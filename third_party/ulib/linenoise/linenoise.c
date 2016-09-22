@@ -115,11 +115,49 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+#ifdef __Fuchsia__
+#include <mxio/io.h>
+#include <ddk/protocol/console.h>
+#endif
+
 #include "linenoise.h"
 
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
 #define LINENOISE_MAX_LINE 4096
-static char *unsupported_term[] = {"dumb","cons25","emacs",NULL};
+
+/* Pass-through version that just calls into the platform's read
+ * implementation.
+ */
+static int readNative(int fd, void* buf, size_t len) {
+    return read(fd, buf, len);
+}
+
+#ifdef __Fuchsia__
+
+/* On Fuchsia the native read implementation doesn't block yet. We provide a
+ * version here that both blocks AND does not return until at least some
+ * characters have been read from the fd.
+ */
+static int __read(int fd, void* buf, size_t len) {
+    int nread;
+
+    if (len == 0) return 0;
+
+    for (;;) {
+      mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+      if ((nread = read(0, buf, len)))
+          return nread;
+    }
+
+    return nread;
+}
+
+#define read __read
+
+#endif
+
+static const char *unsupported_term[] = {"dumb","cons25","emacs",NULL};
 static linenoiseCompletionCallback *completionCallback = NULL;
 static linenoiseHintsCallback *hintsCallback = NULL;
 static linenoiseFreeHintsCallback *freeHintsCallback = NULL;
@@ -127,10 +165,13 @@ static linenoiseFreeHintsCallback *freeHintsCallback = NULL;
 static struct termios orig_termios; /* In order to restore at exit.*/
 static int rawmode = 0; /* For atexit() function to check if restore is needed*/
 static int mlmode = 0;  /* Multi line mode. Default is single line. */
-static int atexit_registered = 0; /* Register atexit just 1 time. */
 static int history_max_len = LINENOISE_DEFAULT_HISTORY_MAX_LEN;
 static int history_len = 0;
 static char **history = NULL;
+
+#ifndef __Fuchsia__
+static int atexit_registered = 0; /* Register atexit just 1 time. */
+#endif
 
 /* The linenoiseState structure represents the state during line editing.
  * We pass this state to functions implementing specific editing
@@ -160,6 +201,9 @@ enum KEY_ACTION{
 	CTRL_F = 6,         /* Ctrl-f */
 	CTRL_H = 8,         /* Ctrl-h */
 	TAB = 9,            /* Tab */
+#ifdef __Fuchsia__
+	NEWLINE = 10,       /* Newline */
+#endif
 	CTRL_K = 11,        /* Ctrl+k */
 	CTRL_L = 12,        /* Ctrl+l */
 	ENTER = 13,         /* Enter */
@@ -172,7 +216,10 @@ enum KEY_ACTION{
 	BACKSPACE =  127    /* Backspace */
 };
 
+#ifndef __Fuchsia__
 static void linenoiseAtExit(void);
+#endif
+
 int linenoiseHistoryAdd(const char *line);
 static void refreshLine(struct linenoiseState *l);
 
@@ -216,6 +263,9 @@ static int isUnsupportedTerm(void) {
 
 /* Raw mode: 1960 magic shit. */
 static int enableRawMode(int fd) {
+#ifdef __Fuchsia__
+    return 0;
+#else
     struct termios raw;
 
     if (!isatty(STDIN_FILENO)) goto fatal;
@@ -248,6 +298,7 @@ static int enableRawMode(int fd) {
 fatal:
     errno = ENOTTY;
     return -1;
+#endif
 }
 
 static void disableRawMode(int fd) {
@@ -269,7 +320,7 @@ static int getCursorPosition(int ifd, int ofd) {
 
     /* Read the response: ESC [ rows ; cols R */
     while (i < sizeof(buf)-1) {
-        if (read(ifd,buf+i,1) != 1) break;
+        if (readNative(ifd,buf+i,1) != 1) break;
         if (buf[i] == 'R') break;
         i++;
     }
@@ -284,9 +335,16 @@ static int getCursorPosition(int ifd, int ofd) {
 /* Try to get the number of columns in the current terminal, or assume 80
  * if it fails. */
 static int getColumns(int ifd, int ofd) {
+#ifdef __Fuchsia__
+    ioctl_console_dimensions_t dims;
+    ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS, NULL, 0, &dims,
+        sizeof(dims));
+    if (r == sizeof(dims)) {
+#else
     struct winsize ws;
 
     if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+#endif
         /* ioctl() failed. Try to query the terminal itself. */
         int start, cols;
 
@@ -309,7 +367,11 @@ static int getColumns(int ifd, int ofd) {
         }
         return cols;
     } else {
+#ifdef __Fuchsia__
+        return dims.width;
+#else
         return ws.ws_col;
+#endif
     }
 
 failed:
@@ -812,6 +874,13 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
         }
 
         switch(c) {
+#ifdef __Fuchsia__
+        /* We don't have support for termios in Fuchsia so "enableRawMode()"
+         * above is explicitly a no-op. This means that we have to process
+         * newline directly.
+         */
+        case NEWLINE:     /* new line */
+#endif
         case ENTER:    /* enter */
             history_len--;
             free(history[history_len]);
@@ -1072,6 +1141,8 @@ void linenoiseFree(void *ptr) {
 
 /* ================================ History ================================= */
 
+#ifndef __Fuchsia__
+
 /* Free the history, but does not reset it. Only used when we have to
  * exit() to avoid memory leaks are reported by valgrind & co. */
 static void freeHistory(void) {
@@ -1089,6 +1160,8 @@ static void linenoiseAtExit(void) {
     disableRawMode(STDIN_FILENO);
     freeHistory();
 }
+
+#endif
 
 /* This is the API call to add a new entry in the linenoise history.
  * It uses a fixed array of char pointers that are shifted (memmoved)
