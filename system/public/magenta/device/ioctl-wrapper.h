@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <stddef.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 extern ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
@@ -53,3 +56,5 @@ static inline ssize_t name(int fd, const intype* in, outtype* out, size_t out_le
 static inline ssize_t name(int fd, const intype* in, size_t in_len, outtype* out, size_t out_len) { \
     return mxio_ioctl(fd, op, in, in_len, out, out_len);                                            \
 }
+
+__END_CDECLS
