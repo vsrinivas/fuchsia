@@ -79,14 +79,9 @@ static void exception_die(x86_iframe_t *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-void x86_syscall_handler(x86_iframe_t *frame)
-{
-    exception_die(frame, "unhandled syscall, halting\n");
-}
-
-static void x86_handle_exception(x86_iframe_t *frame, uint kind, const char* msg)
-{
 #if WITH_LIB_MAGENTA
+static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
+{
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
@@ -94,35 +89,61 @@ static void x86_handle_exception(x86_iframe_t *frame, uint kind, const char* msg
         status_t erc = magenta_exception_handler(kind, &context, frame->ip);
         arch_disable_ints();
         if (erc == NO_ERROR)
-            return;
+            return true;
     }
-#endif
-    exception_die(frame, msg);
+
+    return false;
 }
+#endif
 
 static void x86_debug_handler(x86_iframe_t *frame)
 {
-    x86_handle_exception(frame, EXC_HW_BREAKPOINT, "unhandled hw breakpoint, halting\n");
+#if WITH_LIB_MAGENTA
+    if (handle_magenta_exception(frame, EXC_HW_BREAKPOINT))
+        return;
+#endif
+
+    exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
-    x86_handle_exception(frame, EXC_SW_BREAKPOINT, "unhandled sw breakpoint, halting\n");
+#if WITH_LIB_MAGENTA
+    if (handle_magenta_exception(frame, EXC_SW_BREAKPOINT))
+        return;
+#endif
+
+    exception_die(frame, "unhandled sw breakpoint, halting\n");
 }
 
 void x86_gpf_handler(x86_iframe_t *frame)
 {
-    x86_handle_exception(frame, EXC_GENERAL, "unhandled gpf, halting\n");
+#if WITH_LIB_MAGENTA
+    if (handle_magenta_exception(frame, EXC_GENERAL))
+        return;
+#endif
+
+    exception_die(frame, "unhandled gpf, halting\n");
 }
 
 void x86_invop_handler(x86_iframe_t *frame)
 {
-    x86_handle_exception(frame, EXC_UNDEFINED_INSTRUCTION, "invalid opcode, halting\n");
+#if WITH_LIB_MAGENTA
+    if (handle_magenta_exception(frame, EXC_UNDEFINED_INSTRUCTION))
+        return;
+#endif
+
+    exception_die(frame, "invalid opcode, halting\n");
 }
 
 void x86_unhandled_exception(x86_iframe_t *frame)
 {
-    x86_handle_exception(frame, EXC_GENERAL, "unhandled exception, halting\n");
+#if WITH_LIB_MAGENTA
+    if (handle_magenta_exception(frame, EXC_GENERAL))
+        return;
+#endif
+
+    exception_die(frame, "unhandled exception, halting\n");
 }
 
 static void x86_dump_pfe(x86_iframe_t *frame, ulong cr2)
