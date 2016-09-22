@@ -304,7 +304,12 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
     list_delete(&vc->node);
     vc_count -= 1;
 
-    if (vc->active) active_vc = NULL;
+    if (vc->active) {
+        active_vc = NULL;
+        if (active_vc_index >= vc_count) {
+            active_vc_index = vc_count - 1;
+        }
+    }
 
     // need to fixup active_vc and active_vc_index after deletion
     vc_device_t* d = NULL;
