@@ -17,6 +17,7 @@
 #include <hid/usages.h>
 
 #include <magenta/types.h>
+#include <magenta/device/console.h>
 #include <magenta/device/display.h>
 #include <magenta/device/input.h>
 #include <magenta/syscalls.h>
@@ -280,6 +281,13 @@ int main(int argc, char* argv[]) {
     if (buf == NULL) {
         printf("no memory!\n");
         return -1;
+    }
+
+    ret = mxio_ioctl(vcfd, IOCTL_CONSOLE_SET_ACTIVE_VC, NULL, 0, NULL, 0);
+    if (ret < 0) {
+        printf("could not set active console: %zd\n", ret);
+        // not a fatal error
+        printf("press f1/f2 to switch consoles\n");
     }
 
     clear_screen((void*)fbo, &fb);
