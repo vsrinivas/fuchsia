@@ -6,6 +6,17 @@
 
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
+#include <mxtl/type_support.h>
+
+namespace internal {
+
+// A helper that we can specialize, so we can make user_ptr<T>::copy_array_{to,from}_user() work
+// even when T is void. (Function specializations have to be in namespace scope, so this can't be
+// internal to |user_ptr|.)
+template <typename S> inline constexpr size_t type_size() { return sizeof(S); }
+template <> inline constexpr size_t type_size<void>() { return 1u; }
+
+}  // namespace internal
 
 // user_ptr<> wraps a pointer to user memory, to differntiate it from kernel
 // memory.
@@ -24,6 +35,7 @@ public:
     explicit operator bool() const { return ptr_ != nullptr; }
 
     // allow size_t based addition on the pointer
+    // TODO(vtl): |add| is in number of bytes, regardless of T, which is "surprising".
     user_ptr operator+(size_t add) const {
         if (ptr_ == nullptr)
             return user_ptr(nullptr);
@@ -35,6 +47,37 @@ public:
     // check that the address is inside user space
     bool is_user_address() const { return ::is_user_address(reinterpret_cast<vaddr_t>(ptr_)); }
 
+    // Copies a single T to user memory. (Using this will fail to compile if T is |void|.)
+    // Note: The templatization is simply to allow the class to compile if T is |void|.
+    template <typename S = T>
+    status_t copy_to_user(const S& src) const {
+        static_assert(mxtl::is_same<S, T>::value, "Do not use the template parameter.");
+        return copy_to_user_unsafe(ptr_, &src, sizeof(S));
+    }
+
+    // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
+    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
+    // overflow).
+    status_t copy_array_to_user(const T* src, size_t count) const {
+        return copy_to_user_unsafe(
+                ptr_, src, count * internal::type_size<typename mxtl::remove_volatile<T>::type>());
+    }
+
+    // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
+    status_t copy_from_user(typename mxtl::remove_const<T>::type* dst) const {
+        // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.
+        return copy_from_user_unsafe(dst, ptr_, sizeof(T));
+    }
+
+    // Copies an array of T from user memory. Note: This takes a count not a size, unless T is
+    // |void|.
+    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
+    // overflow).
+    status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count) const {
+        return copy_from_user_unsafe(
+                dst, ptr_, count * internal::type_size<typename mxtl::remove_cv<T>::type>());
+    }
+
 private:
     // It is very important that this class only wrap the pointer type itself
     // and not include any other members so as not to break the ABI between
@@ -42,7 +85,8 @@ private:
     T* const ptr_;
 };
 
-// TODO(vtl): Add appropriate methods to user_ptr, and probably get rid of the functions below.
+// TODO(vtl): Convert things to use the user_ptr<T>::copy_...() and probably get rid of the
+// functions below.
 
 template <typename T>
 inline status_t copy_to_user(user_ptr<T> dst, const void* src, size_t len) {

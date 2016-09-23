@@ -17,17 +17,23 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 
+// is_lvalue_reference:
+
 template <typename T>
 struct is_lvalue_reference : false_type {};
 
 template <typename T>
 struct is_lvalue_reference<T&> : true_type {};
 
+// is_rvalue_reference:
+
 template <typename T>
 struct is_rvalue_reference : false_type {};
 
 template <typename T>
 struct is_rvalue_reference<T&&> : true_type {};
+
+// remove_reference:
 
 template <typename T>
 struct remove_reference {
@@ -49,6 +55,39 @@ constexpr typename remove_reference<T>::type&& move(T&& t) {
     return static_cast<typename remove_reference<T>::type&&>(t);
 }
 
+// remove_const:
+
+template <typename T>
+struct remove_const {
+    typedef T type;
+};
+
+template <typename T>
+struct remove_const<const T> {
+    typedef T type;
+};
+
+// remove_volatile:
+
+template <typename T>
+struct remove_volatile {
+    typedef T type;
+};
+
+template <typename T>
+struct remove_volatile<volatile T> {
+    typedef T type;
+};
+
+// remove_cv:
+
+template <typename T>
+struct remove_cv {
+    typedef typename remove_volatile<typename remove_const<T>::type>::type type;
+};
+
+// forward:
+
 template <typename T>
 constexpr T&& forward(typename remove_reference<T>::type& t) {
     return static_cast<T&&>(t);
@@ -60,8 +99,12 @@ constexpr T&& forward(typename remove_reference<T>::type&& t) {
     return static_cast<T&&>(t);
 }
 
+// is_same:
+
 template<class T, class U> struct is_same : false_type {};
 template<class T> struct is_same<T, T> : true_type {};
+
+// enable_if:
 
 template<bool B, class T = void> struct enable_if { };
 template<class T> struct enable_if<true, T> {

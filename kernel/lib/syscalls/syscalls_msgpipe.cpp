@@ -61,7 +61,7 @@ mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user(out_handle, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (out_handle.copy_array_to_user(hv, 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -91,12 +91,12 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     uint32_t num_handles = 0;
 
     if (_num_bytes) {
-        if (copy_from_user_u32(&num_bytes, _num_bytes) != NO_ERROR)
+        if (_num_bytes.copy_from_user(&num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (_num_handles) {
-        if (copy_from_user_u32(&num_handles, _num_handles) != NO_ERROR)
+        if (_num_handles.copy_from_user(&num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -113,18 +113,18 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
     // unconsumed).
     if (_num_bytes) {
-        if (copy_to_user_u32(_num_bytes, num_bytes) != NO_ERROR)
+        if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (_num_handles) {
-        if (copy_to_user_u32(_num_handles, num_handles) != NO_ERROR)
+        if (_num_handles.copy_to_user(num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (result == ERR_BUFFER_TOO_SMALL)
         return result;
 
     if (num_bytes > 0u) {
-        if (copy_to_user(_bytes.reinterpret<uint8_t>(), msg->data.get(), num_bytes) != NO_ERROR)
+        if (_bytes.copy_array_to_user(msg->data.get(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -191,7 +191,7 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     if (!ac.check())
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
-        result = copy_from_user(handles.get(), _handles, num_handles * sizeof(mx_handle_t));
+        result = _handles.copy_array_from_user(handles.get(), num_handles);
         if (result != NO_ERROR)
             return result;
     }

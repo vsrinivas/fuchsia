@@ -141,7 +141,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
                 tocopy = sizeof(info);
             }
 
-            if (copy_to_user(_buffer.reinterpret<uint8_t>(), &info, tocopy) != NO_ERROR)
+            if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
             return tocopy;
@@ -187,7 +187,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
                 tocopy = sizeof(info);
             }
 
-            if (copy_to_user(_buffer.reinterpret<uint8_t>(), &info, tocopy) != NO_ERROR)
+            if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
 
             return tocopy;
@@ -220,7 +220,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
-            if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
+            if (_value.reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -231,7 +231,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (!thread)
                 return ERR_WRONG_TYPE;
             uint32_t value = thread->thread()->get_num_state_kinds();
-            if (copy_to_user_u32(_value.reinterpret<uint32_t>(), value) != NO_ERROR)
+            if (_value.reinterpret<uint32_t>().copy_to_user(value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -289,7 +289,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!process)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             uint32_t value = 0;
-            if (copy_from_user_u32(&value, _value.reinterpret<const uint32_t>()) != NO_ERROR)
+            if (_value.reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = process->set_bad_handle_policy(value);
             break;
@@ -301,8 +301,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!consumer_dispatcher)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             mx_size_t threshold = 0;
-            if (copy_from_user(&threshold, _value.reinterpret<const mx_size_t>(),
-                               sizeof(mx_size_t)) != NO_ERROR)
+            if (_value.reinterpret<const mx_size_t>().copy_from_user(&threshold) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = consumer_dispatcher->SetReadThreshold(threshold);
             break;
@@ -413,7 +412,7 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
     switch (op) {
 #ifdef ARCH_X86_64
     case ARCH_SET_FS:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (value_ptr.copy_from_user(&value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -421,11 +420,11 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
         break;
     case ARCH_GET_FS:
         value = read_msr(X86_MSR_IA32_FS_BASE);
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (value_ptr.copy_to_user(value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_SET_GS:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (value_ptr.copy_from_user(&value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (!x86_is_vaddr_canonical(value))
             return ERR_INVALID_ARGS;
@@ -433,23 +432,23 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
         break;
     case ARCH_GET_GS:
         value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (value_ptr.copy_to_user(value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
     case ARCH_GET_TSC_TICKS_PER_MS:
         value = get_tsc_ticks_per_ms();
-        if (copy_to_user_uptr(value_ptr, value) != NO_ERROR)
+        if (value_ptr.copy_to_user(value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         break;
 #elif ARCH_ARM64
     case ARCH_SET_TPIDRRO_EL0:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (value_ptr.copy_from_user(&value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         ARM64_WRITE_SYSREG(tpidrro_el0, value);
         break;
 #elif ARCH_ARM
     case ARCH_SET_CP15_READONLY:
-        if (copy_from_user_uptr(&value, value_ptr) != NO_ERROR)
+        if (value_ptr.copy_from_user(&value) != NO_ERROR)
             return ERR_INVALID_ARGS;
         __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
         ISB;
@@ -621,7 +620,7 @@ mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of s
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user(out_handles, hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (out_handles.copy_array_to_user(hv, 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -841,7 +840,7 @@ mx_ssize_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len) {
     auto prng = crypto::GlobalPRNG::GetInstance();
     prng->Draw(kernel_buf, static_cast<int>(len));
 
-    if (copy_to_user(buffer, kernel_buf, len) != NO_ERROR)
+    if (buffer.copy_array_to_user(kernel_buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // Get rid of the stack copy of the random data
@@ -855,7 +854,7 @@ mx_status_t sys_cprng_add_entropy(user_ptr<void> buffer, mx_size_t len) {
         return ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGSeed];
-    if (copy_from_user(kernel_buf, buffer, len) != NO_ERROR)
+    if (buffer.copy_array_from_user(kernel_buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     auto prng = crypto::GlobalPRNG::GetInstance();
@@ -943,7 +942,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     LTRACEF("wait set handle %d\n", ws_handle);
 
     uint32_t num_results;
-    if (copy_from_user_u32(&num_results, _num_results) != NO_ERROR)
+    if (_num_results.copy_from_user(&num_results) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     mxtl::unique_ptr<mx_waitset_result_t[]> results;
@@ -970,15 +969,14 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     uint32_t max_results = 0u;
     mx_status_t result = ws_dispatcher->Wait(timeout, &num_results, results.get(), &max_results);
     if (result == NO_ERROR) {
-        if (copy_to_user_u32(_num_results, num_results) != NO_ERROR)
+        if (_num_results.copy_to_user(num_results) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (num_results > 0u) {
-            if (copy_to_user(_results, results.get(), num_results * sizeof(mx_waitset_result_t)) !=
-                    NO_ERROR)
-            return ERR_INVALID_ARGS;
+            if (_results.copy_array_to_user(results.get(), num_results) != NO_ERROR)
+                return ERR_INVALID_ARGS;
         }
         if (_max_results) {
-            if (copy_to_user_u32(_max_results, max_results) != NO_ERROR)
+            if (_max_results.copy_to_user(max_results) != NO_ERROR)
                 return ERR_INVALID_ARGS;
         }
     }

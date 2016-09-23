@@ -79,7 +79,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
 #endif
 
     if (_signals_state) {
-        if (copy_to_user(_signals_state, &signals_state, sizeof(signals_state)) != NO_ERROR)
+        if (_signals_state.copy_to_user(signals_state) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -183,13 +183,12 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     }
 
     if (_result_index && WaitEvent::HaveContextForResult(wait_event_result)) {
-        if (copy_to_user_u32(_result_index, static_cast<uint32_t>(context)) != NO_ERROR)
+        if (_result_index.copy_to_user(static_cast<uint32_t>(context)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (_signals_states) {
-        if (copy_to_user(_signals_states, signals_states.get(),
-                         sizeof(mx_signals_state_t) * count) != NO_ERROR)
+        if (_signals_states.copy_array_to_user(signals_states.get(), count) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
