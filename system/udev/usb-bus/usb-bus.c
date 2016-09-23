@@ -41,29 +41,17 @@ static mx_status_t usb_bus_add_device(mx_device_t* device, uint32_t device_id, u
     return result;
 }
 
-static void usb_bus_do_remove_device(usb_bus_t* bus, uint32_t device_id) {
+static void usb_bus_remove_device(mx_device_t* dev, uint32_t device_id) {
+    usb_bus_t* bus = get_usb_bus(dev);
     if (device_id >= bus->max_device_count) {
         printf("device_id out of range in usb_bus_remove_device\n");
         return;
     }
     usb_device_t* device = bus->devices[device_id];
     if (device) {
-        // if this is a hub, recursively remove any devices attached to it
-        for (size_t i = 0; i < bus->max_device_count; i++) {
-            usb_device_t* child = bus->devices[i];
-            if (child && child->hub_id == device_id) {
-                usb_bus_do_remove_device(bus, i);
-            }
-        }
-
         usb_device_remove(device);
         bus->devices[device_id] = NULL;
     }
-}
-
-static void usb_bus_remove_device(mx_device_t* device, uint32_t device_id) {
-    usb_bus_t* bus = get_usb_bus(device);
-    usb_bus_do_remove_device(bus, device_id);
 }
 
 static mx_status_t usb_bus_configure_hub(mx_device_t* device, mx_device_t* hub_device, usb_speed_t speed,

@@ -41,8 +41,23 @@ typedef struct usb_hub {
 
     iotxn_t* status_request;
     completion_t completion;
+
+    // bit field indicating which ports are enabled
+    uint8_t enabled_ports[128 / 8];
 } usb_hub_t;
 #define get_hub(dev) containerof(dev, usb_hub_t, device)
+
+inline bool usb_hub_is_port_enabled(usb_hub_t* hub, int port) {
+    return (hub->enabled_ports[port / 8] & (1 << (port % 8))) != 0;
+}
+
+inline void usb_hub_set_port_enabled(usb_hub_t* hub, int port, bool enabled) {
+    if (enabled) {
+        hub->enabled_ports[port / 8] |= (1 << (port % 8));
+    } else {
+        hub->enabled_ports[port / 8] &= ~(1 << (port % 8));
+    }
+}
 
 static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
@@ -148,11 +163,13 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
 
     xprintf("call hub_device_added for port %d\n", port);
     hub->bus_protocol->hub_device_added(hub->bus_device, hub->usb_device, port, speed);
+    usb_hub_set_port_enabled(hub, port, true);
 }
 
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_disconnected\n", port);
     hub->bus_protocol->hub_device_removed(hub->bus_device, hub->usb_device, port);
+    usb_hub_set_port_enabled(hub, port, false);
 }
 
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
@@ -170,6 +187,12 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
 
 static void usb_hub_unbind(mx_device_t* device) {
     usb_hub_t* hub = get_hub(device);
+
+    for (int i = 1; i <= hub->num_ports; i++) {
+        if (usb_hub_is_port_enabled(hub, i)) {
+            usb_hub_port_disconnected(hub, i);
+        }
+    }
     device_remove(&hub->device);
 }
 
@@ -205,6 +228,7 @@ static int usb_hub_thread(void* arg) {
     }
 
     int num_ports = desc.bNbrPorts;
+    hub->num_ports = num_ports;
     // power on delay in microseconds
     hub->power_on_delay = desc.bPowerOn2PwrGood * 2 * 1000;
     if (hub->power_on_delay < 100 * 1000) {
