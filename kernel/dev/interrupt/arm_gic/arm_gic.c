@@ -24,6 +24,8 @@
 #include <lib/sm/sm_err.h>
 #endif
 
+#include <lib/ktrace.h>
+
 #define LOCAL_TRACE 0
 
 #if ARCH_ARM
@@ -369,6 +371,8 @@ enum handler_return __platform_irq(struct iframe *frame)
 
     uint cpu = arch_curr_cpu_num();
 
+    ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
+
     LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %d pc 0x%lx\n", iar, cpu,
                   get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
@@ -383,6 +387,8 @@ enum handler_return __platform_irq(struct iframe *frame)
     GICREG(0, GICC_EOIR) = iar;
 
     LTRACEF_LEVEL(2, "cpu %u exit %d\n", cpu, ret);
+
+    ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 
     KEVLOG_IRQ_EXIT(vector);
 
