@@ -63,3 +63,6 @@ IOCTL_WRAPPER(ioctl_display_flush_fb, IOCTL_DISPLAY_FLUSH_FB);
 
 // ssize_t ioctl_display_flush_fb_region(int fd, const ioctl_display_region_t* in);
 IOCTL_WRAPPER_IN(ioctl_display_flush_fb_region, IOCTL_DISPLAY_FLUSH_FB_REGION, ioctl_display_region_t);
+
+// ssize_t ioctl_display_set_fullscreen(int fd, uint32_t in);
+IOCTL_WRAPPER_IN(ioctl_display_set_fullscreen, IOCTL_DISPLAY_SET_FULLSCREEN, uint32_t);
