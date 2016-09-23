@@ -15,12 +15,14 @@
 #define PERCPU_CURRENT_THREAD_OFFSET   0x4
 #define PERCPU_KERNEL_SP_OFFSET        0x8
 #define PERCPU_SAVED_USER_SP_OFFSET    0xc
+#define PERCPU_IN_IRQ_OFFSET           0x10
 #define PERCPU_DEFAULT_TSS_OFFSET      0x20
 #elif ARCH_X86_64
 #define PERCPU_DIRECT_OFFSET           0x0
 #define PERCPU_CURRENT_THREAD_OFFSET   0x8
 #define PERCPU_KERNEL_SP_OFFSET        0x10
 #define PERCPU_SAVED_USER_SP_OFFSET    0x18
+#define PERCPU_IN_IRQ_OFFSET           0x20
 #define PERCPU_DEFAULT_TSS_OFFSET      0x30
 #endif
 
@@ -52,6 +54,9 @@ struct x86_percpu {
     /* temporarily saved during a syscall */
     uintptr_t saved_user_sp;
 
+    /* are we currently in an irq handler */
+    uint32_t in_irq;
+
     /* local APIC id */
     uint32_t apic_id;
 
@@ -73,6 +78,7 @@ static_assert(__offsetof(struct x86_percpu, direct) == PERCPU_DIRECT_OFFSET, "")
 static_assert(__offsetof(struct x86_percpu, current_thread) == PERCPU_CURRENT_THREAD_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, kernel_sp) == PERCPU_KERNEL_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, in_irq) == PERCPU_IN_IRQ_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 
 /* needs to be run very early in the boot process from start.S and as each cpu is brought up */
@@ -151,6 +157,29 @@ static inline void x86_set_percpu_kernel_sp(uintptr_t sp)
     arch_interrupt_save(&state, 0);
     x86_get_percpu()->kernel_sp = sp;
     arch_interrupt_restore(state, 0);
+#endif
+}
+
+static bool arch_in_int_handler(void)
+{
+#if ARCH_X86_64
+    return (bool)x86_read_gs_offset32(PERCPU_IN_IRQ_OFFSET);
+#else
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, 0);
+    bool in_irq = x86_get_percpu()->in_irq;
+    arch_interrupt_restore(state, 0);
+    return in_irq;
+#endif
+}
+
+static void arch_set_in_int_handler(bool in_irq)
+{
+#if ARCH_X86_64
+    x86_write_gs_offset32(PERCPU_IN_IRQ_OFFSET, in_irq);
+#else
+    /* should only be setting this inside an irq handler with interrupts disabled */
+    x86_get_percpu()->in_irq = in_irq;
 #endif
 }
 

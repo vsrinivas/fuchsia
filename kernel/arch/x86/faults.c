@@ -85,9 +85,11 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         struct arch_exception_context context = { .frame = frame, .is_page_fault = false };
+        arch_set_in_int_handler(false);
         arch_enable_ints();
         status_t erc = magenta_exception_handler(kind, &context, frame->ip);
         arch_disable_ints();
+        arch_set_in_int_handler(true);
         if (erc == NO_ERROR)
             return true;
     }
@@ -216,6 +218,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
     vaddr_t va = x86_get_cr2();
 
     /* reenable interrupts */
+    arch_set_in_int_handler(false);
     arch_enable_ints();
 
     /* check for flags we're not prepared to handle */
@@ -257,6 +260,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
         }
 #else
         arch_disable_ints();
+        arch_set_in_int_handler(true);
 #endif
 
         /* fatal (for now) */
@@ -268,6 +272,13 @@ void x86_pfe_handler(x86_iframe_t *frame)
 void x86_exception_handler(x86_iframe_t *frame)
 {
     THREAD_STATS_INC(interrupts);
+
+    // are we recursing?
+    if (unlikely(arch_in_int_handler())) {
+        exception_die(frame, "recursion in interrupt handler\n");
+    }
+
+    arch_set_in_int_handler(true);
 
     // did we come from user or kernel space?
     bool from_user = SELECTOR_PL(frame->cs) != 0;
@@ -353,6 +364,9 @@ void x86_exception_handler(x86_iframe_t *frame)
         default:
             x86_unhandled_exception(frame);
     }
+
+    /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
+    arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */
     if (unlikely(from_user)) {

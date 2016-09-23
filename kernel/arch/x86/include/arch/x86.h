@@ -437,25 +437,25 @@ static inline bool x86_is_PAE_enabled(void)
 static inline uintptr_t x86_read_gs_offset(uintptr_t offset)
 {
     ulong ret;
-
-    __asm__(
-        "mov   %%gs:%1, %0"
-        : "=r" (ret)
-        : "m" (*(uintptr_t *)(offset))
-        :
-    );
-
+    __asm__( "mov   %%gs:%1, %0" : "=r" (ret) : "m" (*(uintptr_t *)(offset)));
     return ret;
 }
 
 static inline void x86_write_gs_offset(uintptr_t offset, uintptr_t val)
 {
-    __asm__(
-        "mov   %0, %%gs:%1"
-        :
-        : "r" (val), "m" (*(uintptr_t *)(offset))
-        : "memory"
-    );
+    __asm__( "mov   %0, %%gs:%1" : : "r" (val), "m" (*(uintptr_t *)(offset)) : "memory");
+}
+
+static inline uint32_t x86_read_gs_offset32(uintptr_t offset)
+{
+    uint32_t ret;
+    __asm__( "mov   %%gs:%1, %0" : "=r" (ret) : "m" (*(uint32_t *)(offset)));
+    return ret;
+}
+
+static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val)
+{
+    __asm__( "mov   %0, %%gs:%1" : : "r" (val), "m" (*(uint32_t *)(offset)) : "memory");
 }
 
 
