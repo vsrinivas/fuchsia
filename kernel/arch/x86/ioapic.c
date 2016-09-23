@@ -324,8 +324,11 @@ void apic_io_configure_irq(
     spin_lock_irqsave(&lock, state);
 
     /* If we are configuring an invalid vector, for the IRQ to be masked. */
-    if ((vector < X86_INT_PLATFORM_BASE) || (vector > X86_INT_PLATFORM_MAX))
+    if ((del_mode == DELIVERY_MODE_FIXED || del_mode == DELIVERY_MODE_LOWEST_PRI) &&
+        ((vector < X86_INT_PLATFORM_BASE) || (vector > X86_INT_PLATFORM_MAX))) {
+
         mask = true;
+    }
 
     uint64_t reg = 0;
     reg |= IO_APIC_RTE_TRIGGER_MODE(trig_mode);
