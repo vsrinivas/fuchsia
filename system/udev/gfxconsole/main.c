@@ -100,13 +100,29 @@ static int vc_input_thread(void* arg) {
                 modifiers |= MOD_RCTRL;
                 break;
 
-            case HID_USAGE_KEY_F1:
-                vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
-                consumed = 1;
+            case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
+                if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
+                    vc_set_active_console(keycode - HID_USAGE_KEY_F1);
+                    consumed = 1;
+                }
                 break;
-            case HID_USAGE_KEY_F2:
-                vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
-                consumed = 1;
+
+            case HID_USAGE_KEY_F11:
+                if (active_vc && (modifiers & MOD_LALT || modifiers & MOD_RALT)) {
+                    vc_device_set_fullscreen(active_vc, !(active_vc->flags & VC_FLAG_FULLSCREEN));
+                    consumed = 1;
+                }
+                break;
+
+            case HID_USAGE_KEY_TAB:
+                if (modifiers & MOD_LALT || modifiers & MOD_RALT) {
+                    if (modifiers & MOD_LSHIFT || modifiers & MOD_RSHIFT) {
+                        vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
+                    } else {
+                        vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
+                    }
+                    consumed = 1;
+                }
                 break;
 
             case HID_USAGE_KEY_UP:
