@@ -106,6 +106,12 @@ static void x86_debug_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
+extern void platform_handle_watchdog(void);
+static void x86_nmi_handler(x86_iframe_t *frame)
+{
+    platform_handle_watchdog();
+}
+
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
@@ -281,7 +287,7 @@ void x86_exception_handler(x86_iframe_t *frame)
     THREAD_STATS_INC(interrupts);
 
     // are we recursing?
-    if (unlikely(arch_in_int_handler())) {
+    if (unlikely(arch_in_int_handler()) && frame->vector != X86_INT_NMI) {
         exception_die(frame, "recursion in interrupt handler\n");
     }
 
@@ -298,6 +304,9 @@ void x86_exception_handler(x86_iframe_t *frame)
     switch (frame->vector) {
         case X86_INT_DEBUG:
             x86_debug_handler(frame);
+            break;
+        case X86_INT_NMI:
+            x86_nmi_handler(frame);
             break;
         case X86_INT_BREAKPOINT:
             x86_breakpoint_handler(frame);

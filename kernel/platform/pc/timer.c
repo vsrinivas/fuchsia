@@ -452,6 +452,7 @@ static void platform_init_timer(uint level)
 
     if (invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"))) {
         calibrate_tsc();
+
         // Program PIT in the software strobe configuration, but do not load
         // the count.  This will pause the PIT.
         outp(I8253_CONTROL_REG, 0x38);
@@ -529,4 +530,50 @@ void platform_stop_timer(void)
     /* Enable interrupt mode that will stop the decreasing counter of the PIT */
     //outp(I8253_CONTROL_REG, 0x30);
     apic_timer_stop();
+}
+
+status_t platform_configure_watchdog(uint32_t frequency) {
+    switch (wall_clock) {
+        case CLOCK_TSC: {
+            /* Use the PIT IRQ number since the PIT isn't running */
+            uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
+            if (hpet_timer_configure_irq(0, irq) == NO_ERROR) {
+                apic_io_configure_isa_irq(
+                        ISA_IRQ_PIT,
+                        DELIVERY_MODE_NMI,
+                        IO_APIC_IRQ_UNMASK,
+                        DST_MODE_PHYSICAL,
+                        0,
+                        0);
+
+                uint64_t hpet_rate_ms = hpet_ticks_per_ms();
+                hpet_disable();
+                __UNUSED status_t status = hpet_set_value(0);
+                DEBUG_ASSERT(status == NO_ERROR);
+                status = hpet_timer_set_periodic(0, hpet_rate_ms * frequency / 1000);
+                DEBUG_ASSERT(status == NO_ERROR);
+                hpet_enable();
+
+                return NO_ERROR;
+            }
+            /* Fallthrough and use the PIT instead */
+        }
+        case CLOCK_HPET: {
+            /* Use the PIT instead of a separate HPET timer for this since
+             * once the HPET is going, you can't reasonably configure a
+             * periodic timer without stopping it. */
+            set_pit_frequency(frequency);
+
+            apic_io_configure_isa_irq(
+                    ISA_IRQ_PIT,
+                    DELIVERY_MODE_NMI,
+                    IO_APIC_IRQ_UNMASK,
+                    DST_MODE_PHYSICAL,
+                    0,
+                    0);
+            printf("CONFIGURED WATCHDOG\n");
+            return NO_ERROR;
+        }
+        default: return ERR_NOT_SUPPORTED;
+    }
 }

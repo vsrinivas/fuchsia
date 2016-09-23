@@ -18,6 +18,10 @@ those userspace processes, not the kernel itself.
 If this option is set, the crashlogger is not started. You should leave this
 option off unless you suspect the crashlogger is causing problems.
 
+## kernel.watchdog=<bool>
+If this option is set (disabled by default), the system will attempt
+to detect hangs/crashes and reboot upon detection.
+
 ## gfxconsole.early=<bool>
 
 This option (disabled by default) requests that the kernel start a graphics
