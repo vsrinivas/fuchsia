@@ -11,15 +11,14 @@
 #include <kernel/auto_lock.h>
 
 #include <lib/ktrace.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
-#include <magenta/user_copy.h>
 #include <magenta/wait_event.h>
 #include <magenta/wait_state_observer.h>
 
+#include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
@@ -27,6 +26,9 @@
 #define LOCAL_TRACE 0
 
 constexpr uint32_t kMaxWaitHandleCount = 256u;
+
+// Note: This is used for quite a few InlineArrays (simultaneously) in sys_handle_wait_many.
+constexpr size_t kWaitManyInlineCount = 8u;
 
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
@@ -87,8 +89,8 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
 }
 
 mx_status_t sys_handle_wait_many(uint32_t count,
-                                 const mx_handle_t* _handle_values,
-                                 const mx_signals_t* _signals,
+                                 user_ptr<const mx_handle_t> _handle_values,
+                                 user_ptr<const mx_signals_t> _signals,
                                  mx_time_t timeout,
                                  user_ptr<uint32_t> _result_index,
                                  user_ptr<mx_signals_state_t> _signals_states) {
@@ -106,38 +108,32 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     if (count > kMaxWaitHandleCount)
         return ERR_INVALID_ARGS;
 
-    uint32_t max_size = kMaxWaitHandleCount * sizeof(uint32_t);
-    uint32_t bytes_size = static_cast<uint32_t>(sizeof(uint32_t) * count);
-
-    void* copy;
-    status_t result;
-
-    result = magenta_copy_user_dynamic(_handle_values, &copy, bytes_size, max_size);
-    if (result != NO_ERROR)
-        return result;
-    mxtl::unique_ptr<int32_t[]> handle_values(reinterpret_cast<mx_handle_t*>(copy));
-
-    result = magenta_copy_user_dynamic(_signals, &copy, bytes_size, max_size);
-    if (result != NO_ERROR)
-        return result;
-    mxtl::unique_ptr<uint32_t[]> signals(reinterpret_cast<mx_signals_t*>(copy));
-
     AllocChecker ac;
-    mxtl::unique_ptr<WaitStateObserver[]> wait_state_observers(new (&ac) WaitStateObserver[count]);
+    mxtl::InlineArray<mx_handle_t, kWaitManyInlineCount> handle_values(&ac, count);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    if (_handle_values.copy_array_from_user(handle_values.get(), count) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    mxtl::InlineArray<mx_signals_t, kWaitManyInlineCount> signals(&ac, count);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    if (_signals.copy_array_from_user(signals.get(), count) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    mxtl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    mxtl::unique_ptr<mx_signals_state_t[]> signals_states;
-    if (_signals_states) {
-        signals_states.reset(new (&ac) mx_signals_state_t[count]);
-        if (!ac.check())
-            return ERR_NO_MEMORY;
-    }
+    mxtl::InlineArray<mx_signals_state_t, kWaitManyInlineCount>
+            signals_states(&ac, _signals_states ? count : 0);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
 
     WaitEvent event;
 
     // We may need to unwind (which can be done outside the lock).
-    result = NO_ERROR;
+    status_t result = NO_ERROR;
     size_t num_added = 0;
     {
         auto up = ProcessDispatcher::GetCurrent();
@@ -178,7 +174,7 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     // Regardless of wait outcome, we must call End().
     for (size_t ix = 0; ix != count; ++ix) {
         auto s = wait_state_observers[ix].End();
-        if (signals_states)
+        if (signals_states.size())
             signals_states[ix] = s;
     }
 
