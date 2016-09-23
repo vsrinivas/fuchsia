@@ -96,37 +96,3 @@ template <typename T>
 inline status_t copy_from_user(void* dst, const user_ptr<T> src, size_t len) {
   return copy_from_user_unsafe(dst, src.get(), len);
 }
-
-// Convenience functions for common data types, this time with more C++.
-#define MAKE_COPY_TO_USER(name, type) \
-    static inline status_t name(user_ptr<type> dst, type value) { \
-        return copy_to_user(dst, &value, sizeof(type)); \
-    }
-
-MAKE_COPY_TO_USER(copy_to_user_u8, uint8_t);
-MAKE_COPY_TO_USER(copy_to_user_u16, uint16_t);
-MAKE_COPY_TO_USER(copy_to_user_32, int32_t);
-MAKE_COPY_TO_USER(copy_to_user_u32, uint32_t);
-MAKE_COPY_TO_USER(copy_to_user_u64, uint64_t);
-MAKE_COPY_TO_USER(copy_to_user_uptr, uintptr_t);
-MAKE_COPY_TO_USER(copy_to_user_iptr, intptr_t);
-
-#undef MAKE_COPY_TO_USER
-
-#define MAKE_COPY_FROM_USER(name, type) \
-    static inline status_t name(type *dst, const user_ptr<const type> src) { \
-        return copy_from_user(dst, src, sizeof(type)); \
-    } \
-    static inline status_t name(type *dst, const user_ptr<type> src) { \
-        return copy_from_user(dst, src, sizeof(type)); \
-    }
-
-MAKE_COPY_FROM_USER(copy_from_user_u8, uint8_t);
-MAKE_COPY_FROM_USER(copy_from_user_u16, uint16_t);
-MAKE_COPY_FROM_USER(copy_from_user_u32, uint32_t);
-MAKE_COPY_FROM_USER(copy_from_user_32, int32_t);
-MAKE_COPY_FROM_USER(copy_from_user_u64, uint64_t);
-MAKE_COPY_FROM_USER(copy_from_user_uptr, uintptr_t);
-MAKE_COPY_FROM_USER(copy_from_user_iptr, intptr_t);
-
-#undef MAKE_COPY_FROM_USER

@@ -164,7 +164,7 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
 
     // copy the user pointer in
     uintptr_t ptr;
-    if (copy_from_user_uptr(&ptr, user_ptr) != NO_ERROR)
+    if (user_ptr.copy_from_user(&ptr) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // do the map call
@@ -174,7 +174,7 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
         return status;
 
     // copy the user pointer back
-    if (copy_to_user_uptr(user_ptr, ptr) != NO_ERROR)
+    if (user_ptr.copy_to_user(ptr) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;

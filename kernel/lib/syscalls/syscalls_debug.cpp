@@ -307,7 +307,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
         return status;
 
     uint32_t buffer_len;
-    if (copy_from_user_u32(&buffer_len, _buffer_len) != NO_ERROR)
+    if (_buffer_len.copy_from_user(&buffer_len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // avoid malloc'ing insane amounts
@@ -325,7 +325,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
     if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
-        if (copy_to_user_u32(_buffer_len, buffer_len) != NO_ERROR)
+        if (_buffer_len.copy_to_user(buffer_len) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
