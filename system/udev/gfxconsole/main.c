@@ -619,9 +619,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         if (cmdlen < sizeof(uint32_t) || !cmd) {
             return ERR_INVALID_ARGS;
         }
-        mtx_lock(&vc->lock);
         vc_device_set_fullscreen(vc, !!*(uint32_t*)cmd);
-        mtx_unlock(&vc->lock);
         return NO_ERROR;
     }
     default:
