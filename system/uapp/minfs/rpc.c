@@ -63,7 +63,7 @@ static mx_handle_t devmgr_connect(const char* where) {
         return -1;
     }
     mx_handle_t h;
-    if (ioctl_devmgr_mount_fs(fd, &h)) {
+    if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
         close(fd);
         error("minfs: failed to attach to '%s'\n", where);
         return -1;
