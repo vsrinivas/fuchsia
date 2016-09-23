@@ -4,8 +4,20 @@
     ],
     "binaries": [
         {
+            "binary": "cloud_provider_unittests",
+            "bootfs_path": "test/cloud_provider_unittests"
+        },
+        {
             "binary": "convert_unittests",
             "bootfs_path": "test/convert_unittests"
+        },
+        {
+            "binary": "firebase_unittests",
+            "bootfs_path": "test/firebase_unittests"
+        },
+        {
+            "binary": "gcs_unittests",
+            "bootfs_path": "test/gcs_unittests"
         },
         {
             "binary": "ledger_abax",
@@ -14,6 +26,10 @@
         {
             "binary": "ledger_abax_apptests",
             "bootfs_path": "apps/ledger_abax_apptests"
+        },
+        {
+            "binary": "ledger_glue_unittests",
+            "bootfs_path": "test/ledger_glue_unittests"
         }
     ]
 }
