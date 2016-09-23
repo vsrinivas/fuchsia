@@ -4,7 +4,7 @@
 
 import("//mojo/public/tools/bindings/mojom.gni")
 
-mojom("api") {
+mojom("interfaces") {
   sources = [
     "indexing.mojom"
   ]

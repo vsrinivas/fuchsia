@@ -4,6 +4,6 @@
 
 group("indexing") {
   deps = [
-    ":api",
+    ":interfaces",
   ]
 }
