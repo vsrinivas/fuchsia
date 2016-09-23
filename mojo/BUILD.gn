@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("all") {
-  deps = [":modular"]
-}
+source_set("single_service_application") {
+  sources = [
+    "single_service_application.h",
+  ]
 
-group("modular") {
   deps = [
-    "device_runner:all",
-    "story_example:all",
-    "story_manager:all",
-    "story_runner:all",
+    "//mojo/public/cpp/application:standalone",
   ]
 }
+

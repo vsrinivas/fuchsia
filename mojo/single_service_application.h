@@ -19,19 +19,15 @@ class SingleServiceApplication : public mojo::ApplicationImplBase {
   ~SingleServiceApplication() override {}
 
   bool OnAcceptConnection(mojo::ServiceProviderImpl* const s) override {
-    s->AddService<Service>(
-        [this](const mojo::ConnectionContext& ctx,
-               mojo::InterfaceRequest<Service> request) {
-          service_impls_.emplace_back(
-              std::unique_ptr<ServiceImpl>(
-                  new ServiceImpl(request.Pass())));
-        });
+    s->AddService<Service>([this](const mojo::ConnectionContext& ctx,
+                                  mojo::InterfaceRequest<Service> request) {
+      service_impls_.emplace_back(
+          std::unique_ptr<ServiceImpl>(new ServiceImpl(request.Pass())));
+    });
     return true;
   }
 
-  void OnQuit() override {
-    service_impls_.clear();
-  }
+  void OnQuit() override { service_impls_.clear(); }
 
  private:
   std::vector<std::unique_ptr<ServiceImpl>> service_impls_;

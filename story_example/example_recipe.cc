@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "apps/modular/application/single_service_application.h"
+#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -27,11 +27,12 @@ using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StrongBinding;
+using mojo::String;
 
-using story::Link;
-using story::LinkChanged;
-using story::Module;
-using story::Session;
+using modular::Link;
+using modular::LinkChanged;
+using modular::Module;
+using modular::Session;
 
 // Implementation of the LinkChanged service that forwards each value
 // changed in one Link instance to a second Link instance.
@@ -44,7 +45,7 @@ class LinkConnection : public LinkChanged {
     src_->Watch(std::move(watcher));
   }
 
-  void Value(const mojo::String& label, const mojo::String& value) override {
+  void Value(const String& label, const String& value) override {
     if (label == "out" && value != "") {
       FTL_LOG(INFO) << "recipe link connection value \"" << value << "\"";
       src_->SetValue("out", "");
@@ -113,7 +114,7 @@ class RecipeImpl : public Module, public LinkChanged {
     connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
   }
 
-  void Value(const mojo::String& label, const mojo::String& value) override {
+  void Value(const String& label, const String& value) override {
     FTL_LOG(INFO) << "recipe value \"" << label << "\", \"" << value << "\"";
   }
 

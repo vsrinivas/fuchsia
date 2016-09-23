@@ -4,8 +4,6 @@
 
 // Implementation of the story runner mojo app and of all mojo
 // services it provides directly or transitively from other services.
-// The mojom definitions for the services are in
-// ../mojom_hack/story_runner.mojom, though they should be here.
 
 #include <mojo/system/main.h>
 #include <stdio.h>
@@ -28,28 +26,20 @@
 #include "mojo/public/cpp/system/macros.h"
 #include "mojo/public/interfaces/application/shell.mojom.h"
 
-namespace {
+namespace modular {
 
 using mojo::ApplicationImplBase;
-using mojo::Binding;
+using mojo::Array;
 using mojo::BindingSet;
 using mojo::ConnectionContext;
+using mojo::GetProxy;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
+using mojo::String;
 using mojo::StrongBinding;
-
-using ledger::Page;
-
-using story::Runner;
-using story::Session;
-using story::Module;
-using story::Link;
-using story::LinkChanged;
-using story::Resolver;
-using story::ResolverFactory;
 
 // A Link is a mutable and observable value shared between modules.
 // When a module requests to run more modules using
@@ -66,7 +56,7 @@ class LinkImpl : public Link {
 
   ~LinkImpl() override {}
 
-  void SetValue(const mojo::String& label, const mojo::String& value) override {
+  void SetValue(const String& label, const String& value) override {
     FTL_LOG(INFO) << "story-runner link set value " << label << ": " << value;
 
     values_[label] = value;
@@ -78,8 +68,7 @@ class LinkImpl : public Link {
     FTL_LOG(INFO) << "story-runner link set value return";
   }
 
-  void Value(const mojo::String& label,
-             const ValueCallback& callback) override {
+  void Value(const String& label, const ValueCallback& callback) override {
     callback.Run(values_[label]);
   }
 
@@ -110,21 +99,20 @@ class LinkImpl : public Link {
   StrongBinding<Link> binding_;
   BindingSet<Link> clones_;
   std::vector<InterfacePtr<LinkChanged>> watchers_;
-  std::map<mojo::String, mojo::String> values_;
+  std::map<String, String> values_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
-// The Session is the context in which a story executes. It provides
+// The Session is the context in which a story executes.
 class SessionImpl : public Session {
  public:
-  explicit SessionImpl(Shell* shell, InterfaceHandle<Resolver> resolver,
-                       InterfaceHandle<Page> session_page,
-                       InterfaceRequest<Session> req)
-      : shell_(shell),
-        binding_(this, std::move(req)) {
+  SessionImpl(Shell* shell, InterfaceHandle<Resolver> resolver,
+              InterfaceHandle<ledger::Page> session_page,
+              InterfaceRequest<Session> req)
+      : shell_(shell), binding_(this, std::move(req)) {
     resolver_.Bind(resolver.Pass());
     session_page_.Bind(session_page.Pass());
-    session_page_->GetId([](mojo::Array<uint8_t> id) {
+    session_page_->GetId([](Array<uint8_t> id) {
       std::string string_id;
       for (uint8_t val : id) {
         string_id += std::to_string(val);
@@ -136,8 +124,7 @@ class SessionImpl : public Session {
 
   ~SessionImpl() override {}
 
-  void CreateLink(const mojo::String& schema,
-                  InterfaceRequest<Link> link) override {
+  void CreateLink(const String& schema, InterfaceRequest<Link> link) override {
     FTL_LOG(INFO) << "story-runner create link";
 
     new LinkImpl(std::move(link));
@@ -145,25 +132,24 @@ class SessionImpl : public Session {
     FTL_LOG(INFO) << "story-runner create link return";
   }
 
-  void StartModule(const mojo::String& query, InterfaceHandle<Link> link,
+  void StartModule(const String& query, InterfaceHandle<Link> link,
                    const StartModuleCallback& callback) override {
     FTL_LOG(INFO) << "story-runner start module";
     std::string new_link_id = GenerateId();
-    resolver_->Resolve(
-        query, [this, new_link_id, callback](mojo::String module_url) {
-          InterfacePtr<Module> module;
-          mojo::ConnectToService(shell_, module_url, GetProxy(&module));
+    resolver_->Resolve(query, [this, new_link_id, callback](String module_url) {
+      InterfacePtr<Module> module;
+      mojo::ConnectToService(shell_, module_url, GetProxy(&module));
 
-          InterfaceHandle<Session> self;
-          bindings_.AddBinding(this, GetProxy(&self));
+      InterfaceHandle<Session> self;
+      bindings_.AddBinding(this, GetProxy(&self));
 
-          module->Initialize(std::move(self), link_map_[new_link_id].Pass());
-          link_map_.erase(new_link_id);
+      module->Initialize(std::move(self), link_map_[new_link_id].Pass());
+      link_map_.erase(new_link_id);
 
-          callback.Run(module.PassInterfaceHandle());
+      callback.Run(module.PassInterfaceHandle());
 
-          FTL_LOG(INFO) << "story-runner start module return";
-        });
+      FTL_LOG(INFO) << "story-runner start module return";
+    });
 
     link_map_.emplace(std::move(new_link_id), link.Pass());
   }
@@ -178,11 +164,11 @@ class SessionImpl : public Session {
   Shell* const shell_;
   std::map<std::string, InterfaceHandle<Link>> link_map_;
   InterfacePtr<Resolver> resolver_;
-  InterfacePtr<Page> session_page_;
+  InterfacePtr<ledger::Page> session_page_;
   StrongBinding<Session> binding_;
   BindingSet<Session> bindings_;
 
-  // We use the counter to generate IDs for the link handles.
+  // Used to generate IDs for the link handles.
   int counter = 0;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
@@ -190,24 +176,24 @@ class SessionImpl : public Session {
 
 // The story runner service is the primary service provided by the
 // story runner app. It allows to create a Session.
-class RunnerImpl : public Runner {
+class StoryRunnerImpl : public StoryRunner {
  public:
-  explicit RunnerImpl(Shell* const shell, InterfaceRequest<Runner> req)
+  StoryRunnerImpl(Shell* const shell, InterfaceRequest<StoryRunner> req)
       : shell_(shell), binding_(this, std::move(req)) {}
-  ~RunnerImpl() override {}
+  ~StoryRunnerImpl() override {}
 
   void Initialize(InterfaceHandle<ResolverFactory> resolver_factory) override {
     resolver_factory_.Bind(resolver_factory.Pass());
   }
 
-  void StartStory(InterfaceHandle<Page> session_page,
+  void StartStory(InterfaceHandle<ledger::Page> session_page,
                   InterfaceRequest<Session> session) override {
     FTL_LOG(INFO) << "story-runner start story";
 
     InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(
-        shell_, resolver.Pass(), session_page.Pass(), std::move(session));
+    new SessionImpl(shell_, resolver.Pass(), session_page.Pass(),
+                    std::move(session));
 
     FTL_LOG(INFO) << "story-runner start story return";
   }
@@ -215,27 +201,27 @@ class RunnerImpl : public Runner {
  private:
   Shell* const shell_;
   InterfacePtr<ResolverFactory> resolver_factory_;
-  StrongBinding<Runner> binding_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(RunnerImpl);
+  StrongBinding<StoryRunner> binding_;
+  MOJO_DISALLOW_COPY_AND_ASSIGN(StoryRunnerImpl);
 };
 
 // The story runner mojo app.
-class RunnerApp : public ApplicationImplBase {
+class StoryRunnerApp : public ApplicationImplBase {
  public:
-  RunnerApp() {}
-  ~RunnerApp() override {}
+  StoryRunnerApp() {}
+  ~StoryRunnerApp() override {}
 
   bool OnAcceptConnection(ServiceProviderImpl* const s) override {
     FTL_LOG(INFO) << "story-runner accept connection";
 
-    s->AddService<Runner>(
-        [this](const ConnectionContext& ctx, InterfaceRequest<Runner> req) {
-          FTL_LOG(INFO) << "story-runner service request";
+    s->AddService<StoryRunner>([this](const ConnectionContext& ctx,
+                                      InterfaceRequest<StoryRunner> req) {
+      FTL_LOG(INFO) << "story-runner service request";
 
-          new RunnerImpl(shell(), std::move(req));
+      new StoryRunnerImpl(shell(), std::move(req));
 
-          FTL_LOG(INFO) << "story-runner service request return";
-        });
+      FTL_LOG(INFO) << "story-runner service request return";
+    });
 
     FTL_LOG(INFO) << "story-runner accept connection return";
 
@@ -243,13 +229,13 @@ class RunnerApp : public ApplicationImplBase {
   }
 
  private:
-  MOJO_DISALLOW_COPY_AND_ASSIGN(RunnerApp);
+  MOJO_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
 };
 
-}  // namespace
+}  // namespace modular
 
 MojoResult MojoMain(MojoHandle request) {
   FTL_LOG(INFO) << "story-runner main";
-  RunnerApp app;
+  modular::StoryRunnerApp app;
   return mojo::RunApplication(request, &app);
 }

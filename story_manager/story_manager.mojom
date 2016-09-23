@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module story_manager;
+module modular;
 
 import "apps/ledger/api/ledger.mojom";
 
@@ -12,7 +12,7 @@ import "apps/ledger/api/ledger.mojom";
  */
 
 // Intended for use by Device Runner to launch a new Story Manager per user.
-[ServiceName="story_manager::StoryManager"]
+[ServiceName="modular.StoryManager"]
 interface StoryManager {
   // Used to launch story-manager for a particular user, identified by
   // |user_id|. Returns false if there is a problem with |user_id| or |Launch|
@@ -62,7 +62,7 @@ interface StoryProvider {
 
 // This interface is meant to be implemented by a User Shell so that
 // |StoryProvider| could be passed to it on startup.
-[ServiceName="story_manager::UserShell"]
+[ServiceName="modular.UserShell"]
 interface UserShell {
   SetStoryProvider(StoryProvider service);
 };

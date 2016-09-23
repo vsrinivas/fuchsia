@@ -4,21 +4,20 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/application/single_service_application.h"
+#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
-namespace {
+namespace modular {
 
+using mojo::InterfaceHandle;
+using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StrongBinding;
-
-using story::Link;
-using story::Resolver;
-using story::ResolverFactory;
+using mojo::String;
 
 class ResolverImpl : public Resolver {
  public:
@@ -28,8 +27,7 @@ class ResolverImpl : public Resolver {
   ~ResolverImpl() override {}
 
  private:
-  void Resolve(const mojo::String& query,
-               const ResolveCallback& callback) override {
+  void Resolve(const String& query, const ResolveCallback& callback) override {
     callback.Run(query);
   }
 
@@ -53,10 +51,12 @@ class ResolverFactoryImpl : public ResolverFactory {
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolverFactoryImpl);
 };
 
-}  // namespace
+}  // namespace modular
 
 MojoResult MojoMain(MojoHandle request) {
   FTL_LOG(INFO) << "component-manager main";
-  modular::SingleServiceApplication<ResolverFactory, ResolverFactoryImpl> app;
+  modular::SingleServiceApplication<modular::ResolverFactory,
+                                    modular::ResolverFactoryImpl>
+      app;
   return mojo::RunApplication(request, &app);
 }

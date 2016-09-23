@@ -19,36 +19,41 @@
 #include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
-namespace {
+namespace modular {
 
-class DummyUserShellImpl : public story_manager::UserShell {
+using mojo::ApplicationImplBase;
+using mojo::ConnectionContext;
+using mojo::InterfaceHandle;
+using mojo::InterfacePtr;
+using mojo::InterfaceRequest;
+using mojo::ServiceProviderImpl;
+using mojo::StrongBinding;
+using mojo::StructPtr;
+
+class DummyUserShellImpl : public UserShell {
  public:
-  explicit DummyUserShellImpl(
-      const std::string& recipe_url,
-      mojo::InterfaceRequest<story_manager::UserShell> request)
+  DummyUserShellImpl(const std::string& recipe_url,
+                     InterfaceRequest<UserShell> request)
       : binding_(this, std::move(request)), recipe_url_(recipe_url) {}
   ~DummyUserShellImpl() override{};
 
  private:
-  void SetStoryProvider(mojo::InterfaceHandle<story_manager::StoryProvider>
-                            story_provider) override {
+  void SetStoryProvider(
+      InterfaceHandle<StoryProvider> story_provider) override {
     story_provider_.Bind(story_provider.Pass());
 
     // Check for previous stories.
-    story_provider_->PreviousStories(
-        [this](mojo::InterfaceHandle<story_manager::Story> story) {
-          FTL_DCHECK(!story.is_valid());
-        });
+    story_provider_->PreviousStories([this](InterfaceHandle<Story> story) {
+      FTL_DCHECK(!story.is_valid());
+    });
 
     // Start a new story.
     story_provider_->StartNewStory(
-        std::move(recipe_url_),
-        [this](mojo::InterfaceHandle<story_manager::Story> story) {
-          FTL_LOG(INFO) << "Received story_manager::Story from provider.";
+        std::move(recipe_url_), [this](InterfaceHandle<Story> story) {
+          FTL_LOG(INFO) << "Received modular::Story from provider.";
           story_ptr_.Bind(story.Pass());
-          story_ptr_->GetInfo([this](
-              mojo::StructPtr<story_manager::StoryInfo> story_info) {
-            FTL_LOG(INFO) << "story_manager::Story received with url: "
+          story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
+            FTL_LOG(INFO) << "modular::Story received with url: "
                           << story_info->url
                           << " is_running: " << story_info->is_running;
 
@@ -62,16 +67,16 @@ class DummyUserShellImpl : public story_manager::UserShell {
         });
   }
 
-  mojo::InterfacePtr<story_manager::StoryProvider> story_provider_;
-  mojo::InterfacePtr<story_manager::Story> story_ptr_;
+  InterfacePtr<StoryProvider> story_provider_;
+  InterfacePtr<Story> story_ptr_;
 
-  mojo::StrongBinding<story_manager::UserShell> binding_;
+  StrongBinding<UserShell> binding_;
   std::string recipe_url_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellImpl);
 };
 
-class DummyUserShellApp : public mojo::ApplicationImplBase {
+class DummyUserShellApp : public ApplicationImplBase {
  public:
   DummyUserShellApp() {}
   ~DummyUserShellApp() override {}
@@ -88,14 +93,13 @@ class DummyUserShellApp : public mojo::ApplicationImplBase {
     recipe_url_ = args()[0];
   }
 
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
+  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
     // Register |UserShell| implementation.
-    service_provider_impl->AddService<story_manager::UserShell>([this](
-        const mojo::ConnectionContext& connection_context,
-        mojo::InterfaceRequest<story_manager::UserShell> user_shell_request) {
-      new DummyUserShellImpl(recipe_url_, std::move(user_shell_request));
-    });
+    service_provider_impl->AddService<UserShell>(
+        [this](const ConnectionContext& connection_context,
+               InterfaceRequest<UserShell> user_shell_request) {
+          new DummyUserShellImpl(recipe_url_, std::move(user_shell_request));
+        });
     return true;
   }
 
@@ -104,9 +108,9 @@ class DummyUserShellApp : public mojo::ApplicationImplBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellApp);
 };
 
-}  // namespace
+}  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
-  DummyUserShellApp app;
+  modular::DummyUserShellApp app;
   return mojo::RunApplication(application_request, &app);
 }

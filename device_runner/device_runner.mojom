@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module device_runner;
+module modular;
 
 /*
  * This file contains definitions of interfaces and data structures to access
@@ -19,7 +19,7 @@ interface DeviceRunner {
 
 // This interface is meant to be implemented by a Device Shell so that
 // |DeviceRunner| could be passed to it on startup.
-[ServiceName="device_runner::DeviceShell"]
+[ServiceName="modular.DeviceShell"]
 interface DeviceShell {
   SetDeviceRunner(DeviceRunner service);
 };

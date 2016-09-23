@@ -35,7 +35,7 @@ executable("component_manager") {
 
   deps = [
     ":interfaces",
-    "//apps/modular/application:single_service_application",
+    "//apps/modular/mojo:single_service_application",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",

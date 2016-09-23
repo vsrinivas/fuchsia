@@ -16,7 +16,7 @@ executable("example_module1") {
   ]
 
   deps = [
-    "//apps/modular/application:single_service_application",
+    "//apps/modular/mojo:single_service_application",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -31,7 +31,7 @@ executable("example_module2") {
   ]
 
   deps = [
-    "//apps/modular/application:single_service_application",
+    "//apps/modular/mojo:single_service_application",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -46,7 +46,7 @@ executable("example_recipe") {
   ]
 
   deps = [
-    "//apps/modular/application:single_service_application",
+    "//apps/modular/mojo:single_service_application",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",

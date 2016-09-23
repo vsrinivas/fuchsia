@@ -17,33 +17,38 @@
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
-namespace {
+namespace modular {
 
-class DummyDeviceShellImpl : public device_runner::DeviceShell {
+using mojo::ApplicationImplBase;
+using mojo::ConnectionContext;
+using mojo::InterfaceHandle;
+using mojo::InterfacePtr;
+using mojo::InterfaceRequest;
+using mojo::ServiceProviderImpl;
+using mojo::StrongBinding;
+
+class DummyDeviceShellImpl : public DeviceShell {
  public:
-  explicit DummyDeviceShellImpl(
-      const std::string& username,
-      mojo::InterfaceRequest<device_runner::DeviceShell> request)
+  DummyDeviceShellImpl(const std::string& username,
+                       InterfaceRequest<DeviceShell> request)
       : binding_(this, std::move(request)), username_(username) {}
   ~DummyDeviceShellImpl() override{};
 
-  void SetDeviceRunner(mojo::InterfaceHandle<device_runner::DeviceRunner>
-                           device_runner) override {
-    device_runner_ = mojo::InterfacePtr<device_runner::DeviceRunner>::Create(
-        device_runner.Pass());
+  void SetDeviceRunner(InterfaceHandle<DeviceRunner> device_runner) override {
+    device_runner_ = InterfacePtr<DeviceRunner>::Create(device_runner.Pass());
     device_runner_->Login(username_);
   }
 
  private:
-  mojo::StrongBinding<device_runner::DeviceShell> binding_;
+  StrongBinding<DeviceShell> binding_;
   std::string username_;
 
-  mojo::InterfacePtr<device_runner::DeviceRunner> device_runner_;
+  InterfacePtr<DeviceRunner> device_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellImpl);
 };
 
-class DummyDeviceShellApp : public mojo::ApplicationImplBase {
+class DummyDeviceShellApp : public ApplicationImplBase {
  public:
   DummyDeviceShellApp() {}
   ~DummyDeviceShellApp() override {}
@@ -60,13 +65,11 @@ class DummyDeviceShellApp : public mojo::ApplicationImplBase {
     username_ = args()[0];
   }
 
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
+  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
     // Register |DummyDeviceShellService| implementation.
-    service_provider_impl->AddService<device_runner::DeviceShell>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<device_runner::DeviceShell>
-                   device_shell_request) {
+    service_provider_impl->AddService<DeviceShell>(
+        [this](const ConnectionContext& connection_context,
+               InterfaceRequest<DeviceShell> device_shell_request) {
           new DummyDeviceShellImpl(username_, std::move(device_shell_request));
         });
     return true;
@@ -77,9 +80,9 @@ class DummyDeviceShellApp : public mojo::ApplicationImplBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellApp);
 };
 
-}  // namespace
+}  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
-  DummyDeviceShellApp app;
+  modular::DummyDeviceShellApp app;
   return mojo::RunApplication(application_request, &app);
 }

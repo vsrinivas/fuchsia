@@ -5,7 +5,7 @@
 #include <mojo/system/main.h>
 #include <stdio.h>
 
-#include "apps/modular/application/single_service_application.h"
+#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -22,11 +22,12 @@ using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StrongBinding;
+using mojo::String;
 
-using story::Link;
-using story::LinkChanged;
-using story::Module;
-using story::Session;
+using modular::Link;
+using modular::LinkChanged;
+using modular::Module;
+using modular::Session;
 
 // Module implementation that acts as a leaf module. It implements
 // both Module and the LinkChanged observer of its own Link.
@@ -56,7 +57,7 @@ class Module2Impl : public Module, public LinkChanged {
   // better, because the Schema in the Link is supposed to represent
   // data structure, not data flow, and hence having in and out fields
   // in the schema is an abuse.
-  void Value(const mojo::String& label, const mojo::String& value) override {
+  void Value(const String& label, const String& value) override {
     if (label == "in" && value != "") {
       FTL_LOG(INFO) << "module2 value \"" << value << "\"";
 
