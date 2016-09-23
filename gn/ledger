@@ -30,6 +30,10 @@
         {
             "binary": "ledger_glue_unittests",
             "bootfs_path": "test/ledger_glue_unittests"
+        },
+        {
+            "binary": "storage_unittests",
+            "bootfs_path": "test/storage_unittests"
         }
     ]
 }
