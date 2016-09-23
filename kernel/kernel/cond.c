@@ -33,6 +33,7 @@ status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
 {
     DEBUG_ASSERT(cond->magic == COND_MAGIC);
     DEBUG_ASSERT(mutex->magic == MUTEX_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 
@@ -53,6 +54,7 @@ status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
 void cond_signal(cond_t *cond)
 {
     DEBUG_ASSERT(cond->magic == COND_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 
@@ -64,6 +66,7 @@ void cond_signal(cond_t *cond)
 void cond_broadcast(cond_t *cond)
 {
     DEBUG_ASSERT(cond->magic == COND_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 

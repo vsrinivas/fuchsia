@@ -14,6 +14,7 @@
 #include <string.h>
 #include <err.h>
 #include <list.h>
+#include <arch/ops.h>
 #include <kernel/spinlock.h>
 #include <lib/console.h>
 #include <lib/page_alloc.h>
@@ -159,6 +160,8 @@ void heap_trim(void)
 
 void *malloc(size_t size)
 {
+    DEBUG_ASSERT(!arch_in_int_handler());
+
     LTRACEF("size %zd\n", size);
 
     // deal with the pending free list
@@ -174,6 +177,8 @@ void *malloc(size_t size)
 
 void *memalign(size_t boundary, size_t size)
 {
+    DEBUG_ASSERT(!arch_in_int_handler());
+
     LTRACEF("boundary %zu, size %zd\n", boundary, size);
 
     // deal with the pending free list
@@ -189,6 +194,8 @@ void *memalign(size_t boundary, size_t size)
 
 void *calloc(size_t count, size_t size)
 {
+    DEBUG_ASSERT(!arch_in_int_handler());
+
     LTRACEF("count %zu, size %zd\n", count, size);
 
     // deal with the pending free list
@@ -204,6 +211,8 @@ void *calloc(size_t count, size_t size)
 
 void *realloc(void *ptr, size_t size)
 {
+    DEBUG_ASSERT(!arch_in_int_handler());
+
     LTRACEF("ptr %p, size %zd\n", ptr, size);
 
     // deal with the pending free list
@@ -219,6 +228,8 @@ void *realloc(void *ptr, size_t size)
 
 void free(void *ptr)
 {
+    DEBUG_ASSERT(!arch_in_int_handler());
+
     LTRACEF("ptr %p\n", ptr);
     if (heap_trace)
         printf("caller %p free %p\n", __GET_CALLER(), ptr);

@@ -91,6 +91,7 @@ status_t mutex_acquire_timeout_internal(mutex_t *m, lk_time_t timeout)
 status_t mutex_acquire_timeout(mutex_t *m, lk_time_t timeout)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
 #if LK_DEBUGLEVEL > 0
     if (unlikely(get_current_thread() == m->holder))
@@ -120,6 +121,7 @@ void mutex_release_internal(mutex_t *m, bool reschedule)
 void mutex_release(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
 #if LK_DEBUGLEVEL > 0
     if (unlikely(get_current_thread() != m->holder)) {

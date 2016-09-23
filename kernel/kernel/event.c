@@ -89,6 +89,7 @@ status_t event_wait_timeout(event_t *e, lk_time_t timeout, bool interruptable)
     status_t ret = NO_ERROR;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 
@@ -141,6 +142,7 @@ out:
 int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
 {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
+    DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 
     THREAD_LOCK(state);
 

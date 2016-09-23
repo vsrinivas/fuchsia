@@ -762,6 +762,7 @@ void thread_yield(void)
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 
@@ -800,6 +801,7 @@ void thread_preempt(bool interrupt)
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+    DEBUG_ASSERT(!arch_in_int_handler());
 
 #if THREAD_STATS
     if (!thread_is_idle(current_thread)) {
@@ -925,6 +927,7 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(!thread_is_idle(current_thread));
+    DEBUG_ASSERT(!arch_in_int_handler());
 
     timer_t timer;
     timer_initialize(&timer);
