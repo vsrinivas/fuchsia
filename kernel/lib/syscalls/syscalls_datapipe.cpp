@@ -11,7 +11,6 @@
 #include <trace.h>
 
 #include <lib/ktrace.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <magenta/data_pipe.h>
@@ -28,11 +27,10 @@
 
 constexpr mx_size_t kDefaultDataPipeCapacity = 32 * 1024u;
 
-// TODO(vtl): _consumer_handle should presumably be an user_ptr instead. Also, do we want to
-// provide the producer handle as an out parameter (possibly in the same way as in msgpipe_create,
-// instead of overloading the return value)?
+// TODO(vtl): Do we want to provide the producer handle as an out parameter (possibly in the same
+// way as in msgpipe_create, instead of overloading the return value)?
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
-                                mx_handle_t* _consumer_handle) {
+                                user_ptr<mx_handle_t> _consumer_handle) {
     LTRACEF("options %u\n", options);
 
     if (!_consumer_handle)
@@ -73,7 +71,7 @@ mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_siz
     mx_handle_t hv_producer = up->MapHandleToValue(producer_handle.get());
     mx_handle_t hv_consumer = up->MapHandleToValue(consumer_handle.get());
 
-    if (copy_to_user_32_unsafe(_consumer_handle, hv_consumer) != NO_ERROR)
+    if (_consumer_handle.copy_to_user(hv_consumer) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(producer_handle));
@@ -140,7 +138,7 @@ mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_siz
 }
 
 mx_ssize_t sys_datapipe_begin_write(mx_handle_t producer_handle, uint32_t flags,
-                                    uintptr_t* buffer) {
+                                    user_ptr<uintptr_t> _buffer) {
     LTRACEF("handle %d\n", producer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -161,7 +159,7 @@ mx_ssize_t sys_datapipe_begin_write(mx_handle_t producer_handle, uint32_t flags,
         return result;
     DEBUG_ASSERT(result > 0);
 
-    if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
+    if (_buffer.copy_to_user(user_addr) != NO_ERROR) {
         producer->EndWrite(0u);
         return ERR_INVALID_ARGS;
     }
@@ -182,7 +180,8 @@ mx_status_t sys_datapipe_end_write(mx_handle_t producer_handle, mx_size_t writte
     return producer->EndWrite(written);
 }
 
-mx_ssize_t sys_datapipe_begin_read(mx_handle_t consumer_handle, uint32_t flags, uintptr_t* buffer) {
+mx_ssize_t sys_datapipe_begin_read(mx_handle_t consumer_handle, uint32_t flags,
+                                   user_ptr<uintptr_t> _buffer) {
     LTRACEF("handle %d\n", consumer_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -203,7 +202,7 @@ mx_ssize_t sys_datapipe_begin_read(mx_handle_t consumer_handle, uint32_t flags, 
         return result;
     DEBUG_ASSERT(result > 0);
 
-    if (copy_to_user_uptr_unsafe(buffer, user_addr) != NO_ERROR) {
+    if (_buffer.copy_to_user(user_addr) != NO_ERROR) {
         consumer->EndRead(0u);
         return ERR_INVALID_ARGS;
     }
