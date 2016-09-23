@@ -55,6 +55,8 @@
 
 module story;
 
+import "apps/ledger/api/ledger.mojom";
+
 [ServiceName="story.ResolverFactory"]  // Created by component-manager app.
 interface ResolverFactory {
   GetResolver(Resolver& resolver);
@@ -68,7 +70,7 @@ interface Resolver {
 [ServiceName="story.Runner"]  // Created by story-runner app.
 interface Runner {
   Initialize(ResolverFactory resolver_factory);
-  StartStory(Session& session);
+  StartStory(ledger.Page session_page, Session& session);
 };
 
 // No service name: created by Runner.

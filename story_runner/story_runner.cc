@@ -41,6 +41,8 @@ using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
 
+using ledger::Page;
+
 using story::Runner;
 using story::Session;
 using story::Module;
@@ -116,10 +118,22 @@ class LinkImpl : public Link {
 class SessionImpl : public Session {
  public:
   explicit SessionImpl(Shell* shell, InterfaceHandle<Resolver> resolver,
+                       InterfaceHandle<Page> session_page,
                        InterfaceRequest<Session> req)
       : shell_(shell),
-        resolver_(InterfacePtr<Resolver>::Create(resolver.Pass())),
-        binding_(this, std::move(req)) {}
+        binding_(this, std::move(req)) {
+    resolver_.Bind(resolver.Pass());
+    session_page_.Bind(session_page.Pass());
+    session_page_->GetId([](mojo::Array<uint8_t> id) {
+      std::string string_id;
+      for (uint8_t val : id) {
+        string_id += std::to_string(val);
+      }
+      FTL_LOG(INFO) << "story-runner init session with session page: "
+                    << string_id;
+    });
+  }
+
   ~SessionImpl() override {}
 
   void CreateLink(const mojo::String& schema,
@@ -164,6 +178,7 @@ class SessionImpl : public Session {
   Shell* const shell_;
   std::map<std::string, InterfaceHandle<Link>> link_map_;
   InterfacePtr<Resolver> resolver_;
+  InterfacePtr<Page> session_page_;
   StrongBinding<Session> binding_;
   BindingSet<Session> bindings_;
 
@@ -185,12 +200,14 @@ class RunnerImpl : public Runner {
     resolver_factory_.Bind(resolver_factory.Pass());
   }
 
-  void StartStory(InterfaceRequest<Session> session) override {
+  void StartStory(InterfaceHandle<Page> session_page,
+                  InterfaceRequest<Session> session) override {
     FTL_LOG(INFO) << "story-runner start story";
 
     InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(shell_, resolver.Pass(), std::move(session));
+    new SessionImpl(
+        shell_, resolver.Pass(), session_page.Pass(), std::move(session));
 
     FTL_LOG(INFO) << "story-runner start story return";
   }

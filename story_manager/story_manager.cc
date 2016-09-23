@@ -70,8 +70,6 @@ class StoryImpl : public Story, public StoryState {
   // Runs this story. If |session_page| is empty, we are effectively starting
   // a new session, else we are re-inflating an existing session.
   // This is responsible for commiting data to |session_page|.
-  // TODO(alhaad): Define the interface for passing |session_page| to
-  // story-runner.
   // |StoryState| override.
   void RunStory(mojo::InterfacePtr<ledger::Page> session_page) override {
     mojo::InterfacePtr<story::ResolverFactory> resolver_factory;
@@ -80,7 +78,8 @@ class StoryImpl : public Story, public StoryState {
     mojo::ConnectToService(shell_, "mojo:story_runner",
                            mojo::GetProxy(&runner_));
     runner_->Initialize(resolver_factory.Pass());
-    runner_->StartStory(GetProxy(&session_));
+    runner_->StartStory(session_page.PassInterfaceHandle(),
+                        GetProxy(&session_));
     mojo::InterfaceHandle<story::Link> link;
     session_->CreateLink("boot", GetProxy(&link));
     session_->StartModule(story_info_->url, std::move(link),

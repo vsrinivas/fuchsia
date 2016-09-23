@@ -47,4 +47,8 @@ mojom("interfaces") {
   sources = [
     "story_runner.mojom",
   ]
+
+  deps = [
+    "//apps/ledger/api",
+  ]
 }
