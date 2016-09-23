@@ -9,6 +9,7 @@ group("ledger") {
     ":tests",
     "//apps/ledger/abax",
     "//apps/ledger/api",
+    "//apps/ledger/app",
     "//apps/ledger/cloud_provider",
     "//apps/ledger/convert",
     "//apps/ledger/fake_network_service",

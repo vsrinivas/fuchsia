@@ -46,8 +46,8 @@ class FakeJournalDelegate {
   const CommitId id_;
   std::map<std::string, Entry> data_;
 
-  bool is_committed_;
-  bool is_rolled_back_;
+  bool is_committed_ = false;
+  bool is_rolled_back_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };

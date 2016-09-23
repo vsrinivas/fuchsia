@@ -1,0 +1,113 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+
+group("app") {
+  testonly = true
+
+  deps = [
+    ":ledger_app",
+    ":unittests",
+    ":apptests",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "constants.cc",
+    "constants.h",
+    "ledger_factory_impl.cc",
+    "ledger_factory_impl.h",
+    "ledger_impl.cc",
+    "ledger_impl.h",
+    "page_impl.cc",
+    "page_impl.h",
+  ]
+
+  deps = [
+    "//apps/ledger/api",
+    "//apps/ledger/convert",
+    "//apps/ledger/glue",
+    "//apps/ledger/glue/data_pipe",
+    "//apps/ledger/storage/impl:lib",
+    "//apps/ledger/storage/public",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/bindings:utility",
+    "//mojo/public/interfaces/application",
+  ]
+}
+
+mojo_native_application("ledger_app") {
+  output_name = "ledger_codex"
+  sources = [
+    "ledger_app.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/api",
+    "//apps/ledger/storage/impl:lib",
+    "//apps/ledger/storage/public",
+    "//apps/network/interfaces",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+  ]
+}
+
+executable("unittests") {
+  output_name = "ledger_codex_unittests"
+
+  testonly = true
+
+  sources = [
+    "page_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/convert",
+    "//apps/ledger/glue/test",
+    "//apps/ledger/storage/fake:lib",
+    "//apps/ledger/storage/public",
+    "//apps/ledger/test",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/system:libmojo",
+    "//third_party/gtest",
+  ]
+}
+
+mojo_native_application("apptests") {
+  output_name = "ledger_codex_apptests"
+
+  testonly = true
+
+  sources = [
+    "ledger_apptest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/api",
+    "//apps/ledger/convert",
+    "//apps/ledger/glue",
+    "//apps/ledger/glue/test",
+    "//apps/ledger/storage/fake:lib",
+    "//apps/ledger/storage/public",
+    "//lib/mtl",
+    "//lib/mtl/environment",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/application:test_support",
+    "//mojo/public/cpp/bindings:callback",
+    "//mojo/public/cpp/system",
+  ]
+
+  data_deps = [
+    ":ledger_app",
+  ]
+}
