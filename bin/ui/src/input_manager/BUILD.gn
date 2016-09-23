@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-import("//testing/test.gni")
-
-mojo_native_application("input_manager") {
+executable("input_manager") {
   output_name = "input_manager_service"
 
   sources = [
@@ -14,7 +11,7 @@ mojo_native_application("input_manager") {
 
   deps = [
     ":lib",
-    "//mojo/application",
+    "//mojo/public/cpp/application",
   ]
 }
 
@@ -33,19 +30,19 @@ source_set("lib") {
   ]
 
   deps = [
+    "//apps/mozart/glue/base",
+    "//apps/mozart/lib/view_associates_support",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
-    "//base",
-    "//mojo/application",
-    "//mojo/common:tracing_impl",
-    "//mojo/converters/geometry",
-    "//mojo/environment:chromium",
+    "//apps/mozart/services/input/interfaces",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
     "//mojo/services/geometry/cpp",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/ui/input/interfaces",
-    "//mojo/services/ui/views/cpp",
-    "//mojo/services/ui/views/interfaces",
-    "//mojo/ui/associates",
+    "//mojo/system",
   ]
 }

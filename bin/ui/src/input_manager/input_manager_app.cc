@@ -2,14 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/input_manager/input_manager_app.h"
+#include "apps/mozart/src/input_manager/input_manager_app.h"
 
-#include "base/command_line.h"
-#include "base/logging.h"
-#include "base/trace_event/trace_event.h"
-#include "mojo/common/tracing_impl.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
-#include "services/ui/input_manager/input_associate.h"
+#include "apps/mozart/src/input_manager/input_associate.h"
 
 namespace input_manager {
 
@@ -18,13 +14,7 @@ InputManagerApp::InputManagerApp() {}
 InputManagerApp::~InputManagerApp() {}
 
 void InputManagerApp::OnInitialize() {
-  auto command_line = base::CommandLine::ForCurrentProcess();
-  command_line->InitFromArgv(args());
-  logging::LoggingSettings settings;
-  settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
-  logging::InitLogging(settings);
-
-  tracing_.Initialize(shell(), &args());
+  // TODO(mikejurka): Initialize logging and tracing.
 }
 
 bool InputManagerApp::OnAcceptConnection(

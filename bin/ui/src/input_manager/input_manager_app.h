@@ -5,11 +5,10 @@
 #ifndef SERVICES_UI_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 #define SERVICES_UI_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 
-#include "base/macros.h"
-#include "mojo/common/tracing_impl.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 
 namespace input_manager {
 
@@ -25,11 +24,9 @@ class InputManagerApp : public mojo::ApplicationImplBase {
   bool OnAcceptConnection(
       mojo::ServiceProviderImpl* service_provider_impl) override;
 
-  mojo::TracingImpl tracing_;
-
   mojo::StrongBindingSet<mojo::ui::ViewAssociate> input_associates_;
 
-  DISALLOW_COPY_AND_ASSIGN(InputManagerApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(InputManagerApp);
 };
 
 }  // namespace input_manager

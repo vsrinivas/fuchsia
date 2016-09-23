@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/input_manager/input_dispatcher_impl.h"
+#include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "base/message_loop/message_loop.h"
-#include "mojo/services/geometry/cpp/geometry_util.h"
+#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
-#include "services/ui/input_manager/input_associate.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "apps/mozart/src/input_manager/input_associate.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "mojo/services/geometry/cpp/geometry_util.h"
 
 namespace input_manager {
 namespace {
@@ -37,18 +36,17 @@ InputDispatcherImpl::InputDispatcherImpl(
                                                 view_tree_token_.Clone())),
       binding_(this, request.Pass()),
       weak_factory_(this) {
-  DCHECK(associate_);
-  DCHECK(view_tree_token_);
+  FTL_DCHECK(associate_);
+  FTL_DCHECK(view_tree_token_);
 
   binding_.set_connection_error_handler(
-      base::Bind(&InputAssociate::OnInputDispatcherDied,
-                 base::Unretained(associate_), base::Unretained(this)));
+      [this] { associate_->OnInputDispatcherDied(this); });
 }
 
 InputDispatcherImpl::~InputDispatcherImpl() {}
 
 void InputDispatcherImpl::DispatchEvent(mojo::EventPtr event) {
-  DCHECK(event);
+  FTL_DCHECK(event);
 
   pending_events_.push(event.Pass());
   if (pending_events_.size() == 1u)
@@ -56,19 +54,22 @@ void InputDispatcherImpl::DispatchEvent(mojo::EventPtr event) {
 }
 
 void InputDispatcherImpl::ProcessNextEvent() {
-  DCHECK(!pending_events_.empty());
+  FTL_DCHECK(!pending_events_.empty());
 
   do {
     const mojo::Event* event = pending_events_.front().get();
     if (event->action == mojo::EventType::POINTER_DOWN) {
-      DCHECK(event->pointer_data);
+      FTL_DCHECK(event->pointer_data);
       auto point = mojo::PointF::New();
       point->x = event->pointer_data->x;
       point->y = event->pointer_data->y;
       DVLOG(1) << "HitTest: point=" << point;
-      hit_tester_->HitTest(point.Pass(),
-                           base::Bind(&InputDispatcherImpl::OnHitTestResult,
-                                      weak_factory_.GetWeakPtr()));
+      auto hit_result_callback = [ this, weak = weak_factory_.GetWeakPtr() ](
+          std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits) {
+        if (weak)
+          weak->OnHitTestResult(std::move(resolved_hits));
+      };
+      hit_tester_->HitTest(point.Pass(), hit_result_callback);
       return;
     }
     DeliverEvent(pending_events_.front().Pass());
@@ -84,8 +85,8 @@ void InputDispatcherImpl::DeliverEvent(mojo::EventPtr event) {
 }
 
 void InputDispatcherImpl::OnHitTestResult(
-    scoped_ptr<mojo::ui::ResolvedHits> resolved_hits) {
-  DCHECK(!pending_events_.empty());
+    std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits) {
+  FTL_DCHECK(!pending_events_.empty());
   DVLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
 
   // TODO(jeffbrown): Flesh out the input protocol so it makes sense to
@@ -97,7 +98,7 @@ void InputDispatcherImpl::OnHitTestResult(
         resolved_hits->TakeResult();
     const mojo::gfx::composition::SceneHit* scene = result->root.get();
     for (;;) {
-      DCHECK(scene->hits.size());
+      FTL_DCHECK(scene->hits.size());
       if (scene->hits[0]->is_node()) {
         auto it = resolved_hits->map().find(scene->scene_token->value);
         if (it != resolved_hits->map().end()) {
@@ -107,7 +108,7 @@ void InputDispatcherImpl::OnHitTestResult(
         }
         break;
       }
-      DCHECK(scene->hits[0]->is_scene());
+      FTL_DCHECK(scene->hits[0]->is_scene());
       scene = scene->hits[0]->get_scene().get();
     }
   }
@@ -120,9 +121,11 @@ void InputDispatcherImpl::OnHitTestResult(
 
   if (!pending_events_.empty()) {
     // Prevent reentrance from ProcessNextEvent.
-    base::MessageLoop::current()->PostTask(
-        FROM_HERE, base::Bind(&InputDispatcherImpl::ProcessNextEvent,
-                              weak_factory_.GetWeakPtr()));
+    auto process_next_event = [weak = weak_factory_.GetWeakPtr()] {
+      if (weak)
+        weak->ProcessNextEvent();
+    };
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(process_next_event);
   }
 }
 

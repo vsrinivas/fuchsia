@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/input_manager/input_connection_impl.h"
+#include "apps/mozart/src/input_manager/input_connection_impl.h"
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "services/ui/input_manager/input_associate.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/src/input_manager/input_associate.h"
 
 namespace input_manager {
 
@@ -17,11 +16,10 @@ InputConnectionImpl::InputConnectionImpl(
     : associate_(associate),
       view_token_(view_token.Pass()),
       binding_(this, request.Pass()) {
-  DCHECK(associate_);
-  DCHECK(view_token_);
+  FTL_DCHECK(associate_);
+  FTL_DCHECK(view_token_);
   binding_.set_connection_error_handler(
-      base::Bind(&InputAssociate::OnInputConnectionDied,
-                 base::Unretained(associate_), base::Unretained(this)));
+      [this] { associate_->OnInputConnectionDied(this); });
 }
 
 InputConnectionImpl::~InputConnectionImpl() {}
@@ -34,8 +32,7 @@ void InputConnectionImpl::DeliverEvent(mojo::EventPtr event) {
   }
 
   listener_->OnEvent(event.Pass(),
-                     base::Bind(&InputConnectionImpl::OnEventFinished,
-                                base::Unretained(this)));
+                     [this](bool handled) { OnEventFinished(handled); });
 }
 
 void InputConnectionImpl::OnEventFinished(bool handled) {

@@ -8,11 +8,11 @@
 #include <memory>
 #include <unordered_map>
 
-#include "base/macros.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
-#include "mojo/ui/associates/view_inspector_client.h"
-#include "services/ui/input_manager/input_connection_impl.h"
-#include "services/ui/input_manager/input_dispatcher_impl.h"
+#include "lib/ftl/macros.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
+#include "apps/mozart/src/input_manager/input_connection_impl.h"
+#include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
 
 namespace input_manager {
 
@@ -24,7 +24,7 @@ class InputAssociate : public mojo::ui::ViewAssociate {
   InputAssociate();
   ~InputAssociate() override;
 
-  const scoped_refptr<mojo::ui::ViewInspectorClient>& inspector() {
+  const ftl::RefPtr<mojo::ui::ViewInspectorClient>& inspector() {
     return inspector_;
   }
 
@@ -56,13 +56,13 @@ class InputAssociate : public mojo::ui::ViewAssociate {
       mojo::ui::ViewTreeTokenPtr view_tree_token,
       mojo::InterfaceRequest<mojo::ui::InputDispatcher> request);
 
-  scoped_refptr<mojo::ui::ViewInspectorClient> inspector_;
+  ftl::RefPtr<mojo::ui::ViewInspectorClient> inspector_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>
       input_dispatchers_by_view_tree_token_;
 
-  DISALLOW_COPY_AND_ASSIGN(InputAssociate);
+  FTL_DISALLOW_COPY_AND_ASSIGN(InputAssociate);
 };
 
 }  // namespace input_manager

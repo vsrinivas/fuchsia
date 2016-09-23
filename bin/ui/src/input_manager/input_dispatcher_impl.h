@@ -7,14 +7,14 @@
 
 #include <queue>
 
-#include "base/macros.h"
-#include "base/memory/weak_ptr.h"
+#include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/lib/view_associates_support/view_tree_hit_tester_client.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/services/geometry/interfaces/geometry.mojom.h"
-#include "mojo/services/ui/input/interfaces/input_dispatcher.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
-#include "mojo/ui/associates/view_tree_hit_tester_client.h"
 
 namespace input_manager {
 
@@ -40,11 +40,11 @@ class InputDispatcherImpl : public mojo::ui::InputDispatcher {
  private:
   void ProcessNextEvent();
   void DeliverEvent(mojo::EventPtr event);
-  void OnHitTestResult(scoped_ptr<mojo::ui::ResolvedHits> resolved_hits);
+  void OnHitTestResult(std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits);
 
   InputAssociate* const associate_;
   mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  scoped_refptr<mojo::ui::ViewTreeHitTesterClient> hit_tester_;
+  ftl::RefPtr<mojo::ui::ViewTreeHitTesterClient> hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<mojo::EventPtr> pending_events_;
@@ -55,9 +55,9 @@ class InputDispatcherImpl : public mojo::ui::InputDispatcher {
 
   mojo::Binding<mojo::ui::InputDispatcher> binding_;
 
-  base::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
+  ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(InputDispatcherImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(InputDispatcherImpl);
 };
 
 }  // namespace input_manager

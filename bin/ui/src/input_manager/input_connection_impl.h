@@ -5,11 +5,11 @@
 #ifndef SERVICES_UI_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 #define SERVICES_UI_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 
-#include "base/macros.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/services/ui/input/interfaces/input_connection.mojom.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/input/interfaces/input_connection.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
 
 namespace input_manager {
 
@@ -43,7 +43,7 @@ class InputConnectionImpl : public mojo::ui::InputConnection {
 
   mojo::Binding<mojo::ui::InputConnection> binding_;
 
-  DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };
 
 }  // namespace input_manager
