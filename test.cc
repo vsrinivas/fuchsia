@@ -17,10 +17,12 @@ class MaxwellTestApp : public ApplicationImplBase {
  public:
   void OnInitialize() override {
     shell()->ConnectToApplication("mojo:acquirers/gps", GetProxy(&gps_));
+    shell()->ConnectToApplication("mojo:agents/carmen_sandiego",
+                                  GetProxy(&carmen_sandiego_));
   }
 
  private:
-  InterfaceHandle<ServiceProvider> gps_;
+  InterfaceHandle<ServiceProvider> gps_, carmen_sandiego_;
 };
 
 } // namespace

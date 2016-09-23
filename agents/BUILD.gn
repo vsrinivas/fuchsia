@@ -2,23 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("maxwell") {
+group("all") {
   deps = [
-    "acquirers:all",
-    "agents:all",
-    "context_service:all",
-    ":maxwell_test",
+    ":agents/carmen_sandiego",
   ]
 }
 
-executable("maxwell_test") {
+executable("agents/carmen_sandiego") {
   sources = [
-    "test.cc",
+    "carmen_sandiego.cc",
+  ]
+
+  public_deps = [
+    "//third_party/rapidjson",
   ]
 
   deps = [
     "//apps/maxwell/context_service:interfaces",
     "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/utility:utility",
     "//mojo/system",
   ]
 }

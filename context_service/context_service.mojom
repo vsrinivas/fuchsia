@@ -4,13 +4,46 @@
 
 module intelligence;
 
-[ServiceName="intelligence.ContextService"]
+enum Status { Ok };
+
+////////////////////////////////////////////////////////////////////////////////
+// Publish
+////////////////////////////////////////////////////////////////////////////////
+
+[ServiceName="intelligence.ContextPublisher"]
 interface ContextPublisher {
   StartPublishing(string whoami, PublisherPipe& pipe);
 };
 
 interface PublisherPipe {
-  Publish(string label, string? value) => (Status status);
+  Publish(string label, string? json_value) => (Status status);
 };
 
-enum Status { Ok };
+////////////////////////////////////////////////////////////////////////////////
+// Subscribe
+////////////////////////////////////////////////////////////////////////////////
+
+[ServiceName="intelligence.ContextSubscriber"]
+interface ContextSubscriber {
+  Subscribe(array<string> labels, ContextListener listener);
+  // TODO(thatguy) => (Subscription subcription);
+};
+
+interface ContextListener {
+  OnUpdate(map<string, ContextUpdate> update) => (Status status);
+};
+
+struct ContextUpdate {
+  // TODO(thatguy): The type will eventually change to something with verifyable
+  // attribution.
+  string source;
+  // TODO(thatguy): timestamp
+  string json_value;
+};
+
+// Eventually, Subscribe() will return this, and give you further control over
+// flow.
+/*interface Subscription {
+  // Pause()
+  // Resume()
+}*/

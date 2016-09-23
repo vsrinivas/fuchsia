@@ -29,7 +29,7 @@ class GpsAcquirer : public ApplicationImplBase {
 
     ContextPublisherPtr cx;
     ConnectToService(shell(), "mojo:context_service", GetProxy(&cx));
-    cx->StartPublishing("gps", GetProxy(&pub_));
+    cx->StartPublishing("acquirers/gps", GetProxy(&pub_));
 
     PublishingTick();
   }
@@ -43,7 +43,7 @@ class GpsAcquirer : public ApplicationImplBase {
          << ", \"latitude\": "  << rand() % 36001 / 100. - 180
          << " }";
 
-    pub_->Publish("location", json.str(), [](Status){});
+    pub_->Publish("/location/gps", json.str(), [](Status){});
   }
 
   // TODO(rosswang): How can we tell when the pipe is closed?

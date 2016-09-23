@@ -9,54 +9,102 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
+#include "mojo/public/cpp/bindings/formatting.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace {
 
 using mojo::ApplicationImplBase;
 using mojo::BindingSet;
+using mojo::ConnectionContext;
+using mojo::InterfaceHandle;
 using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 
-using intelligence::ContextPublisher;
-using intelligence::PublisherPipe;
-using intelligence::Status;
+using namespace intelligence;
+
+struct ContextEntry {
+  ContextEntry() {
+    latest.source = "";
+    latest.json_value = "";
+  }
+
+  ContextUpdate latest;
+  std::vector<ContextListenerPtr*> listeners;
+};
+
+typedef std::map<std::string, ContextEntry> ContextRepo;
+typedef mojo::Map<mojo::String, ContextUpdatePtr> UpdateMap;
 
 class PublisherPipeImpl : public PublisherPipe {
  public:
-  PublisherPipeImpl(const mojo::String& whoami,
+  PublisherPipeImpl(const mojo::String& whoami, ContextRepo& repo,
                     InterfaceRequest<PublisherPipe> handle)
-      : strong_binding_(this, handle.Pass()), whoami_(whoami) {}
+      : strong_binding_(this, handle.Pass()), whoami_(whoami), repo_(repo) {}
 
   ~PublisherPipeImpl() {
-    MOJO_LOG(INFO) << "context_service publisher " << whoami_ << " terminated";
+    MOJO_LOG(INFO) << "publisher " << whoami_ << " terminated";
   }
 
-  void Publish(const mojo::String& label, const mojo::String& value,
+  void Publish(const mojo::String& label, const mojo::String& json_value,
                const PublishCallback& callback) override {
-    MOJO_LOG(INFO) << "context_service publisher " << whoami_ << " set value "
-                   << label << ": " << value;
+    MOJO_LOG(INFO) << "publisher " << whoami_ << " set value "
+                   << label << ": " << json_value;
+
+    ContextEntry& entry = repo_[label];
+    entry.latest.source = whoami_;
+    entry.latest.json_value = json_value;
+
+    UpdateMap update;
+    update[label] = entry.latest.Clone();
+
+    for (ContextListenerPtr* listener : entry.listeners) {
+      (*listener)->OnUpdate(update.Clone(), [](Status){});
+    }
+
     callback.Run(Status::Ok);
   }
 
  private:
   mojo::StrongBinding<PublisherPipe> strong_binding_;
   mojo::String whoami_;
+  ContextRepo& repo_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(PublisherPipeImpl);
 };
 
-class ContextServiceImpl : public ContextPublisher {
+class ContextServiceImpl : public ContextPublisher, public ContextSubscriber {
  public:
   ContextServiceImpl() {}
 
   void StartPublishing(const mojo::String& whoami,
                        InterfaceRequest<PublisherPipe> pipe) override {
-    MOJO_LOG(INFO) << "context_service StartPublishing " << whoami;
+    MOJO_LOG(INFO) << "StartPublishing " << whoami;
 
-    new PublisherPipeImpl(whoami, pipe.Pass());
+    new PublisherPipeImpl(whoami, repo, pipe.Pass());
+  }
+
+  // TODO(rosswang): additional backpressure modes. For now, just do
+  // on-backpressure-buffer, which is the default for Mojo.
+  void Subscribe(mojo::Array<mojo::String> labels,
+                 InterfaceHandle<ContextListener> listener_handle) override {
+    MOJO_LOG(INFO) << "Subscribe to " << labels;
+
+    // TODO(rosswang): interface ptr lifecycle management (remove on error)
+    ContextListenerPtr* listener = new ContextListenerPtr(
+      ContextListenerPtr::Create(listener_handle.Pass()));
+    UpdateMap initial_snapshot;
+
+    for (mojo::String label : labels) {
+      ContextEntry* entry = &repo[label];
+      entry->listeners.push_back(listener);
+      initial_snapshot[label] = entry->latest.Clone();
+    }
+
+    (*listener)->OnUpdate(initial_snapshot.Pass(), [](Status){});
   }
 
  private:
+  ContextRepo repo;
   MOJO_DISALLOW_COPY_AND_ASSIGN(ContextServiceImpl);
 };
 
@@ -65,19 +113,24 @@ class ContextServiceApp : public ApplicationImplBase {
   ContextServiceApp() {}
 
   bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
+    // Singleton service
     service_provider_impl->AddService<ContextPublisher>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<ContextPublisher> request) {
-          // All channels will connect to this singleton object, so just
-          // add the binding to our collection.
-          bindings_.AddBinding(&cxs_impl_, request.Pass());
+        [this](const ConnectionContext& connection_context,
+               InterfaceRequest<ContextPublisher> request) {
+          pub_bindings_.AddBinding(&cxs_impl_, request.Pass());
+        });
+    service_provider_impl->AddService<ContextSubscriber>(
+        [this](const ConnectionContext& connection_context,
+               InterfaceRequest<ContextSubscriber> request) {
+          sub_bindings_.AddBinding(&cxs_impl_, request.Pass());
         });
     return true;
   }
 
  private:
   ContextServiceImpl cxs_impl_;
-  mojo::BindingSet<ContextPublisher> bindings_;
+  BindingSet<ContextPublisher> pub_bindings_;
+  BindingSet<ContextSubscriber> sub_bindings_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(ContextServiceApp);
 };
 
