@@ -110,9 +110,10 @@ static inline uint arch_curr_cpu_num(void)
     uint64_t mpidr =  ARM64_READ_SYSREG(mpidr_el1);
     return ((mpidr & ((1U << SMP_CPU_ID_BITS) - 1)) >> 8 << SMP_CPU_CLUSTER_SHIFT) | (mpidr & 0xff);
 }
-extern uint arm_num_cpus;
 static inline uint arch_max_num_cpus(void)
 {
+    extern uint arm_num_cpus;
+
     return arm_num_cpus;
 }
 #else
@@ -125,6 +126,13 @@ static inline uint arch_max_num_cpus(void)
     return 1;
 }
 #endif
+
+static inline bool arch_in_int_handler(void)
+{
+    extern bool arm64_in_int_handler[SMP_MAX_CPUS];
+
+    return arm64_in_int_handler[arch_curr_cpu_num()];
+}
 
 __END_CDECLS
 

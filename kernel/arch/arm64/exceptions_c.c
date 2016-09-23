@@ -29,6 +29,8 @@ struct fault_handler_table_entry {
 extern struct fault_handler_table_entry __fault_handler_table_start[];
 extern struct fault_handler_table_entry __fault_handler_table_end[];
 
+bool arm64_in_int_handler[SMP_MAX_CPUS];
+
 extern enum handler_return platform_irq(struct arm64_iframe_long *frame);
 
 static void dump_iframe(const struct arm64_iframe_long *iframe)
@@ -220,7 +222,12 @@ void arm64_irq(struct arm64_iframe_long *iframe, uint exception_flags)
 {
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
+    uint32_t curr_cpu = arch_curr_cpu_num();
+    arm64_in_int_handler[curr_cpu] = true;
+
     enum handler_return ret = platform_irq(iframe);
+
+    arm64_in_int_handler[curr_cpu] = false;
 
     /* if we came from user space, check to see if we have any signals to handle */
     if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
