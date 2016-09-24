@@ -37,6 +37,7 @@ executable("device_runner_boot") {
     "//lib/ftl",
     "//lib/mtl",
     "//mojo/application_manager:application_manager_lib",
+    "//third_party/rapidjson",
   ]
 }
 

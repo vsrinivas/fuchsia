@@ -1,0 +1,6 @@
+{
+  "args-for": {
+    "mojo:dummy_device_shell": ["user1"],
+    "mojo:dummy_user_shell": ["mojo:example_recipe"]
+  }
+}
