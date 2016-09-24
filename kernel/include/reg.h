@@ -21,6 +21,8 @@
 #define RMWREG16(addr, startbit, width, val) *REG16(addr) = (*REG16(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
 #define RMWREG8(addr, startbit, width, val) *REG8(addr) = (*REG8(addr) & ~(((1<<(width)) - 1) << (startbit))) | ((val) << (startbit))
 
+#define writell(v, a) (*REG64(a) = (v))
+#define readll(a) (*REG64(a))
 #define writel(v, a) (*REG32(a) = (v))
 #define readl(a) (*REG32(a))
 #define writew(v, a) (*REG16(a) = (v))
