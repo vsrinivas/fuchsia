@@ -118,12 +118,12 @@ again:
             } else {
                 ptr += 1;
             }
-            dst_len = snprintf((char*)out.data, sizeof(out.data), "%s/%s", dst, ptr);
-            if (dst_len >= MAXSIZE) {
+            int print_len = snprintf((char*)out.data, sizeof(out.data), "%s/%s", dst, ptr);
+            if (print_len >= MAXSIZE) {
                 errno = ENAMETOOLONG;
                 return -1;
-            } else if (dst_len < 0) {
-                return dst_len;
+            } else if (print_len < 0) {
+                return print_len;
             }
             goto again;
         }

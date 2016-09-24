@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <magenta/ktrace.h>
 
@@ -222,10 +223,10 @@ void trace_hdr(evt_info_t* ei, uint32_t tag) {
         return;
     }
 #if USE_NS
-    printf("%04lu.%09lu [%08x] ",
+    printf("%04" PRIu64 ".%09" PRIu64 " [%08" PRIx32 "] ",
            ei->ts/(1000000000UL), ei->ts%(1000000000UL), ei->tid);
 #else
-    printf("%04lu.%06lu [%08x] ",
+    printf("%04" PRIu64 ".%06" PRIu64 " [%08" PRIx32 "] ",
            ei->ts/(1000000UL), ei->ts%(1000000UL), ei->tid);
 #endif
 }
@@ -256,9 +257,9 @@ char* _json(char* out, const char* name, va_list ap) {
                 return NULL;
             }
 #if USE_NS
-            out += sprintf(out, "\"%s\":%lu.%03lu", name + 1, val64 / 1000UL, val64 % 1000UL);
+            out += sprintf(out, "\"%s\":%" PRIu64 ".%03" PRIu64, name + 1, val64 / 1000UL, val64 % 1000UL);
 #else
-            out += sprintf(out, "\"%s\":%lu", name + 1, val64);
+            out += sprintf(out, "\"%s\":%" PRIu64, name + 1, val64);
 #endif
             comma = 1;
             break;
@@ -314,10 +315,10 @@ void json_rec(uint64_t ts, const char* phase, const char* name, const char* cat,
         char obj[1024];
         char *out;
 #if USE_NS
-        out = obj + sprintf(obj, "{\"ts\":%lu.%03lu,\"ph\":\"%s\",\"name\":\"%s\",\"cat\":\"%s\",",
+        out = obj + sprintf(obj, "{\"ts\":%" PRIu64 ".%03" PRIu64 ",\"ph\":\"%s\",\"name\":\"%s\",\"cat\":\"%s\",",
                             ts / 1000UL, ts % 1000UL, phase, name, cat);
 #else
-        out = obj + sprintf(obj, "{\"ts\":%lu,\"ph\":\"%s\",\"name\":\"%s\",\"cat\":\"%s\",",
+        out = obj + sprintf(obj, "{\"ts\":%" PRIu64 ",\"ph\":\"%s\",\"name\":\"%s\",\"cat\":\"%s\",",
                             ts, phase, name, cat);
 #endif
         va_list ap;
@@ -731,7 +732,7 @@ typedef struct {
 void dump_stats(stats_t* s) {
     fprintf(stderr, "-----------------------------------------\n");
     uint64_t duration = s->ts_last - s->ts_first;
-    fprintf(stderr, "elapsed time:     %lu.%06lu s\n",
+    fprintf(stderr, "elapsed time:     %" PRIu64 ".%06" PRIu64 " s\n",
             duration / 1000000UL, duration % 1000000UL);
     fprintf(stderr, "total events:     %u\n", s->events);
     fprintf(stderr, "context switches: %u\n", s->context_switch);
@@ -870,7 +871,7 @@ int main(int argc, char** argv) {
             break;
         case EVT_TICKS_PER_MS:
             ticks_per_ms = ((uint64_t)rec.x4.a) | (((uint64_t)rec.x4.b) << 32);
-            trace("TICKS_PER_MS n=%lu\n", ticks_per_ms);
+            trace("TICKS_PER_MS n=%" PRIu64 "\n", ticks_per_ms);
             break;
         case EVT_CONTEXT_SWITCH:
             s.context_switch++;
@@ -991,7 +992,7 @@ int main(int argc, char** argv) {
             break;
         case EVT_WAIT_ONE:
             t = ((uint64_t)rec.x4.c) | (((uint64_t)rec.x4.d) << 32);
-            trace("WAIT_ONE    id=%08x signals=%08x timeout=%lu\n", rec.x4.a, rec.x4.b, t);
+            trace("WAIT_ONE    id=%08x signals=%08x timeout=%" PRIu64 "\n", rec.x4.a, rec.x4.b, t);
             evt_wait_one(&ei, rec.x4.a, rec.x4.b, t);
             break;
         case EVT_WAIT_ONE_DONE:
