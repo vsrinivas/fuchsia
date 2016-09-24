@@ -4,6 +4,10 @@
     ],
     "resources": [
         {
+            "bootfs_path": "data/modular/boot_config.json",
+            "file": "apps/modular/fuchsia-scripts/boot_config.json"
+        },
+        {
             "bootfs_path": "autorun",
             "file": "apps/modular/fuchsia-scripts/autorun"
         }
