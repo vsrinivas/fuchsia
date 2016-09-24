@@ -15,6 +15,10 @@ TOOLS_CFLAGS := -std=c11 -Wall -Isystem/public -Isystem/private
 
 ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(KTRACEDUMP)
 
+# phony rule to build just the tools
+.PHONY: tools
+tools: $(ALL_TOOLS)
+
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
