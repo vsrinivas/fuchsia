@@ -49,13 +49,13 @@ bool AllocChecker::check() {
     return (state_ & alloc_ok) == alloc_ok;
 }
 
-void *operator new(size_t s, AllocChecker* ac) {
+void *operator new(size_t s, AllocChecker* ac) noexcept {
     auto mem = malloc(s);
     ac->arm(s, mem != nullptr);
     return mem;
 }
 
-void *operator new[](size_t s, AllocChecker* ac) {
+void *operator new[](size_t s, AllocChecker* ac) noexcept {
     auto mem = malloc(s);
     ac->arm(s, mem != nullptr);
     return mem;
