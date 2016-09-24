@@ -90,13 +90,20 @@ static void __kernel_stdout_write(const char *str, size_t len)
 static void __kernel_stdout_write_buffered(const char *str, size_t len) {
     thread_t *t = get_current_thread();
 
-    if (t == NULL) {
+    if (unlikely(t == NULL)) {
         __kernel_stdout_write(str, len);
         return;
     }
 
     char *buf = t->linebuffer;
     size_t pos = t->linebuffer_pos;
+
+    // look for corruption and don't continue
+    if (unlikely(!is_kernel_address((uintptr_t)buf) || pos >= THREAD_LINEBUFFER_LENGTH)) {
+        const char *str = "<linebuffer corruption>\n";
+        __kernel_stdout_write(str, strlen(str));
+        return;
+    }
 
     while (len-- > 0) {
         char c = *str++;
