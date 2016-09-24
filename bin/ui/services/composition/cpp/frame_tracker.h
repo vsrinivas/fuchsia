@@ -7,6 +7,7 @@
 
 #include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace mojo {
 namespace gfx {
@@ -28,9 +29,9 @@ class FrameTracker {
   }
 
   // Returns the difference between the previous frame time and the
-  // current frame time in microseconds, or 0 if this is the first frame.
+  // current frame time, or 0 if this is the first frame.
   // This value is guaranteed to be non-negative.
-  MojoTimeTicks frame_time_delta() const { return frame_time_delta_; }
+  ftl::TimeDelta frame_time_delta() const { return frame_time_delta_; }
 
   // Clears the frame tracker's state such that the next update will be
   // treated as if it were the first.
@@ -49,7 +50,7 @@ class FrameTracker {
  private:
   uint64_t frame_count_ = 0u;
   mojo::gfx::composition::FrameInfo frame_info_;
-  MojoTimeTicks frame_time_delta_ = 0;
+  ftl::TimeDelta frame_time_delta_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FrameTracker);
 };

@@ -17,7 +17,7 @@ FrameTracker::~FrameTracker() {}
 void FrameTracker::Clear() {
   frame_count_ = 0u;
   frame_info_ = mojo::gfx::composition::FrameInfo();
-  frame_time_delta_ = 0;
+  frame_time_delta_ = ftl::TimeDelta::Zero();
 }
 
 void FrameTracker::Update(
@@ -81,7 +81,8 @@ void FrameTracker::Update(
                      << ", old=" << old_presentation_time << ", now=" << now;
     frame_info_.presentation_time = old_presentation_time;
   }
-  frame_time_delta_ = frame_info_.frame_time - old_frame_time;
+  frame_time_delta_ =
+      ftl::TimeDelta::FromMicroseconds(frame_info_.frame_time - old_frame_time);
 }
 
 }  // namespace composition

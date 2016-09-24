@@ -42,7 +42,7 @@ TEST_F(FrameTrackerTest, InitialState) {
   EXPECT_EQ(0u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(0, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(0, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, ClearResetsEverything) {
@@ -54,7 +54,7 @@ TEST_F(FrameTrackerTest, ClearResetsEverything) {
   EXPECT_EQ(0u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(0, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(0, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, TypicalUpdate) {
@@ -66,7 +66,7 @@ TEST_F(FrameTrackerTest, TypicalUpdate) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(24, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(28, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 
   // Signalled 1 ms after frame time.
   // No corrections.
@@ -76,7 +76,7 @@ TEST_F(FrameTrackerTest, TypicalUpdate) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(34, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(38, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(10, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(10, frame_tracker_.frame_time_delta().ToMicroseconds());
 
   // Signalled 9 ms after frame time (frame interval is 10 ms).
   // No corrections.
@@ -86,7 +86,7 @@ TEST_F(FrameTrackerTest, TypicalUpdate) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(44, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(48, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(10, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(10, frame_tracker_.frame_time_delta().ToMicroseconds());
 
   // Frame interval changed.
   // No corrections.
@@ -96,7 +96,7 @@ TEST_F(FrameTrackerTest, TypicalUpdate) {
   EXPECT_EQ(15u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(59, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(62, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(14, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(14, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, LagCompensation) {
@@ -108,7 +108,7 @@ TEST_F(FrameTrackerTest, LagCompensation) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(34, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(38, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 
   // Received signal 2 ms after next frame should begin.
   // Skip 1 frame.
@@ -118,7 +118,7 @@ TEST_F(FrameTrackerTest, LagCompensation) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(54, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(58, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(20, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(20, frame_tracker_.frame_time_delta().ToMicroseconds());
 
   // Received signal 35 ms after next frame should begin.
   // Skip 4 frames.
@@ -128,7 +128,7 @@ TEST_F(FrameTrackerTest, LagCompensation) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(104, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(108, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(50, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(50, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, FrameTimeInPast) {
@@ -140,7 +140,7 @@ TEST_F(FrameTrackerTest, FrameTimeInPast) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(24, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(28, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, FrameDeadlineBehindFrameTime) {
@@ -152,7 +152,7 @@ TEST_F(FrameTrackerTest, FrameDeadlineBehindFrameTime) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(12, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(28, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, PresentationTimeBehindFrameDeadline) {
@@ -164,7 +164,7 @@ TEST_F(FrameTrackerTest, PresentationTimeBehindFrameDeadline) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(24, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(24, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, NonMonotonicFrameTime) {
@@ -178,7 +178,7 @@ TEST_F(FrameTrackerTest, NonMonotonicFrameTime) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(24, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(28, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(0, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(0, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 TEST_F(FrameTrackerTest, NonMonotonicPresentationTime) {
@@ -192,7 +192,7 @@ TEST_F(FrameTrackerTest, NonMonotonicPresentationTime) {
   EXPECT_EQ(10u, frame_tracker_.frame_info().frame_interval);
   EXPECT_EQ(26, frame_tracker_.frame_info().frame_deadline);
   EXPECT_EQ(28, frame_tracker_.frame_info().presentation_time);
-  EXPECT_EQ(10, frame_tracker_.frame_time_delta());
+  EXPECT_EQ(10, frame_tracker_.frame_time_delta().ToMicroseconds());
 }
 
 }  // namespace
