@@ -30,4 +30,8 @@ bool cmdline_get_bool(const char* key, bool _default);
 // return they key's integer value otherwise
 uint32_t cmdline_get_uint32(const char* key, uint32_t _default);
 
+// return _default if key not found or invalid
+// return they key's integer value otherwise
+uint64_t cmdline_get_uint64(const char* key, uint64_t _default);
+
 __END_CDECLS

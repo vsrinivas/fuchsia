@@ -95,3 +95,17 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
     }
     return value;
 }
+
+uint64_t cmdline_get_uint64(const char* key, uint64_t _default) {
+    const char* value_str = cmdline_get(key);
+    if (value_str == NULL || *value_str == '\0') {
+        return _default;
+    }
+
+    char* end;
+    long long value = strtoll(value_str, &end, 0);
+    if (*end != '\0') {
+        return _default;
+    }
+    return value;
+}
