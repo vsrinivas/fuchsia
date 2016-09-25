@@ -95,7 +95,7 @@ status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count);
 static inline struct x86_percpu *x86_get_percpu(void)
 {
 #if ARCH_X86_64
-    return (struct x86_percpu *)x86_read_gs_offset(PERCPU_DIRECT_OFFSET);
+    return (struct x86_percpu *)x86_read_gs_offset64(PERCPU_DIRECT_OFFSET);
 #else
     /* x86-32 does not yet support SMP and thus does not need a gs: pointer to point
      * at the percpu structure
@@ -113,7 +113,7 @@ static inline struct thread *get_current_thread(void)
      * so that this is atomic.  Otherwise, we could context switch between the
      * read of percpu from gs and the read of the current_thread pointer, and
      * discover the current thread on a different CPU */
-    return (struct thread *)x86_read_gs_offset(PERCPU_CURRENT_THREAD_OFFSET);
+    return (struct thread *)x86_read_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET);
 #else
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
@@ -127,7 +127,7 @@ static inline void set_current_thread(struct thread *t)
 {
 #if ARCH_X86_64
     /* See above for why this is a direct gs write */
-    x86_write_gs_offset(PERCPU_CURRENT_THREAD_OFFSET, (uintptr_t)t);
+    x86_write_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET, (uint64_t)t);
 #else
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
@@ -151,7 +151,7 @@ static uint arch_max_num_cpus(void)
 static inline void x86_set_percpu_kernel_sp(uintptr_t sp)
 {
 #if ARCH_X86_64
-    x86_write_gs_offset(PERCPU_KERNEL_SP_OFFSET, sp);
+    x86_write_gs_offset64(PERCPU_KERNEL_SP_OFFSET, sp);
 #else
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);

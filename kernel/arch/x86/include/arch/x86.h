@@ -434,28 +434,30 @@ static inline bool x86_is_PAE_enabled(void)
     return true;
 }
 
-static inline uintptr_t x86_read_gs_offset(uintptr_t offset)
+#if ARCH_X86_64
+static inline uint64_t x86_read_gs_offset64(uintptr_t offset)
 {
-    ulong ret;
-    __asm__( "mov   %%gs:%1, %0" : "=r" (ret) : "m" (*(uintptr_t *)(offset)));
+    uint64_t ret;
+    __asm__( "movq  %%gs:%1, %0" : "=g" (ret) : "m" (*(uint64_t *)(offset)));
     return ret;
 }
 
-static inline void x86_write_gs_offset(uintptr_t offset, uintptr_t val)
+static inline void x86_write_gs_offset64(uintptr_t offset, uint64_t val)
 {
-    __asm__( "mov   %0, %%gs:%1" : : "r" (val), "m" (*(uintptr_t *)(offset)) : "memory");
+    __asm__( "movq  %0, %%gs:%1" : : "g" (val), "m" (*(uint64_t *)(offset)) : "memory");
 }
+#endif
 
 static inline uint32_t x86_read_gs_offset32(uintptr_t offset)
 {
     uint32_t ret;
-    __asm__( "mov   %%gs:%1, %0" : "=r" (ret) : "m" (*(uint32_t *)(offset)));
+    __asm__( "movl  %%gs:%1, %0" : "=g" (ret) : "m" (*(uint32_t *)(offset)));
     return ret;
 }
 
 static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val)
 {
-    __asm__( "mov   %0, %%gs:%1" : : "r" (val), "m" (*(uint32_t *)(offset)) : "memory");
+    __asm__( "movl   %0, %%gs:%1" : : "g" (val), "m" (*(uint32_t *)(offset)) : "memory");
 }
 
 
