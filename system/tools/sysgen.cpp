@@ -193,14 +193,19 @@ bool run_parser(const char* input, const char* output, const Dispatch* table, bo
         }
     }
 
-    if (error)
-        fprintf(stderr, "** stopping. parsing %s failed.\n", input);
+    if (error) {
+        fprintf(stderr, "** stopping at line %d. parsing %s failed.\n", fc.line_start, input);
+        return false;
+    }
 
-    infile.close();
     return true;
 }
 
 // ================================== sysgen specific ============================================
+
+// TODO(cpu): put the 2 and 8 below as pragmas on the file?
+constexpr size_t kMaxReturnArgs = 2;
+constexpr size_t kMaxInputArgs = 8;
 
 struct ArraySpec {
     enum {
@@ -209,6 +214,7 @@ struct ArraySpec {
         INOUT
     } kind;
     uint32_t count;
+    string name;
 };
 
 struct TypeSpec {
@@ -216,9 +222,14 @@ struct TypeSpec {
     string type;
     ArraySpec* arr_spec = nullptr;
 
-    void debug_dump() {
-        auto fmt = arr_spec ? "  + %s %s []\n" : "  + %s %s\n";
-        fprintf(stderr, fmt, type.c_str(), name.c_str());
+    void debug_dump() const {
+        fprintf(stderr, "  + %s %s\n", type.c_str(), name.c_str());
+        if (arr_spec) {
+            if (arr_spec->count)
+                fprintf(stderr, "      [%u] (explicit)\n", arr_spec->count);
+            else
+                fprintf(stderr, "      [%s]\n", arr_spec->name.c_str());
+        }
     }
 };
 
@@ -228,7 +239,57 @@ struct Syscall {
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
 
-    void debug_dump() {
+    bool validate() const {
+        if (ret_spec.size() > kMaxReturnArgs) {
+            print_error("invalid number of return arguments");
+            return false;
+        } else if (ret_spec.size() == 1) {
+            if (!ret_spec[0].name.empty()) {
+                print_error("single return arguments cannot be named");
+                return false;
+            }
+        }
+        if (arg_spec.size() > kMaxInputArgs) {
+            print_error("invalid number of input arguments");
+            return false;
+        }
+        for (const auto& arg : arg_spec) {
+            if (arg.name.empty()) {
+                print_error("all input arguments need to be named");
+                return false;
+            }
+            if (arg.arr_spec) {
+                if (!valid_array_count(arg)) {
+                    std::string err = "invalid array spec for " + arg.name;
+                    print_error(err.c_str());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool valid_array_count(const TypeSpec& ts) const {
+        if (ts.arr_spec->count > 0)
+            return true;
+        // find the argument that represents the array count.
+        for (const auto& arg : arg_spec) {
+            if (ts.arr_spec->name == arg.name) {
+                if (!arg.arr_spec)
+                    return true;
+                // if the count itself is an array it can only be "[1]".
+                // TODO:cpu also enforce INOUT here.
+                return (arg.arr_spec->count == 1u);
+            }
+        }
+        return false;
+    }
+
+    void print_error(const char* what) const {
+        fprintf(stderr, "error: %s  : %s\n", name.c_str(), what);
+    }
+
+    void debug_dump() const {
         fprintf(stderr, "line %d: syscall {%s}\n", fc.line_start, name.c_str());
         fprintf(stderr, "- return(s)\n");
         for (auto& r : ret_spec) {
@@ -258,6 +319,37 @@ bool vet_identifier(const string& iden, const FileCtx& fc) {
     return true;
 }
 
+bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
+    std::string name;
+    uint32_t count = 0;
+
+    auto c = ts.curr()[0];
+
+    if (isalpha(c)) {
+        if (!vet_identifier(ts.curr(), ts.filectx()))
+            return false;
+        name = ts.curr();
+
+    } else if (isdigit(c)) {
+        count = c - '0';
+        if (ts.curr().size() > 1 || count == 0) {
+            ts.filectx().print_error("only 1-9 explicit array count allowed", "");
+            return false;
+        }
+    } else {
+        ts.filectx().print_error("expected array specifier", "");
+        return false;
+    }
+
+    if (name == type_spec->name) {
+        ts.filectx().print_error("invalid name for an array specifier", name);
+        return false;
+    }
+
+    type_spec->arr_spec = new ArraySpec {ArraySpec::INOUT, count, name};
+    return true;
+}
+
 bool parse_typespec(TokenStream& ts, TypeSpec* type_spec) {
     if (ts.peek_next() == ":") {
         auto name = ts.curr();
@@ -279,15 +371,17 @@ bool parse_typespec(TokenStream& ts, TypeSpec* type_spec) {
 
     if (ts.peek_next() == "[") {
         ts.next();
-        // TODO parse number or identifier, etc here.
         if (ts.next().empty()) {
             return false;
         }
+
+        if (!parse_arrayspec(ts, type_spec))
+            return false;
+
         if (ts.next() != "]") {
             ts.filectx().print_error("expected", "]");
             return false;
         }
-        type_spec->arr_spec = new ArraySpec {};
     }
 
     return true;
@@ -339,8 +433,10 @@ bool process_syscall(TokenStream& ts) {
     if (!parse_argpack(ts, &syscall.arg_spec))
         return false;
 
-    if (ts.next() != "returns")
+    if (ts.next() != "returns") {
+        ts.filectx().print_error("expected", "returns");
         return false;
+    }
 
     ts.next();
 
@@ -349,7 +445,8 @@ bool process_syscall(TokenStream& ts) {
 
     if (ts.filectx().verbose)
         syscall.debug_dump();
-    return true;
+
+    return syscall.validate();
 }
 
 constexpr Dispatch sysgen_table[] = {
