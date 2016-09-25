@@ -59,7 +59,7 @@ static void dump_fault_frame(x86_iframe_t *frame)
     }
 }
 
-static void exception_die(x86_iframe_t *frame, const char *msg)
+__NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
 {
     printf("vector %lu\n", (long) frame->vector);
     dprintf(CRITICAL, "%s", msg);
@@ -177,7 +177,7 @@ static void x86_dump_pfe(x86_iframe_t *frame, ulong cr2)
 }
 
 
-static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
+__NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
 {
     x86_dump_pfe(frame, cr2);
 
@@ -224,7 +224,7 @@ void x86_pfe_handler(x86_iframe_t *frame)
     /* check for flags we're not prepared to handle */
     if (unlikely(error_code & ~(PFEX_I | PFEX_U | PFEX_W | PFEX_P))) {
         printf("x86_pfe_handler: unhandled error code bits set, error code 0x%x\n", error_code);
-        x86_fatal_pfe_handler(frame, va);
+        goto fatal;
     }
 
     /* convert the PF error codes to page fault flags */
@@ -234,38 +234,47 @@ void x86_pfe_handler(x86_iframe_t *frame)
     flags |= (error_code & PFEX_I) ? VMM_PF_FLAG_INSTRUCTION : 0;
     flags |= (error_code & PFEX_P) ? 0 : VMM_PF_FLAG_NOT_PRESENT;
 
+    /* call the high level page fault handler */
     status_t pf_err = vmm_page_fault_handler(va, flags);
-    if (unlikely(pf_err < 0)) {
-        /* if the high level page fault handler can't deal with it,
-         * resort to trying to recover first, before bailing */
+    if (likely(pf_err >= 0))
+        goto out_good;
+
+    /* if the high level page fault handler can't deal with it,
+     * resort to trying to recover first, before bailing */
 
 #ifdef ARCH_X86_64
-        /* Check if a resume address is specified, and just return to it if so */
-        thread_t *current_thread = get_current_thread();
-        if (unlikely(current_thread->arch.page_fault_resume)) {
-            frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
-            return;
-        }
-#endif
-
-        /* let high level code deal with this */
-#if WITH_LIB_MAGENTA
-        bool from_user = SELECTOR_PL(frame->cs) != 0;
-        if (from_user) {
-            struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
-            status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->ip);
-            arch_disable_ints();
-            if (erc == NO_ERROR)
-                return;
-        }
-#else
-        arch_disable_ints();
-        arch_set_in_int_handler(true);
-#endif
-
-        /* fatal (for now) */
-        x86_fatal_pfe_handler(frame, va);
+    /* Check if a resume address is specified, and just return to it if so */
+    thread_t *current_thread = get_current_thread();
+    if (unlikely(current_thread->arch.page_fault_resume)) {
+        frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
+        goto out_good;
     }
+#endif
+
+    /* let high level code deal with this */
+#if WITH_LIB_MAGENTA
+    bool from_user = SELECTOR_PL(frame->cs) != 0;
+    if (from_user) {
+        struct arch_exception_context context = { .frame = frame, .is_page_fault = true, .cr2 = va };
+        status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, frame->ip);
+        if (erc == NO_ERROR)
+            goto out_good;
+    }
+#endif
+
+    /* fall through to fatal path */
+
+fatal:
+    arch_disable_ints();
+    arch_set_in_int_handler(true);
+    x86_fatal_pfe_handler(frame, va);
+    /* no return */
+    return;
+
+out_good:
+    arch_disable_ints();
+    arch_set_in_int_handler(true);
+    return;
 }
 
 /* top level x86 exception handler for most exceptions and irqs */
@@ -380,6 +389,14 @@ void x86_exception_handler(x86_iframe_t *frame)
         thread_preempt(true);
 
     ktrace_tiny(TAG_IRQ_EXIT, (frame->vector << 8) | arch_curr_cpu_num());
+
+    DEBUG_ASSERT_MSG(arch_ints_disabled(),
+#if ARCH_X86_64
+        "ints disabled on way out of exception, vector %llu IP 0x%llx\n",
+#else
+        "ints disabled on way out of exception, vector %u IP 0x%x\n",
+#endif
+        frame->vector, frame->ip);
 }
 
 __WEAK uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
