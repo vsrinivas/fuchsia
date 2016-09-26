@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
-=======================================
+# Fuchsia Netstack Service
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+An app that contains TCP/IP network stack and talks to network drivers.
+It serves as a back-end for mxio socket API.
