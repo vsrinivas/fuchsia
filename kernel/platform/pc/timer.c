@@ -49,8 +49,13 @@ static volatile uint64_t timer_current_time;
 static uint16_t pit_divisor;
 
 // Whether or not we have an Invariant TSC (controls whether we use the PIT or
-// not after initialization).
+// not after initialization).  The Invariant TSC is rate-invariant under P-, C-,
+// and T-state transitions.
 static bool invariant_tsc;
+// Whether or not we have a Constant TSC (controls whether we bother calibrating
+// the TSC).  Constant TSC predates the Invariant TSC.  The Constant TSC is
+// rate-invariant under P-state transitions.
+static bool constant_tsc;
 
 // APIC timer calibration values
 static bool use_tsc_deadline;
@@ -332,7 +337,21 @@ static void calibrate_tsc(void)
 
 void platform_init_timer(uint level)
 {
+    const struct x86_model_info *cpu_model = x86_get_model();
+
+    constant_tsc = false;
+    if (x86_vendor == X86_VENDOR_INTEL) {
+        /* This condition taken from Intel 3B 17.15 (Time-Stamp Counter).  This
+         * is the negation of the non-Constant TSC section, since the Constant
+         * TSC section is incomplete (the behavior is architectural going
+         * forward, and modern CPUs are not on the list). */
+        constant_tsc = !((cpu_model->family == 0x6 && cpu_model->model == 0x9) ||
+                         (cpu_model->family == 0x6 && cpu_model->model == 0xd) ||
+                         (cpu_model->family == 0xf && cpu_model->model < 0x3));
+    }
+
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
+
     use_tsc_deadline = invariant_tsc &&
             x86_feature_test(X86_FEATURE_TSC_DEADLINE);
     if (!use_tsc_deadline) {
@@ -345,6 +364,12 @@ void platform_init_timer(uint level)
         // the count.  This will pause the PIT.
         outp(I8253_CONTROL_REG, 0x38);
     } else {
+        if (constant_tsc) {
+            // Calibrate the TSC even though it's not as good as we want, so we
+            // can still let folks still use it for cheap timing.
+            calibrate_tsc();
+        }
+
         timer_current_time = 0;
         set_pit_frequency(1000); // ~1ms granularity
 
