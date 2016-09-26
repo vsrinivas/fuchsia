@@ -61,7 +61,7 @@ bool ApplicationStorageImpl::DeletePageStorage(const PageId& page_id) {
 std::string ApplicationStorageImpl::GetPathFor(const PageId& page_id) {
   std::string encoded;
   glue::Base64Encode(page_id, &encoded);
-  return storage_dir_ + "/" + encoded + "/";
+  return storage_dir_ + "/" + encoded;
 }
 
 }  // namespace storage

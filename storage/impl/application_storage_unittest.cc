@@ -80,9 +80,7 @@ TEST_F(ApplicationStorageTest, CreateGetCreatePageStorage) {
   glue::test::RunLoop();
 }
 
-// TODO(nellyv): we currently can't delete folders under /tmp/. Re-enable the
-// following test when it's supported:
-TEST_F(ApplicationStorageTest, DISABLED_CreateDeletePageStorage) {
+TEST_F(ApplicationStorageTest, CreateDeletePageStorage) {
   PageId pageId = "1234";
   std::unique_ptr<PageStorage> pageStorage =
       storage_->CreatePageStorage(pageId);
