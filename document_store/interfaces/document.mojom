@@ -1,0 +1,36 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="document_store"]
+module document_store;
+
+struct Statement {
+  string docid;
+  string property;
+  Value? value;
+}
+
+// Structure for a property and its value.
+struct Property {
+  // A |property| is almost always an IRI.
+  string property;
+
+  // The (optional) typed |value| of a property.
+  Value? value;
+};
+
+struct Document {
+  string docid;
+
+  // Map from RDF |properties| to value lists.
+  array<Property> properties;
+};
+
+union Value {
+  string string_value;
+  int64 int_value;
+  float64 float_value;
+  array<uint8> binary;
+  string iri;
+};
