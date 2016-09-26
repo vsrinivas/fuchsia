@@ -28,6 +28,18 @@
             "bootfs_path": "apps/ledger_abax_apptests"
         },
         {
+            "binary": "ledger_codex",
+            "bootfs_path": "apps/ledger_codex"
+        },
+        {
+            "binary": "ledger_codex_apptests",
+            "bootfs_path": "apps/ledger_codex_apptests"
+        },
+        {
+            "binary": "ledger_codex_unittests",
+            "bootfs_path": "test/ledger_codex_unittests"
+        },
+        {
             "binary": "ledger_glue_unittests",
             "bootfs_path": "test/ledger_glue_unittests"
         },
