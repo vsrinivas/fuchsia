@@ -4,19 +4,21 @@
 
 module intelligence;
 
-enum Status { Ok };
-
 ////////////////////////////////////////////////////////////////////////////////
 // Publish
 ////////////////////////////////////////////////////////////////////////////////
 
 [ServiceName="intelligence.ContextPublisher"]
 interface ContextPublisher {
+  // Obtains an attributed PublisherPipe from Context Service.
   StartPublishing(string whoami, PublisherPipe& pipe);
 };
 
+// An attributed sink that allows a data source to write to Context Service.
 interface PublisherPipe {
-  Publish(string label, string? json_value) => (Status status);
+  // Writes attributed context data to the specified label. To remove the
+  // context, write an empty JSON value.
+  Publish(string label, string json_value);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -25,12 +27,14 @@ interface PublisherPipe {
 
 [ServiceName="intelligence.ContextSubscriber"]
 interface ContextSubscriber {
-  Subscribe(array<string> labels, ContextListener listener);
+  // Registers a listener to a context label.
+  Subscribe(string label, ContextListener listener);
   // TODO(thatguy) => (Subscription subcription);
 };
 
 interface ContextListener {
-  OnUpdate(map<string, ContextUpdate> update) => (Status status);
+  // Receives an update for a context label.
+  OnUpdate(ContextUpdate update);
 };
 
 struct ContextUpdate {
@@ -38,6 +42,8 @@ struct ContextUpdate {
   // attribution.
   string source;
   // TODO(thatguy): timestamp
+
+  // This may be an empty string, indicating that the value was deleted.
   string json_value;
 };
 

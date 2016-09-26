@@ -40,25 +40,18 @@ class CarmenSandiego : public ApplicationImplBase, public ContextListener {
 
     ContextListenerPtr listener_ptr;
     listener_.Bind(GetProxy(&listener_ptr));
-    // TODO(rosswang): If we want to keep the label-array form of Subscribe as
-    // canonical, we should probably work on supporting Mojo Array literals.
-    mojo::Array<mojo::String> labels;
-    labels.push_back("/location/gps");
-    cxin->Subscribe(labels.Pass(), listener_ptr.PassInterfaceHandle());
+    cxin->Subscribe("/location/gps", listener_ptr.PassInterfaceHandle());
   }
 
-  void OnUpdate(mojo::Map<mojo::String, ContextUpdatePtr> update,
-                const OnUpdateCallback& callback) override {
-    ContextUpdatePtr gps_location_update = update["/location/gps"].Pass();
-
+  void OnUpdate(ContextUpdatePtr update) override {
     MOJO_LOG(INFO) << "OnUpdate from "
-                   << gps_location_update->source << ": "
-                   << gps_location_update->json_value;
+                   << update->source << ": "
+                   << update->json_value;
 
     std::string hlloc = "somewhere";
 
     Document d;
-    d.Parse(gps_location_update->json_value.data());
+    d.Parse(update->json_value.data());
 
     if (d.IsObject()) {
       const float latitude = d["latitude"].GetFloat(),
@@ -80,8 +73,7 @@ class CarmenSandiego : public ApplicationImplBase, public ContextListener {
     // TODO(rosswang): V0 does not support semantic differentiation by source,
     // so the labels have to be explicitly different. In the future, these could
     // all be refinements on "location"
-    loc_out_->Publish("/location/region", json.str(), [](Status){});
-    callback.Run(Status::Ok);
+    loc_out_->Publish("/location/region", json.str());
   }
 
  private:

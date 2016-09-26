@@ -17,7 +17,6 @@ using mojo::RunLoop;
 
 using intelligence::ContextPublisherPtr;
 using intelligence::PublisherPipePtr;
-using intelligence::Status;
 
 #define ONE_MOJO_SECOND   1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
@@ -38,12 +37,16 @@ class GpsAcquirer : public ApplicationImplBase {
   PublisherPipePtr pub_;
 
   inline void PublishLocation() {
+    // For now, this representation must be agreed upon by all parties out of
+    // band. In the future, we will want to represent most mathematical typing
+    // information in schemas and any remaining semantic information in
+    // manifests.
     std::ostringstream json;
     json << "{ \"longitude\": " << rand() % 18001 / 100. - 90
          << ", \"latitude\": "  << rand() % 36001 / 100. - 180
          << " }";
 
-    pub_->Publish("/location/gps", json.str(), [](Status){});
+    pub_->Publish("/location/gps", json.str());
   }
 
   // TODO(rosswang): How can we tell when the pipe is closed?

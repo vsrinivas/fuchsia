@@ -30,11 +30,10 @@ struct ContextEntry {
   }
 
   ContextUpdate latest;
-  std::vector<ContextListenerPtr*> listeners;
+  std::vector<ContextListenerPtr> listeners;
 };
 
 typedef std::map<std::string, ContextEntry> ContextRepo;
-typedef mojo::Map<mojo::String, ContextUpdatePtr> UpdateMap;
 
 class PublisherPipeImpl : public PublisherPipe {
  public:
@@ -46,8 +45,8 @@ class PublisherPipeImpl : public PublisherPipe {
     MOJO_LOG(INFO) << "publisher " << whoami_ << " terminated";
   }
 
-  void Publish(const mojo::String& label, const mojo::String& json_value,
-               const PublishCallback& callback) override {
+  void Publish(const mojo::String& label,
+               const mojo::String& json_value) override {
     MOJO_LOG(INFO) << "publisher " << whoami_ << " set value "
                    << label << ": " << json_value;
 
@@ -55,14 +54,9 @@ class PublisherPipeImpl : public PublisherPipe {
     entry.latest.source = whoami_;
     entry.latest.json_value = json_value;
 
-    UpdateMap update;
-    update[label] = entry.latest.Clone();
-
-    for (ContextListenerPtr* listener : entry.listeners) {
-      (*listener)->OnUpdate(update.Clone(), [](Status){});
+    for (ContextListenerPtr& listener : entry.listeners) {
+      listener->OnUpdate(entry.latest.Clone());
     }
-
-    callback.Run(Status::Ok);
   }
 
  private:
@@ -84,23 +78,19 @@ class ContextServiceImpl : public ContextPublisher, public ContextSubscriber {
   }
 
   // TODO(rosswang): additional backpressure modes. For now, just do
-  // on-backpressure-buffer, which is the default for Mojo.
-  void Subscribe(mojo::Array<mojo::String> labels,
+  // on-backpressure-buffer, which is the default for Mojo. When we add
+  // backpressure, we'll probably add a callback, or add a reactive pull API.
+  void Subscribe(const mojo::String& label,
                  InterfaceHandle<ContextListener> listener_handle) override {
-    MOJO_LOG(INFO) << "Subscribe to " << labels;
+    MOJO_LOG(INFO) << "Subscribe to " << label;
 
     // TODO(rosswang): interface ptr lifecycle management (remove on error)
-    ContextListenerPtr* listener = new ContextListenerPtr(
-      ContextListenerPtr::Create(listener_handle.Pass()));
-    UpdateMap initial_snapshot;
+    ContextListenerPtr listener = ContextListenerPtr::Create(
+        listener_handle.Pass());
 
-    for (mojo::String label : labels) {
-      ContextEntry* entry = &repo[label];
-      entry->listeners.push_back(listener);
-      initial_snapshot[label] = entry->latest.Clone();
-    }
-
-    (*listener)->OnUpdate(initial_snapshot.Pass(), [](Status){});
+    ContextEntry& entry = repo[label];
+    entry.listeners.push_back(listener.Pass());
+    entry.listeners.back()->OnUpdate(entry.latest.Clone());
   }
 
  private:
