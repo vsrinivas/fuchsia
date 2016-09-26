@@ -6,10 +6,11 @@
 
 #include <arch/x86/feature.h>
 
-#include <trace.h>
+#include <assert.h>
+#include <bits.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
+#include <trace.h>
 
 #include <arch/ops.h>
 
@@ -21,6 +22,8 @@ uint32_t max_cpuid = 0;
 uint32_t max_ext_cpuid = 0;
 
 enum x86_vendor_list x86_vendor;
+
+static struct x86_model_info model_info;
 
 static int initialized = 0;
 
@@ -73,6 +76,23 @@ void x86_feature_init(void)
         uint32_t index = i - X86_CPUID_EXT_BASE;
         cpuid_c(i, 0, &_cpuid_ext[index].a, &_cpuid_ext[index].b, &_cpuid_ext[index].c, &_cpuid_ext[index].d);
     }
+
+    /* populate the model info */
+    const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
+    model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
+    model_info.family = BITS_SHIFT(leaf->a, 11, 8);
+    model_info.model = BITS_SHIFT(leaf->a, 7, 4);
+    model_info.stepping = BITS_SHIFT(leaf->a, 3, 0);
+    model_info.display_family = model_info.family;
+    model_info.display_model = model_info.model;
+
+    if (model_info.family == 0xf) {
+        model_info.display_family += BITS_SHIFT(leaf->a, 27, 20);
+    }
+
+    if (model_info.family == 0xf || model_info.family == 0x6) {
+        model_info.display_model += BITS_SHIFT(leaf->a, 19, 16) << 4;
+    }
 }
 
 bool x86_get_cpuid_subleaf(
@@ -104,6 +124,11 @@ bool x86_topology_enumerate(uint8_t level, struct x86_topology_level *info)
     info->right_shift = eax & 0x1f;
     info->type = type;
     return true;
+}
+
+const struct x86_model_info * x86_get_model(void)
+{
+    return &model_info;
 }
 
 void x86_feature_debug(void)
