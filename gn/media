@@ -8,6 +8,14 @@
             "bootfs_path": "apps/audio_server"
         },
         {
+            "binary": "flog_service",
+            "bootfs_path": "apps/flog_service"
+        },
+        {
+            "binary": "flog_viewer",
+            "bootfs_path": "apps/flog_viewer"
+        },
+        {
             "binary": "media_common_apptests",
             "bootfs_path": "apps/media_common_apptests"
         },
