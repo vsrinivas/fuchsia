@@ -14,23 +14,8 @@ _LEDGER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 _FUCHSIA_DIR = os.path.abspath(os.path.join(_LEDGER_DIR, '..', '..'))
 _MAGENTA_DIR = os.path.join(_FUCHSIA_DIR, 'magenta')
 
-_RUN_MAGENTA_TOOL = os.path.join(_MAGENTA_DIR, 'scripts', 'run-magenta-x86-64')
 _NETCMD_TOOL = os.path.join(_MAGENTA_DIR, 'scripts', 'netcmd')
-_OUT_DEBUG_DIR = os.path.join(_FUCHSIA_DIR, 'out', 'debug-x86-64')
-_OUT_DEBUG_BOOTFS = os.path.join(_OUT_DEBUG_DIR, 'user.bootfs')
-
 _TEST_CONFIG = os.path.join(_LEDGER_DIR, 'tools', 'data', 'tests')
-
-
-def run_fuchsia():
-  try:
-    subprocess.check_call([_RUN_MAGENTA_TOOL,
-                           '-x', _OUT_DEBUG_BOOTFS, '-d', '-N'],
-                          cwd=_MAGENTA_DIR)
-  except subprocess.CalledProcessError as e:
-    print 'Failed to run Fuchsia.'
-    print e
-    print '---'
 
 
 def test():
@@ -50,13 +35,10 @@ def test():
 
 def main():
   parser = argparse.ArgumentParser(description='Ledger development helper.')
-  parser.add_argument('command',
-                      choices=['run_fuchsia', 'test'])
+  parser.add_argument('command', choices=['test'])
 
   args = parser.parse_args()
-  if args.command == 'run_fuchsia':
-    run_fuchsia()
-  elif args.command == 'test':
+  if args.command == 'test':
     test()
   else:
     raise RuntimeError('Unrecognized command: ' + args.command)
