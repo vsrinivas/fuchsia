@@ -156,6 +156,18 @@ int unittest_set_verbosity_level(int new_level);
 #define BEGIN_TEST current_test_info->all_ok = true
 #define END_TEST return current_test_info->all_ok
 
+/*
+ * BEGIN_HELPER and END_HELPER go in helper programs.
+ * For example, if a test needs to start a second helper program, and you want
+ * to use the ASSERT_*,EXPECT_* macros in the helper program, then surround the
+ * usage with these macros.
+ */
+#define BEGIN_HELPER \
+    struct test_info _test_info; \
+    current_test_info = &_test_info; \
+    current_test_info->all_ok = true
+#define END_HELPER return current_test_info->all_ok
+
 #ifdef __cplusplus
 #define AUTO_TYPE_VAR(type) auto&
 #else
