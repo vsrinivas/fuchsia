@@ -2,46 +2,48 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/launcher/launcher_view_tree.h"
+#include "apps/mozart/src/launcher/launcher_view_tree.h"
 
-#include "base/bind.h"
-#include "mojo/public/cpp/application/connect.h"
+#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/logging.h"
+#include "mojo/public/cpp/application/connect.h"
 
 namespace launcher {
 
 LauncherViewTree::LauncherViewTree(
     mojo::gfx::composition::Compositor* compositor,
     mojo::ui::ViewManager* view_manager,
-    mojo::ContextProviderPtr context_provider,
-    mojo::ViewportMetricsPtr viewport_metrics,
-    const base::Closure& shutdown_callback)
+    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+    mojo::FramebufferInfoPtr framebuffer_info,
+    const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
-      context_provider_(context_provider.Pass()),
-      viewport_metrics_(viewport_metrics.Pass()),
+      framebuffer_(std::move(framebuffer)),
+      framebuffer_info_(std::move(framebuffer_info)),
       shutdown_callback_(shutdown_callback),
       view_tree_listener_binding_(this),
       view_container_listener_binding_(this) {
-  DCHECK(viewport_metrics_);
+  FTL_DCHECK(framebuffer_info);
 
   // Register the view tree.
   mojo::ui::ViewTreeListenerPtr view_tree_listener;
   view_tree_listener_binding_.Bind(mojo::GetProxy(&view_tree_listener));
   view_manager_->CreateViewTree(mojo::GetProxy(&view_tree_),
-                                view_tree_listener.Pass(), "LauncherTree");
-  view_tree_.set_connection_error_handler(base::Bind(
-      &LauncherViewTree::OnViewTreeConnectionError, base::Unretained(this)));
+                                std::move(view_tree_listener), "LauncherTree");
+  view_tree_.set_connection_error_handler(
+      [this] { OnViewTreeConnectionError(); });
 
   // Prepare the view container for the root.
   view_tree_->GetContainer(mojo::GetProxy(&view_container_));
-  view_container_.set_connection_error_handler(base::Bind(
-      &LauncherViewTree::OnViewTreeConnectionError, base::Unretained(this)));
+  view_container_.set_connection_error_handler(
+      [this] { OnViewTreeConnectionError(); });
   mojo::ui::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(
       mojo::GetProxy(&view_container_listener));
-  view_container_->SetListener(view_container_listener.Pass());
+  view_container_->SetListener(std::move(view_container_listener));
 
   // Get view tree services.
   mojo::ServiceProviderPtr view_tree_service_provider;
@@ -49,14 +51,16 @@ LauncherViewTree::LauncherViewTree(
   mojo::ConnectToService<mojo::ui::InputDispatcher>(
       view_tree_service_provider.get(), mojo::GetProxy(&input_dispatcher_));
   input_dispatcher_.set_connection_error_handler(
-      base::Bind(&LauncherViewTree::OnInputDispatcherConnectionError,
-                 base::Unretained(this)));
+      [this] { OnInputDispatcherConnectionError(); });
 
   // Attach the renderer.
   mojo::gfx::composition::RendererPtr renderer;
-  compositor_->CreateRenderer(context_provider_.Pass(), GetProxy(&renderer),
+  compositor_->CreateRenderer(std::move(framebuffer),
+                              std::move(framebuffer_info), GetProxy(&renderer),
                               "Launcher");
-  view_tree_->SetRenderer(renderer.Pass());
+  view_tree_->SetRenderer(std::move(renderer));
+
+  UpdateViewProperties();
 }
 
 LauncherViewTree::~LauncherViewTree() {}
@@ -68,33 +72,25 @@ void LauncherViewTree::SetRoot(mojo::ui::ViewOwnerPtr owner) {
   }
   if (owner) {
     root_was_set_ = true;
-    view_container_->AddChild(++root_key_, owner.Pass());
+    view_container_->AddChild(++root_key_, std::move(owner));
     UpdateViewProperties();
   }
 }
 
-void LauncherViewTree::SetViewportMetrics(
-    mojo::ViewportMetricsPtr viewport_metrics) {
-  DCHECK(viewport_metrics);
-
-  viewport_metrics_ = viewport_metrics.Pass();
-  UpdateViewProperties();
-}
-
 void LauncherViewTree::DispatchEvent(mojo::EventPtr event) {
   if (input_dispatcher_)
-    input_dispatcher_->DispatchEvent(event.Pass());
+    input_dispatcher_->DispatchEvent(std::move(event));
 }
 
 void LauncherViewTree::OnViewTreeConnectionError() {
-  LOG(ERROR) << "View tree connection error.";
+  FTL_LOG(ERROR) << "View tree connection error.";
   Shutdown();
 }
 
 void LauncherViewTree::OnInputDispatcherConnectionError() {
   // This isn't considered a fatal error right now since it is still useful
   // to be able to test a view system that has graphics but no input.
-  LOG(WARNING) << "Input dispatcher connection error, input will not work.";
+  FTL_LOG(WARNING) << "Input dispatcher connection error, input will not work.";
   input_dispatcher_.reset();
 }
 
@@ -102,11 +98,11 @@ void LauncherViewTree::OnChildAttached(
     uint32_t child_key,
     mojo::ui::ViewInfoPtr child_view_info,
     const OnChildAttachedCallback& callback) {
-  DCHECK(child_view_info);
+  FTL_DCHECK(child_view_info);
 
   if (root_key_ == child_key) {
     DVLOG(1) << "OnChildAttached: child_view_info=" << child_view_info;
-    root_view_info_ = child_view_info.Pass();
+    root_view_info_ = std::move(child_view_info);
   }
   callback.Run();
 }
@@ -115,14 +111,14 @@ void LauncherViewTree::OnChildUnavailable(
     uint32_t child_key,
     const OnChildUnavailableCallback& callback) {
   if (root_key_ == child_key) {
-    LOG(ERROR) << "Root view terminated unexpectedly.";
+    FTL_LOG(ERROR) << "Root view terminated unexpectedly.";
     Shutdown();
   }
   callback.Run();
 }
 
 void LauncherViewTree::OnRendererDied(const OnRendererDiedCallback& callback) {
-  LOG(ERROR) << "Renderer died unexpectedly.";
+  FTL_LOG(ERROR) << "Renderer died unexpectedly.";
   Shutdown();
   callback.Run();
 }
@@ -133,17 +129,18 @@ void LauncherViewTree::UpdateViewProperties() {
 
   auto properties = mojo::ui::ViewProperties::New();
   properties->display_metrics = mojo::ui::DisplayMetrics::New();
-  properties->display_metrics->device_pixel_ratio =
-      viewport_metrics_->device_pixel_ratio;
+  // TODO(mikejurka): Create a way to get pixel ratio from framebuffer
+  properties->display_metrics->device_pixel_ratio = 1.0;
   properties->view_layout = mojo::ui::ViewLayout::New();
-  properties->view_layout->size = viewport_metrics_->size.Clone();
+  properties->view_layout->size = framebuffer_info_->size.Clone();
 
-  view_container_->SetChildProperties(
-      root_key_, mojo::gfx::composition::kSceneVersionNone, properties.Pass());
+  view_container_->SetChildProperties(root_key_,
+                                      mojo::gfx::composition::kSceneVersionNone,
+                                      std::move(properties));
 }
 
 void LauncherViewTree::Shutdown() {
-  shutdown_callback_.Run();
+  shutdown_callback_();
 }
 
 }  // namespace launcher

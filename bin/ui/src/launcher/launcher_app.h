@@ -9,11 +9,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "mojo/common/tracing_impl.h"
+#include "apps/mozart/services/launcher/interfaces/launcher.mojom.h"
+#include "apps/mozart/src/launcher/launch_instance.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "services/ui/launcher/launch_instance.h"
-#include "services/ui/launcher/launcher.mojom.h"
 
 namespace launcher {
 
@@ -33,11 +33,9 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
 
   // |Launcher|:
   void Launch(const mojo::String& application_url) override;
-  void LaunchOnViewport(
-      mojo::InterfaceHandle<mojo::NativeViewport> viewport,
-      mojo::InterfaceHandle<mojo::ui::ViewProvider> view_provider) override;
 
-  void LaunchInternal(mojo::NativeViewportPtr viewport,
+  void LaunchInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                      mojo::FramebufferInfoPtr framebuffer_info,
                       mojo::ui::ViewProviderPtr view_provider);
   void OnLaunchTermination(uint32_t id);
 
@@ -45,19 +43,19 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
   void OnViewManagerConnectionError();
   void OnViewAssociateConnectionError();
 
-  mojo::TracingImpl tracing_;
-
   mojo::BindingSet<Launcher> bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<LaunchInstance>>
       launch_instances_;
 
   uint32_t next_id_;
 
+  mojo::FramebufferProviderPtr framebuffer_provider_;
+
   mojo::gfx::composition::CompositorPtr compositor_;
   mojo::ui::ViewManagerPtr view_manager_;
   std::vector<mojo::ui::ViewAssociateOwnerPtr> view_associate_owners_;
 
-  DISALLOW_COPY_AND_ASSIGN(LauncherApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LauncherApp);
 };
 
 }  // namespace launcher

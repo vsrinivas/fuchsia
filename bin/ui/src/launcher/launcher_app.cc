@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/launcher/launcher_app.h"
+#include "apps/mozart/src/launcher/launcher_app.h"
 
-#include "base/command_line.h"
-#include "base/logging.h"
-#include "base/strings/string_split.h"
-#include "base/trace_event/trace_event.h"
-#include "mojo/common/tracing_impl.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/glue/base/trace_event.h"
+#include "lib/ftl/command_line.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/strings/split_string.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
@@ -20,44 +20,44 @@ LauncherApp::LauncherApp() : next_id_(0u) {}
 LauncherApp::~LauncherApp() {}
 
 void LauncherApp::OnInitialize() {
-  auto command_line = base::CommandLine::ForCurrentProcess();
-  command_line->InitFromArgv(args());
-  logging::LoggingSettings settings;
-  settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
-  logging::InitLogging(settings);
+  auto command_line =
+      ftl::CommandLineFromIterators(args().begin(), args().end());
 
-  tracing_.Initialize(shell(), &args());
   TRACE_EVENT0("launcher", __func__);
 
   InitCompositor();
   InitViewManager();
-  InitViewAssociates(command_line->GetSwitchValueASCII("view_associate_urls"));
+  std::string view_associate_urls;
+  command_line.GetOptionValue("view_associate_urls", &view_associate_urls);
+  // If view_associate_urls is empty, a default set of ViewAssociates is
+  // launched
+  InitViewAssociates(view_associate_urls);
 
-  for (size_t i = 0; i < command_line->GetArgs().size(); ++i) {
-    Launch(command_line->GetArgs()[i]);
+  for (const auto& arg : command_line.positional_args()) {
+    Launch(arg);
   }
 }
 
 void LauncherApp::InitCompositor() {
   mojo::ConnectToService(shell(), "mojo:compositor_service",
                          GetProxy(&compositor_));
-  compositor_.set_connection_error_handler(base::Bind(
-      &LauncherApp::OnCompositorConnectionError, base::Unretained(this)));
+  compositor_.set_connection_error_handler(
+      [this] { OnCompositorConnectionError(); });
 }
 
 void LauncherApp::InitViewManager() {
   mojo::ConnectToService(shell(), "mojo:view_manager_service",
                          GetProxy(&view_manager_));
-  view_manager_.set_connection_error_handler(base::Bind(
-      &LauncherApp::OnViewManagerConnectionError, base::Unretained(this)));
+  view_manager_.set_connection_error_handler(
+      [this] { OnViewManagerConnectionError(); });
 }
 
 void LauncherApp::InitViewAssociates(
     const std::string& associate_urls_command_line_param) {
   // Build up the list of ViewAssociates we are going to start
   auto associate_urls =
-      SplitString(associate_urls_command_line_param, ",", base::KEEP_WHITESPACE,
-                  base::SPLIT_WANT_ALL);
+      ftl::SplitStringCopy(associate_urls_command_line_param, ",",
+                           ftl::kKeepWhitespace, ftl::kSplitWantAll);
 
   // If there's nothing we got from the command line, use our own list
   if (associate_urls.empty()) {
@@ -76,13 +76,13 @@ void LauncherApp::InitViewAssociates(
 
     // Wire up the associate to the ViewManager.
     mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
-    view_manager_->RegisterViewAssociate(view_associate.Pass(),
+    view_manager_->RegisterViewAssociate(std::move(view_associate),
                                          GetProxy(&view_associate_owner), url);
 
-    view_associate_owner.set_connection_error_handler(base::Bind(
-        &LauncherApp::OnViewAssociateConnectionError, base::Unretained(this)));
+    view_associate_owner.set_connection_error_handler(
+        [this] { OnViewAssociateConnectionError(); });
 
-    view_associate_owners_.push_back(view_associate_owner.Pass());
+    view_associate_owners_.push_back(std::move(view_associate_owner));
   }
   view_manager_->FinishedRegisteringViewAssociates();
 }
@@ -94,7 +94,7 @@ bool LauncherApp::OnAcceptConnection(
     service_provider_impl->AddService<Launcher>(
         [this](const mojo::ConnectionContext& connection_context,
                mojo::InterfaceRequest<Launcher> launcher_request) {
-          bindings_.AddBinding(this, launcher_request.Pass());
+          bindings_.AddBinding(this, std::move(launcher_request));
         });
   }
   return true;
@@ -103,30 +103,31 @@ bool LauncherApp::OnAcceptConnection(
 void LauncherApp::Launch(const mojo::String& application_url) {
   DVLOG(1) << "Launching " << application_url;
 
-  mojo::NativeViewportPtr viewport;
-  mojo::ConnectToService(shell(), "mojo:native_viewport_service",
-                         GetProxy(&viewport));
+  mojo::ConnectToService(shell(), "mojo:framebuffer",
+                         mojo::GetProxy(&framebuffer_provider_));
+  framebuffer_provider_->Create([this, application_url](
+      mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+      mojo::FramebufferInfoPtr framebuffer_info) {
+    FTL_CHECK(framebuffer);
+    FTL_CHECK(framebuffer_info);
 
-  mojo::ui::ViewProviderPtr view_provider;
-  mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
+    mojo::ui::ViewProviderPtr view_provider;
+    mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
 
-  LaunchInternal(viewport.Pass(), view_provider.Pass());
+    LaunchInternal(std::move(framebuffer), std::move(framebuffer_info),
+                   std::move(view_provider));
+  });
 }
 
-void LauncherApp::LaunchOnViewport(
-    mojo::InterfaceHandle<mojo::NativeViewport> viewport,
-    mojo::InterfaceHandle<mojo::ui::ViewProvider> view_provider) {
-  LaunchInternal(mojo::NativeViewportPtr::Create(viewport.Pass()),
-                 mojo::ui::ViewProviderPtr::Create(view_provider.Pass()));
-}
-
-void LauncherApp::LaunchInternal(mojo::NativeViewportPtr viewport,
-                                 mojo::ui::ViewProviderPtr view_provider) {
-  uint32_t next_id = next_id_++;
+void LauncherApp::LaunchInternal(
+    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+    mojo::FramebufferInfoPtr framebuffer_info,
+    mojo::ui::ViewProviderPtr view_provider) {
+  const uint32_t next_id = next_id_++;
   std::unique_ptr<LaunchInstance> instance(new LaunchInstance(
-      viewport.Pass(), view_provider.Pass(), compositor_.get(),
-      view_manager_.get(), base::Bind(&LauncherApp::OnLaunchTermination,
-                                      base::Unretained(this), next_id)));
+      std::move(framebuffer), std::move(framebuffer_info),
+      std::move(view_provider), compositor_.get(), view_manager_.get(),
+      [this, next_id] { OnLaunchTermination(next_id); }));
   instance->Launch();
   launch_instances_.emplace(next_id, std::move(instance));
 }
@@ -139,17 +140,17 @@ void LauncherApp::OnLaunchTermination(uint32_t id) {
 }
 
 void LauncherApp::OnCompositorConnectionError() {
-  LOG(ERROR) << "Exiting due to compositor connection error.";
+  FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
   mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
 }
 
 void LauncherApp::OnViewManagerConnectionError() {
-  LOG(ERROR) << "Exiting due to view manager connection error.";
+  FTL_LOG(ERROR) << "Exiting due to view manager connection error.";
   mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
 }
 
 void LauncherApp::OnViewAssociateConnectionError() {
-  LOG(ERROR) << "Exiting due to view associate connection error.";
+  FTL_LOG(ERROR) << "Exiting due to view associate connection error.";
   mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
 };
 

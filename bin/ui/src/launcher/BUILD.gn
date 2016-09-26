@@ -2,18 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-import("//mojo/public/tools/bindings/mojom.gni")
-import("//testing/test.gni")
-
-mojo_native_application("launcher") {
+executable("launcher") {
   sources = [
     "main.cc",
   ]
 
   deps = [
     ":lib",
-    "//mojo/application",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/system",
   ]
 }
 
@@ -30,30 +28,16 @@ source_set("lib") {
   ]
 
   deps = [
-    ":bindings",
+    "//apps/mozart/glue/base",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
-    "//base",
-    "//mojo/application",
-    "//mojo/common:tracing_impl",
-    "//mojo/environment:chromium",
+    "//apps/mozart/services/input/interfaces",
+    "//apps/mozart/services/launcher/interfaces",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
-    "//mojo/services/native_viewport/interfaces",
-    "//mojo/services/ui/input/interfaces",
-    "//mojo/services/ui/views/cpp",
-    "//mojo/services/ui/views/interfaces",
+    "//mojo/services/framebuffer/interfaces",
   ]
-}
-
-mojom("bindings") {
-  sources = [
-    "launcher.mojom",
-  ]
-
-  deps = [
-    "//mojo/services/native_viewport/interfaces",
-    "//mojo/services/ui/views/interfaces",
-  ]
-
-  import_dirs = [ get_path_info("../../../mojo/services", "abspath") ]
 }

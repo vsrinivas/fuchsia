@@ -7,55 +7,49 @@
 
 #include <memory>
 
-#include "base/callback.h"
-#include "mojo/public/cpp/bindings/binding.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "mojo/services/native_viewport/interfaces/native_viewport.mojom.h"
-#include "mojo/services/native_viewport/interfaces/native_viewport_event_dispatcher.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
+#include "mojo/public/cpp/bindings/binding.h"
+#include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
 
 namespace launcher {
 
 class LauncherViewTree;
 
-class LaunchInstance : public mojo::NativeViewportEventDispatcher {
+class LaunchInstance {
  public:
-  LaunchInstance(mojo::NativeViewportPtr viewport,
+  LaunchInstance(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                 mojo::FramebufferInfoPtr framebuffer_info,
                  mojo::ui::ViewProviderPtr view_provider,
                  mojo::gfx::composition::Compositor* compositor,
                  mojo::ui::ViewManager* view_manager,
-                 const base::Closure& shutdown_callback);
-  ~LaunchInstance() override;
+                 const ftl::Closure& shutdown_callback);
+  ~LaunchInstance();
 
   void Launch();
 
  private:
-  // |NativeViewportEventDispatcher|:
-  void OnEvent(mojo::EventPtr event,
-               const mojo::Callback<void()>& callback) override;
+  void InitViewTree();
+  // TODO(jpoichet) Re-wire to new native input mechanism when available
+  void OnEvent(mojo::EventPtr event, const mojo::Callback<void()>& callback);
 
-  void InitViewport();
-  void OnViewportConnectionError();
-  void OnViewportCreated(mojo::ViewportMetricsPtr metrics);
-  void OnViewportMetricsChanged(mojo::ViewportMetricsPtr metrics);
-  void RequestUpdatedViewportMetrics();
-
-  mojo::NativeViewportPtr viewport_;
+  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
+  mojo::FramebufferInfoPtr framebuffer_info_;
   mojo::ui::ViewProviderPtr view_provider_;
 
   mojo::gfx::composition::Compositor* const compositor_;
   mojo::ui::ViewManager* const view_manager_;
-  base::Closure shutdown_callback_;
-
-  mojo::Binding<NativeViewportEventDispatcher>
-      viewport_event_dispatcher_binding_;
+  ftl::Closure shutdown_callback_;
 
   std::unique_ptr<LauncherViewTree> view_tree_;
 
   mojo::ui::ViewOwnerPtr client_view_owner_;
 
-  DISALLOW_COPY_AND_ASSIGN(LaunchInstance);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LaunchInstance);
 };
 
 }  // namespace launcher

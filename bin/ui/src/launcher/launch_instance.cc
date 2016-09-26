@@ -2,93 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/launcher/launch_instance.h"
+#include "apps/mozart/src/launcher/launch_instance.h"
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "base/trace_event/trace_event.h"
-#include "services/ui/launcher/launcher_view_tree.h"
+#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/src/launcher/launcher_view_tree.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/logging.h"
 
 namespace launcher {
 
-LaunchInstance::LaunchInstance(mojo::NativeViewportPtr viewport,
-                               mojo::ui::ViewProviderPtr view_provider,
-                               mojo::gfx::composition::Compositor* compositor,
-                               mojo::ui::ViewManager* view_manager,
-                               const base::Closure& shutdown_callback)
-    : viewport_(viewport.Pass()),
-      view_provider_(view_provider.Pass()),
+LaunchInstance::LaunchInstance(
+    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+    mojo::FramebufferInfoPtr framebuffer_info,
+    mojo::ui::ViewProviderPtr view_provider,
+    mojo::gfx::composition::Compositor* compositor,
+    mojo::ui::ViewManager* view_manager,
+    const ftl::Closure& shutdown_callback)
+    : framebuffer_(std::move(framebuffer)),
+      framebuffer_info_(std::move(framebuffer_info)),
+      view_provider_(std::move(view_provider)),
       compositor_(compositor),
       view_manager_(view_manager),
-      shutdown_callback_(shutdown_callback),
-      viewport_event_dispatcher_binding_(this) {}
+      shutdown_callback_(shutdown_callback) {}
 
 LaunchInstance::~LaunchInstance() {}
 
 void LaunchInstance::Launch() {
   TRACE_EVENT0("launcher", __func__);
 
-  InitViewport();
+  InitViewTree();
 
   view_provider_->CreateView(GetProxy(&client_view_owner_), nullptr);
   view_provider_.reset();
 }
 
-void LaunchInstance::InitViewport() {
-  viewport_.set_connection_error_handler(base::Bind(
-      &LaunchInstance::OnViewportConnectionError, base::Unretained(this)));
-
-  mojo::NativeViewportEventDispatcherPtr dispatcher;
-  viewport_event_dispatcher_binding_.Bind(GetProxy(&dispatcher));
-  viewport_->SetEventDispatcher(dispatcher.Pass());
-
-  // Match the Nexus 5 aspect ratio initially.
-  auto size = mojo::Size::New();
-  size->width = 320;
-  size->height = 640;
-
-  auto requested_configuration = mojo::SurfaceConfiguration::New();
-  viewport_->Create(
-      size.Pass(), requested_configuration.Pass(),
-      base::Bind(&LaunchInstance::OnViewportCreated, base::Unretained(this)));
-}
-
-void LaunchInstance::OnViewportConnectionError() {
-  LOG(ERROR) << "Exiting due to viewport connection error.";
-  shutdown_callback_.Run();
-}
-
-void LaunchInstance::OnViewportCreated(mojo::ViewportMetricsPtr metrics) {
-  viewport_->Show();
-
-  mojo::ContextProviderPtr context_provider;
-  viewport_->GetContextProvider(GetProxy(&context_provider));
-
-  view_tree_.reset(new LauncherViewTree(compositor_, view_manager_,
-                                        context_provider.Pass(), metrics.Pass(),
-                                        shutdown_callback_));
-  view_tree_->SetRoot(client_view_owner_.Pass());
-
-  RequestUpdatedViewportMetrics();
-}
-
-void LaunchInstance::OnViewportMetricsChanged(
-    mojo::ViewportMetricsPtr metrics) {
-  if (view_tree_) {
-    view_tree_->SetViewportMetrics(metrics.Pass());
-    RequestUpdatedViewportMetrics();
-  }
-}
-
-void LaunchInstance::RequestUpdatedViewportMetrics() {
-  viewport_->RequestMetrics(base::Bind(
-      &LaunchInstance::OnViewportMetricsChanged, base::Unretained(this)));
+void LaunchInstance::InitViewTree() {
+  view_tree_.reset(
+      new LauncherViewTree(compositor_, view_manager_, std::move(framebuffer_),
+                           std::move(framebuffer_info_), shutdown_callback_));
+  view_tree_->SetRoot(std::move(client_view_owner_));
 }
 
 void LaunchInstance::OnEvent(mojo::EventPtr event,
                              const mojo::Callback<void()>& callback) {
   if (view_tree_)
-    view_tree_->DispatchEvent(event.Pass());
+    view_tree_->DispatchEvent(std::move(event));
   callback.Run();
 }
 

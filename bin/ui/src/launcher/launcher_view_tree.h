@@ -5,13 +5,12 @@
 #ifndef SERVICES_UI_LAUNCHER_VIEW_TREE_IMPL_H_
 #define SERVICES_UI_LAUNCHER_VIEW_TREE_IMPL_H_
 
-#include "base/callback.h"
-#include "base/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "mojo/services/native_viewport/interfaces/native_viewport.mojom.h"
-#include "mojo/services/ui/input/interfaces/input_dispatcher.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
+#include "mojo/public/cpp/bindings/binding.h"
 
 namespace launcher {
 
@@ -20,14 +19,13 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
  public:
   LauncherViewTree(mojo::gfx::composition::Compositor* compositor,
                    mojo::ui::ViewManager* view_manager,
-                   mojo::ContextProviderPtr context_provider,
-                   mojo::ViewportMetricsPtr viewport_metrics,
-                   const base::Closure& shutdown_callback);
+                   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                   mojo::FramebufferInfoPtr framebuffer_info,
+                   const ftl::Closure& shutdown_callback);
 
   ~LauncherViewTree() override;
 
   void SetRoot(mojo::ui::ViewOwnerPtr owner);
-  void SetViewportMetrics(mojo::ViewportMetricsPtr viewport_metrics);
   void DispatchEvent(mojo::EventPtr event);
 
  private:
@@ -51,9 +49,9 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
   mojo::gfx::composition::Compositor* compositor_;
   mojo::ui::ViewManager* view_manager_;
 
-  mojo::ContextProviderPtr context_provider_;
-  mojo::ViewportMetricsPtr viewport_metrics_;
-  base::Closure shutdown_callback_;
+  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
+  mojo::FramebufferInfoPtr framebuffer_info_;
+  ftl::Closure shutdown_callback_;
 
   mojo::Binding<mojo::ui::ViewTreeListener> view_tree_listener_binding_;
   mojo::Binding<mojo::ui::ViewContainerListener>
@@ -67,7 +65,7 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
   bool root_was_set_ = false;
   mojo::ui::ViewInfoPtr root_view_info_;
 
-  DISALLOW_COPY_AND_ASSIGN(LauncherViewTree);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LauncherViewTree);
 };
 
 }  // namespace launcher

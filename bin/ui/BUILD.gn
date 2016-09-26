@@ -17,6 +17,7 @@ group("mozart") {
     "//apps/mozart/services/views/interfaces",
     "//apps/mozart/src/compositor",
     "//apps/mozart/src/input_manager",
+    "//apps/mozart/src/launcher",
     "//apps/mozart/src/view_manager",
   ]
 }
