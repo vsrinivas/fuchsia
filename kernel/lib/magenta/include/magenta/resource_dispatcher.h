@@ -23,6 +23,5 @@ public:
     virtual Type GetResourceType() const final { return Type::KERNEL; }
 
 private:
-    explicit ResourceDispatcher(void);
-
+    explicit ResourceDispatcher();
 };

@@ -9,8 +9,6 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <kernel/event.h>
-
 #include <lib/ktrace.h>
 
 #include <magenta/handle.h>

@@ -21,7 +21,7 @@ public:
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
     InterruptEventDispatcher& operator=(const InterruptDispatcher &) = delete;
 
-    virtual ~InterruptEventDispatcher() final;
+    ~InterruptEventDispatcher() final;
     status_t InterruptComplete() final;
 
     // requred to exist in our collection of allocated vectors.

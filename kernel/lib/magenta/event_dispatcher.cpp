@@ -6,11 +6,8 @@
 
 #include <magenta/event_dispatcher.h>
 
-#include <assert.h>
 #include <err.h>
 #include <new.h>
-
-#include <kernel/event.h>
 
 #include <magenta/state_tracker.h>
 

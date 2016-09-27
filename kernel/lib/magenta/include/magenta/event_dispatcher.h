@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <kernel/event.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 
@@ -21,7 +19,7 @@ public:
     ~EventDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_EVENT; }
 
-    virtual StateTracker* get_state_tracker() final { return &state_tracker_; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final;
 

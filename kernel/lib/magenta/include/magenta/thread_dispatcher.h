@@ -15,7 +15,7 @@ public:
     static status_t Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
-    virtual ~ThreadDispatcher() final;
+    ~ThreadDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
     mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
 
