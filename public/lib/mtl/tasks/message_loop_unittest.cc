@@ -191,6 +191,16 @@ TEST(MessageLoop, CanQuitCurrent) {
   EXPECT_TRUE(did_run);
 }
 
+TEST(MessageLoop, CanQuitManyTimes) {
+  MessageLoop loop;
+  loop.QuitNow();
+  loop.QuitNow();
+  loop.PostQuitTask();
+  loop.Run();
+  loop.QuitNow();
+  loop.QuitNow();
+}
+
 class TestMessageLoopHandler : public MessageLoopHandler {
  public:
   TestMessageLoopHandler() {}

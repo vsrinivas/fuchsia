@@ -39,6 +39,7 @@ MessageLoop::~MessageLoop() {
   FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
+  // TODO(abarth): What if more handlers are registered here?
   NotifyHandlers(ftl::TimePoint::Max(), MOJO_SYSTEM_RESULT_CANCELLED);
 
   incoming_tasks_->ClearDelegate();
@@ -212,8 +213,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
 }
 
 void MessageLoop::QuitNow() {
-  FTL_DCHECK(is_running_);
-  should_quit_ = true;
+  if (is_running_)
+    should_quit_ = true;
 }
 
 void MessageLoop::PostQuitTask() {
