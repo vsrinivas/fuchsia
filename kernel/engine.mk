@@ -76,9 +76,11 @@ USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 GLOBAL_INCLUDES := system/public system/private
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
-GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type -Wno-nonnull-compare
+GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
 ifeq ($(CLANG),1)
 GLOBAL_COMPILEFLAGS += -Wno-error
+else
+GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
 GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
 # Note: Both -fno-exceptions and -fno-asynchronous-unwind-tables is needed
