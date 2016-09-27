@@ -1130,7 +1130,7 @@ void thread_secondary_cpu_entry(void)
  */
 thread_t *thread_create_idle_thread(uint cpu_num)
 {
-    DEBUG_ASSERT(cpu_num != 0);
+    DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
     /* Shouldn't be initialized yet */
     DEBUG_ASSERT(idle_thread(cpu_num)->magic != THREAD_MAGIC);
