@@ -964,7 +964,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/alarm.c \
     $(LOCAL_DIR)/src/unistd/ctermid.c \
     $(LOCAL_DIR)/src/unistd/dup3.c \
-    $(LOCAL_DIR)/src/unistd/faccessat.c \
     $(LOCAL_DIR)/src/unistd/fchdir.c \
     $(LOCAL_DIR)/src/unistd/fchownat.c \
     $(LOCAL_DIR)/src/unistd/gethostname.c \

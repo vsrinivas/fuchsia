@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -28,8 +29,6 @@
 #include "unistd.h"
 
 static_assert(MXIO_FLAG_CLOEXEC == FD_CLOEXEC, "Unexpected mxio flags value");
-
-#define MXDEBUG 0
 
 // non-thread-safe emulation of unistd io functions
 // using the mxio transports
@@ -96,10 +95,6 @@ free_fd_found:
     return fd;
 }
 
-static bool path_is_absolute(const char* path) {
-    return (path && path[0] == '/') ? true : false;
-}
-
 mxio_t* __mxio_fd_to_io(int fd) {
     if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
         return NULL;
@@ -136,8 +131,31 @@ mx_status_t mxio_close(mxio_t* io) {
     return io->ops->close(io);
 }
 
-static mx_status_t __mxio_open(mxio_t** io, mxio_t* at, const char* path, int flags, uint32_t mode) {
-    mxio_t* iodir;
+// Possibly return an owned mxio_t corresponding to either the root,
+// the cwd, or, for the ...at variants, dirfd. In the absolute path
+// case, *path is also adjusted.
+static mxio_t* mxio_iodir(const char** path, int dirfd) {
+    mxio_t* iodir = NULL;
+    mtx_lock(&mxio_lock);
+    if (*path[0] == '/') {
+        iodir = mxio_root_handle;
+        (*path)++;
+        if (*path[0] == 0) {
+            *path = ".";
+        }
+    } else if (dirfd == AT_FDCWD) {
+        iodir = mxio_cwd_handle;
+    } else if ((dirfd >= 0) && (dirfd < MAX_MXIO_FD)) {
+        iodir = mxio_fdtab[dirfd];
+    }
+    if (iodir != NULL) {
+        mxio_acquire(iodir);
+    }
+    mtx_unlock(&mxio_lock);
+    return iodir;
+}
+
+static mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, uint32_t mode) {
     if (path == NULL) {
         return ERR_INVALID_ARGS;
     }
@@ -145,44 +163,33 @@ static mx_status_t __mxio_open(mxio_t** io, mxio_t* at, const char* path, int fl
         return ERR_INVALID_ARGS;
     }
 
-    mtx_lock(&mxio_lock);
-    if (path[0] == '/') {
-        iodir = mxio_root_handle;
-        path++;
-        if (path[0] == 0) {
-            path = ".";
-        }
-    } else {
-        iodir = at ? at : mxio_cwd_handle;
+    mxio_t* iodir = mxio_iodir(&path, dirfd);
+    if (iodir == NULL) {
+        return ERR_BAD_HANDLE;
     }
-    mxio_acquire(iodir);
-    mtx_unlock(&mxio_lock);
 
     mx_status_t r = iodir->ops->open(iodir, path, flags, mode, io);
     mxio_release(iodir);
     return r;
 }
 
+static mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode) {
+    return __mxio_open_at(io, AT_FDCWD, path, flags, mode);
+}
+
 // opens the directory containing path
 // returns the non-directory portion of the path as name on success
-static mx_status_t __mxio_opendir_containing(mxio_t** io, mxio_t* at, const char* path, const char** _name) {
-    char dirpath[1024];
-    mx_status_t r;
-
+static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const char* path, const char** _name) {
     if (path == NULL) {
         return ERR_INVALID_ARGS;
     }
 
-    mxio_t* iodir;
-    mtx_lock(&mxio_lock);
-    if (path[0] == '/') {
-        path++;
-        iodir = mxio_root_handle;
-    } else {
-        iodir = at ? at : mxio_cwd_handle;
+    mxio_t* iodir = mxio_iodir(&path, dirfd);
+    if (iodir == NULL) {
+        return ERR_BAD_HANDLE;
     }
-    mxio_acquire(iodir);
-    mtx_unlock(&mxio_lock);
+
+    char dirpath[1024];
 
     const char* name = strrchr(path, '/');
     if (name == NULL) {
@@ -204,10 +211,14 @@ static mx_status_t __mxio_opendir_containing(mxio_t** io, mxio_t* at, const char
     }
 
     *_name = name;
-    r = iodir->ops->open(iodir, dirpath, O_DIRECTORY, 0, io);
+    mx_status_t r = iodir->ops->open(iodir, dirpath, O_DIRECTORY, 0, io);
 
     mxio_release(iodir);
     return r;
+}
+
+static mx_status_t __mxio_opendir_containing(mxio_t** io, const char* path, const char** _name) {
+    return __mxio_opendir_containing_at(io, AT_FDCWD, path, _name);
 }
 
 // hook into libc process startup
@@ -288,7 +299,7 @@ void __libc_extensions_init(uint32_t handle_count,
     if (mxio_root_handle) {
         mxio_root_init = true;
         if(!mxio_cwd_handle) {
-          __mxio_open(&mxio_cwd_handle, NULL, "/", O_DIRECTORY, 0);
+            __mxio_open(&mxio_cwd_handle, "/", O_DIRECTORY, 0);
         }
     } else {
         // placeholder null handle
@@ -463,18 +474,10 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
 }
 
 int unlinkat(int dirfd, const char* path, int flags) {
-    mxio_t* at;
-    if (dirfd == AT_FDCWD || path_is_absolute(path)) {
-        at = NULL;
-    } else {
-        if ((at = fd_to_io(dirfd)) == NULL) {
-            return ERRNO(EBADF);
-        }
-    }
     const char* name;
     mxio_t* io;
     mx_status_t r;
-    if ((r = __mxio_opendir_containing(&io, at, path, &name)) < 0) {
+    if ((r = __mxio_opendir_containing_at(&io, dirfd, path, &name)) < 0) {
         return ERROR(r);
     }
     r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*)name, strlen(name));
@@ -672,7 +675,7 @@ int unlink(const char* path) {
     const char* name;
     mxio_t* io;
     mx_status_t r;
-    if ((r = __mxio_opendir_containing(&io, NULL, path, &name)) < 0) {
+    if ((r = __mxio_opendir_containing(&io, path, &name)) < 0) {
         return ERROR(r);
     }
     r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*)name, strlen(name));
@@ -699,7 +702,7 @@ int open(const char* path, int flags, ...) {
         mode = va_arg(ap, uint32_t) & 0777;
         va_end(ap);
     }
-    if ((r = __mxio_open(&io, NULL, path, flags, mode)) < 0) {
+    if ((r = __mxio_open(&io, path, flags, mode)) < 0) {
         return ERROR(r);
     }
     if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
@@ -711,15 +714,6 @@ int open(const char* path, int flags, ...) {
 }
 
 int openat(int dirfd, const char* path, int flags, ...) {
-    mxio_t* at;
-    if (dirfd == AT_FDCWD || path_is_absolute(path)) {
-        at = NULL;
-    } else {
-        if ((at = fd_to_io(dirfd)) == NULL) {
-            return ERRNO(EBADF);
-        }
-    }
-
     mxio_t* io = NULL;
     mx_status_t r;
     int fd;
@@ -731,8 +725,7 @@ int openat(int dirfd, const char* path, int flags, ...) {
         mode = va_arg(ap, uint32_t) & 0777;
         va_end(ap);
     }
-    if ((r = __mxio_open(&io, at, path, flags, mode)) < 0) {
-        mxio_release(at);
+    if ((r = __mxio_open_at(&io, dirfd, path, flags, mode)) < 0) {
         fd = ERROR(r);
     } else if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
         io->ops->close(io);
@@ -740,9 +733,6 @@ int openat(int dirfd, const char* path, int flags, ...) {
         fd = ERRNO(EMFILE);
     }
 
-    if (at != NULL) {
-        mxio_release(at);
-    }
     return fd;
 }
 
@@ -752,7 +742,7 @@ int mkdir(const char* path, mode_t mode) {
 
     mode = (mode & 0777) | S_IFDIR;
 
-    if ((r = __mxio_open(&io, NULL, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
+    if ((r = __mxio_open(&io, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
         return ERROR(r);
     }
     io->ops->close(io);
@@ -771,19 +761,10 @@ int fstat(int fd, struct stat* s) {
 }
 
 int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
-    mxio_t* at;
-    if (dirfd == AT_FDCWD || path_is_absolute(fn)) {
-        at = NULL;
-    } else {
-        if ((at = fd_to_io(dirfd)) == NULL) {
-            return ERRNO(EBADF);
-        }
-    }
-
     mxio_t* io;
     mx_status_t r;
 
-    if ((r = __mxio_open(&io, at, fn, 0, 0)) < 0) {
+    if ((r = __mxio_open_at(&io, dirfd, fn, 0, 0)) < 0) {
         return ERROR(r);
     }
     r = mxio_stat(io, s);
@@ -796,7 +777,7 @@ int stat(const char* fn, struct stat* s) {
     mxio_t* io;
     mx_status_t r;
 
-    if ((r = __mxio_open(&io, NULL, fn, 0, 0)) < 0) {
+    if ((r = __mxio_open(&io, fn, 0, 0)) < 0) {
         return ERROR(r);
     }
     r = mxio_stat(io, s);
@@ -835,6 +816,35 @@ int pipe2(int pipefd[2], int flags) {
 
 int pipe(int pipefd[2]) {
     return pipe2(pipefd, 0);
+}
+
+int faccessat(int dirfd, const char* filename, int amode, int flag) {
+    // For now, we just check to see if the file exists, until we
+    // model permissions. But first, check that the flags and amode
+    // are valid.
+    const int allowed_flags = AT_EACCESS;
+    if (flag & (~allowed_flags)) {
+        return ERRNO(EINVAL);
+    }
+
+    // amode is allowed to be either a subset of this mask, or just F_OK.
+    const int allowed_modes = R_OK | W_OK | X_OK;
+    if (amode != F_OK && (flag & (~allowed_modes))) {
+        return ERRNO(EINVAL);
+    }
+
+    // Since we are not tracking permissions yet, just check that the
+    // file exists a la fstatat.
+    mxio_t* io;
+    mx_status_t status;
+    if ((status = __mxio_open_at(&io, dirfd, filename, 0, 0)) < 0) {
+        return ERROR(status);
+    }
+    struct stat s;
+    status = mxio_stat(io, &s);
+    mxio_close(io);
+    mxio_release(io);
+    return STATUS(status);
 }
 
 static void update_cwd_path(const char* path) {
@@ -931,7 +941,7 @@ char* getcwd(char* buf, size_t size) {
 int chdir(const char* path) {
     mxio_t* io;
     mx_status_t r;
-    if ((r = __mxio_open(&io, NULL, path, O_DIRECTORY, 0)) < 0) {
+    if ((r = __mxio_open(&io, path, O_DIRECTORY, 0)) < 0) {
         return STATUS(r);
     }
     mtx_lock(&mxio_cwd_lock);

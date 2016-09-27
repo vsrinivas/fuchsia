@@ -181,6 +181,12 @@ static int stub_access(const char* path, int mode) {
 }
 weak_alias(stub_access, access);
 
+static int stub_faccessat(int fd, const char* path, int amode, int flags) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_faccessat, faccessat);
+
 static int stub_chmod(const char* path, mode_t mode) {
     errno = ENOSYS;
     return -1;
