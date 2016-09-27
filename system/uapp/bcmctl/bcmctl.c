@@ -47,7 +47,7 @@ int main(int argc, const char** argv) {
 
     const char* cmd = argv[1];
 
-    int fd = open("/dev/bcm-vc-rpc", O_RDWR);
+    int fd = open("/dev/misc/bcm-vc-rpc", O_RDWR);
     if (fd < 0) {
         printf("Error opening bcm mailbox device.\n");
         return 1;
