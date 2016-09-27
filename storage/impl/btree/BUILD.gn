@@ -1,0 +1,53 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+
+group("btree") {
+  testonly = true
+
+  deps = [
+    ":lib",
+    ":unittests",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "btree_iterator.cc",
+    "btree_iterator.h",
+    "commit_contents_impl.cc",
+    "commit_contents_impl.h",
+    "position.cc",
+    "position.h",
+  ]
+
+  deps = [
+    "//apps/ledger/storage/impl/store:lib",
+    "//apps/ledger/storage/public",
+    "//lib/ftl",
+  ]
+}
+
+executable("unittests") {
+  output_name = "storage_btree_unittests"
+
+  testonly = true
+
+  sources = [
+    "btree_iterator_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/glue",
+    "//apps/ledger/glue/test",
+    "//apps/ledger/storage/impl/store:lib",
+    "//apps/ledger/storage/public",
+    "//apps/ledger/test",
+    "//lib/ftl",
+    "//mojo/system:libmojo",
+    "//third_party/gtest",
+  ]
+}

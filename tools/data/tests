@@ -10,6 +10,8 @@ unittests = [
     '/boot/test/gcs_unittests',
     '/boot/test/ledger_glue_unittests',
     '/boot/test/storage_unittests',
+    '/boot/test/storage_btree_unittests',
+    '/boot/test/storage_store_unittests',
 ]
 
 # List of apptest binaries.

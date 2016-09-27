@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/object_store.h"
+#include "apps/ledger/storage/impl/store/object_store.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
-#include "apps/ledger/storage/impl/tree_node.h"
+#include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
@@ -50,15 +50,22 @@ class ObjectStoreTest : public ::testing::Test {
 
   ~ObjectStoreTest() override {}
 
+  // Test:
+  void SetUp() override {
+    ::testing::Test::SetUp();
+    std::srand(0);
+  }
+
  protected:
-  std::unique_ptr<TreeNode> FromId(const ObjectId& id) {
-    std::unique_ptr<TreeNode> node;
+  std::unique_ptr<const TreeNode> FromId(const ObjectId& id) {
+    std::unique_ptr<const TreeNode> node;
     EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, id, &node));
     return node;
   }
 
-  std::unique_ptr<TreeNode> FromEntries(const std::vector<Entry>& entries,
-                                        const std::vector<ObjectId>& children) {
+  std::unique_ptr<const TreeNode> FromEntries(
+      const std::vector<Entry>& entries,
+      const std::vector<ObjectId>& children) {
     ObjectId id;
     EXPECT_EQ(Status::OK,
               TreeNode::FromEntries(&store_, entries, children, &id));
@@ -72,10 +79,10 @@ class ObjectStoreTest : public ::testing::Test {
 };
 
 TEST_F(ObjectStoreTest, CreateGetTreeNode) {
-  std::unique_ptr<Object> node =
+  std::unique_ptr<const Object> node =
       FromEntries(std::vector<Entry>(), std::vector<ObjectId>(1));
 
-  std::unique_ptr<TreeNode> foundNode;
+  std::unique_ptr<const TreeNode> foundNode;
   EXPECT_EQ(Status::OK, store_.GetTreeNode(node->GetId(), &foundNode));
 
   EXPECT_EQ(Status::NOT_FOUND, store_.GetTreeNode(RandomId(), &foundNode));
@@ -84,7 +91,7 @@ TEST_F(ObjectStoreTest, CreateGetTreeNode) {
 TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
-  std::unique_ptr<TreeNode> node =
+  std::unique_ptr<const TreeNode> node =
       FromEntries(entries, std::vector<ObjectId>(size + 1));
   EXPECT_EQ(size, node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
@@ -94,7 +101,7 @@ TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
   }
 
   for (int i = 0; i <= size; ++i) {
-    std::unique_ptr<TreeNode> child;
+    std::unique_ptr<const TreeNode> child;
     EXPECT_EQ(Status::NOT_FOUND, node->GetChild(i, &child));
   }
 }
@@ -102,7 +109,7 @@ TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
 TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
-  std::unique_ptr<TreeNode> node =
+  std::unique_ptr<const TreeNode> node =
       FromEntries(entries, std::vector<ObjectId>(size + 1));
 
   int splitIndex = 3;
@@ -110,7 +117,7 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   ObjectId rightId;
   EXPECT_EQ(Status::OK, node->Split(splitIndex, "", "", &leftId, &rightId));
 
-  std::unique_ptr<TreeNode> leftNode = FromId(leftId);
+  std::unique_ptr<const TreeNode> leftNode = FromId(leftId);
   EXPECT_EQ(splitIndex, leftNode->GetKeyCount());
   for (int i = 0; i < splitIndex; ++i) {
     Entry foundEntry;
@@ -118,7 +125,7 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
     ExpectEntriesEqual(entries[i], foundEntry);
   }
 
-  std::unique_ptr<TreeNode> rightNode = FromId(rightId);
+  std::unique_ptr<const TreeNode> rightNode = FromId(rightId);
   EXPECT_EQ(size - splitIndex, rightNode->GetKeyCount());
   for (int i = 0; i < size - splitIndex; ++i) {
     Entry foundEntry;
@@ -130,7 +137,7 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   ObjectId mergedId;
   EXPECT_EQ(Status::OK,
             TreeNode::Merge(&store_, leftId, rightId, "", &mergedId));
-  std::unique_ptr<TreeNode> mergedNode = FromId(mergedId);
+  std::unique_ptr<const TreeNode> mergedNode = FromId(mergedId);
   EXPECT_EQ(size, mergedNode->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     Entry foundEntry;

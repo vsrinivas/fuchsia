@@ -16,6 +16,7 @@ source_set("public") {
     "ledger_storage.h",
     "object.h",
     "page_storage.h",
+    "types.cc",
     "types.h",
   ]
 

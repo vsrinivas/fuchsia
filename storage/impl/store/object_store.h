@@ -24,8 +24,9 @@ class ObjectStore {
 
   Status AddObject(std::unique_ptr<Object> object);
 
-  Status GetBlob(const ObjectId& id, std::unique_ptr<Blob>* object);
-  Status GetTreeNode(const ObjectId& id, std::unique_ptr<TreeNode>* tree_node);
+  Status GetBlob(const ObjectId& id, std::unique_ptr<const Blob>* object);
+  Status GetTreeNode(const ObjectId& id,
+                     std::unique_ptr<const TreeNode>* tree_node);
 
  private:
   // TODO(nellyv): use file system instead and remove this map.

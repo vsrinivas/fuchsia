@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_STORAGE_IMPL_TREE_NODE_H_
-#define APPS_LEDGER_STORAGE_IMPL_TREE_NODE_H_
+#ifndef APPS_LEDGER_STORAGE_IMPL_STORE_TREE_NODE_H_
+#define APPS_LEDGER_STORAGE_IMPL_STORE_TREE_NODE_H_
 
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/storage/impl/object_store.h"
+#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/object.h"
 #include "apps/ledger/storage/public/types.h"
@@ -31,7 +31,7 @@ class TreeNode : public Object {
   // |node|.
   static Status FromId(ObjectStore* store,
                        const ObjectId& id,
-                       std::unique_ptr<TreeNode>* node);
+                       std::unique_ptr<const TreeNode>* node);
 
   // Creates a |TreeNode| object with the given entries. Contents of |children|
   // are optional and if a child is not present, an empty id should be given in
@@ -75,7 +75,7 @@ class TreeNode : public Object {
 
   // Finds the child node at position |index| and stores it in |child|. |index|
   // has to be in [0, GetKeyCount()].
-  Status GetChild(int index, std::unique_ptr<TreeNode>* child) const;
+  Status GetChild(int index, std::unique_ptr<const TreeNode>* child) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|

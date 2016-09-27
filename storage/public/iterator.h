@@ -9,14 +9,17 @@
 
 namespace storage {
 
-// A non-copyable iterator.
+// A non-copyable iterator over a collection of elements of type T.
 template <class T>
 class Iterator {
  public:
   Iterator() {}
   virtual ~Iterator() {}
 
+  // Advances to the next element in the collection.
   virtual Iterator<T>& Next() = 0;
+  // Returns true iff no elements are available in the collection. It is
+  // invalid to dereference this iterator if Done() returns true.
   virtual bool Done() = 0;
 
   virtual T& operator*() const = 0;

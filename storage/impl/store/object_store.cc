@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/object_store.h"
+#include "apps/ledger/storage/impl/store/object_store.h"
 
-#include "apps/ledger/storage/impl/tree_node.h"
+#include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 
 namespace storage {
@@ -17,12 +17,13 @@ Status ObjectStore::AddObject(std::unique_ptr<Object> object) {
   return Status::OK;
 }
 
-Status ObjectStore::GetBlob(const ObjectId& id, std::unique_ptr<Blob>* blob) {
+Status ObjectStore::GetBlob(const ObjectId& id,
+                            std::unique_ptr<const Blob>* blob) {
   return Status::NOT_IMPLEMENTED;
 }
 
 Status ObjectStore::GetTreeNode(const ObjectId& id,
-                                std::unique_ptr<TreeNode>* tree_node) {
+                                std::unique_ptr<const TreeNode>* tree_node) {
   auto iterator = map_.find(id);
   if (iterator == map_.end()) {
     return Status::NOT_FOUND;

@@ -27,6 +27,9 @@ struct Entry {
   KeyPriority priority;
 };
 
+bool operator==(const Entry& lhs, const Entry& rhs);
+bool operator!=(const Entry& lhs, const Entry& rhs);
+
 // A change between two commit contents.
 struct EntryChange {
   Entry entry;

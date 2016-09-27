@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/tree_node.h"
+#include "apps/ledger/storage/impl/store/tree_node.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/public/constants.h"
@@ -39,7 +39,7 @@ TreeNode::~TreeNode() {}
 
 Status TreeNode::FromId(ObjectStore* store,
                         const ObjectId& id,
-                        std::unique_ptr<TreeNode>* node) {
+                        std::unique_ptr<const TreeNode>* node) {
   return store->GetTreeNode(id, node);
 }
 
@@ -63,8 +63,8 @@ Status TreeNode::Merge(ObjectStore* store,
                        const ObjectId& right,
                        const ObjectId& merged_child_id,
                        ObjectId* merged_id) {
-  std::unique_ptr<TreeNode> leftNode;
-  std::unique_ptr<TreeNode> rightNode;
+  std::unique_ptr<const TreeNode> leftNode;
+  std::unique_ptr<const TreeNode> rightNode;
   Status s = store->GetTreeNode(left, &leftNode);
   if (s != Status::OK) {
     return s;
@@ -150,7 +150,8 @@ Status TreeNode::GetEntry(int index, Entry* entry) const {
   return Status::OK;
 }
 
-Status TreeNode::GetChild(int index, std::unique_ptr<TreeNode>* child) const {
+Status TreeNode::GetChild(int index,
+                          std::unique_ptr<const TreeNode>* child) const {
   FTL_DCHECK(index >= 0 && index <= GetKeyCount());
   if (children_[index].empty()) {
     return Status::NOT_FOUND;
