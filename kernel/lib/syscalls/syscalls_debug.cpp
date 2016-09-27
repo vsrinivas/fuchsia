@@ -332,7 +332,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     if (status != NO_ERROR)
         return status;
 
-    status = copy_to_user(_buffer_ptr.reinterpret<uint8_t>(), bytes.get(), buffer_len);
+    status = _buffer_ptr.copy_array_to_user(bytes.get(), buffer_len);
     if (status != NO_ERROR)
         return ERR_INVALID_ARGS;
 

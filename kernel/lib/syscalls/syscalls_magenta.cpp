@@ -242,7 +242,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (size < sizeof(mx_size_t))
                 return ERR_BUFFER_TOO_SMALL;
             mx_size_t threshold = consumer_dispatcher->GetReadThreshold();
-            if (copy_to_user(_value, &threshold, sizeof(threshold)) != NO_ERROR)
+            if (_value.reinterpret<mx_size_t>().copy_to_user(threshold) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -253,7 +253,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
             if (size < sizeof(mx_size_t))
                 return ERR_BUFFER_TOO_SMALL;
             mx_size_t threshold = producer_dispatcher->GetWriteThreshold();
-            if (copy_to_user(_value, &threshold, sizeof(threshold)) != NO_ERROR)
+            if (_value.reinterpret<mx_size_t>().copy_to_user(threshold) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -1009,7 +1009,7 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (copy_to_user(user_ptr<mx_handle_t>(out_handle), hv, sizeof(mx_handle_t) * 2) != NO_ERROR)
+    if (user_ptr<mx_handle_t>(out_handle).copy_array_to_user(hv, 2) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));

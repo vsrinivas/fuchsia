@@ -101,7 +101,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
     status = vmo->GetSize(&size);
 
     // copy the size back, even if it failed
-    if (copy_to_user(_size.reinterpret<uint8_t>(), &size, sizeof(size)) != NO_ERROR)
+    if (_size.copy_to_user(size) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return status;

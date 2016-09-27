@@ -120,7 +120,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     if (res != NO_ERROR)
         return res;
 
-    if (copy_to_user(out_vaddr, &vaddr, sizeof(void*)) != NO_ERROR) {
+    if (out_vaddr.copy_to_user(vaddr) != NO_ERROR) {
         aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
         return ERR_INVALID_ARGS;
     }
