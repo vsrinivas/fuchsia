@@ -14,8 +14,13 @@ import "mojo/services/geometry/interfaces/geometry.mojom";
 // We may also want to support certain planar formats.
 struct Image {
   // Specifies how pixels are represented in the image buffer.
+  // Following Vulkan naming convention to reduce ambiguity.
   enum PixelFormat {
-    ARGB_8888 = 0,
+    // A 32-bit four-component unsigned integer format.
+    // Byte order: B, G, R, A (little-endian ARGB packed 32-bit word).
+    // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
+    // Equivalent to Magenta |ARGB_8888| pixel format on little-endian arch.
+    B8G8R8A8 = 0,
   };
 
   // Specifies how alpha information should be interpreted.
@@ -48,7 +53,7 @@ struct Image {
   uint32 offset = 0;
 
   // The pixel format of the image.
-  PixelFormat pixel_format = PixelFormat.ARGB_8888;
+  PixelFormat pixel_format = PixelFormat.B8G8R8A8;
 
   // The intended interpretation of alpha information in the image, if any.
   AlphaFormat alpha_format = AlphaFormat.OPAQUE;

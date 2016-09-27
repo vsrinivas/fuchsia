@@ -77,8 +77,8 @@ ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
 
   SkColorType sk_color_type;
   switch (image->pixel_format) {
-    case mojo::gfx::composition::Image::PixelFormat::ARGB_8888:
-      sk_color_type = kRGBA_8888_SkColorType;
+    case mojo::gfx::composition::Image::PixelFormat::B8G8R8A8:
+      sk_color_type = kBGRA_8888_SkColorType;
       break;
     default:
       FTL_LOG(ERROR) << "Unsupported image pixel format: pixel_format="

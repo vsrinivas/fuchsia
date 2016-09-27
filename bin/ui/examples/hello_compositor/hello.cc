@@ -37,7 +37,7 @@ class ImageBuffer {
                                                 MOJO_MAP_BUFFER_FLAG_NONE));
 
     surface_ = SkSurface::MakeRasterDirect(
-        SkImageInfo::Make(size.width, size.height, kRGBA_8888_SkColorType,
+        SkImageInfo::Make(size.width, size.height, kBGRA_8888_SkColorType,
                           kPremul_SkAlphaType),
         buffer_, row_bytes);
   }
@@ -52,7 +52,7 @@ class ImageBuffer {
     image->size->width = surface_->width();
     image->size->height = surface_->height();
     image->stride = image->size->width * sizeof(uint32_t);
-    image->pixel_format = mojo::gfx::composition::Image::PixelFormat::ARGB_8888;
+    image->pixel_format = mojo::gfx::composition::Image::PixelFormat::B8G8R8A8;
     image->alpha_format =
         mojo::gfx::composition::Image::AlphaFormat::PREMULTIPLIED;
     ReleaseSurface();

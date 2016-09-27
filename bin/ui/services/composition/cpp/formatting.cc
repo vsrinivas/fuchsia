@@ -95,8 +95,8 @@ std::ostream& operator<<(
     std::ostream& os,
     const mojo::gfx::composition::Image::PixelFormat* value) {
   switch (*value) {
-    case mojo::gfx::composition::Image::PixelFormat::ARGB_8888:
-      return os << "ARGB_8888";
+    case mojo::gfx::composition::Image::PixelFormat::B8G8R8A8:
+      return os << "B8G8R8A8";
     default:
       return os << "???";
   }
