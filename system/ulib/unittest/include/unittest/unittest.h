@@ -113,11 +113,9 @@ int unittest_set_verbosity_level(int new_level);
         unittest_printf_critical("\nCASE %-50s [STARTED] \n", #case_name);
 
 #define DEFINE_REGISTER_TEST_CASE(case_name)                            \
-    static void _register_##case_name(void) {                           \
+    __attribute__((constructor)) static void _register_##case_name(void) { \
         unittest_register_test_case(&_##case_name##_element);           \
-    }                                                                   \
-    void (*_register_##case_name##_ptr)(void) __SECTION(".ctors") =     \
-        _register_##case_name;
+    }
 
 #define END_TEST_CASE(case_name)                                        \
     if (all_success) {                                                  \
