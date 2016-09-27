@@ -386,6 +386,28 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
     return NO_ERROR;
 }
 
+// Fill in |info| with the current set of threads.
+// |num_info_threads| is the number of threads |info| can hold.
+// Return the actual number of threads, which may be more than |num_info_threads|.
+
+status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_record_process_thread_t>* out_threads) {
+    AutoLock lock(&thread_list_lock_);
+    size_t n = thread_list_.size_slow();
+    mxtl::Array<mx_record_process_thread_t> threads;
+    AllocChecker ac;
+    threads.reset(new (&ac) mx_record_process_thread_t[n], n);
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+    size_t i = 0;
+    for (auto& thread : thread_list_) {
+        threads[i].koid = thread.get_koid();
+        ++i;
+    }
+    DEBUG_ASSERT(i == n);
+    *out_threads = mxtl::move(threads);
+    return NO_ERROR;
+}
+
 status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger) {
     // Lock both |state_lock_| and |exception_lock_| to ensure the process
     // doesn't transition to dead while we're setting the exception handler.

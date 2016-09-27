@@ -18,6 +18,7 @@
 #include <magenta/types.h>
 #include <magenta/user_thread.h>
 
+#include <mxtl/array.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -129,6 +130,8 @@ public:
     status_t GetInfo(mx_record_process_t* info);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
+
+    status_t GetThreads(mxtl::Array<mx_record_process_thread_t>* threads);
 
     // exception handling support
     status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger);

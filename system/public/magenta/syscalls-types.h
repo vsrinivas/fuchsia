@@ -146,6 +146,7 @@ typedef enum {
     MX_INFO_HANDLE_VALID = 1,
     MX_INFO_HANDLE_BASIC,
     MX_INFO_PROCESS,
+    MX_INFO_PROCESS_THREADS,
 } mx_object_info_topic_t;
 
 typedef enum {
@@ -207,6 +208,16 @@ typedef struct mx_info_process {
     mx_info_header_t hdr;
     mx_record_process_t rec;
 } mx_info_process_t;
+
+typedef struct mx_record_process_thread {
+    mx_koid_t koid;
+} mx_record_process_thread_t;
+
+// Returned for topic MX_INFO_PROCESS_THREADS
+typedef struct mx_info_process_threads {
+    mx_info_header_t hdr;
+    mx_record_process_thread_t rec[];
+} mx_info_process_threads_t;
 
 // Defines and structures related to mx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.

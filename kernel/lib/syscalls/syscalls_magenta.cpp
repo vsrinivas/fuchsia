@@ -192,6 +192,63 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 
             return tocopy;
         }
+        case MX_INFO_PROCESS_THREADS: {
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ProcessDispatcher> process;
+            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+            if (error < 0)
+                return error;
+
+            // test that they've asking for an appropriate version
+            if (topic_size != 0 && topic_size != sizeof(mx_record_process_thread_t))
+                return ERR_INVALID_ARGS;
+
+            // make sure they passed us a buffer
+            if (!_buffer)
+                return ERR_INVALID_ARGS;
+
+            // test that we have at least enough target buffer to at least support the header
+            if (buffer_size < sizeof(mx_info_header_t))
+                return ERR_BUFFER_TOO_SMALL;
+
+            // Getting the list of threads is inherently racy (unless the
+            // caller has already stopped all threads, but that's not our 
+            // concern). Still, we promise to either return all threads we know
+            // about at a particular point in time, or notify the caller that
+            // more threads exist than what we computed at that same point in
+            // time.
+
+            mxtl::Array<mx_record_process_thread_t> threads;
+            mx_status_t status = process->GetThreads(&threads);
+            if (status != NO_ERROR)
+                return status;
+            size_t actual_num_threads = threads.size();
+            if (actual_num_threads > UINT32_MAX)
+                return ERR_BAD_STATE;
+            size_t thread_offset = offsetof(mx_info_process_threads_t, rec);
+            size_t num_space_for =
+                (buffer_size - thread_offset) / sizeof(mx_record_process_thread_t);
+            size_t num_to_copy = 0;
+            if (topic_size > 0)
+                num_to_copy = MIN(actual_num_threads, num_space_for);
+            if (num_to_copy > UINT32_MAX)
+                return ERR_INVALID_ARGS;
+
+            mx_info_header_t hdr;
+            hdr.topic = topic;
+            hdr.avail_topic_size = sizeof(mx_record_process_thread_t);
+            hdr.topic_size = topic_size;
+            hdr.avail_count = static_cast<uint32_t>(actual_num_threads);
+            hdr.count = static_cast<uint32_t>(num_to_copy);
+
+            if (copy_to_user(_buffer, &hdr, sizeof(hdr)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            auto thread_result_buffer = _buffer + thread_offset;
+            if (thread_result_buffer.reinterpret<mx_record_process_thread_t>().copy_array_to_user(threads.get(), num_to_copy) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            size_t result_bytes = thread_offset + (num_to_copy * topic_size);
+            return result_bytes;
+        }
         default:
             return ERR_NOT_FOUND;
     }

@@ -28,6 +28,8 @@
 // Do the segv recovery test a number of times to stress test the API.
 #define NUM_SEGV_TRIES 4
 
+#define NUM_EXTRA_THREADS 4
+
 // argv[0]
 static char* program_path;
 
@@ -44,6 +46,8 @@ enum message {
     MSG_PONG,
     MSG_CRASH,
     MSG_RECOVERED_FROM_CRASH,
+    MSG_START_EXTRA_THREADS,
+    MSG_EXTRA_THREADS_STARTED,
 };
 
 static bool done_tests = false;
@@ -551,6 +555,48 @@ static bool debugger_test(void)
     END_TEST;
 }
 
+static bool debugger_thread_list_test(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t pipe, inferior, eport;
+
+    if (!setup_inferior(&pipe, &inferior, &eport))
+        return false;
+
+    enum message msg;
+    send_msg(pipe, MSG_START_EXTRA_THREADS);
+    if (!recv_msg(pipe, &msg))
+        return false;
+    EXPECT_EQ(msg, MSG_EXTRA_THREADS_STARTED, "unexpected response when starting extra threads");
+
+    uint32_t buf_size = sizeof(mx_info_process_threads_t) + 100 * sizeof(mx_record_process_thread_t);
+    mx_info_process_threads_t* threads = tu_malloc(buf_size);
+    mx_ssize_t size = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS, sizeof(mx_record_process_thread_t), threads, buf_size);
+
+    // There should be at least 1+NUM_EXTRA_THREADS threads in the result.
+    ASSERT_GE((size_t) size, sizeof(mx_info_header_t) + (1+NUM_EXTRA_THREADS) * sizeof(mx_record_process_thread_t), "mx_object_get_info failed");
+
+    uint32_t num_threads = threads->hdr.count;
+
+    // Verify each entry is valid.
+    for (uint32_t i = 0; i < num_threads; ++i) {
+        mx_koid_t koid = threads->rec[i].koid;
+        unittest_printf("Looking up thread %llu\n", (long long) koid);
+        mx_handle_t thread = mx_debug_task_get_child(inferior, koid);
+        EXPECT_GT(thread, 0, "mx_debug_task_get_child failed");
+        mx_info_handle_basic_t info;
+        size = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, sizeof(mx_record_handle_basic_t), &info, sizeof(info));
+        EXPECT_EQ((size_t) size, sizeof(info), "mx_object_get_info failed");
+        EXPECT_EQ(info.rec.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
+    }
+
+    if (!shutdown_inferior(pipe, inferior, eport))
+        return false;
+
+    END_TEST;
+}
+
 // This function is marked as no-inline to avoid duplicate label in case the
 // function call is being inlined.
 __NO_INLINE static bool test_prep_and_segv(void)
@@ -608,10 +654,20 @@ __NO_INLINE static bool test_prep_and_segv(void)
     return true;
 }
 
+static int extra_thread_func(void* arg)
+{
+    unittest_printf("Extra thread started.\n");
+    while (true)
+        mx_nanosleep(1000 * 1000 * 1000);
+    return 0;
+}
+
 // This returns "bool" because it uses ASSERT_*.
 
 static bool msg_loop(mx_handle_t pipe)
 {
+    BEGIN_HELPER;
+
     bool my_done_tests = false;
 
     while (!done_tests && !my_done_tests)
@@ -633,12 +689,22 @@ static bool msg_loop(mx_handle_t pipe)
             }
             send_msg(pipe, MSG_RECOVERED_FROM_CRASH);
             break;
+        case MSG_START_EXTRA_THREADS:
+            for (int i = 0; i < NUM_EXTRA_THREADS; ++i) {
+                // For our purposes, we don't need to track the threads.
+                // They'll be terminated when the process exits.
+                thrd_t thread;
+                tu_thread_create_c11(&thread, extra_thread_func, NULL, "extra-thread");
+            }
+            send_msg(pipe, MSG_EXTRA_THREADS_STARTED);
+            break;
         default:
             unittest_printf("unknown message received: %d\n", msg);
             break;
         }
     }
-    return true;
+
+    END_HELPER;
 }
 
 void test_inferior(void)
@@ -662,6 +728,7 @@ static void test_segfault(void)
 
 BEGIN_TEST_CASE(debugger_tests)
 RUN_TEST(debugger_test);
+RUN_TEST(debugger_thread_list_test);
 END_TEST_CASE(debugger_tests)
 
 static void check_verbosity(int argc, char** argv)
