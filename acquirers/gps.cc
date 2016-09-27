@@ -13,28 +13,42 @@
 namespace {
 
 using mojo::ApplicationImplBase;
+using mojo::Binding;
+using mojo::InterfaceHandle;
 using mojo::RunLoop;
 
-using intelligence::ContextPublisherPtr;
-using intelligence::PublisherPipePtr;
+using namespace intelligence;
 
 #define ONE_MOJO_SECOND   1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
 
-class GpsAcquirer : public ApplicationImplBase {
+class GpsAcquirer : public ApplicationImplBase,
+                    public ContextPublisherController {
  public:
+  GpsAcquirer(): ctl_(this) {}
+
   void OnInitialize() override {
     srand(time(NULL));
 
-    ContextPublisherPtr cx;
+    ContextAcquirerClientPtr cx;
     ConnectToService(shell(), "mojo:context_service", GetProxy(&cx));
-    cx->StartPublishing("acquirers/gps", GetProxy(&pub_));
 
+    ContextPublisherControllerPtr ctl_ptr;
+    ctl_.Bind(GetProxy(&ctl_ptr));
+
+    cx->RegisterPublisher("/location/gps", "https://developers.google.com/"
+        "maps/documentation/javascript/3.exp/reference#LatLngLiteral",
+        ctl_ptr.PassInterfaceHandle());
+  }
+
+  void StartPublishing(InterfaceHandle<ContextPublisherLink> link) override {
+    out_ = ContextPublisherLinkPtr::Create(link.Pass());
     PublishingTick();
   }
 
  private:
-  PublisherPipePtr pub_;
+  Binding<ContextPublisherController> ctl_;
+  ContextPublisherLinkPtr out_;
 
   inline void PublishLocation() {
     // For now, this representation must be agreed upon by all parties out of
@@ -42,17 +56,19 @@ class GpsAcquirer : public ApplicationImplBase {
     // information in schemas and any remaining semantic information in
     // manifests.
     std::ostringstream json;
-    json << "{ \"longitude\": " << rand() % 18001 / 100. - 90
-         << ", \"latitude\": "  << rand() % 36001 / 100. - 180
+    json << "{ \"lat\": " << rand() % 18001 / 100. - 90
+         << ", \"lng\": "  << rand() % 36001 / 100. - 180
          << " }";
 
-    pub_->Publish("/location/gps", json.str());
+    out_->Update(json.str());
   }
 
-  // TODO(rosswang): How can we tell when the pipe is closed?
-  // TODO(rosswang): Signals from ContextService to indicate whether we should
-  // start/stop publishing (whether there are any consumers).
   void PublishingTick() {
+    if (out_.encountered_error()) {
+      out_.reset();
+      return;
+    }
+
     PublishLocation();
 
     RunLoop::current()->PostDelayedTask(

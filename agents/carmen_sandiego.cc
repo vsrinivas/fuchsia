@@ -15,32 +15,43 @@ namespace {
 
 using mojo::ApplicationImplBase;
 using mojo::Binding;
-using mojo::ServiceProviderPtr;
+using mojo::InterfaceHandle;
 
 using namespace intelligence;
 using namespace rapidjson;
 
-class CarmenSandiego : public ApplicationImplBase, public ContextListener {
+class CarmenSandiego : public ApplicationImplBase,
+                       public ContextPublisherController,
+                       public ContextSubscriberLink {
  public:
-  CarmenSandiego(): listener_(this) {}
+  CarmenSandiego(): ctl_(this), in_(this) {}
 
   void OnInitialize() override {
-    ContextSubscriberPtr cxin;
-    ContextPublisherPtr cxout;
+    ConnectToService(shell(), "mojo:context_service", GetProxy(&cx_));
 
-    ServiceProviderPtr service_provider;
-    shell()->ConnectToApplication("mojo:context_service",
-                                  GetProxy(&service_provider));
-    ConnectToService(service_provider.get(), GetProxy(&cxin),
-                     ContextSubscriber::Name_);
-    ConnectToService(service_provider.get(), GetProxy(&cxout),
-                     ContextPublisher::Name_);
+    ContextPublisherControllerPtr ctl_ptr;
+    ctl_.Bind(GetProxy(&ctl_ptr));
+    // TODO(rosswang): V0 does not support semantic differentiation by source,
+    // so the labels have to be explicitly different. In the future, these could
+    // all be refinements on "location"
+    cx_->RegisterPublisher("/location/region", "json:string",
+                           ctl_ptr.PassInterfaceHandle());
+  }
 
-    cxout->StartPublishing("agents/carmen_sandiego", GetProxy(&loc_out_));
+  void StartPublishing(InterfaceHandle<ContextPublisherLink> link) override {
+    out_ = ContextPublisherLinkPtr::Create(link.Pass());
 
-    ContextListenerPtr listener_ptr;
-    listener_.Bind(GetProxy(&listener_ptr));
-    cxin->Subscribe("/location/gps", listener_ptr.PassInterfaceHandle());
+    ContextSubscriberLinkPtr in_ptr;
+    in_.Bind(GetProxy(&in_ptr));
+
+    cx_->Subscribe("/location/gps", "https://developers.google.com/maps/"
+        "documentation/javascript/3.exp/reference#LatLngLiteral",
+        in_ptr.PassInterfaceHandle());
+
+    out_.set_connection_error_handler([this]{
+      in_.Unbind();
+      out_.reset();
+    });
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
@@ -54,8 +65,8 @@ class CarmenSandiego : public ApplicationImplBase, public ContextListener {
     d.Parse(update->json_value.data());
 
     if (d.IsObject()) {
-      const float latitude = d["latitude"].GetFloat(),
-                  longitude = d["longitude"].GetFloat();
+      const float latitude = d["lat"].GetFloat(),
+                  longitude = d["lng"].GetFloat();
 
       if (latitude > 66) {
         hlloc = "The Arctic";
@@ -70,15 +81,14 @@ class CarmenSandiego : public ApplicationImplBase, public ContextListener {
     std::ostringstream json;
     json << "\"" << hlloc << "\"";
 
-    // TODO(rosswang): V0 does not support semantic differentiation by source,
-    // so the labels have to be explicitly different. In the future, these could
-    // all be refinements on "location"
-    loc_out_->Publish("/location/region", json.str());
+    out_->Update(json.str());
   }
 
  private:
-  PublisherPipePtr loc_out_;
-  Binding<ContextListener> listener_;
+  ContextAgentClientPtr cx_;
+  Binding<ContextPublisherController> ctl_;
+  Binding<ContextSubscriberLink> in_;
+  ContextPublisherLinkPtr out_;
 };
 
 } // namespace

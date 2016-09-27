@@ -14,7 +14,7 @@ Before running, follow the instructions at [manifest/README.md](https://fuchsia.
 
 To run the Maxwell tests in a running Fuchsia environment:
 
-    application_manager mojo:maxwell_test
+    mojo:maxwell_test
 
 There is no way to quit application_manager without shutting down Fuchsia at
 this time.
