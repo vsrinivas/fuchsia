@@ -51,24 +51,28 @@ struct DefaultWAVLTreeObserver {
 }  // namespace tests
 }  // namespace intrusive_containers
 
-// General prototype of the WAVL tree rank state.  By default, we just use a
-// bool to record the rank parity of a node.  During testing, however, we
-// actually use a specialized version of the node state in which the rank is
-// stored as an int32_t so that extra sanity checks can be made during balance
-// testing.
-template <typename RankType> struct WAVLTreeNodeRank;
+// Prototypes for the WAVL tree node state.  By default, we just use a bool to
+// record the rank parity of a node.  During testing, however, we actually use a
+// specialized version of the node state in which the rank is stored as an
+// int32_t so that extra sanity checks can be made during balance testing.
+//
+// Note: All of the data members are stored in the node state base, as are the
+// helper methods IsValid and InContainer.  Only the rank manipulation methods
+// are in the derived WAVLTreeNodeState class.  This is to ensure that that the
+// WAVLTreeNodeState<> struct is a "standard layout type" which allows objects
+// which include a WAVLTreeNodeState<> to be standard layout types, provided
+// that they follow all of the other the rules as well.
+//
+template <typename PtrType, typename RankType> struct WAVLTreeNodeStateBase;    // Fwd decl
+template <typename PtrType, typename RankType = bool> struct WAVLTreeNodeState; // Partial spec
 
-// Testing specialization of the rank state.  Stores rank as an int32_t so that
-// the rank rule can be explicitly verified during testing.
-template <>
-struct WAVLTreeNodeRank<int32_t> {
-    bool rank_parity() const   { return ((rank_ & 0x1) != 0); }
-    void promote_rank()        { rank_ += 1; }
-    void double_promote_rank() { rank_ += 2; }
-    void demote_rank()         { rank_ -= 1; }
-    void double_demote_rank()  { rank_ -= 2; }
-
-    int32_t rank_;
+template <typename PtrType>
+struct WAVLTreeNodeState<PtrType, int32_t> : public WAVLTreeNodeStateBase<PtrType, int32_t> {
+    bool rank_parity() const   { return ((this->rank_ & 0x1) != 0); }
+    void promote_rank()        { this->rank_ += 1; }
+    void double_promote_rank() { this->rank_ += 2; }
+    void demote_rank()         { this->rank_ -= 1; }
+    void double_demote_rank()  { this->rank_ -= 2; }
 };
 
 }  // namespace mxtl
