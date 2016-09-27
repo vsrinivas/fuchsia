@@ -85,14 +85,8 @@ private:
     T* const ptr_;
 };
 
-// TODO(vtl): Convert things to use the user_ptr<T>::copy_...() and probably get rid of the
-// functions below.
-
+// TODO(vtl): Convert things to use the user_ptr<T>::copy[_array]_to_user() and get rid of this.
 template <typename T>
 inline status_t copy_to_user(user_ptr<T> dst, const void* src, size_t len) {
   return copy_to_user_unsafe(dst.get(), src, len);
-}
-template <typename T>
-inline status_t copy_from_user(void* dst, const user_ptr<T> src, size_t len) {
-  return copy_from_user_unsafe(dst, src.get(), len);
 }

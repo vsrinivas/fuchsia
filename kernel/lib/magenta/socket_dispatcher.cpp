@@ -14,7 +14,7 @@
 #include <trace.h>
 #include <pow2.h>
 
-#include <lib/user_copy.h>
+#include <lib/user_copy/user_ptr.h>
 
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_aspace.h>
@@ -22,7 +22,6 @@
 
 #include <magenta/handle.h>
 #include <magenta/io_port_client.h>
-#include <magenta/user_copy.h>
 
 #define LOCAL_TRACE 0
 
@@ -270,7 +269,7 @@ mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool 
         return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
-        if (copy_from_user(oob_, user_ptr<const void>(src), len)  != NO_ERROR)
+        if (user_ptr<const void>(src).copy_array_from_user(oob_, len) != NO_ERROR)
             return ERR_INVALID_ARGS;
     } else {
         memcpy(oob_, src, len);
@@ -309,7 +308,7 @@ mx_ssize_t SocketDispatcher::OOB_Read(void* dest, mx_size_t len, bool from_user)
         return ERR_BUFFER_TOO_SMALL;
 
     if (from_user) {
-        if (copy_to_user(user_ptr<void>(dest), oob_, oob_len_) != NO_ERROR)
+        if (user_ptr<void>(dest).copy_array_to_user(oob_, oob_len_) != NO_ERROR)
             return ERR_INVALID_ARGS;
     } else {
         memcpy(dest, oob_, oob_len_);

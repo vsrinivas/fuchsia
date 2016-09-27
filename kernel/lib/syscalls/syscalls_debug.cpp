@@ -362,7 +362,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
         return ERR_NO_MEMORY;
     mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
 
-    status = copy_from_user(bytes.get(), _buffer_ptr.reinterpret<const uint8_t>(), buffer_len);
+    status = _buffer_ptr.copy_array_from_user(bytes.get(), buffer_len);
     if (status != NO_ERROR)
         return ERR_INVALID_ARGS;
 

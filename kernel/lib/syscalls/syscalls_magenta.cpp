@@ -313,8 +313,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (!producer_dispatcher)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             mx_size_t threshold = 0;
-            if (copy_from_user(&threshold, _value.reinterpret<const mx_size_t>(),
-                               sizeof(mx_size_t)) != NO_ERROR)
+            if (_value.reinterpret<const mx_size_t>().copy_from_user(&threshold) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = producer_dispatcher->SetWriteThreshold(threshold);
             break;

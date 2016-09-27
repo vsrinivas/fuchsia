@@ -462,7 +462,7 @@ status_t VmObject::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t l
 
     // write routine that uses copy_from_user
     auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {
-        return copy_from_user(dst, ptr + offset, len);
+        return (ptr + offset).copy_array_from_user(dst, len);
     };
 
     return ReadWriteInternal(offset, len, bytes_written, true, write_routine);

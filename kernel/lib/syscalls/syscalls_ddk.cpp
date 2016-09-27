@@ -255,7 +255,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
         return ERR_NO_MEMORY;
     }
     {
-        mx_status_t status = copy_from_user(arg.get(), init_buf, len);
+        mx_status_t status = init_buf.reinterpret<const void>().copy_array_from_user(arg.get(), len);
         if (status != NO_ERROR) {
             return status;
         }
