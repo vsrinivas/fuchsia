@@ -13,6 +13,7 @@ source_set("environment") {
     "//lib/ftl",
     "//lib/mtl/tasks",
     "//mojo/public/c:environment",
+    "//mojo/public/cpp/environment:async_waiter_impl",
     # TODO(abarth): Remove logging_only once we provide our own logging.
     "//mojo/public/cpp/environment:logging_only",
     "//mojo/public/cpp/environment",
