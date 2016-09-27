@@ -9,7 +9,7 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/public/cpp/bindings/formatting.h"
+#include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace {
@@ -18,6 +18,7 @@ using mojo::ApplicationImplBase;
 using mojo::BindingSet;
 using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
+using mojo::InterfacePtrSet;
 using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 
@@ -30,7 +31,7 @@ struct ContextEntry {
   }
 
   ContextUpdate latest;
-  std::vector<ContextListenerPtr> listeners;
+  InterfacePtrSet<ContextListener> listeners;
 };
 
 typedef std::map<std::string, ContextEntry> ContextRepo;
@@ -54,9 +55,9 @@ class PublisherPipeImpl : public PublisherPipe {
     entry.latest.source = whoami_;
     entry.latest.json_value = json_value;
 
-    for (ContextListenerPtr& listener : entry.listeners) {
+    entry.listeners.ForAllPtrs([&entry](auto listener) {
       listener->OnUpdate(entry.latest.Clone());
-    }
+    });
   }
 
  private:
@@ -84,13 +85,12 @@ class ContextServiceImpl : public ContextPublisher, public ContextSubscriber {
                  InterfaceHandle<ContextListener> listener_handle) override {
     MOJO_LOG(INFO) << "Subscribe to " << label;
 
-    // TODO(rosswang): interface ptr lifecycle management (remove on error)
     ContextListenerPtr listener = ContextListenerPtr::Create(
         listener_handle.Pass());
 
     ContextEntry& entry = repo[label];
-    entry.listeners.push_back(listener.Pass());
-    entry.listeners.back()->OnUpdate(entry.latest.Clone());
+    listener->OnUpdate(entry.latest.Clone());
+    entry.listeners.AddInterfacePtr(listener.Pass());
   }
 
  private:
