@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "apps/ledger/fake_network_service/fake_url_loader.h"
+#include "apps/network/interfaces/network_service.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "apps/network/interfaces/network_service.mojom.h"
 
 namespace fake_network_service {
 

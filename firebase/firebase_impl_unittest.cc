@@ -14,8 +14,8 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
 namespace {

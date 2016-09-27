@@ -6,8 +6,8 @@
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
-#include "apps/ledger/storage/public/constants.h"
 #include "apps/ledger/storage/impl/journal_db_impl.h"
+#include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"

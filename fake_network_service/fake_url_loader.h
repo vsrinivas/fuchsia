@@ -5,9 +5,9 @@
 #ifndef APPS_LEDGER_FAKE_NETWORK_SERVICE_FAKE_URL_LOADER_H_
 #define APPS_LEDGER_FAKE_NETWORK_SERVICE_FAKE_URL_LOADER_H_
 
-#include "mojo/public/cpp/bindings/binding.h"
 #include "apps/network/interfaces/url_loader.mojom.h"
 #include "lib/ftl/macros.h"
+#include "mojo/public/cpp/bindings/binding.h"
 
 namespace fake_network_service {
 

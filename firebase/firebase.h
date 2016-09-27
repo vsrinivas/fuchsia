@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_FIREBASE_FIREBASE_H_
 #define APPS_LEDGER_FIREBASE_FIREBASE_H_
 
-#include <string>
 #include <functional>
+#include <string>
 
 #include "apps/ledger/firebase/status.h"
 #include "apps/ledger/firebase/watch_client.h"

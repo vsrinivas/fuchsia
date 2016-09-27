@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/firebase/encoding.h"
-#include "lib/ftl/strings/utf_codecs.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/strings/utf_codecs.h"
 
 #include <string>
 

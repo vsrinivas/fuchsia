@@ -5,11 +5,11 @@
 #ifndef APPS_LEDGER_STORAGE_OBJECT_STORE_H_
 #define APPS_LEDGER_STORAGE_OBJECT_STORE_H_
 
-#include <memory>
 #include <map>
+#include <memory>
 
-#include "apps/ledger/storage/public/object.h"
 #include "apps/ledger/storage/public/blob.h"
+#include "apps/ledger/storage/public/object.h"
 
 namespace storage {
 
