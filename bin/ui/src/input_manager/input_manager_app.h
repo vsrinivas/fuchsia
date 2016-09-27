@@ -5,10 +5,10 @@
 #ifndef SERVICES_UI_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 #define SERVICES_UI_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 
 namespace input_manager {
 

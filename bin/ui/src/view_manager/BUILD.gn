@@ -71,9 +71,9 @@ source_set("lib") {
 #   deps = [
 #     ":common",
 #     "//base",
+#     "//apps/mozart/lib/view_framework/associates:mocks",
 #     "//mojo/application:test_support",
 #     "//mojo/public/cpp/bindings",
 #     "//mojo/public/cpp/bindings:bindings",
-#     "//mojo/ui/associates:mocks",
 #   ]
 # }

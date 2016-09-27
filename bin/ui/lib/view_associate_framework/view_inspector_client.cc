@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
-#include "lib/ftl/logging.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 
 namespace mojo {
 namespace ui {

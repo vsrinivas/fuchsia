@@ -4,11 +4,11 @@
 
 #include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
 
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
 #include "base/run_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
 
 namespace view_manager {
 namespace test {

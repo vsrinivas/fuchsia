@@ -11,8 +11,8 @@
 
 #include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "lib/ftl/macros.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
 namespace view_manager {

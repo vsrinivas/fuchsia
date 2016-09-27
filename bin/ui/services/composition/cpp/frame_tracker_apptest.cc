@@ -4,8 +4,8 @@
 
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/public/cpp/system/macros.h"
 
 namespace test {
 

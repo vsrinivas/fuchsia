@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/binding.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/views.mojom.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
 #include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
+#include "mojo/public/cpp/application/connect.h"
+#include "mojo/public/cpp/bindings/binding.h"
 
 namespace view_manager {
 namespace test {

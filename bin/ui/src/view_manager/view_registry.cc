@@ -12,9 +12,9 @@
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/view_manager/view_impl.h"
 #include "apps/mozart/src/view_manager/view_tree_impl.h"
-#include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace view_manager {
 namespace {

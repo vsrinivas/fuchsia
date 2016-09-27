@@ -5,9 +5,9 @@
 #ifndef SERVICES_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 #define SERVICES_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
 
 namespace view_manager {
 

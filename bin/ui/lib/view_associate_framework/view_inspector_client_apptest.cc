@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/ui/associates/view_inspector_client.h"
+#include "apps/mozart/lib/view_framework/associates/view_inspector_client.h"
 
+#include "apps/mozart/lib/view_framework/associates/mock_view_inspector.h"
+#include "apps/mozart/lib/view_framework/associates/test_helpers.h"
 #include "base/bind.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/ui/associates/mock_view_inspector.h"
-#include "mojo/ui/associates/test_helpers.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace test {

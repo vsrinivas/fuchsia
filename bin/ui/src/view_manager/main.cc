@@ -4,8 +4,8 @@
 
 #include <mojo/system/main.h>
 
-#include "mojo/public/cpp/application/run_application.h"
 #include "apps/mozart/src/view_manager/view_manager_app.h"
+#include "mojo/public/cpp/application/run_application.h"
 
 MojoResult MojoMain(MojoHandle application_request) {
   view_manager::ViewManagerApp view_manager_app;

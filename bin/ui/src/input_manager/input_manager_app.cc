@@ -4,8 +4,8 @@
 
 #include "apps/mozart/src/input_manager/input_manager_app.h"
 
-#include "mojo/public/cpp/application/service_provider_impl.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
+#include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace input_manager {
 

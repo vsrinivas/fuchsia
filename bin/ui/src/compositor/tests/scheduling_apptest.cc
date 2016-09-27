@@ -4,10 +4,10 @@
 
 #include "apps/mozart/services/composition/interfaces/compositor.mojom-sync.h"
 #include "apps/mozart/services/composition/interfaces/scheduling.mojom-sync.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/synchronous_interface_ptr.h"
-#include "mojo/public/cpp/system/macros.h"
 #include "mojo/services/gpu/interfaces/context_provider.mojom.h"
 #include "mojo/services/native_viewport/interfaces/native_viewport.mojom.h"
 

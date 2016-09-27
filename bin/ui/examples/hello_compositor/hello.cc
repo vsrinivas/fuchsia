@@ -181,7 +181,7 @@ class HelloApp : public mojo::ApplicationImplBase {
   float x_ = 400.0f;
   float y_ = 300.0f;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(HelloApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(HelloApp);
 };
 
 }  // namespace

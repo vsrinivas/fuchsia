@@ -5,9 +5,9 @@
 #ifndef SERVICES_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define SERVICES_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include "lib/ftl/macros.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
+#include "lib/ftl/macros.h"
 
 namespace view_manager {
 

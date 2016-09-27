@@ -5,11 +5,11 @@
 #ifndef SERVICES_UI_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 #define SERVICES_UI_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 
+#include "apps/mozart/services/input/interfaces/input_connection.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
-#include "apps/mozart/services/input/interfaces/input_connection.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
 
 namespace input_manager {
 
