@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
-import 'package:cloud_indexer/tarball.dart';
+import 'package:cloud_indexer/zip.dart';
 import 'package:test/test.dart';
 
 ArchiveFile createTestFile(String filename, List<int> data,
@@ -27,15 +27,14 @@ ArchiveFile createTestFile(String filename, List<int> data,
 }
 
 main() {
-  final Matcher throwsTarballException =
-      throwsA(new isInstanceOf<TarballException>());
+  final Matcher throwsZipException = throwsA(new isInstanceOf<ZipException>());
 
   group('cappedDataStream', () {
     const List<int> testData = const [1, 2, 3, 4, 5];
 
     test('Oversized stream.', () {
       expect(cappedDataStream(new Stream.fromIterable([testData]), 1).drain(),
-          throwsTarballException);
+          throwsZipException);
     });
 
     test('Regular stream.', () {
@@ -48,7 +47,7 @@ main() {
     });
   });
 
-  group('tarball', () {
+  group('zip', () {
     // A directory, by convention, has a name that ends with a forward-slash.
     const Map<String, String> testFiles = const {
       'manifest.yaml': 'title: Adorable Cats\n'
@@ -64,45 +63,42 @@ main() {
           createTestFile(key, value.codeUnits, isFile: !key.endsWith('/')));
     });
 
-    List<int> tarData = new TarEncoder().encode(testArchive);
-    List<int> gzipData = new GZipEncoder().encode(tarData);
-    Stream<List<int>> gzipDataStream() =>
-        new Stream.fromFuture(new Future.value(gzipData));
+    List<int> zipData = new ZipEncoder().encode(testArchive);
+    Stream<List<int>> zipDataStream() =>
+        new Stream.fromFuture(new Future.value(zipData));
 
     test(
         'list',
-        () => withTarball(gzipDataStream(), (Tarball tarball) async {
-              expect(await tarball.list().toList(),
-                  unorderedEquals(testFiles.keys));
+        () => withZip(zipDataStream(), (Zip zip) async {
+              expect(
+                  await zip.list().toList(), unorderedEquals(testFiles.keys));
             }));
 
     test(
         'readAsString',
-        () => withTarball(gzipDataStream(), (Tarball tarball) async {
-              expect(await tarball.readAsString('manifest.yaml'),
+        () => withZip(zipDataStream(), (Zip zip) async {
+              expect(await zip.readAsString('manifest.yaml'),
                   testFiles['manifest.yaml']);
             }));
 
     test(
         'readAsString, non-existent file.',
-        () => withTarball(gzipDataStream(), (Tarball tarball) {
-              expect(tarball.readAsString('manifest.json'),
-                  throwsTarballException);
+        () => withZip(zipDataStream(), (Zip zip) {
+              expect(zip.readAsString('manifest.json'), throwsZipException);
             }));
 
     test(
         'openRead',
-        () => withTarball(gzipDataStream(), (Tarball tarball) async {
-              expect(
-                  await UTF8.decodeStream(tarball.openRead('hello/world.txt')),
+        () => withZip(zipDataStream(), (Zip zip) async {
+              expect(await UTF8.decodeStream(zip.openRead('hello/world.txt')),
                   testFiles['hello/world.txt']);
             }));
 
     test(
         'openRead, non-existent file.',
-        () => withTarball(gzipDataStream(), (Tarball tarball) {
-              expect(tarball.openRead('hello/world.md').drain(),
-                  throwsTarballException);
+        () => withZip(zipDataStream(), (Zip zip) {
+              expect(
+                  zip.openRead('hello/world.md').drain(), throwsZipException);
             }));
   });
 }

@@ -7,11 +7,11 @@ dependencies:
     path: ../common
   http: any
   indexer_pipeline:
-    path: ../../../indexer/pipeline
+    path: ../../deps/indexer/pipeline
   logging: any
   mockito: any
   parser:
-    path: ../../../parser
+    path: ../../deps/parser
   path: any
   shelf: any
   test: any

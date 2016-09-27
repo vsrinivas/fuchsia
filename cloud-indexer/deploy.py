@@ -27,9 +27,8 @@ CLOUD_INDEXER_PATH = os.path.dirname(SCRIPT_PATH)
 
 # Locate our bundled dependencies.
 MODULAR_PATH = os.path.abspath(os.path.join(CLOUD_INDEXER_PATH, '..'))
-FLUTTER_PATH = os.path.join(MODULAR_PATH, 'third_party', 'flutter')
-DART_SDK_PATH = os.path.join(FLUTTER_PATH, 'bin', 'cache', 'dart-sdk')
-PUB_PATH = os.path.join(DART_SDK_PATH, 'bin', 'pub')
+DART_SDK_PATH = distutils.spawn.find_executable('dart')
+PUB_PATH = distutils.spawn.find_executable('pub')
 
 # Finally, we assume that gcloud is installed and in the PATH variable.
 GCLOUD_PATH = distutils.spawn.find_executable('gcloud')

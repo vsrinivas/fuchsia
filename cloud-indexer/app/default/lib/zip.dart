@@ -9,76 +9,76 @@ import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 
-final Logger _logger = new Logger('cloud_indexer.tarball');
+final Logger _logger = new Logger('cloud_indexer.zip');
 
-const String _tarballName = 'module.tar.gz';
-const int _defaultMaxTarballSize = 100 * 1024 * 1024;
+const String _zipName = 'module.zip';
+const int _defaultMaxZipSize = 100 * 1024 * 1024;
 
-class TarballException implements Exception {
+class ZipException implements Exception {
   final String message;
-  TarballException(this.message);
-  String toString() => 'TarballException: $message';
+  ZipException(this.message);
+  String toString() => 'ZipException: $message';
 }
 
-TarballException _tarballException(String message) {
-  TarballException e = new TarballException(message);
+ZipException _zipException(String message) {
+  ZipException e = new ZipException(message);
   _logger.warning(e.toString());
   return e;
 }
 
 Stream<List<int>> cappedDataStream(
-    Stream<List<int>> data, int maxTarballSize) async* {
+    Stream<List<int>> data, int maxZipSize) async* {
   int currentSize = 0;
   await for (List<int> bytes in data) {
     currentSize += bytes.length;
-    if (currentSize > maxTarballSize) {
-      throw _tarballException('Module exceeds the maximum upload size.');
+    if (currentSize > maxZipSize) {
+      throw _zipException('Module exceeds the maximum upload size.');
     }
     yield bytes;
   }
 }
 
-Future withTarball(Stream<List<int>> data, Future handler(Tarball tarball),
-    {int maxTarballSize: _defaultMaxTarballSize}) async {
+Future withZip(Stream<List<int>> data, Future handler(Zip zip),
+    {int maxZipSize: _defaultMaxZipSize}) async {
   Directory tempDirectory;
   try {
     tempDirectory = await Directory.systemTemp.createTemp();
-    String tarballPath = path.join(tempDirectory.absolute.path, _tarballName);
-    File tarballFile = await new File(tarballPath).create();
+    String zipPath = path.join(tempDirectory.absolute.path, _zipName);
+    File zipFile = await new File(zipPath).create();
 
     // We cap the size of the data stream to prevent malicious uploads.
-    await cappedDataStream(data, maxTarballSize).pipe(tarballFile.openWrite());
-    return await handler(new FSTarball(tarballPath));
+    await cappedDataStream(data, maxZipSize).pipe(zipFile.openWrite());
+    return await handler(new FSZip(zipPath));
   } on IOException catch (e) {
-    throw _tarballException('Failed to create tarball on FS: ${e.toString()}');
+    throw _zipException('Failed to create zip on FS: ${e.toString()}');
   } finally {
     await tempDirectory?.delete(recursive: true);
   }
 }
 
-/// Utility class representing the contents of a tarball.
+/// Utility class representing the contents of a zip.
 ///
 /// The method signatures attempt to replicate those in dart:io as closely as
-/// possible. On failure, the methods throw [TarballException]s.
-abstract class Tarball {
-  /// Lists the sub-directories and the files of this tarball.
+/// possible. On failure, the methods throw [ZipException]s.
+abstract class Zip {
+  /// Lists the sub-directories and the files of this zip.
   Stream<String> list();
 
-  /// Reads the file [filename] in the tarball as a String.
+  /// Reads the file [filename] in the zip as a String.
   Future<String> readAsString(String filename);
 
   /// Create a new independent Stream for the contents of the file [filename].
   Stream<List<int>> openRead(String filename);
 }
 
-/// An implementation of [Tarball] that interfaces with a tarball on disk.
-class FSTarball implements Tarball {
+/// An implementation of [Zip] that interfaces with a zip on disk.
+class FSZip implements Zip {
   final String _path;
 
-  FSTarball(this._path);
+  FSZip(this._path);
 
   Stream<String> list() async* {
-    final Process process = await Process.start('tar', ['-tzf', _path]);
+    final Process process = await Process.start('unzip', ['-Z1', _path]);
 
     // Process.start requires that both stdout and stderr are fully consumed
     // before the associated system resources are released.
@@ -90,22 +90,22 @@ class FSTarball implements Tarball {
     }
 
     if (await process.exitCode != 0) {
-      throw _tarballException('Failed to list contents of tarball.');
+      throw _zipException('Failed to list contents of zip.');
     }
   }
 
   Future<String> readAsString(String filename) async {
     final ProcessResult result =
-        await Process.run('tar', ['-Oxzf', _path, filename]);
+        await Process.run('unzip', ['-p', _path, filename]);
     if (result.exitCode != 0) {
-      throw _tarballException('Failed to read file: $filename in tarball.');
+      throw _zipException('Failed to read file: $filename in zip.');
     }
     return result.stdout;
   }
 
   Stream<List<int>> openRead(String filename) async* {
     final Process process =
-        await Process.start('tar', ['-Oxzf', _path, filename]);
+        await Process.start('unzip', ['-p', _path, filename]);
 
     // Process.start requires that both stdout and stderr are fully consumed
     // before the associated system resources are released.
@@ -115,7 +115,7 @@ class FSTarball implements Tarball {
     }
 
     if (await process.exitCode != 0) {
-      throw _tarballException('Failed to read file: $filename in tarball.');
+      throw _zipException('Failed to read file: $filename in zip.');
     }
   }
 }

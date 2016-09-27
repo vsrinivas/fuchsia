@@ -11,7 +11,7 @@ import 'package:shelf/shelf.dart' as shelf;
 
 import 'auth_manager.dart';
 import 'module_uploader.dart';
-import 'tarball.dart';
+import 'zip.dart';
 
 final Logger _logger = new Logger('cloud_indexer.request_handler');
 final RegExp _boundaryRegExp =
@@ -62,11 +62,11 @@ Future<shelf.Response> requestHandler(shelf.Request request,
       return new shelf.Response.internalServerError();
     } on PubSubException {
       return new shelf.Response.internalServerError();
-    } on TarballException catch (e) {
+    } on ZipException catch (e) {
       return new shelf.Response(HttpStatus.BAD_REQUEST, body: e.toString());
     }
   }
 
-  _logger.info('Request did not contain a tarball. Bailing out.');
-  return new shelf.Response(HttpStatus.BAD_REQUEST, body: 'Missing tarball.');
+  _logger.info('Request did not contain a zip. Bailing out.');
+  return new shelf.Response(HttpStatus.BAD_REQUEST, body: 'Missing zip.');
 }

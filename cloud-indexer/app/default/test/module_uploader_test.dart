@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_indexer/module_uploader.dart';
-import 'package:cloud_indexer/tarball.dart';
+import 'package:cloud_indexer/zip.dart';
 import 'package:cloud_indexer_common/wrappers.dart';
 import 'package:mockito/mockito.dart';
 import 'package:parser/manifest.dart';
@@ -16,22 +16,22 @@ class MockTopicWrapper extends Mock implements PubSubTopicWrapper {}
 
 class MockBucketWrapper extends Mock implements StorageBucketWrapper {}
 
-class MockTarball implements Tarball {
+class MockZip implements Zip {
   final Map<String, String> _files;
 
-  MockTarball(this._files);
+  MockZip(this._files);
 
   Stream<String> list() => new Stream.fromIterable(_files.keys);
 
   Future<String> readAsString(String filename) {
     String file = _files[filename];
-    if (file == null) throw new TarballException('File does not exist.');
+    if (file == null) throw new ZipException('File does not exist.');
     return new Future.value(file);
   }
 
   Stream<List<int>> openRead(String filename) {
     String file = _files[filename];
-    if (file == null) throw new TarballException('File does not exist.');
+    if (file == null) throw new ZipException('File does not exist.');
     return new Stream.fromIterable([file.codeUnits]);
   }
 }
@@ -76,7 +76,7 @@ class FakeSink<T> implements StreamSink<T> {
 }
 
 main() {
-  group('processTarball', () {
+  group('processZip', () {
     const String testArch = 'linux-x64';
     const String testModularRevision =
         'b54f77abb289dcf2e39bc6f78ecab189aaf77a89';
@@ -106,7 +106,7 @@ main() {
       otherPath: otherPathContents
     };
 
-    final Matcher isTarballException = new isInstanceOf<TarballException>();
+    final Matcher isZipException = new isInstanceOf<ZipException>();
 
     final Matcher isCloudStorageException =
         new isInstanceOf<CloudStorageException>();
@@ -117,13 +117,13 @@ main() {
       final PubSubTopicWrapper topic = new MockTopicWrapper();
       final StorageBucketWrapper bucket = new MockBucketWrapper();
 
-      final Tarball tarball = new MockTarball({otherPath: otherPathContents});
+      final Zip zip = new MockZip({otherPath: otherPathContents});
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
       try {
-        await moduleUploader.processTarball(tarball);
+        await moduleUploader.processZip(zip);
       } catch (e) {
-        expect(e, isTarballException);
+        expect(e, isZipException);
       } finally {
         verifyNever(bucket.writeObjectAsBytes(any, any));
         verifyNever(bucket.writeObject(any));
@@ -135,16 +135,16 @@ main() {
       final PubSubTopicWrapper topic = new MockTopicWrapper();
       final StorageBucketWrapper bucket = new MockBucketWrapper();
 
-      final Tarball tarball1 =
-          new MockTarball({manifestPath: invalidManifest1});
-      final Tarball tarball2 =
-          new MockTarball({manifestPath: invalidManifest2});
+      final Zip zip1 =
+          new MockZip({manifestPath: invalidManifest1});
+      final Zip zip2 =
+          new MockZip({manifestPath: invalidManifest2});
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
       try {
-        await moduleUploader.processTarball(tarball1);
+        await moduleUploader.processZip(zip1);
       } catch (e) {
-        expect(e, isTarballException);
+        expect(e, isZipException);
       } finally {
         verifyNever(bucket.writeObjectAsBytes(any, any));
         verifyNever(bucket.writeObject(any));
@@ -152,9 +152,9 @@ main() {
       }
 
       try {
-        await moduleUploader.processTarball(tarball2);
+        await moduleUploader.processZip(zip2);
       } catch (e) {
-        expect(e, isTarballException);
+        expect(e, isZipException);
       } finally {
         verifyNever(bucket.writeObjectAsBytes(any, any));
         verifyNever(bucket.writeObject(any));
@@ -170,11 +170,11 @@ main() {
           throw new DetailedApiRequestError(
               HttpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error.'));
 
-      final Tarball tarball = new MockTarball(validPayload);
+      final Zip zip = new MockZip(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
       try {
-        await moduleUploader.processTarball(tarball);
+        await moduleUploader.processZip(zip);
       } catch (e) {
         expect(e, isCloudStorageException);
       } finally {
@@ -193,11 +193,11 @@ main() {
       when(topic.publish(any)).thenAnswer((i) => throw new PubSubException(
           HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
 
-      final Tarball tarball = new MockTarball(validPayload);
+      final Zip zip = new MockZip(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
 
       try {
-        await moduleUploader.processTarball(tarball);
+        await moduleUploader.processZip(zip);
       } catch (e) {
         expect(e, isPubSubException);
       } finally {
@@ -215,9 +215,9 @@ main() {
       final StreamSink<List<int>> sink = new FakeSink<List<int>>();
       when(bucket.writeObject(otherDestinationPath)).thenReturn(sink);
 
-      final Tarball tarball = new MockTarball(validPayload);
+      final Zip zip = new MockZip(validPayload);
       final ModuleUploader moduleUploader = new ModuleUploader(topic, bucket);
-      await moduleUploader.processTarball(tarball);
+      await moduleUploader.processZip(zip);
 
       List<List<int>> events = await sink.done;
       List<int> payload = events

@@ -11,6 +11,6 @@ dependencies:
   mime: any
   mockito: any
   parser:
-    path: ../../../parser
+    path: ../../deps/parser
   shelf: any
   test: any

@@ -12,7 +12,7 @@ import 'package:parser/manifest.dart';
 import 'package:parser/parse_error.dart';
 import 'package:path/path.dart' as path;
 
-import 'tarball.dart';
+import 'zip.dart';
 
 final Logger _logger = new Logger('cloud_indexer.module_uploader');
 
@@ -50,8 +50,8 @@ PubSubException _pubSubException(int statusCode, String message) {
   return e;
 }
 
-TarballException _tarballException(String message) {
-  TarballException e = new TarballException(message);
+ZipException _zipException(String message) {
+  ZipException e = new ZipException(message);
   _logger.warning(e.toString());
   return e;
 }
@@ -59,7 +59,7 @@ TarballException _tarballException(String message) {
 /// Handles the uploading of modules to cloud storage.
 ///
 /// The [ModuleUploader] processes uploads in three steps.
-/// 1. First, it ensures the validity of the tarball uploaded;
+/// 1. First, it ensures the validity of the zip uploaded;
 /// 2. Second, it copies files to cloud storage, preserving directory structure;
 /// 3. Finally, it uses Pub/Sub to invoke an index update.
 class ModuleUploader {
@@ -87,33 +87,33 @@ class ModuleUploader {
       path.join('services', arch, modularRevision, file);
 
   Future<Null> processUpload(Stream<List<int>> data) =>
-      withTarball(data, processTarball);
+      withZip(data, processZip);
 
-  Future<Null> processTarball(Tarball tarball) async {
-    Set<String> files = await tarball
+  Future<Null> processZip(Zip zip) async {
+    Set<String> files = await zip
         .list()
         .where((String file) => !file.endsWith('/'))
         .toSet();
 
     if (!files.contains(_manifestPath)) {
-      throw _tarballException(
-          'Manifest: $_manifestPath was missing in tarball.');
+      throw _zipException(
+          'Manifest: $_manifestPath was missing in zip.');
     }
 
-    String yamlManifest = await tarball.readAsString(_manifestPath);
+    String yamlManifest = await zip.readAsString(_manifestPath);
     Manifest manifest;
     try {
       manifest = new Manifest.parseYamlString(yamlManifest);
       if (manifest.arch == null || manifest.modularRevision == null) {
-        throw _tarballException(
+        throw _zipException(
             'Manifest: $_manifestPath was missing its `arch` and/or '
             '`modularRevision` field(s).');
       }
 
       _logger.info('Parsed manifest with title: ${manifest.title}');
     } on ParseError {
-      throw _tarballException(
-          'Manifest: $_manifestPath was invalid in tarball.');
+      throw _zipException(
+          'Manifest: $_manifestPath was invalid in zip.');
     }
 
     // Copy all files into cloud storage, preserving directory structure.
@@ -122,7 +122,7 @@ class ModuleUploader {
       String destinationPath =
           storageDestinationPath(manifest.arch, manifest.modularRevision, file);
       try {
-        await tarball
+        await zip
             .openRead(file)
             .pipe(_storageBucketWrapper.writeObject(destinationPath));
       } on DetailedApiRequestError catch (e) {

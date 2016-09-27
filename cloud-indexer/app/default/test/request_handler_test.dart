@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:cloud_indexer/auth_manager.dart';
 import 'package:cloud_indexer/module_uploader.dart';
 import 'package:cloud_indexer/request_handler.dart';
-import 'package:cloud_indexer/tarball.dart';
+import 'package:cloud_indexer/zip.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
@@ -95,7 +95,7 @@ main() {
       verifyNever(moduleUploader.processUpload(any));
     });
 
-    test('Missing tarball.', () async {
+    test('Missing zip.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
       MockAuthManager authManager = new MockAuthManager();
       when(authManager.authenticatedUser(testHeaders['Authorization']))
@@ -163,10 +163,10 @@ main() {
       expect(bytesBuilder.toBytes(), testBytes);
     });
 
-    test('Tarball failure.', () async {
+    test('Zip failure.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
       when(moduleUploader.processUpload(any)).thenAnswer((i) =>
-          throw new TarballException('Tarball did not contain a manifest.'));
+          throw new ZipException('Zip did not contain a manifest.'));
 
       MockAuthManager authManager = new MockAuthManager();
       when(authManager.authenticatedUser(testHeaders['Authorization']))
@@ -178,7 +178,7 @@ main() {
       shelf.Response response = await requestHandler(request,
           moduleUploader: moduleUploader, authManager: authManager);
 
-      // In general, we fault the requester should we have a TarballException.
+      // In general, we fault the requester should we have a ZipException.
       expect(response.statusCode, HttpStatus.BAD_REQUEST);
 
       Stream<List<int>> data =

@@ -147,7 +147,7 @@ packages:
     version: "0.9.5+1"
   indexer_pipeline:
     description:
-      path: "../../../indexer/pipeline"
+      path: "../../deps/indexer/pipeline"
       relative: true
     source: path
     version: "0.0.0"
@@ -189,13 +189,13 @@ packages:
     version: "1.0.0"
   modular:
     description:
-      path: "../../../dart-packages/modular"
+      path: "../../deps/dart-packages/modular"
       relative: true
     source: path
     version: "0.2.6"
   modular_core:
     description:
-      path: "../../../dart-packages/modular_core"
+      path: "../../deps/dart-packages/modular_core"
       relative: true
     source: path
     version: "0.2.6"
@@ -225,7 +225,7 @@ packages:
     version: "1.0.1"
   parser:
     description:
-      path: "../../../parser"
+      path: "../../deps/parser"
       relative: true
     source: path
     version: "0.0.0"
