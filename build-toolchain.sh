@@ -53,8 +53,9 @@ build() {
     --disable-werror \
     --disable-nls
   make -j ${JOBS} all-binutils
-  install -D -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/objcopy" "${toolchain}/bin/objcopy"
-  install -D -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/strip-new" "${toolchain}/bin/strip"
+  mkdir -p -- "${toolchain}/bin"
+  cp -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/objcopy" "${toolchain}/bin/objcopy"
+  cp -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/strip-new" "${toolchain}/bin/strip"
   popd
 
   mkdir -p -- "${outdir}/build-clang+llvm-${HOST_TRIPLE}"
