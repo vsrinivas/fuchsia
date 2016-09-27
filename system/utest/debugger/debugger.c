@@ -28,14 +28,23 @@
 // Do the segv recovery test a number of times to stress test the API.
 #define NUM_SEGV_TRIES 4
 
-static const char test_child_path[] = "/boot/test/debugger-test";
+// argv[0]
+static char* program_path;
+
 static const char test_inferior_child_name[] = "inferior";
 // The segfault child is not used by the test.
 // It exists for debugging purposes.
 static const char test_segfault_child_name[] = "segfault";
 
-static const char ping_message[] = "Hi there!";
-static const char pong_message[] = "Hi there to you too!";
+enum message {
+    // Force the type to be signed, avoids mismatch clashes in unittest macros.
+    MSG_FORCE_SIGNED = -1,
+    MSG_DONE,
+    MSG_PING,
+    MSG_PONG,
+    MSG_CRASH,
+    MSG_RECOVERED_FROM_CRASH,
+};
 
 static bool done_tests = false;
 
@@ -65,6 +74,32 @@ static uint32_t get_uint32_property(mx_handle_t handle, uint32_t prop)
     if (status != NO_ERROR)
         tu_fatal("mx_object_get_property failed", status);
     return value;
+}
+
+static void send_msg(mx_handle_t handle, enum message msg)
+{
+    uint64_t data = msg;
+    unittest_printf("sending message %d on handle %u\n", msg, handle);
+    tu_message_write(handle, &data, sizeof(data), NULL, 0, 0);
+}
+
+// This returns "bool" because it uses ASSERT_*.
+
+static bool recv_msg(mx_handle_t handle, enum message* msg)
+{
+    uint64_t data;
+    uint32_t num_bytes = sizeof(data);
+
+    unittest_printf("waiting for message on handle %u\n", handle);
+
+    ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
+
+    tu_message_read(handle, &data, &num_bytes, NULL, 0, 0);
+    ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
+
+    *msg = data;
+    unittest_printf("received message %d\n", *msg);
+    return true;
 }
 
 typedef struct {
@@ -406,15 +441,14 @@ static mx_status_t create_inferior(const char* name,
     return status;
 }
 
-static bool debugger_test(void)
+static bool setup_inferior(mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_handle_t* out_eport)
 {
-    BEGIN_TEST;
-
     mx_status_t status;
     mx_handle_t pipe1, pipe2;
     tu_message_pipe_create(&pipe1, &pipe2);
 
     const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char* test_child_path = program_path;
     const char* const argv[] = { test_child_path, test_inferior_child_name, verbosity_string };
     mx_handle_t handles[1] = { pipe2 };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
@@ -438,15 +472,11 @@ static bool debugger_test(void)
     inferior = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS);
     ASSERT_GT(inferior, 0, "mx_handle_duplicate failed");
 
+    // TODO(dje): Set the debug exception port when available.
     mx_handle_t eport = tu_io_port_create(0);
-    status = mx_object_bind_exception_port(inferior, eport, 0,
-                                           MX_EXCEPTION_PORT_DEBUGGER);
+    status = mx_object_bind_exception_port(inferior, eport, 0, 0);
     EXPECT_EQ(status, NO_ERROR, "error setting exception port");
     unittest_printf("Attached to inferior\n");
-
-    mx_handle_t wait_inf_args[2] = { inferior, eport };
-    thrd_t wait_inferior_thread;
-    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*) &wait_inf_args[0], "wait-inf thread");
 
     // launchpad_start returns a dup of |inferior|. The original inferior
     // handle is given to the child.
@@ -457,40 +487,66 @@ static bool debugger_test(void)
 
     launchpad_destroy(lp);
 
-    // TODO(dje): The messaging that exception.c does (e.g, ping,pong) is more
-    // flexible. Add it here.
-    char buffer[64];
-    uint32_t buffer_size = sizeof(buffer);
-    snprintf(buffer, buffer_size, ping_message);
-    tu_message_write(pipe1, buffer, strlen(buffer) + 1, NULL, 0, 0);
+    enum message msg;
+    send_msg(pipe1, MSG_PING);
+    if (!recv_msg(pipe1, &msg))
+        return false;
+    EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
 
-    ASSERT_EQ(tu_wait_readable(pipe1), true, "inferior pipe closed?");
+    *out_pipe = pipe1;
+    *out_inferior = inferior;
+    *out_eport = eport;
+    return true;
+}
 
-    buffer_size = sizeof(buffer) - 1;
-    memset(buffer, 0, sizeof(buffer));
-    tu_message_read(pipe1, buffer, &buffer_size, NULL, NULL, 0);
-    EXPECT_EQ(strcmp(buffer, pong_message), 0,
-              "unexpected message from child");
+static bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport)
+{
+    unittest_printf("Shutting down inferior\n");
 
-    unittest_printf("Done, beginning shutdown\n");
-
-    tu_handle_close(pipe1);
+    send_msg(pipe, MSG_DONE);
+    tu_handle_close(pipe);
 
     tu_wait_signaled(inferior);
     EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
               "unexpected inferior return code");
 
+    // TODO(dje): detach-on-close
+    mx_status_t status =
+        mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
+                                      MX_EXCEPTION_PORT_DEBUGGER);
+    EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
+    tu_handle_close(eport);
+    tu_handle_close(inferior);
+
+    return true;
+}
+
+static bool debugger_test(void)
+{
+    BEGIN_TEST;
+
+    mx_handle_t pipe, inferior, eport;
+
+    if (!setup_inferior(&pipe, &inferior, &eport))
+        return false;
+
+    mx_handle_t wait_inf_args[2] = { inferior, eport };
+    thrd_t wait_inferior_thread;
+    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*) &wait_inf_args[0], "wait-inf thread");
+
+    enum message msg;
+    send_msg(pipe, MSG_CRASH);
+    if (!recv_msg(pipe, &msg))
+        return false;
+    EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "unexpected response from crash");
+
+    if (!shutdown_inferior(pipe, inferior, eport))
+        return false;
+
     unittest_printf("Waiting for wait-inf thread\n");
     int ret = thrd_join(wait_inferior_thread, NULL);
     EXPECT_EQ(ret, thrd_success, "thrd_join failed");
     unittest_printf("wait-inf thread done\n");
-
-    // TODO(dje): detach-on-close
-    status = mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
-                                           MX_EXCEPTION_PORT_DEBUGGER);
-    EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
-    tu_handle_close(eport);
-    tu_handle_close(inferior);
 
     END_TEST;
 }
@@ -552,32 +608,46 @@ __NO_INLINE static bool test_prep_and_segv(void)
     return true;
 }
 
+// This returns "bool" because it uses ASSERT_*.
+
+static bool msg_loop(mx_handle_t pipe)
+{
+    bool my_done_tests = false;
+
+    while (!done_tests && !my_done_tests)
+    {
+        enum message msg;
+        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while receiving msg");
+        switch (msg)
+        {
+        case MSG_DONE:
+            my_done_tests = true;
+            break;
+        case MSG_PING:
+            send_msg(pipe, MSG_PONG);
+            break;
+        case MSG_CRASH:
+            for (int i = 0; i < NUM_SEGV_TRIES; ++i) {
+                if (!test_prep_and_segv())
+                    exit(21);
+            }
+            send_msg(pipe, MSG_RECOVERED_FROM_CRASH);
+            break;
+        default:
+            unittest_printf("unknown message received: %d\n", msg);
+            break;
+        }
+    }
+    return true;
+}
+
 void test_inferior(void)
 {
     mx_handle_t pipe = mxio_get_startup_handle(MX_HND_TYPE_USER0);
     unittest_printf("test_inferior: got handle %d\n", pipe);
 
-    if (!tu_wait_readable(pipe))
+    if (!msg_loop(pipe))
         exit(20);
-
-    char buffer[64];
-    uint32_t buffer_size = sizeof(buffer) - 1;
-    memset(buffer, 0, sizeof(buffer));
-    tu_message_read(pipe, buffer, &buffer_size, NULL, NULL, 0);
-    unittest_printf("test_inferior: received \"%s\"\n", buffer);
-    if (strcmp (buffer, ping_message) != 0) {
-        unittest_printf("Unexpected ping from debugger\n");
-        exit (21);
-    }
-
-    for (int i = 0; i < NUM_SEGV_TRIES; ++i) {
-        if (!test_prep_and_segv())
-            exit(22);
-    }
-
-    buffer_size = sizeof(buffer);
-    snprintf(buffer, buffer_size, pong_message);
-    tu_message_write(pipe, buffer, strlen(buffer) + 1, NULL, 0, 0);
 
     done_tests = true;
     unittest_printf("Inferior done\n");
@@ -607,6 +677,8 @@ static void check_verbosity(int argc, char** argv)
 
 int main(int argc, char **argv)
 {
+    program_path = argv[0];
+
     if (argc >= 2 && strcmp(argv[1], test_inferior_child_name) == 0) {
         check_verbosity(argc, argv);
         test_inferior();
