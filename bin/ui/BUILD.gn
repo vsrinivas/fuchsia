@@ -9,6 +9,7 @@ group("mozart") {
     "//apps/mozart/glue/gl",
     "//apps/mozart/glue/skia",
     "//apps/mozart/lib/view_associate_framework",
+    "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
     "//apps/mozart/services/input/interfaces",

@@ -1,0 +1,38 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("view_framework") {
+  sources = [
+    "base_view.cc",
+    "base_view.h",
+    "input_handler.cc",
+    "input_handler.h",
+    "view_provider_app.cc",
+    "view_provider_app.h",
+  ]
+
+  public_deps = [
+    "//apps/mozart/glue/base",
+    "//apps/mozart/services/composition/cpp",
+    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/input/interfaces",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/interfaces/application",
+  ]
+}
+
+source_set("content") {
+  sources = [
+    "content_viewer_app.cc",
+    "content_viewer_app.h",
+  ]
+
+  public_deps = [
+    ":view_framework",
+    "//mojo/services/content_handler/interfaces",
+  ]
+}
