@@ -56,6 +56,8 @@ public:
 
     // accessors
     ProcessDispatcher* process() { return process_.get(); }
+    // N.B. The dispatcher() accessor is potentially racy.
+    // See UserThread::DispatcherClosed.
     ThreadDispatcher* dispatcher() { return dispatcher_; }
 
     FutexNode* futex_node() { return &futex_node_; }
