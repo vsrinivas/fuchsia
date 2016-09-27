@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <magenta/cpp.h>
 #include <unittest/unittest.h>
+#include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
 static int destroy_count = 0;
@@ -19,6 +20,15 @@ struct CountingDeleter {
 
 using CountingPtr    = mxtl::unique_ptr<int,   CountingDeleter>;
 using CountingArrPtr = mxtl::unique_ptr<int[], CountingDeleter>;
+
+static_assert(mxtl::is_standard_layout<int>::value,
+              "mxtl::unique_ptr<T>'s should have a standard layout");
+static_assert(mxtl::is_standard_layout<CountingPtr>::value,
+              "mxtl::unique_ptr<T>'s should have a standard layout");
+static_assert(mxtl::is_standard_layout<int[]>::value,
+              "mxtl::unique_ptr<T[]>'s should have a standard layout");
+static_assert(mxtl::is_standard_layout<CountingArrPtr>::value,
+              "mxtl::unique_ptr<T[]>'s should have a standard layout");
 
 static bool uptr_test_scoped_destruction() {
     BEGIN_TEST;

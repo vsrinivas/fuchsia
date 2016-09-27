@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <unittest/unittest.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/type_support.h>
 
 namespace {
 
@@ -35,6 +36,9 @@ bool RefCallCounter::Release() {
     release_calls_++;
     return false;
 }
+
+static_assert(mxtl::is_standard_layout<mxtl::RefPtr<RefCallCounter>>::value,
+              "mxtl::RefPtr<T>'s should have a standard layout.");
 
 static bool ref_ptr_test() {
     BEGIN_TEST;
