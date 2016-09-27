@@ -14,6 +14,30 @@
         {
             "binary": "hello_compositor",
             "bootfs_path": "apps/hello_compositor"
+        },
+        {
+            "binary": "input_manager_service",
+            "bootfs_path": "apps/input_manager_service"
+        },
+        {
+            "binary": "launcher",
+            "bootfs_path": "apps/launcher"
+        },
+        {
+            "binary": "noodles_view",
+            "bootfs_path": "apps/noodles_view"
+        },
+        {
+            "binary": "shapes_view",
+            "bootfs_path": "apps/shapes_view"
+        },
+        {
+            "binary": "tile_view",
+            "bootfs_path": "apps/tile_view"
+        },
+        {
+            "binary": "view_manager_service",
+            "bootfs_path": "apps/view_manager_service"
         }
     ]
 }
