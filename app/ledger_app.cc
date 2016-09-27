@@ -40,19 +40,20 @@ class LedgerApp : public mojo::ApplicationImplBase {
 
  private:
   void OnInitialize() override {
+    message_loop_ = mtl::MessageLoop::GetCurrent();
     for (const std::string& arg : args()) {
       if (arg.size() > kStorageArgLength &&
           arg.substr(0, kStorageArgLength) == kStorageArg) {
         std::string storage_path = arg.substr(kStorageArgLength);
         storage_.reset(new storage::LedgerStorageImpl(
-            message_loop_.task_runner(), storage_path));
+            message_loop_->task_runner(), storage_path));
         break;
       }
     }
     if (!storage_) {
       temp_storage_.reset(new files::ScopedTempDir());
-      storage_.reset(new storage::LedgerStorageImpl(message_loop_.task_runner(),
-                                                    temp_storage_->path()));
+      storage_.reset(new storage::LedgerStorageImpl(
+          message_loop_->task_runner(), temp_storage_->path()));
     }
   }
 
@@ -68,7 +69,7 @@ class LedgerApp : public mojo::ApplicationImplBase {
 
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<files::ScopedTempDir> temp_storage_;
-  mtl::MessageLoop message_loop_;
+  mtl::MessageLoop* message_loop_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApp);
 };

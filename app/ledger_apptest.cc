@@ -5,8 +5,8 @@
 #include <mojo/system/main.h>
 
 #include "apps/ledger/api/ledger.mojom.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -85,8 +85,7 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
   LedgerFactoryPtr ledgerFactory;
-  ConnectToService(shell(), "http://app/ledger_codex.mojo",
-                   GetProxy(&ledgerFactory));
+  ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledgerFactory));
 
   Status status;
   mojo::InterfaceHandle<Ledger> ledger;

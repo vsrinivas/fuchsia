@@ -95,8 +95,6 @@ mojo_native_application("apptests") {
     ":lib",
     "//apps/ledger/api",
     "//apps/ledger/convert",
-    "//apps/ledger/glue",
-    "//apps/ledger/glue/test",
     "//apps/ledger/storage/fake:lib",
     "//apps/ledger/storage/public",
     "//lib/mtl",
