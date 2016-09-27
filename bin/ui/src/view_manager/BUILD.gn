@@ -2,10 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-import("//testing/test.gni")
+executable("view_manager") {
+  output_name = "view_manager_service"
 
-source_set("common") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//mojo/system",
+    "//mojo/mtl",
+  ]
+}
+
+source_set("lib") {
   sources = [
     "view_associate_table.cc",
     "view_associate_table.h",
@@ -30,52 +41,39 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//apps/mozart/glue/base",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
-    "//base",
-    "//mojo/application",
-    "//mojo/common:tracing_impl",
-    "//mojo/converters/geometry",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
     "//mojo/services/geometry/cpp",
-    "//mojo/services/ui/views/cpp",
-    "//mojo/services/ui/views/interfaces",
+    "//mojo/system",
   ]
 }
 
-mojo_native_application("view_manager") {
-  output_name = "view_manager_service"
-
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":common",
-    "//mojo/environment:chromium",
-  ]
-}
-
-mojo_native_application("view_manager_apptests") {
-  output_name = "view_manager_apptests"
-
-  testonly = true
-
-  sources = [
-    "tests/mock_view_associate.cc",
-    "tests/mock_view_associate.h",
-    "tests/view_associate_table_test.cc",
-    "tests/view_manager_test.cc",
-    "tests/view_manager_test_base.cc",
-    "tests/view_manager_test_base.h",
-  ]
-
-  deps = [
-    ":common",
-    "//base",
-    "//mojo/application:test_support",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/bindings:bindings",
-    "//mojo/ui/associates:mocks",
-  ]
-}
+# mojo_native_application("view_manager_apptests") {
+#   output_name = "view_manager_apptests"
+#
+#   testonly = true
+#
+#   sources = [
+#     "tests/mock_view_associate.cc",
+#     "tests/mock_view_associate.h",
+#     "tests/view_associate_table_test.cc",
+#     "tests/view_manager_test.cc",
+#     "tests/view_manager_test_base.cc",
+#     "tests/view_manager_test_base.h",
+#   ]
+#
+#   deps = [
+#     ":common",
+#     "//base",
+#     "//mojo/application:test_support",
+#     "//mojo/public/cpp/bindings",
+#     "//mojo/public/cpp/bindings:bindings",
+#     "//mojo/ui/associates:mocks",
+#   ]
+# }

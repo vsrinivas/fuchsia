@@ -10,10 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "base/logging.h"
-#include "base/macros.h"
-#include "mojo/services/ui/views/interfaces/view_containers.mojom.h"
-#include "services/ui/view_manager/view_stub.h"
+#include "apps/mozart/services/views/interfaces/view_containers.mojom.h"
+#include "apps/mozart/src/view_manager/view_stub.h"
+#include "lib/ftl/macros.h"
 
 namespace view_manager {
 
@@ -65,7 +64,7 @@ class ViewContainerState {
   mojo::ui::ViewContainerListenerPtr view_container_listener_;
   ChildrenMap children_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewContainerState);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);
 };
 
 std::ostream& operator<<(std::ostream& os, ViewContainerState* view_state);

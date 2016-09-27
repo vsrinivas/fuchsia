@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/view_manager/view_tree_state.h"
+#include "apps/mozart/src/view_manager/view_tree_state.h"
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "base/strings/stringprintf.h"
-#include "services/ui/view_manager/view_registry.h"
-#include "services/ui/view_manager/view_state.h"
-#include "services/ui/view_manager/view_stub.h"
-#include "services/ui/view_manager/view_tree_impl.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/view_state.h"
+#include "apps/mozart/src/view_manager/view_stub.h"
+#include "apps/mozart/src/view_manager/view_tree_impl.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace view_manager {
 
@@ -26,15 +25,15 @@ ViewTreeState::ViewTreeState(
       impl_(new ViewTreeImpl(registry, this)),
       view_tree_binding_(impl_.get(), view_tree_request.Pass()),
       weak_factory_(this) {
-  DCHECK(view_tree_token_);
-  DCHECK(view_tree_listener_);
+  FTL_DCHECK(view_tree_token_);
+  FTL_DCHECK(view_tree_listener_);
 
-  view_tree_binding_.set_connection_error_handler(
-      base::Bind(&ViewRegistry::OnViewTreeDied, base::Unretained(registry),
-                 base::Unretained(this), "ViewTree connection closed"));
-  view_tree_listener_.set_connection_error_handler(
-      base::Bind(&ViewRegistry::OnViewTreeDied, base::Unretained(registry),
-                 base::Unretained(this), "ViewTreeListener connection closed"));
+  view_tree_binding_.set_connection_error_handler([this, registry] {
+    registry->OnViewTreeDied(this, "ViewTree connection closed");
+  });
+  view_tree_listener_.set_connection_error_handler([this, registry] {
+    registry->OnViewTreeDied(this, "ViewTreeListener connection closed");
+  });
 }
 
 ViewTreeState::~ViewTreeState() {
@@ -60,7 +59,7 @@ void ViewTreeState::RequestHitTester(
     mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
         hit_tester_request,
     const mojo::ui::ViewInspector::GetHitTesterCallback& callback) {
-  DCHECK(hit_tester_request.is_pending());
+  FTL_DCHECK(hit_tester_request.is_pending());
   if (renderer_)
     renderer_->GetHitTester(hit_tester_request.Pass());
   pending_hit_tester_callbacks_.push_back(callback);
@@ -79,9 +78,9 @@ ViewTreeState* ViewTreeState::AsViewTreeState() {
 const std::string& ViewTreeState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
-        label_.empty() ? base::StringPrintf("<T%d>", view_tree_token_->value)
-                       : base::StringPrintf("<T%d:%s>", view_tree_token_->value,
-                                            label_.c_str());
+        label_.empty() ? ftl::StringPrintf("<T%d>", view_tree_token_->value)
+                       : ftl::StringPrintf("<T%d:%s>", view_tree_token_->value,
+                                           label_.c_str());
   }
   return formatted_label_cache_;
 }

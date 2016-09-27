@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/view_manager/view_manager_impl.h"
+#include "apps/mozart/src/view_manager/view_manager_impl.h"
 
 #include <utility>
 
-#include "base/bind.h"
-#include "services/ui/view_manager/view_impl.h"
-#include "services/ui/view_manager/view_tree_impl.h"
+#include "apps/mozart/src/view_manager/view_impl.h"
+#include "apps/mozart/src/view_manager/view_tree_impl.h"
 
 namespace view_manager {
 

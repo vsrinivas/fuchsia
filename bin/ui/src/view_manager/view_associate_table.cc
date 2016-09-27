@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/view_manager/view_associate_table.h"
+#include "apps/mozart/src/view_manager/view_associate_table.h"
 
 #include <algorithm>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 
@@ -29,8 +30,8 @@ void ViewAssociateTable::RegisterViewAssociate(
     mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner>
         view_associate_owner_request,
     const mojo::String& label) {
-  DCHECK(inspector);
-  DCHECK(associate.is_bound());
+  FTL_DCHECK(inspector);
+  FTL_DCHECK(associate.is_bound());
 
   std::string sanitized_label =
       label.get().substr(0, mojo::ui::kLabelMaxLength);
@@ -42,20 +43,18 @@ void ViewAssociateTable::RegisterViewAssociate(
 
   // Set it to use our error handler.
   data->associate.set_connection_error_handler(
-      base::Bind(&ViewAssociateTable::OnAssociateConnectionError,
-                 base::Unretained(this), data));
+      [this, data] { OnAssociateConnectionError(data); });
 
   data->associate_owner.set_connection_error_handler(
-      base::Bind(&ViewAssociateTable::OnAssociateOwnerConnectionError,
-                 base::Unretained(this), data));
+      [this, data] { OnAssociateOwnerConnectionError(data); });
 
   // Connect the associate to our view inspector.
   mojo::ui::ViewInspectorPtr inspector_ptr;
   data->inspector_binding.Bind(GetProxy(&inspector_ptr));
   data->associate->Connect(
-      inspector_ptr.Pass(),
-      base::Bind(&ViewAssociateTable::OnConnected, base::Unretained(this),
-                 pending_connection_count_));
+      inspector_ptr.Pass(), [this](mojo::ui::ViewAssociateInfoPtr info) {
+        OnConnected(pending_connection_count_, info.Pass());
+      });
 
   // Wait for the associate to connect to our view inspector.
   pending_connection_count_++;
@@ -73,20 +72,22 @@ void ViewAssociateTable::ConnectToViewService(
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
-    deferred_work_.push_back(
-        base::Bind(&ViewAssociateTable::ConnectToViewService,
-                   base::Unretained(this), base::Passed(view_token.Pass()),
-                   service_name, base::Passed(client_handle.Pass())));
+    deferred_work_.push_back(ftl::MakeCopyable([
+      this, token = view_token.Pass(), service_name,
+      handle = client_handle.Pass()
+    ]() mutable {
+      ConnectToViewService(std::move(token), service_name, std::move(handle));
+    }));
     return;
   }
 
   for (auto& data : associates_) {
-    DCHECK(data->info);
+    FTL_DCHECK(data->info);
     if (Contains(data->info->view_service_names, service_name)) {
       DVLOG(2) << "Connecting to view service: view_token=" << view_token
                << ", service_name=" << service_name
                << ", associate_label=" << data->label;
-      DCHECK(data->associate);
+      FTL_DCHECK(data->associate);
       data->associate->ConnectToViewService(view_token.Pass(), service_name,
                                             client_handle.Pass());
       return;
@@ -115,7 +116,7 @@ void ViewAssociateTable::OnAssociateConnectionError(
     AssociateData* associate_data) {
   std::string label;
   bool removed = RemoveAssociateData(associate_data, label);
-  DCHECK(removed);
+  FTL_DCHECK(removed);
   DVLOG(2) << "ViewAssociate disconnected, removing from table"
            << ", associate_label=" << label;
 }
@@ -124,7 +125,7 @@ void ViewAssociateTable::OnAssociateOwnerConnectionError(
     AssociateData* associate_data) {
   std::string label;
   bool removed = RemoveAssociateData(associate_data, label);
-  DCHECK(removed);
+  FTL_DCHECK(removed);
   DVLOG(2) << "ViewAssociateOwner disconnected, removing from table"
            << ", associate_label=" << label;
 }
@@ -134,20 +135,23 @@ void ViewAssociateTable::ConnectToViewTreeService(
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
-    deferred_work_.push_back(
-        base::Bind(&ViewAssociateTable::ConnectToViewTreeService,
-                   base::Unretained(this), base::Passed(view_tree_token.Pass()),
-                   service_name, base::Passed(client_handle.Pass())));
+    deferred_work_.push_back(ftl::MakeCopyable([
+      this, token = view_tree_token.Pass(), service_name,
+      handle = client_handle.Pass()
+    ]() mutable {
+      ConnectToViewTreeService(std::move(token), service_name,
+                               std::move(handle));
+    }));
     return;
   }
 
   for (auto& data : associates_) {
-    DCHECK(data->info);
+    FTL_DCHECK(data->info);
     if (Contains(data->info->view_tree_service_names, service_name)) {
       DVLOG(2) << "Connecting to view tree service: view_tree_token="
                << view_tree_token << ", service_name=" << service_name
                << ", associate_label=" << data->label;
-      DCHECK(data->associate);
+      FTL_DCHECK(data->associate);
       data->associate->ConnectToViewTreeService(
           view_tree_token.Pass(), service_name, client_handle.Pass());
       return;
@@ -161,9 +165,9 @@ void ViewAssociateTable::ConnectToViewTreeService(
 
 void ViewAssociateTable::OnConnected(uint32_t index,
                                      mojo::ui::ViewAssociateInfoPtr info) {
-  DCHECK(info);
-  DCHECK(pending_connection_count_);
-  DCHECK(!associates_[index]->info);
+  FTL_DCHECK(info);
+  FTL_DCHECK(pending_connection_count_);
+  FTL_DCHECK(!associates_[index]->info);
 
   DVLOG(1) << "Connected to view associate: label=" << associates_[index]->label
            << ", info=" << info;
@@ -178,7 +182,7 @@ void ViewAssociateTable::CompleteDeferredWorkIfReady() {
   // they connected to us. Otherwise, we keep the work deferred.
   if (!waiting_to_register_associates_ && !pending_connection_count_) {
     for (auto& work : deferred_work_)
-      work.Run();
+      work();
     deferred_work_.clear();
   }
 }

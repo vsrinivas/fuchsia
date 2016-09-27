@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/view_manager/view_stub.h"
+#include "apps/mozart/src/view_manager/view_stub.h"
 
 #include <utility>
 
-#include "base/bind.h"
-#include "base/logging.h"
-#include "services/ui/view_manager/view_registry.h"
-#include "services/ui/view_manager/view_state.h"
-#include "services/ui/view_manager/view_tree_state.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/view_state.h"
+#include "apps/mozart/src/view_manager/view_tree_state.h"
+#include "lib/ftl/logging.h"
 
 namespace view_manager {
 
@@ -37,13 +36,14 @@ ViewStub::ViewStub(ViewRegistry* registry,
     : registry_(registry),
       owner_(mojo::ui::ViewOwnerPtr::Create(std::move(owner))),
       weak_factory_(this) {
-  DCHECK(registry_);
-  DCHECK(owner_);
+  FTL_DCHECK(registry_);
+  FTL_DCHECK(owner_);
 
-  owner_.set_connection_error_handler(
-      base::Bind(&ViewStub::OnViewResolved, base::Unretained(this), nullptr));
-  owner_->GetToken(
-      base::Bind(&ViewStub::OnViewResolved, base::Unretained(this)));
+  owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
+
+  owner_->GetToken([this](mojo::ui::ViewTokenPtr view_token) {
+    OnViewResolved(view_token.Pass());
+  });
 }
 
 ViewStub::~ViewStub() {
@@ -51,7 +51,7 @@ ViewStub::~ViewStub() {
   // destroyed.  The |ViewRegistry| is responsible for maintaining the
   // invariant that all |ViewState| objects are owned so by the time we
   // get here, the view should have found a new owner or been unregistered.
-  DCHECK(is_unavailable());
+  FTL_DCHECK(is_unavailable());
 }
 
 ViewContainerState* ViewStub::container() const {
@@ -60,10 +60,10 @@ ViewContainerState* ViewStub::container() const {
 
 void ViewStub::AttachView(ViewState* state,
                           mojo::gfx::composition::ScenePtr stub_scene) {
-  DCHECK(state);
-  DCHECK(!state->view_stub());
-  DCHECK(stub_scene);
-  DCHECK(is_pending());
+  FTL_DCHECK(state);
+  FTL_DCHECK(!state->view_stub());
+  FTL_DCHECK(stub_scene);
+  FTL_DCHECK(is_pending());
 
   state_ = state;
   state_->set_view_stub(this);
@@ -73,7 +73,7 @@ void ViewStub::AttachView(ViewState* state,
 
 void ViewStub::SetProperties(uint32_t scene_version,
                              mojo::ui::ViewPropertiesPtr properties) {
-  DCHECK(!is_unavailable());
+  FTL_DCHECK(!is_unavailable());
 
   scene_version_ = scene_version;
   properties_ = properties.Pass();
@@ -81,10 +81,10 @@ void ViewStub::SetProperties(uint32_t scene_version,
 
 void ViewStub::SetStubSceneToken(
     mojo::gfx::composition::SceneTokenPtr stub_scene_token) {
-  DCHECK(stub_scene_token);
-  DCHECK(state_);
-  DCHECK(stub_scene_);
-  DCHECK(!stub_scene_token_);
+  FTL_DCHECK(stub_scene_token);
+  FTL_DCHECK(state_);
+  FTL_DCHECK(stub_scene_);
+  FTL_DCHECK(!stub_scene_token_);
 
   stub_scene_token_ = stub_scene_token.Pass();
 }
@@ -95,7 +95,7 @@ ViewState* ViewStub::ReleaseView() {
 
   ViewState* state = state_;
   if (state) {
-    DCHECK(state->view_stub() == this);
+    FTL_DCHECK(state->view_stub() == this);
     state->set_view_stub(nullptr);
     state_ = nullptr;
     stub_scene_.reset();
@@ -109,8 +109,8 @@ ViewState* ViewStub::ReleaseView() {
 }
 
 void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
-  DCHECK(container);
-  DCHECK(!tree_ && !parent_);
+  FTL_DCHECK(container);
+  FTL_DCHECK(!tree_ && !parent_);
 
   key_ = key;
   parent_ = container->AsViewState();
@@ -119,7 +119,7 @@ void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
       SetTreeRecursively(parent_->view_stub()->tree());
   } else {
     ViewTreeState* tree = container->AsViewTreeState();
-    DCHECK(tree);
+    FTL_DCHECK(tree);
     SetTreeRecursively(tree);
   }
 }
@@ -146,13 +146,13 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
 
 void ViewStub::OnViewResolved(mojo::ui::ViewTokenPtr view_token) {
   if (transfer_view_owner_when_view_resolved()) {
-    DCHECK(!container());  // Make sure we're removed from the view tree
-    DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
+    FTL_DCHECK(!container());  // Make sure we're removed from the view tree
+    FTL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
     // TODO(mikejurka): any other way to check that
     // transferred_view_owner_request_ is not null?
-    DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
-               .is_pending());
-    DCHECK(owner_);
+    FTL_DCHECK(pending_view_owner_transfer_->transferred_view_owner_request_
+                   .is_pending());
+    FTL_DCHECK(owner_);
     owner_.reset();
 
     registry_->TransferViewOwner(
@@ -167,7 +167,7 @@ void ViewStub::OnViewResolved(mojo::ui::ViewTokenPtr view_token) {
     // that reference anymore, which should release us immediately.
     pending_view_owner_transfer_.reset();
   } else {
-    DCHECK(owner_);
+    FTL_DCHECK(owner_);
     owner_.reset();
     registry_->OnViewResolved(this, view_token.Pass());
   }
@@ -177,8 +177,8 @@ void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
     mojo::InterfaceRequest<mojo::ui::ViewOwner>
         transferred_view_owner_request) {
-  DCHECK(!container());  // Make sure we've been removed from the view tree
-  DCHECK(!pending_view_owner_transfer_);
+  FTL_DCHECK(!container());  // Make sure we've been removed from the view tree
+  FTL_DCHECK(!pending_view_owner_transfer_);
 
   // When |OnViewResolved| gets called, we'll just transfer ownership
   // of the view instead of calling |ViewRegistry.OnViewResolved|.

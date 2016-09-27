@@ -7,13 +7,12 @@
 
 #include <memory>
 
-#include "base/macros.h"
-#include "mojo/common/tracing_impl.h"
+#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
-#include "services/ui/view_manager/view_registry.h"
 
 namespace view_manager {
 
@@ -33,12 +32,10 @@ class ViewManagerApp : public mojo::ApplicationImplBase {
 
   void Shutdown();
 
-  mojo::TracingImpl tracing_;
-
   mojo::StrongBindingSet<mojo::ui::ViewManager> view_managers_;
   std::unique_ptr<ViewRegistry> registry_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };
 
 }  // namespace view_manager

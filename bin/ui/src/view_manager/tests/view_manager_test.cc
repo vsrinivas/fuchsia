@@ -4,10 +4,10 @@
 
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
-#include "services/ui/view_manager/tests/mock_view_associate.h"
-#include "services/ui/view_manager/tests/view_manager_test_base.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
+#include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
 
 namespace view_manager {
 namespace test {

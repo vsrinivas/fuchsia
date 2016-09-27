@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include "base/macros.h"
-#include "base/memory/weak_ptr.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace view_manager {
 
@@ -46,7 +46,7 @@ class ViewStub {
            mojo::InterfaceHandle<mojo::ui::ViewOwner> owner);
   ~ViewStub();
 
-  base::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+  ftl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Gets the view state referenced by the stub, or null if the view
   // has not yet been resolved or is unavailable.
@@ -164,9 +164,9 @@ class ViewStub {
   ViewState* parent_ = nullptr;
   uint32_t key_ = 0u;
 
-  base::WeakPtrFactory<ViewStub> weak_factory_;
+  ftl::WeakPtrFactory<ViewStub> weak_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewStub);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewStub);
 };
 
 }  // namespace view_manager

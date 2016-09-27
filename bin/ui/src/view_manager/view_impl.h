@@ -5,9 +5,9 @@
 #ifndef SERVICES_UI_VIEW_MANAGER_VIEW_IMPL_H_
 #define SERVICES_UI_VIEW_MANAGER_VIEW_IMPL_H_
 
-#include "base/macros.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
 
 namespace view_manager {
 
@@ -59,7 +59,7 @@ class ViewImpl : public mojo::ui::View,
   mojo::BindingSet<mojo::ServiceProvider> service_provider_bindings_;
   mojo::BindingSet<mojo::ui::ViewContainer> container_bindings_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };
 
 }  // namespace view_manager

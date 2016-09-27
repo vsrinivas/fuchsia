@@ -8,16 +8,16 @@
 #include <string>
 #include <unordered_map>
 
-#include "base/macros.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
-#include "services/ui/view_manager/view_associate_table.h"
-#include "services/ui/view_manager/view_container_state.h"
-#include "services/ui/view_manager/view_state.h"
-#include "services/ui/view_manager/view_stub.h"
-#include "services/ui/view_manager/view_tree_state.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/src/view_manager/view_associate_table.h"
+#include "apps/mozart/src/view_manager/view_container_state.h"
+#include "apps/mozart/src/view_manager/view_state.h"
+#include "apps/mozart/src/view_manager/view_stub.h"
+#include "apps/mozart/src/view_manager/view_tree_state.h"
+#include "lib/ftl/macros.h"
 
 namespace view_manager {
 
@@ -168,10 +168,10 @@ class ViewRegistry : public mojo::ui::ViewInspector {
   // SCENE MANAGEMENT
 
   void OnViewSceneTokenAvailable(
-      base::WeakPtr<ViewState> view_state_weak,
+      ftl::WeakPtr<ViewState> view_state_weak,
       mojo::gfx::composition::SceneTokenPtr scene_token);
   void OnStubSceneTokenAvailable(
-      base::WeakPtr<ViewStub> view_stub_weak,
+      ftl::WeakPtr<ViewStub> view_stub_weak,
       mojo::gfx::composition::SceneTokenPtr scene_token);
   void PublishStubScene(ViewState* view_state);
 
@@ -222,7 +222,7 @@ class ViewRegistry : public mojo::ui::ViewInspector {
   std::unordered_map<uint32_t, ViewState*> views_by_scene_token_;
   std::unordered_map<uint32_t, ViewTreeState*> view_trees_by_token_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewRegistry);
 };
 
 }  // namespace view_manager

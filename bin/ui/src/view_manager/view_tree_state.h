@@ -10,12 +10,12 @@
 #include <string>
 #include <unordered_map>
 
-#include "base/macros.h"
-#include "base/memory/weak_ptr.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/src/view_manager/view_container_state.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
-#include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
-#include "services/ui/view_manager/view_container_state.h"
 
 namespace view_manager {
 
@@ -43,7 +43,7 @@ class ViewTreeState : public ViewContainerState {
                 const std::string& label);
   ~ViewTreeState() override;
 
-  base::WeakPtr<ViewTreeState> GetWeakPtr() {
+  ftl::WeakPtr<ViewTreeState> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
   }
 
@@ -117,9 +117,9 @@ class ViewTreeState : public ViewContainerState {
   uint32_t invalidation_flags_ = 0u;
   bool frame_scheduled_ = false;
 
-  base::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
+  ftl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
 
-  DISALLOW_COPY_AND_ASSIGN(ViewTreeState);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeState);
 };
 
 }  // namespace view_manager

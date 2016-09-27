@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-#include "base/callback.h"
-#include "base/macros.h"
+#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/functional/closure.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/ui/views/interfaces/view_associates.mojom.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
 
 namespace view_manager {
 
@@ -21,7 +21,7 @@ namespace view_manager {
 class ViewAssociateTable : public mojo::ui::ViewAssociateOwner {
  public:
   using AssociateConnectionErrorCallback =
-      base::Callback<void(const std::string&)>;
+      std::function<void(const std::string&)>;
 
   ViewAssociateTable();
   ~ViewAssociateTable() override;
@@ -73,9 +73,9 @@ class ViewAssociateTable : public mojo::ui::ViewAssociateOwner {
 
   uint32_t pending_connection_count_ = 0u;
   bool waiting_to_register_associates_ = true;
-  std::vector<base::Closure> deferred_work_;
+  std::vector<ftl::Closure> deferred_work_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewAssociateTable);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewAssociateTable);
 };
 
 }  // namespace view_manager

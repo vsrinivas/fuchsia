@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "services/ui/view_manager/view_registry.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
-#include "base/strings/stringprintf.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
-#include "services/ui/view_manager/view_impl.h"
-#include "services/ui/view_manager/view_tree_impl.h"
+#include "apps/mozart/glue/base/logging.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "apps/mozart/src/view_manager/view_impl.h"
+#include "apps/mozart/src/view_manager/view_tree_impl.h"
+#include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace view_manager {
 namespace {
@@ -81,14 +82,14 @@ void ViewRegistry::CreateView(
     mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
     mojo::ui::ViewListenerPtr view_listener,
     const mojo::String& label) {
-  DCHECK(view_request.is_pending());
-  DCHECK(view_owner_request.is_pending());
-  DCHECK(view_listener);
+  FTL_DCHECK(view_request.is_pending());
+  FTL_DCHECK(view_owner_request.is_pending());
+  FTL_DCHECK(view_listener);
 
   auto view_token = mojo::ui::ViewToken::New();
   view_token->value = next_view_token_value_++;
-  CHECK(view_token->value);
-  CHECK(!FindView(view_token->value));
+  FTL_CHECK(view_token->value);
+  FTL_CHECK(!FindView(view_token->value));
 
   // Create the state and bind the interfaces to it.
   std::string sanitized_label =
@@ -105,14 +106,14 @@ void ViewRegistry::CreateView(
 
 void ViewRegistry::OnViewDied(ViewState* view_state,
                               const std::string& reason) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(1) << "OnViewDied: view=" << view_state << ", reason=" << reason;
 
   UnregisterView(view_state);
 }
 
 void ViewRegistry::UnregisterView(ViewState* view_state) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(1) << "UnregisterView: view=" << view_state;
 
   HijackView(view_state);
@@ -131,13 +132,13 @@ void ViewRegistry::CreateViewTree(
     mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
     mojo::ui::ViewTreeListenerPtr view_tree_listener,
     const mojo::String& label) {
-  DCHECK(view_tree_request.is_pending());
-  DCHECK(view_tree_listener);
+  FTL_DCHECK(view_tree_request.is_pending());
+  FTL_DCHECK(view_tree_listener);
 
   auto view_tree_token = mojo::ui::ViewTreeToken::New();
   view_tree_token->value = next_view_tree_token_value_++;
-  CHECK(view_tree_token->value);
-  CHECK(!FindViewTree(view_tree_token->value));
+  FTL_CHECK(view_tree_token->value);
+  FTL_CHECK(!FindViewTree(view_tree_token->value));
 
   // Create the state and bind the interfaces to it.
   std::string sanitized_label =
@@ -154,14 +155,14 @@ void ViewRegistry::CreateViewTree(
 
 void ViewRegistry::OnViewTreeDied(ViewTreeState* tree_state,
                                   const std::string& reason) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(1) << "OnViewTreeDied: tree=" << tree_state << ", reason=" << reason;
 
   UnregisterViewTree(tree_state);
 }
 
 void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(1) << "UnregisterViewTree: tree=" << tree_state;
 
   UnregisterChildren(tree_state);
@@ -175,7 +176,7 @@ void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
 
 void ViewRegistry::UnregisterViewContainer(
     ViewContainerState* container_state) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
 
   ViewState* view_state = container_state->AsViewState();
   if (view_state)
@@ -185,7 +186,7 @@ void ViewRegistry::UnregisterViewContainer(
 }
 
 void ViewRegistry::UnregisterViewStub(std::unique_ptr<ViewStub> view_stub) {
-  DCHECK(view_stub);
+  FTL_DCHECK(view_stub);
 
   ViewState* view_state = view_stub->ReleaseView();
   if (view_state)
@@ -193,7 +194,7 @@ void ViewRegistry::UnregisterViewStub(std::unique_ptr<ViewStub> view_stub) {
 }
 
 void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
 
   // Recursively unregister all children since they will become unowned
   // at this point taking care to unlink each one before its unregistration.
@@ -206,25 +207,27 @@ void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
 void ViewRegistry::CreateScene(
     ViewState* view_state,
     mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
-  DCHECK(scene.is_pending());
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(scene.is_pending());
   DVLOG(1) << "CreateScene: view=" << view_state;
 
-  compositor_->CreateScene(
-      scene.Pass(), view_state->label(),
-      base::Bind(&ViewRegistry::OnViewSceneTokenAvailable,
-                 base::Unretained(this), view_state->GetWeakPtr()));
+  compositor_->CreateScene(scene.Pass(), view_state->label(), [
+    this, weak = view_state->GetWeakPtr()
+  ](mojo::gfx::composition::SceneTokenPtr scene_token) {
+    if (weak)
+      OnViewSceneTokenAvailable(weak, scene_token.Pass());
+  });
 }
 
 void ViewRegistry::OnViewSceneTokenAvailable(
-    base::WeakPtr<ViewState> view_state_weak,
+    ftl::WeakPtr<ViewState> view_state_weak,
     mojo::gfx::composition::SceneTokenPtr scene_token) {
-  DCHECK(scene_token);
+  FTL_DCHECK(scene_token);
   ViewState* view_state = view_state_weak.get();
   if (!view_state)
     return;
 
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(2) << "OnSceneCreated: view=" << view_state
            << ", scene_token=" << scene_token;
 
@@ -238,9 +241,9 @@ void ViewRegistry::OnViewSceneTokenAvailable(
 }
 
 void ViewRegistry::OnStubSceneTokenAvailable(
-    base::WeakPtr<ViewStub> view_stub_weak,
+    ftl::WeakPtr<ViewStub> view_stub_weak,
     mojo::gfx::composition::SceneTokenPtr scene_token) {
-  DCHECK(scene_token);
+  FTL_DCHECK(scene_token);
 
   ViewStub* view_stub = view_stub_weak.get();
   if (!view_stub || view_stub->is_unavailable())
@@ -250,7 +253,7 @@ void ViewRegistry::OnStubSceneTokenAvailable(
            << ", scene_token=" << scene_token;
 
   // Store the scene token.
-  DCHECK(view_stub->is_linked());
+  FTL_DCHECK(view_stub->is_linked());
   view_stub->SetStubSceneToken(scene_token.Clone());
   if (view_stub->state())
     PublishStubScene(view_stub->state());
@@ -270,12 +273,12 @@ void ViewRegistry::OnStubSceneTokenAvailable(
 }
 
 void ViewRegistry::PublishStubScene(ViewState* view_state) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   if (!view_state->view_stub())
     return;
 
-  DCHECK(view_state->view_stub()->stub_scene());  // we know view is attached
+  FTL_DCHECK(view_state->view_stub()->stub_scene());  // we know view is attached
   DVLOG(2) << "PublishStubScene: view=" << view_state
            << ", view_stub=" << view_state->view_stub() << ", stub_scene_token="
            << view_state->view_stub()->stub_scene_token();
@@ -293,7 +296,7 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
 
     const mojo::ui::ViewLayoutPtr& layout =
         view_state->issued_properties()->view_layout;
-    DCHECK(layout && layout->size);
+    FTL_DCHECK(layout && layout->size);
 
     auto root_node = mojo::gfx::composition::Node::New();
     root_node->content_clip = mojo::RectF::New();
@@ -320,13 +323,12 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
 
 void ViewRegistry::SetRenderer(ViewTreeState* tree_state,
                                mojo::gfx::composition::RendererPtr renderer) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(1) << "SetRenderer: tree=" << tree_state;
 
   if (renderer) {
     renderer.set_connection_error_handler(
-        base::Bind(&ViewRegistry::OnRendererDied, base::Unretained(this),
-                   base::Unretained(tree_state)));
+        [this, tree_state] { OnRendererDied(tree_state); });
   }
 
   tree_state->SetRenderer(renderer.Pass());
@@ -336,9 +338,9 @@ void ViewRegistry::SetRenderer(ViewTreeState* tree_state,
 }
 
 void ViewRegistry::OnRendererDied(ViewTreeState* tree_state) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(1) << "OnRendererDied: tree=" << tree_state;
-  DCHECK(tree_state->renderer());
+  FTL_DCHECK(tree_state->renderer());
 
   tree_state->SetRenderer(nullptr);
   ScheduleViewTreeInvalidation(tree_state,
@@ -347,7 +349,7 @@ void ViewRegistry::OnRendererDied(ViewTreeState* tree_state) {
 }
 
 void ViewRegistry::SetRendererRootScene(ViewTreeState* tree_state) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
 
   if (!tree_state->renderer())
     return;
@@ -359,7 +361,7 @@ void ViewRegistry::SetRendererRootScene(ViewTreeState* tree_state) {
       IsComplete(*root_stub->properties())) {
     const mojo::ui::ViewLayoutPtr& layout =
         root_stub->properties()->view_layout;
-    DCHECK(layout && layout->size);
+    FTL_DCHECK(layout && layout->size);
 
     auto viewport = mojo::Rect::New();
     viewport->width = layout->size->width;
@@ -384,17 +386,17 @@ void ViewRegistry::AddChild(
     ViewContainerState* container_state,
     uint32_t child_key,
     mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  DCHECK(child_view_owner);
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(child_view_owner);
   DVLOG(1) << "AddChild: container=" << container_state
            << ", child_key=" << child_key;
 
   // Ensure there are no other children with the same key.
   if (container_state->children().find(child_key) !=
       container_state->children().end()) {
-    LOG(ERROR) << "Attempted to add a child with a duplicate key: "
-               << "container=" << container_state
-               << ", child_key=" << child_key;
+    FTL_LOG(ERROR) << "Attempted to add a child with a duplicate key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
     return;
   }
@@ -402,9 +404,9 @@ void ViewRegistry::AddChild(
   // If this is a view tree, ensure it only has one root.
   ViewTreeState* view_tree_state = container_state->AsViewTreeState();
   if (view_tree_state && !container_state->children().empty()) {
-    LOG(ERROR) << "Attempted to add a second child to a view tree: "
-               << "container=" << container_state
-               << ", child_key=" << child_key;
+    FTL_LOG(ERROR) << "Attempted to add a second child to a view tree: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
     return;
   }
@@ -420,16 +422,16 @@ void ViewRegistry::RemoveChild(ViewContainerState* container_state,
                                uint32_t child_key,
                                mojo::InterfaceRequest<mojo::ui::ViewOwner>
                                    transferred_view_owner_request) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   DVLOG(1) << "RemoveChild: container=" << container_state
            << ", child_key=" << child_key;
 
   // Ensure the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
   if (child_it == container_state->children().end()) {
-    LOG(ERROR) << "Attempted to remove a child with an invalid key: "
-               << "container=" << container_state
-               << ", child_key=" << child_key;
+    FTL_LOG(ERROR) << "Attempted to remove a child with an invalid key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key;
     UnregisterViewContainer(container_state);
     return;
   }
@@ -449,7 +451,7 @@ void ViewRegistry::SetChildProperties(
     uint32_t child_key,
     uint32_t child_scene_version,
     mojo::ui::ViewPropertiesPtr child_properties) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   DVLOG(1) << "SetChildProperties: container=" << container_state
            << ", child_key=" << child_key
            << ", child_scene_version=" << child_scene_version
@@ -457,10 +459,11 @@ void ViewRegistry::SetChildProperties(
 
   // Check whether the properties are well-formed.
   if (child_properties && !Validate(*child_properties)) {
-    LOG(ERROR) << "Attempted to set invalid child view properties: "
-               << "container=" << container_state << ", child_key=" << child_key
-               << ", child_scene_version=" << child_scene_version
-               << ", child_properties=" << child_properties;
+    FTL_LOG(ERROR) << "Attempted to set invalid child view properties: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key
+                   << ", child_scene_version=" << child_scene_version
+                   << ", child_properties=" << child_properties;
     UnregisterViewContainer(container_state);
     return;
   }
@@ -468,10 +471,11 @@ void ViewRegistry::SetChildProperties(
   // Check whether the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
   if (child_it == container_state->children().end()) {
-    LOG(ERROR) << "Attempted to modify child with an invalid key: "
-               << "container=" << container_state << ", child_key=" << child_key
-               << ", child_scene_version=" << child_scene_version
-               << ", child_properties=" << child_properties;
+    FTL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
+                   << "container=" << container_state
+                   << ", child_key=" << child_key
+                   << ", child_scene_version=" << child_scene_version
+                   << ", child_properties=" << child_properties;
     UnregisterViewContainer(container_state);
     return;
   }
@@ -496,14 +500,14 @@ void ViewRegistry::SetChildProperties(
 
 void ViewRegistry::FlushChildren(ViewContainerState* container_state,
                                  uint32_t flush_token) {
-  DCHECK(IsViewContainerStateRegisteredDebug(container_state));
+  FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   DVLOG(1) << "FlushChildren: container=" << container_state
            << ", flush_token=" << flush_token;
 }
 
 void ViewRegistry::OnViewResolved(ViewStub* view_stub,
                                   mojo::ui::ViewTokenPtr view_token) {
-  DCHECK(view_stub);
+  FTL_DCHECK(view_stub);
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
   if (view_state)
@@ -515,8 +519,8 @@ void ViewRegistry::OnViewResolved(ViewStub* view_stub,
 void ViewRegistry::TransferViewOwner(mojo::ui::ViewTokenPtr view_token,
                                      mojo::InterfaceRequest<mojo::ui::ViewOwner>
                                          transferred_view_owner_request) {
-  DCHECK(view_token);
-  DCHECK(transferred_view_owner_request.is_pending());
+  FTL_DCHECK(view_token);
+  FTL_DCHECK(transferred_view_owner_request.is_pending());
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
   if (view_state) {
@@ -527,8 +531,8 @@ void ViewRegistry::TransferViewOwner(mojo::ui::ViewTokenPtr view_token,
 
 void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
                                                ViewState* view_state) {
-  DCHECK(view_stub);
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(view_stub);
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
 
   // Create the scene and get its token asynchronously.
@@ -537,9 +541,12 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
   mojo::gfx::composition::ScenePtr stub_scene;
   compositor_->CreateScene(
       mojo::GetProxy(&stub_scene),
-      base::StringPrintf("*%s", view_state->label().c_str()),
-      base::Bind(&ViewRegistry::OnStubSceneTokenAvailable,
-                 base::Unretained(this), view_stub->GetWeakPtr()));
+      ftl::StringPrintf("*%s", view_state->label().c_str()),
+      [ this, weak = view_stub->GetWeakPtr() ](
+          mojo::gfx::composition::SceneTokenPtr scene_token) {
+        if (weak)
+          OnStubSceneTokenAvailable(weak, scene_token.Pass());
+      });
 
   // Hijack the view from its current container, if needed.
   HijackView(view_state);
@@ -551,18 +558,18 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
 }
 
 void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
-  DCHECK(view_stub);
+  FTL_DCHECK(view_stub);
   DVLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
 
   ViewState* view_state = view_stub->ReleaseView();
-  DCHECK(!view_state);
+  FTL_DCHECK(!view_state);
 
   if (view_stub->container())
     SendChildUnavailable(view_stub->container(), view_stub->key());
 }
 
 void ViewRegistry::HijackView(ViewState* view_state) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   ViewStub* view_stub = view_state->view_stub();
   if (view_stub)
@@ -573,7 +580,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
     std::unique_ptr<ViewStub> view_stub,
     mojo::InterfaceRequest<mojo::ui::ViewOwner>
         transferred_view_owner_request) {
-  DCHECK(view_stub);
+  FTL_DCHECK(view_stub);
 
   if (transferred_view_owner_request.is_pending()) {
     if (view_stub->state()) {
@@ -584,7 +591,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
       return;
     }
     if (view_stub->is_pending()) {
-      DCHECK(!view_stub->state());
+      FTL_DCHECK(!view_stub->state());
 
       // Handle transfer of pending view.
       view_stub->TransferViewOwnerWhenViewResolved(
@@ -599,7 +606,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
 // INVALIDATION
 
 void ViewRegistry::Invalidate(ViewState* view_state) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(1) << "Invalidate: view=" << view_state;
 
   ScheduleViewInvalidation(view_state, ViewState::INVALIDATION_EXPLICIT);
@@ -607,7 +614,7 @@ void ViewRegistry::Invalidate(ViewState* view_state) {
 
 void ViewRegistry::ScheduleViewInvalidation(ViewState* view_state,
                                             uint32_t flags) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(2) << "ScheduleViewInvalidation: view=" << view_state
            << ", flags=" << flags;
 
@@ -620,7 +627,7 @@ void ViewRegistry::ScheduleViewInvalidation(ViewState* view_state,
 
 void ViewRegistry::ScheduleViewTreeInvalidation(ViewTreeState* tree_state,
                                                 uint32_t flags) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(2) << "ScheduleViewTreeInvalidation: tree=" << tree_state
            << ", flags=" << flags;
 
@@ -634,20 +641,21 @@ void ViewRegistry::ScheduleViewTreeInvalidation(ViewTreeState* tree_state,
     // renderer.
     tree_state->set_frame_scheduled(true);
     tree_state->frame_scheduler()->ScheduleFrame(
-        base::Bind(&ViewRegistry::TraverseViewTree, base::Unretained(this),
-                   base::Unretained(tree_state)));
+        [this, tree_state](mojo::gfx::composition::FrameInfoPtr frame_info) {
+          TraverseViewTree(tree_state, frame_info.Pass());
+        });
   }
 }
 
 void ViewRegistry::TraverseViewTree(
     ViewTreeState* tree_state,
     mojo::gfx::composition::FrameInfoPtr frame_info) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(2) << "TraverseViewTree: tree=" << tree_state
            << ", frame_info=" << frame_info
            << ", invalidation_flags=" << tree_state->invalidation_flags();
-  DCHECK(tree_state->frame_scheduled());
-  DCHECK(tree_state->invalidation_flags());
+  FTL_DCHECK(tree_state->frame_scheduled());
+  FTL_DCHECK(tree_state->invalidation_flags());
 
   tree_state->set_frame_scheduled(false);
   tree_state->set_invalidation_flags(0u);
@@ -661,7 +669,7 @@ void ViewRegistry::TraverseView(
     ViewState* view_state,
     const mojo::gfx::composition::FrameInfo* frame_info,
     bool parent_properties_changed) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(2) << "TraverseView: view=" << view_state
            << ", frame_info=" << frame_info
            << ", parent_properties_changed=" << parent_properties_changed
@@ -723,7 +731,7 @@ void ViewRegistry::TraverseView(
 
 mojo::ui::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
     ViewState* view_state) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   ViewStub* view_stub = view_state->view_stub();
   if (!view_stub || !view_stub->properties())
@@ -754,7 +762,7 @@ void ViewRegistry::ConnectToViewService(
     ViewState* view_state,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
-  DCHECK(IsViewStateRegisteredDebug(view_state));
+  FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   associate_table_.ConnectToViewService(view_state->view_token()->Clone(),
                                         service_name, client_handle.Pass());
@@ -764,7 +772,7 @@ void ViewRegistry::ConnectToViewTreeService(
     ViewTreeState* tree_state,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
 
   associate_table_.ConnectToViewTreeService(
       tree_state->view_tree_token()->Clone(), service_name,
@@ -778,8 +786,8 @@ void ViewRegistry::GetHitTester(
     mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
         hit_tester_request,
     const GetHitTesterCallback& callback) {
-  DCHECK(view_tree_token);
-  DCHECK(hit_tester_request.is_pending());
+  FTL_DCHECK(view_tree_token);
+  FTL_DCHECK(hit_tester_request.is_pending());
   DVLOG(1) << "GetHitTester: tree=" << view_tree_token;
 
   ViewTreeState* view_tree = FindViewTree(view_tree_token->value);
@@ -794,14 +802,14 @@ void ViewRegistry::GetHitTester(
 void ViewRegistry::ResolveScenes(
     mojo::Array<mojo::gfx::composition::SceneTokenPtr> scene_tokens,
     const ResolveScenesCallback& callback) {
-  DCHECK(scene_tokens);
+  FTL_DCHECK(scene_tokens);
 
   mojo::Array<mojo::ui::ViewTokenPtr> result;
   result.resize(scene_tokens.size());
 
   size_t index = 0;
   for (const auto& scene_token : scene_tokens.storage()) {
-    DCHECK(scene_token);
+    FTL_DCHECK(scene_token);
     auto it = views_by_scene_token_.find(scene_token->value);
     if (it != views_by_scene_token_.end())
       result[index] = it->second->view_token()->Clone();
@@ -818,32 +826,30 @@ void ViewRegistry::ResolveScenes(
 void ViewRegistry::SendInvalidation(
     ViewState* view_state,
     mojo::ui::ViewInvalidationPtr invalidation) {
-  DCHECK(view_state);
-  DCHECK(invalidation);
-  DCHECK(view_state->view_listener());
+  FTL_DCHECK(view_state);
+  FTL_DCHECK(invalidation);
+  FTL_DCHECK(view_state->view_listener());
 
   // TODO: Detect ANRs
   DVLOG(1) << "SendInvalidation: view_state=" << view_state
            << ", invalidation=" << invalidation;
-  view_state->view_listener()->OnInvalidation(invalidation.Pass(),
-                                              base::Bind(&base::DoNothing));
+  view_state->view_listener()->OnInvalidation(invalidation.Pass(), [] {});
 }
 
 void ViewRegistry::SendRendererDied(ViewTreeState* tree_state) {
-  DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DCHECK(tree_state->view_tree_listener());
+  FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
+  FTL_DCHECK(tree_state->view_tree_listener());
 
   // TODO: Detect ANRs
   DVLOG(1) << "SendRendererDied: tree_state=" << tree_state;
-  tree_state->view_tree_listener()->OnRendererDied(
-      base::Bind(&base::DoNothing));
+  tree_state->view_tree_listener()->OnRendererDied([] {});
 }
 
 void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
                                      uint32_t child_key,
                                      mojo::ui::ViewInfoPtr child_view_info) {
-  DCHECK(container_state);
-  DCHECK(child_view_info);
+  FTL_DCHECK(container_state);
+  FTL_DCHECK(child_view_info);
 
   if (!container_state->view_container_listener())
     return;
@@ -853,12 +859,12 @@ void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
            << ", child_key=" << child_key
            << ", child_view_info=" << child_view_info;
   container_state->view_container_listener()->OnChildAttached(
-      child_key, child_view_info.Pass(), base::Bind(&base::DoNothing));
+      child_key, child_view_info.Pass(), [] {});
 }
 
 void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
                                         uint32_t child_key) {
-  DCHECK(container_state);
+  FTL_DCHECK(container_state);
 
   if (!container_state->view_container_listener())
     return;
@@ -866,8 +872,8 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
   // TODO: Detect ANRs
   DVLOG(1) << "SendChildUnavailable: container=" << container_state
            << ", child_key=" << child_key;
-  container_state->view_container_listener()->OnChildUnavailable(
-      child_key, base::Bind(&base::DoNothing));
+  container_state->view_container_listener()->OnChildUnavailable(child_key,
+                                                                 [] {});
 }
 
 // LOOKUP

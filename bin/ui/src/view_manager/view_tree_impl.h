@@ -5,9 +5,9 @@
 #ifndef SERVICES_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 #define SERVICES_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
-#include "base/macros.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/ui/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
 
 namespace view_manager {
 
@@ -57,7 +57,7 @@ class ViewTreeImpl : public mojo::ui::ViewTree,
   mojo::BindingSet<mojo::ServiceProvider> service_provider_bindings_;
   mojo::BindingSet<mojo::ui::ViewContainer> container_bindings_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
 };
 
 }  // namespace view_manager

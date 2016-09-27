@@ -8,12 +8,12 @@
 #include <memory>
 #include <string>
 
-#include "base/macros.h"
-#include "base/memory/weak_ptr.h"
+#include "apps/mozart/services/views/cpp/formatting.h"
+#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/src/view_manager/view_container_state.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/ui/views/cpp/formatting.h"
-#include "mojo/services/ui/views/interfaces/views.mojom.h"
-#include "services/ui/view_manager/view_container_state.h"
 
 namespace view_manager {
 
@@ -42,7 +42,7 @@ class ViewState : public ViewContainerState {
             const std::string& label);
   ~ViewState() override;
 
-  base::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+  ftl::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
@@ -120,9 +120,9 @@ class ViewState : public ViewContainerState {
 
   uint32_t invalidation_flags_ = 0u;
 
-  base::WeakPtrFactory<ViewState> weak_factory_;  // must be last
+  ftl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 
-  DISALLOW_COPY_AND_ASSIGN(ViewState);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewState);
 };
 
 }  // namespace view_manager

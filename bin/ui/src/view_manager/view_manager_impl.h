@@ -5,9 +5,9 @@
 #ifndef SERVICES_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define SERVICES_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include "base/macros.h"
-#include "mojo/services/ui/views/interfaces/view_manager.mojom.h"
-#include "services/ui/view_manager/view_registry.h"
+#include "lib/ftl/macros.h"
+#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/src/view_manager/view_registry.h"
 
 namespace view_manager {
 
@@ -36,7 +36,7 @@ class ViewManagerImpl : public mojo::ui::ViewManager {
 
   ViewRegistry* registry_;
 
-  DISALLOW_COPY_AND_ASSIGN(ViewManagerImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerImpl);
 };
 
 }  // namespace view_manager
