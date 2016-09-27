@@ -12,7 +12,7 @@ executable("view_manager") {
   deps = [
     ":lib",
     "//mojo/system",
-    "//mojo/mtl",
+    "//lib/mtl",
   ]
 }
 
