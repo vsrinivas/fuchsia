@@ -32,14 +32,23 @@
 
 #define LOCAL_TRACE 0
 
-UserThread::UserThread(mx_koid_t koid,
-                       mxtl::RefPtr<ProcessDispatcher> process,
+UserThread::UserThread(mxtl::RefPtr<ProcessDispatcher> process,
                        uint32_t flags)
-    : koid_(koid),
+    : koid_(MX_KOID_INVALID),
       process_(mxtl::move(process)),
       state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
     LTRACE_ENTRY_OBJ;
 }
+
+// This is called during initialization after both us and our dispatcher
+// have been created.
+// N.B. Use of dispatcher_ is potentially racy.
+// See UserThread::DispatcherClosed.
+
+void UserThread::set_dispatcher(ThreadDispatcher* dispatcher) {
+    dispatcher_ = dispatcher;
+    koid_ = dispatcher->get_koid();
+ }
 
 UserThread::~UserThread() {
     LTRACE_ENTRY_OBJ;

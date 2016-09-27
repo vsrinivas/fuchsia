@@ -38,8 +38,7 @@ public:
         DEAD,        // thread has exited and is not running
     };
 
-    UserThread(mx_koid_t koid,
-               mxtl::RefPtr<ProcessDispatcher> process,
+    UserThread(mxtl::RefPtr<ProcessDispatcher> process,
                uint32_t flags);
     ~UserThread();
 
@@ -86,7 +85,7 @@ public:
     status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv);
 
     mx_koid_t get_koid() const { return koid_; }
-    void set_dispatcher(ThreadDispatcher* dispatcher) { dispatcher_ = dispatcher; }
+    void set_dispatcher(ThreadDispatcher* dispatcher);
 
 private:
     UserThread(const UserThread&) = delete;
@@ -102,8 +101,14 @@ private:
     // change states of the object, do what is appropriate for the state transition
     void SetState(State);
 
-    // The kernel object id. Since UserThread is not a dispatcher, is an 'inner' koid.
-    const mx_koid_t koid_;
+    // The kernel object id. Since ProcessDispatcher maintains a list of
+    // UserThreads, and since use of dispatcher_ is racy (see
+    // UserThread::DispatcherClosed), we keep a copy of the ThreadDispatcher
+    // koid here. This allows ProcessDispatcher::LookupThreadById to return
+    // the koid of the Dispatcher.
+    // At construction time this is MX_KOID_INVALID. Later when set_dispatcher
+    // is called this is updated to be the koid of the dispatcher.
+    mx_koid_t koid_;
 
     // a ref pointer back to the parent process
     mxtl::RefPtr<ProcessDispatcher> process_;

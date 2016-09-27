@@ -373,9 +373,8 @@ status_t ProcessDispatcher::GetInfo(mx_record_process_t* info) {
 
 status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread) {
     AllocChecker ac;
-    auto ut = mxtl::AdoptRef(new (&ac) UserThread(GenerateKernelObjectId(),
-                                                   mxtl::WrapRefPtr(this),
-                                                   flags));
+    auto ut = mxtl::AdoptRef(new (&ac) UserThread(mxtl::WrapRefPtr(this),
+                                                  flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
