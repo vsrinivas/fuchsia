@@ -18,7 +18,7 @@ class Object {
   virtual ~Object() {}
 
   // Returns the id of this storage object.
-  virtual ObjectId GetId() = 0;
+  virtual ObjectId GetId() const = 0;
 
   // Returns the size in bytes of this object.
   virtual Status GetSize(int64_t* size) = 0;

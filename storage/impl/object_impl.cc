@@ -20,7 +20,7 @@ ObjectImpl::ObjectImpl(const ObjectId& id, const std::string& file_path)
 
 ObjectImpl::~ObjectImpl() {}
 
-ObjectId ObjectImpl::GetId() {
+ObjectId ObjectImpl::GetId() const {
   return id_;
 }
 

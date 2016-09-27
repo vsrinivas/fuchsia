@@ -52,7 +52,7 @@ class TreeNode : public Object {
 
   // Creates a new tree node by copying this one and applying the given
   // |updates|. The id of the new node is stored in |copy_id|.
-  Status Copy(std::vector<NodeUpdate>& updates, ObjectId* new_id);
+  Status Copy(std::vector<NodeUpdate>& updates, ObjectId* new_id) const;
 
   // Creates two new tree nodes by splitting this one. The |left| one will store
   // entries in [0, index) and the |right| one those in [index, GetKeyCount()).
@@ -64,27 +64,27 @@ class TreeNode : public Object {
                const ObjectId& left_rightmost_child,
                const ObjectId& right_leftmost_child,
                ObjectId* left,
-               ObjectId* right);
+               ObjectId* right) const;
 
   // Returns the number of entries stored in this tree node.
-  int GetKeyCount();
+  int GetKeyCount() const;
 
   // Finds the entry at position |index| and stores it in |entry|. |index| has
   // to be in [0, GetKeyCount() - 1].
-  Status GetEntry(int index, Entry* entry);
+  Status GetEntry(int index, Entry* entry) const;
 
   // Finds the child node at position |index| and stores it in |child|. |index|
   // has to be in [0, GetKeyCount()].
-  Status GetChild(int index, std::unique_ptr<TreeNode>* child);
+  Status GetChild(int index, std::unique_ptr<TreeNode>* child) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|
   // is returned and index stores the index of the child node where the key
   // might be found.
-  Status FindKeyOrChild(const std::string& key, int* index);
+  Status FindKeyOrChild(const std::string& key, int* index) const;
 
   // Object:
-  ObjectId GetId() override;
+  ObjectId GetId() const override;
   Status GetSize(int64_t* size) override;
   Status GetData(const uint8_t** data) override;
 

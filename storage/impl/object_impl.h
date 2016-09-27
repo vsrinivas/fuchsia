@@ -17,7 +17,7 @@ class ObjectImpl : public Object {
   ~ObjectImpl() override;
 
   // Object:
-  ObjectId GetId() override;
+  ObjectId GetId() const override;
   Status GetSize(int64_t* size) override;
   Status GetData(const uint8_t** data) override;
 

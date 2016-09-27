@@ -92,7 +92,8 @@ Status TreeNode::Merge(ObjectStore* store,
   return FromEntries(store, entries, children, merged_id);
 }
 
-Status TreeNode::Copy(std::vector<NodeUpdate>& updates, ObjectId* new_id) {
+Status TreeNode::Copy(std::vector<NodeUpdate>& updates,
+                      ObjectId* new_id) const {
   return Status::NOT_IMPLEMENTED;
 }
 
@@ -100,7 +101,7 @@ Status TreeNode::Split(int index,
                        const ObjectId& left_rightmost_child,
                        const ObjectId& right_leftmost_child,
                        ObjectId* left,
-                       ObjectId* right) {
+                       ObjectId* right) const {
   FTL_DCHECK(index >= 0 && index < GetKeyCount());
   // Left node
   std::vector<Entry> entries;
@@ -139,17 +140,17 @@ Status TreeNode::Split(int index,
   return Status::OK;
 }
 
-int TreeNode::GetKeyCount() {
+int TreeNode::GetKeyCount() const {
   return entries_.size();
 }
 
-Status TreeNode::GetEntry(int index, Entry* entry) {
+Status TreeNode::GetEntry(int index, Entry* entry) const {
   FTL_DCHECK(index >= 0 && index < GetKeyCount());
   *entry = entries_[index];
   return Status::OK;
 }
 
-Status TreeNode::GetChild(int index, std::unique_ptr<TreeNode>* child) {
+Status TreeNode::GetChild(int index, std::unique_ptr<TreeNode>* child) const {
   FTL_DCHECK(index >= 0 && index <= GetKeyCount());
   if (children_[index].empty()) {
     return Status::NOT_FOUND;
@@ -157,11 +158,11 @@ Status TreeNode::GetChild(int index, std::unique_ptr<TreeNode>* child) {
   return store_->GetTreeNode(children_[index], child);
 }
 
-Status TreeNode::FindKeyOrChild(const std::string& key, int* index) {
+Status TreeNode::FindKeyOrChild(const std::string& key, int* index) const {
   return Status::NOT_IMPLEMENTED;
 }
 
-ObjectId TreeNode::GetId() {
+ObjectId TreeNode::GetId() const {
   return id_;
 }
 
