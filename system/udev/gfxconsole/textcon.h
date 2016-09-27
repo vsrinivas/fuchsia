@@ -30,8 +30,8 @@ struct textcon {
     int h;
 
     // cursor position
-    int x;
-    int y;
+    int x;  // 0 < x <= w; cursor may be one position beyond right edge
+    int y;  // 0 < y < h
 
     // callbacks to update visible display
     void (*invalidate)(void* cookie, int x, int y, int w, int h);

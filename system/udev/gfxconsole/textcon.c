@@ -7,9 +7,8 @@
 #define VCDEBUG 1
 #include "vcdebug.h"
 
+#include <assert.h>
 #include <string.h>
-
-#define dataxy(tc, x, y) ((tc)->data + ((y)*tc->w) + (x))
 
 static inline void invalidate(textcon_t* tc, int x, int y, int w, int h) {
     tc->invalidate(tc->cookie, x, y, w, h);
@@ -26,19 +25,29 @@ static inline void setparam(textcon_t* tc, int param, void* arg, size_t arglen) 
 
 #define ATTR(tc) ((((tc)->fg & 15) << 8) | (((tc)->bg & 15) << 12))
 
+static vc_char_t* dataxy(textcon_t* tc, int x, int y) {
+    assert(x >= 0);
+    assert(x < tc->w);
+    assert(y >= 0);
+    assert(y < tc->h);
+    return tc->data + y * tc->w + x;
+}
+
+static int clampx(textcon_t* tc, int x) {
+    return x < 0 ? 0 : x >= tc->w ? tc->w - 1 : x;
+}
+
+static int clampxatedge(textcon_t* tc, int x) {
+    return x < 0 ? 0 : x > tc->w ? tc->w : x;
+}
+
+static int clampy(textcon_t* tc, int y) {
+    return y < 0 ? 0 : y >= tc->h ? tc->h - 1 : y;
+}
+
 static void moveto(textcon_t* tc, int x, int y) {
-    if (x < 0) {
-        x = 0;
-    } else if (x >= tc->w) {
-        x = tc->w - 1;
-    }
-    if (y < 0) {
-        y = 0;
-    } else if (y > tc->h) {
-        y = tc->h - 1;
-    }
-    tc->x = x;
-    tc->y = y;
+    tc->x = clampx(tc, x);
+    tc->y = clampy(tc, y);
 }
 
 static inline void moverel(textcon_t* tc, int dx, int dy) {
@@ -52,6 +61,10 @@ static void fill(vc_char_t* ptr, vc_char_t val, size_t count) {
 }
 
 static void erase_region(textcon_t* tc, int x0, int y0, int x1, int y1) {
+    if (x0 >= tc->w) {
+        return;
+    }
+    x1 = clampx(tc, x1);
     vc_char_t* ptr = dataxy(tc, x0, y0);
     vc_char_t* end = dataxy(tc, x1, y1) + 1;
     fill(ptr, ' ' | ATTR(tc), end - ptr);
@@ -64,7 +77,7 @@ static void erase_screen(textcon_t* tc, int arg) {
         erase_region(tc, tc->x, tc->y, tc->w - 1, tc->h - 1);
         break;
     case 1: // erase upward
-        erase_region(tc, 0, 0, tc->x, tc->w - 1);
+        erase_region(tc, 0, 0, tc->x, tc->y);
         break;
     case 2: // erase all
         erase_region(tc, 0, 0, tc->w - 1, tc->h - 1);
@@ -87,6 +100,9 @@ static void erase_line(textcon_t* tc, int arg) {
 }
 
 static void erase_chars(textcon_t* tc, int arg) {
+    if (tc->x >= tc->w) {
+        return;
+    }
     if (arg < 0) {
         arg = 0;
     }
@@ -111,7 +127,7 @@ static void erase_chars(textcon_t* tc, int arg) {
 static void _scroll_up(textcon_t* tc, int y0, int y1) {
     vc_char_t* dst = dataxy(tc, 0, y0);
     vc_char_t* src = dataxy(tc, 0, y0 + 1);
-    vc_char_t* end = dataxy(tc, 0, y1);
+    vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
 
     if (src < end) {
         pushline(tc, y0);
@@ -123,7 +139,7 @@ static void _scroll_up(textcon_t* tc, int y0, int y1) {
 static void _scroll_down(textcon_t* tc, int y0, int y1) {
     vc_char_t* src = dataxy(tc, 0, y0);
     vc_char_t* dst = dataxy(tc, 0, y0 + 1);
-    vc_char_t* end = dataxy(tc, 0, y1);
+    vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
 
     if (src < end) {
         // todo: push topline
@@ -163,6 +179,16 @@ void set_scroll(textcon_t* tc, int y0, int y1) {
     }
     tc->scroll_y0 = (y0 < 0) ? 0 : y0;
     tc->scroll_y1 = (y1 > tc->h) ? tc->h : y1;
+}
+
+static void savecursorpos(textcon_t* tc) {
+    tc->save_x = tc->x;
+    tc->save_y = tc->y;
+}
+
+static void restorecursorpos(textcon_t* tc) {
+    tc->x = clampxatedge(tc, tc->save_x);
+    tc->y = clampy(tc, tc->save_y);
 }
 
 static void putc_plain(textcon_t* tc, uint8_t c);
@@ -389,11 +415,10 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         set_scroll(tc, ARG0(1) - 1, ARG1(tc->h));
         break;
     case 's': // save cursor position ??
-        tc->save_x = tc->x;
-        tc->save_y = tc->y;
+        savecursorpos(tc);
         break;
     case 'u': // restore cursor position ??
-        moveto(tc, tc->save_x, tc->save_y);
+        restorecursorpos(tc);
         break;
     case '@': // (ICH) Insert Blank Character(s)
     case 'T': // Initiate Hilight Mouse Tracking (xterm)
@@ -432,12 +457,11 @@ static void putc_escape(textcon_t* tc, uint8_t c) {
         tc->putc = putc_osc;
         return;
     case '7': // (DECSC) Save Cursor
-        tc->save_x = tc->x;
-        tc->save_y = tc->y;
+        savecursorpos(tc);
         // save attribute
         break;
     case '8': // (DECRC) Restore Cursor
-        moveto(tc, tc->save_x, tc->save_y);
+        restorecursorpos(tc);
         movecursor(tc, tc->x, tc->y);
         break;
     case 'E': // (NEL) Next Line
@@ -462,37 +486,42 @@ static void putc_escape(textcon_t* tc, uint8_t c) {
     tc->putc = putc_plain;
 }
 
+static void putc_cr(textcon_t* tc) {
+    tc->x = 0;
+}
+
+static void putc_lf(textcon_t* tc) {
+    tc->y++;
+    if (tc->y >= tc->scroll_y1) {
+        tc->y--;
+        scroll_up(tc);
+    }
+}
+
 static void putc_plain(textcon_t* tc, uint8_t c) {
     switch (c) {
     case 7: // bell
         break;
     case 8: // backspace / ^H
-        dataxy(tc, tc->x, tc->y)[0] = ' ' | ATTR(tc);
-        tc->x--;
-        if (tc->x < 0) {
-            tc->x = tc->w - 1;
-            tc->y--;
-            if (tc->y < 0) {
-                tc->y = 0;
-            }
+        if (tc->x == 0) {
+            tc->x = tc->w;
+            tc->y = clampy(tc, tc->y - 1);
         }
+        tc->x--;
+        dataxy(tc, tc->x, tc->y)[0] = ' ' | ATTR(tc);
         break;
     case 9: // tab / ^I
         moveto(tc, (tc->x + 7) & (~7), tc->y);
         break;
     case 10: // newline
-        tc->x = 0;
-        tc->y++;
-        if (tc->y >= tc->scroll_y1) {
-            tc->y--;
-            scroll_up(tc);
-        }
+        putc_cr(tc);  // should we imply this?
+        putc_lf(tc);
         break;
     case 12:
         erase_screen(tc, 2);
         break;
     case 13: // carriage return
-        tc->x = 0;
+        putc_cr(tc);
         break;
     case 27: // escape
         tc->putc = putc_escape;
@@ -501,13 +530,15 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
         if ((c < ' ') || (c > 127)) {
             return;
         }
+        if (tc->x >= tc->w) {
+            // apply deferred line wrap upon printing first character beyond
+            // end of current line
+            putc_cr(tc);
+            putc_lf(tc);
+        }
         dataxy(tc, tc->x, tc->y)[0] = c | ATTR(tc);
         invalidate(tc, tc->x, tc->y, 1, 1);
         tc->x++;
-        if (tc->x >= tc->w) {
-            tc->x = tc->w - 1;
-            // sometimes scroll + newline??
-        }
         break;
     }
     movecursor(tc, tc->x, tc->y);
@@ -544,9 +575,6 @@ void tc_seth(textcon_t* tc, int h) {
         do {
             fill(dataxy(tc, 0, tc->scroll_y1 + y), ' ' | ATTR(tc), tc->w);
         } while (++y < h - tc->h);
-        if (tc->y > h) {
-            tc->y = h;
-        }
     }
     // try to fixup the scroll region
     if (tc->scroll_y0 >= h) {
@@ -558,6 +586,7 @@ void tc_seth(textcon_t* tc, int h) {
         tc->scroll_y1 = tc->scroll_y1 >= h ? h : tc->scroll_y1;
     }
     tc->h = h;
+    tc->y = clampy(tc, tc->y);
     invalidate(tc, 0, 0, tc->w, tc->h);
     movecursor(tc, tc->x, tc->y);
 }
