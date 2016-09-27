@@ -12,6 +12,7 @@
 #include <magenta/types.h>
 #include <sys/param.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -141,7 +142,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
             dev->capacity = sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY) * dev->sector_sz;
             xprintf("  LBA");
         }
-        xprintf(" %llu sectors, size=%lu\n", dev->capacity, dev->sector_sz);
+        xprintf(" %" PRIu64 " sectors, size=%lu\n", dev->capacity, dev->sector_sz);
     } else {
         xprintf("  CHS unsupported!\n");
     }
@@ -184,7 +185,7 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
-        xprintf("%s: offset 0x%llx is not aligned to sector size %lu!\n", dev->name, txn->offset, device->sector_sz);
+        xprintf("%s: offset 0x%" PRIx64 " is not aligned to sector size %lu!\n", dev->name, txn->offset, device->sector_sz);
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }

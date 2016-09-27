@@ -6,6 +6,7 @@
 #include <mxio/io.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,7 @@ static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
         unit = "T";
         div = 1024llu * 1024 * 1024 * 1024;
     }
-    snprintf(str, maxlen, "%llu%s", size / div, unit);
+    snprintf(str, maxlen, "%" PRIu64 "%s", size / div, unit);
     return str;
 }
 
@@ -123,12 +124,12 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
         goto out;
     }
     if (count % blksize) {
-        printf("Bytes read must be a multiple of blksize=%llu\n", blksize);
+        printf("Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
         rc = -1;
         goto out;
     }
     if (offset % blksize) {
-        printf("Offset must be a multiple of blksize=%llu\n", blksize);
+        printf("Offset must be a multiple of blksize=%" PRIu64 "\n", blksize);
         rc = -1;
         goto out;
     }
@@ -138,7 +139,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %zd seeking to offset %lld\n", rc, offset);
+            printf("Error %zd seeking to offset %" PRId64 "\n", rc, offset);
             goto out2;
         }
     }

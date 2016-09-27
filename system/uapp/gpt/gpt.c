@@ -6,6 +6,7 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h> // for mx_cprng_draw
 #include <mxio/io.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,7 +80,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     }
     blocks /= blocksize;
 
-    printf("blocksize=%llu blocks=%llu\n", blocksize, blocks);
+    printf("blocksize=%" PRIu64 " blocks=%" PRIu64 "\n", blocksize, blocks);
 
     gpt_device_t* gpt;
     rc = gpt_device_init(fd, blocksize, blocks, &gpt);
@@ -118,7 +119,7 @@ static void dump_partitions(const char* dev) {
         p = gpt->partitions[i];
         if (!p) break;
         memset(name, 0, 37);
-        printf("%d: %s 0x%llx 0x%llx (%llx blocks) %s\n", i, utf16_to_cstring(name, (const uint16_t*)p->name, 36), p->first, p->last, p->last - p->first + 1, guid_to_cstring(guid, (const uint8_t*)p->guid));
+        printf("%d: %s 0x%" PRIx64 " 0x%" PRIx64 " (%" PRIx64 " blocks) %s\n", i, utf16_to_cstring(name, (const uint16_t*)p->name, 36), p->first, p->last, p->last - p->first + 1, guid_to_cstring(guid, (const uint8_t*)p->guid));
     }
     printf("Total: %d partitions\n", i);
 
@@ -141,7 +142,7 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     mx_cprng_draw(guid, 16);
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {
-        printf("add partition: name=%s offset=0x%llx blocks=0x%llx\n", name, offset, blocks);
+        printf("add partition: name=%s offset=0x%" PRIx64 " blocks=0x%" PRIx64 "\n", name, offset, blocks);
         commit(gpt, fd);
     }
 

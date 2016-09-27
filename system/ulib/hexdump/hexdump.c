@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -24,8 +25,8 @@ void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
         size_t i;
 
         printf(((disp_addr + len) > 0xFFFFFFFF)
-                   ? "0x%016llx: "
-                   : "0x%08llx: ",
+                   ? "0x%016" PRIx64 ": "
+                   : "0x%08" PRIx64 ": ",
                disp_addr + count);
 
         for (i = 0; i < s / 4; i++) {
@@ -57,8 +58,8 @@ void hexdump8_ex(const void* ptr, size_t len, uint64_t disp_addr) {
 
     for (count = 0; count < len; count += 16) {
         printf(((disp_addr + len) > 0xFFFFFFFF)
-                   ? "0x%016llx: "
-                   : "0x%08llx: ",
+                   ? "0x%016" PRIx64 ": "
+                   : "0x%08" PRIx64 ": ",
                disp_addr + count);
 
         for (i = 0; i < MIN(len - count, 16); i++) {

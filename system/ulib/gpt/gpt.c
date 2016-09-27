@@ -6,6 +6,7 @@
 #include <lib/cksum.h>
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -335,7 +336,7 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
 
     // check range
     if (first < priv->header.first) {
-        printf("offset must be at least %llu\n", priv->header.first);
+        printf("offset must be at least %" PRIu64 "\n", priv->header.first);
         return -1;
     }
     if (first > priv->blocks - priv->header.first || last > priv->blocks - priv->header.first) {

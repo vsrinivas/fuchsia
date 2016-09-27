@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -82,7 +83,7 @@ void* eth_get_buffer(size_t sz) {
 void eth_put_buffer(void* data) {
     eth_buffer_t* buf = (void*)(((uintptr_t)data) & (~31));
     if (buf->magic != ETH_BUFFER_MAGIC) {
-        printf("fatal: eth buffer %p (from %p) bad magic %llx\n", buf, data, buf->magic);
+        printf("fatal: eth buffer %p (from %p) bad magic %" PRIx64 "\n", buf, data, buf->magic);
         for (;;)
             ;
     }

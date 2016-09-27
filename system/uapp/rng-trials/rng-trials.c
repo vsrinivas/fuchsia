@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     }
 
     for (unsigned int i = 0; i < BINS; ++i) {
-        printf("bin %u: %llu\n", i, values[i]);
+        printf("bin %u: %" PRIu64 "\n", i, values[i]);
     }
 
     return 0;

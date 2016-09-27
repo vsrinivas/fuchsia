@@ -673,13 +673,13 @@ static void ums_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     uint32_t block_size = msd->block_size;
     // offset must be aligned to block size
     if (txn->offset % block_size) {
-        DEBUG_PRINT(("UMS:offset on iotxn (%llu) not aligned to block size(%d)\n", txn->offset, block_size));
+        DEBUG_PRINT(("UMS:offset on iotxn (%" PRIu64 ") not aligned to block size(%d)\n", txn->offset, block_size));
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         goto out;
     }
 
     if (txn->length % block_size) {
-        DEBUG_PRINT(("UMS:length on iotxn (%llu) not aligned to block size(%d)\n", txn->length, block_size));
+        DEBUG_PRINT(("UMS:length on iotxn (%" PRIu64 ") not aligned to block size(%d)\n", txn->length, block_size));
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         goto out;
     }
@@ -799,8 +799,8 @@ static int ums_start_thread(void* arg) {
     msd->use_read_write_16 = msd->total_blocks > UINT32_MAX;
 
     DEBUG_PRINT(("UMS:block size is: 0x%08x\n", msd->block_size));
-    DEBUG_PRINT(("UMS:total blocks is: %lld\n", msd->total_blocks));
-    DEBUG_PRINT(("UMS:total size is: %lld\n", msd->total_blocks * msd->block_size));
+    DEBUG_PRINT(("UMS:total blocks is: %" PRId64 "\n", msd->total_blocks));
+    DEBUG_PRINT(("UMS:total size is: %" PRId64 "\n", msd->total_blocks * msd->block_size));
     msd->device.protocol_id = MX_PROTOCOL_BLOCK;
     status = device_add(&msd->device, msd->udev);
     if (status == NO_ERROR) return NO_ERROR;

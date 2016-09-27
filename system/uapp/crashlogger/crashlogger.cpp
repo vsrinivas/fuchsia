@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,39 +44,39 @@ void print_error(int line, const char* what = "") {
 
 void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
                          const mx_x86_64_general_regs_t& regs) {
-    printf(" CS:  %#18llx RIP: %#18llx EFL: %#18llx CR2: %#18llx\n",
+    printf(" CS:  %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64 " CR2: %#18" PRIx64 "\n",
            0ull, regs.rip, regs.rflags, exc_data.cr2);
-    printf(" RAX: %#18llx RBX: %#18llx RCX: %#18llx RDX: %#18llx\n",
+    printf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
            regs.rax, regs.rbx, regs.rcx, regs.rdx);
-    printf(" RSI: %#18llx RDI: %#18llx RBP: %#18llx RSP: %#18llx\n",
+    printf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
            regs.rsi, regs.rdi, regs.rbp, regs.rsp);
-    printf("  R8: %#18llx  R9: %#18llx R10: %#18llx R11: %#18llx\n",
+    printf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
            regs.r8, regs.r9, regs.r10, regs.r11);
-    printf(" R12: %#18llx R13: %#18llx R14: %#18llx R15: %#18llx\n",
+    printf(" R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
            regs.r12, regs.r13, regs.r14, regs.r15);
     // errc value is 17 on purpose, errc is 4 characters
-    printf(" errc: %#17llx\n", exc_data.err_code);
+    printf(" errc: %#17" PRIx64 "\n", exc_data.err_code);
 }
 
 void output_frame_arm64(const arm64_exc_data_t& exc_data,
                         const mx_aarch64_general_regs_t& regs) {
-    printf(" x0  %#18llx x1  %#18llx x2  %#18llx x3  %#18llx\n",
+    printf(" x0  %#18" PRIx64 " x1  %#18" PRIx64 " x2  %#18" PRIx64 " x3  %#18" PRIx64 "\n",
            regs.r[0], regs.r[1], regs.r[2], regs.r[3]);
-    printf(" x4  %#18llx x5  %#18llx x6  %#18llx x7  %#18llx\n",
+    printf(" x4  %#18" PRIx64 " x5  %#18" PRIx64 " x6  %#18" PRIx64 " x7  %#18" PRIx64 "\n",
            regs.r[4], regs.r[5], regs.r[6], regs.r[7]);
-    printf(" x8  %#18llx x9  %#18llx x10 %#18llx x11 %#18llx\n",
+    printf(" x8  %#18" PRIx64 " x9  %#18" PRIx64 " x10 %#18" PRIx64 " x11 %#18" PRIx64 "\n",
            regs.r[8], regs.r[9], regs.r[10], regs.r[11]);
-    printf(" x12 %#18llx x13 %#18llx x14 %#18llx x15 %#18llx\n",
+    printf(" x12 %#18" PRIx64 " x13 %#18" PRIx64 " x14 %#18" PRIx64 " x15 %#18" PRIx64 "\n",
            regs.r[12], regs.r[13], regs.r[14], regs.r[15]);
-    printf(" x16 %#18llx x17 %#18llx x18 %#18llx x19 %#18llx\n",
+    printf(" x16 %#18" PRIx64 " x17 %#18" PRIx64 " x18 %#18" PRIx64 " x19 %#18" PRIx64 "\n",
            regs.r[16], regs.r[17], regs.r[18], regs.r[19]);
-    printf(" x20 %#18llx x21 %#18llx x22 %#18llx x23 %#18llx\n",
+    printf(" x20 %#18" PRIx64 " x21 %#18" PRIx64 " x22 %#18" PRIx64 " x23 %#18" PRIx64 "\n",
            regs.r[20], regs.r[21], regs.r[22], regs.r[23]);
-    printf(" x24 %#18llx x25 %#18llx x26 %#18llx x27 %#18llx\n",
+    printf(" x24 %#18" PRIx64 " x25 %#18" PRIx64 " x26 %#18" PRIx64 " x27 %#18" PRIx64 "\n",
            regs.r[24], regs.r[25], regs.r[26], regs.r[27]);
-    printf(" x28 %#18llx x29 %#18llx lr  %#18llx sp  %#18llx\n",
+    printf(" x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " sp  %#18" PRIx64 "\n",
            regs.r[28], regs.r[29], regs.lr, regs.sp);
-    printf(" pc  %#18llx psr %#18llx\n",
+    printf(" pc  %#18" PRIx64 " psr %#18" PRIx64 "\n",
            regs.pc, regs.cpsr);
 };
 
@@ -95,17 +96,17 @@ void process_report(const mx_exception_report_t* report) {
         return;
 
     auto context = report->context;
-    printf("<== fatal exception: process [%llu] thread [%llu]\n", context.pid, context.tid);
+    printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%lx\n", excp_type_to_str(report->header.type), context.arch.pc);
 
     auto process = mx_debug_task_get_child(0, context.pid);
     if (process <= 0) {
-        printf("failed to get a handle to [%llu] : error %d\n", context.pid, process);
+        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", context.pid, process);
         return;
     }
     auto thread = mx_debug_task_get_child(process, context.tid);
     if (thread <= 0) {
-        printf("failed to get a handle to [%llu.%llu] : error %d\n", context.pid, context.tid, thread);
+        printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, thread);
         mx_handle_close(process);
         return;
     }
@@ -121,11 +122,11 @@ void process_report(const mx_exception_report_t* report) {
     uint32_t regs_size = sizeof(regs);
     auto status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, &regs_size);
     if (status < 0) {
-        printf("unable to read general regs for [%llu.%llu] : error %d\n", context.pid, context.tid, status);
+        printf("unable to read general regs for [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
         goto Fail;
     }
     if (regs_size != sizeof(regs)) {
-        printf("general regs size mismatch for [%llu.%llu] : %u != %zu\n", context.pid, context.tid, regs_size, sizeof(regs));
+        printf("general regs size mismatch for [%" PRIu64 ".%" PRIu64 "] : %u != %zu\n", context.pid, context.tid, regs_size, sizeof(regs));
         goto Fail;
     }
 
@@ -143,7 +144,7 @@ void process_report(const mx_exception_report_t* report) {
 
         // Only output the Fault address register if there's a data fault.
         if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type)
-            printf(" far %#18llx\n", context.arch.u.arm_64.far);
+            printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
 
         printf("bottom of user stack:\n");
         dump_memory(process, regs.sp, 256u);

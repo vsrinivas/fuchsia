@@ -10,6 +10,7 @@
 #include <hw/pci.h>
 
 #include <assert.h>
+#include <inttypes.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <stdio.h>
@@ -155,7 +156,7 @@ static mx_status_t kaveri_disp_bind(mx_driver_t* drv, mx_device_t* dev) {
     device->device.protocol_ops = &kaveri_disp_display_proto;
     device_add(&device->device, dev);
 
-    printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%llx fb=%p fbsize=0x%llx\n",
+    printf("initialized amd kaveri R7 display driver, reg=%p regsize=0x%" PRIx64 " fb=%p fbsize=0x%" PRIx64 "\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
     printf("\twidth %u height %u stride %u format %u\n",
             device->info.width, device->info.height, device->info.stride, device->info.format);

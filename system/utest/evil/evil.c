@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,11 +195,11 @@ int writespam(int opt) {
     for (;;) {
         count++;
         if ((r = mx_msgpipe_write(p[0], data, sizeof(data), NULL, 0, 0)) < 0) {
-            printf("evil-tests: SUCCESS, writespammer error %d after only %llu writes\n", r, count);
+            printf("evil-tests: SUCCESS, writespammer error %d after only %" PRIu64 " writes\n", r, count);
             return 0;
         }
         if ((count % 1000) == 0) {
-            printf("evil-tests: wrote %llu messages (%llu bytes).\n", count, count * sizeof(data));
+            printf("evil-tests: wrote %" PRIu64 " messages (%" PRIu64 " bytes).\n", count, count * sizeof(data));
         }
     }
     if (opt == 0) {
@@ -219,12 +220,12 @@ int handlespam(void) {
     for (;;) {
         mx_status_t status;
         if ((status = mx_msgpipe_create(p, 0)) < 0) {
-            printf("evil-tests: SUCCESS, pipe create failed %d after %llu created\n", status, count);
+            printf("evil-tests: SUCCESS, pipe create failed %d after %" PRIu64 " created\n", status, count);
             return 0;
         }
         count++;
         if ((count % 1000) == 0) {
-            printf("evil-tests: created %llu message pipes\n", count);
+            printf("evil-tests: created %" PRIu64 " message pipes\n", count);
         }
     }
     return 0;

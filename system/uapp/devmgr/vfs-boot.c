@@ -12,6 +12,7 @@
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,7 +69,7 @@ static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len) {
     vnboot_t* vnb = vn->pdata;
     mx_handle_t vmo = mx_handle_duplicate(vnb->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER);
-    xprintf("vmofile: %x (%x) off=%llu len=%zd\n", vmo, vnb->vmo, vnb->off, vnb->datalen);
+    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%zd\n", vmo, vnb->vmo, vnb->off, vnb->datalen);
     if (vmo > 0) {
         *off = vnb->off;
         *len = vnb->datalen;

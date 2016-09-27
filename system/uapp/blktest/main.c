@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,12 +46,12 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
     }
     count -= count % blksize;
 
-    printf("Writing 0x%02x from offset %llu to %llu (%llu bytes)...", pattern, offset, offset + count, count);
+    printf("Writing 0x%02x from offset %" PRIu64 " to %" PRIu64 " (%" PRIu64 " bytes)...", pattern, offset, offset + count, count);
 
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %zd seeking to offset %lld\n", rc, offset);
+            printf("Error %zd seeking to offset %" PRId64 "\n", rc, offset);
             goto fail;
         }
     }
@@ -79,7 +80,7 @@ static int do_test(const char* dev, mx_off_t offset, mx_off_t count, uint8_t pat
     // reset offset
     rc = lseek(fd, offset, SEEK_SET);
     if (rc < 0) {
-        printf("Error %zd seeking to offset %lld\n", rc, offset);
+        printf("Error %zd seeking to offset %" PRId64 "\n", rc, offset);
         goto fail;
     }
 

@@ -13,6 +13,7 @@
 #include <magenta/listnode.h>
 #include <sys/param.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -108,7 +109,7 @@ static void gpt_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     uint64_t first = device->gpt_entry.first_lba;
     uint64_t last = device->gpt_entry.last_lba;
     if (first + off_lba > last) {
-        xprintf("%s: offset 0x%llx is past the end of partition!\n", dev->name, txn->offset);
+        xprintf("%s: offset 0x%" PRIx64 " is past the end of partition!\n", dev->name, txn->offset);
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }
@@ -167,7 +168,7 @@ static int gpt_bind_thread(void* arg) {
 
     // sanity check the default txn size with the block size
     if (TXN_SIZE % blksize) {
-        xprintf("gpt: default txn size=%d is not aligned to blksize=%llu!\n", TXN_SIZE, blksize);
+        xprintf("gpt: default txn size=%d is not aligned to blksize=%" PRIu64 "!\n", TXN_SIZE, blksize);
     }
 
     // allocate an iotxn to read the partition table
@@ -204,7 +205,7 @@ static int gpt_bind_thread(void* arg) {
         goto unbind;
     }
 
-    xprintf("gpt: found gpt header %u entries @ lba%llu\n", header.entries_count, header.entries);
+    xprintf("gpt: found gpt header %u entries @ lba%" PRIu64 "\n", header.entries_count, header.entries);
 
     // read partition table entries
     size_t table_sz = header.entries_count * header.entries_sz;
