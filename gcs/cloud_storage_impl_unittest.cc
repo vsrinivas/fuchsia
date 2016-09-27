@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/gcs/cloud_storage_impl.h"
+
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "apps/ledger/fake_network_service/fake_network_service.h"
-#include "apps/ledger/gcs/cloud_storage_impl.h"
 #include "apps/ledger/glue/test/run_loop.h"
 #include "apps/network/interfaces/network_service.mojom.h"
 #include "gtest/gtest.h"

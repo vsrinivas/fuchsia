@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/app/constants.h"
 #include "apps/ledger/app/page_impl.h"
+
+#include "apps/ledger/app/constants.h"
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/glue/test/run_loop.h"
 #include "apps/ledger/storage/fake/fake_journal.h"

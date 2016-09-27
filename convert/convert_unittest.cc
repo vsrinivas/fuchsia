@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/convert/convert.h"
+
 #include "gtest/gtest.h"
 
 namespace convert {

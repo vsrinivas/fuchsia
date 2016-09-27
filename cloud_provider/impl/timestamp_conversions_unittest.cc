@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/cloud_provider/impl/timestamp_conversions.h"
+
 #include "gtest/gtest.h"
 #include "lib/ftl/time/time_delta.h"
 

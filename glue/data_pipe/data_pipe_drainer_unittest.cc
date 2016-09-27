@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/glue/data_pipe/data_pipe_drainer.h"
+
 #include "gtest/gtest.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"

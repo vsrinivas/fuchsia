@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/firebase/event_stream.h"
+
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "apps/ledger/firebase/event_stream.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/cloud_provider/impl/encoding.h"
+
 #include <memory>
 
-#include "apps/ledger/cloud_provider/impl/encoding.h"
 #include "apps/ledger/cloud_provider/impl/timestamp_conversions.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/time/time_delta.h"

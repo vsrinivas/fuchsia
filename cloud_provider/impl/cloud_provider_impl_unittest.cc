@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/ledger/cloud_provider/impl/cloud_provider_impl.h"
+
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "apps/ledger/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/firebase/encoding.h"
 #include "apps/ledger/firebase/firebase.h"
