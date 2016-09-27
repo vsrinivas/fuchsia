@@ -219,14 +219,13 @@ mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len)
     return dn_readdir(parent->dnode, cookie, data, len);
 }
 
-static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
+static mx_status_t _mem_create(vnode_t* parent, mnode_t** out,
                                const char* name, size_t namelen,
                                bool isdir);
 
 static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
-    mnode_t* parent = vn->pdata;
     mnode_t* mem;
-    mx_status_t r = _mem_create(parent, &mem, name, len, S_ISDIR(mode));
+    mx_status_t r = _mem_create(vn, &mem, name, len, S_ISDIR(mode));
     if (r >= 0) {
         vn_acquire(&mem->vn);
         *out = &mem->vn;
@@ -317,10 +316,10 @@ static mnode_t mem_root = {
     },
 };
 
-static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
+static mx_status_t _mem_create(vnode_t* parent, mnode_t** out,
                                const char* name, size_t namelen,
                                bool isdir) {
-    if ((parent == NULL) || (parent->vn.dnode == NULL)) {
+    if ((parent == NULL) || (parent->dnode == NULL)) {
         return ERR_INVALID_ARGS;
     }
 
@@ -338,7 +337,7 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
 
     mx_status_t r;
     dnode_t* dn;
-    if ((r = dn_lookup(parent->vn.dnode, &dn, name, namelen)) == NO_ERROR) {
+    if ((r = dn_lookup(parent->dnode, &dn, name, namelen)) == NO_ERROR) {
         free(mem);
         return ERR_ALREADY_EXISTS;
     }
@@ -348,7 +347,7 @@ static mx_status_t _mem_create(mnode_t* parent, mnode_t** out,
         free(mem);
         return r;
     }
-    dn_add_child(parent->vn.dnode, dn);
+    dn_add_child(parent->dnode, dn);
 
     if (isdir) {
         mem->vn.dnode = dn;
@@ -383,6 +382,7 @@ static mnode_t vfs_root = {
 };
 
 static mnode_t* vn_data;
+static mnode_t* vn_socket;
 
 // Hardcoded initialization function to access global root directory
 vnode_t* vfs_create_global_root(void) {
@@ -392,22 +392,22 @@ vnode_t* vfs_create_global_root(void) {
         dn_add_child(&vfs_root_dn, devfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
-        _mem_create(&vfs_root, &vn_data, "data", 4, true);
+        _mem_create(&vfs_root.vn, &vn_data, "data", 4, true);
+        _mem_create(devfs_get_root(), &vn_socket, "socket", 6, true);
     }
     return &vfs_root.vn;
 }
 
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
-    if (vn != &vn_data->vn) {
-        //TODO: general solution
+    if ((vn != &vn_data->vn) && (vn != &vn_socket->vn)) {
         return ERR_ACCESS_DENIED;
     }
     mtx_lock(&vfs_lock);
-    if (vn_data->vn.remote > 0) {
+    if (vn->remote > 0) {
         mx_handle_close(vn_data->vn.remote);
     }
-    vn_data->vn.remote = h;
-    vn_data->vn.flags |= V_FLAG_REMOTE;
+    vn->remote = h;
+    vn->flags |= V_FLAG_REMOTE;
     mtx_unlock(&vfs_lock);
     return NO_ERROR;
 }
