@@ -208,7 +208,7 @@ template("clang_toolchain") {
 
     # When invoking this toolchain not as the default one, these args will be
     # passed to the build. They are ignored when this is the default toolchain.
-    toolchain_args() {
+    toolchain_args = {
       current_cpu = invoker.toolchain_cpu
       current_os = invoker.toolchain_os
 
