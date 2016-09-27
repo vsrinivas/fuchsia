@@ -1,88 +1,82 @@
 # Modular Cloud Indexer
 
-## Overview
+The Modular cloud indexer provides a simple interface for module developers to
+upload their modules. We define the API as follows.
 
-The cloud indexer consists of two services:
-- The first is a Python service that receives
-[object change notifications](http://goo.gl/hNVOvx) from changes in the Modular
-cloud storage. When the addition of a manifest file is registered, this service
-sends a task to the indexing task queue.
-- The task queue pushes to a Dart service that updates the appropriate indices
-and writes them back to cloud storage. The task queue, as such, acts as a
-concurrency mechanism to ensure that there is only a single writer to the index
-files at any given time.
+```
+POST /api/upload
+Content-Length: <content-length>
+Content-Type: application/zip
+Authorization: Bearer <oauth2-token>
+
+<module-contents>
+```
+
+There are two points of note:
+- First, the /api/upload endpoint is domain- and group- authenticated. To
+facilitate domain-based authentication, we require that the client provides
+the OAuth2 `userinfo.email` scope when issuing the request.
+- Second, the module must be a zip archive with a manifest file `manifest.yaml`
+at the root level. This manifest must contain valid `arch` and `modularRevision`
+fields.
+
+Upon successful upload, the module is surfaced through an index file. For a
+given `arch` and `modularRevision`, the index file can be retrieved through an
+authenticated GET request to the following endpoint:
+<pre>
+https://storage.googleapis.com/<b><i>bucket</i></b>/services/<b><i>arch</i></b>/<b><i>modularRevision</i></b>/index.json
+</pre>
 
 ## Dependencies
 
-Deploying the cloud indexer requires, on top of the dependencies bundled with
-Modular, that you have the latest version of the
-[Google Cloud SDK](https://cloud.google.com/sdk/) installed and that it is part
-of the `PATH` variable.
+First, install [Google Cloud SDK](https://cloud.google.com/sdk/). The SDK tools
+are required to deploy the cloud indexer to a Google Cloud Platform project.
+Installation instructions can be found
+[here](https://cloud.google.com/sdk/downloads).
 
-## Deploy instructions
+Next, install the [Dart SDK](https://www.dartlang.org/tools/sdk). We use the
+Dart SDK at deployment to fetch dependencies using Pub. Installation
+instructions can be found [here](https://www.dartlang.org/install).
 
-To deploy the cloud indexer, invoke `./deploy.sh` from the `cloud-indexer/`
-directory. There are two additional flags that can be set.
+After following the instructions, `gcloud`, `dart`, and `pub` should be
+accessible through the path variable.
 
-- `--deploy-dir DEPLOY_DIR`, which takes the place of a temporary directory to
-contain the deploy output; and
-- `--dry-run`, which performs the deployment steps up to the actual deployment
-to Google App Engine.
+## Deployment
 
-Of course, it doesn't make too much sense to invoke `--dry-run` without
-`--deploy-dir`, as the output will simply be deleted.
+Local and cloud deployment options can be configured in the `config.json` file.
 
-The deployment directory of `notification-handler/` has a different structure to
-that of the development directory. This is because the Docker image,
-`google/dart-runtime-base`, requires that all local dependencies are within a
-`pkg/` directory at deploy time. The script copies the dependencies and updates
-the relative paths as necessary.
+To deploy locally, we recommend using the
+`{default,notification-handler}/bin/shelf.dart` executables to start each
+service. We mock Pub/Sub push in the notification-handler service by setting
+up an isolate that polls for notifications using a Pub/Sub pull subscription,
+creating a request for each of the received messages.
 
-## Unit testing
-
-### default service
-
-Tests in the default service need to be invoked with the App Engine development
-environment. You can do this by either installing
-[NoseGAE](https://github.com/Trii/NoseGAE), or by writing or using a
-[simple runner script](http://goo.gl/WtSQ3K).
-
-### notification-handler service
-
-Tests in the notification-handler services can be invoked directly using `pub`.
+Note that for local deployment, we assume that a service account key file is
+accessible from `$HOME/.modular_cloud_indexer_key`. The JSON key file can be
+downloaded from the `IAM & Admin > Service Accounts` panel in the Google Cloud
+Console.
 
 ```sh
-pub run test <PATH_TO_TEST>
+cd /path/to/cloud-indexer/app
+
+# Start the default service at port 5024 without authentication. If a port
+# number is not specified, the server starts at port 8080 by default.
+dart default/bin/shelf.dart --disable-auth 5024
+
+# In a different shell, start the notification-handler service at port 8000.
+# Likewise, the server starts at port 8080 by default.
+dart notification-handler/bin/shelf.dart 8000
 ```
 
-## End-to-end testing
-
-Running end-to-end tests require a Google Cloud project because `dev_appserver`
-does not support Google Cloud Storage emulation. The following examples
-demonstrate requests that would otherwise be sent as object change
-notifications.
-
-### Mock sync request
+To deploy remotely, we use `deploy.py` to package each service in a format
+amenable to the `google/dart-runtime-base` Docker image before uploading to the
+Google Cloud project.
 
 ```sh
-curl \
-  -H 'X-Goog-Resource-State: sync' \
-  -H 'X-Goog-Resource-Uri: <BUCKET_URI>' \
-  -X POST <DEFAULT_SERVICE_URI>
+cd /path/to/cloud-indexer
+./deploy.py
 ```
 
-### Mock exists request
-
-In the case that a valid `services/<ARCH>/<REVISION>/<MANIFEST_NAME>.yaml`
-object is provided as the name, the associated index will be updated.
-
-```sh
-curl \
-  -H 'X-Goog-Resource-State: exists' \
-  -H 'Content-Type: application/json' \
-  -X POST \
-  -d '{
-      "name":"<OBJECT_NAME>",
-      "bucket":"<BUCKET_NAME>"
-  }' <DEFAULT_SERVICE_URI>
-```
+The `--dry-run` option performs the deployment steps but stops short of
+deploying using `gcloud`. Deployment usually occurs in a temporary folder. To
+see the deployment output, we use the `--deploy-dir DEPLOY_DIR` option.
