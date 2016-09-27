@@ -59,8 +59,10 @@ class LedgerImpl : public Ledger {
                       const mojo::Array<uint8_t>& id2) const;
   };
 
-  std::unordered_map<mojo::Array<uint8_t>, std::unique_ptr<PageImpl>,
-                     PageIdHash, PageIdEquals>
+  std::unordered_map<mojo::Array<uint8_t>,
+                     std::unique_ptr<PageImpl>,
+                     PageIdHash,
+                     PageIdEquals>
       page_map_;
   std::map<std::string, std::string> db_;
 

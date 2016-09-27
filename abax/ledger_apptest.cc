@@ -70,7 +70,8 @@ mojo::Array<uint8_t> RandomArray(int size) {
 
 void ExpectEqual(const mojo::Array<EntryPtr>& entries,
                  mojo::Array<uint8_t> expectedKeys[],
-                 mojo::Array<uint8_t> expectedValues[], int expectedSize) {
+                 mojo::Array<uint8_t> expectedValues[],
+                 int expectedSize) {
   EXPECT_EQ(static_cast<size_t>(expectedSize), entries.size());
   for (size_t i = 0; i < entries.size(); ++i) {
     bool found = false;
@@ -91,7 +92,8 @@ void ExpectEqual(const mojo::Array<EntryPtr>& entries,
 
 void ExpectEqual(const mojo::Array<EntryChangePtr>& entries,
                  mojo::Array<uint8_t> expectedKeys[],
-                 mojo::Array<uint8_t> expectedValues[], int expectedSize) {
+                 mojo::Array<uint8_t> expectedValues[],
+                 int expectedSize) {
   EXPECT_EQ(static_cast<size_t>(expectedSize), entries.size());
   for (size_t i = 0; i < entries.size(); ++i) {
     bool found = false;
@@ -116,7 +118,8 @@ void ExpectEqual(const mojo::Array<EntryChangePtr>& entries,
 }
 
 void ExpectEqual(const mojo::Array<mojo::Array<uint8_t>>& result,
-                 mojo::Array<uint8_t> expectedKeys[], int expectedSize) {
+                 mojo::Array<uint8_t> expectedKeys[],
+                 int expectedSize) {
   EXPECT_EQ(static_cast<size_t>(expectedSize), result.size());
   for (size_t i = 0; i < result.size(); ++i) {
     bool found = false;
@@ -247,20 +250,29 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
   PagePtr GetPage(const mojo::Array<uint8_t>& pageId, Status expected_status);
   void DeletePage(const mojo::Array<uint8_t>& pageId, Status expected_status);
   void Put(PagePtr* page, mojo::Array<uint8_t> key, mojo::Array<uint8_t> value);
-  void PutReference(PagePtr* page, mojo::Array<uint8_t> key,
-                    ReferencePtr reference, Priority priority,
+  void PutReference(PagePtr* page,
+                    mojo::Array<uint8_t> key,
+                    ReferencePtr reference,
+                    Priority priority,
                     Status expected_status);
-  ReferencePtr CreateReference(PagePtr* page, const std::string& value,
-                               int64_t size, Status expected_status);
-  void GetReference(PagePtr* page, ReferencePtr reference,
+  ReferencePtr CreateReference(PagePtr* page,
+                               const std::string& value,
+                               int64_t size,
+                               Status expected_status);
+  void GetReference(PagePtr* page,
+                    ReferencePtr reference,
                     Status expected_status,
                     const mojo::Array<uint8_t>& expected_value);
-  void GetPartialReference(PagePtr* page, ReferencePtr reference,
-                           int64_t offset, int64_t max_size,
+  void GetPartialReference(PagePtr* page,
+                           ReferencePtr reference,
+                           int64_t offset,
+                           int64_t max_size,
                            Status expected_status,
                            const mojo::Array<uint8_t>& expected_value);
-  void Get(PageSnapshotPtr* snapshot, mojo::Array<uint8_t> key,
-           Status expected_status, const mojo::Array<uint8_t>& expected_value);
+  void Get(PageSnapshotPtr* snapshot,
+           mojo::Array<uint8_t> key,
+           Status expected_status,
+           const mojo::Array<uint8_t>& expected_value);
   void Delete(PagePtr* page, mojo::Array<uint8_t> key, Status expected_status);
   PageSnapshotPtr GetSnapshot(PagePtr* page);
 
@@ -370,7 +382,8 @@ PageSnapshotPtr LedgerApplicationTest::GetSnapshot(PagePtr* page) {
   return ptr;
 }
 
-void LedgerApplicationTest::Put(PagePtr* page, mojo::Array<uint8_t> key,
+void LedgerApplicationTest::Put(PagePtr* page,
+                                mojo::Array<uint8_t> key,
                                 mojo::Array<uint8_t> value) {
   Status status;
   (*page)->Put(std::move(key), std::move(value),
@@ -408,7 +421,9 @@ ReferencePtr LedgerApplicationTest::CreateReference(PagePtr* page,
 }
 
 void LedgerApplicationTest::GetReference(
-    PagePtr* page, ReferencePtr reference, Status expected_status,
+    PagePtr* page,
+    ReferencePtr reference,
+    Status expected_status,
     const mojo::Array<uint8_t>& expected_value) {
   Status status;
   ValuePtr value;
@@ -423,8 +438,12 @@ void LedgerApplicationTest::GetReference(
 }
 
 void LedgerApplicationTest::GetPartialReference(
-    PagePtr* page, ReferencePtr reference, int64_t offset, int64_t max_size,
-    Status expected_status, const mojo::Array<uint8_t>& expected_value) {
+    PagePtr* page,
+    ReferencePtr reference,
+    int64_t offset,
+    int64_t max_size,
+    Status expected_status,
+    const mojo::Array<uint8_t>& expected_value) {
   Status status;
   ValuePtr value;
   (*page)->GetPartialReference(std::move(reference), offset, max_size,
@@ -455,7 +474,8 @@ void LedgerApplicationTest::Get(PageSnapshotPtr* snapshot,
   EXPECT_TRUE(IsValueEqual(expected_value, value));
 }
 
-void LedgerApplicationTest::Delete(PagePtr* page, mojo::Array<uint8_t> key,
+void LedgerApplicationTest::Delete(PagePtr* page,
+                                   mojo::Array<uint8_t> key,
                                    Status expected_status) {
   Status status;
   (*page)->Delete(std::move(key), [&status](Status s) { status = s; });
@@ -463,7 +483,9 @@ void LedgerApplicationTest::Delete(PagePtr* page, mojo::Array<uint8_t> key,
   EXPECT_EQ(expected_status, status);
 }
 
-TEST_F(LedgerApplicationTest, GetLedger) { EXPECT_NE(ledger_.get(), nullptr); }
+TEST_F(LedgerApplicationTest, GetLedger) {
+  EXPECT_NE(ledger_.get(), nullptr);
+}
 
 TEST_F(LedgerApplicationTest, LedgerGetRootPage) {
   Status status;

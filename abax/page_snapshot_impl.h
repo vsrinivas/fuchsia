@@ -20,7 +20,8 @@ class PageImpl;
 class PageSnapshotImpl : public PageSnapshot {
  public:
   PageSnapshotImpl(mojo::InterfaceRequest<PageSnapshot> request,
-                   std::map<std::string, std::string>* db, PageImpl* page,
+                   std::map<std::string, std::string>* db,
+                   PageImpl* page,
                    Serialization* serialization);
   ~PageSnapshotImpl() override;
 
@@ -34,7 +35,9 @@ class PageSnapshotImpl : public PageSnapshot {
 
   void Get(mojo::Array<uint8_t> key, const GetCallback& callback) override;
 
-  void GetPartial(mojo::Array<uint8_t> key, int64_t offset, int64_t max_size,
+  void GetPartial(mojo::Array<uint8_t> key,
+                  int64_t offset,
+                  int64_t max_size,
                   const GetPartialCallback& callback) override;
 
   std::map<std::string, std::string> const db_;

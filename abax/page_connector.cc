@@ -37,7 +37,8 @@ void PageConnector::Watch(mojo::InterfaceHandle<PageWatcher> watcher,
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
-void PageConnector::Put(mojo::Array<uint8_t> key, mojo::Array<uint8_t> value,
+void PageConnector::Put(mojo::Array<uint8_t> key,
+                        mojo::Array<uint8_t> value,
                         const PutCallback& callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
@@ -55,7 +56,8 @@ void PageConnector::PutWithPriority(mojo::Array<uint8_t> key,
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
 void PageConnector::PutReference(mojo::Array<uint8_t> key,
-                                 ReferencePtr reference, Priority priority,
+                                 ReferencePtr reference,
+                                 Priority priority,
                                  const PutReferenceCallback& callback) {
   callback.Run(page_->PutReference(std::move(key), std::move(reference)));
 }
@@ -88,7 +90,9 @@ void PageConnector::GetReference(ReferencePtr reference,
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
 //   => (Status status, Stream? stream);
 void PageConnector::GetPartialReference(
-    ReferencePtr reference, int64_t offset, int64_t max_size,
+    ReferencePtr reference,
+    int64_t offset,
+    int64_t max_size,
     const GetPartialReferenceCallback& callback) {
   StreamPtr stream;
   Status status = page_->GetPartialReference(std::move(reference), offset,

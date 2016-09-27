@@ -33,7 +33,8 @@ enum class ChangeSource { LOCAL, SYNC };
 class PageImpl {
  public:
   // Creates a new PageImpl with the given id.
-  PageImpl(mojo::Array<uint8_t> id, std::map<std::string, std::string>* db,
+  PageImpl(mojo::Array<uint8_t> id,
+           std::map<std::string, std::string>* db,
            LedgerImpl* ledger);
   ~PageImpl();
 
@@ -62,7 +63,8 @@ class PageImpl {
 
   Status Watch(mojo::InterfaceHandle<PageWatcher> watcher);
 
-  Status Put(mojo::Array<uint8_t> key, mojo::Array<uint8_t> value,
+  Status Put(mojo::Array<uint8_t> key,
+             mojo::Array<uint8_t> value,
              ChangeSource source);
 
   Status PutReference(mojo::Array<uint8_t> key, ReferencePtr reference);
@@ -70,15 +72,18 @@ class PageImpl {
   Status Delete(mojo::Array<uint8_t> key, ChangeSource source);
 
   void CreateReference(
-      int64_t size, mojo::ScopedDataPipeConsumerHandle data,
+      int64_t size,
+      mojo::ScopedDataPipeConsumerHandle data,
       const std::function<void(Status, ReferencePtr)>& callback);
 
   Status GetReferenceById(const convert::BytesReference& id, ValuePtr* value);
 
   Status GetReference(ReferencePtr reference, ValuePtr* value);
 
-  Status GetPartialReference(ReferencePtr reference, int64_t offset,
-                             int64_t max_size, StreamPtr* stream);
+  Status GetPartialReference(ReferencePtr reference,
+                             int64_t offset,
+                             int64_t max_size,
+                             StreamPtr* stream);
 
  private:
   class DataPipeDrainerClient;
@@ -88,8 +93,10 @@ class PageImpl {
   void OnWatcherError(PageWatcher* watcher);
 
   void OnReferenceDrainerComplete(
-      int64_t size, const std::function<void(Status, ReferencePtr)>& callback,
-      DataPipeDrainerClient* drainer, const std::string& content);
+      int64_t size,
+      const std::function<void(Status, ReferencePtr)>& callback,
+      DataPipeDrainerClient* drainer,
+      const std::string& content);
 
   const mojo::Array<uint8_t> id_;
   std::map<std::string, std::string>* const db_;

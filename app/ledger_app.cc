@@ -44,17 +44,15 @@ class LedgerApp : public mojo::ApplicationImplBase {
       if (arg.size() > kStorageArgLength &&
           arg.substr(0, kStorageArgLength) == kStorageArg) {
         std::string storage_path = arg.substr(kStorageArgLength);
-        storage_.reset(
-            new storage::LedgerStorageImpl(message_loop_.task_runner(),
-                storage_path));
+        storage_.reset(new storage::LedgerStorageImpl(
+            message_loop_.task_runner(), storage_path));
         break;
       }
     }
     if (!storage_) {
       temp_storage_.reset(new files::ScopedTempDir());
-      storage_.reset(
-          new storage::LedgerStorageImpl(message_loop_.task_runner(),
-              temp_storage_->path()));
+      storage_.reset(new storage::LedgerStorageImpl(message_loop_.task_runner(),
+                                                    temp_storage_->path()));
     }
   }
 

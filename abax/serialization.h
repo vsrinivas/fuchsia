@@ -49,7 +49,8 @@ class Serialization {
   std::string PagePrefix();
 
   std::map<std::string, std::string>::const_iterator PrefixEnd(
-      const std::map<std::string, std::string>& db, const std::string& prefix);
+      const std::map<std::string, std::string>& db,
+      const std::string& prefix);
 
  private:
   // The prefix of all keys in this page. It uses the format: /page_<pageId>

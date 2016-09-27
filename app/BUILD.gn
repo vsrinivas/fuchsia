@@ -8,9 +8,9 @@ group("app") {
   testonly = true
 
   deps = [
+    ":apptests",
     ":ledger_app",
     ":unittests",
-    ":apptests",
   ]
 }
 
@@ -35,8 +35,8 @@ source_set("lib") {
     "//apps/ledger/storage/public",
     "//lib/ftl",
     "//mojo/public/cpp/application",
-    "//mojo/public/cpp/system",
     "//mojo/public/cpp/bindings:utility",
+    "//mojo/public/cpp/system",
     "//mojo/public/interfaces/application",
   ]
 }

@@ -49,12 +49,17 @@ std::string Serialization::GetValueRowKey(
          glue::SHA256Hash(entry_value.data(), entry_value.size());
 }
 
-std::string Serialization::MetaRowKey() { return meta_row_key_; }
+std::string Serialization::MetaRowKey() {
+  return meta_row_key_;
+}
 
-std::string Serialization::PagePrefix() { return page_prefix_; }
+std::string Serialization::PagePrefix() {
+  return page_prefix_;
+}
 
 std::map<std::string, std::string>::const_iterator Serialization::PrefixEnd(
-    const std::map<std::string, std::string>& db, const std::string& prefix) {
+    const std::map<std::string, std::string>& db,
+    const std::string& prefix) {
   std::string next_prefix = prefix;
   bool incremented = false;
   for (std::string::reverse_iterator c = next_prefix.rbegin();

@@ -40,12 +40,14 @@ size_t LedgerImpl::PageIdHash::operator()(
     const mojo::Array<uint8_t>& id) const {
   FTL_DCHECK(id.size() == kPageIdSize);
   size_t result = 5381;
-  for (uint8_t b : id.storage()) result = ((result << 5) + result) ^ b;
+  for (uint8_t b : id.storage())
+    result = ((result << 5) + result) ^ b;
   return result;
 }
 
 size_t LedgerImpl::PageIdEquals::operator()(
-    const mojo::Array<uint8_t>& id1, const mojo::Array<uint8_t>& id2) const {
+    const mojo::Array<uint8_t>& id1,
+    const mojo::Array<uint8_t>& id2) const {
   FTL_DCHECK(id1.size() == kPageIdSize && id2.size() == kPageIdSize);
   return id1.Equals(id2);
 }
@@ -55,7 +57,9 @@ LedgerImpl::LedgerImpl(mojo::InterfaceRequest<Ledger> request)
 
 LedgerImpl::~LedgerImpl() {}
 
-Status LedgerImpl::Init() { return Status::OK; }
+Status LedgerImpl::Init() {
+  return Status::OK;
+}
 
 // GetRootPage() => (Status status, Page? page);
 void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {

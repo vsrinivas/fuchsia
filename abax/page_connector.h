@@ -34,28 +34,34 @@ class PageConnector : public Page {
   void Watch(mojo::InterfaceHandle<PageWatcher> watcher,
              const WatchCallback& callback) override;
 
-  void Put(mojo::Array<uint8_t> key, mojo::Array<uint8_t> value,
+  void Put(mojo::Array<uint8_t> key,
+           mojo::Array<uint8_t> value,
            const PutCallback& callback) override;
 
-  void PutWithPriority(mojo::Array<uint8_t> key, mojo::Array<uint8_t> value,
+  void PutWithPriority(mojo::Array<uint8_t> key,
+                       mojo::Array<uint8_t> value,
                        Priority priority,
                        const PutWithPriorityCallback& callback) override;
 
-  void PutReference(mojo::Array<uint8_t> key, ReferencePtr reference,
+  void PutReference(mojo::Array<uint8_t> key,
+                    ReferencePtr reference,
                     Priority priority,
                     const PutReferenceCallback& callback) override;
 
   void Delete(mojo::Array<uint8_t> key,
               const DeleteCallback& callback) override;
 
-  void CreateReference(int64_t size, mojo::ScopedDataPipeConsumerHandle data,
+  void CreateReference(int64_t size,
+                       mojo::ScopedDataPipeConsumerHandle data,
                        const CreateReferenceCallback& callback) override;
 
   void GetReference(ReferencePtr reference,
                     const GetReferenceCallback& callback) override;
 
   void GetPartialReference(
-      ReferencePtr reference, int64_t offset, int64_t max_size,
+      ReferencePtr reference,
+      int64_t offset,
+      int64_t max_size,
       const GetPartialReferenceCallback& callback) override;
 
   void StartTransaction(const StartTransactionCallback& callback) override;

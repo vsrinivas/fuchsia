@@ -125,7 +125,8 @@ void PageImpl::DataPipeDrainerClient::OnDataComplete() {
 }
 
 PageImpl::PageImpl(mojo::Array<uint8_t> id,
-                   std::map<std::string, std::string>* db, LedgerImpl* ledger)
+                   std::map<std::string, std::string>* db,
+                   LedgerImpl* ledger)
     : id_(std::move(id)),
       db_(db),
       ledger_(ledger),
@@ -176,7 +177,9 @@ void PageImpl::OnSnapshotError(PageSnapshotImpl* snapshot) {
       snapshots_.end());
 }
 
-mojo::Array<uint8_t> PageImpl::GetId() { return id_.Clone(); }
+mojo::Array<uint8_t> PageImpl::GetId() {
+  return id_.Clone();
+}
 
 PageSnapshotPtr PageImpl::GetSnapshot() {
   PageSnapshotPtr snapshot;
@@ -197,7 +200,8 @@ Status PageImpl::Watch(mojo::InterfaceHandle<PageWatcher> watcher) {
   return Status::OK;
 }
 
-Status PageImpl::Put(mojo::Array<uint8_t> key, mojo::Array<uint8_t> value,
+Status PageImpl::Put(mojo::Array<uint8_t> key,
+                     mojo::Array<uint8_t> value,
                      ChangeSource source) {
   std::string value_row_key;
   if (!local_storage_.WriteEntryValue(value, &value_row_key) ||
@@ -236,7 +240,8 @@ Status PageImpl::Delete(mojo::Array<uint8_t> key, ChangeSource source) {
 }
 
 void PageImpl::CreateReference(
-    int64_t size, mojo::ScopedDataPipeConsumerHandle data,
+    int64_t size,
+    mojo::ScopedDataPipeConsumerHandle data,
     const std::function<void(Status, ReferencePtr)>& callback) {
   std::unique_ptr<DataPipeDrainerClient> drainer(new DataPipeDrainerClient());
   DataPipeDrainerClient* drainer_ptr = drainer.get();
@@ -264,8 +269,10 @@ Status PageImpl::GetReference(ReferencePtr reference, ValuePtr* value) {
   return GetReferenceById(std::move(reference->opaque_id), value);
 }
 
-Status PageImpl::GetPartialReference(ReferencePtr reference, int64_t offset,
-                                     int64_t max_size, StreamPtr* stream) {
+Status PageImpl::GetPartialReference(ReferencePtr reference,
+                                     int64_t offset,
+                                     int64_t max_size,
+                                     StreamPtr* stream) {
   ValuePtr value;
   Status status = GetReference(std::move(reference), &value);
 
@@ -294,8 +301,10 @@ void PageImpl::OnWatcherError(PageWatcher* watcher) {
 }
 
 void PageImpl::OnReferenceDrainerComplete(
-    int64_t size, const std::function<void(Status, ReferencePtr)>& callback,
-    DataPipeDrainerClient* drainer, const std::string& content) {
+    int64_t size,
+    const std::function<void(Status, ReferencePtr)>& callback,
+    DataPipeDrainerClient* drainer,
+    const std::string& content) {
   // Clear drainer when leaving this method.
   auto drainerIt =
       std::find_if(drainers_.begin(), drainers_.end(),

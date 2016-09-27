@@ -13,7 +13,8 @@ namespace ledger {
 
 PageSnapshotImpl::PageSnapshotImpl(mojo::InterfaceRequest<PageSnapshot> request,
                                    std::map<std::string, std::string>* db,
-                                   PageImpl* page, Serialization* serialization)
+                                   PageImpl* page,
+                                   Serialization* serialization)
     : db_(*db),
       page_(page),
       serialization_(serialization),
@@ -75,7 +76,8 @@ void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,
 
 // GetPartial(array<uint8> key, int64 offset, int64 max_size)
 //   => (Status status, Stream? stream);
-void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key, int64_t offset,
+void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
+                                  int64_t offset,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
   FTL_LOG(ERROR) << "PageSnapshotImpl::GetPartial not implemented.";
