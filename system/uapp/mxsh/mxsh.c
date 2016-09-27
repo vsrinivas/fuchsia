@@ -676,6 +676,14 @@ void execscript(const char* fn) {
     }
 }
 
+void greet(void) {
+    const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
+    cputs(banner, strlen(banner));
+
+    char cmd[] = "motd";
+    execline(cmd);
+}
+
 void console(void) {
     editstate es;
 
@@ -695,8 +703,7 @@ int main(int argc, char** argv) {
     }
 
     interactive = true;
-    const char* banner = "\033]2;mxsh\007\nMXCONSOLE...\n";
-    cputs(banner, strlen(banner));
+    greet();
     console();
     return 0;
 }

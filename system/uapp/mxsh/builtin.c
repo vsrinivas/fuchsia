@@ -21,6 +21,17 @@
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 
+static int mxc_motd(int argc, char** argv) {
+    printf("-----------------------------------------------------------------\n"
+           "Welcome to fuchsia.\n"
+           "  · type 'help' for a list of builtin commands\n"
+           "  · hit enter if you do not see a '>' prompt\n"
+           "  · launch applications from /boot/apps with\n"
+           "    'application_manager mojo:$APP_NAME'\n"
+           "-----------------------------------------------------------------\n");
+    return 0;
+}
+
 static int mxc_dump(int argc, char** argv) {
     int fd;
     ssize_t len;
@@ -462,6 +473,7 @@ builtin_t builtins[] = {
     {"list", mxc_list, "display a text file with line numbers"},
     {"ls", mxc_ls, "list directory contents"},
     {"mkdir", mxc_mkdir, "create a directory" },
+    {"motd", mxc_motd, "show the message of the day"},
     {"mv", mxc_mv, "rename a file or directory" },
     {"rm", mxc_rm, "delete a file"},
     {"runtests", mxc_runtests, "run all test programs"},
