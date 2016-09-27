@@ -10,7 +10,7 @@
 
 #include "lib/ftl/macros.h"
 #include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
-#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
+#include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 #include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
 

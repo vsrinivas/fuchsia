@@ -7,7 +7,7 @@
 
 #include <queue>
 
-#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
+#include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 #include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
 #include "lib/ftl/functional/closure.h"

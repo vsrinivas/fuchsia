@@ -4,7 +4,7 @@
 
 import("//mojo/public/mojo_application.gni")
 
-source_set("view_associates_support") {
+source_set("view_associate_framework") {
   sources = [
     "resolved_hits.cc",
     "resolved_hits.h",
@@ -34,7 +34,7 @@ source_set("mocks") {
   ]
 
   deps = [
-    ":view_associates_support",
+    ":view_associate_framework",
     "//apps/mozart/services/composition/interfaces",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
@@ -56,7 +56,7 @@ source_set("mocks") {
 #   ]
 #
 #   deps = [
-#     ":view_associates_support",
+#     ":view_associate_framework",
 #     ":mocks",
 #     "//lib/ftl",
 #     "//apps/mozart/services/composition/interfaces",

@@ -31,7 +31,7 @@ source_set("lib") {
 
   deps = [
     "//apps/mozart/glue/base",
-    "//apps/mozart/lib/view_associates_support",
+    "//apps/mozart/lib/view_associate_framework",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
     "//apps/mozart/services/input/interfaces",

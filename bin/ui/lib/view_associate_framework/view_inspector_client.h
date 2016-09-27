@@ -8,7 +8,7 @@
 #include <queue>
 #include <vector>
 
-#include "apps/mozart/lib/view_associates_support/resolved_hits.h"
+#include "apps/mozart/lib/view_associate_framework/resolved_hits.h"
 #include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"

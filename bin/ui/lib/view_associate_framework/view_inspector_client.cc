@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associates_support/view_inspector_client.h"
+#include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
 
 #include <algorithm>
 

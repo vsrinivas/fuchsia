@@ -9,7 +9,7 @@
 
 #include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
-#include "apps/mozart/lib/view_associates_support/view_tree_hit_tester_client.h"
+#include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "mojo/public/cpp/bindings/binding.h"

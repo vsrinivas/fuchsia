@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_associates_support/view_tree_hit_tester_client.h"
+#include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
 
 #include <utility>
 
-#include "apps/mozart/lib/view_associates_support/mock_hit_tester.h"
-#include "apps/mozart/lib/view_associates_support/mock_view_inspector.h"
-#include "apps/mozart/lib/view_associates_support/test_helpers.h"
+#include "apps/mozart/lib/view_associate_framework/mock_hit_tester.h"
+#include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
+#include "apps/mozart/lib/view_associate_framework/test_helpers.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
