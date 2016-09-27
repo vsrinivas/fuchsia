@@ -158,4 +158,8 @@ struct is_signed_integer : integral_constant<bool, is_integral<T>::value && (T(-
 template <typename T>
 struct is_unsigned_integer : integral_constant<bool, is_integral<T>::value && (T(0) < T(-1))> { };
 
+// is_standard_layout is a builtin
+template<typename T>
+struct is_standard_layout : integral_constant<bool, __is_standard_layout(T)> { };
+
 }  // namespace mxtl
