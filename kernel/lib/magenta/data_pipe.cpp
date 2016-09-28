@@ -213,7 +213,7 @@ mx_status_t DataPipe::ProducerWriteFromUser(user_ptr<const void> ptr,
     DEBUG_ASSERT(written == to_write_first);
 
     if (to_write_first < to_write) {
-        auto ptr2 = ptr + to_write_first;
+        auto ptr2 = ptr.byte_offset(to_write_first);
         DEBUG_ASSERT(ptr2.is_user_address());
         status = vmo_->WriteUser(ptr2, 0u, to_write - to_write_first, &written);
         if (status < 0)
@@ -340,7 +340,7 @@ mx_status_t DataPipe::ConsumerReadFromUser(user_ptr<void> ptr,
         DEBUG_ASSERT(read == to_read_first);
 
         if (to_read > to_read_first) {
-            auto ptr2 = ptr + to_read_first;
+            auto ptr2 = ptr.byte_offset(to_read_first);
             DEBUG_ASSERT(ptr2.is_user_address());
             status_t st = vmo_->ReadUser(ptr2, 0u, to_read - to_read_first, &read);
             if (st != NO_ERROR)

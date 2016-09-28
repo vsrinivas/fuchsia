@@ -34,14 +34,17 @@ public:
     // special operator to return the nullness of the pointer
     explicit operator bool() const { return ptr_ != nullptr; }
 
-    // allow size_t based addition on the pointer
-    // TODO(vtl): |add| is in number of bytes, regardless of T, which is "surprising".
-    user_ptr operator+(size_t add) const {
-        if (ptr_ == nullptr)
-            return user_ptr(nullptr);
+    // Returns a user_ptr pointing to the |index|-th element from this one, or a null user_ptr if
+    // this pointer is null. Note: This does no other validation, and the behavior is undefined on
+    // overflow. (Using this will fail to compile if T is |void|.)
+    user_ptr element_offset(size_t index) const {
+        return ptr_ ? user_ptr(ptr_ + index) : user_ptr(nullptr);
+    }
 
-        auto ptr = reinterpret_cast<uintptr_t>(ptr_);
-        return user_ptr(reinterpret_cast<T*>(ptr + add));
+    // Returns a user_ptr offset by |offset| bytes from this one.
+    user_ptr byte_offset(size_t offset) const {
+        return ptr_ ? user_ptr(reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(ptr_) + offset))
+                    : user_ptr(nullptr);
     }
 
     // check that the address is inside user space
