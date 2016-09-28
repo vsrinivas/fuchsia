@@ -126,7 +126,7 @@ static void erase_chars(textcon_t* tc, int arg) {
 
 static void _scroll_up(textcon_t* tc, int y0, int y1) {
     vc_char_t* dst = dataxy(tc, 0, y0);
-    vc_char_t* src = dataxy(tc, 0, y0 + 1);
+    vc_char_t* src = dataxy(tc, 0, y0) + tc->w;
     vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
 
     if (src < end) {
@@ -138,7 +138,7 @@ static void _scroll_up(textcon_t* tc, int y0, int y1) {
 
 static void _scroll_down(textcon_t* tc, int y0, int y1) {
     vc_char_t* src = dataxy(tc, 0, y0);
-    vc_char_t* dst = dataxy(tc, 0, y0 + 1);
+    vc_char_t* dst = dataxy(tc, 0, y0) + tc->w;
     vc_char_t* end = dataxy(tc, 0, y1 - 1) + tc->w;
 
     if (src < end) {
@@ -513,8 +513,8 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
     case 9: // tab / ^I
         moveto(tc, (tc->x + 7) & (~7), tc->y);
         break;
-    case 10: // newline
-        putc_cr(tc);  // should we imply this?
+    case 10:         // newline
+        putc_cr(tc); // should we imply this?
         putc_lf(tc);
         break;
     case 12:
@@ -561,32 +561,37 @@ void tc_init(textcon_t* tc, int w, int h, void* data, uint8_t fg, uint8_t bg) {
 
 void tc_seth(textcon_t* tc, int h) {
     // tc->data must be big enough for the new height
+    int old_h = h;
+    tc->h = h;
+
+    // move contents
     int y = 0;
-    if (tc->h > h) {
+    if (old_h > h) {
         vc_char_t* dst = dataxy(tc, 0, tc->scroll_y0);
-        vc_char_t* src = dataxy(tc, 0, tc->scroll_y0 + tc->h - h);
+        vc_char_t* src = dataxy(tc, 0, tc->scroll_y0 + old_h - h);
         vc_char_t* end = dataxy(tc, 0, tc->scroll_y1);
         do {
             pushline(tc, y);
-        } while (++y < tc->h - h);
+        } while (++y < old_h - h);
         memmove(dst, src, (end - dst) * sizeof(vc_char_t));
-        tc->y -= tc->h - h;
-    } else if (tc->h < h) {
+        tc->y -= old_h - h;
+    } else if (old_h < h) {
         do {
             fill(dataxy(tc, 0, tc->scroll_y1 + y), ' ' | ATTR(tc), tc->w);
-        } while (++y < h - tc->h);
+        } while (++y < h - old_h);
     }
+    tc->y = clampy(tc, tc->y);
+
     // try to fixup the scroll region
     if (tc->scroll_y0 >= h) {
         tc->scroll_y0 = 0;
     }
-    if (tc->scroll_y1 == tc->h) {
+    if (tc->scroll_y1 == old_h) {
         tc->scroll_y1 = h;
     } else {
         tc->scroll_y1 = tc->scroll_y1 >= h ? h : tc->scroll_y1;
     }
-    tc->h = h;
-    tc->y = clampy(tc, tc->y);
+
     invalidate(tc, 0, 0, tc->w, tc->h);
     movecursor(tc, tc->x, tc->y);
 }
