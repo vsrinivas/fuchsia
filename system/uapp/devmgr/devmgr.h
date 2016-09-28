@@ -12,7 +12,8 @@ void devmgr_handle_messages(void);
 
 void devmgr_io_init(void);
 void devmgr_vfs_init(void);
-void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd);
+void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd,
+                   mx_handle_t handle, uint32_t type);
 void devmgr_launch_devhost(const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc);
 

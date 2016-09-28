@@ -51,9 +51,10 @@ static const char* env[] = {
     NULL,
 };
 
-void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd) {
-    mx_handle_t hnd[2 * VFS_MAX_HANDLES];
-    uint32_t ids[2 * VFS_MAX_HANDLES];
+void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd,
+                   mx_handle_t handle, uint32_t type) {
+    mx_handle_t hnd[1 + 2 * VFS_MAX_HANDLES];
+    uint32_t ids[1 + 2 * VFS_MAX_HANDLES];
     unsigned n = 1;
     mx_status_t r;
 
@@ -82,6 +83,11 @@ void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd) {
             goto fail;
         }
         n += r;
+    }
+    if (handle) {
+        hnd[n] = handle;
+        ids[n] = type;
+        n++;
     }
     printf("devmgr: launch %s (%s)\n", argv[0], name);
     mx_handle_t proc = launchpad_launch(name, argc, argv, env, n, hnd, ids);

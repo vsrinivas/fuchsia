@@ -631,6 +631,19 @@ static void send_debug_command(const char* cmd) {
     close(fd);
 }
 
+static void mojo_launch(const char* url) {
+    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
+    if (fd >= 0) {
+        int r = write(fd, url, strlen(url));
+        if (r < 0) {
+            fprintf(stderr, "error: cannot write dmctl: %d\n", r);
+        }
+        close(fd);
+    } else {
+        fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
+    }
+}
+
 void execline(char* line) {
     bool runbg;
     char* argv[32];
@@ -647,6 +660,11 @@ void execline(char* line) {
     while ((len > 0) && (line[len - 1] <= ' ')) {
         len--;
         line[len] = 0;
+    }
+
+    if (!strncmp(line, "mojo:", 5)) {
+        mojo_launch(line);
+        return;
     }
 
     // handle backgrounding

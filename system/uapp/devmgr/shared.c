@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "acpi.h"
-#include "devmgr.h"
 #include "devhost.h"
+#include "devmgr.h"
 
 #include <stdio.h>
 
@@ -37,17 +37,19 @@ void devmgr_io_init(void) {
     mxio_bind_to_fd(logger, 1, 0);
 }
 
+extern mx_handle_t mojo_launcher;
+
 void devmgr_launch_devhost(const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc) {
-    mx_handle_t hnd[6];
-    uint32_t ids[6];
+    mx_handle_t hnd[7];
+    uint32_t ids[7];
     ids[0] = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
     hnd[0] = launchpad_get_vdso_vmo();
-    ids[1] = MX_HND_TYPE_USER0;
+    ids[1] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HDEVICE);
     hnd[1] = hdevice;
-    ids[2] = MX_HND_TYPE_USER1;
+    ids[2] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HRPC);
     hnd[2] = hrpc;
-    ids[3] = MX_HND_TYPE_RESOURCE;
+    ids[3] = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
     hnd[3] = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
     ids[4] = MX_HND_TYPE_MXIO_ROOT;
 #if DEVMGR
@@ -63,10 +65,18 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
 #if !LIBDRIVER
 #if !DEVMGR
     // pass acpi handle if available
-    ids[5] = MX_HND_TYPE_USER2;
-    hnd[5] = devmgr_acpi_clone();
-    if (hnd[5] > 0) {
+    ids[hcount] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI);
+    hnd[hcount] = devmgr_acpi_clone();
+    if (hnd[hcount] > 0) {
         hcount++;
+    }
+#else
+    if (mojo_launcher > 0) {
+        ids[hcount] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER);
+        hnd[hcount] = mojo_launcher;
+        if (hnd[hcount] > 0) {
+            hcount++;
+        }
     }
 #endif
 #endif

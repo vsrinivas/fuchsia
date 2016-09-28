@@ -173,9 +173,9 @@ __EXPORT int devhost_init(void) {
     devhost_io_init();
 
     root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
-    hdevice = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
-    hrpc = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER1, 0));
-    hacpi = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER2, 0));
+    hdevice = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HDEVICE));
+    hrpc = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HRPC));
+    hacpi = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI));
 
     //TODO: figure out why we need to do this
     mx_handle_t vmo = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0));

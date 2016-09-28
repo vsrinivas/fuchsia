@@ -23,6 +23,9 @@
 
 static mx_handle_t root_resource_handle;
 
+static mx_handle_t mojo_launcher_child;
+mx_handle_t mojo_launcher;
+
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
@@ -61,7 +64,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         snprintf(path, sizeof(path), "/dev/class/block/%s", name);
         const char* argv[] = { "/boot/bin/minfs", path, "mount" };
         printf("devmgr: /dev/class/block/%s: minfs?\n", name);
-        devmgr_launch("minfs:/data", 3, argv, -1);
+        devmgr_launch("minfs:/data", 3, argv, -1, 0, 0);
     }
 
     close(fd);
@@ -71,14 +74,30 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
 static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
 static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
+static const char* argv_appmgr[] = { "/boot/bin/application_manager" };
+
+void create_mojo_launcher_handles(void) {
+  mx_handle_t h[2];
+  if (mx_msgpipe_create(h, 0) >= 0) {
+      mojo_launcher = h[0];
+      mojo_launcher_child = h[1];
+  }
+}
 
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        devmgr_launch("netsvc", 1, argv_netsvc, -1);
+        devmgr_launch("netsvc", 1, argv_netsvc, -1, 0, 0);
     }
 
-    devmgr_launch("mxsh:autorun", 2, argv_mxsh_autorun, -1);
+    devmgr_launch("mxsh:autorun", 2, argv_mxsh_autorun, -1, 0, 0);
+
+    if (mojo_launcher_child) {
+        devmgr_launch("mojo-app-manager", 2, argv_appmgr, -1,
+                      mojo_launcher_child,
+                      MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0));
+        mojo_launcher_child = 0;
+    }
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
@@ -95,7 +114,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch("mxsh:console", 1, argv_mxsh, fd);
+            devmgr_launch("mxsh:console", 1, argv_mxsh, fd, 0, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -122,7 +141,7 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
     for (unsigned i = 0; i < VC_COUNT; i++) {
         int fd;
         if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
-            devmgr_launch("mxsh:vc", 1, argv_mxsh, fd);
+            devmgr_launch("mxsh:vc", 1, argv_mxsh, fd, 0, 0);
         }
     }
 
@@ -157,7 +176,7 @@ int main(int argc, char** argv) {
 #if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
-        devmgr_launch("crashlogger", 1, argv_crashlogger, -1);
+        devmgr_launch("crashlogger", 1, argv_crashlogger, -1, 0, 0);
     }
 #else
     // Until crashlogging exists, ensure we see load info
@@ -166,6 +185,8 @@ int main(int argc, char** argv) {
 #endif
 
     start_console_shell();
+
+    create_mojo_launcher_handles();
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {

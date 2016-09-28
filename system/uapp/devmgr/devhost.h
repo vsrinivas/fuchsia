@@ -16,6 +16,13 @@
 #include <threads.h>
 #include <stdint.h>
 
+
+// Handle IDs for USER0 handles
+#define ID_HDEVICE 0
+#define ID_HRPC 1
+#define ID_HACPI 2
+#define ID_HLAUNCHER 3
+
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
 // should be calling devhost_*() APIs, as this could
 // violate the internal locking design.
