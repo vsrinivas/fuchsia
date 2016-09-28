@@ -13,11 +13,15 @@ by any commits introduced on the local branch are formatted.
 import argparse
 import os.path
 import paths
+import platform
 import subprocess
 import sys
 
+ossuffix = "linux"
+if platform.platform().startswith("Darwin"):
+    ossuffix = "darwin"
 CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
-                           "clang+llvm-x86_64-linux", "bin", "clang-format")
+                           "clang+llvm-x86_64-%s" % ossuffix, "bin", "clang-format")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 
 C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-i"]
