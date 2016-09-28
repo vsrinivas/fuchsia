@@ -20,6 +20,10 @@
             "bootfs_path": "apps/input_manager_service"
         },
         {
+            "binary": "jank_view",
+            "bootfs_path": "apps/jank_view"
+        },
+        {
             "binary": "launcher",
             "bootfs_path": "apps/launcher"
         },
