@@ -19,6 +19,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
+#include <mxtl/algorithm.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 
@@ -29,6 +30,7 @@
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 1024u;
 
+constexpr size_t kMsgpipeReadHandlesChunkCount = 16u;
 constexpr size_t kMsgpipeWriteHandlesInlineCount = 8u;
 
 mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size 2 */,
@@ -131,12 +133,17 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     if (num_handles > 0u) {
         mxtl::Array<Handle*> handle_list = mxtl::move(msg->handles);
 
-        // TODO(vtl): Should probably do one big copy-out, instead of one for each handle.
-        for (size_t ix = 0u; ix < num_handles; ++ix) {
-            auto hv = up->MapHandleToValue(handle_list[ix]);
-            if (copy_to_user_32_unsafe(&_handles.get()[ix], hv) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-        }
+        // Copy the handle values out in chunks.
+        mx_handle_t hvs[kMsgpipeReadHandlesChunkCount];
+        size_t num_copied = 0;
+        do {
+            size_t this_chunk_size = mxtl::min(num_handles - num_copied,
+                                               kMsgpipeReadHandlesChunkCount);
+            for (size_t i = 0; i < this_chunk_size; i++)
+                hvs[i] = up->MapHandleToValue(handle_list[num_copied + i]);
+            _handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
+            num_copied += this_chunk_size;
+        } while (num_copied < num_handles);
 
         for (size_t idx = 0u; idx < num_handles; ++idx) {
             if (handle_list[idx]->dispatcher()->get_state_tracker())
