@@ -4,7 +4,7 @@
 
 #include "gtt.h"
 #include "magma_util/simple_allocator.h"
-#include "register_defs.h"
+#include "registers.h"
 #include <vector>
 
 Gtt::Gtt(Gtt::Owner* owner) : AddressSpace(ADDRESS_SPACE_GTT), owner_(owner) { DASSERT(owner_); }
@@ -60,23 +60,6 @@ bool Gtt::MapGttMmio(magma::PlatformDevice* platform_device)
     return true;
 }
 
-#define PRIV_PAT_UNCACHEABLE 0
-#define PRIV_PAT_WRITE_COMBINING 1
-#define PRIV_PAT_WRITE_THROUGH 2
-#define PRIV_PAT_WRITE_BACK 3
-
-#define PRIV_PAT_ELLC 0
-#define PRIV_PAT_LLC 1
-#define PRIV_PAT_LLC_ELLC 2
-#define PRIV_PAT_L3_LLC_ELLC 3
-
-static inline uint64_t ppat(unsigned int index, uint8_t age_bits, uint8_t llc_bits,
-                            uint8_t cache_bits)
-{
-    uint64_t ppat = (age_bits << 4) | (llc_bits << 2) | cache_bits;
-    return ppat << (index * 8);
-}
-
 unsigned int gen_ppat_index(CachingType caching_type)
 {
     switch (caching_type) {
@@ -97,18 +80,31 @@ void Gtt::InitPrivatePat()
     DASSERT(gen_ppat_index(CACHING_NONE) == 3);
     DASSERT(gen_ppat_index(CACHING_LLC) == 4);
 
-    uint64_t pat = ppat(0, 0, PRIV_PAT_LLC, PRIV_PAT_WRITE_BACK);
-    pat |= ppat(1, 0, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_COMBINING);
-    pat |= ppat(2, 0, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_THROUGH);
-    pat |= ppat(3, 0, PRIV_PAT_ELLC, PRIV_PAT_UNCACHEABLE);
-    pat |= ppat(4, 0, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_BACK);
-    pat |= ppat(5, 1, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_BACK);
-    pat |= ppat(6, 2, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_BACK);
-    pat |= ppat(7, 3, PRIV_PAT_LLC_ELLC, PRIV_PAT_WRITE_BACK);
+    uint64_t pat =
+        registers::PatIndex::ppat(0, registers::PatIndex::kLruAgeFromUncore,
+                                  registers::PatIndex::kLlc, registers::PatIndex::kWriteBack);
+    pat |= registers::PatIndex::ppat(1, registers::PatIndex::kLruAgeFromUncore,
+                                     registers::PatIndex::kLlcEllc,
+                                     registers::PatIndex::kWriteCombining);
+    pat |= registers::PatIndex::ppat(2, registers::PatIndex::kLruAgeFromUncore,
+                                     registers::PatIndex::kLlcEllc,
+                                     registers::PatIndex::kWriteThrough);
+    pat |= registers::PatIndex::ppat(3, registers::PatIndex::kLruAgeFromUncore,
+                                     registers::PatIndex::kEllc, registers::PatIndex::kUncacheable);
+    pat |=
+        registers::PatIndex::ppat(4, registers::PatIndex::kLruAgeFromUncore,
+                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
+    pat |=
+        registers::PatIndex::ppat(5, registers::PatIndex::kLruAgeZero,
+                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
+    pat |=
+        registers::PatIndex::ppat(6, registers::PatIndex::kLruAgeNoChange,
+                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
+    pat |=
+        registers::PatIndex::ppat(7, registers::PatIndex::kLruAgeThree,
+                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
 
-    // TODO(MA-35) - gtt should attempt 64bit write of private pat
-    reg_io()->Write32(BDW_PAT_INDEX_LOW, static_cast<uint32_t>(pat));
-    reg_io()->Write32(BDW_PAT_INDEX_HIGH, static_cast<uint32_t>(pat >> 32));
+    registers::PatIndex::write(reg_io(), pat);
 }
 
 bool Gtt::InitScratch()

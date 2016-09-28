@@ -28,7 +28,7 @@ source_set("src") {
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
     "pagetable.h",
-    "register_defs.h",
+    "registers.h",
     "register_io.cc",
     "register_io.h",
     "render_init_batch.cc",

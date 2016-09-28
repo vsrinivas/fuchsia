@@ -8,7 +8,6 @@
 #include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "register_defs.h"
 #include "registers.h"
 #include <cstdio>
 #include <string>
@@ -37,9 +36,12 @@ bool MsdIntelDevice::Init(void* device_handle)
     device_id_ = pci_dev_id;
     DLOG("device_id 0x%x", device_id_);
 
-    unsigned int gtt_size;
-    if (!ReadGttSize(&gtt_size))
-        return DRETF(false, "failed to read gtt size");
+    uint16_t gmch_graphics_ctrl;
+    if (!platform_device_->ReadPciConfig16(registers::GmchGraphicsControl::kOffset,
+                                           &gmch_graphics_ctrl))
+        return DRETF(false, "ReadPciConfig16 failed");
+
+    uint32_t gtt_size = registers::GmchGraphicsControl::gtt_size(gmch_graphics_ctrl);
 
     DLOG("gtt_size: %uMB", gtt_size >> 20);
 
@@ -98,7 +100,7 @@ bool MsdIntelDevice::ReadGttSize(unsigned int* gtt_size)
     DASSERT(platform_device_);
 
     uint16_t reg;
-    if (!platform_device_->ReadPciConfig16(GMCH_GFX_CTRL, &reg))
+    if (!platform_device_->ReadPciConfig16(registers::GmchGraphicsControl::kOffset, &reg))
         return DRETF(false, "ReadPciConfig16 failed");
 
     unsigned int size = (reg >> 6) & 0x3;

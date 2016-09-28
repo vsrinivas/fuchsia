@@ -10,6 +10,20 @@
 
 namespace registers {
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.733
+class GmchGraphicsControl {
+public:
+    static constexpr uint32_t kOffset = 0x50;
+    static constexpr uint32_t kGttSizeShift = 6;
+    static constexpr uint32_t kGttSizeMask = 0x3;
+
+    static uint32_t gtt_size(uint32_t val)
+    {
+        unsigned int size = (val >> kGttSizeShift) & kGttSizeMask;
+        return (size == 0) ? 0 : (1 << size) * 1024 * 1024;
+    }
+};
+
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.712
 class HardwareStatusPageAddress {
 public:
@@ -19,6 +33,46 @@ public:
     {
         reg_io->Write32(mmio_base + kOffset, addr);
         reg_io->mmio()->PostingRead32(mmio_base + kOffset);
+    }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.500
+class PatIndex {
+public:
+    static constexpr uint32_t kOffsetLow = 0x40E0;
+    static constexpr uint32_t kOffsetHigh = 0x40E4;
+
+    static constexpr uint8_t kUncacheable = 0;
+    static constexpr uint8_t kWriteCombining = 1;
+    static constexpr uint8_t kWriteThrough = 2;
+    static constexpr uint8_t kWriteBack = 3;
+    static constexpr uint8_t kMemTypeMask = 0x3;
+
+    static constexpr uint8_t kEllc = 0;
+    static constexpr uint8_t kLlc = 1;
+    static constexpr uint8_t kLlcEllc = 2;
+    static constexpr uint8_t kTargetCacheMask = 3;
+
+    static constexpr uint8_t kLruAgeFromUncore = 0;
+    static constexpr uint8_t kLruAgeZero = 1;
+    static constexpr uint8_t kLruAgeNoChange = 2;
+    static constexpr uint8_t kLruAgeThree = 3;
+    static constexpr uint8_t kLruAgeMask = 0x3;
+
+    static void write(RegisterIo* reg_io, uint64_t val)
+    {
+        reg_io->Write32(kOffsetLow, static_cast<uint32_t>(val));
+        reg_io->Write32(kOffsetHigh, static_cast<uint32_t>(val >> 32));
+    }
+
+    static uint64_t ppat(unsigned int index, uint8_t lru_age, uint8_t target_cache,
+                         uint8_t mem_type)
+    {
+        DASSERT((lru_age & ~kLruAgeMask) == 0);
+        DASSERT((target_cache & ~kTargetCacheMask) == 0);
+        DASSERT((mem_type & ~kMemTypeMask) == 0);
+        uint64_t ppat = (lru_age << 4) | (target_cache << 2) | mem_type;
+        return ppat << (index * 8);
     }
 };
 

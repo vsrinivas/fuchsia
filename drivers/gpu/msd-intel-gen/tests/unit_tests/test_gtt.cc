@@ -5,7 +5,7 @@
 #include "gtt.h"
 #include "magma_util/platform/platform_mmio.h"
 #include "mock/mock_mmio.h"
-#include "register_defs.h"
+#include "registers.h"
 #include "gtest/gtest.h"
 
 class TestGtt {
@@ -145,10 +145,10 @@ public:
         bool ret = gtt->Init(gtt_size, platform_device.get());
         EXPECT_EQ(ret, true);
 
-        uint32_t pat_index_low = reg_io->Read32(BDW_PAT_INDEX_LOW);
+        uint32_t pat_index_low = reg_io->Read32(registers::PatIndex::kOffsetLow);
         EXPECT_EQ(pat_index_low, 0xA0907u);
 
-        uint32_t pat_index_high = reg_io->Read32(BDW_PAT_INDEX_HIGH);
+        uint32_t pat_index_high = reg_io->Read32(registers::PatIndex::kOffsetHigh);
         EXPECT_EQ(pat_index_high, 0x3B2B1B0Bu);
 
         uint64_t scratch_bus_addr;
