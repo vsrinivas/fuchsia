@@ -56,12 +56,6 @@ function download_tool() {
   chmod a+x "${tool_path}"
 }
 
-download_tool ninja "${FUCHSIA_URL_BASE}/ninja/${HOST_PLATFORM}"
-
-# TODO(abarth): gn doesn't follow the normal pattern because we download our
-# copy from Chromium's Google Storage bucket.
-download_tool gn "https://storage.googleapis.com/chromium-gn"
-
 # download_tarball <name> <base url> <untar directory>
 function download_tarball() {
   local name="${1}"
@@ -78,13 +72,6 @@ function download_tarball() {
   fi
 }
 
-# TODO(jamesr): the cmake and sdk tarballs are inconsistent about how they name
-# the uploaded artifact and what directories they expect to be untarred from.
-# There's no good reason for these to be different - unify them.
-download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
-download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
-download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
-
 # build_magenta_tool <name>
 function build_magenta_tool() {
   local name="${1}"
@@ -99,6 +86,109 @@ function build_magenta_tool() {
   fi
 }
 
-build_magenta_tool bootserver
-build_magenta_tool loglistener
-build_magenta_tool mkbootfs
+function download_ninja() {
+  download_tool ninja "${FUCHSIA_URL_BASE}/ninja/${HOST_PLATFORM}"
+}
+
+function download_gn() {
+  # TODO(abarth): gn doesn't follow the normal pattern because we download our
+  # copy from Chromium's Google Storage bucket.
+  download_tool gn "https://storage.googleapis.com/chromium-gn"
+}
+
+function download_cmake() {
+  # TODO(jamesr): the cmake and sdk tarballs are inconsistent about how they name
+  # the uploaded artifact and what directories they expect to be untarred from.
+  # There's no good reason for these to be different - unify them.
+  download_tarball cmake "cmake/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+}
+
+function download_toolchain() {
+  download_tarball toolchain "toolchain/${HOST_PLATFORM}" "${SCRIPT_ROOT}/toolchain"
+}
+
+function download_go() {
+  download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
+}
+
+function download_bootserver() {
+  build_magenta_tool bootserver
+}
+
+function download_loglistener() {
+  build_magenta_tool loglistener
+}
+
+function download_mkbootfs() {
+  build_magenta_tool mkbootfs
+}
+
+function download_all() {
+  download_ninja
+  download_gn
+  download_cmake
+  download_toolchain
+  download_go
+  download_bootserver
+  download_loglistener
+  download_mkbootfs
+}
+
+function echo_error() {
+  echo "$@" 1>&2;
+}
+
+declare has_arguments="false"
+
+for i in "$@"; do
+case ${i} in
+  --ninja)
+    download_ninja
+    has_arguments="true"
+    shift
+    ;;
+  --gn)
+    download_gn
+    has_arguments="true"
+    shift
+    ;;
+  --cmake)
+    download_cmake
+    has_arguments="true"
+    shift
+    ;;
+  --toolchain)
+    download_toolchain
+    has_arguments="true"
+    shift
+    ;;
+  --go)
+    download_go
+    has_arguments="true"
+    shift
+    ;;
+  --bootserver)
+    download_bootserver
+    has_arguments="true"
+    shift
+    ;;
+  --loglistener)
+    download_loglistener
+    has_arguments="true"
+    shift
+    ;;
+  --mkbootfs)
+    download_mkbootfs
+    has_arguments="true"
+    shift
+    ;;
+  *)
+    echo_error "Unknown argument."
+    exit -1
+    ;;
+esac
+done
+
+if [[ "${has_arguments}" = "false" ]]; then
+  download_all
+fi
