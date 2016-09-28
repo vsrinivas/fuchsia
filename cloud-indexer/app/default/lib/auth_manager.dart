@@ -66,20 +66,17 @@ class AuthManager {
 
   AuthManager(this._oauth2api, this._adminApi);
 
-  /// Returns the email of the authenticated user given an [accessToken].
-  ///
-  /// Currently, users outside of the google.com domain are considered
-  /// unauthenticated. In this case, we return null.
-  Future<String> authenticatedUser(String accessToken) async {
+  /// Checks whether the given [accessToken] is domain or group authenticated.
+  Future<bool> checkAuthenticated(String accessToken) async {
     if (accessToken == null) {
       _logger.info('No access token provided. Bailing out.');
-      return null;
+      return false;
     }
 
     Match match = _authRegExp.matchAsPrefix(accessToken);
     if (match == null) {
       _logger.info('Invalid access token. Bailing out.');
-      return null;
+      return false;
     }
 
     String email;
@@ -89,19 +86,19 @@ class AuthManager {
       if (tokeninfo.email == null) {
         _logger.info('Authentication failed. The email scope was not present '
             'in the request.');
-        return null;
+        return false;
       }
       email = tokeninfo.email;
-      if (_isAuthorizedDomain(email)) return email;
+      if (_isAuthorizedDomain(email)) return true;
     } on oauth2_api.DetailedApiRequestError catch (e) {
       _logger.warning('Authentication failed. Could not retrieve token info '
           '(${e.status}): ${e.message}');
-      return null;
+      return false;
     }
 
     try {
       await _adminApi.members.get(authorizedGroup, email);
-      return email;
+      return true;
     } on directory_api.DetailedApiRequestError catch (e) {
       if (e.status == HttpStatus.NOT_FOUND) {
         _logger.info('Authentication failed. The user was in neither the '
@@ -110,7 +107,7 @@ class AuthManager {
         _logger.warning('Authentication failed. Could not determine group '
             'membership (${e.status}): ${e.message}');
       }
-      return null;
+      return false;
     }
   }
 }

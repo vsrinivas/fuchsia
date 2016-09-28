@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
-import 'package:mime/mime.dart';
 import 'package:shelf/shelf.dart' as shelf;
 
 import 'auth_manager.dart';
@@ -14,10 +13,6 @@ import 'module_uploader.dart';
 import 'zip.dart';
 
 final Logger _logger = new Logger('cloud_indexer.request_handler');
-final RegExp _boundaryRegExp =
-    new RegExp(r'^.*boundary=(?:"([^"]+)"|([^\s"]+))$');
-
-const String _namePattern = 'name="module"';
 
 Future<shelf.Response> requestHandler(shelf.Request request,
     {ModuleUploader moduleUploader, AuthManager authManager}) async {
@@ -25,9 +20,7 @@ Future<shelf.Response> requestHandler(shelf.Request request,
   moduleUploader ??= moduleUploaderService;
   authManager ??= authManagerService;
 
-  final String email =
-      await authManager.authenticatedUser(request.headers['Authorization']);
-  if (email == null) {
+  if (!await authManager.checkAuthenticated(request.headers['Authorization'])) {
     return new shelf.Response.forbidden(null);
   }
 
@@ -36,37 +29,19 @@ Future<shelf.Response> requestHandler(shelf.Request request,
   }
 
   final String contentType = request.headers['Content-Type'];
-  if (contentType == null || !contentType.startsWith('multipart/form-data')) {
+  if (contentType == null || !contentType.startsWith('application/zip')) {
     _logger.info('Invalid content-type received. Bailing out.');
     return new shelf.Response(HttpStatus.BAD_REQUEST);
   }
 
-  Match boundaryMatch = _boundaryRegExp.matchAsPrefix(contentType);
-  if (boundaryMatch == null) {
-    _logger.info('Invalid boundary received. Bailing out.');
-    return new shelf.Response(HttpStatus.BAD_REQUEST,
-        body: 'Invalid boundary.');
+  try {
+    await moduleUploader.processUpload(request.read());
+    return new shelf.Response.ok(null);
+  } on CloudStorageException {
+    return new shelf.Response.internalServerError();
+  } on PubSubException {
+    return new shelf.Response.internalServerError();
+  } on ZipException catch (e) {
+    return new shelf.Response(HttpStatus.BAD_REQUEST, body: e.toString());
   }
-
-  String boundary = boundaryMatch.group(1) ?? boundaryMatch.group(2);
-  Stream<MimeMultipart> parts =
-      request.read().transform(new MimeMultipartTransformer(boundary));
-  await for (MimeMultipart part in parts) {
-    String contentDisposition = part.headers['content-disposition'];
-    if (!contentDisposition.contains(_namePattern)) continue;
-
-    try {
-      await moduleUploader.processUpload(part);
-      return new shelf.Response.ok(null);
-    } on CloudStorageException {
-      return new shelf.Response.internalServerError();
-    } on PubSubException {
-      return new shelf.Response.internalServerError();
-    } on ZipException catch (e) {
-      return new shelf.Response(HttpStatus.BAD_REQUEST, body: e.toString());
-    }
-  }
-
-  _logger.info('Request did not contain a zip. Bailing out.');
-  return new shelf.Response(HttpStatus.BAD_REQUEST, body: 'Missing zip.');
 }

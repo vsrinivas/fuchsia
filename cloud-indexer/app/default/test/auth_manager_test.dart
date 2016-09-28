@@ -46,7 +46,8 @@ main() {
     test('Malformed token.', () async {
       final String malformedAuthorization = 'Bear questionable-token';
       final AuthManager authManager = new AuthManager(oauth2api, adminApi);
-      expect(await authManager.authenticatedUser(malformedAuthorization), null);
+      expect(
+          await authManager.checkAuthenticated(malformedAuthorization), false);
     });
 
     test('Missing email scope.', () async {
@@ -54,7 +55,7 @@ main() {
           .thenReturn(new Future.value(new oauth2_api.Tokeninfo()));
       final AuthManager authManager = new AuthManager(oauth2api, adminApi);
       expect(
-          await authManager.authenticatedUser(reasonableAuthorization), null);
+          await authManager.checkAuthenticated(reasonableAuthorization), false);
     });
 
     test('Email outside of accepted domains and groups.', () async {
@@ -65,7 +66,7 @@ main() {
               404, 'Member not found.'));
       final AuthManager authManager = new AuthManager(oauth2api, adminApi);
       expect(
-          await authManager.authenticatedUser(reasonableAuthorization), null);
+          await authManager.checkAuthenticated(reasonableAuthorization), false);
     });
 
     test('Reasonable, group-authenticated request.', () async {
@@ -75,8 +76,8 @@ main() {
           .thenReturn(
               new Future.value(new directory_api.Member()..email = testEmail));
       final AuthManager authManager = new AuthManager(oauth2api, adminApi);
-      expect(await authManager.authenticatedUser(reasonableAuthorization),
-          testEmail);
+      expect(
+          await authManager.checkAuthenticated(reasonableAuthorization), true);
     });
 
     test('Reasonable, domain-authenticated request.', () async {
@@ -84,8 +85,8 @@ main() {
           new Future.value(
               new oauth2_api.Tokeninfo()..email = domainValidEmail));
       final AuthManager authManager = new AuthManager(oauth2api, adminApi);
-      expect(await authManager.authenticatedUser(reasonableAuthorization),
-          domainValidEmail);
+      expect(
+          await authManager.checkAuthenticated(reasonableAuthorization), true);
     });
   });
 }

@@ -17,8 +17,7 @@ import 'package:shelf/shelf_io.dart' as io;
 Logger _logger = new Logger('cloud_indexer.shelf');
 
 class FakeAuthManager implements AuthManager {
-  Future<String> authenticatedUser(String accessToken) async =>
-      'test@google.com';
+  Future<bool> checkAuthenticated(String accessToken) async => true;
 }
 
 Future runDefaultService(int port, bool authIsDisabled) {

@@ -8,7 +8,6 @@ dependencies:
   cloud_indexer_common:
     path: ../common
   logging: any
-  mime: any
   mockito: any
   parser:
     path: ../../deps/parser

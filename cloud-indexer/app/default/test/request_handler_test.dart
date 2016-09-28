@@ -14,24 +14,13 @@ import 'package:mockito/mockito.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
 
-shelf.Request multipartRequest(
-    Uri uri, String boundary, String name, List<int> bytes,
+shelf.Request createRequest(Uri uri, List<int> bytes,
     {Map<String, String> additionalHeaders: const {}}) {
-  final Map<String, String> headers = {
-    'Content-Type': 'multipart/form-data; boundary="$boundary"'
-  };
+  final Map<String, String> headers = {'Content-Type': 'application/zip'};
   headers.addAll(additionalHeaders);
 
-  final Iterable<List<int>> requestBody = [
-    '--$boundary\r\n',
-    'Content-Type: application/octet-stream\r\n',
-    'Content-Disposition: form-data; name="$name"\r\n\r\n',
-    bytes,
-    '\r\n--$boundary--\r\n\r\n'
-  ].map((i) => (i is String) ? ASCII.encode(i) : i);
-
   return new shelf.Request('POST', uri,
-      headers: headers, body: new Stream.fromIterable(requestBody));
+      headers: headers, body: new Stream.fromIterable([bytes]));
 }
 
 class MockModuleUploader extends Mock implements ModuleUploader {}
@@ -40,19 +29,16 @@ class MockAuthManager extends Mock implements AuthManager {}
 
 main() {
   group('requestHandler', () {
-    const String testName = 'module';
-    const String testBoundary = 'gc0p4Jq0M2Yt08jU534c0p';
     const Map<String, String> testHeaders = const {
       'Authorization': 'Bearer test-token'
     };
-    const String testEmail = 'test.account@mojoapps.io';
     final List<int> testBytes = UTF8.encode('This is a test.');
     final Uri defaultUri = Uri.parse('https://default-service.io/api/upload');
 
     test('Unauthorized request.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(any)).thenReturn(null);
+      when(authManager.checkAuthenticated(any)).thenReturn(false);
 
       shelf.Request request = new shelf.Request('POST', defaultUri);
       shelf.Response response = await requestHandler(request,
@@ -66,8 +52,8 @@ main() {
     test('Incorrect path.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
+      when(authManager.checkAuthenticated(testHeaders['Authorization']))
+          .thenReturn(true);
 
       shelf.Request request = new shelf.Request(
           'POST', Uri.parse('https://default-service.io/'),
@@ -80,36 +66,6 @@ main() {
       verifyNever(moduleUploader.processUpload(any));
     });
 
-    test('Invalid boundary.', () async {
-      ModuleUploader moduleUploader = new MockModuleUploader();
-      MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
-
-      shelf.Request request = multipartRequest(
-          defaultUri, 'test"boundary', testName, testBytes,
-          additionalHeaders: testHeaders);
-      shelf.Response response = await requestHandler(request,
-          moduleUploader: moduleUploader, authManager: authManager);
-      expect(response.statusCode, HttpStatus.BAD_REQUEST);
-      verifyNever(moduleUploader.processUpload(any));
-    });
-
-    test('Missing zip.', () async {
-      ModuleUploader moduleUploader = new MockModuleUploader();
-      MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
-
-      shelf.Request request = multipartRequest(
-          defaultUri, testBoundary, 'file', testBytes,
-          additionalHeaders: testHeaders);
-      shelf.Response response = await requestHandler(request,
-          moduleUploader: moduleUploader, authManager: authManager);
-      expect(response.statusCode, HttpStatus.BAD_REQUEST);
-      verifyNever(moduleUploader.processUpload(any));
-    });
-
     test('Cloud storage failure.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
       when(moduleUploader.processUpload(any)).thenAnswer((i) =>
@@ -117,12 +73,11 @@ main() {
               HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
 
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
+      when(authManager.checkAuthenticated(testHeaders['Authorization']))
+          .thenReturn(true);
 
-      shelf.Request request = multipartRequest(
-          defaultUri, testBoundary, testName, testBytes,
-          additionalHeaders: testHeaders);
+      shelf.Request request =
+          createRequest(defaultUri, testBytes, additionalHeaders: testHeaders);
       shelf.Response response = await requestHandler(request,
           moduleUploader: moduleUploader, authManager: authManager);
       expect(response.statusCode, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -144,12 +99,11 @@ main() {
               HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error.'));
 
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
+      when(authManager.checkAuthenticated(testHeaders['Authorization']))
+          .thenReturn(true);
 
-      shelf.Request request = multipartRequest(
-          defaultUri, testBoundary, testName, testBytes,
-          additionalHeaders: testHeaders);
+      shelf.Request request =
+          createRequest(defaultUri, testBytes, additionalHeaders: testHeaders);
       shelf.Response response = await requestHandler(request,
           moduleUploader: moduleUploader, authManager: authManager);
       expect(response.statusCode, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -165,16 +119,15 @@ main() {
 
     test('Zip failure.', () async {
       ModuleUploader moduleUploader = new MockModuleUploader();
-      when(moduleUploader.processUpload(any)).thenAnswer((i) =>
-          throw new ZipException('Zip did not contain a manifest.'));
+      when(moduleUploader.processUpload(any)).thenAnswer(
+          (i) => throw new ZipException('Zip did not contain a manifest.'));
 
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
+      when(authManager.checkAuthenticated(testHeaders['Authorization']))
+          .thenReturn(true);
 
-      shelf.Request request = multipartRequest(
-          defaultUri, testBoundary, testName, testBytes,
-          additionalHeaders: testHeaders);
+      shelf.Request request =
+          createRequest(defaultUri, testBytes, additionalHeaders: testHeaders);
       shelf.Response response = await requestHandler(request,
           moduleUploader: moduleUploader, authManager: authManager);
 
@@ -196,12 +149,11 @@ main() {
           .thenReturn(new Future.value(null));
 
       MockAuthManager authManager = new MockAuthManager();
-      when(authManager.authenticatedUser(testHeaders['Authorization']))
-          .thenReturn(testEmail);
+      when(authManager.checkAuthenticated(testHeaders['Authorization']))
+          .thenReturn(true);
 
-      shelf.Request request = multipartRequest(
-          defaultUri, testBoundary, testName, testBytes,
-          additionalHeaders: testHeaders);
+      shelf.Request request =
+          createRequest(defaultUri, testBytes, additionalHeaders: testHeaders);
       shelf.Response response = await requestHandler(request,
           moduleUploader: moduleUploader, authManager: authManager);
       expect(response.statusCode, HttpStatus.OK);
