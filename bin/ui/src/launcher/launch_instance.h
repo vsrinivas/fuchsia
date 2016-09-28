@@ -11,6 +11,7 @@
 #include "apps/mozart/services/input/interfaces/input_events.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/src/launcher/input/input_device.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -33,14 +34,14 @@ class LaunchInstance {
   void Launch();
 
  private:
-  // TODO(jpoichet) Re-wire to new native input mechanism when available
-  void OnEvent(mojo::EventPtr event, const mojo::Callback<void()>& callback);
+  void CheckInput();
 
   mojo::gfx::composition::Compositor* const compositor_;
   mojo::ui::ViewManager* const view_manager_;
 
   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
   mojo::FramebufferInfoPtr framebuffer_info_;
+  mojo::Size framebuffer_size_;
   mojo::ui::ViewProviderPtr view_provider_;
 
   ftl::Closure shutdown_callback_;
@@ -48,6 +49,8 @@ class LaunchInstance {
   std::unique_ptr<LauncherViewTree> view_tree_;
 
   mojo::ui::ViewOwnerPtr client_view_owner_;
+
+  InputDeviceMonitor input_device_monitor_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LaunchInstance);
 };

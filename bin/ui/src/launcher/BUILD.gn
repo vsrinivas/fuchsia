@@ -9,8 +9,6 @@ executable("launcher") {
 
   deps = [
     ":lib",
-    "//lib/mtl",
-    "//mojo/public/cpp/application",
     "//mojo/system",
   ]
 }
@@ -27,7 +25,8 @@ source_set("lib") {
     "launcher_view_tree.h",
   ]
 
-  deps = [
+  public_deps = [
+    ":input",
     "//apps/mozart/glue/base",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
@@ -36,8 +35,26 @@ source_set("lib") {
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
+    "//lib/mtl",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
     "//mojo/services/framebuffer/interfaces",
+  ]
+}
+
+source_set("input") {
+  sources = [
+    "input/input_device.cc",
+    "input/input_device.h",
+  ]
+
+  deps = [
+    "//apps/mozart/services/input/interfaces",
+    "//lib/mtl",
+  ]
+
+  libs = [
+    "mxio",
+    "hid",
   ]
 }
