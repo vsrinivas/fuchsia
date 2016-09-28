@@ -33,21 +33,17 @@ template <typename T, typename Enable = void> struct IsPow2Helper;
 
 template <typename T>
 struct IsPow2Helper<T, typename enable_if<is_unsigned_integer<T>::value>::type> {
-    // TODO(johngro) : should 0 be a valid power of two or not?
-    // On the one hand...
-    // lim(X -> 0) log2(X) diverges
-    //
-    // On the other hand hand...
-    // but lim(X -> -inf) 2^X = 0
-    //
-    // For now, we consider 0 to be a power of two.  Users can explicitly check
-    // for zero if they need to exclude it from consideration.
     static constexpr bool is_pow2(T val) {
         return (val != 0) && (((val - 1u) & val) == 0);
     }
 };
 }
 
+// is_pow2<T>(T val)
+//
+// Tests to see if val (which may be any unsigned integer type) is a power of 2
+// or not.  0 is not considered to be a power of 2.
+//
 template <typename T>
 constexpr bool is_pow2(T val) {
     return internal::IsPow2Helper<T>::is_pow2(val);
