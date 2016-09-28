@@ -6,7 +6,7 @@ import("//mojo/public/tools/bindings/mojom.gni")
 
 group("all") {
   deps = [
-    ":component_manager",
+    ":resolver",
     ":story_runner",
   ]
 }
@@ -28,9 +28,9 @@ executable("story_runner") {
   ]
 }
 
-executable("component_manager") {
+executable("resolver") {
   sources = [
-    "component_manager.cc",
+    "resolver.cc",
   ]
 
   deps = [
