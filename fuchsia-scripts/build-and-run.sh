@@ -8,16 +8,23 @@ set -e
 
 MODULAR_DIR="$( cd "$( dirname "$( dirname "${BASH_SOURCE[0]}" )" )" && pwd )"
 ROOT_DIR="$( dirname "$(dirname $MODULAR_DIR)" )"
+GOMA_FLAG=
+JOB_COUNT_FLAG=
+
+if [[ $1 == "--goma" ]]; then
+  GOMA_FLAG=--goma
+  JOB_COUNT_FLAG=-j1000
+fi
 
 # Build sysroot
 $ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
 
 # Generate ninja files with modular autorun in bootfs. Modular autorun will
 # launch story-manager.
-$ROOT_DIR/packages/gn/gen.py -m modular-autorun
+$ROOT_DIR/packages/gn/gen.py -m modular-autorun $GOMA_FLAG
 
 # Build Fuchsia and all its dependencies (including modular).
-$ROOT_DIR/buildtools/ninja -C $ROOT_DIR/out/debug-x86-64
+$ROOT_DIR/buildtools/ninja -C $ROOT_DIR/out/debug-x86-64 $JOB_COUNT_FLAG
 
 # Build Magenta.
 (cd $ROOT_DIR/magenta && make -j32 magenta-pc-x86-64)
