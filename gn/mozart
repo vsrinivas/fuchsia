@@ -36,6 +36,10 @@
             "bootfs_path": "apps/shapes_view"
         },
         {
+            "binary": "spinning_square_view",
+            "bootfs_path": "apps/spinning_square_view"
+        },
+        {
             "binary": "tile_view",
             "bootfs_path": "apps/tile_view"
         },
