@@ -4,5 +4,10 @@
 
 #include "lib/ftl/logging.h"
 
+#if 0
 #define DVLOG(level) FTL_DLOG(INFO)
 #define VLOG_IS_ON(level) true
+#else
+#define DVLOG(level) FTL_EAT_STREAM_PARAMETERS(true)
+#define VLOG_IS_ON(level) false
+#endif
