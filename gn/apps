@@ -16,10 +16,6 @@
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
         {
-            "binary": "component_manager",
-            "bootfs_path": "apps/component_manager"
-        },
-        {
             "binary": "context_service",
             "bootfs_path": "apps/context_service"
         },
@@ -55,6 +51,10 @@
 	    "binary": "maxwell_test",
 	    "bootfs_path": "apps/maxwell_test"
 	},
+        {
+            "binary": "resolver",
+            "bootfs_path": "apps/resolver"
+        },
         {
             "binary": "story_manager",
             "bootfs_path": "apps/story_manager"
