@@ -15,10 +15,6 @@
 
 namespace storage {
 
-struct NodeUpdate {
-  // TODO(nellyv): define the updates.
-};
-
 // A node of the B-Tree holding the commit contents.
 class TreeNode : public Object {
  public:
@@ -26,6 +22,66 @@ class TreeNode : public Object {
   explicit TreeNode(const TreeNode& node);
 
   ~TreeNode() override;
+
+  // A TreeNode builder, based on an initial node and allowing to apply a set of
+  // changes to it. Mutation calls should be sorted in a strictly increasing
+  // order based on the corresponding key of the change with one exception: to
+  // update the child id before a key K, and update the value of the same key,
+  // two calls using the same key should be made. In this case, the
+  // UpdateChildId call should precede the UpdateEntry one:
+  //
+  // node.StartMutation()
+  //     .UpdateChildId(K, child_id)
+  //     .UpdateEntry(Entry{K, V', priority})
+  //     .Finish();
+  class Mutation {
+   public:
+    explicit Mutation(const TreeNode& node);
+    Mutation(Mutation&&) = default;
+
+    ~Mutation();
+
+    // Adds a new entry with the given ids as its left and right children. The
+    // corresponding child nodes are expected to be the result of spliting the
+    // the previous child node in that entry's position.
+    Mutation& AddEntry(const Entry& entry,
+                       const ObjectId& left_id,
+                       const ObjectId& right_id);
+
+    // Updates the value and/or priority of an existing key.
+    Mutation& UpdateEntry(const Entry& entry);
+
+    // Removes the entry with the given |key| from this node and updates the id
+    // of the child in that position. The new |child_id| is expected to be the
+    // result of the merge of the left and right children of the deleted entry.
+    Mutation& RemoveEntry(const std::string& key, const ObjectId& child_id);
+
+    // Updates the id of a child on the left of the entry with the given key.
+    Mutation& UpdateChildId(const std::string& key_after,
+                            const ObjectId& child_id);
+
+    // Creates the new TreeNode as a result of the given updates. After calling
+    // this method, this Mutation object is no longer valid and calling any
+    // methods on it will fail.
+    Status Finish(ObjectId* new_id);
+
+   private:
+    // Copies the entries from the |node_| starting at |node_index_| and until
+    // that entry's key is equal to or greater than the given |key|. If |key| is
+    // empty, all entries until the end of the vector are copied.
+    void CopyUntil(std::string key);
+
+    const TreeNode& node_;
+    // The index of the next entry of the node to be added in the entries of
+    // this mutation.
+    int node_index_ = 0;
+
+    std::vector<Entry> entries_;
+    std::vector<ObjectId> children_;
+    bool finished = false;
+
+    FTL_DISALLOW_COPY_AND_ASSIGN(Mutation);
+  };
 
   // Creates a |TreeNode| object for an existing node and stores it in the given
   // |node|.
@@ -50,9 +106,8 @@ class TreeNode : public Object {
                       const ObjectId& merged_child_id,
                       ObjectId* merged_id);
 
-  // Creates a new tree node by copying this one and applying the given
-  // |updates|. The id of the new node is stored in |copy_id|.
-  Status Copy(std::vector<NodeUpdate>& updates, ObjectId* new_id) const;
+  // Starts a new mutation based on this node. See also |TreeNode::Mutation|.
+  Mutation StartMutation() const;
 
   // Creates two new tree nodes by splitting this one. The |left| one will store
   // entries in [0, index) and the |right| one those in [index, GetKeyCount()).

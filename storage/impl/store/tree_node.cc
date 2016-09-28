@@ -94,9 +94,8 @@ Status TreeNode::Merge(ObjectStore* store,
   return FromEntries(store, entries, children, merged_id);
 }
 
-Status TreeNode::Copy(std::vector<NodeUpdate>& updates,
-                      ObjectId* new_id) const {
-  return Status::NOT_IMPLEMENTED;
+TreeNode::Mutation TreeNode::StartMutation() const {
+  return TreeNode::Mutation(*this);
 }
 
 Status TreeNode::Split(int index,
@@ -187,6 +186,103 @@ Status TreeNode::GetSize(int64_t* size) {
 
 Status TreeNode::GetData(const uint8_t** data) {
   return Status::NOT_IMPLEMENTED;
+}
+
+// TreeNode::Mutation
+TreeNode::Mutation::Mutation(const TreeNode& node) : node_(node) {}
+
+TreeNode::Mutation::~Mutation() {}
+
+TreeNode::Mutation& TreeNode::Mutation::AddEntry(const Entry& entry,
+                                                 const ObjectId& left_id,
+                                                 const ObjectId& right_id) {
+  FTL_DCHECK(!finished);
+  FTL_DCHECK(entries_.empty() || entries_.back().key < entry.key);
+  CopyUntil(entry.key);
+
+  entries_.push_back(entry);
+  if (children_.size() < entries_.size()) {
+    children_.push_back(left_id);
+  } else {
+    // On two consecutive |AddEntry| calls or |RemoveEntry| and AddEntry
+    // calls the last defined child must match the given |left_id|.
+    FTL_DCHECK(children_.back() == left_id);
+  }
+  children_.push_back(right_id);
+
+  return *this;
+}
+
+TreeNode::Mutation& TreeNode::Mutation::UpdateEntry(const Entry& entry) {
+  FTL_DCHECK(!finished);
+  FTL_DCHECK(entries_.empty() || entries_.back().key <= entry.key);
+  CopyUntil(entry.key);
+
+  entries_.push_back(entry);
+  if (children_.size() < entries_.size()) {
+    children_.push_back(node_.children_[node_index_]);
+  }
+  ++node_index_;
+
+  return *this;
+}
+
+TreeNode::Mutation& TreeNode::Mutation::RemoveEntry(const std::string& key,
+                                                    const ObjectId& child_id) {
+  FTL_DCHECK(!finished);
+  FTL_DCHECK(entries_.empty() || entries_.back().key < key);
+  CopyUntil(key);
+
+  FTL_DCHECK(node_.entries_[node_index_].key == key);
+  if (children_.size() == entries_.size()) {
+    children_.push_back(child_id);
+  } else {
+    // On two consecutive |RemoveEntry| calls the last defined child must
+    // match the given |child_id|.
+    FTL_DCHECK(children_.back() == child_id);
+  }
+  ++node_index_;
+
+  return *this;
+}
+
+TreeNode::Mutation& TreeNode::Mutation::UpdateChildId(
+    const std::string& key_after,
+    const ObjectId& child_id) {
+  FTL_DCHECK(!finished);
+  FTL_DCHECK(entries_.empty() || entries_.back().key < key_after);
+  CopyUntil(key_after);
+
+  children_.push_back(child_id);
+  return *this;
+}
+
+Status TreeNode::Mutation::Finish(ObjectId* new_id) {
+  FTL_DCHECK(!finished);
+  CopyUntil("");
+
+  // If the last change was not an AddEntry, the right child of the last entry
+  // is not yet added.
+  if (children_.size() == entries_.size()) {
+    FTL_DCHECK(node_index_ == node_.GetKeyCount());
+    children_.push_back(node_.children_[node_index_]);
+  }
+
+  finished = true;
+  return FromEntries(node_.store_, entries_, children_, new_id);
+}
+
+void TreeNode::Mutation::CopyUntil(std::string key) {
+  while (node_index_ < node_.GetKeyCount() &&
+         (key.empty() || node_.entries_[node_index_].key < key)) {
+    entries_.push_back(node_.entries_[node_index_]);
+    // If a previous change (AddEntry or RemoveEntry) updated the previous
+    // child, ignore node_.children_[i].
+    if (children_.size() < entries_.size()) {
+      children_.push_back(node_.children_[node_index_]);
+    }
+    ++node_index_;
+  }
 }
 
 }  // namespace storage
