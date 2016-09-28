@@ -5,4 +5,4 @@ some simple shapes to a view.
 
 ## USAGE
 
-  $ application_manager "mojo:launcher mojo:shapes_view"
+  $ application_manager mojo:launcher mojo:shapes_view

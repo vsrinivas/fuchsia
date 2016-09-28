@@ -5,6 +5,7 @@
 group("mozart") {
   deps = [
     "//apps/mozart/examples/hello_compositor",
+    "//apps/mozart/examples/jank",
     "//apps/mozart/examples/noodles",
     "//apps/mozart/examples/shapes",
     "//apps/mozart/examples/tile",

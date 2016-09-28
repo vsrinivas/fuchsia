@@ -4,12 +4,17 @@
 
 source_set("skia") {
   sources = [
+    "skia_font_loader.cc",
+    "skia_font_loader.h",
     "skia_surface_holder.cc",
     "skia_surface_holder.h",
+    "skia_vmo_data.cc",
+    "skia_vmo_data.h",
   ]
 
   public_deps = [
     "//apps/mozart/lib/view_framework",
+    "//mojo/services/ui/fonts/interfaces",
     "//third_party/skia",
   ]
 }

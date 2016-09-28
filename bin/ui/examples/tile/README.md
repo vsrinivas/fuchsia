@@ -10,8 +10,8 @@ their Views with the ViewManager for this to work.
 
 Specify the urls of the views to embed as a comma-delimited query string.
 
-  $ application_manager "mojo:launcher mojo:tile_view?views=<app1>[,<app2>[,...]]"
-  $ application_manager "mojo:launcher mojo:tile_view?views=mojo:spinning_cube_view,mojo:noodles_view"
+  $ application_manager mojo:launcher mojo:tile_view?views=<app1>[,<app2>[,...]]
+  $ application_manager mojo:launcher mojo:tile_view?views=mojo:spinning_cube_view,mojo:noodles_view
 
 The query string may also encode tiling options by appending parameters to
 the end of the query string.
