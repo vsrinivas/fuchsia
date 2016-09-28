@@ -6,3 +6,4 @@ import os.path
 
 FUCHSIA_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAGENTA_ROOT = os.path.join(FUCHSIA_ROOT, "magenta")
+BUILDTOOLS_ROOT = os.path.join(FUCHSIA_ROOT, "buildtools")
