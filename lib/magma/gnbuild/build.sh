@@ -8,7 +8,7 @@ set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 magenta_build_dir=$fuchsia_root/packages/prebuilt/downloads/magenta/pc-x86-64
-
+sysroot_path=$fuchsia_root/out/sysroot
 bootfs_output_dir=$fuchsia_root/out/Debug
 build_dir=$1
 if [ "$build_dir" == "" ]
@@ -45,8 +45,8 @@ mkdir -p $bootfs_path/bin
 cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1916
 
 mkdir -p $bootfs_path/lib
-cp $tools_path/sysroot/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
-cp $tools_path/sysroot/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
+cp $sysroot_path/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
+cp $sysroot_path/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
 
 autorun_path=$bootfs_path/autorun
 

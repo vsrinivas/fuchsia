@@ -14,6 +14,10 @@ extern "C" {
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
+
+int devhost_init(void);
+int devhost_cmdline(int argc, char** argv);
+int devhost_start(void);
 }
 
 #include <magenta/types.h>
@@ -235,6 +239,26 @@ mx_driver_t _driver_intel_i915 BUILTIN_DRIVER = {
     .binding = binding,
     .binding_size = sizeof(binding),
 };
+
+int main(int argc, char** argv)
+{
+    int r;
+    if ((r = devhost_init()) < 0) {
+        return r;
+    }
+    if ((r = devhost_cmdline(argc, argv)) < 0) {
+        return r;
+    }
+
+    xprintf("magma main starting\n");
+
+    driver_add(&_driver_intel_i915);
+    r = devhost_start();
+
+    xprintf("magma main returning %d\n", r);
+
+    return r;
+}
 
 static int magma_hook(void* param)
 {
