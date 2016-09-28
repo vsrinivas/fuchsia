@@ -31,11 +31,20 @@ int devhost_start(void);
 #include "gtest/gtest.h"
 #endif
 
-#if MAGMA_READBACK_TEST
+#if MAGMA_VKREADBACK_TEST
+extern "C" {
+#include "vkreadback/vkreadback.h"
+}
+#endif
+
+#if MAGMA_GLREADBACK_TEST
 extern "C" {
 #include <gpureadback.h>
+#include "vkreadback/vkreadback.h"
 }
-#elif MAGMA_SPINNING_CUBE_TEST
+#endif
+
+#if MAGMA_SPINNING_CUBE_TEST
 extern "C" {
 #include "test_spinning_cube.h"
 }
@@ -324,14 +333,19 @@ static int magma_hook(void* param)
     magma::msleep(10);
     msd_device_dump_status(dev->magma_system_device->msd_dev());
 
-#if MAGMA_READBACK_TEST
-    xprintf("running magma readback tests\n");
+#if MAGMA_GLREADBACK_TEST
+    xprintf("running magma glreadback tests\n");
     test_gpu_readback();
+#endif
 
-#elif MAGMA_SPINNING_CUBE_TEST
+#if MAGMA_VKREADBACK_TEST
+    xprintf("running magma vkreadback tests\n");
+    test_vk_readback();
+#endif
+
+#if MAGMA_SPINNING_CUBE_TEST
     xprintf("running magma spinning cube test\n");
     test_spinning_cube();
-
 #endif
 
 #else

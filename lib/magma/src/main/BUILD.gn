@@ -6,7 +6,8 @@ import("//magma/gnbuild/magma.gni")
 
 declare_args() {
   unit_test = true
-  readback_test = true
+  vkreadback_test = false
+  glreadback_test = false
   spinning_cube_test = false
 }
 
@@ -54,10 +55,15 @@ source_set("test_driver") {
     defines += [ "MAGMA_UNIT_TESTS=1" ]
   }
 
-  if (readback_test) {
+  if (vkreadback_test) {
+    deps += [ "$magma_build_root/tests/vkreadback" ]
+    defines += [ "MAGMA_VKREADBACK_TEST=1" ]
+  }
+  if (glreadback_test) {
     deps += [ "$magma_build_root/tests/gpureadback" ]
-    defines += [ "MAGMA_READBACK_TEST=1" ]
-  } else if (spinning_cube_test) {
+    defines += [ "MAGMA_GLREADBACK_TEST=1" ]
+  }
+  if (spinning_cube_test) {
     deps += [ "$magma_build_root/tests/spinning_cube" ]
     defines += [ "MAGMA_SPINNING_CUBE_TEST=1" ]
   }

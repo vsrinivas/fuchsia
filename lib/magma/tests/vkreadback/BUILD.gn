@@ -1,0 +1,18 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+source_set("vkreadback") {
+  sources = [
+    "vkreadback.cc",
+    "vkreadback.h",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "$mesa_build_root/include:vulkan",
+    "$mesa_build_root/src:vulkan_source",
+  ]
+}
