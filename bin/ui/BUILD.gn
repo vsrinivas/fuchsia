@@ -8,6 +8,7 @@ group("mozart") {
     "//apps/mozart/examples/jank",
     "//apps/mozart/examples/noodles",
     "//apps/mozart/examples/shapes",
+    "//apps/mozart/examples/spinning_square",
     "//apps/mozart/examples/tile",
     "//apps/mozart/glue/base",
     "//apps/mozart/glue/gl",
