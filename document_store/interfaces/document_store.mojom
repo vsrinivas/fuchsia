@@ -6,7 +6,7 @@
 module document_store;
 
 import "apps/ledger/api/ledger.mojom";
-import "apps/maxwell/indexing/interfaces/document.mojom"
+import "apps/maxwell/document_store/interfaces/document.mojom";
 
 // Response codes for document store operations.
 enum Status {
@@ -62,13 +62,13 @@ interface DocumentStore {
 
 
 // A Snapshot is a frozen view of the DocumentStore.
-interface Snapshot() {
+interface Snapshot {
   Get(array<string> docids) => (Status status, array<Document> docs);
   GetOne(string docid) => (Status status, Document? doc);
 
   // |docids| is the list of IRIs (Internationalized Resource Identifier) of
   // documents on the page that match the query.
-  Query(Query query) => (Status status, array<Document> docs);
+  ExecuteQuery(Query query) => (Status status, array<Document> docs);
 };
 
 // NOTE: Strawman only. Do not take seriously.
@@ -103,9 +103,9 @@ struct Query {
 };
 
 union Filter {
-  array<Filter> and;
-  array<Filter> or;
-  Filter not;
+  array<Filter> and_op;
+  array<Filter> or_op;
+  Filter not_op;
 
   // Filter matches if the label or whole reference chain exists.
   Reference exists;

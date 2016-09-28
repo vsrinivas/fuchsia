@@ -9,7 +9,7 @@ struct Statement {
   string docid;
   string property;
   Value? value;
-}
+};
 
 // Structure for a property and its value.
 struct Property {
@@ -30,7 +30,7 @@ struct Document {
 union Value {
   string string_value;
   int64 int_value;
-  float64 float_value;
+  double float_value;
   array<uint8> binary;
   string iri;
 };

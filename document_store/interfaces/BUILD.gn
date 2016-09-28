@@ -6,7 +6,8 @@ import("//mojo/public/tools/bindings/mojom.gni")
 
 mojom("interfaces") {
   sources = [
-    "indexing.mojom"
+    "document.mojom",
+    "document_store.mojom",
   ]
 
   deps = [
