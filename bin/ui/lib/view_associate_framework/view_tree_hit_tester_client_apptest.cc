@@ -26,13 +26,14 @@ class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
 
     mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
-    view_inspector_client_ =
-        new mojo::ui::ViewInspectorClient(view_inspector.Pass());
+    view_inspector_client_ = ftl::MakeRefCounted<mojo::ui::ViewInspectorClient>(
+        view_inspector.Pass());
 
     view_tree_token_ = mojo::ui::ViewTreeToken::New();
     view_tree_token_->value = 1u;
-    view_tree_hit_tester_client_ = new mojo::ui::ViewTreeHitTesterClient(
-        view_inspector_client_, view_tree_token_.Clone());
+    view_tree_hit_tester_client_ =
+        ftl::MakeRefCounted<mojo::ui::ViewTreeHitTesterClient>(
+            view_inspector_client_, view_tree_token_.Clone());
   }
 
  protected:

@@ -24,8 +24,8 @@ class ViewInspectorClientTest : public mojo::test::ApplicationTestBase {
 
     mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
-    view_inspector_client_ =
-        new mojo::ui::ViewInspectorClient(view_inspector.Pass());
+    view_inspector_client_ = ftl::MakeRefCounted<mojo::ui::ViewInspectorClient>(
+        view_inspector.Pass());
   }
 
  protected:

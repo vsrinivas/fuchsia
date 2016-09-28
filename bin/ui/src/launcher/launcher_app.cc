@@ -125,8 +125,8 @@ void LauncherApp::LaunchInternal(
     mojo::ui::ViewProviderPtr view_provider) {
   const uint32_t next_id = next_id_++;
   std::unique_ptr<LaunchInstance> instance(new LaunchInstance(
-      std::move(framebuffer), std::move(framebuffer_info),
-      std::move(view_provider), compositor_.get(), view_manager_.get(),
+      compositor_.get(), view_manager_.get(), std::move(framebuffer),
+      std::move(framebuffer_info), std::move(view_provider),
       [this, next_id] { OnLaunchTermination(next_id); }));
   instance->Launch();
   launch_instances_.emplace(next_id, std::move(instance));

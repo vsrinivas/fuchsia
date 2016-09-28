@@ -21,11 +21,13 @@ LauncherViewTree::LauncherViewTree(
     const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
-      framebuffer_(std::move(framebuffer)),
-      framebuffer_info_(std::move(framebuffer_info)),
+      framebuffer_size_(*framebuffer_info->size),
       shutdown_callback_(shutdown_callback),
       view_tree_listener_binding_(this),
       view_container_listener_binding_(this) {
+  FTL_DCHECK(compositor_);
+  FTL_DCHECK(view_manager_);
+  FTL_DCHECK(framebuffer);
   FTL_DCHECK(framebuffer_info);
 
   // Register the view tree.
@@ -132,7 +134,7 @@ void LauncherViewTree::UpdateViewProperties() {
   // TODO(mikejurka): Create a way to get pixel ratio from framebuffer
   properties->display_metrics->device_pixel_ratio = 1.0;
   properties->view_layout = mojo::ui::ViewLayout::New();
-  properties->view_layout->size = framebuffer_info_->size.Clone();
+  properties->view_layout->size = framebuffer_size_.Clone();
 
   view_container_->SetChildProperties(root_key_,
                                       mojo::gfx::composition::kSceneVersionNone,

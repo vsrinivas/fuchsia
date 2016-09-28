@@ -12,31 +12,33 @@
 namespace launcher {
 
 LaunchInstance::LaunchInstance(
+    mojo::gfx::composition::Compositor* compositor,
+    mojo::ui::ViewManager* view_manager,
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
     mojo::ui::ViewProviderPtr view_provider,
-    mojo::gfx::composition::Compositor* compositor,
-    mojo::ui::ViewManager* view_manager,
     const ftl::Closure& shutdown_callback)
-    : framebuffer_(std::move(framebuffer)),
+    : compositor_(compositor),
+      view_manager_(view_manager),
+      framebuffer_(std::move(framebuffer)),
       framebuffer_info_(std::move(framebuffer_info)),
       view_provider_(std::move(view_provider)),
-      compositor_(compositor),
-      view_manager_(view_manager),
-      shutdown_callback_(shutdown_callback) {}
+      shutdown_callback_(shutdown_callback) {
+  FTL_DCHECK(compositor_);
+  FTL_DCHECK(view_manager_);
+  FTL_DCHECK(framebuffer_);
+  FTL_DCHECK(framebuffer_info_);
+  FTL_DCHECK(view_provider_);
+}
 
 LaunchInstance::~LaunchInstance() {}
 
 void LaunchInstance::Launch() {
   TRACE_EVENT0("launcher", __func__);
 
-  InitViewTree();
-
   view_provider_->CreateView(GetProxy(&client_view_owner_), nullptr);
   view_provider_.reset();
-}
 
-void LaunchInstance::InitViewTree() {
   view_tree_.reset(
       new LauncherViewTree(compositor_, view_manager_, std::move(framebuffer_),
                            std::move(framebuffer_info_), shutdown_callback_));

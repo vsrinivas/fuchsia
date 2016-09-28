@@ -48,9 +48,8 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
 
   mojo::gfx::composition::Compositor* compositor_;
   mojo::ui::ViewManager* view_manager_;
+  mojo::Size framebuffer_size_;
 
-  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
-  mojo::FramebufferInfoPtr framebuffer_info_;
   ftl::Closure shutdown_callback_;
 
   mojo::Binding<mojo::ui::ViewTreeListener> view_tree_listener_binding_;

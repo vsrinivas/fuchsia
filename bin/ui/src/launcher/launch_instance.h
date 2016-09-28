@@ -22,27 +22,27 @@ class LauncherViewTree;
 
 class LaunchInstance {
  public:
-  LaunchInstance(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+  LaunchInstance(mojo::gfx::composition::Compositor* compositor,
+                 mojo::ui::ViewManager* view_manager,
+                 mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                  mojo::FramebufferInfoPtr framebuffer_info,
                  mojo::ui::ViewProviderPtr view_provider,
-                 mojo::gfx::composition::Compositor* compositor,
-                 mojo::ui::ViewManager* view_manager,
                  const ftl::Closure& shutdown_callback);
   ~LaunchInstance();
 
   void Launch();
 
  private:
-  void InitViewTree();
   // TODO(jpoichet) Re-wire to new native input mechanism when available
   void OnEvent(mojo::EventPtr event, const mojo::Callback<void()>& callback);
+
+  mojo::gfx::composition::Compositor* const compositor_;
+  mojo::ui::ViewManager* const view_manager_;
 
   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
   mojo::FramebufferInfoPtr framebuffer_info_;
   mojo::ui::ViewProviderPtr view_provider_;
 
-  mojo::gfx::composition::Compositor* const compositor_;
-  mojo::ui::ViewManager* const view_manager_;
   ftl::Closure shutdown_callback_;
 
   std::unique_ptr<LauncherViewTree> view_tree_;

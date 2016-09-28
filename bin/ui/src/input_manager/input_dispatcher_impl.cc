@@ -31,9 +31,9 @@ InputDispatcherImpl::InputDispatcherImpl(
     mojo::InterfaceRequest<mojo::ui::InputDispatcher> request)
     : associate_(associate),
       view_tree_token_(view_tree_token.Pass()),
-      hit_tester_(
-          new mojo::ui::ViewTreeHitTesterClient(associate_->inspector(),
-                                                view_tree_token_.Clone())),
+      hit_tester_(ftl::MakeRefCounted<mojo::ui::ViewTreeHitTesterClient>(
+          associate_->inspector(),
+          view_tree_token_.Clone())),
       binding_(this, request.Pass()),
       weak_factory_(this) {
   FTL_DCHECK(associate_);

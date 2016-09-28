@@ -47,6 +47,7 @@ FramebufferOutput::FramebufferOutput(
 
   SkColorType sk_color_type;
   SkAlphaType sk_alpha_type;
+  sk_sp<SkColorSpace> sk_color_space;
   switch (framebuffer_info_->format) {
     case mojo::FramebufferFormat::RGB_565:
       sk_color_type = kRGB_565_SkColorType;
@@ -55,10 +56,12 @@ FramebufferOutput::FramebufferOutput(
     case mojo::FramebufferFormat::ARGB_8888:   // little-endian packed 32-bit
       sk_color_type = kBGRA_8888_SkColorType;  // ARGB word has BGRA byte order
       sk_alpha_type = kPremul_SkAlphaType;
+      sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
       break;
     case mojo::FramebufferFormat::RGB_x888:    // little-endian packed 32-bit
       sk_color_type = kBGRA_8888_SkColorType;  // xRGB word has BGRx byte order
       sk_alpha_type = kOpaque_SkAlphaType;
+      sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
       break;
     default:
       FTL_LOG(ERROR) << "Unknown color type: " << framebuffer_info_->format;
@@ -73,8 +76,6 @@ FramebufferOutput::FramebufferOutput(
                 << ", sk_color_type=" << sk_color_type
                 << ", sk_alpha_type=" << sk_alpha_type;
 
-  sk_sp<SkColorSpace> sk_color_space =
-      SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
   framebuffer_surface_ = SkSurface::MakeRasterDirect(
       SkImageInfo::Make(width, height, sk_color_type, sk_alpha_type,
                         sk_color_space),

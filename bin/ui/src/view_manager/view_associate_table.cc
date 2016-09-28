@@ -51,10 +51,9 @@ void ViewAssociateTable::RegisterViewAssociate(
   // Connect the associate to our view inspector.
   mojo::ui::ViewInspectorPtr inspector_ptr;
   data->inspector_binding.Bind(GetProxy(&inspector_ptr));
-  data->associate->Connect(
-      inspector_ptr.Pass(), [this](mojo::ui::ViewAssociateInfoPtr info) {
-        OnConnected(pending_connection_count_, info.Pass());
-      });
+  data->associate->Connect(inspector_ptr.Pass(), [
+    this, index = pending_connection_count_
+  ](mojo::ui::ViewAssociateInfoPtr info) { OnConnected(index, info.Pass()); });
 
   // Wait for the associate to connect to our view inspector.
   pending_connection_count_++;
