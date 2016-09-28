@@ -7,6 +7,7 @@ group("maxwell") {
     "acquirers:all",
     "agents:all",
     "context_service:all",
+    "suggestions",
     ":maxwell_test",
   ]
 }
