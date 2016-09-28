@@ -30,10 +30,7 @@ public:
     void CreateAndDestroy()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-        if (!platform_device) {
-            printf("No platform device\n");
-            return;
-        }
+        ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
@@ -58,10 +55,7 @@ public:
     void Dump()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-        if (!platform_device) {
-            printf("No platform device\n");
-            return;
-        }
+        ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
@@ -111,10 +105,7 @@ public:
     void BatchBuffer()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-        if (!platform_device) {
-            printf("No platform device\n");
-            return;
-        }
+        ASSERT_NE(platform_device, nullptr);
 
         MsdIntelDriver* driver = MsdIntelDriver::Create();
         ASSERT_NE(driver, nullptr);
