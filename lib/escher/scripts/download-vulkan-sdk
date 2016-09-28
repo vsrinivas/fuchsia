@@ -6,5 +6,71 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# Not yet implemented, just a stub.
 readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly INSTALL_DIR="${SCRIPT_DIR}/../third_party/vulkansdk"
+readonly TEMP_DIR=$(mktemp -d /tmp/escher-download-vulkan-sdk.XXXXXX)
+if [ $? -ne 0 ]; then
+  echo "ERROR: Escher download-vulkan-sdk: failed to create TEMP_DIR !!"
+  exit 99
+fi
+
+# Only Linux x86_64 supported for now.
+readonly PLATFORM="linux"
+readonly ARCH="x86_64"
+
+# Called when something goes wrong.
+panic () {
+  echo "ERROR: Escher download-vulkan-sdk: $1"
+  rm -fr "${TEMP_DIR}"
+  exit 99
+}
+
+# Obtain the SHA of the VulkanSDK installer.
+readonly REQUIRED_SHA_FILE="${SCRIPT_DIR}/../third_party/SHAs/required/vulkansdk"
+if [ ! -f "${REQUIRED_SHA_FILE}" ]; then
+  panic "Required SHA file does not exist ${REQUIRED_SHA_FILE}"
+fi
+readonly REQUIRED_SHA=$(cat "${REQUIRED_SHA_FILE}" | tr -d '[[:space:]]')
+if [ ${#REQUIRED_SHA} != 64 ]; then
+  panic "Required SHA file does not contain Base-64 encoded SHA-256 (hash: ${REQUIRED_SHA} file: ${REQUIRED_SHA_FILE})"
+fi
+
+# Compare SHAs to decide whether the correct Vulkan SDK version is already installed.
+readonly INSTALLED_SHA_FILE="${SCRIPT_DIR}/../third_party/SHAs/installed/vulkansdk"
+if [ -f "${INSTALLED_SHA_FILE}" ]; then
+  readonly INSTALLED_SHA=$(cat "${INSTALLED_SHA_FILE}" | tr -d '[[:space:]]')
+  if [ "${REQUIRED_SHA}" = "${INSTALLED_SHA}" ]; then
+    # Required Vulkan SDK is already installed.
+    rm -fr "${TEMP_DIR}"
+    exit 0
+  fi
+fi
+
+echo "Escher: Downloading Vulkan SDK from Google Storage."
+readonly GS_BUCKET="gs://fuchsia-build/lib/escher/third_party/vulkansdk/$PLATFORM/$ARCH"
+readonly GS_PATH="${GS_BUCKET}/${REQUIRED_SHA}"
+readonly SDK_INSTALLER="${TEMP_DIR}/vulkansdk-${PLATFORM}-${ARCH}.run"
+gsutil cp "${GS_PATH}" "${SDK_INSTALLER}" 2> /dev/null
+if [ $? -ne 0 ]; then
+  panic "Failed to download Vulkan SDK from Google Storage: ${GS_PATH} !!"
+fi
+
+echo "Escher: Running Vulkan SDK installer."
+chmod a+x "${SDK_INSTALLER}"
+cd "${TEMP_DIR}"
+"${SDK_INSTALLER}" --quiet --noprogress
+if [ $? -ne 0 ]; then
+  panic "Vulkan SDK installion failed !!"
+fi
+
+echo "Escher: Moving Vulkan SDK to final location."
+# The installed VulkanSDK/ folder contains a top-level directory named with the
+# version number.  This is inconvenient, so get rid of it.
+readonly ACTUAL_SDK_DIR=$(dirname $(find VulkanSDK/ -name Getting_Started.html))
+if [ ! -d "${ACTUAL_SDK_DIR}" ]; then
+  panic "Failed to strip version-number directory from VulkanSDK !!"
+fi
+rm -fr "${INSTALL_DIR}"
+mv "${ACTUAL_SDK_DIR}" "${INSTALL_DIR}"
+cp -f "${REQUIRED_SHA_FILE}" "${INSTALLED_SHA_FILE}"
+rm -fr "${TEMP_DIR}"
