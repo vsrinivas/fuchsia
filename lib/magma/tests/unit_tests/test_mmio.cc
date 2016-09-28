@@ -47,10 +47,7 @@ TEST(MagmaUtil, MockMmio)
 TEST(MagmaUtil, PlatformMmio)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    if (!platform_device) {
-        printf("No platform device\n");
-        return;
-    }
+    ASSERT_NE(platform_device, nullptr);
 
     uint32_t pci_bar = 0;
 

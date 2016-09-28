@@ -8,12 +8,8 @@
 
 TEST(MsdContext, CreateAndDestroy)
 {
-
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    if (!platform_device) {
-        printf("No platform device\n");
-        return;
-    }
+    ASSERT_NE(platform_device, nullptr);
 
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, platform_device->GetDeviceHandle());

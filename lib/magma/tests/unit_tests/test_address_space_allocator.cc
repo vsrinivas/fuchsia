@@ -24,7 +24,7 @@ public:
 
 static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2)
 {
-    printf("test_simple_allocator align_pow2 0x%x\n", align_pow2);
+    DLOG("test_simple_allocator align_pow2 0x%x\n", align_pow2);
 
     uint64_t expected_addr = allocator->base();
     uint64_t addr;
@@ -100,8 +100,8 @@ static void stress_test_allocator(AddressSpaceAllocator* allocator, uint8_t alig
 {
     unsigned int num_init = allocator->size() / max_alloc_size * 3 / 2;
 
-    printf("test_allocator align_pow2 0x%x num_iterations %d num_init %u\n", align_pow2,
-           num_iterations, num_init);
+    DLOG("test_allocator align_pow2 0x%x num_iterations %d num_init %u\n", align_pow2,
+         num_iterations, num_init);
 
     std::vector<std::unique_ptr<Region>> allocs;
     uint64_t addr;

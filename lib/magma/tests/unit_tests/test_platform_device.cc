@@ -10,10 +10,7 @@
 TEST(MagmaUtil, PlatformDevice)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    if (!platform_device) {
-        printf("No platform device\n");
-        return;
-    }
+    ASSERT_NE(platform_device, nullptr);
 
     uint16_t vendor_id = 0;
     bool ret = platform_device->ReadPciConfig16(0, &vendor_id);

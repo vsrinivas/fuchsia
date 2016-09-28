@@ -8,8 +8,6 @@
 
 static void TestPlatformBuffer(uint64_t size)
 {
-    printf("TestPlatformBuffer size 0x%llx\n", size);
-
     std::unique_ptr<magma::PlatformBuffer> buffer = magma::PlatformBuffer::Create(size);
     if (size == 0) {
         EXPECT_EQ(buffer, nullptr);
@@ -117,8 +115,6 @@ static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffe
 
 static void TestPlatformBufferPassing()
 {
-    printf("TestPlatformBufferPassing\n");
-
     std::vector<msd_platform_buffer*> token(2);
     std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
