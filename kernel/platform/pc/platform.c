@@ -163,7 +163,7 @@ void platform_early_display_init(void) {
     if (bootloader_fb_base == 0) {
         return;
     }
-    if (cmdline_get_bool("gfxconsole.early", true) == false) {
+    if (cmdline_get_bool("gfxconsole.early", false) == false) {
         early_console_disabled = true;
         return;
     }

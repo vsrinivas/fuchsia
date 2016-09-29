@@ -20,7 +20,7 @@ option off unless you suspect the crashlogger is causing problems.
 
 ## gfxconsole.early=<bool>
 
-This option (enabled by default) requests that the kernel start a graphics
+This option (disabled by default) requests that the kernel start a graphics
 console during early boot (if possible), to display kernel debug print
 messages while the system is starting.  When userspace starts up, a usermode
 graphics console driver takes over.
