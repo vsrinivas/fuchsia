@@ -19,30 +19,30 @@ namespace input_manager {
 class ViewTreeHitTester;
 
 // InputManager's ViewAssociate interface implementation.
-class InputAssociate : public mojo::ui::ViewAssociate {
+class InputAssociate : public mozart::ViewAssociate {
  public:
   InputAssociate();
   ~InputAssociate() override;
 
-  const ftl::RefPtr<mojo::ui::ViewInspectorClient>& inspector() {
+  const ftl::RefPtr<mozart::ViewInspectorClient>& inspector() {
     return inspector_;
   }
 
   // |ViewAssociate|:
-  void Connect(mojo::InterfaceHandle<mojo::ui::ViewInspector> inspector,
+  void Connect(mojo::InterfaceHandle<mozart::ViewInspector> inspector,
                const ConnectCallback& callback) override;
   void ConnectToViewService(
-      mojo::ui::ViewTokenPtr view_token,
+      mozart::ViewTokenPtr view_token,
       const mojo::String& service_name,
       mojo::ScopedMessagePipeHandle client_handle) override;
   void ConnectToViewTreeService(
-      mojo::ui::ViewTreeTokenPtr view_tree_token,
+      mozart::ViewTreeTokenPtr view_tree_token,
       const mojo::String& service_name,
       mojo::ScopedMessagePipeHandle client_handle) override;
 
   // Delivers an event to a view.
-  void DeliverEvent(const mojo::ui::ViewToken* view_token,
-                    mojo::EventPtr event);
+  void DeliverEvent(const mozart::ViewToken* view_token,
+                    mozart::EventPtr event);
 
   // Callbacks.
   void OnInputConnectionDied(InputConnectionImpl* connection);
@@ -50,13 +50,13 @@ class InputAssociate : public mojo::ui::ViewAssociate {
 
  private:
   void CreateInputConnection(
-      mojo::ui::ViewTokenPtr view_token,
-      mojo::InterfaceRequest<mojo::ui::InputConnection> request);
+      mozart::ViewTokenPtr view_token,
+      mojo::InterfaceRequest<mozart::InputConnection> request);
   void CreateInputDispatcher(
-      mojo::ui::ViewTreeTokenPtr view_tree_token,
-      mojo::InterfaceRequest<mojo::ui::InputDispatcher> request);
+      mozart::ViewTreeTokenPtr view_tree_token,
+      mojo::InterfaceRequest<mozart::InputDispatcher> request);
 
-  ftl::RefPtr<mojo::ui::ViewInspectorClient> inspector_;
+  ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>
       input_connections_by_view_token_;
   std::unordered_map<uint32_t, std::unique_ptr<InputDispatcherImpl>>

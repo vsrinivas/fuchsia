@@ -9,9 +9,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace mojo {
-namespace gfx {
-namespace composition {
+namespace mozart {
 
 // Tracks frame scheduling information.
 class FrameTracker {
@@ -24,9 +22,7 @@ class FrameTracker {
 
   // Returns the current frame info.
   // This value is not meaningful when |frame_count()| is zero.
-  const mojo::gfx::composition::FrameInfo& frame_info() const {
-    return frame_info_;
-  }
+  const FrameInfo& frame_info() const { return frame_info_; }
 
   // Returns the difference between the previous frame time and the
   // current frame time, or 0 if this is the first frame.
@@ -44,19 +40,16 @@ class FrameTracker {
   //
   // Whenever an application receives new frame scheduling information from the
   // system, it should call this function before using it.
-  void Update(const mojo::gfx::composition::FrameInfo& raw_frame_info,
-              MojoTimeTicks now);
+  void Update(const FrameInfo& raw_frame_info, MojoTimeTicks now);
 
  private:
   uint64_t frame_count_ = 0u;
-  mojo::gfx::composition::FrameInfo frame_info_;
+  FrameInfo frame_info_;
   ftl::TimeDelta frame_time_delta_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FrameTracker);
 };
 
-}  // namespace composition
-}  // namespace gfx
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_SERVICES_GFX_COMPOSITION_CPP_SCHEDULING_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.gfx.composition;
+[DartPackage="mozart"]
+module mozart;
 
 // A scene token is an opaque transferable reference to a scene.
 //

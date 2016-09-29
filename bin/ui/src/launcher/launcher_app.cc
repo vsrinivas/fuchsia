@@ -71,11 +71,11 @@ void LauncherApp::InitViewAssociates(
   for (const auto& url : associate_urls) {
     // Connect to the ViewAssociate.
     DVLOG(2) << "Connecting to ViewAssociate " << url;
-    mojo::ui::ViewAssociatePtr view_associate;
+    mozart::ViewAssociatePtr view_associate;
     mojo::ConnectToService(shell(), url, GetProxy(&view_associate));
 
     // Wire up the associate to the ViewManager.
-    mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
+    mozart::ViewAssociateOwnerPtr view_associate_owner;
     view_manager_->RegisterViewAssociate(std::move(view_associate),
                                          GetProxy(&view_associate_owner), url);
 
@@ -111,7 +111,7 @@ void LauncherApp::Launch(const mojo::String& application_url) {
     FTL_CHECK(framebuffer);
     FTL_CHECK(framebuffer_info);
 
-    mojo::ui::ViewProviderPtr view_provider;
+    mozart::ViewProviderPtr view_provider;
     mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
 
     LaunchInternal(std::move(framebuffer), std::move(framebuffer_info),
@@ -122,7 +122,7 @@ void LauncherApp::Launch(const mojo::String& application_url) {
 void LauncherApp::LaunchInternal(
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
-    mojo::ui::ViewProviderPtr view_provider) {
+    mozart::ViewProviderPtr view_provider) {
   const uint32_t next_id = next_id_++;
   std::unique_ptr<LaunchInstance> instance(new LaunchInstance(
       compositor_.get(), view_manager_.get(), std::move(framebuffer),

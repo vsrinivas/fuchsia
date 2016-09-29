@@ -15,11 +15,11 @@ namespace launcher {
 constexpr uint16_t kInputPollIntervalMilliseconds = 20;
 
 LaunchInstance::LaunchInstance(
-    mojo::gfx::composition::Compositor* compositor,
-    mojo::ui::ViewManager* view_manager,
+    mozart::Compositor* compositor,
+    mozart::ViewManager* view_manager,
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
-    mojo::ui::ViewProviderPtr view_provider,
+    mozart::ViewProviderPtr view_provider,
     const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
@@ -56,7 +56,7 @@ void LaunchInstance::Launch() {
 
 void LaunchInstance::CheckInput() {
   input_device_monitor_.CheckInput(
-      [this](mojo::EventPtr event) {
+      [this](mozart::EventPtr event) {
         view_tree_->DispatchEvent(std::move(event));
       },
       framebuffer_size_);

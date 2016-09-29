@@ -19,18 +19,18 @@
 namespace view_manager {
 namespace {
 constexpr uint32_t kSceneResourceId = 1u;
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
-bool Validate(const mojo::ui::DisplayMetrics& value) {
+bool Validate(const mozart::DisplayMetrics& value) {
   return std::isnormal(value.device_pixel_ratio) &&
          value.device_pixel_ratio > 0.f;
 }
 
-bool Validate(const mojo::ui::ViewLayout& value) {
+bool Validate(const mozart::ViewLayout& value) {
   return value.size && value.size->width >= 0 && value.size->height >= 0;
 }
 
-bool Validate(const mojo::ui::ViewProperties& value) {
+bool Validate(const mozart::ViewProperties& value) {
   if (value.display_metrics && !Validate(*value.display_metrics))
     return false;
   if (value.view_layout && !Validate(*value.view_layout))
@@ -40,12 +40,12 @@ bool Validate(const mojo::ui::ViewProperties& value) {
 
 // Returns true if the properties are valid and are sufficient for
 // operating the view tree.
-bool IsComplete(const mojo::ui::ViewProperties& value) {
+bool IsComplete(const mozart::ViewProperties& value) {
   return Validate(value) && value.view_layout && value.display_metrics;
 }
 
-void ApplyOverrides(mojo::ui::ViewProperties* value,
-                    const mojo::ui::ViewProperties* overrides) {
+void ApplyOverrides(mozart::ViewProperties* value,
+                    const mozart::ViewProperties* overrides) {
   if (!overrides)
     return;
   if (overrides->display_metrics)
@@ -53,9 +53,13 @@ void ApplyOverrides(mojo::ui::ViewProperties* value,
   if (overrides->view_layout)
     value->view_layout = overrides->view_layout.Clone();
 }
+
+std::string SanitizeLabel(const mojo::String& label) {
+  return label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
+}
 }  // namespace
 
-ViewRegistry::ViewRegistry(mojo::gfx::composition::CompositorPtr compositor)
+ViewRegistry::ViewRegistry(mozart::CompositorPtr compositor)
     : compositor_(compositor.Pass()) {}
 
 ViewRegistry::~ViewRegistry() {}
@@ -63,9 +67,9 @@ ViewRegistry::~ViewRegistry() {}
 // REGISTERING ASSOCIATES
 
 void ViewRegistry::RegisterViewAssociate(
-    mojo::ui::ViewInspector* view_inspector,
-    mojo::ui::ViewAssociatePtr view_associate,
-    mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner> view_associate_owner,
+    mozart::ViewInspector* view_inspector,
+    mozart::ViewAssociatePtr view_associate,
+    mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
     const mojo::String& label) {
   associate_table_.RegisterViewAssociate(view_inspector, view_associate.Pass(),
                                          view_associate_owner.Pass(), label);
@@ -78,25 +82,23 @@ void ViewRegistry::FinishedRegisteringViewAssociates() {
 // CREATE / DESTROY VIEWS
 
 void ViewRegistry::CreateView(
-    mojo::InterfaceRequest<mojo::ui::View> view_request,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
-    mojo::ui::ViewListenerPtr view_listener,
+    mojo::InterfaceRequest<mozart::View> view_request,
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    mozart::ViewListenerPtr view_listener,
     const mojo::String& label) {
   FTL_DCHECK(view_request.is_pending());
   FTL_DCHECK(view_owner_request.is_pending());
   FTL_DCHECK(view_listener);
 
-  auto view_token = mojo::ui::ViewToken::New();
+  auto view_token = mozart::ViewToken::New();
   view_token->value = next_view_token_value_++;
   FTL_CHECK(view_token->value);
   FTL_CHECK(!FindView(view_token->value));
 
   // Create the state and bind the interfaces to it.
-  std::string sanitized_label =
-      label.get().substr(0, mojo::ui::kLabelMaxLength);
   ViewState* view_state =
       new ViewState(this, view_token.Pass(), view_request.Pass(),
-                    view_listener.Pass(), sanitized_label);
+                    view_listener.Pass(), SanitizeLabel(label));
   view_state->BindOwner(view_owner_request.Pass());
 
   // Add to registry and return token.
@@ -129,23 +131,21 @@ void ViewRegistry::UnregisterView(ViewState* view_state) {
 // CREATE / DESTROY VIEW TREES
 
 void ViewRegistry::CreateViewTree(
-    mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
-    mojo::ui::ViewTreeListenerPtr view_tree_listener,
+    mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+    mozart::ViewTreeListenerPtr view_tree_listener,
     const mojo::String& label) {
   FTL_DCHECK(view_tree_request.is_pending());
   FTL_DCHECK(view_tree_listener);
 
-  auto view_tree_token = mojo::ui::ViewTreeToken::New();
+  auto view_tree_token = mozart::ViewTreeToken::New();
   view_tree_token->value = next_view_tree_token_value_++;
   FTL_CHECK(view_tree_token->value);
   FTL_CHECK(!FindViewTree(view_tree_token->value));
 
   // Create the state and bind the interfaces to it.
-  std::string sanitized_label =
-      label.get().substr(0, mojo::ui::kLabelMaxLength);
   ViewTreeState* tree_state =
       new ViewTreeState(this, view_tree_token.Pass(), view_tree_request.Pass(),
-                        view_tree_listener.Pass(), sanitized_label);
+                        view_tree_listener.Pass(), SanitizeLabel(label));
 
   // Add to registry.
   view_trees_by_token_.emplace(tree_state->view_tree_token()->value,
@@ -204,16 +204,15 @@ void ViewRegistry::UnregisterChildren(ViewContainerState* container_state) {
 
 // SCENE MANAGEMENT
 
-void ViewRegistry::CreateScene(
-    ViewState* view_state,
-    mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene) {
+void ViewRegistry::CreateScene(ViewState* view_state,
+                               mojo::InterfaceRequest<mozart::Scene> scene) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   FTL_DCHECK(scene.is_pending());
   DVLOG(1) << "CreateScene: view=" << view_state;
 
   compositor_->CreateScene(scene.Pass(), view_state->label(), [
     this, weak = view_state->GetWeakPtr()
-  ](mojo::gfx::composition::SceneTokenPtr scene_token) {
+  ](mozart::SceneTokenPtr scene_token) {
     if (weak)
       OnViewSceneTokenAvailable(weak, scene_token.Pass());
   });
@@ -221,7 +220,7 @@ void ViewRegistry::CreateScene(
 
 void ViewRegistry::OnViewSceneTokenAvailable(
     ftl::WeakPtr<ViewState> view_state_weak,
-    mojo::gfx::composition::SceneTokenPtr scene_token) {
+    mozart::SceneTokenPtr scene_token) {
   FTL_DCHECK(scene_token);
   ViewState* view_state = view_state_weak.get();
   if (!view_state)
@@ -242,7 +241,7 @@ void ViewRegistry::OnViewSceneTokenAvailable(
 
 void ViewRegistry::OnStubSceneTokenAvailable(
     ftl::WeakPtr<ViewStub> view_stub_weak,
-    mojo::gfx::composition::SceneTokenPtr scene_token) {
+    mozart::SceneTokenPtr scene_token) {
   FTL_DCHECK(scene_token);
 
   ViewStub* view_stub = view_stub_weak.get();
@@ -259,7 +258,7 @@ void ViewRegistry::OnStubSceneTokenAvailable(
     PublishStubScene(view_stub->state());
 
   // Send view info to the container including the scene token.
-  auto view_info = mojo::ui::ViewInfo::New();
+  auto view_info = mozart::ViewInfo::New();
   view_info->scene_token = scene_token.Pass();
   if (view_stub->container()) {
     SendChildAttached(view_stub->container(), view_stub->key(),
@@ -278,32 +277,33 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
   if (!view_state->view_stub())
     return;
 
-  FTL_DCHECK(view_state->view_stub()->stub_scene());  // we know view is attached
+  FTL_DCHECK(
+      view_state->view_stub()->stub_scene());  // we know view is attached
   DVLOG(2) << "PublishStubScene: view=" << view_state
            << ", view_stub=" << view_state->view_stub() << ", stub_scene_token="
            << view_state->view_stub()->stub_scene_token();
 
-  auto update = mojo::gfx::composition::SceneUpdate::New();
+  auto update = mozart::SceneUpdate::New();
   update->clear_resources = true;
   update->clear_nodes = true;
 
   if (view_state->scene_token() && view_state->issued_properties()) {
-    auto scene_resource = mojo::gfx::composition::Resource::New();
-    scene_resource->set_scene(mojo::gfx::composition::SceneResource::New());
+    auto scene_resource = mozart::Resource::New();
+    scene_resource->set_scene(mozart::SceneResource::New());
     scene_resource->get_scene()->scene_token =
         view_state->scene_token()->Clone();
     update->resources.insert(kSceneResourceId, scene_resource.Pass());
 
-    const mojo::ui::ViewLayoutPtr& layout =
+    const mozart::ViewLayoutPtr& layout =
         view_state->issued_properties()->view_layout;
     FTL_DCHECK(layout && layout->size);
 
-    auto root_node = mojo::gfx::composition::Node::New();
+    auto root_node = mozart::Node::New();
     root_node->content_clip = mojo::RectF::New();
     root_node->content_clip->width = layout->size->width;
     root_node->content_clip->height = layout->size->height;
-    root_node->op = mojo::gfx::composition::NodeOp::New();
-    root_node->op->set_scene(mojo::gfx::composition::SceneNodeOp::New());
+    root_node->op = mozart::NodeOp::New();
+    root_node->op->set_scene(mozart::SceneNodeOp::New());
     root_node->op->get_scene()->scene_resource_id = kSceneResourceId;
     root_node->op->get_scene()->scene_version =
         view_state->issued_scene_version();
@@ -311,7 +311,7 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
   }
   view_state->view_stub()->stub_scene()->Update(update.Pass());
 
-  auto metadata = mojo::gfx::composition::SceneMetadata::New();
+  auto metadata = mozart::SceneMetadata::New();
   metadata->version = view_state->view_stub()->scene_version();
   view_state->view_stub()->stub_scene()->Publish(metadata.Pass());
 
@@ -322,7 +322,7 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
 // RENDERING
 
 void ViewRegistry::SetRenderer(ViewTreeState* tree_state,
-                               mojo::gfx::composition::RendererPtr renderer) {
+                               mozart::RendererPtr renderer) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(1) << "SetRenderer: tree=" << tree_state;
 
@@ -359,8 +359,7 @@ void ViewRegistry::SetRendererRootScene(ViewTreeState* tree_state) {
   ViewStub* root_stub = tree_state->GetRoot();
   if (root_stub && root_stub->stub_scene_token() && root_stub->properties() &&
       IsComplete(*root_stub->properties())) {
-    const mojo::ui::ViewLayoutPtr& layout =
-        root_stub->properties()->view_layout;
+    const mozart::ViewLayoutPtr& layout = root_stub->properties()->view_layout;
     FTL_DCHECK(layout && layout->size);
 
     auto viewport = mojo::Rect::New();
@@ -385,7 +384,7 @@ void ViewRegistry::SetRendererRootScene(ViewTreeState* tree_state) {
 void ViewRegistry::AddChild(
     ViewContainerState* container_state,
     uint32_t child_key,
-    mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner) {
+    mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   FTL_DCHECK(child_view_owner);
   DVLOG(1) << "AddChild: container=" << container_state
@@ -418,10 +417,10 @@ void ViewRegistry::AddChild(
                                             this, child_view_owner.Pass())));
 }
 
-void ViewRegistry::RemoveChild(ViewContainerState* container_state,
-                               uint32_t child_key,
-                               mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                                   transferred_view_owner_request) {
+void ViewRegistry::RemoveChild(
+    ViewContainerState* container_state,
+    uint32_t child_key,
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   DVLOG(1) << "RemoveChild: container=" << container_state
            << ", child_key=" << child_key;
@@ -450,7 +449,7 @@ void ViewRegistry::SetChildProperties(
     ViewContainerState* container_state,
     uint32_t child_key,
     uint32_t child_scene_version,
-    mojo::ui::ViewPropertiesPtr child_properties) {
+    mozart::ViewPropertiesPtr child_properties) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   DVLOG(1) << "SetChildProperties: container=" << container_state
            << ", child_key=" << child_key
@@ -506,7 +505,7 @@ void ViewRegistry::FlushChildren(ViewContainerState* container_state,
 }
 
 void ViewRegistry::OnViewResolved(ViewStub* view_stub,
-                                  mojo::ui::ViewTokenPtr view_token) {
+                                  mozart::ViewTokenPtr view_token) {
   FTL_DCHECK(view_stub);
 
   ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
@@ -516,9 +515,9 @@ void ViewRegistry::OnViewResolved(ViewStub* view_stub,
     ReleaseUnavailableViewAndNotify(view_stub);
 }
 
-void ViewRegistry::TransferViewOwner(mojo::ui::ViewTokenPtr view_token,
-                                     mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                                         transferred_view_owner_request) {
+void ViewRegistry::TransferViewOwner(
+    mozart::ViewTokenPtr view_token,
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(transferred_view_owner_request.is_pending());
 
@@ -538,12 +537,12 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
   // Create the scene and get its token asynchronously.
   // TODO(jeffbrown): It would be really nice to have a way to pipeline
   // getting the scene token.
-  mojo::gfx::composition::ScenePtr stub_scene;
+  mozart::ScenePtr stub_scene;
   compositor_->CreateScene(
       mojo::GetProxy(&stub_scene),
       ftl::StringPrintf("*%s", view_state->label().c_str()),
-      [ this, weak = view_stub->GetWeakPtr() ](
-          mojo::gfx::composition::SceneTokenPtr scene_token) {
+      [ this,
+        weak = view_stub->GetWeakPtr() ](mozart::SceneTokenPtr scene_token) {
         if (weak)
           OnStubSceneTokenAvailable(weak, scene_token.Pass());
       });
@@ -578,8 +577,7 @@ void ViewRegistry::HijackView(ViewState* view_state) {
 
 void ViewRegistry::TransferOrUnregisterViewStub(
     std::unique_ptr<ViewStub> view_stub,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner>
-        transferred_view_owner_request) {
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(view_stub);
 
   if (transferred_view_owner_request.is_pending()) {
@@ -641,15 +639,14 @@ void ViewRegistry::ScheduleViewTreeInvalidation(ViewTreeState* tree_state,
     // renderer.
     tree_state->set_frame_scheduled(true);
     tree_state->frame_scheduler()->ScheduleFrame(
-        [this, tree_state](mojo::gfx::composition::FrameInfoPtr frame_info) {
+        [this, tree_state](mozart::FrameInfoPtr frame_info) {
           TraverseViewTree(tree_state, frame_info.Pass());
         });
   }
 }
 
-void ViewRegistry::TraverseViewTree(
-    ViewTreeState* tree_state,
-    mojo::gfx::composition::FrameInfoPtr frame_info) {
+void ViewRegistry::TraverseViewTree(ViewTreeState* tree_state,
+                                    mozart::FrameInfoPtr frame_info) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   DVLOG(2) << "TraverseViewTree: tree=" << tree_state
            << ", frame_info=" << frame_info
@@ -665,10 +662,9 @@ void ViewRegistry::TraverseViewTree(
     TraverseView(root_stub->state(), frame_info.get(), false);
 }
 
-void ViewRegistry::TraverseView(
-    ViewState* view_state,
-    const mojo::gfx::composition::FrameInfo* frame_info,
-    bool parent_properties_changed) {
+void ViewRegistry::TraverseView(ViewState* view_state,
+                                const mozart::FrameInfo* frame_info,
+                                bool parent_properties_changed) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   DVLOG(2) << "TraverseView: view=" << view_state
            << ", frame_info=" << frame_info
@@ -682,7 +678,7 @@ void ViewRegistry::TraverseView(
   if (parent_properties_changed ||
       (flags & (ViewState::INVALIDATION_PROPERTIES_CHANGED |
                 ViewState::INVALIDATION_PARENT_CHANGED))) {
-    mojo::ui::ViewPropertiesPtr properties = ResolveViewProperties(view_state);
+    mozart::ViewPropertiesPtr properties = ResolveViewProperties(view_state);
     if (properties) {
       if (!view_state->issued_properties() ||
           !properties->Equals(*view_state->issued_properties())) {
@@ -706,7 +702,7 @@ void ViewRegistry::TraverseView(
 
   // Deliver invalidation event if needed.
   if (view_properties_changed || (flags & ViewState::INVALIDATION_EXPLICIT)) {
-    auto invalidation = mojo::ui::ViewInvalidation::New();
+    auto invalidation = mozart::ViewInvalidation::New();
     if (view_properties_changed)
       invalidation->properties = view_state->issued_properties().Clone();
     invalidation->scene_version = view_state->issued_scene_version();
@@ -729,7 +725,7 @@ void ViewRegistry::TraverseView(
   }
 }
 
-mojo::ui::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
+mozart::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
     ViewState* view_state) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
@@ -740,7 +736,7 @@ mojo::ui::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
   if (view_stub->parent()) {
     if (!view_stub->parent()->issued_properties())
       return nullptr;
-    mojo::ui::ViewPropertiesPtr properties =
+    mozart::ViewPropertiesPtr properties =
         view_stub->parent()->issued_properties().Clone();
     ApplyOverrides(properties.get(), view_stub->properties().get());
     return properties.Pass();
@@ -782,9 +778,8 @@ void ViewRegistry::ConnectToViewTreeService(
 // VIEW INSPECTOR
 
 void ViewRegistry::GetHitTester(
-    mojo::ui::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
-        hit_tester_request,
+    mozart::ViewTreeTokenPtr view_tree_token,
+    mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
     const GetHitTesterCallback& callback) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(hit_tester_request.is_pending());
@@ -800,11 +795,11 @@ void ViewRegistry::GetHitTester(
 }
 
 void ViewRegistry::ResolveScenes(
-    mojo::Array<mojo::gfx::composition::SceneTokenPtr> scene_tokens,
+    mojo::Array<mozart::SceneTokenPtr> scene_tokens,
     const ResolveScenesCallback& callback) {
   FTL_DCHECK(scene_tokens);
 
-  mojo::Array<mojo::ui::ViewTokenPtr> result;
+  mojo::Array<mozart::ViewTokenPtr> result;
   result.resize(scene_tokens.size());
 
   size_t index = 0;
@@ -823,9 +818,8 @@ void ViewRegistry::ResolveScenes(
 
 // EXTERNAL SIGNALING
 
-void ViewRegistry::SendInvalidation(
-    ViewState* view_state,
-    mojo::ui::ViewInvalidationPtr invalidation) {
+void ViewRegistry::SendInvalidation(ViewState* view_state,
+                                    mozart::ViewInvalidationPtr invalidation) {
   FTL_DCHECK(view_state);
   FTL_DCHECK(invalidation);
   FTL_DCHECK(view_state->view_listener());
@@ -847,7 +841,7 @@ void ViewRegistry::SendRendererDied(ViewTreeState* tree_state) {
 
 void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
                                      uint32_t child_key,
-                                     mojo::ui::ViewInfoPtr child_view_info) {
+                                     mozart::ViewInfoPtr child_view_info) {
   FTL_DCHECK(container_state);
   FTL_DCHECK(child_view_info);
 

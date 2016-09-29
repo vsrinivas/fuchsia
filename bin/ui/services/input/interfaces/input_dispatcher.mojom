@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
 import "apps/mozart/services/input/interfaces/input_events.mojom";
@@ -16,7 +16,7 @@ import "apps/mozart/services/input/interfaces/input_events.mojom";
 // TODO(jeffbrown): Elaborate how input devices are registered with the
 // dispatcher so that applications can query their capabilities and distinguish
 // input coming from multiple sources concurrently.
-[ServiceName="mojo::ui::InputDispatcher"]
+[ServiceName="mozart::InputDispatcher"]
 interface InputDispatcher {
   // Dispatches an event through the view tree.  The dispatcher will deliver
   // the event to the appropriate views based on the current state of the
@@ -36,5 +36,5 @@ interface InputDispatcher {
   // to block the test until a sequence of events have been delivered and
   // handled.  However these same mechanisms have proven to be brittle in
   // the past so it might be better to solve the problem some other way.
-  DispatchEvent(mojo.Event event);
+  DispatchEvent(Event event);
 };

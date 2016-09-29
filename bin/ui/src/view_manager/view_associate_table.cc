@@ -25,16 +25,16 @@ ViewAssociateTable::ViewAssociateTable() {}
 ViewAssociateTable::~ViewAssociateTable() {}
 
 void ViewAssociateTable::RegisterViewAssociate(
-    mojo::ui::ViewInspector* inspector,
-    mojo::ui::ViewAssociatePtr associate,
-    mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner>
+    mozart::ViewInspector* inspector,
+    mozart::ViewAssociatePtr associate,
+    mojo::InterfaceRequest<mozart::ViewAssociateOwner>
         view_associate_owner_request,
     const mojo::String& label) {
   FTL_DCHECK(inspector);
   FTL_DCHECK(associate.is_bound());
 
   std::string sanitized_label =
-      label.get().substr(0, mojo::ui::kLabelMaxLength);
+      label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
   associates_.emplace_back(
       new AssociateData(sanitized_label, associate.Pass(), this, inspector));
   AssociateData* data = associates_.back().get();
@@ -49,11 +49,11 @@ void ViewAssociateTable::RegisterViewAssociate(
       [this, data] { OnAssociateOwnerConnectionError(data); });
 
   // Connect the associate to our view inspector.
-  mojo::ui::ViewInspectorPtr inspector_ptr;
+  mozart::ViewInspectorPtr inspector_ptr;
   data->inspector_binding.Bind(GetProxy(&inspector_ptr));
   data->associate->Connect(inspector_ptr.Pass(), [
     this, index = pending_connection_count_
-  ](mojo::ui::ViewAssociateInfoPtr info) { OnConnected(index, info.Pass()); });
+  ](mozart::ViewAssociateInfoPtr info) { OnConnected(index, info.Pass()); });
 
   // Wait for the associate to connect to our view inspector.
   pending_connection_count_++;
@@ -67,7 +67,7 @@ void ViewAssociateTable::FinishedRegisteringViewAssociates() {
 }
 
 void ViewAssociateTable::ConnectToViewService(
-    mojo::ui::ViewTokenPtr view_token,
+    mozart::ViewTokenPtr view_token,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
@@ -130,7 +130,7 @@ void ViewAssociateTable::OnAssociateOwnerConnectionError(
 }
 
 void ViewAssociateTable::ConnectToViewTreeService(
-    mojo::ui::ViewTreeTokenPtr view_tree_token,
+    mozart::ViewTreeTokenPtr view_tree_token,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
@@ -163,7 +163,7 @@ void ViewAssociateTable::ConnectToViewTreeService(
 }
 
 void ViewAssociateTable::OnConnected(uint32_t index,
-                                     mojo::ui::ViewAssociateInfoPtr info) {
+                                     mozart::ViewAssociateInfoPtr info) {
   FTL_DCHECK(info);
   FTL_DCHECK(pending_connection_count_);
   FTL_DCHECK(!associates_[index]->info);
@@ -192,9 +192,9 @@ size_t ViewAssociateTable::associate_count() {
 
 ViewAssociateTable::AssociateData::AssociateData(
     const std::string& label,
-    mojo::ui::ViewAssociatePtr associate,
-    mojo::ui::ViewAssociateOwner* associate_owner_impl,
-    mojo::ui::ViewInspector* inspector)
+    mozart::ViewAssociatePtr associate,
+    mozart::ViewAssociateOwner* associate_owner_impl,
+    mozart::ViewInspector* inspector)
     : label(label),
       associate(associate.Pass()),
       associate_owner(associate_owner_impl),
@@ -203,7 +203,7 @@ ViewAssociateTable::AssociateData::AssociateData(
 ViewAssociateTable::AssociateData::~AssociateData() {}
 
 void ViewAssociateTable::AssociateData::BindOwner(
-    mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner>
+    mojo::InterfaceRequest<mozart::ViewAssociateOwner>
         view_associate_owner_request) {
   associate_owner.Bind(view_associate_owner_request.Pass());
 }

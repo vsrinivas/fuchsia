@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/views/interfaces/view_associates.mojom";
 import "apps/mozart/services/views/interfaces/view_trees.mojom";
 import "apps/mozart/services/views/interfaces/views.mojom";
-
-// Maximum length for a view or view tree label.
-const uint32 kLabelMaxLength = 32;
 
 // The view manager manages trees of views which represent user interface
 // components.
@@ -22,8 +19,11 @@ const uint32 kLabelMaxLength = 32;
 // containing views from various applications.
 //
 // Refer to |View| and |ViewTree| for more information about these objects.
-[ServiceName="mojo::ui::ViewManager"]
+[ServiceName="mozart::ViewManager"]
 interface ViewManager {
+  // Maximum length for a view or view tree label.
+  const uint32 kLabelMaxLength = 32;
+
   // Creates a view.
   //
   // The |view| is used to configure the view and interact with its
@@ -45,9 +45,9 @@ interface ViewManager {
   //
   // To destroy the view and cause it to be removed from the view tree,
   // simply close the |view|, |view_listener|, or |view_owner| message pipes.
-  CreateView(mojo.ui.View& view,
-             mojo.ui.ViewOwner& view_owner,
-             mojo.ui.ViewListener view_listener,
+  CreateView(View& view,
+             ViewOwner& view_owner,
+             ViewListener view_listener,
              string? label);
 
   // Creates a view tree.
@@ -64,8 +64,8 @@ interface ViewManager {
   //
   // To destroy the view tree simply close the |view_tree| or
   // |view_tree_listener| message pipes.
-  CreateViewTree(mojo.ui.ViewTree& view_tree,
-                 mojo.ui.ViewTreeListener view_tree_listener,
+  CreateViewTree(ViewTree& view_tree,
+                 ViewTreeListener view_tree_listener,
                  string? label);
 
   // Registers a view associate with the view manager.
@@ -80,8 +80,8 @@ interface ViewManager {
   //
   // TODO(mikejurka): This method should only be made accessible to trusted
   // services, once we have a security story
-  RegisterViewAssociate(mojo.ui.ViewAssociate view_associate,
-    mojo.ui.ViewAssociateOwner& view_associate_owner, string? label);
+  RegisterViewAssociate(ViewAssociate view_associate,
+    ViewAssociateOwner& view_associate_owner, string? label);
 
   // Tells the view manager we've registered all our view associates.
   //

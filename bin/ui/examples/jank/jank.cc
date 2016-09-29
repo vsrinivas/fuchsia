@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
 #include <mojo/system/main.h>
+#include <unistd.h>
 
 #include <string>
 
@@ -25,7 +25,7 @@ namespace examples {
 
 namespace {
 constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 enum class Action {
   kHang10,
@@ -49,10 +49,10 @@ constexpr SkScalar kButtonHeight = 30;
 constexpr SkScalar kMargin = 15;
 }  // namespace
 
-class JankView : public mojo::ui::BaseView, public mojo::ui::InputListener {
+class JankView : public mozart::BaseView, public mozart::InputListener {
  public:
   JankView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-           mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request)
+           mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Jank"),
         input_handler_(GetViewServiceProvider(), this),
         font_loader_(BaseView::app_connector()) {
@@ -68,8 +68,10 @@ class JankView : public mojo::ui::BaseView, public mojo::ui::InputListener {
 
  private:
   // |InputListener|:
-  void OnEvent(mojo::EventPtr event, const OnEventCallback& callback) override {
-    if (event->pointer_data && event->action == mojo::EventType::POINTER_DOWN) {
+  void OnEvent(mozart::EventPtr event,
+               const OnEventCallback& callback) override {
+    if (event->pointer_data &&
+        event->action == mozart::EventType::POINTER_DOWN) {
       SkScalar x = event->pointer_data->x;
       SkScalar y = event->pointer_data->y;
       if (x >= kMargin && x <= kButtonWidth + kMargin) {
@@ -90,7 +92,7 @@ class JankView : public mojo::ui::BaseView, public mojo::ui::InputListener {
     if (!typeface_)
       return;  // wait for typeface to be loaded
 
-    auto update = mojo::gfx::composition::SceneUpdate::New();
+    auto update = mozart::SceneUpdate::New();
 
     const mojo::Size& size = *properties()->view_layout->size;
     if (size.width > 0 && size.height > 0) {
@@ -98,24 +100,23 @@ class JankView : public mojo::ui::BaseView, public mojo::ui::InputListener {
       bounds.width = size.width;
       bounds.height = size.height;
 
-      mojo::ui::SkiaSurfaceHolder surface_holder(size);
+      mozart::SkiaSurfaceHolder surface_holder(size);
       DrawContent(surface_holder.surface()->getCanvas());
-      auto content_resource = mojo::gfx::composition::Resource::New();
-      content_resource->set_image(mojo::gfx::composition::ImageResource::New());
+      auto content_resource = mozart::Resource::New();
+      content_resource->set_image(mozart::ImageResource::New());
       content_resource->get_image()->image = surface_holder.TakeImage();
       update->resources.insert(kContentImageResourceId,
                                content_resource.Pass());
 
-      auto root_node = mojo::gfx::composition::Node::New();
-      root_node->hit_test_behavior =
-          mojo::gfx::composition::HitTestBehavior::New();
-      root_node->op = mojo::gfx::composition::NodeOp::New();
-      root_node->op->set_image(mojo::gfx::composition::ImageNodeOp::New());
+      auto root_node = mozart::Node::New();
+      root_node->hit_test_behavior = mozart::HitTestBehavior::New();
+      root_node->op = mozart::NodeOp::New();
+      root_node->op->set_image(mozart::ImageNodeOp::New());
       root_node->op->get_image()->content_rect = bounds.Clone();
       root_node->op->get_image()->image_resource_id = kContentImageResourceId;
       update->nodes.insert(kRootNodeId, root_node.Pass());
     } else {
-      auto root_node = mojo::gfx::composition::Node::New();
+      auto root_node = mozart::Node::New();
       update->nodes.insert(kRootNodeId, root_node.Pass());
     }
 
@@ -185,22 +186,22 @@ class JankView : public mojo::ui::BaseView, public mojo::ui::InputListener {
     }
   }
 
-  mojo::ui::InputHandler input_handler_;
-  mojo::ui::SkiaFontLoader font_loader_;
+  mozart::InputHandler input_handler_;
+  mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> typeface_;
   int64_t stutter_end_time_ = 0u;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(JankView);
 };
 
-class JankApp : public mojo::ui::ViewProviderApp {
+class JankApp : public mozart::ViewProviderApp {
  public:
   JankApp() {}
   ~JankApp() override {}
 
   void CreateView(
       const std::string& connection_url,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
     new JankView(mojo::CreateApplicationConnector(shell()),
                  view_owner_request.Pass());

@@ -6,9 +6,7 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
-namespace gfx {
-namespace composition {
+namespace mozart {
 
 FrameTracker::FrameTracker() {}
 
@@ -16,13 +14,11 @@ FrameTracker::~FrameTracker() {}
 
 void FrameTracker::Clear() {
   frame_count_ = 0u;
-  frame_info_ = mojo::gfx::composition::FrameInfo();
+  frame_info_ = FrameInfo();
   frame_time_delta_ = ftl::TimeDelta::Zero();
 }
 
-void FrameTracker::Update(
-    const mojo::gfx::composition::FrameInfo& raw_frame_info,
-    MojoTimeTicks now) {
+void FrameTracker::Update(const FrameInfo& raw_frame_info, MojoTimeTicks now) {
   const int64_t old_frame_time = frame_info_.frame_time;
   const int64_t old_presentation_time = frame_info_.presentation_time;
   frame_info_ = raw_frame_info;
@@ -85,6 +81,4 @@ void FrameTracker::Update(
       ftl::TimeDelta::FromMicroseconds(frame_info_.frame_time - old_frame_time);
 }
 
-}  // namespace composition
-}  // namespace gfx
-}  // namespace mojo
+}  // namespace mozart

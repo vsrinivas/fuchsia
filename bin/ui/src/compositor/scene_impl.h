@@ -18,13 +18,11 @@ namespace compositor {
 
 // Scene interface implementation.
 // This object is owned by its associated SceneState.
-class SceneImpl : public mojo::gfx::composition::Scene,
-                  public mojo::gfx::composition::FrameScheduler {
+class SceneImpl : public mozart::Scene, public mozart::FrameScheduler {
  public:
-  SceneImpl(
-      CompositorEngine* engine,
-      SceneState* state,
-      mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene_request);
+  SceneImpl(CompositorEngine* engine,
+            SceneState* state,
+            mojo::InterfaceRequest<mozart::Scene> scene_request);
   ~SceneImpl() override;
 
   void set_connection_error_handler(const ftl::Closure& handler) {
@@ -33,21 +31,20 @@ class SceneImpl : public mojo::gfx::composition::Scene,
 
  private:
   // |Scene|:
-  void SetListener(mojo::InterfaceHandle<mojo::gfx::composition::SceneListener>
-                       listener) override;
-  void Update(mojo::gfx::composition::SceneUpdatePtr update) override;
-  void Publish(mojo::gfx::composition::SceneMetadataPtr metadata) override;
-  void GetScheduler(
-      mojo::InterfaceRequest<mojo::gfx::composition::FrameScheduler>
-          scheduler_request) override;
+  void SetListener(
+      mojo::InterfaceHandle<mozart::SceneListener> listener) override;
+  void Update(mozart::SceneUpdatePtr update) override;
+  void Publish(mozart::SceneMetadataPtr metadata) override;
+  void GetScheduler(mojo::InterfaceRequest<mozart::FrameScheduler>
+                        scheduler_request) override;
 
   // |FrameScheduler|:
   void ScheduleFrame(const ScheduleFrameCallback& callback) override;
 
   CompositorEngine* const engine_;
   SceneState* const state_;
-  mojo::Binding<mojo::gfx::composition::Scene> scene_binding_;
-  mojo::BindingSet<mojo::gfx::composition::FrameScheduler> scheduler_bindings_;
+  mojo::Binding<mozart::Scene> scene_binding_;
+  mojo::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneImpl);
 };

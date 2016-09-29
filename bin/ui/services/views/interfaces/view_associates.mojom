@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/composition/interfaces/hit_tests.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";
@@ -27,7 +27,7 @@ import "mojo/public/interfaces/application/service_provider.mojom";
 // This mechanism is designed to avoid a potential explosion in complexity
 // if all features which depend on the state of views were implemented
 // in one place.
-[ServiceName="mojo::ui::ViewAssociate"]
+[ServiceName="mozart::ViewAssociate"]
 interface ViewAssociate {
   // Connects to the associate.
   //
@@ -66,7 +66,7 @@ interface ViewAssociate {
 // get a connection error callback if the corresponding ViewAssociate is
 // destroyed, and similarly the ViewAssociate that it owns will be killed if
 // this object is destroyed.
-[ServiceName="mojo::ui::ViewAssociateOwner"]
+[ServiceName="mozart::ViewAssociateOwner"]
 interface ViewAssociateOwner {};
 
 // Provides information about the services offered by an associate.
@@ -95,7 +95,7 @@ interface ViewInspector {
   // again to obtain a new one.  Otherwise it should assume that the view
   // tree has become unavailable (so no hit tester is available).
   GetHitTester(ViewTreeToken view_tree_token,
-               mojo.gfx.composition.HitTester& hit_tester)
+               HitTester& hit_tester)
       => (bool renderer_changed);
 
   // Given an array of scene tokens, produces an array of view tokens
@@ -105,6 +105,6 @@ interface ViewInspector {
   // It is safe to cache the results of this operation because a scene will
   // only ever be associated with at most one view although a view may
   // create several scenes during its lifetime.
-  ResolveScenes(array<mojo.gfx.composition.SceneToken> scene_tokens)
+  ResolveScenes(array<SceneToken> scene_tokens)
       => (array<ViewToken?> view_tokens);
 };

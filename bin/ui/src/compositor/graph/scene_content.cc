@@ -25,9 +25,8 @@ SceneContent::SceneContent(const SceneLabel& label,
 SceneContent::~SceneContent() {}
 
 bool SceneContent::MatchesVersion(uint32_t requested_version) const {
-  return requested_version == mojo::gfx::composition::kSceneVersionNone ||
-         requested_version == version_ ||
-         version_ == mojo::gfx::composition::kSceneVersionNone;
+  return requested_version == mozart::kSceneVersionNone ||
+         requested_version == version_ || version_ == mozart::kSceneVersionNone;
 }
 
 void SceneContent::Paint(const Snapshot* snapshot, SkCanvas* canvas) const {
@@ -36,11 +35,10 @@ void SceneContent::Paint(const Snapshot* snapshot, SkCanvas* canvas) const {
     root->Paint(this, snapshot, canvas);
 }
 
-bool SceneContent::HitTest(
-    const Snapshot* snapshot,
-    const SkPoint& scene_point,
-    const SkMatrix44& global_to_scene_transform,
-    mojo::gfx::composition::SceneHitPtr* out_scene_hit) const {
+bool SceneContent::HitTest(const Snapshot* snapshot,
+                           const SkPoint& scene_point,
+                           const SkMatrix44& global_to_scene_transform,
+                           mozart::SceneHitPtr* out_scene_hit) const {
   FTL_DCHECK(snapshot);
   FTL_DCHECK(out_scene_hit);
 
@@ -48,12 +46,12 @@ bool SceneContent::HitTest(
   if (!root)
     return false;
 
-  mojo::Array<mojo::gfx::composition::HitPtr> hits;
+  mojo::Array<mozart::HitPtr> hits;
   bool opaque = root->HitTest(this, snapshot, scene_point,
                               global_to_scene_transform, &hits);
   if (hits.size()) {
-    auto scene_hit = mojo::gfx::composition::SceneHit::New();
-    scene_hit->scene_token = mojo::gfx::composition::SceneToken::New();
+    auto scene_hit = mozart::SceneHit::New();
+    scene_hit->scene_token = mozart::SceneToken::New();
     scene_hit->scene_token->value = label_.token();
     scene_hit->scene_version = version_;
     scene_hit->hits = hits.Pass();
@@ -77,7 +75,7 @@ const Node* SceneContent::GetNode(uint32_t node_id) const {
 }
 
 const Node* SceneContent::GetRootNodeIfExists() const {
-  auto it = nodes_.find(mojo::gfx::composition::kSceneRootNodeId);
+  auto it = nodes_.find(mozart::kSceneRootNodeId);
   return it != nodes_.end() ? it->second.get() : nullptr;
 }
 
@@ -175,7 +173,7 @@ bool SceneContentBuilder::AddNode(const Node* node) {
 ftl::RefPtr<const SceneContent> SceneContentBuilder::Build() {
   FTL_DCHECK(content_);
 
-  const Node* root = FindNode(mojo::gfx::composition::kSceneRootNodeId);
+  const Node* root = FindNode(mozart::kSceneRootNodeId);
   return !root || AddNode(root) ? std::move(content_) : nullptr;
 }
 

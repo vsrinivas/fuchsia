@@ -24,41 +24,41 @@ class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
   void SetUp() override {
     mojo::test::ApplicationTestBase::SetUp();
 
-    mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector;
+    mojo::InterfaceHandle<mozart::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
-    view_inspector_client_ = ftl::MakeRefCounted<mojo::ui::ViewInspectorClient>(
-        view_inspector.Pass());
+    view_inspector_client_ =
+        ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
 
-    view_tree_token_ = mojo::ui::ViewTreeToken::New();
+    view_tree_token_ = mozart::ViewTreeToken::New();
     view_tree_token_->value = 1u;
     view_tree_hit_tester_client_ =
-        ftl::MakeRefCounted<mojo::ui::ViewTreeHitTesterClient>(
+        ftl::MakeRefCounted<mozart::ViewTreeHitTesterClient>(
             view_inspector_client_, view_tree_token_.Clone());
   }
 
  protected:
   void HitTest(mojo::PointFPtr point,
-               scoped_ptr<mojo::ui::ResolvedHits>* resolved_hits) {
+               scoped_ptr<mozart::ResolvedHits>* resolved_hits) {
     base::RunLoop loop;
     view_tree_hit_tester_client_->HitTest(
-        point.Pass(), base::Bind(&Capture<scoped_ptr<mojo::ui::ResolvedHits>>,
+        point.Pass(), base::Bind(&Capture<scoped_ptr<mozart::ResolvedHits>>,
                                  loop.QuitClosure(), resolved_hits));
     loop.Run();
   }
 
-  mojo::ui::MockViewInspector view_inspector_;
-  mojo::Binding<mojo::ui::ViewInspector> view_inspector_binding_;
-  ftl::RefPtr<mojo::ui::ViewInspectorClient> view_inspector_client_;
+  mozart::MockViewInspector view_inspector_;
+  mojo::Binding<mozart::ViewInspector> view_inspector_binding_;
+  ftl::RefPtr<mozart::ViewInspectorClient> view_inspector_client_;
 
-  mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  ftl::RefPtr<mojo::ui::ViewTreeHitTesterClient> view_tree_hit_tester_client_;
+  mozart::ViewTreeTokenPtr view_tree_token_;
+  ftl::RefPtr<mozart::ViewTreeHitTesterClient> view_tree_hit_tester_client_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClientTest);
 };
 
 TEST_F(ViewTreeHitTesterClientTest, NoHitTester) {
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   HitTest(MakePointF(0.f, 0.f), &resolved_hits);
   EXPECT_EQ(nullptr, resolved_hits.get());
 }
@@ -71,14 +71,14 @@ TEST_F(ViewTreeHitTesterClientTest, HaveHitTester) {
   auto transform_333 = MakeDummyTransform(333);
   view_inspector_.SetSceneMapping(scene_token_1->value, view_token_11.Clone());
 
-  mojo::ui::MockHitTester hit_tester;
+  mozart::MockHitTester hit_tester;
   view_inspector_.SetHitTester(view_tree_token_->value, &hit_tester);
 
   // Simple hit test with the first hit tester.
   hit_tester.SetNextResult(
       MakePointF(2.f, 5.f),
       MakeSimpleHitTestResult(scene_token_1.Clone(), transform_111.Clone()));
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   HitTest(MakePointF(2.f, 5.f), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -106,7 +106,7 @@ TEST_F(ViewTreeHitTesterClientTest, HaveHitTester) {
   EXPECT_EQ(1u, view_inspector_.scene_lookups());
 
   // Replace the hit tester, ensuring that another lookup occurs.
-  mojo::ui::MockHitTester hit_tester_2;
+  mozart::MockHitTester hit_tester_2;
   {
     base::RunLoop loop;
     view_tree_hit_tester_client_->set_hit_tester_changed_callback(

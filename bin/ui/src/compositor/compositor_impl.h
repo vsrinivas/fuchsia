@@ -12,22 +12,20 @@
 namespace compositor {
 
 // Compositor interface implementation.
-class CompositorImpl : public mojo::gfx::composition::Compositor {
+class CompositorImpl : public mozart::Compositor {
  public:
   explicit CompositorImpl(CompositorEngine* engine);
   ~CompositorImpl() override;
 
  private:
   // |Compositor|:
-  void CreateScene(
-      mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene_request,
-      const mojo::String& label,
-      const CreateSceneCallback& callback) override;
-  void CreateRenderer(
-      mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-      mojo::FramebufferInfoPtr framebuffer_info,
-      mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
-      const mojo::String& label) override;
+  void CreateScene(mojo::InterfaceRequest<mozart::Scene> scene_request,
+                   const mojo::String& label,
+                   const CreateSceneCallback& callback) override;
+  void CreateRenderer(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                      mojo::FramebufferInfoPtr framebuffer_info,
+                      mojo::InterfaceRequest<mozart::Renderer> renderer_request,
+                      const mojo::String& label) override;
 
   CompositorEngine* engine_;
 

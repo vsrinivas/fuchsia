@@ -17,33 +17,33 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 ViewManagerImpl::~ViewManagerImpl() {}
 
 void ViewManagerImpl::CreateView(
-    mojo::InterfaceRequest<mojo::ui::View> view_request,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
-    mojo::InterfaceHandle<mojo::ui::ViewListener> view_listener,
+    mojo::InterfaceRequest<mozart::View> view_request,
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    mojo::InterfaceHandle<mozart::ViewListener> view_listener,
     const mojo::String& label) {
   registry_->CreateView(
       view_request.Pass(), view_owner_request.Pass(),
-      mojo::ui::ViewListenerPtr::Create(std::move(view_listener)), label);
+      mozart::ViewListenerPtr::Create(std::move(view_listener)), label);
 }
 
 void ViewManagerImpl::CreateViewTree(
-    mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
-    mojo::InterfaceHandle<mojo::ui::ViewTreeListener> view_tree_listener,
+    mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+    mojo::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
     const mojo::String& label) {
   registry_->CreateViewTree(
       view_tree_request.Pass(),
-      mojo::ui::ViewTreeListenerPtr::Create(std::move(view_tree_listener)),
+      mozart::ViewTreeListenerPtr::Create(std::move(view_tree_listener)),
       label);
 }
 
 // TODO(mikejurka): This should only be called by trusted code (ie launcher),
 // once we have a security story.
 void ViewManagerImpl::RegisterViewAssociate(
-    mojo::InterfaceHandle<mojo::ui::ViewAssociate> view_associate,
-    mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner> view_associate_owner,
+    mojo::InterfaceHandle<mozart::ViewAssociate> view_associate,
+    mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
     const mojo::String& label) {
   registry_->RegisterViewAssociate(
-      registry_, mojo::ui::ViewAssociatePtr::Create(std::move(view_associate)),
+      registry_, mozart::ViewAssociatePtr::Create(std::move(view_associate)),
       view_associate_owner.Pass(), label);
 }
 

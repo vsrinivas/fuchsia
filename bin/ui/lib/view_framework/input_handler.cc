@@ -7,10 +7,9 @@
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-InputHandler::InputHandler(ServiceProvider* service_provider,
+InputHandler::InputHandler(mojo::ServiceProvider* service_provider,
                            InputListener* listener)
     : listener_binding_(listener) {
   FTL_DCHECK(service_provider);
@@ -25,5 +24,4 @@ InputHandler::InputHandler(ServiceProvider* service_provider,
 
 InputHandler::~InputHandler() {}
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

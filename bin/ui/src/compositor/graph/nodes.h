@@ -33,12 +33,12 @@ class TransformPair;
 // be shared by multiple versions of the same scene.
 class Node : public ftl::RefCountedThreadSafe<Node> {
  public:
-  using Combinator = mojo::gfx::composition::Node::Combinator;
+  using Combinator = mozart::Node::Combinator;
 
   Node(uint32_t node_id,
        std::unique_ptr<TransformPair> content_transform,
        mojo::RectFPtr content_clip,
-       mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+       mozart::HitTestBehaviorPtr hit_test_behavior,
        Combinator combinator,
        const std::vector<uint32_t>& child_node_ids);
 
@@ -46,7 +46,7 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
   const TransformPair* content_transform() const {
     return content_transform_.get();
   }
-  const mojo::gfx::composition::HitTestBehavior* hit_test_behavior() const {
+  const mozart::HitTestBehavior* hit_test_behavior() const {
     return hit_test_behavior_.get();
   }
   const mojo::RectF* content_clip() const { return content_clip_.get(); }
@@ -85,7 +85,7 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
                const Snapshot* snapshot,
                const SkPoint& parent_point,
                const SkMatrix44& global_to_parent_transform,
-               mojo::Array<mojo::gfx::composition::HitPtr>* hits) const;
+               mojo::Array<mozart::HitPtr>* hits) const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Node);
@@ -104,24 +104,23 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
                           const Snapshot* snapshot,
                           SkCanvas* canvas) const;
 
-  virtual bool HitTestInner(
-      const SceneContent* content,
-      const Snapshot* snapshot,
-      const SkPoint& local_point,
-      const SkMatrix44& global_to_local_transform,
-      mojo::Array<mojo::gfx::composition::HitPtr>* hits) const;
+  virtual bool HitTestInner(const SceneContent* content,
+                            const Snapshot* snapshot,
+                            const SkPoint& local_point,
+                            const SkMatrix44& global_to_local_transform,
+                            mojo::Array<mozart::HitPtr>* hits) const;
 
  private:
   bool HitTestSelf(const SceneContent* content,
                    const Snapshot* snapshot,
                    const SkPoint& local_point,
                    const SkMatrix44& global_to_local_transform,
-                   mojo::Array<mojo::gfx::composition::HitPtr>* hits) const;
+                   mojo::Array<mozart::HitPtr>* hits) const;
 
   uint32_t const node_id_;
   std::unique_ptr<TransformPair> const content_transform_;
   mojo::RectFPtr const content_clip_;
-  mojo::gfx::composition::HitTestBehaviorPtr const hit_test_behavior_;
+  mozart::HitTestBehaviorPtr const hit_test_behavior_;
   Combinator const combinator_;
   std::vector<uint32_t> const child_node_ids_;
 
@@ -136,14 +135,14 @@ class RectNode : public Node {
   RectNode(uint32_t node_id,
            std::unique_ptr<TransformPair> content_transform,
            mojo::RectFPtr content_clip,
-           mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+           mozart::HitTestBehaviorPtr hit_test_behavior,
            Combinator combinator,
            const std::vector<uint32_t>& child_node_ids,
            const mojo::RectF& content_rect,
-           const mojo::gfx::composition::Color& color);
+           const mozart::Color& color);
 
   const mojo::RectF& content_rect() const { return content_rect_; }
-  const mojo::gfx::composition::Color& color() const { return color_; }
+  const mozart::Color& color() const { return color_; }
 
  protected:
   ~RectNode() override;
@@ -154,7 +153,7 @@ class RectNode : public Node {
 
  private:
   mojo::RectF const content_rect_;
-  mojo::gfx::composition::Color const color_;
+  mozart::Color const color_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RectNode);
 };
@@ -167,18 +166,18 @@ class ImageNode : public Node {
   ImageNode(uint32_t node_id,
             std::unique_ptr<TransformPair> content_transform,
             mojo::RectFPtr content_clip,
-            mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+            mozart::HitTestBehaviorPtr hit_test_behavior,
             Combinator combinator,
             const std::vector<uint32_t>& child_node_ids,
             const mojo::RectF& content_rect,
             mojo::RectFPtr image_rect,
             uint32_t image_resource_id,
-            mojo::gfx::composition::BlendPtr blend);
+            mozart::BlendPtr blend);
 
   const mojo::RectF& content_rect() const { return content_rect_; }
   const mojo::RectF* image_rect() const { return image_rect_.get(); }
   uint32_t image_resource_id() const { return image_resource_id_; }
-  const mojo::gfx::composition::Blend* blend() const { return blend_.get(); }
+  const mozart::Blend* blend() const { return blend_.get(); }
 
   bool RecordContent(SceneContentBuilder* builder) const override;
 
@@ -193,7 +192,7 @@ class ImageNode : public Node {
   mojo::RectF const content_rect_;
   mojo::RectFPtr const image_rect_;
   uint32_t const image_resource_id_;
-  mojo::gfx::composition::BlendPtr const blend_;
+  mozart::BlendPtr const blend_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ImageNode);
 };
@@ -206,7 +205,7 @@ class SceneNode : public Node {
   SceneNode(uint32_t node_id,
             std::unique_ptr<TransformPair> content_transform,
             mojo::RectFPtr content_clip,
-            mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+            mozart::HitTestBehaviorPtr hit_test_behavior,
             Combinator combinator,
             const std::vector<uint32_t>& child_node_ids,
             uint32_t scene_resource_id,
@@ -227,12 +226,11 @@ class SceneNode : public Node {
                   const Snapshot* snapshot,
                   SkCanvas* canvas) const override;
 
-  bool HitTestInner(
-      const SceneContent* content,
-      const Snapshot* snapshot,
-      const SkPoint& local_point,
-      const SkMatrix44& global_to_local_transform,
-      mojo::Array<mojo::gfx::composition::HitPtr>* hits) const override;
+  bool HitTestInner(const SceneContent* content,
+                    const Snapshot* snapshot,
+                    const SkPoint& local_point,
+                    const SkMatrix44& global_to_local_transform,
+                    mojo::Array<mozart::HitPtr>* hits) const override;
 
  private:
   uint32_t const scene_resource_id_;
@@ -249,14 +247,14 @@ class LayerNode : public Node {
   LayerNode(uint32_t node_id,
             std::unique_ptr<TransformPair> content_transform,
             mojo::RectFPtr content_clip,
-            mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+            mozart::HitTestBehaviorPtr hit_test_behavior,
             Combinator combinator,
             const std::vector<uint32_t>& child_node_ids,
             const mojo::RectF& layer_rect,
-            mojo::gfx::composition::BlendPtr blend);
+            mozart::BlendPtr blend);
 
   const mojo::RectF& layer_rect() const { return layer_rect_; }
-  const mojo::gfx::composition::Blend* blend() const { return blend_.get(); }
+  const mozart::Blend* blend() const { return blend_.get(); }
 
  protected:
   ~LayerNode() override;
@@ -267,7 +265,7 @@ class LayerNode : public Node {
 
  private:
   mojo::RectF const layer_rect_;
-  mojo::gfx::composition::BlendPtr const blend_;
+  mozart::BlendPtr const blend_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LayerNode);
 };

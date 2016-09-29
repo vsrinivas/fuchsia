@@ -15,8 +15,7 @@ bool FrameDispatcher::AddCallback(const FrameCallback& callback) {
   return pending_callbacks_.size() == 1u;
 }
 
-void FrameDispatcher::DispatchCallbacks(
-    const mojo::gfx::composition::FrameInfo& frame_info) {
+void FrameDispatcher::DispatchCallbacks(const mozart::FrameInfo& frame_info) {
   for (auto& callback : pending_callbacks_) {
     callback(frame_info.Clone());
   }

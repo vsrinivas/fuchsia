@@ -28,32 +28,28 @@ class CompositorEngine {
   // COMPOSITOR REQUESTS
 
   // Registers a scene.
-  mojo::gfx::composition::SceneTokenPtr CreateScene(
-      mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene_request,
+  mozart::SceneTokenPtr CreateScene(
+      mojo::InterfaceRequest<mozart::Scene> scene_request,
       const mojo::String& label);
 
   // Creates a scene graph renderer.
-  void CreateRenderer(
-      mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-      mojo::FramebufferInfoPtr framebuffer_info,
-      mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
-      const mojo::String& label);
+  void CreateRenderer(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                      mojo::FramebufferInfoPtr framebuffer_info,
+                      mojo::InterfaceRequest<mozart::Renderer> renderer_request,
+                      const mojo::String& label);
 
   // SCENE REQUESTS
 
   // Sets the scene listener.
-  void SetListener(SceneState* scene_state,
-                   mojo::gfx::composition::SceneListenerPtr listener);
+  void SetListener(SceneState* scene_state, mozart::SceneListenerPtr listener);
 
   // Updates a scene.
   // Destroys |scene_state| if an error occurs.
-  void Update(SceneState* scene_state,
-              mojo::gfx::composition::SceneUpdatePtr update);
+  void Update(SceneState* scene_state, mozart::SceneUpdatePtr update);
 
   // Publishes a scene.
   // Destroys |scene_state| if an error occurs.
-  void Publish(SceneState* scene_state,
-               mojo::gfx::composition::SceneMetadataPtr metadata);
+  void Publish(SceneState* scene_state, mozart::SceneMetadataPtr metadata);
 
   // Schedules a frame callback.
   void ScheduleFrame(SceneState* scene_state, const FrameCallback& callback);
@@ -63,7 +59,7 @@ class CompositorEngine {
   // Sets the root scene.
   // Destroys |renderer_state| if an error occurs.
   void SetRootScene(RendererState* renderer_state,
-                    mojo::gfx::composition::SceneTokenPtr scene_token,
+                    mozart::SceneTokenPtr scene_token,
                     uint32_t scene_version,
                     mojo::RectPtr viewport);
 
@@ -76,10 +72,9 @@ class CompositorEngine {
                      const FrameCallback& callback);
 
   // Performs a hit test.
-  void HitTest(
-      RendererState* renderer_state,
-      mojo::PointFPtr point,
-      const mojo::gfx::composition::HitTester::HitTestCallback& callback);
+  void HitTest(RendererState* renderer_state,
+               mojo::PointFPtr point,
+               const mozart::HitTester::HitTestCallback& callback);
 
  private:
   void OnSceneConnectionError(SceneState* scene_state);
@@ -95,7 +90,7 @@ class CompositorEngine {
   // Starts the process of composing the contents of the renderer to
   // produce a new frame.
   void ComposeRenderer(RendererState* renderer_state,
-                       const mojo::gfx::composition::FrameInfo& frame_info);
+                       const mozart::FrameInfo& frame_info);
 
   // Applies and validates scene updates from all scenes which are included
   // in the renderer's scene graph.
@@ -111,7 +106,7 @@ class CompositorEngine {
   // Paints the renderer's current snapshot and submits a frame of content
   // to the output for display.
   void PaintRenderer(RendererState* renderer_state,
-                     const mojo::gfx::composition::FrameInfo& frame_info,
+                     const mozart::FrameInfo& frame_info,
                      int64_t composition_time);
 
   // Schedules the next frame to be rendered, if needed.
@@ -121,15 +116,14 @@ class CompositorEngine {
   void OnOutputError(const ftl::WeakPtr<RendererState>& renderer_state_weak);
   void OnOutputUpdateRequest(
       const ftl::WeakPtr<RendererState>& renderer_state_weak,
-      const mojo::gfx::composition::FrameInfo& frame_info);
+      const mozart::FrameInfo& frame_info);
   void OnOutputSnapshotRequest(
       const ftl::WeakPtr<RendererState>& renderer_state_weak,
-      const mojo::gfx::composition::FrameInfo& frame_info);
+      const mozart::FrameInfo& frame_info);
   void OnPresentScene(const ftl::WeakPtr<SceneState>& scene_state_weak,
                       int64_t presentation_time);
 
-  bool ResolveSceneReference(
-      const mojo::gfx::composition::SceneToken& scene_token);
+  bool ResolveSceneReference(const mozart::SceneToken& scene_token);
   void SendResourceUnavailable(SceneState* scene_state, uint32_t resource_id);
 
   SceneState* FindScene(uint32_t scene_token);

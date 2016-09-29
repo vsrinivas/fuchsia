@@ -9,14 +9,14 @@
 
 namespace examples {
 
-class NoodlesApp : public mojo::ui::ViewProviderApp {
+class NoodlesApp : public mozart::ViewProviderApp {
  public:
   NoodlesApp();
   ~NoodlesApp() override;
 
   void CreateView(
       const std::string& connection_url,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       mojo::InterfaceRequest<mojo::ServiceProvider> services) override;
 
  private:

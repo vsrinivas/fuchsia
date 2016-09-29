@@ -18,8 +18,7 @@
 #include "mojo/public/interfaces/application/application_connector.mojom.h"
 #include "mojo/public/interfaces/application/service_provider.mojom.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Abstract base implementation of a view for simple applications.
 // Subclasses must handle layout and provide content for the scene by
@@ -29,14 +28,14 @@ namespace ui {
 // This class is merely intended to make the simple apps easier to write.
 class BaseView : public ViewListener, public ViewContainerListener {
  public:
-  BaseView(InterfaceHandle<ApplicationConnector> app_connector,
-           InterfaceRequest<ViewOwner> view_owner_request,
+  BaseView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
+           mojo::InterfaceRequest<ViewOwner> view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
 
   // Gets the application implementation object provided at creation time.
-  ApplicationConnector* app_connector() { return app_connector_.get(); }
+  mojo::ApplicationConnector* app_connector() { return app_connector_.get(); }
 
   // Gets the view manager.
   ViewManager* view_manager() { return view_manager_.get(); }
@@ -45,18 +44,18 @@ class BaseView : public ViewListener, public ViewContainerListener {
   View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
-  ServiceProvider* GetViewServiceProvider();
+  mojo::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
   ViewContainer* GetViewContainer();
 
   // Gets the scene for the view.
   // Returns nullptr if the |TakeScene| was called.
-  mojo::gfx::composition::Scene* scene() { return scene_.get(); }
+  Scene* scene() { return scene_.get(); }
 
   // Takes the scene from the view.
   // This is useful if the scene will be rendered by a separate component.
-  mojo::gfx::composition::ScenePtr TakeScene() { return scene_.Pass(); }
+  ScenePtr TakeScene() { return scene_.Pass(); }
 
   // Gets the currently requested scene version.
   // This information is updated before processing each invalidation.
@@ -69,13 +68,11 @@ class BaseView : public ViewListener, public ViewContainerListener {
 
   // Gets the frame tracker which maintains timing information for this view.
   // This information is updated before processing each invalidation.
-  const mojo::gfx::composition::FrameTracker& frame_tracker() const {
-    return frame_tracker_;
-  }
+  const FrameTracker& frame_tracker() const { return frame_tracker_; }
 
   // Creates scene metadata initialized using the scene version and
   // current frame's presentation time.
-  mojo::gfx::composition::SceneMetadataPtr CreateSceneMetadata() const;
+  SceneMetadataPtr CreateSceneMetadata() const;
 
   // Invalidates the view.
   //
@@ -136,24 +133,23 @@ class BaseView : public ViewListener, public ViewContainerListener {
   void OnChildUnavailable(uint32_t child_key,
                           const OnChildUnavailableCallback& callback) override;
 
-  ApplicationConnectorPtr app_connector_;
+  mojo::ApplicationConnectorPtr app_connector_;
 
-  StrongBinding<ViewListener> view_listener_binding_;
-  Binding<ViewContainerListener> view_container_listener_binding_;
+  mojo::StrongBinding<ViewListener> view_listener_binding_;
+  mojo::Binding<ViewContainerListener> view_container_listener_binding_;
   ViewManagerPtr view_manager_;
   ViewPtr view_;
-  ServiceProviderPtr view_service_provider_;
+  mojo::ServiceProviderPtr view_service_provider_;
   ViewContainerPtr view_container_;
-  mojo::gfx::composition::ScenePtr scene_;
-  mojo::gfx::composition::FrameTracker frame_tracker_;
-  uint32_t scene_version_ = mojo::gfx::composition::kSceneVersionNone;
+  ScenePtr scene_;
+  FrameTracker frame_tracker_;
+  uint32_t scene_version_ = kSceneVersionNone;
   ViewPropertiesPtr properties_;
   bool invalidated_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BaseView);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_BASE_VIEW_H_

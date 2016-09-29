@@ -32,33 +32,32 @@ inline mojo::TransformPtr MakeDummyTransform(float x) {
   return result.Pass();
 }
 
-inline mojo::gfx::composition::SceneTokenPtr MakeDummySceneToken(
-    uint32_t value) {
-  auto result = mojo::gfx::composition::SceneToken::New();
+inline mozart::SceneTokenPtr MakeDummySceneToken(uint32_t value) {
+  auto result = mozart::SceneToken::New();
   result->value = value;
   return result.Pass();
 }
 
-inline mojo::ui::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
-  auto result = mojo::ui::ViewToken::New();
+inline mozart::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
+  auto result = mozart::ViewToken::New();
   result->value = value;
   return result.Pass();
 }
 
-inline mojo::gfx::composition::HitTestResultPtr MakeSimpleHitTestResult(
-    mojo::gfx::composition::SceneTokenPtr scene_token,
+inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
+    mozart::SceneTokenPtr scene_token,
     mojo::TransformPtr transform) {
-  auto result = mojo::gfx::composition::HitTestResult::New();
-  result->root = mojo::gfx::composition::SceneHit::New();
+  auto result = mozart::HitTestResult::New();
+  result->root = mozart::SceneHit::New();
   result->root->scene_token = scene_token.Pass();
-  result->root->hits.push_back(mojo::gfx::composition::Hit::New());
-  result->root->hits[0]->set_node(mojo::gfx::composition::NodeHit::New());
+  result->root->hits.push_back(mozart::Hit::New());
+  result->root->hits[0]->set_node(mozart::NodeHit::New());
   result->root->hits[0]->get_node()->transform = transform.Pass();
   return result.Pass();
 }
 
-inline mojo::gfx::composition::HitTestResultPtr MakeSimpleHitTestResult(
-    mojo::gfx::composition::SceneTokenPtr scene_token) {
+inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
+    mozart::SceneTokenPtr scene_token) {
   return MakeSimpleHitTestResult(scene_token.Pass(), MakeDummyTransform(0.f));
 }
 

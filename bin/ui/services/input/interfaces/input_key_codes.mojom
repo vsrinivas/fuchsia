@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 // no-format
 
-[DartPackage="mojo_services"]
-module mojo;
+[DartPackage="mozart"]
+module mozart;
 
 // Cross platform keyboard codes.
 //

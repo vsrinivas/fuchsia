@@ -36,7 +36,7 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
 
   void LaunchInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                       mojo::FramebufferInfoPtr framebuffer_info,
-                      mojo::ui::ViewProviderPtr view_provider);
+                      mozart::ViewProviderPtr view_provider);
   void OnLaunchTermination(uint32_t id);
 
   void OnCompositorConnectionError();
@@ -51,9 +51,9 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
 
   mojo::FramebufferProviderPtr framebuffer_provider_;
 
-  mojo::gfx::composition::CompositorPtr compositor_;
-  mojo::ui::ViewManagerPtr view_manager_;
-  std::vector<mojo::ui::ViewAssociateOwnerPtr> view_associate_owners_;
+  mozart::CompositorPtr compositor_;
+  mozart::ViewManagerPtr view_manager_;
+  std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LauncherApp);
 };

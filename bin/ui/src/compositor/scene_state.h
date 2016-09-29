@@ -22,30 +22,23 @@ namespace compositor {
 // This object is owned by the CompositorEngine that created it.
 class SceneState {
  public:
-  SceneState(mojo::gfx::composition::SceneTokenPtr scene_token,
-             const std::string& label);
+  SceneState(mozart::SceneTokenPtr scene_token, const std::string& label);
   ~SceneState();
 
   ftl::WeakPtr<SceneState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Gets the token used to refer to this scene globally.
   // Caller does not obtain ownership of the token.
-  const mojo::gfx::composition::SceneToken& scene_token() {
-    return *scene_token_;
-  }
+  const mozart::SceneToken& scene_token() { return *scene_token_; }
 
   // Gets or sets the scene listener interface.
-  mojo::gfx::composition::SceneListener* scene_listener() {
-    return scene_listener_.get();
-  }
-  void set_scene_listener(mojo::gfx::composition::SceneListenerPtr listener) {
+  mozart::SceneListener* scene_listener() { return scene_listener_.get(); }
+  void set_scene_listener(mozart::SceneListenerPtr listener) {
     scene_listener_ = listener.Pass();
   }
 
   // Sets the associated scene implementation and takes ownership of it.
-  void set_scene_impl(mojo::gfx::composition::Scene* impl) {
-    scene_impl_.reset(impl);
-  }
+  void set_scene_impl(mozart::Scene* impl) { scene_impl_.reset(impl); }
 
   // Gets the underlying scene definition, never null.
   SceneDef* scene_def() { return &scene_def_; }
@@ -53,12 +46,12 @@ class SceneState {
   FrameDispatcher& frame_dispatcher() { return frame_dispatcher_; }
 
  private:
-  mojo::gfx::composition::SceneTokenPtr scene_token_;
+  mozart::SceneTokenPtr scene_token_;
 
   FrameDispatcher frame_dispatcher_;  // must be before scene_impl_
-  std::unique_ptr<mojo::gfx::composition::Scene> scene_impl_;
+  std::unique_ptr<mozart::Scene> scene_impl_;
 
-  mojo::gfx::composition::SceneListenerPtr scene_listener_;
+  mozart::SceneListenerPtr scene_listener_;
 
   SceneDef scene_def_;
 

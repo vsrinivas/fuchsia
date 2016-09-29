@@ -19,9 +19,8 @@ SceneLabel::SceneLabel(const SceneLabel& other)
 SceneLabel::~SceneLabel() {}
 
 std::string SceneLabel::FormattedLabel() const {
-  return label_.empty()
-             ? ftl::StringPrintf("<S%d>", token_)
-             : ftl::StringPrintf("<S%d:%s>", token_, label_.c_str());
+  return label_.empty() ? ftl::StringPrintf("<S%d>", token_)
+                        : ftl::StringPrintf("<S%d:%s>", token_, label_.c_str());
 }
 
 std::string SceneLabel::FormattedLabelForVersion(
@@ -29,9 +28,9 @@ std::string SceneLabel::FormattedLabelForVersion(
     int64_t presentation_time) const {
   return label_.empty()
              ? ftl::StringPrintf("<S%d/v%d@%" PRId64 ">", token_, version,
-                                  presentation_time)
+                                 presentation_time)
              : ftl::StringPrintf("<S%d:%s/v%d@%" PRId64 ">", token_,
-                                  label_.c_str(), version, presentation_time);
+                                 label_.c_str(), version, presentation_time);
 }
 
 std::string SceneLabel::FormattedLabelForNode(uint32_t version,
@@ -39,10 +38,10 @@ std::string SceneLabel::FormattedLabelForNode(uint32_t version,
                                               uint32_t node_id) const {
   return label_.empty()
              ? ftl::StringPrintf("<S%d/v%d@%" PRId64 ">[#%d]", token_, version,
-                                  presentation_time, node_id)
+                                 presentation_time, node_id)
              : ftl::StringPrintf("<S%d:%s/v%d@%" PRId64 ">[#%d]", token_,
-                                  label_.c_str(), version, presentation_time,
-                                  node_id);
+                                 label_.c_str(), version, presentation_time,
+                                 node_id);
 }
 
 }  // namespace compositor

@@ -10,8 +10,7 @@
 #include "mojo/services/geometry/interfaces/geometry.mojom.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Provides an |SkSurface| backed by a shared memory buffer for software
 // rendering which can then be passed to the Mozart compositor in the form
@@ -32,7 +31,7 @@ class SkiaSurfaceHolder {
   // Note: The underlying shared memory buffer remains mapped in this process
   // (and the |SkSurface| remains usable) until the |SkiaSurfaceHolder|
   // itself is destroyed.
-  mojo::gfx::composition::ImagePtr TakeImage();
+  ImagePtr TakeImage();
 
  private:
   mojo::ScopedSharedBufferHandle buffer_handle_;
@@ -42,7 +41,6 @@ class SkiaSurfaceHolder {
   FTL_DISALLOW_COPY_AND_ASSIGN(SkiaSurfaceHolder);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_SURFACE_HOLDER_H_

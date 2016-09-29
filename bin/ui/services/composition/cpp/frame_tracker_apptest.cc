@@ -15,14 +15,14 @@ class FrameTrackerTest : public mojo::test::ApplicationTestBase {
   ~FrameTrackerTest() override {}
 
  protected:
-  mojo::gfx::composition::FrameTracker frame_tracker_;
+  mozart::FrameTracker frame_tracker_;
 
   void Update(int64_t frame_time,
               uint64_t frame_interval,
               int64_t frame_deadline,
               int64_t presentation_time,
               MojoTimeTicks now) {
-    mojo::gfx::composition::FrameInfo frame_info;
+    mozart::FrameInfo frame_info;
     frame_info.frame_time = frame_time;
     frame_info.frame_interval = frame_interval;
     frame_info.frame_deadline = frame_deadline;
@@ -196,4 +196,4 @@ TEST_F(FrameTrackerTest, NonMonotonicPresentationTime) {
 }
 
 }  // namespace
-}  // namespace mojo
+}  // namespace test

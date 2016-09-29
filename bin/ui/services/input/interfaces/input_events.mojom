@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo;
+[DartPackage="mozart"]
+module mozart;
 
 import "mojo/services/geometry/interfaces/geometry.mojom";
 import "apps/mozart/services/input/interfaces/input_event_constants.mojom";

@@ -14,10 +14,10 @@
 namespace examples {
 
 constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 Rasterizer::Rasterizer(mojo::ApplicationConnectorPtr connector,
-                       mojo::gfx::composition::ScenePtr scene)
+                       mozart::ScenePtr scene)
     : scene_(scene.Pass()) {}
 
 Rasterizer::~Rasterizer() {}
@@ -25,28 +25,28 @@ Rasterizer::~Rasterizer() {}
 void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
   FTL_DCHECK(frame);
 
-  auto update = mojo::gfx::composition::SceneUpdate::New();
+  auto update = mozart::SceneUpdate::New();
 
   if (frame->size().width > 0 && frame->size().height > 0) {
     mojo::RectF bounds;
     bounds.width = frame->size().width;
     bounds.height = frame->size().height;
 
-    mojo::ui::SkiaSurfaceHolder surface_holder(frame->size());
+    mozart::SkiaSurfaceHolder surface_holder(frame->size());
     frame->Paint(surface_holder.surface()->getCanvas());
-    auto content_resource = mojo::gfx::composition::Resource::New();
-    content_resource->set_image(mojo::gfx::composition::ImageResource::New());
+    auto content_resource = mozart::Resource::New();
+    content_resource->set_image(mozart::ImageResource::New());
     content_resource->get_image()->image = surface_holder.TakeImage();
     update->resources.insert(kContentImageResourceId, content_resource.Pass());
 
-    auto root_node = mojo::gfx::composition::Node::New();
-    root_node->op = mojo::gfx::composition::NodeOp::New();
-    root_node->op->set_image(mojo::gfx::composition::ImageNodeOp::New());
+    auto root_node = mozart::Node::New();
+    root_node->op = mozart::NodeOp::New();
+    root_node->op->set_image(mozart::ImageNodeOp::New());
     root_node->op->get_image()->content_rect = bounds.Clone();
     root_node->op->get_image()->image_resource_id = kContentImageResourceId;
     update->nodes.insert(kRootNodeId, root_node.Pass());
   } else {
-    auto root_node = mojo::gfx::composition::Node::New();
+    auto root_node = mozart::Node::New();
     update->nodes.insert(kRootNodeId, root_node.Pass());
   }
 

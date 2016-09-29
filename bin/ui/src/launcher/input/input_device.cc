@@ -336,23 +336,24 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
                        &key_state_[current_index_], &key_delta_);
   // For all key pressed, generate a key event
   hid_for_every_key(&key_delta_, keycode) {
-    mojo::EventPtr ev = mojo::Event::New();
-    ev->action = mojo::EventType::KEY_PRESSED;
-    ev->flags = mojo::EventFlags::NONE;
+    mozart::EventPtr ev = mozart::Event::New();
+    ev->action = mozart::EventType::KEY_PRESSED;
+    ev->flags = mozart::EventFlags::NONE;
     ev->time_stamp = now;
 
-    ev->key_data = mojo::KeyData::New();
+    ev->key_data = mozart::KeyData::New();
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->windows_key_code = mojo::KeyboardCode::UNKNOWN;
+    ev->key_data->windows_key_code = mozart::KeyboardCode::UNKNOWN;
     ev->key_data->native_key_code = 0;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
     uint8_t ch = hid_map_key(keycode, modifiers_ & MOD_SHIFT, keymap_);
     if (ch) {
-      mojo::KeyboardCode windows_key_code = mojo::KeyboardCode::BACK;  // FIXME
+      mozart::KeyboardCode windows_key_code =
+          mozart::KeyboardCode::BACK;  // FIXME
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
@@ -364,27 +365,27 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     switch (keycode) {
       case HID_USAGE_KEY_LEFT_SHIFT:
         modifiers_ |= MOD_LSHIFT;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::SHIFT;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
         modifiers_ |= MOD_RSHIFT;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::SHIFT;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
         modifiers_ |= MOD_LCTRL;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::CONTROL;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
         modifiers_ |= MOD_RCTRL;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::CONTROL;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
         break;
       case HID_USAGE_KEY_LEFT_ALT:
         modifiers_ |= MOD_LALT;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::MENU;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
         modifiers_ |= MOD_RALT;
-        ev->key_data->windows_key_code = mojo::KeyboardCode::MENU;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
         break;
       default:
         break;
@@ -398,23 +399,24 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
                         &key_state_[current_index_], &key_delta_);
   // For all key released, generate a key event
   hid_for_every_key(&key_delta_, keycode) {
-    mojo::EventPtr ev = mojo::Event::New();
-    ev->action = mojo::EventType::KEY_RELEASED;
-    ev->flags = mojo::EventFlags::NONE;
+    mozart::EventPtr ev = mozart::Event::New();
+    ev->action = mozart::EventType::KEY_RELEASED;
+    ev->flags = mozart::EventFlags::NONE;
     ev->time_stamp = now;
 
-    ev->key_data = mojo::KeyData::New();
+    ev->key_data = mozart::KeyData::New();
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->windows_key_code = mojo::KeyboardCode::UNKNOWN;
+    ev->key_data->windows_key_code = mozart::KeyboardCode::UNKNOWN;
     ev->key_data->native_key_code = 0;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
     uint8_t ch = hid_map_key(keycode, modifiers_ & MOD_SHIFT, keymap_);
     if (ch) {
-      mojo::KeyboardCode windows_key_code = mojo::KeyboardCode::BACK;  // FIXME
+      mozart::KeyboardCode windows_key_code =
+          mozart::KeyboardCode::BACK;  // FIXME
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
@@ -426,31 +428,31 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     switch (keycode) {
       case HID_USAGE_KEY_LEFT_SHIFT:
         modifiers_ &= (~MOD_LSHIFT);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::SHIFT;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
         modifiers_ &= (~MOD_RSHIFT);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::SHIFT;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
 
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
         modifiers_ &= (~MOD_LCTRL);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::CONTROL;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
 
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
         modifiers_ &= (~MOD_RCTRL);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::CONTROL;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
 
         break;
       case HID_USAGE_KEY_LEFT_ALT:
         modifiers_ &= (~MOD_LALT);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::MENU;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
 
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
         modifiers_ &= (~MOD_RALT);
-        ev->key_data->windows_key_code = mojo::KeyboardCode::MENU;
+        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
 
         break;
     }
@@ -464,7 +466,7 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
 
 void MouseInputDevice::Parse(const OnEventCallback& callback,
                              const mojo::Size& display_size) {
-  // TODO(jpoichet) Generate mojo::Event from boot_mouse_report_t* report =
+  // TODO(jpoichet) Generate mozart::Event from boot_mouse_report_t* report =
   // reinterpret_cast<boot_mouse_report_t*>(report_);
 }
 
@@ -477,14 +479,14 @@ void Acer12InputDevice::ParseStylus(const OnEventCallback& callback,
   if (!report->status || report->status == ACER12_STYLUS_STATUS_INRANGE)
     return;
 
-  mojo::EventPtr ev = mojo::Event::New();
-  ev->action = mojo::EventType::POINTER_DOWN;
-  ev->flags = mojo::EventFlags::NONE;
+  mozart::EventPtr ev = mozart::Event::New();
+  ev->action = mozart::EventType::POINTER_DOWN;
+  ev->flags = mozart::EventFlags::NONE;
   ev->time_stamp = InputEventTimestampNow();
 
-  ev->pointer_data = mojo::PointerData::New();
+  ev->pointer_data = mozart::PointerData::New();
   ev->pointer_data->pointer_id = report->rpt_id;
-  ev->pointer_data->kind = mojo::PointerKind::TOUCH;
+  ev->pointer_data->kind = mozart::PointerKind::TOUCH;
 
   uint32_t x = scale32(report->x, display_size.width, ACER12_STYLUS_X_MAX);
   uint32_t y = scale32(report->y, display_size.height, ACER12_STYLUS_Y_MAX);
@@ -512,7 +514,7 @@ void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
   acer12_touch_t* report = reinterpret_cast<acer12_touch_t*>(report_);
 
   int64_t now = InputEventTimestampNow();
-  std::vector<mojo::PointerData> old_pointers = pointers_;
+  std::vector<mozart::PointerData> old_pointers = pointers_;
   pointers_.clear();
 
   // Only 5 touches per report
@@ -525,21 +527,21 @@ void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
 
     int pointer_id = acer12_finger_id_contact(report->fingers[c].finger_id);
 
-    auto ev = mojo::Event::New();
-    ev->action = mojo::EventType::POINTER_DOWN;
+    auto ev = mozart::Event::New();
+    ev->action = mozart::EventType::POINTER_DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
       if (it->pointer_id == pointer_id) {
-        ev->action = mojo::EventType::POINTER_MOVE;
+        ev->action = mozart::EventType::POINTER_MOVE;
         old_pointers.erase(it);
         break;
       }
     }
-    ev->flags = mojo::EventFlags::NONE;
+    ev->flags = mozart::EventFlags::NONE;
     ev->time_stamp = now;
 
-    ev->pointer_data = mojo::PointerData::New();
+    ev->pointer_data = mozart::PointerData::New();
     ev->pointer_data->pointer_id = pointer_id;
-    ev->pointer_data->kind = mojo::PointerKind::TOUCH;
+    ev->pointer_data->kind = mozart::PointerKind::TOUCH;
 
     uint32_t x =
         scale32(report->fingers[c].x, display_size.width, ACER12_X_MAX);
@@ -565,9 +567,9 @@ void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
   }
 
   for (const auto& pointer : old_pointers) {
-    auto ev = mojo::Event::New();
-    ev->action = mojo::EventType::POINTER_UP;
-    ev->flags = mojo::EventFlags::NONE;
+    auto ev = mozart::Event::New();
+    ev->action = mozart::EventType::POINTER_UP;
+    ev->flags = mozart::EventFlags::NONE;
     ev->time_stamp = now;
     ev->pointer_data = pointer.Clone();
 

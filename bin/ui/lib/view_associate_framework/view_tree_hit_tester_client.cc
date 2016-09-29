@@ -7,12 +7,11 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 ViewTreeHitTesterClient::ViewTreeHitTesterClient(
     const ftl::RefPtr<ViewInspectorClient>& view_inspector_client,
-    mojo::ui::ViewTreeTokenPtr view_tree_token)
+    ViewTreeTokenPtr view_tree_token)
     : view_inspector_client_(view_inspector_client),
       view_tree_token_(view_tree_token.Pass()),
       weak_factory_(this) {
@@ -36,14 +35,12 @@ void ViewTreeHitTesterClient::HitTest(mojo::PointFPtr point,
   // assumption.
   pending_callbacks_.push(callback);
 
-  hit_tester_->HitTest(point.Pass(),
-                       [this](mojo::gfx::composition::HitTestResultPtr result) {
-                         OnHitTestResult(result.Pass());
-                       });
+  hit_tester_->HitTest(point.Pass(), [this](HitTestResultPtr result) {
+    OnHitTestResult(result.Pass());
+  });
 }
 
-void ViewTreeHitTesterClient::OnHitTestResult(
-    mojo::gfx::composition::HitTestResultPtr result) {
+void ViewTreeHitTesterClient::OnHitTestResult(HitTestResultPtr result) {
   FTL_DCHECK(result);
   FTL_DCHECK(!pending_callbacks_.empty());
 
@@ -91,5 +88,4 @@ void ViewTreeHitTesterClient::OnHitTesterDied() {
     hit_tester_changed_callback_();
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

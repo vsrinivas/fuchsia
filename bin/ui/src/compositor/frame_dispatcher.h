@@ -13,7 +13,7 @@
 
 namespace compositor {
 
-using FrameCallback = std::function<void(mojo::gfx::composition::FrameInfoPtr)>;
+using FrameCallback = std::function<void(mozart::FrameInfoPtr)>;
 
 // Maintains a list of pending frame callbacks to be dispatched.
 class FrameDispatcher {
@@ -25,7 +25,7 @@ class FrameDispatcher {
   bool AddCallback(const FrameCallback& callback);
 
   // Dispatches all pending callbacks then clears the list.
-  void DispatchCallbacks(const mojo::gfx::composition::FrameInfo& frame_info);
+  void DispatchCallbacks(const mozart::FrameInfo& frame_info);
 
  private:
   std::vector<FrameCallback> pending_callbacks_;

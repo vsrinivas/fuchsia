@@ -13,10 +13,10 @@ class SkCanvas;
 
 namespace examples {
 
-class ShapesView : public mojo::ui::BaseView {
+class ShapesView : public mozart::BaseView {
  public:
   ShapesView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-             mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request);
+             mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~ShapesView() override;
 

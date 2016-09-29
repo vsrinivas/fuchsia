@@ -17,7 +17,7 @@ TileApp::~TileApp() {}
 
 void TileApp::CreateView(
     const std::string& connection_url,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     mojo::InterfaceRequest<mojo::ServiceProvider> services) {
   TileParams params;
   if (!ParseParams(connection_url, &params)) {

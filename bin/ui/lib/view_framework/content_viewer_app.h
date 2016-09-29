@@ -11,10 +11,10 @@
 #include "mojo/services/content_handler/interfaces/content_handler.mojom.h"
 
 namespace mojo {
-
 class ServiceProviderImpl;
+}  // namespace mojo
 
-namespace ui {
+namespace mozart {
 
 class ViewProviderApp;
 
@@ -25,13 +25,14 @@ class ViewProviderApp;
 // TODO(jeffbrown): Support creating the view provider application in a
 // separate thread if desired (often not the case).  This is one reason
 // we are not using the ContentHandlerFactory here.
-class ContentViewerApp : public ApplicationImplBase {
+class ContentViewerApp : public mojo::ApplicationImplBase {
  public:
   ContentViewerApp();
   ~ContentViewerApp() override;
 
   // |ApplicationImplBase|:
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override;
+  bool OnAcceptConnection(
+      mojo::ServiceProviderImpl* service_provider_impl) override;
 
   // Called to create the view provider application to view the content.
   //
@@ -51,21 +52,21 @@ class ContentViewerApp : public ApplicationImplBase {
   // returned ViewProviderApp implementation?) See my TODO in the implementation
   // of StartViewer().
   virtual ViewProviderApp* LoadContent(const std::string& content_handler_url,
-                                       URLResponsePtr response) = 0;
+                                       mojo::URLResponsePtr response) = 0;
 
  private:
   class DelegatingContentHandler;
 
-  void StartViewer(const std::string& content_handler_url,
-                   InterfaceRequest<Application> application_request,
-                   URLResponsePtr response);
+  void StartViewer(
+      const std::string& content_handler_url,
+      mojo::InterfaceRequest<mojo::Application> application_request,
+      mojo::URLResponsePtr response);
 
-  StrongBindingSet<ContentHandler> bindings_;
+  mojo::StrongBindingSet<mojo::ContentHandler> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContentViewerApp);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_CONTENT_VIEWER_APP_H_

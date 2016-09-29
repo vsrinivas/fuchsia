@@ -126,8 +126,7 @@ class VsyncScheduler : public Scheduler {
                             int64_t update_time);
 
     void Dispatch(int32_t generation, Action action, int64_t update_time);
-    void SetFrameInfoLocked(mojo::gfx::composition::FrameInfo* frame_info,
-                            int64_t update_time);
+    void SetFrameInfoLocked(mozart::FrameInfo* frame_info, int64_t update_time);
 
     const ftl::RefPtr<ftl::TaskRunner> task_runner_;
     const SchedulerCallbacks callbacks_;

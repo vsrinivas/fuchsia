@@ -13,7 +13,7 @@
 
 namespace input_manager {
 namespace {
-void TransformEvent(const mojo::Transform& transform, mojo::Event* event) {
+void TransformEvent(const mojo::Transform& transform, mozart::Event* event) {
   if (!event->pointer_data)
     return;
   mojo::PointF point;
@@ -27,11 +27,11 @@ void TransformEvent(const mojo::Transform& transform, mojo::Event* event) {
 
 InputDispatcherImpl::InputDispatcherImpl(
     InputAssociate* associate,
-    mojo::ui::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mojo::ui::InputDispatcher> request)
+    mozart::ViewTreeTokenPtr view_tree_token,
+    mojo::InterfaceRequest<mozart::InputDispatcher> request)
     : associate_(associate),
       view_tree_token_(view_tree_token.Pass()),
-      hit_tester_(ftl::MakeRefCounted<mojo::ui::ViewTreeHitTesterClient>(
+      hit_tester_(ftl::MakeRefCounted<mozart::ViewTreeHitTesterClient>(
           associate_->inspector(),
           view_tree_token_.Clone())),
       binding_(this, request.Pass()),
@@ -45,7 +45,7 @@ InputDispatcherImpl::InputDispatcherImpl(
 
 InputDispatcherImpl::~InputDispatcherImpl() {}
 
-void InputDispatcherImpl::DispatchEvent(mojo::EventPtr event) {
+void InputDispatcherImpl::DispatchEvent(mozart::EventPtr event) {
   FTL_DCHECK(event);
 
   pending_events_.push(event.Pass());
@@ -57,15 +57,15 @@ void InputDispatcherImpl::ProcessNextEvent() {
   FTL_DCHECK(!pending_events_.empty());
 
   do {
-    const mojo::Event* event = pending_events_.front().get();
-    if (event->action == mojo::EventType::POINTER_DOWN) {
+    const mozart::Event* event = pending_events_.front().get();
+    if (event->action == mozart::EventType::POINTER_DOWN) {
       FTL_DCHECK(event->pointer_data);
       auto point = mojo::PointF::New();
       point->x = event->pointer_data->x;
       point->y = event->pointer_data->y;
       DVLOG(1) << "HitTest: point=" << point;
       auto hit_result_callback = [ this, weak = weak_factory_.GetWeakPtr() ](
-          std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits) {
+          std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
         if (weak)
           weak->OnHitTestResult(std::move(resolved_hits));
       };
@@ -77,7 +77,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
   } while (!pending_events_.empty());
 }
 
-void InputDispatcherImpl::DeliverEvent(mojo::EventPtr event) {
+void InputDispatcherImpl::DeliverEvent(mozart::EventPtr event) {
   if (focused_view_token_) {
     TransformEvent(*focused_view_transform_, event.get());
     associate_->DeliverEvent(focused_view_token_.get(), event.Pass());
@@ -85,7 +85,7 @@ void InputDispatcherImpl::DeliverEvent(mojo::EventPtr event) {
 }
 
 void InputDispatcherImpl::OnHitTestResult(
-    std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits) {
+    std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
   FTL_DCHECK(!pending_events_.empty());
   DVLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
 
@@ -94,9 +94,8 @@ void InputDispatcherImpl::OnHitTestResult(
   focused_view_token_.reset();
   focused_view_transform_.reset();
   if (resolved_hits && resolved_hits->result()->root) {
-    mojo::gfx::composition::HitTestResultPtr result =
-        resolved_hits->TakeResult();
-    const mojo::gfx::composition::SceneHit* scene = result->root.get();
+    mozart::HitTestResultPtr result = resolved_hits->TakeResult();
+    const mozart::SceneHit* scene = result->root.get();
     for (;;) {
       FTL_DCHECK(scene->hits.size());
       if (scene->hits[0]->is_node()) {

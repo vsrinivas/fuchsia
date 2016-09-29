@@ -23,11 +23,11 @@
 
 namespace compositor {
 namespace {
-SkColor MakeSkColor(const mojo::gfx::composition::Color& color) {
+SkColor MakeSkColor(const mozart::Color& color) {
   return SkColorSetARGBInline(color.alpha, color.red, color.green, color.blue);
 }
 
-void SetPaintForBlend(SkPaint* paint, mojo::gfx::composition::Blend* blend) {
+void SetPaintForBlend(SkPaint* paint, mozart::Blend* blend) {
   FTL_DCHECK(paint);
   if (blend)
     paint->setAlpha(blend->alpha);
@@ -42,7 +42,7 @@ bool Contains(const SkRect& bounds, const SkPoint& point) {
 Node::Node(uint32_t node_id,
            std::unique_ptr<TransformPair> content_transform,
            mojo::RectFPtr content_clip,
-           mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+           mozart::HitTestBehaviorPtr hit_test_behavior,
            Combinator combinator,
            const std::vector<uint32_t>& child_node_ids)
     : node_id_(node_id),
@@ -236,7 +236,7 @@ bool Node::HitTest(const SceneContent* content,
                    const Snapshot* snapshot,
                    const SkPoint& parent_point,
                    const SkMatrix44& global_to_parent_transform,
-                   mojo::Array<mojo::gfx::composition::HitPtr>* hits) const {
+                   mojo::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -265,12 +265,11 @@ bool Node::HitTest(const SceneContent* content,
          opaque_children;
 }
 
-bool Node::HitTestInner(
-    const SceneContent* content,
-    const Snapshot* snapshot,
-    const SkPoint& local_point,
-    const SkMatrix44& global_to_local_transform,
-    mojo::Array<mojo::gfx::composition::HitPtr>* hits) const {
+bool Node::HitTestInner(const SceneContent* content,
+                        const Snapshot* snapshot,
+                        const SkPoint& local_point,
+                        const SkMatrix44& global_to_local_transform,
+                        mojo::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -292,43 +291,42 @@ bool Node::HitTestInner(
   return false;
 }
 
-bool Node::HitTestSelf(
-    const SceneContent* content,
-    const Snapshot* snapshot,
-    const SkPoint& local_point,
-    const SkMatrix44& global_to_local_transform,
-    mojo::Array<mojo::gfx::composition::HitPtr>* hits) const {
+bool Node::HitTestSelf(const SceneContent* content,
+                       const Snapshot* snapshot,
+                       const SkPoint& local_point,
+                       const SkMatrix44& global_to_local_transform,
+                       mojo::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
 
   if (!hit_test_behavior_ ||
       hit_test_behavior_->visibility ==
-          mojo::gfx::composition::HitTestBehavior::Visibility::INVISIBLE)
+          mozart::HitTestBehavior::Visibility::INVISIBLE)
     return false;
 
   if (hit_test_behavior_->hit_rect &&
       !Contains(hit_test_behavior_->hit_rect->To<SkRect>(), local_point))
     return false;
 
-  auto hit = mojo::gfx::composition::Hit::New();
-  hit->set_node(mojo::gfx::composition::NodeHit::New());
+  auto hit = mozart::Hit::New();
+  hit->set_node(mozart::NodeHit::New());
   hit->get_node()->node_id = node_id_;
   hit->get_node()->transform =
       mojo::ConvertTo<mojo::TransformPtr>(global_to_local_transform);
   hits->push_back(hit.Pass());
   return hit_test_behavior_->visibility ==
-         mojo::gfx::composition::HitTestBehavior::Visibility::OPAQUE;
+         mozart::HitTestBehavior::Visibility::OPAQUE;
 }
 
 RectNode::RectNode(uint32_t node_id,
                    std::unique_ptr<TransformPair> content_transform,
                    mojo::RectFPtr content_clip,
-                   mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
+                   mozart::HitTestBehaviorPtr hit_test_behavior,
                    Combinator combinator,
                    const std::vector<uint32_t>& child_node_ids,
                    const mojo::RectF& content_rect,
-                   const mojo::gfx::composition::Color& color)
+                   const mozart::Color& color)
     : Node(node_id,
            std::move(content_transform),
            content_clip.Pass(),
@@ -354,17 +352,16 @@ void RectNode::PaintInner(const SceneContent* content,
   Node::PaintInner(content, snapshot, canvas);
 }
 
-ImageNode::ImageNode(
-    uint32_t node_id,
-    std::unique_ptr<TransformPair> content_transform,
-    mojo::RectFPtr content_clip,
-    mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
-    Combinator combinator,
-    const std::vector<uint32_t>& child_node_ids,
-    const mojo::RectF& content_rect,
-    mojo::RectFPtr image_rect,
-    uint32_t image_resource_id,
-    mojo::gfx::composition::BlendPtr blend)
+ImageNode::ImageNode(uint32_t node_id,
+                     std::unique_ptr<TransformPair> content_transform,
+                     mojo::RectFPtr content_clip,
+                     mozart::HitTestBehaviorPtr hit_test_behavior,
+                     Combinator combinator,
+                     const std::vector<uint32_t>& child_node_ids,
+                     const mojo::RectF& content_rect,
+                     mojo::RectFPtr image_rect,
+                     uint32_t image_resource_id,
+                     mozart::BlendPtr blend)
     : Node(node_id,
            std::move(content_transform),
            content_clip.Pass(),
@@ -410,15 +407,14 @@ void ImageNode::PaintInner(const SceneContent* content,
   Node::PaintInner(content, snapshot, canvas);
 }
 
-SceneNode::SceneNode(
-    uint32_t node_id,
-    std::unique_ptr<TransformPair> content_transform,
-    mojo::RectFPtr content_clip,
-    mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
-    Combinator combinator,
-    const std::vector<uint32_t>& child_node_ids,
-    uint32_t scene_resource_id,
-    uint32_t scene_version)
+SceneNode::SceneNode(uint32_t node_id,
+                     std::unique_ptr<TransformPair> content_transform,
+                     mojo::RectFPtr content_clip,
+                     mozart::HitTestBehaviorPtr hit_test_behavior,
+                     Combinator combinator,
+                     const std::vector<uint32_t>& child_node_ids,
+                     uint32_t scene_resource_id,
+                     uint32_t scene_version)
     : Node(node_id,
            std::move(content_transform),
            content_clip.Pass(),
@@ -466,12 +462,11 @@ void SceneNode::PaintInner(const SceneContent* content,
   Node::PaintInner(content, snapshot, canvas);
 }
 
-bool SceneNode::HitTestInner(
-    const SceneContent* content,
-    const Snapshot* snapshot,
-    const SkPoint& local_point,
-    const SkMatrix44& global_to_local_transform,
-    mojo::Array<mojo::gfx::composition::HitPtr>* hits) const {
+bool SceneNode::HitTestInner(const SceneContent* content,
+                             const Snapshot* snapshot,
+                             const SkPoint& local_point,
+                             const SkMatrix44& global_to_local_transform,
+                             mojo::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -484,26 +479,25 @@ bool SceneNode::HitTestInner(
       snapshot->GetResolvedSceneContent(this);
   FTL_DCHECK(resolved_content);
 
-  mojo::gfx::composition::SceneHitPtr scene_hit;
+  mozart::SceneHitPtr scene_hit;
   bool opaque = resolved_content->HitTest(
       snapshot, local_point, global_to_local_transform, &scene_hit);
   if (scene_hit) {
-    auto hit = mojo::gfx::composition::Hit::New();
+    auto hit = mozart::Hit::New();
     hit->set_scene(scene_hit.Pass());
     hits->push_back(hit.Pass());
   }
   return opaque;
 }
 
-LayerNode::LayerNode(
-    uint32_t node_id,
-    std::unique_ptr<TransformPair> content_transform,
-    mojo::RectFPtr content_clip,
-    mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior,
-    Combinator combinator,
-    const std::vector<uint32_t>& child_node_ids,
-    const mojo::RectF& layer_rect,
-    mojo::gfx::composition::BlendPtr blend)
+LayerNode::LayerNode(uint32_t node_id,
+                     std::unique_ptr<TransformPair> content_transform,
+                     mojo::RectFPtr content_clip,
+                     mozart::HitTestBehaviorPtr hit_test_behavior,
+                     Combinator combinator,
+                     const std::vector<uint32_t>& child_node_ids,
+                     const mojo::RectF& layer_rect,
+                     mozart::BlendPtr blend)
     : Node(node_id,
            std::move(content_transform),
            content_clip.Pass(),

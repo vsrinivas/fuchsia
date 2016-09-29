@@ -18,8 +18,7 @@ Snapshot::Snapshot() {}
 
 Snapshot::~Snapshot() {}
 
-bool Snapshot::HasDependency(
-    const mojo::gfx::composition::SceneToken& scene_token) const {
+bool Snapshot::HasDependency(const mozart::SceneToken& scene_token) const {
   return dependencies_.find(scene_token.value) != dependencies_.end();
 }
 
@@ -38,7 +37,7 @@ ftl::RefPtr<RenderFrame> Snapshot::Paint(const RenderFrame::Metadata& metadata,
 }
 
 void Snapshot::HitTest(const mojo::PointF& point,
-                       mojo::gfx::composition::HitTestResult* result) const {
+                       mozart::HitTestResult* result) const {
   FTL_DCHECK(result);
   FTL_DCHECK(!is_blocked());
   FTL_DCHECK(root_scene_content_);
@@ -141,7 +140,7 @@ Snapshot::Disposition SnapshotBuilder::SnapshotSceneContent(
 }
 
 Snapshot::Disposition SnapshotBuilder::AddDependencyResolveAndSnapshotScene(
-    const mojo::gfx::composition::SceneToken& scene_token,
+    const mozart::SceneToken& scene_token,
     uint32_t version,
     ftl::RefPtr<const SceneContent>* out_content) {
   FTL_DCHECK(out_content);
@@ -151,7 +150,7 @@ Snapshot::Disposition SnapshotBuilder::AddDependencyResolveAndSnapshotScene(
 }
 
 ftl::RefPtr<const Snapshot> SnapshotBuilder::Build(
-    const mojo::gfx::composition::SceneToken& scene_token,
+    const mozart::SceneToken& scene_token,
     uint32_t version) {
   FTL_DCHECK(snapshot_);
   FTL_DCHECK(!snapshot_->root_scene_content_);

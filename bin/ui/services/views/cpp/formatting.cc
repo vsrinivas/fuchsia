@@ -6,51 +6,44 @@
 
 #include <ostream>
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewToken& value) {
+std::ostream& operator<<(std::ostream& os, const ViewToken& value) {
   return os << "<V" << value.value << ">";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewTreeToken& value) {
+std::ostream& operator<<(std::ostream& os, const ViewTreeToken& value) {
   return os << "<T" << value.value << ">";
 }
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewInfo& value) {
+std::ostream& operator<<(std::ostream& os, const ViewInfo& value) {
   return os << "{scene_token=" << value.scene_token << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewProperties& value) {
+std::ostream& operator<<(std::ostream& os, const ViewProperties& value) {
   return os << "{display_metrics=" << value.display_metrics
             << ", view_layout=" << value.view_layout << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::DisplayMetrics& value) {
+std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value) {
   return os << "{device_pixel_ratio=" << value.device_pixel_ratio << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewLayout& value) {
+std::ostream& operator<<(std::ostream& os, const ViewLayout& value) {
   return os << "{size=" << value.size << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewInvalidation& value) {
+std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value) {
   return os << "{properties=" << value.properties
             << ", container_flush_token=" << value.container_flush_token
             << ", scene_version=" << value.scene_version
             << ", frame_info=" << value.frame_info << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewAssociateInfo& value) {
+std::ostream& operator<<(std::ostream& os, const ViewAssociateInfo& value) {
   return os << "{view_service_names=" << value.view_service_names
             << ", view_tree_service_names=" << value.view_tree_service_names
             << "}";
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

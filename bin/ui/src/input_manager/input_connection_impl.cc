@@ -11,8 +11,8 @@ namespace input_manager {
 
 InputConnectionImpl::InputConnectionImpl(
     InputAssociate* associate,
-    mojo::ui::ViewTokenPtr view_token,
-    mojo::InterfaceRequest<mojo::ui::InputConnection> request)
+    mozart::ViewTokenPtr view_token,
+    mojo::InterfaceRequest<mozart::InputConnection> request)
     : associate_(associate),
       view_token_(view_token.Pass()),
       binding_(this, request.Pass()) {
@@ -24,7 +24,7 @@ InputConnectionImpl::InputConnectionImpl(
 
 InputConnectionImpl::~InputConnectionImpl() {}
 
-void InputConnectionImpl::DeliverEvent(mojo::EventPtr event) {
+void InputConnectionImpl::DeliverEvent(mozart::EventPtr event) {
   // TODO(jeffbrown): Pass the result back up the stack and handle errors.
   if (!listener_) {
     DVLOG(1) << "DeliverEvent: dropped because there was no listener";
@@ -40,8 +40,8 @@ void InputConnectionImpl::OnEventFinished(bool handled) {
 }
 
 void InputConnectionImpl::SetListener(
-    mojo::InterfaceHandle<mojo::ui::InputListener> listener) {
-  listener_ = mojo::ui::InputListenerPtr::Create(std::move(listener));
+    mojo::InterfaceHandle<mozart::InputListener> listener) {
+  listener_ = mozart::InputListenerPtr::Create(std::move(listener));
 }
 
 }  // namespace input_manager

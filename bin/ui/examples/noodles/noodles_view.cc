@@ -42,7 +42,7 @@ void Lissajous(SkPath* path, double ax, double ay, int wx, int wy, double p) {
 
 NoodlesView::NoodlesView(
     mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request)
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(app_connector),
                std::move(view_owner_request),
                "Noodles"),
@@ -146,10 +146,10 @@ NoodlesView::RasterizerDelegate::~RasterizerDelegate() {}
 
 void NoodlesView::RasterizerDelegate::CreateRasterizer(
     mojo::InterfaceHandle<mojo::ApplicationConnector> connector_info,
-    mojo::InterfaceHandle<mojo::gfx::composition::Scene> scene_info) {
+    mojo::InterfaceHandle<mozart::Scene> scene_info) {
   rasterizer_.reset(new Rasterizer(
       mojo::ApplicationConnectorPtr::Create(std::move(connector_info)),
-      mojo::gfx::composition::ScenePtr::Create(std::move(scene_info))));
+      mozart::ScenePtr::Create(std::move(scene_info))));
 }
 
 void NoodlesView::RasterizerDelegate::PublishNextFrame() {

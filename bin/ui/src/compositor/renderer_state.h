@@ -31,9 +31,7 @@ class RendererState {
   }
 
   // Sets the associated renderer implementation and takes ownership of it.
-  void set_renderer_impl(mojo::gfx::composition::Renderer* impl) {
-    renderer_impl_.reset(impl);
-  }
+  void set_renderer_impl(mozart::Renderer* impl) { renderer_impl_.reset(impl); }
 
   // The underlying backend output.
   void set_output(std::unique_ptr<Output> output) {
@@ -84,10 +82,10 @@ class RendererState {
   std::string formatted_label_cache_;
 
   FrameDispatcher frame_dispatcher_;  // must be before renderer_impl_
-  std::unique_ptr<mojo::gfx::composition::Renderer> renderer_impl_;
+  std::unique_ptr<mozart::Renderer> renderer_impl_;
 
   SceneState* root_scene_ = nullptr;
-  uint32_t root_scene_version_ = mojo::gfx::composition::kSceneVersionNone;
+  uint32_t root_scene_version_ = mozart::kSceneVersionNone;
   mojo::Rect root_scene_viewport_;
 
   ftl::RefPtr<const Snapshot> visible_snapshot_;

@@ -23,11 +23,11 @@ class LauncherViewTree;
 
 class LaunchInstance {
  public:
-  LaunchInstance(mojo::gfx::composition::Compositor* compositor,
-                 mojo::ui::ViewManager* view_manager,
+  LaunchInstance(mozart::Compositor* compositor,
+                 mozart::ViewManager* view_manager,
                  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                  mojo::FramebufferInfoPtr framebuffer_info,
-                 mojo::ui::ViewProviderPtr view_provider,
+                 mozart::ViewProviderPtr view_provider,
                  const ftl::Closure& shutdown_callback);
   ~LaunchInstance();
 
@@ -36,19 +36,19 @@ class LaunchInstance {
  private:
   void CheckInput();
 
-  mojo::gfx::composition::Compositor* const compositor_;
-  mojo::ui::ViewManager* const view_manager_;
+  mozart::Compositor* const compositor_;
+  mozart::ViewManager* const view_manager_;
 
   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
   mojo::FramebufferInfoPtr framebuffer_info_;
   mojo::Size framebuffer_size_;
-  mojo::ui::ViewProviderPtr view_provider_;
+  mozart::ViewProviderPtr view_provider_;
 
   ftl::Closure shutdown_callback_;
 
   std::unique_ptr<LauncherViewTree> view_tree_;
 
-  mojo::ui::ViewOwnerPtr client_view_owner_;
+  mozart::ViewOwnerPtr client_view_owner_;
 
   InputDeviceMonitor input_device_monitor_;
 

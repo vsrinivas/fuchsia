@@ -23,13 +23,12 @@ SceneDef::SceneDef(const SceneLabel& label) : label_(label) {}
 
 SceneDef::~SceneDef() {}
 
-void SceneDef::EnqueueUpdate(mojo::gfx::composition::SceneUpdatePtr update) {
+void SceneDef::EnqueueUpdate(mozart::SceneUpdatePtr update) {
   FTL_DCHECK(update);
   pending_updates_.push_back(update.Pass());
 }
 
-void SceneDef::EnqueuePublish(
-    mojo::gfx::composition::SceneMetadataPtr metadata) {
+void SceneDef::EnqueuePublish(mozart::SceneMetadataPtr metadata) {
   FTL_DCHECK(metadata);
   pending_publications_.emplace_back(new Publication(metadata.Pass()));
   pending_updates_.swap(pending_publications_.back()->updates);
@@ -81,7 +80,7 @@ SceneDef::Disposition SceneDef::Present(
   return Disposition::kSucceeded;
 }
 
-bool SceneDef::ApplyUpdate(mojo::gfx::composition::SceneUpdatePtr update,
+bool SceneDef::ApplyUpdate(mozart::SceneUpdatePtr update,
                            const SceneResolver& resolver,
                            const SceneUnavailableSender& unavailable_sender,
                            std::ostream& err) {
@@ -100,7 +99,7 @@ bool SceneDef::ApplyUpdate(mojo::gfx::composition::SceneUpdatePtr update,
   for (auto it = update->resources.begin(); it != update->resources.end();
        ++it) {
     uint32_t resource_id = it.GetKey();
-    mojo::gfx::composition::ResourcePtr& resource_decl = it.GetValue();
+    mozart::ResourcePtr& resource_decl = it.GetValue();
     if (resource_decl) {
       ftl::RefPtr<const Resource> resource = CreateResource(
           resource_id, resource_decl.Pass(), resolver, unavailable_sender, err);
@@ -118,7 +117,7 @@ bool SceneDef::ApplyUpdate(mojo::gfx::composition::SceneUpdatePtr update,
   }
   for (auto it = update->nodes.begin(); it != update->nodes.end(); ++it) {
     uint32_t node_id = it.GetKey();
-    mojo::gfx::composition::NodePtr& node_decl = it.GetValue();
+    mozart::NodePtr& node_decl = it.GetValue();
     if (node_decl) {
       ftl::RefPtr<const Node> node = CreateNode(node_id, node_decl.Pass(), err);
       if (!node)
@@ -132,7 +131,7 @@ bool SceneDef::ApplyUpdate(mojo::gfx::composition::SceneUpdatePtr update,
 }
 
 void SceneDef::NotifySceneUnavailable(
-    const mojo::gfx::composition::SceneToken& scene_token,
+    const mozart::SceneToken& scene_token,
     const SceneUnavailableSender& unavailable_sender) {
   for (auto& pair : resources_) {
     if (pair.second->type() == Resource::Type::kScene) {
@@ -146,7 +145,7 @@ void SceneDef::NotifySceneUnavailable(
 
 ftl::RefPtr<const Resource> SceneDef::CreateResource(
     uint32_t resource_id,
-    mojo::gfx::composition::ResourcePtr resource_decl,
+    mozart::ResourcePtr resource_decl,
     const SceneResolver& resolver,
     const SceneUnavailableSender& unavailable_sender,
     std::ostream& err) {
@@ -156,8 +155,7 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
     auto& scene_resource_decl = resource_decl->get_scene();
     FTL_DCHECK(scene_resource_decl->scene_token);
 
-    const mojo::gfx::composition::SceneToken& scene_token =
-        *scene_resource_decl->scene_token;
+    const mozart::SceneToken& scene_token = *scene_resource_decl->scene_token;
     if (!resolver(scene_token))
       unavailable_sender(resource_id);
     return ftl::MakeRefCounted<SceneResource>(scene_token);
@@ -175,8 +173,7 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
                                image_resource_decl->callback)]() mutable {
           if (!callback)
             return;
-          mojo::gfx::composition::ImageResourceCallbackPtr::Create(
-              std::move(callback))
+          mozart::ImageResourceCallbackPtr::Create(std::move(callback))
               ->OnImageReleased();
         }));
     if (!image) {
@@ -191,10 +188,9 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
   return nullptr;
 }
 
-ftl::RefPtr<const Node> SceneDef::CreateNode(
-    uint32_t node_id,
-    mojo::gfx::composition::NodePtr node_decl,
-    std::ostream& err) {
+ftl::RefPtr<const Node> SceneDef::CreateNode(uint32_t node_id,
+                                             mozart::NodePtr node_decl,
+                                             std::ostream& err) {
   FTL_DCHECK(node_decl);
 
   std::unique_ptr<TransformPair> content_transform;
@@ -203,10 +199,9 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(
         new TransformPair(node_decl->content_transform.To<SkMatrix44>()));
   }
   mojo::RectFPtr content_clip = node_decl->content_clip.Pass();
-  mojo::gfx::composition::HitTestBehaviorPtr hit_test_behavior =
+  mozart::HitTestBehaviorPtr hit_test_behavior =
       node_decl->hit_test_behavior.Pass();
-  const mojo::gfx::composition::Node::Combinator combinator =
-      node_decl->combinator;
+  const mozart::Node::Combinator combinator = node_decl->combinator;
   const std::vector<uint32_t>& child_node_ids =
       node_decl->child_node_ids.storage();
 
@@ -222,7 +217,7 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(
     FTL_DCHECK(rect_node_decl->color);
 
     const mojo::RectF& content_rect = *rect_node_decl->content_rect;
-    const mojo::gfx::composition::Color& color = *rect_node_decl->color;
+    const mozart::Color& color = *rect_node_decl->color;
     return ftl::MakeRefCounted<RectNode>(node_id, std::move(content_transform),
                                          content_clip.Pass(),
                                          hit_test_behavior.Pass(), combinator,
@@ -236,7 +231,7 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(
     const mojo::RectF& content_rect = *image_node_decl->content_rect;
     mojo::RectFPtr image_rect = image_node_decl->image_rect.Pass();
     const uint32_t image_resource_id = image_node_decl->image_resource_id;
-    mojo::gfx::composition::BlendPtr blend = image_node_decl->blend.Pass();
+    mozart::BlendPtr blend = image_node_decl->blend.Pass();
     return ftl::MakeRefCounted<ImageNode>(
         node_id, std::move(content_transform), content_clip.Pass(),
         hit_test_behavior.Pass(), combinator, child_node_ids, content_rect,
@@ -259,7 +254,7 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(
     FTL_DCHECK(layer_node_decl->layer_rect);
 
     const mojo::RectF& layer_rect = *layer_node_decl->layer_rect;
-    mojo::gfx::composition::BlendPtr blend = layer_node_decl->blend.Pass();
+    mozart::BlendPtr blend = layer_node_decl->blend.Pass();
     return ftl::MakeRefCounted<LayerNode>(
         node_id, std::move(content_transform), content_clip.Pass(),
         hit_test_behavior.Pass(), combinator, child_node_ids, layer_rect,
@@ -297,8 +292,7 @@ const Resource* SceneDef::Collector::FindResource(uint32_t resource_id) const {
   return it != scene_->resources_.end() ? it->second.get() : nullptr;
 }
 
-SceneDef::Publication::Publication(
-    mojo::gfx::composition::SceneMetadataPtr metadata)
+SceneDef::Publication::Publication(mozart::SceneMetadataPtr metadata)
     : metadata(metadata.Pass()) {
   FTL_DCHECK(this->metadata);
 }

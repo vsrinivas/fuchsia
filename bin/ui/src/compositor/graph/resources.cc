@@ -12,8 +12,7 @@ Resource::Resource() {}
 
 Resource::~Resource() {}
 
-SceneResource::SceneResource(
-    const mojo::gfx::composition::SceneToken& scene_token)
+SceneResource::SceneResource(const mozart::SceneToken& scene_token)
     : scene_token_(scene_token) {}
 
 SceneResource::~SceneResource() {}

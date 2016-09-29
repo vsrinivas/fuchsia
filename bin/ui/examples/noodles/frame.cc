@@ -13,7 +13,7 @@ namespace examples {
 
 Frame::Frame(const mojo::Size& size,
              sk_sp<SkPicture> picture,
-             mojo::gfx::composition::SceneMetadataPtr scene_metadata)
+             mozart::SceneMetadataPtr scene_metadata)
     : size_(size), picture_(picture), scene_metadata_(scene_metadata.Pass()) {
   FTL_DCHECK(picture_);
 }

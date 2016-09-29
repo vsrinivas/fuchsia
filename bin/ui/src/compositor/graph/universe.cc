@@ -26,15 +26,14 @@ void Universe::PresentScene(const ftl::RefPtr<const SceneContent>& content) {
   it->second->content_queue.emplace_front(content);
 }
 
-void Universe::RemoveScene(
-    const mojo::gfx::composition::SceneToken& scene_token) {
+void Universe::RemoveScene(const mozart::SceneToken& scene_token) {
   auto it = scenes_.find(scene_token.value);
   FTL_DCHECK(it != scenes_.end());
   scenes_.erase(it);
 }
 
 ftl::RefPtr<const Snapshot> Universe::SnapshotScene(
-    const mojo::gfx::composition::SceneToken& scene_token,
+    const mozart::SceneToken& scene_token,
     uint32_t version,
     std::ostream* block_log) {
   generation_++;
@@ -79,7 +78,7 @@ Universe::Snapshotter::~Snapshotter() {
 }
 
 Snapshot::Disposition Universe::Snapshotter::ResolveAndSnapshotScene(
-    const mojo::gfx::composition::SceneToken& scene_token,
+    const mozart::SceneToken& scene_token,
     uint32_t version,
     ftl::RefPtr<const SceneContent>* out_content) {
   auto it = universe_->scenes_.find(scene_token.value);

@@ -36,19 +36,17 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 // A resource which represents a reference to a specified scene.
 class SceneResource : public Resource {
  public:
-  explicit SceneResource(const mojo::gfx::composition::SceneToken& scene_token);
+  explicit SceneResource(const mozart::SceneToken& scene_token);
 
   Type type() const override;
 
-  const mojo::gfx::composition::SceneToken& scene_token() const {
-    return scene_token_;
-  }
+  const mozart::SceneToken& scene_token() const { return scene_token_; }
 
  protected:
   ~SceneResource() override;
 
  private:
-  mojo::gfx::composition::SceneToken scene_token_;
+  mozart::SceneToken scene_token_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneResource);
 };

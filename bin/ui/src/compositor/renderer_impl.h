@@ -18,14 +18,13 @@ namespace compositor {
 
 // Renderer interface implementation.
 // This object is owned by its associated RendererState.
-class RendererImpl : public mojo::gfx::composition::Renderer,
-                     public mojo::gfx::composition::FrameScheduler,
-                     public mojo::gfx::composition::HitTester {
+class RendererImpl : public mozart::Renderer,
+                     public mozart::FrameScheduler,
+                     public mozart::HitTester {
  public:
   RendererImpl(CompositorEngine* engine,
                RendererState* state,
-               mojo::InterfaceRequest<mojo::gfx::composition::Renderer>
-                   renderer_request);
+               mojo::InterfaceRequest<mozart::Renderer> renderer_request);
   ~RendererImpl() override;
 
   void set_connection_error_handler(const ftl::Closure& handler) {
@@ -34,15 +33,14 @@ class RendererImpl : public mojo::gfx::composition::Renderer,
 
  private:
   // |Renderer|:
-  void SetRootScene(mojo::gfx::composition::SceneTokenPtr scene_token,
+  void SetRootScene(mozart::SceneTokenPtr scene_token,
                     uint32_t scene_version,
                     mojo::RectPtr viewport) override;
   void ClearRootScene() override;
-  void GetScheduler(
-      mojo::InterfaceRequest<mojo::gfx::composition::FrameScheduler>
-          scheduler_request) override;
-  void GetHitTester(mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
-                        hit_tester_request) override;
+  void GetScheduler(mojo::InterfaceRequest<mozart::FrameScheduler>
+                        scheduler_request) override;
+  void GetHitTester(
+      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request) override;
 
   // |FrameScheduler|:
   void ScheduleFrame(const ScheduleFrameCallback& callback) override;
@@ -52,9 +50,9 @@ class RendererImpl : public mojo::gfx::composition::Renderer,
 
   CompositorEngine* const engine_;
   RendererState* const state_;
-  mojo::Binding<mojo::gfx::composition::Renderer> renderer_binding_;
-  mojo::BindingSet<mojo::gfx::composition::FrameScheduler> scheduler_bindings_;
-  mojo::BindingSet<mojo::gfx::composition::HitTester> hit_tester_bindings;
+  mojo::Binding<mozart::Renderer> renderer_binding_;
+  mojo::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
+  mojo::BindingSet<mozart::HitTester> hit_tester_bindings;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RendererImpl);
 };

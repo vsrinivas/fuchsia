@@ -7,8 +7,7 @@
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 class ContentViewerApp::DelegatingContentHandler : public mojo::ContentHandler {
  public:
@@ -38,10 +37,10 @@ ContentViewerApp::ContentViewerApp() {}
 ContentViewerApp::~ContentViewerApp() {}
 
 bool ContentViewerApp::OnAcceptConnection(
-    ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<ContentHandler>([this](
-      const ConnectionContext& connection_context,
-      InterfaceRequest<ContentHandler> content_handler_request) {
+    mojo::ServiceProviderImpl* service_provider_impl) {
+  service_provider_impl->AddService<mojo::ContentHandler>([this](
+      const mojo::ConnectionContext& connection_context,
+      mojo::InterfaceRequest<mojo::ContentHandler> content_handler_request) {
     bindings_.AddBinding(
         new DelegatingContentHandler(this, connection_context.connection_url),
         content_handler_request.Pass());
@@ -62,5 +61,4 @@ void ContentViewerApp::StartViewer(
     app->Bind(application_request.Pass());
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

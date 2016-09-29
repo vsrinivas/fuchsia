@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.gfx.composition;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/composition/interfaces/renderers.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";
 import "apps/mozart/services/composition/interfaces/scenes.mojom";
 import "mojo/services/framebuffer/interfaces/framebuffer.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
-
-// Maximum length for a scene or renderer label.
-const uint32 kLabelMaxLength = 32;
 
 // The compositor manages scenes and scene graph renderers.
 //
@@ -22,8 +19,11 @@ const uint32 kLabelMaxLength = 32;
 // The system creates a renderer to bind a scene graph to a particular display.
 //
 // Refer to |Scene| and |Renderer| for more information about these objects.
-[ServiceName="mojo::gfx::composition::Compositor"]
+[ServiceName="mozart::Compositor"]
 interface Compositor {
+  // Maximum length for a scene or renderer label.
+  const uint32 kLabelMaxLength = 32;
+
   // Creates a scene.
   //
   // The |scene| is used to supply content for the scene.  The scene pipe

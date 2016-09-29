@@ -13,9 +13,9 @@
 namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
-                     mojo::ui::ViewTokenPtr view_token,
-                     mojo::InterfaceRequest<mojo::ui::View> view_request,
-                     mojo::ui::ViewListenerPtr view_listener,
+                     mozart::ViewTokenPtr view_token,
+                     mojo::InterfaceRequest<mozart::View> view_request,
+                     mozart::ViewListenerPtr view_listener,
                      const std::string& label)
     : view_token_(view_token.Pass()),
       view_listener_(view_listener.Pass()),
@@ -40,14 +40,14 @@ ViewState::ViewState(ViewRegistry* registry,
 
 ViewState::~ViewState() {}
 
-void ViewState::IssueProperties(mojo::ui::ViewPropertiesPtr properties) {
+void ViewState::IssueProperties(mozart::ViewPropertiesPtr properties) {
   issued_scene_version_++;
   FTL_CHECK(issued_scene_version_);
   issued_properties_ = properties.Pass();
 }
 
 void ViewState::BindOwner(
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request) {
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   FTL_DCHECK(!owner_binding_.is_bound());
   owner_binding_.Bind(view_owner_request.Pass());
 }

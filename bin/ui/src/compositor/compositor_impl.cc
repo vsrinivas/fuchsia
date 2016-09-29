@@ -15,10 +15,10 @@ CompositorImpl::CompositorImpl(CompositorEngine* engine) : engine_(engine) {}
 CompositorImpl::~CompositorImpl() {}
 
 void CompositorImpl::CreateScene(
-    mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene_request,
+    mojo::InterfaceRequest<mozart::Scene> scene_request,
     const mojo::String& label,
     const CreateSceneCallback& callback) {
-  mojo::gfx::composition::SceneTokenPtr scene_token =
+  mozart::SceneTokenPtr scene_token =
       engine_->CreateScene(scene_request.Pass(), label);
   callback.Run(scene_token.Pass());
 }
@@ -26,7 +26,7 @@ void CompositorImpl::CreateScene(
 void CompositorImpl::CreateRenderer(
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
-    mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
+    mojo::InterfaceRequest<mozart::Renderer> renderer_request,
     const mojo::String& label) {
   engine_->CreateRenderer(std::move(framebuffer), std::move(framebuffer_info),
                           renderer_request.Pass(), label);

@@ -8,8 +8,7 @@
 #include "mojo/public/cpp/system/buffer.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 SkiaSurfaceHolder::SkiaSurfaceHolder(const mojo::Size& size) {
   size_t row_bytes = size.width * sizeof(uint32_t);
@@ -31,20 +30,18 @@ SkiaSurfaceHolder::~SkiaSurfaceHolder() {
   FTL_CHECK(MOJO_RESULT_OK == mojo::UnmapBuffer(buffer_));
 }
 
-mojo::gfx::composition::ImagePtr SkiaSurfaceHolder::TakeImage() {
+ImagePtr SkiaSurfaceHolder::TakeImage() {
   FTL_DCHECK(buffer_handle_.get().value());
 
-  auto image = mojo::gfx::composition::Image::New();
+  auto image = Image::New();
   image->size = mojo::Size::New();
   image->size->width = surface_->width();
   image->size->height = surface_->height();
   image->stride = image->size->width * sizeof(uint32_t);
-  image->pixel_format = mojo::gfx::composition::Image::PixelFormat::B8G8R8A8;
-  image->alpha_format =
-      mojo::gfx::composition::Image::AlphaFormat::PREMULTIPLIED;
+  image->pixel_format = Image::PixelFormat::B8G8R8A8;
+  image->alpha_format = Image::AlphaFormat::PREMULTIPLIED;
   image->buffer = std::move(buffer_handle_);
   return image;
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

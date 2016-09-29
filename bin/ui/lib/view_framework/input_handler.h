@@ -10,18 +10,17 @@
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/interfaces/application/service_provider.mojom.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Holds an |InputConnection| and sets its |InputListener|.
 //
 // This class is intended to be included as a member of a View that wants to
 // receive input using the following pattern.
 //
-// class MyView : public mojo::ui::BaseView, public mojo::ui::InputListener {
+// class MyView : public BaseView, public InputListener {
 //  public:
 //   MyView(mojo::ApplicationImpl* app_impl,
-//          const mojo::ui::ViewProvider::CreateViewCallback&
+//          const ViewProvider::CreateViewCallback&
 //              create_view_callback)
 //          : BaseView(app_impl, "MyView", create_view_callback),
 //            input_handler_(GetViewServiceProvider(), this) {}
@@ -29,10 +28,10 @@ namespace ui {
 //
 //  private:
 //   // |InputListener|:
-//   void OnEvent(mojo::EventPtr event,
+//   void OnEvent(EventPtr event,
 //                const OnEventCallback& callback) override;
 //
-//   mojo::ui::InputHandler input_handler_;
+//   InputHandler input_handler_;
 //
 //   FTL_DISALLOW_COPY_AND_ASSIGN(MyView);
 // };
@@ -41,20 +40,19 @@ class InputHandler {
   // Creates an input connection for the view with the associated
   // service provider.
   InputHandler(mojo::ServiceProvider* service_provider,
-               mojo::ui::InputListener* listener);
+               InputListener* listener);
   ~InputHandler();
 
   // Gets the input connection.
-  mojo::ui::InputConnection* connection() { return connection_.get(); }
+  InputConnection* connection() { return connection_.get(); }
 
  private:
-  mojo::Binding<mojo::ui::InputListener> listener_binding_;
-  mojo::ui::InputConnectionPtr connection_;
+  mojo::Binding<InputListener> listener_binding_;
+  InputConnectionPtr connection_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputHandler);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_INPUT_HANDLER_H_

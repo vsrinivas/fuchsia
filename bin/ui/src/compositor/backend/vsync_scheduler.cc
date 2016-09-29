@@ -194,7 +194,7 @@ void VsyncScheduler::State::Dispatch(int32_t generation,
   // Time may have passed since the callback was originally scheduled and
   // it's possible that we completely missed the deadline we were aiming for.
   // Reevaluate the schedule and jump ahead if necessary.
-  mojo::gfx::composition::FrameInfo frame_info;
+  mozart::FrameInfo frame_info;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!running_ || generation_ != generation)
@@ -260,9 +260,8 @@ void VsyncScheduler::State::Dispatch(int32_t generation,
   }
 }
 
-void VsyncScheduler::State::SetFrameInfoLocked(
-    mojo::gfx::composition::FrameInfo* frame_info,
-    int64_t update_time) {
+void VsyncScheduler::State::SetFrameInfoLocked(mozart::FrameInfo* frame_info,
+                                               int64_t update_time) {
   FTL_DCHECK(frame_info);
   frame_info->frame_time = update_time;
   frame_info->frame_interval = vsync_interval_;

@@ -12,8 +12,7 @@
 #include "mojo/services/ui/fonts/interfaces/font_provider.mojom.h"
 #include "third_party/skia/include/core/SkTypeface.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Loads fonts from the system font provider.
 class SkiaFontLoader {
@@ -37,7 +36,6 @@ class SkiaFontLoader {
   FTL_DISALLOW_COPY_AND_ASSIGN(SkiaFontLoader);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_FONT_LOADER_H_

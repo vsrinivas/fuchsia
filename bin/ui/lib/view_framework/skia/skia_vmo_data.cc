@@ -4,11 +4,10 @@
 
 #include "apps/mozart/lib/view_framework/skia/skia_vmo_data.h"
 
-#include <limits>
 #include <magenta/syscalls.h>
+#include <limits>
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 namespace {
 void UnmapMemory(const void* buffer, void* context) {
@@ -31,5 +30,4 @@ sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo) {
                               UnmapMemory, nullptr);
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

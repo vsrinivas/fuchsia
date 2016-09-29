@@ -6,7 +6,7 @@
 
 namespace compositor {
 
-SceneState::SceneState(mojo::gfx::composition::SceneTokenPtr scene_token,
+SceneState::SceneState(mozart::SceneTokenPtr scene_token,
                        const std::string& label)
     : scene_token_(scene_token.Pass()),
       scene_def_(SceneLabel(scene_token_->value, label)),

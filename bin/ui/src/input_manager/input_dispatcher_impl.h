@@ -22,38 +22,37 @@ class InputAssociate;
 
 // InputDispatcher implementation.
 // Binds incoming requests to the relevant view token.
-class InputDispatcherImpl : public mojo::ui::InputDispatcher {
+class InputDispatcherImpl : public mozart::InputDispatcher {
  public:
-  InputDispatcherImpl(
-      InputAssociate* associate,
-      mojo::ui::ViewTreeTokenPtr view_tree_token,
-      mojo::InterfaceRequest<mojo::ui::InputDispatcher> request);
+  InputDispatcherImpl(InputAssociate* associate,
+                      mozart::ViewTreeTokenPtr view_tree_token,
+                      mojo::InterfaceRequest<mozart::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
-  const mojo::ui::ViewTreeToken* view_tree_token() const {
+  const mozart::ViewTreeToken* view_tree_token() const {
     return view_tree_token_.get();
   }
 
-  // |mojo::ui::InputDispatcher|
-  void DispatchEvent(mojo::EventPtr event) override;
+  // |mozart::InputDispatcher|
+  void DispatchEvent(mozart::EventPtr event) override;
 
  private:
   void ProcessNextEvent();
-  void DeliverEvent(mojo::EventPtr event);
-  void OnHitTestResult(std::unique_ptr<mojo::ui::ResolvedHits> resolved_hits);
+  void DeliverEvent(mozart::EventPtr event);
+  void OnHitTestResult(std::unique_ptr<mozart::ResolvedHits> resolved_hits);
 
   InputAssociate* const associate_;
-  mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  ftl::RefPtr<mojo::ui::ViewTreeHitTesterClient> hit_tester_;
+  mozart::ViewTreeTokenPtr view_tree_token_;
+  ftl::RefPtr<mozart::ViewTreeHitTesterClient> hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
-  std::queue<mojo::EventPtr> pending_events_;
+  std::queue<mozart::EventPtr> pending_events_;
 
   // TODO(jeffbrown): This hack is just for scaffolding.  Redesign later.
-  mojo::ui::ViewTokenPtr focused_view_token_;
+  mozart::ViewTokenPtr focused_view_token_;
   mojo::TransformPtr focused_view_transform_;
 
-  mojo::Binding<mojo::ui::InputDispatcher> binding_;
+  mojo::Binding<mozart::InputDispatcher> binding_;
 
   ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 

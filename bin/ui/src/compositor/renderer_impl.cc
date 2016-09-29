@@ -9,7 +9,7 @@ namespace compositor {
 RendererImpl::RendererImpl(
     CompositorEngine* engine,
     RendererState* state,
-    mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request)
+    mojo::InterfaceRequest<mozart::Renderer> renderer_request)
     : engine_(engine),
       state_(state),
       renderer_binding_(this, renderer_request.Pass()) {}
@@ -17,15 +17,13 @@ RendererImpl::RendererImpl(
 RendererImpl::~RendererImpl() {}
 
 void RendererImpl::GetHitTester(
-    mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
-        hit_tester_request) {
+    mojo::InterfaceRequest<mozart::HitTester> hit_tester_request) {
   hit_tester_bindings.AddBinding(this, hit_tester_request.Pass());
 }
 
-void RendererImpl::SetRootScene(
-    mojo::gfx::composition::SceneTokenPtr scene_token,
-    uint32_t scene_version,
-    mojo::RectPtr viewport) {
+void RendererImpl::SetRootScene(mozart::SceneTokenPtr scene_token,
+                                uint32_t scene_version,
+                                mojo::RectPtr viewport) {
   engine_->SetRootScene(state_, scene_token.Pass(), scene_version,
                         viewport.Pass());
 }
@@ -35,16 +33,14 @@ void RendererImpl::ClearRootScene() {
 }
 
 void RendererImpl::GetScheduler(
-    mojo::InterfaceRequest<mojo::gfx::composition::FrameScheduler>
-        scheduler_request) {
+    mojo::InterfaceRequest<mozart::FrameScheduler> scheduler_request) {
   scheduler_bindings_.AddBinding(this, scheduler_request.Pass());
 }
 
 void RendererImpl::ScheduleFrame(const ScheduleFrameCallback& callback) {
-  engine_->ScheduleFrame(state_,
-                         [callback](mojo::gfx::composition::FrameInfoPtr info) {
-                           callback.Run(std::move(info));
-                         });
+  engine_->ScheduleFrame(state_, [callback](mozart::FrameInfoPtr info) {
+    callback.Run(std::move(info));
+  });
 }
 
 void RendererImpl::HitTest(mojo::PointFPtr point,

@@ -13,11 +13,10 @@
 
 namespace test {
 
-using SynchronousCompositorPtr =
-    mojo::SynchronousInterfacePtr<mojo::gfx::composition::Compositor>;
+using SynchronousCompositorPtr = mojo::SynchronousInterfacePtr<Compositor>;
 
 using SynchronousFrameSchedulerPtr =
-    mojo::SynchronousInterfacePtr<mojo::gfx::composition::FrameScheduler>;
+    mojo::SynchronousInterfacePtr<FrameScheduler>;
 
 class SchedulingTest : public mojo::test::ApplicationTestBase {
  public:
@@ -49,11 +48,11 @@ class SchedulingTest : public mojo::test::ApplicationTestBase {
   }
 
   void TestScheduler(SynchronousFrameSchedulerPtr scheduler) {
-    mojo::gfx::composition::FrameInfoPtr frame_info1;
+    FrameInfoPtr frame_info1;
     ASSERT_TRUE(scheduler->ScheduleFrame(&frame_info1));
     AssertValidFrameInfo(frame_info1.get());
 
-    mojo::gfx::composition::FrameInfoPtr frame_info2;
+    FrameInfoPtr frame_info2;
     ASSERT_TRUE(scheduler->ScheduleFrame(&frame_info2));
     AssertValidFrameInfo(frame_info2.get());
 
@@ -61,7 +60,7 @@ class SchedulingTest : public mojo::test::ApplicationTestBase {
     EXPECT_GT(frame_info2->presentation_time, frame_info1->presentation_time);
   }
 
-  void AssertValidFrameInfo(mojo::gfx::composition::FrameInfo* frame_info) {
+  void AssertValidFrameInfo(FrameInfo* frame_info) {
     ASSERT_NE(nullptr, frame_info);
     EXPECT_LT(frame_info->frame_time, MojoGetTimeTicksNow());
     EXPECT_GT(frame_info->frame_interval, 0u);
@@ -71,7 +70,7 @@ class SchedulingTest : public mojo::test::ApplicationTestBase {
 
   mojo::NativeViewportPtr viewport_;
   SynchronousCompositorPtr compositor_;
-  mojo::gfx::composition::RendererPtr renderer_;
+  RendererPtr renderer_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(SchedulingTest);
@@ -89,8 +88,8 @@ TEST_F(SchedulingTest, RendererScheduler) {
 // It should still receive scheduled frame updates occasionally albeit
 // at some indeterminate rate (enough to keep the scene from hanging).
 TEST_F(SchedulingTest, OrphanedSceneScheduler) {
-  mojo::gfx::composition::ScenePtr scene;
-  mojo::gfx::composition::SceneTokenPtr scene_token;
+  ScenePtr scene;
+  SceneTokenPtr scene_token;
   compositor_->CreateScene(mojo::GetProxy(&scene), "SchedulingTest",
                            &scene_token);
 
@@ -103,16 +102,15 @@ TEST_F(SchedulingTest, OrphanedSceneScheduler) {
 // It should receive scheduled frame updates at a rate determined
 // by the renderer.
 TEST_F(SchedulingTest, RootSceneScheduler) {
-  mojo::gfx::composition::ScenePtr scene;
-  mojo::gfx::composition::SceneTokenPtr scene_token;
+  ScenePtr scene;
+  SceneTokenPtr scene_token;
   compositor_->CreateScene(mojo::GetProxy(&scene), "SchedulingTest",
                            &scene_token);
 
   auto viewport = mojo::Rect::New();
   viewport->width = 1;
   viewport->height = 1;
-  renderer_->SetRootScene(scene_token.Pass(),
-                          mojo::gfx::composition::kSceneVersionNone,
+  renderer_->SetRootScene(scene_token.Pass(), kSceneVersionNone,
                           viewport.Pass());
 
   SynchronousFrameSchedulerPtr scheduler;
@@ -121,4 +119,4 @@ TEST_F(SchedulingTest, RootSceneScheduler) {
 }
 
 }  // namespace
-}  // namespace mojo
+}  // namespace mozart

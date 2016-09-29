@@ -41,10 +41,10 @@ struct TileParams {
   std::vector<std::string> view_urls;
 };
 
-class TileView : public mojo::ui::BaseView {
+class TileView : public mozart::BaseView {
  public:
   TileView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-           mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+           mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
            const TileParams& tile_params);
 
   ~TileView() override;
@@ -58,8 +58,8 @@ class TileView : public mojo::ui::BaseView {
     const uint32_t key;
 
     mojo::RectF layout_bounds;
-    mojo::ui::ViewPropertiesPtr view_properties;
-    mojo::ui::ViewInfoPtr view_info;
+    mozart::ViewPropertiesPtr view_properties;
+    mozart::ViewInfoPtr view_info;
     uint32_t scene_version = 1u;
   };
 
@@ -67,7 +67,7 @@ class TileView : public mojo::ui::BaseView {
   void OnLayout() override;
   void OnDraw() override;
   void OnChildAttached(uint32_t child_key,
-                       mojo::ui::ViewInfoPtr child_view_info) override;
+                       mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
 
   void ConnectViews();

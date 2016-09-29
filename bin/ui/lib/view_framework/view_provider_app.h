@@ -13,23 +13,24 @@
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 
 namespace mojo {
-
 class ServiceProviderImpl;
+}  // namespace mojo
 
-namespace ui {
+namespace mozart {
 
 // Abstract implementation of a simple application that offers a ViewProvider.
 // Subclasses must provide a function to create the necessary Views.
 //
 // It is not necessary to use this class to implement all ViewProviders.
 // This class is merely intended to make the simple apps easier to write.
-class ViewProviderApp : public ApplicationImplBase {
+class ViewProviderApp : public mojo::ApplicationImplBase {
  public:
   ViewProviderApp();
   ~ViewProviderApp() override;
 
   // |ApplicationImplBase|:
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override;
+  bool OnAcceptConnection(
+      mojo::ServiceProviderImpl* service_provider_impl) override;
 
   // Called by the ViewProvider to create a view.
   // This method may be called multiple times in the case where the
@@ -42,24 +43,24 @@ class ViewProviderApp : public ApplicationImplBase {
   //
   // The |services| parameter is used to receive services from the view
   // on behalf of the caller.
-  virtual void CreateView(const std::string& view_provider_url,
-                          InterfaceRequest<ViewOwner> view_owner_request,
-                          InterfaceRequest<ServiceProvider> services) = 0;
+  virtual void CreateView(
+      const std::string& view_provider_url,
+      mojo::InterfaceRequest<ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mojo::ServiceProvider> services) = 0;
 
  private:
   class DelegatingViewProvider;
 
   void CreateView(DelegatingViewProvider* provider,
                   const std::string& view_provider_url,
-                  InterfaceRequest<ViewOwner> view_owner_request,
-                  InterfaceRequest<ServiceProvider> services);
+                  mojo::InterfaceRequest<ViewOwner> view_owner_request,
+                  mojo::InterfaceRequest<mojo::ServiceProvider> services);
 
-  StrongBindingSet<ViewProvider> bindings_;
+  mojo::StrongBindingSet<ViewProvider> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_VIEW_PROVIDER_APP_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/composition/interfaces/renderers.mojom";
 import "apps/mozart/services/views/interfaces/view_containers.mojom";
@@ -33,11 +33,11 @@ import "mojo/public/interfaces/application/service_provider.mojom";
 //
 // Use |GetContainer()| to obtain an interface for manipulating the root view.
 //
-// See |mojo.ui.ViewContainer| for more information.
+// See |ViewContainer| for more information.
 //
 // GETTING SERVICES
 //
-// The view tree's |ServiceProvider| offers access to many services which
+// The view tree's |mojo::ServiceProvider| offers access to many services which
 // are not directly expressed by the |ViewTree| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
@@ -45,7 +45,7 @@ import "mojo/public/interfaces/application/service_provider.mojom";
 //
 // 1. Call |GetServiceProvider()| to obtain the view's service provider.
 //
-// 2. Ask the service provider for its |mojo.ui.InputDispatcher|.
+// 2. Ask the service provider for its |InputDispatcher|.
 //
 // 3. Send input events to the dispatcher for delivery to views.
 interface ViewTree {
@@ -57,7 +57,7 @@ interface ViewTree {
   // The view tree service provider is private to the view tree and should
   // not be shared with anyone else.
   //
-  // See |mojo.ui.InputDispatcher|.
+  // See |InputDispatcher|.
   GetServiceProvider(mojo.ServiceProvider& service_provider);
 
   // Sets where the view tree's scene graph will be rendered.
@@ -65,8 +65,8 @@ interface ViewTree {
   // If |renderer| is null, disconnects the view tree from the renderer
   // causing its previous renderer to be destroyed.
   //
-  // See also: |mojo.gfx.composition.Compositor.CreateRenderer()|.
-  SetRenderer(mojo.gfx.composition.Renderer? renderer);
+  // See also: |Compositor.CreateRenderer()|.
+  SetRenderer(Renderer? renderer);
 
   // Gets an interface for managing the view tree's root.
   GetContainer(ViewContainer& container);

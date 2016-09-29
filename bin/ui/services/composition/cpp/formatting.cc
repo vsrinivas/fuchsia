@@ -6,9 +6,7 @@
 
 #include <ostream>
 
-namespace mojo {
-namespace gfx {
-namespace composition {
+namespace mozart {
 
 class Delimiter {
  public:
@@ -27,13 +25,11 @@ class Delimiter {
   bool need_comma_ = false;
 };
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneToken& value) {
+std::ostream& operator<<(std::ostream& os, const SceneToken& value) {
   return os << "<S" << value.value << ">";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneUpdate& value) {
+std::ostream& operator<<(std::ostream& os, const SceneUpdate& value) {
   os << "{";
   Delimiter d(os);
   if (value.clear_resources) {
@@ -52,14 +48,12 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneMetadata& value) {
+std::ostream& operator<<(std::ostream& os, const SceneMetadata& value) {
   return os << "{version=" << value.version
             << ", presentation_time=" << value.presentation_time << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Resource& value) {
+std::ostream& operator<<(std::ostream& os, const Resource& value) {
   os << "{";
   if (value.is_scene()) {
     os << "scene=" << value.get_scene();
@@ -71,18 +65,15 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneResource& value) {
+std::ostream& operator<<(std::ostream& os, const SceneResource& value) {
   return os << "{scene_token=" << value.scene_token << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::ImageResource& value) {
+std::ostream& operator<<(std::ostream& os, const ImageResource& value) {
   return os << "{image=" << value.image << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Image& value) {
+std::ostream& operator<<(std::ostream& os, const Image& value) {
   return os << "{size=" << value.size << ", stride=" << value.stride
             << ", offset=" << value.offset
             << ", pixel_format=" << &value.pixel_format
@@ -91,45 +82,38 @@ std::ostream& operator<<(std::ostream& os,
             << ", buffer=" << value.buffer.get().value() << "}";
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::gfx::composition::Image::PixelFormat* value) {
+std::ostream& operator<<(std::ostream& os, const Image::PixelFormat* value) {
   switch (*value) {
-    case mojo::gfx::composition::Image::PixelFormat::B8G8R8A8:
+    case Image::PixelFormat::B8G8R8A8:
       return os << "B8G8R8A8";
     default:
       return os << "???";
   }
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::gfx::composition::Image::AlphaFormat* value) {
+std::ostream& operator<<(std::ostream& os, const Image::AlphaFormat* value) {
   switch (*value) {
-    case mojo::gfx::composition::Image::AlphaFormat::OPAQUE:
+    case Image::AlphaFormat::OPAQUE:
       return os << "OPAQUE";
-    case mojo::gfx::composition::Image::AlphaFormat::PREMULTIPLIED:
+    case Image::AlphaFormat::PREMULTIPLIED:
       return os << "PREMULTIPLIED";
-    case mojo::gfx::composition::Image::AlphaFormat::NON_PREMULTIPLIED:
+    case Image::AlphaFormat::NON_PREMULTIPLIED:
       return os << "NON_PREMULTIPLIED";
     default:
       return os << "???";
   }
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::gfx::composition::Image::ColorSpace* value) {
+std::ostream& operator<<(std::ostream& os, const Image::ColorSpace* value) {
   switch (*value) {
-    case mojo::gfx::composition::Image::ColorSpace::SRGB:
+    case Image::ColorSpace::SRGB:
       return os << "SRGB";
     default:
       return os << "???";
   }
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Node& value) {
+std::ostream& operator<<(std::ostream& os, const Node& value) {
   os << "{";
   Delimiter d(os);
   if (value.content_transform)
@@ -146,23 +130,20 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::gfx::composition::Node::Combinator* value) {
+std::ostream& operator<<(std::ostream& os, const Node::Combinator* value) {
   switch (*value) {
-    case mojo::gfx::composition::Node::Combinator::MERGE:
+    case Node::Combinator::MERGE:
       return os << "MERGE";
-    case mojo::gfx::composition::Node::Combinator::PRUNE:
+    case Node::Combinator::PRUNE:
       return os << "PRUNE";
-    case mojo::gfx::composition::Node::Combinator::FALLBACK:
+    case Node::Combinator::FALLBACK:
       return os << "FALLBACK";
     default:
       return os << "???";
   }
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::NodeOp& value) {
+std::ostream& operator<<(std::ostream& os, const NodeOp& value) {
   os << "{";
   if (value.is_rect()) {
     os << "rect=" << value.get_rect();
@@ -178,80 +159,69 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::RectNodeOp& value) {
+std::ostream& operator<<(std::ostream& os, const RectNodeOp& value) {
   return os << "{content_rect=" << value.content_rect
             << ", color=" << value.color << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::ImageNodeOp& value) {
+std::ostream& operator<<(std::ostream& os, const ImageNodeOp& value) {
   return os << "{content_rect=" << value.content_rect
             << ", image_rect=" << value.image_rect
             << ", image_resource_id=" << value.image_resource_id
             << ", blend=" << value.blend << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneNodeOp& value) {
+std::ostream& operator<<(std::ostream& os, const SceneNodeOp& value) {
   return os << "{scene_resource_id=" << value.scene_resource_id
             << ", scene_version=" << value.scene_version << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::LayerNodeOp& value) {
+std::ostream& operator<<(std::ostream& os, const LayerNodeOp& value) {
   return os << "{layer_rect=" << value.layer_rect << ", blend=" << value.blend
             << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Color& value) {
+std::ostream& operator<<(std::ostream& os, const Color& value) {
   return os << "{red=" << static_cast<int>(value.red)
             << ", green=" << static_cast<int>(value.green)
             << ", blue=" << static_cast<int>(value.blue)
             << ", alpha=" << static_cast<int>(value.alpha) << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Blend& value) {
+std::ostream& operator<<(std::ostream& os, const Blend& value) {
   return os << "{alpha=" << static_cast<int>(value.alpha) << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::FrameInfo& value) {
+std::ostream& operator<<(std::ostream& os, const FrameInfo& value) {
   return os << "{frame_time=" << value.frame_time
             << ", frame_interval=" << value.frame_interval
             << ", frame_deadline=" << value.frame_deadline << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::HitTestBehavior& value) {
+std::ostream& operator<<(std::ostream& os, const HitTestBehavior& value) {
   return os << "{visibility=" << &value.visibility << ", prune" << value.prune
             << ", hit_rect=" << value.hit_rect << "}";
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::gfx::composition::HitTestBehavior::Visibility* value) {
+std::ostream& operator<<(std::ostream& os,
+                         const HitTestBehavior::Visibility* value) {
   switch (*value) {
-    case mojo::gfx::composition::HitTestBehavior::Visibility::OPAQUE:
+    case HitTestBehavior::Visibility::OPAQUE:
       return os << "OPAQUE";
-    case mojo::gfx::composition::HitTestBehavior::Visibility::TRANSLUCENT:
+    case HitTestBehavior::Visibility::TRANSLUCENT:
       return os << "TRANSLUCENT";
-    case mojo::gfx::composition::HitTestBehavior::Visibility::INVISIBLE:
+    case HitTestBehavior::Visibility::INVISIBLE:
       return os << "INVISIBLE";
     default:
       return os << "???";
   }
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::HitTestResult& value) {
+std::ostream& operator<<(std::ostream& os, const HitTestResult& value) {
   return os << "{root=" << value.root << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::Hit& value) {
+std::ostream& operator<<(std::ostream& os, const Hit& value) {
   os << "{";
   if (value.is_scene()) {
     os << "scene=" << value.get_scene();
@@ -263,19 +233,15 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::SceneHit& value) {
+std::ostream& operator<<(std::ostream& os, const SceneHit& value) {
   return os << "{scene_token=" << value.scene_token
             << ", scene_version=" << value.scene_version
             << ", hits=" << value.hits << "}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::gfx::composition::NodeHit& value) {
+std::ostream& operator<<(std::ostream& os, const NodeHit& value) {
   return os << "{node_id=" << value.node_id << ", transform=" << value.transform
             << "}";
 }
 
-}  // namespace composition
-}  // namespace gfx
-}  // namespace mojo
+}  // namespace mozart

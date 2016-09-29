@@ -71,7 +71,7 @@ class SceneContent : public ftl::RefCountedThreadSafe<SceneContent> {
   bool HitTest(const Snapshot* snapshot,
                const SkPoint& scene_point,
                const SkMatrix44& global_to_scene_transform,
-               mojo::gfx::composition::SceneHitPtr* out_scene_hit) const;
+               mozart::SceneHitPtr* out_scene_hit) const;
 
   // Gets the requested resource, never null because it must be present.
   const Resource* GetResource(uint32_t resource_id,

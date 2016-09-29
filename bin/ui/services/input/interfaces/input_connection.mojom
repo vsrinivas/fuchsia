@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 // TODO(jeffbrown): Redesign input event representation later.
 import "apps/mozart/services/input/interfaces/input_events.mojom";
@@ -15,7 +15,7 @@ import "apps/mozart/services/input/interfaces/input_events.mojom";
 //
 // TODO(jeffbrown): Elaborate this.  Particularly need to think about
 // how to handle focus and gestures.
-[ServiceName="mojo::ui::InputConnection"]
+[ServiceName="mozart::InputConnection"]
 interface InputConnection {
   // Sets the listener for receiving input events.
   //
@@ -31,5 +31,5 @@ interface InputListener {
   // The |consumed| result should indicate whether the input event was
   // consumed by the connection.  If |consumed| is false, the system may
   // apply default behavior of its own in response to the event.
-  OnEvent(mojo.Event event) => (bool consumed);
+  OnEvent(Event event) => (bool consumed);
 };

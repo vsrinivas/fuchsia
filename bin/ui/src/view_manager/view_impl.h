@@ -16,9 +16,9 @@ class ViewState;
 
 // View interface implementation.
 // This object is owned by its associated ViewState.
-class ViewImpl : public mojo::ui::View,
-                 public mojo::ui::ViewContainer,
-                 public mojo::ui::ViewOwner,
+class ViewImpl : public mozart::View,
+                 public mozart::ViewContainer,
+                 public mozart::ViewOwner,
                  public mojo::ServiceProvider {
  public:
   ViewImpl(ViewRegistry* registry, ViewState* state);
@@ -26,38 +26,37 @@ class ViewImpl : public mojo::ui::View,
 
  private:
   // |View|:
-  void GetToken(const mojo::ui::View::GetTokenCallback& callback) override;
+  void GetToken(const mozart::View::GetTokenCallback& callback) override;
   void GetServiceProvider(mojo::InterfaceRequest<mojo::ServiceProvider>
                               service_provider_request) override;
-  void CreateScene(
-      mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene) override;
-  void GetContainer(mojo::InterfaceRequest<mojo::ui::ViewContainer>
+  void CreateScene(mojo::InterfaceRequest<mozart::Scene> scene) override;
+  void GetContainer(mojo::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
   void Invalidate() override;
 
   // |ViewContainer|:
   void SetListener(
-      mojo::InterfaceHandle<mojo::ui::ViewContainerListener> listener) override;
+      mojo::InterfaceHandle<mozart::ViewContainerListener> listener) override;
   void AddChild(
       uint32_t child_key,
-      mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner) override;
+      mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) override;
   void RemoveChild(uint32_t child_key,
-                   mojo::InterfaceRequest<mojo::ui::ViewOwner>
+                   mojo::InterfaceRequest<mozart::ViewOwner>
                        transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
       uint32_t child_scene_version,
-      mojo::ui::ViewPropertiesPtr child_view_properties) override;
+      mozart::ViewPropertiesPtr child_view_properties) override;
   void FlushChildren(uint32_t flush_token) override;
 
-  // |ServiceProvider|:
+  // |mojo::ServiceProvider|:
   void ConnectToService(const mojo::String& service_name,
                         mojo::ScopedMessagePipeHandle client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;
   mojo::BindingSet<mojo::ServiceProvider> service_provider_bindings_;
-  mojo::BindingSet<mojo::ui::ViewContainer> container_bindings_;
+  mojo::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };

@@ -102,16 +102,15 @@ class VsyncSchedulerTest : public testing::Test {
     int64_t presentation_time;
   };
 
-  void OnUpdate(const mojo::gfx::composition::FrameInfo& frame_info) {
+  void OnUpdate(const mozart::FrameInfo& frame_info) {
     VerifyCallback(CallbackType::kUpdate, frame_info);
   }
 
-  void OnSnapshot(const mojo::gfx::composition::FrameInfo& frame_info) {
+  void OnSnapshot(const mozart::FrameInfo& frame_info) {
     VerifyCallback(CallbackType::kSnapshot, frame_info);
   }
 
-  void VerifyCallback(CallbackType type,
-                      const mojo::gfx::composition::FrameInfo& frame_info) {
+  void VerifyCallback(CallbackType type, const mozart::FrameInfo& frame_info) {
     EXPECT_FALSE(expected_callbacks_.empty());
     if (!expected_callbacks_.empty()) {
       const ExpectedCallback& c = expected_callbacks_.front();

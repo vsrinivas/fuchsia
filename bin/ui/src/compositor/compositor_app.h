@@ -27,8 +27,7 @@ class CompositorApp : public mojo::ApplicationImplBase {
   bool OnAcceptConnection(
       mojo::ServiceProviderImpl* service_provider_impl) override;
 
-  mojo::StrongBindingSet<mojo::gfx::composition::Compositor>
-      compositor_bindings_;
+  mojo::StrongBindingSet<mozart::Compositor> compositor_bindings_;
   std::unique_ptr<CompositorEngine> engine_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CompositorApp);

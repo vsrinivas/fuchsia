@@ -10,14 +10,12 @@
 
 #include "third_party/skia/include/core/SkData.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Makes an |SkData| object backed by a virtual memory object.
 // Does not take ownership of the handle.
 sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo);
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_

@@ -36,9 +36,9 @@ class ViewState : public ViewContainerState {
   };
 
   ViewState(ViewRegistry* registry,
-            mojo::ui::ViewTokenPtr view_token,
-            mojo::InterfaceRequest<mojo::ui::View> view_request,
-            mojo::ui::ViewListenerPtr view_listener,
+            mozart::ViewTokenPtr view_token,
+            mojo::InterfaceRequest<mozart::View> view_request,
+            mozart::ViewListenerPtr view_listener,
             const std::string& label);
   ~ViewState() override;
 
@@ -46,11 +46,11 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const mojo::ui::ViewTokenPtr& view_token() const { return view_token_; }
+  const mozart::ViewTokenPtr& view_token() const { return view_token_; }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
-  const mojo::ui::ViewListenerPtr& view_listener() const {
+  const mozart::ViewListenerPtr& view_listener() const {
     return view_listener_;
   }
 
@@ -60,10 +60,8 @@ class ViewState : public ViewContainerState {
   void set_view_stub(ViewStub* view_stub) { view_stub_ = view_stub; }
 
   // The current scene token, or null if none.
-  const mojo::gfx::composition::SceneTokenPtr& scene_token() {
-    return scene_token_;
-  }
-  void set_scene_token(mojo::gfx::composition::SceneTokenPtr scene_token) {
+  const mozart::SceneTokenPtr& scene_token() { return scene_token_; }
+  void set_scene_token(mozart::SceneTokenPtr scene_token) {
     scene_token_ = scene_token.Pass();
   }
 
@@ -75,13 +73,13 @@ class ViewState : public ViewContainerState {
   // Gets the properties the view was asked to apply, after applying
   // any inherited properties from the container, or null if none set.
   // This value is preserved across reparenting.
-  const mojo::ui::ViewPropertiesPtr& issued_properties() const {
+  const mozart::ViewPropertiesPtr& issued_properties() const {
     return issued_properties_;
   }
 
   // Sets the requested properties and increments the scene version.
   // Sets |issued_properties_valid()| to true if |properties| is not null.
-  void IssueProperties(mojo::ui::ViewPropertiesPtr properties);
+  void IssueProperties(mozart::ViewPropertiesPtr properties);
 
   // Gets or sets flags describing the invalidation state of the view.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
@@ -89,8 +87,7 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request);
+  void BindOwner(mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();
@@ -101,22 +98,22 @@ class ViewState : public ViewContainerState {
   const std::string& FormattedLabel() const override;
 
  private:
-  mojo::ui::ViewTokenPtr view_token_;
-  mojo::ui::ViewListenerPtr view_listener_;
+  mozart::ViewTokenPtr view_token_;
+  mozart::ViewListenerPtr view_listener_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewImpl> impl_;
-  mojo::Binding<mojo::ui::View> view_binding_;
-  mojo::Binding<mojo::ui::ViewOwner> owner_binding_;
+  mojo::Binding<mozart::View> view_binding_;
+  mojo::Binding<mozart::ViewOwner> owner_binding_;
 
   ViewStub* view_stub_ = nullptr;
 
-  mojo::gfx::composition::SceneTokenPtr scene_token_;
+  mozart::SceneTokenPtr scene_token_;
 
   uint32_t issued_scene_version_ = 0u;
-  mojo::ui::ViewPropertiesPtr issued_properties_;
+  mozart::ViewPropertiesPtr issued_properties_;
 
   uint32_t invalidation_flags_ = 0u;
 

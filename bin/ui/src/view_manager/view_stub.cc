@@ -15,9 +15,9 @@ namespace view_manager {
 
 class PendingViewOwnerTransferState {
  public:
-  PendingViewOwnerTransferState(std::unique_ptr<ViewStub> view_stub,
-                                mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                                    transferred_view_owner_request)
+  PendingViewOwnerTransferState(
+      std::unique_ptr<ViewStub> view_stub,
+      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request)
       : view_stub_(std::move(view_stub)),
         transferred_view_owner_request_(transferred_view_owner_request.Pass()) {
   }
@@ -28,20 +28,20 @@ class PendingViewOwnerTransferState {
   std::unique_ptr<ViewStub> view_stub_;
 
   // The |ViewOwner| we want to transfer ownership to.
-  mojo::InterfaceRequest<mojo::ui::ViewOwner> transferred_view_owner_request_;
+  mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request_;
 };
 
 ViewStub::ViewStub(ViewRegistry* registry,
-                   mojo::InterfaceHandle<mojo::ui::ViewOwner> owner)
+                   mojo::InterfaceHandle<mozart::ViewOwner> owner)
     : registry_(registry),
-      owner_(mojo::ui::ViewOwnerPtr::Create(std::move(owner))),
+      owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
       weak_factory_(this) {
   FTL_DCHECK(registry_);
   FTL_DCHECK(owner_);
 
   owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
 
-  owner_->GetToken([this](mojo::ui::ViewTokenPtr view_token) {
+  owner_->GetToken([this](mozart::ViewTokenPtr view_token) {
     OnViewResolved(view_token.Pass());
   });
 }
@@ -58,8 +58,7 @@ ViewContainerState* ViewStub::container() const {
   return parent_ ? static_cast<ViewContainerState*>(parent_) : tree_;
 }
 
-void ViewStub::AttachView(ViewState* state,
-                          mojo::gfx::composition::ScenePtr stub_scene) {
+void ViewStub::AttachView(ViewState* state, mozart::ScenePtr stub_scene) {
   FTL_DCHECK(state);
   FTL_DCHECK(!state->view_stub());
   FTL_DCHECK(stub_scene);
@@ -72,15 +71,14 @@ void ViewStub::AttachView(ViewState* state,
 }
 
 void ViewStub::SetProperties(uint32_t scene_version,
-                             mojo::ui::ViewPropertiesPtr properties) {
+                             mozart::ViewPropertiesPtr properties) {
   FTL_DCHECK(!is_unavailable());
 
   scene_version_ = scene_version;
   properties_ = properties.Pass();
 }
 
-void ViewStub::SetStubSceneToken(
-    mojo::gfx::composition::SceneTokenPtr stub_scene_token) {
+void ViewStub::SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token) {
   FTL_DCHECK(stub_scene_token);
   FTL_DCHECK(state_);
   FTL_DCHECK(stub_scene_);
@@ -102,7 +100,7 @@ ViewState* ViewStub::ReleaseView() {
     stub_scene_token_.reset();
     SetTreeForChildrenOfView(state, nullptr);
   }
-  scene_version_ = mojo::gfx::composition::kSceneVersionNone;
+  scene_version_ = mozart::kSceneVersionNone;
   properties_.reset();
   unavailable_ = true;
   return state;
@@ -144,7 +142,7 @@ void ViewStub::SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree) {
   }
 }
 
-void ViewStub::OnViewResolved(mojo::ui::ViewTokenPtr view_token) {
+void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
   if (transfer_view_owner_when_view_resolved()) {
     FTL_DCHECK(!container());  // Make sure we're removed from the view tree
     FTL_DCHECK(pending_view_owner_transfer_->view_stub_ != nullptr);
@@ -175,8 +173,7 @@ void ViewStub::OnViewResolved(mojo::ui::ViewTokenPtr view_token) {
 
 void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner>
-        transferred_view_owner_request) {
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(!container());  // Make sure we've been removed from the view tree
   FTL_DCHECK(!pending_view_owner_transfer_);
 

@@ -20,15 +20,14 @@ class Frame;
 // correct message loop by the view.
 class Rasterizer {
  public:
-  Rasterizer(mojo::ApplicationConnectorPtr connector,
-             mojo::gfx::composition::ScenePtr scene);
+  Rasterizer(mojo::ApplicationConnectorPtr connector, mozart::ScenePtr scene);
 
   ~Rasterizer();
 
   void PublishFrame(std::unique_ptr<Frame> frame);
 
  private:
-  mojo::gfx::composition::ScenePtr scene_;
+  mozart::ScenePtr scene_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Rasterizer);
 };

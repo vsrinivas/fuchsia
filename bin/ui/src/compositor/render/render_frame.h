@@ -26,17 +26,14 @@ class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
   // and statistics.
   class Metadata {
    public:
-    Metadata(const mojo::gfx::composition::FrameInfo& frame_info,
-             int64_t composition_time);
+    Metadata(const mozart::FrameInfo& frame_info, int64_t composition_time);
     ~Metadata();
 
-    const mojo::gfx::composition::FrameInfo& frame_info() const {
-      return frame_info_;
-    }
+    const mozart::FrameInfo& frame_info() const { return frame_info_; }
     int64_t composition_time() const { return composition_time_; }
 
    private:
-    mojo::gfx::composition::FrameInfo frame_info_;
+    mozart::FrameInfo frame_info_;
     int64_t composition_time_;
   };
 

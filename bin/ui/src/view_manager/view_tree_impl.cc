@@ -24,31 +24,31 @@ void ViewTreeImpl::GetServiceProvider(
 }
 
 void ViewTreeImpl::SetRenderer(
-    mojo::InterfaceHandle<mojo::gfx::composition::Renderer> renderer) {
-  registry_->SetRenderer(
-      state_, mojo::gfx::composition::RendererPtr::Create(std::move(renderer)));
+    mojo::InterfaceHandle<mozart::Renderer> renderer) {
+  registry_->SetRenderer(state_,
+                         mozart::RendererPtr::Create(std::move(renderer)));
 }
 
 void ViewTreeImpl::GetContainer(
-    mojo::InterfaceRequest<mojo::ui::ViewContainer> view_container_request) {
+    mojo::InterfaceRequest<mozart::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, view_container_request.Pass());
 }
 
 void ViewTreeImpl::SetListener(
-    mojo::InterfaceHandle<mojo::ui::ViewContainerListener> listener) {
+    mojo::InterfaceHandle<mozart::ViewContainerListener> listener) {
   state_->set_view_container_listener(
-      mojo::ui::ViewContainerListenerPtr::Create(std::move(listener)));
+      mozart::ViewContainerListenerPtr::Create(std::move(listener)));
 }
 
 void ViewTreeImpl::AddChild(
     uint32_t child_key,
-    mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner) {
+    mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
   registry_->AddChild(state_, child_key, child_view_owner.Pass());
 }
 
-void ViewTreeImpl::RemoveChild(uint32_t child_key,
-                               mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                                   transferred_view_owner_request) {
+void ViewTreeImpl::RemoveChild(
+    uint32_t child_key,
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          transferred_view_owner_request.Pass());
 }
@@ -56,7 +56,7 @@ void ViewTreeImpl::RemoveChild(uint32_t child_key,
 void ViewTreeImpl::SetChildProperties(
     uint32_t child_key,
     uint32_t child_scene_version,
-    mojo::ui::ViewPropertiesPtr child_view_properties) {
+    mozart::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key, child_scene_version,
                                 child_view_properties.Pass());
 }

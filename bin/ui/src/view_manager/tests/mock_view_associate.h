@@ -8,21 +8,21 @@
 namespace view_manager {
 namespace test {
 
-class MockViewAssociate : public mojo::ui::ViewAssociate {
+class MockViewAssociate : public mozart::ViewAssociate {
  public:
   MockViewAssociate();
   ~MockViewAssociate() override;
 
-  void Connect(mojo::InterfaceHandle<mojo::ui::ViewInspector> inspector,
+  void Connect(mojo::InterfaceHandle<mozart::ViewInspector> inspector,
                const ConnectCallback& callback) override;
 
   void ConnectToViewService(
-      mojo::ui::ViewTokenPtr view_token,
+      mozart::ViewTokenPtr view_token,
       const mojo::String& service_name,
       mojo::ScopedMessagePipeHandle client_handle) override;
 
   void ConnectToViewTreeService(
-      mojo::ui::ViewTreeTokenPtr view_tree_token,
+      mozart::ViewTreeTokenPtr view_tree_token,
       const mojo::String& service_name,
       mojo::ScopedMessagePipeHandle client_handle) override;
 

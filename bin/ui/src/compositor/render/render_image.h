@@ -36,7 +36,7 @@ class RenderImage : public ftl::RefCountedThreadSafe<RenderImage> {
   // When the last reference is released, the associated release task is
   // posted to the task runner.  Returns nullptr if the image is invalid.
   static ftl::RefPtr<RenderImage> CreateFromImage(
-      mojo::gfx::composition::ImagePtr image,
+      mozart::ImagePtr image,
       const ftl::RefPtr<ftl::TaskRunner>& task_runner,
       const ftl::Closure& release_task);
 

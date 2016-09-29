@@ -8,8 +8,7 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "third_party/skia/include/ports/SkFontMgr.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 SkiaFontLoader::SkiaFontLoader(mojo::ApplicationConnector* connector) {
   mojo::ConnectToService(connector, "mojo:fonts",
@@ -25,7 +24,7 @@ void SkiaFontLoader::LoadFont(mojo::FontRequestPtr request,
       std::move(request), [this, callback](mojo::FontResponsePtr response) {
         if (response) {
           sk_sp<SkData> font_data =
-              mojo::ui::MakeSkDataFromVMO(response->data->vmo.get().value());
+              MakeSkDataFromVMO(response->data->vmo.get().value());
           if (font_data) {
             callback(sk_sp<SkTypeface>(
                 SkFontMgr::RefDefault()->createFromData(font_data.get())));
@@ -42,5 +41,4 @@ void SkiaFontLoader::LoadDefaultFont(const FontCallback& callback) {
   LoadFont(std::move(font_request), callback);
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

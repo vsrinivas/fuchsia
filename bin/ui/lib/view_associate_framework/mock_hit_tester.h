@@ -10,30 +10,26 @@
 #include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
 #include "lib/ftl/macros.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-// TODO(jeffbrown): Move this someplace closer to mojo::gfx::composition
-class MockHitTester : public mojo::gfx::composition::HitTester {
+class MockHitTester : public HitTester {
  public:
   MockHitTester();
   ~MockHitTester() override;
 
   // Sets the next hit test result.
-  void SetNextResult(mojo::PointFPtr point,
-                     mojo::gfx::composition::HitTestResultPtr result);
+  void SetNextResult(mojo::PointFPtr point, HitTestResultPtr result);
 
   // |HitTester|
   void HitTest(mojo::PointFPtr point, const HitTestCallback& callback) override;
 
  private:
   mojo::PointFPtr point_;
-  mojo::gfx::composition::HitTestResultPtr result_;
+  HitTestResultPtr result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MockHitTester);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_ASSOCIATES_MOCK_HIT_TESTER_H_

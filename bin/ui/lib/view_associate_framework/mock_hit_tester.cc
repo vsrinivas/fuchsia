@@ -6,16 +6,14 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 MockHitTester::MockHitTester() {}
 
 MockHitTester::~MockHitTester() {}
 
-void MockHitTester::SetNextResult(
-    mojo::PointFPtr point,
-    mojo::gfx::composition::HitTestResultPtr result) {
+void MockHitTester::SetNextResult(mojo::PointFPtr point,
+                                  HitTestResultPtr result) {
   FTL_DCHECK(point);
   FTL_DCHECK(result);
 
@@ -31,9 +29,8 @@ void MockHitTester::HitTest(mojo::PointFPtr point,
     point_.reset();
     callback.Run(result_.Pass());
   } else {
-    callback.Run(mojo::gfx::composition::HitTestResult::New());
+    callback.Run(HitTestResult::New());
   }
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

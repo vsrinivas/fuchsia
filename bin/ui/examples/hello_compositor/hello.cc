@@ -22,7 +22,7 @@ namespace {
 
 constexpr uint32_t kSceneVersion = 1u;
 constexpr uint32_t kContentImageResourceId = 1u;
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 class ImageBuffer {
  public:
@@ -44,17 +44,16 @@ class ImageBuffer {
 
   const sk_sp<SkSurface>& surface() const { return surface_; }
 
-  mojo::gfx::composition::ImagePtr TakeImage() {
+  mozart::ImagePtr TakeImage() {
     FTL_DCHECK(surface_);
 
-    auto image = mojo::gfx::composition::Image::New();
+    auto image = mozart::Image::New();
     image->size = mojo::Size::New();
     image->size->width = surface_->width();
     image->size->height = surface_->height();
     image->stride = image->size->width * sizeof(uint32_t);
-    image->pixel_format = mojo::gfx::composition::Image::PixelFormat::B8G8R8A8;
-    image->alpha_format =
-        mojo::gfx::composition::Image::AlphaFormat::PREMULTIPLIED;
+    image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
+    image->alpha_format = mozart::Image::AlphaFormat::PREMULTIPLIED;
     ReleaseSurface();
     image->buffer = std::move(buffer_handle_);
     return image;
@@ -83,41 +82,40 @@ class HelloApp : public mojo::ApplicationImplBase {
   void OnInitialize() override {
     mojo::ConnectToService(shell(), "mojo:framebuffer",
                            mojo::GetProxy(&framebuffer_provider_));
-    framebuffer_provider_->Create(
-        [this](mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-               mojo::FramebufferInfoPtr framebuffer_info) {
-          FTL_CHECK(framebuffer);
-          FTL_CHECK(framebuffer_info);
+    framebuffer_provider_->Create([this](
+        mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+        mojo::FramebufferInfoPtr framebuffer_info) {
+      FTL_CHECK(framebuffer);
+      FTL_CHECK(framebuffer_info);
 
-          framebuffer_size_ = *framebuffer_info->size;
-          compositor_->CreateRenderer(
-              std::move(framebuffer), std::move(framebuffer_info),
-              GetProxy(&renderer_), "Hello Compositor Renderer");
+      framebuffer_size_ = *framebuffer_info->size;
+      compositor_->CreateRenderer(
+          std::move(framebuffer), std::move(framebuffer_info),
+          GetProxy(&renderer_), "Hello Compositor Renderer");
 
-          compositor_->CreateScene(
-              GetProxy(&scene_), "Hello Compositor Scene",
-              [this](mojo::gfx::composition::SceneTokenPtr scene_token) {
-                auto viewport = mojo::Rect::New();
-                viewport->width = framebuffer_size_.width;
-                viewport->height = framebuffer_size_.height;
-                renderer_->SetRootScene(std::move(scene_token), kSceneVersion,
-                                        std::move(viewport));
-              });
+      compositor_->CreateScene(GetProxy(&scene_), "Hello Compositor Scene",
+                               [this](mozart::SceneTokenPtr scene_token) {
+                                 auto viewport = mojo::Rect::New();
+                                 viewport->width = framebuffer_size_.width;
+                                 viewport->height = framebuffer_size_.height;
+                                 renderer_->SetRootScene(std::move(scene_token),
+                                                         kSceneVersion,
+                                                         std::move(viewport));
+                               });
 
-          scene_->GetScheduler(mojo::GetProxy(&frame_scheduler_));
-          ScheduleDraw();
-        });
+      scene_->GetScheduler(mojo::GetProxy(&frame_scheduler_));
+      ScheduleDraw();
+    });
 
     mojo::ConnectToService(shell(), "mojo:compositor_service",
                            GetProxy(&compositor_));
   }
 
   void ScheduleDraw() {
-    frame_scheduler_->ScheduleFrame(
-        [this](mojo::gfx::composition::FrameInfoPtr frame_info) {
-          frame_tracker_.Update(*frame_info, MojoGetTimeTicksNow());
-          Draw();
-        });
+    frame_scheduler_->ScheduleFrame([this](mozart::FrameInfoPtr frame_info) {
+      frame_tracker_.Update(*frame_info, MojoGetTimeTicksNow());
+      Draw();
+    });
   }
 
   void Draw() {
@@ -139,19 +137,19 @@ class HelloApp : public mojo::ApplicationImplBase {
     canvas->flush();
 
     // Update the scene contents.
-    auto update = mojo::gfx::composition::SceneUpdate::New();
+    auto update = mozart::SceneUpdate::New();
     mojo::RectF bounds;
     bounds.width = framebuffer_size_.width;
     bounds.height = framebuffer_size_.height;
 
-    auto content_resource = mojo::gfx::composition::Resource::New();
-    content_resource->set_image(mojo::gfx::composition::ImageResource::New());
+    auto content_resource = mozart::Resource::New();
+    content_resource->set_image(mozart::ImageResource::New());
     content_resource->get_image()->image = image_buffer.TakeImage();
     update->resources.insert(kContentImageResourceId, content_resource.Pass());
 
-    auto root_node = mojo::gfx::composition::Node::New();
-    root_node->op = mojo::gfx::composition::NodeOp::New();
-    root_node->op->set_image(mojo::gfx::composition::ImageNodeOp::New());
+    auto root_node = mozart::Node::New();
+    root_node->op = mozart::NodeOp::New();
+    root_node->op->set_image(mozart::ImageNodeOp::New());
     root_node->op->get_image()->content_rect = bounds.Clone();
     root_node->op->get_image()->image_resource_id = kContentImageResourceId;
     update->nodes.insert(kRootNodeId, root_node.Pass());
@@ -159,7 +157,7 @@ class HelloApp : public mojo::ApplicationImplBase {
     scene_->Update(update.Pass());
 
     // Publish the updated scene contents.
-    auto metadata = mojo::gfx::composition::SceneMetadata::New();
+    auto metadata = mozart::SceneMetadata::New();
     metadata->version = kSceneVersion;
     metadata->presentation_time = frame_tracker_.frame_info().presentation_time;
     scene_->Publish(std::move(metadata));
@@ -172,11 +170,11 @@ class HelloApp : public mojo::ApplicationImplBase {
   mojo::FramebufferProviderPtr framebuffer_provider_;
   mojo::Size framebuffer_size_;
 
-  mojo::gfx::composition::CompositorPtr compositor_;
-  mojo::gfx::composition::RendererPtr renderer_;
-  mojo::gfx::composition::ScenePtr scene_;
-  mojo::gfx::composition::FrameSchedulerPtr frame_scheduler_;
-  mojo::gfx::composition::FrameTracker frame_tracker_;
+  mozart::CompositorPtr compositor_;
+  mozart::RendererPtr renderer_;
+  mozart::ScenePtr scene_;
+  mozart::FrameSchedulerPtr frame_scheduler_;
+  mozart::FrameTracker frame_tracker_;
 
   float x_ = 400.0f;
   float y_ = 300.0f;

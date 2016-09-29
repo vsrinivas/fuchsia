@@ -19,10 +19,9 @@ void CompositorApp::OnInitialize() {
 
 bool CompositorApp::OnAcceptConnection(
     mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mojo::gfx::composition::Compositor>(
+  service_provider_impl->AddService<mozart::Compositor>(
       [this](const mojo::ConnectionContext& connection_context,
-             mojo::InterfaceRequest<mojo::gfx::composition::Compositor>
-                 compositor_request) {
+             mojo::InterfaceRequest<mozart::Compositor> compositor_request) {
         compositor_bindings_.AddBinding(new CompositorImpl(engine_.get()),
                                         compositor_request.Pass());
       });

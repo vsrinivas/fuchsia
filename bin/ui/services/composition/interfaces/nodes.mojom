@@ -6,8 +6,8 @@
 // to embedded scenes.  Primitives are arranged hierarchically as nodes,
 // each with an associated transformation matrix.
 
-[DartPackage="mojo_services"]
-module mojo.gfx.composition;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/composition/interfaces/hit_tests.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";

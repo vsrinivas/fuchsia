@@ -52,10 +52,10 @@ class Universe {
 
   void AddScene(const SceneLabel& scene_label);
   void PresentScene(const ftl::RefPtr<const SceneContent>& content);
-  void RemoveScene(const mojo::gfx::composition::SceneToken& scene_token);
+  void RemoveScene(const mozart::SceneToken& scene_token);
 
   ftl::RefPtr<const Snapshot> SnapshotScene(
-      const mojo::gfx::composition::SceneToken& scene_token,
+      const mozart::SceneToken& scene_token,
       uint32_t version,
       std::ostream* block_log);
 
@@ -81,7 +81,7 @@ class Universe {
 
    protected:
     Snapshot::Disposition ResolveAndSnapshotScene(
-        const mojo::gfx::composition::SceneToken& scene_token,
+        const mozart::SceneToken& scene_token,
         uint32_t version,
         ftl::RefPtr<const SceneContent>* out_content) override;
 

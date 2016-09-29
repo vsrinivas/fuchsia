@@ -11,7 +11,7 @@
 
 namespace input_manager {
 namespace {
-std::ostream& operator<<(std::ostream& os, const mojo::Event& value) {
+std::ostream& operator<<(std::ostream& os, const mozart::Event& value) {
   os << "{action=" << value.action;
   if (value.pointer_data)
     os << ", x=" << value.pointer_data->x << ", y=" << value.pointer_data->y;
@@ -26,50 +26,50 @@ InputAssociate::InputAssociate() {}
 InputAssociate::~InputAssociate() {}
 
 void InputAssociate::Connect(
-    mojo::InterfaceHandle<mojo::ui::ViewInspector> inspector,
+    mojo::InterfaceHandle<mozart::ViewInspector> inspector,
     const ConnectCallback& callback) {
   FTL_DCHECK(inspector);  // checked by mojom
 
   input_connections_by_view_token_.clear();
   input_dispatchers_by_view_tree_token_.clear();
-  inspector_ = ftl::MakeRefCounted<mojo::ui::ViewInspectorClient>(
-      mojo::ui::ViewInspectorPtr::Create(std::move(inspector)));
+  inspector_ = ftl::MakeRefCounted<mozart::ViewInspectorClient>(
+      mozart::ViewInspectorPtr::Create(std::move(inspector)));
 
-  auto info = mojo::ui::ViewAssociateInfo::New();
-  info->view_service_names.push_back(mojo::ui::InputConnection::Name_);
-  info->view_tree_service_names.push_back(mojo::ui::InputDispatcher::Name_);
+  auto info = mozart::ViewAssociateInfo::New();
+  info->view_service_names.push_back(mozart::InputConnection::Name_);
+  info->view_tree_service_names.push_back(mozart::InputDispatcher::Name_);
   callback.Run(info.Pass());
 }
 
 void InputAssociate::ConnectToViewService(
-    mojo::ui::ViewTokenPtr view_token,
+    mozart::ViewTokenPtr view_token,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   FTL_DCHECK(view_token);  // checked by mojom
 
-  if (service_name == mojo::ui::InputConnection::Name_) {
-    CreateInputConnection(view_token.Pass(),
-                          mojo::InterfaceRequest<mojo::ui::InputConnection>(
-                              client_handle.Pass()));
+  if (service_name == mozart::InputConnection::Name_) {
+    CreateInputConnection(
+        view_token.Pass(),
+        mojo::InterfaceRequest<mozart::InputConnection>(client_handle.Pass()));
   }
 }
 
 void InputAssociate::ConnectToViewTreeService(
-    mojo::ui::ViewTreeTokenPtr view_tree_token,
+    mozart::ViewTreeTokenPtr view_tree_token,
     const mojo::String& service_name,
     mojo::ScopedMessagePipeHandle client_handle) {
   FTL_DCHECK(view_tree_token);  // checked by mojom
 
-  if (service_name == mojo::ui::InputDispatcher::Name_) {
-    CreateInputDispatcher(view_tree_token.Pass(),
-                          mojo::InterfaceRequest<mojo::ui::InputDispatcher>(
-                              client_handle.Pass()));
+  if (service_name == mozart::InputDispatcher::Name_) {
+    CreateInputDispatcher(
+        view_tree_token.Pass(),
+        mojo::InterfaceRequest<mozart::InputDispatcher>(client_handle.Pass()));
   }
 }
 
 void InputAssociate::CreateInputConnection(
-    mojo::ui::ViewTokenPtr view_token,
-    mojo::InterfaceRequest<mojo::ui::InputConnection> request) {
+    mozart::ViewTokenPtr view_token,
+    mojo::InterfaceRequest<mozart::InputConnection> request) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(request.is_pending());
   DVLOG(1) << "CreateInputConnection: view_token=" << view_token;
@@ -93,8 +93,8 @@ void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {
 }
 
 void InputAssociate::CreateInputDispatcher(
-    mojo::ui::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mojo::ui::InputDispatcher> request) {
+    mozart::ViewTreeTokenPtr view_tree_token,
+    mojo::InterfaceRequest<mozart::InputDispatcher> request) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(request.is_pending());
   DVLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
@@ -119,8 +119,8 @@ void InputAssociate::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
   input_dispatchers_by_view_tree_token_.erase(it);
 }
 
-void InputAssociate::DeliverEvent(const mojo::ui::ViewToken* view_token,
-                                  mojo::EventPtr event) {
+void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
+                                  mozart::EventPtr event) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(event);
   DVLOG(1) << "DeliverEvent: view_token=" << *view_token

@@ -22,35 +22,35 @@ class ViewInspectorClientTest : public mojo::test::ApplicationTestBase {
   void SetUp() override {
     mojo::test::ApplicationTestBase::SetUp();
 
-    mojo::InterfaceHandle<mojo::ui::ViewInspector> view_inspector;
+    mojo::InterfaceHandle<mozart::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
-    view_inspector_client_ = ftl::MakeRefCounted<mojo::ui::ViewInspectorClient>(
-        view_inspector.Pass());
+    view_inspector_client_ =
+        ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
   }
 
  protected:
-  void ResolveHits(mojo::gfx::composition::HitTestResultPtr hit_test_result,
-                   scoped_ptr<mojo::ui::ResolvedHits>* resolved_hits) {
+  void ResolveHits(mozart::HitTestResultPtr hit_test_result,
+                   scoped_ptr<mozart::ResolvedHits>* resolved_hits) {
     base::RunLoop loop;
     view_inspector_client_->ResolveHits(
         hit_test_result.Pass(),
-        base::Bind(&Capture<scoped_ptr<mojo::ui::ResolvedHits>>,
+        base::Bind(&Capture<scoped_ptr<mozart::ResolvedHits>>,
                    loop.QuitClosure(), resolved_hits));
     loop.Run();
   }
 
-  mojo::ui::MockViewInspector view_inspector_;
-  mojo::Binding<mojo::ui::ViewInspector> view_inspector_binding_;
-  scoped_refptr<mojo::ui::ViewInspectorClient> view_inspector_client_;
+  mozart::MockViewInspector view_inspector_;
+  mojo::Binding<mozart::ViewInspector> view_inspector_binding_;
+  scoped_refptr<mozart::ViewInspectorClient> view_inspector_client_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewInspectorClientTest);
 };
 
 TEST_F(ViewInspectorClientTest, EmptyResult) {
-  auto hit_test_result = mojo::gfx::composition::HitTestResult::New();
+  auto hit_test_result = mozart::HitTestResult::New();
 
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   ResolveHits(hit_test_result.Pass(), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -62,7 +62,7 @@ TEST_F(ViewInspectorClientTest, CachingNegativeResult) {
   auto scene_token_1 = MakeDummySceneToken(1u);
 
   // Initial lookup, should miss cache.
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   ResolveHits(MakeSimpleHitTestResult(scene_token_1.Clone()), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -83,7 +83,7 @@ TEST_F(ViewInspectorClientTest, CachingPositiveResult) {
   view_inspector_.SetSceneMapping(scene_token_1->value, view_token_11.Clone());
 
   // Initial lookup, should hit cache.
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   ResolveHits(MakeSimpleHitTestResult(scene_token_1.Clone()), &resolved_hits);
   ASSERT_NE(nullptr, resolved_hits.get());
   EXPECT_NE(nullptr, resolved_hits->result());
@@ -112,29 +112,27 @@ TEST_F(ViewInspectorClientTest, CompositeSceneGraph) {
   view_inspector_.SetSceneMapping(scene_token_3->value, view_token_33.Clone());
 
   // Scene graph with hits in 3 scenes, only 2 of which are views.
-  auto hit_test_result = mojo::gfx::composition::HitTestResult::New();
-  hit_test_result->root = mojo::gfx::composition::SceneHit::New();
+  auto hit_test_result = mozart::HitTestResult::New();
+  hit_test_result->root = mozart::SceneHit::New();
   hit_test_result->root->scene_token = scene_token_1.Clone();
-  hit_test_result->root->hits.push_back(mojo::gfx::composition::Hit::New());
-  hit_test_result->root->hits.at(0)->set_scene(
-      mojo::gfx::composition::SceneHit::New());
+  hit_test_result->root->hits.push_back(mozart::Hit::New());
+  hit_test_result->root->hits.at(0)->set_scene(mozart::SceneHit::New());
   hit_test_result->root->hits.at(0)->get_scene()->scene_token =
       scene_token_2.Clone();
   hit_test_result->root->hits.at(0)->get_scene()->hits.push_back(
-      mojo::gfx::composition::Hit::New());
+      mozart::Hit::New());
   hit_test_result->root->hits.at(0)->get_scene()->hits.at(0)->set_node(
-      mojo::gfx::composition::NodeHit::New());
-  hit_test_result->root->hits.push_back(mojo::gfx::composition::Hit::New());
-  hit_test_result->root->hits[1]->set_scene(
-      mojo::gfx::composition::SceneHit::New());
+      mozart::NodeHit::New());
+  hit_test_result->root->hits.push_back(mozart::Hit::New());
+  hit_test_result->root->hits[1]->set_scene(mozart::SceneHit::New());
   hit_test_result->root->hits[1]->get_scene()->scene_token =
       scene_token_3.Clone();
   hit_test_result->root->hits[1]->get_scene()->hits.push_back(
-      mojo::gfx::composition::Hit::New());
+      mozart::Hit::New());
   hit_test_result->root->hits[1]->get_scene()->hits.at(0)->set_node(
-      mojo::gfx::composition::NodeHit::New());
+      mozart::NodeHit::New());
 
-  scoped_ptr<mojo::ui::ResolvedHits> resolved_hits;
+  scoped_ptr<mozart::ResolvedHits> resolved_hits;
   ResolveHits(hit_test_result.Pass(), &resolved_hits);
   EXPECT_NE(nullptr, resolved_hits->result());
   EXPECT_EQ(2u, resolved_hits->map().size());

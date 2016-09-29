@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/mozart/src/view_manager/view_associate_table.h"
+
 #include "apps/mozart/lib/view_framework/associates/mock_view_inspector.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/views.mojom.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
 #include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
-#include "apps/mozart/src/view_manager/view_associate_table.h"
 
 namespace view_manager {
 namespace test {
@@ -25,22 +26,22 @@ class ViewAssociateTableTest : public ViewManagerTestBase {
 
 TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
   // Create a mock view registry
-  mojo::ui::MockViewInspector mock_view_inspector;
+  mozart::MockViewInspector mock_view_inspector;
 
   // Create a view associate table
   ViewAssociateTable view_associate_table;
 
   {
     // Create and bind a MockViewAssociate
-    mojo::ui::ViewAssociatePtr associate;
+    mozart::ViewAssociatePtr associate;
     MockViewAssociate mock_view_associate;
-    mojo::Binding<mojo::ui::ViewAssociate> view_associate_binding(
+    mojo::Binding<mozart::ViewAssociate> view_associate_binding(
         &mock_view_associate, mojo::GetProxy(&associate));
 
     // call ViewAssociateTable::RegisterViewAssociate
     EXPECT_EQ((size_t)0, view_associate_table.associate_count());
 
-    mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
+    mozart::ViewAssociateOwnerPtr view_associate_owner;
     view_associate_table.RegisterViewAssociate(
         &mock_view_inspector, associate.Pass(),
         mojo::GetProxy(&view_associate_owner), "test_view_associate");

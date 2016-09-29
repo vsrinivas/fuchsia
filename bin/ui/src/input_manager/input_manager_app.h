@@ -24,7 +24,7 @@ class InputManagerApp : public mojo::ApplicationImplBase {
   bool OnAcceptConnection(
       mojo::ServiceProviderImpl* service_provider_impl) override;
 
-  mojo::StrongBindingSet<mojo::ui::ViewAssociate> input_associates_;
+  mojo::StrongBindingSet<mozart::ViewAssociate> input_associates_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputManagerApp);
 };

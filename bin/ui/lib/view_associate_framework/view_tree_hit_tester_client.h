@@ -16,8 +16,7 @@
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 // Holds a hit tester for a view tree and keeps it up to date as the
 // hit tester is invalidated.
@@ -26,7 +25,7 @@ class ViewTreeHitTesterClient
  public:
   ViewTreeHitTesterClient(
       const ftl::RefPtr<ViewInspectorClient>& view_inspector_client,
-      mojo::ui::ViewTreeTokenPtr view_tree_token);
+      ViewTreeTokenPtr view_tree_token);
 
   // Performs a hit test for the specified point then invokes the callback.
   // Note: May invoke the callback immediately if no remote calls were required.
@@ -41,7 +40,7 @@ class ViewTreeHitTesterClient
   FRIEND_REF_COUNTED_THREAD_SAFE(ViewTreeHitTesterClient);
   ~ViewTreeHitTesterClient();
 
-  void OnHitTestResult(mojo::gfx::composition::HitTestResultPtr result);
+  void OnHitTestResult(HitTestResultPtr result);
 
   void UpdateHitTester();
   void ReleaseHitTester();
@@ -49,8 +48,8 @@ class ViewTreeHitTesterClient
   void OnHitTesterDied();
 
   ftl::RefPtr<ViewInspectorClient> view_inspector_client_;
-  mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  mojo::gfx::composition::HitTesterPtr hit_tester_;
+  ViewTreeTokenPtr view_tree_token_;
+  HitTesterPtr hit_tester_;
 
   std::queue<ResolvedHitsCallback> pending_callbacks_;
   ftl::Closure hit_tester_changed_callback_;
@@ -60,7 +59,6 @@ class ViewTreeHitTesterClient
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeHitTesterClient);
 };
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_ASSOCIATES_VIEW_TREE_HIT_TESTER_CLIENT_H_

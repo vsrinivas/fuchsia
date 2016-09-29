@@ -43,7 +43,7 @@ class ViewStub {
   // Invokes |ViewRegistry.OnViewResolved| when the token is obtained
   // from the owner or passes nullptr if an error occurs.
   ViewStub(ViewRegistry* registry,
-           mojo::InterfaceHandle<mojo::ui::ViewOwner> owner);
+           mojo::InterfaceHandle<mozart::ViewOwner> owner);
   ~ViewStub();
 
   ftl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -78,10 +78,8 @@ class ViewStub {
   uint32_t key() const { return key_; }
 
   // Gets the wrapped scene exposed to the container.
-  const mojo::gfx::composition::ScenePtr& stub_scene() const {
-    return stub_scene_;
-  }
-  const mojo::gfx::composition::SceneTokenPtr& stub_scene_token() const {
+  const mozart::ScenePtr& stub_scene() const { return stub_scene_; }
+  const mozart::SceneTokenPtr& stub_scene_token() const {
     return stub_scene_token_;
   }
 
@@ -91,25 +89,23 @@ class ViewStub {
 
   // Gets the properties which the container set on this view, or null
   // if none set or the view has become unavailable.
-  const mojo::ui::ViewPropertiesPtr& properties() const { return properties_; }
+  const mozart::ViewPropertiesPtr& properties() const { return properties_; }
 
   // Sets the scene version and properties set by the container.
   // May be called when the view is pending or attached but not after it
   // has become unavailable.
   void SetProperties(uint32_t scene_version,
-                     mojo::ui::ViewPropertiesPtr properties);
+                     mozart::ViewPropertiesPtr properties);
 
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
   // view owner.
-  void AttachView(ViewState* state,
-                  mojo::gfx::composition::ScenePtr stub_scene);
+  void AttachView(ViewState* state, mozart::ScenePtr stub_scene);
 
   // Sets the stub scene token, which must not be null.
   // Called after |AttachView| once the scene token is known but the view
   // must not have been released.
-  void SetStubSceneToken(
-      mojo::gfx::composition::SceneTokenPtr stub_scene_token);
+  void SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token);
 
   // Marks the stub as unavailable.
   // Returns the previous view state, or null if none.
@@ -128,14 +124,13 @@ class ViewStub {
   // be transferred
   void TransferViewOwnerWhenViewResolved(
       std::unique_ptr<ViewStub> view_stub,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner>
-          transferred_view_owner_request);
+      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
  private:
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
 
-  void OnViewResolved(mojo::ui::ViewTokenPtr view_token);
+  void OnViewResolved(mozart::ViewTokenPtr view_token);
 
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be
@@ -146,19 +141,19 @@ class ViewStub {
   }
 
   ViewRegistry* registry_;
-  mojo::ui::ViewOwnerPtr owner_;
+  mozart::ViewOwnerPtr owner_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
-  mojo::gfx::composition::ScenePtr stub_scene_;
-  mojo::gfx::composition::SceneTokenPtr stub_scene_token_;
+  mozart::ScenePtr stub_scene_;
+  mozart::SceneTokenPtr stub_scene_token_;
 
   // Non-null when we are waiting to transfer the |ViewOwner|.
   // Saves the |ViewOwner| we want to transfer ownership to, and a reference to
   // ourselves to keep us alive until |OnViewResolved| is called.
   std::unique_ptr<PendingViewOwnerTransferState> pending_view_owner_transfer_;
 
-  uint32_t scene_version_ = mojo::gfx::composition::kSceneVersionNone;
-  mojo::ui::ViewPropertiesPtr properties_;
+  uint32_t scene_version_ = mozart::kSceneVersionNone;
+  mozart::ViewPropertiesPtr properties_;
 
   ViewTreeState* tree_ = nullptr;
   ViewState* parent_ = nullptr;

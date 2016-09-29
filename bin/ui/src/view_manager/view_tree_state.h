@@ -37,9 +37,9 @@ class ViewTreeState : public ViewContainerState {
   };
 
   ViewTreeState(ViewRegistry* registry,
-                mojo::ui::ViewTreeTokenPtr view_tree_token,
-                mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
-                mojo::ui::ViewTreeListenerPtr view_tree_listener,
+                mozart::ViewTreeTokenPtr view_tree_token,
+                mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+                mozart::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
 
@@ -49,25 +49,23 @@ class ViewTreeState : public ViewContainerState {
 
   // Gets the token used to refer to this view tree globally.
   // Caller does not obtain ownership of the token.
-  const mojo::ui::ViewTreeTokenPtr& view_tree_token() const {
+  const mozart::ViewTreeTokenPtr& view_tree_token() const {
     return view_tree_token_;
   }
 
   // Gets the view tree listener interface, never null.
   // Caller does not obtain ownership of the view tree listener.
-  const mojo::ui::ViewTreeListenerPtr& view_tree_listener() const {
+  const mozart::ViewTreeListenerPtr& view_tree_listener() const {
     return view_tree_listener_;
   }
 
   // The view tree's renderer.
-  const mojo::gfx::composition::RendererPtr& renderer() const {
-    return renderer_;
-  }
-  void SetRenderer(mojo::gfx::composition::RendererPtr renderer);
+  const mozart::RendererPtr& renderer() const { return renderer_; }
+  void SetRenderer(mozart::RendererPtr renderer);
 
   // The view tree's frame scheduler.
   // This is updated whenever the renderer is changed.
-  const mojo::gfx::composition::FrameSchedulerPtr& frame_scheduler() const {
+  const mozart::FrameSchedulerPtr& frame_scheduler() const {
     return frame_scheduler_;
   }
 
@@ -78,9 +76,8 @@ class ViewTreeState : public ViewContainerState {
   // The request will be satisfied by the current renderer if possible.
   // The callback will be invoked when the renderer changes.
   void RequestHitTester(
-      mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
-          hit_tester_request,
-      const mojo::ui::ViewInspector::GetHitTesterCallback& callback);
+      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
+      const mozart::ViewInspector::GetHitTesterCallback& callback);
 
   // Gets or sets flags describing the invalidation state of the view tree.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
@@ -99,19 +96,19 @@ class ViewTreeState : public ViewContainerState {
  private:
   void ClearHitTesterCallbacks(bool renderer_changed);
 
-  mojo::ui::ViewTreeTokenPtr view_tree_token_;
-  mojo::ui::ViewTreeListenerPtr view_tree_listener_;
+  mozart::ViewTreeTokenPtr view_tree_token_;
+  mozart::ViewTreeListenerPtr view_tree_listener_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewTreeImpl> impl_;
-  mojo::Binding<mojo::ui::ViewTree> view_tree_binding_;
+  mojo::Binding<mozart::ViewTree> view_tree_binding_;
 
-  mojo::gfx::composition::RendererPtr renderer_;
-  mojo::gfx::composition::FrameSchedulerPtr frame_scheduler_;
+  mozart::RendererPtr renderer_;
+  mozart::FrameSchedulerPtr frame_scheduler_;
 
-  std::vector<mojo::ui::ViewInspector::GetHitTesterCallback>
+  std::vector<mozart::ViewInspector::GetHitTesterCallback>
       pending_hit_tester_callbacks_;
 
   uint32_t invalidation_flags_ = 0u;

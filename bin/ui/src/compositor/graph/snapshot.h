@@ -60,8 +60,7 @@ class Snapshot : public ftl::RefCountedThreadSafe<Snapshot> {
 
   // Returns true if the snapshot has a dependency on content from the
   // specified scene.
-  bool HasDependency(
-      const mojo::gfx::composition::SceneToken& scene_token) const;
+  bool HasDependency(const mozart::SceneToken& scene_token) const;
 
   // Paints the content of the snapshot to produce a frame to be rendered.
   // Only valid if |!is_blocked()|.
@@ -70,8 +69,7 @@ class Snapshot : public ftl::RefCountedThreadSafe<Snapshot> {
 
   // Performs a hit test at the specified point, populating the result.
   // Only valid if |!is_blocked()|.
-  void HitTest(const mojo::PointF& point,
-               mojo::gfx::composition::HitTestResult* result) const;
+  void HitTest(const mojo::PointF& point, mozart::HitTestResult* result) const;
 
   // Returns true if the specified node was blocked from rendering.
   // Only valid if |!is_blocked()|.
@@ -136,14 +134,13 @@ class SnapshotBuilder {
       const SceneContent* referrer_content);
 
   // Builds a snapshot rooted at the specified scene.
-  ftl::RefPtr<const Snapshot> Build(
-      const mojo::gfx::composition::SceneToken& scene_token,
-      uint32_t version);
+  ftl::RefPtr<const Snapshot> Build(const mozart::SceneToken& scene_token,
+                                    uint32_t version);
 
  protected:
   // Resolves and snapshots a particular version of a scene.
   virtual Snapshot::Disposition ResolveAndSnapshotScene(
-      const mojo::gfx::composition::SceneToken& scene_token,
+      const mozart::SceneToken& scene_token,
       uint32_t version,
       ftl::RefPtr<const SceneContent>* out_content) = 0;
 
@@ -152,7 +149,7 @@ class SnapshotBuilder {
 
  private:
   Snapshot::Disposition AddDependencyResolveAndSnapshotScene(
-      const mojo::gfx::composition::SceneToken& scene_token,
+      const mozart::SceneToken& scene_token,
       uint32_t version,
       ftl::RefPtr<const SceneContent>* out_content);
 

@@ -12,25 +12,24 @@
 namespace view_manager {
 
 // ViewManager interface implementation.
-class ViewManagerImpl : public mojo::ui::ViewManager {
+class ViewManagerImpl : public mozart::ViewManager {
  public:
   explicit ViewManagerImpl(ViewRegistry* registry);
   ~ViewManagerImpl() override;
 
  private:
   // |ViewManager|:
-  void CreateView(
-      mojo::InterfaceRequest<mojo::ui::View> view_request,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
-      mojo::InterfaceHandle<mojo::ui::ViewListener> view_listener,
-      const mojo::String& label) override;
+  void CreateView(mojo::InterfaceRequest<mozart::View> view_request,
+                  mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  mojo::InterfaceHandle<mozart::ViewListener> view_listener,
+                  const mojo::String& label) override;
   void CreateViewTree(
-      mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
-      mojo::InterfaceHandle<mojo::ui::ViewTreeListener> view_tree_listener,
+      mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+      mojo::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
       const mojo::String& label) override;
   void RegisterViewAssociate(
-      mojo::InterfaceHandle<mojo::ui::ViewAssociate> view_associate,
-      mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner> view_associate_owner,
+      mojo::InterfaceHandle<mozart::ViewAssociate> view_associate,
+      mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
       const mojo::String& label) override;
   void FinishedRegisteringViewAssociates() override;
 

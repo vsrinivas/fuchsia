@@ -14,19 +14,19 @@
 
 namespace launcher {
 
-class LauncherViewTree : public mojo::ui::ViewTreeListener,
-                         public mojo::ui::ViewContainerListener {
+class LauncherViewTree : public mozart::ViewTreeListener,
+                         public mozart::ViewContainerListener {
  public:
-  LauncherViewTree(mojo::gfx::composition::Compositor* compositor,
-                   mojo::ui::ViewManager* view_manager,
+  LauncherViewTree(mozart::Compositor* compositor,
+                   mozart::ViewManager* view_manager,
                    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                    mojo::FramebufferInfoPtr framebuffer_info,
                    const ftl::Closure& shutdown_callback);
 
   ~LauncherViewTree() override;
 
-  void SetRoot(mojo::ui::ViewOwnerPtr owner);
-  void DispatchEvent(mojo::EventPtr event);
+  void SetRoot(mozart::ViewOwnerPtr owner);
+  void DispatchEvent(mozart::EventPtr event);
 
  private:
   // |ViewTreeListener|:
@@ -34,7 +34,7 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
-                       mojo::ui::ViewInfoPtr child_view_info,
+                       mozart::ViewInfoPtr child_view_info,
                        const OnChildAttachedCallback& callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           const OnChildUnavailableCallback& callback) override;
@@ -46,23 +46,22 @@ class LauncherViewTree : public mojo::ui::ViewTreeListener,
 
   void Shutdown();
 
-  mojo::gfx::composition::Compositor* compositor_;
-  mojo::ui::ViewManager* view_manager_;
+  mozart::Compositor* compositor_;
+  mozart::ViewManager* view_manager_;
   mojo::Size framebuffer_size_;
 
   ftl::Closure shutdown_callback_;
 
-  mojo::Binding<mojo::ui::ViewTreeListener> view_tree_listener_binding_;
-  mojo::Binding<mojo::ui::ViewContainerListener>
-      view_container_listener_binding_;
+  mojo::Binding<mozart::ViewTreeListener> view_tree_listener_binding_;
+  mojo::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
 
-  mojo::ui::ViewTreePtr view_tree_;
-  mojo::ui::ViewContainerPtr view_container_;
-  mojo::ui::InputDispatcherPtr input_dispatcher_;
+  mozart::ViewTreePtr view_tree_;
+  mozart::ViewContainerPtr view_container_;
+  mozart::InputDispatcherPtr input_dispatcher_;
 
   uint32_t root_key_ = 0u;
   bool root_was_set_ = false;
-  mojo::ui::ViewInfoPtr root_view_info_;
+  mozart::ViewInfoPtr root_view_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LauncherViewTree);
 };

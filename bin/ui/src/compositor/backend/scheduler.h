@@ -72,8 +72,7 @@ class Scheduler : public ftl::RefCountedThreadSafe<Scheduler> {
 // These callbacks are provided to the |Output| in order to receive the
 // events produced by the output's associated |Scheduler|.
 struct SchedulerCallbacks {
-  using FrameCallback =
-      std::function<void(const mojo::gfx::composition::FrameInfo&)>;
+  using FrameCallback = std::function<void(const mozart::FrameInfo&)>;
 
   SchedulerCallbacks(const FrameCallback& update_callback,
                      const FrameCallback& snapshot_callback);

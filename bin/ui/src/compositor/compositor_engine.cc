@@ -28,7 +28,7 @@ const int32_t kMaxViewportWidth = 65536;
 const int32_t kMaxViewportHeight = 65536;
 
 std::string SanitizeLabel(const mojo::String& label) {
-  return label.get().substr(0, mojo::gfx::composition::kLabelMaxLength);
+  return label.get().substr(0, mozart::Compositor::kLabelMaxLength);
 }
 }  // namespace
 
@@ -36,10 +36,10 @@ CompositorEngine::CompositorEngine() : weak_factory_(this) {}
 
 CompositorEngine::~CompositorEngine() {}
 
-mojo::gfx::composition::SceneTokenPtr CompositorEngine::CreateScene(
-    mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene_request,
+mozart::SceneTokenPtr CompositorEngine::CreateScene(
+    mojo::InterfaceRequest<mozart::Scene> scene_request,
     const mojo::String& label) {
-  auto scene_token = mojo::gfx::composition::SceneToken::New();
+  auto scene_token = mozart::SceneToken::New();
   scene_token->value = next_scene_token_value_++;
   FTL_CHECK(scene_token->value);
   FTL_CHECK(!FindScene(scene_token->value));
@@ -109,7 +109,7 @@ void CompositorEngine::DestroyScene(SceneState* scene_state) {
 void CompositorEngine::CreateRenderer(
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
-    mojo::InterfaceRequest<mojo::gfx::composition::Renderer> renderer_request,
+    mojo::InterfaceRequest<mozart::Renderer> renderer_request,
     const mojo::String& label) {
   FTL_DCHECK(framebuffer);
   FTL_DCHECK(framebuffer_info);
@@ -130,14 +130,14 @@ void CompositorEngine::CreateRenderer(
       [
         weak = weak_factory_.GetWeakPtr(),
         renderer_state_weak = renderer_state->GetWeakPtr()
-      ](const mojo::gfx::composition::FrameInfo& frame_info) {
+      ](const mozart::FrameInfo& frame_info) {
         if (weak)
           weak->OnOutputUpdateRequest(renderer_state_weak, frame_info);
       },
       [
         weak = weak_factory_.GetWeakPtr(),
         renderer_state_weak = renderer_state->GetWeakPtr()
-      ](const mojo::gfx::composition::FrameInfo& frame_info) {
+      ](const mozart::FrameInfo& frame_info) {
         if (weak)
           weak->OnOutputSnapshotRequest(renderer_state_weak, frame_info);
       });
@@ -175,9 +175,8 @@ void CompositorEngine::DestroyRenderer(RendererState* renderer_state) {
   delete renderer_state;
 }
 
-void CompositorEngine::SetListener(
-    SceneState* scene_state,
-    mojo::gfx::composition::SceneListenerPtr listener) {
+void CompositorEngine::SetListener(SceneState* scene_state,
+                                   mozart::SceneListenerPtr listener) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(1) << "SetSceneListener: scene=" << scene_state;
 
@@ -185,21 +184,20 @@ void CompositorEngine::SetListener(
 }
 
 void CompositorEngine::Update(SceneState* scene_state,
-                              mojo::gfx::composition::SceneUpdatePtr update) {
+                              mozart::SceneUpdatePtr update) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(1) << "Update: scene=" << scene_state << ", update=" << update;
 
   scene_state->scene_def()->EnqueueUpdate(update.Pass());
 }
 
-void CompositorEngine::Publish(
-    SceneState* scene_state,
-    mojo::gfx::composition::SceneMetadataPtr metadata) {
+void CompositorEngine::Publish(SceneState* scene_state,
+                               mozart::SceneMetadataPtr metadata) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(1) << "Publish: scene=" << scene_state << ", metadata=" << metadata;
 
   if (!metadata)
-    metadata = mojo::gfx::composition::SceneMetadata::New();
+    metadata = mozart::SceneMetadata::New();
   int64_t presentation_time = metadata->presentation_time;
   scene_state->scene_def()->EnqueuePublish(metadata.Pass());
 
@@ -251,11 +249,10 @@ void CompositorEngine::ScheduleFrame(SceneState* scene_state,
   }
 }
 
-void CompositorEngine::SetRootScene(
-    RendererState* renderer_state,
-    mojo::gfx::composition::SceneTokenPtr scene_token,
-    uint32_t scene_version,
-    mojo::RectPtr viewport) {
+void CompositorEngine::SetRootScene(RendererState* renderer_state,
+                                    mozart::SceneTokenPtr scene_token,
+                                    uint32_t scene_version,
+                                    mojo::RectPtr viewport) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(scene_token);
   FTL_DCHECK(viewport);
@@ -314,12 +311,12 @@ void CompositorEngine::ScheduleFrame(RendererState* renderer_state,
 void CompositorEngine::HitTest(
     RendererState* renderer_state,
     mojo::PointFPtr point,
-    const mojo::gfx::composition::HitTester::HitTestCallback& callback) {
+    const mozart::HitTester::HitTestCallback& callback) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(point);
   DVLOG(1) << "HitTest: renderer=" << renderer_state << ", point=" << point;
 
-  auto result = mojo::gfx::composition::HitTestResult::New();
+  auto result = mozart::HitTestResult::New();
 
   if (renderer_state->visible_snapshot()) {
     FTL_DCHECK(!renderer_state->visible_snapshot()->is_blocked());
@@ -330,7 +327,7 @@ void CompositorEngine::HitTest(
 }
 
 bool CompositorEngine::ResolveSceneReference(
-    const mojo::gfx::composition::SceneToken& scene_token) {
+    const mozart::SceneToken& scene_token) {
   return FindScene(scene_token.value) != nullptr;
 }
 
@@ -372,7 +369,7 @@ SceneDef::Disposition CompositorEngine::PresentScene(
   std::ostringstream errs;
   SceneDef::Disposition disposition = scene_state->scene_def()->Present(
       presentation_time, &universe_,
-      [this](const mojo::gfx::composition::SceneToken& scene_token) {
+      [this](const mozart::SceneToken& scene_token) {
         return ResolveSceneReference(scene_token);
       },
       [this, scene_state](uint32_t resource_id) {
@@ -387,9 +384,8 @@ SceneDef::Disposition CompositorEngine::PresentScene(
   return disposition;
 }
 
-void CompositorEngine::ComposeRenderer(
-    RendererState* renderer_state,
-    const mojo::gfx::composition::FrameInfo& frame_info) {
+void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
+                                       const mozart::FrameInfo& frame_info) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   DVLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
@@ -463,10 +459,9 @@ void CompositorEngine::SnapshotRendererInner(RendererState* renderer_state,
                               renderer_state->root_scene_version(), block_log));
 }
 
-void CompositorEngine::PaintRenderer(
-    RendererState* renderer_state,
-    const mojo::gfx::composition::FrameInfo& frame_info,
-    int64_t composition_time) {
+void CompositorEngine::PaintRenderer(RendererState* renderer_state,
+                                     const mozart::FrameInfo& frame_info,
+                                     int64_t composition_time) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   DVLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
@@ -513,7 +508,7 @@ void CompositorEngine::OnOutputError(
 
 void CompositorEngine::OnOutputUpdateRequest(
     const ftl::WeakPtr<RendererState>& renderer_state_weak,
-    const mojo::gfx::composition::FrameInfo& frame_info) {
+    const mozart::FrameInfo& frame_info) {
   RendererState* renderer_state = renderer_state_weak.get();
   if (!renderer_state)
     return;
@@ -530,7 +525,7 @@ void CompositorEngine::OnOutputUpdateRequest(
 
 void CompositorEngine::OnOutputSnapshotRequest(
     const ftl::WeakPtr<RendererState>& renderer_state_weak,
-    const mojo::gfx::composition::FrameInfo& frame_info) {
+    const mozart::FrameInfo& frame_info) {
   RendererState* renderer_state = renderer_state_weak.get();
   if (!renderer_state)
     return;

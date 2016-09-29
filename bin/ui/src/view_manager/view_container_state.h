@@ -29,11 +29,11 @@ class ViewContainerState {
   ViewContainerState();
 
   // Gets or sets the view container listener.
-  mojo::ui::ViewContainerListener* view_container_listener() const {
+  mozart::ViewContainerListener* view_container_listener() const {
     return view_container_listener_.get();
   }
   void set_view_container_listener(
-      mojo::ui::ViewContainerListenerPtr view_container_listener) {
+      mozart::ViewContainerListenerPtr view_container_listener) {
     view_container_listener_ = view_container_listener.Pass();
   }
 
@@ -61,7 +61,7 @@ class ViewContainerState {
   virtual ~ViewContainerState();
 
  private:
-  mojo::ui::ViewContainerListenerPtr view_container_listener_;
+  mozart::ViewContainerListenerPtr view_container_listener_;
   ChildrenMap children_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);

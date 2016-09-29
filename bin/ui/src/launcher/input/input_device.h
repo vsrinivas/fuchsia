@@ -32,7 +32,7 @@
 
 namespace launcher {
 
-using OnEventCallback = std::function<void(mojo::EventPtr event)>;
+using OnEventCallback = std::function<void(mozart::EventPtr event)>;
 
 struct InputDevice {
   int fd_;
@@ -82,7 +82,7 @@ struct Acer12InputDevice : InputDevice {
   void ParseTouchscreen(const OnEventCallback& callback,
                         const mojo::Size& display_size);
 
-  std::vector<mojo::PointerData> pointers_;
+  std::vector<mozart::PointerData> pointers_;
 };
 
 class InputDeviceMonitor {

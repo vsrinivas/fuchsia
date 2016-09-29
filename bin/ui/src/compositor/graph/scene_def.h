@@ -26,8 +26,7 @@ class SceneDef;
 class Universe;
 
 // Determines whether a scene is registered.
-using SceneResolver =
-    std::function<bool(const mojo::gfx::composition::SceneToken&)>;
+using SceneResolver = std::function<bool(const mozart::SceneToken&)>;
 
 // Sends a scene unavailable message with the specified resource id.
 using SceneUnavailableSender = std::function<void(uint32_t)>;
@@ -55,11 +54,11 @@ class SceneDef {
   std::string FormattedLabel() const { return label_.FormattedLabel(); }
 
   // Enqueues a pending update event to the scene graph.
-  void EnqueueUpdate(mojo::gfx::composition::SceneUpdatePtr update);
+  void EnqueueUpdate(mozart::SceneUpdatePtr update);
 
   // Enqueues a pending publish event to the scene graph.
   // The changes are not applied until |ApplyChanges| is called.
-  void EnqueuePublish(mojo::gfx::composition::SceneMetadataPtr metadata);
+  void EnqueuePublish(mozart::SceneMetadataPtr metadata);
 
   // Applies published updates to the scene up to the point indicated by
   // |presentation_time|, adds new scene content to the universe.
@@ -76,9 +75,8 @@ class SceneDef {
   // Reports that a scene has been unregistered.
   // Causes |OnResourceUnavailable()| to be delivered for all matching scene
   // references.
-  void NotifySceneUnavailable(
-      const mojo::gfx::composition::SceneToken& scene_token,
-      const SceneUnavailableSender& unavailable_sender);
+  void NotifySceneUnavailable(const mozart::SceneToken& scene_token,
+                              const SceneUnavailableSender& unavailable_sender);
 
  private:
   class Collector : public SceneContentBuilder {
@@ -100,38 +98,38 @@ class SceneDef {
   };
 
   struct Publication {
-    Publication(mojo::gfx::composition::SceneMetadataPtr metadata);
+    Publication(mozart::SceneMetadataPtr metadata);
     ~Publication();
 
     bool is_due(int64_t presentation_time) const {
       return metadata->presentation_time <= presentation_time;
     }
 
-    mojo::gfx::composition::SceneMetadataPtr metadata;
-    std::vector<mojo::gfx::composition::SceneUpdatePtr> updates;
+    mozart::SceneMetadataPtr metadata;
+    std::vector<mozart::SceneUpdatePtr> updates;
 
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(Publication);
   };
 
-  bool ApplyUpdate(mojo::gfx::composition::SceneUpdatePtr update,
+  bool ApplyUpdate(mozart::SceneUpdatePtr update,
                    const SceneResolver& resolver,
                    const SceneUnavailableSender& unavailable_sender,
                    std::ostream& err);
 
   ftl::RefPtr<const Resource> CreateResource(
       uint32_t resource_id,
-      mojo::gfx::composition::ResourcePtr resource_decl,
+      mozart::ResourcePtr resource_decl,
       const SceneResolver& resolver,
       const SceneUnavailableSender& unavailable_sender,
       std::ostream& err);
   ftl::RefPtr<const Node> CreateNode(uint32_t node_id,
-                                     mojo::gfx::composition::NodePtr node_decl,
+                                     mozart::NodePtr node_decl,
                                      std::ostream& err);
 
   const SceneLabel label_;
 
-  std::vector<mojo::gfx::composition::SceneUpdatePtr> pending_updates_;
+  std::vector<mozart::SceneUpdatePtr> pending_updates_;
   std::vector<std::unique_ptr<Publication>> pending_publications_;
 
   std::unordered_map<uint32_t, ftl::RefPtr<const Resource>> resources_;

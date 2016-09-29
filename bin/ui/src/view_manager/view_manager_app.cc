@@ -22,7 +22,7 @@ void ViewManagerApp::OnInitialize() {
       url(), args().begin(), args().end());
 
   // Connect to compositor.
-  mojo::gfx::composition::CompositorPtr compositor;
+  mozart::CompositorPtr compositor;
   mojo::ConnectToService(shell(), "mojo:compositor_service",
                          GetProxy(&compositor));
   compositor.set_connection_error_handler(
@@ -34,13 +34,13 @@ void ViewManagerApp::OnInitialize() {
 
 bool ViewManagerApp::OnAcceptConnection(
     mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mojo::ui::ViewManager>([this](
-      const mojo::ConnectionContext& connection_context,
-      mojo::InterfaceRequest<mojo::ui::ViewManager> view_manager_request) {
-    FTL_DCHECK(registry_);
-    view_managers_.AddBinding(new ViewManagerImpl(registry_.get()),
-                              view_manager_request.Pass());
-  });
+  service_provider_impl->AddService<mozart::ViewManager>(
+      [this](const mojo::ConnectionContext& connection_context,
+             mojo::InterfaceRequest<mozart::ViewManager> view_manager_request) {
+        FTL_DCHECK(registry_);
+        view_managers_.AddBinding(new ViewManagerImpl(registry_.get()),
+                                  view_manager_request.Pass());
+      });
   return true;
 }
 

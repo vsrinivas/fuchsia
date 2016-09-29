@@ -17,31 +17,30 @@ class InputAssociate;
 
 // InputConnection implementation.
 // Binds incoming requests to the relevant view token.
-class InputConnectionImpl : public mojo::ui::InputConnection {
+class InputConnectionImpl : public mozart::InputConnection {
  public:
-  InputConnectionImpl(
-      InputAssociate* associate,
-      mojo::ui::ViewTokenPtr view_token,
-      mojo::InterfaceRequest<mojo::ui::InputConnection> request);
+  InputConnectionImpl(InputAssociate* associate,
+                      mozart::ViewTokenPtr view_token,
+                      mojo::InterfaceRequest<mozart::InputConnection> request);
   ~InputConnectionImpl() override;
 
-  const mojo::ui::ViewToken* view_token() const { return view_token_.get(); }
+  const mozart::ViewToken* view_token() const { return view_token_.get(); }
 
   // Delivers an event to a view.
-  void DeliverEvent(mojo::EventPtr event);
+  void DeliverEvent(mozart::EventPtr event);
 
-  // |mojo::ui::InputConnection|
+  // |mozart::InputConnection|
   void SetListener(
-      mojo::InterfaceHandle<mojo::ui::InputListener> listener) override;
+      mojo::InterfaceHandle<mozart::InputListener> listener) override;
 
  private:
   void OnEventFinished(bool handled);
 
   InputAssociate* const associate_;
-  mojo::ui::ViewTokenPtr view_token_;
-  mojo::ui::InputListenerPtr listener_;
+  mozart::ViewTokenPtr view_token_;
+  mozart::InputListenerPtr listener_;
 
-  mojo::Binding<mojo::ui::InputConnection> binding_;
+  mojo::Binding<mozart::InputConnection> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };

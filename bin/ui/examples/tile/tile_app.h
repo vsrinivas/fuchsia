@@ -12,14 +12,14 @@ namespace examples {
 
 struct TileParams;
 
-class TileApp : public mojo::ui::ViewProviderApp {
+class TileApp : public mozart::ViewProviderApp {
  public:
   TileApp();
   ~TileApp() override;
 
   void CreateView(
       const std::string& connection_url,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       mojo::InterfaceRequest<mojo::ServiceProvider> services) override;
 
  private:

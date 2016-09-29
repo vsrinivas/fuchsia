@@ -14,7 +14,7 @@ ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
 
 ViewImpl::~ViewImpl() {}
 
-void ViewImpl::GetToken(const mojo::ui::View::GetTokenCallback& callback) {
+void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
   callback.Run(state_->view_token()->Clone());
 }
 
@@ -23,13 +23,12 @@ void ViewImpl::GetServiceProvider(
   service_provider_bindings_.AddBinding(this, service_provider_request.Pass());
 }
 
-void ViewImpl::CreateScene(
-    mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene) {
+void ViewImpl::CreateScene(mojo::InterfaceRequest<mozart::Scene> scene) {
   registry_->CreateScene(state_, scene.Pass());
 }
 
 void ViewImpl::GetContainer(
-    mojo::InterfaceRequest<mojo::ui::ViewContainer> view_container_request) {
+    mojo::InterfaceRequest<mozart::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, view_container_request.Pass());
 }
 
@@ -38,20 +37,20 @@ void ViewImpl::Invalidate() {
 }
 
 void ViewImpl::SetListener(
-    mojo::InterfaceHandle<mojo::ui::ViewContainerListener> listener) {
+    mojo::InterfaceHandle<mozart::ViewContainerListener> listener) {
   state_->set_view_container_listener(
-      mojo::ui::ViewContainerListenerPtr::Create(std::move(listener)));
+      mozart::ViewContainerListenerPtr::Create(std::move(listener)));
 }
 
 void ViewImpl::AddChild(
     uint32_t child_key,
-    mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner) {
+    mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
   registry_->AddChild(state_, child_key, child_view_owner.Pass());
 }
 
-void ViewImpl::RemoveChild(uint32_t child_key,
-                           mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                               transferred_view_owner_request) {
+void ViewImpl::RemoveChild(
+    uint32_t child_key,
+    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          transferred_view_owner_request.Pass());
 }
@@ -59,7 +58,7 @@ void ViewImpl::RemoveChild(uint32_t child_key,
 void ViewImpl::SetChildProperties(
     uint32_t child_key,
     uint32_t child_scene_version,
-    mojo::ui::ViewPropertiesPtr child_view_properties) {
+    mozart::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key, child_scene_version,
                                 child_view_properties.Pass());
 }

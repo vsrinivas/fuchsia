@@ -12,12 +12,12 @@
 namespace view_manager {
 namespace test {
 
-class MockViewListener : public mojo::ui::ViewListener {
+class MockViewListener : public mozart::ViewListener {
  public:
   MockViewListener() {}
   ~MockViewListener() override {}
 
-  void OnInvalidation(mojo::ui::ViewInvalidationPtr invalidation,
+  void OnInvalidation(mozart::ViewInvalidationPtr invalidation,
                       const OnInvalidationCallback& callback) override {
     callback.Run();
   }
@@ -37,7 +37,7 @@ class ViewManagerTest : public ViewManagerTestBase {
   }
 
  protected:
-  mojo::ui::ViewManagerPtr view_manager_;
+  mozart::ViewManagerPtr view_manager_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewManagerTest);
@@ -49,21 +49,21 @@ TEST_F(ViewManagerTest, CreateAViewManager) {
 
 TEST_F(ViewManagerTest, CreateAView) {
   // Create and bind a mock view listener
-  mojo::ui::ViewListenerPtr view_listener;
+  mozart::ViewListenerPtr view_listener;
   MockViewListener mock_view_listener;
-  mojo::Binding<mojo::ui::ViewListener> view_listener_binding(
+  mojo::Binding<mozart::ViewListener> view_listener_binding(
       &mock_view_listener, mojo::GetProxy(&view_listener));
 
   // Create a view
-  mojo::ui::ViewPtr view;
-  mojo::ui::ViewOwnerPtr view_owner;
+  mozart::ViewPtr view;
+  mozart::ViewOwnerPtr view_owner;
   view_manager_->CreateView(mojo::GetProxy(&view), mojo::GetProxy(&view_owner),
                             view_listener.Pass(), "test_view");
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback = [&view_token_callback_invokecount](
-      mojo::ui::ViewTokenPtr token) { view_token_callback_invokecount++; };
+      mozart::ViewTokenPtr token) { view_token_callback_invokecount++; };
 
   EXPECT_EQ(0, view_token_callback_invokecount);
   view->GetToken(view_token_callback);
@@ -75,30 +75,30 @@ TEST_F(ViewManagerTest, CreateAView) {
 
 TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
-  mojo::ui::ViewListenerPtr parent_view_listener;
+  mozart::ViewListenerPtr parent_view_listener;
   MockViewListener parent_mock_view_listener;
-  mojo::Binding<mojo::ui::ViewListener> child_view_listener_binding(
+  mojo::Binding<mozart::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, mojo::GetProxy(&parent_view_listener));
 
   // Create a parent view
-  mojo::ui::ViewPtr parent_view;
-  mojo::ui::ViewOwnerPtr parent_view_owner;
+  mozart::ViewPtr parent_view;
+  mozart::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(mojo::GetProxy(&parent_view),
                             mojo::GetProxy(&parent_view_owner),
                             parent_view_listener.Pass(), "parent_test_view");
 
-  mojo::ui::ViewContainerPtr parent_view_container;
+  mozart::ViewContainerPtr parent_view_container;
   parent_view->GetContainer(mojo::GetProxy(&parent_view_container));
 
   // Create and bind a mock view listener for a child view
-  mojo::ui::ViewListenerPtr child_view_listener;
+  mozart::ViewListenerPtr child_view_listener;
   MockViewListener child_mock_view_listener;
-  mojo::Binding<mojo::ui::ViewListener> parent_view_listener_binding(
+  mojo::Binding<mozart::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, mojo::GetProxy(&child_view_listener));
 
   // Create a child view
-  mojo::ui::ViewPtr child_view;
-  mojo::ui::ViewOwnerPtr child_view_owner;
+  mozart::ViewPtr child_view;
+  mozart::ViewOwnerPtr child_view_owner;
   view_manager_->CreateView(mojo::GetProxy(&child_view),
                             mojo::GetProxy(&child_view_owner),
                             child_view_listener.Pass(), "test_view");
@@ -107,7 +107,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   parent_view_container->AddChild(0, child_view_owner.Pass());
 
   // Remove the view from the parent
-  mojo::ui::ViewOwnerPtr new_child_view_owner;
+  mozart::ViewOwnerPtr new_child_view_owner;
   parent_view_container->RemoveChild(0, mojo::GetProxy(&new_child_view_owner));
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
@@ -116,7 +116,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback = [&view_token_callback_invokecount](
-      mojo::ui::ViewTokenPtr token) { view_token_callback_invokecount++; };
+      mozart::ViewTokenPtr token) { view_token_callback_invokecount++; };
 
   EXPECT_EQ(0, view_token_callback_invokecount);
   child_view->GetToken(view_token_callback);
@@ -128,15 +128,15 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
 TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
   // Create and bind a MockViewAssociate
-  mojo::InterfaceHandle<mojo::ui::ViewAssociate> associate;
+  mojo::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
-  mojo::Binding<mojo::ui::ViewAssociate> view_associate_binding(
+  mojo::Binding<mozart::ViewAssociate> view_associate_binding(
       &mock_view_associate, mojo::GetProxy(&associate));
 
   // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
   // should be called back
   EXPECT_EQ(0, mock_view_associate.connect_invokecount);
-  mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
+  mozart::ViewAssociateOwnerPtr view_associate_owner;
   view_manager_->RegisterViewAssociate(associate.Pass(),
                                        mojo::GetProxy(&view_associate_owner),
                                        "test_view_associate");
@@ -147,14 +147,14 @@ TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
 }
 
 TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
-  mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
+  mozart::ViewAssociateOwnerPtr view_associate_owner;
   int owner_connection_error_callback_invokecount = 0;
 
   {
     // Create and bind a MockViewAssociate
-    mojo::InterfaceHandle<mojo::ui::ViewAssociate> associate;
+    mojo::InterfaceHandle<mozart::ViewAssociate> associate;
     MockViewAssociate mock_view_associate;
-    mojo::Binding<mojo::ui::ViewAssociate> view_associate_binding(
+    mojo::Binding<mozart::ViewAssociate> view_associate_binding(
         &mock_view_associate, mojo::GetProxy(&associate));
 
     // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
@@ -188,9 +188,9 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
 
 TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
   // Create and bind a MockViewAssociate
-  mojo::InterfaceHandle<mojo::ui::ViewAssociate> associate;
+  mojo::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
-  mojo::Binding<mojo::ui::ViewAssociate> view_associate_binding(
+  mojo::Binding<mozart::ViewAssociate> view_associate_binding(
       &mock_view_associate, mojo::GetProxy(&associate));
 
   // set a callback for errors
@@ -202,7 +202,7 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
       });
 
   {
-    mojo::ui::ViewAssociateOwnerPtr view_associate_owner;
+    mozart::ViewAssociateOwnerPtr view_associate_owner;
 
     // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
     // should be called back

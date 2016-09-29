@@ -6,10 +6,9 @@
 
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-class ViewProviderApp::DelegatingViewProvider : public mojo::ui::ViewProvider {
+class ViewProviderApp::DelegatingViewProvider : public ViewProvider {
  public:
   DelegatingViewProvider(ViewProviderApp* app,
                          const std::string& view_provider_url)
@@ -20,7 +19,7 @@ class ViewProviderApp::DelegatingViewProvider : public mojo::ui::ViewProvider {
  private:
   // |ViewProvider|:
   void CreateView(
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<ViewOwner> view_owner_request,
       mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
     app_->CreateView(this, view_provider_url_, view_owner_request.Pass(),
                      services.Pass());
@@ -37,10 +36,10 @@ ViewProviderApp::ViewProviderApp() {}
 ViewProviderApp::~ViewProviderApp() {}
 
 bool ViewProviderApp::OnAcceptConnection(
-    ServiceProviderImpl* service_provider_impl) {
+    mojo::ServiceProviderImpl* service_provider_impl) {
   service_provider_impl->AddService<ViewProvider>(
-      [this](const ConnectionContext& connection_context,
-             InterfaceRequest<ViewProvider> view_provider_request) {
+      [this](const mojo::ConnectionContext& connection_context,
+             mojo::InterfaceRequest<ViewProvider> view_provider_request) {
         bindings_.AddBinding(
             new DelegatingViewProvider(this, connection_context.connection_url),
             view_provider_request.Pass());
@@ -51,10 +50,9 @@ bool ViewProviderApp::OnAcceptConnection(
 void ViewProviderApp::CreateView(
     DelegatingViewProvider* provider,
     const std::string& view_provider_url,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+    mojo::InterfaceRequest<ViewOwner> view_owner_request,
     mojo::InterfaceRequest<mojo::ServiceProvider> services) {
   CreateView(view_provider_url, view_owner_request.Pass(), services.Pass());
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

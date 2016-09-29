@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.gfx.composition;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/composition/interfaces/image.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";

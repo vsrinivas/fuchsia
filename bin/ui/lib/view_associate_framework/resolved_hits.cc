@@ -8,18 +8,16 @@
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-ResolvedHits::ResolvedHits(mojo::gfx::composition::HitTestResultPtr result)
-    : result_(result.Pass()) {
+ResolvedHits::ResolvedHits(HitTestResultPtr result) : result_(result.Pass()) {
   FTL_DCHECK(result_);
 }
 
 ResolvedHits::~ResolvedHits() {}
 
 void ResolvedHits::AddMapping(uint32_t scene_token_value,
-                              mojo::ui::ViewTokenPtr view_token) {
+                              ViewTokenPtr view_token) {
   FTL_DCHECK(scene_token_value);
   FTL_DCHECK(view_token);
 
@@ -27,8 +25,7 @@ void ResolvedHits::AddMapping(uint32_t scene_token_value,
   FTL_DCHECK(pair.second);
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ResolvedHits& value) {
+std::ostream& operator<<(std::ostream& os, const ResolvedHits& value) {
   os << "{result=";
   if (value.result())
     os << *value.result();
@@ -46,10 +43,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ResolvedHits* value) {
+std::ostream& operator<<(std::ostream& os, const ResolvedHits* value) {
   return value ? os << *value : os << "null";
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

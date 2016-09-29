@@ -13,29 +13,22 @@
 #include "mojo/public/cpp/bindings/formatting.h"
 #include "mojo/services/geometry/cpp/formatting.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewToken& value);
+std::ostream& operator<<(std::ostream& os, const ViewToken& value);
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewTreeToken& value);
+std::ostream& operator<<(std::ostream& os, const ViewTreeToken& value);
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewInfo& value);
+std::ostream& operator<<(std::ostream& os, const ViewInfo& value);
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewProperties& value);
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::DisplayMetrics& value);
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ViewLayout& value);
+std::ostream& operator<<(std::ostream& os, const ViewProperties& value);
+std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value);
+std::ostream& operator<<(std::ostream& os, const ViewLayout& value);
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewInvalidation& value);
+std::ostream& operator<<(std::ostream& os, const ViewInvalidation& value);
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::ui::ViewAssociateInfo& value);
+std::ostream& operator<<(std::ostream& os, const ViewAssociateInfo& value);
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_SERVICES_UI_VIEWS_CPP_FORMATTING_H_

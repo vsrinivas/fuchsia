@@ -12,37 +12,31 @@
 #include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
 #include "lib/ftl/macros.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
 using SceneTokenValueToViewTokenMap =
-    std::unordered_map<uint32_t, mojo::ui::ViewTokenPtr>;
+    std::unordered_map<uint32_t, ViewTokenPtr>;
 
 // A hit test result combined with a map explaining how scenes are mapped
 // to views.
 class ResolvedHits {
  public:
-  ResolvedHits(mojo::gfx::composition::HitTestResultPtr result);
+  ResolvedHits(HitTestResultPtr result);
   ~ResolvedHits();
 
   // The hit test result, not null unless |TakeResult| was called.
-  const mojo::gfx::composition::HitTestResult* result() const {
-    return result_.get();
-  }
-  mojo::gfx::composition::HitTestResultPtr TakeResult() {
-    return result_.Pass();
-  }
+  const HitTestResult* result() const { return result_.get(); }
+  HitTestResultPtr TakeResult() { return result_.Pass(); }
 
   // A map from scene token value to view token containing all scenes which
   // could be resolved.
   const SceneTokenValueToViewTokenMap& map() const { return map_; }
 
   // Adds a mapping for the specified scene token value to a view token.
-  void AddMapping(uint32_t scene_token_value,
-                  mojo::ui::ViewTokenPtr view_token);
+  void AddMapping(uint32_t scene_token_value, ViewTokenPtr view_token);
 
  private:
-  mojo::gfx::composition::HitTestResultPtr result_;
+  HitTestResultPtr result_;
   SceneTokenValueToViewTokenMap map_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolvedHits);
@@ -54,10 +48,9 @@ class ResolvedHits {
 // play nice with base::Callback right now.
 using ResolvedHitsCallback = std::function<void(std::unique_ptr<ResolvedHits>)>;
 
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ResolvedHits& value);
-std::ostream& operator<<(std::ostream& os, const mojo::ui::ResolvedHits* value);
+std::ostream& operator<<(std::ostream& os, const ResolvedHits& value);
+std::ostream& operator<<(std::ostream& os, const ResolvedHits* value);
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart
 
 #endif  // MOJO_UI_ASSOCIATES_RESOLVED_HIT_TEST_H_

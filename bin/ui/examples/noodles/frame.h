@@ -22,12 +22,12 @@ class Frame {
  public:
   Frame(const mojo::Size& size,
         sk_sp<SkPicture> picture,
-        mojo::gfx::composition::SceneMetadataPtr scene_metadata);
+        mozart::SceneMetadataPtr scene_metadata);
   ~Frame();
 
   const mojo::Size& size() { return size_; }
 
-  mojo::gfx::composition::SceneMetadataPtr TakeSceneMetadata() {
+  mozart::SceneMetadataPtr TakeSceneMetadata() {
     return scene_metadata_.Pass();
   }
 
@@ -36,7 +36,7 @@ class Frame {
  private:
   mojo::Size size_;
   sk_sp<SkPicture> picture_;
-  mojo::gfx::composition::SceneMetadataPtr scene_metadata_;
+  mozart::SceneMetadataPtr scene_metadata_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Frame);
 };

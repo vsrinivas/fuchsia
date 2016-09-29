@@ -23,50 +23,49 @@ namespace view_manager {
 
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
-class ViewRegistry : public mojo::ui::ViewInspector {
+class ViewRegistry : public mozart::ViewInspector {
  public:
   using AssociateConnectionErrorCallback =
       ViewAssociateTable::AssociateConnectionErrorCallback;
 
-  explicit ViewRegistry(mojo::gfx::composition::CompositorPtr compositor);
+  explicit ViewRegistry(mozart::CompositorPtr compositor);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
 
   // Creates a view and returns its ViewToken.
-  void CreateView(
-      mojo::InterfaceRequest<mojo::ui::View> view_request,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
-      mojo::ui::ViewListenerPtr view_listener,
-      const mojo::String& label);
+  void CreateView(mojo::InterfaceRequest<mozart::View> view_request,
+                  mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  mozart::ViewListenerPtr view_listener,
+                  const mojo::String& label);
 
   // Creates a view tree.
   void CreateViewTree(
-      mojo::InterfaceRequest<mojo::ui::ViewTree> view_tree_request,
-      mojo::ui::ViewTreeListenerPtr view_tree_listener,
+      mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+      mozart::ViewTreeListenerPtr view_tree_listener,
       const mojo::String& label);
 
   void RegisterViewAssociate(
-      mojo::ui::ViewInspector* view_inspector,
-      mojo::ui::ViewAssociatePtr view_associate,
-      mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner> view_associate_owner,
+      mozart::ViewInspector* view_inspector,
+      mozart::ViewAssociatePtr view_associate,
+      mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
       const mojo::String& label);
 
   void FinishedRegisteringViewAssociates();
 
   // VIEW STUB REQUESTS
 
-  void OnViewResolved(ViewStub* view_stub, mojo::ui::ViewTokenPtr view_token);
-  void TransferViewOwner(mojo::ui::ViewTokenPtr view_token,
-                         mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                             transferred_view_owner_request);
+  void OnViewResolved(ViewStub* view_stub, mozart::ViewTokenPtr view_token);
+  void TransferViewOwner(
+      mozart::ViewTokenPtr view_token,
+      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // VIEW REQUESTS
 
   // Creates a scene for the view, replacing its current scene.
   // Destroys |view_state| if an error occurs.
   void CreateScene(ViewState* view_state,
-                   mojo::InterfaceRequest<mojo::gfx::composition::Scene> scene);
+                   mojo::InterfaceRequest<mozart::Scene> scene);
 
   // Invalidates a view.
   // Destroys |view_state| if an error occurs.
@@ -79,8 +78,7 @@ class ViewRegistry : public mojo::ui::ViewInspector {
 
   // Sets the view tree's renderer.
   // Destroys |tree_state| if an error occurs.
-  void SetRenderer(ViewTreeState* tree_state,
-                   mojo::gfx::composition::RendererPtr renderer);
+  void SetRenderer(ViewTreeState* tree_state, mozart::RendererPtr renderer);
 
   // Called when one of the view tree pipes is closed remotely.
   void OnViewTreeDied(ViewTreeState* tree_state, const std::string& reason);
@@ -91,21 +89,21 @@ class ViewRegistry : public mojo::ui::ViewInspector {
   // Destroys |container_state| if an error occurs.
   void AddChild(ViewContainerState* container_state,
                 uint32_t child_key,
-                mojo::InterfaceHandle<mojo::ui::ViewOwner> child_view_owner);
+                mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
-  void RemoveChild(ViewContainerState* container_state,
-                   uint32_t child_key,
-                   mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                       transferred_view_owner_request);
+  void RemoveChild(
+      ViewContainerState* container_state,
+      uint32_t child_key,
+      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // Sets a child's properties.
   // Destroys |container_state| if an error occurs.
   void SetChildProperties(ViewContainerState* container_state,
                           uint32_t child_key,
                           uint32_t child_scene_version,
-                          mojo::ui::ViewPropertiesPtr child_properties);
+                          mozart::ViewPropertiesPtr child_properties);
 
   // Flushes changes to children.
   // Destroys |container_state| if an error occurs.
@@ -127,14 +125,13 @@ class ViewRegistry : public mojo::ui::ViewInspector {
 
   // VIEW INSPECTOR REQUESTS
 
-  void GetHitTester(mojo::ui::ViewTreeTokenPtr view_tree_token,
-                    mojo::InterfaceRequest<mojo::gfx::composition::HitTester>
-                        hit_tester_request,
-                    const GetHitTesterCallback& callback) override;
+  void GetHitTester(
+      mozart::ViewTreeTokenPtr view_tree_token,
+      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
+      const GetHitTesterCallback& callback) override;
 
-  void ResolveScenes(
-      mojo::Array<mojo::gfx::composition::SceneTokenPtr> scene_tokens,
-      const ResolveScenesCallback& callback) override;
+  void ResolveScenes(mojo::Array<mozart::SceneTokenPtr> scene_tokens,
+                     const ResolveScenesCallback& callback) override;
 
  private:
   // LIFETIME
@@ -150,29 +147,27 @@ class ViewRegistry : public mojo::ui::ViewInspector {
   void AttachResolvedViewAndNotify(ViewStub* view_stub, ViewState* view_state);
   void ReleaseUnavailableViewAndNotify(ViewStub* view_stub);
   void HijackView(ViewState* view_state);
-  void TransferOrUnregisterViewStub(std::unique_ptr<ViewStub> view_stub,
-                                    mojo::InterfaceRequest<mojo::ui::ViewOwner>
-                                        transferred_view_owner_request);
+  void TransferOrUnregisterViewStub(
+      std::unique_ptr<ViewStub> view_stub,
+      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // INVALIDATION
 
   void ScheduleViewInvalidation(ViewState* view_state, uint32_t flags);
   void ScheduleViewTreeInvalidation(ViewTreeState* tree_state, uint32_t flags);
   void TraverseViewTree(ViewTreeState* tree_state,
-                        mojo::gfx::composition::FrameInfoPtr frame_info);
+                        mozart::FrameInfoPtr frame_info);
   void TraverseView(ViewState* view_state,
-                    const mojo::gfx::composition::FrameInfo* frame_info,
+                    const mozart::FrameInfo* frame_info,
                     bool parent_properties_changed);
-  mojo::ui::ViewPropertiesPtr ResolveViewProperties(ViewState* view_state);
+  mozart::ViewPropertiesPtr ResolveViewProperties(ViewState* view_state);
 
   // SCENE MANAGEMENT
 
-  void OnViewSceneTokenAvailable(
-      ftl::WeakPtr<ViewState> view_state_weak,
-      mojo::gfx::composition::SceneTokenPtr scene_token);
-  void OnStubSceneTokenAvailable(
-      ftl::WeakPtr<ViewStub> view_stub_weak,
-      mojo::gfx::composition::SceneTokenPtr scene_token);
+  void OnViewSceneTokenAvailable(ftl::WeakPtr<ViewState> view_state_weak,
+                                 mozart::SceneTokenPtr scene_token);
+  void OnStubSceneTokenAvailable(ftl::WeakPtr<ViewStub> view_stub_weak,
+                                 mozart::SceneTokenPtr scene_token);
   void PublishStubScene(ViewState* view_state);
 
   // RENDERING
@@ -183,13 +178,13 @@ class ViewRegistry : public mojo::ui::ViewInspector {
   // SIGNALING
 
   void SendInvalidation(ViewState* view_state,
-                        mojo::ui::ViewInvalidationPtr invalidation);
+                        mozart::ViewInvalidationPtr invalidation);
 
   void SendRendererDied(ViewTreeState* tree_state);
 
   void SendChildAttached(ViewContainerState* container_state,
                          uint32_t child_key,
-                         mojo::ui::ViewInfoPtr child_view_info);
+                         mozart::ViewInfoPtr child_view_info);
   void SendChildUnavailable(ViewContainerState* container_state,
                             uint32_t child_key);
 
@@ -213,7 +208,7 @@ class ViewRegistry : public mojo::ui::ViewInspector {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  mojo::gfx::composition::CompositorPtr compositor_;
+  mozart::CompositorPtr compositor_;
   ViewAssociateTable associate_table_;
 
   uint32_t next_view_token_value_ = 1u;

@@ -18,7 +18,7 @@
 namespace view_manager {
 
 // Maintains a table of all connected view associates.
-class ViewAssociateTable : public mojo::ui::ViewAssociateOwner {
+class ViewAssociateTable : public mozart::ViewAssociateOwner {
  public:
   using AssociateConnectionErrorCallback =
       std::function<void(const std::string&)>;
@@ -27,41 +27,41 @@ class ViewAssociateTable : public mojo::ui::ViewAssociateOwner {
   ~ViewAssociateTable() override;
 
   void RegisterViewAssociate(
-      mojo::ui::ViewInspector* inspector,
-      mojo::ui::ViewAssociatePtr associate,
-      mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner> view_associate_owner,
+      mozart::ViewInspector* inspector,
+      mozart::ViewAssociatePtr associate,
+      mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
       const mojo::String& label);
 
   void FinishedRegisteringViewAssociates();
 
   // Connects to services offered by the view associates.
-  void ConnectToViewService(mojo::ui::ViewTokenPtr view_token,
+  void ConnectToViewService(mozart::ViewTokenPtr view_token,
                             const mojo::String& service_name,
                             mojo::ScopedMessagePipeHandle client_handle);
-  void ConnectToViewTreeService(mojo::ui::ViewTreeTokenPtr view_tree_token,
+  void ConnectToViewTreeService(mozart::ViewTreeTokenPtr view_tree_token,
                                 const mojo::String& service_name,
                                 mojo::ScopedMessagePipeHandle client_handle);
 
-  void OnConnected(uint32_t index, mojo::ui::ViewAssociateInfoPtr info);
+  void OnConnected(uint32_t index, mozart::ViewAssociateInfoPtr info);
 
   size_t associate_count();
 
  private:
   struct AssociateData {
     AssociateData(const std::string& label,
-                  mojo::ui::ViewAssociatePtr associate,
-                  mojo::ui::ViewAssociateOwner* associate_owner_impl,
-                  mojo::ui::ViewInspector* inspector);
+                  mozart::ViewAssociatePtr associate,
+                  mozart::ViewAssociateOwner* associate_owner_impl,
+                  mozart::ViewInspector* inspector);
     ~AssociateData();
 
-    void BindOwner(mojo::InterfaceRequest<mojo::ui::ViewAssociateOwner>
+    void BindOwner(mojo::InterfaceRequest<mozart::ViewAssociateOwner>
                        view_associate_owner_request);
 
     const std::string label;
-    mojo::ui::ViewAssociatePtr associate;
-    mojo::Binding<mojo::ui::ViewAssociateOwner> associate_owner;
-    mojo::ui::ViewAssociateInfoPtr info;
-    mojo::Binding<mojo::ui::ViewInspector> inspector_binding;
+    mozart::ViewAssociatePtr associate;
+    mojo::Binding<mozart::ViewAssociateOwner> associate_owner;
+    mozart::ViewAssociateInfoPtr info;
+    mojo::Binding<mozart::ViewInspector> inspector_binding;
   };
 
   bool RemoveAssociateData(AssociateData* associate_data, std::string& label);

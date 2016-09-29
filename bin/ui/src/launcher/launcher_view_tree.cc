@@ -14,8 +14,8 @@
 namespace launcher {
 
 LauncherViewTree::LauncherViewTree(
-    mojo::gfx::composition::Compositor* compositor,
-    mojo::ui::ViewManager* view_manager,
+    mozart::Compositor* compositor,
+    mozart::ViewManager* view_manager,
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
     const ftl::Closure& shutdown_callback)
@@ -31,7 +31,7 @@ LauncherViewTree::LauncherViewTree(
   FTL_DCHECK(framebuffer_info);
 
   // Register the view tree.
-  mojo::ui::ViewTreeListenerPtr view_tree_listener;
+  mozart::ViewTreeListenerPtr view_tree_listener;
   view_tree_listener_binding_.Bind(mojo::GetProxy(&view_tree_listener));
   view_manager_->CreateViewTree(mojo::GetProxy(&view_tree_),
                                 std::move(view_tree_listener), "LauncherTree");
@@ -42,7 +42,7 @@ LauncherViewTree::LauncherViewTree(
   view_tree_->GetContainer(mojo::GetProxy(&view_container_));
   view_container_.set_connection_error_handler(
       [this] { OnViewTreeConnectionError(); });
-  mojo::ui::ViewContainerListenerPtr view_container_listener;
+  mozart::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(
       mojo::GetProxy(&view_container_listener));
   view_container_->SetListener(std::move(view_container_listener));
@@ -50,13 +50,13 @@ LauncherViewTree::LauncherViewTree(
   // Get view tree services.
   mojo::ServiceProviderPtr view_tree_service_provider;
   view_tree_->GetServiceProvider(mojo::GetProxy(&view_tree_service_provider));
-  mojo::ConnectToService<mojo::ui::InputDispatcher>(
+  mojo::ConnectToService<mozart::InputDispatcher>(
       view_tree_service_provider.get(), mojo::GetProxy(&input_dispatcher_));
   input_dispatcher_.set_connection_error_handler(
       [this] { OnInputDispatcherConnectionError(); });
 
   // Attach the renderer.
-  mojo::gfx::composition::RendererPtr renderer;
+  mozart::RendererPtr renderer;
   compositor_->CreateRenderer(std::move(framebuffer),
                               std::move(framebuffer_info), GetProxy(&renderer),
                               "Launcher");
@@ -67,7 +67,7 @@ LauncherViewTree::LauncherViewTree(
 
 LauncherViewTree::~LauncherViewTree() {}
 
-void LauncherViewTree::SetRoot(mojo::ui::ViewOwnerPtr owner) {
+void LauncherViewTree::SetRoot(mozart::ViewOwnerPtr owner) {
   if (root_was_set_) {
     root_was_set_ = false;
     view_container_->RemoveChild(root_key_, nullptr);
@@ -79,7 +79,7 @@ void LauncherViewTree::SetRoot(mojo::ui::ViewOwnerPtr owner) {
   }
 }
 
-void LauncherViewTree::DispatchEvent(mojo::EventPtr event) {
+void LauncherViewTree::DispatchEvent(mozart::EventPtr event) {
   if (input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
 }
@@ -98,7 +98,7 @@ void LauncherViewTree::OnInputDispatcherConnectionError() {
 
 void LauncherViewTree::OnChildAttached(
     uint32_t child_key,
-    mojo::ui::ViewInfoPtr child_view_info,
+    mozart::ViewInfoPtr child_view_info,
     const OnChildAttachedCallback& callback) {
   FTL_DCHECK(child_view_info);
 
@@ -129,15 +129,14 @@ void LauncherViewTree::UpdateViewProperties() {
   if (!root_was_set_)
     return;
 
-  auto properties = mojo::ui::ViewProperties::New();
-  properties->display_metrics = mojo::ui::DisplayMetrics::New();
+  auto properties = mozart::ViewProperties::New();
+  properties->display_metrics = mozart::DisplayMetrics::New();
   // TODO(mikejurka): Create a way to get pixel ratio from framebuffer
   properties->display_metrics->device_pixel_ratio = 1.0;
-  properties->view_layout = mojo::ui::ViewLayout::New();
+  properties->view_layout = mozart::ViewLayout::New();
   properties->view_layout->size = framebuffer_size_.Clone();
 
-  view_container_->SetChildProperties(root_key_,
-                                      mojo::gfx::composition::kSceneVersionNone,
+  view_container_->SetChildProperties(root_key_, mozart::kSceneVersionNone,
                                       std::move(properties));
 }
 

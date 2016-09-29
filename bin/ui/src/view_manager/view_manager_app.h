@@ -32,7 +32,7 @@ class ViewManagerApp : public mojo::ApplicationImplBase {
 
   void Shutdown();
 
-  mojo::StrongBindingSet<mojo::ui::ViewManager> view_managers_;
+  mojo::StrongBindingSet<mozart::ViewManager> view_managers_;
   std::unique_ptr<ViewRegistry> registry_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);

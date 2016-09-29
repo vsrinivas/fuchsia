@@ -60,7 +60,7 @@ RenderImage::RenderImage(const sk_sp<SkImage>& image,
 RenderImage::~RenderImage() {}
 
 ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
-    mojo::gfx::composition::ImagePtr image,
+    mozart::ImagePtr image,
     const ftl::RefPtr<ftl::TaskRunner>& task_runner,
     const ftl::Closure& release_task) {
   FTL_DCHECK(image);
@@ -77,7 +77,7 @@ ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
 
   SkColorType sk_color_type;
   switch (image->pixel_format) {
-    case mojo::gfx::composition::Image::PixelFormat::B8G8R8A8:
+    case mozart::Image::PixelFormat::B8G8R8A8:
       sk_color_type = kBGRA_8888_SkColorType;
       break;
     default:
@@ -88,13 +88,13 @@ ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
 
   SkAlphaType sk_alpha_type;
   switch (image->alpha_format) {
-    case mojo::gfx::composition::Image::AlphaFormat::OPAQUE:
+    case mozart::Image::AlphaFormat::OPAQUE:
       sk_alpha_type = kOpaque_SkAlphaType;
       break;
-    case mojo::gfx::composition::Image::AlphaFormat::PREMULTIPLIED:
+    case mozart::Image::AlphaFormat::PREMULTIPLIED:
       sk_alpha_type = kPremul_SkAlphaType;
       break;
-    case mojo::gfx::composition::Image::AlphaFormat::NON_PREMULTIPLIED:
+    case mozart::Image::AlphaFormat::NON_PREMULTIPLIED:
       sk_alpha_type = kUnpremul_SkAlphaType;
       break;
     default:
@@ -105,7 +105,7 @@ ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
 
   sk_sp<SkColorSpace> sk_color_space;
   switch (image->color_space) {
-    case mojo::gfx::composition::Image::ColorSpace::SRGB:
+    case mozart::Image::ColorSpace::SRGB:
       sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
       break;
     default:

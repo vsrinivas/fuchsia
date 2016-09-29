@@ -22,10 +22,10 @@ namespace examples {
 class Frame;
 class Rasterizer;
 
-class NoodlesView : public mojo::ui::BaseView {
+class NoodlesView : public mozart::BaseView {
  public:
   NoodlesView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-              mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request);
+              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~NoodlesView() override;
 
@@ -59,7 +59,7 @@ class NoodlesView : public mojo::ui::BaseView {
 
     void CreateRasterizer(
         mojo::InterfaceHandle<mojo::ApplicationConnector> connector_info,
-        mojo::InterfaceHandle<mojo::gfx::composition::Scene> scene_info);
+        mojo::InterfaceHandle<mozart::Scene> scene_info);
 
     void PublishNextFrame();
 

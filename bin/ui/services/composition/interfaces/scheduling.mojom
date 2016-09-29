@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.gfx.composition;
+[DartPackage="mozart"]
+module mozart;
 
 // Provides support for scheduling drawing and composition operations.
 //
@@ -22,7 +22,7 @@ interface FrameScheduler {
   //
   // The returned |frame_info| provides information about the frame to
   // be drawn.  This information should be passed to a
-  // |mojo::gfx::composition::FrameTracker| to apply compensation for
+  // |mozart::FrameTracker| to apply compensation for
   // skipped frames before using it.
   //
   // TODO(jeffbrown): Consider whether we should have the callback be invoked
@@ -46,7 +46,7 @@ interface FrameScheduler {
 // system, the consumer of this structure should apply compensation for
 // skipped frames.
 //
-// See |mojo::gfx::composition::FrameTracker|.
+// See |mozart::FrameTracker|.
 struct FrameInfo {
   // A timestamp indicating when the work of updating the frame was scheduled
   // to begin which may be used to coordinate animations that require a

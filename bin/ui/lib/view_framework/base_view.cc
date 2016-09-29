@@ -8,13 +8,14 @@
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
 
-namespace mojo {
-namespace ui {
+namespace mozart {
 
-BaseView::BaseView(InterfaceHandle<ApplicationConnector> app_connector,
-                   InterfaceRequest<ViewOwner> view_owner_request,
-                   const std::string& label)
-    : app_connector_(ApplicationConnectorPtr::Create(app_connector.Pass())),
+BaseView::BaseView(
+    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
+    mojo::InterfaceRequest<ViewOwner> view_owner_request,
+    const std::string& label)
+    : app_connector_(
+          mojo::ApplicationConnectorPtr::Create(app_connector.Pass())),
       view_listener_binding_(this),
       view_container_listener_binding_(this) {
   FTL_DCHECK(app_connector_);
@@ -30,7 +31,7 @@ BaseView::BaseView(InterfaceHandle<ApplicationConnector> app_connector,
 
 BaseView::~BaseView() {}
 
-ServiceProvider* BaseView::GetViewServiceProvider() {
+mojo::ServiceProvider* BaseView::GetViewServiceProvider() {
   if (!view_service_provider_)
     view_->GetServiceProvider(GetProxy(&view_service_provider_));
   return view_service_provider_.get();
@@ -46,8 +47,8 @@ ViewContainer* BaseView::GetViewContainer() {
   return view_container_.get();
 }
 
-mojo::gfx::composition::SceneMetadataPtr BaseView::CreateSceneMetadata() const {
-  auto metadata = mojo::gfx::composition::SceneMetadata::New();
+SceneMetadataPtr BaseView::CreateSceneMetadata() const {
+  auto metadata = SceneMetadata::New();
   metadata->version = scene_version_;
   metadata->presentation_time = frame_tracker_.frame_info().presentation_time;
   return metadata;
@@ -130,5 +131,4 @@ void BaseView::OnChildUnavailable(uint32_t child_key,
   callback.Run();
 }
 
-}  // namespace ui
-}  // namespace mojo
+}  // namespace mozart

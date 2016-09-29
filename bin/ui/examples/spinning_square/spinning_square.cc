@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <string>
 
-#include "mojo/public/cpp/application/run_application.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/skia/skia_surface_holder.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
@@ -24,16 +23,16 @@ namespace examples {
 
 namespace {
 constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 constexpr float kSpeed = 0.25f;
 }  // namespace
 
-class SpinningSquareView : public mojo::ui::BaseView {
+class SpinningSquareView : public mozart::BaseView {
  public:
   SpinningSquareView(
       mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request)
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(app_connector.Pass(),
                  view_owner_request.Pass(),
                  "Spinning Square") {}
@@ -45,7 +44,7 @@ class SpinningSquareView : public mojo::ui::BaseView {
   void OnDraw() override {
     FTL_DCHECK(properties());
 
-    auto update = mojo::gfx::composition::SceneUpdate::New();
+    auto update = mozart::SceneUpdate::New();
 
     const mojo::Size& size = *properties()->view_layout->size;
     if (size.width > 0 && size.height > 0) {
@@ -53,22 +52,22 @@ class SpinningSquareView : public mojo::ui::BaseView {
       bounds.width = size.width;
       bounds.height = size.height;
 
-      mojo::ui::SkiaSurfaceHolder surface_holder(size);
+      mozart::SkiaSurfaceHolder surface_holder(size);
       DrawContent(surface_holder.surface()->getCanvas(), size);
-      auto content_resource = mojo::gfx::composition::Resource::New();
-      content_resource->set_image(mojo::gfx::composition::ImageResource::New());
+      auto content_resource = mozart::Resource::New();
+      content_resource->set_image(mozart::ImageResource::New());
       content_resource->get_image()->image = surface_holder.TakeImage();
       update->resources.insert(kContentImageResourceId,
                                content_resource.Pass());
 
-      auto root_node = mojo::gfx::composition::Node::New();
-      root_node->op = mojo::gfx::composition::NodeOp::New();
-      root_node->op->set_image(mojo::gfx::composition::ImageNodeOp::New());
+      auto root_node = mozart::Node::New();
+      root_node->op = mozart::NodeOp::New();
+      root_node->op->set_image(mozart::ImageNodeOp::New());
       root_node->op->get_image()->content_rect = bounds.Clone();
       root_node->op->get_image()->image_resource_id = kContentImageResourceId;
       update->nodes.insert(kRootNodeId, root_node.Pass());
     } else {
-      auto root_node = mojo::gfx::composition::Node::New();
+      auto root_node = mozart::Node::New();
       update->nodes.insert(kRootNodeId, root_node.Pass());
     }
 
@@ -95,14 +94,14 @@ class SpinningSquareView : public mojo::ui::BaseView {
   FTL_DISALLOW_COPY_AND_ASSIGN(SpinningSquareView);
 };
 
-class SpinningSquareApp : public mojo::ui::ViewProviderApp {
+class SpinningSquareApp : public mozart::ViewProviderApp {
  public:
   SpinningSquareApp() {}
   ~SpinningSquareApp() override {}
 
   void CreateView(
       const std::string& connection_url,
-      mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
     new SpinningSquareView(mojo::CreateApplicationConnector(shell()),
                            view_owner_request.Pass());

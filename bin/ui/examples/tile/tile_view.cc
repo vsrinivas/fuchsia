@@ -14,7 +14,7 @@ namespace {
 constexpr uint32_t kViewResourceIdBase = 100;
 constexpr uint32_t kViewResourceIdSpacing = 100;
 
-constexpr uint32_t kRootNodeId = mojo::gfx::composition::kSceneRootNodeId;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewNodeIdBase = 100;
 constexpr uint32_t kViewNodeIdSpacing = 100;
 constexpr uint32_t kViewSceneNodeIdOffset = 1;
@@ -29,7 +29,7 @@ TileParams::~TileParams() {}
 
 TileView::TileView(
     mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<mojo::ui::ViewOwner> view_owner_request,
+    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     const TileParams& params)
     : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Tile"),
       params_(params) {
@@ -42,12 +42,12 @@ void TileView::ConnectViews() {
   uint32_t child_key = 0;
   for (const auto& url : params_.view_urls) {
     // Start connecting to the view provider.
-    mojo::ui::ViewProviderPtr provider;
+    mozart::ViewProviderPtr provider;
     mojo::ConnectToService(app_connector(), url, mojo::GetProxy(&provider));
 
     FTL_LOG(INFO) << "Connecting to view: child_key=" << child_key
                   << ", url=" << url;
-    mojo::ui::ViewOwnerPtr child_view_owner;
+    mozart::ViewOwnerPtr child_view_owner;
     provider->CreateView(mojo::GetProxy(&child_view_owner), nullptr);
 
     GetViewContainer()->AddChild(child_key, child_view_owner.Pass());
@@ -59,7 +59,7 @@ void TileView::ConnectViews() {
 }
 
 void TileView::OnChildAttached(uint32_t child_key,
-                               mojo::ui::ViewInfoPtr child_view_info) {
+                               mozart::ViewInfoPtr child_view_info) {
   auto it = views_.find(child_key);
   FTL_DCHECK(it != views_.end());
 
@@ -118,8 +118,8 @@ void TileView::OnLayout() {
       }
       offset += extent;
 
-      auto view_properties = mojo::ui::ViewProperties::New();
-      view_properties->view_layout = mojo::ui::ViewLayout::New();
+      auto view_properties = mozart::ViewProperties::New();
+      view_properties->view_layout = mozart::ViewLayout::New();
       view_properties->view_layout->size = mojo::Size::New();
       view_properties->view_layout->size->width =
           view_data->layout_bounds.width;
@@ -142,12 +142,12 @@ void TileView::OnDraw() {
 
   // Update the scene.
   // TODO: only send the resources once, be more incremental
-  auto update = mojo::gfx::composition::SceneUpdate::New();
+  auto update = mozart::SceneUpdate::New();
   update->clear_resources = true;
   update->clear_nodes = true;
 
   // Create the root node.
-  auto root_node = mojo::gfx::composition::Node::New();
+  auto root_node = mozart::Node::New();
 
   // Add the children.
   for (auto it = views_.cbegin(); it != views_.cend(); it++) {
@@ -164,7 +164,7 @@ void TileView::OnDraw() {
     // Create a container to represent the place where the child view
     // will be presented.  The children of the container provide
     // fallback behavior in case the view is not available.
-    auto container_node = mojo::gfx::composition::Node::New();
+    auto container_node = mozart::Node::New();
     container_node->content_clip = extent.Clone();
     container_node->content_transform = mojo::Transform::New();
     SetTranslationTransform(container_node->content_transform.get(),
@@ -173,16 +173,16 @@ void TileView::OnDraw() {
 
     // If we have the view, add it to the scene.
     if (view_data.view_info) {
-      auto scene_resource = mojo::gfx::composition::Resource::New();
-      scene_resource->set_scene(mojo::gfx::composition::SceneResource::New());
+      auto scene_resource = mozart::Resource::New();
+      scene_resource->set_scene(mozart::SceneResource::New());
       scene_resource->get_scene()->scene_token =
           view_data.view_info->scene_token.Clone();
       update->resources.insert(scene_resource_id, scene_resource.Pass());
 
       const uint32_t scene_node_id = container_node_id + kViewSceneNodeIdOffset;
-      auto scene_node = mojo::gfx::composition::Node::New();
-      scene_node->op = mojo::gfx::composition::NodeOp::New();
-      scene_node->op->set_scene(mojo::gfx::composition::SceneNodeOp::New());
+      auto scene_node = mozart::Node::New();
+      scene_node->op = mozart::NodeOp::New();
+      scene_node->op->set_scene(mozart::SceneNodeOp::New());
       scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
       if (params_.version_mode == TileParams::VersionMode::kExact)
         scene_node->op->get_scene()->scene_version = view_data.scene_version;
@@ -191,45 +191,42 @@ void TileView::OnDraw() {
     }
 
     if (params_.combinator_mode == TileParams::CombinatorMode::kPrune) {
-      container_node->combinator =
-          mojo::gfx::composition::Node::Combinator::PRUNE;
+      container_node->combinator = mozart::Node::Combinator::PRUNE;
     } else if (params_.combinator_mode ==
                TileParams::CombinatorMode::kFallbackFlash) {
-      container_node->combinator =
-          mojo::gfx::composition::Node::Combinator::FALLBACK;
+      container_node->combinator = mozart::Node::Combinator::FALLBACK;
 
       const uint32_t color_node_id =
           container_node_id + kViewFallbackColorNodeIdOffset;
-      auto color_node = mojo::gfx::composition::Node::New();
-      color_node->op = mojo::gfx::composition::NodeOp::New();
-      color_node->op->set_rect(mojo::gfx::composition::RectNodeOp::New());
+      auto color_node = mozart::Node::New();
+      color_node->op = mozart::NodeOp::New();
+      color_node->op->set_rect(mozart::RectNodeOp::New());
       color_node->op->get_rect()->content_rect = extent.Clone();
-      color_node->op->get_rect()->color = mojo::gfx::composition::Color::New();
+      color_node->op->get_rect()->color = mozart::Color::New();
       color_node->op->get_rect()->color->red = 255;
       color_node->op->get_rect()->color->alpha = 255;
       update->nodes.insert(color_node_id, color_node.Pass());
       container_node->child_node_ids.push_back(color_node_id);
     } else if (params_.combinator_mode ==
                TileParams::CombinatorMode::kFallbackDim) {
-      container_node->combinator =
-          mojo::gfx::composition::Node::Combinator::FALLBACK;
+      container_node->combinator = mozart::Node::Combinator::FALLBACK;
 
       const uint32_t dim_node_id =
           container_node_id + kViewFallbackDimLayerNodeIdOffset;
-      auto dim_node = mojo::gfx::composition::Node::New();
-      dim_node->combinator = mojo::gfx::composition::Node::Combinator::PRUNE;
-      dim_node->op = mojo::gfx::composition::NodeOp::New();
-      dim_node->op->set_layer(mojo::gfx::composition::LayerNodeOp::New());
+      auto dim_node = mozart::Node::New();
+      dim_node->combinator = mozart::Node::Combinator::PRUNE;
+      dim_node->op = mozart::NodeOp::New();
+      dim_node->op->set_layer(mozart::LayerNodeOp::New());
       dim_node->op->get_layer()->layer_rect = extent.Clone();
-      dim_node->op->get_layer()->blend = mojo::gfx::composition::Blend::New();
+      dim_node->op->get_layer()->blend = mozart::Blend::New();
       dim_node->op->get_layer()->blend->alpha = 50;
 
       if (view_data.view_info) {
         const uint32_t scene_node_id =
             container_node_id + kViewFallbackDimSceneNodeIdOffset;
-        auto scene_node = mojo::gfx::composition::Node::New();
-        scene_node->op = mojo::gfx::composition::NodeOp::New();
-        scene_node->op->set_scene(mojo::gfx::composition::SceneNodeOp::New());
+        auto scene_node = mozart::Node::New();
+        scene_node->op = mozart::NodeOp::New();
+        scene_node->op->set_scene(mozart::SceneNodeOp::New());
         scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
         update->nodes.insert(scene_node_id, scene_node.Pass());
         dim_node->child_node_ids.push_back(scene_node_id);

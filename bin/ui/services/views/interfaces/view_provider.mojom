@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="mojo_services"]
-module mojo.ui;
+[DartPackage="mozart"]
+module mozart;
 
 import "apps/mozart/services/views/interfaces/views.mojom";
 import "mojo/public/interfaces/application/service_provider.mojom";
@@ -12,7 +12,7 @@ import "mojo/public/interfaces/application/service_provider.mojom";
 //
 // Applications should implement and expose this service so that they can
 // expose views to be embedded into other applications.
-[ServiceName="mojo::ui::ViewProvider"]
+[ServiceName="mozart::ViewProvider"]
 interface ViewProvider {
   // Creates and registers a view with the view manager and returns its
   // view owner which may subsequently be passed to |View.AddChild()|

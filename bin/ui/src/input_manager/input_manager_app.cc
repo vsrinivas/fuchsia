@@ -19,9 +19,9 @@ void InputManagerApp::OnInitialize() {
 
 bool InputManagerApp::OnAcceptConnection(
     mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mojo::ui::ViewAssociate>([this](
+  service_provider_impl->AddService<mozart::ViewAssociate>([this](
       const mojo::ConnectionContext& connection_context,
-      mojo::InterfaceRequest<mojo::ui::ViewAssociate> view_associate_request) {
+      mojo::InterfaceRequest<mozart::ViewAssociate> view_associate_request) {
     input_associates_.AddBinding(new InputAssociate(),
                                  view_associate_request.Pass());
   });
