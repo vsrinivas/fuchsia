@@ -11,10 +11,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/simple.c
 
-MODULE_EXPORT := acpisvc-client
-
-MODULE_SO_NAME := acpisvc-client
-
 MODULE_LIBS := \
 	ulib/magenta \
 	ulib/musl

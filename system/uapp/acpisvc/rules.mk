@@ -26,11 +26,11 @@ MODULE_SRCS += $(LOCAL_DIR)/dummy.c
 endif
 
 MODULE_STATIC_LIBS := \
+    ulib/acpisvc-client \
     ulib/acpica \
     ulib/ddk \
 
 MODULE_LIBS := \
-    ulib/acpisvc-client \
     ulib/magenta \
     ulib/musl \
     ulib/mxio \

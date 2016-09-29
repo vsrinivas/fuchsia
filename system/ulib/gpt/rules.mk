@@ -11,10 +11,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/gpt.c \
 
-MODULE_EXPORT := gpt
-
-MODULE_SO_NAME := gpt
-
 MODULE_STATIC_LIBS := ulib/cksum
 
 MODULE_LIBS := ulib/musl
