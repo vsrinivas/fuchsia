@@ -242,9 +242,9 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
             hdr.avail_count = static_cast<uint32_t>(actual_num_threads);
             hdr.count = static_cast<uint32_t>(num_to_copy);
 
-            if (copy_to_user(_buffer, &hdr, sizeof(hdr)) != NO_ERROR)
+            if (_buffer.copy_array_to_user(&hdr, sizeof(hdr)) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-            auto thread_result_buffer = _buffer + thread_offset;
+            auto thread_result_buffer = _buffer.byte_offset(thread_offset);
             if (thread_result_buffer.reinterpret<mx_record_process_thread_t>().copy_array_to_user(threads.get(), num_to_copy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             size_t result_bytes = thread_offset + (num_to_copy * topic_size);
