@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/vm.h>
 #include <kernel/mutex.h>
 #include <lib/heap.h>
@@ -170,7 +171,8 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
         descriptor_type = pte & MMU_PTE_DESCRIPTOR_MASK;
         pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
 
-        LTRACEF("va 0x%lx, index %d, index_shift %d, rem 0x%lx, pte 0x%llx\n",
+        LTRACEF("va %#" PRIxPTR ", index %d, index_shift %d, rem %#" PRIxPTR
+                ", pte %#" PRIx64 "\n",
                 vaddr, index, index_shift, vaddr_rem, pte);
 
         if (descriptor_type == MMU_PTE_DESCRIPTOR_INVALID)
@@ -303,12 +305,13 @@ static pte_t *arm64_mmu_get_page_table(vaddr_t index, uint page_size_shift, pte_
 
             pte = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
             page_table[index] = pte;
-            LTRACEF("pte %p[0x%lx] = 0x%llx\n", page_table, index, pte);
+            LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
+                    page_table, index, pte);
             return vaddr;
 
         case MMU_PTE_L012_DESCRIPTOR_TABLE:
             paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-            LTRACEF("found page table 0x%lx\n", paddr);
+            LTRACEF("found page table %#" PRIxPTR "\n", paddr);
             return paddr_to_kvaddr(paddr);
 
         case MMU_PTE_L012_DESCRIPTOR_BLOCK:
@@ -328,7 +331,8 @@ static bool page_table_is_clear(pte_t *page_table, uint page_size_shift)
     for (i = 0; i < count; i++) {
         pte = page_table[i];
         if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
-            LTRACEF("page_table at %p still in use, index %d is 0x%llx\n",
+            LTRACEF("page_table at %p still in use, index %d is %#"
+                    PRIx64 "\n",
                     page_table, i, pte);
             return false;
         }
@@ -421,7 +425,9 @@ static int arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
     pte_t pte;
     size_t mapped_size;
 
-    LTRACEF("vaddr 0x%lx, vaddr_rel 0x%lx, paddr 0x%lx, size 0x%lx, attrs 0x%llx, index shift %d, page_size_shift %d, page_table %p\n",
+    LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", paddr %#" PRIxPTR
+            ", size %#zx, attrs %#" PRIx64
+            ", index shift %d, page_size_shift %d, page_table %p\n",
             vaddr, vaddr_rel, paddr, size, attrs,
             index_shift, page_size_shift, page_table);
 
@@ -454,7 +460,8 @@ static int arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         } else {
             pte = page_table[index];
             if (pte) {
-                TRACEF("page table entry already in use, index 0x%lx, 0x%llx\n",
+                TRACEF("page table entry already in use, index %#"
+                       PRIxPTR ", %#" PRIx64 "\n",
                        index, pte);
                 goto err;
             }
@@ -465,7 +472,8 @@ static int arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
             else
                 pte |= MMU_PTE_L3_DESCRIPTOR_PAGE;
             pte |= MMU_PTE_ATTR_NON_GLOBAL;
-            LTRACEF("pte %p[0x%lx] = 0x%llx\n", page_table, index, pte);
+            LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
+                    page_table, index, pte);
             page_table[index] = pte;
         }
         vaddr += chunk_size;
@@ -502,7 +510,9 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
     paddr_t page_table_paddr;
     pte_t pte;
 
-    LTRACEF("vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, attrs 0x%llx, index shift %d, page_size_shift %d, page_table %p\n",
+    LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", size %#" PRIxPTR
+            ", attrs %#" PRIx64
+            ", index shift %d, page_size_shift %d, page_table %p\n",
             vaddr, vaddr_rel, size, attrs,
             index_shift, page_size_shift, page_table);
 
@@ -533,11 +543,12 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
             }
         } else if (pte) {
             pte = (pte & ~MMU_PTE_PERMISSION_MASK) | attrs;
-            LTRACEF("pte %p[0x%lx] = 0x%llx\n", page_table, index, pte);
+            LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
+                    page_table, index, pte);
             page_table[index] = pte;
         } else {
-            TRACEF("page table entry does not exist, index 0x%lx, 0x%llx\n",
-                   index, pte);
+            TRACEF("page table entry does not exist, index %#" PRIxPTR
+                   ", %#" PRIx64 "\n", index, pte);
             goto err;
         }
         vaddr += chunk_size;
@@ -565,11 +576,13 @@ int arm64_mmu_map(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
-    LTRACEF("vaddr 0x%lx, paddr 0x%lx, size 0x%lx, attrs 0x%llx, asid 0x%x\n",
+    LTRACEF("vaddr %#" PRIxPTR ", paddr %#" PRIxPTR ", size %#" PRIxPTR
+            ", attrs %#" PRIx64 ", asid %#x\n",
             vaddr, paddr, size, attrs, asid);
 
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
-        TRACEF("vaddr 0x%lx, size 0x%lx out of range vaddr 0x%lx, size 0x%lx\n",
+        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#"
+               PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
         return ERR_INVALID_ARGS;
     }
@@ -621,11 +634,12 @@ static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
     vaddr_t vaddr_rel = vaddr - vaddr_base;
     vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
-    LTRACEF("vaddr 0x%lx, size 0x%lx, attrs 0x%llx, asid 0x%x\n",
-            vaddr, size, attrs, asid);
+    LTRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64
+            ", asid %#x\n", vaddr, size, attrs, asid);
 
     if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
-        TRACEF("vaddr 0x%lx, size 0x%lx out of range vaddr 0x%lx, size 0x%lx\n",
+        TRACEF("vaddr %#" PRIxPTR ", size %#" PRIxPTR " out of range vaddr %#"
+               PRIxPTR ", size %#" PRIxPTR "\n",
                vaddr, size, vaddr_base, vaddr_rel_max);
         return ERR_INVALID_ARGS;
     }
@@ -643,7 +657,8 @@ static int arm64_mmu_protect(vaddr_t vaddr, size_t size, pte_t attrs,
 
 int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t count, uint flags)
 {
-    LTRACEF("vaddr 0x%lx paddr 0x%lx count %zu flags 0x%x\n", vaddr, paddr, count, flags);
+    LTRACEF("vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %zu flags %#x\n",
+            vaddr, paddr, count, flags);
 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -685,7 +700,7 @@ int arch_mmu_map(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
 
 int arch_mmu_unmap(arch_aspace_t *aspace, vaddr_t vaddr, size_t count)
 {
-    LTRACEF("vaddr 0x%lx count %zu\n", vaddr, count);
+    LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -754,7 +769,8 @@ int arch_mmu_protect(arch_aspace_t *aspace, vaddr_t vaddr, size_t count, uint fl
 
 status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, uint flags)
 {
-    LTRACEF("aspace %p, base 0x%lx, size 0x%zx, flags 0x%x\n", aspace, base, size, flags);
+    LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
+            aspace, base, size, flags);
 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic != ARCH_ASPACE_MAGIC);
@@ -798,7 +814,8 @@ status_t arch_mmu_init_aspace(arch_aspace_t *aspace, vaddr_t base, size_t size, 
         memset(aspace->tt_virt, 0, PAGE_SIZE);
     }
 
-    LTRACEF("tt_phys 0x%lx tt_virt %p\n", aspace->tt_phys, aspace->tt_virt);
+    LTRACEF("tt_phys %#" PRIxPTR " tt_virt %p\n",
+            aspace->tt_phys, aspace->tt_virt);
 
     return NO_ERROR;
 }
@@ -843,15 +860,14 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace)
         ARM64_WRITE_SYSREG(ttbr0_el1, ttbr);
 
         if (TRACE_CONTEXT_SWITCH)
-            TRACEF("ttbr 0x%llx, tcr 0x%llx\n", ttbr, tcr);
+            TRACEF("ttbr %#" PRIx64 ", tcr %#" PRIx64 "\n", ttbr, tcr);
 
     } else {
         tcr = MMU_TCR_FLAGS_KERNEL;
 
         if (TRACE_CONTEXT_SWITCH)
-            TRACEF("tcr 0x%llx\n", tcr);
+            TRACEF("tcr %#" PRIx64 "\n", tcr);
     }
 
     ARM64_WRITE_SYSREG(tcr_el1, tcr);
 }
-

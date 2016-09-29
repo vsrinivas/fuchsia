@@ -65,7 +65,7 @@ void arch_init(void)
 #if WITH_SMP
     arch_mp_init_percpu();
 
-    LTRACEF("midr_el1 0x%llx\n", ARM64_READ_SYSREG(midr_el1));
+    LTRACEF("midr_el1 %#" PRIx64 "\n", ARM64_READ_SYSREG(midr_el1));
 
     uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
     if (cmdline_max_cpus > SMP_MAX_CPUS || cmdline_max_cpus <= 0) {

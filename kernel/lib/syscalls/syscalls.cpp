@@ -12,6 +12,7 @@
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
 
+#include <inttypes.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -96,7 +97,8 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely(syscall_imm != 0xf0f)) {
-        TRACEF("syscall does not have magenta magic, 0x%llx @ PC 0x%llx\n", syscall_num, pc);
+        TRACEF("syscall does not have magenta magic, %#" PRIx64
+               " @ PC %#" PRIx64 "\n", syscall_num, pc);
         frame->r[0] = ERR_BAD_SYSCALL;
         return;
     }
@@ -104,7 +106,7 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     /* re-enable interrupts to maintain kernel preemptiveness */
     arch_enable_ints();
 
-    LTRACEF_LEVEL(2, "num %llu\n", syscall_num);
+    LTRACEF_LEVEL(2, "num %" PRIu64 "\n", syscall_num);
 
     /* build a function pointer to call the routine.
      * the args are jammed into the function independent of if the function
@@ -126,7 +128,7 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     uint64_t ret = sfunc(frame->r[0], frame->r[1], frame->r[2], frame->r[3], frame->r[4],
                          frame->r[5], frame->r[6], frame->r[7]);
 
-    LTRACEF_LEVEL(2, "ret 0x%llx\n", ret);
+    LTRACEF_LEVEL(2, "ret %#" PRIx64 "\n", ret);
 
     /* put the return code back */
     frame->r[0] = ret;
@@ -154,7 +156,8 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely((syscall_num >> 32) != 0xff00ff)) {
-        TRACEF("syscall does not have magenta magic, 0x%llx @ IP 0x%llx\n", syscall_num, ip);
+        TRACEF("syscall does not have magenta magic, %#" PRIx64
+               " @ IP %#" PRIx64 "\n", syscall_num, ip);
         return ERR_BAD_SYSCALL;
     }
     syscall_num &= 0xffffffff;
@@ -164,7 +167,8 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
     /* re-enable interrupts to maintain kernel preemptiveness */
     arch_enable_ints();
 
-    LTRACEF_LEVEL(2, "t %p syscall num %llu ip 0x%llx\n", get_current_thread(), syscall_num, ip);
+    LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
+                  get_current_thread(), syscall_num, ip);
 
     /* build a function pointer to call the routine.
      * the args are jammed into the function independent of if the function
@@ -188,7 +192,7 @@ extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, 
     /* check to see if there are any pending signals */
     thread_process_pending_signals();
 
-    LTRACEF_LEVEL(2, "t %p ret 0x%llx\n", get_current_thread(), ret);
+    LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", get_current_thread(), ret);
 
     arch_disable_ints();
     ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());

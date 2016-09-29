@@ -60,7 +60,7 @@ void sys_exit(int retcode) {
 }
 
 mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
-    LTRACEF("nseconds %llu\n", nanoseconds);
+    LTRACEF("nseconds %" PRIu64 "\n", nanoseconds);
 
     if (nanoseconds == 0ull) {
         thread_yield();
@@ -82,7 +82,8 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
                             user_ptr<void> _buffer, mx_size_t buffer_size) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    LTRACEF("handle %u topic %u topic_size %u buffer %p buffer_size %lu\n",
+    LTRACEF("handle %u topic %u topic_size %u buffer %p buffer_size %"
+            PRIuPTR "\n",
             handle, topic, topic_size, _buffer.get(), buffer_size);
 
     switch (topic) {

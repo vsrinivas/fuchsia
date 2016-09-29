@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
 #include <sys/types.h>
 #include <string.h>
 #include <stdlib.h>
@@ -66,7 +67,6 @@ void arch_dump_thread(thread_t *t)
 {
     if (t->state != THREAD_RUNNING) {
         dprintf(INFO, "\tarch: ");
-        dprintf(INFO, "sp 0x%lx\n", t->arch.sp);
+        dprintf(INFO, "sp %#" PRIxPTR "\n", t->arch.sp);
     }
 }
-

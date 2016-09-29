@@ -8,6 +8,7 @@
 
 #include <arch.h>
 #include <err.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <trace.h>
 
@@ -150,7 +151,8 @@ status_t magenta_exception_handler(uint exception_type,
     if (!processed) {
         // only print this if an exception handler wasn't involved
         // in handling the exception
-        printf("KERN: %s in magenta thread '%s' in process '%s' at IP 0x%lx\n",
+        printf("KERN: %s in magenta thread '%s' in process '%s' at IP %#"
+               PRIxPTR "\n",
                excp_type_to_string(exception_type), thread->name().data(),
                process->name().data(), ip);
 

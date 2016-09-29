@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
@@ -35,13 +36,13 @@ extern int __bss_end;
 // mark the physical pages backing a range of virtual as in use.
 // allocate the physical pages and throw them away
 static void mark_pages_in_use(vaddr_t va, size_t len) {
-    LTRACEF("va 0x%lx, len 0x%zx\n", va, len);
+    LTRACEF("va %#" PRIxPTR ", len %#zx\n", va, len);
 
     // make sure we are inclusive of all of the pages in the address range
     len = PAGE_ALIGN(len + (va & (PAGE_SIZE - 1)));
     va = ROUNDDOWN(va, PAGE_SIZE);
 
-    LTRACEF("aligned va 0x%lx, len 0x%zx\n", va, len);
+    LTRACEF("aligned va %#" PRIxPTR ", len 0x%zx\n", va, len);
 
     for (size_t offset = 0; offset < len; offset += PAGE_SIZE) {
         uint flags;
@@ -55,7 +56,7 @@ static void mark_pages_in_use(vaddr_t va, size_t len) {
             // alloate the range, throw the results away
             pmm_alloc_range(pa, 1, nullptr);
         } else {
-            panic("Could not find pa for va 0x%lx\n", va);
+            panic("Could not find pa for va %#" PRIxPTR "\n", va);
         }
     }
 }
@@ -72,7 +73,8 @@ void vm_init_preheap(uint level) {
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
-        LTRACEF("marking boot alloc used from 0x%lx to 0x%lx\n", boot_alloc_start, boot_alloc_end);
+        LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n",
+                boot_alloc_start, boot_alloc_end);
 
         mark_pages_in_use(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
@@ -141,7 +143,7 @@ void vm_init_postheap(uint level) {
         // Unmap temporary mappings except where they intersect with the
         // kernel code/data regions.
         vaddr_t vaddr = map->virt;
-        LTRACEF("vaddr 0x%lx, virt + size 0x%lx\n", vaddr, map->virt + map->size);
+        LTRACEF("vaddr %#" PRIxPTR ", virt + size %#" PRIxPTR "\n", vaddr, map->virt + map->size);
         while (vaddr != map->virt + map->size) {
             vaddr_t next_kernel_region = map->virt + map->size;
             vaddr_t next_kernel_region_end = map->virt + map->size;
@@ -168,7 +170,8 @@ void vm_init_postheap(uint level) {
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
-                    LTRACEF("Freeing region [%016lx, %016lx)\n", vaddr, next_kernel_region);
+                    LTRACEF("Freeing region [%016" PRIxPTR ", %016" PRIxPTR
+                            ")\n", vaddr, next_kernel_region);
                     status = vmm_free_region(aspace, vaddr);
                     ASSERT(status == NO_ERROR);
                 } else {
@@ -259,7 +262,7 @@ static int cmd_vm(int argc, const cmd_args* argv) {
         status_t err = arch_mmu_query(&aspace->arch_aspace(), argv[2].u, &pa, &flags);
         printf("arch_mmu_query returns %d\n", err);
         if (err >= 0) {
-            printf("\tpa 0x%lx, flags 0x%x\n", pa, flags);
+            printf("\tpa %#" PRIxPTR ", flags %#x\n", pa, flags);
         }
     } else if (!strcmp(argv[1].str, "map")) {
         if (argc < 6)

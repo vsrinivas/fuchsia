@@ -9,6 +9,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
@@ -56,7 +57,7 @@ VmObject::~VmObject() {
     for (size_t i = 0; i < page_array_.size(); i++) {
         auto p = page_array_[i];
         if (p) {
-            LTRACEF("freeing page %p (0x%lx)\n", p, vm_page_to_paddr(p));
+            LTRACEF("freeing page %p (%#" PRIxPTR ")\n", p, vm_page_to_paddr(p));
 
             // remove it from the object list of pages
             DEBUG_ASSERT(list_in_list(&p->node));
@@ -109,13 +110,13 @@ void VmObject::Dump() {
                 count++;
         }
     }
-    printf("\t\tobject %p: ref %u size 0x%llx, %zu allocated pages\n", this, ref_count_debug(),
-           size_, count);
+    printf("\t\tobject %p: ref %u size %#" PRIx64 ", %zu allocated pages\n",
+           this, ref_count_debug(), size_, count);
 }
 
 status_t VmObject::Resize(uint64_t s) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("vmo %p, size %llu\n", this, s);
+    LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
     // there's a max size to keep indexes within range
     if (ROUNDUP_PAGE_SIZE(s) > MAX_SIZE)
@@ -160,7 +161,8 @@ void VmObject::AddPageToArray(size_t index, vm_page_t* p) {
 
 status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("vmo %p, offset 0x%llx, page %p (0x%lx)\n", this, offset, p, vm_page_to_paddr(p));
+    LTRACEF("vmo %p, offset %#" PRIx64 ", page %p (%#" PRIxPTR ")\n",
+            this, offset, p, vm_page_to_paddr(p));
 
     DEBUG_ASSERT(p);
 
@@ -198,7 +200,8 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(is_mutex_held(&lock_));
 
-    LTRACEF("vmo %p, offset 0x%llx, pf_flags 0x%x\n", this, offset, pf_flags);
+    LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n",
+            this, offset, pf_flags);
 
     if (offset >= size_)
         return nullptr;
@@ -220,7 +223,7 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
 
     AddPageToArray(index, p);
 
-    LTRACEF("faulted in page %p, pa 0x%lx\n", p, pa);
+    LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
 
     return p;
 }
@@ -234,7 +237,7 @@ vm_page_t* VmObject::FaultPage(uint64_t offset, uint pf_flags) {
 
 int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("offset 0x%llx, len 0x%llx\n", offset, len);
+    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
     AutoLock a(lock_);
 
@@ -292,7 +295,8 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
 
 int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t alignment_log2) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("offset 0x%llx, len 0x%llx, alignment %hhu\n", offset, len, alignment_log2);
+    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n",
+            offset, len, alignment_log2);
 
     AutoLock a(lock_);
 
@@ -507,4 +511,3 @@ status_t VmObject::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffe
 
     return NO_ERROR;
 }
-

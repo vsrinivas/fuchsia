@@ -452,7 +452,8 @@ void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {
 
     global_process_list_.push_back(process);
 
-    LTRACEF("Adding process %p : koid = %llu\n", process, process->get_koid());
+    LTRACEF("Adding process %p : koid = %" PRIu64 "\n",
+            process, process->get_koid());
 }
 
 void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
@@ -460,7 +461,8 @@ void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
 
     DEBUG_ASSERT(process != nullptr);
     global_process_list_.erase(*process);
-    LTRACEF("Removing process %p : koid = %llu\n", process, process->get_koid());
+    LTRACEF("Removing process %p : koid = %" PRIu64 "\n",
+            process, process->get_koid());
 }
 
 // static

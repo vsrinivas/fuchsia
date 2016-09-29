@@ -321,7 +321,7 @@ static void calibrate_tsc(void)
         if (tsc_ticks < best_time) {
             best_time = tsc_ticks;
         }
-        LTRACEF("Calibration trial %d found %llu ticks/ms\n",
+        LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
                 tries, tsc_ticks);
         if (use_hpet) {
             hpet_calibration_cycle_1ms_cleanup();
@@ -332,7 +332,7 @@ static void calibrate_tsc(void)
 
     tsc_ticks_per_ms = best_time;
 
-    LTRACEF("TSC calibrated: %llu ticks/ms\n", tsc_ticks_per_ms);
+    LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 }
 
 void platform_init_timer(uint level)
@@ -399,7 +399,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
         }
         uint64_t tsc_interval = interval * tsc_ticks_per_ms;
         uint64_t deadline = rdtsc() + tsc_interval;
-        LTRACEF("Scheduling oneshot timer: %llu deadline\n", deadline);
+        LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", deadline);
         apic_timer_set_tsc_deadline(deadline, false /* unmasked */);
         return NO_ERROR;
     }

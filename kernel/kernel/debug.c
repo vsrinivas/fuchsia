@@ -17,6 +17,7 @@
  */
 
 #include <debug.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <kernel/thread.h>
@@ -67,8 +68,9 @@ static int cmd_threadstats(int argc, const cmd_args *argv)
             continue;
 
         printf("thread stats (cpu %d):\n", i);
-        printf("\ttotal idle time: %lld\n", thread_stats[i].idle_time);
-        printf("\ttotal busy time: %lld\n", current_time_hires() - thread_stats[i].idle_time);
+        printf("\ttotal idle time: %" PRId64 "\n", thread_stats[i].idle_time);
+        printf("\ttotal busy time: %" PRId64 "\n",
+               current_time_hires() - thread_stats[i].idle_time);
         printf("\treschedules: %lu\n", thread_stats[i].reschedules);
 #if WITH_SMP
         printf("\treschedule_ipis: %lu\n", thread_stats[i].reschedule_ipis);

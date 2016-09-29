@@ -14,10 +14,11 @@
 
 #ifndef ASSEMBLY
 
-#include <sys/types.h>
-#include <stddef.h>
-#include <stdbool.h>
 #include <magenta/compiler.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 __BEGIN_CDECLS
 
@@ -164,80 +165,76 @@ static inline void atomic_fence_acquire(void)
 
 // 64-bit versions. Assumes the compiler/platform is LLP so int is 32 bits.
 
-static inline long long int atomic_swap_64(volatile long long int *ptr, long long int val)
+static inline int64_t atomic_swap_64(volatile int64_t *ptr, int64_t val)
 {
     return __atomic_exchange_n(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long int atomic_add_64(volatile long long int *ptr, long long int val)
+static inline int64_t atomic_add_64(volatile int64_t *ptr, int64_t val)
 {
     return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long int atomic_and_64(volatile long long int *ptr, long long int val)
+static inline int64_t atomic_and_64(volatile int64_t *ptr, int64_t val)
 {
     return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long int atomic_or_64(volatile long long int *ptr, long long int val)
+static inline int64_t atomic_or_64(volatile int64_t *ptr, int64_t val)
 {
     return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline bool atomic_cmpxchg_64(volatile long long int *ptr, long long int *oldval,
-                                     long long int newval)
+static inline bool atomic_cmpxchg_64(volatile int64_t *ptr, int64_t *oldval,
+                                     int64_t newval)
 {
     return __atomic_compare_exchange_n(ptr, oldval, newval, false,
                                        __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-static inline long long int atomic_load_64(volatile long long int *ptr)
+static inline int64_t atomic_load_64(volatile int64_t *ptr)
 {
     return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
 }
 
-static inline void atomic_store_64(volatile long long int *ptr, long long int newval)
+static inline void atomic_store_64(volatile int64_t *ptr, int64_t newval)
 {
     __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
 }
 
-static inline long long unsigned atomic_swap_u64(volatile long long unsigned *ptr,
-                                                 long long unsigned val)
+static inline uint64_t atomic_swap_u64(volatile uint64_t *ptr, uint64_t val)
 {
     return __atomic_exchange_n(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long unsigned atomic_add_u64(volatile long long unsigned *ptr,
-                                                long long unsigned val)
+static inline uint64_t atomic_add_u64(volatile uint64_t *ptr, uint64_t val)
 {
     return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long unsigned atomic_and_u64(volatile long long unsigned *ptr,
-                                                 long long unsigned val)
+static inline uint64_t atomic_and_u64(volatile uint64_t *ptr, uint64_t val)
 {
     return __atomic_fetch_and(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline long long unsigned atomic_or_u64(volatile long long unsigned *ptr,
-                                                long long unsigned val)
+static inline uint64_t atomic_or_u64(volatile uint64_t *ptr, uint64_t val)
 {
     return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
 }
 
-static inline bool atomic_cmpxchg_u64(volatile long long unsigned *ptr, long long unsigned *oldval,
-                                      long long unsigned newval)
+static inline bool atomic_cmpxchg_u64(volatile uint64_t *ptr, uint64_t *oldval,
+                                      uint64_t newval)
 {
     return __atomic_compare_exchange_n(ptr, oldval, newval, false,
                                        __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-static inline long long unsigned atomic_load_u64(volatile long long unsigned *ptr)
+static inline uint64_t atomic_load_u64(volatile uint64_t *ptr)
 {
     return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
 }
 
-static inline void atomic_store_u64(volatile long long unsigned *ptr, long long unsigned newval)
+static inline void atomic_store_u64(volatile uint64_t *ptr, uint64_t newval)
 {
     __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
 }

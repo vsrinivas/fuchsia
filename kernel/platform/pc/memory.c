@@ -92,7 +92,7 @@ static int mem_arena_init(boot_addr_range_t *range)
          !range->is_reset && used < PMM_ARENAS;
          range->advance(range)) {
 
-        LTRACEF("Range at %#llx of %#llx bytes is %smemory.\n",
+        LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n",
                 range->base, range->size, range->is_mem ? "" : "not ");
 
         if (!range->is_mem)
@@ -132,11 +132,12 @@ static int mem_arena_init(boot_addr_range_t *range)
             arena->size = size;
 
             if ((uint64_t)arena->base != base) {
-                LTRACEF("Range base %#llx is too high.\n", base);
+                LTRACEF("Range base %#" PRIx64 " is too high.\n", base);
                 break;
             }
             if ((uint64_t)arena->size != size) {
-                LTRACEF("Range size %#llx is too large, splitting it.\n", size);
+                LTRACEF("Range size %#" PRIx64 " is too large, splitting it.\n",
+                        size);
                 arena->size = -PAGE_SIZE;
             }
 

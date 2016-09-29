@@ -32,7 +32,7 @@ typedef uintptr_t paddr_t;
 typedef int kobj_id;
 
 typedef uint32_t lk_time_t;
-typedef unsigned long long lk_bigtime_t;
+typedef uint64_t lk_bigtime_t;
 #define INFINITE_TIME UINT32_MAX
 
 #define TIME_GTE(a, b) ((int32_t)((a) - (b)) >= 0)
@@ -45,8 +45,8 @@ enum handler_return {
     INT_RESCHEDULE,
 };
 
-typedef signed long int ssize_t;
-#define SSIZE_MAX LONG_MAX
+typedef intptr_t ssize_t;
+#define SSIZE_MAX INTPTR_MAX
 
 typedef uint8_t u8;
 typedef uint16_t u16;

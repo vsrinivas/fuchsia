@@ -9,6 +9,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
@@ -56,10 +57,10 @@ status_t VmRegion::Destroy() {
 void VmRegion::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
     printf(
-        "\tregion %p: ref %d name '%s' range 0x%lx - 0x%lx size 0x%zx mmu_flags 0x%x "
-        "vmo %p offset 0x%llx\n",
-        this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_, arch_mmu_flags_,
-        object_.get(), object_offset_);
+        "\tregion %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
+        " size %#zx mmu_flags %#x vmo %p offset %#" PRIx64 "\n",
+        this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_,
+        arch_mmu_flags_, object_.get(), object_offset_);
     if (object_.get()) {
         object_->Dump();
     }
@@ -86,7 +87,7 @@ int VmRegion::Unmap() {
 
 status_t VmRegion::SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("%p '%s', o %p, offset 0x%llx\n", this, name_, &o, offset);
+    LTRACEF("%p '%s', o %p, offset %#" PRIx64 "\n", this, name_, &o, offset);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
 
@@ -100,8 +101,8 @@ status_t VmRegion::SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset) {
 
 status_t VmRegion::MapPhysicalRange(size_t offset, size_t len, paddr_t paddr, bool allow_remap) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("%p '%s', offset 0x%zu, size 0x%zx, paddr 0x%lx, remap %d\n", this, name_, offset, len,
-            paddr, allow_remap);
+    LTRACEF("%p '%s', offset %#zx, size %#zx, paddr %#" PRIxPTR ", remap %d\n",
+            this, name_, offset, len, paddr, allow_remap);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
@@ -127,7 +128,8 @@ status_t VmRegion::MapPhysicalRange(size_t offset, size_t len, paddr_t paddr, bo
     auto ret = arch_mmu_map(&aspace_->arch_aspace(), base_ + offset, paddr, len / PAGE_SIZE,
                             arch_mmu_flags_);
     if (ret < 0) {
-        TRACEF("error %d mapping pages at va 0x%lx pa 0x%lx\n", ret, base_, paddr);
+        TRACEF("error %d mapping pages at va %#" PRIxPTR " pa %#" PRIxPTR "\n",
+               ret, base_, paddr);
     }
     return (ret < 0) ? ret : 0;
 }
@@ -170,11 +172,13 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
 
         vaddr_t va = base_ + o;
         paddr_t pa = vm_page_to_paddr(p);
-        LTRACEF_LEVEL(2, "mapping pa 0x%lx to va 0x%lx\n", pa, va);
+        LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n",
+                      pa, va);
 
         auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_);
         if (ret < 0) {
-            TRACEF("error %d mapping page at va 0x%lx pa 0x%lx\n", ret, va, pa);
+            TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR
+                   "\n", ret, va, pa);
         }
     }
 
@@ -188,7 +192,8 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     va = ROUNDDOWN(va, PAGE_SIZE);
     uint64_t vmo_offset = va - base_ + object_offset_;
 
-    LTRACEF("%p '%s', vmo_offset 0x%llx, pf_flags 0x%x\n", this, name_, vmo_offset, pf_flags);
+    LTRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n",
+            this, name_, vmo_offset, pf_flags);
 
     // make sure we have permission to continue
     if ((pf_flags & VMM_PF_FLAG_USER) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER) == 0) {
@@ -236,7 +241,9 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     paddr_t pa;
     status_t err = arch_mmu_query(&aspace_->arch_aspace(), va, &pa, &page_flags);
     if (err >= 0) {
-        LTRACEF("queried va, page at pa 0x%lx, flags 0x%x is already there\n", pa, page_flags);
+        LTRACEF("queried va, page at pa %#" PRIxPTR
+                ", flags %#x is already there\n",
+                pa, page_flags);
         if (pa == new_pa) {
             // page was already mapped, are the permissions compatible?
             if (page_flags == arch_mmu_flags_)
@@ -253,13 +260,14 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
             // currently this is an error situation, since there's no way for this to have
             // happened, but in the future this will be a path for copy-on-write.
             // TODO: implement
-            printf("KERN: thread %s faulted on va 0x%lx, different page was present, unhandled\n",
-                    get_current_thread()->name, va);
+            printf("KERN: thread %s faulted on va %#" PRIxPTR
+                   ", different page was present, unhandled\n",
+                   get_current_thread()->name, va);
             return ERR_NOT_SUPPORTED;
         }
     } else {
         // nothing was mapped there before, map it now
-        LTRACEF("mapping pa 0x%lx to va 0x%lx\n", new_pa, va);
+        LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", new_pa, va);
         auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, new_pa, 1, arch_mmu_flags_);
         if (ret < 0) {
             TRACEF("failed to map page\n");

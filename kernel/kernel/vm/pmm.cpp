@@ -8,6 +8,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
@@ -61,8 +62,8 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) {
 }
 
 status_t pmm_add_arena(pmm_arena_t* arena) {
-    LTRACEF("arena %p name '%s' base 0x%lx size 0x%zx\n", arena, arena->name, arena->base,
-            arena->size);
+    LTRACEF("arena %p name '%s' base %#" PRIxPTR " size %#zx\n",
+            arena, arena->name, arena->base, arena->size);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(arena->base));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(arena->size));
@@ -131,7 +132,7 @@ vm_page_t* pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
             *pa = PAGE_ADDRESS_FROM_ARENA(page, a);
         }
 
-        LTRACEF("allocating page %p, pa 0x%lx\n", page, PAGE_ADDRESS_FROM_ARENA(page, a));
+        LTRACEF("allocating page %p, pa %#" PRIxPTR "\n", page, PAGE_ADDRESS_FROM_ARENA(page, a));
 
         return page;
     }
@@ -180,7 +181,7 @@ size_t pmm_alloc_pages(size_t count, uint alloc_flags, struct list_node* list) {
 }
 
 size_t pmm_alloc_range(paddr_t address, size_t count, struct list_node* list) {
-    LTRACEF("address 0x%lx, count %zu\n", address, count);
+    LTRACEF("address %#" PRIxPTR ", count %zu\n", address, count);
 
     uint allocated = 0;
     if (count == 0)
@@ -253,8 +254,8 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
 
         paddr_t aligned_offset = (rounded_base - a->base) / PAGE_SIZE;
         paddr_t start = aligned_offset;
-        LTRACEF("starting search at aligned offset %lu\n", start);
-        LTRACEF("arena base 0x%lx size %zu\n", a->base, a->size);
+        LTRACEF("starting search at aligned offset %" PRIuPTR "\n", start);
+        LTRACEF("arena base %#" PRIxPTR " size %zu\n", a->base, a->size);
 
     retry:
         /* search while we're still within the arena and have a chance of finding a slot
@@ -275,7 +276,8 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
             }
 
             /* we found a run */
-            LTRACEF("found run from pn %lu to %lu\n", start, start + count);
+            LTRACEF("found run from pn %" PRIuPTR " to %" PRIuPTR "\n",
+                    start, start + count);
 
             /* remove the pages from the run out of the free list */
             for (paddr_t i = start; i < start + count; i++) {
@@ -323,7 +325,7 @@ void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* _pa) {
             return nullptr;
     }
 
-    LTRACEF("pa 0x%lx\n", pa);
+    LTRACEF("pa %#" PRIxPTR "\n", pa);
     void* ptr = paddr_to_kvaddr(pa);
     DEBUG_ASSERT(ptr);
 
@@ -424,12 +426,12 @@ static const char* page_state_to_str(const vm_page_t* page) {
 }
 
 static void dump_page(const vm_page_t* page) {
-    printf("page %p: address 0x%lx state %s flags 0x%x\n", page, vm_page_to_paddr(page),
+    printf("page %p: address %#" PRIxPTR " state %s flags 0x%x\n", page, vm_page_to_paddr(page),
            page_state_to_str(page), page->flags);
 }
 
 static void dump_arena(const pmm_arena_t* arena, bool dump_pages) {
-    printf("arena %p: name '%s' base 0x%lx size 0x%zx priority %u flags 0x%x\n", arena, arena->name,
+    printf("arena %p: name '%s' base %#" PRIxPTR " size 0x%zx priority %u flags 0x%x\n", arena, arena->name,
            arena->base, arena->size, arena->priority, arena->flags);
     printf("\tpage_array %p, free_count %zu\n", arena->page_array, arena->free_count);
 
@@ -450,7 +452,8 @@ static void dump_arena(const pmm_arena_t* arena, bool dump_pages) {
             }
         } else {
             if (last != -1) {
-                printf("\t\t0x%lx - 0x%lx\n", arena->base + last * PAGE_SIZE,
+                printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n",
+                       arena->base + last * PAGE_SIZE,
                        arena->base + i * PAGE_SIZE);
             }
             last = -1;
@@ -458,7 +461,9 @@ static void dump_arena(const pmm_arena_t* arena, bool dump_pages) {
     }
 
     if (last != -1) {
-        printf("\t\t0x%lx - 0x%lx\n", arena->base + last * PAGE_SIZE, arena->base + arena->size);
+        printf("\t\t%#" PRIxPTR " - %#" PRIxPTR "\n",
+               arena->base + last * PAGE_SIZE,
+               arena->base + arena->size);
     }
 }
 
@@ -495,7 +500,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
 
         vm_page_t* p;
         list_for_every_entry (&list, p, vm_page_t, node) {
-            printf("\tpage %p, address 0x%lx\n", p, vm_page_to_paddr(p));
+            printf("\tpage %p, address %#" PRIxPTR "\n", p, vm_page_to_paddr(p));
         }
 
         /* add the pages to the local allocated list */
@@ -519,7 +524,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
 
         vm_page_t* p;
         list_for_every_entry (&list, p, vm_page_t, node) {
-            printf("\tpage %p, address 0x%lx\n", p, vm_page_to_paddr(p));
+            printf("\tpage %p, address %#" PRIxPTR "\n", p, vm_page_to_paddr(p));
         }
 
         /* add the pages to the local allocated list */
@@ -533,7 +538,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
 
         paddr_t pa;
         void* ptr = pmm_alloc_kpages((uint)argv[2].u, NULL, &pa);
-        printf("pmm_alloc_kpages returns %p pa 0x%lx\n", ptr, pa);
+        printf("pmm_alloc_kpages returns %p pa %#" PRIxPTR "\n", ptr, pa);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 4)
             goto notenoughargs;
@@ -543,8 +548,10 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
 
         paddr_t pa;
         size_t ret = pmm_alloc_contiguous((uint)argv[2].u, 0, (uint8_t)argv[3].u, &pa, &list);
-        printf("pmm_alloc_contiguous returns %zu, address 0x%lx\n", ret, pa);
-        printf("address %% align = 0x%lx\n", pa % argv[3].u);
+        printf("pmm_alloc_contiguous returns %zu, address %#" PRIxPTR "\n",
+               ret, pa);
+        printf("address %% align = %#" PRIxPTR "\n",
+               static_cast<uintptr_t>(pa % argv[3].u));
 
         /* add the pages to the local allocated list */
         struct list_node* node;

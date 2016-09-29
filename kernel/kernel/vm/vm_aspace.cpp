@@ -9,6 +9,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
@@ -220,7 +221,8 @@ status_t VmAspace::AddRegion(const mxtl::RefPtr<VmRegion>& r) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(r);
 
-    LTRACEF_LEVEL(2, "aspace %p base 0x%lx size 0x%zx r %p base 0x%lx size 0x%zx\n", this, base_,
+    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size %#zx r %p base %#"
+                  PRIxPTR " size %#zx\n", this, base_,
                   size_, r.get(), r->base(), r->size());
 
     // only try if the region will at least fit in the address space
@@ -350,7 +352,8 @@ mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vadd
                                               uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(is_mutex_held(&lock_));
-    LTRACEF_LEVEL(2, "aspace %p name '%s' size 0x%zx vaddr 0x%lx\n", this, name, size, vaddr);
+    LTRACEF_LEVEL(2, "aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n",
+                  this, name, size, vaddr);
 
     // make a region struct for it and stick it in the list
     mxtl::RefPtr<VmRegion> r = VmRegion::Create(*this, vaddr, size, arch_mmu_flags, name);
@@ -370,7 +373,7 @@ mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vadd
         // allocate a virtual slot for it
         RegionTree::iterator after;
         vaddr = AllocSpot(size, align_pow2, arch_mmu_flags, &after);
-        LTRACEF_LEVEL(2, "alloc_spot returns 0x%lx, before %p\n", vaddr,
+        LTRACEF_LEVEL(2, "alloc_spot returns %#" PRIxPTR ", before %p\n", vaddr,
                       (after.IsValid() ? &(*after) : nullptr));
 
         if (vaddr == (vaddr_t)-1) {
@@ -421,8 +424,8 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
 
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF(
-        "aspace %p name '%s' vmo %p, offset 0x%llx size 0x%zx ptr %p align %hhu vmm_flags 0x%x "
-        "arch_mmu_flags 0x%x\n",
+        "aspace %p name '%s' vmo %p, offset %#" PRIx64 " size %#zx "
+        "ptr %p align %hhu vmm_flags %#x arch_mmu_flags %#x\n",
         this, name, vmo.get(), offset, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
 
     size = ROUNDUP(size, PAGE_SIZE);
@@ -475,7 +478,8 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
 
 status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("aspace %p name '%s' size 0x%zx vaddr 0x%lx\n", this, name, size, vaddr);
+    LTRACEF("aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n",
+            this, name, size, vaddr);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
@@ -511,7 +515,8 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
                                  paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF(
-        "aspace %p name '%s' size 0x%zx ptr %p paddr 0x%lx vmm_flags 0x%x arch_mmu_flags 0x%x\n",
+        "aspace %p name '%s' size %#zx ptr %p paddr %#" PRIxPTR
+        " vmm_flags 0x%x arch_mmu_flags 0x%x\n",
         this, name, size, ptr ? *ptr : 0, paddr, vmm_flags, arch_mmu_flags);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
@@ -626,7 +631,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 
 status_t VmAspace::FreeRegion(vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("vaddr 0x%lx\n", vaddr);
+    LTRACEF("vaddr %#" PRIxPTR "\n", vaddr);
 
     mxtl::RefPtr<VmRegion> r;
     {
@@ -666,7 +671,7 @@ void VmAspace::AttachToThread(thread_t* t) {
 
 status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("va 0x%lx, flags 0x%x\n", va, flags);
+    LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
 
     // for now, hold the aspace lock across the page fault operation,
     // which stops any other operations on the address space from moving
@@ -682,7 +687,8 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
 
 void VmAspace::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    printf("aspace %p: ref %u name '%s' range 0x%lx - 0x%lx size 0x%zx flags 0x%x\n", this,
+    printf("aspace %p: ref %u name '%s' range %#" PRIxPTR " - %#" PRIxPTR
+           " size %#zx flags %#x\n", this,
            ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
 
     printf("regions:\n");

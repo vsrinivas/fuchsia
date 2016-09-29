@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <dev/pcie.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
@@ -562,7 +563,8 @@ static bool pcie_allocate_bar(pcie_bar_info_t* info) {
             TRACEF("Insufficient space to map BAR region while configuring BARs for device at "
                    "%02x:%02x.%01x (cfg vaddr = %p)\n",
                    dev->bus_id, dev->dev_id, dev->func_id, cfg);
-            TRACEF("BAR region size 0x%llx Alignment overhead 0x%llx Space available 0x%llx\n",
+            TRACEF("BAR region size %#" PRIx64 " Alignment overhead %#" PRIx64
+                   " Space available %#" PRIx64 "\n",
                    info->size, align_overhead, avail);
 
             return false;
@@ -1289,7 +1291,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
         if ((ecam->io_range.size     & ((size_t)PAGE_SIZE   - 1)) ||
             (ecam->io_range.bus_addr & ((uint64_t)PAGE_SIZE - 1))) {
             TRACEF("Failed to initialize PCIe bus driver; Invalid ECAM window "
-                   "(0x%zx @ 0x%llx).  Windows must be page aligned and a "
+                   "%#zx @ %#" PRIx64 ").  Windows must be page aligned and a "
                    "multiple of pages in length.\n",
                    ecam->io_range.size, ecam->io_range.bus_addr);
             status = ERR_INVALID_ARGS;
@@ -1311,7 +1313,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
                     ARCH_MMU_FLAG_PERM_WRITE);
         if (status != NO_ERROR) {
             TRACEF("Failed to initialize PCIe bus driver; Failed to map ECAM window "
-                   "(0x%zx @ 0x%llx).  Status = %d.\n",
+                   "(%#zx @ %#" PRIx64 ").  Status = %d.\n",
                    ecam->io_range.size, ecam->io_range.bus_addr, status);
             goto bailout;
         }

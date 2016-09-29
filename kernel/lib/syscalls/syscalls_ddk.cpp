@@ -79,7 +79,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
                                    mx_cache_policy_t cache_policy,
                                    user_ptr<void*> out_vaddr) {
 
-    LTRACEF("addr 0x%lx len 0x%x\n", paddr, len);
+    LTRACEF("addr %#" PRIxPTR " len %#x\n", paddr, len);
 
     // TODO: finer grained validation
     mx_status_t status;

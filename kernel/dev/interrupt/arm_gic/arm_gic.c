@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <bits.h>
 #include <err.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <debug.h>
 #include <dev/interrupt/arm_gic.h>
@@ -373,7 +374,8 @@ enum handler_return __platform_irq(struct iframe *frame)
 
     ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
-    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %d pc 0x%lx\n", iar, cpu,
+    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %d pc %#"
+                  PRIxPTR "\n", iar, cpu,
                   get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
     // deliver the interrupt

@@ -368,13 +368,14 @@ static void read_xsave_state_info(void)
     xsaveopt_supported = !!(leaf.a & (1<<0));
     xss_component_bitmap = ((uint64_t)leaf.d << 32) | leaf.c;
 
-    LTRACEF("xcr0 bitmap: %016llx\n", xcr0_component_bitmap);
-    LTRACEF("xss bitmap: %016llx\n", xss_component_bitmap);
+    LTRACEF("xcr0 bitmap: %016" PRIx64 "\n", xcr0_component_bitmap);
+    LTRACEF("xss bitmap: %016" PRIx64 "\n", xss_component_bitmap);
 
     /* Sanity check; all CPUs that support xsave support components 0 and 1 */
     DEBUG_ASSERT((xcr0_component_bitmap & 0x3) == 0x3);
     if ((xcr0_component_bitmap & 0x3) != 0x3) {
-        LTRACEF("unexpected xcr0 bitmap %016llx\n", xcr0_component_bitmap);
+        LTRACEF("unexpected xcr0 bitmap %016" PRIx64 "\n",
+                xcr0_component_bitmap);
         goto bailout;
     }
 

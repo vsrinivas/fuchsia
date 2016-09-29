@@ -174,7 +174,7 @@ static int cmd_dcc(int argc, const cmd_args *argv)
         uint32_t buf[128];
 
         ssize_t len = arm_dcc_read(buf, sizeof(buf), 1000);
-        printf("arm_dcc_read returns %ld\n", len);
+        printf("arm_dcc_read returns %zd\n", len);
         if (len > 0) {
             hexdump(buf, len);
         }
@@ -192,4 +192,3 @@ STATIC_COMMAND("dcc", "dcc stuff", &cmd_dcc)
 STATIC_COMMAND_END(dcc);
 
 #endif
-

@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <dev/pcie.h>
 #include <err.h>
+#include <inttypes.h>
 #include <lib/console.h>
 #include <string.h>
 
@@ -299,7 +300,7 @@ static void dump_pcie_bars(const pcie_device_state_t* dev,
             continue;
         }
 
-        printf(" :: paddr 0x%llx size 0x%llx%s%s %s\n",
+        printf(" :: paddr %#" PRIx64 " size %#" PRIx64 "%s%s %s\n",
                 info->bus_addr,
                 info->size,
                 info->is_prefetchable ? " prefetchable" : "",
@@ -369,7 +370,8 @@ static void dump_pcie_bridge(const pcie_device_state_t* dev, lspci_params_t* par
 
 static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys)
 {
-    printf("%u bytes of raw config (kvaddr %p; phys 0x%llx)\n", amt, kvaddr, phys);
+    printf("%u bytes of raw config (kvaddr %p; phys %#" PRIx64 ")\n",
+           amt, kvaddr, phys);
     hexdump8(kvaddr, amt);
 }
 

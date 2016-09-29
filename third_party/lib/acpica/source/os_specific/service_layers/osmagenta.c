@@ -259,7 +259,7 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
     vmm_aspace_t *kernel_aspace = vmm_get_kernel_aspace();
     status_t status = vmm_free_region(kernel_aspace, (vaddr_t)LogicalAddress);
     if (status != NO_ERROR) {
-        TRACEF("WARNING: ACPI failed to free region %p, size %llu\n",
+        TRACEF("WARNING: ACPI failed to free region %p, size %" PRIu64 "\n",
                LogicalAddress, (uint64_t)Length);
     }
 }

@@ -17,6 +17,7 @@
  */
 #include <debug.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <list.h>
 #include <malloc.h>
 #include <string.h>
@@ -1190,7 +1191,8 @@ void dump_thread(thread_t *t)
     dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
             thread_state_to_str(t->state), t->priority, t->remaining_quantum);
 #endif
-    dprintf(INFO, "\truntime_us %lld, runtime_s %lld\n", runtime, runtime / 1000000);
+    dprintf(INFO, "\truntime_us %" PRId64 ", runtime_s %" PRId64 "\n",
+            runtime, runtime / 1000000);
     dprintf(INFO, "\tstack %p, stack_size %zd\n", t->stack, t->stack_size);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
             (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
