@@ -50,6 +50,9 @@ public:
         uint64_t fault_gpu_address;
     };
 
+    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
+              void* data);
+
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
 
@@ -102,6 +105,11 @@ private:
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<MsdIntelContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
+
+    // page flipping
+    std::shared_ptr<MsdIntelBuffer> displayed_buffer_;
+    magma_system_pageflip_callback_t flip_callback_{};
+    void* flip_data_{};
 
     friend class MsdIntelDriver;
     friend class TestMsdIntelDevice;

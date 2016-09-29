@@ -10,6 +10,7 @@ source_set("msd_unit_tests") {
     "test_command_buffer.cc",
     "test_context.cc",
     "test_device.cc",
+    "test_display.cc",
     "test_engine_command_streamer.cc",
     "test_forcewake.cc",
     "test_gtt.cc",

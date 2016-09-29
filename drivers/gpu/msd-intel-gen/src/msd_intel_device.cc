@@ -165,6 +165,68 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     }
 }
 
+void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
+                          magma_system_pageflip_callback_t callback, void* data)
+{
+    if (!buffer->IsMappedGpu(ADDRESS_SPACE_GTT)) {
+        if (!buffer->MapGpu(gtt_.get(), PAGE_SIZE)) {
+            DLOG("Couldn't map buffer to gtt");
+            if (callback)
+                (*callback)(-ENOMEM, data);
+            return;
+        }
+    }
+
+    gpu_addr_t gpu_addr_gtt;
+    bool result = buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr_gtt);
+    DASSERT(result);
+
+    // Writing the plane surface address triggers an update on the next vertical blank.
+    // A page flip event tells us when that has happened.
+    registers::DisplayPipeInterrupt::update_mask_bits(
+        register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+        registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
+
+    registers::DisplayPlaneSurfaceAddress::write(
+        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, gpu_addr_gtt);
+
+    constexpr uint32_t kRetryMsMax = 100;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    while (true) {
+        bool flip_done = false;
+
+        registers::DisplayPipeInterrupt::process_identity_bits(
+            register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
+        if (flip_done)
+            break;
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        if (elapsed.count() > kRetryMsMax) {
+            DLOG("Timeout waiting for page flip event");
+            if (callback)
+                (*callback)(-ETIMEDOUT, data);
+            return;
+        }
+        std::this_thread::yield();
+    }
+
+    registers::DisplayPipeInterrupt::update_mask_bits(
+        register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+        registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, false);
+
+    if (flip_callback_) {
+        DLOG("making flip callback now");
+        (*flip_callback_)(0, flip_data_);
+    }
+
+    displayed_buffer_ = buffer;
+    flip_callback_ = callback;
+    flip_data_ = data;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
@@ -182,4 +244,10 @@ void msd_device_dump_status(struct msd_device* dev)
     std::string dump;
     MsdIntelDevice::cast(dev)->DumpToString(dump);
     printf("--------------------\n%s\n--------------------\n", dump.c_str());
+}
+
+void msd_device_page_flip(msd_device* dev, msd_buffer* buf,
+                          magma_system_pageflip_callback_t callback, void* data)
+{
+    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), callback, data);
 }

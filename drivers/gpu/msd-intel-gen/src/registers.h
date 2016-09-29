@@ -220,6 +220,69 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
+class DisplayPlaneSurfaceAddress {
+public:
+    enum Plane { PIPE_A_PLANE_1 };
+
+    static constexpr uint32_t kOffsetPipeAPlane1 = 0x7019C;
+
+    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            return reg_io->Read32(kOffsetPipeAPlane1);
+        }
+    }
+
+    static void write(RegisterIo* reg_io, Plane plane, uint32_t gpu_addr_gtt)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            reg_io->Write32(kOffsetPipeAPlane1, gpu_addr_gtt);
+            break;
+        }
+    }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.444
+class DisplayPipeInterrupt {
+public:
+    enum Pipe { PIPE_A };
+
+    static constexpr uint32_t kMaskOffsetPipeA = 0x44404;
+    static constexpr uint32_t kIdentityOffsetPipeA = 0x44408;
+    static constexpr uint32_t kPlane1FlipDoneBit = 1 << 3;
+
+    static void update_mask_bits(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
+    {
+        uint32_t offset, val;
+        switch (pipe) {
+        case PIPE_A:
+            offset = kMaskOffsetPipeA;
+            break;
+        }
+
+        val = reg_io->Read32(offset);
+        val = enable ? (val & ~bits) : val | bits;
+        reg_io->Write32(offset, val);
+    }
+
+    static void process_identity_bits(RegisterIo* reg_io, Pipe pipe, uint32_t bits,
+                                      bool* bits_present_out)
+    {
+        uint32_t offset, val;
+        switch (pipe) {
+        case PIPE_A:
+            offset = kIdentityOffsetPipeA;
+            break;
+        }
+        val = reg_io->Read32(offset);
+        if ((*bits_present_out = val & bits))
+            reg_io->Write32(offset, val | bits); // reset the event
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H
