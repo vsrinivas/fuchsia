@@ -7,7 +7,6 @@ import("//mojo/public/tools/bindings/mojom.gni")
 group("all") {
   deps = [
     ":device_runner",
-    ":device_runner_boot",
     ":dummy_device_shell",
   ]
 }
@@ -25,19 +24,6 @@ executable("device_runner") {
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
     "//mojo/system",
-  ]
-}
-
-executable("device_runner_boot") {
-  sources = [
-    "device_runner_boot.cc",
-  ]
-
-  deps = [
-    "//lib/ftl",
-    "//lib/mtl",
-    "//mojo/application_manager:application_manager_lib",
-    "//third_party/rapidjson",
   ]
 }
 

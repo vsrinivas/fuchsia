@@ -21,7 +21,7 @@ $ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
 
 # Generate ninja files with modular autorun in bootfs. Modular autorun will
 # launch story-manager.
-$ROOT_DIR/packages/gn/gen.py -m modular-autorun $GOMA_FLAG
+$ROOT_DIR/packages/gn/gen.py -m boot_modular $GOMA_FLAG
 
 # Build Fuchsia and all its dependencies (including modular).
 $ROOT_DIR/buildtools/ninja -C $ROOT_DIR/out/debug-x86-64 $JOB_COUNT_FLAG
