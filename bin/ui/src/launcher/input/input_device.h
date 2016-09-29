@@ -69,8 +69,15 @@ struct KeyboardInputDevice : InputDevice {
 };
 
 struct MouseInputDevice : InputDevice {
-  // TODO(FIXME) add last known position and last button states
+  int32_t x_ = 0;
+  int32_t y_ = 0;
+  uint8_t buttons_ = 0;
+
   void Parse(const OnEventCallback& callback, const mojo::Size& display_size);
+  void SendEvent(const OnEventCallback& callback,
+                 int64_t timestamp,
+                 mozart::EventType type,
+                 mozart::EventFlags flags);
 };
 
 struct Acer12InputDevice : InputDevice {

@@ -17,9 +17,7 @@
 #include <magenta/types.h>
 #include <mojo/system/time.h>
 #include <mxio/io.h>
-extern "C" {  // FIXME(jpoichet) remove once CL to fix watcher.h is checked in
 #include <mxio/watcher.h>
-}
 
 #define DEV_INPUT "/dev/class/input"
 
@@ -36,6 +34,10 @@ extern "C" {  // FIXME(jpoichet) remove once CL to fix watcher.h is checked in
 namespace launcher {
 
 namespace {
+
+constexpr uint32_t kMouseLeftButtonMask = 0x01;
+constexpr uint32_t kMouseRightButtonMask = 0x02;
+constexpr uint32_t kMouseMiddleButtonMask = 0x04;
 
 inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
   return (z * screen_dim) / rpt_dim;
@@ -464,10 +466,80 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
   previous_index_ = 1 - previous_index_;
 }
 
+void MouseInputDevice::SendEvent(const OnEventCallback& callback,
+                                 int64_t timestamp,
+                                 mozart::EventType type,
+                                 mozart::EventFlags flags) {
+  mozart::EventPtr ev = mozart::Event::New();
+  ev->time_stamp = timestamp;
+  ev->action = type;
+  ev->flags = flags;
+
+  ev->pointer_data = mozart::PointerData::New();
+  ev->pointer_data->pointer_id = 0;
+  ev->pointer_data->kind = mozart::PointerKind::MOUSE;
+  ev->pointer_data->x = x_;
+  ev->pointer_data->y = y_;
+  ev->pointer_data->screen_x = x_;
+  ev->pointer_data->screen_y = y_;
+  ev->pointer_data->pressure = 0;
+  ev->pointer_data->radius_major = 0;
+  ev->pointer_data->radius_minor = 0;
+  ev->pointer_data->orientation = 0.;
+  ev->pointer_data->horizontal_wheel = 0;
+  ev->pointer_data->vertical_wheel = 0;
+  callback(std::move(ev));
+}
+
 void MouseInputDevice::Parse(const OnEventCallback& callback,
                              const mojo::Size& display_size) {
-  // TODO(jpoichet) Generate mozart::Event from boot_mouse_report_t* report =
-  // reinterpret_cast<boot_mouse_report_t*>(report_);
+  boot_mouse_report_t* report = reinterpret_cast<boot_mouse_report_t*>(report_);
+  uint64_t now = InputEventTimestampNow();
+  uint8_t pressed = (report->buttons ^ buttons_) & report->buttons;
+  uint8_t released = (report->buttons ^ buttons_) & buttons_;
+
+  x_ += report->rel_x;
+  y_ -= report->rel_y;
+  // Clamp
+  x_ = std::max(0, std::min(display_size.width, x_));
+  y_ = std::max(0, std::min(display_size.height, y_));
+
+  if (!pressed && !released) {
+    // Simple move of the mouse
+    SendEvent(callback, now, mozart::EventType::POINTER_MOVE,
+              mozart::EventFlags::NONE);
+  } else {
+    if (pressed) {
+      if (pressed & kMouseLeftButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
+      }
+      if (pressed & kMouseRightButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
+      }
+      if (pressed & kMouseMiddleButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
+      }
+    }
+    if (released) {
+      if (released & kMouseLeftButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
+      }
+      if (released & kMouseRightButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
+      }
+      if (released & kMouseMiddleButtonMask) {
+        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
+      }
+    }
+  }
+
+  buttons_ = report->buttons;
 }
 
 // TODO(jpoichet) scale x, y to display size
