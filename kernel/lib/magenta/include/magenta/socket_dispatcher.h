@@ -45,6 +45,8 @@ public:
 
     void OnPeerZeroHandles();
 
+    status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final;
+
 private:
     class CBuf {
     public:

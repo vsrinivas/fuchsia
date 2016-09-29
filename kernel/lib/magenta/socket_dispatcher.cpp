@@ -204,6 +204,22 @@ void SocketDispatcher::OnPeerZeroHandles() {
         iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
 }
 
+status_t SocketDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
+    if ((set_mask & ~MX_SIGNAL_SIGNAL_ALL) || (clear_mask & ~MX_SIGNAL_SIGNAL_ALL))
+        return ERR_INVALID_ARGS;
+
+    mxtl::RefPtr<SocketDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_)
+            return ERR_REMOTE_CLOSED;
+        other = other_;
+    }
+
+    other->state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+    return NO_ERROR;
+}
+
 status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client) {
     if (iopc_)
         return ERR_BAD_STATE;
