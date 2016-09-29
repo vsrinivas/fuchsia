@@ -16,11 +16,14 @@ __BEGIN_CDECLS;
 #define clz(x) __builtin_clz(x)
 #define ctz(x) __builtin_ctz(x)
 
-#define BIT(x, bit) ((x) & (1UL << (bit)))
+/* Trick to get a 1 of the right size */
+#define _ONE(x) (1 + ((x) - (x)))
+
+#define BIT(x, bit) ((x) & (_ONE(x) << (bit)))
 #define BIT_SHIFT(x, bit) (((x) >> (bit)) & 1)
-#define BITS(x, high, low) ((x) & (((1UL<<((high)+1))-1) & ~((1UL<<(low))-1)))
-#define BITS_SHIFT(x, high, low) (((x) >> (low)) & ((1UL<<((high)-(low)+1))-1))
-#define BIT_SET(x, bit) (((x) & (1UL << (bit))) ? 1 : 0)
+#define BITS(x, high, low) ((x) & (((_ONE(x)<<((high)+1))-1) & ~((_ONE(x)<<(low))-1)))
+#define BITS_SHIFT(x, high, low) (((x) >> (low)) & ((_ONE(x)<<((high)-(low)+1))-1))
+#define BIT_SET(x, bit) (((x) & (_ONE(x) << (bit))) ? 1 : 0)
 
 #define BITMAP_BITS_PER_WORD (sizeof(unsigned long) * 8)
 #define BITMAP_NUM_WORDS(x) (((x) + BITMAP_BITS_PER_WORD - 1) / BITMAP_BITS_PER_WORD)

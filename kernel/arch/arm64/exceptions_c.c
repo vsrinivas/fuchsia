@@ -188,7 +188,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 
             /* decode the iss */
             if (BIT(iss, 24)) { /* ISV bit */
-                printf("data fault: PC at 0x%llx, FAR 0x%llx, iss 0x%x (DFSC 0x%lx)\n",
+                printf("data fault: PC at 0x%llx, FAR 0x%llx, iss 0x%x (DFSC 0x%x)\n",
                        iframe->elr, far, iss, BITS(iss, 5, 0));
             } else {
                 printf("data fault: PC at 0x%llx, FAR 0x%llx, iss 0x%x\n", iframe->elr, far, iss);
@@ -259,7 +259,7 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     switch (ec) {
         case 0b100000: /* instruction abort from lower level */
         case 0b100001: /* instruction abort from same level */
-            printf("instruction abort: PC at 0x%llx, address 0x%llx IFSC 0x%lx %s\n",
+            printf("instruction abort: PC at 0x%llx, address 0x%llx IFSC 0x%x %s\n",
                     context->frame->elr, context->far,
                     BITS(context->esr, 5, 0),
                     BIT(ec, 0) ? "" : "user ");
