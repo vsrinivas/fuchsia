@@ -1,0 +1,12 @@
+{
+    "imports": [
+        "framebuffer",
+        "mojo"
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/application_manager/startup.config",
+            "file": "mojo/examples/shapes/startup.config"
+        }
+    ]
+}
