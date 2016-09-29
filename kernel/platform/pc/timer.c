@@ -32,13 +32,34 @@
 
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
-// HPET is not present, we will fallback to calibrating using the PIT.  If the
-// CPU advertises an invariant TSC, then we will use the TSC for tracking
-// wall time in a tickless manner.  Otherwise, we will use the PIT to generate
-// periodic ticks to update wall time.
+// HPET is not present, we will fallback to calibrating using the PIT.
+//
+// For wall-time, we use the following mechanisms, in order of highest
+// preference to least:
+// 1) TSC: If the CPU advertises an invariant TSC, then we will use the TSC for
+// tracking wall time in a tickless manner.
+// 2) HPET: If there is an HPET present, we will use its count to track wall
+// time in a tickless manner.
+// 3) PIT: We will use periodic interrupts to update wall time.
 //
 // The local APICs are responsible for handling timer callbacks
 // sent from the scheduler.
+
+enum clock_source {
+    CLOCK_PIT,
+    CLOCK_HPET,
+    CLOCK_TSC,
+
+    CLOCK_COUNT
+};
+
+const char *clock_name[] = {
+    [CLOCK_PIT] = "PIT",
+    [CLOCK_HPET] = "HPET",
+    [CLOCK_TSC] = "TSC",
+};
+static_assert(countof(clock_name) == CLOCK_COUNT, "");
+
 
 static platform_timer_callback t_callback[SMP_MAX_CPUS] = {NULL};
 static void *callback_arg[SMP_MAX_CPUS] = {NULL};
@@ -59,6 +80,9 @@ static bool invariant_tsc;
 // rate-invariant under P-state transitions.
 static bool constant_tsc;
 
+static enum clock_source wall_clock;
+static enum clock_source calibration_clock;
+
 // APIC timer calibration values
 static bool use_tsc_deadline;
 static volatile uint32_t apic_ticks_per_ms = 0;
@@ -67,6 +91,9 @@ static uint8_t apic_divisor = 0;
 // TSC timer calibration values
 static uint64_t tsc_ticks_per_ms;
 static struct fp_32_64 ns_per_tsc;
+
+// HPET calibration values
+static struct fp_32_64 ns_per_hpet;
 
 uint64_t get_tsc_ticks_per_ms(void) {
     return tsc_ticks_per_ms;
@@ -87,12 +114,24 @@ lk_time_t current_time(void)
 {
     lk_time_t time;
 
-    if (likely(invariant_tsc)) {
-        uint64_t tsc = rdtsc();
-        time = tsc / tsc_ticks_per_ms;
-    } else {
-        // XXX slight race
-        time = (lk_time_t) (timer_current_time >> 32);
+    switch (wall_clock) {
+        case CLOCK_TSC: {
+            uint64_t tsc = rdtsc();
+            time = tsc / tsc_ticks_per_ms;
+            break;
+        }
+        case CLOCK_HPET: {
+            uint64_t counter = hpet_get_value();
+            time = counter / hpet_ticks_per_ms();
+            break;
+        }
+        case CLOCK_PIT: {
+            // XXX slight race
+            time = (lk_time_t) (timer_current_time >> 32);
+            break;
+        }
+        default:
+            panic("Invalid wall clock source\n");
     }
 
     return time;
@@ -102,13 +141,25 @@ lk_bigtime_t current_time_hires(void)
 {
     lk_bigtime_t time;
 
-    if (likely(invariant_tsc)) {
-        uint64_t tsc = rdtsc();
-        time = u64_mul_u64_fp32_64(tsc, ns_per_tsc);
-    } else {
-        // XXX slight race
-        time = (lk_bigtime_t) ((timer_current_time >> 22) * 1000) >> 10;
-        time *= 1000;
+    switch (wall_clock) {
+        case CLOCK_TSC: {
+            uint64_t tsc = rdtsc();
+            time = u64_mul_u64_fp32_64(tsc, ns_per_tsc);
+            break;
+        }
+        case CLOCK_HPET: {
+            uint64_t counter = hpet_get_value();
+            time = u64_mul_u64_fp32_64(counter, ns_per_hpet);
+            break;
+        }
+        case CLOCK_PIT: {
+            // XXX slight race
+            time = (lk_bigtime_t) ((timer_current_time >> 22) * 1000) >> 10;
+            time *= 1000;
+            break;
+        }
+        default:
+            panic("Invalid wall clock source\n");
     }
 
     return time;
@@ -236,17 +287,20 @@ static void calibrate_apic_timer(void)
 {
     ASSERT(arch_ints_disabled());
 
-    bool use_hpet = hpet_is_present();
-    TRACEF("Calibrating APIC with %s\n", use_hpet ? "HPET" : "PIT");
+    TRACEF("Calibrating APIC with %s\n", clock_name[calibration_clock]);
 
     apic_divisor = 1;
     while (apic_divisor != 0) {
         uint32_t best_time = UINT32_MAX;
         for (int tries = 0; tries < 3; ++tries) {
-            if (use_hpet) {
-                hpet_calibration_cycle_1ms_preamble();
-            } else {
-                pit_calibration_cycle_1ms_preamble();
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_1ms_preamble();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_1ms_preamble();
+                    break;
+                default: PANIC_UNIMPLEMENTED;
             }
 
             // Setup APIC timer to count down with interrupt masked
@@ -256,10 +310,14 @@ static void calibrate_apic_timer(void)
                     true);
             ASSERT(status == NO_ERROR);
 
-            if (use_hpet) {
-                hpet_calibration_cycle_1ms();
-            } else {
-                pit_calibration_cycle_1ms();
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_1ms();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_1ms();
+                    break;
+                default: PANIC_UNIMPLEMENTED;
             }
 
             uint32_t apic_ticks = UINT32_MAX - apic_timer_current_count();
@@ -269,10 +327,14 @@ static void calibrate_apic_timer(void)
             LTRACEF("Calibration trial %d found %u ticks/ms\n",
                     tries, apic_ticks);
 
-            if (use_hpet) {
-                hpet_calibration_cycle_1ms_cleanup();
-            } else {
-                pit_calibration_cycle_1ms_cleanup();
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_1ms_cleanup();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_1ms_cleanup();
+                    break;
+                default: PANIC_UNIMPLEMENTED;
             }
         }
 
@@ -296,15 +358,18 @@ static void calibrate_tsc(void)
 {
     ASSERT(arch_ints_disabled());
 
-    bool use_hpet = hpet_is_present();
-    TRACEF("Calibrating TSC with %s\n", use_hpet ? "HPET" : "PIT");
+    TRACEF("Calibrating TSC with %s\n", clock_name[calibration_clock]);
 
     uint64_t best_time = UINT64_MAX;
     for (int tries = 0; tries < 3; ++tries) {
-        if (use_hpet) {
-            hpet_calibration_cycle_1ms_preamble();
-        } else {
-            pit_calibration_cycle_1ms_preamble();
+        switch (calibration_clock) {
+            case CLOCK_HPET:
+                hpet_calibration_cycle_1ms_preamble();
+                break;
+            case CLOCK_PIT:
+                pit_calibration_cycle_1ms_preamble();
+                break;
+            default: PANIC_UNIMPLEMENTED;
         }
 
         // Use CPUID to serialize the instruction stream
@@ -312,10 +377,14 @@ static void calibrate_tsc(void)
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
         uint64_t start = rdtsc();
 
-        if (use_hpet) {
-            hpet_calibration_cycle_1ms();
-        } else {
-            pit_calibration_cycle_1ms();
+        switch (calibration_clock) {
+            case CLOCK_HPET:
+                hpet_calibration_cycle_1ms();
+                break;
+            case CLOCK_PIT:
+                pit_calibration_cycle_1ms();
+                break;
+            default: PANIC_UNIMPLEMENTED;
         }
 
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
@@ -327,10 +396,14 @@ static void calibrate_tsc(void)
         }
         LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
                 tries, tsc_ticks);
-        if (use_hpet) {
-            hpet_calibration_cycle_1ms_cleanup();
-        } else {
-            pit_calibration_cycle_1ms_cleanup();
+        switch (calibration_clock) {
+            case CLOCK_HPET:
+                hpet_calibration_cycle_1ms_cleanup();
+                break;
+            case CLOCK_PIT:
+                pit_calibration_cycle_1ms_cleanup();
+                break;
+            default: PANIC_UNIMPLEMENTED;
         }
     }
 
@@ -358,6 +431,14 @@ void platform_init_timer(uint level)
     }
 
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
+    bool has_hpet = hpet_is_present();
+
+    if (has_hpet) {
+        calibration_clock = CLOCK_HPET;
+        fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000 * 1000, hpet_ticks_per_ms() * 1000);
+    } else {
+        calibration_clock = CLOCK_PIT;
+    }
 
     LTRACEF("constant_tsc %u invariant_tsc %u\n", constant_tsc, invariant_tsc);
 
@@ -372,6 +453,7 @@ void platform_init_timer(uint level)
         // Program PIT in the software strobe configuration, but do not load
         // the count.  This will pause the PIT.
         outp(I8253_CONTROL_REG, 0x38);
+        wall_clock = CLOCK_TSC;
     } else {
         if (constant_tsc) {
             // Calibrate the TSC even though it's not as good as we want, so we
@@ -379,13 +461,23 @@ void platform_init_timer(uint level)
             calibrate_tsc();
         }
 
-        timer_current_time = 0;
-        set_pit_frequency(1000); // ~1ms granularity
+        if (has_hpet) {
+            wall_clock = CLOCK_HPET;
+            hpet_set_value(0);
+            hpet_enable();
+        } else {
+            wall_clock = CLOCK_PIT;
 
-        uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-        register_int_handler(irq, &pit_timer_tick, NULL);
-        unmask_interrupt(irq);
+            timer_current_time = 0;
+            set_pit_frequency(1000); // ~1ms granularity
+
+            uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
+            register_int_handler(irq, &pit_timer_tick, NULL);
+            unmask_interrupt(irq);
+        }
     }
+
+    TRACEF("Using %s as wallclock\n", clock_name[wall_clock]);
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);
 
