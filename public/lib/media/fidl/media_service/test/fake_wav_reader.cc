@@ -140,7 +140,7 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 void FakeWavReader::WriteToProducerHandleStatic(void* reader_void_ptr,
                                                 MojoResult result) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(reader_void_ptr);
-  if (result == MOJO_SYSTEM_RESULT_ABORTED) {
+  if (result == MOJO_SYSTEM_RESULT_CANCELLED) {
     // Run loop has aborted...the app is shutting down.
     return;
   }
