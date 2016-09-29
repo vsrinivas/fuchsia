@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-LOCAL_DIR := system/uapp/devmgr
+LOCAL_DIR := system/core/devmgr
 
 MODULE := system/ulib/driver
 

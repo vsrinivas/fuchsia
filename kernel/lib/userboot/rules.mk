@@ -21,7 +21,7 @@ MODULE_SRCS += $(LOCAL_DIR)/bootfs.S
 endif
 
 vdso-filename := $(BUILDDIR)/ulib/magenta/libmagenta.so
-userboot-filename := $(BUILDDIR)/uapp/userboot/libuserboot.so
+userboot-filename := $(BUILDDIR)/core/userboot/libuserboot.so
 
 # vdso.S embeds those two files, so building it depends on them.
 MODULE_SRCDEPS += $(vdso-filename).strip $(userboot-filename).strip
@@ -38,7 +38,7 @@ $(BUILDDIR)/$(LOCAL_DIR)/code-start.h: \
 	@echo generating $@
 	$(NOECHO)$< '$(NM)' \
 	    VDSO $(BUILDDIR)/ulib/magenta/libmagenta.so \
-	    USERBOOT $(BUILDDIR)/uapp/userboot/libuserboot.so \
+	    USERBOOT $(BUILDDIR)/core/userboot/libuserboot.so \
 	    > $@.new
 	@mv -f $@.new $@
 GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/code-start.h
