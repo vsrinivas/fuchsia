@@ -9,7 +9,7 @@
 
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
-#include "mojo/public/c/include/MGL/mgl.h"
+#include "mojo/public/c/gpu/include/MGL/mgl.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 
 namespace mojo {
