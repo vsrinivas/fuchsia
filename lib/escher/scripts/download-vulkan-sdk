@@ -54,7 +54,7 @@ echo "Escher: Downloading Vulkan SDK from Google Storage."
 readonly GS_BUCKET="https://fuchsia-build.storage.googleapis.com/lib/escher/third_party/vulkansdk/$PLATFORM/$ARCH"
 readonly GS_PATH="${GS_BUCKET}/${REQUIRED_SHA}"
 readonly SDK_INSTALLER="${TEMP_DIR}/vulkansdk-${PLATFORM}-${ARCH}.run"
-curl "${GS_PATH}" --output ${SDK_INSTALLER}
+curl --progress-bar -continue-at=- --location "${GS_PATH}" --output ${SDK_INSTALLER}
 if [ $? -ne 0 ]; then
   panic "Failed to download Vulkan SDK from Google Storage: ${GS_PATH} !!"
 fi
