@@ -21,7 +21,28 @@ config("compiler") {
     configs += [ "//build/config/fuchsia:compiler" ]
   } else {
     cflags_c += [ "-std=c11" ]
-    cflags_cc += [ "-std=c++11" ]
+    cflags_cc += [
+      "-std=c++14",
+      "-stdlib=libc++",
+    ]
+    if (current_os == "linux") {
+      # On linux, we want to statically link against our libc++.a and
+      # libc++abi.a which are shipped as part of the toolchain
+      ldflags += [
+        "-stdlib=libc++",
+        "-static-libstdc++",
+
+        # libc++ and libc++abi are separate in our current toolchain,
+        # so we have to explicitly statically link it
+        "-Wl,-Bstatic",
+        "-lc++abi",
+        "-Wl,-Bdynamic",
+
+        # We currently ship libc++.a and libc++abi.a with LLVM IR,
+        # not ELF, so we have to use llvm's linker to link them in.
+        "-fuse-ld=lld",
+      ]
+    }
   }
 
   asmflags += cflags
