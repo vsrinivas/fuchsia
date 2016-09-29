@@ -25,7 +25,7 @@ __BEGIN_CDECLS;
 #define BITS_SHIFT(x, high, low) (((x) >> (low)) & ((_ONE(x)<<((high)-(low)+1))-1))
 #define BIT_SET(x, bit) (((x) & (_ONE(x) << (bit))) ? 1 : 0)
 
-#define BITMAP_BITS_PER_WORD (sizeof(unsigned long) * 8)
+#define BITMAP_BITS_PER_WORD ((int)(sizeof(unsigned long) * 8))
 #define BITMAP_NUM_WORDS(x) (((x) + BITMAP_BITS_PER_WORD - 1) / BITMAP_BITS_PER_WORD)
 #define BITMAP_WORD(x) ((x) / BITMAP_BITS_PER_WORD)
 #define BITMAP_BIT_IN_WORD(x) ((x) & (BITMAP_BITS_PER_WORD - 1))
@@ -92,13 +92,12 @@ static inline unsigned long _ffz(unsigned long x)
 
 static inline int bitmap_ffz(unsigned long *bitmap, int numbits)
 {
-    uint i;
     int bit;
 
-    for (i = 0; i < BITMAP_NUM_WORDS(numbits); i++) {
+    for (int i = 0; i < BITMAP_NUM_WORDS(numbits); i++) {
         if (bitmap[i] == ~0UL)
             continue;
-        bit = i * BITMAP_BITS_PER_WORD + _ffz(bitmap[i]);
+        bit = i * BITMAP_BITS_PER_WORD + (int)_ffz(bitmap[i]);
         if (bit < numbits)
             return bit;
         return -1;
