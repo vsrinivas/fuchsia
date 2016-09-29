@@ -28,10 +28,6 @@
             "bootfs_path": "apps/device_runner"
         },
         {
-            "binary": "device_runner_boot",
-            "bootfs_path": "bin/device_runner_boot"
-        },
-        {
             "binary": "dummy_device_shell",
             "bootfs_path": "apps/dummy_device_shell"
         },
