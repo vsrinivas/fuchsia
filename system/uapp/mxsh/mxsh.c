@@ -543,7 +543,7 @@ mx_status_t command(int argc, char** argv, bool runbg) {
     }
 
     //TODO: some kind of PATH processing
-    if (argv[0][0] != '/') {
+    if (argv[0][0] != '/' && argv[0][0] != '.') {
         snprintf(tmp, sizeof(tmp), "%s%s", "/boot/bin/", argv[0]);
         argv[0] = tmp;
     }
