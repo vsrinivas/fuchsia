@@ -18,6 +18,10 @@ fi
 readonly PLATFORM="linux"
 readonly ARCH="x86_64"
 
+if [ "$(uname)" != "Linux" ]; then
+  exit 0
+fi
+
 # Called when something goes wrong.
 panic () {
   echo "ERROR: Escher download-vulkan-sdk: $1"
