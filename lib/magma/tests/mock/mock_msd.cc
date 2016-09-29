@@ -26,6 +26,12 @@ void msd_device_destroy(msd_device* dev)
     delete MsdMockDevice::cast(dev);
 }
 
+void msd_device_page_flip(msd_device* dev, msd_buffer* buf,
+                          magma_system_pageflip_callback_t callback, void* data)
+{
+    callback(0, data);
+}
+
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 {
     return MsdMockDevice::cast(dev)->Open(client_id);

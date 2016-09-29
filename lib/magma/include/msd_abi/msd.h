@@ -32,6 +32,13 @@ void msd_device_dump_status(struct msd_device* dev);
 // Opens a device for the given client. Returns null on failure
 struct msd_connection* msd_device_open(struct msd_device* dev, msd_client_id client_id);
 
+// Provides a buffer to be scanned out on the next vblank event.
+// |callback| will be called with |data| as its second argument when |buf| is
+// no longer being displayed and is safe to be reused. The first argument to
+// |callback| indicates an error with the page flip, where 0 indicates success
+void msd_device_page_flip(struct msd_device* dev, struct msd_buffer* buf,
+                          magma_system_pageflip_callback_t callback, void* data);
+
 // Closes the given connection to the device.
 void msd_connection_close(struct msd_connection* connection);
 

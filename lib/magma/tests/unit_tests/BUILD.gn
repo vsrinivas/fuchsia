@@ -46,6 +46,7 @@ source_set("magma_system_tests") {
     "test_magma_system_buffer.cc",
     "test_magma_system_connection.cc",
     "test_magma_system_context.cc",
+    "test_magma_system_display.cc",
   ]
 
   deps = [

@@ -22,6 +22,8 @@ source_set("sys_driver") {
     "magma_system_context.h",
     "magma_system_device.cc",
     "magma_system_device.h",
+    "magma_system_display.cc",
+    "magma_system_display.h",
   ]
 
   deps = [

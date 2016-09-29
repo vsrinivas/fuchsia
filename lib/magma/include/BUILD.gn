@@ -40,6 +40,7 @@ source_set("sys_abi") {
 
   sources = [
     "sys_abi/magma_system.h",
+    "sys_abi/magma_system_display_abi.h",
   ]
 
   public_deps = [

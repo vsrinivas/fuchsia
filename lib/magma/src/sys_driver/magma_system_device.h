@@ -6,6 +6,7 @@
 #define _MAGMA_SYSTEM_DEVICE_H_
 
 #include "magma_system_connection.h"
+#include "magma_system_display.h"
 #include "msd.h"
 #include <functional>
 #include <memory>
@@ -17,9 +18,12 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
     return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
 }
 
-class MagmaSystemDevice : public MagmaSystemConnection::Owner {
+class MagmaSystemDevice : public MagmaSystemConnection::Owner, public MagmaSystemDisplay::Owner {
 public:
-    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
+    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev)
+        : msd_dev_(std::move(msd_dev)), display_(new MagmaSystemDisplay(this))
+    {
+    }
 
     // Opens a connection to the device. This transfers ownership of this object to the
     // caller for now, since that is the semantics of what will happen when connections are message
@@ -29,13 +33,26 @@ public:
     // returns nullptr on failure
     std::unique_ptr<MagmaSystemConnection> Open(msd_client_id client_id);
 
+    // Gets the display interface for this device. This will only return a valid pointer once
+    std::unique_ptr<MagmaSystemDisplay> OpenDisplay() { return std::move(display_); }
+
     msd_device* msd_dev() { return msd_dev_.get(); }
 
+    // MagmaSystemDisplay::Owner
+    uint32_t GetTokenForBuffer(std::shared_ptr<MagmaSystemBuffer>) override;
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId() override;
 
+    // MagmaSystemDisplay::Owner
+    std::shared_ptr<MagmaSystemBuffer> GetBufferForToken(uint32_t token) override;
+    void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf, magma_system_pageflip_callback_t callback,
+                  void* data) override;
+
 private:
     msd_device_unique_ptr_t msd_dev_;
+    std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> token_map_;
+    uint32_t next_token_{};
+    std::unique_ptr<MagmaSystemDisplay> display_;
 };
 
 #endif //_MAGMA_SYSTEM_DEVICE_H_

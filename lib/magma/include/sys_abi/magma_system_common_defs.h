@@ -37,6 +37,12 @@ struct magma_system_command_buffer {
     struct magma_system_exec_resource* resources;
 };
 
+// callback type for magma_system_pageflip and msd_device_pageflip
+// |error| is a value from errno.h indicating the result of the attempted pageflip,
+// where 0 indicates success
+// |data| is a user defined parameter which is passed into the page flip function
+typedef void (*magma_system_pageflip_callback_t)(int32_t error, void* data);
+
 #if defined(__cplusplus)
 }
 #endif

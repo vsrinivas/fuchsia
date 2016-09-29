@@ -26,6 +26,7 @@ class MagmaSystemConnection : public magma_system_connection, private MagmaSyste
 public:
     class Owner {
     public:
+        virtual uint32_t GetTokenForBuffer(std::shared_ptr<MagmaSystemBuffer>) = 0;
         virtual uint32_t GetDeviceId() = 0;
     };
 
@@ -42,6 +43,9 @@ public:
     // other instances remain valid until deleted
     // Returns false if no buffer with the given handle exists in the map
     bool FreeBuffer(uint32_t handle);
+    // This does not modify the buffer map, but makes the buffer referred
+    // to by |handle| available for import using the value of |token_out|
+    bool ExportBuffer(uint32_t handle, uint32_t* token_out);
 
     bool CreateContext(uint32_t* context_id_out);
     bool DestroyContext(uint32_t context_id);

@@ -44,6 +44,16 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint32_t 
     return iter->second;
 }
 
+bool MagmaSystemConnection::ExportBuffer(uint32_t handle, uint32_t* token_out)
+{
+    auto iter = buffer_map_.find(handle);
+    if (iter == buffer_map_.end())
+        return DRETF(false, "MagmaSystemConnection: Attempting to export invalid buffer handle");
+
+    *token_out = owner_->GetTokenForBuffer(iter->second);
+    return true;
+}
+
 bool MagmaSystemConnection::CreateContext(uint32_t* context_id_out)
 {
     auto msd_ctx = msd_connection_create_context(msd_connection());

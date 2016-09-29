@@ -6,6 +6,7 @@
 #include "magma_driver.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"
+#include <errno.h>
 
 #ifdef __linux__
 #include <unistd.h>
@@ -70,6 +71,11 @@ bool magma_system_free(magma_system_connection* connection, uint32_t handle)
     return MagmaSystemConnection::cast(connection)->FreeBuffer(handle);
 }
 
+bool magma_system_export(magma_system_connection* connection, uint32_t handle, uint32_t* token_out)
+{
+    return MagmaSystemConnection::cast(connection)->ExportBuffer(handle, token_out);
+}
+
 bool magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t handle,
                                   uint32_t tiling_mode)
 {
@@ -116,4 +122,43 @@ bool magma_system_submit_command_buffer(struct magma_system_connection* connecti
 void magma_system_wait_rendering(magma_system_connection* connection, uint32_t handle)
 {
     DLOG("TODO: magma_system_wait_rendering");
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+magma_system_display* magma_system_display_open(uint32_t device_handle)
+{
+    if (device_handle != 0xdeadbeef)
+        return DRETP(nullptr, "Unexpected device_handle");
+
+    MagmaSystemDevice* dev = MagmaDriver::GetDevice();
+    DASSERT(dev);
+
+    auto display = dev->OpenDisplay();
+    if (!display)
+        return DRETP(nullptr, "failed to open display");
+
+    // Here we release ownership of the display to the client
+    return display.release();
+}
+
+void magma_system_display_close(magma_system_display* display) { delete display; }
+
+bool magma_system_display_import_buffer(magma_system_display* display, uint32_t token,
+                                        uint32_t* handle_out)
+{
+    return MagmaSystemDisplay::cast(display)->ImportBuffer(token, handle_out);
+}
+
+void magma_system_display_page_flip(magma_system_display* display, uint32_t handle,
+                                    magma_system_pageflip_callback_t callback, void* data)
+{
+    auto buf = MagmaSystemDisplay::cast(display)->LookupBuffer(handle);
+    if (!buf) {
+        DLOG("Attempting to page flip with invalid buffer");
+        callback(-EINVAL, data);
+        return;
+    }
+
+    MagmaSystemDisplay::cast(display)->PageFlip(buf, callback, data);
 }

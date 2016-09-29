@@ -45,6 +45,10 @@ bool magma_system_submit_command_buffer(struct magma_system_connection* connecti
 
 void magma_system_wait_rendering(struct magma_system_connection* connection, uint32_t handle);
 
+// makes the buffer returned by |handle| able to be imported via |token|
+// TODO(MA-88) make these arguments less confusing
+bool magma_system_export(magma_system_connection* connection, uint32_t handle, uint32_t* token_out);
+
 #if defined(__cplusplus)
 }
 #endif
