@@ -200,6 +200,20 @@ inline CommandLine CommandLineFromIterators(InputIterator first,
       first, last, nullptr);
 }
 
+// Builds a |CommandLine| from first/last iterators (where |last| is really
+// one-past-the-last, as usual) to |std::string|s or things that implicitly
+// convert to |std::string|, where argv[0] is provided separately.
+template <typename InputIterator>
+inline CommandLine CommandLineFromIteratorsWithArgv0(const std::string& argv0,
+                                                     InputIterator first,
+                                                     InputIterator last) {
+  internal::CommandLineBuilder builder;
+  builder.ProcessArg(argv0);
+  for (auto it = first; it < last; ++it)
+    builder.ProcessArg(*it);
+  return builder.Build();
+}
+
 // Builds a |CommandLine| from the usual argc/argv.
 inline CommandLine CommandLineFromArgcArgv(int argc, const char* const* argv) {
   return CommandLineFromIterators(argv, argv + argc);
