@@ -9,10 +9,11 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/bench.cpp \
     $(LOCAL_DIR)/vmo.cpp
 
 MODULE_NAME := vmo-test
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl
+MODULE_LIBS := ulib/unittest ulib/mxio ulib/magenta ulib/musl ulib/mxtl
 
 include make/module.mk

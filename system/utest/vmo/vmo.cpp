@@ -12,6 +12,8 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
+#include "bench.h"
+
 bool vmo_create_test() {
     BEGIN_TEST;
 
@@ -339,6 +341,19 @@ RUN_TEST(vmo_lookup_test);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
+    printf("argc %d\n", argc);
+
+    bool run_bench = false;
+    if (argc > 1) {
+        if (!strcmp(argv[1], "bench")) {
+            run_bench = true;
+        }
+    }
+
+    if (!run_bench) {
+        bool success = unittest_run_all_tests(argc, argv);
+        return success ? 0 : -1;
+    } else {
+        return vmo_run_benchmark();
+    }
 }
