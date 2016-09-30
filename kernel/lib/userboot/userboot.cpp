@@ -170,25 +170,18 @@ static HandleUniquePtr make_bootstrap_pipe(
 
     // Now pack up the bytes and handles to write down the pipe.
     AllocChecker ac;
-    mxtl::Array<uint8_t> buffer(new (&ac) uint8_t[num_bytes], num_bytes);
-    if (!ac.check())
+    mxtl::unique_ptr<MessagePacket> msg;
+    if (MessagePacket::Create(num_bytes, num_handles, &msg) != NO_ERROR)
         return nullptr;
-    memcpy(buffer.get(), bytes, buffer.size());
 
-    mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles], num_handles);
-    if (!ac.check())
-        return nullptr;
+    memcpy(msg->mutable_data(), bytes, num_bytes);
+
+    Handle** handle_list = msg->mutable_handles();
     for (uint32_t i = 0; i < num_handles; ++i)
         handle_list[i] = handles[i].release();
 
-    mxtl::unique_ptr<MessagePacket> msg(
-        new (&ac) MessagePacket(mxtl::move(buffer), mxtl::move(handle_list)));
-    if (!ac.check())
-        return nullptr;
-
     // Here it goes!
-    mx_status_t status = kernel_pipe->Write(mxtl::move(msg));
-    if (status != NO_ERROR)
+    if (kernel_pipe->Write(mxtl::move(msg)) != NO_ERROR)
         return nullptr;
 
     return user_pipe_handle;

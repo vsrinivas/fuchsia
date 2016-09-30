@@ -27,6 +27,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/job_dispatcher.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/magenta.cpp \
+    $(LOCAL_DIR)/message_packet.cpp \
     $(LOCAL_DIR)/message_pipe_dispatcher.cpp \
     $(LOCAL_DIR)/message_pipe.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \

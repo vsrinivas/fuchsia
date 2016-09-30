@@ -8,24 +8,38 @@
 
 #include <stdint.h>
 
-#include <magenta/magenta.h>
-
-#include <mxtl/array.h>
+#include <magenta/types.h>
 #include <mxtl/intrusive_double_list.h>
-#include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
-struct MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
-    MessagePacket(mxtl::Array<uint8_t>&& _data, mxtl::Array<Handle*>&& _handles)
-        : data(mxtl::move(_data)), handles(mxtl::move(_handles)) {}
-    ~MessagePacket() {
-        for (size_t ix = 0; ix != handles.size(); ++ix) {
-            DeleteHandle(handles[ix]);
-        }
-    }
+class Handle;
 
-    mxtl::Array<uint8_t> data;
-    mxtl::Array<Handle*> handles;
+class MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
+public:
+    // Creates a message packet.
+    static mx_status_t Create(uint32_t data_size, uint32_t num_handles,
+                              mxtl::unique_ptr<MessagePacket>* msg);
 
-    void ReturnHandles() { handles.reset(); }
+    ~MessagePacket();
+
+    uint32_t data_size() const { return data_size_; }
+    uint32_t num_handles() const { return num_handles_; }
+
+    void set_owns_handles(bool own_handles) { owns_handles_ = own_handles; }
+
+    const void* data() const { return data_.get(); }
+    void* mutable_data() { return data_.get(); }
+    Handle* const* handles() const { return handles_.get(); }
+    Handle** mutable_handles() { return handles_.get(); }
+
+private:
+    MessagePacket(uint32_t data_size, uint32_t num_handles);
+
+    bool owns_handles_;
+    uint32_t data_size_;
+    uint32_t num_handles_;
+
+    // TODO(vtl): Allocate these inline instead.
+    mxtl::unique_ptr<uint8_t[]> data_;
+    mxtl::unique_ptr<Handle*[]> handles_;
 };

@@ -80,8 +80,8 @@ status_t MessagePipe::Read(size_t side,
     if (messages_[side].is_empty())
         return other_alive ? ERR_BAD_STATE : ERR_REMOTE_CLOSED;
 
-    *msg_size = static_cast<uint32_t>(messages_[side].front().data.size());
-    *msg_handle_count = static_cast<uint32_t>(messages_[side].front().handles.size());
+    *msg_size = messages_[side].front().data_size();
+    *msg_handle_count = messages_[side].front().num_handles();
     if (*msg_size > max_size || *msg_handle_count > max_handle_count)
         return ERR_BUFFER_TOO_SMALL;
 
@@ -103,11 +103,11 @@ status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
     if (!other_alive) {
         // |msg| will be destroyed but we want to keep the handles alive since
         // the caller should put them back into the process table.
-        msg->ReturnHandles();
+        msg->set_owns_handles(false);
         return ERR_BAD_STATE;
     }
 
-    auto size = msg->data.size();
+    auto size = msg->data_size();
     messages_[other].push_back(mxtl::move(msg));
 
     state_tracker_[other].UpdateSatisfied(0u, MX_SIGNAL_READABLE);
@@ -132,7 +132,7 @@ status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<PortClient> client
 
     // Replay the messages that are pending.
     for (auto& msg : messages_[side]) {
-        iopc_[side]->Signal(MX_SIGNAL_READABLE, msg.data.size(), &lock_);
+        iopc_[side]->Signal(MX_SIGNAL_READABLE, msg.data_size(), &lock_);
     }
 
     return NO_ERROR;

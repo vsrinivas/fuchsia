@@ -126,12 +126,13 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_to_user(msg->data.get(), num_bytes) != NO_ERROR)
+        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (num_handles > 0u) {
-        mxtl::Array<Handle*> handle_list = mxtl::move(msg->handles);
+        Handle* const* handle_list = msg->handles();
+        msg->set_owns_handles(false);
 
         // Copy the handle values out in chunks.
         mx_handle_t hvs[kMsgpipeReadHandlesChunkCount];
@@ -183,14 +184,14 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     if (num_handles > kMaxMessageHandles)
         return ERR_OUT_OF_RANGE;
 
-    mxtl::Array<uint8_t> bytes;
+    mxtl::unique_ptr<MessagePacket> msg;
+    result = MessagePacket::Create(num_bytes, num_handles, &msg);
+    if (result != NO_ERROR)
+        return result;
 
     if (num_bytes > 0u) {
-        void* copy;
-        result = magenta_copy_user_dynamic(_bytes.get(), &copy, num_bytes, kMaxMessageSize);
-        if (result != NO_ERROR)
-            return result;
-        bytes.reset(reinterpret_cast<uint8_t*>(copy), num_bytes);
+        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
+            return ERR_INVALID_ARGS;
     }
 
     AllocChecker ac;
@@ -198,67 +199,64 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     if (!ac.check())
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
-        result = _handles.copy_array_from_user(handles.get(), num_handles);
-        if (result != NO_ERROR)
-            return result;
-    }
+        if (_handles.copy_array_from_user(handles.get(), num_handles) != NO_ERROR)
+            return ERR_INVALID_ARGS;
 
-    mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles], num_handles);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+        {
+            // Loop twice, first we collect and validate handles, the second pass
+            // we remove them from this process.
+            AutoLock lock(up->handle_table_lock());
 
-    {
-        // Loop twice, first we collect and validate handles, the second pass
-        // we remove them from this process.
-        AutoLock lock(up->handle_table_lock());
+            size_t reply_pipe_found = -1;
 
-        size_t reply_pipe_found = -1;
+            for (size_t ix = 0; ix != num_handles; ++ix) {
+                auto handle = up->GetHandle_NoLock(handles[ix]);
+                if (!handle)
+                    return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
-        for (size_t ix = 0; ix != num_handles; ++ix) {
-            auto handle = up->GetHandle_NoLock(handles[ix]);
-            if (!handle)
-                return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
-
-            if (handle->dispatcher().get() == static_cast<Dispatcher*>(msg_pipe.get())) {
-                // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
-                if (!is_reply_pipe) {
-                    return ERR_NOT_SUPPORTED;
-                } else {
-                    reply_pipe_found = ix;
+                if (handle->dispatcher().get() == static_cast<Dispatcher*>(msg_pipe.get())) {
+                    // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
+                    if (!is_reply_pipe) {
+                        return ERR_NOT_SUPPORTED;
+                    } else {
+                        reply_pipe_found = ix;
+                    }
                 }
+
+                if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
+                    return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
+
+                msg->mutable_handles()[ix] = handle;
             }
 
-            if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
-                return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
+            if (is_reply_pipe) {
+                // For reply pipes, itself must be in the handle array and be the last handle.
+                if ((reply_pipe_found != (num_handles - 1)))
+                    return ERR_BAD_STATE;
+            }
 
-            handle_list[ix] = handle;
-        }
-
-        if (is_reply_pipe) {
-            // For reply pipes, itself must be in the handle array and be the last handle.
-            if ((num_handles == 0) || (reply_pipe_found != (num_handles - 1)))
-                return ERR_BAD_STATE;
-        }
-
-        for (size_t ix = 0; ix != num_handles; ++ix) {
-            auto handle = up->RemoveHandle_NoLock(handles[ix]).release();
-            // Passing duplicate handles is not allowed.
-            // If we've already seen this handle flag an error.
-            if (!handle) {
-                // Put back the handles we've already removed.
-                for (size_t idx = 0; idx < ix; ++idx) {
-                    up->UndoRemoveHandle_NoLock(handles[idx]);
+            for (size_t ix = 0; ix != num_handles; ++ix) {
+                auto handle = up->RemoveHandle_NoLock(handles[ix]).release();
+                // Passing duplicate handles is not allowed.
+                // If we've already seen this handle flag an error.
+                if (!handle) {
+                    // Put back the handles we've already removed.
+                    for (size_t idx = 0; idx < ix; ++idx) {
+                        up->UndoRemoveHandle_NoLock(handles[idx]);
+                    }
+                    // TODO: more specific error?
+                    return ERR_INVALID_ARGS;
                 }
-                // TODO: more specific error?
-                return ERR_INVALID_ARGS;
             }
         }
-    }
 
-    mxtl::unique_ptr<MessagePacket> msg(
-        new (&ac) MessagePacket(mxtl::move(bytes), mxtl::move(handle_list)));
-    if (!ac.check())
-        return ERR_NO_MEMORY;
+        // On success, the MessagePacket owns the handles.
+        msg->set_owns_handles(true);
+    } else {
+        // For reply pipes, itself must be in the handle array and be the last handle.
+        if (is_reply_pipe)
+            return ERR_BAD_STATE;
+    }
 
     result = msg_pipe->Write(mxtl::move(msg));
     if (result != NO_ERROR) {
