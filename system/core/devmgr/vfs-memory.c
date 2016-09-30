@@ -399,12 +399,12 @@ vnode_t* vfs_create_global_root(void) {
 }
 
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
-    if ((vn != &vn_data->vn) && (vn != &vn_socket->vn)) {
+    if (vn == NULL) {
         return ERR_ACCESS_DENIED;
     }
     mtx_lock(&vfs_lock);
     if (vn->remote > 0) {
-        mx_handle_close(vn_data->vn.remote);
+        mx_handle_close(vn->remote);
     }
     vn->remote = h;
     vn->flags |= V_FLAG_REMOTE;
