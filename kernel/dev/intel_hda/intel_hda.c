@@ -452,7 +452,7 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
     }
 
     if (sizeof(hda_all_registers_t) != info->size) {
-        TRACEF("Unexpected register window size!  (Got %llu; expected %zu)\n",
+        TRACEF("Unexpected register window size!  (Got %" PRIu64 "; expected %zu)\n",
                 info->size, sizeof(hda_all_registers_t));
         ret = ERR_INTERNAL;
         goto finished;
@@ -472,7 +472,7 @@ static status_t intel_hda_pci_startup(struct pcie_device_state* pci_device) {
                                  ARCH_MMU_FLAG_PERM_WRITE);
 
     if (ret != NO_ERROR) {
-        TRACEF("Failed to map register window (0x%llx @ 0x%llx) Status = %d\n",
+        TRACEF("Failed to map register window (0x%" PRIx64 " @ 0x%" PRIx64 ") Status = %d\n",
                info->size, info->bus_addr, ret);
         goto finished;
     }
