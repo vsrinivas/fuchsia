@@ -8,11 +8,9 @@
 #define __PLATFORM_ACPI_H
 
 #include <magenta/compiler.h>
-
+#include <magenta/types.h>
 #include <acpica/acpi.h>
-
 #include <arch/x86/apic.h>
-#include <dev/pcie.h>
 
 __BEGIN_CDECLS
 

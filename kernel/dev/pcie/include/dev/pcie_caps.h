@@ -102,8 +102,8 @@ typedef struct pcie_cap_msi {
 #define PCIE_CAP_MSI_CTRL_GET_MMC(ctrl)         ((ctrl >> 1) & 0x7)
 #define PCIE_CAP_MSI_CTRL_GET_ENB(ctrl)         ((ctrl & 0x0001) != 0)
 
-#define PCIE_CAP_MSI_CTRL_SET_MME(val, ctrl)    ((ctrl & ~0x0070) | ((val & 0x7) << 4))
-#define PCIE_CAP_MSI_CTRL_SET_ENB(val, ctrl)    ((ctrl & ~0x0001) | (!!val))
+#define PCIE_CAP_MSI_CTRL_SET_MME(val, ctrl)    (uint16_t)((ctrl & ~0x0070) | ((val & 0x7) << 4))
+#define PCIE_CAP_MSI_CTRL_SET_ENB(val, ctrl)    (uint16_t)((ctrl & ~0x0001) | (!!val))
 
 /**
  * Structure definitions for capability PCIE_CAP_ID_MSIX and the tables it
@@ -176,7 +176,7 @@ typedef struct pcie_capabilities {
 #define PCS_CAPS_SLOT2_CHUNK_NDX  (5u)
 #define PCS_CAPS_CHUNK_COUNT      (6u)
 
-typedef enum {
+enum pcie_device_type_t : uint8_t {
     // Type 0 config header types
     PCIE_DEVTYPE_PCIE_ENDPOINT          = 0x0,
     PCIE_DEVTYPE_LEGACY_PCIE_ENDPOINT   = 0x1,
@@ -192,11 +192,11 @@ typedef enum {
 
     // Default value; used for device which have no pcie_capabilities extension.
     PCIE_DEVTYPE_UNKNOWN = 0xFF,
-} pcie_device_type_t;
+};
 
 // Section 7.8.2 Table 7-12
 #define PCS_CAPS_VERSION(val)     (((val) >> 0) &  0xF)
-#define PCS_CAPS_DEVTYPE(val)     (((val) >> 4) &  0xF)
+#define PCS_CAPS_DEVTYPE(val)     ((pcie_device_type_t)(((val) >> 4) &  0xF))
 #define PCS_CAPS_SLOT_IMPL(val)   (((val) >> 8) &  0x1)
 #define PCS_CAPS_IRQ_MSG_NUM(val) (((val) >> 9) & 0x1F)
 

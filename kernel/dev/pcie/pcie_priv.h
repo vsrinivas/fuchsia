@@ -15,8 +15,6 @@
 #include <list.h>
 #include <trace.h>
 
-__BEGIN_CDECLS
-
 /*
  * Some notes on locking and reference counting in the PCIe bus driver.
  *
@@ -259,14 +257,14 @@ pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
  *  pcie_topology.c
  *
  ******************************************************************************/
-typedef bool (*pcie_foreach_device_cbk)(struct pcie_device_state* dev, void* ctx, uint level);
+typedef bool (*pcie_foreach_device_cbk)(pcie_device_state_t* dev, void* ctx, uint level);
 
-void pcie_add_ref_device(struct pcie_device_state* dev);
-void pcie_release_device(struct pcie_device_state* dev);
-void pcie_link_device_to_upstream(struct pcie_device_state* dev, struct pcie_bridge_state* bridge);
-void pcie_unlink_device_from_upstream(struct pcie_device_state* dev);
-pcie_bridge_state_t* pcie_get_refed_upstream(struct pcie_device_state* dev);
-pcie_device_state_t* pcie_get_refed_downstream(struct pcie_bridge_state* bridge, uint ndx);
+void pcie_add_ref_device(pcie_device_state_t* dev);
+void pcie_release_device(pcie_device_state_t* dev);
+void pcie_link_device_to_upstream(pcie_device_state_t* dev, pcie_bridge_state_t* bridge);
+void pcie_unlink_device_from_upstream(pcie_device_state_t* dev);
+pcie_bridge_state_t* pcie_get_refed_upstream(pcie_device_state_t* dev);
+pcie_device_state_t* pcie_get_refed_downstream(pcie_bridge_state_t* bridge, uint ndx);
 void pcie_foreach_device(struct pcie_bus_driver_state* drv, pcie_foreach_device_cbk cbk, void* ctx);
 pcie_device_state_t* pcie_get_refed_device(struct pcie_bus_driver_state* drv,
                                            uint bus_id, uint dev_id, uint func_id);
@@ -277,7 +275,7 @@ pcie_device_state_t* pcie_get_refed_device(struct pcie_bus_driver_state* drv,
  *  pcie_caps.c
  *
  ******************************************************************************/
-status_t pcie_parse_capabilities(struct pcie_device_state* dev);
+status_t pcie_parse_capabilities(pcie_device_state_t* dev);
 
 /******************************************************************************
  *
@@ -290,7 +288,7 @@ status_t pcie_query_irq_mode_capabilities_internal(
         pcie_irq_mode_caps_t* out_caps);
 
 status_t pcie_get_irq_mode_internal(
-        const struct pcie_device_state* dev,
+        const pcie_device_state_t* dev,
         pcie_irq_mode_info_t* out_info);
 
 status_t pcie_set_irq_mode_internal(
@@ -312,5 +310,3 @@ status_t pcie_mask_unmask_irq_internal(
 status_t pcie_init_device_irq_state(pcie_device_state_t* dev, pcie_bridge_state_t* upstream);
 status_t pcie_init_irqs(pcie_bus_driver_state_t* drv, const pcie_init_info_t* init_info);
 void     pcie_shutdown_irqs(pcie_bus_driver_state_t* drv);
-
-__END_CDECLS

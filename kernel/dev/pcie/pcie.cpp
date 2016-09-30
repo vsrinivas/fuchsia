@@ -16,6 +16,7 @@
 #include <kernel/vm.h>
 #include <list.h>
 #include <lk/init.h>
+#include <mxtl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
@@ -104,7 +105,7 @@ pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
             if (cfg_phys)
                 *cfg_phys = window->ecam.io_range.bus_addr + offset;
 
-            return (pcie_config_t*)(window->vaddr + offset);
+            return reinterpret_cast<pcie_config_t*>(static_cast<uint8_t*>(window->vaddr) + offset);
         }
     }
 
@@ -259,9 +260,10 @@ static status_t pcie_scan_init_device(pcie_device_state_t*     dev,
     uint64_t       cfg_phys;
     pcie_config_t* cfg = pcie_get_config(bus_drv, &cfg_phys, bus_id, dev_id, func_id);
     DEBUG_ASSERT(cfg);
+    DEBUG_ASSERT(cfg_phys <= mxtl::numeric_limits<paddr_t>::max());
 
     dev->cfg        = cfg;
-    dev->cfg_phys   = cfg_phys;
+    dev->cfg_phys   = static_cast<paddr_t>(cfg_phys);
     dev->bus_drv    = bus_drv;
     dev->vendor_id  = pcie_read16(&cfg->base.vendor_id);
     dev->device_id  = pcie_read16(&cfg->base.device_id);
@@ -362,7 +364,7 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
         }
 
         /* Allocate and initialize our bridge structure */
-        pcie_bridge_state_t* bridge = calloc(1, sizeof(*bridge));
+        pcie_bridge_state_t* bridge = static_cast<pcie_bridge_state_t*>(calloc(1, sizeof(*bridge)));
         if (!bridge) {
             TRACEF("Failed to allocate bridge node for %02x:%02x.%01x during bus scan.\n",
                     bus_id, dev_id, func_id);
@@ -380,7 +382,7 @@ static void pcie_scan_function(pcie_bridge_state_t* upstream_bridge,
 
         // TODO(johngro) : The local "dev" pointer owns this reference.  Clean
         // this up using smart pointers when we switch to C++
-        dev = calloc(1, sizeof(*dev));
+        dev = static_cast<pcie_device_state_t*>(calloc(1, sizeof(*dev)));
         if (!dev) {
             TRACEF("Failed to allocate device node for %02x:%02x.%01x during bus scan.\n",
                     bus_id, dev_id, func_id);
@@ -491,7 +493,7 @@ void pcie_unplug_device(pcie_device_state_t* dev) {
     /* If this is a bridge, recursively unplug its children */
     pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
-        for (size_t i = 0; i < countof(bridge->downstream); ++i) {
+        for (uint i = 0; i < countof(bridge->downstream); ++i) {
             pcie_device_state_t* downstream_device = pcie_get_refed_downstream(bridge, i);
 
             if (downstream_device) {
@@ -633,7 +635,8 @@ static status_t pcie_allocate_bars(pcie_device_state_t* dev) {
     }
 
     /* If this is a bridge, recurse and keep allocating */
-    pcie_bridge_state_t* bridge = pcie_downcast_to_bridge(dev);
+    pcie_bridge_state_t* bridge;
+    bridge = pcie_downcast_to_bridge(dev);
     if (bridge) {
         for (size_t i = 0; i < countof(bridge->downstream); ++i) {
             if (bridge->downstream[i]) {
@@ -649,7 +652,7 @@ finished:
     return ret;
 }
 
-static bool pcie_allocate_device_bars_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_allocate_device_bars_helper(pcie_device_state_t* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
     pcie_allocate_bars(dev);
     return true;
@@ -689,8 +692,12 @@ finished:
     return ret;
 }
 
-static bool pcie_claim_devices_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_claim_devices_helper(pcie_device_state_t* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
+
+    void* driver_ctx;
+    const pcie_driver_registration_t* driver;
+    status_t res;
 
     /* Our device is currently ref'ed, so we know it will not disappear out from
      * under us.  While holding the device's start/claim lock, iterate over our
@@ -708,8 +715,7 @@ static bool pcie_claim_devices_helper(struct pcie_device_state* dev, void* ctx, 
 
     /* Go over our list of builtin drivers and see if any are interested in this
      * device. */
-    void* driver_ctx = NULL;
-    const pcie_driver_registration_t* driver;
+    driver_ctx = NULL;
 
     for (driver = __start_pcie_builtin_drivers; driver < __stop_pcie_builtin_drivers; ++driver) {
         const pcie_driver_fn_table_t* fn_table = driver->fn_table;
@@ -729,7 +735,7 @@ static bool pcie_claim_devices_helper(struct pcie_device_state* dev, void* ctx, 
      * may have become unplugged.  If so, give the device context back to the
      * driver using its release method (if it has one).
      */
-    status_t res = pcie_claim_device(dev, driver, driver_ctx);
+    res = pcie_claim_device(dev, driver, driver_ctx);
     if (res != NO_ERROR) {
         if (driver->fn_table->pcie_release_fn)
             driver->fn_table->pcie_release_fn(driver_ctx);
@@ -801,7 +807,7 @@ static status_t pcie_start_device(pcie_device_state_t* dev) {
     return ret;
 }
 
-static bool pcie_start_devices_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_start_devices_helper(pcie_device_state_t* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
 
     /* Don't let the started/claimed status of the device change for the
@@ -822,7 +828,7 @@ typedef struct pcie_get_nth_device_state {
     pcie_device_state_t* ret;
 } pcie_get_nth_device_state_t;
 
-static bool pcie_get_nth_device_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_get_nth_device_helper(pcie_device_state_t* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev && ctx);
 
     pcie_get_nth_device_state_t* state = (pcie_get_nth_device_state_t*)ctx;
@@ -881,6 +887,8 @@ finished:
  */
 void pcie_shutdown_device(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev);
+    const pcie_driver_fn_table_t* fn;
+
     MUTEX_ACQUIRE(dev, start_claim_lock);
 
     /* If the device is not claimed, then there is nothing to do */
@@ -892,7 +900,7 @@ void pcie_shutdown_device(pcie_device_state_t* dev) {
         goto finished;
     }
 
-    const pcie_driver_fn_table_t* fn = dev->driver->fn_table;
+    fn = dev->driver->fn_table;
 
     LTRACEF("Shutting down PCI device %02x:%02x.%x (%s)...\n",
             dev->bus_id, dev->dev_id, dev->func_id,
@@ -1102,7 +1110,8 @@ void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
 
         /* Allocate the host bridge, initialize the structure and start the scan. */
         pcie_bridge_state_t* root;
-        root = bus_drv->host_bridge = calloc(1, sizeof(*bus_drv->host_bridge));
+        root = bus_drv->host_bridge =
+            static_cast<pcie_bridge_state_t*>(calloc(1, sizeof(*bus_drv->host_bridge)));
         if (!root) {
             TRACEF("Failed to allocate bridge node for 00:00.0 during bus scan.\n");
             return;
@@ -1301,6 +1310,8 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
         snprintf(name_buf, sizeof(name_buf), "pcie_cfg%zu", i);
         name_buf[sizeof(name_buf) - 1] = 0;
 
+        DEBUG_ASSERT(ecam->io_range.bus_addr <= mxtl::numeric_limits<paddr_t>::max());
+
         status = vmm_alloc_physical(
                 bus_drv->aspace,
                 name_buf,
@@ -1308,7 +1319,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
                 &window->vaddr,
                 PAGE_SIZE_SHIFT,
                 0 /* min alloc gap */,
-                ecam->io_range.bus_addr,
+                static_cast<paddr_t>(ecam->io_range.bus_addr),
                 0 /* vmm flags */,
                 ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
                     ARCH_MMU_FLAG_PERM_WRITE);
@@ -1330,7 +1341,7 @@ bailout:
     return status;
 }
 
-static bool pcie_shutdown_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_shutdown_helper(pcie_device_state_t* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev);
     pcie_shutdown_device(dev);
     return true;
@@ -1379,12 +1390,13 @@ void pcie_modify_cmd_internal(pcie_device_state_t* dev, uint16_t clr_bits, uint1
      * MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate
      * the legacy IRQ enable/disable bit.  Just ignore them if they try to
      * manipulate the bit via the modify cmd API. */
-    clr_bits &= ~PCIE_CFG_COMMAND_INT_DISABLE;
-    set_bits &= ~PCIE_CFG_COMMAND_INT_DISABLE;
+    clr_bits = static_cast<uint16_t>(clr_bits & ~PCIE_CFG_COMMAND_INT_DISABLE);
+    set_bits = static_cast<uint16_t>(set_bits & ~PCIE_CFG_COMMAND_INT_DISABLE);
 
     DEBUG_ASSERT(bus_drv && cfg);
     spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
-    pcie_write16(&cfg->base.command, (pcie_read16(&cfg->base.command) & ~clr_bits) | set_bits);
+    pcie_write16(&cfg->base.command,
+                 static_cast<uint16_t>((pcie_read16(&cfg->base.command) & ~clr_bits) | set_bits));
     spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
 }
 

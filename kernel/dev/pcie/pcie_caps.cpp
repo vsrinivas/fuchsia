@@ -15,10 +15,14 @@
 
 #define LOCAL_TRACE 0
 
-typedef struct pcie_caps_parse_table_entry {
-    status_t (*parse)(pcie_device_state_t* dev, void* hdr, uint version, uint space_left);
+struct pcie_caps_parse_table_entry_t {
+    using ParseFn = status_t (*)(pcie_device_state_t* dev, void* hdr,
+                                 uint version, uint space_left);
+
+    constexpr pcie_caps_parse_table_entry_t(ParseFn pfn, uint cid) : parse(pfn), cap_id(cid) { }
+    ParseFn  parse;
     uint     cap_id;
-} pcie_caps_parse_table_entry_t;
+};
 
 typedef struct pcie_caps_fetch_hdr_params {
     void* hdr;
@@ -36,7 +40,7 @@ typedef struct pcie_do_parse_caps_params {
     const uint                           max_possible_caps;
 } pcie_do_parse_caps_params_t;
 
-static bool quirk_should_force_pcie(struct pcie_device_state* dev) {
+static bool quirk_should_force_pcie(pcie_device_state_t* dev) {
     DEBUG_ASSERT(dev);
 
     static const struct {
@@ -59,10 +63,16 @@ static bool quirk_should_force_pcie(struct pcie_device_state* dev) {
  * PCI Express Base Specification 1.1  Section 7.8 (version 1)
  * PCI Express Base Specification 3.1a Section 7.8 (version 2)
  */
-static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
-                                            void*                     hdr,
-                                            uint                      capability_version,
-                                            uint                      space_left) {
+static status_t pcie_parse_pci_express_caps(pcie_device_state_t* dev,
+                                            void*                hdr,
+                                            uint                 capability_version,
+                                            uint                 space_left) {
+    pcie_capabilities_t* ecam;
+    uint16_t             caps;
+    uint                 version;
+    pcie_device_type_t   devtype;
+    uint                 min_size;
+
     static_assert(countof(dev->pcie_caps.chunks) == PCS_CAPS_CHUNK_COUNT, "");
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(hdr);
@@ -78,7 +88,7 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
     }
 
     /* Min size sanity check */
-    uint min_size = PCS_CAPS_MIN_SIZE;
+    min_size = PCS_CAPS_MIN_SIZE;
     if (min_size > space_left) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
                "Express capability structure.  Structure must be at least %u "
@@ -92,10 +102,10 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
     /* Extract the the version and device type and use it to determine the real
      * minimum size of the structure.  Sanity check the device/port type in the
      * process */
-    pcie_capabilities_t* ecam = (pcie_capabilities_t*)hdr;
-    uint16_t             caps = pcie_read16(&ecam->hdr.caps);
-    uint                 version = PCS_CAPS_VERSION(caps);
-    pcie_device_type_t   devtype = PCS_CAPS_DEVTYPE(caps);
+    ecam    = (pcie_capabilities_t*)hdr;
+    caps    = pcie_read16(&ecam->hdr.caps);
+    version = PCS_CAPS_VERSION(caps);
+    devtype = PCS_CAPS_DEVTYPE(caps);
 
     /* Sanity check the device/port type */
     switch (devtype) {
@@ -226,8 +236,10 @@ static status_t pcie_parse_pci_express_caps(struct pcie_device_state* dev,
 
     /* Check device capabilities to see if we support function level reset or
      * not */
-    uint32_t devcaps = pcie_read32(&dev->pcie_caps.chunks[PCS_CAPS_DEV_CHUNK_NDX]->caps);
-    bool has_flr = PCS_DEV_CAPS_FUNC_LEVEL_RESET(devcaps) != 0;
+    uint32_t devcaps;
+    bool has_flr;
+    devcaps = pcie_read32(&dev->pcie_caps.chunks[PCS_CAPS_DEV_CHUNK_NDX]->caps);
+    has_flr = PCS_DEV_CAPS_FUNC_LEVEL_RESET(devcaps) != 0;
 
     /* Success, stash the rest of our results and we are done */
     dev->pcie_caps.ecam    = &ecam->hdr;
@@ -331,10 +343,10 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
 /*
  * Advanced Capabilities for Conventional PCI ECN
  */
-static status_t pcie_parse_pci_advanced_features(struct pcie_device_state* dev,
-                                                 void*                     hdr,
-                                                 uint                      version,
-                                                 uint                      space_left) {
+static status_t pcie_parse_pci_advanced_features(pcie_device_state_t* dev,
+                                                 void*                hdr,
+                                                 uint                 version,
+                                                 uint                 space_left) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(hdr);
     DEBUG_ASSERT(!version);  // Standard capabilities do not have versions
@@ -404,8 +416,8 @@ static status_t pcie_fetch_standard_cap_hdr(pcie_device_state_t*          dev,
 
         /* Start of the standard config list comes from the capabilities ptr
          * member of the config header */
-        cptr = pcie_read8(&dev->cfg->base.capabilities_ptr)
-             & ~(PCIE_CAPABILITY_ALIGNMENT - 1);
+        cptr = static_cast<uint8_t>(pcie_read8(&dev->cfg->base.capabilities_ptr)
+                                    & ~(PCIE_CAPABILITY_ALIGNMENT - 1));
     } else {
         /* Extract the next header pointer from the previous header */
         cptr = pcie_cap_hdr_get_next_ptr(pcie_read16((pcie_cap_hdr_t*)prev_hdr));
@@ -570,7 +582,7 @@ static status_t pcie_do_parse_caps(pcie_device_state_t* dev,
     return res;
 }
 
-#define PTE(_cap_id, _parse_fn) { .cap_id = _cap_id, .parse = _parse_fn }
+#define PTE(_cap_id, _parse_fn) pcie_caps_parse_table_entry_t(_parse_fn, _cap_id)
 static const pcie_caps_parse_table_entry_t PCIE_STANDARD_CAPS_PARSE_TABLE[] = {
     PTE(PCIE_CAP_ID_NULL,                     NULL),
     PTE(PCIE_CAP_ID_PCI_PWR_MGMT,             NULL),
@@ -647,7 +659,7 @@ static const pcie_do_parse_caps_params_t PCIE_EXTENDED_PARSE_CAPS_PARAMS = {
     .max_possible_caps = PCIE_MAX_EXT_CAPABILITIES,
 };
 
-status_t pcie_parse_capabilities(struct pcie_device_state* dev) {
+status_t pcie_parse_capabilities(pcie_device_state_t* dev) {
     status_t ret = pcie_do_parse_caps(dev, &PCIE_STANDARD_PARSE_CAPS_PARAMS);
 
     if (NO_ERROR != ret)

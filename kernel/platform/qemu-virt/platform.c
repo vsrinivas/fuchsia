@@ -13,7 +13,7 @@
 #include <dev/hw_rng.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
-#include <dev/pcie.h>
+#include <dev/pcie_platform.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/uart.h>
 #include <lk/init.h>
@@ -40,17 +40,19 @@ static const pcie_ecam_range_t PCIE_ECAM_WINDOWS[] = {
 
 static const paddr_t GICV2M_REG_FRAMES[] = { GICV2M_FRAME_PHYS };
 
-static status_t qemu_pcie_irq_swizzle(const pcie_device_state_t* dev,
+static status_t qemu_pcie_irq_swizzle(uint bus_id,
+                                      uint dev_id,
+                                      uint fund_id,
                                       uint pin,
                                       uint *irq)
 {
-    DEBUG_ASSERT(dev && irq);
+    DEBUG_ASSERT(irq);
     DEBUG_ASSERT(pin < PCIE_MAX_LEGACY_IRQ_PINS);
 
-    if (dev->bus_id != 0)
+    if (bus_id != 0)
         return ERR_NOT_FOUND;
 
-    *irq = PCIE_INT_BASE + ((pin + dev->dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
+    *irq = PCIE_INT_BASE + ((pin + dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
     return NO_ERROR;
 }
 

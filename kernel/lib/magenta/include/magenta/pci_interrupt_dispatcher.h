@@ -25,7 +25,7 @@ public:
     status_t InterruptComplete() final;
 
 private:
-    static pcie_irq_handler_retval_t IrqThunk(struct pcie_device_state* dev,
+    static pcie_irq_handler_retval_t IrqThunk(pcie_device_state_t* dev,
                                               uint irq_id,
                                               void* ctx);
     PciInterruptDispatcher(uint32_t irq_id, bool maskable)

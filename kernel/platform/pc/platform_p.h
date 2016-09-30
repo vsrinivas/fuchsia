@@ -8,7 +8,7 @@
 #pragma once
 
 #include <sys/types.h>
-#include <dev/pcie_irqs.h>
+#include <dev/pcie_platform.h>
 #include <lib/cbuf.h>
 #include <magenta/compiler.h>
 

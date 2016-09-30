@@ -14,12 +14,11 @@
 #include <dev/pcie_caps.h>
 #include <dev/pcie_constants.h>
 #include <dev/pcie_irqs.h>
+#include <dev/pcie_platform.h>
 #include <endian.h>
 #include <err.h>
 #include <kernel/mutex.h>
 #include <sys/types.h>
-
-__BEGIN_CDECLS
 
 typedef struct pcie_config {
     pci_config_t base;
@@ -28,17 +27,18 @@ typedef struct pcie_config {
 } __PACKED pcie_config_t;
 
 /* Fwd decls */
-struct pcie_bridge_state;
 struct pcie_bus_driver_state;
-struct pcie_device_state;
 struct pcie_driver_registration;
 struct pcie_legacy_irq_handler_state;
+
+struct pcie_bridge_state_t;
+struct pcie_device_state_t;
 
 /*
  * struct used to fetch information about a configured base address register
  */
 typedef struct pcie_bar_info {
-    struct pcie_device_state* dev;
+    pcie_device_state_t* dev;
 
     uint64_t size;
     uint64_t bus_addr;
@@ -48,104 +48,6 @@ typedef struct pcie_bar_info {
     uint     first_bar_reg;
     bool     is_allocated;
 } pcie_bar_info_t;
-
-/**
- * A struct used to describe a sub-range of the address space of one of the
- * system buses.  Typically, this is a range of the main system bus, but it
- * might also be the I/O space bus on an architecture like x86/x64
- *
- * @param bus_addr The base address of the I/O range on the appropriate bus.
- * For MMIO or memory mapped config, this will be an address on the main system
- * bus.  For PIO regions, this may also be a an address on the main system bus
- * for architectures which do not have a sepearate I/O bus (ARM, MIPS, etc..).
- * For systems which do have a separate I/O bus (x86/x64) this should be the
- * base address in I/O space.
- *
- * @param size The size of the range in bytes.
- */
-typedef struct pcie_io_range {
-    uint64_t bus_addr;
-    size_t size;
-} pcie_io_range_t;
-
-/**
- * A struct used to describe a range of the Extended Configuration Access
- * Mechanism (ECAM) region.
- *
- * @param io_range The MMIO range which describes the region of the main system
- * bus where this slice of the ECAM resides.
- * @param bus_start The ID of the first bus covered by this slice of ECAM.
- * @param bus_end The ID of the last bus covered by this slice of ECAM.
- */
-typedef struct pcie_ecam_range {
-    pcie_io_range_t io_range;
-    uint8_t bus_start;
-    uint8_t bus_end;
-} pcie_ecam_range_t;
-
-/**
- * A struct used to describe the resources to be used by the PCIe subsystem for
- * discovering and configuring PCIe controllers, bridges and devices.
- */
-typedef struct pcie_init_info {
-    /**
-     * A pointer to an array of pcie_ecam_range_t structures which describe the
-     * ECAM regions available to the subsytem.  The windows must...
-     * -# Be listed in ascending bus_start order.
-     * -# Contain a range which describes Bus #0
-     * -# Consist of non-overlapping [bus_start, bus_end] ranges.
-     * -# Have a sufficiently sized IO range to contain the configuration
-     *    structures for the given bus range.  Each bus requries 4KB * 8
-     *    functions * 32 devices worth of config space.
-     */
-    const pcie_ecam_range_t* ecam_windows;
-
-    /** The number of elements in the ecam_windows array. */
-    size_t ecam_window_count;
-
-    /**
-     * The low-memory region of MMIO space.  The physical addresses for the
-     * range must exist entirely below the 4GB mark on the system bus.  32-bit
-     * MMIO regions described by device BARs must be allocated from this window.
-     */
-    pcie_io_range_t mmio_window_lo;
-
-    /**
-     * The high-memory region of MMIO space.  This range is optional; set
-     * mmio_window_hi.size to zero if there is no high memory range on this
-     * system.  64-bit MMIO regions described by device BARs will be
-     * preferentally allocated from this window.
-     */
-    pcie_io_range_t mmio_window_hi;
-
-    /**
-     * The PIO space.  On x86/x64 systems, this will describe the regions of the
-     * 16-bit IO address space which are availavle to be allocated to PIO BARs
-     * for PCI devices.  On other systems, this describes the physical address
-     * space that the system reserves for producing PIO cycles on PCI.  Note;
-     * this region must exist in low memory (below the 4GB mark)
-     */
-    pcie_io_range_t pio_window;
-
-    /** Platform-specific legacy IRQ remapping.  @see platform_legacy_irq_swizzle_t */
-    platform_legacy_irq_swizzle_t legacy_irq_swizzle;
-
-    /**
-     * Routines for allocating and freeing blocks of IRQs for use with MSI or
-     * MSI-X, and for registering handlers for IRQs within blocks.  May be NULL
-     * if the platform's interrupts controller is not compatible with MSI.
-     * @note Either all of these routines must be provided, or none of them.
-     */
-    platform_alloc_msi_block_t      alloc_msi_block;
-    platform_free_msi_block_t       free_msi_block;
-    platform_register_msi_handler_t register_msi_handler;
-
-    /**
-     * Routine for masking/unmasking MSI IRQ handlers.  May be NULL if the
-     * platform is incapable of masking individual MSI handlers.
-     */
-    platform_mask_unmask_msi_t mask_unmask_msi;
-} pcie_init_info_t;
 
 /* Function table registered by a device driver.  Method requirements and device
  * lifecycle are described below.
@@ -188,9 +90,9 @@ typedef struct pcie_init_info {
  *   internal state associated with an attempt to claim a device.
  */
 typedef struct pcie_driver_fn_table {
-    void*               (*pcie_probe_fn)   (struct pcie_device_state* pci_device);
-    status_t            (*pcie_startup_fn) (struct pcie_device_state* pci_device);
-    void                (*pcie_shutdown_fn)(struct pcie_device_state* pci_device);
+    void*               (*pcie_probe_fn)   (pcie_device_state_t* pci_device);
+    status_t            (*pcie_startup_fn) (pcie_device_state_t* pci_device);
+    void                (*pcie_shutdown_fn)(pcie_device_state_t* pci_device);
     void                (*pcie_release_fn) (void* ctx);
 } pcie_driver_fn_table_t;
 
@@ -206,10 +108,10 @@ typedef struct pcie_driver_registration {
  * driver may claim a device by returning a pointer to a driver-managed
  * pcie_device_state struct, with the driver owned fields filled out.
  */
-typedef struct pcie_device_state {
+struct pcie_device_state_t {
     pcie_config_t*                cfg;       // Pointer to the memory mapped ECAM (kernel vaddr)
     paddr_t                       cfg_phys;  // The physical address of the device's ECAM
-    struct pcie_bridge_state*     upstream;  // The upstream bridge, or NULL if we are root
+    pcie_bridge_state_t*          upstream;  // The upstream bridge, or NULL if we are root
     struct pcie_bus_driver_state* bus_drv;   // Pointer to our bus driver state.
     bool                          is_bridge; // True if this device is also a bridge
     uint16_t                      vendor_id; // The device's vendor ID, as read from config
@@ -286,9 +188,9 @@ typedef struct pcie_device_state {
         struct { } msi_x;
     } irq;
 
-} pcie_device_state_t;
+};
 
-typedef struct pcie_bridge_state {
+struct pcie_bridge_state_t {
     pcie_device_state_t dev;             // Common device state for this bridge.
     uint                managed_bus_id;  // The ID of the downstream bus which this bridge manages.
 
@@ -302,7 +204,7 @@ typedef struct pcie_bridge_state {
      * to C++ and Magenta.
      */
     pcie_device_state_t* downstream[PCIE_MAX_FUNCTIONS_PER_BUS];
-} pcie_bridge_state_t;
+};
 
 /*
  * Endian independent PCIe register access helpers.
@@ -323,22 +225,6 @@ static inline pcie_bridge_state_t* pcie_downcast_to_bridge(const pcie_device_sta
     DEBUG_ASSERT(device);
     return device->is_bridge ? containerof(device, pcie_bridge_state_t, dev) : NULL;
 }
-
-/*
- * Init the PCIe subsystem
- *
- * @param init_info A pointer to the information describing the resources to be
- * used by the bus driver to access the PCIe subsystem on this platform.  See \p
- * struct pcie_init_info for more details.
- *
- * @return NO_ERROR if everything goes well.
- */
-status_t pcie_init(const pcie_init_info_t* init_info);
-
-/*
- * Shutdown the PCIe subsystem
- */
-void pcie_shutdown(void);
 
 /**
  * Fetches a ref'ed pointer to the Nth PCIe device currently in the system.
@@ -477,9 +363,3 @@ static inline const char* pcie_driver_name(const pcie_driver_registration_t* dri
  * Temporary hack; do not use!
  */
 void pcie_rescan_bus(void);
-
-/* Returns a pointer to reference init information for the platform.
- * Any NULL fields may be overriden. */
-void platform_pcie_init_info(pcie_init_info_t *out);
-
-__END_CDECLS

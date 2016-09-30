@@ -10,14 +10,13 @@
 
 #include <assert.h>
 #include <dev/interrupt.h>
+#include <dev/pcie_platform.h>
 #include <err.h>
 #include <kernel/spinlock.h>
 #include <sys/types.h>
 
-__BEGIN_CDECLS
-
 /* Fwd decls */
-struct pcie_device_state;
+struct pcie_device_state_t;
 
 /**
  * Enumeration which defines the IRQ modes a PCIe device may be operating in.
@@ -90,25 +89,6 @@ typedef enum pcie_irq_handler_retval {
 } pcie_irq_handler_retval_t;
 
 /**
- * A structure which holds the state of a block of IRQs allocated by the
- * platform to be used for delivering MSI or MSI-X interrupts.
- */
-typedef struct pcie_msi_block {
-    void*    platform_ctx; /** Allocation context owned by the platform */
-    uint64_t tgt_addr;     /** The target write transaction physical address */
-    bool     allocated;    /** Whether or not this block has been allocated */
-    uint     base_irq_id;  /** The first IRQ id in the allocated block */
-    uint     num_irq;      /** The number of irqs in the allocated block */
-
-    /**
-     * The data which the device should write when triggering an IRQ.  Note,
-     * only the lower 16 bits are used when the block has been allocated for MSI
-     * instead of MSI-X
-     */
-    uint32_t tgt_data;
-} pcie_msi_block_t;
-
-/**
  * A structure used to hold the details about the currently configured IRQ mode
  * of a device.  Used in conjunction with pcie_get_irq_mode.
  */
@@ -132,91 +112,20 @@ typedef struct pcie_irq_mode_info {
  * @param irq_id The 0-indexed ID of the IRQ which occurred.
  * @param ctx The context pointer registered when registering the handler.
  */
-typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(struct pcie_device_state* dev,
+typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(pcie_device_state_t* dev,
                                                            uint irq_id,
                                                            void* ctx);
-
-/**
- * Callback definition used for platform-specific legacy IRQ remapping.
- *
- * @param dev A pointer to the pcie device/bridge to swizzle for.
- * @param pin The pin we want to swizzle
- * @param irq An output pointer for what IRQ this pin goes to
- *
- * @return NO_ERROR if we successfully swizzled
- * @return ERR_NOT_FOUND if we did not know how to swizzle this pin
- */
-typedef status_t (*platform_legacy_irq_swizzle_t)(const struct pcie_device_state* dev,
-                                                  uint pin,
-                                                  uint *irq);
-
-/**
- * Callback definition used for platform allocation of blocks of MSI and MSI-X
- * compatible IRQ targets.
- *
- * @param requested_irqs The total number of irqs being requested.
- * @param can_target_64bit True if the target address of the MSI block can
- *        be located past the 4GB boundary.  False if the target address must be
- *        in low memory.
- * @param is_msix True if this request is for an MSI-X compatible block.  False
- *        for plain old MSI.
- * @param out_block A pointer to the allocation bookkeeping to be filled out
- *        upon successful allocation of the reqested block of IRQs.
- *
- * @return A status code indicating the success or failure of the operation.
- */
-typedef status_t (*platform_alloc_msi_block_t)(uint requested_irqs,
-                                               bool can_target_64bit,
-                                               bool is_msix,
-                                               pcie_msi_block_t* out_block);
-
-/**
- * Callback definition used by the bus driver to return a block of MSI IRQs
- * previously allocated with a call to a platform_alloc_msi_block_t
- * implementation to the platform pool.
- *
- * @param block A pointer to the block to be returned.
- */
-typedef void (*platform_free_msi_block_t)(pcie_msi_block_t* block);
-
-/**
- * Callback definition used for platform registration of MSI handlers.
- *
- * @param block A pointer to a block of MSIs allocated using a platform supplied
- *        platform_alloc_msi_block_t callback.
- * @param msi_id The ID (indexed from 0) with the block of MSIs to register a
- *        handler for.
- * @param handler A pointer to the handler to register, or NULL to unregister.
- * @param ctx A context pointer to be supplied when the handler is invoked.
- */
-typedef void (*platform_register_msi_handler_t)(const pcie_msi_block_t* block,
-                                                uint                    msi_id,
-                                                int_handler             handler,
-                                                void*                   ctx);
-
-/**
- * Callback definition used for platform masking/unmaskingof MSI handlers.
- *
- * @param block A pointer to a block of MSIs allocated using a platform supplied
- *        platform_alloc_msi_block_t callback.
- * @param msi_id The ID (indexed from 0) with the block of MSIs to mask or
- *        unmask.
- * @param mask If true, mask the handler.  Otherwise, unmask it.
- */
-typedef void (*platform_mask_unmask_msi_t)(const pcie_msi_block_t* block,
-                                           uint                    msi_id,
-                                           bool                    mask);
 
 /**
  * Structure used internally to hold the state of a registered handler.
  */
 typedef struct pcie_irq_handler_state {
-    spin_lock_t               lock;
-    pcie_irq_handler_fn_t     handler;
-    void*                     ctx;
-    struct pcie_device_state* dev;
-    uint                      pci_irq_id;
-    bool                      masked;
+    spin_lock_t           lock;
+    pcie_irq_handler_fn_t handler;
+    void*                 ctx;
+    pcie_device_state_t*  dev;
+    uint                  pci_irq_id;
+    bool                  masked;
 } pcie_irq_handler_state_t;
 
 /**
@@ -230,7 +139,7 @@ typedef struct pcie_irq_handler_state {
  *
  * @return A status_t indicating the success or failure of the operation.
  */
-status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
+status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
                                           pcie_irq_mode_t mode,
                                           pcie_irq_mode_caps_t* out_caps);
 
@@ -248,7 +157,7 @@ status_t pcie_query_irq_mode_capabilities(const struct pcie_device_state* dev,
  * ++ ERR_UNAVAILABLE
  *    The device has become unplugged and is waiting to be released.
  */
-status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
+status_t pcie_get_irq_mode(const pcie_device_state_t* dev,
                            pcie_irq_mode_info_t* out_info);
 
 /**
@@ -286,16 +195,16 @@ status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
  *    The system is unable to allocate sufficient system IRQs to satisfy the
  *    number of IRQs and exclusivity mode requested the device driver.
  */
-status_t pcie_set_irq_mode(struct pcie_device_state* dev,
-                           pcie_irq_mode_t           mode,
-                           uint                      requested_irqs);
+status_t pcie_set_irq_mode(pcie_device_state_t* dev,
+                           pcie_irq_mode_t      mode,
+                           uint                 requested_irqs);
 
 /**
  * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
  *
  * Convenience function.  @see pcie_set_irq_mode for details.
  */
-static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
+static inline void pcie_set_irq_mode_disabled(pcie_device_state_t* dev) {
     /* It should be impossible to fail a transition to the DISABLED state,
      * regardless of the state of the system.  ASSERT this in debug builds */
     __UNUSED status_t result;
@@ -325,10 +234,10 @@ static inline void pcie_set_irq_mode_disabled(struct pcie_device_state* dev) {
  * ++ ERR_INVALID_ARGS
  *    The irq_id parameter is out of range for the currently configured mode.
  */
-status_t pcie_register_irq_handler(struct pcie_device_state* dev,
-                                   uint                      irq_id,
-                                   pcie_irq_handler_fn_t     handler,
-                                   void*                     ctx);
+status_t pcie_register_irq_handler(pcie_device_state_t*  dev,
+                                   uint                  irq_id,
+                                   pcie_irq_handler_fn_t handler,
+                                   void*                 ctx);
 
 /**
  * Mask or unmask the specified IRQ for the given device.
@@ -351,16 +260,16 @@ status_t pcie_register_irq_handler(struct pcie_device_state* dev,
  *    The device is operating in MSI mode, but neither the PCI device nor the
  *    platform interrupt controller support masking the MSI vector.
  */
-status_t pcie_mask_unmask_irq(struct pcie_device_state* dev,
-                              uint                      irq_id,
-                              bool                      mask);
+status_t pcie_mask_unmask_irq(pcie_device_state_t* dev,
+                              uint                 irq_id,
+                              bool                 mask);
 
 /**
  * Mask the specified IRQ for the given device.
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_mask_irq(struct pcie_device_state* dev, uint irq_id) {
+static inline status_t pcie_mask_irq(pcie_device_state_t* dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, true);
 }
 
@@ -369,8 +278,6 @@ static inline status_t pcie_mask_irq(struct pcie_device_state* dev, uint irq_id)
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_unmask_irq(struct pcie_device_state* dev, uint irq_id) {
+static inline status_t pcie_unmask_irq(pcie_device_state_t* dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, false);
 }
-
-__END_CDECLS

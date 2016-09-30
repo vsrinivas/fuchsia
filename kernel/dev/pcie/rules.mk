@@ -9,10 +9,10 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/debug.c \
-	$(LOCAL_DIR)/pcie.c \
-	$(LOCAL_DIR)/pcie_caps.c \
-	$(LOCAL_DIR)/pcie_irqs.c \
-	$(LOCAL_DIR)/pcie_topology.c
+	$(LOCAL_DIR)/debug.cpp \
+	$(LOCAL_DIR)/pcie.cpp \
+	$(LOCAL_DIR)/pcie_caps.cpp \
+	$(LOCAL_DIR)/pcie_irqs.cpp \
+	$(LOCAL_DIR)/pcie_topology.cpp
 
 include make/module.mk

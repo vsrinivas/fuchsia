@@ -28,7 +28,7 @@
 #include "platform_p.h"
 
 #ifdef WITH_DEV_PCIE
-#include <dev/pcie_irqs.h>
+#include <dev/pcie_platform.h>
 #define MAX_IRQ_BLOCK_SIZE PCIE_MAX_MSI_IRQS
 #else
 #define MAX_IRQ_BLOCK_SIZE (1u)

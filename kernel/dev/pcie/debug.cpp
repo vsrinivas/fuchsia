@@ -19,7 +19,7 @@
 /* Class code/Subclass code definitions taken from
  * http://wiki.osdev.org/Pci#Class_Codes */
 typedef struct {
-    uint8_t class;
+    uint8_t class_code;
     uint8_t subclass;
     uint8_t prof_if_start;
     uint8_t prof_if_end;
@@ -41,7 +41,7 @@ typedef struct lspci_params {
 #define WILDCARD_ID (0xFFFFFFFF)
 
 #define LUT_ENTRY(_class, _subclass, _pif_start, _pif_end, _desc) { \
-    .class         = _class,                                        \
+    .class_code    = _class,                                        \
     .subclass      = _subclass,                                     \
     .prof_if_start = _pif_start,                                    \
     .prof_if_end   = _pif_end,                                      \
@@ -247,7 +247,7 @@ static const char* pci_device_type(const pcie_device_state_t* dev)
     for (size_t i = 0; i < countof(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
-        if ((dev->class_id == entry->class)         &&
+        if ((dev->class_id == entry->class_code)    &&
             (dev->subclass == entry->subclass)      &&
             (dev->prog_if  >= entry->prof_if_start) &&
             (dev->prog_if  <= entry->prof_if_end))
@@ -379,6 +379,7 @@ static bool dump_pcie_device(pcie_device_state_t* dev, void* ctx, uint level)
 {
     DEBUG_ASSERT(dev && ctx);
     lspci_params_t* params = (lspci_params_t*)ctx;
+    bool match;
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
@@ -388,9 +389,9 @@ static bool dump_pcie_device(pcie_device_state_t* dev, void* ctx, uint level)
     if (!dev->plugged_in)
         goto finished;
 
-    bool match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
-                  ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
-                  ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
+    match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
+             ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
+             ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
     if (!match)
         goto finished;
 
@@ -497,19 +498,19 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         } else {
             switch (filter_ndx) {
                 case 0:
-                    params.bus_id = argv[i].i;
+                    params.bus_id = static_cast<uint>(argv[i].i);
                     if (params.bus_id >= PCIE_MAX_BUSSES)
                         confused = true;
                     break;
 
                 case 1:
-                    params.dev_id = argv[i].i;
+                    params.dev_id = static_cast<uint>(argv[i].i);
                     if (params.dev_id >= PCIE_MAX_DEVICES_PER_BUS)
                         confused = true;
                     break;
 
                 case 2:
-                    params.func_id = argv[i].i;
+                    params.func_id = static_cast<uint>(argv[i].i);
                     if (params.func_id >= PCIE_MAX_FUNCTIONS_PER_DEVICE)
                         confused = true;
                     break;
@@ -563,9 +564,9 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
     uint bus_id, dev_id, func_id;
 
     if (argc == 4) {
-        bus_id  = argv[1].i;
-        dev_id  = argv[2].i;
-        func_id = argv[3].i;
+        bus_id  = static_cast<uint>(argv[1].i);
+        dev_id  = static_cast<uint>(argv[2].i);
+        func_id = static_cast<uint>(argv[3].i);
 
         if ((bus_id  >= PCIE_MAX_BUSSES) ||
             (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||
@@ -603,9 +604,9 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
     uint bus_id, dev_id, func_id;
 
     if (argc == 4) {
-        bus_id  = argv[1].i;
-        dev_id  = argv[2].i;
-        func_id = argv[3].i;
+        bus_id  = static_cast<uint>(argv[1].i);
+        dev_id  = static_cast<uint>(argv[2].i);
+        func_id = static_cast<uint>(argv[3].i);
 
         if ((bus_id  >= PCIE_MAX_BUSSES) ||
             (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||

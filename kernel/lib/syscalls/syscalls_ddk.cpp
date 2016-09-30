@@ -219,17 +219,29 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, ui
 
 // Lookup routine for IRQ routing for PCIe
 static uint32_t pcie_root_irq_map[PCIE_MAX_DEVICES_PER_BUS][PCIE_MAX_FUNCTIONS_PER_DEVICE][PCIE_MAX_LEGACY_IRQ_PINS];
-static status_t pcie_irq_swizzle_from_table(const pcie_device_state_t* dev, uint pin, uint *irq)
+static status_t pcie_irq_swizzle_from_table(uint bus_id,
+                                            uint dev_id,
+                                            uint func_id,
+                                            uint pin,
+                                            uint *irq)
 {
-    DEBUG_ASSERT(dev);
     DEBUG_ASSERT(pin < 4);
-    if (dev->bus_id != 0) {
+
+    if (bus_id != 0) {
         return ERR_NOT_FOUND;
     }
-    uint32_t val = pcie_root_irq_map[dev->dev_id][dev->func_id][pin];
+
+    if ((bus_id  >= PCIE_MAX_BUSSES) ||
+        (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||
+        (func_id >= PCIE_MAX_FUNCTIONS_PER_DEVICE)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    uint32_t val = pcie_root_irq_map[dev_id][func_id][pin];
     if (val == MX_PCI_NO_IRQ_MAPPING) {
         return ERR_NOT_FOUND;
     }
+
     *irq = val;
     return NO_ERROR;
 }

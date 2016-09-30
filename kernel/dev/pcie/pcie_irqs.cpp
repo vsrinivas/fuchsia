@@ -54,7 +54,8 @@ static status_t pcie_alloc_irq_handlers(pcie_device_state_t* dev, uint requested
         goto finish_bookkeeping;
     }
 
-    dev->irq.handlers = calloc(requested_irqs, sizeof(*dev->irq.handlers));
+    dev->irq.handlers = static_cast<pcie_irq_handler_state_t*>(calloc(requested_irqs,
+                                                                      sizeof(*dev->irq.handlers)));
     if (!dev->irq.handlers)
         return ERR_NO_MEMORY;
     dev->irq.handler_count = requested_irqs;
@@ -171,8 +172,8 @@ static inline status_t pcie_mask_unmask_legacy_irq(pcie_device_state_t* dev,
     spin_lock_irqsave(&hstate->lock, irq_state);
 
     val = pcie_read16(&cfg->base.command);
-    if (mask) val |= PCIE_CFG_COMMAND_INT_DISABLE;
-    else      val &= ~PCIE_CFG_COMMAND_INT_DISABLE;
+    if (mask) val = static_cast<uint16_t>(val | PCIE_CFG_COMMAND_INT_DISABLE);
+    else      val = static_cast<uint16_t>(val & ~PCIE_CFG_COMMAND_INT_DISABLE);
     pcie_write16(&cfg->base.command, val);
     hstate->masked = mask;
 
@@ -262,7 +263,7 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin, pcie_bridge_
     uint irq;
     __UNUSED status_t status;
     DEBUG_ASSERT(bus_drv && bus_drv->legacy_irq_swizzle);
-    status = bus_drv->legacy_irq_swizzle(dev, pin, &irq);
+    status = bus_drv->legacy_irq_swizzle(dev->bus_id, dev->dev_id, dev->func_id, pin, &irq);
     DEBUG_ASSERT(status == NO_ERROR);
 
     return irq;
@@ -720,7 +721,7 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t* de
     return NO_ERROR;
 }
 
-status_t pcie_get_irq_mode_internal(const struct pcie_device_state* dev,
+status_t pcie_get_irq_mode_internal(const pcie_device_state_t* dev,
                                     pcie_irq_mode_info_t* out_info) {
     DEBUG_ASSERT(dev && dev->plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
@@ -905,7 +906,7 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
     return ret;
 }
 
-status_t pcie_get_irq_mode(const struct pcie_device_state* dev,
+status_t pcie_get_irq_mode(const pcie_device_state_t* dev,
                            pcie_irq_mode_info_t* out_info) {
     DEBUG_ASSERT(dev);
     if (!out_info)

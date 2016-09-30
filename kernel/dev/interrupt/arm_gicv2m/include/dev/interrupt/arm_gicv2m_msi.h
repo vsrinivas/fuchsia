@@ -8,7 +8,7 @@
 #pragma once
 
 #if WITH_DEV_PCIE
-#include <dev/pcie_irqs.h>
+#include <dev/pcie_platform.h>
 #include <sys/types.h>
 
 /**
