@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_GPU_GL_CONTEXT_H_
-#define MOJO_GPU_GL_CONTEXT_H_
+#ifndef APPS_MOZART_GLUE_GL_GL_CONTEXT_H_
+#define APPS_MOZART_GLUE_GL_GL_CONTEXT_H_
 
 #include <deque>
 
@@ -109,4 +109,4 @@ class GLContext : public ftl::RefCountedThreadSafe<GLContext> {
 
 }  // namespace mojo
 
-#endif  // MOJO_GPU_GL_CONTEXT_H_
+#endif  // APPS_MOZART_GLUE_GL_GL_CONTEXT_H_

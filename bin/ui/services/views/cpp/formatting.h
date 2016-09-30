@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_UI_VIEWS_CPP_FORMATTING_H_
-#define MOJO_SERVICES_UI_VIEWS_CPP_FORMATTING_H_
+#ifndef APPS_MOZART_SERVICES_VIEWS_CPP_FORMATTING_H_
+#define APPS_MOZART_SERVICES_VIEWS_CPP_FORMATTING_H_
 
 #include <iosfwd>
 
@@ -31,4 +31,4 @@ std::ostream& operator<<(std::ostream& os, const ViewAssociateInfo& value);
 
 }  // namespace mozart
 
-#endif  // MOJO_SERVICES_UI_VIEWS_CPP_FORMATTING_H_
+#endif  // APPS_MOZART_SERVICES_VIEWS_CPP_FORMATTING_H_

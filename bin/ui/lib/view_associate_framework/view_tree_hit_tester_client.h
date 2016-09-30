@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_ASSOCIATES_VIEW_TREE_HIT_TESTER_CLIENT_H_
-#define MOJO_UI_ASSOCIATES_VIEW_TREE_HIT_TESTER_CLIENT_H_
+#ifndef APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_VIEW_TREE_HIT_TESTER_CLIENT_H_
+#define APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_VIEW_TREE_HIT_TESTER_CLIENT_H_
 
 #include <queue>
 
@@ -61,4 +61,4 @@ class ViewTreeHitTesterClient
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_ASSOCIATES_VIEW_TREE_HIT_TESTER_CLIENT_H_
+#endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_VIEW_TREE_HIT_TESTER_CLIENT_H_

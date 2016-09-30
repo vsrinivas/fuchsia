@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_UI_LAUNCHER_LAUNCH_INSTANCE_H_
-#define SERVICES_UI_LAUNCHER_LAUNCH_INSTANCE_H_
+#ifndef APPS_MOZART_SRC_LAUNCHER_LAUNCH_INSTANCE_H_
+#define APPS_MOZART_SRC_LAUNCHER_LAUNCH_INSTANCE_H_
 
 #include <memory>
 
@@ -57,4 +57,4 @@ class LaunchInstance {
 
 }  // namespace launcher
 
-#endif  // SERVICES_UI_LAUNCHER_LAUNCH_INSTANCE_H_
+#endif  // APPS_MOZART_SRC_LAUNCHER_LAUNCH_INSTANCE_H_

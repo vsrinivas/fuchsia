@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_BASE_VIEW_H_
-#define MOJO_UI_BASE_VIEW_H_
+#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_BASE_VIEW_H_
+#define APPS_MOZART_LIB_VIEW_FRAMEWORK_BASE_VIEW_H_
 
 #include <string>
 
@@ -152,4 +152,4 @@ class BaseView : public ViewListener, public ViewContainerListener {
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_BASE_VIEW_H_
+#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_BASE_VIEW_H_

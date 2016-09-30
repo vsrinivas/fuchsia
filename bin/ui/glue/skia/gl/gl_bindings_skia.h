@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SKIA_GL_BINDINGS_SKIA_H_
-#define MOJO_SKIA_GL_BINDINGS_SKIA_H_
+#ifndef APPS_MOZART_GLUE_SKIA_GL_GL_BINDINGS_SKIA_H_
+#define APPS_MOZART_GLUE_SKIA_GL_GL_BINDINGS_SKIA_H_
 
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkTypes.h"
@@ -20,4 +20,4 @@ sk_sp<GrGLInterface> CreateMojoSkiaGLBinding();
 }  // namespace skia
 }  // namespace mojo
 
-#endif  // MOJO_SKIA_GL_BINDINGS_SKIA_H_
+#endif  // APPS_MOZART_GLUE_SKIA_GL_GL_BINDINGS_SKIA_H_

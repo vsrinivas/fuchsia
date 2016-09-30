@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SKIA_GANESH_CONTEXT_H_
-#define MOJO_SKIA_GANESH_CONTEXT_H_
+#ifndef APPS_MOZART_GLUE_SKIA_GL_GANESH_CONTEXT_H_
+#define APPS_MOZART_GLUE_SKIA_GL_GANESH_CONTEXT_H_
 
 #include "apps/mozart/glue/gl/gl_context.h"
 #include "lib/ftl/macros.h"
@@ -93,4 +93,4 @@ class GaneshContext : public ftl::RefCountedThreadSafe<GaneshContext>,
 }  // namespace skia
 }  // namespace mojo
 
-#endif  // MOJO_SKIA_GANESH_CONTEXT_H_
+#endif  // APPS_MOZART_GLUE_SKIA_GL_GANESH_CONTEXT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_
-#define SERVICES_GFX_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_
+#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_
 
 #include <functional>
 #include <limits>
@@ -157,4 +157,4 @@ class VsyncScheduler : public Scheduler {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_VSYNC_SCHEDULER_H_

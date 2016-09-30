@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_COMPOSITOR_H_
-#define SERVICES_GFX_COMPOSITOR_COMPOSITOR_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_COMPOSITOR_ENGINE_H_
+#define APPS_MOZART_SRC_COMPOSITOR_COMPOSITOR_ENGINE_H_
 
 #include <unordered_map>
 #include <vector>
@@ -153,4 +153,4 @@ class CompositorEngine {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_COMPOSITOR_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_COMPOSITOR_ENGINE_H_

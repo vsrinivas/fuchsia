@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_GRAPH_SCENE_CONTENT_H_
-#define SERVICES_GFX_COMPOSITOR_GRAPH_SCENE_CONTENT_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_GRAPH_SCENE_CONTENT_H_
+#define APPS_MOZART_SRC_COMPOSITOR_GRAPH_SCENE_CONTENT_H_
 
 #include <iosfwd>
 #include <string>
@@ -149,4 +149,4 @@ class SceneContentBuilder {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_GRAPH_SCENE_CONTENT_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_GRAPH_SCENE_CONTENT_H_

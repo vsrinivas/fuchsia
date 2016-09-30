@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_ASSOCIATES_MOCK_VIEW_INSPECTOR_H_
-#define MOJO_UI_ASSOCIATES_MOCK_VIEW_INSPECTOR_H_
+#ifndef APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_VIEW_INSPECTOR_H_
+#define APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_VIEW_INSPECTOR_H_
 
 #include <unordered_map>
 
@@ -58,4 +58,4 @@ class MockViewInspector : public ViewInspector {
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_ASSOCIATES_MOCK_VIEW_INSPECTOR_H_
+#endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_MOCK_VIEW_INSPECTOR_H_

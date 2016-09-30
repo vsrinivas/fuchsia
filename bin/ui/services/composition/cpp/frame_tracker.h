@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_GFX_COMPOSITION_CPP_SCHEDULING_H_
-#define MOJO_SERVICES_GFX_COMPOSITION_CPP_SCHEDULING_H_
+#ifndef APPS_MOZART_SERVICES_COMPOSITION_CPP_FRAME_TRACKER_H_
+#define APPS_MOZART_SERVICES_COMPOSITION_CPP_FRAME_TRACKER_H_
 
 #include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
 #include "lib/ftl/macros.h"
@@ -52,4 +52,4 @@ class FrameTracker {
 
 }  // namespace mozart
 
-#endif  // MOJO_SERVICES_GFX_COMPOSITION_CPP_SCHEDULING_H_
+#endif  // APPS_MOZART_SERVICES_COMPOSITION_CPP_FRAME_TRACKER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_ASSOCIATES_RESOLVED_HIT_TEST_H_
-#define MOJO_UI_ASSOCIATES_RESOLVED_HIT_TEST_H_
+#ifndef APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_
+#define APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_
 
 #include <iosfwd>
 #include <memory>
@@ -53,4 +53,4 @@ std::ostream& operator<<(std::ostream& os, const ResolvedHits* value);
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_ASSOCIATES_RESOLVED_HIT_TEST_H_
+#endif  // APPS_MOZART_LIB_VIEW_ASSOCIATE_FRAMEWORK_RESOLVED_HITS_H_

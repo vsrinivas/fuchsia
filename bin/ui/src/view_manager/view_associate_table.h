@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_UI_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_
-#define SERVICES_UI_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_
 
 #include <memory>
 #include <string>
@@ -80,4 +80,4 @@ class ViewAssociateTable : public mozart::ViewAssociateOwner {
 
 }  // namespace view_manager
 
-#endif  // SERVICES_UI_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_VIEW_ASSOCIATE_TABLE_H_

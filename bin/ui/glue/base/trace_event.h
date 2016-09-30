@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_
+#define APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_
+
 #if defined(__Fuchsia__)
 #define TRACE_EVENT0(a, b)
 #define TRACE_EVENT1(a, b, c, d) (void)d
@@ -23,3 +26,5 @@
 #else
 #include "base/trace_event/trace_event.h"
 #endif  // defined(__Fuchsia__)
+
+#endif  // APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_

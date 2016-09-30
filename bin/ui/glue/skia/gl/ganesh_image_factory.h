@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SKIA_GANESH_IMAGE_FACTORY_H_
-#define MOJO_SKIA_GANESH_IMAGE_FACTORY_H_
+#ifndef APPS_MOZART_GLUE_SKIA_GL_GANESH_IMAGE_FACTORY_H_
+#define APPS_MOZART_GLUE_SKIA_GL_GANESH_IMAGE_FACTORY_H_
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2extmojo.h>
@@ -56,4 +56,4 @@ class MailboxTextureImageGenerator : public SkImageGenerator {
 }  // namespace skia
 }  // namespace mojo
 
-#endif  // MOJO_SKIA_GANESH_IMAGE_FACTORY_H_
+#endif  // APPS_MOZART_GLUE_SKIA_GL_GANESH_IMAGE_FACTORY_H_

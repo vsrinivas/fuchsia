@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_UI_LAUNCHER_LAUNCHER_APP_H_
-#define SERVICES_UI_LAUNCHER_LAUNCHER_APP_H_
+#ifndef APPS_MOZART_SRC_LAUNCHER_LAUNCHER_APP_H_
+#define APPS_MOZART_SRC_LAUNCHER_LAUNCHER_APP_H_
 
 #include <memory>
 #include <unordered_map>
@@ -60,4 +60,4 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
 
 }  // namespace launcher
 
-#endif  // SERVICES_UI_LAUNCHER_LAUNCHER_APP_H_
+#endif  // APPS_MOZART_SRC_LAUNCHER_LAUNCHER_APP_H_

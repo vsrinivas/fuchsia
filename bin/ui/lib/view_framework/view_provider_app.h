@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_VIEW_PROVIDER_APP_H_
-#define MOJO_UI_VIEW_PROVIDER_APP_H_
+#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_APP_H_
+#define APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_APP_H_
 
 #include <string>
 
@@ -63,4 +63,4 @@ class ViewProviderApp : public mojo::ApplicationImplBase {
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_VIEW_PROVIDER_APP_H_
+#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_VIEW_PROVIDER_APP_H_

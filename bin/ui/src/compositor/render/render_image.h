@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_RENDER_RENDER_IMAGE_H_
-#define SERVICES_GFX_COMPOSITOR_RENDER_RENDER_IMAGE_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_IMAGE_H_
+#define APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_IMAGE_H_
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2extmojo.h>
@@ -59,4 +59,4 @@ class RenderImage : public ftl::RefCountedThreadSafe<RenderImage> {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_RENDER_RENDER_IMAGE_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_IMAGE_H_

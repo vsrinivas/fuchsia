@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_UI_VIEW_MANAGER_VIEW_REGISTRY_H_
-#define SERVICES_UI_VIEW_MANAGER_VIEW_REGISTRY_H_
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_REGISTRY_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_REGISTRY_H_
 
 #include <string>
 #include <unordered_map>
@@ -222,4 +222,4 @@ class ViewRegistry : public mozart::ViewInspector {
 
 }  // namespace view_manager
 
-#endif  // SERVICES_UI_VIEW_MANAGER_VIEW_REGISTRY_H_
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_VIEW_REGISTRY_H_

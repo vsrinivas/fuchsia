@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_HID_INPUT_H_
-#define APPS_MOZART_SRC_LAUNCHER_HID_INPUT_H_
+#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
+#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 
 #include <thread>
 #include <vector>
@@ -109,4 +109,4 @@ class InputDeviceMonitor {
 };
 }
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_HID_INPUT_H_
+#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_

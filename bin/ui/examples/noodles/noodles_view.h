@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_UI_NOODLES_NOODLES_VIEW_H_
-#define EXAMPLES_UI_NOODLES_NOODLES_VIEW_H_
+#ifndef APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
+#define APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_
 
 #include <memory>
 #include <mutex>
@@ -91,4 +91,4 @@ class NoodlesView : public mozart::BaseView {
 
 }  // namespace examples
 
-#endif  // EXAMPLES_UI_NOODLES_NOODLES_VIEW_H_
+#endif  // APPS_MOZART_EXAMPLES_NOODLES_NOODLES_VIEW_H_

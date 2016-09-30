@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_UI_NOODLES_RASTERIZER_H_
-#define EXAMPLES_UI_NOODLES_RASTERIZER_H_
+#ifndef APPS_MOZART_EXAMPLES_NOODLES_RASTERIZER_H_
+#define APPS_MOZART_EXAMPLES_NOODLES_RASTERIZER_H_
 
 #include <memory>
 
@@ -34,4 +34,4 @@ class Rasterizer {
 
 }  // namespace examples
 
-#endif  // EXAMPLES_UI_NOODLES_RASTERIZER_H_
+#endif  // APPS_MOZART_EXAMPLES_NOODLES_RASTERIZER_H_

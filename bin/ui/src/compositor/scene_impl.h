@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_SCENE_IMPL_H_
-#define SERVICES_GFX_COMPOSITOR_SCENE_IMPL_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_SCENE_IMPL_H_
+#define APPS_MOZART_SRC_COMPOSITOR_SCENE_IMPL_H_
 
 #include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
 #include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
@@ -51,4 +51,4 @@ class SceneImpl : public mozart::Scene, public mozart::FrameScheduler {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_SCENE_IMPL_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_SCENE_IMPL_H_

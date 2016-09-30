@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
-#define SERVICES_GFX_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+#define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
 
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "apps/mozart/src/compositor/backend/vsync_scheduler.h"
@@ -45,4 +45,4 @@ class FramebufferOutput : public Output {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_

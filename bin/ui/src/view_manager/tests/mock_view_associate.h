@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCK_VIEW_ASSOCIATE_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCK_VIEW_ASSOCIATE_H_
+
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/views.mojom.h"
 
@@ -31,3 +34,5 @@ class MockViewAssociate : public mozart::ViewAssociate {
 
 }  // namespace test
 }  // namespace view_manager
+
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCK_VIEW_ASSOCIATE_H_

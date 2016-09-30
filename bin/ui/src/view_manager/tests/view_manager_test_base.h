@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_VIEW_MANAGER_TEST_BASE_H_
+#define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_VIEW_MANAGER_TEST_BASE_H_
+
 #include "base/bind.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 
@@ -37,3 +40,5 @@ class ViewManagerTestBase : public mojo::test::ApplicationTestBase {
 
 }  // namespace test
 }  // namespace view_manager
+
+#endif  // APPS_MOZART_SRC_VIEW_MANAGER_TESTS_VIEW_MANAGER_TEST_BASE_H_

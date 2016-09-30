@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_
-#define APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_
+#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_
+#define APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_
 
 #include <magenta/process.h>
 #include <utility>
@@ -18,4 +18,4 @@ sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo);
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_EXAMPLES_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_
+#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_VMO_DATA_H_

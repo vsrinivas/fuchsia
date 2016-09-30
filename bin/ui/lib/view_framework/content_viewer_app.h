@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_UI_CONTENT_VIEWER_APP_H_
-#define MOJO_UI_CONTENT_VIEWER_APP_H_
+#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_CONTENT_VIEWER_APP_H_
+#define APPS_MOZART_LIB_VIEW_FRAMEWORK_CONTENT_VIEWER_APP_H_
 
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -69,4 +69,4 @@ class ContentViewerApp : public mojo::ApplicationImplBase {
 
 }  // namespace mozart
 
-#endif  // MOJO_UI_CONTENT_VIEWER_APP_H_
+#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_CONTENT_VIEWER_APP_H_

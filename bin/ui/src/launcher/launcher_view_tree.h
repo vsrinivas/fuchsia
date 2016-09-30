@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_UI_LAUNCHER_VIEW_TREE_IMPL_H_
-#define SERVICES_UI_LAUNCHER_VIEW_TREE_IMPL_H_
+#ifndef APPS_MOZART_SRC_LAUNCHER_LAUNCHER_VIEW_TREE_H_
+#define APPS_MOZART_SRC_LAUNCHER_LAUNCHER_VIEW_TREE_H_
 
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
@@ -68,4 +68,4 @@ class LauncherViewTree : public mozart::ViewTreeListener,
 
 }  // namespace launcher
 
-#endif  // SERVICES_UI_LAUNCHER_VIEW_TREE_IMPL_H_
+#endif  // APPS_MOZART_SRC_LAUNCHER_LAUNCHER_VIEW_TREE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_
-#define SERVICES_GFX_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_
+#define APPS_MOZART_SRC_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_
 
 #include "third_party/skia/include/core/SkMatrix44.h"
 
@@ -33,4 +33,4 @@ class TransformPair {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_GRAPH_TRANSFORM_PAIR_H_

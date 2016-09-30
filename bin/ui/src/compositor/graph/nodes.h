@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SERVICES_GFX_COMPOSITOR_GRAPH_NODES_H_
-#define SERVICES_GFX_COMPOSITOR_GRAPH_NODES_H_
+#ifndef APPS_MOZART_SRC_COMPOSITOR_GRAPH_NODES_H_
+#define APPS_MOZART_SRC_COMPOSITOR_GRAPH_NODES_H_
 
 #include <iosfwd>
 #include <memory>
@@ -272,4 +272,4 @@ class LayerNode : public Node {
 
 }  // namespace compositor
 
-#endif  // SERVICES_GFX_COMPOSITOR_GRAPH_NODES_H_
+#endif  // APPS_MOZART_SRC_COMPOSITOR_GRAPH_NODES_H_

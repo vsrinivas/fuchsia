@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef EXAMPLES_UI_NOODLES_NOODLES_APP_H_
-#define EXAMPLES_UI_NOODLES_NOODLES_APP_H_
+#ifndef APPS_MOZART_EXAMPLES_NOODLES_NOODLES_APP_H_
+#define APPS_MOZART_EXAMPLES_NOODLES_NOODLES_APP_H_
 
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 
@@ -25,4 +25,4 @@ class NoodlesApp : public mozart::ViewProviderApp {
 
 }  // namespace examples
 
-#endif  // EXAMPLES_UI_NOODLES_NOODLES_APP_H_
+#endif  // APPS_MOZART_EXAMPLES_NOODLES_NOODLES_APP_H_
