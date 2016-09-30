@@ -7,13 +7,13 @@
 
 #include <mojo/system/main.h>
 
+#include "apps/mozart/lib/skia/skia_surface_holder.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/system/buffer.h"
 #include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -23,56 +23,6 @@ namespace {
 constexpr uint32_t kSceneVersion = 1u;
 constexpr uint32_t kContentImageResourceId = 1u;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-
-class ImageBuffer {
- public:
-  ImageBuffer(const mojo::Size& size) {
-    size_t row_bytes = size.width * sizeof(uint32_t);
-    size_t total_bytes = size.height * row_bytes;
-
-    FTL_CHECK(MOJO_RESULT_OK ==
-              mojo::CreateSharedBuffer(nullptr, total_bytes, &buffer_handle_));
-    FTL_CHECK(MOJO_RESULT_OK == mojo::MapBuffer(buffer_handle_.get(), 0u,
-                                                total_bytes, &buffer_,
-                                                MOJO_MAP_BUFFER_FLAG_NONE));
-
-    surface_ = SkSurface::MakeRasterDirect(
-        SkImageInfo::Make(size.width, size.height, kBGRA_8888_SkColorType,
-                          kPremul_SkAlphaType),
-        buffer_, row_bytes);
-  }
-
-  const sk_sp<SkSurface>& surface() const { return surface_; }
-
-  mozart::ImagePtr TakeImage() {
-    FTL_DCHECK(surface_);
-
-    auto image = mozart::Image::New();
-    image->size = mojo::Size::New();
-    image->size->width = surface_->width();
-    image->size->height = surface_->height();
-    image->stride = image->size->width * sizeof(uint32_t);
-    image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
-    image->alpha_format = mozart::Image::AlphaFormat::PREMULTIPLIED;
-    ReleaseSurface();
-    image->buffer = std::move(buffer_handle_);
-    return image;
-  }
-
-  ~ImageBuffer() { ReleaseSurface(); }
-
- private:
-  void ReleaseSurface() {
-    if (!surface_)
-      return;
-    surface_.reset();
-    FTL_CHECK(MOJO_RESULT_OK == mojo::UnmapBuffer(buffer_));
-  }
-
-  mojo::ScopedSharedBufferHandle buffer_handle_;
-  void* buffer_;
-  sk_sp<SkSurface> surface_;
-};
 
 class HelloApp : public mojo::ApplicationImplBase {
  public:
@@ -126,9 +76,9 @@ class HelloApp : public mojo::ApplicationImplBase {
     if (x_ >= framebuffer_size_.width)
       x_ = 0.0;
 
-    // Draw the contents of the scene to an image buffer.
-    ImageBuffer image_buffer(framebuffer_size_);
-    SkCanvas* canvas = image_buffer.surface()->getCanvas();
+    // Draw the contents of the scene to a surface.
+    mozart::SkiaSurfaceHolder surface_holder(framebuffer_size_);
+    SkCanvas* canvas = surface_holder.surface()->getCanvas();
     canvas->clear(SK_ColorBLUE);
     SkPaint paint;
     paint.setColor(0xFFFF00FF);
@@ -144,7 +94,7 @@ class HelloApp : public mojo::ApplicationImplBase {
 
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = image_buffer.TakeImage();
+    content_resource->get_image()->image = surface_holder.TakeImage();
     update->resources.insert(kContentImageResourceId, content_resource.Pass());
 
     auto root_node = mozart::Node::New();
