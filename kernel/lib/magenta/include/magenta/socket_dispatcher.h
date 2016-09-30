@@ -70,6 +70,7 @@ private:
     mx_ssize_t WriteHelper(const void* src, mx_size_t len, bool from_user, bool is_oob);
     mx_ssize_t WriteSelf(const void* src, mx_size_t len, bool from_user);
     mx_ssize_t OOB_WriteSelf(const void* src, mx_size_t len, bool from_user);
+    status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
 
     const uint32_t flags_;
     NonIrqStateTracker state_tracker_;

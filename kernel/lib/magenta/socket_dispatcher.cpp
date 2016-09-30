@@ -27,7 +27,13 @@
 
 constexpr mx_rights_t kDefaultSocketRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
+
 constexpr mx_size_t kDeFaultSocketBufferSize = 256 * 1024u;
+
+constexpr mx_signals_t kValidSignalMask =
+    MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
+    MX_SIGNAL_SIGNAL0 | MX_SIGNAL_SIGNAL1 | MX_SIGNAL_SIGNAL2 |
+    MX_SIGNAL_SIGNAL3 | MX_SIGNAL_SIGNAL4;
 
 namespace {
 // Cribbed from pow2.h, we need overloading to correctly deal with 32 and 64 bits.
@@ -216,7 +222,20 @@ status_t SocketDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
         other = other_;
     }
 
-    other->state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+    return other->UserSignalSelf(clear_mask, set_mask);
+}
+
+status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+    AutoLock lock(&lock_);
+    auto satisfied = state_tracker_.GetSignalsState().satisfied;
+    auto changed = ~satisfied & set_mask;
+
+    if (changed) {
+        if (iopc_)
+            iopc_->Signal(changed, 0u, &lock_);
+    }
+
+    state_tracker_.UpdateSatisfied(clear_mask, set_mask);
     return NO_ERROR;
 }
 
@@ -224,7 +243,7 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client
     if (iopc_)
         return ERR_BAD_STATE;
 
-    if ((client->get_trigger_signals() & ~(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) != 0)
+    if ((client->get_trigger_signals() & ~kValidSignalMask) != 0)
         return ERR_INVALID_ARGS;
 
     {
