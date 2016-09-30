@@ -145,10 +145,10 @@ func (f OpenFlags) Directory() bool {
 
 // Whence is used to explain the meaning of an offset in a file
 const (
-	// WhenceFromCurrent means the offset starts at the current file position
-	WhenceFromCurrent = iota
 	// WhenceFromStart means the offset starts at the beginning of the file
-	WhenceFromStart
+	WhenceFromStart = iota
+	// WhenceFromCurrent means the offset starts at the current file position
+	WhenceFromCurrent
 	// WhenceFromEnd means the offset starts at the end of the file
 	WhenceFromEnd
 )
