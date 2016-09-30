@@ -9,6 +9,7 @@
 #include <mojo/system/main.h>
 
 #include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/modular/mojo/single_service_application.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/sleep.h"
@@ -21,6 +22,8 @@
 
 namespace modular {
 
+constexpr char kExampleRecipeUrl[] = "mojo:example_recipe";
+
 using mojo::ApplicationImplBase;
 using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
@@ -32,12 +35,10 @@ using mojo::StructPtr;
 
 class DummyUserShellImpl : public UserShell {
  public:
-  DummyUserShellImpl(const std::string& recipe_url,
-                     InterfaceRequest<UserShell> request)
-      : binding_(this, std::move(request)), recipe_url_(recipe_url) {}
+  explicit DummyUserShellImpl(InterfaceRequest<UserShell> request)
+      : binding_(this, std::move(request)) {}
   ~DummyUserShellImpl() override{};
 
- private:
   void SetStoryProvider(
       InterfaceHandle<StoryProvider> story_provider) override {
     story_provider_.Bind(story_provider.Pass());
@@ -49,7 +50,7 @@ class DummyUserShellImpl : public UserShell {
 
     // Start a new story.
     story_provider_->StartNewStory(
-        std::move(recipe_url_), [this](InterfaceHandle<Story> story) {
+        kExampleRecipeUrl, [this](InterfaceHandle<Story> story) {
           FTL_LOG(INFO) << "Received modular::Story from provider.";
           story_ptr_.Bind(story.Pass());
           story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
@@ -67,50 +68,18 @@ class DummyUserShellImpl : public UserShell {
         });
   }
 
+ private:
+  StrongBinding<UserShell> binding_;
   InterfacePtr<StoryProvider> story_provider_;
   InterfacePtr<Story> story_ptr_;
 
-  StrongBinding<UserShell> binding_;
-  std::string recipe_url_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellImpl);
-};
-
-class DummyUserShellApp : public ApplicationImplBase {
- public:
-  DummyUserShellApp() {}
-  ~DummyUserShellApp() override {}
-
- private:
-  void OnInitialize() override {
-    if (args().size() != 1) {
-      FTL_DLOG(INFO) << "dummy-user-runner expects 1 additional argument.\n"
-                     << "Usage: mojo:dummy_user_runner [recipe]";
-      return;
-    }
-
-    FTL_LOG(INFO) << "dummy-user_shell init";
-    recipe_url_ = args()[0];
-  }
-
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
-    // Register |UserShell| implementation.
-    service_provider_impl->AddService<UserShell>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<UserShell> user_shell_request) {
-          new DummyUserShellImpl(recipe_url_, std::move(user_shell_request));
-        });
-    return true;
-  }
-
-  std::string recipe_url_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellApp);
 };
 
 }  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
-  modular::DummyUserShellApp app;
+  FTL_LOG(INFO) << "dummy_user_shell main";
+  modular::SingleServiceApplication<modular::UserShell, modular::DummyUserShellImpl> app;
   return mojo::RunApplication(application_request, &app);
 }

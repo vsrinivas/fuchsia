@@ -37,6 +37,7 @@ executable("dummy_user_shell") {
 
   deps = [
     ":interfaces",
+    "//apps/modular/mojo:single_service_application",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
