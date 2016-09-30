@@ -483,7 +483,7 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
 
             DLOG("WaitRendering popping inflight command sequence with sequence_number 0x%x "
                  "ringbuffer_start_offset 0x%x",
-                 sequence.sequence_number(), sequence.ringbuffer_start_offset());
+                 sequence.sequence_number(), sequence.ringbuffer_offset());
 
             sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
 
