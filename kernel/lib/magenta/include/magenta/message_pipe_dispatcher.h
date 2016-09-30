@@ -13,7 +13,6 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
-#include <mxtl/array.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
 
@@ -37,7 +36,7 @@ public:
     status_t Read(uint32_t* msg_size,
                   uint32_t* msg_handle_count,
                   mxtl::unique_ptr<MessagePacket>* msg);
-    status_t Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles);
+    status_t Write(mxtl::unique_ptr<MessagePacket> msg);
 
 private:
     MessagePipeDispatcher(uint32_t flags, size_t side, mxtl::RefPtr<MessagePipe> pipe);

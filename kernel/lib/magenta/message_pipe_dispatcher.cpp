@@ -73,13 +73,8 @@ status_t MessagePipeDispatcher::Read(uint32_t* msg_size,
     return pipe_->Read(side_, msg_size, msg_handle_count, msg);
 }
 
-status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Handle*> handles) {
+status_t MessagePipeDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
     LTRACE_ENTRY;
-    AllocChecker ac;
-    mxtl::unique_ptr<MessagePacket> msg(
-        new (&ac) MessagePacket(mxtl::move(data), mxtl::move(handles)));
-    if (!ac.check()) return ERR_NO_MEMORY;
-
     return pipe_->Write(side_, mxtl::move(msg));
 }
 

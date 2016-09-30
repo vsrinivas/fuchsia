@@ -23,6 +23,7 @@
 
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
+#include <magenta/message_packet.h>
 #include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
@@ -174,16 +175,19 @@ static HandleUniquePtr make_bootstrap_pipe(
         return nullptr;
     memcpy(buffer.get(), bytes, buffer.size());
 
-    mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles],
-                                      num_handles);
+    mxtl::Array<Handle*> handle_list(new (&ac) Handle*[num_handles], num_handles);
     if (!ac.check())
         return nullptr;
     for (uint32_t i = 0; i < num_handles; ++i)
         handle_list[i] = handles[i].release();
 
+    mxtl::unique_ptr<MessagePacket> msg(
+        new (&ac) MessagePacket(mxtl::move(buffer), mxtl::move(handle_list)));
+    if (!ac.check())
+        return nullptr;
+
     // Here it goes!
-    mx_status_t status = kernel_pipe->Write(mxtl::move(buffer),
-                                            mxtl::move(handle_list));
+    mx_status_t status = kernel_pipe->Write(mxtl::move(msg));
     if (status != NO_ERROR)
         return nullptr;
 

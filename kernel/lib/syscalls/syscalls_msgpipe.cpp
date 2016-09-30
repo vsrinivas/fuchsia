@@ -255,8 +255,12 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
         }
     }
 
-    result = msg_pipe->Write(mxtl::move(bytes), mxtl::move(handle_list));
+    mxtl::unique_ptr<MessagePacket> msg(
+        new (&ac) MessagePacket(mxtl::move(bytes), mxtl::move(handle_list)));
+    if (!ac.check())
+        return ERR_NO_MEMORY;
 
+    result = msg_pipe->Write(mxtl::move(msg));
     if (result != NO_ERROR) {
         // Write failed, put back the handles into this process.
         AutoLock lock(up->handle_table_lock());
@@ -268,4 +272,3 @@ mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
     ktrace(TAG_MSGPIPE_WRITE, (uint32_t)msg_pipe->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
-
