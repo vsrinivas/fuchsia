@@ -144,7 +144,7 @@ static int mem_arena_init(boot_addr_range_t *range)
             size -= arena->size;
             base += arena->size;
 
-            LTRACEF("Adding pmm range at %#lx of %#lx bytes.\n",
+            LTRACEF("Adding pmm range at %#" PRIxPTR " of %#zx bytes.\n",
                     arena->base, arena->size);
 
             arena->name = "memory";

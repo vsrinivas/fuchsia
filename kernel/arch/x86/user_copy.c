@@ -50,7 +50,7 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
 
 static bool can_access(const void *base, size_t len, bool for_write)
 {
-    LTRACEF("can_access: base %p, len %lu\n", base, len);
+    LTRACEF("can_access: base %p, len %zu\n", base, len);
 
     // If the target wraps around, it would be possible for the start
     // and end to be user addresses but intermediate address to not be.

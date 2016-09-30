@@ -290,7 +290,7 @@ static paddr_t paddr_from_pte(pt_entry_t pte) {
             panic("paddr_from_pte at unhandled level %u\n", Level);
     }
 
-    LTRACEF_LEVEL(2, "pte 0x%" PRIxPTE " , level %u, paddr 0x%lx\n", pte, Level, pa);
+    LTRACEF_LEVEL(2, "pte 0x%" PRIxPTE " , level %u, paddr %#" PRIxPTR "\n", pte, Level, pa);
 
     return pa;
 }
@@ -592,7 +592,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
     static_assert(Level < X86_PAGING_LEVELS, "level too high");
 
     DEBUG_ASSERT(table);
-    LTRACEF("L: %d, %016lx %016lx\n", Level, start_cursor.vaddr, start_cursor.size);
+    LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", Level, start_cursor.vaddr, start_cursor.size);
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
 
     *new_cursor = start_cursor;
@@ -678,7 +678,7 @@ template <>
 bool x86_mmu_remove_mapping<PT_L>(ulong cr3, pt_entry_t* table, const MappingCursor& start_cursor,
                                   MappingCursor* new_cursor) {
 
-    LTRACEF("%016lx %016lx\n", start_cursor.vaddr, start_cursor.size);
+    LTRACEF("%016" PRIxPTR " %016zx\n", start_cursor.vaddr, start_cursor.size);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
 
     *new_cursor = start_cursor;
@@ -844,7 +844,7 @@ static status_t x86_mmu_update_mapping(ulong cr3, pt_entry_t* table, uint mmu_fl
     static_assert(Level < X86_PAGING_LEVELS, "level too high");
 
     DEBUG_ASSERT(table);
-    LTRACEF("L: %d, %016lx %016lx\n", Level, start_cursor.vaddr, start_cursor.size);
+    LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", Level, start_cursor.vaddr, start_cursor.size);
     DEBUG_ASSERT(x86_mmu_check_vaddr(start_cursor.vaddr));
 
     status_t ret = NO_ERROR;
@@ -905,7 +905,7 @@ status_t x86_mmu_update_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_fla
                                       const MappingCursor& start_cursor,
                                       MappingCursor* new_cursor) {
 
-    LTRACEF("%016lx %016lx\n", start_cursor.vaddr, start_cursor.size);
+    LTRACEF("%016" PRIxPTR " %016zx\n", start_cursor.vaddr, start_cursor.size);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
 
     *new_cursor = start_cursor;
@@ -929,7 +929,7 @@ status_t x86_mmu_update_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_fla
 }
 
 int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
-    LTRACEF("aspace %p, vaddr 0x%lx, count %lx\n", aspace, vaddr, count);
+    LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", aspace, vaddr, count);
 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
@@ -954,7 +954,7 @@ int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
-    LTRACEF("aspace %p, vaddr 0x%lx paddr 0x%lx count %lx flags 0x%x\n", aspace, vaddr, paddr,
+    LTRACEF("aspace %p, vaddr %#" PRIxPTR " paddr %#" PRIxPTR " count %#zx flags 0x%x\n", aspace, vaddr, paddr,
             count, flags);
 
     if ((!x86_mmu_check_paddr(paddr))) return ERR_INVALID_ARGS;
@@ -985,7 +985,7 @@ int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint fl
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
 
-    LTRACEF("aspace %p, vaddr 0x%lx count %lx flags 0x%x\n", aspace, vaddr, count, flags);
+    LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx flags 0x%x\n", aspace, vaddr, count, flags);
 
     if (!x86_mmu_check_vaddr(vaddr)) return ERR_INVALID_ARGS;
     if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
@@ -1046,7 +1046,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
     DEBUG_ASSERT(aspace);
     DEBUG_ASSERT(aspace->magic != ARCH_ASPACE_MAGIC);
 
-    LTRACEF("aspace %p, base 0x%lx, size 0x%zx, flags 0x%x\n", aspace, base, size, flags);
+    LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n", aspace, base, size, flags);
 
     aspace->magic = ARCH_ASPACE_MAGIC;
     aspace->flags = flags;
@@ -1055,7 +1055,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
     if (flags & ARCH_ASPACE_FLAG_KERNEL) {
         aspace->pt_phys = kernel_pt_phys;
         aspace->pt_virt = (pt_entry_t*)X86_PHYS_TO_VIRT(aspace->pt_phys);
-        LTRACEF("kernel aspace: pt phys 0x%lx, virt %p\n", aspace->pt_phys, aspace->pt_virt);
+        LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
     } else {
 #if ARCH_X86_32
         /* not fully functional on 32bit x86 */
@@ -1077,7 +1077,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
         memcpy(aspace->pt_virt + NO_OF_PT_ENTRIES / 2, &KERNEL_PT[NO_OF_PT_ENTRIES / 2],
                sizeof(pt_entry_t) * NO_OF_PT_ENTRIES / 2);
 
-        LTRACEF("user aspace: pt phys 0x%lx, virt %p\n", aspace->pt_phys, aspace->pt_virt);
+        LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
 #endif
     }
     aspace->io_bitmap_ptr = NULL;
@@ -1122,10 +1122,10 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
 void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace) {
     if (aspace != NULL) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
-        LTRACEF_LEVEL(3, "switching to aspace %p, pt 0x%lx\n", aspace, aspace->pt_phys);
+        LTRACEF_LEVEL(3, "switching to aspace %p, pt %#" PRIXPTR "\n", aspace, aspace->pt_phys);
         x86_set_cr3(aspace->pt_phys);
     } else {
-        LTRACEF_LEVEL(3, "switching to kernel aspace, pt 0x%lx\n", kernel_pt_phys);
+        LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
         x86_set_cr3(kernel_pt_phys);
     }
 
@@ -1149,7 +1149,7 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
 
     page_table_levels ret_level;
 
-    LTRACEF("aspace %p, vaddr 0x%lx, paddr %p, flags %p\n", aspace, vaddr, paddr, flags);
+    LTRACEF("aspace %p, vaddr %#" PRIxPTR ", paddr %p, flags %p\n", aspace, vaddr, paddr, flags);
 
     DEBUG_ASSERT(aspace);
 
@@ -1186,7 +1186,7 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
             panic("arch_mmu_query: unhandled frame level\n");
     }
 
-    LTRACEF("paddr 0x%lx\n", *paddr);
+    LTRACEF("paddr %#" PRIxPTR "\n", *paddr);
 
     /* converting x86 arch specific flags to arch mmu flags */
     if (flags) {

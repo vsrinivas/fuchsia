@@ -402,7 +402,7 @@ static void read_xsave_state_info(void)
         max_area += leaf.a;
     }
     xsave_max_area_size = max_area;
-    LTRACEF("total xsave size: %ld\n", max_area);
+    LTRACEF("total xsave size: %zd\n", max_area);
 
     return;
 bailout:
