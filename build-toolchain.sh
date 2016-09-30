@@ -70,7 +70,7 @@ build() {
     -DLLVM_ENABLE_LTO=ON \
     -DLLVM_TARGETS_TO_BUILD='ARM;AArch64;X86' \
     -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
-    -DLLVM_TOOLCHAIN_TOOLS='llvm-ar;llvm-ranlib;llvm-dwarfdump;llvm-objdump;llvm-readobj;llvm-nm;llvm-size;llvm-symbolizer' \
+    -DLLVM_TOOLCHAIN_TOOLS='llvm-ar;llvm-cxxfilt;llvm-ranlib;llvm-dwarfdump;llvm-objdump;llvm-readobj;llvm-nm;llvm-size;llvm-symbolizer' \
     ${ROOT_DIR}/third_party/llvm
   env LD_LIBRARY_PATH="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib" DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja install
   popd
