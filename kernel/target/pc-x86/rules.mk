@@ -14,8 +14,7 @@ PLATFORM := pc
 MODULE_SRCS += $(LOCAL_DIR)/config.c
 
 MODULE_DEPS += \
-    dev/intel_rng \
-    dev/thermal/intel_pch_thermal
+    dev/intel_rng
 
 include make/module.mk
 
