@@ -18,6 +18,8 @@
 
 namespace {
 
+constexpr char kValueLabel[] = "value";
+
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -46,19 +48,17 @@ class Module2Impl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
+    link_->Watch(std::move(watcher), false);
   }
 
-  // Whenever the module sees a changed "in" value, it increments it
-  // by 1 and writes it to "out".
-  //
-  // TODO(mesch): This is one possible workaround to avoid change
-  // callbacks for the module's own changes. This needs to be solved
-  // better, because the Schema in the Link is supposed to represent
-  // data structure, not data flow, and hence having in and out fields
-  // in the schema is an abuse.
+  // Whenever the module sees a changed value, it increments it by 1
+  // and writes it back. This works because the module is not notified
+  // of changes from itself, because of the false argument to Watch().
+  // More precisely, a watcher registered through one link handle is
+  // not notified of changes requested through the same handle. It's
+  // really the handle identity that decides.
   void Value(const String& label, const String& value) override {
-    if (label == "in" && value != "") {
+    if (label == kValueLabel) {
       FTL_LOG(INFO) << "module2 value \"" << value << "\"";
 
       int i = 0;
@@ -66,8 +66,8 @@ class Module2Impl : public Module, public LinkChanged {
       ++i;
       std::ostringstream out;
       out << i;
-      link_->SetValue("in", "");
-      link_->SetValue("out", out.str());
+
+      link_->SetValue(kValueLabel, out.str());
     }
   }
 

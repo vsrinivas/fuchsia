@@ -22,6 +22,8 @@
 
 namespace {
 
+constexpr char kValueLabel[] = "value";
+
 using mojo::Binding;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
@@ -42,14 +44,13 @@ class LinkConnection : public LinkChanged {
       : src_binding_(this), src_(src), dst_(dst) {
     InterfaceHandle<LinkChanged> watcher;
     src_binding_.Bind(GetProxy(&watcher));
-    src_->Watch(std::move(watcher));
+    src_->Watch(std::move(watcher), false);
   }
 
   void Value(const String& label, const String& value) override {
-    if (label == "out" && value != "") {
+    if (label == kValueLabel) {
       FTL_LOG(INFO) << "recipe link connection value \"" << value << "\"";
-      src_->SetValue("out", "");
-      dst_->SetValue("in", value);
+      dst_->SetValue(kValueLabel, value);
     }
   }
 
@@ -81,7 +82,7 @@ class RecipeImpl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
+    link_->Watch(std::move(watcher), false);
 
     session_->CreateLink("token_pass", GetProxy(&module1_link_));
 
@@ -94,7 +95,7 @@ class RecipeImpl : public Module, public LinkChanged {
                           [this](InterfaceHandle<Module> module) {
                             FTL_LOG(INFO) << "recipe start module module1 done";
                             module1_.Bind(std::move(module));
-                            module1_link_->SetValue("in", "1");
+                            module1_link_->SetValue(kValueLabel, "1");
                           });
 
     session_->CreateLink("token_pass", GetProxy(&module2_link_));

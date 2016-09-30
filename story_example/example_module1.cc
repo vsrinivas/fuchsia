@@ -21,6 +21,8 @@
 
 namespace {
 
+constexpr char kValueLabel[] = "value";
+
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -49,12 +51,12 @@ class Module1Impl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
+    link_->Watch(std::move(watcher), false);
   }
 
   // See comments on Module2Impl in example-module2.cc.
   void Value(const String& label, const String& value) override {
-    if (label == "in" && value != "") {
+    if (label == kValueLabel) {
       FTL_LOG(INFO) << "module1 value \"" << value << "\"";
 
       int i = 0;
@@ -62,8 +64,8 @@ class Module1Impl : public Module, public LinkChanged {
       ++i;
       std::ostringstream out;
       out << i;
-      link_->SetValue("in", "");
-      link_->SetValue("out", out.str());
+
+      link_->SetValue(kValueLabel, out.str());
     }
   }
 

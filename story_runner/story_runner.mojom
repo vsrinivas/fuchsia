@@ -57,13 +57,13 @@ module modular;
 
 import "apps/ledger/api/ledger.mojom";
 
-[ServiceName="modular.ResolverFactory"]  // Created by component-manager app.
+[ServiceName="modular.ResolverFactory"]  // Created by resolver app.
 interface ResolverFactory {
   GetResolver(Resolver& resolver);
 };
 
+// No service name: created by ResolverFactory.
 interface Resolver {
-  // Resolves a query to a module URL.
   Resolve(string query) => (string module_url);
 };
 
@@ -85,7 +85,7 @@ interface Session {
 interface Link {
   SetValue(string label, string? value);
   Value(string label) => (string? value);
-  Watch(LinkChanged watcher);
+  Watch(LinkChanged watcher, bool self);
   Dup(Link& dup);
 };
 

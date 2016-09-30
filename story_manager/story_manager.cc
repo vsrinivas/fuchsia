@@ -86,8 +86,7 @@ class StoryImpl : public Story, public StoryState {
   // |StoryState| override.
   void RunStory(InterfacePtr<ledger::Page> session_page) override {
     InterfacePtr<ResolverFactory> resolver_factory;
-    ConnectToService(shell_, "mojo:resolver",
-                     GetProxy(&resolver_factory));
+    ConnectToService(shell_, "mojo:resolver", GetProxy(&resolver_factory));
     ConnectToService(shell_, "mojo:story_runner", GetProxy(&runner_));
     runner_->Initialize(resolver_factory.Pass());
     runner_->StartStory(session_page.PassInterfaceHandle(),
@@ -206,7 +205,7 @@ class StoryProviderImpl : public StoryProvider, public StoryProviderState {
                      const StartNewStoryCallback& callback) override {
     // TODO(alhaad): Creating multiple stories can only work after
     // https://fuchsia-review.googlesource.com/#/c/8941/ has landed.
-    FTL_LOG(INFO) << "Received request for starting application at " << url;
+    FTL_LOG(INFO) << "StoryProviderImpl::StartNewStory " << url;
     ledger_->NewPage([this, callback, url](
         ledger::Status status, InterfaceHandle<ledger::Page> session_page) {
       auto story_id = GenerateNewStoryId(10);
@@ -286,7 +285,7 @@ class StoryManagerImpl : public StoryManager {
  private:
   void Launch(StructPtr<ledger::Identity> identity,
               const LaunchCallback& callback) override {
-    FTL_LOG(INFO) << "story_manager::Launch received.";
+    FTL_LOG(INFO) << "StoryManagerImpl::Launch()";
 
     // Establish connection with Ledger.
     ConnectToService(shell_, "mojo:ledger", GetProxy(&ledger_factory_));
@@ -345,7 +344,7 @@ class StoryManagerApp : public ApplicationImplBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerApp);
 };
 
-}  // namespace story_manager
+}  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
   modular::StoryManagerApp app;
