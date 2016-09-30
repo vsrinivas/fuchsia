@@ -2,26 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_GURL_H_
-#define URL_GURL_H_
+#ifndef LIB_URL_GURL_H_
+#define LIB_URL_GURL_H_
 
 #include <iosfwd>
 #include <string>
 
-#include "base/memory/scoped_ptr.h"
-#include "base/strings/string16.h"
-#include "base/strings/string_piece.h"
-#include "url/third_party/mozilla/url_parse.h"
-#include "url/url_canon.h"
-#include "url/url_canon_stdstring.h"
-#include "url/url_constants.h"
-#include "url/url_export.h"
+#include "lib/ftl/strings/string_view.h"
+#include "lib/url/third_party/mozilla/url_parse.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_stdstring.h"
+#include "lib/url/url_constants.h"
+#include "lib/url/url_export.h"
+
+namespace url {
 
 class URL_EXPORT GURL {
  public:
-  typedef url::StringPieceReplacements<std::string> Replacements;
-  typedef url::StringPieceReplacements<base::string16> ReplacementsW;
-
   // Creates an empty, invalid URL.
   GURL();
 
@@ -37,7 +34,6 @@ class URL_EXPORT GURL {
   // version to assume the query parameter encoding should be the same as the
   // input encoding.
   explicit GURL(const std::string& url_string /*, output_param_encoding*/);
-  explicit GURL(const base::string16& url_string /*, output_param_encoding*/);
 
   // Constructor for URLs that have already been parsed and canonicalized. This
   // is used for conversions from KURL, for example. The caller must supply all
@@ -135,22 +131,6 @@ class URL_EXPORT GURL {
   // It is an error to resolve a URL relative to an invalid URL. The result
   // will be the empty URL.
   GURL Resolve(const std::string& relative) const;
-  GURL Resolve(const base::string16& relative) const;
-
-  // Creates a new GURL by replacing the current URL's components with the
-  // supplied versions. See the Replacements class in url_canon.h for more.
-  //
-  // These are not particularly quick, so avoid doing mutations when possible.
-  // Prefer the 8-bit version when possible.
-  //
-  // It is an error to replace components of an invalid URL. The result will
-  // be the empty URL.
-  //
-  // Note that we use the more general url::Replacements type to give
-  // callers extra flexibility rather than our override.
-  GURL ReplaceComponents(const url::Replacements<char>& replacements) const;
-  GURL ReplaceComponents(
-      const url::Replacements<base::char16>& replacements) const;
 
   // A helper function that is equivalent to replacing the path with a slash
   // and clearing out everything after that. We sometimes need to know just the
@@ -162,23 +142,6 @@ class URL_EXPORT GURL {
   // It is an error to get an empty path on an invalid URL. The result
   // will be the empty URL.
   GURL GetWithEmptyPath() const;
-
-  // A helper function to return a GURL containing just the scheme, host,
-  // and port from a URL. Equivalent to clearing any username and password,
-  // replacing the path with a slash, and clearing everything after that. If
-  // this URL is not a standard URL, then the result will be an empty,
-  // invalid GURL. If the URL has neither username nor password, this
-  // degenerates to GetWithEmptyPath().
-  //
-  // It is an error to get the origin of an invalid URL. The result
-  // will be the empty URL.
-  GURL GetOrigin() const;
-
-  // A helper function to return a GURL stripped from the elements that are not
-  // supposed to be sent as HTTP referrer: username, password and ref fragment.
-  // For invalid URLs or URLs that no valid referrers, an empty URL will be
-  // returned.
-  GURL GetAsReferrer() const;
 
   // Returns true if the scheme for the current URL is a known "standard-format"
   // scheme. A standard-format scheme adheres to what RFC 3986 calls "generic
@@ -205,11 +168,6 @@ class URL_EXPORT GURL {
     return SchemeIs(url::kFileScheme);
   }
 
-  // FileSystem URLs need to be treated differently in some cases.
-  bool SchemeIsFileSystem() const {
-    return SchemeIs(url::kFileSystemScheme);
-  }
-
   // Returns true if the scheme indicates a secure connection.
   //
   // NOTE: This function is deprecated. You probably want
@@ -222,9 +180,7 @@ class URL_EXPORT GURL {
   // |IsOriginSecure|, as appropriate. Then remove |SchemeIsSecure|.
   // crbug.com/362214
   bool SchemeIsSecure() const {
-    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme) ||
-           (SchemeIsFileSystem() && inner_url() &&
-            inner_url()->SchemeIsSecure());
+    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme);
   }
 
   // Returns true if the scheme indicates a network connection that uses TLS or
@@ -344,7 +300,7 @@ class URL_EXPORT GURL {
   // scheme. This call is more efficient than getting the host and check
   // whether host has the specific domain or not because no copies or
   // object constructions are done.
-  bool DomainIs(base::StringPiece lower_ascii_domain) const;
+  bool DomainIs(ftl::StringView lower_ascii_domain) const;
 
   // Swaps the contents of this GURL object with |other|, without doing
   // any memory allocations.
@@ -355,12 +311,6 @@ class URL_EXPORT GURL {
   // This function may be called from any thread.
   static const GURL& EmptyGURL();
 
-  // Returns the inner URL of a nested URL [currently only non-null for
-  // filesystem: URLs].
-  const GURL* inner_url() const {
-    return inner_url_.get();
-  }
-
  private:
   // Variant of the string parsing constructor that allows the caller to elect
   // retain trailing whitespace, if any, on the passed URL spec, but only if
@@ -370,8 +320,7 @@ class URL_EXPORT GURL {
   enum RetainWhiteSpaceSelector { RETAIN_TRAILING_PATH_WHITEPACE };
   GURL(const std::string& url_string, RetainWhiteSpaceSelector);
 
-  template<typename STR>
-  void InitCanonical(const STR& input_spec, bool trim_path_end);
+  void InitCanonical(ftl::StringView input_spec, bool trim_path_end);
 
   void InitializeFromCanonicalSpec();
 
@@ -393,13 +342,12 @@ class URL_EXPORT GURL {
   // Identified components of the canonical spec.
   url::Parsed parsed_;
 
-  // Used for nested schemes [currently only filesystem:].
-  scoped_ptr<GURL> inner_url_;
-
   // TODO bug 684583: Add encoding for query params.
 };
 
 // Stream operator so GURL can be used in assertion statements.
 URL_EXPORT std::ostream& operator<<(std::ostream& out, const GURL& url);
 
-#endif  // URL_GURL_H_
+}  // namespace url
+
+#endif  // LIB_URL_GURL_H_

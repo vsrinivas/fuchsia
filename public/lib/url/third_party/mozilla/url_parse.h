@@ -2,17 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
-#define URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
+#ifndef LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
+#define LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
 
-#include "base/strings/string16.h"
-#include "url/url_export.h"
+#include "lib/url/url_export.h"
 
 namespace url {
-
-// Deprecated, but WebKit/WebCore/platform/KURLGooglePrivate.h and
-// KURLGoogle.cpp still rely on this type.
-typedef base::char16 UTF16Char;
 
 // Component ------------------------------------------------------------------
 
@@ -91,12 +86,9 @@ struct URL_EXPORT Parsed {
     REF,
   };
 
-  // The default constructor is sufficient for the components, but inner_parsed_
-  // requires special handling.
   Parsed();
   Parsed(const Parsed&);
   Parsed& operator=(const Parsed&);
-  ~Parsed();
 
   // Returns the length of the URL (the end of the last component).
   //
@@ -181,30 +173,6 @@ struct URL_EXPORT Parsed {
   // the string with the scheme stripped off.
   Component GetContent() const;
 
-  // This is used for nested URL types, currently only filesystem.  If you
-  // parse a filesystem URL, the resulting Parsed will have a nested
-  // inner_parsed_ to hold the parsed inner URL's component information.
-  // For all other url types [including the inner URL], it will be NULL.
-  Parsed* inner_parsed() const {
-    return inner_parsed_;
-  }
-
-  void set_inner_parsed(const Parsed& inner_parsed) {
-    if (!inner_parsed_)
-      inner_parsed_ = new Parsed(inner_parsed);
-    else
-      *inner_parsed_ = inner_parsed;
-  }
-
-  void clear_inner_parsed() {
-    if (inner_parsed_) {
-      delete inner_parsed_;
-      inner_parsed_ = NULL;
-    }
-  }
-
- private:
-  Parsed* inner_parsed_;  // This object is owned and managed by this struct.
 };
 
 // Initialization functions ---------------------------------------------------
@@ -227,9 +195,6 @@ struct URL_EXPORT Parsed {
 URL_EXPORT void ParseStandardURL(const char* url,
                                  int url_len,
                                  Parsed* parsed);
-URL_EXPORT void ParseStandardURL(const base::char16* url,
-                                 int url_len,
-                                 Parsed* parsed);
 
 // PathURL is for when the scheme is known not to have an authority (host)
 // section but that aren't file URLs either. The scheme is parsed, and
@@ -239,31 +204,13 @@ URL_EXPORT void ParsePathURL(const char* url,
                              int url_len,
                              bool trim_path_end,
                              Parsed* parsed);
-URL_EXPORT void ParsePathURL(const base::char16* url,
-                             int url_len,
-                             bool trim_path_end,
-                             Parsed* parsed);
 
 // FileURL is for file URLs. There are some special rules for interpreting
 // these.
 URL_EXPORT void ParseFileURL(const char* url, int url_len, Parsed* parsed);
-URL_EXPORT void ParseFileURL(const base::char16* url,
-                             int url_len,
-                             Parsed* parsed);
-
-// Filesystem URLs are structured differently than other URLs.
-URL_EXPORT void ParseFileSystemURL(const char* url,
-                                   int url_len,
-                                   Parsed* parsed);
-URL_EXPORT void ParseFileSystemURL(const base::char16* url,
-                                   int url_len,
-                                   Parsed* parsed);
 
 // MailtoURL is for mailto: urls. They are made up scheme,path,query
 URL_EXPORT void ParseMailtoURL(const char* url, int url_len, Parsed* parsed);
-URL_EXPORT void ParseMailtoURL(const base::char16* url,
-                               int url_len,
-                               Parsed* parsed);
 
 // Helper functions -----------------------------------------------------------
 
@@ -290,23 +237,14 @@ URL_EXPORT void ParseMailtoURL(const base::char16* url,
 URL_EXPORT bool ExtractScheme(const char* url,
                               int url_len,
                               Component* scheme);
-URL_EXPORT bool ExtractScheme(const base::char16* url,
-                              int url_len,
-                              Component* scheme);
 
 // Returns true if ch is a character that terminates the authority segment
 // of a URL.
-URL_EXPORT bool IsAuthorityTerminator(base::char16 ch);
+URL_EXPORT bool IsAuthorityTerminator(char ch);
 
 // Does a best effort parse of input |spec|, in range |auth|. If a particular
 // component is not found, it will be set to invalid.
 URL_EXPORT void ParseAuthority(const char* spec,
-                               const Component& auth,
-                               Component* username,
-                               Component* password,
-                               Component* hostname,
-                               Component* port_num);
-URL_EXPORT void ParseAuthority(const base::char16* spec,
                                const Component& auth,
                                Component* username,
                                Component* password,
@@ -321,7 +259,6 @@ URL_EXPORT void ParseAuthority(const base::char16* spec,
 // the two special values below.
 enum SpecialPort { PORT_UNSPECIFIED = -1, PORT_INVALID = -2 };
 URL_EXPORT int ParsePort(const char* url, const Component& port);
-URL_EXPORT int ParsePort(const base::char16* url, const Component& port);
 
 // Extracts the range of the file name in the given url. The path must
 // already have been computed by the parse function, and the matching URL
@@ -334,9 +271,6 @@ URL_EXPORT int ParsePort(const base::char16* url, const Component& port);
 //
 // The 8-bit version requires UTF-8 encoding.
 URL_EXPORT void ExtractFileName(const char* url,
-                                const Component& path,
-                                Component* file_name);
-URL_EXPORT void ExtractFileName(const base::char16* url,
                                 const Component& path,
                                 Component* file_name);
 
@@ -359,11 +293,7 @@ URL_EXPORT bool ExtractQueryKeyValue(const char* url,
                                      Component* query,
                                      Component* key,
                                      Component* value);
-URL_EXPORT bool ExtractQueryKeyValue(const base::char16* url,
-                                     Component* query,
-                                     Component* key,
-                                     Component* value);
 
 }  // namespace url
 
-#endif  // URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
+#endif  // LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_

@@ -6,8 +6,8 @@
 // of a URL, these are URLs that have no authority section, only a path. For
 // example, "javascript:" and "data:".
 
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
 
 namespace url {
 
@@ -16,8 +16,7 @@ namespace {
 // Canonicalize the given |component| from |source| into |output| and
 // |new_component|. If |separator| is non-zero, it is pre-pended to |output|
 // prior to the canonicalized component; i.e. for the '?' or '#' characters.
-template<typename CHAR, typename UCHAR>
-bool DoCanonicalizePathComponent(const CHAR* source,
+bool DoCanonicalizePathComponent(const char* source,
                                  const Component& component,
                                  char separator,
                                  CanonOutput* output,
@@ -32,7 +31,7 @@ bool DoCanonicalizePathComponent(const CHAR* source,
     new_component->begin = output->length();
     int end = component.end();
     for (int i = component.begin; i < end; i++) {
-      UCHAR uch = static_cast<UCHAR>(source[i]);
+      unsigned char uch = static_cast<unsigned char>(source[i]);
       if (uch < 0x20 || uch >= 0x80)
         success &= AppendUTF8EscapedChar(source, &i, end, output);
       else
@@ -46,11 +45,15 @@ bool DoCanonicalizePathComponent(const CHAR* source,
   return success;
 }
 
-template <typename CHAR, typename UCHAR>
-bool DoCanonicalizePathURL(const URLComponentSource<CHAR>& source,
+}  // namespace
+
+bool CanonicalizePathURL(const char* spec,
+                         int spec_len,
                            const Parsed& parsed,
                            CanonOutput* output,
                            Parsed* new_parsed) {
+  URLComponentSource source(spec);
+
   // Scheme: this will append the colon.
   bool success = CanonicalizeScheme(source.scheme, parsed.scheme,
                                     output, &new_parsed->scheme);
@@ -63,59 +66,14 @@ bool DoCanonicalizePathURL(const URLComponentSource<CHAR>& source,
   new_parsed->port.reset();
   // We allow path URLs to have the path, query and fragment components, but we
   // will canonicalize each of the via the weaker path URL rules.
-  success &= DoCanonicalizePathComponent<CHAR, UCHAR>(
+  success &= DoCanonicalizePathComponent(
       source.path, parsed.path, '\0', output, &new_parsed->path);
-  success &= DoCanonicalizePathComponent<CHAR, UCHAR>(
+  success &= DoCanonicalizePathComponent(
       source.query, parsed.query, '?', output, &new_parsed->query);
-  success &= DoCanonicalizePathComponent<CHAR, UCHAR>(
+  success &= DoCanonicalizePathComponent(
       source.ref, parsed.ref, '#', output, &new_parsed->ref);
 
   return success;
-}
-
-}  // namespace
-
-bool CanonicalizePathURL(const char* spec,
-                         int spec_len,
-                         const Parsed& parsed,
-                         CanonOutput* output,
-                         Parsed* new_parsed) {
-  return DoCanonicalizePathURL<char, unsigned char>(
-      URLComponentSource<char>(spec), parsed, output, new_parsed);
-}
-
-bool CanonicalizePathURL(const base::char16* spec,
-                         int spec_len,
-                         const Parsed& parsed,
-                         CanonOutput* output,
-                         Parsed* new_parsed) {
-  return DoCanonicalizePathURL<base::char16, base::char16>(
-      URLComponentSource<base::char16>(spec), parsed, output, new_parsed);
-}
-
-bool ReplacePathURL(const char* base,
-                    const Parsed& base_parsed,
-                    const Replacements<char>& replacements,
-                    CanonOutput* output,
-                    Parsed* new_parsed) {
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupOverrideComponents(base, replacements, &source, &parsed);
-  return DoCanonicalizePathURL<char, unsigned char>(
-      source, parsed, output, new_parsed);
-}
-
-bool ReplacePathURL(const char* base,
-                    const Parsed& base_parsed,
-                    const Replacements<base::char16>& replacements,
-                    CanonOutput* output,
-                    Parsed* new_parsed) {
-  RawCanonOutput<1024> utf8;
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupUTF16OverrideComponents(base, replacements, &utf8, &source, &parsed);
-  return DoCanonicalizePathURL<char, unsigned char>(
-      source, parsed, output, new_parsed);
 }
 
 }  // namespace url

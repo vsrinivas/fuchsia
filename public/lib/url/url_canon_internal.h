@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_URL_CANON_INTERNAL_H_
-#define URL_URL_CANON_INTERNAL_H_
+#ifndef LIB_URL_URL_CANON_INTERNAL_H_
+#define LIB_URL_URL_CANON_INTERNAL_H_
 
 // This file is intended to be included in another C++ file where the character
 // types are defined. This allows us to write mostly generic code, but not have
@@ -12,8 +12,8 @@
 
 #include <stdlib.h>
 
-#include "base/logging.h"
-#include "url/url_canon.h"
+#include "lib/ftl/logging.h"
+#include "lib/url/url_canon.h"
 
 namespace url {
 
@@ -77,9 +77,6 @@ inline bool IsComponentChar(unsigned char c) {
 void AppendStringOfType(const char* source, int length,
                         SharedCharTypes type,
                         CanonOutput* output);
-void AppendStringOfType(const base::char16* source, int length,
-                        SharedCharTypes type,
-                        CanonOutput* output);
 
 // Maps the hex numerical values 0x0 to 0xf to the corresponding ASCII digit
 // that will be used to represent it.
@@ -103,8 +100,7 @@ inline unsigned char HexCharToValue(unsigned char c) {
 // Indicates if the given character is a dot or dot equivalent, returning the
 // number of characters taken by it. This will be one for a literal dot, 3 for
 // an escaped dot. If the character is not a dot, this will return 0.
-template<typename CHAR>
-inline int IsDot(const CHAR* spec, int offset, int end) {
+inline int IsDot(const char* spec, int offset, int end) {
   if (spec[offset] == '.') {
     return 1;
   } else if (spec[offset] == '%' && offset + 3 <= end &&
@@ -121,7 +117,7 @@ inline int IsDot(const CHAR* spec, int offset, int end) {
 // required for relative URL resolving to test for scheme equality.
 //
 // Returns 0 if the input character is not a valid scheme character.
-char CanonicalSchemeChar(base::char16 ch);
+char CanonicalSchemeChar(char ch);
 
 // Write a single character, escaped, to the output. This always escapes: it
 // does no checking that thee character requires escaping.
@@ -134,9 +130,6 @@ inline void AppendEscapedChar(UINCHAR ch,
   output->push_back(kHexCharLookup[(ch >> 4) & 0xf]);
   output->push_back(kHexCharLookup[ch & 0xf]);
 }
-
-// The character we'll substitute for undecodable or invalid characters.
-extern const base::char16 kUnicodeReplacementCharacter;
 
 // UTF-8 functions ------------------------------------------------------------
 
@@ -187,7 +180,7 @@ inline void DoAppendUTF8(unsigned char_value, Output* output) {
              output);
   } else {
     // Invalid UTF-8 character (>20 bits).
-    NOTREACHED();
+    FTL_NOTREACHED();
   }
 }
 
@@ -223,17 +216,17 @@ inline void AppendUTF8EscapedValue(unsigned char_value, CanonOutput* output) {
 // |*begin| will be updated to point to the last character consumed so it
 // can be incremented in a loop and will be ready for the next character.
 // (for a single-16-bit-word character, it will not be changed).
-URL_EXPORT bool ReadUTFChar(const base::char16* str, int* begin, int length,
+URL_EXPORT bool ReadUTFChar(const uint16_t* str, int* begin, int length,
                             unsigned* code_point_out);
 
 // Equivalent to U16_APPEND_UNSAFE in ICU but uses our output method.
 inline void AppendUTF16Value(unsigned code_point,
-                             CanonOutputT<base::char16>* output) {
+                             CanonOutputT<uint16_t>* output) {
   if (code_point > 0xffff) {
-    output->push_back(static_cast<base::char16>((code_point >> 10) + 0xd7c0));
-    output->push_back(static_cast<base::char16>((code_point & 0x3ff) | 0xdc00));
+    output->push_back(static_cast<uint16_t>((code_point >> 10) + 0xd7c0));
+    output->push_back(static_cast<uint16_t>((code_point & 0x3ff) | 0xdc00));
   } else {
-    output->push_back(static_cast<base::char16>(code_point));
+    output->push_back(static_cast<uint16_t>(code_point));
   }
 }
 
@@ -258,7 +251,7 @@ inline void AppendUTF16Value(unsigned code_point,
 //
 // Assumes that ch[begin] is within range in the array, but does not assume
 // that any following characters are.
-inline bool AppendUTF8EscapedChar(const base::char16* str, int* begin,
+inline bool AppendUTF8EscapedChar(const uint16_t* str, int* begin,
                                   int length, CanonOutput* output) {
   // UTF-16 input. ReadUTFChar will handle invalid characters for us and give
   // us the kUnicodeReplacementCharacter, so we don't have to do special
@@ -293,7 +286,8 @@ inline bool AppendUTF8EscapedChar(const char* str, int* begin, int length,
 inline bool Is8BitChar(char c) {
   return true;  // this case is specialized to avoid a warning
 }
-inline bool Is8BitChar(base::char16 c) {
+
+inline bool Is8BitChar(uint16_t c) {
   return c <= 255;
 }
 
@@ -329,7 +323,7 @@ inline bool DecodeEscaped(const CHAR* spec, int* begin, int end,
 // the escaping rules are not guaranteed!
 void AppendInvalidNarrowString(const char* spec, int begin, int end,
                                CanonOutput* output);
-void AppendInvalidNarrowString(const base::char16* spec, int begin, int end,
+void AppendInvalidNarrowString(const uint16_t* spec, int begin, int end,
                                CanonOutput* output);
 
 // Misc canonicalization helpers ----------------------------------------------
@@ -342,53 +336,17 @@ void AppendInvalidNarrowString(const base::char16* spec, int begin, int end,
 // replacing the invalid characters with the "invalid character". It will
 // return false in the failure case, and the caller should not continue as
 // normal.
-URL_EXPORT bool ConvertUTF16ToUTF8(const base::char16* input, int input_len,
+URL_EXPORT bool ConvertUTF16ToUTF8(const uint16_t* input, int input_len,
                                    CanonOutput* output);
 URL_EXPORT bool ConvertUTF8ToUTF16(const char* input, int input_len,
-                                   CanonOutputT<base::char16>* output);
+                                   CanonOutputT<uint16_t>* output);
 
 // Converts from UTF-16 to 8-bit using the character set converter. If the
 // converter is NULL, this will use UTF-8.
-void ConvertUTF16ToQueryEncoding(const base::char16* input,
+void ConvertUTF16ToQueryEncoding(const uint16_t* input,
                                  const Component& query,
                                  CharsetConverter* converter,
                                  CanonOutput* output);
-
-// Applies the replacements to the given component source. The component source
-// should be pre-initialized to the "old" base. That is, all pointers will
-// point to the spec of the old URL, and all of the Parsed components will
-// be indices into that string.
-//
-// The pointers and components in the |source| for all non-NULL strings in the
-// |repl| (replacements) will be updated to reference those strings.
-// Canonicalizing with the new |source| and |parsed| can then combine URL
-// components from many different strings.
-void SetupOverrideComponents(const char* base,
-                             const Replacements<char>& repl,
-                             URLComponentSource<char>* source,
-                             Parsed* parsed);
-
-// Like the above 8-bit version, except that it additionally converts the
-// UTF-16 input to UTF-8 before doing the overrides.
-//
-// The given utf8_buffer is used to store the converted components. They will
-// be appended one after another, with the parsed structure identifying the
-// appropriate substrings. This buffer is a parameter because the source has
-// no storage, so the buffer must have the same lifetime as the source
-// parameter owned by the caller.
-//
-// THE CALLER MUST NOT ADD TO THE |utf8_buffer| AFTER THIS CALL. Members of
-// |source| will point into this buffer, which could be invalidated if
-// additional data is added and the CanonOutput resizes its buffer.
-//
-// Returns true on success. False means that the input was not valid UTF-16,
-// although we will have still done the override with "invalid characters" in
-// place of errors.
-bool SetupUTF16OverrideComponents(const char* base,
-                                  const Replacements<base::char16>& repl,
-                                  CanonOutput* utf8_buffer,
-                                  URLComponentSource<char>* source,
-                                  Parsed* parsed);
 
 // Implemented in url_canon_path.cc, these are required by the relative URL
 // resolver as well, so we declare them here.
@@ -396,29 +354,16 @@ bool CanonicalizePartialPath(const char* spec,
                              const Component& path,
                              int path_begin_in_output,
                              CanonOutput* output);
-bool CanonicalizePartialPath(const base::char16* spec,
-                             const Component& path,
-                             int path_begin_in_output,
-                             CanonOutput* output);
-
-#ifndef WIN32
 
 // Implementations of Windows' int-to-string conversions
-URL_EXPORT int _itoa_s(int value, char* buffer, size_t size_in_chars,
-                       int radix);
-URL_EXPORT int _itow_s(int value, base::char16* buffer, size_t size_in_chars,
-                       int radix);
+int IntToString(int value, char* buffer, size_t size_in_chars, int radix);
 
 // Secure template overloads for these functions
 template<size_t N>
-inline int _itoa_s(int value, char (&buffer)[N], int radix) {
-  return _itoa_s(value, buffer, N, radix);
+inline int IntToString(int value, char (&buffer)[N], int radix) {
+  return IntToString(value, buffer, N, radix);
 }
 
-template<size_t N>
-inline int _itow_s(int value, base::char16 (&buffer)[N], int radix) {
-  return _itow_s(value, buffer, N, radix);
-}
 
 // _strtoui64 and strtoull behave the same
 inline unsigned long long _strtoui64(const char* nptr,
@@ -426,8 +371,20 @@ inline unsigned long long _strtoui64(const char* nptr,
   return strtoull(nptr, endptr, base);
 }
 
-#endif  // WIN32
+// IDN ------------------------------------------------------------------------
 
+// Converts the Unicode input representing a hostname to ASCII using IDN rules.
+// The output must fall in the ASCII range, but will be encoded in UTF-16.
+//
+// On success, the output will be filled with the ASCII host name and it will
+// return true. Unlike most other canonicalization functions, this assumes that
+// the output is empty. The beginning of the host will be at offset 0, and
+// the length of the output will be set to the length of the new host name.
+//
+// On error, returns false. The output in this case is undefined.
+URL_EXPORT bool IDNToASCII(const uint16_t* src,
+                           int src_len,
+                           CanonOutputW* output);
 }  // namespace url
 
-#endif  // URL_URL_CANON_INTERNAL_H_
+#endif  // LIB_URL_URL_CANON_INTERNAL_H_

@@ -6,8 +6,8 @@
 
 #include <string.h>
 
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
 
 namespace url {
 
@@ -19,38 +19,9 @@ inline bool IsRemovableURLWhitespace(int ch) {
   return ch == '\r' || ch == '\n' || ch == '\t';
 }
 
-// Backend for RemoveURLWhitespace (see declaration in url_canon.h).
-// It sucks that we have to do this, since this takes about 13% of the total URL
-// canonicalization time.
-template<typename CHAR>
-const CHAR* DoRemoveURLWhitespace(const CHAR* input, int input_len,
-                                  CanonOutputT<CHAR>* buffer,
-                                  int* output_len) {
-  // Fast verification that there's nothing that needs removal. This is the 99%
-  // case, so we want it to be fast and don't care about impacting the speed
-  // when we do find whitespace.
-  int found_whitespace = false;
-  for (int i = 0; i < input_len; i++) {
-    if (!IsRemovableURLWhitespace(input[i]))
-      continue;
-    found_whitespace = true;
-    break;
-  }
-
-  if (!found_whitespace) {
-    // Didn't find any whitespace, we don't need to do anything. We can just
-    // return the input as the output.
-    *output_len = input_len;
-    return input;
-  }
-
-  // Remove the whitespace into the new buffer and return it.
-  for (int i = 0; i < input_len; i++) {
-    if (!IsRemovableURLWhitespace(input[i]))
-      buffer->push_back(input[i]);
-  }
-  *output_len = buffer->length();
-  return buffer->data();
+// Helper functions for converting port integers to strings.
+inline void WritePortInt(char* output, int output_len, int port) {
+  IntToString(port, output, output_len, 10);
 }
 
 // Contains the canonical version of each possible input letter in the scheme
@@ -80,8 +51,42 @@ inline bool IsSchemeFirstChar(unsigned char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-template<typename CHAR, typename UCHAR>
-bool DoScheme(const CHAR* spec,
+}
+
+// Backend for RemoveURLWhitespace (see declaration in url_canon.h).
+// It sucks that we have to do this, since this takes about 13% of the total URL
+// canonicalization time.
+const char* RemoveURLWhitespace(const char* input, size_t input_len,
+                                  CanonOutputT<char>* buffer,
+                                  size_t* output_len) {
+  // Fast verification that there's nothing that needs removal. This is the 99%
+  // case, so we want it to be fast and don't care about impacting the speed
+  // when we do find whitespace.
+  int found_whitespace = false;
+  for (size_t i = 0; i < input_len; i++) {
+    if (!IsRemovableURLWhitespace(input[i]))
+      continue;
+    found_whitespace = true;
+    break;
+  }
+
+  if (!found_whitespace) {
+    // Didn't find any whitespace, we don't need to do anything. We can just
+    // return the input as the output.
+    *output_len = input_len;
+    return input;
+  }
+
+  // Remove the whitespace into the new buffer and return it.
+  for (size_t i = 0; i < input_len; i++) {
+    if (!IsRemovableURLWhitespace(input[i]))
+      buffer->push_back(input[i]);
+  }
+  *output_len = buffer->length();
+  return buffer->data();
+}
+
+bool CanonicalizeScheme(const char* spec,
               const Component& scheme,
               CanonOutput* output,
               Component* out_scheme) {
@@ -103,7 +108,7 @@ bool DoScheme(const CHAR* spec,
   bool success = true;
   int end = scheme.end();
   for (int i = scheme.begin; i < end; i++) {
-    UCHAR ch = static_cast<UCHAR>(spec[i]);
+    unsigned char ch = static_cast<unsigned char>(spec[i]);
     char replacement = 0;
     if (ch < 0x80) {
       if (i == scheme.begin) {
@@ -144,10 +149,9 @@ bool DoScheme(const CHAR* spec,
 // *_spec strings. Typically, these specs will be the same (we're
 // canonicalizing a single source string), but may be different when
 // replacing components.
-template<typename CHAR, typename UCHAR>
-bool DoUserInfo(const CHAR* username_spec,
+bool CanonicalizeUserInfo(const char* username_spec,
                 const Component& username,
-                const CHAR* password_spec,
+                const char* password_spec,
                 const Component& password,
                 CanonOutput* output,
                 Component* out_username,
@@ -184,14 +188,8 @@ bool DoUserInfo(const CHAR* username_spec,
   return true;
 }
 
-// Helper functions for converting port integers to strings.
-inline void WritePortInt(char* output, int output_len, int port) {
-  _itoa_s(port, output, output_len, 10);
-}
-
 // This function will prepend the colon if there will be a port.
-template<typename CHAR, typename UCHAR>
-bool DoPort(const CHAR* spec,
+bool CanonicalizePort(const char* spec,
             const Component& port,
             int default_port_for_scheme,
             CanonOutput* output,
@@ -228,8 +226,7 @@ bool DoPort(const CHAR* spec,
   return true;
 }
 
-template<typename CHAR, typename UCHAR>
-void DoCanonicalizeRef(const CHAR* spec,
+void CanonicalizeRef(const char* spec,
                        const Component& ref,
                        CanonOutput* output,
                        Component* out_ref) {
@@ -250,12 +247,12 @@ void DoCanonicalizeRef(const CHAR* spec,
     if (spec[i] == 0) {
       // IE just strips NULLs, so we do too.
       continue;
-    } else if (static_cast<UCHAR>(spec[i]) < 0x20) {
+    } else if (static_cast<unsigned char>(spec[i]) < 0x20) {
       // Unline IE seems to, we escape control characters. This will probably
       // make the reference fragment unusable on a web page, but people
       // shouldn't be using control characters in their anchor names.
       AppendEscapedChar(static_cast<unsigned char>(spec[i]), output);
-    } else if (static_cast<UCHAR>(spec[i]) < 0x80) {
+    } else if (static_cast<unsigned char>(spec[i]) < 0x80) {
       // Normal ASCII characters are just appended.
       output->push_back(static_cast<char>(spec[i]));
     } else {
@@ -272,96 +269,8 @@ void DoCanonicalizeRef(const CHAR* spec,
   out_ref->len = output->length() - out_ref->begin;
 }
 
-}  // namespace
-
-const char* RemoveURLWhitespace(const char* input, int input_len,
-                                CanonOutputT<char>* buffer,
-                                int* output_len) {
-  return DoRemoveURLWhitespace(input, input_len, buffer, output_len);
-}
-
-const base::char16* RemoveURLWhitespace(const base::char16* input,
-                                        int input_len,
-                                        CanonOutputT<base::char16>* buffer,
-                                        int* output_len) {
-  return DoRemoveURLWhitespace(input, input_len, buffer, output_len);
-}
-
-char CanonicalSchemeChar(base::char16 ch) {
-  if (ch >= 0x80)
-    return 0;  // Non-ASCII is not supported by schemes.
-  return kSchemeCanonical[ch];
-}
-
-bool CanonicalizeScheme(const char* spec,
-                        const Component& scheme,
-                        CanonOutput* output,
-                        Component* out_scheme) {
-  return DoScheme<char, unsigned char>(spec, scheme, output, out_scheme);
-}
-
-bool CanonicalizeScheme(const base::char16* spec,
-                        const Component& scheme,
-                        CanonOutput* output,
-                        Component* out_scheme) {
-  return DoScheme<base::char16, base::char16>(spec, scheme, output, out_scheme);
-}
-
-bool CanonicalizeUserInfo(const char* username_source,
-                          const Component& username,
-                          const char* password_source,
-                          const Component& password,
-                          CanonOutput* output,
-                          Component* out_username,
-                          Component* out_password) {
-  return DoUserInfo<char, unsigned char>(
-      username_source, username, password_source, password,
-      output, out_username, out_password);
-}
-
-bool CanonicalizeUserInfo(const base::char16* username_source,
-                          const Component& username,
-                          const base::char16* password_source,
-                          const Component& password,
-                          CanonOutput* output,
-                          Component* out_username,
-                          Component* out_password) {
-  return DoUserInfo<base::char16, base::char16>(
-      username_source, username, password_source, password,
-      output, out_username, out_password);
-}
-
-bool CanonicalizePort(const char* spec,
-                      const Component& port,
-                      int default_port_for_scheme,
-                      CanonOutput* output,
-                      Component* out_port) {
-  return DoPort<char, unsigned char>(spec, port,
-                                     default_port_for_scheme,
-                                     output, out_port);
-}
-
-bool CanonicalizePort(const base::char16* spec,
-                      const Component& port,
-                      int default_port_for_scheme,
-                      CanonOutput* output,
-                      Component* out_port) {
-  return DoPort<base::char16, base::char16>(spec, port, default_port_for_scheme,
-                                            output, out_port);
-}
-
-void CanonicalizeRef(const char* spec,
-                     const Component& ref,
-                     CanonOutput* output,
-                     Component* out_ref) {
-  DoCanonicalizeRef<char, unsigned char>(spec, ref, output, out_ref);
-}
-
-void CanonicalizeRef(const base::char16* spec,
-                     const Component& ref,
-                     CanonOutput* output,
-                     Component* out_ref) {
-  DoCanonicalizeRef<base::char16, base::char16>(spec, ref, output, out_ref);
+char CanonicalSchemeChar(char ch) {
+  return url::kSchemeCanonical[static_cast<int>(ch)];
 }
 
 }  // namespace url

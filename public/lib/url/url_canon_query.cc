@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
 
 // Query canonicalization in IE
 // ----------------------------
@@ -41,11 +41,10 @@ namespace {
 
 // Returns true if the characters starting at |begin| and going until |end|
 // (non-inclusive) are all representable in 7-bits.
-template<typename CHAR, typename UCHAR>
-bool IsAllASCII(const CHAR* spec, const Component& query) {
+bool IsAllASCII(const char* spec, const Component& query) {
   int end = query.end();
   for (int i = query.begin; i < end; i++) {
-    if (static_cast<UCHAR>(spec[i]) >= 0x80)
+    if (static_cast<unsigned char>(spec[i]) >= 0x80)
       return false;
   }
   return true;
@@ -55,8 +54,7 @@ bool IsAllASCII(const CHAR* spec, const Component& query) {
 // match the given |type| in SharedCharTypes. This version will accept 8 or 16
 // bit characters, but assumes that they have only 7-bit values. It also assumes
 // that all UTF-8 values are correct, so doesn't bother checking
-template<typename CHAR>
-void AppendRaw8BitQueryString(const CHAR* source, int length,
+void AppendRaw8BitQueryString(const char* source, int length,
                               CanonOutput* output) {
   for (int i = 0; i < length; i++) {
     if (!IsQueryChar(static_cast<unsigned char>(source[i])))
@@ -79,22 +77,11 @@ void RunConverter(const char* spec,
   converter->ConvertFromUTF16(utf16.data(), utf16.length(), output);
 }
 
-// Runs the converter with the given UTF-16 input. We don't have to do
-// anything, but this overridden function allows us to use the same code
-// for both UTF-8 and UTF-16 input.
-void RunConverter(const base::char16* spec,
-                  const Component& query,
-                  CharsetConverter* converter,
-                  CanonOutput* output) {
-  converter->ConvertFromUTF16(&spec[query.begin], query.len, output);
-}
-
-template<typename CHAR, typename UCHAR>
-void DoConvertToQueryEncoding(const CHAR* spec,
+void DoConvertToQueryEncoding(const char* spec,
                               const Component& query,
                               CharsetConverter* converter,
                               CanonOutput* output) {
-  if (IsAllASCII<CHAR, UCHAR>(spec, query)) {
+  if (IsAllASCII(spec, query)) {
     // Easy: the input can just appended with no character set conversions.
     AppendRaw8BitQueryString(&spec[query.begin], query.len, output);
 
@@ -114,8 +101,9 @@ void DoConvertToQueryEncoding(const CHAR* spec,
   }
 }
 
-template<typename CHAR, typename UCHAR>
-void DoCanonicalizeQuery(const CHAR* spec,
+}  // namespace
+
+void CanonicalizeQuery(const char* spec,
                          const Component& query,
                          CharsetConverter* converter,
                          CanonOutput* output,
@@ -128,37 +116,9 @@ void DoCanonicalizeQuery(const CHAR* spec,
   output->push_back('?');
   out_query->begin = output->length();
 
-  DoConvertToQueryEncoding<CHAR, UCHAR>(spec, query, converter, output);
+  DoConvertToQueryEncoding(spec, query, converter, output);
 
   out_query->len = output->length() - out_query->begin;
-}
-
-}  // namespace
-
-void CanonicalizeQuery(const char* spec,
-                       const Component& query,
-                       CharsetConverter* converter,
-                       CanonOutput* output,
-                       Component* out_query) {
-  DoCanonicalizeQuery<char, unsigned char>(spec, query, converter,
-                                           output, out_query);
-}
-
-void CanonicalizeQuery(const base::char16* spec,
-                       const Component& query,
-                       CharsetConverter* converter,
-                       CanonOutput* output,
-                       Component* out_query) {
-  DoCanonicalizeQuery<base::char16, base::char16>(spec, query, converter,
-                                                  output, out_query);
-}
-
-void ConvertUTF16ToQueryEncoding(const base::char16* input,
-                                 const Component& query,
-                                 CharsetConverter* converter,
-                                 CanonOutput* output) {
-  DoConvertToQueryEncoding<base::char16, base::char16>(input, query,
-                                                       converter, output);
 }
 
 }  // namespace url

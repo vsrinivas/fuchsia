@@ -2,55 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_URL_TEST_UTILS_H_
-#define URL_URL_TEST_UTILS_H_
+#ifndef LIB_URL_URL_TEST_UTILS_H_
+#define LIB_URL_URL_TEST_UTILS_H_
 
 // Convenience functions for string conversions.
 // These are mostly intended for use in unit tests.
 
 #include <string>
 
-#include "base/strings/string16.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/url_canon_internal.h"
+#include "third_party/gtest/include/gtest/gtest.h"
+#include "lib/url/url_canon_internal.h"
 
 namespace url {
 
 namespace test_utils {
 
-// Converts a UTF-16 string from native wchar_t format to char16, by
+
+// Converts a UTF-16 string from native wchar_t format to uint16_t, by
 // truncating the high 32 bits. This is not meant to handle true UTF-32
 // encoded strings.
-inline base::string16 WStringToUTF16(const wchar_t* src) {
-  base::string16 str;
+inline std::basic_string<uint16_t> WStringToUTF16(const wchar_t* src) {
+  std::basic_string<uint16_t> str;
   int length = static_cast<int>(wcslen(src));
   for (int i = 0; i < length; ++i) {
-    str.push_back(static_cast<base::char16>(src[i]));
+    str.push_back(static_cast<uint16_t>(src[i]));
   }
-  return str;
-}
-
-// Converts a string from UTF-8 to UTF-16.
-inline base::string16 ConvertUTF8ToUTF16(const std::string& src) {
-  int length = static_cast<int>(src.length());
-  EXPECT_LT(length, 1024);
-  RawCanonOutputW<1024> output;
-  EXPECT_TRUE(ConvertUTF8ToUTF16(src.data(), length, &output));
-  return base::string16(output.data(), output.length());
-}
-
-// Converts a string from UTF-16 to UTF-8.
-inline std::string ConvertUTF16ToUTF8(const base::string16& src) {
-  std::string str;
-  StdStringCanonOutput output(&str);
-  EXPECT_TRUE(ConvertUTF16ToUTF8(src.data(), static_cast<int>(src.length()),
-                                 &output));
-  output.Complete();
   return str;
 }
 
 }  // namespace test_utils
 
+// The arraysize(arr) macro returns the # of elements in an array arr.
+// The expression is a compile-time constant, and therefore can be
+// used in defining new arrays, for example.  If you use arraysize on
+// a pointer by mistake, you will get a compile-time error.
+
+// This template function declaration is used in defining arraysize.
+// Note that the function doesn't need an implementation, as we only
+// use its type.
+template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
+#define arraysize(array) (sizeof(ArraySizeHelper(array)))
+
 }  // namespace url
 
-#endif  // URL_URL_TEST_UTILS_H_
+#endif  // LIB_URL_URL_TEST_UTILS_H_

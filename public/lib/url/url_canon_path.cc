@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
-#include "url/url_parse_internal.h"
+#include "lib/ftl/logging.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
+#include "lib/url/url_parse_internal.h"
 
 namespace url {
 
@@ -97,8 +97,7 @@ enum DotDisposition {
 // If the input is "../foo", |after_dot| = 1, |end| = 6, and
 // at the end, |*consumed_len| = 2 for the "./" this function consumed. The
 // original dot length should be handled by the caller.
-template<typename CHAR>
-DotDisposition ClassifyAfterDot(const CHAR* spec, int after_dot,
+DotDisposition ClassifyAfterDot(const char* spec, int after_dot,
                                 int end, int* consumed_len) {
   if (after_dot == end) {
     // Single dot at the end.
@@ -146,10 +145,10 @@ DotDisposition ClassifyAfterDot(const CHAR* spec, int after_dot,
 // The output is guaranteed to end in a slash when this function completes.
 void BackUpToPreviousSlash(int path_begin_in_output,
                            CanonOutput* output) {
-  DCHECK(output->length() > 0);
+  FTL_DCHECK(output->length() > 0);
 
   int i = output->length() - 1;
-  DCHECK(output->at(i) == '/');
+  FTL_DCHECK(output->at(i) == '/');
   if (i == path_begin_in_output)
     return;  // We're at the first slash, nothing to do.
 
@@ -161,6 +160,8 @@ void BackUpToPreviousSlash(int path_begin_in_output,
   // Now shrink the output to just include that last slash we found.
   output->set_length(i + 1);
 }
+
+}  // namespace
 
 // Appends the given path to the output. It assumes that if the input path
 // starts with a slash, it should be copied to the output. If no path has
@@ -175,8 +176,7 @@ void BackUpToPreviousSlash(int path_begin_in_output,
 // We do not collapse multiple slashes in a row to a single slash. It seems
 // no web browsers do this, and we don't want incompatibilities, even though
 // it would be correct for most systems.
-template<typename CHAR, typename UCHAR>
-bool DoPartialPath(const CHAR* spec,
+bool CanonicalizePartialPath(const char* spec,
                    const Component& path,
                    int path_begin_in_output,
                    CanonOutput* output) {
@@ -184,8 +184,8 @@ bool DoPartialPath(const CHAR* spec,
 
   bool success = true;
   for (int i = path.begin; i < end; i++) {
-    UCHAR uch = static_cast<UCHAR>(spec[i]);
-    if (sizeof(CHAR) > sizeof(char) && uch >= 0x80) {
+    unsigned char uch = static_cast<unsigned char>(spec[i]);
+    if (sizeof(char) > sizeof(char) && uch >= 0x80) {
       // We only need to test wide input for having non-ASCII characters. For
       // narrow input, we'll always just use the lookup table. We don't try to
       // do anything tricky with decoding/validating UTF-8. This function will
@@ -209,12 +209,12 @@ bool DoPartialPath(const CHAR* spec,
           // special case slashes. Since slashes are much more common than
           // dots, this actually increases performance measurably (though
           // slightly).
-          DCHECK(output->length() > path_begin_in_output);
+          FTL_DCHECK(output->length() > path_begin_in_output);
           if (output->length() > path_begin_in_output &&
               output->at(output->length() - 1) == '/') {
             // Slash followed by a dot, check to see if this is means relative
             int consumed_len;
-            switch (ClassifyAfterDot<CHAR>(spec, i + dotlen, end,
+            switch (ClassifyAfterDot(spec, i + dotlen, end,
                                            &consumed_len)) {
               case NOT_A_DIRECTORY:
                 // Copy the dot to the output, it means nothing special.
@@ -293,8 +293,7 @@ bool DoPartialPath(const CHAR* spec,
   return success;
 }
 
-template<typename CHAR, typename UCHAR>
-bool DoPath(const CHAR* spec,
+bool CanonicalizePath(const char* spec,
             const Component& path,
             CanonOutput* output,
             Component* out_path) {
@@ -308,46 +307,13 @@ bool DoPath(const CHAR* spec,
     if (!IsURLSlash(spec[path.begin]))
       output->push_back('/');
 
-    success = DoPartialPath<CHAR, UCHAR>(spec, path, out_path->begin, output);
+    success = CanonicalizePartialPath(spec, path, out_path->begin, output);
   } else {
     // No input, canonical path is a slash.
     output->push_back('/');
   }
   out_path->len = output->length() - out_path->begin;
   return success;
-}
-
-}  // namespace
-
-bool CanonicalizePath(const char* spec,
-                      const Component& path,
-                      CanonOutput* output,
-                      Component* out_path) {
-  return DoPath<char, unsigned char>(spec, path, output, out_path);
-}
-
-bool CanonicalizePath(const base::char16* spec,
-                      const Component& path,
-                      CanonOutput* output,
-                      Component* out_path) {
-  return DoPath<base::char16, base::char16>(spec, path, output, out_path);
-}
-
-bool CanonicalizePartialPath(const char* spec,
-                             const Component& path,
-                             int path_begin_in_output,
-                             CanonOutput* output) {
-  return DoPartialPath<char, unsigned char>(spec, path, path_begin_in_output,
-                                            output);
-}
-
-bool CanonicalizePartialPath(const base::char16* spec,
-                             const Component& path,
-                             int path_begin_in_output,
-                             CanonOutput* output) {
-  return DoPartialPath<base::char16, base::char16>(spec, path,
-                                                   path_begin_in_output,
-                                                   output);
 }
 
 }  // namespace url

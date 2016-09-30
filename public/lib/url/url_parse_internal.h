@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_URL_PARSE_INTERNAL_H_
-#define URL_URL_PARSE_INTERNAL_H_
+#ifndef LIB_URL_URL_PARSE_INTERNAL_H_
+#define LIB_URL_URL_PARSE_INTERNAL_H_
 
 // Contains common inline helper functions used by the URL parsing routines.
 
-#include "url/third_party/mozilla/url_parse.h"
+#include "lib/url/third_party/mozilla/url_parse.h"
 
 namespace url {
 
 // We treat slashes and backslashes the same for IE compatibility.
-inline bool IsURLSlash(base::char16 ch) {
+inline bool IsURLSlash(char ch) {
   return ch == '/' || ch == '\\';
 }
 
 // Returns true if we should trim this character from the URL because it is a
 // space or a control character.
-inline bool ShouldTrimFromURL(base::char16 ch) {
-  return ch <= ' ';
+inline bool ShouldTrimFromURL(char ch) {
+  return ch > 0 && ch <= ' ';
 }
 
 // Given an already-initialized begin index and length, this shrinks the range
@@ -27,8 +27,7 @@ inline bool ShouldTrimFromURL(base::char16 ch) {
 // indicate the length of untrimmed data from |*begin|, but rather the position
 // in the input string (so the string starts at character |*begin| in the spec,
 // and goes until |*len|).
-template<typename CHAR>
-inline void TrimURL(const CHAR* spec, int* begin, int* len,
+inline void TrimURL(const char* spec, int* begin, int* len,
                     bool trim_path_end = true) {
   // Strip leading whitespace and control characters.
   while (*begin < *len && ShouldTrimFromURL(spec[*begin]))
@@ -45,8 +44,7 @@ inline void TrimURL(const CHAR* spec, int* begin, int* len,
 
 // Counts the number of consecutive slashes starting at the given offset
 // in the given string of the given length.
-template<typename CHAR>
-inline int CountConsecutiveSlashes(const CHAR *str,
+inline int CountConsecutiveSlashes(const char *str,
                                    int begin_offset, int str_len) {
   int count = 0;
   while (begin_offset + count < str_len &&
@@ -67,12 +65,6 @@ void ParsePathInternal(const char* spec,
                        Component* filepath,
                        Component* query,
                        Component* ref);
-void ParsePathInternal(const base::char16* spec,
-                       const Component& path,
-                       Component* filepath,
-                       Component* query,
-                       Component* ref);
-
 
 // Given a spec and a pointer to the character after the colon following the
 // scheme, this parses it and fills in the structure, Every item in the parsed
@@ -81,11 +73,6 @@ void ParseAfterScheme(const char* spec,
                       int spec_len,
                       int after_scheme,
                       Parsed* parsed);
-void ParseAfterScheme(const base::char16* spec,
-                      int spec_len,
-                      int after_scheme,
-                      Parsed* parsed);
-
 }  // namespace url
 
-#endif  // URL_URL_PARSE_INTERNAL_H_
+#endif  // LIB_URL_URL_PARSE_INTERNAL_H_

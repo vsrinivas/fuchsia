@@ -2,49 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifdef WIN32
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
 #include <algorithm>
 #include <ostream>
 
-#include "url/gurl.h"
+#include "lib/url/gurl.h"
 
-#include "base/logging.h"
-#include "base/strings/string_piece.h"
-#include "base/strings/string_util.h"
-#include "url/url_canon_stdstring.h"
-#include "url/url_util.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/strings/ascii.h"
+#include "lib/ftl/strings/string_view.h"
+#include "lib/url/url_canon_stdstring.h"
+#include "lib/url/url_util.h"
+#include "lib/url/url_util_internal.h"
+
+namespace url {
 
 namespace {
 
 static std::string* empty_string = NULL;
 static GURL* empty_gurl = NULL;
-
-#ifdef WIN32
-
-// Returns a static reference to an empty string for returning a reference
-// when there is no underlying string.
-const std::string& EmptyStringForGURL() {
-  // Avoid static object construction/destruction on startup/shutdown.
-  if (!empty_string) {
-    // Create the string. Be careful that we don't break in the case that this
-    // is being called from multiple threads. Statics are not threadsafe.
-    std::string* new_empty_string = new std::string;
-    if (InterlockedCompareExchangePointer(
-        reinterpret_cast<PVOID*>(&empty_string), new_empty_string, NULL)) {
-      // The old value was non-NULL, so no replacement was done. Another
-      // thread did the initialization out from under us.
-      delete new_empty_string;
-    }
-  }
-  return *empty_string;
-}
-
-#else
 
 static pthread_once_t empty_string_once = PTHREAD_ONCE_INIT;
 static pthread_once_t empty_gurl_once = PTHREAD_ONCE_INIT;
@@ -59,8 +36,6 @@ const std::string& EmptyStringForGURL() {
   return *empty_string;
 }
 
-#endif  // WIN32
-
 }  // namespace
 
 GURL::GURL() : is_valid_(false) {
@@ -70,17 +45,9 @@ GURL::GURL(const GURL& other)
     : spec_(other.spec_),
       is_valid_(other.is_valid_),
       parsed_(other.parsed_) {
-  if (other.inner_url_)
-    inner_url_.reset(new GURL(*other.inner_url_));
-  // Valid filesystem urls should always have an inner_url_.
-  DCHECK(!is_valid_ || !SchemeIsFileSystem() || inner_url_);
 }
 
 GURL::GURL(const std::string& url_string) {
-  InitCanonical(url_string, true);
-}
-
-GURL::GURL(const base::string16& url_string) {
   InitCanonical(url_string, true);
 }
 
@@ -105,60 +72,41 @@ GURL::GURL(std::string canonical_spec, const url::Parsed& parsed, bool is_valid)
   InitializeFromCanonicalSpec();
 }
 
-template<typename STR>
-void GURL::InitCanonical(const STR& input_spec, bool trim_path_end) {
+void GURL::InitCanonical(ftl::StringView input_spec, bool trim_path_end) {
   // Reserve enough room in the output for the input, plus some extra so that
   // we have room if we have to escape a few things without reallocating.
   spec_.reserve(input_spec.size() + 32);
   url::StdStringCanonOutput output(&spec_);
   is_valid_ = url::Canonicalize(
-      input_spec.data(), static_cast<int>(input_spec.length()), trim_path_end,
+      input_spec.data(), static_cast<int>(input_spec.size()), trim_path_end,
       NULL, &output, &parsed_);
 
   output.Complete();  // Must be done before using string.
-  if (is_valid_ && SchemeIsFileSystem()) {
-    inner_url_.reset(new GURL(spec_.data(), parsed_.Length(),
-                              *parsed_.inner_parsed(), true));
-  }
 }
 
 void GURL::InitializeFromCanonicalSpec() {
-  if (is_valid_ && SchemeIsFileSystem()) {
-    inner_url_.reset(
-        new GURL(spec_.data(), parsed_.Length(),
-                 *parsed_.inner_parsed(), true));
-  }
-
 #ifndef NDEBUG
   // For testing purposes, check that the parsed canonical URL is identical to
   // what we would have produced. Skip checking for invalid URLs have no meaning
   // and we can't always canonicalize then reproducibly.
   if (is_valid_) {
-    url::Component scheme;
-    // We can't do this check on the inner_url of a filesystem URL, as
-    // canonical_spec actually points to the start of the outer URL, so we'd
-    // end up with infinite recursion in this constructor.
-    if (!url::FindAndCompareScheme(spec_.data(), spec_.length(),
-                                   url::kFileSystemScheme, &scheme) ||
-        scheme.begin == parsed_.scheme.begin) {
-      // We need to retain trailing whitespace on path URLs, as the |parsed_|
-      // spec we originally received may legitimately contain trailing white-
-      // space on the path or  components e.g. if the #ref has been
-      // removed from a "foo:hello #ref" URL (see http://crbug.com/291747).
-      GURL test_url(spec_, RETAIN_TRAILING_PATH_WHITEPACE);
+    // We need to retain trailing whitespace on path URLs, as the |parsed_|
+    // spec we originally received may legitimately contain trailing white-
+    // space on the path or  components e.g. if the #ref has been
+    // removed from a "foo:hello #ref" URL (see http://crbug.com/291747).
+    GURL test_url(spec_, RETAIN_TRAILING_PATH_WHITEPACE);
 
-      DCHECK(test_url.is_valid_ == is_valid_);
-      DCHECK(test_url.spec_ == spec_);
+    FTL_DCHECK(test_url.is_valid_ == is_valid_);
+    FTL_DCHECK(test_url.spec_ == spec_);
 
-      DCHECK(test_url.parsed_.scheme == parsed_.scheme);
-      DCHECK(test_url.parsed_.username == parsed_.username);
-      DCHECK(test_url.parsed_.password == parsed_.password);
-      DCHECK(test_url.parsed_.host == parsed_.host);
-      DCHECK(test_url.parsed_.port == parsed_.port);
-      DCHECK(test_url.parsed_.path == parsed_.path);
-      DCHECK(test_url.parsed_.query == parsed_.query);
-      DCHECK(test_url.parsed_.ref == parsed_.ref);
-    }
+    FTL_DCHECK(test_url.parsed_.scheme == parsed_.scheme);
+    FTL_DCHECK(test_url.parsed_.username == parsed_.username);
+    FTL_DCHECK(test_url.parsed_.password == parsed_.password);
+    FTL_DCHECK(test_url.parsed_.host == parsed_.host);
+    FTL_DCHECK(test_url.parsed_.port == parsed_.port);
+    FTL_DCHECK(test_url.parsed_.path == parsed_.path);
+    FTL_DCHECK(test_url.parsed_.query == parsed_.query);
+    FTL_DCHECK(test_url.parsed_.ref == parsed_.ref);
   }
 #endif
 }
@@ -175,7 +123,7 @@ const std::string& GURL::spec() const {
   if (is_valid_ || spec_.empty())
     return spec_;
 
-  DCHECK(false) << "Trying to get the spec of an invalid URL!";
+  FTL_DCHECK(false) << "Trying to get the spec of an invalid URL!";
   return EmptyStringForGURL();
 }
 
@@ -208,9 +156,9 @@ GURL GURL::Resolve(const std::string& relative) const {
   result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
 
-  if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.length()),
+  if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.size()),
                             parsed_, relative.data(),
-                            static_cast<int>(relative.length()),
+                            static_cast<int>(relative.size()),
                             nullptr, &output, &result.parsed_)) {
     // Error resolving, return an empty URL.
     return GURL();
@@ -218,128 +166,7 @@ GURL GURL::Resolve(const std::string& relative) const {
 
   output.Complete();
   result.is_valid_ = true;
-  if (result.SchemeIsFileSystem()) {
-    result.inner_url_.reset(
-        new GURL(result.spec_.data(), result.parsed_.Length(),
-                 *result.parsed_.inner_parsed(), true));
-  }
   return result;
-}
-
-// Note: code duplicated above (it's inconvenient to use a template here).
-GURL GURL::Resolve(const base::string16& relative) const {
-  // Not allowed for invalid URLs.
-  if (!is_valid_)
-    return GURL();
-
-  GURL result;
-
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
-  url::StdStringCanonOutput output(&result.spec_);
-
-  if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.length()),
-                            parsed_, relative.data(),
-                            static_cast<int>(relative.length()),
-                            nullptr, &output, &result.parsed_)) {
-    // Error resolving, return an empty URL.
-    return GURL();
-  }
-
-  output.Complete();
-  result.is_valid_ = true;
-  if (result.SchemeIsFileSystem()) {
-    result.inner_url_.reset(
-        new GURL(result.spec_.data(), result.parsed_.Length(),
-                 *result.parsed_.inner_parsed(), true));
-  }
-  return result;
-}
-
-// Note: code duplicated below (it's inconvenient to use a template here).
-GURL GURL::ReplaceComponents(
-    const url::Replacements<char>& replacements) const {
-  GURL result;
-
-  // Not allowed for invalid URLs.
-  if (!is_valid_)
-    return GURL();
-
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
-  url::StdStringCanonOutput output(&result.spec_);
-
-  result.is_valid_ = url::ReplaceComponents(
-      spec_.data(), static_cast<int>(spec_.length()), parsed_, replacements,
-      NULL, &output, &result.parsed_);
-
-  output.Complete();
-  if (result.is_valid_ && result.SchemeIsFileSystem()) {
-    result.inner_url_.reset(new GURL(spec_.data(), result.parsed_.Length(),
-                                     *result.parsed_.inner_parsed(), true));
-  }
-  return result;
-}
-
-// Note: code duplicated above (it's inconvenient to use a template here).
-GURL GURL::ReplaceComponents(
-    const url::Replacements<base::char16>& replacements) const {
-  GURL result;
-
-  // Not allowed for invalid URLs.
-  if (!is_valid_)
-    return GURL();
-
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
-  url::StdStringCanonOutput output(&result.spec_);
-
-  result.is_valid_ = url::ReplaceComponents(
-      spec_.data(), static_cast<int>(spec_.length()), parsed_, replacements,
-      NULL, &output, &result.parsed_);
-
-  output.Complete();
-  if (result.is_valid_ && result.SchemeIsFileSystem()) {
-    result.inner_url_.reset(new GURL(spec_.data(), result.parsed_.Length(),
-                                     *result.parsed_.inner_parsed(), true));
-  }
-  return result;
-}
-
-GURL GURL::GetOrigin() const {
-  // This doesn't make sense for invalid or nonstandard URLs, so return
-  // the empty URL.
-  if (!is_valid_ || !IsStandard())
-    return GURL();
-
-  if (SchemeIsFileSystem())
-    return inner_url_->GetOrigin();
-
-  url::Replacements<char> replacements;
-  replacements.ClearUsername();
-  replacements.ClearPassword();
-  replacements.ClearPath();
-  replacements.ClearQuery();
-  replacements.ClearRef();
-
-  return ReplaceComponents(replacements);
-}
-
-GURL GURL::GetAsReferrer() const {
-  if (!is_valid_ || !SchemeIsHTTPOrHTTPS())
-    return GURL();
-
-  if (!has_ref() && !has_username() && !has_password())
-    return GURL(*this);
-
-  url::Replacements<char> replacements;
-  replacements.ClearRef();
-  replacements.ClearUsername();
-  replacements.ClearPassword();
-  return ReplaceComponents(replacements);
 }
 
 GURL GURL::GetWithEmptyPath() const {
@@ -373,10 +200,10 @@ bool GURL::IsStandard() const {
 bool GURL::SchemeIs(const char* lower_ascii_scheme) const {
   if (parsed_.scheme.len <= 0)
     return lower_ascii_scheme == NULL;
-  return base::LowerCaseEqualsASCII(
-      base::StringPiece(spec_.data() + parsed_.scheme.begin,
+  return url::LowerCaseEqualsASCII(
+      ftl::StringView(spec_.data() + parsed_.scheme.begin,
                         parsed_.scheme.len),
-      lower_ascii_scheme);
+      ftl::StringView(lower_ascii_scheme));
 }
 
 bool GURL::SchemeIsHTTPOrHTTPS() const {
@@ -408,7 +235,7 @@ std::string GURL::ExtractFileName() const {
 }
 
 std::string GURL::PathForRequest() const {
-  DCHECK(parsed_.path.len > 0)
+  FTL_DCHECK(parsed_.path.len > 0)
       << "Canonical path for requests should be non-empty";
   if (parsed_.ref.len >= 0) {
     // Clip off the reference when it exists. The reference starts after the
@@ -451,26 +278,6 @@ bool GURL::HostIsIPAddress() const {
   return host_info.IsIPAddress();
 }
 
-#ifdef WIN32
-
-const GURL& GURL::EmptyGURL() {
-  // Avoid static object construction/destruction on startup/shutdown.
-  if (!empty_gurl) {
-    // Create the string. Be careful that we don't break in the case that this
-    // is being called from multiple threads.
-    GURL* new_empty_gurl = new GURL;
-    if (InterlockedCompareExchangePointer(
-        reinterpret_cast<PVOID*>(&empty_gurl), new_empty_gurl, NULL)) {
-      // The old value was non-NULL, so no replacement was done. Another
-      // thread did the initialization out from under us.
-      delete new_empty_gurl;
-    }
-  }
-  return *empty_gurl;
-}
-
-#else
-
 void EmptyGURLOnce(void) {
   empty_gurl = new GURL;
 }
@@ -481,15 +288,9 @@ const GURL& GURL::EmptyGURL() {
   return *empty_gurl;
 }
 
-#endif  // WIN32
-
-bool GURL::DomainIs(base::StringPiece lower_ascii_domain) const {
+bool GURL::DomainIs(ftl::StringView lower_ascii_domain) const {
   if (!is_valid_ || lower_ascii_domain.empty())
     return false;
-
-  // FileSystem URLs have empty parsed_.host, so check this first.
-  if (SchemeIsFileSystem() && inner_url_)
-    return inner_url_->DomainIs(lower_ascii_domain);
 
   if (!parsed_.host.is_nonempty())
     return false;
@@ -498,7 +299,7 @@ bool GURL::DomainIs(base::StringPiece lower_ascii_domain) const {
   // then we ignore the dot in the host name.
   const char* host_last_pos = spec_.data() + parsed_.host.end() - 1;
   int host_len = parsed_.host.len;
-  int domain_len = lower_ascii_domain.length();
+  int domain_len = lower_ascii_domain.size();
   if ('.' == *host_last_pos && '.' != lower_ascii_domain[domain_len - 1]) {
     host_last_pos--;
     host_len--;
@@ -512,8 +313,8 @@ bool GURL::DomainIs(base::StringPiece lower_ascii_domain) const {
   const char* host_first_pos = spec_.data() + parsed_.host.begin +
                                host_len - domain_len;
 
-  if (!base::LowerCaseEqualsASCII(
-           base::StringPiece(host_first_pos, domain_len), lower_ascii_domain))
+  if (!url::LowerCaseEqualsASCII(
+           ftl::StringView(host_first_pos, domain_len), lower_ascii_domain))
     return false;
 
   // Make sure there aren't extra characters in host before the compared part;
@@ -531,9 +332,10 @@ void GURL::Swap(GURL* other) {
   spec_.swap(other->spec_);
   std::swap(is_valid_, other->is_valid_);
   std::swap(parsed_, other->parsed_);
-  inner_url_.swap(other->inner_url_);
 }
 
 std::ostream& operator<<(std::ostream& out, const GURL& url) {
   return out << url.possibly_invalid_spec();
 }
+
+}  // namespace url

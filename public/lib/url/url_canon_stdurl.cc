@@ -5,20 +5,19 @@
 // Functions to canonicalize "standard" URLs, which are ones that have an
 // authority section including a host name.
 
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
-#include "url/url_constants.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
+#include "lib/url/url_constants.h"
 
 namespace url {
 
-namespace {
-
-template<typename CHAR, typename UCHAR>
-bool DoCanonicalizeStandardURL(const URLComponentSource<CHAR>& source,
-                               const Parsed& parsed,
-                               CharsetConverter* query_converter,
-                               CanonOutput* output,
-                               Parsed* new_parsed) {
+bool CanonicalizeStandardURL(const char* spec,
+                             int spec_len,
+                             const Parsed& parsed,
+                             CharsetConverter* query_converter,
+                             CanonOutput* output,
+                             Parsed* new_parsed) {
+  URLComponentSource source(spec);
   // Scheme: this will append the colon.
   bool success = CanonicalizeScheme(source.scheme, parsed.scheme,
                                     output, &new_parsed->scheme);
@@ -90,9 +89,6 @@ bool DoCanonicalizeStandardURL(const URLComponentSource<CHAR>& source,
   return success;
 }
 
-}  // namespace
-
-
 // Returns the default port for the given canonical scheme, or PORT_UNSPECIFIED
 // if the scheme is unknown.
 int DefaultPortForScheme(const char* scheme, int scheme_len) {
@@ -122,66 +118,6 @@ int DefaultPortForScheme(const char* scheme, int scheme_len) {
       break;
   }
   return default_port;
-}
-
-bool CanonicalizeStandardURL(const char* spec,
-                             int spec_len,
-                             const Parsed& parsed,
-                             CharsetConverter* query_converter,
-                             CanonOutput* output,
-                             Parsed* new_parsed) {
-  return DoCanonicalizeStandardURL<char, unsigned char>(
-      URLComponentSource<char>(spec), parsed, query_converter,
-      output, new_parsed);
-}
-
-bool CanonicalizeStandardURL(const base::char16* spec,
-                             int spec_len,
-                             const Parsed& parsed,
-                             CharsetConverter* query_converter,
-                             CanonOutput* output,
-                             Parsed* new_parsed) {
-  return DoCanonicalizeStandardURL<base::char16, base::char16>(
-      URLComponentSource<base::char16>(spec), parsed, query_converter,
-      output, new_parsed);
-}
-
-// It might be nice in the future to optimize this so unchanged components don't
-// need to be recanonicalized. This is especially true since the common case for
-// ReplaceComponents is removing things we don't want, like reference fragments
-// and usernames. These cases can become more efficient if we can assume the
-// rest of the URL is OK with these removed (or only the modified parts
-// recanonicalized). This would be much more complex to implement, however.
-//
-// You would also need to update DoReplaceComponents in url_util.cc which
-// relies on this re-checking everything (see the comment there for why).
-bool ReplaceStandardURL(const char* base,
-                        const Parsed& base_parsed,
-                        const Replacements<char>& replacements,
-                        CharsetConverter* query_converter,
-                        CanonOutput* output,
-                        Parsed* new_parsed) {
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupOverrideComponents(base, replacements, &source, &parsed);
-  return DoCanonicalizeStandardURL<char, unsigned char>(
-      source, parsed, query_converter, output, new_parsed);
-}
-
-// For 16-bit replacements, we turn all the replacements into UTF-8 so the
-// regular code path can be used.
-bool ReplaceStandardURL(const char* base,
-                        const Parsed& base_parsed,
-                        const Replacements<base::char16>& replacements,
-                        CharsetConverter* query_converter,
-                        CanonOutput* output,
-                        Parsed* new_parsed) {
-  RawCanonOutput<1024> utf8;
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupUTF16OverrideComponents(base, replacements, &utf8, &source, &parsed);
-  return DoCanonicalizeStandardURL<char, unsigned char>(
-      source, parsed, query_converter, output, new_parsed);
 }
 
 }  // namespace url

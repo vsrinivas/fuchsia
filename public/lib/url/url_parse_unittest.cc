@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "url/third_party/mozilla/url_parse.h"
+#include "lib/url/third_party/mozilla/url_parse.h"
 
-#include "base/macros.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/third_party/mozilla/url_parse.h"
+#include "lib/ftl/macros.h"
+#include "lib/url/third_party/mozilla/url_parse.h"
+#include "lib/url/url_test_utils.h"
+#include "third_party/gtest/include/gtest/gtest.h"
 
 // Interesting IE file:isms...
 //
@@ -366,35 +367,6 @@ TEST(URLParser, PathURL) {
 
 // Various incarnations of file URLs.
 static URLParseCase file_cases[] = {
-#ifdef WIN32
-{"file:server",              "file", NULL, NULL, "server", -1, NULL,          NULL, NULL},
-{"  file: server  \t",       "file", NULL, NULL, " server",-1, NULL,          NULL, NULL},
-{"FiLe:c|",                  "FiLe", NULL, NULL, NULL,     -1, "c|",          NULL, NULL},
-{"FILE:/\\\\/server/file",   "FILE", NULL, NULL, "server", -1, "/file",       NULL, NULL},
-{"file://server/",           "file", NULL, NULL, "server", -1, "/",           NULL, NULL},
-{"file://localhost/c:/",     "file", NULL, NULL, NULL,     -1, "/c:/",        NULL, NULL},
-{"file://127.0.0.1/c|\\",    "file", NULL, NULL, NULL,     -1, "/c|\\",       NULL, NULL},
-{"file:/",                   "file", NULL, NULL, NULL,     -1, NULL,          NULL, NULL},
-{"file:",                    "file", NULL, NULL, NULL,     -1, NULL,          NULL, NULL},
-  // If there is a Windows drive letter, treat any number of slashes as the
-  // path part.
-{"file:c:\\fo\\b",           "file", NULL, NULL, NULL,     -1, "c:\\fo\\b",   NULL, NULL},
-{"file:/c:\\foo/bar",        "file", NULL, NULL, NULL,     -1, "/c:\\foo/bar",NULL, NULL},
-{"file://c:/f\\b",           "file", NULL, NULL, NULL,     -1, "/c:/f\\b",    NULL, NULL},
-{"file:///C:/foo",           "file", NULL, NULL, NULL,     -1, "/C:/foo",     NULL, NULL},
-{"file://///\\/\\/c:\\f\\b", "file", NULL, NULL, NULL,     -1, "/c:\\f\\b",   NULL, NULL},
-  // If there is not a drive letter, we should treat is as UNC EXCEPT for
-  // three slashes, which we treat as a Unix style path.
-{"file:server/file",         "file", NULL, NULL, "server", -1, "/file",       NULL, NULL},
-{"file:/server/file",        "file", NULL, NULL, "server", -1, "/file",       NULL, NULL},
-{"file://server/file",       "file", NULL, NULL, "server", -1, "/file",       NULL, NULL},
-{"file:///server/file",      "file", NULL, NULL, NULL,     -1, "/server/file",NULL, NULL},
-{"file://\\server/file",     "file", NULL, NULL, NULL,     -1, "\\server/file",NULL, NULL},
-{"file:////server/file",     "file", NULL, NULL, "server", -1, "/file",       NULL, NULL},
-  // Queries and refs are valid for file URLs as well.
-{"file:///C:/foo.html?#",   "file", NULL, NULL,  NULL,     -1, "/C:/foo.html",  "",   ""},
-{"file:///C:/foo.html?query=yes#ref", "file", NULL, NULL, NULL, -1, "/C:/foo.html", "query=yes", "ref"},
-#else  // WIN32
   // No slashes.
   {"file:",                    "file", NULL, NULL, NULL,      -1, NULL,             NULL, NULL},
   {"file:path",                "file", NULL, NULL, NULL,      -1, "path",           NULL, NULL},
@@ -439,7 +411,6 @@ static URLParseCase file_cases[] = {
   // Queries and refs are valid for file URLs as well.
   {"file:///foo.html?#",       "file", NULL, NULL, NULL,       -1, "/foo.html",     "",   ""},
   {"file:///foo.html?q=y#ref", "file", NULL, NULL, NULL,       -1, "/foo.html",    "q=y", "ref"},
-#endif  // WIN32
 };
 
 TEST(URLParser, ParseFileURL) {
@@ -630,57 +601,6 @@ TEST(URLParser, MailtoUrl) {
     ExpectInvalidComponent(parsed.password);
     ExpectInvalidComponent(parsed.port);
     ExpectInvalidComponent(parsed.ref);
-  }
-}
-
-// Various incarnations of filesystem URLs.
-static FileSystemURLParseCase filesystem_cases[] = {
-  // Regular URL with all the parts
-{"filesystem:http://user:pass@foo:21/temporary/bar;par?b#c", "http",  "user", "pass", "foo", 21, "/temporary",  "/bar;par",  "b",  "c"},
-{"filesystem:https://foo/persistent/bar;par/",               "https", NULL,   NULL,   "foo", -1, "/persistent", "/bar;par/", NULL, NULL},
-{"filesystem:file:///persistent/bar;par/",                   "file", NULL,    NULL,   NULL,  -1, "/persistent", "/bar;par/", NULL, NULL},
-{"filesystem:file:///persistent/bar;par/?query#ref",                   "file", NULL,    NULL,   NULL,  -1, "/persistent", "/bar;par/", "query", "ref"},
-{"filesystem:file:///persistent",                            "file", NULL,    NULL,   NULL,  -1, "/persistent", "",        NULL, NULL},
-};
-
-TEST(URLParser, FileSystemURL) {
-  // Declared outside for loop to try to catch cases in init() where we forget
-  // to reset something that is reset by the constructor.
-  Parsed parsed;
-  for (size_t i = 0; i < arraysize(filesystem_cases); i++) {
-    const FileSystemURLParseCase* parsecase = &filesystem_cases[i];
-    const char* url = parsecase->input;
-    ParseFileSystemURL(url, static_cast<int>(strlen(url)), &parsed);
-
-    EXPECT_TRUE(ComponentMatches(url, "filesystem", parsed.scheme));
-    EXPECT_EQ(!parsecase->inner_scheme, !parsed.inner_parsed());
-    // Only check the inner_parsed if there is one.
-    if (parsed.inner_parsed()) {
-      EXPECT_TRUE(ComponentMatches(url, parsecase->inner_scheme,
-          parsed.inner_parsed()->scheme));
-      EXPECT_TRUE(ComponentMatches(url, parsecase->inner_username,
-          parsed.inner_parsed()->username));
-      EXPECT_TRUE(ComponentMatches(url, parsecase->inner_password,
-          parsed.inner_parsed()->password));
-      EXPECT_TRUE(ComponentMatches(url, parsecase->inner_host,
-          parsed.inner_parsed()->host));
-      int port = ParsePort(url, parsed.inner_parsed()->port);
-      EXPECT_EQ(parsecase->inner_port, port);
-
-      // The remaining components are never used for filesystem URLs.
-      ExpectInvalidComponent(parsed.inner_parsed()->query);
-      ExpectInvalidComponent(parsed.inner_parsed()->ref);
-    }
-
-    EXPECT_TRUE(ComponentMatches(url, parsecase->path, parsed.path));
-    EXPECT_TRUE(ComponentMatches(url, parsecase->query, parsed.query));
-    EXPECT_TRUE(ComponentMatches(url, parsecase->ref, parsed.ref));
-
-    // The remaining components are never used for filesystem URLs.
-    ExpectInvalidComponent(parsed.username);
-    ExpectInvalidComponent(parsed.password);
-    ExpectInvalidComponent(parsed.host);
-    ExpectInvalidComponent(parsed.port);
   }
 }
 

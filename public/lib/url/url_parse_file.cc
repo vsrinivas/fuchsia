@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "url/third_party/mozilla/url_parse.h"
-#include "url/url_file.h"
-#include "url/url_parse_internal.h"
+#include "lib/ftl/logging.h"
+#include "lib/url/third_party/mozilla/url_parse.h"
+#include "lib/url/url_file.h"
+#include "lib/url/url_parse_internal.h"
 
 // Interesting IE file:isms...
 //
@@ -47,8 +47,7 @@ namespace {
 // the scheme given in |after_slashes|. This will initialize the host, path,
 // query, and ref, and leave the other output components untouched
 // (DoInitFileURL handles these for us).
-template<typename CHAR>
-void DoParseUNC(const CHAR* spec,
+void DoParseUNC(const char* spec,
                 int after_slashes,
                 int spec_len,
                Parsed* parsed) {
@@ -64,18 +63,6 @@ void DoParseUNC(const CHAR* spec,
     parsed->path.reset();
     return;
   }
-
-#ifdef WIN32
-  // See if we have something that looks like a path following the first
-  // component. As in "file://localhost/c:/", we get "c:/" out. We want to
-  // treat this as a having no host but the path given. Works on Windows only.
-  if (DoesBeginWindowsDriveSpec(spec, next_slash + 1, spec_len)) {
-    parsed->host.reset();
-    ParsePathInternal(spec, MakeRange(next_slash, spec_len),
-                      &parsed->path, &parsed->query, &parsed->ref);
-    return;
-  }
-#endif
 
   // Otherwise, everything up until that first slash we found is the host name,
   // which will end up being the UNC host. For example "file://foo/bar.txt"
@@ -99,8 +86,7 @@ void DoParseUNC(const CHAR* spec,
 // beginning of the path indicated by the index in |path_begin|. This will
 // initialize the host, path, query, and ref, and leave the other output
 // components untouched (DoInitFileURL handles these for us).
-template<typename CHAR>
-void DoParseLocalFile(const CHAR* spec,
+void DoParseLocalFile(const char* spec,
                       int path_begin,
                       int spec_len,
                       Parsed* parsed) {
@@ -109,13 +95,14 @@ void DoParseLocalFile(const CHAR* spec,
                     &parsed->path, &parsed->query, &parsed->ref);
 }
 
+}  // namespace
+
 // Backend for the external functions that operates on either char type.
 // Handles cases where there is a scheme, but also when handed the first
 // character following the "file:" at the beginning of the spec. If so,
 // this is usually a slash, but needn't be; we allow paths like "file:c:\foo".
-template<typename CHAR>
-void DoParseFileURL(const CHAR* spec, int spec_len, Parsed* parsed) {
-  DCHECK(spec_len >= 0);
+void ParseFileURL(const char* spec, int spec_len, Parsed* parsed) {
+  FTL_DCHECK(spec_len >= 0);
 
   // Get the parts we never use for file URLs out of the way.
   parsed->username.reset();
@@ -135,23 +122,6 @@ void DoParseFileURL(const CHAR* spec, int spec_len, Parsed* parsed) {
   int num_slashes = CountConsecutiveSlashes(spec, begin, spec_len);
   int after_scheme;
   int after_slashes;
-#ifdef WIN32
-  // See how many slashes there are. We want to handle cases like UNC but also
-  // "/c:/foo". This is when there is no scheme, so we can allow pages to do
-  // links like "c:/foo/bar" or "//foo/bar". This is also called by the
-  // relative URL resolver when it determines there is an absolute URL, which
-  // may give us input like "/c:/foo".
-  after_slashes = begin + num_slashes;
-  if (DoesBeginWindowsDriveSpec(spec, after_slashes, spec_len)) {
-    // Windows path, don't try to extract the scheme (for example, "c:\foo").
-    parsed->scheme.reset();
-    after_scheme = after_slashes;
-  } else if (DoesBeginUNCPath(spec, begin, spec_len, false)) {
-    // Windows UNC path: don't try to extract the scheme, but keep the slashes.
-    parsed->scheme.reset();
-    after_scheme = begin;
-  } else
-#endif
   {
     // ExtractScheme doesn't understand the possibility of filenames with
     // colons in them, in which case it returns the entire spec up to the
@@ -179,26 +149,11 @@ void DoParseFileURL(const CHAR* spec, int spec_len, Parsed* parsed) {
 
   num_slashes = CountConsecutiveSlashes(spec, after_scheme, spec_len);
   after_slashes = after_scheme + num_slashes;
-#ifdef WIN32
-  // Check whether the input is a drive again. We checked above for windows
-  // drive specs, but that's only at the very beginning to see if we have a
-  // scheme at all. This test will be duplicated in that case, but will
-  // additionally handle all cases with a real scheme such as "file:///C:/".
-  if (!DoesBeginWindowsDriveSpec(spec, after_slashes, spec_len) &&
-      num_slashes != 3) {
-    // Anything not beginning with a drive spec ("c:\") on Windows is treated
-    // as UNC, with the exception of three slashes which always means a file.
-    // Even IE7 treats file:///foo/bar as "/foo/bar", which then fails.
-    DoParseUNC(spec, after_slashes, spec_len, parsed);
-    return;
-  }
-#else
   // file: URL with exactly 2 slashes is considered to have a host component.
   if (num_slashes == 2) {
     DoParseUNC(spec, after_slashes, spec_len, parsed);
     return;
   }
-#endif  // WIN32
 
   // Easy and common case, the full path immediately follows the scheme
   // (modulo slashes), as in "file://c:/foo". Just treat everything from
@@ -207,16 +162,6 @@ void DoParseFileURL(const CHAR* spec, int spec_len, Parsed* parsed) {
   DoParseLocalFile(spec,
       num_slashes > 0 ? after_scheme + num_slashes - 1 : after_scheme,
       spec_len, parsed);
-}
-
-}  // namespace
-
-void ParseFileURL(const char* url, int url_len, Parsed* parsed) {
-  DoParseFileURL(url, url_len, parsed);
-}
-
-void ParseFileURL(const base::char16* url, int url_len, Parsed* parsed) {
-  DoParseFileURL(url, url_len, parsed);
 }
 
 }  // namespace url

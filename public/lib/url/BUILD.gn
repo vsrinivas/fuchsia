@@ -2,35 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//testing/test.gni")
-import("//url/config.gni")
-
-# Sets the USE_ICU_ALTERNATIVES_ON_ANDROID define based on the build flag.
-config("url_icu_config") {
-  if (use_icu_alternatives_on_android) {
-    defines = [ "USE_ICU_ALTERNATIVES_ON_ANDROID=1" ]
-  }
-}
-
-component("url") {
-  if (is_win) {
-    # Don't conflict with Windows' "url.dll".
-    output_name = "url_lib"
-  }
+static_library("url") {
   sources = [
-    "android/url_jni_registrar.cc",
-    "android/url_jni_registrar.h",
     "gurl.cc",
     "gurl.h",
-    "origin.cc",
-    "origin.h",
-    "scheme_host_port.cc",
-    "scheme_host_port.h",
     "third_party/mozilla/url_parse.cc",
     "third_party/mozilla/url_parse.h",
     "url_canon.h",
     "url_canon_etc.cc",
-    "url_canon_filesystemurl.cc",
     "url_canon_fileurl.cc",
     "url_canon_host.cc",
     "url_canon_icu.cc",
@@ -60,80 +39,32 @@ component("url") {
 
   defines = [ "URL_IMPLEMENTATION" ]
 
-  configs += [
-    ":url_icu_config",
-
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    "//build/config/compiler:no_size_t_to_int_warning",
-  ]
-
   deps = [
-    "//base",
-    "//base/third_party/dynamic_annotations",
+    "//lib/ftl",
     "//third_party/icu:icudata",
     "//third_party/icu",
   ]
 
-  if (use_icu_alternatives_on_android) {
-    sources -= [
-      "url_canon_icu.cc",
-      "url_canon_icu.h",
-    ]
-    deps -= [
-      "//third_party/icu:icudata",
-      "//third_party/icu",
-    ]
-
-    sources += [
-      "url_canon_icu_alternatives_android.cc",
-      "url_canon_icu_alternatives_android.h",
-    ]
-  }
 }
 
-# TODO(dpranke): crbug.com/360936. Get this to build and run on Android.
-if (!is_android) {
-  # TODO(GYP): Delete this after we've converted everything to GN.
-  # The _run targets exist only for compatibility w/ GYP.
-  group("url_unittests_run") {
-    testonly = true
-    deps = [
-      ":url_unittests",
-    ]
-  }
+executable("url_unittests") {
+  testonly = true
 
-  test("url_unittests") {
-    sources = [
-      "gurl_unittest.cc",
-      "origin_unittest.cc",
-      "scheme_host_port_unittest.cc",
-      "url_canon_icu_unittest.cc",
-      "url_canon_unittest.cc",
-      "url_parse_unittest.cc",
-      "url_test_utils.h",
-      "url_util_unittest.cc",
-    ]
+  sources = [
+    "gurl_unittest.cc",
+    "test/run_all_unittests.cc",
+    "url_canon_icu_unittest.cc",
+    "url_canon_unittest.cc",
+    "url_parse_unittest.cc",
+    "url_test_utils.h",
+    "url_util_unittest.cc",
+  ]
 
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    configs += [ "//build/config/compiler:no_size_t_to_int_warning" ]
+  deps = [
+    ":url",
+    "//lib/ftl",
+    "//third_party/gtest",
+    "//third_party/icu",
+  ]
 
-    #if (is_posix && !is_mac && !is_ios) {
-    #  if (use_allocator!="none") {
-    #    deps += "//base/allocator"
-    #  }
-    #}
-
-    deps = [
-      ":url",
-      "//base",
-      "//base/test:run_all_unittests",
-      "//testing/gtest",
-      "//third_party/icu:icuuc",
-    ]
-
-    if (use_icu_alternatives_on_android) {
-      sources -= [ "url_canon_icu_unittest.cc" ]
-      deps -= [ "//third_party/icu:icuuc" ]
-    }
-  }
 }

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_URL_CONSTANTS_H_
-#define URL_URL_CONSTANTS_H_
+#ifndef LIB_URL_URL_CONSTANTS_H_
+#define LIB_URL_URL_CONSTANTS_H_
 
-#include "url/url_export.h"
+#include "lib/url/url_export.h"
 
 namespace url {
 
@@ -13,11 +13,8 @@ URL_EXPORT extern const char kAboutBlankURL[];
 
 URL_EXPORT extern const char kAboutScheme[];
 URL_EXPORT extern const char kBlobScheme[];
-// The content scheme is specific to Android for identifying a stored file.
-URL_EXPORT extern const char kContentScheme[];
 URL_EXPORT extern const char kDataScheme[];
 URL_EXPORT extern const char kFileScheme[];
-URL_EXPORT extern const char kFileSystemScheme[];
 URL_EXPORT extern const char kFtpScheme[];
 URL_EXPORT extern const char kGopherScheme[];
 URL_EXPORT extern const char kHttpScheme[];
@@ -32,4 +29,4 @@ URL_EXPORT extern const char kStandardSchemeSeparator[];
 
 }  // namespace url
 
-#endif  // URL_URL_CONSTANTS_H_
+#endif  // LIB_URL_URL_CONSTANTS_H_

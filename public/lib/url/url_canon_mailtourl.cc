@@ -4,20 +4,19 @@
 
 // Functions for canonicalizing "mailto:" URLs.
 
-#include "url/url_canon.h"
-#include "url/url_canon_internal.h"
-#include "url/url_file.h"
-#include "url/url_parse_internal.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
+#include "lib/url/url_file.h"
+#include "lib/url/url_parse_internal.h"
 
 namespace url {
 
-namespace {
-
-template <typename CHAR, typename UCHAR>
-bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
+bool CanonicalizeMailtoURL(const char* spec,
+                           int spec_len,
                              const Parsed& parsed,
                              CanonOutput* output,
                              Parsed* new_parsed) {
+  URLComponentSource source(spec);
   // mailto: only uses {scheme, path, query} -- clear the rest.
   new_parsed->username = Component();
   new_parsed->password = Component();
@@ -42,7 +41,7 @@ bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
     // ASCII characters alone.
     int end = parsed.path.end();
     for (int i = parsed.path.begin; i < end; ++i) {
-      UCHAR uch = static_cast<UCHAR>(source.path[i]);
+      unsigned char uch = static_cast<unsigned char>(source.path[i]);
       if (uch < 0x20 || uch >= 0x80)
         success &= AppendUTF8EscapedChar(source.path, &i, end, output);
       else
@@ -60,51 +59,6 @@ bool DoCanonicalizeMailtoURL(const URLComponentSource<CHAR>& source,
                     output, &new_parsed->query);
 
   return success;
-}
-
-} // namespace
-
-bool CanonicalizeMailtoURL(const char* spec,
-                           int spec_len,
-                           const Parsed& parsed,
-                           CanonOutput* output,
-                           Parsed* new_parsed) {
-  return DoCanonicalizeMailtoURL<char, unsigned char>(
-      URLComponentSource<char>(spec), parsed, output, new_parsed);
-}
-
-bool CanonicalizeMailtoURL(const base::char16* spec,
-                           int spec_len,
-                           const Parsed& parsed,
-                           CanonOutput* output,
-                           Parsed* new_parsed) {
-  return DoCanonicalizeMailtoURL<base::char16, base::char16>(
-      URLComponentSource<base::char16>(spec), parsed, output, new_parsed);
-}
-
-bool ReplaceMailtoURL(const char* base,
-                      const Parsed& base_parsed,
-                      const Replacements<char>& replacements,
-                      CanonOutput* output,
-                      Parsed* new_parsed) {
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupOverrideComponents(base, replacements, &source, &parsed);
-  return DoCanonicalizeMailtoURL<char, unsigned char>(
-      source, parsed, output, new_parsed);
-}
-
-bool ReplaceMailtoURL(const char* base,
-                      const Parsed& base_parsed,
-                      const Replacements<base::char16>& replacements,
-                      CanonOutput* output,
-                      Parsed* new_parsed) {
-  RawCanonOutput<1024> utf8;
-  URLComponentSource<char> source(base);
-  Parsed parsed(base_parsed);
-  SetupUTF16OverrideComponents(base, replacements, &utf8, &source, &parsed);
-  return DoCanonicalizeMailtoURL<char, unsigned char>(
-      source, parsed, output, new_parsed);
 }
 
 }  // namespace url

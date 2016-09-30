@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef URL_URL_CANON_ICU_H_
-#define URL_URL_CANON_ICU_H_
+#ifndef LIB_URL_URL_CANON_ICU_H_
+#define LIB_URL_URL_CANON_ICU_H_
 
 // ICU integration functions.
 
-#include "base/compiler_specific.h"
-#include "url/url_canon.h"
-#include "url/url_export.h"
+#include "lib/ftl/compiler_specific.h"
+#include "lib/url/url_canon.h"
+#include "lib/url/url_canon_internal.h"
+#include "lib/url/url_export.h"
 
 typedef struct UConverter UConverter;
 
@@ -26,7 +27,7 @@ class URL_EXPORT ICUCharsetConverter : public CharsetConverter {
 
   ~ICUCharsetConverter() override;
 
-  void ConvertFromUTF16(const base::char16* input,
+  void ConvertFromUTF16(const uint16_t* input,
                         int input_len,
                         CanonOutput* output) override;
 
@@ -37,4 +38,4 @@ class URL_EXPORT ICUCharsetConverter : public CharsetConverter {
 
 }  // namespace url
 
-#endif  // URL_URL_CANON_ICU_H_
+#endif  // LIB_URL_URL_CANON_ICU_H_
