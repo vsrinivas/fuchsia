@@ -137,7 +137,11 @@ if [ "$NET" -eq 1 ]; then
 fi
 
 if [ "$NET" -eq 2 ]; then
-    ARGS+=" -netdev type=tap,ifname=qemu,script=no,id=net0"
+    if [ $(uname -s) == "Darwin" ]; then
+        ARGS+=" -netdev type=tap,ifname=tap0,script=no,id=net0"
+    else
+        ARGS+=" -netdev type=tap,ifname=qemu,script=no,id=net0"
+    fi
     if [ "$ARCH" == "x86-64" ]; then
         ARGS+=" -device e1000,netdev=net0"
     else
