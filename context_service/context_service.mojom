@@ -38,7 +38,7 @@ interface ContextAgentClient {
   // is immediately updated with the last known value of the context unless the
   // publisher had invalidated it.
   Subscribe(string label, string schema, ContextSubscriberLink link);
-  // TODO(thatguy) => (Subscription subcription);
+  // TODO(thatguy) => (Subscription subscription);
 };
 
 // Client that should be requested by suggestion agents. Suggestion agents are
@@ -49,7 +49,7 @@ interface ContextAgentClient {
 interface SuggestionAgentClient {
   // Registers a listener to a context label.
   Subscribe(string label, string schema, ContextSubscriberLink link);
-  // TODO(thatguy) => (Subscription subcription);
+  // TODO(thatguy) => (Subscription subscription);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,3 +105,92 @@ struct ContextUpdate {
   // Pause()
   // Resume()
 }*/
+
+////////////////////////////////////////////////////////////////////////////////
+// Query
+////////////////////////////////////////////////////////////////////////////////
+
+[ServiceName="intelligence.ContextQuery"]
+interface ContextQuery {
+  // Registers a query for a label and creates a listener to determine when the
+  // query evaluates to true.
+  RegisterQuery(string whoami, Query query);
+  // TODO(afergan): Include this once thatguy submits
+  // https://fuchsia-review.googlesource.com/c/11130/
+  //              array<proposal_service.ExpiryCondition> expiry_conditions);
+  // TODO(afergan): Add queryLinks interface.
+  // queryLinks(Query query, ContextSubscriberLinkQueryWatcher watcher) =>
+  //                (array<LinkService> initialMatches);
+  // queryGraph(Query query) => (GraphSnapshot graph);
+  // TODO(afergan) => (ContextSubscriberLinkQueryWatcher watcher);
+};
+
+union Query {
+  ScopeModifier scopeModifier;
+  Expression expression;
+  StoryTerm storyTerm;
+  DataPathTerm dataPathTerm;
+  WildcardTerm wildcard;
+};
+
+// Scope modifiers descend the graph for matches. All query terms within a scope
+// modifier until the next descent are tested per datum, i.e. label = “foo” And
+// label = “bar” is a contradiction.
+struct ScopeModifier {
+  MatchScope scope;
+  Query term;
+};
+
+
+struct Expression {
+  Operator op;
+  array<Query> terms;
+};
+
+enum Operator { Not, And, Or }; // Not = Nand
+
+enum MatchScope {
+  // Include self and all descendents.
+  Recursive,
+  // Exclude self; include only the first level of descendents.
+  Children,
+  // Stops descent on result depth, but continues descending the predicate test
+  // used for matching. This is similar to a WHERE clause in SQL. Without
+  // another scope modifier, this is simply equivalent to And.
+  Where
+};
+
+union StoryTerm {
+  string verb;
+  string title;
+  // TODO(afergan): Once Uris are supported in Mojom, change this type.
+  string manifest;
+  // CompositionType compositionType;
+  bool isStoryActive;
+  bool isModuleVisible;
+
+  // TODO: suggestion stuff
+};
+
+union DataPathTerm {
+  string label;
+  // TODO(afergan): Once Uris are supported in Mojom, change this type.
+  string schema;
+  string mimeType;
+  string primitiveType;
+
+  // A rough keyword search. This query term exists to take advantage of
+  // indexing within Context Service. Boolean queries can be composed using an
+  // expression with multiple terms. Any more sophisticated value matching
+  // should be done by the caller on the produced Links.
+  string value;
+};
+
+enum WildcardTerm { Any, AnyStory, AnyData };
+
+interface ContextSubscriberLinkQueryWatcher {
+  OnConditionsTrue(string uuid, ContextSubscriberLink match);
+  OnMatchLost(string uuid);
+  // TODO(afergan): ContextUpdate.json_value => null;
+  // TODO(afergan): Subscription.Pause() ?
+};
