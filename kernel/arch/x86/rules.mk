@@ -133,7 +133,7 @@ ifeq ($(LIBGCC),)
 $(error cannot find runtime library, please set LIBGCC)
 endif
 else
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(CFLAGS) -print-libgcc-file-name)
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
 endif
 
 cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`"; \
