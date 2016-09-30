@@ -180,7 +180,7 @@ endif
 
 # Disable these two warnings to prevent ACPICA from cluttering the
 # build output
-ifneq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers
 endif
 MODULE_CFLAGS += -Wno-strict-aliasing -I$(SRC_DIR)/include/acpica

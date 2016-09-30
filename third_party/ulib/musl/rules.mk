@@ -36,7 +36,7 @@ LOCAL_CFLAGS := \
     -Wno-type-limits \
     -Werror=strict-prototypes \
 
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 LOCAL_CFLAGS += \
     -Wno-missing-field-initializers \
     -Wno-incompatible-pointer-types-discards-qualifiers \

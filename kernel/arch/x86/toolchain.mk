@@ -38,7 +38,7 @@ ARCH_x86_64_TOOLCHAIN_INCLUDED := 1
 ifndef ARCH_x86_64_TOOLCHAIN_PREFIX
 ARCH_x86_64_TOOLCHAIN_PREFIX := x86_64-elf-
 endif
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 FOUNDTOOL=$(shell which $(ARCH_x86_64_TOOLCHAIN_PREFIX)clang)
 else
 FOUNDTOOL=$(shell which $(ARCH_x86_64_TOOLCHAIN_PREFIX)gcc)

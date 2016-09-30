@@ -21,9 +21,10 @@ BUILDDIR_SUFFIX ?=
 DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
-CLANG ?= 0
+USE_CLANG ?= false
 USE_GOLD ?= true
 LKNAME ?= magenta
+CLANG_TARGET_FUCHSIA ?= false
 
 # special rule for handling make spotless
 ifeq ($(MAKECMDGOALS),spotless)
@@ -77,7 +78,7 @@ GLOBAL_INCLUDES := system/public system/private
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += -Wno-error
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
@@ -352,7 +353,7 @@ KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
 
 # default to no ccache
 CCACHE ?=
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 CC := $(CCACHE) $(TOOLCHAIN_PREFIX)clang
 AR := $(TOOLCHAIN_PREFIX)llvm-ar
 else

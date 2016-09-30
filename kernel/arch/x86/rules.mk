@@ -128,7 +128,7 @@ endif # SUBARCH x86-64
 #$(warning ARCH_x86_64_TOOLCHAIN_PREFIX = $(ARCH_x86_64_TOOLCHAIN_PREFIX))
 #$(warning TOOLCHAIN_PREFIX = $(TOOLCHAIN_PREFIX))
 
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifeq ($(LIBGCC),)
 $(error cannot find runtime library, please set LIBGCC)
 endif
@@ -143,27 +143,26 @@ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`";
 GLOBAL_CFLAGS += $(call cc-option,$(CC),-fno-stack-protector,)
 
 GLOBAL_COMPILEFLAGS += -gdwarf-2
-ifeq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_LDFLAGS += -m elf_x86_64
 GLOBAL_MODULE_LDFLAGS += -m elf_x86_64
 endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
-ifneq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -falign-jumps=1 -falign-loops=1 -falign-functions=4
 endif
 
 # hard disable floating point in the kernel
 KERNEL_COMPILEFLAGS += -msoft-float -mno-mmx -mno-sse -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -DWITH_NO_FP=1
-ifneq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mno-80387 -mno-fp-ret-in-387
 endif
 
-ifeq ($(CLANG),1)
-ifeq ($(FUCHSIA),1)
-GLOBAL_COMPILEFLAGS += --target=x86_64-fuchsia
-else
-GLOBAL_COMPILEFLAGS += --target=x86_64-fuchsia -integrated-as
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+ifndef ARCH_x86_64_CLANG_TARGET
+ARCH_x86_64_CLANG_TARGET := x86_64-fuchsia
 endif
+GLOBAL_COMPILEFLAGS += --target=$(ARCH_x86_64_CLANG_TARGET)
 endif
 
 ifeq ($(SUBARCH),x86-32)
@@ -177,7 +176,7 @@ KERNEL_COMPILEFLAGS += -mno-red-zone
 
 # optimization: since fpu is disabled, do not pass flag in rax to varargs routines
 # that floating point args are in use.
-ifneq ($(CLANG),1)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mskip-rax-setup
 endif
 endif # SUBARCH x86-64
