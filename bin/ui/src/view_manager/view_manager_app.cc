@@ -18,8 +18,8 @@ ViewManagerApp::ViewManagerApp() {}
 ViewManagerApp::~ViewManagerApp() {}
 
 void ViewManagerApp::OnInitialize() {
-  auto command_line =
-      ftl::CommandLineFromIterators(args().begin(), args().end());
+  auto command_line = ftl::CommandLineFromIteratorsWithArgv0(
+      url(), args().begin(), args().end());
 
   // Connect to compositor.
   mojo::gfx::composition::CompositorPtr compositor;

@@ -20,8 +20,8 @@ LauncherApp::LauncherApp() : next_id_(0u) {}
 LauncherApp::~LauncherApp() {}
 
 void LauncherApp::OnInitialize() {
-  auto command_line =
-      ftl::CommandLineFromIterators(args().begin(), args().end());
+  auto command_line = ftl::CommandLineFromIteratorsWithArgv0(
+      url(), args().begin(), args().end());
 
   TRACE_EVENT0("launcher", __func__);
 
