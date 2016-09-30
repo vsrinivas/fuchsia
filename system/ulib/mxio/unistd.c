@@ -672,19 +672,10 @@ int rename(const char* oldpath, const char* newpath) {
 }
 
 int unlink(const char* path) {
-    const char* name;
-    mxio_t* io;
-    mx_status_t r;
-    if ((r = __mxio_opendir_containing(&io, path, &name)) < 0) {
-        return ERROR(r);
-    }
-    r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*)name, strlen(name));
-    io->ops->close(io);
-    mxio_release(io);
-    return STATUS(r);
+    return unlinkat(AT_FDCWD, path, 0);
 }
 
-int open(const char* path, int flags, ...) {
+static int vopenat(int dirfd, const char* path, int flags, va_list args) {
     mxio_t* io = NULL;
     mx_status_t r;
     int fd;
@@ -697,12 +688,9 @@ int open(const char* path, int flags, ...) {
             // the combination.
             return ERRNO(EINVAL);
         }
-        va_list ap;
-        va_start(ap, flags);
-        mode = va_arg(ap, uint32_t) & 0777;
-        va_end(ap);
+        mode = va_arg(args, uint32_t) & 0777;
     }
-    if ((r = __mxio_open(&io, path, flags, mode)) < 0) {
+    if ((r = __mxio_open_at(&io, dirfd, path, flags, mode)) < 0) {
         return ERROR(r);
     }
     if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
@@ -713,36 +701,33 @@ int open(const char* path, int flags, ...) {
     return fd;
 }
 
+int open(const char* path, int flags, ...) {
+    va_list ap;
+    va_start(ap, flags);
+    int ret = vopenat(AT_FDCWD, path, flags, ap);
+    va_end(ap);
+    return ret;
+}
+
 int openat(int dirfd, const char* path, int flags, ...) {
-    mxio_t* io = NULL;
-    mx_status_t r;
-    int fd;
-    uint32_t mode = 0;
-
-    if (flags & O_CREAT) {
-        va_list ap;
-        va_start(ap, flags);
-        mode = va_arg(ap, uint32_t) & 0777;
-        va_end(ap);
-    }
-    if ((r = __mxio_open_at(&io, dirfd, path, flags, mode)) < 0) {
-        fd = ERROR(r);
-    } else if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
-        io->ops->close(io);
-        mxio_release(io);
-        fd = ERRNO(EMFILE);
-    }
-
-    return fd;
+    va_list ap;
+    va_start(ap, flags);
+    int ret = vopenat(dirfd, path, flags, ap);
+    va_end(ap);
+    return ret;
 }
 
 int mkdir(const char* path, mode_t mode) {
+    return mkdirat(AT_FDCWD, path, mode);
+}
+
+int mkdirat(int dirfd, const char* path, mode_t mode) {
     mxio_t* io = NULL;
     mx_status_t r;
 
     mode = (mode & 0777) | S_IFDIR;
 
-    if ((r = __mxio_open(&io, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
+    if ((r = __mxio_open_at(&io, dirfd, path, O_CREAT | O_EXCL | O_RDWR, mode)) < 0) {
         return ERROR(r);
     }
     io->ops->close(io);
@@ -774,16 +759,7 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
 }
 
 int stat(const char* fn, struct stat* s) {
-    mxio_t* io;
-    mx_status_t r;
-
-    if ((r = __mxio_open(&io, fn, 0, 0)) < 0) {
-        return ERROR(r);
-    }
-    r = mxio_stat(io, s);
-    mxio_close(io);
-    mxio_release(io);
-    return STATUS(r);
+    return fstatat(AT_FDCWD, fn, s, 0);
 }
 
 int pipe2(int pipefd[2], int flags) {

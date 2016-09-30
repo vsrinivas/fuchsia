@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -30,6 +31,12 @@ static int stub_open(const char* path, int flags, ...) {
     return -1;
 }
 weak_alias(stub_open, open);
+
+static int stub_openat(int fd, const char* filename, int flags, ...) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_openat, openat);
 
 static off_t stub_lseek(int fd, off_t offset, int whence) {
     errno = ENOSYS;
@@ -84,6 +91,12 @@ static int stub_mkdir(const char* path, mode_t mode) {
     return -1;
 }
 weak_alias(stub_mkdir, mkdir);
+
+static int stub_mkdirat(int fd, const char* path, mode_t mode) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_mkdirat, mkdirat);
 
 static int stub_rmdir(const char* path) {
     errno = ENOSYS;

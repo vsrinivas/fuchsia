@@ -268,7 +268,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/exit/exit.c \
     $(LOCAL_DIR)/src/exit/quick_exit.c \
     $(LOCAL_DIR)/src/fcntl/creat.c \
-    $(LOCAL_DIR)/src/fcntl/openat.c \
     $(LOCAL_DIR)/src/fcntl/posix_fadvise.c \
     $(LOCAL_DIR)/src/fcntl/posix_fallocate.c \
     $(LOCAL_DIR)/src/fenv/__flt_rounds.c \
@@ -736,7 +735,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/stat/futimens.c \
     $(LOCAL_DIR)/src/stat/futimesat.c \
     $(LOCAL_DIR)/src/stat/lchmod.c \
-    $(LOCAL_DIR)/src/stat/mkdirat.c \
     $(LOCAL_DIR)/src/stat/mkfifoat.c \
     $(LOCAL_DIR)/src/stat/mknodat.c \
     $(LOCAL_DIR)/src/stat/statvfs.c \
