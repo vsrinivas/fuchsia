@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_framework/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_surface_holder.h"
 
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/system/buffer.h"

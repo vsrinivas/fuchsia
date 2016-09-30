@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_framework/skia/skia_font_loader.h"
+#include "apps/mozart/lib/skia/skia_font_loader.h"
 
-#include "apps/mozart/lib/view_framework/skia/skia_vmo_data.h"
+#include "apps/mozart/lib/skia/skia_vmo_data.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "third_party/skia/include/ports/SkFontMgr.h"
 

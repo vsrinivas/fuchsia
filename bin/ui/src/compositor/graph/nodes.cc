@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "apps/mozart/glue/skia/type_converters.h"
+#include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/graph/scene_content.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"

@@ -10,7 +10,7 @@
 
 #include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/glue/base/trace_event.h"
-#include "apps/mozart/glue/skia/type_converters.h"
+#include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/backend/framebuffer_output.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"

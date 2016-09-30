@@ -5,7 +5,7 @@
 #include "apps/mozart/examples/noodles/rasterizer.h"
 
 #include "apps/mozart/examples/noodles/frame.h"
-#include "apps/mozart/lib/view_framework/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_surface_holder.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"

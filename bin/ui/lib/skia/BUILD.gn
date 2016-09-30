@@ -12,9 +12,25 @@ source_set("skia") {
     "skia_vmo_data.h",
   ]
 
-  public_deps = [
-    "//apps/mozart/lib/view_framework",
+  deps = [
+    ":type_converters",
+    "//apps/mozart/services/composition/interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/interfaces/application",
     "//mojo/services/ui/fonts/interfaces",
+    "//third_party/skia",
+  ]
+}
+
+source_set("type_converters") {
+  sources = [
+    "type_converters.cc",
+    "type_converters.h",
+  ]
+
+  deps = [
+    "//mojo/services/geometry/interfaces",
     "//third_party/skia",
   ]
 }

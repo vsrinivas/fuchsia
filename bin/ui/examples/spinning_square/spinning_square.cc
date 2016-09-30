@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/lib/view_framework/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_surface_holder.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_FONT_LOADER_H_
-#define APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_FONT_LOADER_H_
+#ifndef APPS_MOZART_LIB_SKIA_SKIA_FONT_LOADER_H_
+#define APPS_MOZART_LIB_SKIA_SKIA_FONT_LOADER_H_
 
 #include <functional>
 
@@ -38,4 +38,4 @@ class SkiaFontLoader {
 
 }  // namespace mozart
 
-#endif  // APPS_MOZART_LIB_VIEW_FRAMEWORK_SKIA_SKIA_FONT_LOADER_H_
+#endif  // APPS_MOZART_LIB_SKIA_SKIA_FONT_LOADER_H_

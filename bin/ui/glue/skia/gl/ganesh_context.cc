@@ -5,7 +5,7 @@
 #include "apps/mozart/glue/skia/gl/ganesh_context.h"
 
 #include "apps/mozart/glue/skia/gl/gl_bindings_skia.h"
-#include "mojo/public/c/include/MGL/mgl.h"
+#include "mojo/public/c/gpu/include/MGL/mgl.h"
 #include "third_party/skia/include/gpu/gl/GrGLInterface.h"
 
 namespace mojo {

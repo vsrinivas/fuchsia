@@ -12,7 +12,7 @@ group("mozart") {
     "//apps/mozart/examples/tile",
     "//apps/mozart/glue/base",
     "//apps/mozart/glue/gl",
-    "//apps/mozart/glue/skia",
+    "//apps/mozart/glue/skia/gl",
     "//apps/mozart/lib/view_associate_framework",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/composition/cpp",

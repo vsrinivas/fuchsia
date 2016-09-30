@@ -7,9 +7,9 @@
 #ifndef GL_GLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
 #endif
-#include "mojo/public/c/include/GLES2/gl2.h"
-#include "mojo/public/c/include/GLES2/gl2ext.h"
-#include "mojo/public/c/include/GLES2/gl2extmojo.h"
+#include "mojo/public/c/gpu/include/GLES2/gl2.h"
+#include "mojo/public/c/gpu/include/GLES2/gl2ext.h"
+#include "mojo/public/c/gpu/include/GLES2/gl2extmojo.h"
 #include "third_party/skia/include/gpu/gl/GrGLInterface.h"
 
 namespace mojo {

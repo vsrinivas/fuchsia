@@ -18,6 +18,7 @@ source_set("bindings") {
   deps = [
     "//mojo/public/c:GLES2",
     "//third_party/skia",
+    "//third_party/skia:gpu",
   ]
 }
 
@@ -44,5 +45,6 @@ source_set("ganesh") {
     "//mojo/public/c:MGL",
     "//mojo/services/geometry/interfaces",
     "//third_party/skia",
+    "//third_party/skia:gpu",
   ]
 }

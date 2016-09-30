@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/view_framework/skia/skia_vmo_data.h"
+#include "apps/mozart/lib/skia/skia_vmo_data.h"
 
 #include <magenta/syscalls.h>
 #include <limits>

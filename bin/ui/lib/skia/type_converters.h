@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_GLUE_SKIA_TYPE_CONVERTERS_H_
-#define APPS_MOZART_GLUE_SKIA_TYPE_CONVERTERS_H_
+#ifndef APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
+#define APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
 
 #include "mojo/public/cpp/bindings/type_converter.h"
 #include "mojo/services/geometry/interfaces/geometry.mojom.h"
@@ -13,6 +13,7 @@
 #include "third_party/skia/include/core/SkRRect.h"
 #include "third_party/skia/include/core/SkRect.h"
 
+// The TypeConverter template is defined in the mojo namespace.
 namespace mojo {
 
 template <>
@@ -83,4 +84,4 @@ struct TypeConverter<mojo::TransformPtr, SkMatrix44> {
 
 }  // namespace mojo
 
-#endif  // APPS_MOZART_GLUE_SKIA_TYPE_CONVERTERS_H_
+#endif  // APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
