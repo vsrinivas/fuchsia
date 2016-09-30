@@ -154,6 +154,9 @@ paging_setup:
     btsl $(31), %eax
     mov %eax,  %cr0
 
+    /* Start using the magenta stack from its physical address. */
+    mov $PHYS(_kstack + 4096), %esp
+
     /* Using another long jump to be on 64 bit mode
     after this we will be on real 64 bit mode */
     pushl $CODE_64_SELECTOR     /*Need to put it in a the right CS*/
