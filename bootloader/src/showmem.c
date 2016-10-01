@@ -73,11 +73,11 @@ static void dump_memmap(efi_system_table* systab) {
     }
 }
 
-#include <utils.h>
+#include <xefi.h>
 
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
-    InitGoodies(img, sys);
+    xefi_init(img, sys);
     dump_memmap(sys);
-    WaitAnyKey();
+    xefi_wait_any_key();
     return EFI_SUCCESS;
 }

@@ -10,34 +10,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <printf.h>
-#include <utils.h>
+#include <xefi.h>
 
-efi_system_table* gSys;
-efi_handle gImg;
-efi_boot_services* gBS;
-efi_simple_text_output_protocol* gConOut;
+xefi_global xefi_global_state;
 
-void InitGoodies(efi_handle img, efi_system_table* sys) {
+void xefi_init(efi_handle img, efi_system_table* sys) {
     gSys = sys;
     gImg = img;
     gBS = sys->BootServices;
     gConOut = sys->ConOut;
 }
 
-void WaitAnyKey(void) {
+void xefi_wait_any_key(void) {
     efi_simple_text_input_protocol* sii = gSys->ConIn;
     efi_input_key key;
     while (sii->ReadKeyStroke(sii, &key) != EFI_SUCCESS)
         ;
 }
 
-void Fatal(const char* msg, efi_status status) {
-    printf("\nERROR: %s (%s)\n", msg, efi_strerror(status));
-    WaitAnyKey();
+void xefi_fatal(const char* msg, efi_status status) {
+    printf("\nERROR: %s (%s)\n", msg, xefi_strerror(status));
+    xefi_wait_any_key();
     gBS->Exit(gImg, 1, 0, NULL);
 }
 
-char16_t* DevicePathToStr(efi_device_path_protocol* path) {
+char16_t* xefi_devpath_to_str(efi_device_path_protocol* path) {
     efi_device_path_to_text_protocol* prot;
     efi_status status = gBS->LocateProtocol(&DevicePathToTextProtocol, NULL, (void**)&prot);
     if (EFI_ERROR(status)) {
@@ -46,11 +43,11 @@ char16_t* DevicePathToStr(efi_device_path_protocol* path) {
     return prot->ConvertDevicePathToText(path, false, false);
 }
 
-int CompareGuid(efi_guid* guid1, efi_guid* guid2) {
+int xefi_cmp_guid(efi_guid* guid1, efi_guid* guid2) {
     return memcmp(guid1, guid2, sizeof(efi_guid));
 }
 
-char16_t* HandleToString(efi_handle h) {
+char16_t* xefi_handle_to_str(efi_handle h) {
     efi_device_path_protocol* path;
     efi_status status = gBS->HandleProtocol(h, &DevicePathProtocol, (void*)&path);
     if (EFI_ERROR(status)) {
@@ -62,7 +59,7 @@ char16_t* HandleToString(efi_handle h) {
         gBS->CopyMem(err, L"<NoPath>", sizeof(L"<NoPath>"));
         return err;
     }
-    char16_t* str = DevicePathToStr(path);
+    char16_t* str = xefi_devpath_to_str(path);
     if (str == NULL) {
         char16_t* err;
         status = gBS->AllocatePool(EfiLoaderData, sizeof(L"<NoString>"), (void**)&err);
@@ -75,17 +72,16 @@ char16_t* HandleToString(efi_handle h) {
     return str;
 }
 
-efi_status OpenProtocol(efi_handle h, efi_guid* guid, void** ifc) {
+efi_status xefi_open_protocol(efi_handle h, efi_guid* guid, void** ifc) {
     return gBS->OpenProtocol(h, guid, ifc, gImg, NULL,
                              EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 }
 
-efi_status CloseProtocol(efi_handle h, efi_guid* guid) {
+efi_status xefi_close_protocol(efi_handle h, efi_guid* guid) {
     return gBS->CloseProtocol(h, guid, gImg, NULL);
 }
 
-const char *efi_strerror(efi_status status)
-{
+const char *xefi_strerror(efi_status status) {
     switch (status) {
 #define ERR_ENTRY(x) \
     case x: {        \
@@ -131,8 +127,7 @@ const char *efi_strerror(efi_status status)
     return "<Unknown error>";
 }
 
-const char16_t* efi_wstrerror(efi_status status)
-{
+const char16_t* xefi_wstrerror(efi_status status) {
     switch (status) {
 #define ERR_ENTRY(x)     \
     case x: {            \
@@ -178,8 +173,7 @@ const char16_t* efi_wstrerror(efi_status status)
     return L"<Unknown error>";
 }
 
-size_t strlen_16(char16_t* str)
-{
+size_t strlen_16(char16_t* str) {
     size_t len = 0;
     while (*(str + len) != '\0') {
         len++;

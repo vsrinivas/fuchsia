@@ -15,7 +15,7 @@
 #include <cmdline.h>
 #include <magenta.h>
 #include <netboot.h>
-#include <utils.h>
+#include <xefi.h>
 
 #define DEFAULT_TIMEOUT 3
 
@@ -64,13 +64,13 @@ int boot_prompt(efi_system_table* sys, int timeout_s) {
 
     status = bs->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
     if (status != EFI_SUCCESS) {
-        printf("could not create event timer: %s\n", efi_strerror(status));
+        printf("could not create event timer: %s\n", xefi_strerror(status));
         return BOOT_DEVICE_NONE;
     }
 
     status = bs->SetTimer(TimerEvent, TimerPeriodic, 10000000);
     if (status != EFI_SUCCESS) {
-        printf("could not set timer: %s\n", efi_strerror(status));
+        printf("could not set timer: %s\n", xefi_strerror(status));
         return BOOT_DEVICE_NONE;
     }
 
@@ -99,7 +99,7 @@ int boot_prompt(efi_system_table* sys, int timeout_s) {
                 }
             }
         } else {
-            printf("Error waiting for event: %s\n", efi_strerror(status));
+            printf("Error waiting for event: %s\n", xefi_strerror(status));
             return BOOT_DEVICE_NONE;
         }
     } while ((key.UnicodeChar != 'n' && key.UnicodeChar != 'm') && timeout_s);
@@ -143,7 +143,7 @@ void set_graphics_mode(efi_system_table* sys, efi_graphics_output_protocol* gop,
         size_t info_size = 0;
         efi_status status = gop->QueryMode(gop, i, &info_size, &mode_info);
         if (EFI_ERROR(status)) {
-            printf("Could not retrieve mode %d: %s\n", i, efi_strerror(status));
+            printf("Could not retrieve mode %d: %s\n", i, xefi_strerror(status));
             continue;
         }
 
@@ -249,7 +249,7 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
             printf("Attempting to run EFI binary...\n");
             r = bs->LoadImage(false, img, (efi_device_path_protocol*)mempath, (void*)nbkernel.data, nbkernel.offset, &h);
             if (EFI_ERROR(r)) {
-                printf("LoadImage Failed (%s)\n", efi_strerror(r));
+                printf("LoadImage Failed (%s)\n", xefi_strerror(r));
                 continue;
             }
             r = bs->StartImage(h, &exitdatasize, NULL);
@@ -285,10 +285,10 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     efi_boot_services* bs = sys->BootServices;
 
-    InitGoodies(img, sys);
+    xefi_init(img, sys);
 
     uint64_t mmio;
-    if (FindPCIMMIO(bs, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
+    if (xefi_find_pci_mmio(bs, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
         sprintf(cmdextra, " xdc.mmio=0x%lx ", mmio);
     } else {
         cmdextra[0] = 0;
@@ -296,7 +296,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     // Load the cmdline
     size_t csz = 0;
-    char* cmdline = LoadFile(L"cmdline", &csz);
+    char* cmdline = xefi_load_file(L"cmdline", &csz);
     if (cmdline) {
         cmdline[csz] = '\0';
         printf("cmdline: %s\n", cmdline);
@@ -316,7 +316,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // Look for a kernel image on disk
     // TODO: use the filesystem protocol
     size_t ksz = 0;
-    void* kernel = LoadFile(L"magenta.bin", &ksz);
+    void* kernel = xefi_load_file(L"magenta.bin", &ksz);
 
     if (!have_network && kernel == NULL) {
         goto fail;
@@ -341,7 +341,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
             break;
         case BOOT_DEVICE_LOCAL: {
             size_t rsz = 0;
-            void* ramdisk = LoadFile(L"ramdisk.bin", &rsz);
+            void* ramdisk = xefi_load_file(L"ramdisk.bin", &rsz);
             boot_kernel(img, sys, kernel, ksz, ramdisk, rsz,
                         cmdline, csz, cmdextra, strlen(cmdextra));
             break;
@@ -352,6 +352,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
 fail:
     printf("\nBoot Failure\n");
-    WaitAnyKey();
+    xefi_wait_any_key();
     return EFI_SUCCESS;
 }

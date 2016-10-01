@@ -7,7 +7,7 @@
 #include <efi/protocol/driver-binding.h>
 #include <efi/protocol/usb-io.h>
 
-#include <utils.h>
+#include <xefi.h>
 #include <stdio.h>
 
 EFIAPI efi_status MyDriverSupported(
@@ -124,7 +124,7 @@ void RemoveMyDriver(efi_handle img, efi_system_table* sys) {
 }
 
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
-    InitGoodies(img, sys);
+    xefi_init(img, sys);
 
     printf("Hello, EFI World\n");
 
@@ -134,6 +134,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     RemoveMyDriver(img, sys);
 
-    WaitAnyKey();
+    xefi_wait_any_key();
     return EFI_SUCCESS;
 }

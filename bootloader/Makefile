@@ -20,7 +20,7 @@ EFI_CFLAGS	+= -ffreestanding -nostdinc -Iinclude -Isrc
 EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie
 EFI_LDFLAGS	+= -Lout
 
-EFI_LIBS	:= -lutils
+EFI_LIBS	:= -lxefi
 
 what_to_build::	all
 
@@ -31,16 +31,11 @@ include build/build.mk
 #$(call efi_app, hello, hello.c)
 $(call efi_app, showmem, src/showmem.c)
 $(call efi_app, fileio, src/fileio.c)
-OSBOOT_FILES := src/osboot.c \
-				src/cmdline.c \
-				src/magenta.c \
-				src/netboot.c \
-				src/netifc.c \
-				src/inet6.c \
-				src/pci.c
-
-$(call efi_app, osboot, $(OSBOOT_FILES))
 $(call efi_app, usbtest, src/usbtest.c)
+
+OSBOOT_FILES := src/osboot.c src/cmdline.c src/magenta.c src/netboot.c
+OSBOOT_FILES += src/netifc.c src/inet6.c src/pci.c
+$(call efi_app, osboot, $(OSBOOT_FILES))
 
 ifneq ($(APP),)
 	APP := out/$(APP).efi
@@ -50,7 +45,7 @@ endif
 
 LIB_SRCS := \
     lib/efi/guids.c \
-    lib/utils.c \
+    lib/xefi.c \
     lib/loadfile.c \
     lib/console-printf.c \
     lib/ctype.c \
@@ -61,7 +56,7 @@ LIB_SRCS := \
 LIB_OBJS := $(patsubst %.c,out/%.o,$(LIB_SRCS))
 DEPS += $(patsubst %.c,out/%.d,$(LIB_SRCS))
 
-out/libutils.a: $(LIB_OBJS)
+out/libxefi.a: $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	@echo archiving: $@
 	$(QUIET)rm -f $@

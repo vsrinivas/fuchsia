@@ -6,7 +6,7 @@
 #include <efi/protocol/pci-root-bridge-io.h>
 
 #include <stdio.h>
-#include <utils.h>
+#include <xefi.h>
 
 typedef struct {
     uint8_t descriptor;
@@ -53,13 +53,13 @@ typedef struct {
 #define PCI_MAX_DEVICES 32
 #define PCI_MAX_FUNCS 8
 
-efi_status FindPCIMMIO(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc, uint64_t* mmio) {
+efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc, uint64_t* mmio) {
     size_t num_handles;
     efi_handle* handles;
     efi_status status = bs->LocateHandleBuffer(ByProtocol, &PciRootBridgeIoProtocol,
             NULL, &num_handles, &handles);
     if (EFI_ERROR(status)) {
-        printf("Could not find PCI root bridge IO protocol: %s\n", efi_strerror(status));
+        printf("Could not find PCI root bridge IO protocol: %s\n", xefi_strerror(status));
         return status;
     }
 
@@ -68,13 +68,13 @@ efi_status FindPCIMMIO(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t 
         efi_pci_root_bridge_io_protocol* iodev;
         status = bs->HandleProtocol(handles[i], &PciRootBridgeIoProtocol, (void**)&iodev);
         if (EFI_ERROR(status)) {
-            printf("Could not get protocol for handle %d: %s\n", i, efi_strerror(status));
+            printf("Could not get protocol for handle %d: %s\n", i, xefi_strerror(status));
             continue;
         }
         acpi_addrspace_desc64_t* descriptors;
         status = iodev->Configuration(iodev, (void**)&descriptors);
         if (EFI_ERROR(status)) {
-            printf("Could not get configuration for handle %d: %s\n", i, efi_strerror(status));
+            printf("Could not get configuration for handle %d: %s\n", i, xefi_strerror(status));
             continue;
         }
 
@@ -97,7 +97,7 @@ efi_status FindPCIMMIO(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t 
                         status = iodev->Pci.Read(iodev, EfiPciWidthUint16, address, sizeof(pci_hdr) / 2, &pci_hdr);
                         if (EFI_ERROR(status)) {
                             printf("could not read pci configuration for bus %d dev %d func %d: %s\n",
-                                    bus, dev, func, efi_strerror(status));
+                                    bus, dev, func, xefi_strerror(status));
                             continue;
                         }
                         if (pci_hdr.vid == 0xffff) break;

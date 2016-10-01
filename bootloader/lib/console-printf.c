@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <printf.h>
-#include <utils.h>
+#include <xefi.h>
 
 #define PCBUFMAX 126
 // buffer is two larger to leave room for a \0 and room

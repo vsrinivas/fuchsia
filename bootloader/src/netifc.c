@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <utils.h>
+#include <xefi.h>
 
 #include <inet6.h>
 #include <netifc.h>
@@ -132,13 +132,13 @@ efi_simple_network_protocol* netifc_find_available(void) {
     /* Get the handles of all devices that provide SimpleNetworkProtocol interfaces */
     ret = bs->LocateHandle(ByProtocol, &SimpleNetworkProtocol, NULL, &sz, handles);
     if (ret != EFI_SUCCESS) {
-        printf("Failed to locate network interfaces (%s)\n", efi_strerror(ret));
+        printf("Failed to locate network interfaces (%s)\n", xefi_strerror(ret));
         return NULL;
     }
 
     nic_cnt = sz / sizeof(efi_handle);
     for (size_t i = 0; i < nic_cnt; i++) {
-        paths[i] = HandleToString(handles[i]);
+        paths[i] = xefi_handle_to_str(handles[i]);
     }
 
     /* Iterate over our SNP list until we find one with an established link */
@@ -157,7 +157,7 @@ efi_simple_network_protocol* netifc_find_available(void) {
         printf("%ls: ", paths[i]);
         ret = bs->HandleProtocol(handles[i], &SimpleNetworkProtocol, (void**)&cur_snp);
         if (ret) {
-            printf("Failed to open (%s)\n", efi_strerror(ret));
+            printf("Failed to open (%s)\n", xefi_strerror(ret));
             continue;
         }
 
@@ -166,14 +166,14 @@ efi_simple_network_protocol* netifc_find_available(void) {
          * during this boot itself */
         ret = cur_snp->Start(cur_snp);
         if (EFI_ERROR(ret) && ret != EFI_ALREADY_STARTED) {
-            printf("Failed to start (%s)", efi_strerror(ret));
+            printf("Failed to start (%s)", xefi_strerror(ret));
             goto link_fail;
         }
 
         if (ret != EFI_ALREADY_STARTED) {
             ret = cur_snp->Initialize(cur_snp, 0, 0);
             if (EFI_ERROR(ret)) {
-                printf("Failed to initialize (%s)\n", efi_strerror(ret));
+                printf("Failed to initialize (%s)\n", xefi_strerror(ret));
                 goto link_fail;
             }
         }
@@ -182,7 +182,7 @@ efi_simple_network_protocol* netifc_find_available(void) {
          * but some drivers appear to require the OPTIONAL parameters. */
         ret = cur_snp->GetStatus(cur_snp, &int_sts, &tx_buf);
         if (EFI_ERROR(ret)) {
-            printf("Failed to read status (%s)\n", efi_strerror(ret));
+            printf("Failed to read status (%s)\n", xefi_strerror(ret));
             goto link_fail;
         }
 
@@ -236,7 +236,7 @@ int netifc_open(void) {
                                 EFI_SIMPLE_NETWORK_RECEIVE_MULTICAST,
                             0, 0, mcast_filter_count, (void*)mcast_filters);
     if (ret) {
-        printf("Failed to install multicast filters %s\n", efi_strerror(ret));
+        printf("Failed to install multicast filters %s\n", xefi_strerror(ret));
         return -1;
     }
 
@@ -271,7 +271,7 @@ force_promisc:
                                 EFI_SIMPLE_NETWORK_RECEIVE_PROMISCUOUS_MULTICAST,
                             0, 0, 0, NULL);
     if (ret) {
-        printf("Failed to set promiscuous mode (%s)\n", efi_strerror(ret));
+        printf("Failed to set promiscuous mode (%s)\n", xefi_strerror(ret));
         return -1;
     }
     return 0;

@@ -8,33 +8,33 @@
 #include <efi/protocol/simple-file-system.h>
 
 #include <stdio.h>
-#include <utils.h>
+#include <xefi.h>
 
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     efi_loaded_image_protocol* loaded;
     efi_status r;
 
-    InitGoodies(img, sys);
+    xefi_init(img, sys);
 
     printf("Hello, EFI World\n");
 
-    r = OpenProtocol(img, &LoadedImageProtocol, (void**)&loaded);
+    r = xefi_open_protocol(img, &LoadedImageProtocol, (void**)&loaded);
     if (r)
-        Fatal("LoadedImageProtocol", r);
+        xefi_fatal("LoadedImageProtocol", r);
 
-    printf("Img DeviceHandle='%ls'\n", HandleToString(loaded->DeviceHandle));
-    printf("Img FilePath='%ls'\n", DevicePathToStr(loaded->FilePath));
+    printf("Img DeviceHandle='%ls'\n", xefi_handle_to_str(loaded->DeviceHandle));
+    printf("Img FilePath='%ls'\n", xefi_devpath_to_str(loaded->FilePath));
     printf("Img Base=%p Size=%lx\n", loaded->ImageBase, loaded->ImageSize);
 
     efi_simple_file_system_protocol* sfs;
-    r = OpenProtocol(loaded->DeviceHandle, &SimpleFileSystemProtocol, (void**)&sfs);
+    r = xefi_open_protocol(loaded->DeviceHandle, &SimpleFileSystemProtocol, (void**)&sfs);
     if (r)
-        Fatal("SimpleFileSystemProtocol", r);
+        xefi_fatal("SimpleFileSystemProtocol", r);
 
     efi_file_protocol* root;
     r = sfs->OpenVolume(sfs, &root);
     if (r)
-        Fatal("OpenVolume", r);
+        xefi_fatal("OpenVolume", r);
 
     efi_file_protocol* file;
     r = root->Open(root, &file, L"README.txt", EFI_FILE_MODE_READ, 0);
@@ -45,13 +45,13 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         efi_file_info* finfo = (void*)buf;
         r = file->GetInfo(file, &FileInfoGuid, &sz, finfo);
         if (r)
-            Fatal("GetInfo", r);
+            xefi_fatal("GetInfo", r);
         printf("FileSize %ld\n", finfo->FileSize);
 
         sz = sizeof(buf) - 1;
         r = file->Read(file, &sz, buf);
         if (r)
-            Fatal("Read", r);
+            xefi_fatal("Read", r);
 
         char* x = buf;
         while (sz-- > 0)
@@ -61,10 +61,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
 
     root->Close(root);
-    CloseProtocol(loaded->DeviceHandle, &SimpleFileSystemProtocol);
-    CloseProtocol(img, &LoadedImageProtocol);
+    xefi_close_protocol(loaded->DeviceHandle, &SimpleFileSystemProtocol);
+    xefi_close_protocol(img, &LoadedImageProtocol);
 
-    WaitAnyKey();
+    xefi_wait_any_key();
 
     return EFI_SUCCESS;
 }

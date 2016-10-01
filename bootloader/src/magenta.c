@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <utils.h>
+#include <xefi.h>
 
 static efi_guid AcpiTableGUID = ACPI_TABLE_GUID;
 static efi_guid Acpi2TableGUID = ACPI_20_TABLE_GUID;
@@ -19,8 +19,8 @@ uint32_t find_acpi_root(efi_handle img, efi_system_table* sys) {
     int i;
 
     for (i = 0; i < sys->NumberOfTableEntries; i++) {
-        if (!CompareGuid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
-            !CompareGuid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
+        if (!xefi_cmp_guid(&cfgtab[i].VendorGuid, &AcpiTableGUID) &&
+            !xefi_cmp_guid(&cfgtab[i].VendorGuid, &Acpi2TableGUID)) {
             // not an ACPI table
             continue;
         }
@@ -352,11 +352,11 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
         n = process_memory_map(sys, &key, 1);
         r = sys->BootServices->ExitBootServices(img, key);
         if (r) {
-            printf("Cannot ExitBootServices! (2) %s\n", efi_strerror(r));
+            printf("Cannot ExitBootServices! (2) %s\n", xefi_strerror(r));
             return -1;
         }
     } else if (r) {
-        printf("Cannot ExitBootServices! (1) %s\n", efi_strerror(r));
+        printf("Cannot ExitBootServices! (1) %s\n", xefi_strerror(r));
         return -1;
     }
 
