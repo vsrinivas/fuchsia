@@ -8,6 +8,7 @@
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
+#include "mojo/public/cpp/utility/run_loop.h"
 
 namespace {
 
@@ -17,6 +18,9 @@ using mojo::ApplicationImplBase;
 using mojo::Binding;
 using mojo::InterfaceHandle;
 using mojo::ServiceProvider;
+using mojo::RunLoop;
+
+#define ONE_MOJO_SECOND   1000000
 
 class MaxwellTestApp : public ApplicationImplBase,
                        public ContextSubscriberLink {
@@ -24,16 +28,14 @@ class MaxwellTestApp : public ApplicationImplBase,
   MaxwellTestApp(): sink_(this) {}
 
   void OnInitialize() override {
+    srand(time(NULL));
+
     shell()->ConnectToApplication("mojo:acquirers/gps", GetProxy(&gps_));
     shell()->ConnectToApplication("mojo:agents/carmen_sandiego",
                                   GetProxy(&carmen_sandiego_));
 
-    SuggestionAgentClientPtr cx;
-    ConnectToService(shell(), "mojo:context_service", GetProxy(&cx));
-    ContextSubscriberLinkPtr sink_ptr;
-    sink_.Bind(GetProxy(&sink_ptr));
-    cx->Subscribe("/location/region", "json:string",
-                  sink_ptr.PassInterfaceHandle());
+    ConnectToService(shell(), "mojo:context_service", GetProxy(&cx_));
+    Subscribe();
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
@@ -44,7 +46,31 @@ class MaxwellTestApp : public ApplicationImplBase,
 
  private:
   InterfaceHandle<ServiceProvider> gps_, carmen_sandiego_;
+  SuggestionAgentClientPtr cx_;
   Binding<ContextSubscriberLink> sink_;
+
+  void Subscribe() {
+    MOJO_LOG(INFO) << "test subscribing to /location/region for 5 seconds";
+
+    ContextSubscriberLinkPtr sink_ptr;
+    sink_.Bind(GetProxy(&sink_ptr));
+
+    cx_->Subscribe("/location/region", "json:string",
+                   sink_ptr.PassInterfaceHandle());
+
+    RunLoop::current()->PostDelayedTask([this] { Unsubscribe(); },
+                                        5 * ONE_MOJO_SECOND);
+  }
+
+  void Unsubscribe() {
+    int delay = 1 + rand() % 5;
+    MOJO_LOG(INFO) << "test unsubscribing from /location/region for "
+                   << delay << " seconds";
+    sink_.Close();
+
+    RunLoop::current()->PostDelayedTask([this] { Subscribe(); },
+                                        delay * ONE_MOJO_SECOND);
+  }
 };
 
 } // namespace

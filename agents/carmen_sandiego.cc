@@ -34,24 +34,21 @@ class CarmenSandiego : public ApplicationImplBase,
     // TODO(rosswang): V0 does not support semantic differentiation by source,
     // so the labels have to be explicitly different. In the future, these could
     // all be refinements on "location"
-    cx_->RegisterPublisher("/location/region", "json:string",
-                           ctl_ptr.PassInterfaceHandle());
+    cx_->Publish("/location/region", "json:string",
+                  ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
   }
 
-  void StartPublishing(InterfaceHandle<ContextPublisherLink> link) override {
-    out_ = ContextPublisherLinkPtr::Create(link.Pass());
-
+  void OnHasSubscribers() override {
     ContextSubscriberLinkPtr in_ptr;
     in_.Bind(GetProxy(&in_ptr));
-
     cx_->Subscribe("/location/gps", "https://developers.google.com/maps/"
         "documentation/javascript/3.exp/reference#LatLngLiteral",
         in_ptr.PassInterfaceHandle());
+  }
 
-    out_.set_connection_error_handler([this]{
-      in_.Unbind();
-      out_.reset();
-    });
+  void OnNoSubscribers() override {
+    in_.Unbind();
+    out_->Update(NULL);
   }
 
   void OnUpdate(ContextUpdatePtr update) override {

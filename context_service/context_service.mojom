@@ -8,12 +8,18 @@ module intelligence;
 // that publish context based on sensors and/or network sources. They have
 // publish-only access to Context Service. All context written by this client is
 // attributed to the bound acquirer.
+//
+// Context may be pushed at any time, but Context Service will notify the
+// publisher as to whether any subscribers exist. The publisher is free to not
+// publish until subscribers exist, and to delete context once the last
+// subscriber is removed.
 [ServiceName="intelligence.ContextAcquirerClient"]
 interface ContextAcquirerClient {
-  // Registers a potential context publisher. When potential subscribers exist,
-  // the publisher is woken through the provided ContextPublisherController.
-  RegisterPublisher(string label, string schema,
-                    ContextPublisherController controller);
+  // Registers a potential context publisher and attains a publish link for it.
+  // When the existence or nonexistence of subscribers changes, the publisher is
+  // notified through the provided ContextPublisherController.
+  Publish(string label, string schema, ContextPublisherController? controller,
+          ContextPublisherLink& link);
 };
 
 // Client that should be requested by context agents. Context agents are Mojo
@@ -22,12 +28,15 @@ interface ContextAcquirerClient {
 // is attributed to the bound agent.
 [ServiceName="intelligence.ContextAgentClient"]
 interface ContextAgentClient {
-  // Registers a potential context publisher. When potential subscribers exist,
-  // the publisher is woken through the provided ContextPublisherController.
-  RegisterPublisher(string label, string schema,
-                    ContextPublisherController controller);
+  // Registers a potential context publisher and attains a publish link for it.
+  // When the existence or nonexistence of subscribers changes, the publisher is
+  // notified through the provided ContextPublisherController.
+  Publish(string label, string schema, ContextPublisherController? controller,
+          ContextPublisherLink& link);
 
-  // Registers a listener to a context label.
+  // Registers a listener to a context label. Upon subscribing, the subscriber
+  // is immediately updated with the last known value of the context unless the
+  // publisher had invalidated it.
   Subscribe(string label, string schema, ContextSubscriberLink link);
   // TODO(thatguy) => (Subscription subcription);
 };
@@ -47,14 +56,19 @@ interface SuggestionAgentClient {
 // Publish
 ////////////////////////////////////////////////////////////////////////////////
 
-// Listener interface that a context publisher should implement to be informed
-// by Context Service that one or more subscribers has subscribed to its
-// context.
+// Optional listener interface that a context publisher can implement to be
+// informed by Context Service that one or more subscribers has subscribed to
+// the bound label and schema. This is recommended for acquirers and agents.
 interface ContextPublisherController {
   // Indicates that one or more subscribers has subscribed to the context
-  // published by this context publisher. The link is closed when no subscribers
-  // are interested any longer.
-  StartPublishing(ContextPublisherLink link);
+  // published by this context publisher.
+  OnHasSubscribers();
+  // Indicates that all subscriber links to the context published by this
+  // context publisher have closed. The publisher is free to stop publishing. If
+  // the previously published context could become stale at the next
+  // subscription prior to a new update from the publisher, the publisher should
+  // invalidate the context by publishing null.
+  OnNoSubscribers();
 };
 
 // An attributed link that allows a context publisher to write to a context

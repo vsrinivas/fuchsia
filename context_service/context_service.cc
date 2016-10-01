@@ -26,20 +26,9 @@ using mojo::StrongBindingSet;
 
 using namespace intelligence;
 
-class ContextPublisherLinkImpl;
-
-struct BoundPublisherController {
-  BoundPublisherController() {}
-  BoundPublisherController(const std::string& whoami,
-                           ContextPublisherControllerPtr controller):
-                           whoami(whoami), controller(controller.Pass()) {}
-  std::string whoami;
-  ContextPublisherControllerPtr controller;
-};
-
 struct ContextEntry {
   ContextUpdate latest;
-  std::vector<BoundPublisherController> publisher_controllers;
+  InterfacePtrSet<ContextPublisherController> publisher_controllers;
   StrongBindingSet<ContextPublisherLink> publishers;
   std::vector<ContextSubscriberLinkPtr> subscribers;
 };
@@ -67,46 +56,30 @@ class ContextPublisherLinkImpl : public ContextPublisherLink {
   MOJO_DISALLOW_COPY_AND_ASSIGN(ContextPublisherLinkImpl);
 };
 
-void CreatePublisherLink(BoundPublisherController* bound_controller,
-                         ContextEntry* entry) {
-  ContextPublisherLinkPtr link;
-  entry->publishers.AddBinding(
-      new ContextPublisherLinkImpl(bound_controller->whoami, entry),
-      GetProxy(&link));
-  bound_controller->controller->StartPublishing(link.PassInterfaceHandle());
-}
-
 template<typename Interface>
 class ContextPublisherClient: public virtual Interface {
  public:
   ContextPublisherClient(const std::string& whoami, ContextRepo* repo):
       whoami_(whoami), repo_(repo) {}
 
-  void RegisterPublisher(const mojo::String& label, const mojo::String& schema,
-                         InterfaceHandle<ContextPublisherController> controller)
-                         override {
-    ContextPublisherControllerPtr ptr =
-        ContextPublisherControllerPtr::Create(controller.Pass());
+  void Publish(const mojo::String& label, const mojo::String& schema,
+               InterfaceHandle<ContextPublisherController> controller_handle,
+               InterfaceRequest<ContextPublisherLink> link) override {
     ContextEntry& entry = (*repo_)[label][schema];
-    std::vector<BoundPublisherController>& controllers =
-        entry.publisher_controllers;
 
-    // Taken from mojo::InterfacePtrSet; remove controller on error
-    ContextPublisherController* ifc = ptr.get();
-    ptr.set_connection_error_handler([&controllers, ifc]{
-      auto it = std::find_if(controllers.begin(), controllers.end(),
-                             [ifc](const BoundPublisherController& bpc){
-                               return bpc.controller.get() == ifc;
-                             });
-      controllers.erase(it);
-    });
+    if (controller_handle) {
+      ContextPublisherControllerPtr controller =
+          ContextPublisherControllerPtr::Create(controller_handle.Pass());
 
-    controllers.emplace_back(whoami_, ptr.Pass());
+      // Immediately notify if there are already subscribers.
+      if (!entry.subscribers.empty())
+        controller->OnHasSubscribers();
 
-    // Immediately start publishing if there are already subscribers
-    if (!entry.subscribers.empty()) {
-      CreatePublisherLink(&controllers.back(), &entry);
+      entry.publisher_controllers.AddInterfacePtr(controller.Pass());
     }
+
+    entry.publishers.AddBinding(new ContextPublisherLinkImpl(whoami_, &entry),
+                                link.Pass());
   }
 
  private:
@@ -130,33 +103,47 @@ class ContextSubscriberClient: public virtual Interface {
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
     ContextEntry& entry = (*repo_)[label][schema];
 
-    // Taken from mojo::InterfacePtrSet; remove link on error
+    // Taken from mojo::InterfacePtrSet; remove link on error.
     ContextSubscriberLink* ifc = link.get();
-    link.set_connection_error_handler([&entry, ifc]{
+    link.set_connection_error_handler([&entry, ifc, label]{
       // General note: since Mojo message processing, including error handling,
       // is single-threaded, this is guaranteed not to happen at least until the
       // next processing loop.
+
+      MOJO_LOG(VERBOSE) << "Subscription to " << label << " lost";
 
       auto it = std::find_if(entry.subscribers.begin(), entry.subscribers.end(),
                              [ifc](const ContextSubscriberLinkPtr& sub){
                                return sub.get() == ifc;
                              });
-      entry.subscribers.erase(it);
 
-      // Stop publishing if this was the last subscriber
-      if (entry.subscribers.empty()) {
-        entry.publishers.CloseAllBindings();
-        // Force requery on resubscribe to prevent stale values from appearing
-        // fresh
-        entry.latest.json_value = NULL;
+      assert(it != entry.subscribers.end());
+
+      // Notify if this was the last subscriber.
+      if (entry.subscribers.size() == 1) {
+        MOJO_LOG(VERBOSE) << "No more subscribers to " << label;
+        entry.publisher_controllers.ForAllPtrs(
+            [](ContextPublisherController* controller) {
+              controller->OnNoSubscribers();
+            });
       }
+
+      // This must be the last line in the error handler, because once we do
+      // this the lambda is destroyed and subsequent capture accesses seg-fault.
+      entry.subscribers.erase(it);
     });
 
-    // Start publishing if this is the first subscriber
+    // If there is already context, send it as an initial update. If it could
+    // be stale, it is up to the publisher to have removed it.
+    if (entry.latest.json_value)
+      link->OnUpdate(entry.latest.Clone());
+
+    // Notify if this is the first subscriber.
     if (entry.subscribers.empty()) {
-      for (BoundPublisherController& bpc : entry.publisher_controllers) {
-        CreatePublisherLink(&bpc, &entry);
-      }
+      entry.publisher_controllers.ForAllPtrs(
+          [](ContextPublisherController* controller) {
+            controller->OnHasSubscribers();
+          });
     }
 
     entry.subscribers.emplace_back(link.Pass());

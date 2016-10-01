@@ -21,6 +21,8 @@ using namespace intelligence;
 
 #define ONE_MOJO_SECOND   1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
+#define KEEP_ALIVE_TICKS  3
+#define HAS_SUBSCRIBERS   -1
 
 class GpsAcquirer : public ApplicationImplBase,
                     public ContextPublisherController {
@@ -36,19 +38,31 @@ class GpsAcquirer : public ApplicationImplBase,
     ContextPublisherControllerPtr ctl_ptr;
     ctl_.Bind(GetProxy(&ctl_ptr));
 
-    cx->RegisterPublisher("/location/gps", "https://developers.google.com/"
+    cx->Publish("/location/gps", "https://developers.google.com/"
         "maps/documentation/javascript/3.exp/reference#LatLngLiteral",
-        ctl_ptr.PassInterfaceHandle());
+        ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
   }
 
-  void StartPublishing(InterfaceHandle<ContextPublisherLink> link) override {
-    out_ = ContextPublisherLinkPtr::Create(link.Pass());
-    PublishingTick();
+  void OnHasSubscribers() override {
+    if (!tick_keep_alive_) {
+      MOJO_LOG(INFO) << "GPS on";
+      tick_keep_alive_ = HAS_SUBSCRIBERS;
+      PublishingTick();
+    } else {
+      tick_keep_alive_ = HAS_SUBSCRIBERS;
+    }
+  }
+
+  void OnNoSubscribers() override {
+    tick_keep_alive_ = KEEP_ALIVE_TICKS;
+    MOJO_LOG(INFO) << "GPS subscribers lost; keeping GPS on for "
+                   << KEEP_ALIVE_TICKS << " seconds";
   }
 
  private:
   Binding<ContextPublisherController> ctl_;
   ContextPublisherLinkPtr out_;
+  int tick_keep_alive_;
 
   inline void PublishLocation() {
     // For now, this representation must be agreed upon by all parties out of
@@ -60,13 +74,18 @@ class GpsAcquirer : public ApplicationImplBase,
          << ", \"lng\": "  << rand() % 36001 / 100. - 180
          << " }";
 
+    MOJO_LOG(INFO) << "Update by acquirers/gps: " << json.str();
+
     out_->Update(json.str());
   }
 
   void PublishingTick() {
-    if (out_.encountered_error()) {
-      out_.reset();
+    if (!tick_keep_alive_) {
+      MOJO_LOG(INFO) << "GPS off";
+      out_->Update(NULL);
       return;
+    } else if (tick_keep_alive_ > 0) {
+      tick_keep_alive_--;
     }
 
     PublishLocation();
