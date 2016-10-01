@@ -100,12 +100,7 @@ qemu: QEMU_OPTS += -net none
 qemu:: all
 	qemu-system-x86_64 $(QEMU_OPTS)
 
-out/nbserver: src/nbserver.c
-	@mkdir -p out
-	@echo building nbserver
-	$(QUIET)gcc -o out/nbserver -Isrc -Wall src/nbserver.c
-
-all: $(ALL) out/nbserver
+all: $(ALL)
 
 clean::
 	rm -rf out
