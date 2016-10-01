@@ -308,18 +308,18 @@ SYSROOT_DEPS += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 GENERATED += $(SYSROOT_CRT1) $(SYSROOT_SCRT1)
 
 # generate empty compatibility libs
-$(BUILDDIR)/sysroot/lib/libm.a::
+$(BUILDDIR)/sysroot/lib/libm.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
-	$(NOECHO)echo '!<arch>' > $@
-$(BUILDDIR)/sysroot/lib/libdl.a::
+	$(NOECHO)cp $< $@
+$(BUILDDIR)/sysroot/lib/libdl.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
-	$(NOECHO)echo '!<arch>' > $@
-$(BUILDDIR)/sysroot/lib/libpthread.a::
+	$(NOECHO)cp $< $@
+$(BUILDDIR)/sysroot/lib/libpthread.so: third_party/ulib/musl/lib.ld
 	@$(MKDIR)
-	$(NOECHO)echo '!<arch>' > $@
+	$(NOECHO)cp $< $@
 
-SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.a $(BUILDDIR)/sysroot/lib/libdl.a $(BUILDDIR)/sysroot/lib/libpthread.a
-GENERATED += $(BUILDDIR)/sysroot/lib/libm.a $(BUILDDIR)/sysroot/lib/libdl.a $(BUILDDIR)/sysroot/lib/libpthread.a
+SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
+GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 endif
 
 # any extra top level build dependencies that someone declared
