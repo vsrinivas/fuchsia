@@ -8,11 +8,14 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/param.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <ifaddrs.h>
 
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,10 +45,17 @@ static int pull_file(int s, const char* dst, const char* src) {
         return r;
     }
 
-    int fd = open(dst, O_WRONLY|O_TRUNC|O_CREAT, 0664);
-    if (!fd) {
+    char final_dst[MAXPATHLEN];
+    struct stat st;
+    strncpy(final_dst, dst, sizeof(final_dst));
+    if (stat(dst, &st) == 0 && (st.st_mode & S_IFDIR)) {
+        strncat(final_dst, "/", sizeof(final_dst) - strlen(final_dst) - 1);
+        strncat(final_dst, basename((char*)src), sizeof(final_dst) - strlen(final_dst) - 1);
+    }
+    int fd = open(final_dst, O_WRONLY|O_TRUNC|O_CREAT, 0664);
+    if (fd < 0) {
         fprintf(stderr, "%s: cannot open %s for writing: %s\n",
-                appname, dst, strerror(errno));
+                appname, final_dst, strerror(errno));
         return -1;
     }
 
