@@ -1,8 +1,8 @@
 The Magenta Kernel (kernel/...) is under the MIT License, a copy of which
 may be found in kernel/LICENSE
 
-The Magenta System (system/...) is under the BSD License, a copy of which
-may be found in system/LICENSE
+The Magenta System (system/...) and Bootloader (bootloader/...) are under the
+BSD License, a copy of which may be found in system/LICENSE
 
 The Third Party Components (third_party/...) are under various licenses
 (of the BSD, MIT, or Zlib style), which may be found in the root directory

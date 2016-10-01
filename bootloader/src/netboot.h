@@ -1,0 +1,48 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#define NB_MAGIC 0xAA774217
+
+#define NB_SERVER_PORT 33330
+#define NB_ADVERT_PORT 33331
+
+#define NB_COMMAND 1   // arg=0, data=command
+#define NB_SEND_FILE 2 // arg=0, data=filename
+#define NB_DATA 3      // arg=blocknum, data=data
+#define NB_BOOT 4      // arg=0
+
+#define NB_ACK 0
+
+#define NB_ADVERTISE 0x77777777
+
+#define NB_ERROR 0x80000000
+#define NB_ERROR_BAD_CMD 0x80000001
+#define NB_ERROR_BAD_PARAM 0x80000002
+#define NB_ERROR_TOO_LARGE 0x80000003
+#define NB_ERROR_BAD_FILE 0x80000004
+
+typedef struct nbmsg_t {
+    uint32_t magic;
+    uint32_t cookie;
+    uint32_t cmd;
+    uint32_t arg;
+    uint8_t data[0];
+} nbmsg;
+
+typedef struct nbfile_t {
+    uint8_t* data;
+    size_t size; // max size of buffer
+    size_t offset; // write pointer
+} nbfile;
+
+int netboot_init(void);
+int netboot_poll(void);
+void netboot_close(void);
+
+// Ask for a buffer suitable to put the file /name/ in
+// Return NULL to indicate /name/ is not wanted.
+nbfile* netboot_get_buffer(const char* name);
+

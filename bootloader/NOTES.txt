@@ -1,0 +1,42 @@
+Intel Visual BIOS (on NUC) and netboot
+--------------------------------------
+This will netboot EFI apps, provided you have a DHCP server which is
+setup to give the BIOS the IP of a tftp server and a filename to grab
+from there.
+
+You must disable legacy boot for the EFI netboot option to appear.  If
+you check the "keep retrying forever" option, when your app exits, the
+BIOS will try to download it from the tftp server again, making for a
+quick build/download/test cycle
+
+
+Making tftpd work on Ubuntu with IPv4
+-------------------------------------
+sudo apt-get install tftpd-hpa
+
+Optionally make it easy to copy files to the server without sudo:
+sudo chown `who` /var/lib/tftpdboot 
+
+Edit /etc/default/tftpd-hpa so it looks more like:
+TFTP_USERNAME="tftp"
+TFTP_DIRECTORY="/var/lib/tftpboot"
+TFTP_ADDRESS=":69"
+TFTP_OPTIONS="--secure -4 -v -v -v"
+
+Removing the [::] and adding the -4 make it work reliably on IPv4 for me.
+The several -v's make it chattier in syslog which is handy if you're not
+sure the test machine is actually trying to grab files.
+
+QEMU Tips
+-------------------------------------
+USB-ETH Adapters:
+- For ASIX chipset usb adapters if you have permission issues copy the udev rules in scripts/ to /etc/udev/rules.d/
+
+E1000 local networking bridge:
+- You can create a network interface using the Linux tun/tap network device named “qemu” for the
+  qemu-e1000 target. Qemu does not need to be run with any special privileges for this, but you need
+  to create a persistent tun/tap device ahead of time (which does require you be root):
+
+  sudo apt-get install uml-utilities
+  sudo tunctl -u $USER -t qemu
+  sudo ifconfig qemu up

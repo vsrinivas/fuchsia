@@ -1,0 +1,3 @@
+#!/bin/sh
+
+make && mcopy -o -i out/disk.img@@1024K ../build-magenta-pc-x86-64/magenta.bin ::magenta.bin && make qemu
