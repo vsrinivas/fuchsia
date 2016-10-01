@@ -11,6 +11,7 @@
         "fortune",
         "framebuffer",
         "ftl",
+        "icu_data",
         "ledger",
         "leveldb",
         "libc-tests",

@@ -1,0 +1,17 @@
+{
+    "labels": [
+        "//apps/icu_data:icu_data_provider"
+    ],
+    "binaries": [
+        {
+            "binary": "icu_data_provider",
+            "bootfs_path": "apps/icu_data_provider"
+        }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "data/icu_data/icudtl.dat",
+            "file": "third_party/icu/common/icudtl.dat"
+        }
+    ]
+}
