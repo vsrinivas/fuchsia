@@ -44,12 +44,11 @@ class LinkConnection : public LinkChanged {
       : src_binding_(this), src_(src), dst_(dst) {
     InterfaceHandle<LinkChanged> watcher;
     src_binding_.Bind(GetProxy(&watcher));
-    src_->Watch(std::move(watcher), false);
+    src_->Watch(std::move(watcher));
   }
 
   void Value(const String& label, const String& value) override {
     if (label == kValueLabel) {
-      FTL_LOG(INFO) << "recipe link connection value \"" << value << "\"";
       dst_->SetValue(kValueLabel, value);
     }
   }
@@ -82,7 +81,7 @@ class RecipeImpl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher), false);
+    link_->Watch(std::move(watcher));
 
     session_->CreateLink("token_pass", GetProxy(&module1_link_));
 

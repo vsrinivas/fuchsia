@@ -75,7 +75,7 @@ class LinkHost : public Link {
   // methods are implemented below, after LinkImpl is defined.
   void SetValue(const String& label, const String& value) override;
   void Value(const String& label, const ValueCallback& callback) override;
-  void Watch(InterfaceHandle<LinkChanged> watcher, bool self) override;
+  void Watch(InterfaceHandle<LinkChanged> watcher) override;
   void Dup(InterfaceRequest<Link> dup) override;
 
   // Called back from LinkImpl.
@@ -85,7 +85,7 @@ class LinkHost : public Link {
   LinkImpl* const impl_;
   StrongBinding<Link> binding_;
   const bool primary_;
-  std::vector<std::pair<InterfacePtr<LinkChanged>, bool>> watchers_;
+  std::vector<InterfacePtr<LinkChanged>> watchers_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkHost);
 };
 
@@ -160,7 +160,7 @@ void LinkHost::Value(const String& label, const ValueCallback& callback) {
   callback.Run(impl_->Value(label));
 }
 
-void LinkHost::Watch(InterfaceHandle<LinkChanged> watcher, const bool self) {
+void LinkHost::Watch(InterfaceHandle<LinkChanged> watcher) {
   InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
 
@@ -168,7 +168,7 @@ void LinkHost::Watch(InterfaceHandle<LinkChanged> watcher, const bool self) {
     watcher_ptr->Value(value.first, value.second);
   }
 
-  watchers_.push_back(std::make_pair(std::move(watcher_ptr), self));
+  watchers_.push_back(std::move(watcher_ptr));
 }
 
 void LinkHost::Dup(InterfaceRequest<Link> dup) {
@@ -177,9 +177,9 @@ void LinkHost::Dup(InterfaceRequest<Link> dup) {
 
 void LinkHost::Notify(LinkHost* const source, const String& label,
                       const String& value) {
-  for (std::pair<InterfacePtr<LinkChanged>, bool>& watcher : watchers_) {
-    if (watcher.second || source != this) {
-      watcher.first->Value(label, value);
+  for (InterfacePtr<LinkChanged>& watcher : watchers_) {
+    if (source != this) {
+      watcher->Value(label, value);
     }
   }
 }

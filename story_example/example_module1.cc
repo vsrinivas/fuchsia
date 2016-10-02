@@ -51,7 +51,7 @@ class Module1Impl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher), false);
+    link_->Watch(std::move(watcher));
   }
 
   // See comments on Module2Impl in example-module2.cc.

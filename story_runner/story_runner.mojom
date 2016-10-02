@@ -85,7 +85,7 @@ interface Session {
 interface Link {
   SetValue(string label, string? value);
   Value(string label) => (string? value);
-  Watch(LinkChanged watcher, bool self);
+  Watch(LinkChanged watcher);
   Dup(Link& dup);
 };
 

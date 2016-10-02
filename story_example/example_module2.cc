@@ -48,15 +48,15 @@ class Module2Impl : public Module, public LinkChanged {
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher), false);
+    link_->Watch(std::move(watcher));
   }
 
   // Whenever the module sees a changed value, it increments it by 1
   // and writes it back. This works because the module is not notified
-  // of changes from itself, because of the false argument to Watch().
-  // More precisely, a watcher registered through one link handle is
-  // not notified of changes requested through the same handle. It's
-  // really the handle identity that decides.
+  // of changes from itself. More precisely, a watcher registered
+  // through one link handle is not notified of changes requested
+  // through the same handle. It's really the handle identity that
+  // decides.
   void Value(const String& label, const String& value) override {
     if (label == kValueLabel) {
       FTL_LOG(INFO) << "module2 value \"" << value << "\"";
