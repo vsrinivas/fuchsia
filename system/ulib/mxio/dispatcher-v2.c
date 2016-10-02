@@ -37,21 +37,24 @@ static void mxio_dispatcher_destroy(mxio_dispatcher_t* md) {
     free(md);
 }
 
-static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler) {
+static void destroy_handler(mxio_dispatcher_t* md, handler_t* handler, bool need_close_cb) {
+    if (need_close_cb) {
+        md->cb(0, handler->cb, handler->cookie);
+    }
     mtx_lock(&md->lock);
     list_delete(&handler->node);
     mtx_unlock(&md->lock);
     free(handler);
 }
 
-static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler) {
+static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool need_close_cb) {
     // close handle, so we get no further messages
     mx_handle_close(handler->h);
 
     // send a synthetic message so we know when it's safe to destroy
     mx_io_packet_t packet;
     packet.hdr.key = (uint64_t)(uintptr_t)handler;
-    packet.signals = MX_SIGNAL_SIGNALED;
+    packet.signals = need_close_cb ? MX_SIGNAL_SIGNALED : 0;
     mx_port_queue(md->ioport, &packet, sizeof(packet));
 
     // flag so we know to ignore further events
@@ -73,8 +76,8 @@ again:
         if (handler->flags & FLAG_DISCONNECTED) {
             // handler is awaiting gc
             // ignore events for it until we get the synthetic "destroy" event
-            if (packet.signals & MX_SIGNAL_SIGNALED) {
-                destroy_handler(md, handler);
+            if (packet.hdr.type == MX_PORT_PKT_TYPE_USER) {
+                destroy_handler(md, handler, packet.signals & MX_SIGNAL_SIGNALED);
             }
             continue;
         }
@@ -83,19 +86,14 @@ again:
                 if (r == ERR_DISPATCHER_NO_WORK) {
                     printf("mxio: dispatcher found no work to do!\n");
                 } else {
-                    if (r < 0) {
-                        // generate a synthetic close.
-                        md->cb(0, handler->cb, handler->cookie);
-                    }
-                    disconnect_handler(md, handler);
+                    disconnect_handler(md, handler, r < 0);
                     continue;
                 }
             }
         }
         if (packet.signals & MX_SIGNAL_PEER_CLOSED) {
             // synthesize a close
-            md->cb(0, handler->cb, handler->cookie);
-            disconnect_handler(md, handler);
+            disconnect_handler(md, handler, true);
         }
     }
 
