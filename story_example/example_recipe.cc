@@ -57,6 +57,36 @@ class LinkConnection : public LinkChanged {
   Binding<LinkChanged> src_binding_;
   InterfacePtr<Link>& src_;
   InterfacePtr<Link>& dst_;
+
+  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
+};
+
+// Implementation of the LinkChanged service that just reports each
+// value changed in the given Link.
+class LinkMonitor : public LinkChanged {
+ public:
+  LinkMonitor(const std::string tag, InterfacePtr<Link>& link)
+      : binding_(this), tag_(tag) {
+    InterfaceHandle<LinkChanged> watcher;
+    binding_.Bind(GetProxy(&watcher));
+
+    // The link is duplicated such that all changes are notified,
+    // including those done on link.
+    link->Dup(GetProxy(&link_));
+    link_->Watch(std::move(watcher));
+  }
+
+  void Value(const String& label, const String& value) override {
+    FTL_LOG(INFO) << "LinkMonitor::Value() " << tag_
+                  << " \"" << label << "\": \"" << value << "\"";
+  }
+
+ private:
+  InterfacePtr<Link> link_;
+  Binding<LinkChanged> binding_;
+  const std::string tag_;
+
+  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkMonitor);
 };
 
 // Module implementation that acts as a recipe. It implements both
@@ -110,6 +140,9 @@ class RecipeImpl : public Module, public LinkChanged {
                             module2_.Bind(std::move(module));
                           });
 
+    monitors_.emplace_back(new LinkMonitor("module1", module1_link_));
+    monitors_.emplace_back(new LinkMonitor("module2", module2_link_));
+
     connections_.emplace_back(new LinkConnection(module1_link_, module2_link_));
     connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
   }
@@ -131,7 +164,8 @@ class RecipeImpl : public Module, public LinkChanged {
   InterfacePtr<Module> module2_;
   InterfacePtr<Link> module2_link_;
 
-  std::vector<std::shared_ptr<LinkConnection>> connections_;
+  std::vector<std::unique_ptr<LinkConnection>> connections_;
+  std::vector<std::unique_ptr<LinkMonitor>> monitors_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
 };

@@ -59,7 +59,7 @@ class Module2Impl : public Module, public LinkChanged {
   // decides.
   void Value(const String& label, const String& value) override {
     if (label == kValueLabel) {
-      FTL_LOG(INFO) << "module2 value \"" << value << "\"";
+      FTL_LOG(INFO) << "Module2Impl::Value() \"" << value << "\"";
 
       int i = 0;
       std::istringstream(value.get()) >> i;

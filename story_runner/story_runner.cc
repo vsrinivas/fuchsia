@@ -30,6 +30,7 @@ namespace modular {
 
 using mojo::ApplicationImplBase;
 using mojo::Array;
+using mojo::Binding;
 using mojo::BindingSet;
 using mojo::ConnectionContext;
 using mojo::GetProxy;
