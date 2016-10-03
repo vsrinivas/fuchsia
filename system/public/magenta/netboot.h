@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <stddef.h>
 #include <stdint.h>
 
 // clang-format off
@@ -33,6 +32,7 @@
 #define NB_ERROR_BAD_CMD      0x80000001
 #define NB_ERROR_BAD_PARAM    0x80000002
 #define NB_ERROR_TOO_LARGE    0x80000003
+#define NB_ERROR_BAD_FILE     0x80000004
 
 typedef struct nbmsg_t {
     uint32_t magic;
@@ -42,8 +42,19 @@ typedef struct nbmsg_t {
     uint8_t  data[0];
 } nbmsg;
 
-int netboot_init(void *buf, size_t len);
+typedef struct nbfile_t {
+    uint8_t* data;
+    size_t size; // max size of buffer
+    size_t offset; // write pointer
+} nbfile;
+
+int netboot_init(void);
 int netboot_poll(void);
+void netboot_close(void);
+
+// Ask for a buffer suitable to put the file /name/ in
+// Return NULL to indicate /name/ is not wanted.
+nbfile* netboot_get_buffer(const char* name);
 
 #define DEBUGLOG_PORT         33337
 #define DEBUGLOG_ACK_PORT     33338

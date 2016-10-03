@@ -16,6 +16,9 @@ EFI_LINKSCRIPT	:= build/efi-x86-64.lds
 EFI_CFLAGS	:= -fPIE -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -Iinclude -Isrc
+# Temporary ugliness until we integrate gigaboot build into magenta build
+LK_ROOT         := ..
+EFI_CFLAGS      += -I$(LK_ROOT)/system/public
 
 EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie
 EFI_LDFLAGS	+= -Lout

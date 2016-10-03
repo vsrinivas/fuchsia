@@ -14,8 +14,9 @@
 #include <cmdline.h>
 #include <framebuffer.h>
 #include <magenta.h>
-#include <netboot.h>
 #include <xefi.h>
+
+#include <magenta/netboot.h>
 
 #define DEFAULT_TIMEOUT 3
 

@@ -6,8 +6,9 @@
 #include <string.h>
 
 #include <inet6.h>
-#include <netboot.h>
 #include <netifc.h>
+
+#include <magenta/netboot.h>
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;
