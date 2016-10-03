@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
 # Defines a clang-based toolchain
@@ -31,7 +32,8 @@ import("//build/toolchain/goma.gni")
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.cc), "clang_toolchain() must specify a \"cc\" value")
-    assert(defined(invoker.cxx), "clang_toolchain() must specify a \"cxx\" value")
+    assert(defined(invoker.cxx),
+           "clang_toolchain() must specify a \"cxx\" value")
     assert(defined(invoker.ar), "clang_toolchain() must specify a \"ar\" value")
     assert(defined(invoker.ld), "clang_toolchain() must specify a \"ld\" value")
     assert(defined(invoker.toolchain_cpu),
@@ -44,6 +46,8 @@ template("clang_toolchain") {
     }
     if (use_goma) {
       compiler_prefix = "$goma_dir/gomacc "
+    } else if (use_ccache) {
+      compiler_prefix = "ccache "
     } else {
       compiler_prefix = ""
     }
