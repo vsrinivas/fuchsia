@@ -11,23 +11,9 @@ learn how to run under qemu:
 ### Persistent file system
 
 Having a persistent block device is handy, and you will probably want one.
-
-In your `magenta` directory, create a 512 MiB file to hold your persistent block
-device:
-
-```sh
-dd if=/dev/zero of=blk.bin bs=1M count=512
-```
-
-Then, run Fuchsia and:
-
-```
-> minfs /dev/class/block/000 mkfs
-> minfs /dev/class/block/000 mount &
-```
-
-That's it: you only need to do it once. The device will be mounted automatically
-on future boots.
+Follow [these
+instructions](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md)
+to create a minfs partition.
 
 ### Networking
 
