@@ -10,11 +10,6 @@
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 
-// TODO(abarth): Remove once we update the sysroot.
-#ifndef MX_RIGHT_MAP
-#define MX_RIGHT_MAP ((mx_rights_t)1u << 5)
-#endif
-
 namespace fonts {
 namespace {
 
