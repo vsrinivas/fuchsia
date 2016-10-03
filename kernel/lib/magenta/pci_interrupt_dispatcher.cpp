@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#if WITH_DEV_PCIE
+
 #include <new.h>
 
 #include <kernel/auto_lock.h>
@@ -88,3 +90,5 @@ status_t PciInterruptDispatcher::InterruptComplete() {
 
     return NO_ERROR;
 }
+
+#endif  // if WITH_DEV_PCIE

@@ -16,7 +16,7 @@
  *
  * @return A status code indicating the success or failure of the initialization.
  */
-status_t arm_gic2vm_msi_init(void);
+status_t arm_gicv2m_msi_init(void);
 
 /**
  * Implementation of the PCIe bus driver hooks.

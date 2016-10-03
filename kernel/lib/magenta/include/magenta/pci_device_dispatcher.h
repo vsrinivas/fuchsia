@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+#if WITH_DEV_PCIE
 
 #include <dev/pcie.h>
 #include <dev/pcie_constants.h>
@@ -95,3 +96,5 @@ private:
     uint irqs_supported_ = 0;
     bool irqs_maskable_  = false;
 };
+
+#endif  // if WITH_DEV_PCIE

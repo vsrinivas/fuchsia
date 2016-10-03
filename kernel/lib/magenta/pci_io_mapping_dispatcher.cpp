@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#if WITH_DEV_PCIE
+
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_io_mapping_dispatcher.h>
 
@@ -134,3 +136,5 @@ void PciIoMappingDispatcher::Close() {
 
     device_ = nullptr;
 }
+
+#endif  // if WITH_DEV_PCIE

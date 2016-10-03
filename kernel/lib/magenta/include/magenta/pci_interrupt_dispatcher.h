@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+#if WITH_DEV_PCIE
 
 #include <dev/pcie.h>
 #include <magenta/interrupt_dispatcher.h>
@@ -36,3 +37,5 @@ private:
     const bool     maskable_;
     mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
 };
+
+#endif  // if WITH_DEV_PCIE

@@ -39,15 +39,12 @@ GLOBAL_DEFINES += \
 	BCM2837=1 \
 	WITH_LIB_DEBUGLOG=1 \
 	PLATFORM_SUPPORTS_PANIC_SHELL=1 \
-	PLATFORM_NO_PCI_BUS=1 \
-
 
 MODULE_DEPS += \
 	lib/cbuf \
 	lib/fdt \
 	dev/timer/arm_generic \
 	dev/interrupt \
-	dev/pcie \
 
 include make/module.mk
 

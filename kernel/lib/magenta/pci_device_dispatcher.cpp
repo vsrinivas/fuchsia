@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#if WITH_DEV_PCIE
+
 #include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
 #include <magenta/pci_device_dispatcher.h>
@@ -296,3 +298,5 @@ void PciDeviceDispatcher::PciDeviceWrapper::ReleaseBarCachePolicyRef(uint bar_nu
 
     r.ref_count--;
 }
+
+#endif  // if WITH_DEV_PCIE

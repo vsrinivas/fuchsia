@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
+#if WITH_DEV_PCIE
 
 #include <dev/pcie_constants.h>
 #include <magenta/io_mapping_dispatcher.h>
@@ -42,3 +43,5 @@ private:
     mxtl::RefPtr<PciDeviceDispatcher::PciDeviceWrapper> device_;
     uint bar_num_ = PCIE_MAX_BAR_REGS;
 };
+
+#endif  // if WITH_DEV_PCIE

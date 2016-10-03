@@ -24,7 +24,6 @@
 #include <magenta/state_tracker.h>
 
 // The next two includes should be removed. See DeleteHandle().
-#include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
 
 #include <mxtl/arena.h>

@@ -6,6 +6,11 @@
 // https://opensource.org/licenses/MIT
 
 
+/* If we are building with PCIe support, go ahead and implement management of
+ * MSI IRQ blocks here, instead of requiring each platform to do so on their
+ * own. */
+#if WITH_DEV_PCIE
+
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie_platform.h>
@@ -16,15 +21,10 @@
 #include <sys/types.h>
 #include <trace.h>
 
-/* If we are building with PCIe support, go ahead and implement management of
- * MSI IRQ blocks here, instead of requiring each platform to do so on their
- * own. */
-#if WITH_DEV_PCIE
-
 p2ra_state_t g_32bit_targets;
 p2ra_state_t g_64bit_targets;
 
-status_t arm_gic2vm_msi_init(void) {
+status_t arm_gicv2m_msi_init(void) {
     status_t ret;
 
     ret = p2ra_init(&g_32bit_targets, PCIE_MAX_MSI_IRQS);
