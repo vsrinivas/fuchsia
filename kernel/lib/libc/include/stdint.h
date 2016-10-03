@@ -253,6 +253,35 @@ typedef __UINTMAX_TYPE__  uintmax_t;
 
 #define SIZE_MAX          __SIZE_MAX__
 
+// GCC defines __<type>INT<size>_C macros which append the correct suffix
+// to an (un)signed integer literal, with <size> being one of 8, 16, 32, 64
+// and MAX, and type being U for unsigned types. The standard stdint.h macros
+// with the same names without the leading __ could be implemented in terms of
+// these macros.
+//
+// Clang predefines macros __<type>INT<size>_C_SUFFIX__ which expand to the
+// suffix itself. We define the standard stdint.h macros in terms of the GCC
+// variants and for Clang we define their equivalents.
+#ifndef __INTMAX_C
+
+#define __int_c_join(a, b) a ## b
+#define __int_c(v, suffix) __int_c_join(v, suffix)
+
+#define __INT8_C(c)       __int_c(c, __INT8_C_SUFFIX__)
+#define __INT16_C(c)      __int_c(c, __INT16_C_SUFFIX__)
+#define __INT32_C(c)      __int_c(c, __INT32_C_SUFFIX__)
+#define __INT64_C(c)      __int_c(c, __INT16_C_SUFFIX__)
+
+#define __UINT8_C(c)      __int_c(c, __UINT8_C_SUFFIX__)
+#define __UINT16_C(c)     __int_c(c, __UINT16_C_SUFFIX__)
+#define __UINT32_C(c)     __int_c(c, __UINT32_C_SUFFIX__)
+#define __UINT64_C(c)     __int_c(c, __UINT64_C_SUFFIX__)
+
+#define __INTMAX_C(c)     __int_c(c, __INTMAX_C_SUFFIX__)
+#define __UINTMAX_C(c)    __int_c(c, __UINTMAX_C_SUFFIX__)
+
+#endif
+
 #define INT8_C(c)         __INT8_C(c)
 #define INT16_C(c)        __INT16_C(c)
 #define INT32_C(c)        __INT32_C(c)
