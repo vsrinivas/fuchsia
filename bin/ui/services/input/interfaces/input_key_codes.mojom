@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 // no-format
 
-[DartPackage="mozart"]
+[DartPackage="mozart_services"]
 module mozart;
 
 // Cross platform keyboard codes.
