@@ -195,6 +195,25 @@ public:
             EXPECT_TRUE(ringbuffer_wrapped);
     }
 
+    void MaxFreq()
+    {
+        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        ASSERT_NE(platform_device, nullptr);
+
+        std::unique_ptr<MsdIntelDevice> device(
+            driver_->CreateDevice(platform_device->GetDeviceHandle()));
+        EXPECT_NE(device, nullptr);
+
+        constexpr uint32_t max_freq = 1050;
+        uint32_t freq = device->GetCurrentFrequency();
+        EXPECT_LE(freq, max_freq);
+
+        device->RequestMaxFreq();
+
+        freq = device->GetCurrentFrequency();
+        EXPECT_EQ(freq, max_freq);
+    }
+
 private:
     MsdIntelDriver* driver_;
 };
@@ -227,4 +246,10 @@ TEST(MsdIntelDevice, WrapRingbuffer)
 {
     TestMsdIntelDevice test;
     test.BatchBuffer(true);
+}
+
+TEST(MsdIntelDevice, MaxFreq)
+{
+    TestMsdIntelDevice test;
+    test.MaxFreq();
 }

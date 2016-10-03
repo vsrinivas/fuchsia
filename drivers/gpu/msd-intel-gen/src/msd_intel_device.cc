@@ -227,6 +227,23 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     flip_data_ = data;
 }
 
+void MsdIntelDevice::RequestMaxFreq()
+{
+    uint32_t max_freq =
+        registers::RenderPerformanceStateCapability::read_rp0_frequency(register_io());
+    registers::RenderPerformanceNormalFrequencyRequest::write_frequency_request(register_io(),
+                                                                                max_freq);
+}
+
+uint32_t MsdIntelDevice::GetCurrentFrequency()
+{
+    if (DeviceId::is_gen9(device_id_))
+        return registers::RenderPerformanceStatus::read_current_frequency_gen9(register_io());
+
+    DLOG("GetCurrentGraphicsFrequency not implemented");
+    return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)

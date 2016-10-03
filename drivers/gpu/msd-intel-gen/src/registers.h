@@ -283,6 +283,38 @@ public:
     }
 };
 
+// from Intel-GFX-BSpec-NDA-SKL-20150707-b93797-r96240-Web register spec
+class RenderPerformanceNormalFrequencyRequest {
+public:
+    static constexpr uint32_t kOffset = 0xA008;
+
+    static void write_frequency_request(RegisterIo* reg_io, uint32_t val)
+    {
+        return reg_io->Write32(kOffset, val << 23);
+    }
+};
+
+class RenderPerformanceStatus {
+public:
+    static constexpr uint32_t kOffset = 0xA01C;
+
+    // Returns frequency in MHz
+    static uint32_t read_current_frequency_gen9(RegisterIo* reg_io)
+    {
+        return (reg_io->Read32(kOffset) >> 23) * 50;
+    }
+};
+
+class RenderPerformanceStateCapability {
+public:
+    static constexpr uint32_t kOffset = 0x140000 + 0x5998;
+
+    static uint32_t read_rp0_frequency(RegisterIo* register_io)
+    {
+        return register_io->Read32(kOffset) & 0xff;
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H
