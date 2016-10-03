@@ -65,6 +65,22 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         const char* argv[] = { "/boot/bin/minfs", path, "mount" };
         printf("devmgr: /dev/class/block/%s: minfs?\n", name);
         devmgr_launch("minfs:/data", 3, argv, -1, 0, 0);
+    } else if ((data[510] == 0x55 && data[511] == 0xAA) && (data[38] == 0x29 ||
+                                                            data[66] == 0x29)) {
+        // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
+        // 0x29 is the Boot Signature, but it is placed at either offset 38 or
+        // 66 (depending on FAT type).
+        char device_path[MXIO_MAX_FILENAME + 64];
+        snprintf(device_path, sizeof(device_path), "-devicepath=/dev/class/block/%s", name);
+        const char* argv[] = {
+            "/boot/bin/thinfs",
+            device_path,
+            "-mountpath=/data",
+            "-readonly=true",
+            "mount",
+        };
+        printf("devmgr: /dev/class/block/%s: fatfs?\n", name);
+        devmgr_launch("fatfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
     }
 
     close(fd);
