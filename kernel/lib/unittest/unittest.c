@@ -12,6 +12,7 @@
 #include <magenta/compiler.h>
 #include <debug.h>
 #include <err.h>
+#include <inttypes.h>
 #include <platform.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -179,21 +180,19 @@ bool run_unittest(const unittest_testcase_registration_t* testcase) {
             printf(fmt_string, test->name ? test->name : "");
         }
 
-        unittest_printf("%s (%lld.%03lld mSec)\n",
+        unittest_printf("%s (%" PRIu64 " nSec)\n",
                         good ? "PASSED" : "FAILED",
-                        test_runtime / 1000,
-                        test_runtime % 1000);
+                        test_runtime);
 
     }
 
     lk_bigtime_t testcase_runtime = current_time_hires() - testcase_start;
 
-    unittest_printf("%s : %sll tests passed (%zu/%zu) in %lld.%03lld mSec\n",
+    unittest_printf("%s : %sll tests passed (%zu/%zu) in %" PRIu64 " nSec\n",
                     testcase->name,
                     passed != testcase->test_cnt ? "Not a" : "A",
                     passed, testcase->test_cnt,
-                    testcase_runtime / 1000,
-                    testcase_runtime % 1000);
+                    testcase_runtime);
 
     return passed == testcase->test_cnt;
 }

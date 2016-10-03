@@ -28,6 +28,8 @@
 #include <platform/timer.h>
 #include "platform_p.h"
 
+#include <lib/fixed_point.h>
+
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
 // HPET is not present, we will fallback to calibrating using the PIT.  If the
@@ -64,6 +66,7 @@ static uint8_t apic_divisor = 0;
 
 // TSC timer calibration values
 static uint64_t tsc_ticks_per_ms;
+static struct fp_32_64 ns_per_tsc;
 
 uint64_t get_tsc_ticks_per_ms(void) {
     return tsc_ticks_per_ms;
@@ -84,7 +87,7 @@ lk_time_t current_time(void)
 {
     lk_time_t time;
 
-    if (invariant_tsc) {
+    if (likely(invariant_tsc)) {
         uint64_t tsc = rdtsc();
         time = tsc / tsc_ticks_per_ms;
     } else {
@@ -99,12 +102,13 @@ lk_bigtime_t current_time_hires(void)
 {
     lk_bigtime_t time;
 
-    if (invariant_tsc) {
+    if (likely(invariant_tsc)) {
         uint64_t tsc = rdtsc();
-        time = tsc / (tsc_ticks_per_ms / 1000);
+        time = u64_mul_u64_fp32_64(tsc, ns_per_tsc);
     } else {
         // XXX slight race
         time = (lk_bigtime_t) ((timer_current_time >> 22) * 1000) >> 10;
+        time *= 1000;
     }
 
     return time;
@@ -333,6 +337,9 @@ static void calibrate_tsc(void)
     tsc_ticks_per_ms = best_time;
 
     LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
+
+    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000 * 1000, best_time * 1000);
+    LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
 void platform_init_timer(uint level)
@@ -351,6 +358,8 @@ void platform_init_timer(uint level)
     }
 
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
+
+    LTRACEF("constant_tsc %u invariant_tsc %u\n", constant_tsc, invariant_tsc);
 
     use_tsc_deadline = invariant_tsc &&
             x86_feature_test(X86_FEATURE_TSC_DEADLINE);

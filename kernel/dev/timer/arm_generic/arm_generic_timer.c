@@ -115,6 +115,7 @@ static int timer_irq;
 struct fp_32_64 cntpct_per_ms;
 struct fp_32_64 ms_per_cntpct;
 struct fp_32_64 us_per_cntpct;
+struct fp_32_64 ns_per_cntpct;
 
 static uint64_t lk_time_to_cntpct(lk_time_t lk_time)
 {
@@ -128,7 +129,7 @@ static lk_time_t cntpct_to_lk_time(uint64_t cntpct)
 
 static lk_bigtime_t cntpct_to_lk_bigtime(uint64_t cntpct)
 {
-    return u64_mul_u64_fp32_64(cntpct, us_per_cntpct);
+    return u64_mul_u64_fp32_64(cntpct, ns_per_cntpct);
 }
 
 static uint32_t read_cntfrq(void)
@@ -308,9 +309,11 @@ static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
     fp_32_64_div_32_32(&cntpct_per_ms, cntfrq, 1000);
     fp_32_64_div_32_32(&ms_per_cntpct, 1000, cntfrq);
     fp_32_64_div_32_32(&us_per_cntpct, 1000 * 1000, cntfrq);
+    fp_32_64_div_32_32(&ns_per_cntpct, 1000 * 1000 * 1000, cntfrq);
     LTRACEF("cntpct_per_ms: %08x.%08x%08x\n", cntpct_per_ms.l0, cntpct_per_ms.l32, cntpct_per_ms.l64);
     LTRACEF("ms_per_cntpct: %08x.%08x%08x\n", ms_per_cntpct.l0, ms_per_cntpct.l32, ms_per_cntpct.l64);
     LTRACEF("us_per_cntpct: %08x.%08x%08x\n", us_per_cntpct.l0, us_per_cntpct.l32, us_per_cntpct.l64);
+    LTRACEF("ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }
 
 void arm_generic_timer_init(int irq, uint32_t freq_override)

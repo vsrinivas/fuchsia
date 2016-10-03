@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdio.h>
+#include <inttypes.h>
 #include <kernel/thread.h>
 #include <platform.h>
 
@@ -17,7 +19,7 @@ static int thread_sleep_test(void)
         lk_bigtime_t actual_delay = current_time_hires() - now;
         if (actual_delay < 500 * 1000) {
             early = 1;
-            printf("thread_sleep(500) returned after %lluus\n", actual_delay);
+            printf("thread_sleep(500) returned after %" PRIu64 " ns\n", actual_delay);
         }
     }
     return early;

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if ARM_WITH_CACHE
-
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +36,7 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     arch_clean_cache_range((addr_t)buf, bufsize);
     t = current_time_hires() - t;
 
-    printf("took %llu usecs to clean %d bytes (cold)\n", t, bufsize);
+    printf("took %" PRIu64 " nsecs to clean %zu bytes (cold)\n", t, bufsize);
 
     memset(buf, 0x99, bufsize);
 
@@ -48,7 +47,7 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     if (do_free)
         free(buf);
 
-    printf("took %llu usecs to clean %d bytes (hot)\n", t, bufsize);
+    printf("took %" PRIu64 " nsecs to clean %zu bytes (hot)\n", t, bufsize);
 }
 
 static int cache_tests(int argc, const cmd_args *argv)
@@ -69,5 +68,3 @@ static int cache_tests(int argc, const cmd_args *argv)
 STATIC_COMMAND_START
 STATIC_COMMAND("cache_tests", "test/bench the cpu cache", &cache_tests)
 STATIC_COMMAND_END(cache_tests);
-
-#endif

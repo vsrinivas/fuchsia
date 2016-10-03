@@ -90,7 +90,7 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     rec->next = nxt;
     rec->datalen = len;
     rec->flags = flags;
-    rec->timestamp = current_time_hires() * 1000ULL;
+    rec->timestamp = current_time_hires();
     memcpy(rec->data, ptr, len);
 
     // Advance the head pointer

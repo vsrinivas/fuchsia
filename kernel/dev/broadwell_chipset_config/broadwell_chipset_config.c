@@ -42,7 +42,7 @@ static const uint16_t LPC_BRIDGE_DIDS[] = {
 #define IOBPD_OFFSET            (0x2334u)
 #define IOBPS_OFFSET            (0x2338u)
 
-#define IOBP_REGISTER_TIMEOUT   (100u)  // 100us.  Arbitrary; docs provides no guidance here.
+#define IOBP_REGISTER_TIMEOUT   (100000u)  // 100ns.  Arbitrary; docs provides no guidance here.
 
 #define IOBPS_BUSY_MASK         (0x00000001u)
 #define IOBPS_BUSY_SHIFT        (0u)

@@ -23,7 +23,7 @@ extern "C" uint64_t get_tsc_ticks_per_ms(void);
 #else
 #include <platform.h>
 #define ktrace_timestamp() current_time_hires()
-#define ktrace_ticks_per_ms() (1000)
+#define ktrace_ticks_per_ms() (1000000)
 #endif
 
 // implemented by thread.c

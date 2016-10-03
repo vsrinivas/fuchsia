@@ -29,10 +29,8 @@ typedef uintptr_t addr_t;
 typedef uintptr_t vaddr_t;
 typedef uintptr_t paddr_t;
 
-typedef int kobj_id;
-
-typedef uint32_t lk_time_t;
-typedef uint64_t lk_bigtime_t;
+typedef uint32_t lk_time_t; // milliseconds
+typedef uint64_t lk_bigtime_t; // nanoseconds
 #define INFINITE_TIME UINT32_MAX
 
 #define TIME_GTE(a, b) ((int32_t)((a) - (b)) >= 0)

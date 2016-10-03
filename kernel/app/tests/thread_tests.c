@@ -9,6 +9,7 @@
 #include <trace.h>
 #include <rand.h>
 #include <err.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <string.h>
 #include <app/tests.h>
@@ -448,7 +449,7 @@ static int preempt_tester(void *arg)
 {
     spin(1000000);
 
-    printf("exiting ts %lld\n", current_time_hires());
+    printf("exiting ts %" PRIu64 " ns\n", current_time_hires());
 
     atomic_add(&preempt_count, -1);
 #undef COUNT

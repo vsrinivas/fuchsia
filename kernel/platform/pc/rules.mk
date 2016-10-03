@@ -31,6 +31,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     lib/acpica \
     lib/gfxconsole \
+    lib/fixed_point \
     lib/pow2_range_allocator \
     dev/interrupt \
     dev/pcie \

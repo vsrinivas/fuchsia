@@ -75,7 +75,7 @@ uint sys_num_cpus() {
 }
 
 uint64_t sys_current_time() {
-    return current_time_hires() * 1000;  // microseconds to nanoseconds
+    return current_time_hires();
 }
 
 mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,

@@ -21,7 +21,8 @@ void spin(uint32_t usecs)
 {
     lk_bigtime_t start = current_time_hires();
 
-    while ((current_time_hires() - start) < usecs)
+    lk_bigtime_t nsecs = (lk_bigtime_t)usecs * 1000;
+    while ((current_time_hires() - start) < nsecs)
         ;
 }
 

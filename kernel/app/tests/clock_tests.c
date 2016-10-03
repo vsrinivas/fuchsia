@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <rand.h>
 #include <err.h>
+#include <inttypes.h>
 #include <app/tests.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
@@ -59,7 +60,7 @@ void clock_tests(void)
             t2 = current_time_hires();
             //printf("%llu %llu\n", last, t2);
             if (t2 < last) {
-                printf("WARNING: time ran backwards: %llu < %llu\n", t2, last);
+                printf("WARNING: time ran backwards: %" PRIu64 " < %" PRIu64 "\n", t2, last);
                 last = t2;
                 continue;
             }
@@ -75,8 +76,8 @@ void clock_tests(void)
         for (;;) {
             t = current_time();
             t2 = current_time_hires();
-            if (t > ((t2 + 500) / 1000)) {
-                printf("WARNING: current_time() ahead of current_time_hires() %lu %llu\n", t, t2);
+            if (t > ((t2 + 500000) / 1000000)) {
+                printf("WARNING: current_time() ahead of current_time_hires() %u %" PRIu64 "\n", t, t2);
             }
             if (t - start > 5000)
                 break;
@@ -93,7 +94,7 @@ void clock_tests(void)
     for (int i = 0; i < 5; i++) {
         uint cycles = arch_cycle_count();
         lk_bigtime_t start = current_time_hires();
-        while ((current_time_hires() - start) < 1000000)
+        while ((current_time_hires() - start) < 1000000000)
             ;
         cycles = arch_cycle_count() - cycles;
         printf("%u cycles per second\n", cycles);

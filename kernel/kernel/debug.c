@@ -68,8 +68,8 @@ static int cmd_threadstats(int argc, const cmd_args *argv)
             continue;
 
         printf("thread stats (cpu %d):\n", i);
-        printf("\ttotal idle time: %" PRId64 "\n", thread_stats[i].idle_time);
-        printf("\ttotal busy time: %" PRId64 "\n",
+        printf("\ttotal idle time: %" PRIu64 "\n", thread_stats[i].idle_time);
+        printf("\ttotal busy time: %" PRIu64 "\n",
                current_time_hires() - thread_stats[i].idle_time);
         printf("\treschedules: %lu\n", thread_stats[i].reschedules);
 #if WITH_SMP
@@ -105,8 +105,8 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         }
 
         lk_bigtime_t delta_time = idle_time - last_idle_time[i];
-        lk_bigtime_t busy_time = 1000000ULL - (delta_time > 1000000ULL ? 1000000ULL : delta_time);
-        uint busypercent = (busy_time * 10000) / (1000000);
+        lk_bigtime_t busy_time = 1000000000ULL - (delta_time > 1000000000ULL ? 1000000000ULL : delta_time);
+        uint busypercent = (busy_time * 10000) / (1000000000);
 
         printf("cpu %u LOAD: "
                "%u.%02u%%, "

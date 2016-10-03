@@ -637,8 +637,8 @@ static void thread_resched(void)
         return;
 
     lk_bigtime_t now = current_time_hires();
-    oldthread->runtime_us += now - oldthread->last_started_running_us;
-    newthread->last_started_running_us = now;
+    oldthread->runtime_ns += now - oldthread->last_started_running_ns;
+    newthread->last_started_running_ns = now;
 
     /* set up quantum for the new thread if it was consumed */
     if (newthread->remaining_quantum <= 0) {
@@ -1178,9 +1178,9 @@ static const char *thread_state_to_str(enum thread_state state)
  */
 void dump_thread(thread_t *t)
 {
-    lk_bigtime_t runtime = t->runtime_us;
+    lk_bigtime_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
-        runtime += current_time_hires() - t->last_started_running_us;
+        runtime += current_time_hires() - t->last_started_running_ns;
     }
 
     dprintf(INFO, "dump_thread: t %p (%s)\n", t, t->name);
@@ -1191,8 +1191,8 @@ void dump_thread(thread_t *t)
     dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
             thread_state_to_str(t->state), t->priority, t->remaining_quantum);
 #endif
-    dprintf(INFO, "\truntime_us %" PRId64 ", runtime_s %" PRId64 "\n",
-            runtime, runtime / 1000000);
+    dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
+            runtime, runtime / 1000000000);
     dprintf(INFO, "\tstack %p, stack_size %zd\n", t->stack, t->stack_size);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
             (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
