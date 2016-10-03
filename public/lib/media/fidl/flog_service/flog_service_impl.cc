@@ -7,6 +7,7 @@
 #include "apps/media/services/flog_service/flog_directory.h"
 #include "apps/media/services/flog_service/flog_logger_impl.h"
 #include "apps/media/services/flog_service/flog_reader_impl.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
@@ -43,23 +44,22 @@ bool FlogServiceImpl::OnAcceptConnection(
   return true;
 }
 
-void FlogServiceImpl::CreateLogger(InterfaceRequest<FlogLogger> logger,
+void FlogServiceImpl::CreateLogger(InterfaceRequest<FlogLogger> request,
                                    const String& label) {
-  // TODO(dalesat): Get rid of this capture hack once we have c++14.
-  MessagePipeHandle handle = logger.PassMessagePipe().release();
-  ready_.When([this, handle, label]() {
-    InterfaceRequest<FlogLogger> logger =
-        InterfaceRequest<FlogLogger>(ScopedMessagePipeHandle(handle));
-    AddProduct(FlogLoggerImpl::Create(logger.Pass(), ++last_allocated_log_id_,
-                                      label, directory_, this));
-  });
+  ready_.When(
+      ftl::MakeCopyable([ this, request = request.Pass(), label ]() mutable {
+        std::shared_ptr<FlogLoggerImpl> logger = FlogLoggerImpl::Create(
+            request.Pass(), ++last_allocated_log_id_, label, directory_, this);
+        AddProduct(logger);
+        log_labels_by_id_->insert(
+            std::make_pair(logger->id(), logger->label()));
+      }));
 }
 
 void FlogServiceImpl::GetLogDescriptions(
     const GetLogDescriptionsCallback& callback) {
   ready_.When([this, callback]() {
     FTL_DCHECK(log_labels_by_id_);
-    // TODO(dalesat): Include open and new logs.
     Array<FlogDescriptionPtr> descriptions =
         Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
 
@@ -78,16 +78,15 @@ void FlogServiceImpl::GetLogDescriptions(
 
 void FlogServiceImpl::CreateReader(InterfaceRequest<FlogReader> reader,
                                    uint32_t log_id) {
-  // TODO(dalesat): Get rid of this capture hack once we have c++14.
-  MessagePipeHandle handle = reader.PassMessagePipe().release();
-  ready_.When([this, handle, log_id]() {
-    FTL_DCHECK(log_labels_by_id_);
-    auto iter = log_labels_by_id_->find(log_id);
-    AddProduct(FlogReaderImpl::Create(
-        InterfaceRequest<FlogReader>(ScopedMessagePipeHandle(handle)), log_id,
-        iter == log_labels_by_id_->end() ? nullptr : iter->second, directory_,
-        this));
-  });
+  ready_.When(
+      ftl::MakeCopyable([ this, reader = reader.Pass(), log_id ]() mutable {
+        FTL_DCHECK(log_labels_by_id_);
+        auto iter = log_labels_by_id_->find(log_id);
+        AddProduct(FlogReaderImpl::Create(
+            reader.Pass(), log_id,
+            iter == log_labels_by_id_->end() ? nullptr : iter->second,
+            directory_, this));
+      }));
 }
 
 void FlogServiceImpl::DeleteLog(uint32_t log_id) {

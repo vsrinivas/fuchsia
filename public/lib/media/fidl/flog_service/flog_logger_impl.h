@@ -29,6 +29,10 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
 
   ~FlogLoggerImpl() override;
 
+  uint32_t id() { return id_; }
+
+  const std::string& label() { return label_; }
+
  private:
   FlogLoggerImpl(InterfaceRequest<FlogLogger> request,
                  uint32_t log_id,
@@ -44,6 +48,8 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   bool AcceptWithResponder(Message* message,
                            MessageReceiverWithStatus* responder) override;
 
+  uint32_t id_;
+  std::string label_;
   std::unique_ptr<mojo::internal::Router> router_;
   ftl::UniqueFD fd_;
 };

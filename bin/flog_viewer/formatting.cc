@@ -38,10 +38,9 @@ std::ostream& operator<<(std::ostream& os, AsNiceDateTime value) {
   std::time_t time = std::chrono::system_clock::to_time_t(
       std::chrono::time_point<std::chrono::system_clock>(
           std::chrono::microseconds(value.time_us_)));
-  std::tm* tm = localtime(&time);
-  return os << std::setw(4) << tm->tm_year + 1900 << "/" << std::setw(2)
-            << std::setfill('0') << tm->tm_mon + 1 << "/" << std::setw(2)
-            << tm->tm_mday << " " << std::setw(2) << tm->tm_hour << ":"
+  std::tm* tm = gmtime(&time);
+  // Our timestamps are relative to startup, so no point in showing the date.
+  return os << std::setfill('0') << std::setw(2) << tm->tm_hour << ":"
             << std::setw(2) << tm->tm_min << ":" << std::setw(2) << tm->tm_sec;
 }
 

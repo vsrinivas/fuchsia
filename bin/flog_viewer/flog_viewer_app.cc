@@ -47,7 +47,7 @@ class FlogViewerApp : public ApplicationImplBase {
  private:
   // Processes arguments.
   void ProcessArgs(const std::vector<std::string>& args) {
-    for (size_t i = 1; i < args.size(); ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
       const std::string& arg = args[i];
 
       std::string string_value;

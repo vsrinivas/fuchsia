@@ -4,9 +4,6 @@
 
 #include "apps/media/services/flog_service/flog_logger_impl.h"
 
-#include <iomanip>
-#include <iostream>
-
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/logging.h"
 
@@ -30,6 +27,8 @@ FlogLoggerImpl::FlogLoggerImpl(InterfaceRequest<FlogLogger> request,
                                std::shared_ptr<FlogDirectory> directory,
                                FlogServiceImpl* owner)
     : FlogServiceImpl::ProductBase(owner),
+      id_(log_id),
+      label_(label),
       fd_(directory->GetFile(log_id, label, true)) {
   mojo::internal::MessageValidatorList validators;
   router_.reset(new mojo::internal::Router(
