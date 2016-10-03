@@ -13,10 +13,10 @@ class CommitImpl : public Commit {
  public:
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
-  CommitImpl(CommitId id,
+  CommitImpl(const CommitId& id,
              int64_t timestamp,
-             ObjectId root_node_id,
-             std::vector<CommitId> parent_ids);
+             const ObjectId& root_node_id,
+             const std::vector<CommitId>& parent_ids);
 
   ~CommitImpl() override;
 
@@ -24,7 +24,7 @@ class CommitImpl : public Commit {
   // representation. If the format is incorrect, a NULL pointer will be
   // returned.
   static std::unique_ptr<Commit> FromStorageBytes(
-      CommitId id,
+      const CommitId& id,
       const std::string& storage_bytes);
 
   // Commit:

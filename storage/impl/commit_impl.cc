@@ -33,10 +33,10 @@ int64_t BytesToTimestamp(std::string bytes) {
 
 }  // namespace
 
-CommitImpl::CommitImpl(CommitId id,
+CommitImpl::CommitImpl(const CommitId& id,
                        int64_t timestamp,
-                       ObjectId root_node_id,
-                       std::vector<CommitId> parent_ids)
+                       const ObjectId& root_node_id,
+                       const std::vector<CommitId>& parent_ids)
     : id_(id),
       timestamp_(timestamp),
       root_node_id_(root_node_id),
@@ -47,7 +47,7 @@ CommitImpl::CommitImpl(CommitId id,
 CommitImpl::~CommitImpl() {}
 
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
-    CommitId id,
+    const CommitId& id,
     const std::string& storage_bytes) {
   int parentCount = (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
 
