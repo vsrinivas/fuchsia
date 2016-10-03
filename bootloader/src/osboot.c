@@ -72,18 +72,11 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
 
 static char cmdline[4096];
 
-enum {
-    BOOT_DEVICE_NONE,
-    BOOT_DEVICE_NETBOOT,
-    BOOT_DEVICE_LOCAL,
-};
-
 // Wait for a keypress from a set of valid keys. If timeout_s < INT_MAX, the
-// first key in the set of valid keys will be returned after timeout_s seconds.
-char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
+// first key in the set of valid keys will be returned after timeout_s seconds
+// if no other valid key is pressed.
+char key_prompt(char* valid_keys, int timeout_s) {
     if (strlen(valid_keys) < 1) return 0;
-
-    efi_boot_services* bs = sys->BootServices;
 
     efi_event TimerEvent;
     efi_event WaitList[2];
@@ -93,13 +86,13 @@ char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
     efi_input_key key;
     memset(&key, 0, sizeof(key));
 
-    status = bs->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
+    status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
     if (status != EFI_SUCCESS) {
         printf("could not create event timer: %s\n", xefi_strerror(status));
         return 0;
     }
 
-    status = bs->SetTimer(TimerEvent, TimerPeriodic, 10000000);
+    status = gBS->SetTimer(TimerEvent, TimerPeriodic, 10000000);
     if (status != EFI_SUCCESS) {
         printf("could not set timer: %s\n", xefi_strerror(status));
         return 0;
@@ -107,14 +100,14 @@ char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
 
     int wait_idx = 0;
     int key_idx = wait_idx;
-    WaitList[wait_idx++] = sys->ConIn->WaitForKey;
+    WaitList[wait_idx++] = gSys->ConIn->WaitForKey;
     int timer_idx = wait_idx;  // timer should always be last
     WaitList[wait_idx++] = TimerEvent;
 
-    bool cur_vis = sys->ConOut->Mode->CursorVisible;
-    int32_t col = sys->ConOut->Mode->CursorColumn;
-    int32_t row = sys->ConOut->Mode->CursorRow;
-    sys->ConOut->EnableCursor(sys->ConOut, false);
+    bool cur_vis = gConOut->Mode->CursorVisible;
+    int32_t col = gConOut->Mode->CursorColumn;
+    int32_t row = gConOut->Mode->CursorRow;
+    gConOut->EnableCursor(gConOut, false);
 
     // TODO: better event loop
     char pressed = 0;
@@ -122,19 +115,19 @@ char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
         printf("%-10d", timeout_s);
     }
     do {
-        status = bs->WaitForEvent(wait_idx, WaitList, &Index);
+        status = gBS->WaitForEvent(wait_idx, WaitList, &Index);
 
         // Check the timer
         if (!EFI_ERROR(status)) {
             if (Index == timer_idx) {
                 if (timeout_s < INT_MAX) {
                     timeout_s--;
-                    sys->ConOut->SetCursorPosition(sys->ConOut, col, row);
+                    gConOut->SetCursorPosition(gConOut, col, row);
                     printf("%-10d", timeout_s);
                 }
                 continue;
             } else if (Index == key_idx) {
-                status = sys->ConIn->ReadKeyStroke(sys->ConIn, &key);
+                status = gSys->ConIn->ReadKeyStroke(gSys->ConIn, &key);
                 if (EFI_ERROR(status)) {
                     // clear the key and wait for another event
                     memset(&key, 0, sizeof(key));
@@ -148,14 +141,14 @@ char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
             }
         } else {
             printf("Error waiting for event: %s\n", xefi_strerror(status));
-            sys->ConOut->EnableCursor(sys->ConOut, cur_vis);
+            gConOut->EnableCursor(gConOut, cur_vis);
             return 0;
         }
     } while (timeout_s);
 
-    bs->CloseEvent(TimerEvent);
-    sys->ConOut->EnableCursor(sys->ConOut, cur_vis);
-    if (timeout_s > 0 || status == EFI_SUCCESS) {
+    gBS->CloseEvent(TimerEvent);
+    gConOut->EnableCursor(gConOut, cur_vis);
+    if (timeout_s > 0 && pressed) {
         return pressed;
     }
 
@@ -163,11 +156,57 @@ char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
     return valid_keys[0];
 }
 
-void do_netboot(efi_handle img, efi_system_table* sys) {
-    efi_boot_services* bs = sys->BootServices;
+void do_select_fb() {
+    uint32_t cur_mode = get_gfx_mode();
+    uint32_t max_mode = get_gfx_max_mode();
+    while (true) {
+        printf("\n");
+        print_fb_modes();
+        printf("Choose a framebuffer mode or press (b) to return to the menu\n");
+        char key = key_prompt("b0123456789", INT_MAX);
+        if (key == 'b') break;
+        if (key - '0' >= max_mode) {
+            printf("invalid mode: %c\n", key);
+            continue;
+        }
+        set_gfx_mode(key - '0');
+        printf("Use \"bootloader.fbres=%ux%u\" to use this resolution by default\n",
+                get_gfx_hres(), get_gfx_vres());
+        printf("Press space to accept or (r) to choose again ...");
+        key = key_prompt("r ", 5);
+        if (key == ' ') {
+            return;
+        }
+        set_gfx_mode(cur_mode);
+    }
+}
 
+void do_bootmenu() {
+    char* menukeys = "rfx";
+    printf("  BOOT MENU  \n");
+    printf("  ---------  \n");
+    printf("  (f) list framebuffer modes\n");
+    printf("  (r) reset\n");
+    printf("  (x) exit menu\n");
+    printf("\n");
+    char key = key_prompt(menukeys, INT_MAX);
+    switch (key) {
+    case 'f': {
+        do_select_fb();
+        break;
+    }
+    case 'r':
+        gSys->RuntimeServices->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, NULL);
+        break;
+    case 'x':
+    default:
+        break;
+    }
+}
+
+void do_netboot() {
     efi_physical_addr mem = 0xFFFFFFFF;
-    if (bs->AllocatePages(AllocateMaxAddress, EfiLoaderData, KBUFSIZE / 4096, &mem)) {
+    if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, KBUFSIZE / 4096, &mem)) {
         printf("Failed to allocate network io buffer\n");
         return;
     }
@@ -184,8 +223,8 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
     cmdline[0] = 0;
 
     printf("\nNetBoot Server Started...\n\n");
-    efi_tpl prev_tpl = bs->RaiseTPL(TPL_NOTIFY);
-    for (;;) {
+    efi_tpl prev_tpl = gBS->RaiseTPL(TPL_NOTIFY);
+    while (true) {
         int n = netboot_poll();
         if (n < 1) {
             continue;
@@ -223,12 +262,12 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
             };
 
             printf("Attempting to run EFI binary...\n");
-            r = bs->LoadImage(false, img, (efi_device_path_protocol*)mempath, (void*)nbkernel.data, nbkernel.offset, &h);
+            r = gBS->LoadImage(false, gImg, (efi_device_path_protocol*)mempath, (void*)nbkernel.data, nbkernel.offset, &h);
             if (EFI_ERROR(r)) {
                 printf("LoadImage Failed (%s)\n", xefi_strerror(r));
                 continue;
             }
-            r = bs->StartImage(h, &exitdatasize, NULL);
+            r = gBS->StartImage(h, &exitdatasize, NULL);
             if (EFI_ERROR(r)) {
                 printf("StartImage Failed %ld\n", r);
                 continue;
@@ -241,7 +280,7 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
         netboot_close();
 
         // Restore the TPL before booting the kernel, or failing to netboot
-        bs->RestoreTPL(prev_tpl);
+        gBS->RestoreTPL(prev_tpl);
 
         // ensure cmdline is null terminated
         cmdline[nbcmdline.offset] = 0;
@@ -249,12 +288,10 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
         // maybe it's a kernel image?
         char fbres[11];
         if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
-            efi_graphics_output_protocol* gop;
-            bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
-            set_graphics_mode(sys, gop, fbres);
+            set_gfx_mode_from_cmdline(fbres);
         }
 
-        boot_kernel(img, sys, (void*) nbkernel.data, nbkernel.offset,
+        boot_kernel(gImg, gSys, (void*) nbkernel.data, nbkernel.offset,
                     (void*) nbramdisk.data, nbramdisk.offset,
                     cmdline, strlen(cmdline), cmdextra, strlen(cmdextra));
         break;
@@ -262,14 +299,12 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
 }
 
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
-    efi_boot_services* bs = sys->BootServices;
-    efi_simple_text_output_protocol *console = sys->ConOut;
-    console->ClearScreen(console);
-
     xefi_init(img, sys);
+    gConOut->ClearScreen(gConOut);
+
 
     uint64_t mmio;
-    if (xefi_find_pci_mmio(bs, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
+    if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
         sprintf(cmdextra, " xdc.mmio=0x%lx ", mmio);
     } else {
         cmdextra[0] = 0;
@@ -283,18 +318,19 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         printf("cmdline: %s\n", cmdline);
     }
 
-    efi_graphics_output_protocol* gop;
-    bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
     char fbres[11];
     if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
-        set_graphics_mode(sys, gop, fbres);
+        set_gfx_mode_from_cmdline(fbres);
     }
-    draw_logo(gop);
+    draw_logo();
 
-    int32_t prev_attr = console->Mode->Attribute;
-    console->SetAttribute(console, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
+    int32_t prev_attr = gConOut->Mode->Attribute;
+    gConOut->SetAttribute(gConOut, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
     printf("\nGigaBoot 20X6\n\n");
-    console->SetAttribute(console, prev_attr);
+    gConOut->SetAttribute(gConOut, prev_attr);
+
+    efi_graphics_output_protocol* gop;
+    gBS->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
     printf("Framebuffer base is at %lx\n\n", gop->Mode->FrameBufferBase);
 
     // See if there's a network interface
@@ -309,32 +345,47 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         goto fail;
     }
 
-    int boot_device = BOOT_DEVICE_NONE;
+    char valid_keys[4];
+    memset(valid_keys, 0, sizeof(valid_keys));
+    int key_idx = 0;
+
+    // The first entry in valid_keys will be the default after the timeout.
     if (have_network) {
-        boot_device = BOOT_DEVICE_NETBOOT;
+        valid_keys[key_idx++] = 'n';
     }
     if (kernel != NULL) {
-        if (boot_device != BOOT_DEVICE_NONE) {
-            int timeout_s = cmdline_get_uint32(cmdline, "bootloader.timeout", DEFAULT_TIMEOUT);
-            printf("\n");
-            printf("Press (n) for netboot or (m) to boot the magenta.bin on the device... ");
-            char key = key_prompt(sys, "nm", timeout_s);
-            printf("\n");
-            if (key == 'n') {
-                boot_device = BOOT_DEVICE_NETBOOT;
-            } else if (key == 'm') {
-                boot_device = BOOT_DEVICE_LOCAL;
-            }
-        } else {
-            boot_device = BOOT_DEVICE_LOCAL;
-        }
+        valid_keys[key_idx++] = 'm';
     }
+    valid_keys[key_idx++] = 'b';
 
-    switch (boot_device) {
-        case BOOT_DEVICE_NETBOOT:
-            do_netboot(img, sys);
+    // make sure we update valid_keys if we ever add new options
+    if (key_idx >= sizeof(valid_keys)) goto fail;
+
+    int timeout_s = cmdline_get_uint32(cmdline, "bootloader.timeout", DEFAULT_TIMEOUT);
+    while (true) {
+        printf("\nPress (b) for the boot menu");
+        if (have_network) {
+            printf(", ");
+            if (!kernel) printf("or ");
+            printf("(n) for network boot");
+        }
+        if (kernel) {
+            printf(", ");
+            printf("or (m) to boot the magenta.bin on the device");
+        }
+        printf(" ...");
+
+        char key = key_prompt(valid_keys, timeout_s);
+        printf("\n\n");
+
+        switch (key) {
+        case 'b':
+            do_bootmenu();
             break;
-        case BOOT_DEVICE_LOCAL: {
+        case 'n':
+            do_netboot();
+            break;
+        case 'm': {
             size_t rsz = 0;
             void* ramdisk = NULL;
             efi_file_protocol* ramdisk_file = xefi_open_file(L"ramdisk.bin");
@@ -343,12 +394,13 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
                 ramdisk = xefi_read_file(ramdisk_file, &rsz);
                 ramdisk_file->Close(ramdisk_file);
             }
-            boot_kernel(img, sys, kernel, ksz, ramdisk, rsz,
+            boot_kernel(gImg, gSys, kernel, ksz, ramdisk, rsz,
                         cmdline, csz, cmdextra, strlen(cmdextra));
             break;
         }
         default:
             goto fail;
+        }
     }
 
 fail:
