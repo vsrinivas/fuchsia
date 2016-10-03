@@ -38,8 +38,6 @@ clang_toolchain("host_${host_cpu}") {
   ld = cxx
   ar = "${prefix}llvm-ar"
 
-  strip = "strip"
-
   toolchain_cpu = host_cpu
   toolchain_os = host_os
 }

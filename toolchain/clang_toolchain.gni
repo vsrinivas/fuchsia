@@ -122,7 +122,7 @@ template("clang_toolchain") {
       }
       if (defined(invoker.strip)) {
         command +=
-            " && ${invoker.strip} -S -o \"$outfile\" \"$unstripped_outfile\""
+            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -155,7 +155,7 @@ template("clang_toolchain") {
       }
       if (defined(invoker.strip)) {
         command +=
-            " && ${invoker.strip} -S -o \"$outfile\" \"$unstripped_outfile\""
+            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
@@ -184,7 +184,7 @@ template("clang_toolchain") {
       }
       if (defined(invoker.strip)) {
         command +=
-            " && ${invoker.strip} -S -o \"$outfile\" \"$unstripped_outfile\""
+            " && ${invoker.strip} -s -o \"$outfile\" \"$unstripped_outfile\""
       }
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"
