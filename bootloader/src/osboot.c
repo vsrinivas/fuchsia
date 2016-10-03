@@ -51,7 +51,11 @@ enum {
     BOOT_DEVICE_LOCAL,
 };
 
-int boot_prompt(efi_system_table* sys, int timeout_s) {
+// Wait for a keypress from a set of valid keys. If timeout_s < INT_MAX, the
+// first key in the set of valid keys will be returned after timeout_s seconds.
+char key_prompt(efi_system_table* sys, char* valid_keys, int timeout_s) {
+    if (strlen(valid_keys) < 1) return 0;
+
     efi_boot_services* bs = sys->BootServices;
 
     efi_event TimerEvent;
@@ -65,13 +69,13 @@ int boot_prompt(efi_system_table* sys, int timeout_s) {
     status = bs->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
     if (status != EFI_SUCCESS) {
         printf("could not create event timer: %s\n", xefi_strerror(status));
-        return BOOT_DEVICE_NONE;
+        return 0;
     }
 
     status = bs->SetTimer(TimerEvent, TimerPeriodic, 10000000);
     if (status != EFI_SUCCESS) {
         printf("could not set timer: %s\n", xefi_strerror(status));
-        return BOOT_DEVICE_NONE;
+        return 0;
     }
 
     int wait_idx = 0;
@@ -80,43 +84,56 @@ int boot_prompt(efi_system_table* sys, int timeout_s) {
     int timer_idx = wait_idx;  // timer should always be last
     WaitList[wait_idx++] = TimerEvent;
 
-    printf("Press (n) for netboot or (m) to boot the magenta.bin on the device\n");
+    bool cur_vis = sys->ConOut->Mode->CursorVisible;
+    int32_t col = sys->ConOut->Mode->CursorColumn;
+    int32_t row = sys->ConOut->Mode->CursorRow;
+    sys->ConOut->EnableCursor(sys->ConOut, false);
+
     // TODO: better event loop
+    char pressed = 0;
+    if (timeout_s < INT_MAX) {
+        printf("%-10d", timeout_s);
+    }
     do {
         status = bs->WaitForEvent(wait_idx, WaitList, &Index);
 
         // Check the timer
         if (!EFI_ERROR(status)) {
             if (Index == timer_idx) {
-                printf(".");
-                timeout_s--;
+                if (timeout_s < INT_MAX) {
+                    timeout_s--;
+                    sys->ConOut->SetCursorPosition(sys->ConOut, col, row);
+                    printf("%-10d", timeout_s);
+                }
                 continue;
             } else if (Index == key_idx) {
                 status = sys->ConIn->ReadKeyStroke(sys->ConIn, &key);
                 if (EFI_ERROR(status)) {
                     // clear the key and wait for another event
                     memset(&key, 0, sizeof(key));
+                } else {
+                    char* which_key = strchr(valid_keys, key.UnicodeChar);
+                    if (which_key) {
+                        pressed = *which_key;
+                        break;
+                    }
                 }
             }
         } else {
             printf("Error waiting for event: %s\n", xefi_strerror(status));
-            return BOOT_DEVICE_NONE;
+            sys->ConOut->EnableCursor(sys->ConOut, cur_vis);
+            return 0;
         }
-    } while ((key.UnicodeChar != 'n' && key.UnicodeChar != 'm') && timeout_s);
-    printf("\n");
+    } while (timeout_s);
 
     bs->CloseEvent(TimerEvent);
+    sys->ConOut->EnableCursor(sys->ConOut, cur_vis);
     if (timeout_s > 0 || status == EFI_SUCCESS) {
-        if (key.UnicodeChar == 'n') {
-            return BOOT_DEVICE_NETBOOT;
-        } else if (key.UnicodeChar == 'm') {
-            return BOOT_DEVICE_LOCAL;
-        }
+        return pressed;
     }
 
-    // Default to netboot
-    printf("Time out! Trying netboot...\n");
-    return BOOT_DEVICE_NETBOOT;
+    // Default to first key in list
+    return valid_keys[0];
 }
 
 void do_netboot(efi_handle img, efi_system_table* sys) {
@@ -271,7 +288,15 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     if (kernel != NULL) {
         if (boot_device != BOOT_DEVICE_NONE) {
             int timeout_s = cmdline_get_uint32(cmdline, "bootloader.timeout", DEFAULT_TIMEOUT);
-            boot_device = boot_prompt(sys, timeout_s);
+            printf("\n");
+            printf("Press (n) for netboot or (m) to boot the magenta.bin on the device... ");
+            char key = key_prompt(sys, "nm", timeout_s);
+            printf("\n");
+            if (key == 'n') {
+                boot_device = BOOT_DEVICE_NETBOOT;
+            } else if (key == 'm') {
+                boot_device = BOOT_DEVICE_LOCAL;
+            }
         } else {
             boot_device = BOOT_DEVICE_LOCAL;
         }
