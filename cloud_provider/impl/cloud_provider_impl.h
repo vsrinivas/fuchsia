@@ -19,32 +19,29 @@ namespace cloud_provider {
 
 class CloudProviderImpl : public CloudProvider {
  public:
-  CloudProviderImpl(firebase::Firebase* firebase);
+  CloudProviderImpl(firebase::Firebase* firebase, const AppId& app_id);
   ~CloudProviderImpl() override;
 
   // CloudProvider:
-  void AddNotification(const AppId& app_id,
-                       const PageId& page_id,
+  void AddNotification(const PageId& page_id,
                        const Notification& notification,
                        const std::function<void(Status)>& callback) override;
 
-  void WatchNotifications(const AppId& app_id,
-                          const PageId& page_id,
+  void WatchNotifications(const PageId& page_id,
                           const std::string& min_timestamp,
                           NotificationWatcher* watcher) override;
 
   void UnwatchNotifications(NotificationWatcher* watcher) override;
 
-  void GetNotifications(const AppId& app_id,
-                        const PageId& page_id,
+  void GetNotifications(const PageId& page_id,
                         const std::string& min_timestamp,
                         std::function<void(Status, const std::vector<Record>&)>
                             callback) override;
 
  private:
-  // Returns url location where notifications for the particular app and
-  // page are stored.
-  std::string GetLocation(const AppId& app_id, const PageId& page_id);
+  // Returns url location where notifications for the particular page are
+  // stored.
+  std::string GetLocation(const PageId& page_id);
 
   // Returns the Firebase query filtering the notifications so that only
   // notifications not older than |min_timestamp| are returned. Passing empty
@@ -52,6 +49,7 @@ class CloudProviderImpl : public CloudProvider {
   std::string GetTimestampQuery(const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
+  const AppId app_id_;
   std::map<NotificationWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
 };
 

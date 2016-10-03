@@ -13,13 +13,13 @@
 
 namespace cloud_provider {
 
-CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase)
-    : firebase_(firebase) {}
+CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
+                                     const AppId& app_id)
+    : firebase_(firebase), app_id_(app_id) {}
 
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::AddNotification(
-    const AppId& app_id,
     const PageId& page_id,
     const Notification& notification,
     const std::function<void(Status)>& callback) {
@@ -27,24 +27,23 @@ void CloudProviderImpl::AddNotification(
   bool ok = EncodeNotification(notification, &encoded_notification);
   FTL_DCHECK(ok);
 
-  firebase_->Put(GetLocation(app_id, page_id) + "/" +
-                     firebase::EncodeKey(notification.GetId()),
-                 encoded_notification, [callback](firebase::Status status) {
-                   if (status == firebase::Status::OK) {
-                     callback(Status::OK);
-                   } else {
-                     callback(Status::UNKNOWN_ERROR);
-                   }
-                 });
+  firebase_->Put(
+      GetLocation(page_id) + "/" + firebase::EncodeKey(notification.GetId()),
+      encoded_notification, [callback](firebase::Status status) {
+        if (status == firebase::Status::OK) {
+          callback(Status::OK);
+        } else {
+          callback(Status::UNKNOWN_ERROR);
+        }
+      });
 }
 
-void CloudProviderImpl::WatchNotifications(const AppId& app_id,
-                                           const PageId& page_id,
+void CloudProviderImpl::WatchNotifications(const PageId& page_id,
                                            const std::string& min_timestamp,
                                            NotificationWatcher* watcher) {
-  watchers_[watcher].reset(
-      new WatchClientImpl(firebase_, GetLocation(app_id, page_id),
-                          GetTimestampQuery(min_timestamp), watcher));
+  watchers_[watcher].reset(new WatchClientImpl(firebase_, GetLocation(page_id),
+                                               GetTimestampQuery(min_timestamp),
+                                               watcher));
 }
 
 void CloudProviderImpl::UnwatchNotifications(NotificationWatcher* watcher) {
@@ -52,12 +51,11 @@ void CloudProviderImpl::UnwatchNotifications(NotificationWatcher* watcher) {
 }
 
 void CloudProviderImpl::GetNotifications(
-    const AppId& app_id,
     const PageId& page_id,
     const std::string& min_timestamp,
     std::function<void(Status, const std::vector<Record>&)> callback) {
   firebase_->Get(
-      GetLocation(app_id, page_id), GetTimestampQuery(min_timestamp),
+      GetLocation(page_id), GetTimestampQuery(min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
@@ -76,9 +74,8 @@ void CloudProviderImpl::GetNotifications(
       });
 }
 
-std::string CloudProviderImpl::GetLocation(const AppId& app_id,
-                                           const PageId& page_id) {
-  return firebase::EncodeKey(app_id) + "/" + firebase::EncodeKey(page_id);
+std::string CloudProviderImpl::GetLocation(const PageId& page_id) {
+  return firebase::EncodeKey(app_id_) + "/" + firebase::EncodeKey(page_id);
 }
 
 std::string CloudProviderImpl::GetTimestampQuery(

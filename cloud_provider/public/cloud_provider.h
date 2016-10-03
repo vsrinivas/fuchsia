@@ -19,6 +19,9 @@ namespace cloud_provider {
 
 // This API captures Ledger requirements for a cloud sync provider.
 //
+// A CloudProvider instance is scoped to a particular ledger instance, but can
+// be used to sync multiple pages within that ledger.
+//
 // When delivered from the server, notifications come along with their
 // timestamps. These timestamps are server timestamps , i.e. they represent the
 // time of registering the notification on the server. Their meaning is
@@ -32,8 +35,7 @@ class CloudProvider {
 
   // Adds the given notification to the cloud. The given callback will be
   // called asynchronously with Status::OK if the operation have succeeded.
-  virtual void AddNotification(const AppId& app_id,
-                               const PageId& page_id,
+  virtual void AddNotification(const PageId& page_id,
                                const Notification& notification,
                                const std::function<void(Status)>& callback) = 0;
 
@@ -52,8 +54,7 @@ class CloudProvider {
   // |watcher|. Passing empty |min_timestamp| covers all notifications.
   //
   // Each |watcher| object can be registered only once at a time.
-  virtual void WatchNotifications(const AppId& app_id,
-                                  const PageId& page_id,
+  virtual void WatchNotifications(const PageId& page_id,
                                   const std::string& min_timestamp,
                                   NotificationWatcher* watcher) = 0;
 
@@ -67,7 +68,6 @@ class CloudProvider {
   // Result is a vector of pairs of the retrieved notifications and their
   // corresponding server timestamps.
   virtual void GetNotifications(
-      const AppId& app_id,
       const PageId& page_id,
       const std::string& min_timestamp,
       std::function<void(Status, const std::vector<Record>&)> callback) = 0;

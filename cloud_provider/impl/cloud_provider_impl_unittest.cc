@@ -27,7 +27,8 @@ class CloudProviderImplTest : public ::testing::Test,
                               public firebase::Firebase,
                               public NotificationWatcher {
  public:
-  CloudProviderImplTest() : cloud_provider_(new CloudProviderImpl(this)) {}
+  CloudProviderImplTest()
+      : cloud_provider_(new CloudProviderImpl(this, "app_id")) {}
   ~CloudProviderImplTest() override {}
 
   // firebase::Firebase:
@@ -118,7 +119,7 @@ TEST_F(CloudProviderImplTest, AddNotification) {
                                       {"object_b", "data_b"}});
 
   bool callback_called = false;
-  cloud_provider_->AddNotification("app_id", "page_id", notification,
+  cloud_provider_->AddNotification("page_id", notification,
                                    [&callback_called](Status status) {
                                      EXPECT_EQ(Status::OK, status);
                                      callback_called = true;
@@ -143,7 +144,7 @@ TEST_F(CloudProviderImplTest, AddNotification) {
 }
 
 TEST_F(CloudProviderImplTest, WatchUnwatch) {
-  cloud_provider_->WatchNotifications("app_id", "page_id", "", this);
+  cloud_provider_->WatchNotifications("page_id", "", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
@@ -155,8 +156,8 @@ TEST_F(CloudProviderImplTest, WatchUnwatch) {
 }
 
 TEST_F(CloudProviderImplTest, WatchWithQuery) {
-  cloud_provider_->WatchNotifications("app_id", "page_id",
-                                      ServerTimestampToBytes(42), this);
+  cloud_provider_->WatchNotifications("page_id", ServerTimestampToBytes(42),
+                                      this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
@@ -165,7 +166,7 @@ TEST_F(CloudProviderImplTest, WatchWithQuery) {
 
 // Tests handling a server event containing multiple notifications.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
-  cloud_provider_->WatchNotifications("app_id", "page_id", "", this);
+  cloud_provider_->WatchNotifications("page_id", "", this);
 
   std::string put_content =
       "{\"id_1V\":"
@@ -198,7 +199,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
 
 // Tests handling a server event containing a single notification.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
-  cloud_provider_->WatchNotifications("app_id", "page_id", "", this);
+  cloud_provider_->WatchNotifications("page_id", "", this);
 
   std::string put_content =
       "{\"id\":\"commit_idV\","
@@ -261,8 +262,8 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
     EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
   };
 
-  cloud_provider_->GetNotifications("app_id", "page_id",
-                                    ServerTimestampToBytes(42), callback);
+  cloud_provider_->GetNotifications("page_id", ServerTimestampToBytes(42),
+                                    callback);
   glue::test::RunLoop();
 
   EXPECT_EQ(1u, get_keys_.size());
