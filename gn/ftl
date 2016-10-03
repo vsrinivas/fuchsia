@@ -1,7 +1,8 @@
 {
     "labels": [
         "//lib/ftl",
-        "//lib/ftl:ftl_unittests"
+        "//lib/ftl:ftl_unittests",
+        "//lib/ftl:ftl_unittests(//build/toolchain:host_x64)"
     ],
     "binaries": [
         {
