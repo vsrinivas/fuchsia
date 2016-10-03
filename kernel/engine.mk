@@ -83,11 +83,15 @@ GLOBAL_COMPILEFLAGS += -Wno-error
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
-GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
-# Note: Both -fno-exceptions and -fno-asynchronous-unwind-tables is needed
+# Note: Both -fno-exceptions and -fno-asynchronous-unwind-tables is needed on x86
 # in order to stop gcc from emitting .eh_frame (which is part of the loaded
-# image by default).
-GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-asynchronous-unwind-tables -fno-rtti -fno-threadsafe-statics -Wconversion
+# image by default). Things are different on arm{32,64}:
+# - -fasynchronous-unwind-tables is off by default
+# - -fno-exceptions is sufficient to disable .eh_frame
+# We add -fno-a*-u*-t* to GLOBAL_COMPILEFLAGS as we need it for C too.
+GLOBAL_COMPILEFLAGS += -fno-asynchronous-unwind-tables
+GLOBAL_CFLAGS := --std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
+GLOBAL_CPPFLAGS := --std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS := -DASSEMBLY
 GLOBAL_LDFLAGS := -nostdlib $(addprefix -L,$(LKINC))
