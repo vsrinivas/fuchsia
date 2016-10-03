@@ -240,6 +240,8 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
 
 EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     efi_boot_services* bs = sys->BootServices;
+    efi_simple_text_output_protocol *console = sys->ConOut;
+    console->ClearScreen(console);
 
     xefi_init(img, sys);
 
@@ -266,7 +268,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     }
     draw_logo(gop);
 
-    printf("\nOSBOOT v0.2\n\n");
+    int32_t prev_attr = console->Mode->Attribute;
+    console->SetAttribute(console, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
+    printf("\nGigaBoot 20X6\n\n");
+    console->SetAttribute(console, prev_attr);
     printf("Framebuffer base is at %lx\n\n", gop->Mode->FrameBufferBase);
 
     // See if there's a network interface

@@ -65,7 +65,6 @@ void draw_logo(efi_graphics_output_protocol* gop) {
 
     // Blank the screen, removing vendor UEFI logos
     gop->Blt(gop, &black, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res, 0);
-    // Draw the Fuchsia square in the top right corner
+    // Draw the Fuchsia stripe on the top of the screen
     gop->Blt(gop, &fuchsia, EfiBltVideoFill, 0, 0, 0, 0, h_res, v_res/100, 0);
-    gop->Blt(gop, &fuchsia, EfiBltVideoFill, 0, 0, 0, v_res - (v_res/100), h_res, v_res/100, 0);
 }
