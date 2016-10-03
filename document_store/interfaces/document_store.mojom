@@ -13,6 +13,7 @@ enum Status {
   OK = 0,
   PAGE_NOT_FOUND,
   DOCUMENT_NOT_FOUND,
+  DOCUMENT_ALREADY_EXISTS,
   TRANSACTION_ALREADY_IN_PROGRESS,
   UNKNOWN_ERROR = -1,
 };
@@ -35,29 +36,50 @@ interface DocumentStore {
   // Returns the page id associated with this document store.
   GetId() => (array<uint8, 16> id);
 
-  Add(array<Document> docs) => (Status status);
-  AddOne(Document doc) => (Status status);
+  Watch(DocumentStoreWatcher water) => (Status status);
 
-  Delete(array<string> docids) => (Status status);
-  DeleteOne(string docid) => (Status status);
+  // All queries and read operations must be run against a Snapshot.
+  GetSnapshot(Snapshot& snapshot);
+
+  // Only one transaction can be in progress at a time.
+  // TODO(azani): Allow multiple simultaneous transactions.
+  BeginTransaction(Transaction& transaction);
+
+  GetIndexManager(IndexManager& manager);
+};
+
+// A Transaction collects a set of changes on the document store and applies
+// them atomically.
+// Closing the pipe will roll back the transaction.
+interface Transaction {
+  // Adds the values in the specified document(s).
+  // 1) If the document does not yet exist, it is created with the specified
+  // values.
+  // 2) If the document already exists, values already stored are overwritten
+  // if specified in the document object, deleted if specified as null and
+  // left unchanged otherwise.
+  // TODO(azani): Consider how to handle large documents.
+  Add(array<Document> docs);
+  AddOne(Document doc);
+
+  // Equivalent to Delete followed by Add.
+  AddReplace(array<Document> docs);
+  AddReplaceOne(Document doc);
+
+  // Deletes the specified documents.
+  Delete(array<string> docids);
+  DeleteOne(string docid);
 
   // NOTE: This will probably not work and need to be changed. We need it to
   // handle multi-values and other things we are not worrying about today
   // because this is scary.
-  ApplyStatementMutations(array<StatementMutation> mutations) => (Status status);
+  ApplyStatementMutations(array<StatementMutation> mutations);
 
-  Watch(DocumentStoreWatcher water) => (Status status);
-
-  // GetSnapshot returns a snapshot of the document store against which queries
-  // can be executed.
-  GetSnapshot() => (Snapshot snapshot);
-
-  // Only one transaction can be in progress at a time.
-  BeginTransaction() => (Status status);
+  // Applies the changes to the document store if possible. A single status
+  // code is returned representing the first error encountered when attempting
+  // to apply the changes.
+  // TODO(azani): Consider resetting the Transaction upon commit.
   Commit() => (Status status);
-  Rollback() => (Status status);
-
-  GetIndexManager() => (IndexManager manager);
 };
 
 
