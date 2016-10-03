@@ -10,6 +10,8 @@
 #include <string.h>
 #include <xefi.h>
 
+#include <magenta/pixelformat.h>
+
 static efi_guid AcpiTableGUID = ACPI_TABLE_GUID;
 static efi_guid Acpi2TableGUID = ACPI_20_TABLE_GUID;
 static uint8_t ACPI_RSD_PTR[8] = "RSD PTR ";
@@ -314,7 +316,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
     ZP32(kernel.zeropage, ZP_FB_WIDTH) = (uint32_t)gop->Mode->Info->HorizontalResolution;
     ZP32(kernel.zeropage, ZP_FB_HEIGHT) = (uint32_t)gop->Mode->Info->VerticalResolution;
     ZP32(kernel.zeropage, ZP_FB_STRIDE) = (uint32_t)gop->Mode->Info->PixelsPerScanLine;
-    ZP32(kernel.zeropage, ZP_FB_FORMAT) = 5; // XRGB32
+    ZP32(kernel.zeropage, ZP_FB_FORMAT) = MX_PIXEL_FORMAT_RGB_x888;  // TODO: compute this
     ZP32(kernel.zeropage, ZP_FB_REGBASE) = 0;
     ZP32(kernel.zeropage, ZP_FB_SIZE) = 256 * 1024 * 1024;
 
