@@ -34,7 +34,7 @@ $(call efi_app, fileio, src/fileio.c)
 $(call efi_app, usbtest, src/usbtest.c)
 
 OSBOOT_FILES := src/osboot.c src/cmdline.c src/magenta.c src/netboot.c
-OSBOOT_FILES += src/netifc.c src/inet6.c src/pci.c
+OSBOOT_FILES += src/netifc.c src/inet6.c src/pci.c src/framebuffer.c
 $(call efi_app, osboot, $(OSBOOT_FILES))
 
 ifneq ($(APP),)
