@@ -9,13 +9,12 @@ BOOTSERVER := $(BUILDDIR)/tools/bootserver
 LOGLISTENER := $(BUILDDIR)/tools/loglistener
 NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 NETCP := $(BUILDDIR)/tools/netcp
-KTRACEDUMP := $(BUILDDIR)/tools/ktracedump
 SYSGEN := $(BUILDDIR)/tools/sysgen
 
 TOOLS_CFLAGS := -std=c11 -Wall -Isystem/public -Isystem/private
 TOOLS_CXXFLAGS := -std=c++11 -Wall
 
-ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(KTRACEDUMP) $(SYSGEN)
+ALL_TOOLS := $(MKBOOTFS) $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(SYSGEN)
 
 # phony rule to build just the tools
 .PHONY: tools
