@@ -31,17 +31,21 @@ bool EncodeNotification(const Notification& notification,
   writer.StartObject();
 
   writer.Key(kIdKey);
-  writer.String(firebase::EncodeValue(notification.GetId()).c_str());
+  std::string id = firebase::EncodeValue(notification.GetId());
+  writer.String(id.c_str(), id.size());
 
   writer.Key(kContentKey);
-  writer.String(firebase::EncodeValue(notification.GetContent()).c_str());
+  std::string content = firebase::EncodeValue(notification.GetContent());
+  writer.String(content.c_str(), content.size());
 
   if (!notification.GetStorageObjects().empty()) {
     writer.Key(kObjectsKey);
     writer.StartObject();
     for (const auto& entry : notification.GetStorageObjects()) {
-      writer.Key(firebase::EncodeKey(entry.first).c_str());
-      writer.String(firebase::EncodeValue(entry.second).c_str());
+      std::string key = firebase::EncodeKey(entry.first);
+      writer.Key(key.c_str(), key.size());
+      std::string value = firebase::EncodeValue(entry.second);
+      writer.String(value.c_str(), value.size());
     }
     writer.EndObject();
   }
@@ -68,7 +72,7 @@ bool EncodeNotification(const Notification& notification,
 bool DecodeNotification(const std::string& json,
                         std::unique_ptr<Record>* output_record) {
   rapidjson::Document document;
-  document.Parse(json.c_str());
+  document.Parse(json.c_str(), json.size());
 
   if (document.HasParseError()) {
     return false;
@@ -84,7 +88,7 @@ bool DecodeNotification(const std::string& json,
 bool DecodeMultipleNotifications(const std::string& json,
                                  std::vector<Record>* output_records) {
   rapidjson::Document document;
-  document.Parse(json.c_str());
+  document.Parse(json.c_str(), json.size());
 
   if (document.HasParseError()) {
     return false;

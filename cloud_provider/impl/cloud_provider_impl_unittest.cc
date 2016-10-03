@@ -180,7 +180,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
       "\"timestamp\":43"
       "}}";
   rapidjson::Document document;
-  document.Parse(put_content.c_str());
+  document.Parse(put_content.c_str(), put_content.size());
   ASSERT_FALSE(document.HasParseError());
 
   watch_client_->OnPut("/", document);
@@ -210,7 +210,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
       "\"timestamp\":1472722368296"
       "}";
   rapidjson::Document document;
-  document.Parse(put_content.c_str());
+  document.Parse(put_content.c_str(), put_content.size());
   ASSERT_FALSE(document.HasParseError());
 
   watch_client_->OnPut("/app_idV/page_idV/commit_idV", document);
@@ -242,7 +242,8 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
       "\"timestamp\":42"
       "}}";
   get_response_.reset(new rapidjson::Document());
-  get_response_->Parse(get_response_content.c_str());
+  get_response_->Parse(get_response_content.c_str(),
+                       get_response_content.size());
 
   bool callback_called = false;
   auto callback = [&callback_called](Status status,

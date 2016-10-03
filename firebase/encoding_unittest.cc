@@ -11,6 +11,12 @@
 namespace firebase {
 namespace {
 
+// Allows to create correct std::strings with \0 bytes inside from C-style
+// string constants.
+std::string operator"" _s(const char* str, size_t size) {
+  return std::string(str, size);
+}
+
 // See
 // https://www.firebase.com/docs/rest/guide/understanding-data.html#section-limitations
 bool IsValidKey(const std::string& s) {
@@ -84,6 +90,24 @@ TEST(EncodingTest, BackAndForth) {
   EXPECT_EQ(s, ret_value);
 
   s = "abc\"def\"ghi'jkl'";
+  EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
+  EXPECT_EQ(s, ret_key);
+  EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
+  EXPECT_EQ(s, ret_value);
+
+  s = "\0\0\0"_s;
+  EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
+  EXPECT_EQ(s, ret_key);
+  EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
+  EXPECT_EQ(s, ret_value);
+
+  s = "bazinga\0\0\0"_s;
+  EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
+  EXPECT_EQ(s, ret_key);
+  EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
+  EXPECT_EQ(s, ret_value);
+
+  s = "alice\0bob"_s;
   EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
   EXPECT_EQ(s, ret_key);
   EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));

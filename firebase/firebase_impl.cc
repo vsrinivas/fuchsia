@@ -78,7 +78,7 @@ void FirebaseImpl::Get(
     }
 
     rapidjson::Document document;
-    document.Parse(response.c_str());
+    document.Parse(response.c_str(), response.size());
     if (document.HasParseError()) {
       callback(Status::UNKNOWN_ERROR, rapidjson::Value());
       return;
@@ -270,7 +270,7 @@ void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
                                  const std::string& data) {
   if (event == "put" || event == "patch") {
     rapidjson::Document document;
-    document.Parse(data.c_str());
+    document.Parse(data.c_str(), data.size());
     if (document.HasParseError()) {
       watch_client->OnError();
       return;
@@ -303,7 +303,7 @@ void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
     watch_client->OnCancel();
   } else if (event == "auth_revoked") {
     rapidjson::Document document;
-    document.Parse(data.c_str());
+    document.Parse(data.c_str(), data.size());
     if (document.HasParseError()) {
       watch_client->OnError();
       return;

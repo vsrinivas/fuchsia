@@ -12,6 +12,14 @@
 
 namespace cloud_provider {
 
+namespace {
+// Allows to create correct std::strings with \0 bytes inside from C-style
+// string constants.
+std::string operator"" _s(const char* str, size_t size) {
+  return std::string(str, size);
+}
+}  // namespace
+
 TEST(EncodingTest, Encode) {
   Notification notification(
       "some_id", "some_content",
@@ -82,6 +90,27 @@ TEST(EncodingTest, DecodeMultiple) {
   EXPECT_EQ("bazinga", records[1].notification.GetContent());
   EXPECT_EQ(0u, records[1].notification.GetStorageObjects().size());
   EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
+}
+
+// Verifies that encoding and JSON parsing we use work with zero bytes within
+// strings.
+TEST(EncodingTest, EncodeDecodeZeroByte) {
+  Notification notification(
+      "id\0\0\0"_s, "\0"_s,
+      std::map<StorageObjectId, Data>{{"object_a", "\0\0\0"_s},
+                                      {"object_\0"_s, "\0"_s}});
+
+  std::string encoded;
+  EXPECT_TRUE(EncodeNotification(notification, &encoded));
+  // Encoded notification is sent to server, which replaces the timestamp
+  // placeholder with server-side timestamp. We emulate this for testing.
+  std::string pattern = "{\".sv\":\"timestamp\"}";
+  encoded.replace(encoded.find(pattern), pattern.size(), "42");
+
+  std::unique_ptr<Record> output_record;
+  EXPECT_TRUE(DecodeNotification(encoded, &output_record));
+  EXPECT_EQ(notification, output_record->notification);
+  EXPECT_EQ(ServerTimestampToBytes(42), output_record->timestamp);
 }
 
 }  // namespace cloud_provider
