@@ -263,7 +263,7 @@ void MediaPlayerImpl::Update() {
           // itself, so we just need to transition to |kPrimed|.
           target_state_ = State::kPrimed;
           state_ = State::kPrimed;
-          FLOG(log_channel_, Primed());
+          FLOG(log_channel_, EndOfStream());
           // Loop around to check if there's more work to do.
           break;
         }

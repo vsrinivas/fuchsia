@@ -31,6 +31,8 @@ std::ostream& operator<<(std::ostream& os,
       return os << "primed";
     case MediaPlayerAccumulator::State::kPlaying:
       return os << "playing";
+    case MediaPlayerAccumulator::State::kEndOfStream:
+      return os << "endOfStream";
     case MediaPlayerAccumulator::State::kFlushing:
       return os << "flushing";
   }
@@ -107,6 +109,17 @@ void MediaPlayerDigest::Playing() {
   accumulator_->state_ = MediaPlayerAccumulator::State::kPlaying;
 }
 
+void MediaPlayerDigest::EndOfStream() {
+  if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kPriming &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying) {
+    ReportProblem() << "EndOfStream out of sequence";
+  }
+
+  accumulator_->state_ = MediaPlayerAccumulator::State::kEndOfStream;
+  accumulator_->target_state_ = MediaPlayerAccumulator::State::kEndOfStream;
+}
+
 void MediaPlayerDigest::PlayRequested() {
   accumulator_->target_state_ = MediaPlayerAccumulator::State::kPlaying;
 }
@@ -140,7 +153,8 @@ void MediaPlayerDigest::Priming() {
 }
 
 void MediaPlayerDigest::Flushing() {
-  if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed) {
+  if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kEndOfStream) {
     ReportProblem() << "Flushing out of sequence";
   }
 
@@ -150,7 +164,8 @@ void MediaPlayerDigest::Flushing() {
 void MediaPlayerDigest::SettingTimelineTransform(
     TimelineTransformPtr timeline_transform) {
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
-      accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying) {
+      accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying &&
+      accumulator_->state_ != MediaPlayerAccumulator::State::kEndOfStream) {
     ReportProblem() << "SettingTimelineTransform out of sequence";
   }
 

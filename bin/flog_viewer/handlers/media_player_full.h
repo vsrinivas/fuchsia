@@ -37,6 +37,8 @@ class MediaPlayerFull : public ChannelHandler,
 
   void Playing() override;
 
+  void EndOfStream() override;
+
   void PlayRequested() override;
 
   void PauseRequested() override;

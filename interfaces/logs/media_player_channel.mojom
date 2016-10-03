@@ -15,6 +15,7 @@ interface MediaPlayerChannel {
   Flushed();
   Primed();
   Playing();
+  EndOfStream();
   PlayRequested();
   PauseRequested();
   SeekRequested(int64 position);

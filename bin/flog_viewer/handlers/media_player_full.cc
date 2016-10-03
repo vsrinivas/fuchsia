@@ -49,6 +49,10 @@ void MediaPlayerFull::Playing() {
   std::cout << entry() << "MediaPlayer.Playing" << std::endl;
 }
 
+void MediaPlayerFull::EndOfStream() {
+  std::cout << entry() << "MediaPlayer.EndOfStream" << std::endl;
+}
+
 void MediaPlayerFull::PlayRequested() {
   std::cout << entry() << "MediaPlayer.PlayRequested" << std::endl;
 }
