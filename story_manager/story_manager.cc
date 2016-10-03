@@ -92,7 +92,7 @@ class StoryImpl : public Story, public StoryState {
     runner_->StartStory(session_page.PassInterfaceHandle(),
                         GetProxy(&session_));
     InterfaceHandle<Link> link;
-    session_->CreateLink("boot", GetProxy(&link));
+    session_->CreateLink(GetProxy(&link));
     session_->StartModule(
         story_info_->url, std::move(link),
         [this](InterfaceHandle<Module> m) { module_.Bind(std::move(m)); });

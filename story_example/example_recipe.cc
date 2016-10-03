@@ -17,7 +17,9 @@
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
+#include "mojo/public/cpp/bindings/map.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/system/macros.h"
 
 namespace {
@@ -28,11 +30,14 @@ using mojo::Binding;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
+using mojo::Map;
 using mojo::StrongBinding;
 using mojo::String;
+using mojo::StructPtr;
 
 using modular::Link;
 using modular::LinkChanged;
+using modular::LinkValue;
 using modular::Module;
 using modular::Session;
 
@@ -47,10 +52,8 @@ class LinkConnection : public LinkChanged {
     src_->Watch(std::move(watcher));
   }
 
-  void Value(const String& label, const String& value) override {
-    if (label == kValueLabel) {
-      dst_->SetValue(kValueLabel, value);
-    }
+  void Value(StructPtr<LinkValue> value) override {
+    dst_->SetValue(std::move(value));
   }
 
  private:
@@ -76,9 +79,9 @@ class LinkMonitor : public LinkChanged {
     link_->Watch(std::move(watcher));
   }
 
-  void Value(const String& label, const String& value) override {
+  void Value(StructPtr<LinkValue> value) override {
     FTL_LOG(INFO) << "LinkMonitor::Value() " << tag_
-                  << " \"" << label << "\": \"" << value << "\"";
+                  << " " << value->get_object_value()[kValueLabel]->get_int_value();
   }
 
  private:
@@ -113,7 +116,7 @@ class RecipeImpl : public Module, public LinkChanged {
     watcher_binding_.Bind(&watcher);
     link_->Watch(std::move(watcher));
 
-    session_->CreateLink("token_pass", GetProxy(&module1_link_));
+    session_->CreateLink(GetProxy(&module1_link_));
 
     InterfaceHandle<Link> module1_link_handle;  // To pass to StartModule().
     module1_link_->Dup(GetProxy(&module1_link_handle));
@@ -124,10 +127,23 @@ class RecipeImpl : public Module, public LinkChanged {
                           [this](InterfaceHandle<Module> module) {
                             FTL_LOG(INFO) << "recipe start module module1 done";
                             module1_.Bind(std::move(module));
-                            module1_link_->SetValue(kValueLabel, "1");
+
+                            // TODO(mesch): This is much too
+                            // cumbersome. I'm not sure if I'm missing
+                            // a simpler way, but if not we need a
+                            // simpler API.
+
+                            Map<String, StructPtr<LinkValue>> object;
+                            object[kValueLabel] = LinkValue::New();
+                            object[kValueLabel]->set_int_value(1);
+
+                            StructPtr<LinkValue> value = LinkValue::New();
+                            value->set_object_value(std::move(object));
+
+                            module1_link_->SetValue(std::move(value));
                           });
 
-    session_->CreateLink("token_pass", GetProxy(&module2_link_));
+    session_->CreateLink(GetProxy(&module2_link_));
 
     InterfaceHandle<Link> module2_link_handle;  // To pass to StartModule().
     module2_link_->Dup(GetProxy(&module2_link_handle));
@@ -147,8 +163,8 @@ class RecipeImpl : public Module, public LinkChanged {
     connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
   }
 
-  void Value(const String& label, const String& value) override {
-    FTL_LOG(INFO) << "recipe value \"" << label << "\", \"" << value << "\"";
+  void Value(StructPtr<LinkValue> value) override {
+    FTL_LOG(INFO) << "RecipeImpl::Value()";
   }
 
  private:

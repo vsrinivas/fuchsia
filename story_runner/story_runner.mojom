@@ -75,7 +75,7 @@ interface StoryRunner {
 
 // No service name: created by StoryRunner.
 interface Session {
-  CreateLink(string schema, Link& link);
+  CreateLink(Link& link);
   StartModule(string query, Link link) => (Module module_instance);
   // StartModule() invokes Initialize() on the created Module instance,
   // so it must return it and cannot take an interface request.
@@ -83,15 +83,30 @@ interface Session {
 
 // No service name: created by Session.
 interface Link {
-  SetValue(string label, string? value);
-  Value(string label) => (string? value);
+  SetValue(LinkValue value);
+  Value() => (LinkValue? value);
   Watch(LinkChanged watcher);
   Dup(Link& dup);
 };
 
 // No service name: created by Module.
 interface LinkChanged {
-  Value(string label, string? value);
+  Value(LinkValue value);
+};
+
+// JSON-LD inspired structure for the value of a link. This allows to
+// represent JSON and thus also JSON-LD if we really want it to. (Read
+// the spec https://www.w3.org/TR/json-ld/ to help decide.) Once we go
+// for JSON-LD, special properties like @id, @value, @type, @context
+// and so on may be represented as actual struct fields to enforce
+// their presence.
+union LinkValue {
+  string string_value;
+  int64 int_value;
+  double double_value;
+  bool bool_value;
+  map<string, LinkValue> object_value;
+  array<LinkValue> array_value;
 };
 
 [ServiceName="modular.Module"]  // Created by each module app.

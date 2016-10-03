@@ -41,6 +41,7 @@ using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::String;
 using mojo::StrongBinding;
+using mojo::StructPtr;
 
 // A Link is a mutable and observable value shared between modules.
 // When a module requests to run more modules using
@@ -74,13 +75,13 @@ class LinkHost : public Link {
 
   // Implements Link interface. Forwards to LinkImpl, therefore the
   // methods are implemented below, after LinkImpl is defined.
-  void SetValue(const String& label, const String& value) override;
-  void Value(const String& label, const ValueCallback& callback) override;
+  void SetValue(StructPtr<LinkValue> value) override;
+  void Value(const ValueCallback& callback) override;
   void Watch(InterfaceHandle<LinkChanged> watcher) override;
   void Dup(InterfaceRequest<Link> dup) override;
 
   // Called back from LinkImpl.
-  void Notify(LinkHost* source, const String& label, const String& value);
+  void Notify(LinkHost* source, const StructPtr<LinkValue>& value);
 
  private:
   LinkImpl* const impl_;
@@ -119,20 +120,17 @@ class LinkImpl {
     }
   }
 
-  void SetValue(LinkHost* const impl, const String& label,
-                const String& value) {
-    values_[label] = value;
+  void SetValue(LinkHost* const impl, StructPtr<LinkValue> value) {
+    value_ = std::move(value);
     for (auto& client : clients_) {
-      client->Notify(impl, label, value);
+      client->Notify(impl, value_);
     }
   }
 
-  const String& Value(const String& label) { return values_[label]; }
-
-  const std::map<String, String>& values() const { return values_; }
+  const StructPtr<LinkValue>& Value() const { return value_; }
 
  private:
-  std::map<String, String> values_;
+  StructPtr<LinkValue> value_;
   std::vector<LinkHost*> clients_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
@@ -153,20 +151,20 @@ LinkHost::~LinkHost() {
   }
 }
 
-void LinkHost::SetValue(const String& label, const String& value) {
-  impl_->SetValue(this, label, value);
+void LinkHost::SetValue(StructPtr<LinkValue> value) {
+  impl_->SetValue(this, std::move(value));
 }
 
-void LinkHost::Value(const String& label, const ValueCallback& callback) {
-  callback.Run(impl_->Value(label));
+void LinkHost::Value(const ValueCallback& callback) {
+  callback.Run(impl_->Value().Clone());
 }
 
 void LinkHost::Watch(InterfaceHandle<LinkChanged> watcher) {
   InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
 
-  for (auto& value : impl_->values()) {
-    watcher_ptr->Value(value.first, value.second);
+  if (!impl_->Value().is_null()) {
+    watcher_ptr->Value(impl_->Value().Clone());
   }
 
   watchers_.push_back(std::move(watcher_ptr));
@@ -176,11 +174,10 @@ void LinkHost::Dup(InterfaceRequest<Link> dup) {
   new LinkHost(impl_, std::move(dup), false);
 }
 
-void LinkHost::Notify(LinkHost* const source, const String& label,
-                      const String& value) {
+void LinkHost::Notify(LinkHost* const source, const StructPtr<LinkValue>& value) {
   for (InterfacePtr<LinkChanged>& watcher : watchers_) {
     if (source != this) {
-      watcher->Value(label, value);
+      watcher->Value(value.Clone());
     }
   }
 }
@@ -207,7 +204,7 @@ class SessionImpl : public Session {
 
   ~SessionImpl() override { FTL_LOG(INFO) << "~SessionImpl()"; }
 
-  void CreateLink(const String& schema, InterfaceRequest<Link> link) override {
+  void CreateLink(InterfaceRequest<Link> link) override {
     FTL_LOG(INFO) << "story-runner create link";
     new LinkImpl(std::move(link));
   }

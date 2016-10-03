@@ -13,6 +13,7 @@
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/public/cpp/system/macros.h"
 
@@ -25,9 +26,11 @@ using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StrongBinding;
 using mojo::String;
+using mojo::StructPtr;
 
 using modular::Link;
 using modular::LinkChanged;
+using modular::LinkValue;
 using modular::Module;
 using modular::Session;
 
@@ -57,18 +60,10 @@ class Module2Impl : public Module, public LinkChanged {
   // through one link handle is not notified of changes requested
   // through the same handle. It's really the handle identity that
   // decides.
-  void Value(const String& label, const String& value) override {
-    if (label == kValueLabel) {
-      FTL_LOG(INFO) << "Module2Impl::Value() \"" << value << "\"";
-
-      int i = 0;
-      std::istringstream(value.get()) >> i;
-      ++i;
-      std::ostringstream out;
-      out << i;
-
-      link_->SetValue(kValueLabel, out.str());
-    }
+  void Value(StructPtr<LinkValue> value) override {
+    StructPtr<LinkValue>& v = value->get_object_value()[kValueLabel];
+    v->set_int_value(v->get_int_value() + 1);
+    link_->SetValue(std::move(value));
   }
 
  private:
