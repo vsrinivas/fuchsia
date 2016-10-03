@@ -30,7 +30,6 @@ namespace modular {
 
 using mojo::ApplicationImplBase;
 using mojo::Array;
-using mojo::Binding;
 using mojo::BindingSet;
 using mojo::ConnectionContext;
 using mojo::GetProxy;
@@ -52,10 +51,10 @@ using mojo::StructPtr;
 // modules. The Dup() method allows to obtain more handles of the same
 // Link instance.
 //
-// If a watcher is registered through one handle, it can be configured
-// that it only receives notifications for changes caused by requested
-// through other handles. To make this possible, each connection is
-// associated with a separate implementation instance, called a host.
+// If a watcher is registered through one handle, it only receives
+// notifications for changes by requests through other handles. To
+// make this possible, each connection is associated with a separate
+// implementation instance, called a host.
 //
 // A host can be primary. If it's primary, then it deletes the
 // LinkImpl instance that is shared between all connections when it's
@@ -63,11 +62,11 @@ using mojo::StructPtr;
 
 class LinkImpl;
 
-// LinkHost keeps a single connection to a LinkImpl together with
-// pointers to all watchers registered through this connection. We
-// need this as a separate class so that we can identify where an
-// updated value comes from, so that we are able to suppress
-// notifications sent to the same client.
+// LinkHost keeps a single connection from a client to a LinkImpl
+// together with pointers to all watchers registered through this
+// connection. We need this as a separate class so that we can
+// identify where an updated value comes from, so that we are able to
+// suppress notifications sent to the same client.
 class LinkHost : public Link {
  public:
   LinkHost(LinkImpl* impl, InterfaceRequest<Link> req, bool primary);
@@ -81,7 +80,7 @@ class LinkHost : public Link {
   void Dup(InterfaceRequest<Link> dup) override;
 
   // Called back from LinkImpl.
-  void Notify(LinkHost* source, const StructPtr<LinkValue>& value);
+  void Notify(const StructPtr<LinkValue>& value);
 
  private:
   LinkImpl* const impl_;
@@ -97,15 +96,13 @@ class LinkImpl {
  public:
   explicit LinkImpl(InterfaceRequest<Link> req) {
     FTL_LOG(INFO) << "LinkImpl()";
-    new LinkHost(this, std::move(req), true);
+    new LinkHost(this, std::move(req), true);  // Calls Add().
   }
 
   ~LinkImpl() {
-    FTL_LOG(INFO) << "~LinkImpl()";
-    std::vector<LinkHost*> clients;
-    clients.swap(clients_);
-    for (auto client : clients) {
-      delete client;
+    while (!clients_.empty()) {
+      delete clients_.back();  // Calls Remove(), which erases the
+                               // deleted element.
     }
   }
 
@@ -115,15 +112,18 @@ class LinkImpl {
 
   void Remove(LinkHost* const client) {
     auto f = std::find(clients_.begin(), clients_.end(), client);
-    if (f != clients_.end()) {
-      clients_.erase(f);
-    }
+    FTL_DCHECK(f != clients_.end());
+    clients_.erase(f);
   }
 
-  void SetValue(LinkHost* const impl, StructPtr<LinkValue> value) {
+  // SetValue knows which client a notification comes from, so it
+  // notifies only all other clients.
+  void SetValue(LinkHost* const src, StructPtr<LinkValue> value) {
     value_ = std::move(value);
-    for (auto& client : clients_) {
-      client->Notify(impl, value_);
+    for (auto dst : clients_) {
+      if (dst != src) {
+        dst->Notify(value_);
+      }
     }
   }
 
@@ -135,7 +135,10 @@ class LinkImpl {
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
-// Methods of LinkHost that need the definition of LinkImpl.
+
+// The methods of LinkHost may call LinkImpl and thus need to be
+// implemented after LinkImpl is defined.
+
 LinkHost::LinkHost(LinkImpl* const impl, InterfaceRequest<Link> req,
                    const bool primary)
     : impl_(impl), binding_(this, std::move(req)), primary_(primary) {
@@ -146,6 +149,15 @@ LinkHost::LinkHost(LinkImpl* const impl, InterfaceRequest<Link> req,
 LinkHost::~LinkHost() {
   FTL_LOG(INFO) << "~LinkHost()";
   impl_->Remove(this);
+
+  // If a "primary" (currently that's the first) connection goes down,
+  // the whole implementation is deleted, taking down all remaining
+  // connections. This corresponds to a strong binding on the first
+  // connection, and regular bindings on all later ones. This is just
+  // how it is and may be revised in the future.
+  //
+  // Order is important: this delete call MUST happen after the
+  // Remove() call above, otherwise double delete ensues.
   if (primary_) {
     delete impl_;
   }
@@ -163,6 +175,8 @@ void LinkHost::Watch(InterfaceHandle<LinkChanged> watcher) {
   InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
 
+  // The current Value is sent to a newly registered watcher only if
+  // it's not null.
   if (!impl_->Value().is_null()) {
     watcher_ptr->Value(impl_->Value().Clone());
   }
@@ -174,21 +188,53 @@ void LinkHost::Dup(InterfaceRequest<Link> dup) {
   new LinkHost(impl_, std::move(dup), false);
 }
 
-void LinkHost::Notify(LinkHost* const source, const StructPtr<LinkValue>& value) {
+void LinkHost::Notify(const StructPtr<LinkValue>& value) {
   for (InterfacePtr<LinkChanged>& watcher : watchers_) {
-    if (source != this) {
-      watcher->Value(value.Clone());
-    }
+    watcher->Value(value.Clone());
   }
 }
 
-// The Session is the context in which a story executes.
-class SessionImpl : public Session {
+// The Session is the context in which a story executes. It starts
+// modules and provides them with a handle to itself, so they can
+// start more modules. It also serves as the factory for Link
+// instances, which are used to share data between modules.
+
+class SessionImpl;
+
+// SessionHost keeps a single connection from a client (i.e., a module
+// instance in the same session) to a SessionImpl together with
+// pointers to all links created and modules started through this
+// connection. This allows to persist and recreate the session state
+// correctly.
+class SessionHost : public Session {
+ public:
+  SessionHost(SessionImpl* const impl, InterfaceRequest<Session> req,
+              const bool primary);
+  ~SessionHost();
+
+  // Implements Session interface. Forwards to SessionImpl, therefore
+  // the methods are implemented below, after SessionImpl is defined.
+  void CreateLink(InterfaceRequest<Link> link) override;
+  void StartModule(const String& query, InterfaceHandle<Link> link,
+                   const StartModuleCallback& callback) override;
+
+ private:
+  // TODO(mesch): Actually record link and module instances created
+  // through this binding here.
+  SessionImpl* const impl_;
+  StrongBinding<Session> binding_;
+  const bool primary_;
+  MOJO_DISALLOW_COPY_AND_ASSIGN(SessionHost);
+};
+
+// The actual implementation of the Session service. Called from
+// SessionHost above.
+class SessionImpl {
  public:
   SessionImpl(Shell* const shell, InterfaceHandle<Resolver> resolver,
               InterfaceHandle<ledger::Page> session_page,
               InterfaceRequest<Session> req)
-      : shell_(shell), binding_(this, std::move(req)) {
+      : shell_(shell) {
     FTL_LOG(INFO) << "SessionImpl()";
     resolver_.Bind(resolver.Pass());
     session_page_.Bind(session_page.Pass());
@@ -200,29 +246,52 @@ class SessionImpl : public Session {
       FTL_LOG(INFO) << "story-runner init session with session page: "
                     << string_id;
     });
+
+    new SessionHost(this, std::move(req), true);  // Calls Add();
   }
 
-  ~SessionImpl() override { FTL_LOG(INFO) << "~SessionImpl()"; }
-
-  void CreateLink(InterfaceRequest<Link> link) override {
-    FTL_LOG(INFO) << "story-runner create link";
-    new LinkImpl(std::move(link));
+  ~SessionImpl() {
+    FTL_LOG(INFO) << "~SessionImpl()";
+    while (!clients_.empty()) {
+      delete clients_.back();  // Calls Remove(), which erases the
+                               // deleted element.
+    }
   }
 
-  void StartModule(const String& query, InterfaceHandle<Link> link,
-                   const StartModuleCallback& callback) override {
+  // These methods are called by SessionHost.
+
+  void Add(SessionHost* const client) {
+    clients_.push_back(client);
+  }
+
+  void Remove(SessionHost* const client) {
+    auto f = std::find(clients_.begin(), clients_.end(), client);
+    FTL_DCHECK(f != clients_.end());
+    clients_.erase(f);
+  }
+
+  void StartModule(SessionHost* const client,
+                   const String& query, InterfaceHandle<Link> link,
+                   const SessionHost::StartModuleCallback& callback) {
     FTL_LOG(INFO) << "story-runner start module " << query;
 
     const int link_id = new_link_id_();
     link_map_[link_id] = link.Pass();
 
     resolver_->Resolve(
-        query, [this, link_id, callback, query](String module_url) {
+        query, [client, this, link_id, callback](String module_url) {
+          // TODO(mesch): Client is not yet used. We need to remember
+          // the association of which module was requested from which
+          // other module, and what link instance was exchanged
+          // between them. We will do this by associating the link
+          // instances with names which are local to the module that
+          // uses them.
+
           InterfacePtr<Module> module;
           mojo::ConnectToService(shell_, module_url, GetProxy(&module));
 
           InterfaceHandle<Session> self;
-          bindings_.AddBinding(this, GetProxy(&self));
+          new SessionHost(this, GetProxy(&self), false);
 
           module->Initialize(std::move(self), link_map_[link_id].Pass());
           link_map_.erase(link_id);
@@ -240,20 +309,59 @@ class SessionImpl : public Session {
   Shell* const shell_;
   InterfacePtr<Resolver> resolver_;
   InterfacePtr<ledger::Page> session_page_;
-  StrongBinding<Session> binding_;
-  BindingSet<Session> bindings_;
+
+  std::vector<SessionHost*> clients_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
 
-// The story runner service is the primary service provided by the
-// story runner app. It allows to create a Session.
+
+// The methods of SessionHost may call SessionImpl and thus need to be
+// implemented after SessionImpl is defined.
+
+SessionHost::SessionHost(SessionImpl* const impl, InterfaceRequest<Session> req,
+                         const bool primary)
+    : impl_(impl), binding_(this, std::move(req)), primary_(primary) {
+  impl_->Add(this);
+}
+
+SessionHost::~SessionHost() {
+  impl_->Remove(this);
+
+  // If a "primary" (currently that's the first) connection goes down,
+  // the whole implementation is deleted, taking down all remaining
+  // connections. This corresponds to a strong binding on the first
+  // connection, and regular bindings on all later ones. This is just
+  // how it is and may be revised in the future.
+  //
+  // Order is important: this delete call MUST happen after the
+  // Remove() call above, otherwise double delete ensues.
+  if (primary_) {
+    delete impl_;
+  }
+}
+
+void SessionHost::CreateLink(InterfaceRequest<Link> link) {
+  FTL_LOG(INFO) << "story-runner create link";
+  new LinkImpl(std::move(link));
+}
+
+void SessionHost::StartModule(const String& query, InterfaceHandle<Link> link,
+                              const StartModuleCallback& callback) {
+  impl_->StartModule(this, query, std::move(link), callback);
+}
+
+
+// The story runner service is the service directly provided by the
+// story runner app. It must be initialized with a resolver factory
+// and then allows to create a Session.
 class StoryRunnerImpl : public StoryRunner {
  public:
   StoryRunnerImpl(Shell* const shell, InterfaceRequest<StoryRunner> req)
       : shell_(shell), binding_(this, std::move(req)) {
     FTL_LOG(INFO) << "StoryRunnerImpl()";
   }
+
   ~StoryRunnerImpl() override { FTL_LOG(INFO) << "~StoryRunnerImpl()"; }
 
   void Initialize(InterfaceHandle<ResolverFactory> resolver_factory) override {
@@ -275,7 +383,11 @@ class StoryRunnerImpl : public StoryRunner {
   MOJO_DISALLOW_COPY_AND_ASSIGN(StoryRunnerImpl);
 };
 
-// The story runner mojo app.
+
+// The StoryRunner mojo app provides instances of the implementation
+// of the StoryRunner service. It is a single service app, but the
+// service impl takes the shell as additional constructor parameter,
+// so we don't reuse the template class here.
 class StoryRunnerApp : public ApplicationImplBase {
  public:
   StoryRunnerApp() {}
