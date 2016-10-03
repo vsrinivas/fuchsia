@@ -146,4 +146,33 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   }
 }
 
+TEST_F(ObjectStoreTest, TreeNodeFindKeyOrChild) {
+  int size = 10;
+  std::vector<Entry> entries = GetEntries(size);
+  std::unique_ptr<const TreeNode> node =
+      FromEntries(entries, std::vector<ObjectId>(size + 1));
+
+  int index;
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("a", &index));
+  EXPECT_EQ(0, index);
+
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("c", &index));
+  EXPECT_EQ(2, index);
+
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("j", &index));
+  EXPECT_EQ(9, index);
+
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("0", &index));
+  EXPECT_EQ(0, index);
+
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("aa", &index));
+  EXPECT_EQ(1, index);
+
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("cc", &index));
+  EXPECT_EQ(3, index);
+
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("z", &index));
+  EXPECT_EQ(10, index);
+}
+
 }  // namespace

@@ -4,6 +4,8 @@
 
 #include "apps/ledger/storage/impl/store/tree_node.h"
 
+#include <algorithm>
+
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/logging.h"
@@ -160,7 +162,19 @@ Status TreeNode::GetChild(int index,
 }
 
 Status TreeNode::FindKeyOrChild(const std::string& key, int* index) const {
-  return Status::NOT_IMPLEMENTED;
+  auto it = std::lower_bound(entries_.begin(), entries_.end(), key,
+                             [](const Entry& entry, const std::string& key) {
+                               return entry.key < key;
+                             });
+  if (it == entries_.end()) {
+    *index = entries_.size();
+    return Status::NOT_FOUND;
+  }
+  *index = it - entries_.begin();
+  if (it->key == key) {
+    return Status::OK;
+  }
+  return Status::NOT_FOUND;
 }
 
 ObjectId TreeNode::GetId() const {
