@@ -156,7 +156,7 @@ out2:
     free(buf);
 out:
     close(fd);
-    return 0;
+    return rc;
 }
 
 int main(int argc, const char** argv) {
