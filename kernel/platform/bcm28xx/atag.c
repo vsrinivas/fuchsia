@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
-bool atag_isvalid(atag_t* tag) {
+static bool atag_isvalid(atag_t* tag) {
     switch (tag->id) {
     case RPI_ATAG_ATAG_NONE:
     case RPI_ATAG_ATAG_CORE:

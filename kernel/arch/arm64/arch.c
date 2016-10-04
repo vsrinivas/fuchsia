@@ -135,6 +135,9 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 }
 
 #if WITH_SMP
+/* called from assembly */
+void arm64_secondary_entry(ulong asm_cpu_num);
+
 void arm64_secondary_entry(ulong asm_cpu_num)
 {
     uint cpu = arch_curr_cpu_num();

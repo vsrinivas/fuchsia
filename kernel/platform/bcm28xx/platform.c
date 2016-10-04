@@ -16,12 +16,15 @@
 #include <kernel/spinlock.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/display.h>
+#include <dev/hw_rng.h>
 
 #include <platform.h>
 #include <dev/interrupt.h>
 #include <platform/bcm28xx.h>
 #include <platform/videocore.h>
 #include <platform/atag.h>
+
+#include <target.h>
 
 #include <libfdt.h>
 #include <arch/arm64.h>
@@ -287,7 +290,7 @@ __WEAK int platform_pgetc(char *c, bool wait)
     return platform_dgetc(c, wait);
 }
 
-/* stub out the hardware rng entropy generator, which doesn't eixst on this platform */
+/* stub out the hardware rng entropy generator, which doesn't exist on this platform */
 size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
     return 0;
 }

@@ -13,8 +13,9 @@
 #include <kernel/thread.h>
 #include <platform/bcm28xx.h>
 #include <trace.h>
-
 #include <arch/arm64.h>
+
+#include "platform_p.h"
 
 #define LOCAL_TRACE 0
 
@@ -182,7 +183,7 @@ void register_int_handler(unsigned int vector, int_handler handler, void* arg) {
     spin_unlock_irqrestore(&lock, state);
 }
 
-enum handler_return platform_irq(struct iframe* frame) {
+enum handler_return platform_irq(struct arm64_iframe_short* frame) {
     uint vector;
     uint cpu = arch_curr_cpu_num();
 
@@ -266,9 +267,12 @@ decoded:
     return ret;
 }
 
-enum handler_return platform_fiq(struct iframe* frame) {
+enum handler_return platform_fiq(struct arm64_iframe_short* frame) {
     PANIC_UNIMPLEMENTED;
 }
+
+/* called from arm64 code. TODO: put in shared header */
+void bcm28xx_send_ipi(uint irq, uint cpu_mask);
 
 void bcm28xx_send_ipi(uint irq, uint cpu_mask) {
     LTRACEF("irq %u, cpu_mask 0x%x\n", irq, cpu_mask);

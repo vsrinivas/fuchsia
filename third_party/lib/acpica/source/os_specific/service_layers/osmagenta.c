@@ -583,6 +583,7 @@ struct acpi_irq_wrapper_arg {
     ACPI_OSD_HANDLER handler;
     void *context;
 };
+enum handler_return acpi_irq_wrapper(void *arg);
 enum handler_return acpi_irq_wrapper(void *arg) {
     struct acpi_irq_wrapper_arg *real_arg = (struct acpi_irq_wrapper_arg *)arg;
     real_arg->handler(real_arg->context);

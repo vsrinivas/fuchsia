@@ -36,7 +36,7 @@ static void pch_thermal_cleanup(struct pch_thermal_context* ctx)
     ctx->regs   = NULL;
 }
 
-pcie_irq_handler_retval_t pch_thermal_irq_handler(struct pcie_device_state* dev,
+static pcie_irq_handler_retval_t pch_thermal_irq_handler(struct pcie_device_state* dev,
                                                   uint irq_id,
                                                   void* ctx)
 {

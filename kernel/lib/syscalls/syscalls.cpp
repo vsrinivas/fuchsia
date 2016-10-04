@@ -150,9 +150,9 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 using syscall_func = int64_t (*)(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
                                  uint64_t f, uint64_t g, uint64_t h);
 
-extern "C" uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
-                                   uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-                                   uint64_t syscall_num, uint64_t ip) {
+uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+                        uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+                        uint64_t syscall_num, uint64_t ip) {
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely((syscall_num >> 32) != 0xff00ff)) {

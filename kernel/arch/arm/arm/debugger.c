@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <kernel/thread.h>
 #include <arch/arm.h>
+#include <arch/debugger.h>
 
 uint arch_num_regsets(void)
 {

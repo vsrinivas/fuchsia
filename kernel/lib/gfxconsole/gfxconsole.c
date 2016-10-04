@@ -129,7 +129,7 @@ static bool gfxconsole_putc(char c)
     return inval;
 }
 
-void gfxconsole_print_callback(print_callback_t *cb, const char *str, size_t len)
+static void gfxconsole_print_callback(print_callback_t *cb, const char *str, size_t len)
 {
     int refresh_full_screen = 0;
     for (size_t i = 0; i < len; i++) {

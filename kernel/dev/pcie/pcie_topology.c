@@ -193,7 +193,7 @@ typedef struct pcie_get_refed_device_state {
     pcie_device_state_t* ret;
 } pcie_get_refed_device_state_t;
 
-bool pcie_get_refed_device_helper(struct pcie_device_state* dev, void* ctx, uint level) {
+static bool pcie_get_refed_device_helper(struct pcie_device_state* dev, void* ctx, uint level) {
     DEBUG_ASSERT(dev && ctx);
     pcie_get_refed_device_state_t* state = (pcie_get_refed_device_state_t*)ctx;
 

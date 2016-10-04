@@ -322,7 +322,7 @@ static int multiboot_range_init(boot_addr_range_t *range,
     return 0;
 }
 
-int addr_range_cmp(const void* p1, const void* p2)
+static int addr_range_cmp(const void* p1, const void* p2)
 {
     const struct addr_range *a1 = p1;
     const struct addr_range *a2 = p2;

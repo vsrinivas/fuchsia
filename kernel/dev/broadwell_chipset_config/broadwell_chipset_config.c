@@ -347,7 +347,7 @@ finished:
     return ret;
 }
 
-status_t bwcc_disable_fd_fd2_device(chipset_config_state_t* state,
+static status_t bwcc_disable_fd_fd2_device(chipset_config_state_t* state,
                                     uint32_t offset,
                                     uint32_t bit,
                                     bool disable) {

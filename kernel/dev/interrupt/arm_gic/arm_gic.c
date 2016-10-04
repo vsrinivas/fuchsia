@@ -397,6 +397,7 @@ enum handler_return __platform_irq(struct iframe *frame)
     return ret;
 }
 
+// called from assembly
 enum handler_return platform_irq(struct iframe *frame)
 {
 #if WITH_LIB_SM
@@ -440,7 +441,8 @@ enum handler_return platform_irq(struct iframe *frame)
 #endif
 }
 
-void platform_fiq(struct iframe *frame)
+// called from assembly
+enum handler_return platform_fiq(struct iframe *frame)
 {
 #if WITH_LIB_SM
     sm_handle_fiq();

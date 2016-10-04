@@ -12,6 +12,8 @@
 #include <kernel/timer.h>
 #include <kernel/mp.h>
 
+void kernel_init(void);
+
 void kernel_init(void)
 {
     // if enabled, configure kernel log

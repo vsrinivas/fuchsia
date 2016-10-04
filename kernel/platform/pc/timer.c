@@ -16,6 +16,7 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <lib/fixed_point.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
@@ -28,8 +29,6 @@
 #include <platform/pc/hpet.h>
 #include <platform/timer.h>
 #include "platform_p.h"
-
-#include <lib/fixed_point.h>
 
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
@@ -96,6 +95,8 @@ static struct fp_32_64 ns_per_tsc;
 // HPET calibration values
 static struct fp_32_64 ns_per_hpet;
 
+// TODO: move this to a common header
+uint64_t get_tsc_ticks_per_ms(void);
 uint64_t get_tsc_ticks_per_ms(void) {
     return tsc_ticks_per_ms;
 }
@@ -174,7 +175,7 @@ static enum handler_return pit_timer_tick(void *arg)
 }
 
 // The APIC timers will call this when they fire
-enum handler_return platform_handle_timer_tick(void) {
+enum handler_return platform_handle_apic_timer_tick(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint cpu = arch_curr_cpu_num();
 
@@ -416,7 +417,7 @@ static void calibrate_tsc(void)
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
-void platform_init_timer(uint level)
+static void platform_init_timer(uint level)
 {
     const struct x86_model_info *cpu_model = x86_get_model();
 
@@ -440,8 +441,6 @@ void platform_init_timer(uint level)
     } else {
         calibration_clock = CLOCK_PIT;
     }
-
-    LTRACEF("constant_tsc %u invariant_tsc %u\n", constant_tsc, invariant_tsc);
 
     use_tsc_deadline = invariant_tsc &&
             x86_feature_test(X86_FEATURE_TSC_DEADLINE);
@@ -484,6 +483,8 @@ void platform_init_timer(uint level)
         }
     }
 
+    TRACEF("timer features: constant_tsc %u invariant_tsc %u tsc_deadline %u\n",
+            constant_tsc, invariant_tsc, use_tsc_deadline);
     TRACEF("Using %s as wallclock\n", clock_name[wall_clock]);
 }
 LK_INIT_HOOK(timer, &platform_init_timer, LK_INIT_LEVEL_VM + 3);

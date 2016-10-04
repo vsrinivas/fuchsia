@@ -67,6 +67,9 @@ extern void arm64_exception_base(void);
 void arm64_el3_to_el1(void);
 void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags);
 
+enum handler_return platform_irq(struct arm64_iframe_short* frame);
+enum handler_return platform_fiq(struct arm64_iframe_short* frame);
+
 /* fpu routines */
 void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags);
 void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread);

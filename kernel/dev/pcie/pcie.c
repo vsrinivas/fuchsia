@@ -813,7 +813,7 @@ static bool pcie_start_devices_helper(struct pcie_device_state* dev, void* ctx, 
     return true;
 }
 
-void pcie_start_devices(pcie_bus_driver_state_t* bus_drv) {
+static void pcie_start_devices(pcie_bus_driver_state_t* bus_drv) {
     pcie_foreach_device(bus_drv, pcie_start_devices_helper, NULL);
 }
 

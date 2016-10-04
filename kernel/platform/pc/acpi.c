@@ -54,7 +54,7 @@ void platform_init_acpi_tables(uint level)
 /* initialize ACPI tables as soon as we have a working VM */
 LK_INIT_HOOK(acpi_tables, &platform_init_acpi_tables, LK_INIT_LEVEL_VM + 1);
 
-status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
+static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
 {
     ACPI_TABLE_HEADER *table = NULL;
     ACPI_STATUS status = AcpiGetTable((char *)ACPI_SIG_MADT, 1, &table);

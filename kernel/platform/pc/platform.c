@@ -96,7 +96,7 @@ static bool early_console_disabled;
  * kernel in a way that would to badly interact with a Linux kernel booting
  * from the same loader.
  */
-void platform_save_bootloader_data(void)
+static void platform_save_bootloader_data(void)
 {
     uint32_t *zp = (void*) ((uintptr_t)_zero_page_boot_params + KERNEL_BASE);
 
@@ -156,7 +156,7 @@ status_t display_get_info(struct display_info *info) {
     return gfxconsole_display_get_info(info);
 }
 
-void platform_early_display_init(void) {
+static void platform_early_display_init(void) {
     struct display_info info;
     void *bits;
 
@@ -245,7 +245,7 @@ void platform_early_init(void)
 }
 
 #if WITH_SMP
-void platform_init_smp(void)
+static void platform_init_smp(void)
 {
     uint32_t num_cpus = 0;
 

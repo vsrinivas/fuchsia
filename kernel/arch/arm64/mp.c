@@ -50,14 +50,14 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
     return NO_ERROR;
 }
 
-enum handler_return arm_ipi_generic_handler(void *arg)
+static enum handler_return arm_ipi_generic_handler(void *arg)
 {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
     return mp_mbx_generic_irq();
 }
 
-enum handler_return arm_ipi_reschedule_handler(void *arg)
+static enum handler_return arm_ipi_reschedule_handler(void *arg)
 {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 

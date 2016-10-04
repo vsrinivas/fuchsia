@@ -77,6 +77,9 @@ struct arm_iframe {
     uint32_t spsr;
 };
 
+enum handler_return platform_irq(struct arm_iframe* frame);
+enum handler_return platform_fiq(struct arm_iframe* frame);
+
 struct arm_fault_frame {
 #if ARM_WITH_VFP
     uint32_t fpexc;

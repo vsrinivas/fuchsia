@@ -23,13 +23,15 @@
 #include <platform/debug.h>
 #include <trace.h>
 
+#include "platform_p.h"
+
 static const int uart_baud_rate = 115200;
 static const int uart_io_port = 0x3f8;
 
 cbuf_t console_input_buf;
 static bool output_enabled = false;
 
-enum handler_return platform_drain_debug_uart_rx(void)
+static enum handler_return platform_drain_debug_uart_rx(void)
 {
     unsigned char c;
     bool resched = false;
@@ -53,6 +55,22 @@ static enum handler_return uart_rx_poll(struct timer *t, lk_time_t now, void *ar
 {
     return platform_drain_debug_uart_rx();
 }
+
+// also called from the pixel2 quirk file
+void platform_debug_start_uart_timer(void);
+
+void platform_debug_start_uart_timer(void)
+{
+    static timer_t uart_rx_poll_timer;
+    static bool started = false;
+
+    if (!started) {
+        started = true;
+        timer_initialize(&uart_rx_poll_timer);
+        timer_set_periodic(&uart_rx_poll_timer, 10, uart_rx_poll, NULL);
+    }
+}
+
 
 void platform_init_debug_early(void)
 {
@@ -82,10 +100,7 @@ void platform_init_debug(void)
     outp(uart_io_port + 1, 0x1); // enable receive data available interrupt
 
     if (cmdline_get_bool("kernel.debug_uart_poll", false)) {
-        static timer_t uart_rx_poll_timer;
-
-        timer_initialize(&uart_rx_poll_timer);
-        timer_set_periodic(&uart_rx_poll_timer, 10, uart_rx_poll, NULL);
+        platform_debug_start_uart_timer();
     }
 }
 

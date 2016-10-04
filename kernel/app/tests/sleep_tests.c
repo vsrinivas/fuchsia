@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <platform.h>
+#include <app/tests.h>
 
 // Tests that thread_sleep and current_time_hires() are consistent.
 static int thread_sleep_test(void)

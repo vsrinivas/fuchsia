@@ -59,6 +59,9 @@ void apic_timer_stop(void);
 enum handler_return apic_error_interrupt_handler(void);
 enum handler_return apic_timer_interrupt_handler(void);
 
+// platform code needs to implement this
+enum handler_return platform_handle_apic_timer_tick(void);
+
 // Information about the system IO APICs
 struct io_apic_descriptor {
     uint8_t apic_id;

@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <trace.h>
 #include <dev/display.h>
+#include <dev/hw_rng.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <dev/pcie.h>

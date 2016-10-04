@@ -158,6 +158,9 @@ void arch_init(void)
 }
 
 #if WITH_SMP
+// called from assembly
+void arm_secondary_entry(uint asm_cpu_num);
+
 void arm_secondary_entry(uint asm_cpu_num)
 {
     uint cpu = arch_curr_cpu_num();

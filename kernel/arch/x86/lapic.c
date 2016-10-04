@@ -326,10 +326,8 @@ cleanup:
     return status;
 }
 
-// TODO: Where should this declaration go
-extern enum handler_return platform_handle_timer_tick(void);
 enum handler_return apic_timer_interrupt_handler(void) {
-    return platform_handle_timer_tick();
+    return platform_handle_apic_timer_tick();
 }
 
 static void apic_error_init(void) {

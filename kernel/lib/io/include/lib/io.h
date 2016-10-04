@@ -55,5 +55,8 @@ static inline void io_handle_init(io_handle_t *io, io_handle_hooks_t *hooks)
 /* the main console io handle */
 extern io_handle_t console_io;
 
+/* back doors to directly write to the kernel serial and console */
+void __kernel_serial_write(const char *str, size_t len);
+void __kernel_console_write(const char *str, size_t len);
 
 __END_CDECLS

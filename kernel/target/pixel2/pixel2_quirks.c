@@ -27,7 +27,7 @@ static const struct {
 extern uint32_t bootloader_fb_base;
 extern uint32_t bootloader_fb_format;
 
-void pixel2_init_quirks(uint level)
+static void pixel2_init_quirks(uint level)
 {
     status_t res = NO_ERROR;
     for (size_t i = 0; i < countof(DEVICES_TO_UNHIDE); ++i) {

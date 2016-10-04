@@ -28,7 +28,7 @@ static int sleep_thread(void *arg)
     return 0;
 }
 
-int sleep_test(void)
+static int sleep_test(void)
 {
     int i;
     for (i=0; i < 16; i++)
@@ -173,7 +173,7 @@ static int mutex_zerotimeout_thread(void *arg)
     return err;
 }
 
-int mutex_test(void)
+static int mutex_test(void)
 {
     static mutex_t imutex = MUTEX_INITIAL_VALUE(imutex);
     printf("preinitialized mutex:\n");
@@ -265,7 +265,7 @@ static int event_waiter(void *arg)
     return 0;
 }
 
-void event_test(void)
+static void event_test(void)
 {
     thread_t *threads[5];
 
@@ -326,7 +326,7 @@ static int quantum_tester(void *arg)
     return 0;
 }
 
-void quantum_test(void)
+static void quantum_test(void)
 {
     thread_detach_and_resume(thread_create("quantum tester 0", &quantum_tester, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
     thread_detach_and_resume(thread_create("quantum tester 1", &quantum_tester, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE));
@@ -360,7 +360,7 @@ static int context_switch_tester(void *arg)
     return 0;
 }
 
-void context_switch_test(void)
+static void context_switch_test(void)
 {
     event_init(&context_switch_event, false, 0);
     event_init(&context_switch_done_event, false, 0);

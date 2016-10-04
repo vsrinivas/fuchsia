@@ -25,6 +25,8 @@
 #include <lib/pow2_range_allocator.h>
 #include <pow2.h>
 
+#include "platform_p.h"
+
 #ifdef WITH_DEV_PCIE
 #include <dev/pcie_irqs.h>
 #define MAX_IRQ_BLOCK_SIZE PCIE_MAX_MSI_IRQS
@@ -44,7 +46,7 @@ static spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
 static struct int_handler_struct int_handler_table[X86_MAX_INT];
 static p2ra_state_t x86_irq_vector_allocator;
 
-void platform_init_apic(uint level)
+static void platform_init_apic(uint level)
 {
     pic_map(PIC1_BASE, PIC2_BASE);
     pic_disable();

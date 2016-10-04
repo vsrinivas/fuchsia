@@ -26,10 +26,7 @@ extern "C" uint64_t get_tsc_ticks_per_ms(void);
 #define ktrace_ticks_per_ms() (1000000)
 #endif
 
-// implemented by thread.c
-extern "C" void ktrace_report_live_threads(void);
-
-void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
+static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 
 #define MAGENTA_SYSCALL_DEF(s64,s32,num,ret,name,attr,args...) \
     ktrace_name_etc(TAG_SYSCALL_NAME, num, 0, #name, true);
@@ -226,7 +223,7 @@ void* ktrace_open(uint32_t tag) {
     return hdr + 1;
 }
 
-void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
+static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
     ktrace_state_t* ks = &KTRACE_STATE;
     if ((tag & atomic_load(&ks->grpmask)) || always) {
         uint32_t len = static_cast<uint32_t>(strnlen(name, 31));

@@ -394,7 +394,7 @@ static void intel_hda_deactivate_device(intel_hda_device_t* dev) {
      */
 }
 
-pcie_irq_handler_retval_t intel_hda_pci_irq_handler(struct pcie_device_state* pci_device,
+static pcie_irq_handler_retval_t intel_hda_pci_irq_handler(struct pcie_device_state* pci_device,
                                                     uint  irq_id,
                                                     void* ctx) {
     DEBUG_ASSERT(pci_device && ctx);
@@ -693,7 +693,7 @@ static void intel_hda_pci_release(void* ctx) {
     intel_hda_release(dev);
 }
 
-void intel_hda_work_thread_service_device(intel_hda_device_t* dev) {
+static void intel_hda_work_thread_service_device(intel_hda_device_t* dev) {
     /* Note: the module's work thread lock is being held at the moment. */
     DEBUG_ASSERT(dev && dev->regs);
     hda_registers_t* r = dev->regs;

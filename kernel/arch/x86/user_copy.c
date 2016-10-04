@@ -17,6 +17,10 @@
 
 #define LOCAL_TRACE 0
 
+// called from assembly
+bool _x86_usercopy_can_read(const void *base, size_t len);
+bool _x86_usercopy_can_write(const void *base, size_t len);
+
 static inline bool ac_flag(void)
 {
     return x86_save_flags() & X86_FLAGS_AC;

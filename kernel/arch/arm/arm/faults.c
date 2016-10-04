@@ -108,11 +108,13 @@ static void exception_die_iframe(struct arm_iframe *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
+void arm_syscall_handler(struct arm_fault_frame *frame);
 __WEAK void arm_syscall_handler(struct arm_fault_frame *frame)
 {
     exception_die(frame, "unhandled syscall, halting\n");
 }
 
+void arm_undefined_handler(struct arm_iframe *frame);
 void arm_undefined_handler(struct arm_iframe *frame)
 {
     /* look at the undefined instruction, figure out if it's something we can handle */
@@ -213,6 +215,7 @@ static status_t arm_shared_page_fault_handler(struct arm_fault_frame *frame, uin
     return ERR_INTERNAL;
 }
 
+void arm_data_abort_handler(struct arm_fault_frame *frame);
 void arm_data_abort_handler(struct arm_fault_frame *frame)
 {
     uint32_t fsr = arm_read_dfsr();
@@ -305,6 +308,7 @@ void arm_data_abort_handler(struct arm_fault_frame *frame)
     exception_die(frame, "halting\n");
 }
 
+void arm_prefetch_abort_handler(struct arm_fault_frame *frame);
 void arm_prefetch_abort_handler(struct arm_fault_frame *frame)
 {
     uint32_t fsr = arm_read_ifsr();

@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <dev/interrupt.h>
+#include <dev/uart.h>
 #include <kernel/thread.h>
 #include <lib/cbuf.h>
 #include <platform/bcm28xx.h>

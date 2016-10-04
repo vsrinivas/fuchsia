@@ -132,7 +132,7 @@ static void list_cases(void) {
 }
 
 
-bool run_unittest(const unittest_testcase_registration_t* testcase) {
+static bool run_unittest(const unittest_testcase_registration_t* testcase) {
     char   fmt_string[32];
     size_t max_namelen = 0;
     size_t passed = 0;

@@ -44,6 +44,9 @@ typedef struct x86_32_iframe x86_iframe_t;
 typedef struct x86_64_iframe x86_iframe_t;
 #endif
 
+void x86_exception_handler(x86_iframe_t *frame);
+enum handler_return platform_irq(x86_iframe_t *frame);
+
 struct arch_exception_context {
     bool is_page_fault;
     x86_iframe_t *frame;
@@ -67,6 +70,10 @@ struct x86_64_context_switch_frame {
 void x86_64_context_switch(vaddr_t *oldsp, vaddr_t newsp);
 void x86_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t sp,
                       uintptr_t pc, uint64_t rflags) __NO_RETURN;
+
+uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
+                        uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
+                        uint64_t syscall_num, uint64_t ip);
 
 /* @brief Register all of the CPUs in the system
  *

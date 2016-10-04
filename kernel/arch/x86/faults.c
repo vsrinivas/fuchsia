@@ -22,8 +22,6 @@
 #include <magenta/exception.h>
 #endif
 
-extern enum handler_return platform_irq(x86_iframe_t *frame);
-
 static void dump_fault_frame(x86_iframe_t *frame)
 {
 #if ARCH_X86_32
@@ -118,7 +116,7 @@ static void x86_breakpoint_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled sw breakpoint, halting\n");
 }
 
-void x86_gpf_handler(x86_iframe_t *frame)
+static void x86_gpf_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
@@ -128,7 +126,7 @@ void x86_gpf_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled gpf, halting\n");
 }
 
-void x86_invop_handler(x86_iframe_t *frame)
+static void x86_invop_handler(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
     if (handle_magenta_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
@@ -138,7 +136,7 @@ void x86_invop_handler(x86_iframe_t *frame)
     exception_die(frame, "invalid opcode, halting\n");
 }
 
-void x86_unhandled_exception(x86_iframe_t *frame)
+static void x86_unhandled_exception(x86_iframe_t *frame)
 {
 #if WITH_LIB_MAGENTA
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
@@ -211,7 +209,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
     exception_die(frame, "unhandled page fault, halting\n");
 }
 
-void x86_pfe_handler(x86_iframe_t *frame)
+static void x86_pfe_handler(x86_iframe_t *frame)
 {
     /* Handle a page fault exception */
     uint32_t error_code = frame->err_code;
@@ -401,7 +399,7 @@ void x86_exception_handler(x86_iframe_t *frame)
 
 __WEAK uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
                                uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
-                               uint64_t syscall_num)
+                               uint64_t syscall_num, uint64_t ip)
 {
     PANIC_UNIMPLEMENTED;
 }

@@ -32,8 +32,6 @@ extern struct fault_handler_table_entry __fault_handler_table_end[];
 
 bool arm64_in_int_handler[SMP_MAX_CPUS];
 
-extern enum handler_return platform_irq(struct arm64_iframe_long *frame);
-
 static void dump_iframe(const struct arm64_iframe_long *iframe)
 {
     printf("iframe %p:\n", iframe);
@@ -225,7 +223,10 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-void arm64_irq(struct arm64_iframe_long *iframe, uint exception_flags)
+/* called from assembly */
+void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags);
+
+void arm64_irq(struct arm64_iframe_short *iframe, uint exception_flags)
 {
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
@@ -248,6 +249,9 @@ void arm64_irq(struct arm64_iframe_long *iframe, uint exception_flags)
     if (ret != INT_NO_RESCHEDULE)
         thread_preempt(true);
 }
+
+/* called from assembly */
+void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which);
 
 void arm64_invalid_exception(struct arm64_iframe_long *iframe, unsigned int which)
 {

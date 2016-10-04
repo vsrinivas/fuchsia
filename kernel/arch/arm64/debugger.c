@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <arch/arm64.h>
+#include <arch/debugger.h>
 #include <kernel/thread.h>
 #include <magenta/syscalls-debug.h>
 

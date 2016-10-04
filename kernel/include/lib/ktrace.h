@@ -63,4 +63,6 @@ static inline status_t ktrace_control(uint32_t action, uint32_t options) {
 #define KTRACE_DEFAULT_BUFSIZE 32 // MB
 #define KTRACE_DEFAULT_GRPMASK 0xFFF
 
+void ktrace_report_live_threads(void);
+
 __END_CDECLS

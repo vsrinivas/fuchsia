@@ -10,6 +10,7 @@
 #include <dev/udisplay.h>
 #include <kernel/thread.h>
 #include <lib/user_copy.h>
+#include <lib/io.h>
 #include <lk/init.h>
 #include <platform.h>
 #include <string.h>
@@ -169,9 +170,6 @@ static void cputs(const char* data, size_t len) {
         }
     }
 }
-
-void __kernel_serial_write(const char *str, size_t len);
-void __kernel_console_write(const char *str, size_t len);
 
 static int debuglog_reader(void* arg) {
     uint8_t buffer[DLOG_MAX_ENTRY + 1];

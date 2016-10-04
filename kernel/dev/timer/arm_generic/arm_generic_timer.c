@@ -12,6 +12,7 @@
 #include <lk/init.h>
 #include <platform.h>
 #include <dev/interrupt.h>
+#include <dev/timer/arm_generic.h>
 #include <platform/timer.h>
 #include <trace.h>
 

@@ -7,9 +7,14 @@
 
 #pragma once
 
+#include <sys/types.h>
+#include <dev/pcie_irqs.h>
 #include <lib/cbuf.h>
+#include <magenta/compiler.h>
 
 extern cbuf_t console_input_buf;
+
+__BEGIN_CDECLS
 
 /* Do not use anything above this address for PCIe stuff.  A bunch of
  * architectural devices often occupy this area */
@@ -25,3 +30,13 @@ void platform_init_debug_early(void);
 void platform_init_debug(void);
 void platform_init_timer_percpu(void);
 void platform_mem_init(void);
+
+status_t x86_alloc_msi_block(uint requested_irqs, bool can_target_64bit,
+                             bool is_msix, pcie_msi_block_t* out_block);
+void x86_free_msi_block(pcie_msi_block_t* block);
+void x86_register_msi_handler(const pcie_msi_block_t* block,
+                              uint msi_id,
+                              int_handler handler,
+                              void* ctx);
+
+__END_CDECLS
