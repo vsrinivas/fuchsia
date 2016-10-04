@@ -8,11 +8,8 @@
 #include "apps/mozart/src/launcher/launcher_view_tree.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace launcher {
-
-constexpr uint16_t kInputPollIntervalMilliseconds = 20;
 
 LaunchInstance::LaunchInstance(
     mozart::Compositor* compositor,
@@ -48,22 +45,29 @@ void LaunchInstance::Launch() {
                            std::move(framebuffer_info_), shutdown_callback_));
   view_tree_->SetRoot(std::move(client_view_owner_));
 
-  input_device_monitor_.Start();
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] { CheckInput(); },
-      ftl::TimeDelta::FromMilliseconds(kInputPollIntervalMilliseconds));
-}
-
-void LaunchInstance::CheckInput() {
-  input_device_monitor_.CheckInput(
-      [this](mozart::EventPtr event) {
-        view_tree_->DispatchEvent(std::move(event));
-      },
-      framebuffer_size_);
-
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] { CheckInput(); },
-      ftl::TimeDelta::FromMilliseconds(kInputPollIntervalMilliseconds));
+  input_device_monitor_.Start([this](mozart::EventPtr event) {
+    if (event->pointer_data) {
+      // TODO(jpoichet) Move all this into an "input interpreter"
+      if (event->pointer_data->kind == mozart::PointerKind::MOUSE) {
+        mouse_coordinates_.x = std::max(
+            0.0f, std::min(mouse_coordinates_.x + event->pointer_data->x,
+                           static_cast<float>(framebuffer_size_.width)));
+        mouse_coordinates_.y = std::max(
+            0.0f, std::min(mouse_coordinates_.y - event->pointer_data->y,
+                           static_cast<float>(framebuffer_size_.height)));
+        event->pointer_data->x = mouse_coordinates_.x;
+        event->pointer_data->y = mouse_coordinates_.y;
+      } else {
+        event->pointer_data->x =
+            event->pointer_data->x * framebuffer_size_.width;
+        event->pointer_data->y =
+            event->pointer_data->y * framebuffer_size_.height;
+      }
+      event->pointer_data->screen_x = event->pointer_data->x;
+      event->pointer_data->screen_y = event->pointer_data->y;
+    }
+    view_tree_->DispatchEvent(std::move(event));
+  });
 }
 
 }  // namespace launcher

@@ -42,6 +42,7 @@ class LaunchInstance {
   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
   mojo::FramebufferInfoPtr framebuffer_info_;
   mojo::Size framebuffer_size_;
+  mojo::PointF mouse_coordinates_;
   mozart::ViewProviderPtr view_provider_;
 
   ftl::Closure shutdown_callback_;
@@ -50,7 +51,7 @@ class LaunchInstance {
 
   mozart::ViewOwnerPtr client_view_owner_;
 
-  InputDeviceMonitor input_device_monitor_;
+  InputReader input_device_monitor_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LaunchInstance);
 };

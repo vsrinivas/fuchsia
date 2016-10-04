@@ -5,6 +5,7 @@
 #ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 
+#include <map>
 #include <thread>
 #include <vector>
 
@@ -16,8 +17,9 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/time/time_delta.h"
-
-#define MAX_HANDLERS 127
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop_handler.h"
+#include "mojo/public/cpp/system/handle.h"
 
 #define MOD_LSHIFT (1 << 0)
 #define MOD_RSHIFT (1 << 1)
@@ -36,7 +38,8 @@ using OnEventCallback = std::function<void(mozart::EventPtr event)>;
 
 struct InputDevice {
   int fd_;
-  mx_handle_t handle_;
+  // TODO(jpoichet) use mojo::ScopedEventHandle once available
+  mojo::ScopedHandleBase<mojo::Handle> event_handle_;
   char name_[128];
   int protocol_;
   size_t report_desc_len_;
@@ -49,9 +52,8 @@ struct InputDevice {
   InputDevice();
   virtual ~InputDevice();
 
-  void Read(const OnEventCallback& callback, const mojo::Size& display_size);
-  virtual void Parse(const OnEventCallback& callback,
-                     const mojo::Size& display_size) = 0;
+  bool Read(const OnEventCallback& callback);
+  virtual void Parse(const OnEventCallback& callback) = 0;
 
   static InputDevice* BuildInputDevice(int fd, const char* name);
 };
@@ -65,54 +67,61 @@ struct KeyboardInputDevice : InputDevice {
   keychar_t* keymap_;
 
   KeyboardInputDevice();
-  void Parse(const OnEventCallback& callback, const mojo::Size& display_size);
+  void Parse(const OnEventCallback& callback);
 };
 
 struct MouseInputDevice : InputDevice {
-  int32_t x_ = 0;
-  int32_t y_ = 0;
   uint8_t buttons_ = 0;
 
-  void Parse(const OnEventCallback& callback, const mojo::Size& display_size);
+  void Parse(const OnEventCallback& callback);
   void SendEvent(const OnEventCallback& callback,
+                 float rel_x,
+                 float rel_y,
                  int64_t timestamp,
                  mozart::EventType type,
                  mozart::EventFlags flags);
 };
 
 struct Acer12InputDevice : InputDevice {
-  void Parse(const OnEventCallback& callback, const mojo::Size& display_size);
+  void Parse(const OnEventCallback& callback);
 
  private:
-  void ParseStylus(const OnEventCallback& callback,
-                   const mojo::Size& display_size);
-  void ParseTouchscreen(const OnEventCallback& callback,
-                        const mojo::Size& display_size);
+  void ParseStylus(const OnEventCallback& callback);
+  void ParseTouchscreen(const OnEventCallback& callback);
 
   std::vector<mozart::PointerData> pointers_;
 };
 
-class InputDeviceMonitor {
+class InputReader : mtl::MessageLoopHandler {
  public:
-  InputDeviceMonitor();
-  ~InputDeviceMonitor();
-  void Start();
-  void CheckInput(const OnEventCallback& callback,
-                  const mojo::Size& display_size);
+  InputReader();
+  ~InputReader();
+  void Start(const OnEventCallback& callback);
 
  private:
-  void DeviceAdded(int dirfd, const char* fn);
+  InputDevice* OpenDevice(int dirfd, const char* fn);
 
-  std::thread monitor_thread_;
-  std::vector<InputDevice*> devices_;
-  std::mutex devices_lock_;
+  InputDevice* GetDevice(MojoHandle handle);
+  void DeviceAdded(InputDevice* device);
+  void DeviceRemoved(InputDevice* device);
 
-  mx_handle_t handles_[MAX_HANDLERS + 1];
-  mx_signals_t wsigs_[MAX_HANDLERS + 1];
-  mx_signals_state_t states_[MAX_HANDLERS + 1];
+  void OnDirectoryHandleReady(MojoHandle handle);
+  void OnDeviceHandleReady(MojoHandle handle);
 
-  //  ftl::RefPtr<ftl::TaskRunner> hid_task_runner_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(InputDeviceMonitor);
+  // |mtl::MessageLoopHandler|:
+  void OnHandleReady(MojoHandle handle);
+  void OnHandleError(MojoHandle handle, MojoResult result);
+
+  mtl::MessageLoop* main_loop_;
+  mtl::MessageLoop::HandlerKey input_directory_key_;
+  int input_directory_fd_;
+  MojoHandle input_directory_handle_;
+
+  std::map<MojoHandle, std::pair<InputDevice*, mtl::MessageLoop::HandlerKey>>
+      devices_;
+  OnEventCallback callback_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
 }
 

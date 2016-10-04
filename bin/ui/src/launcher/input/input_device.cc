@@ -39,10 +39,6 @@ constexpr uint32_t kMouseLeftButtonMask = 0x01;
 constexpr uint32_t kMouseRightButtonMask = 0x02;
 constexpr uint32_t kMouseMiddleButtonMask = 0x04;
 
-inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
-  return (z * screen_dim) / rpt_dim;
-}
-
 int get_hid_protocol(int fd, const char* name, int* proto) {
   ssize_t rc = ioctl_input_get_protocol(fd, proto);
   if (rc < 0) {
@@ -130,17 +126,18 @@ int64_t InputEventTimestampNow() {
 InputDevice::InputDevice() {}
 
 InputDevice::~InputDevice() {
-  if (fd_)
+  if (fd_) {
     close(fd_);
-  if (handle_)
-    mx_handle_close(handle_);
-
-  if (report_desc_)
+  }
+  if (report_desc_) {
     free(report_desc_);
-  if (ids_)
+  }
+  if (ids_) {
     free(ids_);
-  if (report_)
+  }
+  if (report_) {
     free(report_);
+  }
 }
 
 KeyboardInputDevice::KeyboardInputDevice() : keymap_(qwerty_map) {
@@ -201,12 +198,16 @@ InputDevice* InputDevice::BuildInputDevice(int fd, const char* name) {
   snprintf(device->name_, sizeof(device->name_), "hid-input-%s", name);
 
   // Get event handle for file descriptor
-  ssize_t rc = ioctl_device_get_event_handle(device->fd_, &device->handle_);
+  mx_handle_t handle;
+  ssize_t rc = ioctl_device_get_event_handle(device->fd_, &handle);
   if (rc < 0) {
     FTL_LOG(ERROR) << "Could not convert file descriptor to handle";
     delete device;
     return nullptr;
   }
+
+  device->event_handle_ =
+      mojo::ScopedHandleBase<mojo::Handle>(mojo::Handle(handle));
 
   TRYFN(get_num_reports(fd, name, &device->num_reports_));
 
@@ -231,104 +232,17 @@ InputDevice* InputDevice::BuildInputDevice(int fd, const char* name) {
   return device;
 }
 
-InputDeviceMonitor::InputDeviceMonitor() {}
-InputDeviceMonitor::~InputDeviceMonitor() {}
-
-void InputDeviceMonitor::Start() {
-  // Start a thread that monitors /dev/input for new devices
-  monitor_thread_ = std::thread(
-      [](InputDeviceMonitor* monitor) {
-        int dirfd = open(DEV_INPUT, O_DIRECTORY | O_RDONLY);
-        if (dirfd < 0) {
-          FTL_LOG(ERROR) << "Error opening " << DEV_INPUT;
-          return;
-        }
-        mxio_watch_directory(
-            dirfd,
-            [](int dirfd, const char* fn, void* cookie) {
-              InputDeviceMonitor* monitor =
-                  reinterpret_cast<InputDeviceMonitor*>(cookie);
-              monitor->DeviceAdded(dirfd, fn);
-              return NO_ERROR;
-            },
-            monitor);
-        close(dirfd);
-
-      },
-      this);
-}
-
-// This method is non-blocking and should be called from the caller's thread
-void InputDeviceMonitor::CheckInput(const OnEventCallback& callback,
-                                    const mojo::Size& display_size) {
-  std::lock_guard<std::mutex> lock(devices_lock_);
-
-  if (!devices_.size())
-    return;
-
-  int count = 0;
-  for (InputDevice* device : devices_) {
-    handles_[count] = device->handle_;
-    wsigs_[count] = MX_SIGNAL_SIGNAL0;
-    count++;
-  }
-
-  // Note: Timeout of 0 is actually clamped at 1ms and is the closest to
-  // non-blocking we can get.
-  mx_status_t rc =
-      mx_handle_wait_many(count, handles_, wsigs_, 0, NULL, states_);
-  if (rc == ERR_TIMED_OUT) {
-    return;
-  } else if (rc == NO_ERROR) {
-    // Something has changed.
-    while (--count >= 0) {
-      // FIXME(jpoichet) figure out when device is gone
-      if (states_[count].satisfied & MX_SIGNAL_SIGNAL0) {
-        InputDevice* device = devices_.at(count);
-        device->Read(callback, display_size);
-      }
-    }
-  } else {
-    switch (rc) {
-      case ERR_BAD_STATE:
-        FTL_LOG(ERROR) << "Checking input devices failed: Bad State";
-        break;
-      case ERR_INVALID_ARGS:
-        FTL_LOG(ERROR) << "Checking input devices failed: Invalid Arguments";
-        break;
-      case ERR_ACCESS_DENIED:
-        FTL_LOG(ERROR) << "Checking input devices failed: Access Denied";
-        break;
-      case ERR_BAD_HANDLE:
-        FTL_LOG(ERROR) << "Checking input devices failed: Bad Handle";
-        break;
-      case ERR_HANDLE_CLOSED:
-        FTL_LOG(ERROR) << "Checking input devices failed: Handle Closed";
-        break;
-      case ERR_NO_MEMORY:
-        FTL_LOG(ERROR) << "Checking input devices failed: No Memory";
-        break;
-      default:
-        FTL_LOG(ERROR) << "Checking input devices failed: " << rc;
-    }
-  }
-}
-
-// FIXME(jpoichet) we only read one report at a time though there could be more
-// pending depending on the frequency CheckInput is called.
-void InputDevice::Read(const OnEventCallback& callback,
-                       const mojo::Size& display_size) {
+bool InputDevice::Read(const OnEventCallback& callback) {
   int rc = read(fd_, report_, max_report_len_);
   if (rc < 0) {
-    FTL_LOG(ERROR) << "Failed to read report from " << name_ << " (r=" << rc
-                   << ")";
-    return;
+    // TODO(jpoichet) check whether the device was actually closed or not
+    return false;
   }
-  Parse(callback, display_size);
+  Parse(callback);
+  return true;
 }
 
-void KeyboardInputDevice::Parse(const OnEventCallback& callback,
-                                const mojo::Size& display_size) {
+void KeyboardInputDevice::Parse(const OnEventCallback& callback) {
   int64_t now = InputEventTimestampNow();
   uint8_t keycode;
   hid_kbd_parse_report(report_, &key_state_[current_index_]);
@@ -346,7 +260,7 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->hid_usage = HID_USAGE_KEY_ERROR_UNDEF;
+    ev->key_data->hid_usage = keycode;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
@@ -355,7 +269,6 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
-      ev->key_data->hid_usage = keycode;
       ev->key_data->text = character16;
       ev->key_data->unmodified_text = character16;
     }
@@ -400,7 +313,7 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->hid_usage = HID_USAGE_KEY_ERROR_UNDEF;
+    ev->key_data->hid_usage = keycode;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
@@ -409,7 +322,6 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
-      ev->key_data->hid_usage = keycode;
       ev->key_data->text = character16;
       ev->key_data->unmodified_text = character16;
     }
@@ -443,6 +355,8 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
 }
 
 void MouseInputDevice::SendEvent(const OnEventCallback& callback,
+                                 float rel_x,
+                                 float rel_y,
                                  int64_t timestamp,
                                  mozart::EventType type,
                                  mozart::EventFlags flags) {
@@ -454,10 +368,10 @@ void MouseInputDevice::SendEvent(const OnEventCallback& callback,
   ev->pointer_data = mozart::PointerData::New();
   ev->pointer_data->pointer_id = 0;
   ev->pointer_data->kind = mozart::PointerKind::MOUSE;
-  ev->pointer_data->x = x_;
-  ev->pointer_data->y = y_;
-  ev->pointer_data->screen_x = x_;
-  ev->pointer_data->screen_y = y_;
+  ev->pointer_data->x = rel_x;
+  ev->pointer_data->y = rel_y;
+  ev->pointer_data->screen_x = rel_x;
+  ev->pointer_data->screen_y = rel_y;
   ev->pointer_data->pressure = 0;
   ev->pointer_data->radius_major = 0;
   ev->pointer_data->radius_minor = 0;
@@ -467,65 +381,65 @@ void MouseInputDevice::SendEvent(const OnEventCallback& callback,
   callback(std::move(ev));
 }
 
-void MouseInputDevice::Parse(const OnEventCallback& callback,
-                             const mojo::Size& display_size) {
+void MouseInputDevice::Parse(const OnEventCallback& callback) {
   boot_mouse_report_t* report = reinterpret_cast<boot_mouse_report_t*>(report_);
   uint64_t now = InputEventTimestampNow();
   uint8_t pressed = (report->buttons ^ buttons_) & report->buttons;
   uint8_t released = (report->buttons ^ buttons_) & buttons_;
 
-  x_ += report->rel_x;
-  y_ -= report->rel_y;
-  // Clamp
-  x_ = std::max(0, std::min(display_size.width, x_));
-  y_ = std::max(0, std::min(display_size.height, y_));
-
   if (!pressed && !released) {
-    // Simple move of the mouse
-    SendEvent(callback, now, mozart::EventType::POINTER_MOVE,
-              mozart::EventFlags::NONE);
+    SendEvent(callback, report->rel_x, report->rel_y, now,
+              mozart::EventType::POINTER_MOVE, mozart::EventFlags::NONE);
   } else {
     if (pressed) {
       if (pressed & kMouseLeftButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::LEFT_MOUSE_BUTTON);
       }
       if (pressed & kMouseRightButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::RIGHT_MOUSE_BUTTON);
       }
       if (pressed & kMouseMiddleButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_DOWN,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
       }
     }
     if (released) {
       if (released & kMouseLeftButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_UP,
                   mozart::EventFlags::LEFT_MOUSE_BUTTON);
       }
       if (released & kMouseRightButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_UP,
                   mozart::EventFlags::RIGHT_MOUSE_BUTTON);
       }
       if (released & kMouseMiddleButtonMask) {
-        SendEvent(callback, now, mozart::EventType::POINTER_UP,
+        SendEvent(callback, report->rel_x, report->rel_y, now,
+                  mozart::EventType::POINTER_UP,
                   mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
       }
     }
   }
-
   buttons_ = report->buttons;
 }
 
-// TODO(jpoichet) scale x, y to display size
-void Acer12InputDevice::ParseStylus(const OnEventCallback& callback,
-                                    const mojo::Size& display_size) {
+void Acer12InputDevice::ParseStylus(const OnEventCallback& callback) {
   acer12_stylus_t* report = reinterpret_cast<acer12_stylus_t*>(report_);
 
-  // Don't generic events for out of range or hover with no switches
+  // Don't generate events for out of range or hover with no switches
   if (!report->status || report->status == ACER12_STYLUS_STATUS_INRANGE)
     return;
+
+  float x =
+      static_cast<float>(report->x) / static_cast<float>(ACER12_STYLUS_X_MAX);
+  float y =
+      static_cast<float>(report->y) / static_cast<float>(ACER12_STYLUS_Y_MAX);
 
   mozart::EventPtr ev = mozart::Event::New();
   ev->action = mozart::EventType::POINTER_DOWN;
@@ -535,30 +449,21 @@ void Acer12InputDevice::ParseStylus(const OnEventCallback& callback,
   ev->pointer_data = mozart::PointerData::New();
   ev->pointer_data->pointer_id = report->rpt_id;
   ev->pointer_data->kind = mozart::PointerKind::TOUCH;
-
-  uint32_t x = scale32(report->x, display_size.width, ACER12_STYLUS_X_MAX);
-  uint32_t y = scale32(report->y, display_size.height, ACER12_STYLUS_Y_MAX);
-
-  // |x| and |y| are in the coordinate system of the View.
   ev->pointer_data->x = x;
   ev->pointer_data->y = y;
-  // |screen_x| and |screen_y| are in screen coordinates.
   ev->pointer_data->screen_x = x;
   ev->pointer_data->screen_y = y;
   ev->pointer_data->pressure = report->pressure;
   ev->pointer_data->radius_major = report->pressure >> 4;
   ev->pointer_data->radius_minor = report->pressure >> 4;
   ev->pointer_data->orientation = 0.;
-  // Used for devices that support wheels. Ranges from -1 to 1.
   ev->pointer_data->horizontal_wheel = 0.;
   ev->pointer_data->vertical_wheel = 0.;
 
   callback(std::move(ev));
 }
 
-// TODO(jpoichet) scale x, y to display size
-void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
-                                         const mojo::Size& display_size) {
+void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback) {
   acer12_touch_t* report = reinterpret_cast<acer12_touch_t*>(report_);
 
   int64_t now = InputEventTimestampNow();
@@ -591,22 +496,19 @@ void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
     ev->pointer_data->pointer_id = pointer_id;
     ev->pointer_data->kind = mozart::PointerKind::TOUCH;
 
-    uint32_t x =
-        scale32(report->fingers[c].x, display_size.width, ACER12_X_MAX);
-    uint32_t y =
-        scale32(report->fingers[c].y, display_size.height, ACER12_Y_MAX);
+    float x = static_cast<float>(report->fingers[c].x) /
+              static_cast<float>(ACER12_X_MAX);
+    float y = static_cast<float>(report->fingers[c].y) /
+              static_cast<float>(ACER12_Y_MAX);
 
-    // |x| and |y| are in the coordinate system of the View.
     ev->pointer_data->x = x;
     ev->pointer_data->y = y;
-    // |screen_x| and |screen_y| are in screen coordinates.
     ev->pointer_data->screen_x = x;
     ev->pointer_data->screen_y = y;
     ev->pointer_data->pressure = 0.;
     ev->pointer_data->radius_major = width > height ? width : height;
     ev->pointer_data->radius_minor = width > height ? height : width;
     ev->pointer_data->orientation = 0.;
-    // Used for devices that support wheels. Ranges from -1 to 1.
     ev->pointer_data->horizontal_wheel = 0.;
     ev->pointer_data->vertical_wheel = 0.;
     pointers_.push_back(*ev->pointer_data);
@@ -625,30 +527,156 @@ void Acer12InputDevice::ParseTouchscreen(const OnEventCallback& callback,
   }
 }
 
-void Acer12InputDevice::Parse(const OnEventCallback& callback,
-                              const mojo::Size& display_size) {
+void Acer12InputDevice::Parse(const OnEventCallback& callback) {
   if (*(uint8_t*)report_ == ACER12_RPT_ID_TOUCH) {
-    ParseTouchscreen(callback, display_size);
+    ParseTouchscreen(callback);
   } else if (*(uint8_t*)report_ == ACER12_RPT_ID_STYLUS) {
-    ParseStylus(callback, display_size);
+    ParseStylus(callback);
   }
 }
 
-void InputDeviceMonitor::DeviceAdded(int dirfd, const char* fn) {
-  FTL_LOG(INFO) << "Input device " << fn << " added";
+//
+// InputReader
+//
+
+InputReader::InputReader() {}
+InputReader::~InputReader() {
+  if (input_directory_key_) {
+    main_loop_->RemoveHandler(input_directory_key_);
+  }
+  if (input_directory_fd_) {
+    close(input_directory_fd_);
+  }
+  if (input_directory_handle_) {
+    close(input_directory_handle_);
+  }
+}
+
+void InputReader::Start(const OnEventCallback& callback) {
+  main_loop_ = mtl::MessageLoop::GetCurrent();
+  callback_ = callback;
+
+  // Check content of /dev/input and add handle to monitor changes
+  main_loop_->task_runner()->PostTask([this] {
+    input_directory_fd_ = open(DEV_INPUT, O_DIRECTORY | O_RDONLY);
+    if (input_directory_fd_ < 0) {
+      FTL_LOG(ERROR) << "Error opening " << DEV_INPUT;
+      return;
+    }
+
+    DIR* dir;
+    int fd;
+    if ((fd = openat(input_directory_fd_, ".", O_RDONLY | O_DIRECTORY)) < 0) {
+      FTL_LOG(ERROR) << "Error opening directory " << DEV_INPUT;
+      return;
+    }
+    if ((dir = fdopendir(fd)) == NULL) {
+      FTL_LOG(ERROR) << "Failed to open directory " << DEV_INPUT;
+      return;
+    }
+
+    struct dirent* de;
+    while ((de = readdir(dir)) != NULL) {
+      if (de->d_name[0] == '.') {
+        if (de->d_name[1] == 0) {
+          continue;
+        }
+        if ((de->d_name[1] == '.') && (de->d_name[2] == 0)) {
+          continue;
+        }
+      }
+      InputDevice* device = OpenDevice(input_directory_fd_, de->d_name);
+      if (device) {
+        DeviceAdded(device);
+      }
+    }
+    closedir(dir);
+
+    mx_handle_t handle;
+    ssize_t r = ioctl_device_watch_dir(input_directory_fd_, &handle);
+    if (r < 0) {
+      return;
+    }
+    input_directory_handle_ = static_cast<MojoHandle>(handle);
+
+    MojoHandleSignals signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    input_directory_key_ = main_loop_->AddHandler(
+        this, input_directory_handle_, signals, ftl::TimeDelta::Max());
+  });
+}
+
+InputDevice* InputReader::OpenDevice(int dirfd, const char* fn) {
   int fd = openat(dirfd, fn, O_RDONLY);
   if (fd < 0) {
     FTL_LOG(ERROR) << "Failed to open device " << fn;
-    return;
+    return nullptr;
   }
 
-  InputDevice* device = InputDevice::BuildInputDevice(fd, fn);
-  if (!device)
-    return;
+  return InputDevice::BuildInputDevice(fd, fn);
+}
 
-  devices_lock_.lock();
-  devices_.push_back(device);
-  devices_lock_.unlock();
+InputDevice* InputReader::GetDevice(MojoHandle handle) {
+  if (!devices_.count(handle)) {
+    return nullptr;
+  }
+  return devices_.at(handle).first;
+}
+
+void InputReader::DeviceRemoved(InputDevice* device) {
+  if (!device) {
+    return;
+  }
+  FTL_LOG(INFO) << "Input device " << device->name_ << " removed";
+  MojoHandle handle = device->event_handle_.get().value();
+  main_loop_->RemoveHandler(devices_.at(handle).second);
+  devices_.erase(handle);
+  delete device;
+}
+
+void InputReader::DeviceAdded(InputDevice* device) {
+  FTL_LOG(INFO) << "Input device " << device->name_ << " added";
+  MojoHandleSignals signals = MOJO_HANDLE_SIGNAL_SIGNAL0;
+  mtl::MessageLoop::HandlerKey key =
+      main_loop_->AddHandler(this, device->event_handle_.get().value(), signals,
+                             ftl::TimeDelta::Max());
+  devices_[device->event_handle_.get().value()] = std::make_pair(device, key);
+}
+
+void InputReader::OnDirectoryHandleReady(MojoHandle handle) {
+  mx_status_t status;
+  uint32_t sz = MXIO_MAX_FILENAME;
+  char name[MXIO_MAX_FILENAME + 1];
+  if ((status = mx_msgpipe_read(input_directory_handle_, name, &sz, NULL, NULL,
+                                0)) < 0) {
+    FTL_LOG(ERROR) << "Failed to read from " << DEV_INPUT;
+    return;
+  }
+  name[sz] = 0;
+  InputDevice* device = OpenDevice(input_directory_fd_, name);
+  if (device) {
+    DeviceAdded(device);
+  }
+}
+void InputReader::OnDeviceHandleReady(MojoHandle handle) {
+  InputDevice* device = devices_[handle].first;
+  bool ret = device->Read(
+      [this](mozart::EventPtr event) { callback_(std::move(event)); });
+  if (!ret) {
+    DeviceRemoved(device);
+  }
+}
+
+void InputReader::OnHandleReady(MojoHandle handle) {
+  if (input_directory_handle_ == handle) {
+    OnDirectoryHandleReady(handle);
+  } else if (devices_.count(handle)) {
+    OnDeviceHandleReady(handle);
+    return;
+  }
+}
+
+void InputReader::OnHandleError(MojoHandle handle, MojoResult result) {
+  DeviceRemoved(GetDevice(handle));
 }
 
 }  // namespace launcher
