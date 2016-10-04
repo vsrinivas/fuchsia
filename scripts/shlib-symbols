@@ -60,7 +60,7 @@ massage() {
     # The numbers are printed in hex, but without a leading "0x" indicator.
     addr="0x$addr"
     if [ -z "$size" ]; then
-      size=0
+      size="0x0"
     else
       size="0x$size"
     fi
@@ -97,7 +97,7 @@ massage() {
 
     if $zero_function_size; then
       case $type in
-      FUNCTION|WEAK_FUNCTION) size=0 ;;
+      FUNCTION|WEAK_FUNCTION) size="0x0" ;;
       esac
     fi
 

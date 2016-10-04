@@ -369,9 +369,19 @@ CCACHE ?=
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 CC := $(CCACHE) $(TOOLCHAIN_PREFIX)clang
 AR := $(TOOLCHAIN_PREFIX)llvm-ar
+OBJDUMP := $(TOOLCHAIN_PREFIX)llvm-objdump
+READELF := $(TOOLCHAIN_PREFIX)llvm-readobj -elf-output-style=GNU
+CPPFILT := $(TOOLCHAIN_PREFIX)llvm-cxxfilt
+SIZE := $(TOOLCHAIN_PREFIX)llvm-size
+NM := $(TOOLCHAIN_PREFIX)llvm-nm
 else
 CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
+OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
+READELF := $(TOOLCHAIN_PREFIX)readelf
+CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
+SIZE := $(TOOLCHAIN_PREFIX)size
+NM := $(TOOLCHAIN_PREFIX)nm
 endif
 LD := $(TOOLCHAIN_PREFIX)ld
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
@@ -382,12 +392,7 @@ USER_LD := $(LD).gold
 else
 USER_LD := $(LD)
 endif
-OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
-READELF := $(TOOLCHAIN_PREFIX)readelf
-CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
-SIZE := $(TOOLCHAIN_PREFIX)size
-NM := $(TOOLCHAIN_PREFIX)nm
 STRIP := $(TOOLCHAIN_PREFIX)strip
 
 # try to have the compiler output colorized error messages if available
