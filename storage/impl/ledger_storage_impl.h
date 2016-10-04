@@ -20,7 +20,8 @@ class LedgerStorageImpl : public LedgerStorage {
   // Creates a new LedgerStorageImpl. |task_runner| executes long-running
   // storage tasks. |base_storage_dir| is the base directory on the local
   // filesystem used to store the ledger data.
-  LedgerStorageImpl(ftl::TaskRunner* task_runner, std::string base_storage_dir);
+  LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                    std::string base_storage_dir);
   ~LedgerStorageImpl() override;
 
   // LedgerStorage:
@@ -28,7 +29,7 @@ class LedgerStorageImpl : public LedgerStorage {
       std::string identity) override;
 
  private:
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string base_storage_dir_;
 };
 

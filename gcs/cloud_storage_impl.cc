@@ -75,10 +75,10 @@ void OnFileWritten(const std::string& destination,
 
 }  // namespace
 
-CloudStorageImpl::CloudStorageImpl(ftl::TaskRunner* task_runner,
+CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                    mojo::NetworkServicePtr network_service,
                                    const std::string& bucket_name)
-    : task_runner_(task_runner),
+    : task_runner_(std::move(task_runner)),
       network_service_(std::move(network_service)),
       bucket_name_(bucket_name) {}
 

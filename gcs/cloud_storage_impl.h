@@ -16,7 +16,7 @@ namespace gcs {
 
 class CloudStorageImpl : public CloudStorage {
  public:
-  CloudStorageImpl(ftl::TaskRunner* task_runner,
+  CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    mojo::NetworkServicePtr network_service,
                    const std::string& bucket_name);
   ~CloudStorageImpl() override;
@@ -45,7 +45,7 @@ class CloudStorageImpl : public CloudStorage {
                                   Status status,
                                   mojo::URLResponsePtr response);
 
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   mojo::NetworkServicePtr network_service_;
   std::string bucket_name_;
   std::vector<mojo::URLLoaderPtr> loaders_;

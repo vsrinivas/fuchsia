@@ -12,9 +12,10 @@
 
 namespace storage {
 
-LedgerStorageImpl::LedgerStorageImpl(ftl::TaskRunner* task_runner,
+LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                      std::string base_storage_dir)
-    : task_runner_(task_runner), base_storage_dir_(base_storage_dir) {}
+    : task_runner_(std::move(task_runner)),
+      base_storage_dir_(base_storage_dir) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 

@@ -15,7 +15,8 @@ namespace storage {
 
 class ApplicationStorageImpl : public ApplicationStorage {
  public:
-  ApplicationStorageImpl(ftl::TaskRunner* task_runner, std::string storage_dir);
+  ApplicationStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                         std::string storage_dir);
   ~ApplicationStorageImpl() override;
 
   std::unique_ptr<PageStorage> CreatePageStorage(
@@ -30,7 +31,7 @@ class ApplicationStorageImpl : public ApplicationStorage {
  private:
   std::string GetPathFor(const PageId& page_id);
 
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string storage_dir_;
 };
 

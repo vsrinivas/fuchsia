@@ -12,9 +12,10 @@
 
 namespace storage {
 
-ApplicationStorageImpl::ApplicationStorageImpl(ftl::TaskRunner* task_runner,
-                                               std::string storage_dir)
-    : task_runner_(task_runner), storage_dir_(storage_dir) {}
+ApplicationStorageImpl::ApplicationStorageImpl(
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    std::string storage_dir)
+    : task_runner_(std::move(task_runner)), storage_dir_(storage_dir) {}
 
 ApplicationStorageImpl::~ApplicationStorageImpl() {}
 
