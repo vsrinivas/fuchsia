@@ -471,6 +471,9 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
     HardwareStatusPage* status_page =
         inflight_command_sequences_.front().GetContext()->hardware_status_page(id());
 
+    constexpr uint32_t kTimeOutMs = 100;
+    auto start = std::chrono::high_resolution_clock::now();
+
     while (!inflight_command_sequences_.empty()) {
         uint32_t last_completed_sequence = status_page->read_sequence_number();
         DLOG("WaitRendering loop last_completed_sequence: 0x%x", last_completed_sequence);
@@ -488,13 +491,21 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
             sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
 
             inflight_command_sequences_.pop();
+
+            start = std::chrono::high_resolution_clock::now();
         }
 
         if (last_completed_sequence >= sequence_number)
             return true; // were done here
 
-        // wait cause were not done here
-        magma::msleep(1);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        if (elapsed.count() > kTimeOutMs) {
+            DLOG("WaitRendering timeout");
+            return false;
+        }
+
+        std::this_thread::yield();
     }
 
     DASSERT(false); // the asserts at the top should stop us from getting here
