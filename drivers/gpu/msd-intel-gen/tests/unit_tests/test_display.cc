@@ -14,9 +14,9 @@ public:
 
     ~TestDisplay() { MsdIntelDriver::Destroy(driver_); }
 
-    static void callback(uint32_t result, void* data)
+    static void callback(int32_t result, void* data)
     {
-        EXPECT_EQ(result, 0u);
+        EXPECT_EQ(result, 0);
         auto test = reinterpret_cast<TestDisplay*>(data);
         test->num_callback_++;
     }
