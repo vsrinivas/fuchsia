@@ -264,21 +264,24 @@ int test_spinning_cube(uint32_t device_handle)
     auto t0 = std::chrono::high_resolution_clock::now();
     uint32_t num_frames = 60;
     uint32_t frame_count = 0;
-    uint64_t total_microseconds = 0;
-    static const float microseconds_per_second =
-        std::chrono::microseconds(std::chrono::seconds(1)).count();
+    uint64_t total_milliseconds = 0;
+    static const float milliseconds_per_second =
+        std::chrono::milliseconds(std::chrono::seconds(1)).count();
     while (true) {
-        if (!app.Draw(16)) {
-            break;
-        }
+
         auto t1 = std::chrono::high_resolution_clock::now();
-        auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-        total_microseconds += microseconds;
-        if (++frame_count % num_frames == 0) {
+        std::chrono::duration<double, std::milli> elapsed = t1 - t0;
+        double milliseconds = elapsed.count();
+        total_milliseconds += milliseconds;
+        if (frame_count++ > num_frames) {
             printf("Framerate average for last %u frames: %f frames per second\n", num_frames,
-                   (num_frames) / (total_microseconds / microseconds_per_second));
+                   (num_frames) / (total_milliseconds / milliseconds_per_second));
             frame_count = 0;
-            total_microseconds = 0;
+            total_milliseconds = 0;
+        }
+
+        if (!app.Draw(milliseconds)) {
+            break;
         }
 
         t0 = t1;
