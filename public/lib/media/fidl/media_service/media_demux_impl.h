@@ -89,7 +89,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
   // Reports a problem via status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   Graph graph_;
   PartRef demux_part_;
   std::shared_ptr<Demux> demux_;

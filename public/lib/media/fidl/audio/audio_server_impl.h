@@ -70,7 +70,7 @@ class AudioServerImpl : public AudioServer {
   // A reference to our message loop's task runner.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   // State for dealing with outputs.
   AudioOutputManager output_manager_;

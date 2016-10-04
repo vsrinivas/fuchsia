@@ -130,7 +130,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   std::vector<DemuxStream*> streams_;
   Incident init_complete_;
   Result result_;
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   // After Init, only the ffmpeg thread accesses these.
   AvFormatContextPtr format_context_;

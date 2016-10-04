@@ -78,7 +78,7 @@ class MojoPacketProducer : private MediaPacketProducerBase,
   Binding<MediaPacketProducer> binding_;
 
   DemandCallback demand_callback_;
-  ftl::TaskRunner* task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 };
 
 }  // namespace media

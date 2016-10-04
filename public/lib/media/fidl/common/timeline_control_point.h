@@ -90,7 +90,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   PrimeRequestedCallback prime_requested_callback_;
 
   ftl::Mutex mutex_;
-  ftl::TaskRunner* task_runner_ FTL_GUARDED_BY(mutex_);
+  ftl::RefPtr<ftl::TaskRunner> task_runner_ FTL_GUARDED_BY(mutex_);
   TimelineFunction current_timeline_function_ FTL_GUARDED_BY(mutex_);
   TimelineFunction pending_timeline_function_ FTL_GUARDED_BY(mutex_);
   SetTimelineTransformCallback set_timeline_transform_callback_
