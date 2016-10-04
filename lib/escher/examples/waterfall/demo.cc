@@ -12,7 +12,7 @@
 #define VK_CHECK_RESULT(XXX) FTL_CHECK(XXX.result == vk::Result::eSuccess)
 
 // Helper for Demo::InitGlfw().
-static void DemoGlfwErrorCallback(int err_code, const char *err_desc) {
+static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
   std::cerr << "GLFW ERROR: " << err_code << " " << err_desc << std::endl;
 }
 
@@ -22,18 +22,18 @@ void Demo::InitGlfw() {
 }
 
 // Helper for Demo::CreateInstance().
-static std::vector<vk::LayerProperties>
-GetRequiredInstanceLayers(std::set<std::string> required_layer_names) {
+static std::vector<vk::LayerProperties> GetRequiredInstanceLayers(
+    std::set<std::string> required_layer_names) {
   // Get list of all available layers.
   auto result = vk::enumerateInstanceLayerProperties();
   VK_CHECK_RESULT(result);
-  std::vector<vk::LayerProperties> &props = result.value;
+  std::vector<vk::LayerProperties>& props = result.value;
 
   // Keep only the required layers.  Panic if any are not available.
   std::vector<vk::LayerProperties> required_layers;
-  for (auto &name : required_layer_names) {
+  for (auto& name : required_layer_names) {
     auto found = std::find_if(props.begin(), props.end(),
-                              [&name](vk::LayerProperties &layer) {
+                              [&name](vk::LayerProperties& layer) {
                                 return !strcmp(layer.layerName, name.c_str());
                               });
     FTL_CHECK(found != props.end());
@@ -43,19 +43,19 @@ GetRequiredInstanceLayers(std::set<std::string> required_layer_names) {
 }
 
 // Helper for Demo::CreateInstance().
-static std::vector<vk::ExtensionProperties>
-GetRequiredInstanceExtensions(std::set<std::string> required_extension_names) {
+static std::vector<vk::ExtensionProperties> GetRequiredInstanceExtensions(
+    std::set<std::string> required_extension_names) {
   // Get list of all available extensions.
   auto result = vk::enumerateInstanceExtensionProperties();
   VK_CHECK_RESULT(result);
-  std::vector<vk::ExtensionProperties> &props = result.value;
+  std::vector<vk::ExtensionProperties>& props = result.value;
 
   // Keep only the required extensions.  Panic if any are not available.
   std::vector<vk::ExtensionProperties> required_extensions;
-  for (auto &name : required_extension_names) {
+  for (auto& name : required_extension_names) {
     auto found =
         std::find_if(props.begin(), props.end(),
-                     [&name](vk::ExtensionProperties &extension) {
+                     [&name](vk::ExtensionProperties& extension) {
                        return !strcmp(extension.extensionName, name.c_str());
                      });
     FTL_CHECK(found != props.end());
@@ -78,7 +78,7 @@ void Demo::CreateInstance(InstanceParams params) {
 
     // Get names of extensions required by GLFW.
     uint32_t extensions_count;
-    const char **extensions =
+    const char** extensions =
         glfwGetRequiredInstanceExtensions(&extensions_count);
     for (uint32_t i = 0; i < extensions_count; ++i) {
       params.extension_names.emplace_back(std::string(extensions[i]));
@@ -96,12 +96,12 @@ void Demo::CreateInstance(InstanceParams params) {
   // Create Vulkan instance.
   {
     // Gather names of layers/extensions to populate InstanceCreateInfo.
-    std::vector<const char *> layer_names;
-    for (auto &layer : instance_layers_) {
+    std::vector<const char*> layer_names;
+    for (auto& layer : instance_layers_) {
       layer_names.push_back(layer.layerName);
     }
-    std::vector<const char *> extension_names;
-    for (auto &extension : instance_extensions_) {
+    std::vector<const char*> extension_names;
+    for (auto& extension : instance_extensions_) {
       extension_names.push_back(extension.extensionName);
     }
 
@@ -137,7 +137,7 @@ void Demo::CreateInstance(InstanceParams params) {
   }
 }
 
-void Demo::CreateWindowAndSurface(const WindowParams &params) {
+void Demo::CreateWindowAndSurface(const WindowParams& params) {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   window_ = glfwCreateWindow(params.width, params.height,
                              params.window_name.c_str(), NULL, NULL);
@@ -153,16 +153,16 @@ void Demo::CreateDeviceAndQueue() {
   // Obtain list of physical devices.
   auto result = instance_.enumeratePhysicalDevices();
   VK_CHECK_RESULT(result);
-  std::vector<vk::PhysicalDevice> &devices = result.value;
+  std::vector<vk::PhysicalDevice>& devices = result.value;
 
   // Iterate over physical devices until we find one that meets our needs.
-  for (auto &physical_device : devices) {
+  for (auto& physical_device : devices) {
     auto result = physical_device.enumerateDeviceExtensionProperties();
     VK_CHECK_RESULT(result);
-    std::vector<vk::ExtensionProperties> &device_props = result.value;
+    std::vector<vk::ExtensionProperties>& device_props = result.value;
     auto found_device =
         std::find_if(device_props.begin(), device_props.end(),
-                     [](vk::ExtensionProperties &extension) {
+                     [](vk::ExtensionProperties& extension) {
                        return !strcmp(extension.extensionName,
                                       VK_KHR_SWAPCHAIN_EXTENSION_NAME);
                      });
@@ -197,7 +197,7 @@ void Demo::CreateDeviceAndQueue() {
           queue_info.pQueuePriorities = queue_priorities;
 
           // TODO: need other device extensions?
-          const char *swapchain_extension_name = "VK_KHR_swapchain";
+          const char* swapchain_extension_name = "VK_KHR_swapchain";
 
           vk::DeviceCreateInfo device_info;
           device_info.queueCreateInfoCount = 1;
@@ -222,7 +222,10 @@ void Demo::CreateDeviceAndQueue() {
   FTL_CHECK(false);
 }
 
-void Demo::CreateSwapchain(const WindowParams &window_params) {
+void Demo::CreateSwapchain(const WindowParams& window_params) {
+  FTL_CHECK(!swapchain_.swapchain);
+  FTL_CHECK(swapchain_.images.empty());
+  FTL_CHECK(swapchain_.image_views.empty());
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -249,7 +252,7 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
   vk::PresentModeKHR swapchain_present_mode = vk::PresentModeKHR::eFifo;
-  for (auto &mode : present_modes) {
+  for (auto& mode : present_modes) {
     if (mode == vk::PresentModeKHR::eMailbox) {
       // Best choice: lowest-latency non-tearing mode.
       swapchain_present_mode = vk::PresentModeKHR::eMailbox;
@@ -263,7 +266,7 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
 
   // Determine number of images in the swapchain.
   swapchain_image_count_ = window_params.desired_swapchain_image_count;
-  if (surface_caps.maxImageCount > 0 && // 0 means "no limit"
+  if (surface_caps.maxImageCount > 0 &&  // 0 means "no limit"
       surface_caps.maxImageCount > swapchain_image_count_) {
     swapchain_image_count_ = surface_caps.maxImageCount;
   }
@@ -286,6 +289,7 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
   vk::SwapchainKHR old_swapchain = nullptr;
 
   // Create the swapchain.
+  vk::SwapchainKHR swapchain;
   {
     vk::SwapchainCreateInfoKHR info;
     info.surface = surface_;
@@ -293,7 +297,7 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
     info.imageFormat = surface_formats[0].format;
     info.imageColorSpace = surface_formats[0].colorSpace;
     info.imageExtent = swapchain_extent;
-    info.imageArrayLayers = 1; // TODO: what is this?
+    info.imageArrayLayers = 1;  // TODO: what is this?
     info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
     info.queueFamilyIndexCount = 1;
     info.pQueueFamilyIndices = &queue_family_index_;
@@ -304,7 +308,7 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
 
     auto result = device_.createSwapchainKHR(info);
     VK_CHECK_RESULT(result);
-    swapchain_ = result.value;
+    swapchain = result.value;
   }
 
   if (old_swapchain) {
@@ -315,13 +319,13 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
 
   // Obtain swapchain images and buffers.
   {
-    auto result = device_.getSwapchainImagesKHR(swapchain_);
+    auto result = device_.getSwapchainImagesKHR(swapchain);
     VK_CHECK_RESULT(result);
-    auto &swapchain_images = result.value;
 
-    swapchain_entries_.clear();
-    swapchain_entries_.reserve(swapchain_images.size());
-    for (auto &im : swapchain_images) {
+    std::vector<vk::Image> images(std::move(result.value));
+    std::vector<vk::ImageView> image_views;
+    image_views.reserve(images.size());
+    for (auto& im : images) {
       vk::ImageSubresourceRange range;
       range.aspectMask = vk::ImageAspectFlagBits::eColor;
       range.levelCount = 1;
@@ -336,25 +340,29 @@ void Demo::CreateSwapchain(const WindowParams &window_params) {
       auto result = device_.createImageView(info);
       VK_CHECK_RESULT(result);
 
-      SwapchainEntry entry;
-      entry.image = im;
-      entry.image_view = result.value;
-
-      swapchain_entries_.push_back(entry);
+      image_views.push_back(result.value);
     }
+    swapchain_ = escher::VulkanSwapchain(swapchain, images, image_views,
+                                         swapchain_extent.width,
+                                         swapchain_extent.height);
   }
 }
 
 void Demo::DestroySwapchain() {
-  for (auto &entry : swapchain_entries_) {
-    device_.destroyImageView(entry.image_view);
+  for (auto& iview : swapchain_.image_views) {
+    device_.destroyImageView(iview);
   }
-  swapchain_entries_.clear();
+  swapchain_.images.clear();
+  swapchain_.image_views.clear();
 
-  device_.destroySwapchainKHR(swapchain_);
+  FTL_CHECK(swapchain_.swapchain);
+  device_.destroySwapchainKHR(swapchain_.swapchain);
+  swapchain_.swapchain = nullptr;
 }
 
-void Demo::DestroyDevice() { device_.destroy(); }
+void Demo::DestroyDevice() {
+  device_.destroy();
+}
 
 void Demo::DestroyInstance() {
   // Destroy the debug callback.  We use the C API here because we need to
@@ -374,10 +382,17 @@ void Demo::ShutdownGlfw() {
 
 VkBool32 Demo::HandleDebugReport(VkDebugReportFlagsEXT flags,
                                  VkDebugReportObjectTypeEXT objectType,
-                                 uint64_t object, size_t location,
-                                 int32_t messageCode, const char *pLayerPrefix,
-                                 const char *pMessage) {
+                                 uint64_t object,
+                                 size_t location,
+                                 int32_t messageCode,
+                                 const char* pLayerPrefix,
+                                 const char* pMessage) {
   std::cerr << "Vulkan Error: " << pMessage << " (from layer: " << pLayerPrefix
             << ")" << std::endl;
   return true;
+}
+
+escher::VulkanContext Demo::GetVulkanContext() {
+  return escher::VulkanContext(instance_, physical_device_, device_, queue_,
+                               queue_family_index_);
 }

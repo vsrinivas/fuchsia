@@ -2,12 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//lib/escher/vulkan.gni")
+
 if (is_linux) {
-  executable("waterfall-vulkan") {
+  executable("waterfall") {
+    defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
     sources = [
-      "waterfall_main.cc",
       "demo.cc",
+      #"scenes/app_test_scene.cc",
+      #"scenes/shadow_test_scene.cc",
       "vulkan_proc_addrs.cc",
+      "waterfall_main.cc",
     ]
     deps = [
       "//lib/escher",
@@ -15,7 +20,7 @@ if (is_linux) {
       "third_party:glfw",
     ]
     libs = [
-      "glslang",
+      #"glslang",
       #"OGLCompiler",
       #"OSDependent",
       #"SPIRV",
@@ -29,50 +34,15 @@ if (is_linux) {
       "vulkan",
     ]
     lib_dirs = [
-      "$VULKAN_SDK/lib",
-      "$VULKAN_SDK/lib/glslang",
+      "$vulkan_sdk/lib",
+      "$vulkan_sdk/lib/glslang",
     ]
     include_dirs = [
       "//lib",
-      "$VULKAN_SDK/include",
-      "$VULKAN_SDK/../source/glslang/glslang/Public",
-    ]
-  }
-}
-
-executable("waterfall") {
-  sources = [
-    "glfw_main.cc",
-    "scenes/app_test_scene.cc",
-    "scenes/material_stage.cc",
-  ]
-  include_dirs = [
-    "app",
-    "third_party/glfw/include",
-    "third_party/glfw/deps",
-    "//lib/escher",
-    "//lib",
-    "//third_party/glm",
-  ]
-  deps = [
-    "//lib/escher",
-    "third_party:glfw",
-  ]
-
-  if (is_linux)  {
-    libs = [
-      "GL",
-      "dl",
-      "X11",
-      "Xrandr",
-      "pthread",
-      "Xinerama",
-      "Xcursor",
-    ]
-    lib_dirs = [
-      "/usr/lib",
-      "/usr/X11R6/lib",
-      "/usr/lib/nvidia-367",
+      "//lib/escher",
+      "$vulkan_sdk/include",
+      "$vulkan_sdk/../source/glslang/glslang/Public",
+      "third_party/glfw/include",
     ]
   }
 }

@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "escher/geometry/types.h"
-#include "escher/gl/gles2/bindings.h"
 
 namespace escher {
 
@@ -25,7 +24,7 @@ struct Tessellation {
   std::vector<position_type> positions;
   std::vector<normal_type> normals;
   std::vector<uv_type> uvs;
-  std::vector<GLushort> indices;
+  std::vector<uint16_t> indices;
 
   // Perform basic consistency checks.
   void SanityCheck() const;

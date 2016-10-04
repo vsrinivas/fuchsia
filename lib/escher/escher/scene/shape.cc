@@ -12,9 +12,7 @@ Shape::Shape(Type type) : type_(type) {}
 
 Shape::~Shape() {}
 
-Shape Shape::CreateRect(const vec2& position,
-                        const vec2& size,
-                        float z) {
+Shape Shape::CreateRect(const vec2& position, const vec2& size, float z) {
   Shape shape(Type::kRect);
   shape.position_ = position;
   shape.size_ = size;
@@ -30,8 +28,9 @@ Shape Shape::CreateCircle(const vec2& center, float radius, float z) {
   return shape;
 }
 
-Shape Shape::CreateMesh(
-    const Tessellation& tessellation, vec2 position, float z) {
+Shape Shape::CreateMesh(const Tessellation& tessellation,
+                        vec2 position,
+                        float z) {
   return CreateMesh(ftl::MakeRefCounted<Mesh>(tessellation), position, z);
 }
 

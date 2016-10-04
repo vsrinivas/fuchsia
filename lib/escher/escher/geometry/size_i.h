@@ -20,9 +20,7 @@ class SizeI {
   int width() const { return width_; }
   int height() const { return height_; }
 
-  float aspect_ratio() const {
-    return float(width_) / height_;
-  }
+  float aspect_ratio() const { return float(width_) / height_; }
 
   int area() const { return width_ * height_; }
 

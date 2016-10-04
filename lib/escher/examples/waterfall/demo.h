@@ -4,14 +4,17 @@
 
 #pragma once
 
-#define VULKAN_HPP_NO_EXCEPTIONS
-#include <GLFW/glfw3.h>
+#include <cstdint>
 #include <vulkan/vulkan.hpp>
+#include <GLFW/glfw3.h>
+
+#include "escher/vk/vulkan_context.h"
+#include "escher/vk/vulkan_swapchain.h"
 
 #include "vulkan_proc_addrs.h"
 
 class Demo {
-public:
+ public:
   struct WindowParams {
     int width = 1024;
     int height = 1024;
@@ -22,11 +25,6 @@ public:
   struct InstanceParams {
     std::vector<std::string> layer_names{"VK_LAYER_LUNARG_standard_validation"};
     std::vector<std::string> extension_names;
-  };
-
-  struct SwapchainEntry {
-    vk::Image image;
-    vk::ImageView image_view;
   };
 
   Demo(InstanceParams instance_params, WindowParams window_params) {
@@ -44,25 +42,27 @@ public:
     ShutdownGlfw();
   }
 
-  const std::vector<vk::LayerProperties> &GetInstanceLayers() const {
+  const std::vector<vk::LayerProperties>& GetInstanceLayers() const {
     return instance_layers_;
   }
-  const std::vector<vk::ExtensionProperties> &GetInstanceExtensions() const {
+  const std::vector<vk::ExtensionProperties>& GetInstanceExtensions() const {
     return instance_extensions_;
   }
-  GLFWwindow *GetWindow() const { return window_; }
+  GLFWwindow* GetWindow() const { return window_; }
 
-private:
+  escher::VulkanContext GetVulkanContext();
+  escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
+
+ private:
   vk::Instance instance_;
-  GLFWwindow *window_;
+  GLFWwindow* window_;
   vk::SurfaceKHR surface_;
   // TODO: may not need to retain physical_device_
   vk::PhysicalDevice physical_device_;
   vk::Device device_;
   vk::Queue queue_;
-  uint32_t queue_family_index_ = 0xFFFFFFFF; // initialize to invalid index.
-  vk::SwapchainKHR swapchain_;
-  std::vector<SwapchainEntry> swapchain_entries_;
+  uint32_t queue_family_index_ = UINT32_MAX;  // initialize to invalid index.
+  escher::VulkanSwapchain swapchain_;
 
   VkDebugReportCallbackEXT debug_report_callback_;
 
@@ -73,9 +73,9 @@ private:
 
   void InitGlfw();
   void CreateInstance(InstanceParams params);
-  void CreateWindowAndSurface(const WindowParams &window_params);
+  void CreateWindowAndSurface(const WindowParams& window_params);
   void CreateDeviceAndQueue();
-  void CreateSwapchain(const WindowParams &window_params);
+  void CreateSwapchain(const WindowParams& window_params);
 
   void DestroySwapchain();
   void DestroyDevice();
@@ -85,20 +85,24 @@ private:
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
                                       VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object, size_t location,
+                                      uint64_t object,
+                                      size_t location,
                                       int32_t messageCode,
-                                      const char *pLayerPrefix,
-                                      const char *pMessage, void *pUserData) {
-    return reinterpret_cast<Demo *>(pUserData)->HandleDebugReport(
+                                      const char* pLayerPrefix,
+                                      const char* pMessage,
+                                      void* pUserData) {
+    return reinterpret_cast<Demo*>(pUserData)->HandleDebugReport(
         flags, objectType, object, location, messageCode, pLayerPrefix,
         pMessage);
   }
 
   VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
                              VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object, size_t location,
-                             int32_t messageCode, const char *pLayerPrefix,
-                             const char *pMessage);
+                             uint64_t object,
+                             size_t location,
+                             int32_t messageCode,
+                             const char* pLayerPrefix,
+                             const char* pMessage);
 
   std::vector<vk::LayerProperties> instance_layers_;
   std::vector<vk::ExtensionProperties> instance_extensions_;

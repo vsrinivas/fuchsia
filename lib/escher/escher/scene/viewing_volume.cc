@@ -9,15 +9,12 @@
 
 namespace escher {
 
-ViewingVolume::ViewingVolume() {
-}
+ViewingVolume::ViewingVolume() {}
 
 ViewingVolume::ViewingVolume(float width, float height, float near, float far)
-  : width_(width), height_(height), near_(near), far_(far) {
-}
+    : width_(width), height_(height), near_(near), far_(far) {}
 
-ViewingVolume::~ViewingVolume() {
-}
+ViewingVolume::~ViewingVolume() {}
 
 ViewingVolume ViewingVolume::CopyWith(float width, float height) {
   return ViewingVolume(width, height, near_, far_);

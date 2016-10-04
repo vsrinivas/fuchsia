@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/scene/ambient_light.h"
+#include "escher/shape/mesh.h"
 
 namespace escher {
 
-AmbientLight::AmbientLight() {}
+Mesh::Mesh(const Tessellation& tessellation) {
+  FTL_CHECK(false);  // not implemented
+}
 
-AmbientLight::~AmbientLight() {}
+Mesh::~Mesh() {
+  FTL_CHECK(false);  // not implemented
+}
 
 }  // namespace escher

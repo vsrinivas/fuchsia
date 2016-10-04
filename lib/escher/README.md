@@ -16,7 +16,5 @@ Escher requires Vulkan, and currently only builds on Linux.  In order to build E
   * set the VULKAN_SDK, VK_LAYER_PATH, and LD_LIBRARY_PATH environment variables
   * specify that you want to build only the Escher module:
     * ```cd $FUCHSIA_DIR; ./packages/gn/gen.py -m escher -r```
-  * set VULKAN_SDK in your gn args, to the same path as the env var.
-    * ```./packages/gn/gn.py args out/release-x86-64/```
   * BUILD!!
-    * ```buildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall-vulkanbuildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall-vulkan```
+    * ```buildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall```

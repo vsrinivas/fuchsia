@@ -20,14 +20,10 @@ constexpr float kFabSize = 56.0f;
 AppTestScene::AppTestScene() {
   app_bar_material_.set_color(
       MakeConstantBinding(vec4(0.0f, 0.0f, 1.0f, 1.0f)));
-  canvas_material_.set_color(
-      MakeConstantBinding(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
-  card_material_.set_color(
-      MakeConstantBinding(vec4(1.0f, 1.0f, 0.8f, 1.0f)));
-  fab_material_.set_color(
-      MakeConstantBinding(vec4(1.0f, 0.0f, 0.0f, 1.0f)));
-  green_material_.set_color(
-      MakeConstantBinding(vec4(0.0f, 1.0f, 0.0f, 1.0f)));
+  canvas_material_.set_color(MakeConstantBinding(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
+  card_material_.set_color(MakeConstantBinding(vec4(1.0f, 1.0f, 0.8f, 1.0f)));
+  fab_material_.set_color(MakeConstantBinding(vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+  green_material_.set_color(MakeConstantBinding(vec4(0.0f, 1.0f, 0.0f, 1.0f)));
   // Rotate by 10 degrees and scale by 2.
   constexpr double angle = 3.14159265359 / 18;
   const float c = 5 * cos(angle);
@@ -40,15 +36,14 @@ AppTestScene::~AppTestScene() {}
 
 void AppTestScene::InitGL() {
   // Generate RGB texture containing 2x2 checkerboard.
-  constexpr GLubyte checkerboard[] =
-      {255, 255, 255, 255, 0, 0, 0, 255,
-       0, 0, 0, 255, 255, 255, 255, 255};
+  constexpr GLubyte checkerboard[] = {255, 255, 255, 255, 0,   0,   0,   255,
+                                      0,   0,   0,   255, 255, 255, 255, 255};
   GLuint texture = 0;
   glGenTextures(1, &texture);
   FTL_DCHECK(texture != 0);
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-      &(checkerboard[0]));
+               &(checkerboard[0]));
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   checkerboard_material_.set_texture(texture);
@@ -62,20 +57,18 @@ Model AppTestScene::GetModel(const ViewingVolume& volume, const vec2& focus) {
 
   // canvas
   objects.emplace_back(
-      Shape::CreateRect(
-          vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()), 0),
+      Shape::CreateRect(vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()),
+                        0),
       &canvas_material_);
 
   // app bar
   objects.emplace_back(
-      Shape::CreateRect(
-          vec2(0.0f, 0.0f), vec2(volume.width(), 56.0f), 4),
+      Shape::CreateRect(vec2(0.0f, 0.0f), vec2(volume.width(), 56.0f), 4),
       &app_bar_material_);
 
   // card
   objects.emplace_back(
-      Shape::CreateRect(
-          vec2(0.0f, 200.0f), vec2(volume.width(), 120.0f), 2),
+      Shape::CreateRect(vec2(0.0f, 200.0f), vec2(volume.width(), 120.0f), 2),
       &card_material_);
 
   // left eye
@@ -170,7 +163,7 @@ Model AppTestScene::GetModel(const ViewingVolume& volume, const vec2& focus) {
   // null
   objects.emplace_back(
       Shape::CreateRect(vec2(40.0f, 310.0f), vec2(40.0f, 40.0f), 2.0f),
-       &null_material_);
+      &null_material_);
 
   // fabs
   objects.emplace_back(

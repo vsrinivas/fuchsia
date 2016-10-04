@@ -4,22 +4,23 @@
 
 #include <iostream>
 
-#include <GLFW/glfw3.h>
+#include "demo.h"
 #include <ShaderLang.h>
-#include <vulkan/vulkan.hpp>
 
+#include "escher/escher.h"
+#include "escher/geometry/types.h"
+#include "escher/scene/model.h"
+#include "escher/scene/stage.h"
 #include "ftl/logging.h"
 
-#include "demo.h"
-
-class Waterfall {
-public:
-  Waterfall(Demo *demo) : demo_(demo) {}
-  ~Waterfall() {}
-
-private:
-  Demo *demo_;
-};
+static void key_callback(GLFWwindow* window,
+                         int key,
+                         int scancode,
+                         int action,
+                         int mods) {
+  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
 
 std::unique_ptr<Demo> create_demo() {
   Demo::WindowParams window_params;
@@ -31,14 +32,27 @@ std::unique_ptr<Demo> create_demo() {
   return std::unique_ptr<Demo>(new Demo(instance_params, window_params));
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   auto demo = create_demo();
-  Waterfall waterfall(demo.get());
+  glfwSetKeyCallback(demo->GetWindow(), key_callback);
+
+  escher::VulkanContext vulkan_context = demo->GetVulkanContext();
+
+  escher::Escher escher(vulkan_context, demo->GetVulkanSwapchain());
+  escher::vec2 focus;
+  escher::Stage stage;
+  // AppTestScene scene;
 
   while (!glfwWindowShouldClose(demo->GetWindow())) {
+    // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
+    escher::Model model;  // dummy model
+    model.set_blur_plane_height(12.0f);
+    escher.Render(stage, model);
+
     glfwPollEvents();
   }
 
-  std::cerr << "HELLO WATERFALL MAIN " << std::endl;
+  vulkan_context.device.waitIdle();
+
   return 0;
 }

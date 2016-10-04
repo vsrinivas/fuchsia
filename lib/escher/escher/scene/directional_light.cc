@@ -8,16 +8,15 @@
 
 namespace escher {
 
-DirectionalLight::DirectionalLight() {
-}
+DirectionalLight::DirectionalLight() {}
 
-DirectionalLight::DirectionalLight(vec2 direction, float dispersion, float intensity)
-  : direction_(std::move(direction)),
-    dispersion_(dispersion),
-    intensity_(intensity) {
-}
+DirectionalLight::DirectionalLight(vec2 direction,
+                                   float dispersion,
+                                   float intensity)
+    : direction_(std::move(direction)),
+      dispersion_(dispersion),
+      intensity_(intensity) {}
 
-DirectionalLight::~DirectionalLight() {
-}
+DirectionalLight::~DirectionalLight() {}
 
 }  // namespace escher

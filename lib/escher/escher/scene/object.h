@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "escher/scene/material.h"
+#include "escher/material/material.h"
 #include "escher/scene/shape.h"
 
 namespace escher {

@@ -8,31 +8,31 @@
 
 namespace {
 
-template<typename FuncT>
-inline FuncT GetInstanceProcAddr(
-    vk::Instance inst, const char* func_name) {
+template <typename FuncT>
+inline FuncT GetInstanceProcAddr(vk::Instance inst, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(inst.getProcAddr(func_name));
   FTL_CHECK(func);
   return func;
 }
 
-template<typename FuncT>
-inline FuncT GetDeviceProcAddr(
-    vk::Device device, const char* func_name) {
+template <typename FuncT>
+inline FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
   FTL_CHECK(func);
   return func;
 }
 
-#define GET_INSTANCE_PROC_ADDR(XXX) XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
-#define GET_DEVICE_PROC_ADDR(XXX) XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
+#define GET_INSTANCE_PROC_ADDR(XXX) \
+  XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
+#define GET_DEVICE_PROC_ADDR(XXX) \
+  XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
 
 }  // anonymous namespace
 
-InstanceProcAddrs::InstanceProcAddrs() :
-    CreateDebugReportCallbackEXT(nullptr),
-    DestroyDebugReportCallbackEXT(nullptr),
-    GetPhysicalDeviceSurfaceSupportKHR(nullptr) {}
+InstanceProcAddrs::InstanceProcAddrs()
+    : CreateDebugReportCallbackEXT(nullptr),
+      DestroyDebugReportCallbackEXT(nullptr),
+      GetPhysicalDeviceSurfaceSupportKHR(nullptr) {}
 
 InstanceProcAddrs::InstanceProcAddrs(vk::Instance instance) {
   GET_INSTANCE_PROC_ADDR(CreateDebugReportCallbackEXT);
@@ -40,12 +40,12 @@ InstanceProcAddrs::InstanceProcAddrs(vk::Instance instance) {
   GET_INSTANCE_PROC_ADDR(GetPhysicalDeviceSurfaceSupportKHR);
 }
 
-DeviceProcAddrs::DeviceProcAddrs() :
-    CreateSwapchainKHR(nullptr),
-    DestroySwapchainKHR(nullptr),
-    GetSwapchainImagesKHR(nullptr),
-    AcquireNextImageKHR(nullptr),
-    QueuePresentKHR(nullptr) {}
+DeviceProcAddrs::DeviceProcAddrs()
+    : CreateSwapchainKHR(nullptr),
+      DestroySwapchainKHR(nullptr),
+      GetSwapchainImagesKHR(nullptr),
+      AcquireNextImageKHR(nullptr),
+      QueuePresentKHR(nullptr) {}
 
 DeviceProcAddrs::DeviceProcAddrs(vk::Device device) {
   GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);

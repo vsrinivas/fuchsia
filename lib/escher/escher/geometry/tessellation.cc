@@ -20,8 +20,9 @@ void Tessellation::SanityCheck() const {
   FTL_DCHECK(uvs.empty() || uvs.size() == positions.size());
   FTL_DCHECK(!indices.empty());
   size_t vertex_count = positions.size();
-  FTL_DCHECK(std::all_of(indices.begin(), indices.end(),
-      [vertex_count](GLuint index) { return index < vertex_count; }));
+  FTL_DCHECK(std::all_of(
+      indices.begin(), indices.end(),
+      [vertex_count](size_t index) { return index < vertex_count; }));
 }
 
 Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
@@ -29,20 +30,20 @@ Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
   FTL_DCHECK(subdivisions >= 0);
   size_t circle_vertex_count = 4;
   while (subdivisions-- > 0)
-      circle_vertex_count *= 2;
+    circle_vertex_count *= 2;
 
   // Reserve space for the result, and for intermediate computations.
   Tessellation result;
   result.positions.reserve(circle_vertex_count);
   result.indices.reserve(circle_vertex_count * 3 - 6);
-  std::vector<GLushort> circle_indices;
-  std::vector<GLushort> half_of_circle_indices;
+  std::vector<uint16_t> circle_indices;
+  std::vector<uint16_t> half_of_circle_indices;
   circle_indices.reserve(circle_vertex_count);
   half_of_circle_indices.reserve(circle_vertex_count / 2);
 
   // Generate vertex positions, and indices that will be consumed below.
   const float radian_step = 2 * M_PI / circle_vertex_count;
-  for (GLuint i = 0; i < circle_vertex_count; ++i) {
+  for (size_t i = 0; i < circle_vertex_count; ++i) {
     float radians = i * radian_step;
     float x = sin(radians) * radius + center.x;
     float y = cos(radians) * radius + center.y;
@@ -56,7 +57,7 @@ Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
   // indices to process, exactly as if 'subdivisions - 1' had been passed as
   // the argument to this function.
   while (circle_indices.size() > 2) {
-    for (GLuint i = 0; i < circle_indices.size(); i += 2) {
+    for (size_t i = 0; i < circle_indices.size(); i += 2) {
       result.indices.push_back(circle_indices[i]);
       result.indices.push_back(circle_indices[(i + 1) % circle_indices.size()]);
       result.indices.push_back(circle_indices[(i + 2) % circle_indices.size()]);

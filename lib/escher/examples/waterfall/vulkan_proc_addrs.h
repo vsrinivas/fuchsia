@@ -4,7 +4,6 @@
 
 #pragma once
 
-#define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 
 // Dynamically obtains addresses of instance-specific functions needed by demo.

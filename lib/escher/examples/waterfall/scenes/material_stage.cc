@@ -14,8 +14,7 @@ constexpr float kFar = -1.0f;
 }  // namespace
 
 void InitStageForMaterial(escher::Stage* stage) {
-  stage->set_viewing_volume(
-      escher::ViewingVolume(0.0f, 0.0f, kNear, kFar));
+  stage->set_viewing_volume(escher::ViewingVolume(0.0f, 0.0f, kNear, kFar));
   stage->set_key_light(escher::DirectionalLight(
       escher::vec2(M_PI / 2.0, M_PI / 4.0), M_PI / 4.0, 0.5));
 }

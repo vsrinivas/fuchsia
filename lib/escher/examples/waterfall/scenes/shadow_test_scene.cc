@@ -38,14 +38,13 @@ Model ShadowTestScene::GetModel(const ViewingVolume& volume) {
   float tile_size = center - kPadding - kPadding;
 
   objects.emplace_back(
-      Shape::CreateRect(
-          vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()), 0.0f),
+      Shape::CreateRect(vec2(0.0f, 0.0f), vec2(volume.width(), volume.height()),
+                        0.0f),
       &card_material_);
 
   for (int i = 0; i < arraysize(kElevations); ++i) {
     objects.emplace_back(
-        Shape::CreateRect(vec2(left[i % 2], top),
-                          vec2(tile_size, tile_size),
+        Shape::CreateRect(vec2(left[i % 2], top), vec2(tile_size, tile_size),
                           kElevations[i]),
         &card_material_);
     if (i % 2 == 1)

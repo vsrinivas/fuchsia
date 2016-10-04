@@ -6,11 +6,9 @@
 
 namespace escher {
 
-Stage::Stage() {
-}
+Stage::Stage() {}
 
-Stage::~Stage() {
-}
+Stage::~Stage() {}
 
 void Stage::Resize(SizeI size,
                    float device_pixel_ratio,

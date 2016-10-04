@@ -8,8 +8,7 @@ namespace escher {
 
 SizeI::SizeI() {}
 
-SizeI::SizeI(int width, int height) : width_(width), height_(height) {
-}
+SizeI::SizeI(int width, int height) : width_(width), height_(height) {}
 
 vec2 SizeI::AsVec2() const {
   return vec2(width_, height_);

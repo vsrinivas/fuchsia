@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/geometry/types.h"
-#include "escher/gl/mesh.h"
+#include "escher/shape/mesh.h"
 
 #include "ftl/logging.h"
 
@@ -22,8 +22,9 @@ class Shape {
 
   static Shape CreateRect(const vec2& position, const vec2& size, float z);
   static Shape CreateCircle(const vec2& center, float radius, float z);
-  static Shape CreateMesh(
-      const Tessellation& tesselation, vec2 position, float z);
+  static Shape CreateMesh(const Tessellation& tesselation,
+                          vec2 position,
+                          float z);
   static Shape CreateMesh(ftl::RefPtr<Mesh> mesh, vec2 position, float z);
 
   // TODO(jeffbrown): CreateMesh (with bounding box?)
