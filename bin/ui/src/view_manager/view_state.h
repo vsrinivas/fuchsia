@@ -33,6 +33,17 @@ class ViewState : public ViewContainerState {
 
     // View's parent changed, may require resolving properties.
     INVALIDATION_PARENT_CHANGED = 1u << 2,
+
+    // Next invalidation should carry all properties.
+    INVALIDATION_RESEND_PROPERTIES = 1u << 3,
+
+    // View invalidation is in progress, awaiting a reply.
+    INVALIDATION_IN_PROGRESS = 1u << 4,
+
+    // View invalidation was stalled because the view took too long to
+    // respond before a subsequent invalidation was triggered so it must
+    // be rescheduled.
+    INVALIDATION_STALLED = 1u << 5,
   };
 
   ViewState(ViewRegistry* registry,

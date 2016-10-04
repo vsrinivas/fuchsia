@@ -690,28 +690,40 @@ void ViewRegistry::TraverseView(ViewState* view_state,
         view_properties_changed = true;
       }
     }
+    flags &= ~(ViewState::INVALIDATION_PROPERTIES_CHANGED |
+               ViewState::INVALIDATION_PARENT_CHANGED);
   }
 
-  // If we don't have view properties yet then we cannot pursue traversals.
-  // Remember the application-specified invalidation bits for later.
+  // If we don't have view properties yet then we cannot pursue traversals
+  // any further.
   if (!view_state->issued_properties()) {
     DVLOG(2) << "View has no valid properties: view=" << view_state;
-    view_state->set_invalidation_flags(flags &
-                                       ViewState::INVALIDATION_EXPLICIT);
+    view_state->set_invalidation_flags(flags);
     return;
   }
 
-  view_state->set_invalidation_flags(0u);
-
   // Deliver invalidation event if needed.
-  if (view_properties_changed || (flags & ViewState::INVALIDATION_EXPLICIT)) {
-    auto invalidation = mozart::ViewInvalidation::New();
-    if (view_properties_changed)
-      invalidation->properties = view_state->issued_properties().Clone();
-    invalidation->scene_version = view_state->issued_scene_version();
-    invalidation->frame_info = frame_info->Clone();
-    SendInvalidation(view_state, invalidation.Pass());
+  bool send_properties = view_properties_changed ||
+                         (flags & ViewState::INVALIDATION_RESEND_PROPERTIES);
+  bool force = (flags & ViewState::INVALIDATION_EXPLICIT);
+  if (send_properties || force) {
+    if (!(flags & ViewState::INVALIDATION_IN_PROGRESS)) {
+      auto invalidation = mozart::ViewInvalidation::New();
+      if (send_properties)
+        invalidation->properties = view_state->issued_properties().Clone();
+      invalidation->scene_version = view_state->issued_scene_version();
+      invalidation->frame_info = frame_info->Clone();
+      SendInvalidation(view_state, invalidation.Pass());
+      flags = ViewState::INVALIDATION_IN_PROGRESS;
+    } else {
+      DVLOG(2) << "View invalidation stalled awaiting response: view="
+               << view_state;
+      if (send_properties)
+        flags |= ViewState::INVALIDATION_RESEND_PROPERTIES;
+      flags |= ViewState::INVALIDATION_STALLED;
+    }
   }
+  view_state->set_invalidation_flags(flags);
 
   // TODO(jeffbrown): Optimize propagation.
   // This should defer traversal of the rest of the subtree until the view
@@ -723,7 +735,8 @@ void ViewRegistry::TraverseView(ViewState* view_state,
 
   // Traverse all children.
   for (const auto& pair : view_state->children()) {
-    if (pair.second->state())
+    ViewState* child_state = pair.second->state();
+    if (child_state)
       TraverseView(pair.second->state(), frame_info, view_properties_changed);
   }
 }
@@ -827,10 +840,28 @@ void ViewRegistry::SendInvalidation(ViewState* view_state,
   FTL_DCHECK(invalidation);
   FTL_DCHECK(view_state->view_listener());
 
-  // TODO: Detect ANRs
   DVLOG(1) << "SendInvalidation: view_state=" << view_state
            << ", invalidation=" << invalidation;
-  view_state->view_listener()->OnInvalidation(invalidation.Pass(), [] {});
+
+  // It's safe to capture the view state because the ViewListener is closed
+  // before the view state is destroyed so we will only receive the callback
+  // if the view state is still alive.
+  view_state->view_listener()->OnInvalidation(
+      invalidation.Pass(), [this, view_state] {
+        uint32_t old_flags = view_state->invalidation_flags();
+        FTL_DCHECK(old_flags & ViewState::INVALIDATION_IN_PROGRESS);
+
+        view_state->set_invalidation_flags(
+            old_flags &
+            ~(ViewState::INVALIDATION_IN_PROGRESS |
+              ViewState::INVALIDATION_STALLED));
+
+        if (old_flags & ViewState::INVALIDATION_STALLED) {
+          DVLOG(2) << "View recovered from stalled invalidation: view_state="
+                   << view_state;
+          Invalidate(view_state);
+        }
+      });
 }
 
 void ViewRegistry::SendRendererDied(ViewTreeState* tree_state) {
