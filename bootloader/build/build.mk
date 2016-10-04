@@ -25,7 +25,7 @@ out/%.o: %.c
 out/%.efi: out/%.so
 	@mkdir -p $(dir $@)
 	@echo building: $@
-	$(QUIET)$(EFI_OBJCOPY) --target=efi-app-$(ARCH) $(EFI_SECTIONS) $< $@
+	$(QUIET)$(EFI_OBJCOPY) --target=pei-$(subst _,-,$(ARCH)) --subsystem 10 $(EFI_SECTIONS) $< $@
 	$(QUIET)if [ "`nm $< | grep ' U '`" != "" ]; then echo "error: $<: undefined symbols"; nm $< | grep ' U '; rm $<; exit 1; fi
 
 # _efi_app <basename> <obj-files> <dep-files>
