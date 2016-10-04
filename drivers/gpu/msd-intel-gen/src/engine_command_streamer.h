@@ -39,6 +39,8 @@ public:
 
     virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
 
+    virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
+
 protected:
     bool SubmitContext(MsdIntelContext* context);
     bool UpdateContext(MsdIntelContext* context);
@@ -76,11 +78,13 @@ public:
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
 
-    bool WaitRendering(uint32_t sequence_number);
+    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
 
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
                                 std::unique_ptr<RenderInitBatch> init_batch);
+
+    bool WaitRendering(uint32_t sequence_number);
 
     RenderInitBatch* init_batch() { return init_batch_.get(); }
 

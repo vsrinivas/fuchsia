@@ -8,8 +8,27 @@
 
 CommandBuffer::~CommandBuffer()
 {
-    if (prepared_to_execute_)
-        UnmapResourcesGpu(locked_context_->exec_address_space());
+    if (!prepared_to_execute_)
+        return;
+
+    UnmapResourcesGpu(locked_context_->exec_address_space());
+    if (sequence_number_ != Sequencer::kInvalidSequenceNumber) {
+        for (auto buf : exec_resources_) {
+            // only want to reset seq num on buffers that arent referenced
+            // from another more recent command buffer
+            if (buf->sequence_number() == sequence_number_) {
+                buf->SetSequenceNumber(Sequencer::kInvalidSequenceNumber);
+            }
+        }
+    }
+}
+
+void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
+{
+    sequence_number_ = sequence_number;
+    for (auto buf : exec_resources_) {
+        buf->SetSequenceNumber(sequence_number);
+    }
 }
 
 CommandBuffer::CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources,

@@ -20,6 +20,7 @@ public:
         // TODO(MA-71) have the connection own its own PPGTT address space so we dont need this
         virtual AddressSpace* gtt() = 0;
         virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+        virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     };
 
     MsdIntelConnection(Owner* owner) : owner_(owner) {}
@@ -30,6 +31,11 @@ public:
     {
         // Backing store creation deferred until context is used.
         return std::unique_ptr<ClientContext>(new ClientContext(this));
+    }
+
+    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
+    {
+        return owner_->WaitRendering(std::move(buf));
     }
 
 private:

@@ -168,6 +168,13 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
+    if (!render_engine_cs_->WaitRendering(buffer)) {
+        DLOG("WaitRendering failed");
+        if (callback)
+            (*callback)(-ETIMEDOUT, data);
+        return;
+    }
+
     if (!buffer->IsMappedGpu(ADDRESS_SPACE_GTT)) {
         if (!buffer->MapGpu(gtt_.get(), PAGE_SIZE)) {
             DLOG("Couldn't map buffer to gtt");

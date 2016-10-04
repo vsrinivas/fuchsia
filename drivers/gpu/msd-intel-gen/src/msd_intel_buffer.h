@@ -9,6 +9,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
+#include "sequencer.h"
 #include "types.h"
 #include <map>
 #include <memory>
@@ -39,6 +40,10 @@ public:
 
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* addr_out);
 
+    void SetSequenceNumber(uint32_t sequence_number) { sequence_number_ = sequence_number; }
+
+    uint32_t sequence_number() { return sequence_number_; }
+
 private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
@@ -56,6 +61,8 @@ private:
 
     uint32_t read_domains_bitfield_ = MEMORY_DOMAIN_CPU;
     uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
+
+    uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
 };
 
 class MsdIntelAbiBuffer : public msd_buffer {

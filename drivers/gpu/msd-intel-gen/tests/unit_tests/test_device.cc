@@ -16,6 +16,12 @@ public:
     {
         EXPECT_TRUE(engine->ExecBatch(std::move(mapped_batch), 0, sequence_number_out));
     }
+
+    static void WaitInitFinished(RenderEngineCommandStreamer* engine)
+    {
+        bool result = engine->WaitRendering(engine->init_batch()->buffer());
+        DASSERT(result);
+    }
 };
 
 class TestMsdIntelDevice {
@@ -33,7 +39,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        device->render_engine_cs()->WaitRendering(0x1001);
+        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
 
         // check that the render init batch succeeded.
         EXPECT_EQ(device->global_context()
@@ -57,7 +63,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        device->render_engine_cs()->WaitRendering(0x1001);
+        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
 
         MsdIntelDevice::DumpState dump_state;
         device->Dump(&dump_state);
@@ -110,7 +116,7 @@ public:
             driver->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        device->render_engine_cs()->WaitRendering(0x1001);
+        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
 
         auto target_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
         ASSERT_NE(target_buffer, nullptr);
@@ -170,7 +176,7 @@ public:
                 &sequence_number);
 
             EXPECT_NE(sequence_number, 0u);
-            EXPECT_TRUE(device->render_engine_cs()->WaitRendering(sequence_number));
+            EXPECT_TRUE(device->render_engine_cs()->WaitRendering(batch_buffer));
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 

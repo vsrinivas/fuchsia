@@ -87,6 +87,11 @@ private:
         return render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf));
     }
 
+    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override
+    {
+        return render_engine_cs_->WaitRendering(std::move(buf));
+    }
+
     bool ReadGttSize(unsigned int* gtt_size);
 
     uint32_t GetCurrentFrequency();

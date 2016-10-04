@@ -412,6 +412,8 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
     DLOG("Executing batch with sequence number 0x%x", sequence_number);
 
+    mapped_batch->SetSequenceNumber(sequence_number);
+
     gpu_addr_t gpu_addr;
     if (!mapped_batch->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr))
         return DRETF(false, "coudln't get batch gpu address");
@@ -452,8 +454,16 @@ bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBu
     if (!ExecBatch(std::move(cmd_buf), pipe_control_flags, &sequence_number))
         return DRETF(false, "ExecBatch failed");
 
-    // wait synchronously for the GPU
-    return WaitRendering(sequence_number);
+    return true;
+}
+
+bool RenderEngineCommandStreamer::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
+{
+    DASSERT(buf);
+    // early out if we never rendered to this buffer or rendering has already completed
+    if (buf->sequence_number() == Sequencer::kInvalidSequenceNumber)
+        return true;
+    return WaitRendering(buf->sequence_number());
 }
 
 bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
@@ -462,6 +472,7 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
 
     // Dont wait for something you havent executed
     DASSERT(!inflight_command_sequences_.empty());
+    DASSERT(sequence_number != Sequencer::kInvalidSequenceNumber);
     DASSERT(sequence_number <= inflight_command_sequences_.back().sequence_number());
 
     // TODO: Handle sequence number wrapping

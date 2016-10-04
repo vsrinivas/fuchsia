@@ -4,6 +4,7 @@
 
 #include "msd_intel_connection.h"
 #include "magma_util/dlog.h"
+#include <errno.h>
 
 void msd_connection_close(msd_connection* connection)
 {
@@ -16,4 +17,13 @@ msd_context* msd_connection_create_context(msd_connection* connection)
     if (!context)
         return DRETP(nullptr, "MsdIntelConnection::CreateContext failed");
     return new MsdIntelAbiContext(std::move(context));
+}
+
+int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf)
+{
+    if (!MsdIntelAbiConnection::cast(connection)
+             ->ptr()
+             ->WaitRendering((MsdIntelAbiBuffer::cast(buf)->ptr())))
+        return DRET(-ETIMEDOUT);
+    return 0;
 }

@@ -37,6 +37,8 @@ public:
     // only valid after PrepareForExecution succeeds
     MsdIntelContext* GetContext() override;
 
+    void SetSequenceNumber(uint32_t sequence_number) override;
+
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override;
 
 private:
@@ -70,6 +72,7 @@ private:
     std::shared_ptr<ClientContext> locked_context_;
     gpu_addr_t batch_buffer_gpu_addr_;
     EngineCommandStreamerId engine_id_;
+    uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
     // ---------------------------- //
 
     friend class TestCommandBuffer;

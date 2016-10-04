@@ -6,7 +6,6 @@
 #define SEQUENCER_H
 
 #include "magma_util/macros.h"
-#include "msd_intel_buffer.h"
 
 class Sequencer {
 public:
@@ -19,6 +18,8 @@ public:
         DASSERT(next_sequence_number_ >= sequence_number);
         return sequence_number;
     }
+
+    static constexpr uint32_t kInvalidSequenceNumber = 0;
 
 private:
     uint32_t next_sequence_number_;
