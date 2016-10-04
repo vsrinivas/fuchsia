@@ -14,20 +14,19 @@ namespace {
 
 using mojo::ApplicationImplBase;
 using mojo::Binding;
-using mojo::InterfaceHandle;
 using mojo::RunLoop;
 
 using namespace intelligence;
 
-#define ONE_MOJO_SECOND   1000000
+#define ONE_MOJO_SECOND 1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
-#define KEEP_ALIVE_TICKS  3
-#define HAS_SUBSCRIBERS   -1
+#define KEEP_ALIVE_TICKS 3
+#define HAS_SUBSCRIBERS -1
 
 class GpsAcquirer : public ApplicationImplBase,
                     public ContextPublisherController {
  public:
-  GpsAcquirer(): ctl_(this) {}
+  GpsAcquirer() : ctl_(this) {}
 
   void OnInitialize() override {
     srand(time(NULL));
@@ -38,9 +37,10 @@ class GpsAcquirer : public ApplicationImplBase,
     ContextPublisherControllerPtr ctl_ptr;
     ctl_.Bind(GetProxy(&ctl_ptr));
 
-    cx->Publish("/location/gps", "https://developers.google.com/"
-        "maps/documentation/javascript/3.exp/reference#LatLngLiteral",
-        ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
+    cx->Publish("/location/gps",
+                "https://developers.google.com/maps/documentation/javascript/"
+                "3.exp/reference#LatLngLiteral",
+                ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
   }
 
   void OnHasSubscribers() override {
@@ -71,8 +71,7 @@ class GpsAcquirer : public ApplicationImplBase,
     // manifests.
     std::ostringstream json;
     json << "{ \"lat\": " << rand() % 18001 / 100. - 90
-         << ", \"lng\": "  << rand() % 36001 / 100. - 180
-         << " }";
+         << ", \"lng\": " << rand() % 36001 / 100. - 180 << " }";
 
     MOJO_LOG(INFO) << "Update by acquirers/gps: " << json.str();
 
@@ -80,23 +79,24 @@ class GpsAcquirer : public ApplicationImplBase,
   }
 
   void PublishingTick() {
-    if (!tick_keep_alive_) {
-      MOJO_LOG(INFO) << "GPS off";
-      out_->Update(NULL);
-      return;
-    } else if (tick_keep_alive_ > 0) {
+    if (tick_keep_alive_ > 0) {
       tick_keep_alive_--;
     }
 
     PublishLocation();
 
-    RunLoop::current()->PostDelayedTask(
-      [this] { PublishingTick(); },
-      GPS_UPDATE_PERIOD);
+    if (!tick_keep_alive_) {
+      MOJO_LOG(INFO) << "GPS off";
+      out_->Update(NULL);
+      return;
+    }
+
+    RunLoop::current()->PostDelayedTask([this] { PublishingTick(); },
+                                        GPS_UPDATE_PERIOD);
   }
 };
 
-} // namespace
+}  // namespace
 
 MojoResult MojoMain(MojoHandle request) {
   GpsAcquirer app;

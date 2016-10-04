@@ -31,6 +31,11 @@ interface ContextAgentClient {
   // Registers a potential context publisher and attains a publish link for it.
   // When the existence or nonexistence of subscribers changes, the publisher is
   // notified through the provided ContextPublisherController.
+  //
+  // If the label/schema pair for this client has already been registered, the
+  // new controller and link replace the old. The new controller is notified of
+  // any existing subscribers, but no effort is made to notify the old
+  // controller beyond closing the pipe.
   Publish(string label, string schema, ContextPublisherController? controller,
           ContextPublisherLink& link);
 

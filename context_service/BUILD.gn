@@ -11,6 +11,8 @@ group("all") {
 executable("context_service") {
   sources = [
     "context_service.cc",
+    "graph.cc",
+    "repo.cc",
   ]
 
   deps = [
