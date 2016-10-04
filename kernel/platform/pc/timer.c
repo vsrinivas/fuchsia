@@ -17,8 +17,9 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <lk/init.h>
-#include <kernel/thread.h>
+#include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
+#include <kernel/thread.h>
 #include <platform.h>
 #include <dev/interrupt.h>
 #include <platform/console.h>
@@ -448,7 +449,9 @@ void platform_init_timer(uint level)
         calibrate_apic_timer();
     }
 
-    if (invariant_tsc) {
+    const char *force_wallclock = cmdline_get("timer.wallclock");
+
+    if (invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"))) {
         calibrate_tsc();
         // Program PIT in the software strobe configuration, but do not load
         // the count.  This will pause the PIT.
@@ -461,11 +464,15 @@ void platform_init_timer(uint level)
             calibrate_tsc();
         }
 
-        if (has_hpet) {
+        if (has_hpet && (!force_wallclock || !strcmp(force_wallclock, "hpet"))) {
             wall_clock = CLOCK_HPET;
             hpet_set_value(0);
             hpet_enable();
         } else {
+            if (force_wallclock && strcmp(force_wallclock, "pit")) {
+                panic("Could not satisfy timer.wallclock choice\n");
+            }
+
             wall_clock = CLOCK_PIT;
 
             timer_current_time = 0;

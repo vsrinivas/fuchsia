@@ -43,6 +43,11 @@ This option caps the number of CPUs to initialize.  It cannot be greater than
 This option can be used to disable the initialization of hyperthread logical
 CPUs.  Defaults to true.
 
+## timer.wallclock=<name>
+
+This option can be used to force the selection of a particular wall clock.  It
+only is used on pc builds.  Options are "tsc", "hpet", and "pit".
+
 ## userboot=<path>
 
 This option instructs the userboot process (the first userspace process) to
