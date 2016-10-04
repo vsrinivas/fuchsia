@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hid/usages.h>
 #include <math.h>
 #include <mojo/system/main.h>
 
@@ -84,7 +85,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
           break;
       }
     } else if (event->key_data) {
-      if (event->key_data->windows_key_code == mozart::KeyboardCode::ESCAPE) {
+      if (event->key_data->hid_usage == HID_USAGE_KEY_ESC) {
         // clear
         paths_.clear();
       }

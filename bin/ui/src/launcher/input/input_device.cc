@@ -327,7 +327,6 @@ void InputDevice::Read(const OnEventCallback& callback,
   Parse(callback, display_size);
 }
 
-// TODO(jpoichet) Need to convert keycode to proper windows_key_code
 void KeyboardInputDevice::Parse(const OnEventCallback& callback,
                                 const mojo::Size& display_size) {
   int64_t now = InputEventTimestampNow();
@@ -347,19 +346,16 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->windows_key_code = mozart::KeyboardCode::UNKNOWN;
-    ev->key_data->native_key_code = 0;
+    ev->key_data->hid_usage = HID_USAGE_KEY_ERROR_UNDEF;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
     uint8_t ch = hid_map_key(keycode, modifiers_ & MOD_SHIFT, keymap_);
     if (ch) {
-      mozart::KeyboardCode windows_key_code =
-          mozart::KeyboardCode::BACK;  // FIXME
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
-      ev->key_data->windows_key_code = windows_key_code;
+      ev->key_data->hid_usage = keycode;
       ev->key_data->text = character16;
       ev->key_data->unmodified_text = character16;
     }
@@ -367,27 +363,21 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     switch (keycode) {
       case HID_USAGE_KEY_LEFT_SHIFT:
         modifiers_ |= MOD_LSHIFT;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
         modifiers_ |= MOD_RSHIFT;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
         modifiers_ |= MOD_LCTRL;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
         modifiers_ |= MOD_RCTRL;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
         break;
       case HID_USAGE_KEY_LEFT_ALT:
         modifiers_ |= MOD_LALT;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
         modifiers_ |= MOD_RALT;
-        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
         break;
       default:
         break;
@@ -410,19 +400,16 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     ev->key_data->key_code = 0;
     ev->key_data->is_char = false;
     ev->key_data->character = 0;
-    ev->key_data->windows_key_code = mozart::KeyboardCode::UNKNOWN;
-    ev->key_data->native_key_code = 0;
+    ev->key_data->hid_usage = HID_USAGE_KEY_ERROR_UNDEF;
     ev->key_data->text = 0;
     ev->key_data->unmodified_text = 0;
 
     uint8_t ch = hid_map_key(keycode, modifiers_ & MOD_SHIFT, keymap_);
     if (ch) {
-      mozart::KeyboardCode windows_key_code =
-          mozart::KeyboardCode::BACK;  // FIXME
       uint16_t character16 = static_cast<unsigned char>(ch);
       ev->key_data->is_char = true;
       ev->key_data->character = character16;
-      ev->key_data->windows_key_code = windows_key_code;
+      ev->key_data->hid_usage = keycode;
       ev->key_data->text = character16;
       ev->key_data->unmodified_text = character16;
     }
@@ -430,32 +417,21 @@ void KeyboardInputDevice::Parse(const OnEventCallback& callback,
     switch (keycode) {
       case HID_USAGE_KEY_LEFT_SHIFT:
         modifiers_ &= (~MOD_LSHIFT);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
         modifiers_ &= (~MOD_RSHIFT);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::SHIFT;
-
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
         modifiers_ &= (~MOD_LCTRL);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
-
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
         modifiers_ &= (~MOD_RCTRL);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::CONTROL;
-
         break;
       case HID_USAGE_KEY_LEFT_ALT:
         modifiers_ &= (~MOD_LALT);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
-
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
         modifiers_ &= (~MOD_RALT);
-        ev->key_data->windows_key_code = mozart::KeyboardCode::MENU;
-
         break;
     }
     callback(std::move(ev));

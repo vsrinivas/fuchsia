@@ -10,7 +10,6 @@ mojom("interfaces") {
     "input_dispatcher.mojom",
     "input_event_constants.mojom",
     "input_events.mojom",
-    "input_key_codes.mojom",
   ]
 
   public_deps = [
