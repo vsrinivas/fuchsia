@@ -12,6 +12,7 @@ class MsdIntelContext;
 
 class MappedBatch {
 public:
+    virtual ~MappedBatch() {}
     virtual MsdIntelContext* GetContext() = 0;
     virtual bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) = 0;
 };
