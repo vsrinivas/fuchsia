@@ -159,7 +159,7 @@ static mx_status_t intel_serialio_i2c_remove_slave(
 
 remove_slave_finish:
     mtx_unlock(&device->mutex);
-    return NO_ERROR;
+    return status;
 }
 
 static uint32_t intel_serialio_compute_scl_hcnt(
