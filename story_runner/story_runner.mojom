@@ -2,114 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains services definitions used by the current story
-// runner implementation. They are skeletal and will be revised.
-//
-// What happens so far:
-//
-// 1. The story runner app exposes a service that allows to start a
-//    story. The running story is represented as a Session.
-//
-// 2. The Session service allows to request to run a mojo app.
-//    Invoking a mojo app through the Session service causes (2.1) the
-//    specified mojo app to be run, (2.2) the Module service of that
-//    app to be requested, and (2.3.) Initialize() method of the
-//    Module service to be invoked with a handle of the Session
-//    service instance as a parameter. Thus, the module so started is
-//    able to start more modules, all in the scope of the same
-//    Session.
-//
-// 3. The Session service also exposes a factory for instances of the
-//    Link service. A Link instance exposes an API to store and
-//    retrieve values, and to register callbacks to notify when values
-//    stored in the instance change. A Link instance is shared between
-//    each pair of requesting and requested modules in the session.
-//
-// What is still missing:
-//
-// 4. The Module and Link instances in the session are planned to be
-//    recorded in the Ledger by the story runner.
-//
-// 5. The story runner is invoked by the story manager.
-//
-// 6. An existing story can be restarted.
-//
-// 7. The Link instance holds data according to a Schema.
-//
-// Other issues with these interfaces:
-//
-// a) There is a trade off between Interface request arguments and
-//    Interface return values. Interface requests are less verbose
-//    because they are synchronous. Interface requests can be sent to
-//    handles and the handles be passed on immediately. However, if
-//    the receiving side is to make calls on the bound implementation
-//    and delegate implementation to a further service (as for
-//    Session::StartModule()), then this is possible only for a
-//    returned interface.
-//
-// b) Many methods that currently return nothing should return void so
-//    that it's possible to invoke them sequentially.
-//
-// c) Some methods that currently return nothing should probably return
-//    a status.
-
 module modular;
 
 import "apps/ledger/api/ledger.mojom";
-
-[ServiceName="modular.ResolverFactory"]  // Created by resolver app.
-interface ResolverFactory {
-  GetResolver(Resolver& resolver);
-};
-
-// No service name: created by ResolverFactory.
-interface Resolver {
-  Resolve(string query) => (string module_url);
-};
+import "apps/modular/story_runner/session.mojom";
+import "apps/modular/story_runner/resolver.mojom";
 
 [ServiceName="modular.StoryRunner"]  // Created by story-runner app.
 interface StoryRunner {
   Initialize(ResolverFactory resolver_factory);
   StartStory(ledger.Page session_page, Session& session);
-};
-
-// No service name: created by StoryRunner.
-interface Session {
-  CreateLink(Link& link);
-  StartModule(string query, Link link) => (Module module_instance);
-  // StartModule() invokes Initialize() on the created Module instance,
-  // so it must return it and cannot take an interface request.
-};
-
-// No service name: created by Session.
-interface Link {
-  SetValue(LinkValue value);
-  Value() => (LinkValue? value);
-  Watch(LinkChanged watcher);
-  Dup(Link& dup);
-};
-
-// No service name: created by Module.
-interface LinkChanged {
-  Value(LinkValue value);
-};
-
-// JSON-LD inspired structure for the value of a link. This allows to
-// represent JSON and thus also JSON-LD if we really want it to. (Read
-// the spec https://www.w3.org/TR/json-ld/ to help decide.) Once we go
-// for JSON-LD, special properties like @id, @value, @type, @context
-// and so on may be represented as actual struct fields to enforce
-// their presence.
-union LinkValue {
-  string string_value;
-  int64 int_value;
-  double double_value;
-  bool bool_value;
-  map<string, LinkValue> object_value;
-  array<LinkValue> array_value;
-};
-
-[ServiceName="modular.Module"]  // Created by each module app.
-interface Module {
-  Initialize(Session session, Link link);
 };

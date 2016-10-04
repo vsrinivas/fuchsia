@@ -1,0 +1,16 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+[ServiceName="modular.ResolverFactory"]  // Created by resolver app.
+interface ResolverFactory {
+  GetResolver(Resolver& resolver);
+};
+
+// No service name: created by ResolverFactory.
+interface Resolver {
+  Resolve(string query) => (string module_url);
+};
+

@@ -1,0 +1,21 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/story_runner/link.mojom";
+
+[ServiceName="modular.Module"]  // Created by each module app.
+interface Module {
+  Initialize(Session session, Link link);
+};
+
+// No service name: created by StoryRunner.
+interface Session {
+  CreateLink(Link& link);
+  StartModule(string query, Link link) => (Module module_instance);
+  // StartModule() invokes Initialize() on the created Module instance,
+  // so it must return it and cannot take an interface request.
+};
+
