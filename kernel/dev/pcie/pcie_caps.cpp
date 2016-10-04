@@ -40,9 +40,7 @@ typedef struct pcie_do_parse_caps_params {
     const uint                           max_possible_caps;
 } pcie_do_parse_caps_params_t;
 
-static bool quirk_should_force_pcie(pcie_device_state_t* dev) {
-    DEBUG_ASSERT(dev);
-
+static bool quirk_should_force_pcie(const pcie_device_state_t& dev) {
     static const struct {
         uint16_t vendor_id;
         uint16_t device_id;
@@ -51,8 +49,8 @@ static bool quirk_should_force_pcie(pcie_device_state_t* dev) {
     };
 
     for (size_t i = 0; i < countof(QUIRK_LIST); ++i) {
-        if ((QUIRK_LIST[i].vendor_id == dev->vendor_id) &&
-            (QUIRK_LIST[i].device_id == dev->device_id))
+        if ((QUIRK_LIST[i].vendor_id == dev.vendor_id) &&
+            (QUIRK_LIST[i].device_id == dev.device_id))
             return true;
     }
 
@@ -659,9 +657,11 @@ static const pcie_do_parse_caps_params_t PCIE_EXTENDED_PARSE_CAPS_PARAMS = {
     .max_possible_caps = PCIE_MAX_EXT_CAPABILITIES,
 };
 
-status_t pcie_parse_capabilities(pcie_device_state_t* dev) {
-    status_t ret = pcie_do_parse_caps(dev, &PCIE_STANDARD_PARSE_CAPS_PARAMS);
+status_t pcie_parse_capabilities(const mxtl::RefPtr<pcie_device_state_t>& dev) {
+    if (!dev)
+        return ERR_INVALID_ARGS;
 
+    status_t ret = pcie_do_parse_caps(dev.get(), &PCIE_STANDARD_PARSE_CAPS_PARAMS);
     if (NO_ERROR != ret)
         return ret;
 
@@ -677,8 +677,8 @@ status_t pcie_parse_capabilities(pcie_device_state_t* dev) {
      * contain a proper PCI Express Capability Structure.  Because of this, we
      * maintain a quirks list of non compliant devices which are actually PCIe,
      * but do not appear to be so at first glance. */
-    if (dev->pcie_caps.ecam || quirk_should_force_pcie(dev))
-        ret = pcie_do_parse_caps(dev, &PCIE_EXTENDED_PARSE_CAPS_PARAMS);
+    if (dev->pcie_caps.ecam || quirk_should_force_pcie(*dev))
+        ret = pcie_do_parse_caps(dev.get(), &PCIE_EXTENDED_PARSE_CAPS_PARAMS);
 
     return ret;
 };

@@ -13,6 +13,7 @@
 #include <dev/pcie_platform.h>
 #include <err.h>
 #include <kernel/spinlock.h>
+#include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
 /* Fwd decls */
@@ -112,9 +113,10 @@ typedef struct pcie_irq_mode_info {
  * @param irq_id The 0-indexed ID of the IRQ which occurred.
  * @param ctx The context pointer registered when registering the handler.
  */
-typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(pcie_device_state_t* dev,
-                                                           uint irq_id,
-                                                           void* ctx);
+typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(
+        const pcie_device_state_t& dev,
+        uint irq_id,
+        void* ctx);
 
 /**
  * Structure used internally to hold the state of a registered handler.
@@ -139,7 +141,7 @@ typedef struct pcie_irq_handler_state {
  *
  * @return A status_t indicating the success or failure of the operation.
  */
-status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
+status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t& dev,
                                           pcie_irq_mode_t mode,
                                           pcie_irq_mode_caps_t* out_caps);
 
@@ -157,7 +159,7 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t* dev,
  * ++ ERR_UNAVAILABLE
  *    The device has become unplugged and is waiting to be released.
  */
-status_t pcie_get_irq_mode(const pcie_device_state_t* dev,
+status_t pcie_get_irq_mode(const pcie_device_state_t& dev,
                            pcie_irq_mode_info_t* out_info);
 
 /**
@@ -195,16 +197,16 @@ status_t pcie_get_irq_mode(const pcie_device_state_t* dev,
  *    The system is unable to allocate sufficient system IRQs to satisfy the
  *    number of IRQs and exclusivity mode requested the device driver.
  */
-status_t pcie_set_irq_mode(pcie_device_state_t* dev,
-                           pcie_irq_mode_t      mode,
-                           uint                 requested_irqs);
+status_t pcie_set_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                           pcie_irq_mode_t                          mode,
+                           uint                                     requested_irqs);
 
 /**
  * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
  *
  * Convenience function.  @see pcie_set_irq_mode for details.
  */
-static inline void pcie_set_irq_mode_disabled(pcie_device_state_t* dev) {
+static inline void pcie_set_irq_mode_disabled(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     /* It should be impossible to fail a transition to the DISABLED state,
      * regardless of the state of the system.  ASSERT this in debug builds */
     __UNUSED status_t result;
@@ -234,10 +236,10 @@ static inline void pcie_set_irq_mode_disabled(pcie_device_state_t* dev) {
  * ++ ERR_INVALID_ARGS
  *    The irq_id parameter is out of range for the currently configured mode.
  */
-status_t pcie_register_irq_handler(pcie_device_state_t*  dev,
-                                   uint                  irq_id,
-                                   pcie_irq_handler_fn_t handler,
-                                   void*                 ctx);
+status_t pcie_register_irq_handler(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                                   uint                                     irq_id,
+                                   pcie_irq_handler_fn_t                    handler,
+                                   void*                                    ctx);
 
 /**
  * Mask or unmask the specified IRQ for the given device.
@@ -260,16 +262,16 @@ status_t pcie_register_irq_handler(pcie_device_state_t*  dev,
  *    The device is operating in MSI mode, but neither the PCI device nor the
  *    platform interrupt controller support masking the MSI vector.
  */
-status_t pcie_mask_unmask_irq(pcie_device_state_t* dev,
-                              uint                 irq_id,
-                              bool                 mask);
+status_t pcie_mask_unmask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                              uint                                     irq_id,
+                              bool                                     mask);
 
 /**
  * Mask the specified IRQ for the given device.
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_mask_irq(pcie_device_state_t* dev, uint irq_id) {
+static inline status_t pcie_mask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, true);
 }
 
@@ -278,6 +280,6 @@ static inline status_t pcie_mask_irq(pcie_device_state_t* dev, uint irq_id) {
  *
  * Convenience function.  @see pcie_mask_unmask_irq for details.
  */
-static inline status_t pcie_unmask_irq(pcie_device_state_t* dev, uint irq_id) {
+static inline status_t pcie_unmask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev, uint irq_id) {
     return pcie_mask_unmask_irq(dev, irq_id, false);
 }

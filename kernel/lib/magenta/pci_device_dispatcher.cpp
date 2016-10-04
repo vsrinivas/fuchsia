@@ -192,7 +192,7 @@ status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t*
     DEBUG_ASSERT(device_ && device_->device());
 
     pcie_irq_mode_caps_t caps;
-    status_t ret = pcie_query_irq_mode_capabilities(device_->device(),
+    status_t ret = pcie_query_irq_mode_capabilities(*device_->device(),
                                                     static_cast<pcie_irq_mode_t>(mode),
                                                     &caps);
 
@@ -213,7 +213,7 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
     if (ret == NO_ERROR) {
         pcie_irq_mode_caps_t caps;
         __UNUSED status_t tmp;
-        tmp = pcie_query_irq_mode_capabilities(device_->device(),
+        tmp = pcie_query_irq_mode_capabilities(*device_->device(),
                                                static_cast<pcie_irq_mode_t>(mode),
                                                &caps);
         DEBUG_ASSERT(tmp == NO_ERROR);
@@ -224,8 +224,9 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
     return ret;
 }
 
-PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(pcie_device_state_t* device)
-    : device_(device) {
+PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(
+        mxtl::RefPtr<pcie_device_state_t>&& device)
+    : device_(mxtl::move(device)) {
     DEBUG_ASSERT(device_);
     memset(&cp_refs_, 0, sizeof(cp_refs_));
 }
@@ -233,9 +234,7 @@ PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(pcie_device_state_t* dev
 PciDeviceDispatcher::PciDeviceWrapper::~PciDeviceWrapper() {
     DEBUG_ASSERT(device_);
     pcie_shutdown_device(device_);
-
-    // Release the reference we are holding because of our call to pcie_get_nth_device
-    pcie_release_device(device_);
+    device_ = nullptr;
 }
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
@@ -257,19 +256,13 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
     if (!out_device)
         return ERR_INVALID_ARGS;
 
-    pcie_device_state_t* device = pcie_get_nth_device(index);
+    mxtl::RefPtr<pcie_device_state_t> device = pcie_get_nth_device(index);
     if (!device)
         return ERR_OUT_OF_RANGE;
 
     AllocChecker ac;
-
-    *out_device = mxtl::AdoptRef<PciDeviceWrapper>(new (&ac) PciDeviceWrapper(device));
-    if (!ac.check()) {
-        pcie_release_device(device);
-        return ERR_NO_MEMORY;
-    }
-
-    return NO_ERROR;
+    *out_device = mxtl::AdoptRef<PciDeviceWrapper>(new (&ac) PciDeviceWrapper(mxtl::move(device)));
+    return ac.check() ? NO_ERROR : ERR_NO_MEMORY;
 }
 
 status_t PciDeviceDispatcher::PciDeviceWrapper::AddBarCachePolicyRef(uint bar_num,

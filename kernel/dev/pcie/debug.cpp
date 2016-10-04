@@ -226,16 +226,15 @@ static const char* pci_class_code_to_string(uint8_t class_code)
     }
 }
 
-static const char* pci_device_type(const pcie_device_state_t* dev)
+static const char* pci_device_type(const pcie_device_state_t& dev)
 {
     // TODO(johngro): It might be a good idea, some day, to make this something
     // better than an O(n) search.
-    DEBUG_ASSERT(dev);
 
     // If this is a PCIe style bridge with a specific device type spelled out in
     // its PCI Express Capabilities structure, use that to provide the type
     // string.
-    switch (dev->pcie_caps.devtype) {
+    switch (dev.pcie_caps.devtype) {
         case PCIE_DEVTYPE_RC_ROOT_PORT:           return "PCIe Root Port";
         case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:   return "PCIe Upstream Switch Port";
         case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT: return "PCIe Downstream Switch Port";
@@ -247,14 +246,14 @@ static const char* pci_device_type(const pcie_device_state_t* dev)
     for (size_t i = 0; i < countof(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
-        if ((dev->class_id == entry->class_code)    &&
-            (dev->subclass == entry->subclass)      &&
-            (dev->prog_if  >= entry->prof_if_start) &&
-            (dev->prog_if  <= entry->prof_if_end))
+        if ((dev.class_id == entry->class_code)    &&
+            (dev.subclass == entry->subclass)      &&
+            (dev.prog_if  >= entry->prof_if_start) &&
+            (dev.prog_if  <= entry->prof_if_end))
             return entry->desc;
     }
 
-    return pci_class_code_to_string(dev->class_id);
+    return pci_class_code_to_string(dev.class_id);
 }
 
 static void do_lspci_indent(uint level) {
@@ -267,28 +266,28 @@ static void do_lspci_indent(uint level) {
         printf(_fmt, ##__VA_ARGS__);           \
     } while (0)
 
-static void dump_pcie_hdr(const pcie_device_state_t* dev, lspci_params_t* params)
+static void dump_pcie_hdr(const pcie_device_state_t& dev, lspci_params_t* params)
 {
-    DEBUG_ASSERT(dev && params);
+    DEBUG_ASSERT(params);
     LSPCI_PRINTF("[%02x:%02x.%01x] - VID 0x%04x DID 0x%04x :: %s",
-                 dev->bus_id, dev->dev_id, dev->func_id,
-                 dev->vendor_id, dev->device_id,
+                 dev.bus_id, dev.dev_id, dev.func_id,
+                 dev.vendor_id, dev.device_id,
                  pci_device_type(dev));
 
-    if (dev->driver)
-        printf(" [driver = \"%s\"]", pcie_driver_name(dev->driver));
+    if (dev.driver)
+        printf(" [driver = \"%s\"]", pcie_driver_name(dev.driver));
 
     printf("\n");
 }
 
-static void dump_pcie_bars(const pcie_device_state_t* dev,
+static void dump_pcie_bars(const pcie_device_state_t& dev,
                            lspci_params_t* params,
                            uint bar_count)
 {
-    pci_config_t* cfg = &dev->cfg->base;
+    pci_config_t* cfg = &dev.cfg->base;
 
     DEBUG_ASSERT(bar_count <= countof(cfg->base_addresses));
-    DEBUG_ASSERT(bar_count <= countof(dev->bars));
+    DEBUG_ASSERT(bar_count <= countof(dev.bars));
     for (uint i = 0; i < bar_count; ++i) {
         DEBUG_ASSERT(i < bar_count);
 
@@ -309,9 +308,9 @@ static void dump_pcie_bars(const pcie_device_state_t* dev,
     }
 }
 
-static void dump_pcie_common(const pcie_device_state_t* dev, lspci_params_t* params)
+static void dump_pcie_common(const pcie_device_state_t& dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &dev->cfg->base;
+    pci_config_t* cfg = &dev.cfg->base;
     uint8_t base_class = pcie_read8(&cfg->base_class);
 
     LSPCI_PRINTF("Command           : 0x%04x\n",    pcie_read16(&cfg->command));
@@ -327,9 +326,9 @@ static void dump_pcie_common(const pcie_device_state_t* dev, lspci_params_t* par
     LSPCI_PRINTF("BIST              : 0x%02x\n",    pcie_read8(&cfg->bist));
 }
 
-static void dump_pcie_standard(const pcie_device_state_t* dev, lspci_params_t* params)
+static void dump_pcie_standard(const pcie_device_state_t& dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &dev->cfg->base;
+    pci_config_t* cfg = &dev.cfg->base;
     LSPCI_PRINTF("Cardbus CIS       : 0x%08x\n", pcie_read32(&cfg->cardbus_cis_ptr));
     LSPCI_PRINTF("Subsystem VID     : 0x%04x\n", pcie_read16(&cfg->subsystem_vendor_id));
     LSPCI_PRINTF("Subsystem ID      : 0x%04x\n", pcie_read16(&cfg->subsystem_id));
@@ -341,9 +340,9 @@ static void dump_pcie_standard(const pcie_device_state_t* dev, lspci_params_t* p
     LSPCI_PRINTF("Max Latency       : 0x%02x\n", pcie_read8(&cfg->max_latency));
 }
 
-static void dump_pcie_bridge(const pcie_device_state_t* dev, lspci_params_t* params)
+static void dump_pcie_bridge(const pcie_device_state_t& dev, lspci_params_t* params)
 {
-    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&dev->cfg->base);
+    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&dev.cfg->base);
 
     LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", pcie_read8(&bcfg->primary_bus_id));
     LSPCI_PRINTF("S. Bus Range      : [0x%02x, 0x%02x]\n",
@@ -375,7 +374,7 @@ static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys)
     hexdump8(kvaddr, amt);
 }
 
-static bool dump_pcie_device(pcie_device_state_t* dev, void* ctx, uint level)
+static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level)
 {
     DEBUG_ASSERT(dev && ctx);
     lspci_params_t* params = (lspci_params_t*)ctx;
@@ -407,25 +406,25 @@ static bool dump_pcie_device(pcie_device_state_t* dev, void* ctx, uint level)
     params->indent_level = params->verbose ? 0 : level - params->base_level;
 
     /* Dump the header */
-    dump_pcie_hdr(dev, params);
+    dump_pcie_hdr(*dev, params);
 
     /* Only dump details if we are in verbose mode and this device matches our
      * filter */
     if (params->verbose) {
         params->indent_level += 2;
 
-        dump_pcie_common(dev, params);
+        dump_pcie_common(*dev, params);
 
         uint8_t header_type = pcie_read8(&dev->cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
         switch (header_type) {
         case PCI_HEADER_TYPE_STANDARD:
-            dump_pcie_bars(dev, params, 6);
-            dump_pcie_standard(dev, params);
+            dump_pcie_bars(*dev, params, 6);
+            dump_pcie_standard(*dev, params);
             break;
 
         case PCI_HEADER_TYPE_PCI_BRIDGE:
-            dump_pcie_bars(dev, params, 2);
-            dump_pcie_bridge(dev, params);
+            dump_pcie_bars(*dev, params, 2);
+            dump_pcie_bridge(*dev, params);
             break;
 
         case PCI_HEADER_TYPE_CARD_BUS:
@@ -581,8 +580,8 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    pcie_device_state_t* dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
-                                                     bus_id, dev_id, func_id);
+    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+                                                                  bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
@@ -591,7 +590,7 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
                 bus_id, dev_id, func_id, pcie_driver_name(dev->driver));
         pcie_shutdown_device(dev);
         pcie_unplug_device(dev);
-        pcie_release_device(dev);
+        dev = nullptr;
         printf("done\n");
     }
 
@@ -621,15 +620,15 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    pcie_device_state_t* dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
-                                                     bus_id, dev_id, func_id);
+    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+                                                                  bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
     } else {
         printf("Attempting reset of device %02x:%02x.%01x...\n", bus_id, dev_id, func_id);
         status_t res = pcie_do_function_level_reset(dev);
-        pcie_release_device(dev);
+        dev = nullptr;
         if (res != NO_ERROR)
             printf("Reset attempt failed (res = %d).\n", res);
         else

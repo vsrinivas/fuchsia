@@ -62,8 +62,11 @@ status_t PciIoMappingDispatcher::CreateBarMapping(
     if (!device || !out_rights || !out_dispatcher)
         return ERR_INVALID_ARGS;
 
+    if (!device->device())
+        return ERR_BAD_STATE;
+
     // Fetch our BAR info.
-    const pcie_bar_info_t* info = pcie_get_bar_info(device->device(), bar_num);
+    const pcie_bar_info_t* info = pcie_get_bar_info(*device->device(), bar_num);
     if (!info) return ERR_INVALID_ARGS;
     DEBUG_ASSERT(bar_num < PCIE_MAX_BAR_REGS);
 

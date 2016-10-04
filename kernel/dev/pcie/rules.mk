@@ -15,4 +15,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pcie_irqs.cpp \
 	$(LOCAL_DIR)/pcie_topology.cpp
 
+MODULE_DEPS += \
+    lib/mxtl
+
 include make/module.mk

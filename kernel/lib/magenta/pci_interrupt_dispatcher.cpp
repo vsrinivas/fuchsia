@@ -28,7 +28,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     }
 }
 
-pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(pcie_device_state_t* dev,
+pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const pcie_device_state_t& dev,
                                                            uint irq_id,
                                                            void* ctx) {
     DEBUG_ASSERT(ctx);
