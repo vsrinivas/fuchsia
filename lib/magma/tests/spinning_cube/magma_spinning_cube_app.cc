@@ -7,9 +7,24 @@
 #include "magma_util/macros.h"
 #include <chrono>
 
+#include <dirent.h>
+#include <errno.h>
+#include <hid/acer12.h>
+#include <hid/usages.h>
+#include <magenta/device/input.h>
+#include <magenta/syscalls.h>
+#include <mxio/io.h>
+#include <stdlib.h>
+#include <thread>
+
+#include <cmath>
+
 #define SECONDS_TO_RUN 2
 #define FB_W 2160
 #define FB_H 1440
+
+#define DEV_INPUT "/dev/class/input"
+#define I2C_HID_DEBUG 0
 
 MagmaSpinningCubeApp::MagmaSpinningCubeApp() {}
 
@@ -240,7 +255,7 @@ bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms)
     cube_->Draw();
     glFinish();
 
-    uint32_t prev_buf = (curr_buf_ + bufcount_ - 1) % bufcount_;
+    uint32_t prev_buf = (curr_buf_ + (bufcount_ - 1)) % bufcount_;
     magma_system_display_page_flip(magma_display_, fb_[prev_buf].fb_handle, &pageflip_callback,
                                    cube_);
 
@@ -251,10 +266,163 @@ bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms)
     return true;
 }
 
+inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim)
+{
+    return (z * screen_dim) / rpt_dim;
+}
+
+void MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
+{
+    if (!buf || !len) {
+        last_touch_valid_ = false;
+        return;
+    }
+
+    acer12_touch_t* curr_touch = static_cast<acer12_touch_t*>(buf);
+    if (len < sizeof(*curr_touch)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*curr_touch));
+        return;
+    }
+
+    // so we can use both as pointers
+    auto last_touch = &last_touch_;
+    bool found_finger = false;
+
+    if (last_touch_valid_) {
+        for (uint8_t curr_finger_index = 0; curr_finger_index < 5; curr_finger_index++) {
+            for (uint8_t last_finger_index = 0; last_finger_index < 5; last_finger_index++) {
+                auto curr_finger = &curr_touch->fingers[curr_finger_index];
+                auto last_finger = &last_touch->fingers[last_finger_index];
+                // find the matching finger from the last touch event;
+                if (curr_finger->finger_id == last_finger->finger_id) {
+                    // only proceed if touch was valid for this finger for both touch events
+                    if (acer12_finger_id_tswitch(curr_finger->finger_id) &&
+                        acer12_finger_id_tswitch(last_finger->finger_id)) {
+
+                        float x0 = scale32(last_finger->x, FB_W, ACER12_X_MAX);
+                        float y0 = scale32(last_finger->y, FB_H, ACER12_Y_MAX);
+
+                        float x1 = scale32(curr_finger->x, FB_W, ACER12_X_MAX);
+                        float y1 = scale32(curr_finger->y, FB_H, ACER12_Y_MAX);
+
+                        float drag_x = x1 - x0;
+                        float drag_y = y1 - y0;
+
+                        int direction = 0;
+                        // if dot product is positive we are going in the same direction
+                        if (drag_y - drag_x > 0) {
+                            direction = 1;
+                        } else {
+                            direction = -1;
+                        }
+
+                        constexpr int ratio = 5;
+                        cube_->UpdateForDragDistance(direction * std::hypot(drag_x, drag_y) /
+                                                     ratio);
+
+                        auto now = std::chrono::high_resolution_clock::now();
+
+                        std::chrono::duration<double, std::ratio<1, ratio>> elapsed =
+                            now - last_touch_timestamp_;
+
+                        cube_->SetFlingMultiplier(direction * std::hypot(drag_x, drag_y),
+                                                  elapsed.count());
+
+                        found_finger = true;
+                    }
+                    break;
+                }
+            }
+            if (found_finger)
+                break;
+        }
+    }
+
+    memcpy(last_touch, curr_touch, sizeof(acer12_touch_t));
+    last_touch_valid_ = true;
+    last_touch_timestamp_ = std::chrono::high_resolution_clock::now();
+}
+
 extern "C" {
 
 int test_spinning_cube(uint32_t device_handle)
 {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    // Scan /dev/class/input to find the touchscreen
+    struct dirent* de;
+    DIR* dir = opendir(DEV_INPUT);
+    if (!dir) {
+        printf("failed to open %s: %d\n", DEV_INPUT, errno);
+        return -1;
+    }
+
+    int ret = 0;
+    int touchfd = -1;
+    size_t rpt_desc_len = 0;
+    uint8_t* rpt_desc = NULL;
+    while ((de = readdir(dir)) != NULL) {
+        char devname[128];
+        snprintf(devname, sizeof(devname), "%s/%s", DEV_INPUT, de->d_name);
+        touchfd = open(devname, O_RDONLY);
+        if (touchfd < 0) {
+            printf("failed to open %s: %d\n", devname, errno);
+            continue;
+        }
+
+        ret = ioctl_input_get_report_desc_size(touchfd, &rpt_desc_len);
+        if (ret < 0) {
+            printf("failed to get report descriptor length for %s: %zd\n", devname, ret);
+            touchfd = -1;
+            continue;
+        }
+        if (rpt_desc_len != ACER12_RPT_DESC_LEN) {
+            rpt_desc_len = 0;
+            touchfd = -1;
+            continue;
+        }
+
+        rpt_desc = (uint8_t*)malloc(rpt_desc_len);
+        if (rpt_desc == NULL) {
+            printf("no memory!\n");
+            return -1;
+        }
+        ret = ioctl_input_get_report_desc(touchfd, rpt_desc, rpt_desc_len);
+        if (ret < 0) {
+            printf("failed to get report descriptor for %s: %zd\n", devname, ret);
+            rpt_desc_len = 0;
+            free(rpt_desc);
+            rpt_desc = NULL;
+            touchfd = -1;
+            continue;
+        }
+        if (!memcmp(rpt_desc, acer12_touch_report_desc, ACER12_RPT_DESC_LEN)) {
+            // Found the touchscreen
+            printf("touchscreen: %s\n", devname);
+            break;
+        }
+        touchfd = -1;
+    }
+    closedir(dir);
+
+    if (touchfd < 0) {
+        printf("could not find a touchscreen!\n");
+        return -1;
+    }
+    assert(rpt_desc_len > 0);
+    assert(rpt_desc);
+
+    input_report_size_t max_rpt_sz = 0;
+    ret = ioctl_input_get_max_reportsize(touchfd, &max_rpt_sz);
+    if (ret < 0) {
+        printf("failed to get max report size: %zd\n", ret);
+        return -1;
+    }
+    void* buf = malloc(max_rpt_sz);
+    if (buf == NULL) {
+        printf("no memory!\n");
+        return -1;
+    }
 
     MagmaSpinningCubeApp app;
     if (!app.Initialize(device_handle)) {
@@ -265,9 +433,28 @@ int test_spinning_cube(uint32_t device_handle)
     uint32_t num_frames = 60;
     uint32_t frame_count = 0;
     uint64_t total_milliseconds = 0;
+    ssize_t r;
     static const float milliseconds_per_second =
         std::chrono::milliseconds(std::chrono::seconds(1)).count();
     while (true) {
+
+        uint32_t num_events = 0;
+        while (mxio_wait_fd(touchfd, MXIO_EVT_READABLE, NULL, 0) == 0) {
+            r = read(touchfd, buf, max_rpt_sz);
+            if (r < 0) {
+                printf("touchscreen read error: %zd\n", r);
+                break;
+            }
+            if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
+                num_events++;
+            }
+        }
+
+        if (num_events > 0) {
+            app.ProcessTouchscreenInput(buf, r);
+        } else {
+            app.ProcessTouchscreenInput(nullptr, 0);
+        }
 
         auto t1 = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = t1 - t0;

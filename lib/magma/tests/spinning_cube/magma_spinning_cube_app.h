@@ -14,6 +14,10 @@
 #include <GLES2/gl2ext.h>
 #include <gbm.h>
 
+#include <hid/acer12.h>
+
+#include <chrono>
+
 #include "spinning_cube.h"
 
 class MagmaSpinningCubeApp {
@@ -24,6 +28,7 @@ public:
     void Cleanup();
     bool Draw(uint32_t time_delta_ms);
     bool CanDraw() { return !encountered_async_error_; }
+    void ProcessTouchscreenInput(void* buf, size_t len);
 
 private:
     bool InitEGL();
@@ -56,6 +61,10 @@ private:
     bool encountered_async_error_ = false;
     bool waiting_on_page_flip_ = false;
     bool is_initialized_ = false;
+
+    acer12_touch_t last_touch_;
+    bool last_touch_valid_ = false;
+    std::chrono::high_resolution_clock::time_point last_touch_timestamp_;
 
     magma_system_display* magma_display_ = nullptr;
 };

@@ -439,6 +439,27 @@ void SpinningCube::UpdateForTimeDelta(float delta_time)
     Update();
 }
 
+void SpinningCube::UpdateForDragDistance(float distance)
+{
+    state_->angle_ += RotationForDragDistance(distance);
+    if (state_->angle_ >= 360.0f)
+        state_->angle_ -= 360.0f;
+
+    Update();
+}
+
+void SpinningCube::UpdateForDragVector(float x0_in, float y0_in, float x1_in, float y1_in)
+{
+
+    // normalize to screen height
+    // float x0 = x0_in/height_;
+    // float y0 = y0_in/height_;
+    // float x1 = x1_in/height_;
+    // float y1 = y1_in/height_;
+
+    Update();
+}
+
 void SpinningCube::Draw()
 {
     glViewport(0, 0, width_, height_);

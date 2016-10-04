@@ -32,6 +32,7 @@ public:
     void SetFlingMultiplier(float drag_distance, float drag_time);
     void UpdateForTimeDelta(float delta_time);
     void UpdateForDragDistance(float distance);
+    void UpdateForDragVector(float x0_in, float y0_in, float x1_in, float y1_in);
     void Draw();
 
     void OnGLContextLost();
@@ -49,6 +50,7 @@ private:
     float fling_multiplier_;
     int direction_;
     float color_[3];
+    // float axis_[3];
 };
 
 #endif // EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_

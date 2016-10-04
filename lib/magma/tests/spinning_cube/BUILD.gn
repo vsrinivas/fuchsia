@@ -27,4 +27,8 @@ source_set("spinning_cube") {
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
   ]
+
+  libs = [
+    "hid",
+  ]
 }
