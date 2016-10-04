@@ -1,0 +1,30 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//magma/gnbuild/magma.gni")
+
+config("spinning_cube_public_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("spinning_cube") {
+  public_configs = [ ":spinning_cube_public_config" ]
+
+  sources = [
+    "magma_spinning_cube_app.cc",
+    "magma_spinning_cube_app.h",
+    "spinning_cube.cc",
+    "spinning_cube.h",
+    "test_spinning_cube.h",
+  ]
+
+  public_deps = [
+    "$mesa_build_root:magma_framework",
+  ]
+
+  deps = [
+    "$magma_build_root/include:sys_abi",
+    "$magma_build_root/src/magma_util",
+  ]
+}

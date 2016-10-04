@@ -3,17 +3,22 @@
 // found in the LICENSE file.
 
 #include "magma_spinning_cube_app.h"
+#include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include <chrono>
 
 #define SECONDS_TO_RUN 2
+#define FB_W 2160
+#define FB_H 1440
 
 MagmaSpinningCubeApp::MagmaSpinningCubeApp() {}
 
-static void modeset_callback(int fd, unsigned int frame, unsigned int sec,
-                      unsigned int usec, void *data) {
-  MagmaSpinningCubeApp *app = static_cast<MagmaSpinningCubeApp *>(data);
-  if (!app->Draw(16)) {
-    fprintf(stderr, "draw failed\n");
-  }
+static void pageflip_callback(int32_t error, void* data)
+{
+    if (error) {
+        DLOG("magma_system_page_flip failed");
+        DASSERT(false);
+    }
 }
 
 bool MagmaSpinningCubeApp::Initialize(int fd_in) {
@@ -23,16 +28,16 @@ bool MagmaSpinningCubeApp::Initialize(int fd_in) {
   fd_ = fd_in;
   curr_buf_ = 0;
 
-  if (!InitKMS())
-    return false;
   if (!InitEGL())
     return false;
+  if (!InitDisplay())
+      return false;
   if (!InitFramebuffer())
     return false;
 
   cube_ = new SpinningCube();
   cube_->Init();
-  cube_->set_size(mode_.hdisplay, mode_.vdisplay);
+  cube_->set_size(FB_W, FB_H);
   cube_->set_color(1.0, 1.0, 1.0);
   cube_->UpdateForTimeDelta(0);
 
@@ -44,40 +49,10 @@ bool MagmaSpinningCubeApp::Initialize(int fd_in) {
 void MagmaSpinningCubeApp::Cleanup(){
   is_cleaning_up_ = true;
 
-  // block teardown until outstanding pageflips are serviced
-  if (waiting_on_page_flip_) {
-    drmEventContext ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.version = DRM_EVENT_CONTEXT_VERSION;
-    ev.page_flip_handler = modeset_callback;
-    fprintf(stderr, "Clearing outstanding page flips\n");
-    while (waiting_on_page_flip_) {
-      fd_set fds;
-      FD_ZERO(&fds);
-      FD_SET(fd, &fds);
-      struct timeval timeout;
-      memset(&timeout, 0, sizeof(timeout));
-      timeout.tv_sec = 1;
-
-      if (select(fd + 1, &fds, nullptr, nullptr, &timeout) < 0) {
-        perror("select() failed, giving up on clearing outstanding page flips.");
-        break;
-      } else if (FD_ISSET(fd, &fds)) {
-        if(drmHandleEvent(fd, &ev)){
-          fprintf(stderr, "drmHandleEvent failed, giving up on clearing outstanding page flips.\n");
-          break;
-        }
-      }
-    }
-
-
-  }
-
   delete cube_;
   CleanupFramebuffer();
   CleanupEGL();
-  CleanupKMS();
-  close(fd_);
+  CleanupDisplay();
 
   fprintf(stderr, "\nCLeaned Up Successfully, Exiting Cleanly\n\n");
 }
@@ -86,64 +61,11 @@ MagmaSpinningCubeApp::~MagmaSpinningCubeApp() {
   Cleanup();
 }
 
-bool MagmaSpinningCubeApp::InitKMS() {
-  resources_ = drmModeGetResources(fd);
-  if (!resources_) {
-    fprintf(stderr, "drmModeGetResources failed\n");
-    return false;
-  }
-
-  int i;
-  for (i = 0; i < resources_->count_connectors; i++) {
-    connector_ = drmModeGetConnector(fd, resources_->connectors[i]);
-    if (connector_ == nullptr)
-      continue;
-
-    if (connector_->connection == DRM_MODE_CONNECTED &&
-        connector_->count_modes > 0)
-      break;
-
-    drmModeFreeConnector(connector_);
-    connector_ = nullptr;
-  }
-
-  if (i == resources_->count_connectors) {
-    fprintf(stderr, "No currently active connector found.\n");
-    return false;
-  }
-
-  for (i = 0; i < resources_->count_encoders; i++) {
-    encoder_ = drmModeGetEncoder(fd, resources_->encoders[i]);
-
-    if (encoder_ == nullptr)
-      continue;
-
-    if (encoder_->encoder_id == connector_->encoder_id)
-      break;
-
-    encoder_ = nullptr;
-  }
-
-  if (encoder_ == nullptr) {
-    fprintf(stderr, "Could not get encoder for connector_\n");
-    return false;
-  }
-
-  mode_ = connector_->modes[0];
-
-  saved_crtc_ = drmModeGetCrtc(fd, encoder_->crtc_id);\
-  if(!saved_crtc_){
-    fprintf(stderr, "Warning: Could not save currently set crtc\n");
-  }
-
-  return true;
-}
-
 bool MagmaSpinningCubeApp::InitEGL() {
-  gbm_ = gbm_create_device(fd);
-  if (!gbm_) {
-    perror("could not create gbm_device");
-    return false;
+    gbm_ = gbm_create_device(fd_);
+    if (!gbm_) {
+        perror("could not create gbm_device");
+        return false;
   }
   display_ = eglGetDisplay(gbm_);
   if (display_ == EGL_NO_DISPLAY) {
@@ -195,74 +117,82 @@ bool MagmaSpinningCubeApp::InitEGL() {
 }
 
 bool MagmaSpinningCubeApp::InitFramebuffer() {
-  auto egl_image_target_renderbuffer_storage =
-      reinterpret_cast<PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC>(
-          eglGetProcAddress("glEGLImageTargetRenderbufferStorageOES"));
+    // auto egl_image_target_renderbuffer_storage =
+    //     reinterpret_cast<PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC>(
+    //         eglGetProcAddress("glEGLImageTargetRenderbufferStorageOES"));
 
-  auto egl_image_target_texture_2d =
-      reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
-          eglGetProcAddress("glEGLImageTargetTexture2DOES"));
+    auto egl_image_target_texture_2d = reinterpret_cast<PFNGLEGLIMAGETARGETTEXTURE2DOESPROC>(
+        eglGetProcAddress("glEGLImageTargetTexture2DOES"));
 
-  for (int i = 0; i < bufcount_; i++) {
-    fb_[i].bo =
-        gbm_bo_create(gbm_, mode_.hdisplay, mode_.vdisplay, GBM_BO_FORMAT_ARGB8888,
-                      GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
-    if (!fb_[i].bo) {
-      perror("could not create GBM buffer");
-      return false;
-    }
-    uint32_t stride = gbm_bo_get_stride(fb_[i].bo);
+    for (int i = 0; i < bufcount_; i++) {
+        fb_[i].bo = gbm_bo_create(gbm_, FB_W, FB_H, GBM_BO_FORMAT_ARGB8888,
+                                  GBM_BO_USE_LINEAR | GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
+        if (!fb_[i].bo) {
+            perror("could not create GBM buffer");
+            return false;
+        }
+        // uint32_t stride = gbm_bo_get_stride(fb_[i].bo);
 
-    fb_[i].image = eglCreateImage(display_, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
-                                 fb_[i].bo, nullptr);
-    if (!fb_[i].image) {
-      fprintf(stderr, "eglCreateImage returned null\n");
-      return false;
-    }
+        fb_[i].image =
+            eglCreateImage(display_, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR, fb_[i].bo, nullptr);
+        if (!fb_[i].image) {
+            fprintf(stderr, "eglCreateImage returned null\n");
+            return false;
+        }
 
-    glGenFramebuffers(1, &fb_[i].fb);
-    glBindFramebuffer(GL_FRAMEBUFFER, fb_[i].fb);
+        glGenFramebuffers(1, &fb_[i].fb);
+        glBindFramebuffer(GL_FRAMEBUFFER, fb_[i].fb);
 
-    glGenTextures(1, &fb_[i].color_rb);
-    glBindTexture(GL_TEXTURE_2D, fb_[i].color_rb);
-    egl_image_target_texture_2d(GL_TEXTURE_2D, fb_[i].image);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           fb_[i].color_rb, 0);
+        glGenTextures(1, &fb_[i].color_rb);
+        glBindTexture(GL_TEXTURE_2D, fb_[i].color_rb);
+        egl_image_target_texture_2d(GL_TEXTURE_2D, fb_[i].image);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb_[i].color_rb,
+                               0);
 
-    glGenRenderbuffers(1, &fb_[i].depth_rb);
-    glBindRenderbuffer(GL_RENDERBUFFER, fb_[i].depth_rb);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, mode_.hdisplay,
-                          mode_.vdisplay);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                              GL_RENDERBUFFER, fb_[i].depth_rb);
+        glGenRenderbuffers(1, &fb_[i].depth_rb);
+        glBindRenderbuffer(GL_RENDERBUFFER, fb_[i].depth_rb);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, FB_W, FB_H);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
+                                  fb_[i].depth_rb);
 
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-      fprintf(stderr, "framebuffer is incomplete\n");
-      return false;
-    }
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            fprintf(stderr, "framebuffer is incomplete\n");
+            return false;
+        }
 
-    fb_[i].fb_id = 0;
-    uint32_t handle = gbm_bo_get_handle(fb_[i].bo).u32;
-    if(drmModeAddFB(fd, mode_.hdisplay, mode_.vdisplay, 24, 32, stride, handle, &fb_[i].fb_id)) {
-      return false;
-    }
-  }
+        int32_t fb_token = gbm_bo_get_fd(fb_[i].bo);
+        if (fb_token < 0) {
+            fprintf(stderr, "gbm_bo_get_fd returned %d\n", fb_token);
+            return false;
+        }
 
-  if(drmModeSetCrtc(fd, encoder_->crtc_id, fb_[0].fb_id, 0, 0,
-                 &(connector_->connector_id), 1, &mode_)){
-    fprintf(stderr, "failed to set crtc\n");
-    return false;
+        printf("got token 0x%x for fb %d\n", fb_token, i);
+
+        if (!magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_token),
+                                                &(fb_[i].fb_handle))) {
+            fprintf(stderr, "magma_system_display_import_buffer failed\n");
+            return false;
+        }
   }
 
   return true;
 }
 
+bool MagmaSpinningCubeApp::InitDisplay()
+{
+    magma_display_ = magma_system_display_open(fd_);
+    if (!magma_display_) {
+        fprintf(stderr, "magma_system_display_open returned null\n");
+        return false;
+    }
+    return true;
+}
+
+void MagmaSpinningCubeApp::CleanupDisplay() { magma_system_display_close(magma_display_); }
+
 void MagmaSpinningCubeApp::CleanupFramebuffer() {
 
   for (int i = 0; i < bufcount_; i++) {
-    if (fb_[i].fb_id) {
-      drmModeRmFB(fd, fb_[i].fb_id);
-    }
 
     if (fb_[i].color_rb) {
       glDeleteTextures(1, &fb_[i].color_rb);
@@ -299,91 +229,59 @@ void MagmaSpinningCubeApp::CleanupEGL() {
   }
 }
 
-void MagmaSpinningCubeApp::CleanupKMS() {
+bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms)
+{
+    waiting_on_page_flip_ = false;
+    if (is_cleaning_up_)
+        return true;
 
-  if (saved_crtc_) {
-    if(drmModeSetCrtc(fd, saved_crtc_->crtc_id, saved_crtc_->buffer_id,
-                   saved_crtc_->x, saved_crtc_->y, &(connector_->connector_id), 1,
-                   &(saved_crtc_->mode))){
-      fprintf(stderr, "Warning: could not restore saved crtc\n");
-    }
-  }
+    glBindFramebuffer(GL_FRAMEBUFFER, fb_[curr_buf_].fb);
+    cube_->UpdateForTimeDelta(time_delta_ms / 1000.f);
+    cube_->Draw();
+    glFinish();
 
-  if (encoder_) {
-    drmModeFreeEncoder(encoder_);
-  }
+    magma_system_display_page_flip(magma_display_, fb_[curr_buf_].fb_handle, &pageflip_callback,
+                                   cube_);
 
-  if (resources_) {
-    drmModeFreeResources(resources_);
-  }
+    curr_buf_ = (curr_buf_ + 1) % bufcount_;
+    waiting_on_page_flip_ = true;
 
-  if (connector_) {
-    drmModeFreeConnector(connector_);
-  }
-}
-
-bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms) {
-  waiting_on_page_flip_ = false;
-  if (is_cleaning_up_)
     return true;
-
-  glBindFramebuffer(GL_FRAMEBUFFER, fb_[curr_buf_].fb);
-  cube_->UpdateForTimeDelta(time_delta_ms / 1000.f);
-  cube_->Draw();
-  glFinish();
-
-  if (drmModePageFlip(fd, encoder_->crtc_id, fb_[curr_buf_].fb_id,
-                      DRM_MODE_PAGE_FLIP_EVENT, this)) {
-    printf("Failed to page flip\n");
-    encountered_async_error_ = true;
-    return false;
-  }
-  waiting_on_page_flip_ = true;
-  curr_buf_ = (curr_buf_ + 1) % bufcount_;
-
-  return true;
 }
 
-int main() {
+extern "C" {
 
-  int fd = open("/dev/dri/card0", O_RDWR);
-  if (fd < 0) {
-    perror("could not open dri device node");
-    return -1;
-  }
+int test_spinning_cube(uint32_t device_handle)
+{
 
-  MagmaSpinningCubeApp app;
-  if (!app.Initialize(fd)) {
-    return -1;
-  }
-
-  drmEventContext ev;
-  memset(&ev, 0, sizeof(ev));
-  ev.version = DRM_EVENT_CONTEXT_VERSION;
-  ev.page_flip_handler = modeset_callback;
-
-  if (!app.Draw(0)) {
-    fprintf(stderr, "draw failed\n");
-    return -1;
-  }
-  while (app.CanDraw()) {
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(fileno(stdin), &fds);
-    FD_SET(fd, &fds);
-    struct timeval timeout;
-    memset(&timeout, 0, sizeof(timeout));
-    timeout.tv_sec = 1;
-
-    if (select(fd + 1, &fds, nullptr, nullptr, &timeout) < 0) {
-      perror("select() failed");
-      break;
-    } else if (FD_ISSET(fileno(stdin), &fds)) {
-      fprintf(stderr, "exit due to user-input\n");
-      break;
-    } else if (FD_ISSET(fd, &fds)) {
-      drmHandleEvent(fd, &ev);
+    MagmaSpinningCubeApp app;
+    if (!app.Initialize(device_handle)) {
+        return -1;
     }
-  }
-  return 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    uint32_t num_frames = 60;
+    uint32_t frame_count = 0;
+    uint64_t total_microseconds = 0;
+    static const float microseconds_per_second =
+        std::chrono::microseconds(std::chrono::seconds(1)).count();
+    while (true) {
+        if (!app.Draw(16)) {
+            break;
+        }
+        auto t1 = std::chrono::high_resolution_clock::now();
+        auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+        total_microseconds += microseconds;
+        if (++frame_count % num_frames == 0) {
+            printf("Framerate average for last %u frames: %f frames per second\n", num_frames,
+                   (num_frames) / (total_microseconds / microseconds_per_second));
+            frame_count = 0;
+            total_microseconds = 0;
+        }
+
+        t0 = t1;
+    }
+
+    return 0;
+}
 }

@@ -21,21 +21,23 @@ rm -f $bootfs_output_file
 
 echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 
-autorun_unit_tests=true;
+autorun_unit_tests=false;
 
 if $autorun_unit_tests; then
 	autorun_readback_test=false;
+	autorun_spinning_cube_test=false;
 	autorun_msd_intel_tests=true;
 	autorun_magma_app_tests=true;
 	autorun_magma_sys_tests=true;
 else
-	autorun_readback_test=true;
+	autorun_readback_test=false;
+	autorun_spinning_cube_test=true;
 	autorun_msd_intel_tests=false;
 	autorun_magma_app_tests=false;
 	autorun_magma_sys_tests=false;
 fi
 
-$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="unit_test=$autorun_msd_intel_tests readback_test=$autorun_readback_test"
+$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="unit_test=$autorun_msd_intel_tests readback_test=$autorun_readback_test spinning_cube_test=$autorun_spinning_cube_test"
 
 echo "Building magma_service_driver"
 $tools_path/ninja -C $build_dir magma_service_driver magma_tests

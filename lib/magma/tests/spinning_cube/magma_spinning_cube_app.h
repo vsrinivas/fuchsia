@@ -7,13 +7,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "magma_system_display_abi.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <gbm.h>
-#include <xf86drm.h>
-#include <xf86drmMode.h>
 
 #include "spinning_cube.h"
 
@@ -29,8 +28,8 @@ public:
 private:
     bool InitEGL();
     void CleanupEGL();
-    bool InitKMS();
-    void CleanupKMS();
+    bool InitDisplay();
+    void CleanupDisplay();
     bool InitFramebuffer();
     void CleanupFramebuffer();
 
@@ -40,13 +39,6 @@ private:
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;
 
-    drmModeRes* resources_ = nullptr;
-    drmModeConnector* connector_ = nullptr;
-    drmModeEncoder* encoder_ = nullptr;
-    drmModeModeInfo mode_;
-
-    drmModeCrtc* saved_crtc_ = nullptr;
-
     static const int bufcount_ = 2;
     int curr_buf_;
 
@@ -54,7 +46,7 @@ private:
         EGLImage image = EGL_NO_IMAGE;
         struct gbm_bo* bo = nullptr;
         GLuint fb = 0, color_rb = 0, depth_rb = 0;
-        uint32_t fb_id = 0;
+        uint32_t fb_handle = 0;
     };
     framebuffer fb_[bufcount_];
 
@@ -64,4 +56,6 @@ private:
     bool encountered_async_error_ = false;
     bool waiting_on_page_flip_ = false;
     bool is_initialized_ = false;
+
+    magma_system_display* magma_display_ = nullptr;
 };

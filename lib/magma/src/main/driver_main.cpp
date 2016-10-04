@@ -35,6 +35,10 @@ int devhost_start(void);
 extern "C" {
 #include <gpureadback.h>
 }
+#elif MAGMA_SPINNING_CUBE_TEST
+extern "C" {
+#include "test_spinning_cube.h"
+}
 #endif
 
 #define MAGMA_START 1
@@ -290,7 +294,14 @@ static int magma_hook(void* param)
     xprintf("running magma readback tests\n");
     uint32_t device_handle = 0xdeadbeef;
     test_gpu_readback(device_handle);
-#endif // MAGMA_READBACK_TEST
+
+#elif MAGMA_SPINNING_CUBE_TEST
+
+    xprintf("running magma spinning cube test\n");
+    uint32_t device_handle = 0xdeadbeef;
+    test_spinning_cube(device_handle);
+
+#endif
 
 #else
     xprintf("running magma unit tests\n");
