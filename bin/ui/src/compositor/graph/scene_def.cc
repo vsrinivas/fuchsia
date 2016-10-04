@@ -167,8 +167,7 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
 
     auto& image_decl = image_resource_decl->image;
     ftl::RefPtr<RenderImage> image = RenderImage::CreateFromImage(
-        std::move(image_decl),
-        ftl::Ref(mtl::MessageLoop::GetCurrent()->task_runner()),
+        std::move(image_decl), mtl::MessageLoop::GetCurrent()->task_runner(),
         ftl::MakeCopyable([callback = std::move(
                                image_resource_decl->callback)]() mutable {
           if (!callback)
