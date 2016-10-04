@@ -24,13 +24,13 @@ void clock_tests(void)
 
     thread_sleep(100);
     c = arch_cycle_count();
-    t = current_time();
+    current_time();
     c = arch_cycle_count() - c;
     printf("%u cycles per current_time()\n", c);
 
     thread_sleep(100);
     c = arch_cycle_count();
-    t2 = current_time_hires();
+    current_time_hires();
     c = arch_cycle_count() - c;
     printf("%u cycles per current_time_hires()\n", c);
 
