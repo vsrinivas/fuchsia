@@ -5,4 +5,4 @@ square using Skia.
 
 ## USAGE
 
-  $ application_manager mojo:launcher mojo:spinning_square_view
+  $ mojo:launcher mojo:spinning_square_view

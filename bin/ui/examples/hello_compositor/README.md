@@ -5,4 +5,4 @@ to the framebuffer using only the compositor (not the view manager).
 
 ## USAGE
 
-  $ application_manager mojo:hello_compositor
+  $ mojo:hello_compositor

@@ -5,4 +5,4 @@ input usage.
 
 ## USAGE
 
-  $ application_manager mojo:launcher mojo:paint_view
+  $ mojo:launcher mojo:paint_view

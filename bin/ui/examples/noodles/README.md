@@ -8,4 +8,4 @@ For the purposes of this example, the content consists of a Lissajous figure.
 
 ## USAGE
 
-  $ application_manager mojo:launcher mojo:noodles_view
+  $ mojo:launcher mojo:noodles_view
