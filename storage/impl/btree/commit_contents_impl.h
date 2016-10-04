@@ -31,6 +31,8 @@ class CommitContentsImpl : public CommitContents {
       const CommitContents& other) const override;
 
  private:
+  std::unique_ptr<BTreeIterator> NewIterator() const;
+
   const ObjectId root_id_;
   ObjectStore* store_;
 };

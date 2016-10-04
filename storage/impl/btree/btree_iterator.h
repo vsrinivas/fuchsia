@@ -27,6 +27,9 @@ class BTreeIterator : public Iterator<const Entry> {
   bool Valid() const override;
   Status GetStatus() const override;
 
+  // Advances the iterator to the entry equal or after the provided key.
+  BTreeIterator& Seek(const std::string& key);
+
   const Entry& operator*() const override;
   const Entry* operator->() const override;
 

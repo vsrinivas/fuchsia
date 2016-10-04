@@ -20,22 +20,26 @@ CommitContentsImpl::CommitContentsImpl(const ObjectId& root_id,
 CommitContentsImpl::~CommitContentsImpl() {}
 
 std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::begin() const {
-  std::unique_ptr<const TreeNode> root;
-  FTL_CHECK(store_->GetTreeNode(root_id_, &root) == Status::OK);
-  return std::unique_ptr<Iterator<const Entry>>(
-      new BTreeIterator(std::move(root)));
+  return std::unique_ptr<BTreeIterator>(NewIterator());
 }
 
 std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::find(
     const std::string& key) const {
-  FTL_NOTIMPLEMENTED();
-  return nullptr;
+  std::unique_ptr<BTreeIterator> it(NewIterator());
+  it->Seek(key);
+  return std::unique_ptr<Iterator<const Entry>>(std::move(it));
 }
 
 std::unique_ptr<Iterator<const EntryChange>> CommitContentsImpl::diff(
     const CommitContents& other) const {
   FTL_NOTIMPLEMENTED();
   return nullptr;
+}
+
+std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
+  std::unique_ptr<const TreeNode> root;
+  FTL_CHECK(store_->GetTreeNode(root_id_, &root) == Status::OK);
+  return std::unique_ptr<BTreeIterator>(new BTreeIterator(std::move(root)));
 }
 
 }  // namespace storage

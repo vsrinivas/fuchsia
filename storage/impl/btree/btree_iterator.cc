@@ -33,6 +33,48 @@ BTreeIterator::BTreeIterator(std::unique_ptr<const TreeNode> root) {
 
 BTreeIterator::~BTreeIterator() {}
 
+BTreeIterator& BTreeIterator::Seek(const std::string& key) {
+  if (!Valid()) {
+    return *this;
+  }
+
+  if (key < (*this)->key) {
+    return *this;
+  }
+
+  std::unique_ptr<const TreeNode> current_node;
+  // Clear the stack.
+  while (!stack_.empty()) {
+    current_node.swap(stack_.top().node);
+    stack_.pop();
+  }
+  while (current_node) {
+    int index;
+    Status status = current_node->FindKeyOrChild(key, &index);
+    if (status == Status::OK) {
+      stack_.emplace(std::move(current_node), index, index);
+      stack_.top().node->GetEntry(stack_.top().entry_index, &current_entry_);
+    } else if (status == Status::NOT_FOUND) {
+      std::unique_ptr<const TreeNode> next_node;
+      Status child_status = current_node->GetChild(index, &next_node);
+      stack_.emplace(std::move(current_node), index - 1, index);
+      if (child_status == Status::OK) {
+        current_node = std::move(next_node);
+        // If child_status != Status::OK, then current_node would remain unset
+        // after the move above, then we will exit the loop.
+      } else if (child_status == Status::NOT_FOUND) {
+        Next();
+      } else {
+        current_status_ = child_status;
+      }
+    } else {
+      current_status_ = status;
+      break;
+    }
+  }
+  return *this;
+}
+
 BTreeIterator& BTreeIterator::Next() {
   FTL_DCHECK(Valid());
   // direction_up tells the algorithm whether we are exploring the tree down

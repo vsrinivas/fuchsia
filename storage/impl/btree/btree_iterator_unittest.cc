@@ -135,4 +135,61 @@ TEST_F(BTreeIteratorTest, IterateTree) {
   EXPECT_EQ(Status::OK, it->GetStatus());
 }
 
+TEST_F(BTreeIteratorTest, Seek) {
+  std::vector<Entry> entries{
+      Entry{"key0", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key1", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key2", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key3", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key4", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key5", RandomId(), storage::KeyPriority::EAGER},
+      Entry{"key6", RandomId(), storage::KeyPriority::LAZY}};
+
+  // We create a tree with one root and three leaves, as follows:
+  //              D:[2, 3]
+  //           /      |    \
+  //  A:[0, 1]   B:[]   C:[4, 5, 6]
+
+  ObjectId node_A, node_B, node_C, node_D;
+  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
+                            &store_, std::vector<Entry>{entries[0], entries[1]},
+                            std::vector<ObjectId>(3), &node_A));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(&store_, std::vector<Entry>(),
+                                  std::vector<ObjectId>(1), &node_B));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(
+                &store_, std::vector<Entry>{entries[4], entries[5], entries[6]},
+                std::vector<ObjectId>(4), &node_C));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(
+                &store_, std::vector<Entry>{entries[2], entries[3]},
+                std::vector<ObjectId>{node_A, node_B, node_C}, &node_D));
+
+  CommitContentsImpl reader(node_D, &store_);
+
+  std::unique_ptr<Iterator<const Entry>> it = reader.find("key");
+  EXPECT_EQ(entries[0], **it);
+
+  it = reader.find("key2");
+  EXPECT_EQ(entries[2], **it);
+  EXPECT_TRUE(it->Valid());
+
+  it = reader.find("key5");
+  EXPECT_EQ(entries[5], **it);
+  EXPECT_TRUE(it->Valid());
+
+  it = reader.find("key11");
+  EXPECT_EQ(entries[2], **it);
+  EXPECT_TRUE(it->Valid());
+
+  it = reader.find("key6");
+  EXPECT_EQ(entries[6], **it);
+  EXPECT_TRUE(it->Valid());
+
+  it = reader.find("key9");
+  EXPECT_FALSE(it->Valid());
+  EXPECT_EQ(Status::OK, it->GetStatus());
+}
+
 }  // namespace storage
