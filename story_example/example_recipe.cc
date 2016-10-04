@@ -64,7 +64,7 @@ class LinkConnection : public LinkChanged {
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
-// Implementation of the LinkChanged service that just reports each
+// Implementation of the LinkChanged service that just reports every
 // value changed in the given Link.
 class LinkMonitor : public LinkChanged {
  public:
@@ -72,11 +72,7 @@ class LinkMonitor : public LinkChanged {
       : binding_(this), tag_(tag) {
     InterfaceHandle<LinkChanged> watcher;
     binding_.Bind(GetProxy(&watcher));
-
-    // The link is duplicated such that all changes are notified,
-    // including those done on link.
-    link->Dup(GetProxy(&link_));
-    link_->Watch(std::move(watcher));
+    link->WatchAll(std::move(watcher));
   }
 
   void Value(StructPtr<LinkValue> value) override {
@@ -85,7 +81,6 @@ class LinkMonitor : public LinkChanged {
   }
 
  private:
-  InterfacePtr<Link> link_;
   Binding<LinkChanged> binding_;
   const std::string tag_;
 

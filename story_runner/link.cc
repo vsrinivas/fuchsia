@@ -46,6 +46,15 @@ void LinkHost::Value(const ValueCallback& callback) {
 }
 
 void LinkHost::Watch(mojo::InterfaceHandle<LinkChanged> watcher) {
+  AddWatcher(std::move(watcher), false);
+}
+
+void LinkHost::WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) {
+  AddWatcher(std::move(watcher), true);
+}
+
+void LinkHost::AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
+                          const bool self) {
   mojo::InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
 
@@ -55,16 +64,19 @@ void LinkHost::Watch(mojo::InterfaceHandle<LinkChanged> watcher) {
     watcher_ptr->Value(impl_->Value().Clone());
   }
 
-  watchers_.push_back(std::move(watcher_ptr));
+  watchers_.push_back(std::make_pair(std::move(watcher_ptr), self));
 }
 
 void LinkHost::Dup(mojo::InterfaceRequest<Link> dup) {
   new LinkHost(impl_, std::move(dup), false);
 }
 
-void LinkHost::Notify(const mojo::StructPtr<LinkValue>& value) {
-  for (mojo::InterfacePtr<LinkChanged>& watcher : watchers_) {
-    watcher->Value(value.Clone());
+void LinkHost::Notify(LinkHost* const source,
+                      const mojo::StructPtr<LinkValue>& value) {
+  for (std::pair<mojo::InterfacePtr<LinkChanged>, bool>& watcher : watchers_) {
+    if (watcher.second || this != source) {
+      watcher.first->Value(value.Clone());
+    }
   }
 }
 
@@ -89,13 +101,12 @@ void LinkImpl::Remove(LinkHost* const client) {
 }
 
 // SetValue knows which client a notification comes from, so it
-// notifies only all other clients.
+// notifies only all other clients, or the ones that requested all
+// notifications.
 void LinkImpl::SetValue(LinkHost* const src, mojo::StructPtr<LinkValue> value) {
   value_ = std::move(value);
   for (auto dst : clients_) {
-    if (dst != src) {
-      dst->Notify(value_);
-    }
+    dst->Notify(src, value_);
   }
 }
 

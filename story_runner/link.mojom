@@ -57,6 +57,10 @@ interface Link {
   // current value.
   Watch(LinkChanged watcher);
 
+  // Like Watch(), but the watcher is notified also of changes made
+  // through the same handle as the watcher is registered on.
+  WatchAll(LinkChanged watcher);
+
   // Obtains another handle for the same Link instance. Can be used to
   // keep a refernece to a Link instance and pass it as an argument to
   // another service.

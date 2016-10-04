@@ -52,16 +52,19 @@ class LinkHost : public Link {
   void SetValue(mojo::StructPtr<LinkValue> value) override;
   void Value(const ValueCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
+  void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void Dup(mojo::InterfaceRequest<Link> dup) override;
 
   // Called back from LinkImpl.
-  void Notify(const mojo::StructPtr<LinkValue>& value);
+  void Notify(LinkHost* source, const mojo::StructPtr<LinkValue>& value);
 
  private:
+  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self);
+
   LinkImpl* const impl_;
   mojo::StrongBinding<Link> binding_;
   const bool primary_;
-  std::vector<mojo::InterfacePtr<LinkChanged>> watchers_;
+  std::vector<std::pair<mojo::InterfacePtr<LinkChanged>, bool>> watchers_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkHost);
 };
 
