@@ -41,6 +41,11 @@ bool MagmaBuffer::Alloc(uint64_t size)
     return true;
 }
 
+bool MagmaBuffer::Export(uint32_t* token_out)
+{
+    return connection_->ExportBufferObject(this, token_out);
+}
+
 void MagmaBuffer::SetTilingMode(uint32_t tiling_mode)
 {
     if (magma_system_set_tiling_mode(connection_->sys_connection(), this->handle, tiling_mode))

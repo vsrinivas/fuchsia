@@ -75,7 +75,14 @@ magma_buffer* magma_bo_gem_create_from_prime(magma_connection* connection, int32
 
 int32_t magma_bo_gem_export_to_prime(magma_buffer* bo, int32_t* prime_fd)
 {
-    UNIMPLEMENTED("magma_bo_gem_export_to_prime");
+    DLOG("magma_bo_gem_export_to_prime '%s'\n", MagmaBuffer::cast(bo)->Name());
+    uint32_t token;
+    bool success = MagmaBuffer::cast(bo)->Export(&token);
+    if (!success)
+        return DRET(-EINVAL);
+
+    *prime_fd = static_cast<int32_t>(token);
+
     return 0;
 }
 
@@ -148,6 +155,8 @@ int32_t magma_bo_unmap(magma_buffer* bo)
 
 void magma_bo_unreference(magma_buffer* bo)
 {
+    if (!bo)
+        return;
     auto buffer = MagmaBuffer::cast(bo);
     DLOG("magma_bo_unreference %s", buffer ? buffer->Name() : nullptr);
     if (buffer)

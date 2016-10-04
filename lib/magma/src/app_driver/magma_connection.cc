@@ -59,3 +59,8 @@ MagmaBuffer* MagmaConnection::AllocBufferObject(const char* name, uint64_t size,
 
     return buffer;
 }
+
+bool MagmaConnection::ExportBufferObject(MagmaBuffer* buffer, uint32_t* token_out)
+{
+    return magma_system_export(sys_connection_, buffer->handle, token_out);
+}

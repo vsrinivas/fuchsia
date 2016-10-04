@@ -28,6 +28,8 @@ public:
     MagmaBuffer* AllocBufferObject(const char* name, uint64_t size, uint32_t align,
                                    uint32_t tiling_mode, uint32_t stride);
 
+    bool ExportBufferObject(MagmaBuffer* buffer, uint32_t* token_out);
+
     MagmaContext* CreateContext()
     {
         uint32_t context_id;
