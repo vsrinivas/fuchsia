@@ -279,6 +279,9 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
         size_t index = OffsetToIndex(o);
 
+        if (page_array_[index])
+            continue;
+
         vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, node);
         DEBUG_ASSERT(p);
 
