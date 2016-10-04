@@ -31,7 +31,7 @@ static mxio_dispatcher_t* vfs_dispatcher;
 static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 // Initializes io state for a vnode, and attaches it to the vfs dispatcher
-static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
+static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn, uint32_t flags) {
     mx_handle_t h[2];
     mx_status_t r;
     iostate_t* ios;
@@ -39,6 +39,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn) {
     if ((ios = calloc(1, sizeof(iostate_t))) == NULL)
         return ERR_NO_MEMORY;
     ios->vn = vn;
+    ios->io_flags = flags;
 
     if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(ios);
@@ -97,11 +98,11 @@ mx_handle_t vfs_rpc_mount(vnode_t* vn, const char* where) {
     return NO_ERROR;
 }
 
-static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir,
+static mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags,
                                    mx_handle_t* hnds, uint32_t* type,
                                    void* extra, uint32_t* esize,
                                    const char* trackfn) {
-    if ((vn->flags & V_FLAG_DEVICE) && !as_dir) {
+    if ((vn->flags & V_FLAG_DEVICE) && !(flags & O_DIRECTORY)) {
         *type = 0;
         hnds[0] = vn->remote;
         return 1;
@@ -113,7 +114,7 @@ static mx_status_t vfs_get_handles(vnode_t* vn, bool as_dir,
         return 1;
     } else {
         // local vnode or device as a directory, we will create the handles
-        hnds[0] = vfs_create_handle(vn, trackfn);
+        hnds[0] = vfs_create_handle(vn, trackfn, flags);
         *type = MXIO_PROTOCOL_REMOTE;
         return 1;
     }
@@ -160,7 +161,7 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
         return ERR_DISPATCHER_INDIRECT;
     }
     uint32_t type;
-    if ((r = vfs_get_handles(vn, flags & O_DIRECTORY, msg->handle, &type,
+    if ((r = vfs_get_handles(vn, flags, msg->handle, &type,
                              msg->data, &msg->datalen, (const char*)msg->data)) < 0) {
         vn->ops->close(vn);
         return r;
@@ -224,7 +225,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         free(ios);
         return NO_ERROR;
     case MXRIO_CLONE:
-        if ((msg->handle[0] = vfs_create_handle(vn, "<clone>")) < 0) {
+        if ((msg->handle[0] = vfs_create_handle(vn, "<clone>", ios->io_flags)) < 0) {
             return msg->handle[0];
         }
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
@@ -247,6 +248,14 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         return r;
     }
     case MXRIO_WRITE: {
+        if (ios->io_flags & O_APPEND) {
+            vnattr_t attr;
+            mx_status_t r;
+            if ((r = vn->ops->getattr(vn, &attr)) < 0) {
+                return r;
+            }
+            ios->io_off = attr.size;
+        }
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -409,7 +418,7 @@ mx_handle_t vfs_create_root_handle(vnode_t* vn) {
     if ((r = vn->ops->open(&vn, O_DIRECTORY)) < 0) {
         return r;
     }
-    return vfs_create_handle(vn, "/");
+    return vfs_create_handle(vn, "/", 0);
 }
 
 static vnode_t* global_vfs_root;

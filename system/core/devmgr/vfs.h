@@ -113,6 +113,7 @@ typedef struct iostate {
     };
     vdircookie_t dircookie;
     size_t io_off;
+    uint32_t io_flags;
 
     list_node_t node;
     const char* fn;
