@@ -32,6 +32,10 @@
             "bootfs_path": "apps/noodles_view"
         },
         {
+            "binary": "paint_view",
+            "bootfs_path": "apps/paint_view"
+        },
+        {
             "binary": "shapes_view",
             "bootfs_path": "apps/shapes_view"
         },
