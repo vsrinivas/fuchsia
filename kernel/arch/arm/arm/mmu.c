@@ -279,6 +279,11 @@ void arm_mmu_init(void)
     }
     arm_after_invalidate_tlb_barrier();
 
+    arm_mmu_init_percpu();
+}
+
+void arm_mmu_init_percpu(void)
+{
 #if KERNEL_ASPACE_BASE != 0
     /* bounce the ttbr over to ttbr1 and leave 0 unmapped */
     uint32_t n = __builtin_clz(KERNEL_ASPACE_BASE) + 1;

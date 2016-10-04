@@ -181,6 +181,8 @@ void arm_secondary_entry(uint asm_cpu_num)
     /* run early secondary cpu init routines up to the threading level */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
+    arm_mmu_init_percpu();
+
     arch_mp_init_percpu();
 
     LTRACEF("cpu num %u\n", cpu);
