@@ -571,8 +571,11 @@ void ViewRegistry::HijackView(ViewState* view_state) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
 
   ViewStub* view_stub = view_state->view_stub();
-  if (view_stub)
-    ReleaseUnavailableViewAndNotify(view_stub);
+  if (view_stub) {
+    view_stub->ReleaseView();
+    if (view_stub->container())
+      SendChildUnavailable(view_stub->container(), view_stub->key());
+  }
 }
 
 void ViewRegistry::TransferOrUnregisterViewStub(
