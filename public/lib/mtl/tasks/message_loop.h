@@ -41,7 +41,9 @@ class MessageLoop : public internal::TaskQueueDelegate {
   static MessageLoop* GetCurrent();
 
   // Return an interface for posting tasks to this message loop.
-  ftl::TaskRunner* task_runner() const { return incoming_tasks_.get(); }
+  const ftl::RefPtr<ftl::TaskRunner>& task_runner() const {
+    return task_runner_;
+  }
 
   // Adds a |handler| that the message loop calls when the |handle| triggers one
   // of the given |handle_signals| or when |timeout| elapses, whichever happens
@@ -106,7 +108,11 @@ class MessageLoop : public internal::TaskQueueDelegate {
   void NotifyHandlers(ftl::TimePoint now, MojoResult result);
   void CallAfterTaskCallback();
 
-  ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks_;
+  internal::IncomingTaskQueue* incoming_tasks() {
+    return static_cast<internal::IncomingTaskQueue*>(task_runner_.get());
+  }
+
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   ftl::Closure after_task_callback_;
 

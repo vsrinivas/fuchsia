@@ -27,11 +27,11 @@ MessageLoop::MessageLoop()
 
 MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
-    : incoming_tasks_(std::move(incoming_tasks)) {
+    : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
   event_.reset(mx_event_create(0));
   FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
-  incoming_tasks_->InitDelegate(this);
+  MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
 
@@ -42,7 +42,7 @@ MessageLoop::~MessageLoop() {
   // TODO(abarth): What if more handlers are registered here?
   NotifyHandlers(ftl::TimePoint::Max(), MOJO_SYSTEM_RESULT_CANCELLED);
 
-  incoming_tasks_->ClearDelegate();
+  incoming_tasks()->ClearDelegate();
   ReloadQueue();
 
   // Destroy the tasks in the order in which they would have run.
@@ -251,7 +251,7 @@ ftl::TimePoint MessageLoop::RunReadyTasks(ftl::TimePoint now) {
 }
 
 void MessageLoop::ReloadQueue() {
-  for (auto& task : incoming_tasks_->TakeTaskQueue())
+  for (auto& task : incoming_tasks()->TakeTaskQueue())
     queue_.push(std::move(task));
 }
 
