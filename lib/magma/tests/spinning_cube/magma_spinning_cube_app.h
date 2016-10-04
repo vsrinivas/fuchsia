@@ -39,7 +39,7 @@ private:
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;
 
-    static const int bufcount_ = 2;
+    static const int bufcount_ = 3;
     int curr_buf_;
 
     struct framebuffer {
