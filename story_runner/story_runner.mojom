@@ -8,6 +8,10 @@ import "apps/ledger/api/ledger.mojom";
 import "apps/modular/story_runner/session.mojom";
 import "apps/modular/story_runner/resolver.mojom";
 
+// The main service implemented by the story runner app. It is used to
+// configure the app with a resolver factory, and to create session
+// instances (which then are configured with a Resolver instance each,
+// obtained from the resolver factory).
 [ServiceName="modular.StoryRunner"]  // Created by story-runner app.
 interface StoryRunner {
   Initialize(ResolverFactory resolver_factory);

@@ -4,13 +4,23 @@
 
 module modular;
 
+// The main service implemented by the resolver app. A factory for
+// Resolver service instances.
 [ServiceName="modular.ResolverFactory"]  // Created by resolver app.
 interface ResolverFactory {
   GetResolver(Resolver& resolver);
 };
 
+// A service that takes an arbitrary query for a module (such as
+// passed to the StartModule() method of Session) and translates it
+// into the URL of an executable mojo app. Right now the
+// implementation just passes through the query. Later this will
+// actually do something non trivial, for example involving the
+// component manager. This may all change, but it's here right now as
+// a placeholder to make it easier to think about cooperation of the
+// different components.
+//
 // No service name: created by ResolverFactory.
 interface Resolver {
   Resolve(string query) => (string module_url);
 };
-

@@ -7,14 +7,68 @@
 
 module modular;
 
+// This interface is implemented by the story runner. The Session
+// service instance acts as a factory for it.
+//
+// An instance of Link holds a value, expressed as an instance of
+// LinkValue. The value is structured, however right now the value is
+// only set and read as a whole, but in the future it should be
+// possible to just set and read deltas to the value.
+//
+// Each module receives a handle to one instance of Link at startup.
+// This instance is shared with the module that requested the start of
+// the module. A module can create additional Link instances through
+// the Session handle that it also receives at startup. Why would it
+// do that? For example to share the Link instance with modules it
+// requests to start in turn.
+//
+// A client of Link can set the Value stored in the instance and
+// register a handler (an implementation of the LinkChanged interface)
+// to be notified of changes to the Value. A client is not notified of
+// changes it itself makes to the Link value. More specifically, a
+// watcher registered on one handle to a Link instance is not notified
+// of changes made *through the same handle*.
+//
+// A client may obtain another handle to the same Link instance using
+// the Dup() method. The primary purpose of this is to be able to
+// retain one handle and pass another handle to a StartModule()
+// request. (In Mojo, once a handle is passed as argument to a method,
+// it's gone from the caller.)
+//
+// The Dup() method can also be used to create an extra handle to
+// register a watcher on. If the changes to the Link value are made
+// through the original handle, the watcher is notified of all such
+// changes.
+//
 // No service name: created by Session.
 interface Link {
+  // Sets the value. Watchers will be notified. Before SetValue() is
+  // called for the first time, the value in the Link is null, but
+  // it's not possible to reset it back to null.
   SetValue(LinkValue value);
+
+  // Obtains the current value. If SetValue() was not yet called, the
+  // value returned is null.
   Value() => (LinkValue? value);
+
+  // Registers a watcher, which is notified whenever the value
+  // changes. If the value is not null at the time the watcher is
+  // registered, the Value() callbck method is invoked with the
+  // current value.
   Watch(LinkChanged watcher);
+
+  // Obtains another handle for the same Link instance. Can be used to
+  // keep a refernece to a Link instance and pass it as an argument to
+  // another service.
   Dup(Link& dup);
 };
 
+// This interface is meant to be implemented by a client of Link.
+//
+// The Value() method is invoked whenever the value changes. If the
+// value is not null at the time the watcher is registered, Value() is
+// called with the current value immediately.
+//
 // No service name: created by Module.
 interface LinkChanged {
   Value(LinkValue value);
@@ -26,6 +80,17 @@ interface LinkChanged {
 // for JSON-LD, special properties like @id, @value, @type, @context
 // and so on may be represented as actual struct fields to enforce
 // their presence.
+//
+// For now, LinkValue can just represent anything that can also be
+// represented as JSON, except for null values (which we might add if
+// we want them).
+//
+// NOTE(mesch): In the future I want to use *the same* data structure
+// to represent *deltas* in addition to the full value. The only thing
+// this requires is to add a "deleted" field to the union in order to
+// represent deleted fields. Even if we change the data structure to
+// something else, we should aim for this property (might be called
+// self duality if we need a name).
 union LinkValue {
   string string_value;
   int64 int_value;
@@ -34,4 +99,3 @@ union LinkValue {
   map<string, LinkValue> object_value;
   array<LinkValue> array_value;
 };
-
