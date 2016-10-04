@@ -102,11 +102,13 @@ int test_maxfile(void);
 int test_rw_workers(void);
 int test_basic(void);
 int test_rename(void);
+int test_append(void);
 
 struct {
     const char* name;
     int (*test)(void);
 } FS_TESTS[] = {
+    {"append", test_append},
     {"maxfile", test_maxfile},
     {"rw_workers", test_rw_workers},
     {"basic", test_basic},

@@ -13,6 +13,7 @@ MODULE_NAME := fs_tests
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/wrap.c \
+    $(LOCAL_DIR)/test_append.c \
     $(LOCAL_DIR)/test_maxfile.c \
     $(LOCAL_DIR)/test_rw_workers.c \
     $(LOCAL_DIR)/test_basic.c \
