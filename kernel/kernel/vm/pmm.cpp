@@ -162,6 +162,10 @@ size_t pmm_alloc_pages(size_t count, uint alloc_flags, struct list_node* list) {
                 continue;
         }
         while (allocated < count) {
+            /* Go to the next arena if this one's free list is exhausted. */
+            if (!a->free_count)
+                break;
+
             vm_page_t* page = list_remove_head_type(&a->free_list, vm_page_t, node);
             if (!page)
                 return allocated;
