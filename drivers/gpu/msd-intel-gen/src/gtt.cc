@@ -76,34 +76,12 @@ unsigned int gen_ppat_index(CachingType caching_type)
 // of the pat bits in the page table entries.
 void Gtt::InitPrivatePat()
 {
-    DASSERT(gen_ppat_index(CACHING_WRITE_THROUGH) == 2);
-    DASSERT(gen_ppat_index(CACHING_NONE) == 3);
-    DASSERT(gen_ppat_index(CACHING_LLC) == 4);
-
+    // While command buffers are executed with GGTT, only index 0 is used and so for the 
+    // framebuffer' sake we mark everything as uncacheable.
+    // TODO(MA-71) configure the full set of PPAT indices.
     uint64_t pat =
         registers::PatIndex::ppat(0, registers::PatIndex::kLruAgeFromUncore,
-                                  registers::PatIndex::kLlc, registers::PatIndex::kWriteBack);
-    pat |= registers::PatIndex::ppat(1, registers::PatIndex::kLruAgeFromUncore,
-                                     registers::PatIndex::kLlcEllc,
-                                     registers::PatIndex::kWriteCombining);
-    pat |= registers::PatIndex::ppat(2, registers::PatIndex::kLruAgeFromUncore,
-                                     registers::PatIndex::kLlcEllc,
-                                     registers::PatIndex::kWriteThrough);
-    pat |= registers::PatIndex::ppat(3, registers::PatIndex::kLruAgeFromUncore,
-                                     registers::PatIndex::kEllc, registers::PatIndex::kUncacheable);
-    pat |=
-        registers::PatIndex::ppat(4, registers::PatIndex::kLruAgeFromUncore,
-                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
-    pat |=
-        registers::PatIndex::ppat(5, registers::PatIndex::kLruAgeZero,
-                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
-    pat |=
-        registers::PatIndex::ppat(6, registers::PatIndex::kLruAgeNoChange,
-                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
-    pat |=
-        registers::PatIndex::ppat(7, registers::PatIndex::kLruAgeThree,
-                                  registers::PatIndex::kLlcEllc, registers::PatIndex::kWriteBack);
-
+                                  registers::PatIndex::kLlc, registers::PatIndex::kUncacheable);
     registers::PatIndex::write(reg_io(), pat);
 }
 
