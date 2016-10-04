@@ -18,6 +18,7 @@
         "lua",
         "media",
         "mojo",
+        "mozart",
         "mtl",
         "re2",
         "wpa_supplicant"
