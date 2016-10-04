@@ -12,30 +12,15 @@
 #include <limits.h> // PAGE_SIZE
 #include <magenta/syscalls.h>
 
-#include <vector>
-
-class MagentaPlatformPage {
-public:
-    MagentaPlatformPage(void* virt_addr, uint64_t phys_addr)
-        : virt_addr_(virt_addr), phys_addr_(phys_addr)
-    {
-        DASSERT((reinterpret_cast<uintptr_t>(virt_addr) & (PAGE_SIZE - 1)) == 0);
-        DASSERT((phys_addr & (PAGE_SIZE - 1)) == 0);
-    }
-
-    void* virt_addr() { return virt_addr_; }
-    uint64_t phys_addr() { return phys_addr_; }
-
-private:
-    void* virt_addr_;
-    uint64_t phys_addr_;
+struct MagentaPlatformPage {
+    uint64_t phys_addr;
+    void* virt_addr;
 };
 
 class MagentaPlatformBuffer : public msd_platform_buffer, public magma::Refcounted {
 public:
-    MagentaPlatformBuffer(uint64_t size, void* vaddr, uint64_t paddr)
-        : magma::Refcounted("MagentaPlatformBuffer"), size_(size), virt_addr_(vaddr),
-          phys_addr_(paddr), handle_(++handle_count_)
+    MagentaPlatformBuffer(mx_handle_t handle, uint64_t size)
+        : magma::Refcounted("MagentaPlatformBuffer"), handle_(handle), size_(size)
     {
         DLOG("MagentaPlatformBuffer ctor size %lld handle 0x%x", size, handle_);
         magic_ = kMagic;
@@ -43,20 +28,27 @@ public:
 
     ~MagentaPlatformBuffer()
     {
-        // TODO(MA-22) - free the allocation.
+        UnmapCpu();
+        UnpinPages();
+        mx_handle_close(handle_);
     }
 
     uint64_t size() { return size_; }
 
+    uint32_t num_pages() { return size_ / PAGE_SIZE; }
+
     uint32_t handle() { return handle_; }
 
-    void* virt_addr() { return virt_addr_; }
+    void* MapCpu();
+    void UnmapCpu();
 
     int PinPages();
     int UnpinPages();
     bool PinnedPageCount(uint32_t* count);
 
-    MagentaPlatformPage* get_page(unsigned int index) { return pages_[index].get(); }
+    void* MapPageCpu(uint32_t page_index);
+    void UnmapPageCpu(uint32_t page_index);
+    uint64_t MapPageBus(uint32_t page_index);
 
     static MagentaPlatformBuffer* cast(msd_platform_buffer* buffer)
     {
@@ -65,37 +57,69 @@ public:
     }
 
 private:
-    static uint32_t handle_count_;
-
     static const uint32_t kMagic = 0x62756666;
 
+    mx_handle_t handle_;
     uint64_t size_;
-    void* virt_addr_;
-    uint64_t phys_addr_;
-    uint32_t handle_;
+    void* virt_addr_{};
     std::atomic_int pin_count_{};
-    std::vector<std::unique_ptr<MagentaPlatformPage>> pages_{};
+    MagentaPlatformPage* pages_{};
 };
 
-uint32_t MagentaPlatformBuffer::handle_count_{};
+void* MagentaPlatformBuffer::MapCpu()
+{
+    if (virt_addr_)
+        return virt_addr_;
+
+    uintptr_t ptr;
+    mx_status_t status = mx_process_map_vm(mx_process_self(), handle_, 0, size(), &ptr,
+                                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "failed to map vmo");
+
+    virt_addr_ = reinterpret_cast<void*>(ptr);
+    DLOG("mapped vmo got %p", virt_addr_);
+
+    return virt_addr_;
+}
+
+void MagentaPlatformBuffer::UnmapCpu()
+{
+    if (virt_addr_) {
+        mx_status_t status =
+            mx_process_unmap_vm(mx_process_self(), reinterpret_cast<uintptr_t>(virt_addr_), 0);
+        if (status != NO_ERROR)
+            DLOG("failed to unmap vmo: %d", status);
+
+        virt_addr_ = nullptr;
+    }
+}
 
 int MagentaPlatformBuffer::PinPages()
 {
-    if (pin_count_++ == 0 && pages_.size() == 0) {
-        uint64_t num_pages = size() / PAGE_SIZE;
-        DASSERT(num_pages * PAGE_SIZE == size());
-        DLOG("acquiring pages size %lld num_pages %zd", size(), num_pages);
+    if (pin_count_++ == 0 && !pages_) {
+        DASSERT(num_pages() * PAGE_SIZE == size());
+        DLOG("acquiring pages size %lld num_pages %zd", size(), num_pages());
 
-        for (unsigned int i = 0; i < num_pages; i++) {
-            void* vaddr = reinterpret_cast<uint8_t*>(virt_addr_) + i * PAGE_SIZE;
-            uint64_t paddr = phys_addr_ + i * PAGE_SIZE;
-            auto page = new (std::nothrow) MagentaPlatformPage(vaddr, paddr);
-            if (!page) {
-                DLOG("Failed allocating page %u", i);
-                pages_.clear();
-                return DRET(-ENOMEM);
-            }
-            pages_.push_back(std::unique_ptr<MagentaPlatformPage>(page));
+        mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_COMMIT, 0, size(), nullptr, 0);
+        if (status != NO_ERROR) {
+            DLOG("failed to commit vmo");
+            return DRET(-ENOMEM);
+        }
+
+        mx_paddr_t paddr[num_pages()];
+
+        status = mx_vmo_op_range(handle_, MX_VMO_OP_LOOKUP, 0, size(), paddr, sizeof(paddr));
+        if (status != NO_ERROR) {
+            DLOG("failed to lookup vmo");
+            return DRET(-ENOMEM);
+        }
+
+        pages_ = new MagentaPlatformPage[num_pages()];
+
+        for (unsigned int i = 0; i < num_pages(); i++) {
+            pages_[i].phys_addr = paddr[i];
+            pages_[i].virt_addr = nullptr;
         }
     }
     return 0;
@@ -108,7 +132,19 @@ int MagentaPlatformBuffer::UnpinPages()
 
     if (--pin_count_ == 0) {
         DLOG("pin_count 0, freeing pages");
-        pages_.clear();
+        DASSERT(pages_);
+
+        for (uint32_t page_index = 0; page_index < num_pages(); page_index++) {
+            if (pages_[page_index].virt_addr)
+                UnmapPageCpu(page_index);
+        }
+
+        delete[] pages_;
+        pages_ = nullptr;
+
+        mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT, 0, size(), nullptr, 0);
+        if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
+            DLOG("failed to decommit pages: %d", status);
     }
     return 0;
 }
@@ -116,10 +152,59 @@ int MagentaPlatformBuffer::UnpinPages()
 bool MagentaPlatformBuffer::PinnedPageCount(uint32_t* count)
 {
     if (pin_count_ > 0) {
-        *count = pages_.size();
+        *count = size() / PAGE_SIZE;
         return true;
     }
     return false;
+}
+
+void* MagentaPlatformBuffer::MapPageCpu(uint32_t page_index)
+{
+    if (!pages_)
+        return DRETP(nullptr, "pages not pinned");
+
+    if (page_index >= num_pages())
+        return DRETP(nullptr, "page_index out of range");
+
+    if (pages_[page_index].virt_addr)
+        return pages_[page_index].virt_addr;
+
+    uintptr_t ptr;
+    mx_status_t status =
+        mx_process_map_vm(mx_process_self(), handle_, page_index * PAGE_SIZE, PAGE_SIZE, &ptr,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "page map failed");
+
+    return (pages_[page_index].virt_addr = reinterpret_cast<void*>(ptr));
+}
+
+void MagentaPlatformBuffer::UnmapPageCpu(uint32_t page_index)
+{
+    if (!pages_ || (page_index >= num_pages()) || !pages_[page_index].virt_addr)
+        return;
+
+    mx_status_t status = mx_process_unmap_vm(
+        mx_process_self(), reinterpret_cast<uintptr_t>(pages_[page_index].virt_addr), 0);
+    if (status != NO_ERROR)
+        DLOG("failed to unmap vmo page %d virt_addr %p", page_index, pages_[page_index].virt_addr);
+
+    pages_[page_index].virt_addr = nullptr;
+}
+
+uint64_t MagentaPlatformBuffer::MapPageBus(uint32_t page_index)
+{
+    if (!pages_) {
+        DLOG("pages not pinned");
+        return 0;
+    }
+
+    if (page_index >= num_pages()) {
+        DLOG("page_index out of range");
+        return 0;
+    }
+
+    return pages_[page_index].phys_addr;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -131,16 +216,14 @@ int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint6
     if (size == 0)
         return DRET(-EINVAL);
 
-    void* vaddr;
-    mx_paddr_t paddr;
-    mx_status_t status = mx_alloc_device_memory(get_root_resource(), size, &paddr, &vaddr);
-    if (status < 0) {
-        DLOG("failed to allocate device memory size %lld: %d", size, status);
+    mx_handle_t vmo_handle = mx_vmo_create(size);
+    if (vmo_handle == MX_HANDLE_INVALID) {
+        DLOG("failed to allocate vmo size %lld: %d", size, vmo_handle);
         return DRET(-ENOMEM);
     }
 
-    DLOG("allocated object size %lld vaddr %p paddr %p", size, vaddr, (void*)paddr);
-    auto buffer = new MagentaPlatformBuffer(size, vaddr, paddr);
+    DLOG("allocated vmo size %lld handle 0x%x", size, vmo_handle);
+    auto buffer = new MagentaPlatformBuffer(vmo_handle, size);
 
     *buffer_out = buffer;
     *size_out = buffer->size();
@@ -178,13 +261,13 @@ int32_t msd_platform_buffer_get_handle(struct msd_platform_buffer* buffer, uint3
 
 int32_t msd_platform_buffer_map_cpu(struct msd_platform_buffer* buffer, void** addr_out)
 {
-    *addr_out = MagentaPlatformBuffer::cast(buffer)->virt_addr();
+    *addr_out = MagentaPlatformBuffer::cast(buffer)->MapCpu();
     return 0;
 }
 
 int32_t msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer)
 {
-    // Nothing to do.
+    MagentaPlatformBuffer::cast(buffer)->UnmapCpu();
     return 0;
 }
 
@@ -211,35 +294,30 @@ int32_t msd_platform_buffer_pinned_page_count(struct msd_platform_buffer* buffer
 int32_t msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,
                                          void** addr_out)
 {
-    auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
-    if (!page)
+    void* virt_addr = MagentaPlatformBuffer::cast(buffer)->MapPageCpu(page_index);
+    if (!virt_addr)
         return DRET(-EINVAL);
-    *addr_out = page->virt_addr();
+    *addr_out = virt_addr;
     return 0;
 }
 
 int32_t msd_platform_buffer_unmap_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index)
 {
-    auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
-    if (!page)
-        return DRET(-EINVAL);
+    MagentaPlatformBuffer::cast(buffer)->UnmapPageCpu(page_index);
     return 0;
 }
 
 int32_t msd_platform_buffer_map_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index,
                                          uint64_t* addr_out)
 {
-    auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
-    if (!page)
+    uint64_t phys_addr = MagentaPlatformBuffer::cast(buffer)->MapPageBus(page_index);
+    if (!phys_addr)
         return DRET(-EINVAL);
-    *addr_out = page->phys_addr();
+    *addr_out = phys_addr;
     return 0;
 }
 
 int32_t msd_platform_buffer_unmap_page_bus(struct msd_platform_buffer* buffer, uint32_t page_index)
 {
-    auto page = MagentaPlatformBuffer::cast(buffer)->get_page(page_index);
-    if (!page)
-        return DRET(-EINVAL);
     return 0;
 }

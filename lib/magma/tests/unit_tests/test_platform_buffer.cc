@@ -136,6 +136,7 @@ TEST(MagmaUtil, PlatformBuffer)
     TestPlatformBuffer(4095);
     TestPlatformBuffer(4096);
     TestPlatformBuffer(4097);
-    TestPlatformBuffer(1024 * 1000 * 1000);
+    TestPlatformBuffer(20 * PAGE_SIZE);
+    TestPlatformBuffer(10 * 1024 * 1024);
     TestPlatformBufferPassing();
 }
