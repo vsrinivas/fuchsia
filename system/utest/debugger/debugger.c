@@ -30,6 +30,9 @@
 
 #define NUM_EXTRA_THREADS 4
 
+// Produce a backtrace of sufficient size to be interesting but not excessive.
+#define TEST_SEGFAULT_DEPTH 4
+
 // argv[0]
 static char* program_path;
 
@@ -720,10 +723,45 @@ void test_inferior(void)
     exit(1234);
 }
 
-static void test_segfault(void)
+// Compilers are getting too smart.
+// These maintain the semantics we want even under optimization.
+
+volatile int* crashing_ptr = (int*) 42;
+volatile int crash_depth;
+
+static int __NO_INLINE test_segfault_doit2(int*);
+
+static int __NO_INLINE test_segfault_leaf(int* p)
 {
-    volatile int* p = 0;
-    *p = 42;
+    *crashing_ptr = *p;
+    return 0;
+}
+
+static int __NO_INLINE test_segfault_doit1(int* p)
+{
+    if (crash_depth > 0)
+    {
+        int n = crash_depth;
+        int use_stack[n];
+        memset(use_stack, 0x99, n * sizeof(int));
+        --crash_depth;
+        return test_segfault_doit2(use_stack) + 99;
+    }
+    return test_segfault_leaf(p) + 99;
+}
+
+static int __NO_INLINE test_segfault_doit2(int* p)
+{
+    return test_segfault_doit1(p) + *p;
+}
+
+// Produce a crash with a moderately interesting backtrace.
+
+static int __NO_INLINE test_segfault(void)
+{
+    crash_depth = TEST_SEGFAULT_DEPTH;
+    int i = 0;
+    return test_segfault_doit1(&i);
 }
 
 BEGIN_TEST_CASE(debugger_tests)
@@ -753,8 +791,7 @@ int main(int argc, char **argv)
     }
     if (argc >= 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
         check_verbosity(argc, argv);
-        test_segfault();
-        return 0;
+        return test_segfault();
     }
 
     thrd_t watchdog_thread;
