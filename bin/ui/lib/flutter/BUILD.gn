@@ -1,0 +1,18 @@
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_package.gni")
+
+dart_package("flutter") {
+  infer_package_name = true
+
+  deps = [
+    "//apps/mozart/services/composition/interfaces:interfaces_dart",
+    "//apps/mozart/services/view/interfaces:interfaces_dart",
+    "//lib/flutter/packages/flutter",
+    "//mojo/dart/packages/mojo",
+    "//mojo/public/interfaces/application:application_dart",
+    "//mojo/services/geometry/interfaces:interfaces_dart",
+  ]
+}
