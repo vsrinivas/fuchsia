@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("icu_data_provider") {
+  sources = [
+    "icu_data_provider_impl.cc",
+    "icu_data_provider_impl.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/services/icu_data/cpp",
+    "//mojo/services/icu_data/interfaces",
+    "//mojo/system",
+  ]
+
+  libs = [ "magenta" ]
+}

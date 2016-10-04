@@ -1,5 +1,3 @@
-Fuchsia Open Source Template Repository
-=======================================
+# ICU Data
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+An app that serves the shared ICU data file with other apps.
