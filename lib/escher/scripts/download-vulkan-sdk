@@ -44,9 +44,12 @@ readonly INSTALLED_SHA_FILE="${SCRIPT_DIR}/../third_party/SHAs/installed/vulkans
 if [ -f "${INSTALLED_SHA_FILE}" ]; then
   readonly INSTALLED_SHA=$(cat "${INSTALLED_SHA_FILE}" | tr -d '[[:space:]]')
   if [ "${REQUIRED_SHA}" = "${INSTALLED_SHA}" ]; then
-    # Required Vulkan SDK is already installed.
+    # Required Vulkan SDK is already installed.  However, this does not guarantee
+    # that the binary glslang libaries have been installed.
+    "$SCRIPT_DIR/download-vulkan-glslang"
+    readonly EXIT_VAL=$?
     rm -fr "${TEMP_DIR}"
-    exit 0
+    exit ${EXIT_VAL}
   fi
 fi
 
@@ -78,4 +81,11 @@ rm -fr "${INSTALL_DIR}"
 mv "${ACTUAL_SDK_DIR}" "${INSTALL_DIR}"
 mkdir -p "${SCRIPT_DIR}/../third_party/SHAs/installed"
 cp -f "${REQUIRED_SHA_FILE}" "${INSTALLED_SHA_FILE}"
+
+# Finally, run the download-vulkan-glslang script, forcing it to reinstall the
+# binary libraries.
+rm -f "${SCRIPT_DIR}/../third_party/SHAs/installed/vulkansdk-glslang"
+"$SCRIPT_DIR/download-vulkan-glslang"
+readonly EXIT_VAL=$?
 rm -fr "${TEMP_DIR}"
+exit ${EXIT_VAL}
