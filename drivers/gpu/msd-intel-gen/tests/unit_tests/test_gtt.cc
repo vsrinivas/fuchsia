@@ -146,10 +146,10 @@ public:
         EXPECT_EQ(ret, true);
 
         uint32_t pat_index_low = reg_io->Read32(registers::PatIndex::kOffsetLow);
-        EXPECT_EQ(pat_index_low, 0xA0907u);
+        EXPECT_EQ(pat_index_low, 4u);
 
         uint32_t pat_index_high = reg_io->Read32(registers::PatIndex::kOffsetHigh);
-        EXPECT_EQ(pat_index_high, 0x3B2B1B0Bu);
+        EXPECT_EQ(pat_index_high, 0u);
 
         uint64_t scratch_bus_addr;
         ret = TestGtt::scratch_buffer(gtt.get())->MapPageBus(0, &scratch_bus_addr);
