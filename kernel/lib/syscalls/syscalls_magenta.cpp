@@ -1082,7 +1082,7 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
                             mx_size_t size, user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", handle);
 
-    if (!_buffer)
+    if ((size > 0u) && !_buffer)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -1092,9 +1092,17 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    return flags == MX_SOCKET_CONTROL?
-        socket->OOB_Write(_buffer.get(), size, true) :
-        socket->Write(_buffer.get(), size, true);
+    switch (flags) {
+    case 0:
+        return socket->Write(_buffer.get(), size, true);
+    case MX_SOCKET_CONTROL:
+        return socket->OOB_Write(_buffer.get(), size, true);
+    case MX_SOCKET_HALF_CLOSE:
+        if (size == 0)
+            return socket->HalfClose();
+    // fall thru if size != 0.
+    default: return ERR_INVALID_ARGS;
+    }
 }
 
 mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,

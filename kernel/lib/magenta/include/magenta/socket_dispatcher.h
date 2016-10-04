@@ -40,6 +40,8 @@ public:
         return WriteHelper(src, len, from_user, true);
     }
 
+    status_t HalfClose();
+
     mx_ssize_t Read(void* dest, mx_size_t len, bool from_user);
     mx_ssize_t OOB_Read(void* dest, mx_size_t len, bool from_user);
 
@@ -71,6 +73,7 @@ private:
     mx_ssize_t WriteSelf(const void* src, mx_size_t len, bool from_user);
     mx_ssize_t OOB_WriteSelf(const void* src, mx_size_t len, bool from_user);
     status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
+    status_t HalfCloseOther();
 
     const uint32_t flags_;
     NonIrqStateTracker state_tracker_;
@@ -81,5 +84,7 @@ private:
     mxtl::RefPtr<SocketDispatcher> other_;
     mxtl::unique_ptr<IOPortClient> iopc_;
     mx_size_t oob_len_;
+    // half_closed_[0] is this end and [1] is the other end.
+    bool half_closed_[2];
     char oob_[MX_SOCKET_CONTROL_MAX_LEN];
 };

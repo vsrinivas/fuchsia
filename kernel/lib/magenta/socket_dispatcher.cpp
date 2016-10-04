@@ -174,7 +174,8 @@ status_t SocketDispatcher::Create(uint32_t flags,
 
 SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
-      oob_len_(0u) {
+      oob_len_(0u),
+      half_closed_{false, false} {
     const auto kSatisfiable =
         MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED;
     state_tracker_.set_initial_signals_state(
@@ -257,6 +258,29 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client
     return NO_ERROR;
 }
 
+status_t SocketDispatcher::HalfClose() {
+    mxtl::RefPtr<SocketDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (half_closed_[0])
+            return NO_ERROR;
+        if (!other_)
+            return ERR_REMOTE_CLOSED;
+        other = other_;
+        half_closed_[0] = true;
+        state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u,
+                                   MX_SIGNAL_WRITABLE, 0u);
+    }
+    return other->HalfCloseOther();
+}
+
+status_t SocketDispatcher::HalfCloseOther() {
+    AutoLock lock(&lock_);
+    half_closed_[1] = true;
+    state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_PEER_CLOSED);
+    return NO_ERROR;
+}
+
 mx_ssize_t SocketDispatcher::WriteHelper(const void* src, mx_size_t len,
                                          bool from_user, bool is_oob) {
     mxtl::RefPtr<SocketDispatcher> other;
@@ -264,6 +288,8 @@ mx_ssize_t SocketDispatcher::WriteHelper(const void* src, mx_size_t len,
         AutoLock lock(&lock_);
         if (!other_)
             return ERR_REMOTE_CLOSED;
+        if (half_closed_[0])
+            return ERR_BAD_STATE;
         other = other_;
     }
 
@@ -319,15 +345,27 @@ mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool 
 
 mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     AutoLock lock(&lock_);
+
+    bool closed = half_closed_[1] || !other_;
+
     if (cbuf_.empty())
-        return ERR_SHOULD_WAIT;
+        return closed ? ERR_REMOTE_CLOSED: ERR_SHOULD_WAIT;
 
     bool was_full = cbuf_.free() == 0u;
 
     auto st = cbuf_.Read(dest, len, from_user);
 
-    if (cbuf_.empty())
-        state_tracker_.UpdateSatisfied(MX_SIGNAL_READABLE, 0u);
+    mx_signals_t satisfied_clear = 0u;
+    mx_signals_t satisfiable_clear = 0u;
+
+    if (cbuf_.empty()) {
+        satisfied_clear = MX_SIGNAL_READABLE;
+        // If the far end is closed or half closed, no more data will ever arrive.
+        if ((st == 0) && closed)
+            satisfiable_clear = MX_SIGNAL_READABLE;
+    }
+
+    state_tracker_.UpdateState(satisfied_clear, 0u, satisfiable_clear, 0u);
 
     if (was_full && (st > 0))
         other_->state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);

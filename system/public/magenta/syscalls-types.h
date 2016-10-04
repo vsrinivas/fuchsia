@@ -390,9 +390,9 @@ typedef struct mx_waitset_result {
 #define MX_POLICY_BAD_HANDLE_EXIT           2u
 
 // Socket flags and limits.
-
-#define MX_SOCKET_CONTROL                1u
-#define MX_SOCKET_CONTROL_MAX_LEN     1024u
+#define MX_SOCKET_CONTROL                   1u
+#define MX_SOCKET_HALF_CLOSE                2u
+#define MX_SOCKET_CONTROL_MAX_LEN           1024u
 
 // mx_thread_read_state, mx_thread_write_state
 // The maximum size of thread state, in bytes, that can be processed by the
