@@ -26,13 +26,14 @@ typedef struct iostate {
     vnode_t* vn;
     vdircookie_t dircookie;
     size_t io_off;
+    uint32_t io_flags;
 } iostate_t;
 
 static mxio_dispatcher_t* vfs_dispatcher;
 
 static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
-static mx_handle_t vfs_create_handle(vnode_t* vn) {
+static mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags) {
     mx_handle_t h[2];
     mx_status_t r;
     iostate_t* ios;
@@ -40,6 +41,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn) {
     if ((ios = calloc(1, sizeof(iostate_t))) == NULL)
         return ERR_NO_MEMORY;
     ios->vn = vn;
+    ios->io_flags = flags;
 
     if ((r = mx_msgpipe_create(h, 0)) < 0) {
         free(ios);
@@ -127,7 +129,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         if ((r = vfs_open(vn, &vn, path, arg, msg->arg2.mode)) < 0) {
             return r;
         }
-        if ((msg->handle[0] = vfs_create_handle(vn)) < 0) {
+        if ((msg->handle[0] = vfs_create_handle(vn, arg)) < 0) {
             vfs_close(vn);
             return msg->handle[0];
         }
@@ -141,7 +143,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return NO_ERROR;
     }
     case MXRIO_CLONE:
-        if ((msg->handle[0] = vfs_create_handle(vn)) < 0) {
+        if ((msg->handle[0] = vfs_create_handle(vn, ios->io_flags)) < 0) {
             return msg->handle[0];
         }
         msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
@@ -169,6 +171,14 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         return r;
     }
     case MXRIO_WRITE: {
+        if (ios->io_flags & O_APPEND) {
+            vnattr_t attr;
+            mx_status_t r;
+            if ((r = vn->ops->getattr(vn, &attr)) < 0) {
+                return r;
+            }
+            ios->io_off = attr.size;
+        }
         ssize_t r = vn->ops->write(vn, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
