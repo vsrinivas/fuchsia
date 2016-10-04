@@ -27,6 +27,8 @@ void vc_gfx_invalidate_all(vc_device_t* dev) {
 }
 
 void vc_gfx_invalidate_status(vc_device_t* dev) {
+    if (!dev->active)
+        return;
     if (dev->flags & VC_FLAG_FULLSCREEN) {
         return;
     }

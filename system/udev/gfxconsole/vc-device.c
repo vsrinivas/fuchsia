@@ -291,8 +291,7 @@ void vc_device_scroll_viewport(vc_device_t* dev, int dir) {
         vc_device_invalidate(dev, 0, vpy, dev->columns, delta);
     }
     gfx_flush(dev->gfx);
-    vc_device_write_status(dev);
-    vc_gfx_invalidate_all(dev);
+    vc_device_render(dev);
 }
 
 void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
@@ -308,7 +307,6 @@ void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
         tc_seth(&dev->textcon, vc_device_rows(dev));
     }
     mtx_unlock(&dev->lock);
-    gfx_flush(dev->gfx);
     vc_device_render(dev);
 }
 
