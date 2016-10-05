@@ -22,6 +22,9 @@
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/vector_angle.hpp>
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
@@ -30,7 +33,6 @@
 
 namespace {
 
-const float kPi = 3.14159265359f;
 const int kNumVertices = 24;
 
 int GenerateCube(GLuint* vbo_vertices, GLuint* vbo_indices)
@@ -178,143 +180,6 @@ GLuint LoadProgram(const char* vertex_shader_source, const char* fragment_shader
     return program_object;
 }
 
-class ESMatrix {
-public:
-    GLfloat m[4][4];
-
-    ESMatrix() { LoadZero(); }
-
-    void LoadZero() { memset(this, 0x0, sizeof(ESMatrix)); }
-
-    void LoadIdentity()
-    {
-        LoadZero();
-        m[0][0] = 1.0f;
-        m[1][1] = 1.0f;
-        m[2][2] = 1.0f;
-        m[3][3] = 1.0f;
-    }
-
-    void Multiply(ESMatrix* a, ESMatrix* b)
-    {
-        ESMatrix result;
-        for (int i = 0; i < 4; ++i) {
-            result.m[i][0] = (a->m[i][0] * b->m[0][0]) + (a->m[i][1] * b->m[1][0]) +
-                             (a->m[i][2] * b->m[2][0]) + (a->m[i][3] * b->m[3][0]);
-
-            result.m[i][1] = (a->m[i][0] * b->m[0][1]) + (a->m[i][1] * b->m[1][1]) +
-                             (a->m[i][2] * b->m[2][1]) + (a->m[i][3] * b->m[3][1]);
-
-            result.m[i][2] = (a->m[i][0] * b->m[0][2]) + (a->m[i][1] * b->m[1][2]) +
-                             (a->m[i][2] * b->m[2][2]) + (a->m[i][3] * b->m[3][2]);
-
-            result.m[i][3] = (a->m[i][0] * b->m[0][3]) + (a->m[i][1] * b->m[1][3]) +
-                             (a->m[i][2] * b->m[2][3]) + (a->m[i][3] * b->m[3][3]);
-        }
-        *this = result;
-    }
-
-    void Frustum(float left, float right, float bottom, float top, float near_z, float far_z)
-    {
-        float delta_x = right - left;
-        float delta_y = top - bottom;
-        float delta_z = far_z - near_z;
-
-        if ((near_z <= 0.0f) || (far_z <= 0.0f) || (delta_z <= 0.0f) || (delta_y <= 0.0f) ||
-            (delta_y <= 0.0f))
-            return;
-
-        ESMatrix frust;
-        frust.m[0][0] = 2.0f * near_z / delta_x;
-        frust.m[0][1] = frust.m[0][2] = frust.m[0][3] = 0.0f;
-
-        frust.m[1][1] = 2.0f * near_z / delta_y;
-        frust.m[1][0] = frust.m[1][2] = frust.m[1][3] = 0.0f;
-
-        frust.m[2][0] = (right + left) / delta_x;
-        frust.m[2][1] = (top + bottom) / delta_y;
-        frust.m[2][2] = -(near_z + far_z) / delta_z;
-        frust.m[2][3] = -1.0f;
-
-        frust.m[3][2] = -2.0f * near_z * far_z / delta_z;
-        frust.m[3][0] = frust.m[3][1] = frust.m[3][3] = 0.0f;
-
-        Multiply(&frust, this);
-    }
-
-    void Perspective(float fov_y, float aspect, float near_z, float far_z)
-    {
-        GLfloat frustum_h = tanf(fov_y / 360.0f * kPi) * near_z;
-        GLfloat frustum_w = frustum_h * aspect;
-        Frustum(-frustum_w, frustum_w, -frustum_h, frustum_h, near_z, far_z);
-    }
-
-    void Translate(GLfloat tx, GLfloat ty, GLfloat tz)
-    {
-        m[3][0] += m[0][0] * tx + m[1][0] * ty + m[2][0] * tz;
-        m[3][1] += m[0][1] * tx + m[1][1] * ty + m[2][1] * tz;
-        m[3][2] += m[0][2] * tx + m[1][2] * ty + m[2][2] * tz;
-        m[3][3] += m[0][3] * tx + m[1][3] * ty + m[2][3] * tz;
-    }
-
-    void Rotate(GLfloat angle, GLfloat x, GLfloat y, GLfloat z)
-    {
-        GLfloat mag = sqrtf(x * x + y * y + z * z);
-
-        GLfloat sin_angle = sinf(angle * kPi / 180.0f);
-        GLfloat cos_angle = cosf(angle * kPi / 180.0f);
-        if (mag > 0.0f) {
-            GLfloat xx, yy, zz, xy, yz, zx, xs, ys, zs;
-            GLfloat one_minus_cos;
-            ESMatrix rotation;
-
-            x /= mag;
-            y /= mag;
-            z /= mag;
-
-            xx = x * x;
-            yy = y * y;
-            zz = z * z;
-            xy = x * y;
-            yz = y * z;
-            zx = z * x;
-            xs = x * sin_angle;
-            ys = y * sin_angle;
-            zs = z * sin_angle;
-            one_minus_cos = 1.0f - cos_angle;
-
-            rotation.m[0][0] = (one_minus_cos * xx) + cos_angle;
-            rotation.m[0][1] = (one_minus_cos * xy) - zs;
-            rotation.m[0][2] = (one_minus_cos * zx) + ys;
-            rotation.m[0][3] = 0.0F;
-
-            rotation.m[1][0] = (one_minus_cos * xy) + zs;
-            rotation.m[1][1] = (one_minus_cos * yy) + cos_angle;
-            rotation.m[1][2] = (one_minus_cos * yz) - xs;
-            rotation.m[1][3] = 0.0F;
-
-            rotation.m[2][0] = (one_minus_cos * zx) - ys;
-            rotation.m[2][1] = (one_minus_cos * yz) + xs;
-            rotation.m[2][2] = (one_minus_cos * zz) + cos_angle;
-            rotation.m[2][3] = 0.0F;
-
-            rotation.m[3][0] = 0.0F;
-            rotation.m[3][1] = 0.0F;
-            rotation.m[3][2] = 0.0F;
-            rotation.m[3][3] = 1.0F;
-
-            Multiply(&rotation, this);
-        }
-    }
-};
-
-float RotationForTimeDelta(float delta_time) { return delta_time * 40.0f; }
-
-float RotationForDragDistance(float drag_distance)
-{
-    return drag_distance / 5; // Arbitrary damping.
-}
-
 } // namespace
 
 class SpinningCube::GLState {
@@ -333,7 +198,7 @@ public:
     GLuint vbo_vertices_;
     GLuint vbo_indices_;
     int num_indices_;
-    ESMatrix mvp_matrix_;
+    glm::mat4 mvp_matrix_;
 };
 
 SpinningCube::GLState::GLState() : angle_(0) { OnGLContextLost(); }
@@ -352,7 +217,7 @@ void SpinningCube::GLState::OnGLContextLost()
 
 SpinningCube::SpinningCube()
     : initialized_(false), width_(0), height_(0), state_(new GLState()), fling_multiplier_(1.0f),
-      direction_(1), color_()
+      direction_(1), color_(), axis_(1, 0, 0)
 {
     state_->angle_ = 45.0f;
     set_color(1.0, 1.0, 1.0);
@@ -416,46 +281,61 @@ void SpinningCube::OnGLContextLost()
     state_->OnGLContextLost();
 }
 
-void SpinningCube::SetFlingMultiplier(float drag_distance, float drag_time)
-{
-    fling_multiplier_ = RotationForDragDistance(drag_distance) / RotationForTimeDelta(drag_time);
-}
 
 void SpinningCube::UpdateForTimeDelta(float delta_time)
 {
-    state_->angle_ += RotationForTimeDelta(delta_time) * fling_multiplier_;
-    if (state_->angle_ >= 360.0f)
-        state_->angle_ -= 360.0f;
-
-    // Arbitrary 50-step linear reduction in spin speed.
-    if (fling_multiplier_ > 1.0f) {
-        fling_multiplier_ = std::max(1.0f, fling_multiplier_ - (fling_multiplier_ - 1.0f) / 50);
-    }
-
-    if (fling_multiplier_ < -1.0f) {
-        fling_multiplier_ = std::min(-1.0f, fling_multiplier_ - (fling_multiplier_ + 1.0f) / 50);
-    }
+    orientation_ = glm::rotate(glm::mat4(), angular_velocity_ * delta_time, axis_) * orientation_;
 
     Update();
 }
 
-void SpinningCube::UpdateForDragDistance(float distance)
+glm::vec2 normalize_to_screen(glm::vec2 pixel, glm::vec2 size)
 {
-    state_->angle_ += RotationForDragDistance(distance);
-    if (state_->angle_ >= 360.0f)
-        state_->angle_ -= 360.0f;
-
-    Update();
+    return (pixel - size / 2.0f) / size.y;
 }
 
-void SpinningCube::UpdateForDragVector(float x0_in, float y0_in, float x1_in, float y1_in)
+glm::vec3 project_to_unit_sphere(glm::vec2 p)
 {
 
-    // normalize to screen height
-    // float x0 = x0_in/height_;
-    // float y0 = y0_in/height_;
-    // float x1 = x1_in/height_;
-    // float y1 = y1_in/height_;
+    float r = 0.5;
+
+    float z = glm::sqrt((r * r) / (p.x * p.x + p.y * p.y));
+
+    return glm::normalize(glm::vec3(p, z));
+}
+
+void SpinningCube::UpdateForDragVector(glm::vec2 start_pixel,
+                                       std::chrono::high_resolution_clock::time_point start_time,
+                                       glm::vec2 end_pixel,
+                                       std::chrono::high_resolution_clock::time_point end_time)
+{
+
+    // printf("got pixels (%f, %f) and (%f, %f)\n", start_pixel.x, start_pixel.y, end_pixel.x,
+    // end_pixel.y);
+    glm::vec2 size(width_, height_);
+    if (glm::length(normalize_to_screen(start_pixel, size)) > 0.5 ||
+        glm::length(normalize_to_screen(end_pixel, size)) > 0.5)
+        return;
+
+    glm::vec3 start = project_to_unit_sphere(normalize_to_screen(start_pixel, size));
+    glm::vec3 end = project_to_unit_sphere(normalize_to_screen(end_pixel, size));
+
+    axis_ = glm::cross(start, end);
+    if (glm::length(axis_) == 0.0) {
+        // start and end are the same, so choose an arbitrary axis
+        axis_ = glm::vec3(1, 0, 0);
+    }
+    axis_ = glm::normalize(axis_);
+
+    // radians
+    float theta = glm::angle(start, end);
+
+    float seconds = std::chrono::duration<float>(end_time - start_time).count();
+
+    // radians per second
+    angular_velocity_ = theta / seconds;
+
+    orientation_ = glm::rotate(glm::mat4(), theta, axis_) * orientation_;
 
     Update();
 }
@@ -473,8 +353,7 @@ void SpinningCube::Draw()
                           reinterpret_cast<void*>(3 * sizeof(GLfloat) * kNumVertices));
     glEnableVertexAttribArray(state_->position_location_);
     glEnableVertexAttribArray(state_->normal_location_);
-    glUniformMatrix4fv(state_->mvp_location_, 1, GL_FALSE,
-                       static_cast<GLfloat*>(&state_->mvp_matrix_.m[0][0]));
+    glUniformMatrix4fv(state_->mvp_location_, 1, GL_FALSE, glm::value_ptr(state_->mvp_matrix_));
     glUniform3fv(state_->color_location_, 1, color_);
     glDrawElements(GL_TRIANGLES, state_->num_indices_, GL_UNSIGNED_SHORT, 0);
 }
@@ -483,14 +362,9 @@ void SpinningCube::Update()
 {
     float aspect = static_cast<GLfloat>(width_) / static_cast<GLfloat>(height_);
 
-    ESMatrix perspective;
-    perspective.LoadIdentity();
-    perspective.Perspective(60.0f, aspect, 1.0f, 20.0f);
+    glm::mat4 perspective = glm::perspective(glm::radians(60.0f), aspect, 1.0f, 20.f);
 
-    ESMatrix modelview;
-    modelview.LoadIdentity();
-    modelview.Translate(0.0, 0.0, -2.0);
-    modelview.Rotate(state_->angle_ * direction_, 1.0, 0.0, 1.0);
+    glm::mat4 modelview = glm::translate(glm::mat4(), glm::vec3(0.0, 0.0, -2.0)) * orientation_;
 
-    state_->mvp_matrix_.Multiply(&modelview, &perspective);
+    state_->mvp_matrix_ = perspective * modelview;
 }

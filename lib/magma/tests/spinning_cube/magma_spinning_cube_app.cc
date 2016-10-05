@@ -244,14 +244,14 @@ void MagmaSpinningCubeApp::CleanupEGL() {
   }
 }
 
-bool MagmaSpinningCubeApp::Draw(uint32_t time_delta_ms)
+bool MagmaSpinningCubeApp::Draw(float time_delta_s)
 {
     waiting_on_page_flip_ = false;
     if (is_cleaning_up_)
         return true;
 
     glBindFramebuffer(GL_FRAMEBUFFER, fb_[curr_buf_].fb);
-    cube_->UpdateForTimeDelta(time_delta_ms / 1000.f);
+    cube_->UpdateForTimeDelta(time_delta_s);
     cube_->Draw();
     glFinish();
 
@@ -299,34 +299,13 @@ void MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
                     if (acer12_finger_id_tswitch(curr_finger->finger_id) &&
                         acer12_finger_id_tswitch(last_finger->finger_id)) {
 
-                        float x0 = scale32(last_finger->x, FB_W, ACER12_X_MAX);
-                        float y0 = scale32(last_finger->y, FB_H, ACER12_Y_MAX);
+                        glm::vec2 start(scale32(last_finger->x, FB_W, ACER12_X_MAX),
+                                        scale32(last_finger->y, FB_H, ACER12_Y_MAX));
+                        glm::vec2 end(scale32(curr_finger->x, FB_W, ACER12_X_MAX),
+                                      scale32(curr_finger->y, FB_H, ACER12_Y_MAX));
 
-                        float x1 = scale32(curr_finger->x, FB_W, ACER12_X_MAX);
-                        float y1 = scale32(curr_finger->y, FB_H, ACER12_Y_MAX);
-
-                        float drag_x = x1 - x0;
-                        float drag_y = y1 - y0;
-
-                        int direction = 0;
-                        // if dot product is positive we are going in the same direction
-                        if (drag_y - drag_x > 0) {
-                            direction = 1;
-                        } else {
-                            direction = -1;
-                        }
-
-                        constexpr int ratio = 5;
-                        cube_->UpdateForDragDistance(direction * std::hypot(drag_x, drag_y) /
-                                                     ratio);
-
-                        auto now = std::chrono::high_resolution_clock::now();
-
-                        std::chrono::duration<double, std::ratio<1, ratio>> elapsed =
-                            now - last_touch_timestamp_;
-
-                        cube_->SetFlingMultiplier(direction * std::hypot(drag_x, drag_y),
-                                                  elapsed.count());
+                        cube_->UpdateForDragVector(start, last_touch_timestamp_, end,
+                                                   std::chrono::high_resolution_clock::now());
 
                         found_finger = true;
                     }
@@ -467,7 +446,7 @@ int test_spinning_cube(uint32_t device_handle)
             total_milliseconds = 0;
         }
 
-        if (!app.Draw(milliseconds)) {
+        if (!app.Draw(std::chrono::duration<float>(t1 - t0).count())) {
             break;
         }
 

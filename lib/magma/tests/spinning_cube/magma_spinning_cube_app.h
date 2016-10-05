@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <glm/glm.hpp>
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +28,7 @@ public:
     ~MagmaSpinningCubeApp();
     bool Initialize(int fd);
     void Cleanup();
-    bool Draw(uint32_t time_delta_ms);
+    bool Draw(float time_delta_s);
     bool CanDraw() { return !encountered_async_error_; }
     void ProcessTouchscreenInput(void* buf, size_t len);
 

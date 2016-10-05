@@ -9,6 +9,8 @@
 #ifndef EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_
 #define EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_
 
+#include <chrono>
+#include <glm/glm.hpp>
 #include <stdint.h>
 
 class SpinningCube {
@@ -32,7 +34,10 @@ public:
     void SetFlingMultiplier(float drag_distance, float drag_time);
     void UpdateForTimeDelta(float delta_time);
     void UpdateForDragDistance(float distance);
-    void UpdateForDragVector(float x0_in, float y0_in, float x1_in, float y1_in);
+    void UpdateForDragVector(glm::vec2 start_pixel,
+                             std::chrono::high_resolution_clock::time_point start_time,
+                             glm::vec2 end_pixel,
+                             std::chrono::high_resolution_clock::time_point end_time);
     void Draw();
 
     void OnGLContextLost();
@@ -50,7 +55,10 @@ private:
     float fling_multiplier_;
     int direction_;
     float color_[3];
-    // float axis_[3];
+
+    glm::vec3 axis_;
+    float angular_velocity_ = .5;
+    glm::mat4 orientation_;
 };
 
 #endif // EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_

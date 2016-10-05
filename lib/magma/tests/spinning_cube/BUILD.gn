@@ -28,7 +28,10 @@ source_set("spinning_cube") {
     "$magma_build_root/src/magma_util",
   ]
 
+  include_dirs = [ "$glm_build_root/" ]
+
   libs = [
     "hid",
   ]
+
 }
