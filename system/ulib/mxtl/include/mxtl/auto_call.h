@@ -14,12 +14,12 @@
 //    extern int foo();
 //    int a;
 //
-//    auto ac = MakeAutoCall([&](){ a = 1; });
-//    auto ac2 = MakeAutoCall(foo);
+//    auto ac = mxtl::MakeAutoCall([&](){ a = 1; });
+//    auto ac2 = mxtl::MakeAutoCall(foo);
 //
 //    auto func = [&](){ a = 2; };
-//    AutoCall<decltype(bleh)> ac3(func);
-//    AutoCall<decltype(&foo)> ac4(&foo);
+//    mxtl::AutoCall<decltype(func)> ac3(func);
+//    mxtl::AutoCall<decltype(&foo)> ac4(&foo);
 //
 //    // abort the call
 //    ac2.cancel();
