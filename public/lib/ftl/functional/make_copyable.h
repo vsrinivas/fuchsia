@@ -20,7 +20,7 @@ class CopyableLambda {
       : impl_(MakeRefCounted<Impl>(std::move(func))) {}
 
   template <typename... ArgType>
-  auto operator()(ArgType&&... args) {
+  auto operator()(ArgType&&... args) const {
     return impl_->func_(std::forward<ArgType>(args)...);
   }
 

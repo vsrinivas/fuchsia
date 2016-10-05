@@ -24,5 +24,15 @@ TEST(MakeCopyableTest, Control) {
   EXPECT_EQ(42, int_ptr_func());
 }
 
+TEST(MakeCopyableTest, Mutable) {
+  std::unique_ptr<int> src(new int);
+  *src = 42;
+  std::unique_ptr<int> dest;
+  std::function<void()> mutable_func = ftl::MakeCopyable(
+      [&dest, src = std::move(src) ]() mutable { dest = std::move(src); });
+  mutable_func();
+  EXPECT_EQ(42, *dest);
+}
+
 }  // namespace
 }  // namespace ftl
