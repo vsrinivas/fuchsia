@@ -44,7 +44,7 @@ interface Ledger {
   GetRootPage() => (Status status, Page? page);
 
   // Returns the page with the given identifier or an error if the page doesn't
-  // exist.
+  // exist. It is allowed to connect to the same page multiple times.
   GetPage(array<uint8, 16> id) => (Status status, Page? page);
 
   // Creates a new page and returns it.
@@ -147,14 +147,19 @@ interface Page {
       => (Status status, Stream? stream);
 
   // Transactions.
-  // Clients can control the content of a given commit by using a transaction.
+  //
+  // Transactions allow the client to control the content of a new commit.
   // Once a transaction is started with |StartTransaction()|, every call to
   // |Put(...)| and |Delete(...)| will not be visible until either |Commit()|
   // is called, and all changes are applied in a single commit, or |Rollback()|
   // is called and all changes are discarded.
-  // Nested transactions are not allowed and an error will be returned if a
-  // client tries to start a new transaction while a previous one is still in
-  // progress.
+  //
+  // Parallel transactions on the same *page connection* are not allowed, and
+  // calling StartTransaction() when a transaction is already in progress
+  // returns an error. However, a client is free to connect to the same page
+  // multiple times, and run parallel transactions on the same page using
+  // separate connections. In this case, commiting each transaction creates
+  // divergent commits, which are later subject to conflict resolution.
   StartTransaction() => (Status status);
   Commit() => (Status status);
   Rollback() => (Status status);
