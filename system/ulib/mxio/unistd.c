@@ -369,7 +369,7 @@ mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t t
 
 int mxio_stat(mxio_t* io, struct stat* s) {
     vnattr_t attr;
-    int r = io->ops->misc(io, MXRIO_STAT, sizeof(attr), &attr, 0);
+    int r = io->ops->misc(io, MXRIO_STAT, 0, sizeof(attr), &attr, 0);
     if (r < 0) {
         return ERR_BAD_HANDLE;
     }
@@ -480,7 +480,7 @@ int unlinkat(int dirfd, const char* path, int flags) {
     if ((r = __mxio_opendir_containing_at(&io, dirfd, path, &name)) < 0) {
         return ERROR(r);
     }
-    r = io->ops->misc(io, MXRIO_UNLINK, 0, (void*)name, strlen(name));
+    r = io->ops->misc(io, MXRIO_UNLINK, 0, 0, (void*)name, strlen(name));
     io->ops->close(io);
     mxio_release(io);
     return STATUS(r);
@@ -631,7 +631,7 @@ static int getdirents(int fd, void* ptr, size_t len) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    int r = STATUS(io->ops->misc(io, MXRIO_READDIR, len, ptr, 0));
+    int r = STATUS(io->ops->misc(io, MXRIO_READDIR, 0, len, ptr, 0));
     mxio_release(io);
     return r;
 }
@@ -666,7 +666,7 @@ int rename(const char* oldpath, const char* newpath) {
     name[oldlen] = '\0';
     memcpy(name + oldlen + 1, newpath, newlen);
     name[oldlen + newlen + 1] = '\0';
-    mx_status_t r = io->ops->misc(io, MXRIO_RENAME, 0, (void*)name, oldlen + newlen + 2);
+    mx_status_t r = io->ops->misc(io, MXRIO_RENAME, 0, 0, (void*)name, oldlen + newlen + 2);
     mxio_release(io);
     return STATUS(r);
 }

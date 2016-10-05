@@ -29,7 +29,7 @@ typedef struct mxio_ops {
     ssize_t (*write)(mxio_t* io, const void* data, size_t len);
     ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, off_t offset);
     off_t (*seek)(mxio_t* io, off_t offset, int whence);
-    mx_status_t (*misc)(mxio_t* io, uint32_t op, uint32_t maxreply, void* data, size_t len);
+    mx_status_t (*misc)(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len);
     mx_status_t (*close)(mxio_t* io);
     mx_status_t (*open)(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out);
     mx_status_t (*clone)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
@@ -93,8 +93,8 @@ static inline ssize_t mxio_write_at(mxio_t* io, const void* data, size_t len, of
 static inline off_t mxio_seek(mxio_t* io, off_t offset, int whence) {
     return io->ops->seek(io, offset, whence);
 }
-static inline mx_status_t mxio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* data, size_t len) {
-    return io->ops->misc(io, op, maxreply, data, len);
+static inline mx_status_t mxio_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len) {
+    return io->ops->misc(io, op, off, maxreply, data, len);
 }
 static inline mx_status_t mxio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     return io->ops->open(io, path, flags, mode, out);
@@ -132,7 +132,7 @@ ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset);
 ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len);
 ssize_t mxio_default_write_at(mxio_t* io, const void* _data, size_t len, off_t offset);
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence);
-mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, uint32_t arg, void* data, size_t len);
+mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len);
 mx_status_t mxio_default_close(mxio_t* io);
 mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out);
 mx_handle_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types);

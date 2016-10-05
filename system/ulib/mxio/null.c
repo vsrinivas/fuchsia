@@ -30,7 +30,7 @@ off_t mxio_default_seek(mxio_t* io, off_t offset, int whence) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, uint32_t arg, void* data, size_t len) {
+mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 

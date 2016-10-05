@@ -444,7 +444,8 @@ static mx_status_t mxrio_close(mxio_t* io) {
     return r;
 }
 
-static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* ptr, size_t len) {
+static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
+                              uint32_t maxreply, void* ptr, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
     mxrio_msg_t msg;
     mx_status_t r;
@@ -456,6 +457,7 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = op;
     msg.arg = maxreply;
+    msg.arg2.off = off;
     msg.datalen = len;
     if (ptr) {
         memcpy(msg.data, ptr, len);
@@ -469,7 +471,6 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     if (msg.datalen > maxreply) {
         return ERR_IO;
     }
-
     if (ptr) {
         memcpy(ptr, msg.data, msg.datalen);
     }

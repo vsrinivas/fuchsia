@@ -83,7 +83,7 @@ static void vmofile_release(mxio_t* io) {
     free(io);
 }
 
-static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* ptr, size_t len) {
+static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* ptr, size_t len) {
     vmofile_t* vf = (vmofile_t*)io;
     switch (op) {
     case MXRIO_STAT: {
