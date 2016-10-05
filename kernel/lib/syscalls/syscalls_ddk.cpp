@@ -64,7 +64,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
 }
 
 mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
@@ -411,7 +411,7 @@ mx_status_t sys_pci_claim_device(mx_handle_t handle) {
      * successfully probes the device.
      * @param handle Handle associated with a PCI device
      */
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -429,7 +429,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
      * @param handle Handle associated with a PCI device
      * @param enable true if bus mastering should be enabled.
      */
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -446,7 +446,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t handle) {
      * Resets the PCI device associated with the handle.
      * @param handle Handle associated with a PCI device
      */
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -464,7 +464,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
      * @param handle Handle associated with a PCI device
      * @param bar_num BAR number
      */
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     // Caller only gets to control the cache policy, nothing else.
     if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK)
@@ -525,7 +525,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
      * @param which_irq Identifier for an IRQ, returned in sys_pci_get_nth_device, or -1 for legacy
      * interrupts
      */
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -557,7 +557,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
      *
      * @param handle Handle associated with a PCI device
      */
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -590,7 +590,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
 mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
                                         mx_pci_irq_mode_t mode,
                                         uint32_t* out_max_irqs) {
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -620,7 +620,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
 mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
                                  mx_pci_irq_mode_t mode,
                                  uint32_t requested_irq_count) {
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -639,7 +639,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
  * @param out_len Mapped size of the I/O range.
  */
 mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64_t* out_size) {
-    LTRACEF("handle %u\n", handle);
+    LTRACEF("handle %d\n", handle);
 
     if (!out_vaddr || !out_size)
         return ERR_INVALID_ARGS;

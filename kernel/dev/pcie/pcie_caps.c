@@ -292,7 +292,7 @@ static status_t pcie_parse_msi_caps(pcie_device_state_t* dev,
     uint max_irqs = 0x1u << PCIE_CAP_MSI_CTRL_GET_MMC(ctrl);
     if (max_irqs > PCIE_MAX_MSI_IRQS) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has invalid Multi-Message "
-               "Capable value in MSI capability structure (%u).  Structure "
+               "Capable value in MSI capability structure (%d).  Structure "
                "claims to support %u vectors, but %u is the maximum allowed.\n",
                dev->bus_id, dev->dev_id, dev->func_id,
                dev->vendor_id, dev->device_id,

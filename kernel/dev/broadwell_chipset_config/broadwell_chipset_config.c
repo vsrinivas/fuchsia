@@ -242,7 +242,7 @@ static status_t bcc_pci_startup(pcie_device_state_t* pci_device) {
     if (ret != NO_ERROR) {
         TRACEF("Failed to map register window (%#x @ %#" PRIx64
                ") Status = %d\n",
-                0x4000, (uint64_t)state->rcba_phys, ret);
+                0x4000u, (uint64_t)state->rcba_phys, ret);
         goto finished;
     }
 

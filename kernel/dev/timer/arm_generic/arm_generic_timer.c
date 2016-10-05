@@ -165,7 +165,7 @@ static void write_cntp_cval(uint64_t cntp_cval)
 
 static void write_cntp_tval(int32_t cntp_tval)
 {
-    LTRACEF_LEVEL(3, "cntp_tval: 0x%08x, %d\n", cntp_tval, cntp_tval);
+    LTRACEF_LEVEL(3, "cntp_tval: %d\n", cntp_tval);
     WRITE_TIMER_REG32(TIMER_REG_TVAL, cntp_tval);
 }
 
@@ -344,7 +344,7 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
     arm_generic_timer_init_conversion_factors(cntfrq);
     test_time_conversions(cntfrq);
 
-    LTRACEF("register irq %d on cpu %d\n", irq, arch_curr_cpu_num());
+    LTRACEF("register irq %d on cpu %u\n", irq, arch_curr_cpu_num());
     register_int_handler(irq, &platform_tick, NULL);
     unmask_interrupt(irq);
 
@@ -353,7 +353,7 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
 
 static void arm_generic_timer_init_secondary_cpu(uint level)
 {
-    LTRACEF("register irq %d on cpu %d\n", timer_irq, arch_curr_cpu_num());
+    LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
     register_int_handler(timer_irq, &platform_tick, NULL);
     unmask_interrupt(timer_irq);
 }

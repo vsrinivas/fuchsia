@@ -287,10 +287,10 @@ static paddr_t paddr_from_pte(pt_entry_t pte) {
             pa = (pte & X86_PG_FRAME);
             break;
         default:
-            panic("paddr_from_pte at unhandled level %u\n", Level);
+            panic("paddr_from_pte at unhandled level %d\n", Level);
     }
 
-    LTRACEF_LEVEL(2, "pte 0x%" PRIxPTE " , level %u, paddr %#" PRIxPTR "\n", pte, Level, pa);
+    LTRACEF_LEVEL(2, "pte 0x%" PRIxPTE " , level %d, paddr %#" PRIxPTR "\n", pte, Level, pa);
 
     return pa;
 }
@@ -450,7 +450,7 @@ static status_t x86_mmu_split(ulong cr3, vaddr_t vaddr, pt_entry_t* pte) {
     // a bunch of code in the callers
     DEBUG_ASSERT(Level != PML4_L);
 #endif
-    LTRACEF_LEVEL(2, "splitting table %p at level %u\n", pte, Level);
+    LTRACEF_LEVEL(2, "splitting table %p at level %d\n", pte, Level);
 
     DEBUG_ASSERT(IS_PAGE_PRESENT(*pte) && IS_LARGE_PAGE(*pte));
     pt_entry_t* m = _map_alloc_page();
@@ -764,7 +764,7 @@ static status_t x86_mmu_add_mapping(ulong cr3, pt_entry_t* table, uint mmu_flags
                     goto err;
                 }
 
-                LTRACEF_LEVEL(2, "new table %p at level %u\n", m, Level);
+                LTRACEF_LEVEL(2, "new table %p at level %d\n", m, Level);
 
                 update_entry<Level>(cr3, new_cursor->vaddr, e, X86_VIRT_TO_PHYS(m),
                                     interm_arch_flags);
@@ -1163,7 +1163,7 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
     if (stat != NO_ERROR) return stat;
 
     DEBUG_ASSERT(last_valid_entry);
-    LTRACEF("last_valid_entry (%p) 0x%" PRIxPTE ", level %u\n", last_valid_entry, *last_valid_entry,
+    LTRACEF("last_valid_entry (%p) 0x%" PRIxPTE ", level %d\n", last_valid_entry, *last_valid_entry,
             ret_level);
 
     /* based on the return level, parse the page table entry */

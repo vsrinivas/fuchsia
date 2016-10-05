@@ -162,7 +162,7 @@ void *malloc(size_t size)
 {
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    LTRACEF("size %zd\n", size);
+    LTRACEF("size %zu\n", size);
 
     // deal with the pending free list
     if (unlikely(!list_is_empty(&delayed_free_list))) {
@@ -179,7 +179,7 @@ void *memalign(size_t boundary, size_t size)
 {
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    LTRACEF("boundary %zu, size %zd\n", boundary, size);
+    LTRACEF("boundary %zu, size %zu\n", boundary, size);
 
     // deal with the pending free list
     if (unlikely(!list_is_empty(&delayed_free_list))) {
@@ -196,7 +196,7 @@ void *calloc(size_t count, size_t size)
 {
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    LTRACEF("count %zu, size %zd\n", count, size);
+    LTRACEF("count %zu, size %zu\n", count, size);
 
     // deal with the pending free list
     if (unlikely(!list_is_empty(&delayed_free_list))) {
@@ -213,7 +213,7 @@ void *realloc(void *ptr, size_t size)
 {
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    LTRACEF("ptr %p, size %zd\n", ptr, size);
+    LTRACEF("ptr %p, size %zu\n", ptr, size);
 
     // deal with the pending free list
     if (unlikely(!list_is_empty(&delayed_free_list))) {

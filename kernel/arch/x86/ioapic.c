@@ -174,7 +174,7 @@ void apic_io_init(
         uint8_t isa_irq = overrides[i].isa_irq;
         ASSERT(isa_irq < NUM_ISA_IRQS);
         isa_overrides[isa_irq] = overrides[i];
-        LTRACEF("ISA IRQ override for ISA IRQ %d, mapping to %d\n",
+        LTRACEF("ISA IRQ override for ISA IRQ %u, mapping to %u\n",
                 isa_irq, overrides[i].global_irq);
     }
 }
@@ -462,14 +462,14 @@ void apic_io_debug(void)
     spin_lock_irqsave(&lock, state);
     for (uint32_t i = 0; i < num_io_apics; ++i) {
         struct io_apic *apic = &io_apics[i];
-        printf("IO APIC idx %d:\n", i);
+        printf("IO APIC idx %u:\n", i);
         printf("  id: %08x\n", apic->desc.apic_id);
-        printf("  version: %08x\n", apic->version);
-        printf("  entries: %08x\n", apic->max_redirection_entry + 1);
+        printf("  version: %08hhx\n", apic->version);
+        printf("  entries: %08hhx\n", apic->max_redirection_entry + 1);
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
             uint32_t global_irq = apic->desc.global_irq_base + j;
             uint64_t reg = apic_io_read_redirection_entry(apic, global_irq);
-            printf("    %4d: dst: %s %02x, %s, %s, %s, dm %x, vec %2x, %s %s\n",
+            printf("    %4u: dst: %s %02hhx, %s, %s, %s, dm %hhx, vec %2hhx, %s %s\n",
                    global_irq,
                    (reg & (1 << 11)) ? "l" : "p",
                    (uint8_t)(reg >> 56),

@@ -20,7 +20,7 @@
 #define LOCAL_TRACE 0
 
 mx_status_t sys_handle_close(mx_handle_t handle_value) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
     auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr handle(up->RemoveHandle(handle_value));
     if (!handle)
@@ -29,7 +29,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
 }
 
 mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t dup_hv;
@@ -62,7 +62,7 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
 }
 
 mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr source;

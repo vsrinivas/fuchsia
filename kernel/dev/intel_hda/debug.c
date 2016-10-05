@@ -290,7 +290,7 @@ static void ihda_dump_widget(intel_hda_codec_audio_fn_group_t* fn_group, uint id
 
     intel_hda_widget_t* widget = &fn_group->widgets[id];
 
-    printf("%sWidget %hu/%hu\n", widget_pad, id + 1, fn_group->widget_count);
+    printf("%sWidget %u/%u\n", widget_pad, id + 1, fn_group->widget_count);
     printf(FMT("%hu\n"), "Node ID", widget->nid);
     printf(FMT("[%02x] %s\n"),  "Type", widget->type, ihda_get_widget_type_string(widget->type));
 
@@ -358,8 +358,8 @@ static void ihda_dump_codec_fn_group(intel_hda_codec_t* codec, uint id) {
     static const char* pad = "+--- ";
     intel_hda_codec_audio_fn_group_t* fn_group = codec->fn_groups[id];
 
-    printf("%sFunction Group %hu/%hu\n", pad, id + 1, codec->fn_group_count);
-    printf(FMT("%hu\n"), "Node ID", codec->fn_group_starting_id + id);
+    printf("%sFunction Group %u/%u\n", pad, id + 1, codec->fn_group_count);
+    printf(FMT("%u\n"), "Node ID", codec->fn_group_starting_id + id);
     printf(FMT("%s\n"),  "Type", ihda_get_fn_group_type_string(fn_group));
 
     if (!fn_group)

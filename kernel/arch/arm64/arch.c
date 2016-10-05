@@ -154,7 +154,7 @@ void arm64_secondary_entry(ulong asm_cpu_num)
 
     arch_mp_init_percpu();
 
-    LTRACEF("cpu num %d\n", cpu);
+    LTRACEF("cpu num %u\n", cpu);
 
     /* we're done, tell the main cpu we're up */
     atomic_add(&secondaries_to_init, -1);

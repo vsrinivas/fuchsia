@@ -312,9 +312,9 @@ static void platform_init_smp(void)
         max_cpus = SMP_MAX_CPUS;
     }
 
-    dprintf(INFO, "Found %d cpus\n", num_cpus);
+    dprintf(INFO, "Found %u cpus\n", num_cpus);
     if (num_cpus > max_cpus) {
-        TRACEF("Clamping number of CPUs to %d\n", max_cpus);
+        TRACEF("Clamping number of CPUs to %u\n", max_cpus);
         num_cpus = max_cpus;
     }
 

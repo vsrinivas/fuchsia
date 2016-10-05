@@ -71,7 +71,7 @@ static status_t acpi_get_madt_record_limits(uintptr_t *start, uintptr_t *end)
     }
     // Shouldn't be too many records
     if (madt->Header.Length > 4096) {
-        TRACEF("MADT suspiciously long: %d\n", madt->Header.Length);
+        TRACEF("MADT suspiciously long: %u\n", madt->Header.Length);
         return ERR_INTERNAL;
     }
     *start = records_start;
@@ -242,7 +242,7 @@ status_t platform_enumerate_interrupt_source_overrides(
                             isos[count].pol = IRQ_POLARITY_ACTIVE_LOW;
                             break;
                         default:
-                            panic("Unknown IRQ polarity in override: %d\n",
+                            panic("Unknown IRQ polarity in override: %u\n",
                                   polarity);
                     }
 
@@ -255,7 +255,7 @@ status_t platform_enumerate_interrupt_source_overrides(
                             isos[count].tm = IRQ_TRIGGER_MODE_LEVEL;
                             break;
                         default:
-                            panic("Unknown IRQ trigger in override: %d\n",
+                            panic("Unknown IRQ trigger in override: %u\n",
                                   trigger);
                     }
                 }

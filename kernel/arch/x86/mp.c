@@ -188,7 +188,7 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
             vector = X86_INT_IPI_HALT;
             break;
         default:
-            panic("Unexpected MP IPI value: %d", ipi);
+            panic("Unexpected MP IPI value: %u", ipi);
     }
 
     if (target == MP_CPU_ALL_BUT_LOCAL) {

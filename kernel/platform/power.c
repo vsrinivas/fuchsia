@@ -24,14 +24,14 @@ __WEAK void platform_halt(platform_halt_action suggested_action,
 #if ENABLE_PANIC_SHELL
 
     if (reason == HALT_REASON_SW_PANIC) {
-        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
+        dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %u)\n", reason);
         arch_disable_ints();
         panic_shell_start();
     }
 
 #endif  // ENABLE_PANIC_SHELL
 
-    dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
+    dprintf(ALWAYS, "HALT: spinning forever... (reason = %u)\n", reason);
     arch_disable_ints();
     for (;;);
 }

@@ -111,7 +111,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             }
 
             LTRACEF("instruction abort: PC at %#" PRIx64
-                    ", is_user %u, FAR %" PRIx64 ", esr 0x%x, iss 0x%x\n",
+                    ", is_user %d, FAR %" PRIx64 ", esr 0x%x, iss 0x%x\n",
                     iframe->elr, is_user, far, esr, iss);
 
             arch_enable_ints();
@@ -150,7 +150,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             }
 
             LTRACEF("data fault: PC at %#" PRIx64
-                    ", is_user %u, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
+                    ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
                     iframe->elr, is_user, far, esr, iss);
 
             arch_enable_ints();

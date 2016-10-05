@@ -67,7 +67,7 @@ static int cmd_threadstats(int argc, const cmd_args *argv)
         if (!mp_is_cpu_active(i))
             continue;
 
-        printf("thread stats (cpu %d):\n", i);
+        printf("thread stats (cpu %u):\n", i);
         printf("\ttotal idle time: %" PRIu64 "\n", thread_stats[i].idle_time);
         printf("\ttotal busy time: %" PRIu64 "\n",
                current_time_hires() - thread_stats[i].idle_time);

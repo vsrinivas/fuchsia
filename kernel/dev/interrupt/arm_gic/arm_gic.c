@@ -99,7 +99,7 @@ void register_int_handler(unsigned int vector, int_handler handler, void *arg)
     spin_lock_saved_state_t state;
 
     if (vector >= MAX_INT)
-        panic("register_int_handler: vector out of range %d\n", vector);
+        panic("register_int_handler: vector out of range %u\n", vector);
 
     spin_lock_save(&gicd_lock, &state, GICD_LOCK_FLAGS);
 
@@ -245,7 +245,7 @@ static status_t arm_gic_set_target_locked(u_int irq, u_int cpu_mask, u_int enabl
     old_val = GICREG(0, GICD_ITARGETSR(reg));
     new_val = (gicd_itargetsr[reg] & ~cpu_mask) | enable_mask;
     GICREG(0, GICD_ITARGETSR(reg)) = gicd_itargetsr[reg] = new_val;
-    LTRACEF("irq %i, GICD_ITARGETSR%d %x => %x (got %x)\n",
+    LTRACEF("irq %u, GICD_ITARGETSR%u %x => %x (got %x)\n",
             irq, reg, old_val, new_val, GICREG(0, GICD_ITARGETSR(reg)));
 
     return NO_ERROR;
@@ -266,10 +266,10 @@ static status_t arm_gic_set_priority_locked(u_int irq, uint8_t priority)
     uint32_t regval;
 
     regval = GICREG(0, GICD_IPRIORITYR(reg));
-    LTRACEF("irq %i, old GICD_IPRIORITYR%d = %x\n", irq, reg, regval);
+    LTRACEF("irq %u, old GICD_IPRIORITYR%u = %x\n", irq, reg, regval);
     regval = (regval & ~mask) | ((uint32_t)priority << shift);
     GICREG(0, GICD_IPRIORITYR(reg)) = regval;
-    LTRACEF("irq %i, new GICD_IPRIORITYR%d = %x, req %x\n",
+    LTRACEF("irq %u, new GICD_IPRIORITYR%u = %x, req %x\n",
             irq, reg, GICREG(0, GICD_IPRIORITYR(reg)), regval);
 
     return 0;
@@ -374,7 +374,7 @@ enum handler_return __platform_irq(struct iframe *frame)
 
     ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
-    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %d pc %#"
+    LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#"
                   PRIxPTR "\n", iar, cpu,
                   get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
 
@@ -388,7 +388,7 @@ enum handler_return __platform_irq(struct iframe *frame)
 
     GICREG(0, GICC_EOIR) = iar;
 
-    LTRACEF_LEVEL(2, "cpu %u exit %d\n", cpu, ret);
+    LTRACEF_LEVEL(2, "cpu %u exit %u\n", cpu, ret);
 
     ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 

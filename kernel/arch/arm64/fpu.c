@@ -30,7 +30,7 @@ static void arm64_fpu_load_state(struct thread *t)
 {
     struct fpstate *fpstate = &t->arch.fpstate;
 
-    LTRACEF("cpu %d, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
+    LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
 
     static_assert(sizeof(fpstate->regs) == 16 * 32, "");
     __asm__ volatile("ldp     q0, q1, [%0, #(0 * 32)]\n"
@@ -58,7 +58,7 @@ static void arm64_fpu_save_state(struct thread *t)
 {
     struct fpstate *fpstate = &t->arch.fpstate;
 
-    LTRACEF("cpu %d, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
+    LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
 
     __asm__ volatile("stp     q0, q1, [%2, #(0 * 32)]\n"
                      "stp     q2, q3, [%2, #(1 * 32)]\n"
@@ -102,7 +102,7 @@ void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread
 /* called because of a fpu instruction used exception */
 void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags)
 {
-    LTRACEF("cpu %d, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name, exception_flags);
+    LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name, exception_flags);
 
     /* only valid to be called if exception came from lower level */
     DEBUG_ASSERT(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL);

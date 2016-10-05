@@ -177,7 +177,7 @@ static void gfxconsole_setup(gfx_surface *surface, gfx_surface *hw_surface)
     gfxconsole.columns = surface->width / FONT_X;
     gfxconsole.extray = surface->height - (gfxconsole.rows * FONT_Y);
 
-    dprintf(SPEW, "gfxconsole: rows %d, columns %d, extray %d\n", gfxconsole.rows,
+    dprintf(SPEW, "gfxconsole: rows %u, columns %u, extray %u\n", gfxconsole.rows,
             gfxconsole.columns, gfxconsole.extray);
 }
 

@@ -183,7 +183,7 @@ void arm_secondary_entry(uint asm_cpu_num)
 
     arch_mp_init_percpu();
 
-    LTRACEF("cpu num %d\n", cpu);
+    LTRACEF("cpu num %u\n", cpu);
     LTRACEF("sctlr 0x%x\n", arm_read_sctlr());
     LTRACEF("actlr 0x%x\n", arm_read_actlr());
 

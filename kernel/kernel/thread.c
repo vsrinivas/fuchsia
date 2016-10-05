@@ -1083,7 +1083,7 @@ void thread_become_idle(void)
 
 #if WITH_SMP
     char name[16];
-    snprintf(name, sizeof(name), "idle %d", arch_curr_cpu_num());
+    snprintf(name, sizeof(name), "idle %u", arch_curr_cpu_num());
     thread_set_name(name);
 #else
     thread_set_name("idle");
@@ -1111,7 +1111,7 @@ void thread_secondary_cpu_init_early(thread_t *t)
 {
     DEBUG_ASSERT(arch_ints_disabled());
     char name[16];
-    snprintf(name, sizeof(name), "cpu_init %d", arch_curr_cpu_num());
+    snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
     thread_construct_first(t, name);
 }
 
@@ -1193,7 +1193,7 @@ void dump_thread(thread_t *t)
 #endif
     dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
             runtime, runtime / 1000000000);
-    dprintf(INFO, "\tstack %p, stack_size %zd\n", t->stack, t->stack_size);
+    dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
     dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
             (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
             (t->flags & THREAD_FLAG_FREE_STACK) ? "Fs" :"",
@@ -1201,7 +1201,7 @@ void dump_thread(thread_t *t)
             (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" :"",
             (t->flags & THREAD_FLAG_IDLE) ? "Id" :"",
             (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" :"");
-    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %u\n",
+    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d\n",
             t->blocking_wait_queue, t->blocked_status, t->interruptable);
 #if WITH_KERNEL_VM
     dprintf(INFO, "\taspace %p\n", t->aspace);

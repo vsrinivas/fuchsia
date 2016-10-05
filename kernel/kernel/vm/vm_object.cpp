@@ -110,7 +110,7 @@ void VmObject::Dump() {
                 count++;
         }
     }
-    printf("\t\tobject %p: ref %u size %#" PRIx64 ", %zu allocated pages\n",
+    printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n",
            this, ref_count_debug(), size_, count);
 }
 

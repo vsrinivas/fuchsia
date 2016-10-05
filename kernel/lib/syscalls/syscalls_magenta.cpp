@@ -82,7 +82,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
                             user_ptr<void> _buffer, mx_size_t buffer_size) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    LTRACEF("handle %u topic %u topic_size %u buffer %p buffer_size %"
+    LTRACEF("handle %d topic %u topic_size %u buffer %p buffer_size %"
             PRIuPTR "\n",
             handle, topic, topic_size, _buffer.get(), buffer_size);
 
@@ -382,7 +382,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
-    LTRACEF("process handle %u, flags %#x\n", process_handle, flags);
+    LTRACEF("process handle %d, flags %#x\n", process_handle, flags);
 
     // copy the name to a local buffer
     char buf[MX_MAX_NAME_LEN];
@@ -433,7 +433,7 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> n
 
 mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
                              uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
-    LTRACEF("handle %u, entry %#" PRIxPTR ", sp %#" PRIxPTR
+    LTRACEF("handle %d, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             thread_handle, entry, stack, arg1, arg2);
 
@@ -460,7 +460,7 @@ uint64_t get_tsc_ticks_per_ms(void);
 
 mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
                                   user_ptr<uintptr_t> value_ptr) {
-    LTRACEF("handle %u operation %u value_ptr %p", handle_value, op, value_ptr.get());
+    LTRACEF("handle %d operation %u value_ptr %p", handle_value, op, value_ptr.get());
 
     // TODO(cpu) what to do with |handle_value|?
 
@@ -556,8 +556,8 @@ mx_handle_t sys_process_create(user_ptr<const char> name, uint32_t name_len, uin
 }
 
 mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t pc, uintptr_t sp, mx_handle_t arg_handle_value, uintptr_t arg2) {
-    LTRACEF("phandle %u, thandle %u, pc %#" PRIxPTR ", sp %#" PRIxPTR
-            ", arg_handle %#x, arg2 %#" PRIxPTR "\n",
+    LTRACEF("phandle %d, thandle %d, pc %#" PRIxPTR ", sp %#" PRIxPTR
+            ", arg_handle %d, arg2 %#" PRIxPTR "\n",
             process_handle, thread_handle, pc, sp, arg_handle_value, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -610,7 +610,7 @@ static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t right
 }
 
 mx_status_t sys_task_kill(mx_handle_t task_handle) {
-    LTRACEF("handle %u\n", task_handle);
+    LTRACEF("handle %d\n", task_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -687,7 +687,7 @@ mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of s
 }
 
 mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;

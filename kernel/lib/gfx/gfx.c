@@ -521,7 +521,7 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
             src += source_stride_diff;
         }
     } else {
-        panic("gfx_surface_blend: unimplemented colorspace combination (source %d target %d)\n", source->format, target->format);
+        panic("gfx_surface_blend: unimplemented colorspace combination (source %u target %u)\n", source->format, target->format);
     }
 }
 
@@ -693,7 +693,7 @@ int gfx_init_surface_from_display(gfx_surface *surface, struct display_info *inf
             format = GFX_FORMAT_MONO;
             break;
         default:
-            DEBUG_ASSERT_MSG(0, "invalid graphics format %u", info->format);
+            DEBUG_ASSERT_MSG(0, "invalid graphics format %d", info->format);
             return ERR_INVALID_ARGS;
     }
 
@@ -832,7 +832,7 @@ static int cmd_gfx(int argc, const cmd_args *argv)
         printf("display:\n");
         printf("\tframebuffer %p\n", info.framebuffer);
         printf("\twidth %u height %u stride %u\n", info.width, info.height, info.stride);
-        printf("\tformat %u\n", info.format);
+        printf("\tformat %d\n", info.format);
         printf("\tflags 0x%x\n", info.flags);
     } else if (!strcmp(argv[1].str, "rgb_bars")) {
         gfx_draw_rgb_bars(surface);

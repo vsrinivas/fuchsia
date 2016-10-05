@@ -12,4 +12,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS := \
 	$(LOCAL_DIR)/unittest.c
 
+MODULE_COMPILEFLAGS := -Wno-format-nonliteral
+
 include make/module.mk

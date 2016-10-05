@@ -257,11 +257,11 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         psci_call(psci_call_num, 0, 0, 0);
     } else {
 #if ENABLE_PANIC_SHELL
-        dprintf(ALWAYS, "HALT: starting debug shell... (reason = %d)\n", reason);
+        dprintf(ALWAYS, "HALT: starting debug shell... (reason = %u)\n", reason);
         arch_disable_ints();
         panic_shell_start();
 #else
-        dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
+        dprintf(ALWAYS, "HALT: spinning forever... (reason = %u)\n", reason);
         arch_disable_ints();
         for (;;);
 #endif

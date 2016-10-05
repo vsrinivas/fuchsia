@@ -687,7 +687,7 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
 
 void VmAspace::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    printf("aspace %p: ref %u name '%s' range %#" PRIxPTR " - %#" PRIxPTR
+    printf("aspace %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
            " size %#zx flags %#x\n", this,
            ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
 

@@ -172,7 +172,7 @@ status_t get_interrupt_config(unsigned int vector,
 
 void register_int_handler(unsigned int vector, int_handler handler, void* arg) {
     if (vector >= MAX_INT)
-        panic("register_int_handler: vector out of range %d\n", vector);
+        panic("register_int_handler: vector out of range %u\n", vector);
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&lock, state);

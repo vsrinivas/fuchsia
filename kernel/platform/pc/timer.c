@@ -483,7 +483,7 @@ static void platform_init_timer(uint level)
         }
     }
 
-    TRACEF("timer features: constant_tsc %u invariant_tsc %u tsc_deadline %u\n",
+    TRACEF("timer features: constant_tsc %d invariant_tsc %d tsc_deadline %d\n",
             constant_tsc, invariant_tsc, use_tsc_deadline);
     TRACEF("Using %s as wallclock\n", clock_name[wall_clock]);
 }
@@ -520,7 +520,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback,
     uint32_t count = (apic_ticks_per_ms / extra_divisor) * interval;
     uint32_t divisor = apic_divisor * extra_divisor;
     ASSERT(divisor <= UINT8_MAX);
-    LTRACEF("Scheduling oneshot timer: %u count, %d div\n", count, divisor);
+    LTRACEF("Scheduling oneshot timer: %u count, %u div\n", count, divisor);
     return apic_timer_set_oneshot(count, divisor, false /* unmasked */);
 }
 

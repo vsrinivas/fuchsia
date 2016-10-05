@@ -228,7 +228,7 @@ static int i8042_process_scode(uint8_t scode, unsigned int flags)
         key_code = pc_keymap_set1_lower[scode];
     }
 
-    LTRACEF("scancode 0x%x, keyup %u, multi %u: keycode 0x%x\n", scode, !!key_up, multi, key_code);
+    LTRACEF("scancode 0x%x, keyup %d, multi %d: keycode 0x%x\n", scode, !!key_up, multi, key_code);
 
     // generate a character string to feed into the queue
     char str[4] = { 0 };

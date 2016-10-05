@@ -392,7 +392,7 @@ static void read_xsave_state_info(void)
 
         state_components[i].size = leaf.a;
         state_components[i].align64 = align64;
-        LTRACEF("component %d size: %d (xcr0 %d)\n",
+        LTRACEF("component %u size: %u (xcr0 %d)\n",
                 idx, state_components[i].size,
                 !!(xcr0_component_bitmap & (1ULL << idx)));
 
@@ -402,7 +402,7 @@ static void read_xsave_state_info(void)
         max_area += leaf.a;
     }
     xsave_max_area_size = max_area;
-    LTRACEF("total xsave size: %zd\n", max_area);
+    LTRACEF("total xsave size: %zu\n", max_area);
 
     return;
 bailout:

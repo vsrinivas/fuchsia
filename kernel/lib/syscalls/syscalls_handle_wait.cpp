@@ -34,7 +34,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
                                 user_ptr<mx_signals_state_t> _signals_state) {
-    LTRACEF("handle %u\n", handle_value);
+    LTRACEF("handle %d\n", handle_value);
 
     WaitEvent event;
 

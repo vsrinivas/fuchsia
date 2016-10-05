@@ -9,7 +9,7 @@ KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing -I$(LOCAL_DIR)/source/include/acpica
+MODULE_CFLAGS += -Wno-strict-aliasing -Wno-format-signedness -I$(LOCAL_DIR)/source/include/acpica
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/tables/tbinstal.c \

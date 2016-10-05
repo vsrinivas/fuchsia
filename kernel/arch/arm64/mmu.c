@@ -173,7 +173,7 @@ status_t arch_mmu_query(arch_aspace_t *aspace, vaddr_t vaddr, paddr_t *paddr, ui
         descriptor_type = pte & MMU_PTE_DESCRIPTOR_MASK;
         pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
 
-        LTRACEF("va %#" PRIxPTR ", index %d, index_shift %d, rem %#" PRIxPTR
+        LTRACEF("va %#" PRIxPTR ", index %u, index_shift %u, rem %#" PRIxPTR
                 ", pte %#" PRIx64 "\n",
                 vaddr, index, index_shift, vaddr_rem, pte);
 
@@ -359,7 +359,7 @@ static int arm64_mmu_unmap_pt(vaddr_t vaddr, vaddr_t vaddr_rel,
     paddr_t page_table_paddr;
     size_t unmap_size;
 
-    LTRACEF("vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %d, page_size_shift %d, page_table %p\n",
+    LTRACEF("vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %u, page_size_shift %u, page_table %p\n",
             vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
 
     unmap_size = 0;
@@ -429,7 +429,7 @@ static int arm64_mmu_map_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
     LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", paddr %#" PRIxPTR
             ", size %#zx, attrs %#" PRIx64
-            ", index shift %d, page_size_shift %d, page_table %p\n",
+            ", index shift %u, page_size_shift %u, page_table %p\n",
             vaddr, vaddr_rel, paddr, size, attrs,
             index_shift, page_size_shift, page_table);
 
@@ -514,7 +514,7 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
 
     LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", size %#" PRIxPTR
             ", attrs %#" PRIx64
-            ", index shift %d, page_size_shift %d, page_table %p\n",
+            ", index shift %u, page_size_shift %u, page_table %p\n",
             vaddr, vaddr_rel, size, attrs,
             index_shift, page_size_shift, page_table);
 

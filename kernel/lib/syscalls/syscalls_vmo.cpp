@@ -126,7 +126,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
 
 mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
                              user_ptr<void> buffer, mx_size_t buffer_size) {
-    LTRACEF("handle %u op %u offset %#" PRIx64 " size %#" PRIx64
+    LTRACEF("handle %d op %u offset %#" PRIx64 " size %#" PRIx64
             " buffer %p buffer_size %" PRIuPTR "\n",
              handle, op, offset, size, buffer.get(), buffer_size);
 

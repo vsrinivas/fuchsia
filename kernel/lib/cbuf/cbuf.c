@@ -38,7 +38,7 @@ void cbuf_initialize_etc(cbuf_t *cbuf, size_t len, void *buf)
     event_init(&cbuf->event, false, 0);
     spin_lock_init(&cbuf->lock);
 
-    LTRACEF("len %zd, len_pow2 %u\n", len, cbuf->len_pow2);
+    LTRACEF("len %zu, len_pow2 %u\n", len, cbuf->len_pow2);
 }
 
 size_t cbuf_space_avail(cbuf_t *cbuf)
@@ -56,7 +56,7 @@ size_t cbuf_write_etc(cbuf_t *cbuf, const void *_buf, size_t len, uint32_t flags
 {
     const char *buf = (const char *)_buf;
 
-    LTRACEF("len %zd\n", len);
+    LTRACEF("len %zu\n", len);
 
     DEBUG_ASSERT(cbuf);
     DEBUG_ASSERT(len < valpow2(cbuf->len_pow2));

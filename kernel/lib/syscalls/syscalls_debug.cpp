@@ -74,7 +74,7 @@ int sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
 }
 
 int sys_debug_write(const void* ptr, uint32_t len) {
-    LTRACEF("ptr %p, len %d\n", ptr, len);
+    LTRACEF("ptr %p, len %u\n", ptr, len);
 
     if (len > kMaxDebugWriteSize)
         len = kMaxDebugWriteSize;
@@ -90,7 +90,7 @@ int sys_debug_write(const void* ptr, uint32_t len) {
 }
 
 int sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
-    LTRACEF("ptr %p, len %d\n", ptr, len);
+    LTRACEF("ptr %p, len %u\n", ptr, len);
 
     // TODO: finer grained validation
     mx_status_t status;
@@ -296,7 +296,7 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
                                   user_ptr<void> _buffer_ptr, user_ptr<uint32_t> _buffer_len)
 {
-    LTRACEF("handle %u, state_kind %u\n", handle, state_kind);
+    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -342,7 +342,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
 mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
                                    user_ptr<const void> _buffer_ptr, uint32_t buffer_len)
 {
-    LTRACEF("handle %u, state_kind %u\n", handle, state_kind);
+    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 

@@ -46,7 +46,7 @@ void mp_reschedule(mp_cpu_mask_t target, uint flags)
 {
     uint local_cpu = arch_curr_cpu_num();
 
-    LTRACEF("local %d, target 0x%x\n", local_cpu, target);
+    LTRACEF("local %u, target 0x%x\n", local_cpu, target);
 
     if (target == MP_CPU_ALL) {
         target = mp.active_cpus;
@@ -61,7 +61,7 @@ void mp_reschedule(mp_cpu_mask_t target, uint flags)
     }
     target &= ~(1U << local_cpu);
 
-    LTRACEF("local %d, post mask target now 0x%x\n", local_cpu, target);
+    LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, target);
 
     arch_mp_send_ipi(target, MP_IPI_RESCHEDULE);
 }

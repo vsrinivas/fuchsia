@@ -94,7 +94,7 @@ static void dump_iframe(struct arm_iframe *frame)
 
 static void exception_die(struct arm_fault_frame *frame, const char *msg)
 {
-    dprintf(CRITICAL, msg);
+    dprintf(CRITICAL, "%s", msg);
     dump_fault_frame(frame);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
@@ -102,7 +102,7 @@ static void exception_die(struct arm_fault_frame *frame, const char *msg)
 
 static void exception_die_iframe(struct arm_iframe *frame, const char *msg)
 {
-    dprintf(CRITICAL, msg);
+    dprintf(CRITICAL, "%s", msg);
     dump_iframe(frame);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);

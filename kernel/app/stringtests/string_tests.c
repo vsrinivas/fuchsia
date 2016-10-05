@@ -264,7 +264,7 @@ static void validate_memset(void)
     printf("testing memset for correctness\n");
 
     for (dstalign = 0; dstalign < 64; dstalign++) {
-        printf("align %zd\n", dstalign);
+        printf("align %zu\n", dstalign);
         for (size = 0; size < maxsize; size++) {
             for (c = -1; c < 257; c++) {
 
