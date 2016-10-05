@@ -8,6 +8,7 @@
 #include "apps/mozart/glue/base/trace_event.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/split_string.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -89,37 +90,41 @@ void LauncherApp::InitViewAssociates(
 
 bool LauncherApp::OnAcceptConnection(
     mojo::ServiceProviderImpl* service_provider_impl) {
-  // Only present the launcher interface to the shell.
-  if (service_provider_impl->connection_context().remote_url.empty()) {
-    service_provider_impl->AddService<Launcher>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<Launcher> launcher_request) {
-          bindings_.AddBinding(this, std::move(launcher_request));
-        });
-  }
+  service_provider_impl->AddService<Launcher>(
+      [this](const mojo::ConnectionContext& connection_context,
+             mojo::InterfaceRequest<Launcher> launcher_request) {
+        bindings_.AddBinding(this, std::move(launcher_request));
+      });
   return true;
 }
 
 void LauncherApp::Launch(const mojo::String& application_url) {
   DVLOG(1) << "Launching " << application_url;
 
-  mojo::ConnectToService(shell(), "mojo:framebuffer",
-                         mojo::GetProxy(&framebuffer_provider_));
-  framebuffer_provider_->Create([this, application_url](
-      mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-      mojo::FramebufferInfoPtr framebuffer_info) {
-    FTL_CHECK(framebuffer);
-    FTL_CHECK(framebuffer_info);
-
-    mozart::ViewProviderPtr view_provider;
-    mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
-
-    LaunchInternal(std::move(framebuffer), std::move(framebuffer_info),
-                   std::move(view_provider));
-  });
+  mojo::InterfaceHandle<mozart::ViewProvider> view_provider;
+  mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
+  Display(std::move(view_provider));
 }
 
-void LauncherApp::LaunchInternal(
+void LauncherApp::Display(
+    mojo::InterfaceHandle<mozart::ViewProvider> view_provider_handle) {
+  mojo::ConnectToService(shell(), "mojo:framebuffer",
+                         mojo::GetProxy(&framebuffer_provider_));
+  framebuffer_provider_->Create(
+      ftl::MakeCopyable([ this, handle = std::move(view_provider_handle) ](
+          mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+          mojo::FramebufferInfoPtr framebuffer_info) mutable {
+        FTL_CHECK(framebuffer);
+        FTL_CHECK(framebuffer_info);
+
+        mozart::ViewProviderPtr view_provider =
+            mozart::ViewProviderPtr::Create(std::move(handle));
+        DisplayInternal(std::move(framebuffer), std::move(framebuffer_info),
+                        std::move(view_provider));
+      }));
+}
+
+void LauncherApp::DisplayInternal(
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
     mozart::ViewProviderPtr view_provider) {

@@ -17,7 +17,7 @@
 
 namespace launcher {
 
-class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
+class LauncherApp : public mojo::ApplicationImplBase, public mozart::Launcher {
  public:
   LauncherApp();
   ~LauncherApp() override;
@@ -32,11 +32,14 @@ class LauncherApp : public mojo::ApplicationImplBase, public Launcher {
       mojo::ServiceProviderImpl* service_provider_impl) override;
 
   // |Launcher|:
-  void Launch(const mojo::String& application_url) override;
+  void Display(
+      mojo::InterfaceHandle<mozart::ViewProvider> view_provider) override;
 
-  void LaunchInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                      mojo::FramebufferInfoPtr framebuffer_info,
-                      mozart::ViewProviderPtr view_provider);
+  void Launch(const mojo::String& application_url);
+
+  void DisplayInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                       mojo::FramebufferInfoPtr framebuffer_info,
+                       mozart::ViewProviderPtr view_provider);
   void OnLaunchTermination(uint32_t id);
 
   void OnCompositorConnectionError();

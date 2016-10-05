@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module launcher;
+module mozart;
 
-// Private interface for the shell. Allows the shell to start an ui
-// application.
-[ServiceName="launcher::Launcher"]
+import "apps/mozart/services/views/interfaces/view_provider.mojom";
+
+// A way to run the launcher as a mojo service (as opposed to via command-line
+// arguments).
+[ServiceName="mozart::Launcher"]
 interface Launcher {
-  Launch(string application_url);
+  Display(mozart.ViewProvider view_provider);
 };
