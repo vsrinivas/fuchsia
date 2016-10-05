@@ -5,6 +5,7 @@
 module modular;
 
 import "apps/ledger/api/ledger.mojom";
+import "apps/mozart/services/views/interfaces/view_provider.mojom";
 
 /*
  * This file contains definitions of interfaces and data structures to access
@@ -16,8 +17,10 @@ import "apps/ledger/api/ledger.mojom";
 interface StoryManager {
   // Used to launch story-manager for a particular user, identified by
   // |user_id|. Returns false if there is a problem with |user_id| or |Launch|
-  // has already been called.
-  Launch(ledger.Identity user_id) => (bool success);
+  // has already been called. If successful, returns the view associated with
+  // this story manager.
+  Launch(ledger.Identity user_id) => (bool success,
+                                      mozart.ViewProvider? view_provider);
 };
 
 struct StoryInfo {
@@ -36,6 +39,13 @@ struct StoryInfo {
 // Intended for use by SysUi to interact with a single story.
 interface Story {
   GetInfo() => (StoryInfo info);
+
+  // Provides the root view provider for this story. This can only be called
+  // once from a running story. The story must be restarted if this is to be
+  // called again.
+  // If story is not running or |TakeViewProvider| has been called before,
+  // returns NULL.
+  TakeViewProvider() => (mozart.ViewProvider? view_provider);
 
   // Stops this |Story| if it is running - committing all story data to Ledger,
   // else does nothing.

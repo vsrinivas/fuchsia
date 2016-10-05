@@ -70,5 +70,5 @@ $ROOT_DIR/buildtools/ninja -C $ROOT_DIR/out/debug-x86-64 $JOB_COUNT_FLAG
 # Run Fuchsia on QEMU. To run modular now, type mojo:device_runner at
 # the shell prompt.
 $ROOT_DIR/magenta/scripts/run-magenta-x86-64 -x \
-  $ROOT_DIR/out/debug-x86-64/user.bootfs
+  $ROOT_DIR/out/debug-x86-64/user.bootfs -g -m 2048
 

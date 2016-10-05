@@ -20,6 +20,7 @@ executable("story_manager") {
     ":interfaces",
     "//apps/ledger/api",
     "//apps/modular/story_runner:interfaces",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
@@ -37,12 +38,19 @@ executable("dummy_user_shell") {
 
   deps = [
     ":interfaces",
-    "//apps/modular/mojo:single_service_application",
+    "//apps/mozart/lib/skia",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
+    "//lib/mtl",
     "//mojo/public/c:system",
-    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
+    "//mojo/services/geometry/interfaces",
     "//mojo/system",
+    "//third_party/skia",
   ]
 }
 
@@ -53,5 +61,6 @@ mojom("interfaces") {
 
   deps = [
     "//apps/ledger/api",
+    "//apps/mozart/services/views/interfaces",
   ]
 }

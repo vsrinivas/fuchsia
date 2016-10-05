@@ -19,6 +19,7 @@ executable("device_runner") {
   deps = [
     ":interfaces",
     "//apps/modular/story_manager:interfaces",
+    "//apps/mozart/services/launcher/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",

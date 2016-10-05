@@ -13,6 +13,7 @@
 
 #include "apps/modular/story_manager/story_manager.mojom.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -65,7 +66,8 @@ class StoryProviderState {
 class StoryImpl : public Story, public StoryState, public ModuleWatcher {
  public:
   StoryImpl(StructPtr<StoryInfo> story_info,
-            StoryProviderState* story_provider_state, Shell* shell,
+            StoryProviderState* story_provider_state,
+            Shell* shell,
             InterfaceRequest<Story> request)
       : story_info_(std::move(story_info)),
         story_provider_state_(story_provider_state),
@@ -94,13 +96,16 @@ class StoryImpl : public Story, public StoryState, public ModuleWatcher {
     FTL_LOG(INFO) << "StoryImpl::RunStory()";
     InterfacePtr<ResolverFactory> resolver_factory;
     ConnectToService(shell_, "mojo:resolver", GetProxy(&resolver_factory));
+    // TODO(alhaad): Implement |ViewProvider| service in story-runner.
+    ConnectToService(shell_, "mojo:story_runner", GetProxy(&view_provider_));
     ConnectToService(shell_, "mojo:story_runner", GetProxy(&runner_));
     runner_->Initialize(resolver_factory.Pass());
     runner_->StartStory(session_page.PassInterfaceHandle(),
                         GetProxy(&session_));
     InterfaceHandle<Link> link;
     session_->CreateLink(GetProxy(&link));
-    session_->StartModule(story_info_->url, std::move(link), GetProxy(&module_));
+    session_->StartModule(story_info_->url, std::move(link),
+                          GetProxy(&module_));
     story_info_->is_running = true;
 
     InterfaceHandle<ModuleWatcher> module_watcher;
@@ -118,6 +123,14 @@ class StoryImpl : public Story, public StoryState, public ModuleWatcher {
   // |Story| override.
   void GetInfo(const GetInfoCallback& callback) override {
     callback.Run(story_info_->Clone());
+  }
+
+  // |Story| override.
+  void TakeViewProvider(const TakeViewProviderCallback& callback) override {
+    if (!story_info_->is_running) {
+      return;
+    }
+    callback.Run(view_provider_.Pass());
   }
 
   // |Story| override.
@@ -154,6 +167,7 @@ class StoryImpl : public Story, public StoryState, public ModuleWatcher {
   InterfacePtr<StoryRunner> runner_;
   InterfacePtr<Session> session_;
   InterfacePtr<ModuleClient> module_;
+  InterfacePtr<mozart::ViewProvider> view_provider_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };
@@ -163,7 +177,8 @@ class StoryImpl : public Story, public StoryState, public ModuleWatcher {
 // assumption.
 class StoryProviderImpl : public StoryProvider, public StoryProviderState {
  public:
-  StoryProviderImpl(Shell* shell, InterfacePtr<ledger::Ledger> ledger,
+  StoryProviderImpl(Shell* shell,
+                    InterfacePtr<ledger::Ledger> ledger,
                     InterfaceHandle<StoryProvider>* service)
       : shell_(shell), binding_(this, service), ledger_(std::move(ledger)) {
     ledger_->GetRootPage([this](ledger::Status status,
@@ -314,22 +329,27 @@ class StoryManagerImpl : public StoryManager {
                          InterfaceHandle<ledger::Ledger> ledger) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "story-manager's connection to ledger failed.";
-            callback.Run(false);
+            callback.Run(false, nullptr);
             return;
           }
-          callback.Run(true);
-          StartUserShell(std::move(ledger));
+          callback.Run(true, StartUserShell(std::move(ledger)));
         });
   }
 
   // Run the User shell and provide it the |StoryProvider| interface.
-  void StartUserShell(InterfaceHandle<ledger::Ledger> ledger) {
+  InterfaceHandle<mozart::ViewProvider> StartUserShell(
+      InterfaceHandle<ledger::Ledger> ledger) {
+    InterfacePtr<mozart::ViewProvider> view_provider;
+    // TODO(alhaad): Do a service provider exchange in ViewProvider's
+    // |CreateView| call.
+    ConnectToService(shell_, "mojo:dummy_user_shell", GetProxy(&view_provider));
     ConnectToService(shell_, "mojo:dummy_user_shell", GetProxy(&user_shell_));
     InterfaceHandle<StoryProvider> service;
     new StoryProviderImpl(
         shell_, InterfacePtr<ledger::Ledger>::Create(std::move(ledger)),
         &service);
     user_shell_->SetStoryProvider(std::move(service));
+    return std::move(view_provider);
   }
 
   Shell* shell_;

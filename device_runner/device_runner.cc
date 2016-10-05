@@ -6,6 +6,7 @@
 
 #include "apps/modular/device_runner/device_runner.mojom.h"
 #include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/mozart/services/launcher/interfaces/launcher.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -37,7 +38,9 @@ Array<uint8_t> UserIdentityArray(const std::string& username) {
 class DeviceRunnerImpl : public DeviceRunner {
  public:
   DeviceRunnerImpl(Shell* shell, InterfaceHandle<DeviceRunner>* service)
-      : shell_(shell), binding_(this, service) {}
+      : shell_(shell), binding_(this, service) {
+    ConnectToService(shell_, "mojo:launcher", GetProxy(&mozart_launcher_));
+  }
   ~DeviceRunnerImpl() override {}
 
  private:
@@ -46,12 +49,16 @@ class DeviceRunnerImpl : public DeviceRunner {
 
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
-    ConnectToService(shell_, "mojo:story_manager", GetProxy(&launcher_));
+    ConnectToService(shell_, "mojo:story_manager", GetProxy(&story_manager_));
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
-    launcher_->Launch(std::move(identity), [](bool success) {
-      FTL_DLOG(INFO) << "story-manager launched.";
-    });
+    story_manager_->Launch(
+        std::move(identity),
+        [this](bool success,
+               InterfaceHandle<mozart::ViewProvider> view_provider) {
+          mozart_launcher_->Display(std::move(view_provider));
+          FTL_DLOG(INFO) << "story-manager launched.";
+        });
   }
 
   Shell* shell_;
@@ -60,7 +67,9 @@ class DeviceRunnerImpl : public DeviceRunner {
   // Interface pointer to the |StoryManager| handle exposed by the Story
   // Manager. Currently, we maintain a single instance which means that
   // subsequent logins override previous ones.
-  InterfacePtr<StoryManager> launcher_;
+  InterfacePtr<StoryManager> story_manager_;
+
+  InterfacePtr<mozart::Launcher> mozart_launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerImpl);
 };
