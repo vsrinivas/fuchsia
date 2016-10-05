@@ -169,6 +169,12 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
             xprintf("vn open r = %d", r);
             return r;
         }
+        if (flags & O_TRUNC) {
+            if ((r = vn->ops->truncate(vn, 0)) < 0) {
+                vn_release(vn);
+                return r;
+            }
+        }
     }
     *pathout = "";
     *out = vn;
