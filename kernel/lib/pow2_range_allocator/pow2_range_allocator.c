@@ -390,6 +390,7 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
 #else
     DEBUG_ASSERT(!list_is_empty(&state->allocated_bocks));
     block         = list_remove_head_type(&state->allocated_blocks, p2ra_block_t, node);
+    ASSERT(block);
     block->start  = range_start;
     block->bucket = bucket;
 #endif

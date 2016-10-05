@@ -89,7 +89,8 @@ void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
 
     while (!did_cancel_list.is_empty()) {
         auto observer = did_cancel_list.pop_front();
-        observer->OnDidCancel();
+        if (observer)
+            observer->OnDidCancel();
     }
 
     if (awoke_threads)

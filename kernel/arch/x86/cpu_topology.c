@@ -74,6 +74,8 @@ static void extended_amd_topology_init(void)
 {
     // Described in AMD CPUID Specification, version 2.34, section 3.2
     const struct cpuid_leaf *leaf = x86_get_cpuid_leaf(0x80000008);
+    if (!leaf)
+        return;
 
     // width of the core part of the apic id
     uint32_t apic_id_core_id_size = BITS_SHIFT(leaf->c, 15, 12);

@@ -79,19 +79,21 @@ void x86_feature_init(void)
 
     /* populate the model info */
     const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
-    model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
-    model_info.family = BITS_SHIFT(leaf->a, 11, 8);
-    model_info.model = BITS_SHIFT(leaf->a, 7, 4);
-    model_info.stepping = BITS_SHIFT(leaf->a, 3, 0);
-    model_info.display_family = model_info.family;
-    model_info.display_model = model_info.model;
+    if (leaf) {
+        model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
+        model_info.family = BITS_SHIFT(leaf->a, 11, 8);
+        model_info.model = BITS_SHIFT(leaf->a, 7, 4);
+        model_info.stepping = BITS_SHIFT(leaf->a, 3, 0);
+        model_info.display_family = model_info.family;
+        model_info.display_model = model_info.model;
 
-    if (model_info.family == 0xf) {
-        model_info.display_family += BITS_SHIFT(leaf->a, 27, 20);
-    }
+        if (model_info.family == 0xf) {
+            model_info.display_family += BITS_SHIFT(leaf->a, 27, 20);
+        }
 
-    if (model_info.family == 0xf || model_info.family == 0x6) {
-        model_info.display_model += BITS_SHIFT(leaf->a, 19, 16) << 4;
+        if (model_info.family == 0xf || model_info.family == 0x6) {
+            model_info.display_model += BITS_SHIFT(leaf->a, 19, 16) << 4;
+        }
     }
 }
 

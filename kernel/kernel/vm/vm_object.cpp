@@ -283,7 +283,7 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
             continue;
 
         vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, node);
-        DEBUG_ASSERT(p);
+        ASSERT(p);
 
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);
@@ -347,7 +347,7 @@ int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t a
         size_t index = OffsetToIndex(o);
 
         vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, node);
-        DEBUG_ASSERT(p);
+        ASSERT(p);
 
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);

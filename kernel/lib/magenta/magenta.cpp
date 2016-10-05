@@ -69,8 +69,12 @@ void DeleteHandle(Handle* handle) {
         // have complicated Close() logic which cannot be untangled at
         // this time.
         switch (disp->get_type()) {
-            case MX_OBJ_TYPE_IOMAP: disp->get_specific<IoMappingDispatcher>()->Close();
+            case MX_OBJ_TYPE_IOMAP: {
+                auto iodisp = disp->get_specific<IoMappingDispatcher>();
+                if (iodisp)
+                    iodisp->Close();
                 break;
+            }
             default:  break;
                 // This is fine. See for example the LogDispatcher.
         };

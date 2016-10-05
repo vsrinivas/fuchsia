@@ -53,7 +53,7 @@ IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
 }
 
 void IOP_Packet::Delete(IOP_Packet* packet) {
-    if (packet->is_signal)
+    if (!packet || packet->is_signal)
         return;
     packet->~IOP_Packet();
     delete [] reinterpret_cast<char*>(packet);
@@ -104,8 +104,10 @@ void IOPortDispatcher::FreePackets_NoLock() {
     }
     while (!at_zero_.is_empty()) {
         auto signal = at_zero_.pop_front();
-        signal->is_signal = false;
-        IOP_Packet::Delete(signal);
+        if (signal) {
+            signal->is_signal = false;
+            IOP_Packet::Delete(signal);
+        }
     }
 }
 
@@ -181,6 +183,8 @@ mx_status_t IOPortDispatcher::Wait(IOP_Packet** packet) {
             AutoLock al(&lock_);
             if (!packets_.is_empty()) {
                 auto pk = packets_.pop_front();
+                ASSERT(pk);
+
                 if (!pk->is_signal) {
                     *packet = pk;
                 } else {

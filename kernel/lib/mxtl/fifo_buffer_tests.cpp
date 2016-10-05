@@ -47,15 +47,18 @@ static bool fifo_basic(void* context) {
 
         p->val = ++count;
         p = fifo.pop_head();
-
-        EXPECT_EQ(loops, p->val, "missing buffer");
+        EXPECT_NEQ(nullptr, p, "missing buffer");
+        if (p)
+            EXPECT_EQ(loops, p->val, "missing buffer");
     }
 
     EXPECT_EQ(true, fifo.is_full(), "should be full");
 
     EXPECT_EQ(16, loops, "slot count mismatch");
 
-    EXPECT_EQ(16, fifo.peek_head()->val, "peek failed");
+    EXPECT_NEQ(nullptr, fifo.peek_head(), "peek failed");
+    if (fifo.peek_head())
+        EXPECT_EQ(16, fifo.peek_head()->val, "peek failed");
 
     loops = 0;
     while (!fifo.is_empty()) {

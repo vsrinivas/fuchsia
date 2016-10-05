@@ -39,7 +39,11 @@ mx_status_t WaitStateObserver::Begin(WaitEvent* event,
 mx_signals_state_t WaitStateObserver::End() {
     DEBUG_ASSERT(dispatcher_);
 
-    mx_signals_state_t state = dispatcher_->get_state_tracker()->RemoveObserver(this);
+    mx_signals_state_t state = {};
+    auto tracker = dispatcher_->get_state_tracker();
+    DEBUG_ASSERT(tracker);
+    if (tracker)
+        state = tracker->RemoveObserver(this);
     dispatcher_.reset();
     return state;
 }

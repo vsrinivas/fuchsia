@@ -79,7 +79,7 @@ static status_t pch_thermal_startup(struct pcie_device_state* pci_device)
     g_pch_thermal_context.aspace = vmm_get_kernel_aspace();
 
     const pcie_bar_info_t* bar_info = pcie_get_bar_info(pci_device, 0);
-    DEBUG_ASSERT(bar_info->bus_addr);
+    DEBUG_ASSERT(bar_info && bar_info->bus_addr);
 
     /* Select legacy IRQ Mode */
     status = pcie_set_irq_mode(pci_device, PCIE_IRQ_MODE_LEGACY, 1);
