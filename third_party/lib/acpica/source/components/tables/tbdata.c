@@ -630,6 +630,7 @@ AcpiTbTerminate (
     return_VOID;
 }
 
+#ifndef _KERNEL
 
 /*******************************************************************************
  *
@@ -867,3 +868,4 @@ AcpiTbSetTableLoadedFlag (
 
     (void) AcpiUtReleaseMutex (ACPI_MTX_TABLES);
 }
+#endif
