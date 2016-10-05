@@ -103,6 +103,7 @@ int test_rw_workers(void);
 int test_basic(void);
 int test_rename(void);
 int test_append(void);
+int test_truncate(void);
 
 struct {
     const char* name;
@@ -113,6 +114,7 @@ struct {
     {"rw_workers", test_rw_workers},
     {"basic", test_basic},
     {"rename", test_rename},
+    {"truncate", test_truncate},
 };
 
 int run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** argv) {

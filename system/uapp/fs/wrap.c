@@ -89,6 +89,13 @@ int FN(unlink)(const char* path) {
     DO_REAL(unlink, real_path);
 }
 
+int FL(truncate)(const char* path, off_t len);
+int FN(truncate)(const char* path, off_t len) {
+    char real_path[PATH_MAX];
+    PATH_WRAP(path, real_path);
+    DO_REAL(truncate, real_path, len);
+}
+
 int FL(rename)(const char* oldpath, const char* newpath);
 int FN(rename)(const char* oldpath, const char* newpath) {
     char real_oldpath[PATH_MAX];

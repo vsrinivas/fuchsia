@@ -18,9 +18,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test_rw_workers.c \
     $(LOCAL_DIR)/test_basic.c \
     $(LOCAL_DIR)/test_rename.c \
+    $(LOCAL_DIR)/test_truncate.c \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
-MODULE_LDFLAGS += --wrap rename
+MODULE_LDFLAGS += --wrap rename --wrap truncate
 
 MODULE_LIBS := \
     ulib/mxio ulib/launchpad ulib/magenta ulib/musl
