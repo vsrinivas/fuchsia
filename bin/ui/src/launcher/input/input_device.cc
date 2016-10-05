@@ -432,34 +432,49 @@ void MouseInputDevice::Parse(const OnEventCallback& callback) {
 void Acer12InputDevice::ParseStylus(const OnEventCallback& callback) {
   acer12_stylus_t* report = reinterpret_cast<acer12_stylus_t*>(report_);
 
-  // Don't generate events for out of range or hover with no switches
-  if (!report->status || report->status == ACER12_STYLUS_STATUS_INRANGE)
-    return;
+  const bool previous_stylus_down = stylus_down_;
+  stylus_down_ = acer12_stylus_status_inrange(report->status) &&
+                 acer12_stylus_status_tswitch(report->status);
 
-  float x =
-      static_cast<float>(report->x) / static_cast<float>(ACER12_STYLUS_X_MAX);
-  float y =
-      static_cast<float>(report->y) / static_cast<float>(ACER12_STYLUS_Y_MAX);
+  mozart::EventType action = mozart::EventType::POINTER_DOWN;
+  if (stylus_down_) {
+    if (previous_stylus_down) {
+      action = mozart::EventType::POINTER_MOVE;
+    }
+  } else {
+    if (!previous_stylus_down) {
+      return;
+    }
+    action = mozart::EventType::POINTER_UP;
+  }
 
   mozart::EventPtr ev = mozart::Event::New();
-  ev->action = mozart::EventType::POINTER_DOWN;
+  ev->action = action;
   ev->flags = mozart::EventFlags::NONE;
   ev->time_stamp = InputEventTimestampNow();
+  if (action == mozart::EventType::POINTER_UP) {
+    ev->pointer_data = stylus_.Clone();
+  } else {
+    float x =
+        static_cast<float>(report->x) / static_cast<float>(ACER12_STYLUS_X_MAX);
+    float y =
+        static_cast<float>(report->y) / static_cast<float>(ACER12_STYLUS_Y_MAX);
 
-  ev->pointer_data = mozart::PointerData::New();
-  ev->pointer_data->pointer_id = report->rpt_id;
-  ev->pointer_data->kind = mozart::PointerKind::TOUCH;
-  ev->pointer_data->x = x;
-  ev->pointer_data->y = y;
-  ev->pointer_data->screen_x = x;
-  ev->pointer_data->screen_y = y;
-  ev->pointer_data->pressure = report->pressure;
-  ev->pointer_data->radius_major = report->pressure >> 4;
-  ev->pointer_data->radius_minor = report->pressure >> 4;
-  ev->pointer_data->orientation = 0.;
-  ev->pointer_data->horizontal_wheel = 0.;
-  ev->pointer_data->vertical_wheel = 0.;
-
+    ev->pointer_data = mozart::PointerData::New();
+    ev->pointer_data->pointer_id = 11;  // Assuming max of 10 fingers
+    ev->pointer_data->kind = mozart::PointerKind::TOUCH;
+    ev->pointer_data->x = x;
+    ev->pointer_data->y = y;
+    ev->pointer_data->screen_x = x;
+    ev->pointer_data->screen_y = y;
+    ev->pointer_data->pressure = report->pressure;
+    ev->pointer_data->radius_major = 0.;
+    ev->pointer_data->radius_minor = 0.;
+    ev->pointer_data->orientation = 0.;
+    ev->pointer_data->horizontal_wheel = 0.;
+    ev->pointer_data->vertical_wheel = 0.;
+    stylus_ = *ev->pointer_data;
+  }
   callback(std::move(ev));
 }
 

@@ -56,6 +56,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   // |InputListener|:
   void OnEvent(mozart::EventPtr event,
                const OnEventCallback& callback) override {
+    bool handled = false;
     if (event->pointer_data) {
       uint32_t pointer_id = event->pointer_data->pointer_id;
       switch (event->action) {
@@ -73,13 +74,14 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
                 .push_back(SkPoint::Make(event->pointer_data->x,
                                          event->pointer_data->y));
           }
-
+          handled = true;
           break;
         case mozart::EventType::POINTER_UP:
           // Path is done, add it to the list of paths and reset the list of
           // points
           paths_.push_back(CurrentPath(pointer_id));
           points_.erase(pointer_id);
+          handled = true;
           break;
         default:
           break;
@@ -88,10 +90,11 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
       if (event->key_data->hid_usage == HID_USAGE_KEY_ESC) {
         // clear
         paths_.clear();
+        handled = true;
       }
     }
 
-    callback.Run(true);
+    callback.Run(handled);
     Invalidate();
   }
 

@@ -90,6 +90,8 @@ struct Acer12InputDevice : InputDevice {
   void ParseTouchscreen(const OnEventCallback& callback);
 
   std::vector<mozart::PointerData> pointers_;
+  bool stylus_down_ = false;
+  mozart::PointerData stylus_;
 };
 
 class InputReader : mtl::MessageLoopHandler {
