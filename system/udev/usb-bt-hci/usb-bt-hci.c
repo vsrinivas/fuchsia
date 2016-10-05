@@ -70,10 +70,10 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         uint8_t* buffer;
         txn->ops->mmap(txn, (void **)&buffer);
         size_t length = txn->actual;
+        size_t packet_size = buffer[1] + 2;
 
         // simple case - packet fits in received data
         if (hci->event_buffer_offset == 0 && length >= 2) {
-            size_t packet_size = buffer[1] + 2;
             if (packet_size == length) {
                 mx_status_t status = mx_msgpipe_write(hci->control_pipe[0], buffer, length,
                                                             NULL, 0, 0);
@@ -92,9 +92,7 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         }
 
         memcpy(&hci->event_buffer[hci->event_buffer_offset], buffer, length);
-        size_t packet_size;
         if (hci->event_buffer_offset == 0) {
-            packet_size = buffer[1] + 2;
             hci->event_buffer_packet_length = packet_size;
         } else {
             packet_size = hci->event_buffer_packet_length;
@@ -102,7 +100,6 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         hci->event_buffer_offset += length;
 
         // check to see if we have a full packet
-        packet_size = hci->event_buffer[1] + 2;
         if (packet_size <= hci->event_buffer_offset) {
             mx_status_t status = mx_msgpipe_write(hci->control_pipe[0], hci->event_buffer,
                                                         packet_size, NULL, 0, 0);
