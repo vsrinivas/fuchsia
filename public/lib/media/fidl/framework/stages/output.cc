@@ -63,8 +63,9 @@ void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
       memcpy(buffer, packet->payload(), size);
     }
 
-    packet = Packet::Create(packet->pts(), packet->end_of_stream(), size,
-                            buffer, copy_allocator_);
+    packet =
+        Packet::Create(packet->pts(), packet->pts_rate(),
+                       packet->end_of_stream(), size, buffer, copy_allocator_);
   }
 
   if (actual_mate().SupplyPacketFromOutput(std::move(packet))) {

@@ -18,9 +18,13 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   context()->get_buffer2 = AllocateBufferForAvFrame;
   context()->refcounted_frames = 1;
 
+  std::unique_ptr<StreamType> stream_type = output_stream_type();
+  FTL_DCHECK(stream_type_->audio());
+  pts_rate_ = TimelineRate(stream_type_->audio()->frames_per_second(), 1);
+
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
-    stream_type_ = output_stream_type();
+    stream_type_ = std::move(stream_type);
     lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
   }
 }
@@ -93,18 +97,19 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
                            payload_buffer, av_frame.nb_samples);
 
     return Packet::Create(
-        pts,
+        pts, pts_rate_,
         false,  // The base class is responsible for end-of-stream.
         payload_size, payload_buffer, allocator);
   } else {
     // We don't need to interleave. The interleaved frames are in a buffer that
     // was allocated from the correct allocator.
-    return DecoderPacket::Create(pts, av_buffer_ref(av_frame.buf[0]));
+    return DecoderPacket::Create(pts, pts_rate_,
+                                 av_buffer_ref(av_frame.buf[0]));
   }
 }
 
 PacketPtr FfmpegAudioDecoder::CreateOutputEndOfStreamPacket() {
-  return Packet::CreateEndOfStream(next_pts_);
+  return Packet::CreateEndOfStream(next_pts_, pts_rate_);
 }
 
 int FfmpegAudioDecoder::AllocateBufferForAvFrame(

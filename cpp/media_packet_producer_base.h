@@ -9,6 +9,7 @@
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set_allocator.h"
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -53,6 +54,7 @@ class MediaPacketProducerBase {
   void ProducePacket(void* payload,
                      size_t size,
                      int64_t pts,
+                     TimelineRate pts_rate,
                      bool end_of_stream,
                      const ProducePacketCallback& callback);
 

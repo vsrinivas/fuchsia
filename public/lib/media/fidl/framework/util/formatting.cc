@@ -57,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
   }
 
   os << "&" << std::hex << uint64_t(value.get()) << std::dec;
-  os << "/pts:" << value->pts();
+  os << "/pts:" << value->pts() << "(" << value->pts_rate() << ")";
   os << "/eos:" << (value->end_of_stream() ? "t" : "f");
   os << "/size:" << value->size();
   os << "/payload:" << std::hex << uint64_t(value->payload()) << std::dec;
@@ -308,6 +308,10 @@ std::ostream& operator<<(std::ostream& os,
   } else {
     return os << value->size() << " bytes";
   }
+}
+
+std::ostream& operator<<(std::ostream& os, TimelineRate value) {
+  return os << value.subject_delta() << "/" << value.reference_delta();
 }
 
 std::ostream& operator<<(std::ostream& os, Range<bool> value) {

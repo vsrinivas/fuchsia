@@ -58,6 +58,7 @@ std::ostream& operator<<(std::ostream& os, VideoStreamType::VideoProfile value);
 std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value);
 std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value);
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<Bytes>& value);
+std::ostream& operator<<(std::ostream& os, TimelineRate value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, Range<T> value) {

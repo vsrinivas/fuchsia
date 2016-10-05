@@ -93,6 +93,7 @@ void MediaPacketProducerBase::ProducePacket(
     void* payload,
     size_t size,
     int64_t pts,
+    TimelineRate pts_rate,
     bool end_of_stream,
     const ProducePacketCallback& callback) {
 #ifndef NDEBUG
@@ -109,6 +110,8 @@ void MediaPacketProducerBase::ProducePacket(
 
   MediaPacketPtr media_packet = MediaPacket::New();
   media_packet->pts = pts;
+  media_packet->pts_rate_ticks = pts_rate.subject_delta();
+  media_packet->pts_rate_seconds = pts_rate.reference_delta();
   media_packet->end_of_stream = end_of_stream;
   media_packet->payload_buffer_id = locator.buffer_id();
   media_packet->payload_offset = locator.offset();

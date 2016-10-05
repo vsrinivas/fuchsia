@@ -6,6 +6,7 @@
 #include <map>
 #include <thread>
 
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/services/framework/util/safe_clone.h"
 #include "apps/media/services/framework_ffmpeg/av_codec_context.h"
 #include "apps/media/services/framework_ffmpeg/av_format_context.h"
@@ -59,17 +60,21 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
     std::unique_ptr<StreamType> stream_type() const override;
 
+    TimelineRate pts_rate() const override;
+
    private:
     AVStream* stream_;
     size_t index_;
     std::unique_ptr<StreamType> stream_type_;
+    TimelineRate pts_rate_;
   };
 
   // Specialized packet implementation.
   class DemuxPacket : public Packet {
    public:
-    static PacketPtr Create(ffmpeg::AvPacketPtr av_packet) {
-      return PacketPtr(new DemuxPacket(std::move(av_packet)));
+    static PacketPtr Create(ffmpeg::AvPacketPtr av_packet,
+                            TimelineRate pts_rate) {
+      return PacketPtr(new DemuxPacket(std::move(av_packet), pts_rate));
     }
 
     AVPacket& av_packet() { return *av_packet_; }
@@ -80,9 +85,10 @@ class FfmpegDemuxImpl : public FfmpegDemux {
     void Release() override { delete this; }
 
    private:
-    DemuxPacket(ffmpeg::AvPacketPtr av_packet)
+    DemuxPacket(ffmpeg::AvPacketPtr av_packet, TimelineRate pts_rate)
         : Packet(
               (av_packet->pts == AV_NOPTS_VALUE) ? kUnknownPts : av_packet->pts,
+              pts_rate,
               false,
               static_cast<size_t>(av_packet->size),
               av_packet->data),
@@ -322,7 +328,8 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   FTL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
   FTL_DCHECK(av_packet->side_data_elems == 0);
 
-  return DemuxPacket::Create(std::move(av_packet));
+  return DemuxPacket::Create(std::move(av_packet),
+                             streams_[*stream_index_out]->pts_rate());
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
@@ -334,7 +341,8 @@ PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
   }
 
   *stream_index_out = next_stream_to_end_++;
-  return Packet::CreateEndOfStream(next_pts_);
+  return Packet::CreateEndOfStream(next_pts_,
+                                   streams_[*stream_index_out]->pts_rate());
 }
 
 void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source,
@@ -387,6 +395,7 @@ FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(
     size_t index)
     : stream_(format_context.streams[index]), index_(index) {
   stream_type_ = AvCodecContext::GetStreamType(*stream_->codec);
+  pts_rate_ = TimelineRate(stream_->time_base.den, stream_->time_base.num);
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::~FfmpegDemuxStream() {}
@@ -398,6 +407,10 @@ size_t FfmpegDemuxImpl::FfmpegDemuxStream::index() const {
 std::unique_ptr<StreamType> FfmpegDemuxImpl::FfmpegDemuxStream::stream_type()
     const {
   return SafeClone(stream_type_);
+}
+
+TimelineRate FfmpegDemuxImpl::FfmpegDemuxStream::pts_rate() const {
+  return pts_rate_;
 }
 
 }  // namespace media

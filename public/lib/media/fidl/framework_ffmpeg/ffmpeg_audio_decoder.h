@@ -60,6 +60,8 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   // Used to supply missing PTS.
   int64_t next_pts_ = Packet::kUnknownPts;
+
+  TimelineRate pts_rate_;
 };
 
 }  // namespace media

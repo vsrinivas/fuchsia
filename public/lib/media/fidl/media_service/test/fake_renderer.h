@@ -129,6 +129,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   bool end_of_stream_ = false;
   uint64_t status_version_ = 1u;
   std::vector<GetStatusCallback> pending_status_callbacks_;
+  TimelineRate pts_rate_;
 
   bool expected_ = true;
 };

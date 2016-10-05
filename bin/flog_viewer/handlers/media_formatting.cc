@@ -282,13 +282,7 @@ std::ostream& operator<<(std::ostream& os,
     os << std::endl;
   }
 
-  os << indent;
-  os << begl << "pts: " << AsTime(value->pts) << std::endl;
-  os << begl << "end_of_stream: " << value->end_of_stream << std::endl;
-  os << begl << "payload_buffer_id: " << value->payload_buffer_id << std::endl;
-  os << begl << "payload_offset: " << value->payload_offset << std::endl;
-  os << begl << "payload_size: " << value->payload_size << std::endl;
-  return os << outdent;
+  return os << *value;
 }
 
 std::ostream& operator<<(std::ostream& os,
@@ -296,6 +290,8 @@ std::ostream& operator<<(std::ostream& os,
   os << std::endl;
   os << indent;
   os << begl << "pts: " << AsTime(value.pts) << std::endl;
+  os << begl << "pts_rate_ticks: " << value.pts_rate_ticks << std::endl;
+  os << begl << "pts_rate_seconds: " << value.pts_rate_seconds << std::endl;
   os << begl << "end_of_stream: " << value.end_of_stream << std::endl;
   os << begl << "payload_buffer_id: " << value.payload_buffer_id << std::endl;
   os << begl << "payload_offset: " << value.payload_offset << std::endl;

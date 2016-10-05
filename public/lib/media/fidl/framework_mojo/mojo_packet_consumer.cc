@@ -70,6 +70,8 @@ void MojoPacketConsumer::SetDownstreamDemand(Demand demand) {
 MojoPacketConsumer::PacketImpl::PacketImpl(
     std::unique_ptr<SuppliedPacket> supplied_packet)
     : Packet(supplied_packet->packet()->pts,
+             TimelineRate(supplied_packet->packet()->pts_rate_ticks,
+                          supplied_packet->packet()->pts_rate_seconds),
              supplied_packet->packet()->end_of_stream,
              supplied_packet->payload_size(),
              supplied_packet->payload()),

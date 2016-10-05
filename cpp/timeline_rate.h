@@ -25,6 +25,12 @@ class TimelineRate {
   // Used to indicate overflow of scaling operations.
   static constexpr int64_t kOverflow = std::numeric_limits<int64_t>::max();
 
+  // Zero as a TimelineRate.
+  static const TimelineRate Zero;
+
+  // One billionth as a TimelineRate.
+  static const TimelineRate Nano;
+
   // Reduces the ratio of *subject_delta and *reference_delta.
   static void Reduce(uint32_t* subject_delta, uint32_t* reference_delta);
 
@@ -120,6 +126,11 @@ inline bool operator==(TimelineRate a, TimelineRate b) {
 // Tests two rates for inequality.
 inline bool operator!=(TimelineRate a, TimelineRate b) {
   return !(a == b);
+}
+
+// Returns the ratio of the two rates. DCHECKs on loss of precision.
+inline TimelineRate operator/(TimelineRate a, TimelineRate b) {
+  return TimelineRate::Product(a, b.Inverse());
 }
 
 // Returns the product of the two rates. DCHECKs on loss of precision.

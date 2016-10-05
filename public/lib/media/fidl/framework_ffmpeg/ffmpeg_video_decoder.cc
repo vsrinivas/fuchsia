@@ -32,11 +32,8 @@ FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
   context()->thread_count = 2;
   context()->thread_type = FF_THREAD_FRAME;
 
-  // Determine the frame rate in frames per nanosecond so we can translate pts
-  // values from frame index to nanoseconds.
-  frame_rate_in_frames_per_ns_ =
-      TimelineRate(context()->time_base.den,
-                   Timeline::ns_from_seconds(context()->time_base.num));
+  // Precalculate the PTS rate needed for packets.
+  pts_rate_ = TimelineRate(context()->time_base.den, context()->time_base.num);
 }
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {}
@@ -79,15 +76,15 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
                                                  PayloadAllocator* allocator) {
   FTL_DCHECK(allocator);
 
-  // Recover the pts deposited in Decode and divide it by frames per nanosecond
-  // to get the pts in nanoseconds.
-  next_pts_ = av_frame.reordered_opaque / frame_rate_in_frames_per_ns_;
+  // Recover the pts deposited in Decode.
+  next_pts_ = av_frame.reordered_opaque;
 
-  return DecoderPacket::Create(next_pts_, av_buffer_ref(av_frame.buf[0]));
+  return DecoderPacket::Create(next_pts_, pts_rate_,
+                               av_buffer_ref(av_frame.buf[0]));
 }
 
 PacketPtr FfmpegVideoDecoder::CreateOutputEndOfStreamPacket() {
-  return Packet::CreateEndOfStream(next_pts_);
+  return Packet::CreateEndOfStream(next_pts_, pts_rate_);
 }
 
 int FfmpegVideoDecoder::AllocateBufferForAvFrame(

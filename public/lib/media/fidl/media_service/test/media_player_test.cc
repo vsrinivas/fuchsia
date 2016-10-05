@@ -4,6 +4,7 @@
 
 #include <mojo/system/main.h>
 
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/media_service.mojom.h"
 #include "apps/media/services/framework_mojo/mojo_formatting.h"
 #include "apps/media/services/media_service/test/fake_renderer.h"
@@ -25,6 +26,8 @@ class MediaPlayerTester : public ApplicationImplBase {
 
     MediaServicePtr media_service;
     ConnectToService(shell(), "mojo:media_service", GetProxy(&media_service));
+
+    fake_renderer_.SetPtsRate(TimelineRate(48000, 1));
 
     fake_renderer_.ExpectPackets({{0, false, 4096, 0x20c39d1e31991800},
                                   {1024, false, 4096, 0xeaf137125d313800},

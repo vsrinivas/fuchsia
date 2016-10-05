@@ -82,6 +82,7 @@ source_set("framework") {
   ]
 
   deps = [
+    "//apps/media/cpp",
     "//apps/media/services/common",
     "//lib/ftl",
     "//mojo/public/cpp/application",

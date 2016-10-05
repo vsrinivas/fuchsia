@@ -38,6 +38,8 @@ class Demux : public ActiveMultistreamSource {
     virtual size_t index() const = 0;
 
     virtual std::unique_ptr<StreamType> stream_type() const = 0;
+
+    virtual TimelineRate pts_rate() const = 0;
   };
 
   // Creates a Demux object for a given reader.

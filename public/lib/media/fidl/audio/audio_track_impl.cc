@@ -209,6 +209,8 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   frames_per_ns_ =
       TimelineRate(cfg->frames_per_second, Timeline::ns_from_seconds(1));
 
+  pipe_.SetPtsRate(TimelineRate(cfg->frames_per_second, 1));
+
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.
   frame_to_media_ratio_ = TimelineRate(1 << PTS_FRACTIONAL_BITS, 1);
@@ -334,6 +336,9 @@ void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   }
 
   if (packet->supplied_packet()->packet()->end_of_stream) {
+    FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_ticks ==
+               format_->frames_per_second);
+    FTL_DCHECK(packet->supplied_packet()->packet()->pts_rate_seconds == 1);
     timeline_control_point_.SetEndOfStreamPts(
         (packet->supplied_packet()->packet()->pts + packet->frame_count()) /
         frames_per_ns_);

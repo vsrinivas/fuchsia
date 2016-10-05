@@ -37,8 +37,10 @@ class FfmpegDecoderBase : public Decoder {
  protected:
   class DecoderPacket : public Packet {
    public:
-    static PacketPtr Create(int64_t pts, AVBufferRef* av_buffer_ref) {
-      return PacketPtr(new DecoderPacket(pts, av_buffer_ref));
+    static PacketPtr Create(int64_t pts,
+                            TimelineRate pts_rate,
+                            AVBufferRef* av_buffer_ref) {
+      return PacketPtr(new DecoderPacket(pts, pts_rate, av_buffer_ref));
     }
 
    protected:
@@ -47,8 +49,11 @@ class FfmpegDecoderBase : public Decoder {
     void Release() override;
 
    private:
-    DecoderPacket(int64_t pts, AVBufferRef* av_buffer_ref)
+    DecoderPacket(int64_t pts,
+                  TimelineRate pts_rate,
+                  AVBufferRef* av_buffer_ref)
         : Packet(pts,
+                 pts_rate,
                  false,
                  static_cast<size_t>(av_buffer_ref->size),
                  av_buffer_ref->data),

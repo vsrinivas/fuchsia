@@ -51,12 +51,12 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
   // Used to supply PTS for end-of-stream.
   int64_t next_pts_ = Packet::kUnknownPts;
+  TimelineRate pts_rate_;
 
   // TODO(dalesat): For investigation only...remove these three fields.
   bool first_frame_ = true;
   AVColorSpace colorspace_;
   Extent coded_size_;
-  TimelineRate frame_rate_in_frames_per_ns_;
 };
 
 }  // namespace media

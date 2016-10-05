@@ -13,14 +13,23 @@ import "apps/media/interfaces/media_types.mojom";
 struct MediaPacket {
   const int64 kNoTimestamp = 0x7fffffffffffffff;
 
-  // Presentation Time Stamp. Time at which the media should be presented,
+  // Presentation timestamp. Time at which the media should be presented,
   // according to the media timeline.
   int64 pts = kNoTimestamp;
 
+  // Indicates the number of PTS ticks that correspond to pts_rate_seconds
+  // seconds. In other words, the time represented by a single PTS tick in
+  // seconds is pts_rate_ticks / pts_rate_seconds. For example, if PTS is
+  // given in nanoseconds, pts_rate_ticks would be 1,000,000,000, and
+  // pts_rate_seconds would be 1.
+  uint32 pts_rate_ticks;
+
+  // Indicates the number of seconds that correspond to pts_rate_ticks
+  // PTS ticks. See pts_rate_ticks for more info.
+  uint32 pts_rate_seconds;
+
   // Indicates whether this is the last packet in the stream.
   bool end_of_stream;
-
-  // TODO(dalesat): Add ability to reference payload in texture memory.
 
   // Identifier of the shared buffer that contains the payload for this packet.
   // This identifier must be established by a call to MediaPacketConsumer's

@@ -79,10 +79,16 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
   if (media_type->details->is_video()) {
     const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
     FTL_DCHECK(details);
+    pts_rate_ = TimelineRate::Nano;
   } else if (media_type->details->is_audio()) {
     const AudioMediaTypeDetailsPtr& details = media_type->details->get_audio();
     FTL_DCHECK(details);
+    pts_rate_ = TimelineRate(details->frames_per_second, 1);
+  } else {
+    FTL_DCHECK(false) << "Media type is neither audio nor video";
   }
+
+  SetPtsRate(pts_rate_);
 }
 
 void FakeRenderer::GetPacketConsumer(
@@ -98,6 +104,10 @@ void FakeRenderer::GetTimelineControlPoint(
 void FakeRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FTL_DCHECK(supplied_packet);
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+             pts_rate_.subject_delta());
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+             pts_rate_.reference_delta());
   if (supplied_packet->packet()->end_of_stream) {
     end_of_stream_ = true;
     SendStatusUpdates();

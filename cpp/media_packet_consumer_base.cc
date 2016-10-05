@@ -195,6 +195,9 @@ void MediaPacketConsumerBase::SupplyPacket(
   FLOG(log_channel_,
        PacketSupplied(label, media_packet.Clone(), FLOG_ADDRESS(payload),
                       counter_->packets_outstanding() + 1));
+
+  SetPacketPtsRate(media_packet);
+
   OnPacketSupplied(std::unique_ptr<SuppliedPacket>(new SuppliedPacket(
       label, media_packet.Pass(), payload, callback, counter_)));
 }
@@ -253,6 +256,20 @@ MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
 
   demand_update_required_ = false;
   return demand_.Clone();
+}
+
+void MediaPacketConsumerBase::SetPacketPtsRate(const MediaPacketPtr& packet) {
+  if (pts_rate_ == TimelineRate::Zero) {
+    return;
+  }
+
+  TimelineRate original_rate(packet->pts_rate_ticks, packet->pts_rate_seconds);
+
+  if (original_rate != pts_rate_) {
+    packet->pts = packet->pts * (pts_rate_ / original_rate);
+    packet->pts_rate_ticks = pts_rate_.subject_delta();
+    packet->pts_rate_seconds = pts_rate_.reference_delta();
+  }
 }
 
 MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(

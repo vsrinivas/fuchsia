@@ -15,7 +15,10 @@ namespace media {
 VideoRenderer::VideoRenderer()
     : renderer_binding_(this),
       control_point_binding_(this),
-      timeline_consumer_binding_(this) {}
+      timeline_consumer_binding_(this) {
+  // Make sure the PTS rate for all packets is nanoseconds.
+  SetPtsRate(TimelineRate::Nano);
+}
 
 VideoRenderer::~VideoRenderer() {}
 
@@ -96,6 +99,11 @@ void VideoRenderer::GetTimelineControlPoint(
 void VideoRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FTL_DCHECK(supplied_packet);
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+             TimelineRate::Nano.subject_delta());
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+             TimelineRate::Nano.reference_delta());
+
   if (supplied_packet->packet()->end_of_stream) {
     end_of_stream_pts_ = supplied_packet->packet()->pts;
   }

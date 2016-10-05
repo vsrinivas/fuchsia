@@ -143,6 +143,12 @@ uint64_t ScaleUInt64(uint64_t value,
 }  // namespace
 
 // static
+const TimelineRate TimelineRate::Zero = TimelineRate(0, 1);
+
+// static
+const TimelineRate TimelineRate::Nano = TimelineRate(1, 1000000000L);
+
+// static
 void TimelineRate::Reduce(uint32_t* subject_delta, uint32_t* reference_delta) {
   ReduceRatio(subject_delta, reference_delta);
 }

@@ -58,6 +58,9 @@ void AudioPipe::PrimeRequested(
 void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   FTL_DCHECK(supplied_packet);
   FTL_DCHECK(owner_);
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+             owner_->Format()->frames_per_second);
+  FTL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames.  Count the total number of frames in the

@@ -7,6 +7,7 @@
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set.h"
+#include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
 #include "apps/media/interfaces/media_transport.mojom.h"
 #include "lib/ftl/logging.h"
@@ -63,6 +64,11 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   // Determines if the consumer is bound to a message pipe.
   bool is_bound();
+
+  // Sets the PTS rate to apply to all incoming packets. If the PTS rate is
+  // set to TimelineRate::Zero (the default), PTS rates on incoming packets
+  // are not adjusted.
+  void SetPtsRate(TimelineRate pts_rate) { pts_rate_ = pts_rate; }
 
   const MediaPacketDemand& current_demand() { return demand_; }
 
@@ -180,12 +186,17 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // callback.
   MediaPacketDemandPtr GetDemandForPacketDeparture(uint64_t label);
 
+  // Sets the PTS rate of the packet to pts_rate_ unless pts_rate_ is zero.
+  // Does nothing if pts_rate_ is zero.
+  void SetPacketPtsRate(const MediaPacketPtr& packet);
+
   Binding<MediaPacketConsumer> binding_;
   MediaPacketDemand demand_;
   bool demand_update_required_ = false;
   bool returning_packet_ = false;
   PullDemandUpdateCallback get_demand_update_callback_;
   std::shared_ptr<SuppliedPacketCounter> counter_;
+  TimelineRate pts_rate_ = TimelineRate::Zero;  // Zero means do not adjust.
   uint64_t prev_packet_label_ = 0;
 
 #ifndef NDEBUG
