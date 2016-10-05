@@ -636,6 +636,33 @@ static int getdirents(int fd, void* ptr, size_t len) {
     return r;
 }
 
+static int truncateat(int dirfd, const char* path, off_t len) {
+    mxio_t* io;
+    mx_status_t r;
+
+    if ((r = __mxio_open_at(&io, dirfd, path, O_WRONLY, 0)) < 0) {
+        return ERROR(r);
+    }
+    r = STATUS(io->ops->misc(io, MXRIO_TRUNCATE, len, 0, NULL, 0));
+    mxio_close(io);
+    mxio_release(io);
+    return STATUS(r);
+}
+
+int truncate(const char* path, off_t len) {
+    return truncateat(AT_FDCWD, path, len);
+}
+
+int ftruncate(int fd, off_t len) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    int r = STATUS(io->ops->misc(io, MXRIO_TRUNCATE, len, 0, NULL, 0));
+     mxio_release(io);
+     return r;
+}
+
 int rename(const char* oldpath, const char* newpath) {
     char name[MXIO_CHUNK_SIZE];
     size_t oldlen = strlen(oldpath);

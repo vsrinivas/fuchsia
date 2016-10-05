@@ -31,8 +31,9 @@ __BEGIN_CDECLS
 #define MXRIO_UNLINK       0x0000000b
 #define MXRIO_READ_AT      0x0000000c
 #define MXRIO_WRITE_AT     0x0000000d
+#define MXRIO_TRUNCATE     0x0000000e
 #define MXRIO_RENAME       0x0000000f
-#define MXRIO_NUM_OPS      15
+#define MXRIO_NUM_OPS      16
 
 #define MXRIO_OP(n)        ((n) & 0xFFFF)
 #define MXRIO_REPLY_PIPE   0x01000000
@@ -41,7 +42,7 @@ __BEGIN_CDECLS
     "status", "close", "clone", "open", \
     "misc", "read", "write", "seek", \
     "stat", "readdir", "ioctl", "unlink", \
-    "read_at", "write_at", "rename", }
+    "read_at", "write_at", "truncate", "rename", }
 
 typedef struct mxrio_msg mxrio_msg_t;
 
@@ -102,6 +103,7 @@ struct mxrio_msg {
 // READDIR   maxreply   0        -                 0           <vndirent_t[]>  -
 // IOCTL     out_len    opcode   <in_bytes>        0           <out_bytes>     -
 // UNLINK    0          0        <name>            0           -               -
+// TRUNCATE  0          offset   -                 0           -               -
 // RENAME    0          0        <name1>0<name2>0  0           -               -
 //
 // proposed:

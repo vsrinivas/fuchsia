@@ -60,14 +60,6 @@ static int checksocket(int fd, int sock_err, int err) {
     return 0;
 }
 
-// no plumbing for these yet
-int truncate(const char* path, off_t len) {
-    return checkfile(path, ENOSYS);
-}
-int ftruncate(int fd, off_t len) {
-    return checkfd(fd, ENOSYS);
-}
-
 // not supported by any filesystems yet
 int link(const char* path, const char* newpath) {
     errno = ENOSYS;
