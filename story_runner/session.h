@@ -16,6 +16,7 @@
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/modular/story_runner/resolver.mojom.h"
 #include "apps/modular/story_runner/session.mojom.h"
+#include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
@@ -26,7 +27,34 @@
 
 namespace modular {
 
+class SessionHost;
 class SessionImpl;
+
+// Implements the ModuleClient interface, which is passed back to the
+// client that requested a module to be started this SessionHost is
+// passed to on Initialize(). One instance of ModuleClientImpl is
+// associated with each SessionHost instance.
+class ModuleClientImpl : public ModuleClient {
+ public:
+  ModuleClientImpl(SessionHost* session,
+                   mojo::InterfacePtr<Module> module,
+                   mojo::InterfaceRequest<ModuleClient> module_client);
+  ~ModuleClientImpl();
+
+  // Implements ModuleClient.
+  void Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) override;
+
+  // Called by SessionHost. Closes the module handle and notifies
+  // watchers.
+  void Done();
+
+ private:
+  SessionHost* const session_;
+  mojo::StrongBinding<ModuleClient> binding_;
+  mojo::InterfacePtr<Module> module_;
+  std::vector<mojo::InterfacePtr<ModuleWatcher>> watchers_;
+  MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleClientImpl);
+};
 
 // SessionHost keeps a single connection from a client (i.e., a module
 // instance in the same session) to a SessionImpl together with
@@ -35,21 +63,33 @@ class SessionImpl;
 // correctly.
 class SessionHost : public Session {
  public:
-  SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> req,
-              bool primary);
+  // Primary session host created when SessionImpl is created from story manager.
+  SessionHost(SessionImpl* impl,
+              mojo::InterfaceRequest<Session> session);
+
+  // Non-primary session host created for the module started by StartModule().
+  SessionHost(SessionImpl* impl,
+              mojo::InterfaceRequest<Session> session,
+              mojo::InterfacePtr<Module> module,
+              mojo::InterfaceRequest<ModuleClient> module_client);
   ~SessionHost();
 
-  // Implements Session interface. Forwards to SessionImpl, therefore
-  // the methods are implemented below, after SessionImpl is defined.
+  // Implements Session interface. Forwards to SessionImpl.
   void CreateLink(mojo::InterfaceRequest<Link> link) override;
   void StartModule(const mojo::String& query, mojo::InterfaceHandle<Link> link,
-                   const StartModuleCallback& callback) override;
+                   mojo::InterfaceRequest<ModuleClient> module_client) override;
+  void Done() override;
+
+  // Called by ModuleClientImpl.
+  void Add(ModuleClientImpl* module_client);
+  void Remove(ModuleClientImpl* module_client);
 
  private:
-  // TODO(mesch): Actually record link and module instances created
-  // through this binding here.
+  // TODO(mesch): Actually record link instances created through this
+  // binding here.
   SessionImpl* const impl_;
   mojo::StrongBinding<Session> binding_;
+  ModuleClientImpl* module_client_;
   const bool primary_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionHost);
 };
@@ -66,15 +106,16 @@ class SessionImpl {
   // These methods are called by SessionHost.
   void Add(SessionHost* client);
   void Remove(SessionHost* client);
-  void StartModule(SessionHost* client, const mojo::String& query,
+  void StartModule(const mojo::String& query,
                    mojo::InterfaceHandle<Link> link,
-                   const SessionHost::StartModuleCallback& callback);
+                   mojo::InterfaceRequest<ModuleClient> module_client);
 
  private:
-  // Used to pass interface handles into callback lambdas.
-  int new_link_id_() { return link_id_++; }
-  int link_id_ = 0;
+  // Used to pass handles into callback lambdas.
+  int new_request_id_() { return request_id_++; }
+  int request_id_ = 0;
   std::map<int, mojo::InterfaceHandle<Link>> link_map_;
+  std::map<int, mojo::InterfaceRequest<ModuleClient>> module_client_map_;
 
   mojo::Shell* const shell_;
   mojo::InterfacePtr<Resolver> resolver_;
@@ -82,6 +123,7 @@ class SessionImpl {
   std::vector<SessionHost*> clients_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
+
 
 }  // namespace modular
 

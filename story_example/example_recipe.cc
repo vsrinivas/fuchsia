@@ -39,6 +39,8 @@ using modular::Link;
 using modular::LinkChanged;
 using modular::LinkValue;
 using modular::Module;
+using modular::ModuleClient;
+using modular::ModuleWatcher;
 using modular::Session;
 
 // Implementation of the LinkChanged service that forwards each value
@@ -87,17 +89,41 @@ class LinkMonitor : public LinkChanged {
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkMonitor);
 };
 
+class ModuleMonitor : public ModuleWatcher {
+ public:
+  ModuleMonitor(InterfacePtr<ModuleClient>& module_client,
+                InterfacePtr<Session>& session)
+      : binding_(this), session_(session) {
+    InterfaceHandle<ModuleWatcher> watcher;
+    binding_.Bind(GetProxy(&watcher));
+    module_client->Watch(std::move(watcher));
+  }
+
+  void Done() override {
+    session_->Done();
+  }
+
+ private:
+  Binding<ModuleWatcher> binding_;
+  InterfacePtr<Session>& session_;
+  MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
+};
+
 // Module implementation that acts as a recipe. It implements both
 // Module and the LinkChanged observer of its own Link.
 class RecipeImpl : public Module, public LinkChanged {
  public:
   explicit RecipeImpl(InterfaceRequest<Module> req)
-      : module_binding_(this, std::move(req)), watcher_binding_(this) {}
-  ~RecipeImpl() override {}
+      : module_binding_(this, std::move(req)), watcher_binding_(this) {
+    FTL_LOG(INFO) << "RecipeImpl";
+  }
+  ~RecipeImpl() override {
+    FTL_LOG(INFO) << "~RecipeImpl";
+  }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
-    FTL_LOG(INFO) << "recipe init";
+    FTL_LOG(INFO) << "RecipeImpl::Initialize()";
 
     // TODO(mesch): Good illustration of the remaining issue to
     // restart a session: How does this code look like when the
@@ -119,24 +145,16 @@ class RecipeImpl : public Module, public LinkChanged {
     FTL_LOG(INFO) << "recipe start module module1";
     session_->StartModule("mojo:example_module1",
                           std::move(module1_link_handle),
-                          [this](InterfaceHandle<Module> module) {
-                            FTL_LOG(INFO) << "recipe start module module1 done";
-                            module1_.Bind(std::move(module));
+                          GetProxy(&module1_));
 
-                            // TODO(mesch): This is much too
-                            // cumbersome. I'm not sure if I'm missing
-                            // a simpler way, but if not we need a
-                            // simpler API.
-
-                            Map<String, StructPtr<LinkValue>> object;
-                            object[kValueLabel] = LinkValue::New();
-                            object[kValueLabel]->set_int_value(1);
-
-                            StructPtr<LinkValue> value = LinkValue::New();
-                            value->set_object_value(std::move(object));
-
-                            module1_link_->SetValue(std::move(value));
-                          });
+    // TODO(mesch): This is much too cumbersome. I'm not sure if I'm
+    // missing a simpler way, but if not we need a simpler API.
+    Map<String, StructPtr<LinkValue>> object;
+    object[kValueLabel] = LinkValue::New();
+    object[kValueLabel]->set_int_value(1);
+    StructPtr<LinkValue> value = LinkValue::New();
+    value->set_object_value(std::move(object));
+    module1_link_->SetValue(std::move(value));
 
     session_->CreateLink(GetProxy(&module2_link_));
 
@@ -146,16 +164,16 @@ class RecipeImpl : public Module, public LinkChanged {
     FTL_LOG(INFO) << "recipe start module module2";
     session_->StartModule("mojo:example_module2",
                           std::move(module2_link_handle),
-                          [this](InterfaceHandle<Module> module) {
-                            FTL_LOG(INFO) << "recipe start module module2 done";
-                            module2_.Bind(std::move(module));
-                          });
+                          GetProxy(&module2_));
 
     monitors_.emplace_back(new LinkMonitor("module1", module1_link_));
     monitors_.emplace_back(new LinkMonitor("module2", module2_link_));
 
     connections_.emplace_back(new LinkConnection(module1_link_, module2_link_));
     connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
+
+    module_monitors_.emplace_back(new ModuleMonitor(module1_, session_));
+    module_monitors_.emplace_back(new ModuleMonitor(module2_, session_));
   }
 
   void Value(StructPtr<LinkValue> value) override {
@@ -169,14 +187,15 @@ class RecipeImpl : public Module, public LinkChanged {
   InterfacePtr<Link> link_;
   InterfacePtr<Session> session_;
 
-  InterfacePtr<Module> module1_;
+  InterfacePtr<ModuleClient> module1_;
   InterfacePtr<Link> module1_link_;
 
-  InterfacePtr<Module> module2_;
+  InterfacePtr<ModuleClient> module2_;
   InterfacePtr<Link> module2_link_;
 
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   std::vector<std::unique_ptr<LinkMonitor>> monitors_;
+  std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
 };

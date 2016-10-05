@@ -42,8 +42,13 @@ using modular::Session;
 class Module1Impl : public Module, public LinkChanged {
  public:
   explicit Module1Impl(InterfaceRequest<Module> req)
-      : module_binding_(this, std::move(req)), watcher_binding_(this) {}
-  ~Module1Impl() override {}
+      : module_binding_(this, std::move(req)), watcher_binding_(this) {
+    FTL_LOG(INFO) << "Module1Impl";
+  }
+
+  ~Module1Impl() override {
+    FTL_LOG(INFO) << "~Module1Impl";
+  }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
@@ -60,8 +65,13 @@ class Module1Impl : public Module, public LinkChanged {
   // See comments on Module2Impl in example-module2.cc.
   void Value(StructPtr<LinkValue> value) override {
     StructPtr<LinkValue>& v = value->get_object_value()[kValueLabel];
-    v->set_int_value(v->get_int_value() + 1);
-    link_->SetValue(std::move(value));
+
+    if (v->get_int_value() >= 100) {
+      session_->Done();
+    } else {
+      v->set_int_value(v->get_int_value() + 1);
+      link_->SetValue(std::move(value));
+    }
   }
 
  private:

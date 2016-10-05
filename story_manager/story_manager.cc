@@ -19,12 +19,14 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
+#include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace modular {
 
 using mojo::ApplicationImplBase;
 using mojo::Array;
+using mojo::Binding;
 using mojo::ConnectionContext;
 using mojo::GetProxy;
 using mojo::InterfaceHandle;
@@ -60,7 +62,7 @@ class StoryProviderState {
   virtual void RemoveStoryState(StoryState* story_state) = 0;
 };
 
-class StoryImpl : public Story, public StoryState {
+class StoryImpl : public Story, public StoryState, public ModuleWatcher {
  public:
   StoryImpl(StructPtr<StoryInfo> story_info,
             StoryProviderState* story_provider_state, Shell* shell,
@@ -68,9 +70,13 @@ class StoryImpl : public Story, public StoryState {
       : story_info_(std::move(story_info)),
         story_provider_state_(story_provider_state),
         shell_(shell),
-        binding_(this, std::move(request)) {}
+        binding_(this, std::move(request)),
+        module_watcher_binding_(this) {
+    FTL_LOG(INFO) << "StoryImpl()";
+  }
 
   ~StoryImpl() override {
+    FTL_LOG(INFO) << "~StoryImpl()";
     story_provider_state_->CommitStoryState(this);
     story_provider_state_->RemoveStoryState(this);
   }
@@ -85,6 +91,7 @@ class StoryImpl : public Story, public StoryState {
   // This is responsible for commiting data to |session_page|.
   // |StoryState| override.
   void RunStory(InterfacePtr<ledger::Page> session_page) override {
+    FTL_LOG(INFO) << "StoryImpl::RunStory()";
     InterfacePtr<ResolverFactory> resolver_factory;
     ConnectToService(shell_, "mojo:resolver", GetProxy(&resolver_factory));
     ConnectToService(shell_, "mojo:story_runner", GetProxy(&runner_));
@@ -93,13 +100,21 @@ class StoryImpl : public Story, public StoryState {
                         GetProxy(&session_));
     InterfaceHandle<Link> link;
     session_->CreateLink(GetProxy(&link));
-    session_->StartModule(
-        story_info_->url, std::move(link),
-        [this](InterfaceHandle<Module> m) { module_.Bind(std::move(m)); });
+    session_->StartModule(story_info_->url, std::move(link), GetProxy(&module_));
     story_info_->is_running = true;
+
+    InterfaceHandle<ModuleWatcher> module_watcher;
+    module_watcher_binding_.Bind(GetProxy(&module_watcher));
+    module_->Watch(std::move(module_watcher));
   }
 
  private:
+  // |ModuleWatcher| override.
+  void Done() override {
+    FTL_LOG(INFO) << "StoryImpl::Done()";
+    Stop();
+  }
+
   // |Story| override.
   void GetInfo(const GetInfoCallback& callback) override {
     callback.Run(story_info_->Clone());
@@ -107,6 +122,7 @@ class StoryImpl : public Story, public StoryState {
 
   // |Story| override.
   void Stop() override {
+    FTL_LOG(INFO) << "StoryImpl::Stop()";
     if (!story_info_->is_running) {
       return;
     }
@@ -114,12 +130,14 @@ class StoryImpl : public Story, public StoryState {
     module_.reset();
     session_.reset();
     runner_.reset();
+    module_watcher_binding_.Close();
     story_provider_state_->CommitStoryState(this);
     story_info_->is_running = false;
   }
 
   // |Story| override.
   void Resume() override {
+    FTL_LOG(INFO) << "StoryImpl::Resume()";
     if (story_info_->is_running) {
       return;
     }
@@ -131,10 +149,11 @@ class StoryImpl : public Story, public StoryState {
   StoryProviderState* story_provider_state_;
   Shell* shell_;
   StrongBinding<Story> binding_;
+  Binding<ModuleWatcher> module_watcher_binding_;
 
   InterfacePtr<StoryRunner> runner_;
   InterfacePtr<Session> session_;
-  InterfacePtr<Module> module_;
+  InterfacePtr<ModuleClient> module_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

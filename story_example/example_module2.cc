@@ -39,8 +39,13 @@ using modular::Session;
 class Module2Impl : public Module, public LinkChanged {
  public:
   explicit Module2Impl(InterfaceRequest<Module> req)
-      : module_binding_(this, std::move(req)), watcher_binding_(this) {}
-  ~Module2Impl() override {}
+      : module_binding_(this, std::move(req)), watcher_binding_(this) {
+    FTL_LOG(INFO) << "Module2Impl";
+  }
+
+  ~Module2Impl() override {
+    FTL_LOG(INFO) << "~Module2Impl";
+  }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {

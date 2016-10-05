@@ -15,7 +15,7 @@ import "apps/modular/story_runner/link.mojom";
 // service it provides, and if it obtains one, calls Initialize().
 //
 // The arguments to Initialize() are a handle of the Session instance
-// that created the Module, and a Link instance provides by the caller
+// that created the Module, and a Link instance provided by the caller
 // of StartModule(). The Link instance can be used to exchange data
 // with the calling module. The Session service can be used to start
 // more Modules, and to create Link instances to share with those
@@ -23,6 +23,27 @@ import "apps/modular/story_runner/link.mojom";
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
   Initialize(Session session, Link link);
+};
+
+
+// A handle of this interface is held by the client of Session that
+// requests the start of a module using StartModule().
+//
+// It can be used to register a watcher to be notified when the module
+// stops.
+//
+// It can also be used to request the module to stop. To accomplish
+// that, just close the handle to the ModuleClient.
+interface ModuleClient {
+  // Registers a watcher that is notified when the module stops.
+  Watch(ModuleWatcher watcher);
+};
+
+// This interface is implemented by the client calling
+// ModuleClient::Watch().
+interface ModuleWatcher {
+  // Called when the module instance is stopped.
+  Done();
 };
 
 // This interface is implemented by the story runner application. The
@@ -45,5 +66,13 @@ interface Session {
   // The implementation of StartModule() invokes Initialize() on the
   // created Module instance, so it must return it and cannot take an
   // interface request.
-  StartModule(string query, Link link) => (Module module_instance);
+  StartModule(string query, Link link, ModuleClient& module_client);
+
+  // The module holding this handle to the Session declares it's done
+  // and wants to be torn down. This causes the story runner to take
+  // down the Module instance this handle was passed to, and it
+  // notifies the Session client that requested this Module to be
+  // started. This causes Done() to be called on all the module
+  // watchers registered on this Module's ModuleClient.
+  Done();
 };

@@ -58,8 +58,9 @@ class DummyUserShellImpl : public UserShell {
                           << story_info->url
                           << " is_running: " << story_info->is_running;
 
-            // Let the story run for 500 milli-seconds before stopping.
-            ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(500));
+            // Let the story run for 2500 milli-seconds before stopping.
+            ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(2500));
+
             story_ptr_->Stop();
 
             // Resume the stopped story.

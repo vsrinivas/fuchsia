@@ -17,14 +17,63 @@
 
 namespace modular {
 
+ModuleClientImpl::ModuleClientImpl(
+    SessionHost* session,
+    mojo::InterfacePtr<Module> module,
+    mojo::InterfaceRequest<ModuleClient> module_client)
+    : session_(session),
+      binding_(this, std::move(module_client)),
+      module_(std::move(module)) {
+  session_->Add(this);
+  FTL_LOG(INFO) << "ModuleClientImpl";
+}
+
+ModuleClientImpl::~ModuleClientImpl() {
+  FTL_LOG(INFO) << "~ModuleClientImpl " << this;
+  session_->Remove(this);
+}
+
+void ModuleClientImpl::Done() {
+  FTL_LOG(INFO) << "ModuleClientImpl::Done()";
+  module_.reset();
+  for (auto& watcher : watchers_) {
+    watcher->Done();
+  }
+}
+
+void ModuleClientImpl::Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) {
+  watchers_.push_back(mojo::InterfacePtr<ModuleWatcher>::Create(watcher.Pass()));
+}
+
 SessionHost::SessionHost(SessionImpl* const impl,
-                         mojo::InterfaceRequest<Session> req,
-                         const bool primary)
-    : impl_(impl), binding_(this, std::move(req)), primary_(primary) {
+                         mojo::InterfaceRequest<Session> session)
+    : impl_(impl), binding_(this, std::move(session)), module_client_(nullptr),
+      primary_(true) {
+  FTL_LOG(INFO) << "SessionHost() primary";
   impl_->Add(this);
 }
 
+SessionHost::SessionHost(SessionImpl* const impl,
+                         mojo::InterfaceRequest<Session> session,
+                         mojo::InterfacePtr<Module> module,
+                         mojo::InterfaceRequest<ModuleClient> module_client)
+    : impl_(impl), binding_(this, std::move(session)), module_client_(nullptr),
+      primary_(false) {
+  FTL_LOG(INFO) << "SessionHost()";
+  impl_->Add(this);
+
+  // Calls Add().
+  new ModuleClientImpl(this, std::move(module), std::move(module_client));
+}
+
 SessionHost::~SessionHost() {
+  FTL_LOG(INFO) << "~SessionHost() " << this;
+
+  if (module_client_) {
+    FTL_LOG(INFO) << "~SessionHost() delete module_client " << module_client_;
+    delete module_client_;
+  }
+
   impl_->Remove(this);
 
   // If a "primary" (currently that's the first) connection goes down,
@@ -47,9 +96,26 @@ void SessionHost::CreateLink(mojo::InterfaceRequest<Link> link) {
 
 void SessionHost::StartModule(const mojo::String& query,
                               mojo::InterfaceHandle<Link> link,
-                              const StartModuleCallback& callback) {
-  impl_->StartModule(this, query, std::move(link), callback);
+                              mojo::InterfaceRequest<ModuleClient> module_client) {
+  FTL_LOG(INFO) << "SessionHost::StartModule()";
+  impl_->StartModule(query, std::move(link), std::move(module_client));
 }
+
+void SessionHost::Done() {
+  FTL_LOG(INFO) << "SessionHost::Done()";
+  if (module_client_) {
+    module_client_->Done();
+  }
+}
+
+void SessionHost::Add(ModuleClientImpl* const module_client) {
+  module_client_ = module_client;
+}
+
+void SessionHost::Remove(ModuleClientImpl* const module_client) {
+  module_client_ = nullptr;
+}
+
 
 SessionImpl::SessionImpl(mojo::Shell* const shell,
                          mojo::InterfaceHandle<Resolver> resolver,
@@ -68,7 +134,7 @@ SessionImpl::SessionImpl(mojo::Shell* const shell,
                   << string_id;
   });
 
-  new SessionHost(this, std::move(req), true);  // Calls Add();
+  new SessionHost(this, std::move(req));  // Calls Add();
 }
 
 SessionImpl::~SessionImpl() {
@@ -79,7 +145,9 @@ SessionImpl::~SessionImpl() {
   }
 }
 
-void SessionImpl::Add(SessionHost* const client) { clients_.push_back(client); }
+void SessionImpl::Add(SessionHost* const client) {
+  clients_.push_back(client);
+}
 
 void SessionImpl::Remove(SessionHost* const client) {
   auto f = std::find(clients_.begin(), clients_.end(), client);
@@ -88,31 +156,30 @@ void SessionImpl::Remove(SessionHost* const client) {
 }
 
 void SessionImpl::StartModule(
-    SessionHost* const client, const mojo::String& query,
+    const mojo::String& query,
     mojo::InterfaceHandle<Link> link,
-    const SessionHost::StartModuleCallback& callback) {
-  const int link_id = new_link_id_();
-  link_map_[link_id] = link.Pass();
+    mojo::InterfaceRequest<ModuleClient> module_client) {
+  FTL_LOG(INFO) << "SessionImpl::StartModule()";
+  const int request_id = new_request_id_();
+  link_map_[request_id] = link.Pass();
+  module_client_map_[request_id] = module_client.Pass();
 
   resolver_->Resolve(
-      query, [client, this, link_id, callback](mojo::String module_url) {
-        // TODO(mesch): Client is not yet used. We need to remember
-        // the association of which module was requested from which
-        // other module, and what link instance was exchanged
-        // between them. We will do this by associating the link
-        // instances with names which are local to the module that
-        // uses them.
-
+      query, [this, request_id](mojo::String module_url) {
+        FTL_LOG(INFO) << "SessionImpl::StartModule() resolver callback";
         mojo::InterfacePtr<Module> module;
         mojo::ConnectToService(shell_, module_url, GetProxy(&module));
 
         mojo::InterfaceHandle<Session> self;
-        new SessionHost(this, GetProxy(&self), false);
+        mojo::InterfaceRequest<Session> self_req = GetProxy(&self);
 
-        module->Initialize(std::move(self), link_map_[link_id].Pass());
-        link_map_.erase(link_id);
+        module->Initialize(std::move(self), link_map_[request_id].Pass());
 
-        callback.Run(module.PassInterfaceHandle());
+        new SessionHost(this, std::move(self_req), std::move(module),
+                        module_client_map_[request_id].Pass());
+
+        link_map_.erase(request_id);
+        module_client_map_.erase(request_id);
       });
 }
 
