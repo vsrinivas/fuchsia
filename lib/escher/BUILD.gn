@@ -2,73 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("vulkan.gni")
-
-config("thread_safety_warning") {
-  cflags = [
-    "-Wthread-safety",
-    "-fcolor-diagnostics"
+group("examples") {
+  deps = [
+    "//lib/escher/examples/waterfall($host_toolchain)",
   ]
 }
 
-static_library("escher") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
-  deps = [ "//lib/ftl" ]
-  sources = [
-    "escher/escher.cc",
-    "escher/escher.h",
-    "escher/geometry/quad.cc",
-    "escher/geometry/quad.h",
-    "escher/geometry/size_i.cc",
-    "escher/geometry/size_i.h",
-    "escher/geometry/tessellation.cc",
-    "escher/geometry/tessellation.h",
-    "escher/geometry/types.h",
-    "escher/impl/escher_impl.cc",
-    "escher/impl/escher_impl.h",
-    "escher/impl/image_cache.cc",
-    "escher/impl/image_cache.h",
-    "escher/impl/render_context.cc",
-    "escher/impl/render_context.h",
-    "escher/impl/swapchain_manager.cc",
-    "escher/impl/swapchain_manager.h",
-    "escher/impl/temp_frame_renderer.cc",
-    "escher/impl/temp_frame_renderer.h",
-    "escher/impl/vulkan_utils.cc",
-    "escher/impl/vulkan_utils.h",
-    "escher/material/material.h",
-    "escher/scene/ambient_light.cc",
-    "escher/scene/shape.h",
-    "escher/scene/ambient_light.h",
-    "escher/scene/stage.cc",
-    "escher/scene/binding.h",
-    "escher/scene/model.cc",
-    "escher/scene/stage.h",
-    "escher/scene/directional_light.cc",
-    "escher/scene/model.h",
-    "escher/scene/viewing_volume.cc",
-    "escher/scene/directional_light.h",
-    "escher/scene/object.cc",
-    "escher/scene/viewing_volume.h",
-    "escher/scene/displacement.cc",
-    "escher/scene/object.h",
-    "escher/scene/displacement.h",
-    "escher/scene/shape.cc",
-    "escher/shape/mesh.cc",
-    "escher/shape/mesh.h",
-    "escher/util/need.h",
-    "escher/vk/vulkan_context.h",
-    "escher/vk/vulkan_swapchain.h",
+group("tests") {
+  deps = [
+    "//lib/escher/test:escher_unittests($host_toolchain)",
   ]
-
-  include_dirs = [
-    ".",
-    "./third_party",
-    "..",
-    "../../third_party/glm",
-    "$vulkan_sdk/include",
-    "$vulkan_sdk/../source/glslang/glslang/Public",
-  ]
-
-  public_configs = [ ":thread_safety_warning" ]
 }

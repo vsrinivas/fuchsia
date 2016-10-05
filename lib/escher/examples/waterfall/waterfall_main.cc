@@ -5,9 +5,9 @@
 #include <iostream>
 
 #include "demo.h"
-#include <ShaderLang.h>
 
 #include "escher/escher.h"
+#include "escher/escher_process_init.h"
 #include "escher/geometry/types.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
@@ -36,23 +36,25 @@ int main(int argc, char** argv) {
   auto demo = create_demo();
   glfwSetKeyCallback(demo->GetWindow(), key_callback);
 
-  escher::VulkanContext vulkan_context = demo->GetVulkanContext();
+  escher::GlslangInitializeProcess();
+  {
+    escher::VulkanContext vulkan_context = demo->GetVulkanContext();
+    escher::Escher escher(vulkan_context, demo->GetVulkanSwapchain());
+    escher::vec2 focus;
+    escher::Stage stage;
+    // AppTestScene scene;
 
-  escher::Escher escher(vulkan_context, demo->GetVulkanSwapchain());
-  escher::vec2 focus;
-  escher::Stage stage;
-  // AppTestScene scene;
+    while (!glfwWindowShouldClose(demo->GetWindow())) {
+      // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
+      escher::Model model;  // dummy model
+      model.set_blur_plane_height(12.0f);
+      escher.Render(stage, model);
 
-  while (!glfwWindowShouldClose(demo->GetWindow())) {
-    // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
-    escher::Model model;  // dummy model
-    model.set_blur_plane_height(12.0f);
-    escher.Render(stage, model);
-
-    glfwPollEvents();
+      glfwPollEvents();
+    }
+    vulkan_context.device.waitIdle();
   }
-
-  vulkan_context.device.waitIdle();
+  escher::GlslangFinalizeProcess();
 
   return 0;
 }

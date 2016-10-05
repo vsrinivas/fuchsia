@@ -1,0 +1,83 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/escher/vulkan.gni")
+
+config("thread_safety_warning") {
+  cflags = [
+    "-Wthread-safety",
+    "-fcolor-diagnostics"
+  ]
+}
+
+static_library("escher") {
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  deps = [ "//lib/ftl" ]
+  sources = [
+    "escher.cc",
+    "escher.h",
+    "escher_process_init.cc",
+    "escher_process_init.h",
+    "geometry/quad.cc",
+    "geometry/quad.h",
+    "geometry/size_i.cc",
+    "geometry/size_i.h",
+    "geometry/tessellation.cc",
+    "geometry/tessellation.h",
+    "geometry/types.h",
+    "impl/escher_impl.cc",
+    "impl/escher_impl.h",
+    "impl/glsl_compiler.cc",
+    "impl/glsl_compiler.h",
+    "impl/image_cache.cc",
+    "impl/image_cache.h",
+    "impl/render_context.cc",
+    "impl/render_context.h",
+    "impl/swapchain_manager.cc",
+    "impl/swapchain_manager.h",
+    "impl/temp_frame_renderer.cc",
+    "impl/temp_frame_renderer.h",
+    "impl/vulkan_utils.cc",
+    "impl/vulkan_utils.h",
+    "material/material.h",
+    "scene/ambient_light.cc",
+    "scene/ambient_light.h",
+    "scene/binding.h",
+    "scene/directional_light.cc",
+    "scene/directional_light.h",
+    "scene/displacement.cc",
+    "scene/displacement.h",
+    "scene/model.cc",
+    "scene/model.h",
+    "scene/object.cc",
+    "scene/object.h",
+    "scene/shape.cc",
+    "scene/shape.h",
+    "scene/stage.cc",
+    "scene/stage.h",
+    "scene/viewing_volume.cc",
+    "scene/viewing_volume.h",
+    "shape/mesh.cc",
+    "shape/mesh.h",
+    "util/need.h",
+    "vk/vulkan_context.h",
+    "vk/vulkan_swapchain.h",
+  ]
+
+  include_dirs = [
+    "//lib",  # for ftl/
+    "//lib/escher", # TODO: make //lib/escher/src|include directories.
+    "//third_party/glm",
+    "third_party",
+    "$glslang_compiler_src",
+    "$vulkan_sdk/include",
+  ]
+
+  public_configs = [ ":thread_safety_warning" ]
+}
+
+group("unittests") {
+  deps = [
+    "//lib/escher/test:test($host_toolchain)",  ]
+}

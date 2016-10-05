@@ -4,4 +4,5 @@
 
 declare_args() {
   vulkan_sdk="//lib/escher/third_party/vulkansdk/x86_64"
+  glslang_compiler_src="//lib/escher/third_party/vulkansdk/source/glslang"
 }

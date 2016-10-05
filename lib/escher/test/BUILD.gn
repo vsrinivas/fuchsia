@@ -5,22 +5,20 @@
 import("//lib/escher/vulkan.gni")
 
 if (is_linux) {
-  executable("waterfall") {
+  executable("escher_unittests") {
     defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
     sources = [
-      "demo.cc",
-      #"scenes/app_test_scene.cc",
-      #"scenes/shadow_test_scene.cc",
-      "vulkan_proc_addrs.cc",
-      "waterfall_main.cc",
+      "run_all_unittests.cc",
+      "impl/glsl_compiler_unittest.cc"
     ]
+
     deps = [
       "//lib/escher/escher",
-      "//lib/ftl",
-      "third_party:glfw",
+      "//third_party/gtest"
     ]
+
     libs = [
-      "dl",
       "glslang",
       "glslang-default-resource-limits",
       "HLSL",
@@ -28,21 +26,18 @@ if (is_linux) {
       "OSDependent",
       "pthread",
       "SPIRV",
-      "X11",
-      "Xinerama",
-      "Xcursor",
-      "Xrandr",
-      "vulkan",
     ]
+
     lib_dirs = [
       "$vulkan_sdk/lib",
       "$vulkan_sdk/lib/glslang",
     ]
+
     include_dirs = [
       "//lib",
       "//lib/escher",
+      "$glslang_compiler_src",
       "$vulkan_sdk/include",
-      "third_party/glfw/include",
     ]
   }
 }
