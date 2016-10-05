@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//mojo/public/mojo_application.gni")
+
 static_library("url") {
   sources = [
     "gurl.cc",
@@ -41,15 +43,17 @@ static_library("url") {
 
   deps = [
     "//lib/ftl",
-    "//third_party/icu:icudata",
     "//third_party/icu",
+  ]
+
+  public_deps = [
+    "//mojo/services/icu_data/cpp",
   ]
 
 }
 
-executable("url_unittests") {
+mojo_native_application("url_unittests") {
   testonly = true
-
   sources = [
     "gurl_unittest.cc",
     "test/run_all_unittests.cc",
@@ -63,8 +67,11 @@ executable("url_unittests") {
   deps = [
     ":url",
     "//lib/ftl",
+    "//mojo/public/cpp/application:standalone",
     "//third_party/gtest",
     "//third_party/icu",
   ]
+
+  libs = [ "magenta" ]
 
 }
