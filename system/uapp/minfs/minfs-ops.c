@@ -149,6 +149,93 @@ static mx_status_t minfs_inode_destroy(vnode_t* vn) {
     return NO_ERROR;
 }
 
+// Delete all blocks (relative to a file) from "start" (inclusive) to the end of
+// the file.
+static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
+    mx_status_t status;
+    gbb_ctxt_t gbb;
+    memset(&gbb, 0, sizeof(gbb));
+
+    // release direct blocks
+    for (unsigned bno = start; bno < MINFS_DIRECT; bno++) {
+        if (vn->inode.dnum[bno] == 0) {
+            continue;
+        }
+        if ((status = get_bitmap_block(vn->fs, &gbb, vn->inode.dnum[bno])) < 0) {
+            return status;
+        }
+
+        bitmap_clr(&vn->fs->block_map, vn->inode.dnum[bno]);
+        vn->inode.dnum[bno] = 0;
+        vn->inode.block_count--;
+        minfs_sync_vnode(vn);
+    }
+
+    const unsigned direct_per_indirect = MINFS_BLOCK_SIZE / sizeof(uint32_t);
+
+    // release indirect blocks
+    for (unsigned indirect = 0; indirect < MINFS_INDIRECT; indirect++) {
+        if (vn->inode.inum[indirect] == 0) {
+            continue;
+        }
+        unsigned bno = MINFS_DIRECT + (indirect + 1) * direct_per_indirect;
+        if (start > bno) {
+            continue;
+        }
+        uint32_t* entry;
+        block_t* blk;
+        if ((blk = bcache_get(vn->fs->bc, vn->inode.inum[indirect], (void**) &entry)) == NULL) {
+            put_bitmap_block(vn->fs, &gbb);
+            return ERR_IO;
+        }
+        uint32_t iflags = 0;
+        bool delete_indirect = true; // can we delete the indirect block?
+        // release the blocks pointed at by the entries in the indirect block
+        for (unsigned direct = 0; direct < direct_per_indirect; direct++) {
+            if (entry[direct] == 0) {
+                continue;
+            }
+            unsigned bno = MINFS_DIRECT + indirect * direct_per_indirect + direct;
+            if (start > bno) {
+                // This is a valid entry which exists in the indirect block
+                // BEFORE our truncation point. Don't delete it, and don't
+                // delete the indirect block.
+                delete_indirect = false;
+                continue;
+            }
+
+            if ((status = get_bitmap_block(vn->fs, &gbb, entry[direct])) < 0) {
+                put_bitmap_block(vn->fs, &gbb);
+                bcache_put(vn->fs->bc, blk, iflags);
+                return status;
+            }
+            bitmap_clr(&vn->fs->block_map, entry[direct]);
+            entry[direct] = 0;
+            iflags = BLOCK_DIRTY;
+            vn->inode.block_count--;
+        }
+        // only update the indirect block if an entry was deleted
+        if (iflags & BLOCK_DIRTY) {
+            minfs_sync_vnode(vn);
+        }
+        bcache_put(vn->fs->bc, blk, iflags);
+
+        if (delete_indirect)  {
+            // release the direct block itself
+            if ((status = get_bitmap_block(vn->fs, &gbb, vn->inode.inum[indirect])) < 0) {
+                return status;
+            }
+            bitmap_clr(&vn->fs->block_map, vn->inode.inum[indirect]);
+            vn->inode.inum[indirect] = 0;
+            vn->inode.block_count--;
+            minfs_sync_vnode(vn);
+        }
+    }
+
+    put_bitmap_block(vn->fs, &gbb);
+    return NO_ERROR;
+}
+
 // Obtain the nth block of a vnode.
 // If alloc is true, allocate that block if it doesn't already exist.
 static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) {
@@ -741,6 +828,50 @@ static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
     return vn_dir_for_each(vn, &args, cb_dir_unlink);
 }
 
+static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
+    mx_status_t r = 0;
+    if (len < vn->inode.size) {
+        // Truncate should make the file shorter
+        size_t bno = vn->inode.size / MINFS_BLOCK_SIZE;
+        size_t trunc_bno = len / MINFS_BLOCK_SIZE;
+
+        // Truncate to the nearest block
+        if (trunc_bno <= bno) {
+            size_t start_bno = (len % MINFS_BLOCK_SIZE == 0) ? trunc_bno : trunc_bno + 1;
+            if ((r = vn_blocks_shrink(vn, start_bno)) < 0) {
+                return r;
+            }
+
+            if (start_bno * MINFS_BLOCK_SIZE < vn->inode.size) {
+                vn->inode.size = start_bno * MINFS_BLOCK_SIZE;
+            }
+        }
+
+        // Write zeroes to the rest of the remaining block, if it exists
+        if (len < vn->inode.size) {
+            void* bdata;
+            block_t* blk;
+            size_t adjust = len % MINFS_BLOCK_SIZE;
+            if ((blk = vn_get_block(vn, len / MINFS_BLOCK_SIZE, &bdata, false)) != NULL) {
+                memset(bdata + adjust, 0, MINFS_BLOCK_SIZE - adjust);
+                vn_put_block_dirty(vn, blk);
+            }
+        }
+        vn->inode.size = len;
+        minfs_sync_vnode(vn);
+    } else if (len > vn->inode.size) {
+        // Truncate should make the file longer, filled with zeroes.
+        if (MAX_FILE_BLOCK * MINFS_BLOCK_SIZE < len) {
+            return ERR_INVALID_ARGS;
+        }
+        char zero = 0;
+        if ((r = fs_write(vn, &zero, 1, len - 1)) < 0) {
+            return r;
+        }
+    }
+    return NO_ERROR;
+}
+
 static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
                              const char* oldname, size_t oldlen,
                              const char* newname, size_t newlen) {
@@ -821,6 +952,7 @@ vnode_ops_t minfs_ops = {
     .create = fs_create,
     .ioctl = fs_ioctl,
     .unlink = fs_unlink,
+    .truncate = fs_truncate,
     .rename = fs_rename,
 };
 
