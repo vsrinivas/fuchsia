@@ -10,8 +10,8 @@ move more waiters to another wait queue.
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_futex_requeue(int* value_ptr, uint32_t wake_count,
-                             int current_value, int* requeue_ptr,
+mx_status_t mx_futex_requeue(mx_futex_t* value_ptr, uint32_t wake_count,
+                             int current_value, mx_futex_t* requeue_ptr,
                              uint32_t requeue_count);
 ```
 
@@ -36,7 +36,7 @@ This requeueing behavior may be used to avoid thundering herds on wake.
 
 **ERR_INVALID_ARGS**  *value_ptr* is the same futex as *requeue_ptr*.
 
-**ERR_ALREADY_BOUND**  *current_value* does not match the value at *value_ptr*.
+**ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO
 

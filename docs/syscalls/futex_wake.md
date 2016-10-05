@@ -9,7 +9,7 @@ futex_wake - Wake some number of threads waiting on a futex.
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_futex_wake(int* value_ptr, uint32_t wake_count);
+mx_status_t mx_futex_wake(mx_futex_t* value_ptr, uint32_t wake_count);
 ```
 
 ## DESCRIPTION
