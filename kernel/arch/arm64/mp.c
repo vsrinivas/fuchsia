@@ -75,3 +75,7 @@ void arch_mp_init_percpu(void)
     //unmask_interrupt(MP_IPI_RESCHEDULE);
 }
 
+void arch_flush_state_and_halt(event_t *flush_done)
+{
+    PANIC_UNIMPLEMENTED;
+}

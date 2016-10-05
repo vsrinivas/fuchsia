@@ -17,8 +17,9 @@ status_t IoMappingDispatcher::Create(const char* dbg_name,
     if (!out_dispatcher || !out_rights)
         return ERR_INVALID_ARGS;
 
-    IoMappingDispatcher* disp = new IoMappingDispatcher();
-    if (!disp)
+    AllocChecker ac;
+    IoMappingDispatcher* disp = new (&ac) IoMappingDispatcher();
+    if (!ac.check())
         return ERR_NO_MEMORY;
 
     status_t status;

@@ -78,3 +78,7 @@ void arch_mp_init_percpu(void)
     mp_set_curr_cpu_online(true);
 }
 
+void arch_flush_state_and_halt(event_t *flush_done)
+{
+    PANIC_UNIMPLEMENTED;
+}
