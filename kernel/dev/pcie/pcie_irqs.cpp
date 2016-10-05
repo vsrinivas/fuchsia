@@ -205,7 +205,7 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin, pcie_bridge_
 
     /* Hold the bus topology lock while we do this, so we don't need to worry
      * about stuff disappearing as we walk the tree up */
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    pcie_bus_driver_state_t* bus_drv = &dev->bus_drv;
     MUTEX_ACQUIRE(bus_drv, bus_topology_lock);
 
     /* Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop
@@ -263,7 +263,7 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin, pcie_bridge_
 
     uint irq;
     __UNUSED status_t status;
-    DEBUG_ASSERT(bus_drv && bus_drv->legacy_irq_swizzle);
+    DEBUG_ASSERT(bus_drv->legacy_irq_swizzle);
     status = bus_drv->legacy_irq_swizzle(dev->bus_id, dev->dev_id, dev->func_id, pin, &irq);
     DEBUG_ASSERT(status == NO_ERROR);
 
@@ -271,16 +271,14 @@ static uint pcie_map_pin_to_irq(pcie_device_state_t* dev, uint pin, pcie_bridge_
 }
 
 static pcie_legacy_irq_handler_state_t* pcie_find_legacy_irq_handler(
-        pcie_bus_driver_state_t* bus_drv,
+        pcie_bus_driver_state_t& bus_drv,
         uint irq_id) {
-    DEBUG_ASSERT(bus_drv);
-
     /* Search to see if we have already created a shared handler for this system
      * level IRQ id already */
     pcie_legacy_irq_handler_state_t* ret = NULL;
-    MUTEX_ACQUIRE(bus_drv, legacy_irq_list_lock);
+    MUTEX_ACQUIRE(&bus_drv, legacy_irq_list_lock);
 
-    list_for_every_entry(&bus_drv->legacy_irq_list,
+    list_for_every_entry(&bus_drv.legacy_irq_list,
                          ret,
                          pcie_legacy_irq_handler_state_t,
                          legacy_irq_list_node) {
@@ -294,16 +292,16 @@ static pcie_legacy_irq_handler_state_t* pcie_find_legacy_irq_handler(
     ret = (pcie_legacy_irq_handler_state_t*)calloc(1, sizeof(*ret));
     ASSERT(ret);
 
-    ret->bus_drv    = bus_drv;
-    ret->irq_id = irq_id;
+    ret->bus_drv = &bus_drv;
+    ret->irq_id  = irq_id;
     list_initialize(&ret->device_handler_list);
-    list_add_tail  (&bus_drv->legacy_irq_list, &ret->legacy_irq_list_node);
+    list_add_tail  (&bus_drv.legacy_irq_list, &ret->legacy_irq_list_node);
 
     register_int_handler(ret->irq_id, pcie_legacy_irq_handler, (void*)ret);
     unmask_interrupt(ret->irq_id);
 
 finished:
-    MUTEX_RELEASE(bus_drv, legacy_irq_list_lock);
+    MUTEX_RELEASE(&bus_drv, legacy_irq_list_lock);
     return ret;
 }
 
@@ -313,15 +311,14 @@ static void pcie_register_legacy_irq_handler(const mxtl::RefPtr<pcie_device_stat
     DEBUG_ASSERT(dev->irq.legacy.shared_handler);
     DEBUG_ASSERT(!list_in_list(&dev->irq.legacy.shared_handler_node));
 
-    pcie_bus_driver_state_t*         bus_drv = dev->bus_drv;
+    pcie_bus_driver_state_t&         bus_drv = dev->bus_drv;
     pcie_legacy_irq_handler_state_t* handler = dev->irq.legacy.shared_handler;
     spin_lock_saved_state_t          irq_state;
-    DEBUG_ASSERT(bus_drv);
 
     /* Add this dev to the handler's list. */
-    spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+    spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
     list_add_tail(&handler->device_handler_list, &dev->irq.legacy.shared_handler_node);
-    spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+    spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 }
 
 /*
@@ -333,9 +330,8 @@ static void pcie_unregister_legacy_irq_handler(const mxtl::RefPtr<pcie_device_st
     DEBUG_ASSERT(dev->irq.legacy.shared_handler);
     DEBUG_ASSERT(list_in_list(&dev->irq.legacy.shared_handler_node));
 
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    pcie_bus_driver_state_t& bus_drv = dev->bus_drv;
     spin_lock_saved_state_t  irq_state;
-    DEBUG_ASSERT(bus_drv);
 
     /* Make absolutely sure we have been masked at the PCIe config level before
      * removing ourselves from the shared handler list. */
@@ -343,9 +339,9 @@ static void pcie_unregister_legacy_irq_handler(const mxtl::RefPtr<pcie_device_st
                                           PCIE_CFG_COMMAND_INT_DISABLE);
 
     /* Remove the dev from the shared handler's list */
-    spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+    spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
     list_delete(&dev->irq.legacy.shared_handler_node);
-    spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+    spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 }
 
 static void pcie_leave_legacy_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev) {
@@ -397,13 +393,12 @@ static inline bool pcie_mask_unmask_msi_irq_locked(pcie_device_state_t& dev,
     DEBUG_ASSERT(irq_id < dev.irq.handler_count);
     DEBUG_ASSERT(dev.irq.handlers);
 
-    pcie_bus_driver_state_t*  bus_drv = dev.bus_drv;
     pcie_irq_handler_state_t* hstate  = &dev.irq.handlers[irq_id];
     DEBUG_ASSERT(spin_lock_held(&hstate->lock));
 
     /* Internal code should not be calling this function if they want to mask
      * the interrupt, but it is not possible to do so. */
-    DEBUG_ASSERT(!mask || bus_drv->mask_unmask_msi || dev.irq.msi.pvm_mask_reg);
+    DEBUG_ASSERT(!mask || dev.bus_drv.mask_unmask_msi || dev.irq.msi.pvm_mask_reg);
 
     /* If we can mask at the PCI device level, do so. */
     if (dev.irq.msi.pvm_mask_reg) {
@@ -418,8 +413,8 @@ static inline bool pcie_mask_unmask_msi_irq_locked(pcie_device_state_t& dev,
     /* If we can mask at the platform interrupt controller level, do so. */
     DEBUG_ASSERT(dev.irq.msi.irq_block.allocated);
     DEBUG_ASSERT(irq_id < dev.irq.msi.irq_block.num_irq);
-    if (bus_drv->mask_unmask_msi)
-        bus_drv->mask_unmask_msi(&dev.irq.msi.irq_block, irq_id, mask);
+    if (dev.bus_drv.mask_unmask_msi)
+        dev.bus_drv.mask_unmask_msi(&dev.irq.msi.irq_block, irq_id, mask);
 
     bool ret = hstate->masked;
     hstate->masked = mask;
@@ -430,7 +425,6 @@ static inline status_t pcie_mask_unmask_msi_irq(const mxtl::RefPtr<pcie_device_s
                                                 uint irq_id,
                                                 bool mask) {
     DEBUG_ASSERT(dev);
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
     spin_lock_saved_state_t irq_state;
 
     if (irq_id >= dev->irq.handler_count)
@@ -439,7 +433,7 @@ static inline status_t pcie_mask_unmask_msi_irq(const mxtl::RefPtr<pcie_device_s
     /* If a mask is being requested, and we cannot mask at either the platform
      * interrupt controller or the PCI device level, tell the caller that the
      * operation is unsupported. */
-    if (mask && !bus_drv->mask_unmask_msi && !dev->irq.msi.pvm_mask_reg)
+    if (mask && !dev->bus_drv.mask_unmask_msi && !dev->irq.msi.pvm_mask_reg)
         return ERR_NOT_SUPPORTED;
 
     DEBUG_ASSERT(dev->irq.handlers);
@@ -494,7 +488,6 @@ static enum handler_return pcie_msi_irq_handler(void *arg) {
     DEBUG_ASSERT(arg);
     pcie_irq_handler_state_t* hstate  = (pcie_irq_handler_state_t*)arg;
     pcie_device_state_t*      dev     = hstate->dev;
-    pcie_bus_driver_state_t*  bus_drv = dev->bus_drv;
     DEBUG_ASSERT(dev);
 
     /* No need to save IRQ state; we are in an IRQ handler at the moment. */
@@ -503,7 +496,7 @@ static enum handler_return pcie_msi_irq_handler(void *arg) {
 
     /* Mask our IRQ if we can. */
     bool was_masked;
-    if (bus_drv->mask_unmask_msi || dev->irq.msi.pvm_mask_reg) {
+    if (dev->bus_drv.mask_unmask_msi || dev->irq.msi.pvm_mask_reg) {
         was_masked = pcie_mask_unmask_msi_irq_locked(*dev, hstate->pci_irq_id, true);
     } else {
         DEBUG_ASSERT(!hstate->masked);
@@ -531,30 +524,29 @@ static enum handler_return pcie_msi_irq_handler(void *arg) {
 
 static void pcie_free_msi_block(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    pcie_bus_driver_state_t& bus_drv = dev->bus_drv;
 
     /* If no block has been allocated, there is nothing to do */
     if (!dev->irq.msi.irq_block.allocated)
         return;
 
-    DEBUG_ASSERT(bus_drv->register_msi_handler);
-    DEBUG_ASSERT(bus_drv->free_msi_block);
+    DEBUG_ASSERT(bus_drv.register_msi_handler);
+    DEBUG_ASSERT(bus_drv.free_msi_block);
 
     /* Mask the IRQ at the platform interrupt controller level if we can, and
      * unregister any registered handler. */
     const pcie_msi_block_t* b = &dev->irq.msi.irq_block;
     for (uint i = 0; i < b->num_irq; i++) {
-        if (bus_drv->mask_unmask_msi)
-            bus_drv->mask_unmask_msi(b, i, true);
+        if (bus_drv.mask_unmask_msi)
+            bus_drv.mask_unmask_msi(b, i, true);
 
-        bus_drv->register_msi_handler(b, i, NULL, NULL);
+        bus_drv.register_msi_handler(b, i, NULL, NULL);
     }
 
-    DEBUG_ASSERT(bus_drv);
-    DEBUG_ASSERT(bus_drv->free_msi_block);
+    DEBUG_ASSERT(bus_drv.free_msi_block);
 
     /* Give the block of IRQs back to the plaform */
-    bus_drv->free_msi_block(&dev->irq.msi.irq_block);
+    bus_drv.free_msi_block(&dev->irq.msi.irq_block);
     DEBUG_ASSERT(!dev->irq.msi.irq_block.allocated);
 }
 
@@ -577,7 +569,6 @@ static void pcie_set_msi_multi_message_enb(const mxtl::RefPtr<pcie_device_state_
 
 static void pcie_leave_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->bus_drv);
 
     /* Disable MSI, mask all vectors and zero out the target */
     pcie_set_msi_target(dev, 0x0, 0x0);
@@ -594,7 +585,6 @@ static void pcie_leave_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev
 static status_t pcie_enter_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                         uint requested_irqs) {
     DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->bus_drv);
     DEBUG_ASSERT(requested_irqs);
 
     status_t res = NO_ERROR;
@@ -602,19 +592,19 @@ static status_t pcie_enter_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>&
     /* We cannot go into MSI mode if we don't support MSI at all, or we
      * don't support the number of IRQs requested */
     if (!dev->irq.msi.cfg               ||
-        !dev->bus_drv->alloc_msi_block  ||
+        !dev->bus_drv.alloc_msi_block  ||
         (requested_irqs > dev->irq.msi.max_irqs))
         return ERR_NOT_SUPPORTED;
 
-    DEBUG_ASSERT(dev->bus_drv->free_msi_block &&
-                 dev->bus_drv->register_msi_handler);
+    DEBUG_ASSERT(dev->bus_drv.free_msi_block &&
+                 dev->bus_drv.register_msi_handler);
 
     /* Ask the platform for a chunk of MSI compatible IRQs */
     DEBUG_ASSERT(!dev->irq.msi.irq_block.allocated);
-    res = dev->bus_drv->alloc_msi_block(requested_irqs,
-                                        dev->irq.msi.is64bit,
-                                        false,  /* is_msix == false */
-                                        &dev->irq.msi.irq_block);
+    res = dev->bus_drv.alloc_msi_block(requested_irqs,
+                                       dev->irq.msi.is64bit,
+                                       false,  /* is_msix == false */
+                                       &dev->irq.msi.irq_block);
     if (res != NO_ERROR) {
         LTRACEF("Failed to allocate a block of %u MSI IRQs for device "
                 "%02x:%02x.%01x (res %d)\n",
@@ -648,10 +638,10 @@ static status_t pcie_enter_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>&
     /* Register each IRQ with the dispatcher */
     DEBUG_ASSERT(dev->irq.handler_count <= dev->irq.msi.irq_block.num_irq);
     for (uint i = 0; i < dev->irq.handler_count; ++i) {
-        dev->bus_drv->register_msi_handler(&dev->irq.msi.irq_block,
-                                           i,
-                                           pcie_msi_irq_handler,
-                                           dev->irq.handlers + i);
+        dev->bus_drv.register_msi_handler(&dev->irq.msi.irq_block,
+                                          i,
+                                          pcie_msi_irq_handler,
+                                          dev->irq.handlers + i);
     }
 
     /* Enable MSI at the top level */
@@ -674,10 +664,9 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t& de
                                                    pcie_irq_mode_caps_t* out_caps) {
     DEBUG_ASSERT(dev.plugged_in);
     DEBUG_ASSERT(is_mutex_held(&dev.dev_lock));
-    DEBUG_ASSERT(dev.bus_drv);
     DEBUG_ASSERT(out_caps);
 
-    pcie_bus_driver_state_t* bus_drv = dev.bus_drv;
+    pcie_bus_driver_state_t& bus_drv = dev.bus_drv;
     memset(out_caps, 0, sizeof(*out_caps));
 
     switch (mode) {
@@ -692,7 +681,7 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t& de
     case PCIE_IRQ_MODE_MSI:
         /* If the platorm cannot allocate MSI blocks, then we don't support MSI,
          * even if the device does. */
-        if (!bus_drv->alloc_msi_block)
+        if (!bus_drv.alloc_msi_block)
             return ERR_NOT_SUPPORTED;
 
         /* If the device supports MSI, it will have a pointer to the control
@@ -705,13 +694,13 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t& de
          * allocation. */
         out_caps->max_irqs = dev.irq.msi.max_irqs;
         out_caps->per_vector_masking_supported = (dev.irq.msi.pvm_mask_reg != NULL)
-                                               || (bus_drv->mask_unmask_msi != NULL);
+                                               || (bus_drv.mask_unmask_msi != NULL);
         break;
 
     case PCIE_IRQ_MODE_MSI_X:
         /* If the platorm cannot allocate MSI blocks, then we don't support
          * MSI-X, even if the device does. */
-        if (!bus_drv->alloc_msi_block)
+        if (!bus_drv.alloc_msi_block)
             return ERR_NOT_SUPPORTED;
 
         /* TODO(johngro) : finish MSI-X implementation. */
@@ -894,7 +883,7 @@ status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t& dev,
     status_t ret;
 
     MUTEX_ACQUIRE(&dev, dev_lock);
-    ret = dev.plugged_in
+    ret = (dev.plugged_in && !dev.disabled)
         ? pcie_query_irq_mode_capabilities_internal(dev, mode, out_caps)
         : ERR_BAD_STATE;
     MUTEX_RELEASE(&dev, dev_lock);
@@ -910,7 +899,7 @@ status_t pcie_get_irq_mode(const pcie_device_state_t& dev,
     status_t ret;
 
     MUTEX_ACQUIRE(&dev, dev_lock);
-    ret = dev.plugged_in
+    ret = (dev.plugged_in && !dev.disabled)
         ? pcie_get_irq_mode_internal(dev, out_info)
         : ERR_BAD_STATE;
     MUTEX_RELEASE(&dev, dev_lock);
@@ -925,7 +914,7 @@ status_t pcie_set_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev,
     status_t ret;
 
     MUTEX_ACQUIRE(dev, dev_lock);
-    ret = dev->plugged_in
+    ret = ((mode == PCIE_IRQ_MODE_DISABLED) || (dev->plugged_in && !dev->disabled))
         ? pcie_set_irq_mode_internal(dev, mode, requested_irqs)
         : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);
@@ -941,7 +930,7 @@ status_t pcie_register_irq_handler(const mxtl::RefPtr<pcie_device_state_t>& dev,
     status_t ret;
 
     MUTEX_ACQUIRE(dev, dev_lock);
-    ret = dev->plugged_in
+    ret = (dev->plugged_in && !dev->disabled)
         ? pcie_register_irq_handler_internal(dev, irq_id, handler, ctx)
         : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);
@@ -956,7 +945,7 @@ status_t pcie_mask_unmask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev,
     status_t ret;
 
     MUTEX_ACQUIRE(dev, dev_lock);
-    ret = dev->plugged_in
+    ret = (mask || (dev->plugged_in && !dev->disabled))
         ? pcie_mask_unmask_irq_internal(dev, irq_id, mask)
         : ERR_BAD_STATE;
     MUTEX_RELEASE(dev, dev_lock);

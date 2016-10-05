@@ -142,10 +142,8 @@
  *  device graph without holding an uber-lock for the entire graph-wide
  *  operation.  The rules around ref-counting are as follows...
  *
- *  ## The bus driver holds a reference for the host_bridge device at the root
- *     of the graph.  Eventually, when the code is reworked to be root-complex
- *     oriented, the bus driver will hold a reference for each root-complex
- *     device in each root complex.
+ *  ## The bus driver holds a reference for the a single root complex "bridge"
+ *     at the root of the graph.
  *  ## Bridges hold a reference for each of their downstream children.
  *  ## Children of bridges hold a reference to their upstream bridge.
  *  ## Kernel mode device driver do *not* hold a reference to their device.  The
@@ -202,11 +200,6 @@ typedef struct pcie_kmap_ecam_range {
     void*             vaddr;
 } pcie_kmap_ecam_range_t;
 
-typedef struct pcie_io_range_alloc {
-    pcie_io_range_t  io;
-    size_t           used;
-} pcie_io_range_alloc_t;
-
 typedef struct pcie_legacy_irq_handler_state {
     pcie_bus_driver_state_t*      bus_drv;
     struct list_node              legacy_irq_list_node;
@@ -220,15 +213,12 @@ struct pcie_bus_driver_state_t {
 
     mutex_t                           bus_topology_lock;
     mutex_t                           bus_rescan_lock;
-    mxtl::RefPtr<pcie_bridge_state_t> host_bridge;
+    mxtl::RefPtr<pcie_bridge_state_t> root_complex;
 
     vmm_aspace_t*                              aspace;
     mxtl::unique_ptr<pcie_kmap_ecam_range_t[]> ecam_windows;
     size_t                                     ecam_window_count;
-
-    pcie_io_range_alloc_t           mmio_lo;
-    pcie_io_range_alloc_t           mmio_hi;
-    pcie_io_range_alloc_t           pio;
+    RegionAllocator::RegionPool::RefPtr        region_bookkeeping;
 
     platform_legacy_irq_swizzle_t   legacy_irq_swizzle;
     spin_lock_t                     legacy_irq_handler_lock;
@@ -247,11 +237,11 @@ struct pcie_bus_driver_state_t {
  *
  ******************************************************************************/
 pcie_bus_driver_state_t* pcie_get_bus_driver_state(void);
-void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv);
+void pcie_scan_and_start_devices(pcie_bus_driver_state_t& bus_drv);
 void pcie_unplug_device(const mxtl::RefPtr<pcie_device_state_t>& dev);
 void pcie_modify_cmd_internal(const mxtl::RefPtr<pcie_device_state_t>& dev,
                               uint16_t clr_bits, uint16_t set_bits);
-pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
+pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t& bus_drv,
                                uint64_t* cfg_phys,
                                uint bus_id,
                                uint dev_id,
@@ -268,8 +258,8 @@ typedef bool (*pcie_foreach_device_cbk)(const mxtl::RefPtr<pcie_device_state_t>&
 void pcie_link_device_to_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                   const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
 void pcie_unlink_device_from_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev);
-void pcie_foreach_device(pcie_bus_driver_state_t* drv, pcie_foreach_device_cbk cbk, void* ctx);
-mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t* drv,
+void pcie_foreach_device(pcie_bus_driver_state_t& drv, pcie_foreach_device_cbk cbk, void* ctx);
+mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t& drv,
                                                         uint bus_id, uint dev_id, uint func_id);
 
 

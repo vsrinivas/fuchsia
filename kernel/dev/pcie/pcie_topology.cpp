@@ -19,8 +19,7 @@ void pcie_link_device_to_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                   const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
     DEBUG_ASSERT(dev && bridge);
 
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
-    mutex_acquire(&bus_drv->bus_topology_lock);
+    mutex_acquire(&dev->bus_drv.bus_topology_lock);
 
     /* Hold a reference to our upstream bridge. */
     DEBUG_ASSERT(!dev->upstream);
@@ -32,14 +31,13 @@ void pcie_link_device_to_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev,
     DEBUG_ASSERT(!dev->upstream->downstream[ndx]);
     dev->upstream->downstream[ndx] = dev;
 
-    mutex_release(&bus_drv->bus_topology_lock);
+    mutex_release(&dev->bus_drv.bus_topology_lock);
 }
 
 void pcie_unlink_device_from_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
 
-    mutex_acquire(&bus_drv->bus_topology_lock);
+    mutex_acquire(&dev->bus_drv.bus_topology_lock);
     if (dev->upstream) {
         uint ndx = (dev->dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev->func_id;
         DEBUG_ASSERT(ndx < countof(dev->upstream->downstream));
@@ -51,22 +49,22 @@ void pcie_unlink_device_from_upstream(const mxtl::RefPtr<pcie_device_state_t>& d
         /* Let go of our reference to our parent */
         dev->upstream = nullptr;
     }
-    mutex_release(&bus_drv->bus_topology_lock);
+    mutex_release(&dev->bus_drv.bus_topology_lock);
 }
 
 mxtl::RefPtr<pcie_bridge_state_t> pcie_device_state_t::GetUpstream() {
-    mutex_acquire(&bus_drv->bus_topology_lock);
+    mutex_acquire(&bus_drv.bus_topology_lock);
     auto ret = upstream;
-    mutex_release(&bus_drv->bus_topology_lock);
+    mutex_release(&bus_drv.bus_topology_lock);
     return ret;
 }
 
 mxtl::RefPtr<pcie_device_state_t> pcie_bridge_state_t::GetDownstream(uint ndx) {
     DEBUG_ASSERT(ndx <= countof(downstream));
 
-    mutex_acquire(&bus_drv->bus_topology_lock);
+    mutex_acquire(&bus_drv.bus_topology_lock);
     auto ret = downstream[ndx];
-    mutex_release(&bus_drv->bus_topology_lock);
+    mutex_release(&bus_drv.bus_topology_lock);
 
     return ret;
 }
@@ -76,13 +74,12 @@ static bool pcie_foreach_device_on_bridge(const mxtl::RefPtr<pcie_bridge_state_t
                                           pcie_foreach_device_cbk                  cbk,
                                           void*                                    ctx) {
     DEBUG_ASSERT(bridge && cbk);
-    pcie_bus_driver_state_t* drv = bridge->bus_drv;
     bool keep_going = true;
 
     for (size_t i = 0; keep_going && (i < countof(bridge->downstream)); ++i) {
-        mutex_acquire(&drv->bus_topology_lock);
+        mutex_acquire(&bridge->bus_drv.bus_topology_lock);
         auto dev = bridge->downstream[i];
-        mutex_release(&drv->bus_topology_lock);
+        mutex_release(&bridge->bus_drv.bus_topology_lock);
 
         if (!dev)
             continue;
@@ -99,26 +96,22 @@ static bool pcie_foreach_device_on_bridge(const mxtl::RefPtr<pcie_bridge_state_t
     return keep_going;
 }
 
-void pcie_foreach_device(pcie_bus_driver_state_t* drv,
+void pcie_foreach_device(pcie_bus_driver_state_t& drv,
                          pcie_foreach_device_cbk  cbk,
                          void*                    ctx) {
-    DEBUG_ASSERT(drv && cbk);
+    DEBUG_ASSERT(cbk);
 
-    mutex_acquire(&drv->bus_topology_lock);
-    auto host_bridge = drv->host_bridge;
-    mutex_release(&drv->bus_topology_lock);
+    // Grab a reference to the root complex if we can
+    mutex_acquire(&drv.bus_topology_lock);
+    auto root_complex = drv.root_complex;
+    mutex_release(&drv.bus_topology_lock);
 
-    if (!host_bridge) {
-        printf("No host bridge discovered...\n");
+    if (root_complex == nullptr) {
+        TRACEF("No root complex!");
         return;
     }
 
-    auto tmp = pcie_upcast_to_device(host_bridge);
-    bool keep_going = cbk(tmp, ctx, 0);
-    tmp = nullptr;
-
-    if (keep_going)
-        pcie_foreach_device_on_bridge(host_bridge, 0, cbk, ctx);
+    pcie_foreach_device_on_bridge(root_complex, 0, cbk, ctx);
 }
 
 typedef struct pcie_get_refed_device_state {
@@ -142,7 +135,7 @@ static bool pcie_get_refed_device_helper(const mxtl::RefPtr<pcie_device_state_t>
     return true;
 }
 
-mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t* drv,
+mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t& drv,
                                                         uint bus_id, uint dev_id, uint func_id) {
     pcie_get_refed_device_state_t state = {
         .bus_id  = bus_id,
@@ -151,7 +144,7 @@ mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t*
         .ret     = nullptr,
     };
 
-    pcie_foreach_device(pcie_get_bus_driver_state(), pcie_get_refed_device_helper, &state);
+    pcie_foreach_device(drv, pcie_get_refed_device_helper, &state);
 
     return mxtl::move(state.ret);
 }

@@ -18,6 +18,7 @@
 #include <endian.h>
 #include <err.h>
 #include <kernel/mutex.h>
+#include <region-alloc/region-alloc.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
@@ -39,15 +40,15 @@ struct pcie_device_state_t;
 /*
  * struct used to fetch information about a configured base address register
  */
-typedef struct pcie_bar_info {
-    uint64_t size;
-    uint64_t bus_addr;
+struct pcie_bar_info_t {
+    uint64_t size = 0;
+    uint64_t bus_addr = 0;
     bool     is_mmio;
     bool     is_64bit;
     bool     is_prefetchable;
     uint     first_bar_reg;
-    bool     is_allocated;
-} pcie_bar_info_t;
+    RegionAllocator::Region::UPtr allocation;
+};
 
 /* Function table registered by a device driver.  Method requirements and device
  * lifecycle are described below.
@@ -109,16 +110,16 @@ typedef struct pcie_driver_registration {
  * pcie_device_state struct, with the driver owned fields filled out.
  */
 struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
-    pcie_device_state_t();
+    pcie_device_state_t(pcie_bus_driver_state_t& bus_driver);
     virtual ~pcie_device_state_t();
 
     mxtl::RefPtr<pcie_bridge_state_t> GetUpstream();
     mxtl::RefPtr<pcie_bridge_state_t> DowncastToBridge();
 
+    pcie_bus_driver_state_t&          bus_drv;   // Reference to our bus driver state.
     pcie_config_t*                    cfg;       // Pointer to the memory mapped ECAM (kernel vaddr)
     paddr_t                           cfg_phys;  // The physical address of the device's ECAM
     mxtl::RefPtr<pcie_bridge_state_t> upstream;  // The upstream bridge, or NULL if we are root
-    pcie_bus_driver_state_t*          bus_drv;   // Pointer to our bus driver state.
     bool                              is_bridge; // True if this device is also a bridge
     uint16_t                          vendor_id; // The device's vendor ID, as read from config
     uint16_t                          device_id; // The device's device ID, as read from config
@@ -133,6 +134,7 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
     mutable mutex_t                   dev_lock;
     mutable mutex_t                   start_claim_lock;
     bool                              plugged_in;
+    bool                              disabled;
 
     /* State tracking for this device's driver (if this device has been claimed by a driver) */
     const pcie_driver_registration_t* driver;
@@ -142,6 +144,7 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
     /* Info about the BARs computed and cached during the initial setup/probe,
      * indexed by starting BAR register index */
     pcie_bar_info_t bars[PCIE_MAX_BAR_REGS];
+    uint bar_count;
 
     /* PCI Express Capabilities (Standard Capability 0x10) if present */
     struct {
@@ -196,12 +199,27 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
 };
 
 struct pcie_bridge_state_t : public pcie_device_state_t {
-    explicit pcie_bridge_state_t(uint mbus_id);
+    pcie_bridge_state_t(pcie_bus_driver_state_t& bus_driver, uint mbus_id);
     virtual ~pcie_bridge_state_t();
 
     mxtl::RefPtr<pcie_device_state_t> GetDownstream(uint ndx);
 
     const uint managed_bus_id;  // The ID of the downstream bus which this bridge manages.
+
+    RegionAllocator mmio_lo_regions;
+    RegionAllocator mmio_hi_regions;
+    RegionAllocator pio_regions;
+
+    RegionAllocator::Region::UPtr mmio_window;
+    RegionAllocator::Region::UPtr pio_window;
+
+    uint64_t pf_mem_base;
+    uint64_t pf_mem_limit;
+    uint32_t mem_base;
+    uint32_t mem_limit;
+    uint32_t io_base;
+    uint32_t io_limit;
+    bool     supports_32bit_pio;
 
     /* An array of pointers for all the possible functions which exist on the
      * downstream bus of this bridge.  Note: in the special case of the root
@@ -282,7 +300,7 @@ static inline const pcie_bar_info_t* pcie_get_bar_info(
         uint bar_ndx) {
     DEBUG_ASSERT(bar_ndx < countof(dev.bars));
     const pcie_bar_info_t* ret = &dev.bars[bar_ndx];
-    return ret->is_allocated ? ret : NULL;
+    return (!dev.disabled && (ret->allocation != nullptr)) ? ret : NULL;
 }
 
 /*
@@ -311,6 +329,9 @@ status_t pcie_modify_cmd(const mxtl::RefPtr<pcie_device_state_t>& device,
  */
 static inline status_t pcie_enable_bus_master(const mxtl::RefPtr<pcie_device_state_t>& device,
                                               bool enabled) {
+    if (enabled && device->disabled)
+        return ERR_BAD_STATE;
+
     return pcie_modify_cmd(device,
                            enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
                            enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
@@ -325,6 +346,9 @@ static inline status_t pcie_enable_bus_master(const mxtl::RefPtr<pcie_device_sta
  */
 static inline status_t pcie_enable_pio(const mxtl::RefPtr<pcie_device_state_t>& device,
                                        bool enabled) {
+    if (enabled && device->disabled)
+        return ERR_BAD_STATE;
+
     return pcie_modify_cmd(device,
                            enabled ? 0 : PCI_COMMAND_IO_EN,
                            enabled ? PCI_COMMAND_IO_EN : 0);
@@ -339,6 +363,9 @@ static inline status_t pcie_enable_pio(const mxtl::RefPtr<pcie_device_state_t>& 
  */
 static inline status_t pcie_enable_mmio(const mxtl::RefPtr<pcie_device_state_t>& device,
                                         bool enabled) {
+    if (enabled && device->disabled)
+        return ERR_BAD_STATE;
+
     return pcie_modify_cmd(device,
                            enabled ? 0 : PCI_COMMAND_MEM_EN,
                            enabled ? PCI_COMMAND_MEM_EN : 0);

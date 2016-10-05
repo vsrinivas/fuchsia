@@ -274,6 +274,9 @@ static void dump_pcie_hdr(const pcie_device_state_t& dev, lspci_params_t* params
                  dev.vendor_id, dev.device_id,
                  pci_device_type(dev));
 
+    if (dev.disabled)
+        printf(" [DISABLED]");
+
     if (dev.driver)
         printf(" [driver = \"%s\"]", pcie_driver_name(dev.driver));
 
@@ -281,30 +284,28 @@ static void dump_pcie_hdr(const pcie_device_state_t& dev, lspci_params_t* params
 }
 
 static void dump_pcie_bars(const pcie_device_state_t& dev,
-                           lspci_params_t* params,
-                           uint bar_count)
+                           lspci_params_t* params)
 {
     pci_config_t* cfg = &dev.cfg->base;
 
-    DEBUG_ASSERT(bar_count <= countof(cfg->base_addresses));
-    DEBUG_ASSERT(bar_count <= countof(dev.bars));
-    for (uint i = 0; i < bar_count; ++i) {
-        DEBUG_ASSERT(i < bar_count);
-
+    DEBUG_ASSERT(dev.bar_count <= countof(cfg->base_addresses));
+    DEBUG_ASSERT(dev.bar_count <= countof(dev.bars));
+    for (uint i = 0; i < dev.bar_count; ++i) {
         LSPCI_PRINTF("Base Addr[%u]      : 0x%08x", i, pcie_read32(&cfg->base_addresses[i]));
 
-        const pcie_bar_info_t* info = pcie_get_bar_info(dev, i);
-        if (!info) {
+        const pcie_bar_info_t& info = dev.bars[i];
+        if (!info.size) {
             printf("\n");
             continue;
         }
 
-        printf(" :: paddr %#" PRIx64 " size %#" PRIx64 "%s%s %s\n",
-                info->bus_addr,
-                info->size,
-                info->is_prefetchable ? " prefetchable" : "",
-                info->is_mmio ? (info->is_64bit ? " 64-bit" : " 32-bit") : "",
-                info->is_mmio ? "MMIO" : "PIO");
+        printf(" :: paddr %#" PRIx64 " size %#" PRIx64 "%s%s %s%s\n",
+                info.bus_addr,
+                info.size,
+                info.is_prefetchable ? " prefetchable" : "",
+                info.is_mmio ? (info.is_64bit ? " 64-bit" : " 32-bit") : "",
+                info.is_mmio ? "MMIO" : "PIO",
+                info.allocation == nullptr ? "" : " (allocated)");
     }
 }
 
@@ -340,9 +341,9 @@ static void dump_pcie_standard(const pcie_device_state_t& dev, lspci_params_t* p
     LSPCI_PRINTF("Max Latency       : 0x%02x\n", pcie_read8(&cfg->max_latency));
 }
 
-static void dump_pcie_bridge(const pcie_device_state_t& dev, lspci_params_t* params)
+static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* params)
 {
-    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&dev.cfg->base);
+    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&bridge.cfg->base);
 
     LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", pcie_read8(&bcfg->primary_bus_id));
     LSPCI_PRINTF("S. Bus Range      : [0x%02x, 0x%02x]\n",
@@ -352,14 +353,31 @@ static void dump_pcie_bridge(const pcie_device_state_t& dev, lspci_params_t* par
     LSPCI_PRINTF("IO Base           : 0x%02x\n", pcie_read8(&bcfg->io_base));
     LSPCI_PRINTF("IO Base Upper     : 0x%04x\n", pcie_read16(&bcfg->io_base_upper));
     LSPCI_PRINTF("IO Limit          : 0x%02x\n", pcie_read8(&bcfg->io_limit));
-    LSPCI_PRINTF("IO Limit Upper    : 0x%04x\n", pcie_read16(&bcfg->io_limit_upper));
+    LSPCI_PRINTF("IO Limit Upper    : 0x%04x",   pcie_read16(&bcfg->io_limit_upper));
+    if (bridge.io_base < bridge.io_limit) {
+        printf(" :: [0x%08x, 0x%08x]\n", bridge.io_base, bridge.io_limit);
+    } else {
+        printf("\n");
+    }
     LSPCI_PRINTF("Secondary Status  : 0x%04x\n", pcie_read16(&bcfg->secondary_status));
     LSPCI_PRINTF("Memory Limit      : 0x%04x\n", pcie_read16(&bcfg->memory_limit));
-    LSPCI_PRINTF("Memory Base       : 0x%04x\n", pcie_read16(&bcfg->memory_base));
+    LSPCI_PRINTF("Memory Base       : 0x%04x", pcie_read16(&bcfg->memory_base));
+    if (bridge.mem_base < bridge.mem_limit) {
+        printf(" :: [0x%08x, 0x%08x]\n", bridge.mem_base, bridge.mem_limit);
+    } else {
+        printf("\n");
+    }
     LSPCI_PRINTF("PFMem Base        : 0x%04x\n", pcie_read16(&bcfg->prefetchable_memory_base));
     LSPCI_PRINTF("PFMem Base Upper  : 0x%08x\n", pcie_read32(&bcfg->prefetchable_memory_base_upper));
     LSPCI_PRINTF("PFMem Limit       : 0x%04x\n", pcie_read16(&bcfg->prefetchable_memory_limit));
-    LSPCI_PRINTF("PFMem Limit Upper : 0x%08x\n", pcie_read32(&bcfg->prefetchable_memory_limit_upper));
+    LSPCI_PRINTF("PFMem Limit Upper : 0x%08x", pcie_read32(&bcfg->prefetchable_memory_limit_upper));
+    if (bridge.pf_mem_base < bridge.pf_mem_limit) {
+        printf(" :: [0x%016" PRIx64 ", 0x%016" PRIx64"]\n",
+                bridge.pf_mem_base, bridge.pf_mem_limit);
+    } else {
+        printf("\n");
+    }
+
     LSPCI_PRINTF("Capabilities Ptr  : 0x%02x\n", pcie_read8(&bcfg->capabilities_ptr));
     LSPCI_PRINTF("Exp ROM Address   : 0x%08x\n", pcie_read32(&bcfg->expansion_rom_address));
     LSPCI_PRINTF("Interrupt Line    : 0x%02x\n", pcie_read8(&bcfg->interrupt_line));
@@ -414,18 +432,22 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
         params->indent_level += 2;
 
         dump_pcie_common(*dev, params);
+        dump_pcie_bars(*dev, params);
 
         uint8_t header_type = pcie_read8(&dev->cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
         switch (header_type) {
         case PCI_HEADER_TYPE_STANDARD:
-            dump_pcie_bars(*dev, params, 6);
             dump_pcie_standard(*dev, params);
             break;
 
-        case PCI_HEADER_TYPE_PCI_BRIDGE:
-            dump_pcie_bars(*dev, params, 2);
-            dump_pcie_bridge(*dev, params);
-            break;
+        case PCI_HEADER_TYPE_PCI_BRIDGE: {
+            auto bridge = dev->DowncastToBridge();
+            if (bridge != nullptr) {
+                dump_pcie_bridge(*bridge, params);
+            } else {
+                printf("ERROR! Type 1 header detected for non-bridge device!\n");
+            }
+        } break;
 
         case PCI_HEADER_TYPE_CARD_BUS:
             printf("TODO : Implemnt CardBus Config header register dump\n");
@@ -534,7 +556,10 @@ static int cmd_lspci(int argc, const cmd_args *argv)
     }
 
     pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
-    pcie_foreach_device(bus_drv, dump_pcie_device, &params);
+    if (bus_drv == nullptr)
+        return ERR_BAD_STATE;
+
+    pcie_foreach_device(*bus_drv, dump_pcie_device, &params);
 
     if (!params.found && params.force_dump_cfg &&
         (params.bus_id  != WILDCARD_ID) &&
@@ -543,7 +568,7 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         pcie_config_t* cfg;
         uint64_t cfg_phys;
 
-        cfg = pcie_get_config(bus_drv, &cfg_phys, params.bus_id, params.dev_id, params.func_id);
+        cfg = pcie_get_config(*bus_drv, &cfg_phys, params.bus_id, params.dev_id, params.func_id);
         if (!cfg) {
             printf("Config space for %02x:%02x.%01x not mapped by bus driver!\n",
                    params.bus_id, params.dev_id, params.func_id);
@@ -580,7 +605,11 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    if (bus_drv == nullptr)
+        return ERR_BAD_STATE;
+
+    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(*bus_drv,
                                                                   bus_id, dev_id, func_id);
 
     if (!dev) {
@@ -620,7 +649,11 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(pcie_get_bus_driver_state(),
+    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    if (bus_drv == nullptr)
+        return ERR_BAD_STATE;
+
+    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(*bus_drv,
                                                                   bus_id, dev_id, func_id);
 
     if (!dev) {
@@ -640,7 +673,11 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
 
 static int cmd_pcirescan(int argc, const cmd_args *argv)
 {
-    pcie_scan_and_start_devices(pcie_get_bus_driver_state());
+    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    if (bus_drv == nullptr)
+        return ERR_BAD_STATE;
+
+    pcie_scan_and_start_devices(*bus_drv);
     return NO_ERROR;
 }
 

@@ -63,8 +63,12 @@
 #define EXPORT_TO_DEBUG_CONSOLE static
 #endif
 
+static constexpr size_t REGION_BOOKKEEPING_SLAB_SIZE = 16 << 10;
+static constexpr size_t REGION_BOOKKEEPING_MAX_MEM = 128 << 10;
+
 static uint8_t g_drv_mem[sizeof(pcie_bus_driver_state_t)];
 static pcie_bus_driver_state_t* g_drv_state;
+
 #ifdef WITH_LIB_CONSOLE
 pcie_bus_driver_state_t* pcie_get_bus_driver_state(void) { return g_drv_state; }
 #endif
@@ -76,8 +80,8 @@ extern pcie_driver_registration_t __stop_pcie_builtin_drivers[] __WEAK;
 // Fwd decls
 static void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
 
-pcie_device_state_t::pcie_device_state_t() {
-    memset(bars, 0, sizeof(bars));
+pcie_device_state_t::pcie_device_state_t(pcie_bus_driver_state_t& bus_driver)
+    : bus_drv(bus_driver) {
     memset(&pcie_caps, 0, sizeof(pcie_caps));
     memset(&pcie_adv_caps, 0, sizeof(pcie_adv_caps));
     memset(&irq, 0, sizeof(irq));
@@ -85,7 +89,6 @@ pcie_device_state_t::pcie_device_state_t() {
     cfg        = nullptr;
     cfg_phys   = 0;
     upstream   = nullptr;
-    bus_drv    = nullptr;
 
     is_bridge  = false;
     plugged_in = false;
@@ -93,6 +96,9 @@ pcie_device_state_t::pcie_device_state_t() {
     driver     = nullptr;
     driver_ctx = nullptr;
     started    = false;
+    disabled   = false;
+
+    bar_count  = 0;
 
     mutex_init(&dev_lock);
     mutex_init(&start_claim_lock);
@@ -109,16 +115,25 @@ pcie_device_state_t::~pcie_device_state_t() {
     DEBUG_ASSERT(!driver);
     DEBUG_ASSERT(!driver_ctx);
 
-    /* TODO(johngro) : assert that this device's interrupts are disabled at
-     * the hardware level and that it is no longer participating in any of
-     * the bus driver's shared dispatching. */
+    /* TODO(johngro) : ASSERT that this device no longer participating in any of
+     * the bus driver's shared IRQ dispatching. */
 
-    /* TODO(johngro) : Return any allocated BAR regions to the central pool. */
+    /* Make certain that all bus access (MMIO, PIO, Bus mastering) has been
+     * disabled.  Also, explicitly disable legacy IRQs */
+    if (cfg)
+        pcie_write16(&cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 }
 
-pcie_bridge_state_t::pcie_bridge_state_t(uint mbus_id)
-    : managed_bus_id(mbus_id) {
+pcie_bridge_state_t::pcie_bridge_state_t(pcie_bus_driver_state_t& bus_driver, uint mbus_id)
+    : pcie_device_state_t(bus_driver),
+      managed_bus_id(mbus_id) {
     is_bridge = true;
+
+    /* Assign the driver-wide region pool to this bridge's allocators. */
+    DEBUG_ASSERT(bus_drv.region_bookkeeping != nullptr);
+    mmio_lo_regions.SetRegionPool(bus_drv.region_bookkeeping);
+    mmio_hi_regions.SetRegionPool(bus_drv.region_bookkeeping);
+    pio_regions.SetRegionPool(bus_drv.region_bookkeeping);
 }
 
 pcie_bridge_state_t::~pcie_bridge_state_t() {
@@ -130,18 +145,17 @@ pcie_bridge_state_t::~pcie_bridge_state_t() {
 }
 
 EXPORT_TO_DEBUG_CONSOLE
-pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
+pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t& bus_drv,
                                uint64_t* cfg_phys,
                                uint bus_id,
                                uint dev_id,
                                uint func_id) {
-    DEBUG_ASSERT(bus_drv);
     DEBUG_ASSERT(bus_id  < PCIE_MAX_BUSSES);
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
 
-    for (size_t i = 0; i < bus_drv->ecam_window_count; ++i) {
-        const pcie_kmap_ecam_range_t* window = &bus_drv->ecam_windows[i];
+    for (size_t i = 0; i < bus_drv.ecam_window_count; ++i) {
+        const pcie_kmap_ecam_range_t* window = &bus_drv.ecam_windows[i];
         const pcie_ecam_range_t*      ecam   = &window->ecam;
 
         if ((bus_id >= ecam->bus_start) && (bus_id <= ecam->bus_end)) {
@@ -169,34 +183,90 @@ pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t* bus_drv,
     return NULL;
 }
 
-static status_t pcie_probe_bar_info(pcie_config_t*   cfg,
-                                    uint             bar_id,
-                                    uint             bar_count,
-                                    pcie_bar_info_t* info_out) {
-    DEBUG_ASSERT(cfg);
-    DEBUG_ASSERT(bar_id < bar_count);
-    DEBUG_ASSERT(info_out);
+static void pcie_disable_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
+    /* Disable a device because we cannot allocate space for all of its BARs (or
+     * forwarding windows, in the case of a bridge).  Flag the device as
+     * disabled from here on out.
+     */
+    DEBUG_ASSERT((dev != nullptr) && !dev->started && !dev->driver);
+    TRACEF("WARNING - Disabling device %02x:%02x.%01x due to unsatisfiable configuration\n",
+            dev->bus_id, dev->dev_id, dev->func_id);
 
-    memset(info_out, 0, sizeof(*info_out));
+    /* Flag the device as disabled.  Close the device's MMIO/PIO windows, shut
+     * off device initiated accesses to the bus, disable legacy interrupts.
+     * Basically, prevent the device from doing anything from here on out. */
+    dev->disabled = true;
+    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+
+    /* Release all BAR allocations back into the pool they came from */
+    for (auto& bar : dev->bars)
+        bar.allocation = nullptr;
+
+    /* If this is a bridge, disable all of its downstream devices.  Then close
+     * any of the bus forwarding windows and release any of its bus allocations
+     */
+    auto bridge = dev->DowncastToBridge();
+    if (bridge) {
+        for (uint i = 0; i < countof(bridge->downstream); ++i) {
+            auto downstream = bridge->GetDownstream(i);
+            if (downstream)
+                pcie_disable_device(downstream);
+        }
+
+        /* Close the windows at the HW level, update the internal bookkeeping to
+         * indicate that they are closed */
+        auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&bridge->cfg->base));
+        bridge->pf_mem_limit = bridge->mem_limit = bridge->io_limit = 0u;
+        bridge->pf_mem_base  = bridge->mem_base  = bridge->io_base  = 1u;
+
+        pcie_write8(&bcfg.io_base, 0xF0);
+        pcie_write8(&bcfg.io_limit, 0);
+        pcie_write16(&bcfg.io_base_upper, 0);
+        pcie_write16(&bcfg.io_limit_upper, 0);
+
+        pcie_write16(&bcfg.memory_base, 0xFFF0);
+        pcie_write16(&bcfg.memory_limit, 0);
+
+        pcie_write16(&bcfg.prefetchable_memory_base, 0xFFF0);
+        pcie_write16(&bcfg.prefetchable_memory_limit, 0);
+        pcie_write32(&bcfg.prefetchable_memory_base_upper, 0);
+        pcie_write32(&bcfg.prefetchable_memory_limit_upper, 0);
+
+        /* Release our internal bookkeeping */
+        bridge->mmio_lo_regions.Reset();
+        bridge->mmio_hi_regions.Reset();
+        bridge->pio_regions.Reset();
+
+        bridge->mmio_window = nullptr;
+        bridge->pio_window  = nullptr;
+    }
+}
+
+static status_t pcie_probe_bar_info(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                                    uint bar_id) {
+    DEBUG_ASSERT(dev && dev->cfg);
+    DEBUG_ASSERT(bar_id < dev->bar_count);
 
     /* Determine the type of BAR this is.  Make sure that it is one of the types we understand */
+    pcie_config_t* cfg         = dev->cfg;
+    pcie_bar_info_t& bar_info  = dev->bars[bar_id];
     volatile uint32_t* bar_reg = &cfg->base.base_addresses[bar_id];
     uint32_t bar_val           = pcie_read32(bar_reg);
-    info_out->is_mmio          = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
-    info_out->is_64bit         = info_out->is_mmio &&
+    bar_info.is_mmio           = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
+    bar_info.is_64bit          = bar_info.is_mmio &&
                                  ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
-    info_out->is_prefetchable  = info_out->is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
-    info_out->first_bar_reg    = bar_id;
+    bar_info.is_prefetchable   = bar_info.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
+    bar_info.first_bar_reg     = bar_id;
 
-    if (info_out->is_64bit) {
-        if ((bar_id + 1) >= bar_count) {
+    if (bar_info.is_64bit) {
+        if ((bar_id + 1) >= dev->bar_count) {
             TRACEF("Illegal 64-bit MMIO BAR position (%u/%u) while fetching BAR info "
                    "for device config @%p\n",
-                   bar_id, bar_count, cfg);
+                   bar_id, dev->bar_count, cfg);
             return ERR_BAD_STATE;
         }
     } else {
-        if (info_out->is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) != PCI_BAR_MMIO_TYPE_32BIT)) {
+        if (bar_info.is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) != PCI_BAR_MMIO_TYPE_32BIT)) {
             TRACEF("Unrecognized MMIO BAR type (BAR[%u] == 0x%08x) while fetching BAR info "
                    "for device config @%p\n",
                    bar_id, bar_val, cfg);
@@ -204,35 +274,107 @@ static status_t pcie_probe_bar_info(pcie_config_t*   cfg,
         }
     }
 
+    /* Disable either MMIO or PIO (depending on the BAR type) access while we
+     * perform the probe.  We don't want the addresses written during probing to
+     * conflict with anything else on the bus.  Note:  No drivers should have
+     * acccess to this device's registers during the probe process as the device
+     * should not have been published yet.  That said, there could be other
+     * (special case) parts of the system accessing a devices registers at this
+     * point in time, like an early init debug console or serial port.  Don't
+     * make any attempt to print or log until the probe operation has been
+     * completed.  Hopefully these special systems are quiescent at this point
+     * in time, otherwise they might see some minor glitching while access is
+     * disabled.
+     */
+    uint16_t backup = pcie_read16(&dev->cfg->base.command);
+    if (bar_info.is_mmio)
+        pcie_write16(&dev->cfg->base.command, static_cast<uint16_t>(backup & ~PCI_COMMAND_MEM_EN));
+    else
+        pcie_write16(&dev->cfg->base.command, static_cast<uint16_t>(backup & ~PCI_COMMAND_IO_EN));
+
     /* Figure out the size of this BAR region by writing 1's to the
      * address bits, then reading back to see which bits the device
      * considers un-configurable. */
-    uint32_t addr_mask = info_out->is_mmio ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
+    uint32_t addr_mask = bar_info.is_mmio ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
+    uint32_t addr_lo   = bar_val & addr_mask;
     uint64_t size_mask;
 
     pcie_write32(bar_reg, bar_val | addr_mask);
     size_mask = ~(pcie_read32(bar_reg) & addr_mask);
     pcie_write32(bar_reg, bar_val);
 
-    if (info_out->is_mmio) {
-        if (info_out->is_64bit) {
+    if (bar_info.is_mmio) {
+        if (bar_info.is_64bit) {
             /* 64bit MMIO? Probe the upper bits as well */
             bar_reg++;
             bar_val = pcie_read32(bar_reg);
             pcie_write32(bar_reg, 0xFFFFFFFF);
             size_mask |= ((uint64_t)~pcie_read32(bar_reg)) << 32;
             pcie_write32(bar_reg, bar_val);
-            info_out->size = size_mask + 1;
+            bar_info.size = size_mask + 1;
+            bar_info.bus_addr = (static_cast<uint64_t>(bar_val) << 32) | addr_lo;
         } else {
-            info_out->size = (uint32_t)(size_mask + 1);
+            bar_info.size = (uint32_t)(size_mask + 1);
+            bar_info.bus_addr = addr_lo;
         }
     } else {
         /* PIO BAR */
-        info_out->size = ((uint32_t)(size_mask + 1)) & PCIE_PIO_ADDR_SPACE_MASK;
+        bar_info.size = ((uint32_t)(size_mask + 1)) & PCIE_PIO_ADDR_SPACE_MASK;
+        bar_info.bus_addr = addr_lo;
     }
+
+    /* Restore the command register to its previous value */
+    pcie_write16(&dev->cfg->base.command, backup);
 
     /* Success */
     return NO_ERROR;
+}
+
+static void pcie_bridge_parse_windows(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
+    DEBUG_ASSERT(bridge);
+
+    /* Parse the currently configured windows used to determine MMIO/PIO
+     * forwarding policy for this bridge.
+     *
+     * See The PCI-to-PCI Bridge Architecture Specification Revision 1.2,
+     * section 3.2.5 and chapter 4 for detail.. */
+    auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&bridge->cfg->base));
+    uint32_t base, limit;
+
+    // I/O window
+    base  = pcie_read8(&bcfg.io_base);
+    limit = pcie_read8(&bcfg.io_limit);
+
+    bridge->supports_32bit_pio = ((base & 0xF) == 0x1) && ((base & 0xF) == (limit& 0xF));
+    bridge->io_base  = (base & ~0xF) << 8;
+    bridge->io_limit = (limit << 8) | 0xFFF;
+    if (bridge->supports_32bit_pio) {
+        bridge->io_base  |= static_cast<uint32_t>(pcie_read16(&bcfg.io_base_upper)) << 16;
+        bridge->io_limit |= static_cast<uint32_t>(pcie_read16(&bcfg.io_limit_upper)) << 16;
+    }
+
+    bridge->io_base  = base;
+    bridge->io_limit = limit;
+
+    // Non-prefetchable memory window
+    bridge->mem_base  = (static_cast<uint32_t>(pcie_read16(&bcfg.memory_base)) << 16)
+                      & ~0xFFFFF;
+    bridge->mem_limit = (static_cast<uint32_t>(pcie_read16(&bcfg.memory_limit)) << 16)
+                      | 0xFFFFF;
+
+    // Prefetchable memory window
+    base  = pcie_read16(&bcfg.prefetchable_memory_base);
+    limit = pcie_read16(&bcfg.prefetchable_memory_limit);
+
+    bool supports_64bit_pf_mem = ((base & 0xF) == 0x1) && ((base & 0xF) == (limit& 0xF));
+    bridge->pf_mem_base  = (base & ~0xF) << 16;;
+    bridge->pf_mem_limit = (limit << 16) | 0xFFFFF;
+    if (supports_64bit_pf_mem) {
+        bridge->pf_mem_base  |=
+            static_cast<uint64_t>(pcie_read32(&bcfg.prefetchable_memory_base_upper)) << 32;
+        bridge->pf_mem_limit |=
+            static_cast<uint64_t>(pcie_read32(&bcfg.prefetchable_memory_limit_upper)) << 32;
+    }
 }
 
 static status_t pcie_enumerate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev) {
@@ -241,22 +383,24 @@ static status_t pcie_enumerate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev
 
     pcie_config_t* cfg  = dev->cfg;
     uint8_t header_type = pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
-    uint bar_count;
 
     static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_DEVICE, "");
     static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_BRIDGE, "");
 
     switch (header_type) {
     case PCI_HEADER_TYPE_STANDARD:
-        bar_count = PCIE_BAR_REGS_PER_DEVICE;
+        DEBUG_ASSERT(!dev->is_bridge);
+        dev->bar_count = PCIE_BAR_REGS_PER_DEVICE;
         break;
 
     case PCI_HEADER_TYPE_PCI_BRIDGE:
-        bar_count = PCIE_BAR_REGS_PER_BRIDGE;
+        DEBUG_ASSERT(dev->is_bridge);
+        dev->bar_count = PCIE_BAR_REGS_PER_BRIDGE;
         break;
 
     case PCI_HEADER_TYPE_CARD_BUS:
-        goto finished;  // Nothing to do if this header type has no BARs
+        dev->bar_count = 0;
+        return ERR_NOT_SUPPORTED; // I don't think that we are ever going to support CardBus
 
     default:
         TRACEF("Unrecognized header type (0x%02x) for device %02x:%02x:%01x.\n",
@@ -264,13 +408,12 @@ static status_t pcie_enumerate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev
         return ERR_NOT_SUPPORTED;
     }
 
-    DEBUG_ASSERT(bar_count <= countof(dev->bars));
-    for (uint i = 0; i < bar_count; ++i) {
+    for (uint i = 0; i < dev->bar_count; ++i) {
         /* If this is a re-scan of the bus, We should not be re-enumerating BARs. */
         DEBUG_ASSERT(dev->bars[i].size == 0);
-        DEBUG_ASSERT(!dev->bars[i].is_allocated);
+        DEBUG_ASSERT(dev->bars[i].allocation == nullptr);
 
-        status_t probe_res = pcie_probe_bar_info(cfg, i, bar_count, &dev->bars[i]);
+        status_t probe_res = pcie_probe_bar_info(dev, i);
         if (probe_res != NO_ERROR)
             return probe_res;
 
@@ -280,40 +423,36 @@ static status_t pcie_enumerate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev
             if (dev->bars[i].is_64bit) {
                 i++;
 
-                if (i >= bar_count) {
+                if (i >= dev->bar_count) {
                     TRACEF("Device %02x:%02x:%01x claims to have 64-bit BAR in position %u/%u!\n",
-                           dev->bus_id, dev->dev_id, dev->func_id, i, bar_count);
+                           dev->bus_id, dev->dev_id, dev->func_id, i, dev->bar_count);
                     return ERR_BAD_STATE;
                 }
             }
         }
     }
 
-finished:
     return NO_ERROR;
 }
 
 static status_t pcie_scan_init_device(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                       const mxtl::RefPtr<pcie_bridge_state_t>& upstream_bridge,
-                                      pcie_bus_driver_state_t*                 bus_drv,
                                       uint                                     bus_id,
                                       uint                                     dev_id,
                                       uint                                     func_id) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(!dev->plugged_in);
-    DEBUG_ASSERT(bus_drv);
 
     MUTEX_ACQUIRE(dev, dev_lock);
 
     status_t       status;
     uint64_t       cfg_phys;
-    pcie_config_t* cfg = pcie_get_config(bus_drv, &cfg_phys, bus_id, dev_id, func_id);
+    pcie_config_t* cfg = pcie_get_config(dev->bus_drv, &cfg_phys, bus_id, dev_id, func_id);
     DEBUG_ASSERT(cfg);
     DEBUG_ASSERT(cfg_phys <= mxtl::numeric_limits<paddr_t>::max());
 
     dev->cfg        = cfg;
     dev->cfg_phys   = static_cast<paddr_t>(cfg_phys);
-    dev->bus_drv    = bus_drv;
     dev->vendor_id  = pcie_read16(&cfg->base.vendor_id);
     dev->device_id  = pcie_read16(&cfg->base.device_id);
     dev->class_id   = pcie_read8(&cfg->base.base_class);
@@ -325,6 +464,11 @@ static status_t pcie_scan_init_device(const mxtl::RefPtr<pcie_device_state_t>& d
 
     /* PCI Express Capabilities */
     dev->pcie_caps.devtype = PCIE_DEVTYPE_UNKNOWN;
+
+    /* If this device is a bridge, parse the state of its I/O and Memory windows. */
+    auto bridge = dev->DowncastToBridge();
+    if (bridge != nullptr)
+        pcie_bridge_parse_windows(bridge);
 
     /* Build this device's list of BARs with non-zero size, but do not actually
      * allocate them yet. */
@@ -414,7 +558,8 @@ static void pcie_scan_function(const mxtl::RefPtr<pcie_bridge_state_t>& upstream
 
         /* Allocate and initialize our bridge structure */
         AllocChecker ac;
-        auto bridge = mxtl::AdoptRef(new (&ac) pcie_bridge_state_t(secondary_id));
+        auto bridge = mxtl::AdoptRef(new (&ac) pcie_bridge_state_t(upstream_bridge->bus_drv,
+                                                                   secondary_id));
         if (!ac.check()) {
             DEBUG_ASSERT(!bridge);
             TRACEF("Failed to allocate bridge node for %02x:%02x.%01x during bus scan.\n",
@@ -427,7 +572,7 @@ static void pcie_scan_function(const mxtl::RefPtr<pcie_bridge_state_t>& upstream
         /* Allocate and initialize our device structure */
 
         AllocChecker ac;
-        dev = mxtl::AdoptRef(new (&ac) pcie_device_state_t());
+        dev = mxtl::AdoptRef(new (&ac) pcie_device_state_t(upstream_bridge->bus_drv));
         if (!ac.check()) {
             DEBUG_ASSERT(!dev);
             TRACEF("Failed to allocate device node for %02x:%02x.%01x during bus scan.\n",
@@ -439,7 +584,6 @@ static void pcie_scan_function(const mxtl::RefPtr<pcie_bridge_state_t>& upstream
     /* Initialize common fields, linking up the graph in the process. */
     status_t res = pcie_scan_init_device(dev,
                                          upstream_bridge,
-                                         upstream_bridge->bus_drv,
                                          bus_id, dev_id, func_id);
     if (NO_ERROR == res) {
         /* If this was a bridge device, recurse and continue probing. */
@@ -461,10 +605,6 @@ static void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
 
     for (uint dev_id = 0; dev_id < PCIE_MAX_DEVICES_PER_BUS; ++dev_id) {
         for (uint func_id = 0; func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE; ++func_id) {
-            /* Special case for the host controller. */
-            if (!bridge->managed_bus_id && !dev_id && !func_id)
-                continue;
-
             /* If we can find the config, and it has a valid vendor ID, go ahead
              * and scan it looking for a valid function. */
             uint64_t cfg_phys;
@@ -495,6 +635,16 @@ static void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
                (!good_device || !(pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MULTI_FN)))
                 break;
         }
+    }
+}
+
+static void pcie_unplug_children(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
+    DEBUG_ASSERT(bridge);
+
+    for (uint i = 0; i < countof(bridge->downstream); ++i) {
+        auto downstream_device = bridge->GetDownstream(i);
+        if (downstream_device)
+            pcie_unplug_device(downstream_device);
     }
 }
 
@@ -536,36 +686,82 @@ void pcie_unplug_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
 
     /* If this is a bridge, recursively unplug its children */
     auto bridge = dev->DowncastToBridge();
-    if (bridge) {
-        for (uint i = 0; i < countof(bridge->downstream); ++i) {
-            auto downstream_device = bridge->GetDownstream(i);
-            if (downstream_device)
-                pcie_unplug_device(downstream_device);
-        }
-    }
+    if (bridge)
+        pcie_unplug_children(bridge);
 
     /* Unlink ourselves from our upstream parent (if we still have one). */
     pcie_unlink_device_from_upstream(dev);
 }
 
-static bool pcie_allocate_bar(pcie_device_state_t& dev, pcie_bar_info_t* info) {
-    DEBUG_ASSERT(info);
-    DEBUG_ASSERT(dev.bus_drv);
-    DEBUG_ASSERT(dev.cfg);
+static status_t pcie_allocate_bar(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                                  pcie_bar_info_t* info) {
+    DEBUG_ASSERT(dev && info);
+    DEBUG_ASSERT(dev->cfg);
 
     /* Do not attempt to remap if we are rescanning the bus and this BAR is
-     * already allocated */
-    if (info->is_allocated)
-        return true;
+     * already allocated, or if it does not exist (size is zero) */
+    if ((info->size == 0) || (info->allocation != nullptr))
+        return NO_ERROR;
 
-    pcie_bus_driver_state_t* bus_drv = dev.bus_drv;
-    pcie_config_t*           cfg = dev.cfg;
+    /* Grab a reference to our upstream bridge/complex.  If we no longer have
+     * one, then we may be in the process of being unplugged and need to fail
+     * this operation. */
+    auto upstream = dev->GetUpstream();
+    if (upstream == nullptr) {
+        TRACEF("Failed to find upstream device for device at %02x:%02x.%01x "
+               "during BAR allocation\n", dev->bus_id, dev->dev_id, dev->func_id);
+        return ERR_UNAVAILABLE;
+    }
 
-    /* Choose which range we will attempt to allocate from, then check to see if we have the
-     * space. */
-    pcie_io_range_alloc_t* io_range = !info->is_mmio
-                                    ? &bus_drv->pio
-                                    : (info->is_64bit ? &bus_drv->mmio_hi : &bus_drv->mmio_lo);
+    /* Does this BAR already have an assigned address?  If so, try to preserve
+     * it, if possible. */
+    if (info->bus_addr != 0) {
+        RegionAllocator* alloc = nullptr;
+        if (info->is_mmio) {
+            /* We currently do not support preserving an MMIO region which spans
+             * the 4GB mark.  If we encounter such a thing, clear out the
+             * allocation and attempt to re-allocate. */
+            uint64_t inclusive_end = info->bus_addr + info->size - 1;
+            if (inclusive_end <= mxtl::numeric_limits<uint32_t>::max()) {
+                alloc = &upstream->mmio_lo_regions;
+            } else
+            if (info->bus_addr > mxtl::numeric_limits<uint32_t>::max()) {
+                alloc = &upstream->mmio_hi_regions;
+            }
+        } else {
+            alloc = &upstream->pio_regions;
+        }
+
+        status_t res = ERR_NOT_FOUND;
+        if (alloc != nullptr) {
+            res = alloc->GetRegion({ .base = info->bus_addr, .size = info->size },
+                                   info->allocation);
+        }
+
+        if (res == NO_ERROR)
+            return NO_ERROR;
+
+        TRACEF("Failed to preserve device %02x:%02x.%01x's %s window "
+               "[%#" PRIx64 ", %#" PRIx64 "] Attempting to re-allocate.\n",
+               dev->bus_id, dev->dev_id, dev->func_id,
+               info->is_mmio ? "MMIO" : "PIO",
+               info->bus_addr, info->bus_addr + info->size - 1);
+        info->bus_addr = 0;
+    }
+
+    /* We failed to preserve the allocation and need to attempt to
+     * dynamically allocate a new region.  Close the device MMIO/PIO
+     * windows, disable interrupts and shut of bus mastering (which will
+     * also disable MSI interrupts) before we attempt dynamic allocation.
+     */
+    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+
+    /* Choose which region allocator we will attempt to allocate from, then
+     * check to see if we have the space. */
+    RegionAllocator* alloc = !info->is_mmio
+                             ? &upstream->pio_regions
+                             : (info->is_64bit ? &upstream->mmio_hi_regions
+                                               : &upstream->mmio_lo_regions);
     uint32_t addr_mask = info->is_mmio
                        ? PCI_BAR_MMIO_ADDR_MASK
                        : PCI_BAR_PIO_ADDR_MASK;
@@ -574,62 +770,63 @@ static bool pcie_allocate_bar(pcie_device_state_t& dev, pcie_bar_info_t* info) {
      * range.  In the case of a 64 bit MMIO BAR, if we run out of space in
      * the high-memory MMIO range, try the low memory range as well.
      */
-    uint64_t align_size, avail, alloc_start, align_overhead, real_alloc_start;
     while (true) {
         /* MMIO windows and I/O windows on systems where I/O space is actually
          * memory mapped must be aligned to a page boundary, at least. */
-        bool is_io_space = PCIE_HAS_IO_ADDR_SPACE && !info->is_mmio;
-        DEBUG_ASSERT(io_range->used <= io_range->io.size);
-        align_size     = ((info->size >= PAGE_SIZE) || is_io_space)
-                       ? info->size
-                       : PAGE_SIZE;
-        avail          = (io_range->io.size - io_range->used);
+        bool     is_io_space = PCIE_HAS_IO_ADDR_SPACE && !info->is_mmio;
+        uint64_t align_size  = ((info->size >= PAGE_SIZE) || is_io_space)
+                             ? info->size
+                             : PAGE_SIZE;
+        status_t res = alloc->GetRegion(align_size, align_size, info->allocation);
 
-        alloc_start    = io_range->io.bus_addr + io_range->used;
-        real_alloc_start = ROUNDUP(alloc_start, align_size);
-        align_overhead = real_alloc_start - alloc_start;
-
-        if ((avail < align_overhead) ||
-           ((avail - align_overhead) < info->size)) {
-
-            if (io_range == &bus_drv->mmio_hi) {
+        if (res != NO_ERROR) {
+            if ((res == ERR_NOT_FOUND) && (alloc == &upstream->mmio_hi_regions)) {
                 LTRACEF("Insufficient space to map 64-bit MMIO BAR in high region while "
-                        "configuring BARs for device at %02x:%02x.%01x (cfg vaddr = %p).  Falling "
-                        "back on low memory region.\n",
-                        dev.bus_id, dev.dev_id, dev.func_id, cfg);
-                io_range = &bus_drv->mmio_lo;
+                        "configuring BARs for device at %02x:%02x.%01x (cfg vaddr = %p).  "
+                        "Falling back on low memory region.\n",
+                        dev->bus_id, dev->dev_id, dev->func_id, dev->cfg);
+                alloc = &upstream->mmio_lo_regions;
                 continue;
             }
 
-            TRACEF("Insufficient space to map BAR region while configuring BARs for device at "
-                   "%02x:%02x.%01x (cfg vaddr = %p)\n",
-                   dev.bus_id, dev.dev_id, dev.func_id, cfg);
-            TRACEF("BAR region size %#" PRIx64 " Alignment overhead %#" PRIx64
-                   " Space available %#" PRIx64 "\n",
-                   info->size, align_overhead, avail);
+            TRACEF("Failed to dynamically allocate %s BAR region (size %#" PRIx64 ") "
+                   "while configuring BARs for device at %02x:%02x.%01x (res = %d)\n",
+                   info->is_mmio ? "MMIO" : "PIO", info->size,
+                   dev->bus_id, dev->dev_id, dev->func_id, res);
 
-            return false;
+            /* Looks like we are out of luck, disable the device and propagate
+             * the error up the stack. */
+            pcie_disable_device(dev);
+            return res;
         }
 
         break;
     }
 
-    /* Looks like we have enough space.  Update our range bookkeeping,
-     * and record our allocated and aligned physical address in our
-     * BAR(s) */
-    volatile uint32_t* bar_reg = &cfg->base.base_addresses[info->first_bar_reg];
+    /* Allocation succeeded.  Record our allocated and aligned physical address
+     * in our BAR(s) */
+    DEBUG_ASSERT(info->allocation != nullptr);
+    volatile uint32_t* bar_reg = &dev->cfg->base.base_addresses[info->first_bar_reg];
 
-    io_range->used += (size_t)(align_overhead + align_size);
-    DEBUG_ASSERT(!(real_alloc_start & ~addr_mask));
+    info->bus_addr = info->allocation->base;
 
-    pcie_write32(bar_reg, (uint32_t)(real_alloc_start & 0xFFFFFFFF) | (pcie_read32(bar_reg) & ~addr_mask));
+    pcie_write32(bar_reg, static_cast<uint32_t>((info->bus_addr & 0xFFFFFFFF) |
+                                                (pcie_read32(bar_reg) & ~addr_mask)));
     if (info->is_64bit)
-        pcie_write32(bar_reg + 1, (uint32_t)(real_alloc_start >> 32));
+        pcie_write32(bar_reg + 1, static_cast<uint32_t>(info->bus_addr >> 32));
 
-    /* Success!  Fill out the info structure and we are done. */
-    info->bus_addr     = real_alloc_start;
-    info->is_allocated = true;
     return true;
+}
+
+static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev);
+static void pcie_allocate_downstream_bars(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
+    DEBUG_ASSERT(bridge != nullptr);
+
+    for (size_t i = 0; i < countof(bridge->downstream); ++i) {
+        if (bridge->downstream[i]) {
+            pcie_allocate_bars(bridge->downstream[i]);
+        }
+    }
 }
 
 static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev) {
@@ -649,9 +846,11 @@ static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev)
     MUTEX_ACQUIRE(dev, dev_lock);
 
     status_t ret;
+    mxtl::RefPtr<pcie_bridge_state_t> upstream = dev->GetUpstream();
+    mxtl::RefPtr<pcie_bridge_state_t> bridge;
 
-    /* Has the device been unplugged already? */
-    if (!dev->plugged_in) {
+    /* Has the device or its upstream bridge/complex been unplugged already? */
+    if (!dev->plugged_in || (upstream == nullptr)) {
         ret = ERR_UNAVAILABLE;
         goto finished;
     }
@@ -663,43 +862,70 @@ static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev)
         goto finished;
     }
 
-    /* Make sure the device has no access to either MMIO or PIO space, cannot
-     * access main system memory, and has its IRQ(s) disabled */
-    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+    /* Are we configuring a bridge?  If so, we need to be able to allocate the
+     * MMIO and PIO regions this bridge is configured to manage.  Currently, we
+     * don't support re-allocating a bridge's MMIO/PIO windows.
+     *
+     * TODO(johngro) : support dynamic configuration of bridge windows.  Its
+     * going to be important when we need to support hot-plugging.  See MG-322
+     */
+    bridge = dev->DowncastToBridge();
+    if (bridge) {
+        if (bridge->io_base <= bridge->io_limit) {
+            uint32_t size = bridge->io_limit - bridge->io_base + 1;
+            ret = upstream->pio_regions.GetRegion({ .base = bridge->io_base, .size = size },
+                                                  bridge->pio_window);
+
+            if (ret != NO_ERROR) {
+                TRACEF("Failed to allocate bridge PIO window [0x%08x, 0x%08x]\n",
+                       bridge->io_base, bridge->io_limit);
+                pcie_disable_device(dev);
+                goto finished;
+            }
+
+            DEBUG_ASSERT(bridge->pio_window != nullptr);
+            bridge->pio_regions.AddRegion(*bridge->pio_window);
+        }
+
+        /* TODO(johngro) : Figure out what we are supposed to do with
+         * prefetchable MMIO windows and allocations behind bridges above 4GB.
+         * See MG-321 for details */
+        if (bridge->mem_base <= bridge->mem_limit) {
+            uint64_t size = bridge->mem_limit - bridge->mem_base + 1;
+            ret = upstream->mmio_lo_regions.GetRegion({ .base = bridge->mem_base, .size = size },
+                                                         bridge->mmio_window);
+
+            if (ret != NO_ERROR) {
+                TRACEF("Failed to allocate bridge MMIO window [0x%08x, 0x%08x]\n",
+                       bridge->mem_base, bridge->mem_limit);
+                pcie_disable_device(dev);
+                goto finished;
+            }
+
+            DEBUG_ASSERT(bridge->mmio_window != nullptr);
+            bridge->mmio_lo_regions.AddRegion(*bridge->mmio_window);
+        }
+    }
 
     /* Allocate BARs for the device */
-    for (size_t i = 0; i < countof(dev->bars); ++i) {
-        if (dev->bars[i].size)
-            pcie_allocate_bar(*dev, &dev->bars[i]);
+    DEBUG_ASSERT(dev->bar_count <= countof(dev->bars));
+    for (size_t i = 0; i < dev->bar_count; ++i) {
+        if (dev->bars[i].size) {
+            ret = pcie_allocate_bar(dev, &dev->bars[i]);
+            if (ret != NO_ERROR)
+                goto finished;
+        }
     }
 
     /* If this is a bridge, recurse and keep allocating */
-    {
-        auto bridge = dev->DowncastToBridge();
-        if (bridge) {
-            for (size_t i = 0; i < countof(bridge->downstream); ++i) {
-                if (bridge->downstream[i]) {
-                    pcie_allocate_bars(bridge->downstream[i]);
-                }
-            }
-        }
-    }
+    if (bridge)
+        pcie_allocate_downstream_bars(bridge);
 
     ret = NO_ERROR;
 
 finished:
     MUTEX_RELEASE(dev, dev_lock);
     return ret;
-}
-
-static bool pcie_allocate_device_bars_helper(const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) {
-    DEBUG_ASSERT(dev);
-    pcie_allocate_bars(dev);
-    return true;
-}
-
-static void pcie_allocate_device_bars(pcie_bus_driver_state_t* bus_drv) {
-    pcie_foreach_device(bus_drv, pcie_allocate_device_bars_helper, NULL);
 }
 
 static status_t pcie_claim_device(const mxtl::RefPtr<pcie_device_state_t>& dev,
@@ -787,10 +1013,6 @@ finished:
     return true;
 }
 
-static void pcie_claim_devices(pcie_bus_driver_state_t* bus_drv) {
-    pcie_foreach_device(bus_drv, pcie_claim_devices_helper, NULL);
-}
-
 static status_t pcie_start_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(is_mutex_held(&dev->start_claim_lock));
@@ -859,10 +1081,6 @@ static bool pcie_start_devices_helper(const mxtl::RefPtr<pcie_device_state_t>& d
     return true;
 }
 
-static void pcie_start_devices(pcie_bus_driver_state_t* bus_drv) {
-    pcie_foreach_device(bus_drv, pcie_start_devices_helper, NULL);
-}
-
 typedef struct pcie_get_nth_device_state {
     uint32_t index;
     mxtl::RefPtr<pcie_device_state_t> ret;
@@ -891,7 +1109,7 @@ mxtl::RefPtr<pcie_device_state_t> pcie_get_nth_device(uint32_t index) {
 
     pcie_get_nth_device_state_t state;
     state.index = index;
-    pcie_foreach_device(bus_drv, pcie_get_nth_device_helper, &state);
+    pcie_foreach_device(*bus_drv, pcie_get_nth_device_helper, &state);
 
     return mxtl::move(state.ret);
 }
@@ -927,40 +1145,34 @@ finished:
  */
 void pcie_shutdown_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    const pcie_driver_fn_table_t* fn;
+    const pcie_driver_fn_table_t* fn = (dev->driver != nullptr) ? dev->driver->fn_table : nullptr;
 
     MUTEX_ACQUIRE(dev, start_claim_lock);
 
-    /* If the device is not claimed, then there is nothing to do */
-    if (!dev->driver) {
-        DEBUG_ASSERT(!dev->driver_ctx);
-        DEBUG_ASSERT(!dev->started);
-        LTRACEF("PCI device (%02x:%02x.%x) already shutdown.\n",
-                dev->bus_id, dev->dev_id, dev->func_id);
-        goto finished;
+    /* If we have a driver, shut it down now if it had been started. */
+    if (fn) {
+        if (dev->started && fn->pcie_shutdown_fn)
+            fn->pcie_shutdown_fn(dev);
+        dev->started = false;
     }
 
-    fn = dev->driver->fn_table;
 
     LTRACEF("Shutting down PCI device %02x:%02x.%x (%s)...\n",
             dev->bus_id, dev->dev_id, dev->func_id,
             pcie_driver_name(dev->driver));
 
-    /* If startup was ever successfully called for this device, and the device
-     * has registered a shutdown hook, give it a chance to shutdown cleanly */
-    if (dev->started && fn->pcie_shutdown_fn)
-        fn->pcie_shutdown_fn(dev);
-    dev->started = false;
-
     /* Make sure that all IRQs are shutdown and all handlers released for this device */
     pcie_set_irq_mode_disabled(dev);
 
-    /* Disable access to MMIO windows, PIO windows, and system memory */
-    pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+    /* If this device is not a bridge, disable access to MMIO windows, PIO windows, and system
+     * memory.  If it is a bridge, leave this stuff turned on so that downstream devices can
+     * continue to function. */
+    if (!dev->is_bridge)
+        pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 
     /* If the device has a release hook, call it in order to allow it to free
      * any dynamically allocated resources. */
-    if (fn->pcie_release_fn)
+    if (fn && fn->pcie_release_fn)
         fn->pcie_release_fn(dev->driver_ctx);
 
     /* Unclaim the device. */
@@ -1022,7 +1234,7 @@ status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& d
     if (dev->pcie_adv_caps.has_flr) {
         // Following the procedure outlined in the Implementation notes
         spin_lock_saved_state_t  irq_state;
-        pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+        pcie_bus_driver_state_t& bus_drv = dev->bus_drv;
         pcie_config_t*           cfg = dev->cfg;
         uint32_t                 bar_backup[PCIE_MAX_BAR_REGS];
         uint16_t                 cmd_backup;
@@ -1034,14 +1246,14 @@ status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& d
         //    can do about this, just have to hope).
         // 2) Clear out the command register so that no new transactions may be
         //    initiated.  Also back up the BARs in the process.
-        spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+        spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
 
         cmd_backup = pcie_read16(&cfg->base.command);
         pcie_write16(&cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
         for (uint i = 0; i < bar_count; ++i)
             bar_backup[i] = pcie_read32(&cfg->base.base_addresses[i]);
 
-        spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+        spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 
         // 3) Poll the transaction pending bit until it clears.  This may take
         //    "several seconds"
@@ -1062,9 +1274,9 @@ status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& d
                    dev->bus_id, dev->dev_id, dev->func_id);
 
             // Restore the command register
-            spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+            spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
             pcie_write16(&cfg->base.command, cmd_backup);
-            spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+            spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 
             goto finished;
         } else {
@@ -1093,13 +1305,13 @@ status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& d
 
         if (ret == NO_ERROR) {
             // 6) Software reconfigures the function and enables it for normal operation
-            spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+            spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
 
             for (uint i = 0; i < bar_count; ++i)
                 pcie_write32(&cfg->base.base_addresses[i], bar_backup[i]);
             pcie_write16(&cfg->base.command, cmd_backup);
 
-            spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+            spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
         } else {
             // TODO(johngro) : What do we do if this fails?  If we trigger a
             // device reset, and the device fails to re-appear after 5 seconds,
@@ -1117,78 +1329,25 @@ finished:
 }
 
 EXPORT_TO_DEBUG_CONSOLE
-void pcie_scan_and_start_devices(pcie_bus_driver_state_t* bus_drv) {
-    DEBUG_ASSERT(bus_drv);
+void pcie_scan_and_start_devices(pcie_bus_driver_state_t& bus_drv) {
+    MUTEX_ACQUIRE(&bus_drv, bus_rescan_lock);
 
-    MUTEX_ACQUIRE(bus_drv, bus_rescan_lock);
+    /* Scan the root complex looking for for devices and other bridges. */
+    DEBUG_ASSERT(bus_drv.root_complex);
+    pcie_scan_bus(bus_drv.root_complex);
 
-    /* If we have not already discovered the host bridge, start by looking for it */
-    if (!bus_drv->host_bridge) {
-        /* 00:00.0 had better exist and be a host bridge, or we are not going to proceed. */
-        uint64_t cfg_phys;
-        pcie_config_t* cfg = pcie_get_config(bus_drv, &cfg_phys, 0, 0, 0);
-        if (!cfg) {
-            TRACEF("Failed to find configuration for root host bridge (device 00:00.0)\n");
-            goto finished;
-        }
+    /* Attempt to allocate any unallocated BARs */
+    pcie_allocate_downstream_bars(bus_drv.root_complex);
 
-        uint16_t vendor_id = pcie_read16(&cfg->base.vendor_id);
-        if (vendor_id == PCIE_INVALID_VENDOR_ID) {
-            TRACEF("No device detected at 00:00.0\n");
-            goto finished;
-        }
+    /* Go over our tree and look for drivers who might want to take ownership of
+     * devices. */
+    pcie_foreach_device(bus_drv, pcie_claim_devices_helper, NULL);
 
-        /* TODO(johngro) : make a header file with all of the classes, subclasses
-         * and programming interface magic numbers. */
-        uint8_t base_class = pcie_read8(&cfg->base.base_class);
-        uint8_t sub_class  = pcie_read8(&cfg->base.sub_class);
-        if ((base_class != 0x06) && (sub_class != 0x00)) {
-            TRACEF("Device 00:00.0 is not a host bridge (base 0x%02x sub 0x%02x)\n",
-                   base_class, sub_class);
-            goto finished;
-        }
-
-        /* Allocate the host bridge, initialize the structure and start the scan. */
-        AllocChecker ac;
-        bus_drv->host_bridge = mxtl::AdoptRef(new (&ac) pcie_bridge_state_t(0));
-        if (!ac.check()) {
-            TRACEF("Failed to allocate bridge node for 00:00.0 during bus scan.\n");
-            goto finished;
-        }
-
-        /* Initialize common fields */
-        auto tmp = pcie_upcast_to_device(bus_drv->host_bridge);
-        status_t res = pcie_scan_init_device(tmp, NULL, bus_drv, 0, 0, 0);
-        if (NO_ERROR != res) {
-            /* No need to log, init device has done so already for us. */
-            bus_drv->host_bridge = nullptr;
-            goto finished;
-        }
-    }
-
-    {
-        DEBUG_ASSERT(bus_drv->host_bridge);
-        auto tmp = pcie_upcast_to_device(bus_drv->host_bridge);
-
-        /* Now that we have found the host bridge, scan the bus it controls, looking
-         * for devices and other bridges. */
-        pcie_scan_bus(bus_drv->host_bridge);
-
-        /* Now that we have scanned the config space, allocate I/O widows for each
-         * of the BARs discovered by carving up the regions of the system and I/O
-         * buses which were provided to us by the platform. */
-        pcie_allocate_bars(tmp);
-
-        /* Go over our tree and look for drivers who might want to take ownership of
-         * device. */
-        pcie_claim_devices(bus_drv);
-
-        /* Give the devices claimed by drivers a chance to start */
-        pcie_start_devices(bus_drv);
-    }
+    /* Give the devices claimed by drivers a chance to start */
+    pcie_foreach_device(bus_drv, pcie_start_devices_helper, NULL);
 
 finished:
-    MUTEX_RELEASE(bus_drv, bus_rescan_lock);
+    MUTEX_RELEASE(&bus_drv, bus_rescan_lock);
 }
 
 pcie_bus_driver_state_t::pcie_bus_driver_state_t() {
@@ -1224,13 +1383,6 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     if (status != NO_ERROR) {
         goto bailout;
     }
-
-    bus_drv->mmio_lo.io   = init_info->mmio_window_lo;
-    bus_drv->mmio_hi.io   = init_info->mmio_window_hi;
-    bus_drv->pio.io       = init_info->pio_window;
-    bus_drv->mmio_lo.used = 0;
-    bus_drv->mmio_hi.used = 0;
-    bus_drv->pio.used     = 0;
 
     /* Sanity check the init info provided by the platform.  If anything goes
      * wrong in this section, the error will be INVALID_ARGS, so just set the
@@ -1286,28 +1438,77 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     }
 
     /* The MMIO low memory region must be below the physical 4GB mark */
-    if (((bus_drv->mmio_lo.io.bus_addr + 0ull) >= 0x100000000ull) ||
-        ((bus_drv->mmio_lo.io.size     + 0ull) >= 0x100000000ull) ||
-         (bus_drv->mmio_lo.io.bus_addr         > (0x100000000ull - bus_drv->mmio_lo.io.size))) {
+    if (((init_info->mmio_window_lo.bus_addr + 0ull) >= 0x100000000ull) ||
+        ((init_info->mmio_window_lo.size     + 0ull) >= 0x100000000ull) ||
+         (init_info->mmio_window_lo.bus_addr > (0x100000000ull - init_info->mmio_window_lo.size))) {
         TRACEF("Low mem MMIO region [%zx, %zx) does not exist entirely below 4GB mark.\n",
-                (size_t)bus_drv->mmio_lo.io.bus_addr,
-                (size_t)bus_drv->mmio_lo.io.bus_addr + bus_drv->mmio_lo.io.size);
+                (size_t)init_info->mmio_window_lo.bus_addr,
+                (size_t)init_info->mmio_window_lo.bus_addr + init_info->mmio_window_lo.size);
         goto bailout;
     }
 
     /* The PIO region must fit somewhere in the architecture's I/O bus region */
-    if (((bus_drv->pio.io.bus_addr + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
-        ((bus_drv->pio.io.size     + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
-         (bus_drv->pio.io.bus_addr         > (PCIE_PIO_ADDR_SPACE_SIZE - bus_drv->pio.io.size))) {
+    if (((init_info->pio_window.bus_addr + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
+        ((init_info->pio_window.size     + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
+         (init_info->pio_window.bus_addr > (PCIE_PIO_ADDR_SPACE_SIZE - init_info->pio_window.size)))
+    {
         TRACEF("PIO region [%zx, %zx) too large for architecture's PIO address space size (%zx)\n",
-                (size_t)bus_drv->pio.io.bus_addr,
-                (size_t)bus_drv->pio.io.bus_addr + bus_drv->pio.io.size,
+                (size_t)init_info->pio_window.bus_addr,
+                (size_t)init_info->pio_window.bus_addr + init_info->pio_window.size,
                 (size_t)PCIE_PIO_ADDR_SPACE_SIZE);
         goto bailout;
     }
 
     /* Init parameters look good, go back to assuming NO_ERROR for now. */
     status = NO_ERROR;
+
+    /* Create the RegionPool we will use to supply the memory for the
+     * bookkeeping for all of our region tracking and allocation needs.
+     * Then assign it to each of our allocators. */
+    bus_drv->region_bookkeeping = RegionAllocator::RegionPool::Create(REGION_BOOKKEEPING_SLAB_SIZE,
+                                                                      REGION_BOOKKEEPING_MAX_MEM);
+    if (bus_drv->region_bookkeeping == nullptr) {
+        TRACEF("Failed to create pool allocator for Region bookkeeping!\n");
+        status = ERR_NO_MEMORY;
+        goto bailout;
+    }
+
+    /* Allocate the root complex, currently modeled as a bridge.
+     *
+     * TODO(johngro) : refactor this.  PCIe root complexes are neither bridges
+     * nor devices.  They do not have BDF address, base address registers,
+     * configuration space, etc...
+     */
+    bus_drv->root_complex = mxtl::AdoptRef(new (&ac) pcie_bridge_state_t(*bus_drv, 0));
+    if (!ac.check()) {
+        TRACEF("Failed to allocate root complex\n");
+        status = ERR_NO_MEMORY;
+        goto bailout;
+    }
+
+    /* Configure the RegionAllocators for the root complex using the regions of
+     * the MMIO and PIO busses provided by platform to the allocators */
+    {
+        struct {
+            RegionAllocator& alloc;
+            const pcie_io_range_t& range;
+        } ALLOC_INIT[] = {
+            { .alloc = bus_drv->root_complex->mmio_lo_regions, .range = init_info->mmio_window_lo },
+            { .alloc = bus_drv->root_complex->mmio_hi_regions, .range = init_info->mmio_window_hi },
+            { .alloc = bus_drv->root_complex->pio_regions,     .range = init_info->pio_window },
+        };
+        for (const auto& iter : ALLOC_INIT) {
+            if (iter.range.size) {
+                status = iter.alloc.AddRegion({ .base = iter.range.bus_addr,
+                                                .size = iter.range.size });
+                if (status != NO_ERROR) {
+                    TRACEF("Failed to initilaize region allocator (0x%#" PRIx64 ", size 0x%zx\n",
+                           iter.range.bus_addr, iter.range.size);
+                    goto bailout;
+                }
+            }
+        }
+    }
 
     /* Stash the ECAM window info and map the ECAM windows into the bus driver's
      * address space so we can access config space. */
@@ -1378,7 +1579,7 @@ status_t pcie_init(const pcie_init_info_t* init_info) {
     }
 
     /* Scan the bus and start up any drivers who claim devices we discover */
-    pcie_scan_and_start_devices(bus_drv);
+    pcie_scan_and_start_devices(*bus_drv);
 
 bailout:
     if (status != NO_ERROR)
@@ -1395,17 +1596,15 @@ static bool pcie_shutdown_helper(const mxtl::RefPtr<pcie_device_state_t>& dev, v
 
 pcie_bus_driver_state_t::~pcie_bus_driver_state_t() {
     /* Force shutdown any devices which happen to still be running. */
-    pcie_foreach_device(this, pcie_shutdown_helper, NULL);
+    pcie_foreach_device(*this, pcie_shutdown_helper, NULL);
 
     /* Shut off all of our IRQs and free all of our bookkeeping */
     pcie_shutdown_irqs(this);
 
     /* Free the device tree */
-    if (host_bridge) {
-        auto tmp = pcie_upcast_to_device(host_bridge);
-        pcie_unplug_device(tmp);
-        tmp = nullptr;
-        host_bridge = nullptr;
+    if (root_complex) {
+        pcie_unplug_children(root_complex);
+        root_complex = nullptr;
     }
 
     /* Free the ECAM window bookkeeping */
@@ -1436,7 +1635,7 @@ void pcie_modify_cmd_internal(const mxtl::RefPtr<pcie_device_state_t>& dev, uint
     DEBUG_ASSERT(dev);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
     spin_lock_saved_state_t  irq_state;
-    pcie_bus_driver_state_t* bus_drv = dev->bus_drv;
+    pcie_bus_driver_state_t& bus_drv = dev->bus_drv;
     pcie_config_t*           cfg = dev->cfg;
 
     /* In order to keep internal bookkeeping coherent, and interactions between
@@ -1446,11 +1645,11 @@ void pcie_modify_cmd_internal(const mxtl::RefPtr<pcie_device_state_t>& dev, uint
     clr_bits = static_cast<uint16_t>(clr_bits & ~PCIE_CFG_COMMAND_INT_DISABLE);
     set_bits = static_cast<uint16_t>(set_bits & ~PCIE_CFG_COMMAND_INT_DISABLE);
 
-    DEBUG_ASSERT(bus_drv && cfg);
-    spin_lock_irqsave(&bus_drv->legacy_irq_handler_lock, irq_state);
+    DEBUG_ASSERT(cfg);
+    spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
     pcie_write16(&cfg->base.command,
                  static_cast<uint16_t>((pcie_read16(&cfg->base.command) & ~clr_bits) | set_bits));
-    spin_unlock_irqrestore(&bus_drv->legacy_irq_handler_lock, irq_state);
+    spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 }
 
 status_t pcie_modify_cmd(const mxtl::RefPtr<pcie_device_state_t>& dev, uint16_t clr_bits, uint16_t set_bits) {
@@ -1470,5 +1669,6 @@ status_t pcie_modify_cmd(const mxtl::RefPtr<pcie_device_state_t>& dev, uint16_t 
 
 void pcie_rescan_bus(void) {
     pcie_bus_driver_state_t* bus_drv = g_drv_state;
-    pcie_scan_and_start_devices(bus_drv);
+    if (bus_drv)
+        pcie_scan_and_start_devices(*bus_drv);
 }
