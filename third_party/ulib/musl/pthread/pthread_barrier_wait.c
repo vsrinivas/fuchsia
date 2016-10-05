@@ -57,7 +57,7 @@ struct instance {
     volatile int count;
     volatile int last;
     volatile int waiters;
-    volatile int finished;
+    mx_futex_t finished;
 };
 
 int pthread_barrier_wait(pthread_barrier_t* b) {
@@ -79,17 +79,17 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
 
     /* First thread to enter the barrier becomes the "instance owner" */
     if (!inst) {
-        struct instance new_inst = {0};
+        struct instance new_inst = { 0, 0, 0, ATOMIC_VAR_INIT(0) };
         int spins = 200;
         b->_b_inst = inst = &new_inst;
         a_store(&b->_b_lock, 0);
         if (b->_b_waiters)
             __wake(&b->_b_lock, 1);
-        while (spins-- && !inst->finished)
+        while (spins-- && !atomic_load(&inst->finished))
             a_spin();
-        a_inc(&inst->finished);
-        while (inst->finished == 1)
-            _mx_futex_wait((int*)&inst->finished, 1, MX_TIME_INFINITE);
+        atomic_fetch_add(&inst->finished, 1);
+        while (atomic_load(&inst->finished) == 1)
+            _mx_futex_wait(&inst->finished, 1, MX_TIME_INFINITE);
         return PTHREAD_BARRIER_SERIAL_THREAD;
     }
 
@@ -110,7 +110,7 @@ int pthread_barrier_wait(pthread_barrier_t* b) {
     }
 
     /* Last thread to exit the barrier wakes the instance owner */
-    if (a_fetch_add(&inst->count, -1) == 1 && a_fetch_add(&inst->finished, 1))
+    if (a_fetch_add(&inst->count, -1) == 1 && atomic_fetch_add(&inst->finished, 1))
         __wake(&inst->finished, 1);
 
     return 0;
