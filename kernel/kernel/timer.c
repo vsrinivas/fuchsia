@@ -304,7 +304,7 @@ void timer_transition_off_cpu(uint old_cpu)
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
     timer_t *new_head = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
-    if (new_head != old_head) {
+    if (new_head != NULL && new_head != old_head) {
         lk_time_t now = current_time();
         lk_time_t delay = 0;
         if (TIME_LT(now, new_head->scheduled_time)) {
