@@ -10,9 +10,10 @@ import sys
 
 # These are the locations of pubspec files that are roots of the dependency
 # graph.  If they contain conflicting requirements for a package 'pub get' will
-# error our and the conflicts will have to be resolved before the packages can
+# error out and the conflicts will have to be resolved before the packages can
 # be updated.
 ROOT_PUBSPECS = [
+    'dart/pkg/analysis_server',
     'lib/flutter/packages/flutter_test',
     'lib/flutter/packages/flutter_tools',
 ]
