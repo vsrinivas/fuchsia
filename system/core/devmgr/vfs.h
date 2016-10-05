@@ -91,6 +91,7 @@ mx_status_t memfs_open(vnode_t** _vn, uint32_t flags);
 mx_status_t memfs_close(vnode_t* vn);
 mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_t len);
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len);
+mx_status_t memfs_truncate_none(vnode_t* vn, size_t len);
 mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir,
                               const char* oldname, size_t oldlen,
                               const char* newname, size_t newlen);

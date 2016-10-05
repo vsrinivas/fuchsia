@@ -89,6 +89,7 @@ static vnode_ops_t vn_boot_ops = {
     .create = vnb_create,
     .ioctl = memfs_ioctl,
     .unlink = memfs_unlink,
+    .truncate = memfs_truncate_none,
     .rename = memfs_rename_none,
 };
 

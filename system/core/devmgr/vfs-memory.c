@@ -122,6 +122,43 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
     return count;
 }
 
+mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
+    mnode_t* mem = vn->pdata;
+    mx_status_t r = 0;
+
+    while (len < mem->datalen) {
+        // Truncate should make the file shorter
+
+        // Observe the final blocks of the file first
+        size_t bno = mem->datalen / BLOCKSIZE;
+        size_t b_start = bno * BLOCKSIZE;
+
+        if (len <= b_start) {
+            // Wipe out this entire block
+            if (mem->block[bno] != NULL) {
+                free(mem->block[bno]);
+                mem->block[bno] = NULL;
+            }
+            mem->datalen = b_start;
+        } else {
+            // Wipe out a portion of a block
+            size_t sub_block_off = len - b_start;
+            memset(mem->block[bno] + sub_block_off, 0, BLOCKSIZE - sub_block_off);
+            mem->datalen = len;
+        }
+    }
+    if (len > mem->datalen) {
+        // Truncate should make the file longer
+        if (len > MAXBLOCKS * BLOCKSIZE) {
+            return ERR_INVALID_ARGS;
+        }
+        // Memfs supports sparse files, so we can simply extend the data length,
+        // and trust the rest of the filesystem to deal with this appropriately
+        mem->datalen = len;
+    }
+    return r;
+}
+
 mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
                          const char* oldname, size_t oldlen,
                          const char* newname, size_t newlen) {
@@ -175,6 +212,10 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
 mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir,
                               const char* oldname, size_t oldlen,
                               const char* newname, size_t newlen) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t memfs_truncate_none(vnode_t* vn, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -282,6 +323,7 @@ static vnode_ops_t vn_mem_ops = {
     .readdir = memfs_readdir,
     .create = mem_create,
     .unlink = memfs_unlink,
+    .truncate = memfs_truncate,
     .rename = memfs_rename,
 };
 
@@ -296,6 +338,7 @@ static vnode_ops_t vn_mem_ops_dir = {
     .readdir = memfs_readdir,
     .create = mem_create,
     .unlink = memfs_unlink,
+    .truncate = memfs_truncate_none,
     .rename = memfs_rename,
 };
 

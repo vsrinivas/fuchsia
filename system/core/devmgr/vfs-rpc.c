@@ -365,6 +365,12 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return r;
     }
+    case MXRIO_TRUNCATE: {
+        if (msg->arg2.off < 0) {
+            return ERR_INVALID_ARGS;
+        }
+        return vn->ops->truncate(vn, msg->arg2.off);
+    }
     case MXRIO_RENAME: {
         if (len < 4) { // At least one byte for src + dst + null terminators
             return ERR_INVALID_ARGS;
