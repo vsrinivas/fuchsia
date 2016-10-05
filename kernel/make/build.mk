@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT
 
 # use linker garbage collection, if requested
-ifeq ($(WITH_LINKER_GC),1)
+ifeq ($(call TOBOOL,$(USE_LINKER_GC)),true)
 GLOBAL_COMPILEFLAGS += -ffunction-sections -fdata-sections
 GLOBAL_LDFLAGS += --gc-sections
 endif

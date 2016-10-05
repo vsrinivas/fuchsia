@@ -25,6 +25,7 @@ USE_CLANG ?= false
 USE_GOLD ?= true
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
+USE_LINKER_GC ?= true
 
 # special rule for handling make spotless
 ifeq ($(MAKECMDGOALS),spotless)

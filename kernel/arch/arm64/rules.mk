@@ -57,7 +57,6 @@ KERNEL_DEFINES += \
 endif
 
 ARCH_OPTFLAGS := -O2
-WITH_LINKER_GC ?= 1
 
 # we have a mmu and want the vmm/pmm
 WITH_KERNEL_VM ?= 1
