@@ -1,0 +1,38 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bin") {
+  output_name = "debugserver"
+
+  sources = [
+    "command_handler.cc",
+    "command_handler.h",
+    "main.cc",
+    "server.cc",
+    "server.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("gdbserver_unittests") {
+  testonly = true
+
+  sources = [
+    "test/run_all_unittests.cc",
+    "util.cc",
+    "util.h",
+    "util_unittest.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+}

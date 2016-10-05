@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
-=======================================
+gdbserver
+=========
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+A debug server for Fuchsia that supports the GDB Remote Serial Protocol.
