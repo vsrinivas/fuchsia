@@ -18,6 +18,7 @@ mojom("interfaces") {
   ]
 
   public_deps = [
+    "//apps/mozart/services/composition/interfaces",
     "//mojo/public/interfaces/application",
     "//mojo/services/geometry/interfaces"
   ]
