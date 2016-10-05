@@ -19,6 +19,8 @@ source_set("lib") {
     "btree_iterator.h",
     "commit_contents_impl.cc",
     "commit_contents_impl.h",
+    "diff_iterator.cc",
+    "diff_iterator.h",
     "position.cc",
     "position.h",
   ]
@@ -37,6 +39,7 @@ executable("unittests") {
 
   sources = [
     "btree_iterator_unittest.cc",
+    "diff_iterator_unittest.cc",
   ]
 
   deps = [

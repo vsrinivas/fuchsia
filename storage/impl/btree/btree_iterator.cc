@@ -145,7 +145,7 @@ BTreeIterator& BTreeIterator::Next() {
 }
 
 bool BTreeIterator::Valid() const {
-  return !stack_.empty() || current_status_ != Status::OK;
+  return !stack_.empty() && current_status_ == Status::OK;
 }
 
 Status BTreeIterator::GetStatus() const {
