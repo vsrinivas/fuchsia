@@ -30,7 +30,7 @@ public:
     void Cleanup();
     bool Draw(float time_delta_s);
     bool CanDraw() { return !encountered_async_error_; }
-    void ProcessTouchscreenInput(void* buf, size_t len);
+    bool ProcessTouchscreenInput(void* buf, size_t len);
 
 private:
     bool InitEGL();

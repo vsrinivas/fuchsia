@@ -22,18 +22,20 @@
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/vector_angle.hpp>
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/vector_angle.hpp>
+#include <glm/gtx/intersect.hpp>
 
 namespace {
 
 const int kNumVertices = 24;
+const float kFovYDeg = 60.0;
 
 int GenerateCube(GLuint* vbo_vertices, GLuint* vbo_indices)
 {
@@ -217,7 +219,7 @@ void SpinningCube::GLState::OnGLContextLost()
 
 SpinningCube::SpinningCube()
     : initialized_(false), width_(0), height_(0), state_(new GLState()), fling_multiplier_(1.0f),
-      direction_(1), color_(), axis_(1, 0, 0)
+      direction_(1), color_(), axis_(1, 0, 0)   
 {
     state_->angle_ = 45.0f;
     set_color(1.0, 1.0, 1.0);
@@ -289,55 +291,61 @@ void SpinningCube::UpdateForTimeDelta(float delta_time)
     Update();
 }
 
-glm::vec2 normalize_to_screen(glm::vec2 pixel, glm::vec2 size)
-{
-    return (pixel - size / 2.0f) / size.y;
+glm::vec3 normalize_to_screen(glm::vec2 pixel, glm::vec2 size){
+    return glm::vec3((pixel - size / 2.0f) / size.y, 0);
 }
 
-glm::vec3 project_to_unit_sphere(glm::vec2 p)
+bool SpinningCube::UpdateForDragVector(
+        glm::vec2 start_pixel,
+                             glm::vec2 end_pixel,
+                             float delta_time_seconds)
 {
-
-    float r = 0.5;
-
-    float z = glm::sqrt((r * r) / (p.x * p.x + p.y * p.y));
-
-    return glm::normalize(glm::vec3(p, z));
-}
-
-void SpinningCube::UpdateForDragVector(glm::vec2 start_pixel,
-                                       std::chrono::high_resolution_clock::time_point start_time,
-                                       glm::vec2 end_pixel,
-                                       std::chrono::high_resolution_clock::time_point end_time)
-{
-
-    // printf("got pixels (%f, %f) and (%f, %f)\n", start_pixel.x, start_pixel.y, end_pixel.x,
-    // end_pixel.y);
+    //fb size
     glm::vec2 size(width_, height_);
-    if (glm::length(normalize_to_screen(start_pixel, size)) > 0.5 ||
-        glm::length(normalize_to_screen(end_pixel, size)) > 0.5)
-        return;
 
-    glm::vec3 start = project_to_unit_sphere(normalize_to_screen(start_pixel, size));
-    glm::vec3 end = project_to_unit_sphere(normalize_to_screen(end_pixel, size));
+    //center of focus
+    glm::vec3 cof = glm::vec3(0, 0, 0.5 / glm::tan(glm::radians(kFovYDeg) / 2.0));
+
+    // sphere same radius as cube
+    float sphere_radius = glm::length(glm::vec3(0.5));
+
+    glm::vec3 start_screen = normalize_to_screen(start_pixel, size);
+    glm::vec3 end_screen = normalize_to_screen(end_pixel, size);
+    
+    //ignored
+    glm::vec3 pos2, normal, normal2;
+
+    glm::vec3 start, end;
+
+    if(!glm::intersectLineSphere(start_screen - cof, glm::vec3(0), cube_pos, sphere_radius, start, normal, pos2, normal2) ||
+       !glm::intersectLineSphere(end_screen - cof, glm::vec3(0), cube_pos, sphere_radius, end, normal, pos2, normal2))
+        return false;
+
+    start = start - cube_pos;
+    end = end - cube_pos;
+
+    start = glm::normalize(start);
+    end = glm::normalize(end);
 
     axis_ = glm::cross(start, end);
-    if (glm::length(axis_) == 0.0) {
+    if(glm::length(axis_) == 0.0){
         // start and end are the same, so choose an arbitrary axis
         axis_ = glm::vec3(1, 0, 0);
     }
+    //just to be sure lol
     axis_ = glm::normalize(axis_);
 
-    // radians
+    //radians
     float theta = glm::angle(start, end);
 
-    float seconds = std::chrono::duration<float>(end_time - start_time).count();
-
-    // radians per second
-    angular_velocity_ = theta / seconds;
+    //radians per second
+    angular_velocity_ = theta / delta_time_seconds;
 
     orientation_ = glm::rotate(glm::mat4(), theta, axis_) * orientation_;
 
     Update();
+
+    return true;
 }
 
 void SpinningCube::Draw()
@@ -362,9 +370,9 @@ void SpinningCube::Update()
 {
     float aspect = static_cast<GLfloat>(width_) / static_cast<GLfloat>(height_);
 
-    glm::mat4 perspective = glm::perspective(glm::radians(60.0f), aspect, 1.0f, 20.f);
+    glm::mat4 perspective = glm::perspective(glm::radians(kFovYDeg), aspect, 1.0f, 20.f);
 
-    glm::mat4 modelview = glm::translate(glm::mat4(), glm::vec3(0.0, 0.0, -2.0)) * orientation_;
+    glm::mat4 modelview = glm::translate(glm::mat4(), cube_pos) * orientation_;
 
     state_->mvp_matrix_ = perspective * modelview;
 }

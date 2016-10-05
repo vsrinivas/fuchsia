@@ -34,10 +34,9 @@ public:
     void SetFlingMultiplier(float drag_distance, float drag_time);
     void UpdateForTimeDelta(float delta_time);
     void UpdateForDragDistance(float distance);
-    void UpdateForDragVector(glm::vec2 start_pixel,
-                             std::chrono::high_resolution_clock::time_point start_time,
+    bool UpdateForDragVector(glm::vec2 start_pixel,
                              glm::vec2 end_pixel,
-                             std::chrono::high_resolution_clock::time_point end_time);
+                             float delta_time_seconds);
     void Draw();
 
     void OnGLContextLost();
@@ -59,6 +58,8 @@ private:
     glm::vec3 axis_;
     float angular_velocity_ = .5;
     glm::mat4 orientation_;
+
+    glm::vec3 cube_pos = glm::vec3(0.f, 0.f, -2.f);
 };
 
 #endif // EXAMPLES_SPINNING_CUBE_SPINNING_CUBE_H_

@@ -271,17 +271,17 @@ inline uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim)
     return (z * screen_dim) / rpt_dim;
 }
 
-void MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
+bool MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
 {
     if (!buf || !len) {
         last_touch_valid_ = false;
-        return;
+        return false;
     }
 
     acer12_touch_t* curr_touch = static_cast<acer12_touch_t*>(buf);
     if (len < sizeof(*curr_touch)) {
         printf("bad report size: %zd < %zd\n", len, sizeof(*curr_touch));
-        return;
+        return false;
     }
 
     // so we can use both as pointers
@@ -304,10 +304,7 @@ void MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
                         glm::vec2 end(scale32(curr_finger->x, FB_W, ACER12_X_MAX),
                                       scale32(curr_finger->y, FB_H, ACER12_Y_MAX));
 
-                        cube_->UpdateForDragVector(start, last_touch_timestamp_, end,
-                                                   std::chrono::high_resolution_clock::now());
-
-                        found_finger = true;
+                        found_finger = cube_->UpdateForDragVector(start, end, (float)(curr_touch->scan_time - last_touch->scan_time) / 10000.f);
                     }
                     break;
                 }
@@ -320,6 +317,8 @@ void MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
     memcpy(last_touch, curr_touch, sizeof(acer12_touch_t));
     last_touch_valid_ = true;
     last_touch_timestamp_ = std::chrono::high_resolution_clock::now();
+
+    return found_finger;
 }
 
 extern "C" {
@@ -418,6 +417,8 @@ int test_spinning_cube(uint32_t device_handle)
     while (true) {
 
         uint32_t num_events = 0;
+
+        bool updated_for_input = false;
         while (mxio_wait_fd(touchfd, MXIO_EVT_READABLE, NULL, 0) == 0) {
             r = read(touchfd, buf, max_rpt_sz);
             if (r < 0) {
@@ -430,7 +431,7 @@ int test_spinning_cube(uint32_t device_handle)
         }
 
         if (num_events > 0) {
-            app.ProcessTouchscreenInput(buf, r);
+            updated_for_input = app.ProcessTouchscreenInput(buf, r);
         } else {
             app.ProcessTouchscreenInput(nullptr, 0);
         }
@@ -446,7 +447,7 @@ int test_spinning_cube(uint32_t device_handle)
             total_milliseconds = 0;
         }
 
-        if (!app.Draw(std::chrono::duration<float>(t1 - t0).count())) {
+        if (!app.Draw(updated_for_input ? 0.0 : std::chrono::duration<float>(t1 - t0).count())) {
             break;
         }
 
