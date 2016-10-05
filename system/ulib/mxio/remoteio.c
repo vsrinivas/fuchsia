@@ -457,7 +457,9 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     msg.op = op;
     msg.arg = maxreply;
     msg.datalen = len;
-    memcpy(msg.data, ptr, len);
+    if (ptr) {
+        memcpy(msg.data, ptr, len);
+    }
 
     if ((r = mxrio_txn(rio, &msg)) < 0) {
         return r;
@@ -467,7 +469,10 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, uint32_t maxreply, void* 
     if (msg.datalen > maxreply) {
         return ERR_IO;
     }
-    memcpy(ptr, msg.data, msg.datalen);
+
+    if (ptr) {
+        memcpy(ptr, msg.data, msg.datalen);
+    }
     return r;
 }
 
