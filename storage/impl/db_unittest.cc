@@ -167,11 +167,12 @@ TEST_F(DBTest, JournalEntries) {
                 static_cast<JournalDBImpl*>(implicitJournal.get())->GetId(),
                 &entries));
   for (int i = 0; i < 3; ++i) {
-    EXPECT_FALSE(entries->Done());
+    EXPECT_TRUE(entries->Valid());
     ExpectChangesEqual(expectedChanges[i], **entries);
     entries->Next();
   }
-  EXPECT_TRUE(entries->Done());
+  EXPECT_FALSE(entries->Valid());
+  EXPECT_EQ(Status::OK, entries->GetStatus());
 }
 
 TEST_F(DBTest, UnsyncedCommits) {

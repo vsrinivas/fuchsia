@@ -24,7 +24,8 @@ class BTreeIterator : public Iterator<const Entry> {
 
   // Iterator:
   BTreeIterator& Next() override;
-  bool Done() override;
+  bool Valid() const override;
+  Status GetStatus() const override;
 
   const Entry& operator*() const override;
   const Entry* operator->() const override;
@@ -32,6 +33,7 @@ class BTreeIterator : public Iterator<const Entry> {
  private:
   std::stack<Position> stack_;
   Entry current_entry_;
+  Status current_status_ = Status::OK;
 };
 
 }  // namespace storage

@@ -60,19 +60,20 @@ TEST_F(BTreeIteratorTest, IterateOneNode) {
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
 
-  EXPECT_FALSE(it->Done());
+  EXPECT_TRUE(it->Valid());
   EXPECT_EQ(entry1, **it);
 
   it->Next();
-  EXPECT_FALSE(it->Done());
+  EXPECT_TRUE(it->Valid());
   EXPECT_EQ(entry2, **it);
 
   it->Next();
-  EXPECT_FALSE(it->Done());
+  EXPECT_TRUE(it->Valid());
   EXPECT_EQ(entry3, **it);
 
   it->Next();
-  EXPECT_TRUE(it->Done());
+  EXPECT_FALSE(it->Valid());
+  EXPECT_EQ(Status::OK, it->GetStatus());
 }
 
 TEST_F(BTreeIteratorTest, IterateEmptyTree) {
@@ -85,7 +86,8 @@ TEST_F(BTreeIteratorTest, IterateEmptyTree) {
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
 
-  EXPECT_TRUE(it->Done());
+  EXPECT_FALSE(it->Valid());
+  EXPECT_EQ(Status::OK, it->GetStatus());
 }
 
 TEST_F(BTreeIteratorTest, IterateTree) {
@@ -122,14 +124,15 @@ TEST_F(BTreeIteratorTest, IterateTree) {
   CommitContentsImpl reader(node_D, &store_);
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
-  EXPECT_FALSE(it->Done());
+  EXPECT_TRUE(it->Valid());
 
   for (const Entry& entry : entries) {
-    EXPECT_FALSE(it->Done());
+    EXPECT_TRUE(it->Valid());
     EXPECT_EQ(entry, **it);
     it->Next();
   }
-  EXPECT_TRUE(it->Done());
+  EXPECT_FALSE(it->Valid());
+  EXPECT_EQ(Status::OK, it->GetStatus());
 }
 
 }  // namespace storage

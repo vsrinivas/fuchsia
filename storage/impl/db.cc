@@ -95,8 +95,12 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
     return *this;
   }
 
-  bool Done() override {
-    return !it_->Valid() || !it_->key().starts_with(prefix_);
+  bool Valid() const override {
+    return it_->Valid() && it_->key().starts_with(prefix_);
+  }
+
+  Status GetStatus() const override {
+    return it_->status().ok() ? Status::OK : Status::IO_ERROR;
   }
 
   const EntryChange& operator*() const override { return *(change_.get()); }
@@ -104,7 +108,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
 
  private:
   void PrepareEntry() {
-    if (Done()) {
+    if (!Valid()) {
       change_.reset(nullptr);
       return;
     }

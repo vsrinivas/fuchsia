@@ -20,17 +20,21 @@ BTreeIterator::BTreeIterator(std::unique_ptr<const TreeNode> root) {
     stack_.emplace(std::move(current_node), -1, 0);
     if (status == Status::OK) {
       current_node = std::move(next_node);
-    } else {
+    } else if (status == Status::NOT_FOUND) {
       break;
+    } else {
+      current_status_ = status;
     }
   }
-  this->Next();
+  if (Valid()) {
+    this->Next();
+  }
 }
 
 BTreeIterator::~BTreeIterator() {}
 
 BTreeIterator& BTreeIterator::Next() {
-  FTL_DCHECK(!Done());
+  FTL_DCHECK(Valid());
   // direction_up tells the algorithm whether we are exploring the tree down
   // (from root to leaves) or up (from leaves to root). In the down direction,
   // we are exploring the children of each node: when exploring a node, we look
@@ -80,10 +84,13 @@ BTreeIterator& BTreeIterator::Next() {
       if (status == Status::OK) {
         // [3] The child is not empty, so we add it to the stack to explore it.
         stack_.emplace(std::move(next_child), -1, -1);
-      } else {
+      } else if (status == Status::NOT_FOUND) {
         // [4] The child is empty, so we reverse direction. This will lead us to
         // try to read the next entry, if available.
         direction_up = true;
+      } else {
+        current_status_ = status;
+        return *this;
       }
       continue;
     }
@@ -95,15 +102,21 @@ BTreeIterator& BTreeIterator::Next() {
   return *this;
 }
 
-bool BTreeIterator::Done() {
-  return stack_.empty();
+bool BTreeIterator::Valid() const {
+  return !stack_.empty() || current_status_ != Status::OK;
+}
+
+Status BTreeIterator::GetStatus() const {
+  return current_status_;
 }
 
 const Entry& BTreeIterator::operator*() const {
+  FTL_DCHECK(Valid());
   return current_entry_;
 }
 
 const Entry* BTreeIterator::operator->() const {
+  FTL_DCHECK(Valid());
   return &current_entry_;
 }
 
