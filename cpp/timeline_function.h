@@ -24,17 +24,16 @@ namespace media {
 class TimelineFunction {
  public:
   // Applies a timeline function.
-  static int64_t Apply(
-      int64_t reference_time,
-      int64_t subject_time,
-      const TimelineRate& rate,  // subject_delta / reference_delta
-      int64_t reference_input);
+  static int64_t Apply(int64_t reference_time,
+                       int64_t subject_time,
+                       TimelineRate rate,  // subject_delta / reference_delta
+                       int64_t reference_input);
 
   // Applies the inverse of a timeline function.
   static int64_t ApplyInverse(
       int64_t reference_time,
       int64_t subject_time,
-      const TimelineRate& rate,  // subject_delta / reference_delta
+      TimelineRate rate,  // subject_delta / reference_delta
       int64_t subject_input) {
     FTL_DCHECK(rate.reference_delta() != 0u);
     return Apply(subject_time, reference_time, rate.Inverse(), subject_input);
@@ -58,13 +57,13 @@ class TimelineFunction {
 
   TimelineFunction(int64_t reference_time,
                    int64_t subject_time,
-                   const TimelineRate& rate)  // subject_delta / reference_delta
+                   TimelineRate rate)  // subject_delta / reference_delta
       : reference_time_(reference_time),
         subject_time_(subject_time),
         rate_(rate) {}
 
   explicit TimelineFunction(
-      const TimelineRate& rate)  // subject_delta / reference_delta
+      TimelineRate rate)  // subject_delta / reference_delta
       : reference_time_(0),
         subject_time_(0),
         rate_(rate) {}
@@ -96,7 +95,7 @@ class TimelineFunction {
 
   int64_t subject_time() const { return subject_time_; }
 
-  const TimelineRate& rate() const { return rate_; }
+  TimelineRate rate() const { return rate_; }
 
   uint32_t reference_delta() const { return rate_.reference_delta(); }
 

@@ -46,7 +46,7 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
   // important for the mixing process.
   void SnapshotRateTrans(TimelineFunction* out, uint32_t* generation = nullptr);
 
-  const TimelineRate& FractionalFrameToMediaTimeRatio() const {
+  TimelineRate FractionalFrameToMediaTimeRatio() const {
     return frame_to_media_ratio_;
   }
 

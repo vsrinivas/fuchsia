@@ -16,7 +16,7 @@ namespace media {
 int64_t TimelineFunction::Apply(
     int64_t reference_time,
     int64_t subject_time,
-    const TimelineRate& rate,  // subject_delta / reference_delta
+    TimelineRate rate,  // subject_delta / reference_delta
     int64_t reference_input) {
   return rate.Scale(reference_input - reference_time) + subject_time;
 }

@@ -46,8 +46,8 @@ class TimelineRate {
 
   // Returns the product of the rates. If exact is true, DCHECKs on loss of
   // precision.
-  static TimelineRate Product(const TimelineRate& a,
-                              const TimelineRate& b,
+  static TimelineRate Product(TimelineRate a,
+                              TimelineRate b,
                               bool exact = true) {
     uint32_t result_subject_delta;
     uint32_t result_reference_delta;
@@ -112,36 +112,36 @@ class TimelineRate {
 };
 
 // Tests two rates for equality.
-inline bool operator==(const TimelineRate& a, const TimelineRate& b) {
+inline bool operator==(TimelineRate a, TimelineRate b) {
   return a.subject_delta() == b.subject_delta() &&
          a.reference_delta() == b.reference_delta();
 }
 
 // Tests two rates for inequality.
-inline bool operator!=(const TimelineRate& a, const TimelineRate& b) {
+inline bool operator!=(TimelineRate a, TimelineRate b) {
   return !(a == b);
 }
 
 // Returns the product of the two rates. DCHECKs on loss of precision.
-inline TimelineRate operator*(const TimelineRate& a, const TimelineRate& b) {
+inline TimelineRate operator*(TimelineRate a, TimelineRate b) {
   return TimelineRate::Product(a, b);
 }
 
 // Returns the product of the rate and the int64_t. Returns kOverflow on
 // overflow.
-inline int64_t operator*(const TimelineRate& a, int64_t b) {
+inline int64_t operator*(TimelineRate a, int64_t b) {
   return a.Scale(b);
 }
 
 // Returns the product of the rate and the int64_t. Returns kOverflow on
 // overflow.
-inline int64_t operator*(int64_t a, const TimelineRate& b) {
+inline int64_t operator*(int64_t a, TimelineRate b) {
   return b.Scale(a);
 }
 
 // Returns the the int64_t divided by the rate. Returns kOverflow on
 // overflow.
-inline int64_t operator/(int64_t a, const TimelineRate& b) {
+inline int64_t operator/(int64_t a, TimelineRate b) {
   return b.Inverse().Scale(a);
 }
 
