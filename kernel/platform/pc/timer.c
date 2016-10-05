@@ -239,20 +239,20 @@ static void set_pit_frequency(uint32_t frequency)
     outp(I8253_DATA_REG, pit_divisor >> 8); // MSB
 }
 
-static inline void pit_calibration_cycle_1ms_preamble(void)
+static inline void pit_calibration_cycle_preamble(uint16_t ms)
 {
-    // Make the PIT run for 1ms
-    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
+    // Make the PIT run for
+    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS * ms;
     // Program PIT in the interrupt on terminal count configuration,
     // this makes it count down and set the output high when it hits 0.
     outp(I8253_CONTROL_REG, 0x30);
     outp(I8253_DATA_REG, init_pic_count & 0xff); // LSB
 }
 
-static inline void pit_calibration_cycle_1ms(void)
+static inline void pit_calibration_cycle(uint16_t ms)
 {
-    // Make the PIT run for 1ms, see comments in the preamble
-    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS;
+    // Make the PIT run for ms millis, see comments in the preamble
+    const uint16_t init_pic_count = INTERNAL_FREQ_TICKS_PER_MS * ms;
     outp(I8253_DATA_REG, init_pic_count >> 8); // MSB
 
     uint8_t status = 0;
@@ -264,23 +264,23 @@ static inline void pit_calibration_cycle_1ms(void)
     } while ((status & 0xc0) != 0x80);
 }
 
-static inline void pit_calibration_cycle_1ms_cleanup(void)
+static inline void pit_calibration_cycle_cleanup(void)
 {
     // Stop the PIT by starting a mode change but not writing a counter
     outp(I8253_CONTROL_REG, 0x38);
 }
 
-static inline void hpet_calibration_cycle_1ms_preamble(void)
+static inline void hpet_calibration_cycle_preamble(void)
 {
     hpet_enable();
 }
 
-static inline void hpet_calibration_cycle_1ms(void)
+static inline void hpet_calibration_cycle(uint16_t ms)
 {
-    hpet_wait_ms(1);
+    hpet_wait_ms(ms);
 }
 
-static inline void hpet_calibration_cycle_1ms_cleanup(void)
+static inline void hpet_calibration_cycle_cleanup(void)
 {
     hpet_disable();
 }
@@ -292,62 +292,66 @@ static void calibrate_apic_timer(void)
     TRACEF("Calibrating APIC with %s\n", clock_name[calibration_clock]);
 
     apic_divisor = 1;
+outer:
     while (apic_divisor != 0) {
-        uint32_t best_time = UINT32_MAX;
-        for (int tries = 0; tries < 3; ++tries) {
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle_1ms_preamble();
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle_1ms_preamble();
-                    break;
-                default: PANIC_UNIMPLEMENTED;
+        uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
+        const uint16_t duration_ms[2] = { 2, 4 };
+        for (int trial = 0; trial < 2; ++trial) {
+            for (int tries = 0; tries < 3; ++tries) {
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle_preamble();
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle_preamble(duration_ms[trial]);
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
+
+                // Setup APIC timer to count down with interrupt masked
+                status_t status = apic_timer_set_oneshot(
+                        UINT32_MAX,
+                        apic_divisor,
+                        true);
+                ASSERT(status == NO_ERROR);
+
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle(duration_ms[trial]);
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle(duration_ms[trial]);
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
+
+                uint32_t apic_ticks = UINT32_MAX - apic_timer_current_count();
+                if (apic_ticks < best_time[trial]) {
+                    best_time[trial] = apic_ticks;
+                }
+                LTRACEF("Calibration trial %d found %u ticks/ms\n",
+                        tries, apic_ticks);
+
+                switch (calibration_clock) {
+                    case CLOCK_HPET:
+                        hpet_calibration_cycle_cleanup();
+                        break;
+                    case CLOCK_PIT:
+                        pit_calibration_cycle_cleanup();
+                        break;
+                    default: PANIC_UNIMPLEMENTED;
+                }
             }
 
-            // Setup APIC timer to count down with interrupt masked
-            status_t status = apic_timer_set_oneshot(
-                    UINT32_MAX,
-                    apic_divisor,
-                    true);
-            ASSERT(status == NO_ERROR);
-
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle_1ms();
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle_1ms();
-                    break;
-                default: PANIC_UNIMPLEMENTED;
+            // If the APIC ran out of time every time, try again with a higher
+            // divisor
+            if (best_time[trial] == UINT32_MAX) {
+                apic_divisor *= 2;
+                goto outer;
             }
 
-            uint32_t apic_ticks = UINT32_MAX - apic_timer_current_count();
-            if (apic_ticks < best_time) {
-                best_time = apic_ticks;
-            }
-            LTRACEF("Calibration trial %d found %u ticks/ms\n",
-                    tries, apic_ticks);
-
-            switch (calibration_clock) {
-                case CLOCK_HPET:
-                    hpet_calibration_cycle_1ms_cleanup();
-                    break;
-                case CLOCK_PIT:
-                    pit_calibration_cycle_1ms_cleanup();
-                    break;
-                default: PANIC_UNIMPLEMENTED;
-            }
         }
-
-        // If the APIC ran out of time every time, try again with a higher
-        // divisor
-        if (best_time == UINT32_MAX) {
-            apic_divisor *= 2;
-            continue;
-        }
-
-        apic_ticks_per_ms = best_time;
+        apic_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
         break;
     }
     ASSERT(apic_divisor != 0);
@@ -362,58 +366,63 @@ static void calibrate_tsc(void)
 
     TRACEF("Calibrating TSC with %s\n", clock_name[calibration_clock]);
 
-    uint64_t best_time = UINT64_MAX;
-    for (int tries = 0; tries < 3; ++tries) {
-        switch (calibration_clock) {
-            case CLOCK_HPET:
-                hpet_calibration_cycle_1ms_preamble();
-                break;
-            case CLOCK_PIT:
-                pit_calibration_cycle_1ms_preamble();
-                break;
-            default: PANIC_UNIMPLEMENTED;
-        }
+    uint64_t best_time[2] = {UINT64_MAX, UINT64_MAX};
+    const uint16_t duration_ms[2] = { 1, 2 };
+    for (int trial = 0; trial < 2; ++trial) {
+        for (int tries = 0; tries < 3; ++tries) {
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_preamble();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_preamble(duration_ms[trial]);
+                    break;
+                default: PANIC_UNIMPLEMENTED;
+            }
 
-        // Use CPUID to serialize the instruction stream
-        uint32_t _ignored;
-        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-        uint64_t start = rdtsc();
+            // Use CPUID to serialize the instruction stream
+            uint32_t _ignored;
+            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+            uint64_t start = rdtsc();
+            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
-        switch (calibration_clock) {
-            case CLOCK_HPET:
-                hpet_calibration_cycle_1ms();
-                break;
-            case CLOCK_PIT:
-                pit_calibration_cycle_1ms();
-                break;
-            default: PANIC_UNIMPLEMENTED;
-        }
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle(duration_ms[trial]);
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle(duration_ms[trial]);
+                    break;
+                default: PANIC_UNIMPLEMENTED;
+            }
 
-        cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-        uint64_t end = rdtsc();
+            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
+            uint64_t end = rdtsc();
+            cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
-        uint64_t tsc_ticks = end - start;
-        if (tsc_ticks < best_time) {
-            best_time = tsc_ticks;
-        }
-        LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
-                tries, tsc_ticks);
-        switch (calibration_clock) {
-            case CLOCK_HPET:
-                hpet_calibration_cycle_1ms_cleanup();
-                break;
-            case CLOCK_PIT:
-                pit_calibration_cycle_1ms_cleanup();
-                break;
-            default: PANIC_UNIMPLEMENTED;
+            uint64_t tsc_ticks = end - start;
+            if (tsc_ticks < best_time[trial]) {
+                best_time[trial] = tsc_ticks;
+            }
+            LTRACEF("Calibration trial %d found %" PRIu64 " ticks/ms\n",
+                    tries, tsc_ticks);
+            switch (calibration_clock) {
+                case CLOCK_HPET:
+                    hpet_calibration_cycle_cleanup();
+                    break;
+                case CLOCK_PIT:
+                    pit_calibration_cycle_cleanup();
+                    break;
+                default: PANIC_UNIMPLEMENTED;
+            }
         }
     }
 
-    tsc_ticks_per_ms = best_time;
+    tsc_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
 
     LTRACEF("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
 
-    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000 * 1000, best_time * 1000);
+    fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000 * 1000, tsc_ticks_per_ms * 1000);
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
