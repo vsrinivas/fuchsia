@@ -18,6 +18,8 @@ MODULE_NAME := crashlogger
 MODULE_STATIC_LIBS := ulib/hexdump ulib/runtime
 
 MODULE_LIBS := \
-    ulib/mxio ulib/magenta ulib/musl
+    ulib/mxio \
+    ulib/magenta \
+    ulib/musl
 
 include make/module.mk

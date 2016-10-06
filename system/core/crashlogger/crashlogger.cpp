@@ -7,12 +7,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <hexdump/hexdump.h>
 
 #include <magenta/assert.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls-debug.h>
+#include <mxio/util.h>
 
 #include "backtrace.h"
 #include "utils.h"
@@ -39,6 +42,13 @@ const char* excp_type_to_str(uint32_t type) {
 }
 
 constexpr uint64_t kSysExceptionKey = 1166444u;
+constexpr uint64_t kSelfExceptionKey = 0x646a65u;
+
+// Handle of the thread we're dumping.
+// This is used by both the main thread and the self-dumper thread.
+// However there is no need to lock it as the self-dumper thread only runs
+// when the main thread has crashed.
+mx_handle_t crashed_thread = MX_HANDLE_INVALID;
 
 void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
                          const mx_x86_64_general_regs_t& regs) {
@@ -89,6 +99,15 @@ void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
     free(buf);
 }
 
+void resume_crashed_thread(mx_handle_t thread) {
+    auto status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
+    if (status != NO_ERROR) {
+        print_mx_error("unable to \"resume\" crashed thread", status);
+        // This shouldn't ever happen. The task is now effectively hung.
+        // TODO: Try to forcefully kill it?
+    }
+}
+
 void process_report(const mx_exception_report_t* report) {
     if (!MX_EXCP_IS_ARCH(report->header.type))
         return;
@@ -108,6 +127,10 @@ void process_report(const mx_exception_report_t* report) {
         mx_handle_close(process);
         return;
     }
+
+    // Record the crashed thread so that if we crash then self_dump_func
+    // can (try to) "resume" the thread so that it's not left hanging.
+    crashed_thread = thread;
 
 #if defined(__x86_64__)
     mx_x86_64_general_regs_t regs;
@@ -159,7 +182,8 @@ Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
 
     // allow the thread (and then process) to die:
-    mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
+    resume_crashed_thread(thread);
+    crashed_thread = MX_HANDLE_INVALID;
 
     mx_handle_close(thread);
     mx_handle_close(process);
@@ -178,6 +202,50 @@ mx_status_t bind_system_exception_port(mx_handle_t eport) {
 mx_status_t unbind_system_exception_port() {
     return mx_object_bind_exception_port(MX_HANDLE_INVALID, MX_HANDLE_INVALID,
                                          kSysExceptionKey, 0);
+}
+
+int self_dump_func(void* arg) {
+    mx_handle_t ex_port = static_cast<mx_handle_t> (reinterpret_cast<uintptr_t> (arg));
+
+    // TODO: There may be exceptions we can recover from, but for now KISS
+    // and just terminate on any exception.
+
+    mx_exception_packet_t packet;
+    mx_port_wait(ex_port, &packet, sizeof(packet));
+    if (packet.hdr.key != kSelfExceptionKey) {
+        print_error("invalid crash key");
+        return 1;
+    }
+
+    fprintf(stderr, "crashlogger: crashed!\n");
+
+    // The main thread got an exception.
+    // Try to print a dump of it before we shutdown.
+
+    // Disable system exception handling ASAP: If we get another exception
+    // we're hosed. This is also a workaround to MG-307.
+    auto unbind_status = unbind_system_exception_port();
+
+    // Also, before we do anything else, "resume" the original crashing thread.
+    // Otherwise whomever is waiting on its process to terminate will hang.
+    // And best do this ASAP in case we ourselves crash.
+    if (crashed_thread != MX_HANDLE_INVALID) {
+        resume_crashed_thread(crashed_thread);
+    }
+
+    // Now we can check the return code of the unbinding. We don't want to
+    // terminate until the original crashing thread is "resumed".
+    // This could be an assert, but we don't want the check disabled in
+    // release builds.
+    if (unbind_status != NO_ERROR) {
+        print_mx_error("WARNING: unable to unbind system exception port", unbind_status);
+        // This "shouldn't happen", safer to just terminate.
+        exit(1);
+    }
+
+    process_report(&packet.report);
+
+    exit(1);
 }
 
 void usage() {
@@ -216,6 +284,41 @@ int main(int argc, char** argv) {
             print_mx_error("unable to unbind system exception port", status);
             return 1;
         }
+    }
+
+    mx_handle_t thread_self = mxio_get_startup_handle(MX_HND_TYPE_THREAD_SELF);
+    if (thread_self < 0) {
+        print_mx_error("unable to get thread self", thread_self);
+        return 1;
+    }
+
+    mx_handle_t self_dump_port = mx_port_create(0u);
+    if (self_dump_port < 0) {
+        print_mx_error("mx_port_create failed", self_dump_port);
+        return 1;
+    }
+
+    // A thread to wait for and process internal exceptions.
+    // This is done so that we can recognize when we ourselves have
+    // crashed: We still want a dump, and we need to still mark the original
+    // crashing thread as resumed.
+    thrd_t self_dump_thread;
+    void* self_dump_arg =
+        reinterpret_cast<void*> (static_cast<uintptr_t> (self_dump_port));
+    int ret = thrd_create_with_name(&self_dump_thread, self_dump_func,
+                                    self_dump_arg, "self-dump-thread");
+    if (ret != thrd_success) {
+        print_error("thrd_create_with_name failed");
+        return 1;
+    }
+
+    // Bind this exception handler to the main thread instead of the process
+    // so that the crashlogger crash dumper doesn't get its own exceptions.
+    status = mx_object_bind_exception_port(thread_self, self_dump_port,
+                                           kSelfExceptionKey, 0);
+    if (status < 0) {
+        print_mx_error("unable to set self exception port", self_dump_port);
+        return 1;
     }
 
     mx_handle_t ex_port = mx_port_create(0u);
