@@ -62,6 +62,8 @@ class Demo {
   vk::Device device_;
   vk::Queue queue_;
   uint32_t queue_family_index_ = UINT32_MAX;  // initialize to invalid index.
+  vk::Queue transfer_queue_;
+  uint32_t transfer_queue_family_index_ = UINT32_MAX;  // invalid index.
   escher::VulkanSwapchain swapchain_;
 
   VkDebugReportCallbackEXT debug_report_callback_;

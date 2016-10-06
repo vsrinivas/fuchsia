@@ -190,21 +190,45 @@ void Demo::CreateDeviceAndQueue() {
           // logical device.
           physical_device_ = physical_device;
 
-          vk::DeviceQueueCreateInfo queue_info;
-          queue_info.queueFamilyIndex = i;
-          queue_info.queueCount = 1;
+          // We may only create one queue, or we may create an additional
+          // transfer-only queue... see below.
+          vk::DeviceQueueCreateInfo queue_info[2];
+          queue_info[0] = vk::DeviceQueueCreateInfo();
+          queue_info[0] = vk::DeviceQueueCreateInfo();
+          queue_info[0].queueFamilyIndex = i;
+          queue_info[0].queueCount = 1;
           float queue_priorities[1] = {0.0};
-          queue_info.pQueuePriorities = queue_priorities;
-
-          // TODO: need other device extensions?
-          const char* swapchain_extension_name = "VK_KHR_swapchain";
+          queue_info[0].pQueuePriorities = queue_priorities;
 
           vk::DeviceCreateInfo device_info;
           device_info.queueCreateInfoCount = 1;
-          device_info.pQueueCreateInfos = &queue_info;
+          device_info.pQueueCreateInfos = queue_info;
+          // TODO: need other device extensions?
+          const char* swapchain_extension_name = "VK_KHR_swapchain";
           device_info.enabledExtensionCount = 1;
           device_info.ppEnabledExtensionNames = &swapchain_extension_name;
 
+          // Try to find a transfer-only queue... if it exists, it will be the
+          // fastest way to upload data to the GPU.
+          for (size_t j = 0; j < queues.size(); ++j) {
+            auto flags = queues[j].queueFlags;
+            if (!(flags & vk::QueueFlagBits::eGraphics) &&
+                !(flags & vk::QueueFlagBits::eCompute) &&
+                (flags & vk::QueueFlagBits::eTransfer)) {
+              // Found a transfer-only queue.  Update the parameters that will
+              // be used to create the logical device.
+              device_info.queueCreateInfoCount = 2;
+              queue_info[1].queueFamilyIndex = j;
+              queue_info[1].queueCount = 1;
+              // TODO: make transfer queue higher priority?  Maybe unnecessary,
+              // since we'll use semaphores to block the graphics/compute queue
+              // until necessary transfers are complete.
+              queue_info[1].pQueuePriorities = queue_priorities;
+              break;
+            }
+          }
+
+          // Create the logical device.
           auto result = physical_device_.createDevice(device_info);
           VK_CHECK_RESULT(result);
           device_ = result.value;
@@ -212,8 +236,17 @@ void Demo::CreateDeviceAndQueue() {
           // Obtain device-specific function pointers.
           device_procs_ = DeviceProcAddrs(device_);
 
-          queue_ = device_.getQueue(i, 0);
-          queue_family_index_ = i;
+          // Obtain the queues that we requested to be created with the device.
+          queue_family_index_ = queue_info[0].queueFamilyIndex;
+          queue_ = device_.getQueue(queue_family_index_, 0);
+          if (device_info.queueCreateInfoCount == 2) {
+            transfer_queue_family_index_ = queue_info[1].queueFamilyIndex;
+            transfer_queue_ = device_.getQueue(transfer_queue_family_index_, 0);
+          } else {
+            transfer_queue_family_index_ = UINT32_MAX;
+            transfer_queue_ = nullptr;
+          }
+
           return;
         }
       }
@@ -284,7 +317,8 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
   }
   FTL_CHECK(surface_formats.size() > 0);
 
-  // TODO: old_swapchain will come into play (I think) when we support resizing
+  // TODO: old_swapchain will come into play (I think) when we support
+  // resizing
   // the window.
   vk::SwapchainKHR old_swapchain = nullptr;
 
@@ -394,5 +428,6 @@ VkBool32 Demo::HandleDebugReport(VkDebugReportFlagsEXT flags,
 
 escher::VulkanContext Demo::GetVulkanContext() {
   return escher::VulkanContext(instance_, physical_device_, device_, queue_,
-                               queue_family_index_);
+                               queue_family_index_, transfer_queue_,
+                               transfer_queue_family_index_);
 }
