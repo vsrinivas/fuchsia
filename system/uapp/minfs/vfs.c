@@ -100,6 +100,12 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out,
             vn_release(vn);
             return r;
         }
+        if (flags & O_TRUNC) {
+            if ((r = vn->ops->truncate(vn, 0)) < 0) {
+                vn_release(vn);
+                return r;
+            }
+        }
     }
     trace(VFS, "vfs_open: vn=%p\n", vn);
     *out = vn;
