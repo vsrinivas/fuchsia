@@ -133,6 +133,13 @@ mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
         size_t bno = mem->datalen / BLOCKSIZE;
         size_t b_start = bno * BLOCKSIZE;
 
+        if (b_start == mem->datalen) {
+            // If the last block is empty, move to the one before
+            bno--;
+            b_start -= BLOCKSIZE;
+        }
+        // "b_start" is now guaranteed to be less than "mem->datalen"
+
         if (len <= b_start) {
             // Wipe out this entire block
             if (mem->block[bno] != NULL) {
