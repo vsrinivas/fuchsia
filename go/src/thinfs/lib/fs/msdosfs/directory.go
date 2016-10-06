@@ -146,7 +146,7 @@ func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		return nil, nil, fs.ErrNotOpen
 	}
 
-	if flags.Write() && d.fs.info.Readonly {
+	if (flags.Write() || flags.Create()) && d.fs.info.Readonly {
 		return nil, nil, fs.ErrPermission
 	} else if flags.Create() && !d.flags.Write() {
 		return nil, nil, fs.ErrPermission // Creation requires the parent directory to be writable
@@ -163,7 +163,7 @@ func (d *directory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 		return nil, &directory{
 			fs:    d.fs,
 			node:  n.(node.DirectoryNode),
-			flags: flags,
+			flags: flags | fs.OpenFlagWrite | fs.OpenFlagRead,
 		}, nil
 	}
 	return &file{
