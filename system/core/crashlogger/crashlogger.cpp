@@ -14,6 +14,7 @@
 #include <magenta/syscalls-debug.h>
 
 #include "backtrace.h"
+#include "utils.h"
 
 const char* excp_type_to_str(uint32_t type) {
     DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
@@ -37,10 +38,6 @@ const char* excp_type_to_str(uint32_t type) {
 }
 
 constexpr uint64_t kSysExceptionKey = 1166444u;
-
-void print_error(int line, const char* what = "") {
-    fprintf(stderr, "crashlogger: ln%d : %s\n", line, what);
-}
 
 void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
                          const mx_x86_64_general_regs_t& regs) {
@@ -176,13 +173,13 @@ int main(int argc, char** argv) {
 
     mx_handle_t ex_port = mx_port_create(0u);
     if (ex_port < 0) {
-        print_error(__LINE__);
+        print_mx_error("mx_port_create failed", ex_port);
         return 1;
     }
 
     mx_status_t status = mx_object_bind_exception_port(0, ex_port, kSysExceptionKey, 0);
     if (status < 0) {
-        print_error(__LINE__, "unable to set exception port");
+        print_mx_error("unable to set system exception port", status);
         return 1;
     }
 
@@ -192,7 +189,7 @@ int main(int argc, char** argv) {
         mx_exception_packet_t packet;
         mx_port_wait(ex_port, &packet, sizeof(packet));
         if (packet.hdr.key != kSysExceptionKey) {
-            print_error(__LINE__, "invalid crash key");
+            print_error("invalid crash key");
             return 1;
         }
 

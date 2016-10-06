@@ -11,10 +11,11 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/crashlogger.cpp \
     $(LOCAL_DIR)/backtrace.c \
+    $(LOCAL_DIR)/utils.cpp \
 
 MODULE_NAME := crashlogger
 
-MODULE_STATIC_LIBS := ulib/hexdump
+MODULE_STATIC_LIBS := ulib/hexdump ulib/runtime
 
 MODULE_LIBS := \
     ulib/mxio ulib/magenta ulib/musl
