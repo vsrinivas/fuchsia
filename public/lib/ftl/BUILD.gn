@@ -30,14 +30,15 @@ static_library("ftl") {
     "compiler_specific.h",
     "debug/debugger.cc",
     "debug/debugger.h",
+
     # TODO(abarth): Move files/* out to its own library.
     "files/directory.cc",
     "files/directory.h",
     "files/eintr_wrapper.h",
-    "files/file_descriptor.cc",
-    "files/file_descriptor.h",
     "files/file.cc",
     "files/file.h",
+    "files/file_descriptor.cc",
+    "files/file_descriptor.h",
     "files/path.cc",
     "files/path.h",
     "files/scoped_temp_dir.cc",
@@ -93,13 +94,13 @@ static_library("ftl") {
     "tasks/one_shot_timer.h",
     "tasks/task_runner.cc",
     "tasks/task_runner.h",
+    "third_party/icu/icu_utf.cc",
+    "third_party/icu/icu_utf.h",
     "time/stopwatch.cc",
     "time/stopwatch.h",
     "time/time_delta.h",
     "time/time_point.cc",
     "time/time_point.h",
-    "third_party/icu/icu_utf.h",
-    "third_party/icu/icu_utf.cc",
   ]
 
   if (is_android) {
@@ -118,20 +119,30 @@ static_library("ftl") {
   ]
 }
 
+source_set("ftl_printers") {
+  testonly = true
+
+  sources = [
+    "time/time_printers.cc",
+  ]
+  deps = [
+    ":ftl",
+  ]
+}
+
 executable("ftl_unittests") {
   testonly = true
 
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
-    "log_settings_unittest.cc",
     "files/file_unittest.cc",
     "files/path_unittest.cc",
     "files/scoped_temp_dir_unittest.cc",
     "functional/make_copyable_unittest.cc",
+    "log_settings_unittest.cc",
     "memory/ref_counted_unittest.cc",
     "memory/weak_ptr_unittest.cc",
-    "tasks/one_shot_timer_unittest.cc",
     "strings/ascii_unittest.cc",
     "strings/concatenate_unittest.cc",
     "strings/split_string_unittest.cc",
@@ -144,12 +155,14 @@ executable("ftl_unittests") {
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
+    "tasks/one_shot_timer_unittest.cc",
     "test/run_all_unittests.cc",
     "time/time_unittest.cc",
   ]
 
   deps = [
     ":ftl",
+    ":ftl_printers",
     "//third_party/gtest",
   ]
 }

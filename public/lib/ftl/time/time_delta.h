@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <iosfwd>
 #include <limits>
 
 namespace ftl {
@@ -104,6 +105,10 @@ class TimeDelta {
 
   int64_t delta_ = 0;
 };
+
+// Used to print useful values in gtest assertions. Should not be used in
+// production code.
+void PrintTo(const TimeDelta& time_delta, ::std::ostream* os);
 
 }  // namespace ftl
 

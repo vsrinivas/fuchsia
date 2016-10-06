@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <iosfwd>
+
 #include "lib/ftl/time/time_delta.h"
 
 namespace ftl {
@@ -58,6 +60,10 @@ class TimePoint {
 
   int64_t ticks_ = 0;
 };
+
+// Used to print useful values in gtest assertions. Should not be used in
+// production code.
+void PrintTo(const TimePoint& time_point, ::std::ostream* os);
 
 }  // namespace ftl
 
