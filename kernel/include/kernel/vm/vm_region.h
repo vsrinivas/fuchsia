@@ -11,6 +11,7 @@
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <kernel/vm/vm_page_list.h>
 
 class VmAspace;
 class VmObject;

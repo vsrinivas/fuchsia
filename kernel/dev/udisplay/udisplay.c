@@ -42,8 +42,8 @@ status_t udisplay_set_display_info(struct display_info* display) {
 }
 
 status_t udisplay_bind_gfxconsole(void) {
-    assert(g_udisplay.framebuffer_phys);
-    assert(g_udisplay.framebuffer_size);
+    if (g_udisplay.framebuffer_phys == 0 || g_udisplay.framebuffer_size == 0)
+        return ERR_NOT_FOUND;
 
     // map the framebuffer
     vmm_aspace_t* aspace = vmm_get_kernel_aspace();

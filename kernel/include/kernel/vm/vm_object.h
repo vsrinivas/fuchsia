@@ -9,12 +9,13 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_page_list.h>
+#include <lib/user_copy/user_ptr.h>
 #include <list.h>
-#include <stdint.h>
 #include <mxtl/array.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-#include <lib/user_copy/user_ptr.h>
+#include <stdint.h>
 
 // The base vm object that holds a range of bytes of data
 //
@@ -84,7 +85,7 @@ private:
     status_t ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
                                T copyfunc);
 
-    // constants
+// constants
 #if _LP64
     static const uint64_t MAX_SIZE = ROUNDDOWN(SIZE_MAX, PAGE_SIZE);
 #else
@@ -98,8 +99,8 @@ private:
     // members
     uint64_t size_ = 0;
     uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
-    mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
+    Mutex lock_;
 
-    // array of page pointers, one per page offset into the object
-    mxtl::Array<vm_page_t*> page_array_;
+    // a tree of pages
+    VmPageList page_list_;
 };

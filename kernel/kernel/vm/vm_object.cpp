@@ -53,20 +53,7 @@ VmObject::~VmObject() {
     list_initialize(&list);
 
     // free all of the pages attached to us
-    size_t count = 0;
-    for (size_t i = 0; i < page_array_.size(); i++) {
-        auto p = page_array_[i];
-        if (p) {
-            LTRACEF("freeing page %p (%#" PRIxPTR ")\n", p, vm_page_to_paddr(p));
-
-            // add to the temporary free list
-            list_add_tail(&list, &p->free.node);
-            count++;
-        }
-    }
-
-    __UNUSED auto freed = pmm_free(&list);
-    DEBUG_ASSERT(freed == count);
+    page_list_.FreeAllPages();
 
     // clear our magic value
     magic_ = 0;
@@ -99,10 +86,8 @@ void VmObject::Dump() {
     size_t count = 0;
     {
         AutoLock a(lock_);
-        for (size_t i = 0; i < page_array_.size(); i++) {
-            if (page_array_[i])
-                count++;
-        }
+
+        page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
     }
     printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n",
            this, ref_count_debug(), size_, count);
@@ -122,32 +107,10 @@ status_t VmObject::Resize(uint64_t s) {
         return ERR_NOT_SUPPORTED; // TODO: support resizing an existing object
     }
 
-    // compute the number of pages we cover
-    size_t page_count = OffsetToIndex(ROUNDUP_PAGE_SIZE(s));
-
     // save bytewise size
     size_ = s;
 
-    // allocate a new array
-    DEBUG_ASSERT(!page_array_); // no resizing
-    AllocChecker ac;
-    vm_page_t** pa = new (&ac) vm_page_t* [page_count] {};
-    if (!ac.check())
-        return ERR_NO_MEMORY;
-
-    page_array_.reset(pa, page_count);
-
     return NO_ERROR;
-}
-
-void VmObject::AddPageToArray(size_t index, vm_page_t* p) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(is_mutex_held(&lock_));
-
-    DEBUG_ASSERT(page_array_);
-    DEBUG_ASSERT(!page_array_[index]);
-    DEBUG_ASSERT(index < page_array_.size());
-    page_array_[index] = p;
 }
 
 status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
@@ -162,11 +125,7 @@ status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
     if (offset >= size_)
         return ERR_OUT_OF_RANGE;
 
-    size_t index = OffsetToIndex(offset);
-
-    AddPageToArray(index, p);
-
-    return NO_ERROR;
+    return page_list_.AddPage(p, offset);
 }
 
 mxtl::RefPtr<VmObject> VmObject::CreateFromROData(const void* data,
@@ -223,9 +182,7 @@ vm_page_t* VmObject::GetPageLocked(uint64_t offset) {
     if (offset >= size_)
         return nullptr;
 
-    size_t index = OffsetToIndex(offset);
-
-    return page_array_[index];
+    return page_list_.GetPage(offset);
 }
 
 vm_page_t* VmObject::GetPage(uint64_t offset) {
@@ -237,7 +194,7 @@ vm_page_t* VmObject::GetPage(uint64_t offset) {
 
 vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(is_mutex_held(&lock_));
+    DEBUG_ASSERT(lock_.IsHeld());
 
     LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n",
             this, offset, pf_flags);
@@ -245,9 +202,7 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     if (offset >= size_)
         return nullptr;
 
-    size_t index = OffsetToIndex(offset);
-
-    vm_page_t* p = page_array_[index];
+    vm_page_t* p = page_list_.GetPage(offset);
     if (p)
         return p;
 
@@ -262,7 +217,8 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
 
-    AddPageToArray(index, p);
+    auto status = page_list_.AddPage(p, offset);
+    DEBUG_ASSERT(status == NO_ERROR);
 
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
 
@@ -297,9 +253,7 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
     // make a pass through the list, counting the number of pages we need to allocate
     size_t count = 0;
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        size_t index = OffsetToIndex(o);
-
-        if (!page_array_[index])
+        if (!page_list_.GetPage(o))
             count++;
     }
     if (count == 0)
@@ -318,12 +272,11 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
 
     // add them to the appropriate range of the object
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        size_t index = OffsetToIndex(o);
-
-        if (page_array_[index])
+        vm_page_t* p = page_list_.GetPage(o);
+        if (p)
             continue;
 
-        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
+        p = list_remove_head_type(&page_list, vm_page_t, free.node);
         ASSERT(p);
 
         p->state = VM_PAGE_STATE_OBJECT;
@@ -331,7 +284,8 @@ int64_t VmObject::CommitRange(uint64_t offset, uint64_t len) {
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);
 
-        AddPageToArray(index, p);
+        __UNUSED auto status = page_list_.AddPage(p, o);
+        DEBUG_ASSERT(status == NO_ERROR);
     }
 
     DEBUG_ASSERT(list_is_empty(&page_list));
@@ -361,12 +315,8 @@ int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t a
     // make a pass through the list, making sure we have an empty run on the object
     size_t count = 0;
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        size_t index = OffsetToIndex(o);
-
-        if (page_array_[index])
-            return ERR_NO_MEMORY;
-
-        count++;
+        if (!page_list_.GetPage(o))
+            count++;
     }
 
     DEBUG_ASSERT(count == len / PAGE_SIZE);
@@ -387,8 +337,6 @@ int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t a
 
     // add them to the appropriate range of the object
     for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        size_t index = OffsetToIndex(o);
-
         vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
         ASSERT(p);
 
@@ -397,7 +345,8 @@ int64_t VmObject::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t a
         // TODO: remove once pmm returns zeroed pages
         ZeroPage(p);
 
-        AddPageToArray(index, p);
+        __UNUSED auto status = page_list_.AddPage(p, o);
+        DEBUG_ASSERT(status == NO_ERROR);
     }
 
     return count * PAGE_SIZE;
