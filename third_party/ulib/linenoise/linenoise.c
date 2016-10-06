@@ -145,9 +145,10 @@ static int __read(int fd, void* buf, size_t len) {
     if (len == 0) return 0;
 
     for (;;) {
-      mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-      if ((nread = read(0, buf, len)))
+      mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+      if ((nread = read(fd, buf, len))) {
           return nread;
+      }
     }
 
     return nread;
