@@ -240,10 +240,23 @@ func (f *file) Truncate(size uint64) error {
 
 	f.node.Lock()
 	defer f.node.Unlock()
-	if size >= uint64(f.node.Size()) {
-		return errors.New("'size' is larger than file")
+	if size > uint64(f.node.Size()) {
+		empty := make([]byte, 1<<14)
+		for size > uint64(f.node.Size()) {
+			// Make the file larger (filled with zeroes). Since FAT (unfortunately) does not support
+			// sparse files, this requires manually writing 'zero' to the end of the file.
+			bytesToWrite := uint64(len(empty))
+			bytesLeft := size - uint64(f.node.Size())
+			if bytesToWrite > bytesLeft {
+				bytesToWrite = bytesLeft
+			}
+			f.node.WriteAt(empty[:bytesToWrite], f.node.Size())
+		}
 	}
-	f.node.SetSize(int64(size))
+	if size < uint64(f.node.Size()) {
+		// Make the file smaller. This can be done by simply reducing the size.
+		f.node.SetSize(int64(size))
+	}
 	return nil
 }
 

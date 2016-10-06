@@ -281,7 +281,8 @@ type File interface {
 	// The seek position is only updated if fs.WhenceFromCurrent is passed as whence.
 	Write(p []byte, off int64, whence int) (int, error)
 
-	// Truncate reduces the file to the size specified by "size" in bytes.
+	// Truncate reduces/expands the file to the size specified by "size" in bytes.
+	// If the file length is increased, it is filled with zeroes.
 	// Truncate does not modify the seek position.
 	Truncate(size uint64) error
 
