@@ -44,7 +44,7 @@ done
 if [ "$GOMA"  -eq 1 ]; then
   GOMA_FLAG=--goma
   case $OSTYPE in
-    darwin) JOB_COUNT_FLAG=-j50 ;;
+    darwin*) JOB_COUNT_FLAG=-j50 ;;
     linux-gnu) JOB_COUNT_FLAG=-j1000 ;;
     *) JOB_COUNT_FLAG= ;;
   esac
