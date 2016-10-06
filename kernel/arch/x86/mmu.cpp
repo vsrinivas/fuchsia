@@ -604,15 +604,17 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
         pt_entry_t* e = table + index;
         // If the page isn't even mapped, just skip it
         if (!IS_PAGE_PRESENT(*e)) {
+            size_t next_entry_vaddr = ROUNDDOWN(new_cursor->vaddr, ps) + ps;
+
             // If our endpoint was in the middle of this range, clamp the
             // amount we remove from the cursor
-            if (new_cursor->size < ps) {
+            if (new_cursor->size < next_entry_vaddr - new_cursor->vaddr) {
                 new_cursor->vaddr += new_cursor->size;
                 new_cursor->size = 0;
                 continue;
             }
-            new_cursor->vaddr += ps;
-            new_cursor->size -= ps;
+            new_cursor->size -= next_entry_vaddr - new_cursor->vaddr;
+            new_cursor->vaddr = next_entry_vaddr;
             DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
             continue;
         }

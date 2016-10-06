@@ -81,6 +81,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/lapic.c \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/mmu_mem_types.c \
+	$(LOCAL_DIR)/mmu_tests.cpp \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/registers.c \
 	$(LOCAL_DIR)/thread.c \
