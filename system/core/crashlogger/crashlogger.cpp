@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <hexdump/hexdump.h>
 
@@ -161,14 +162,50 @@ Fail:
     mx_handle_close(process);
 }
 
+// A small wrapper to provide a useful name to the API call used to effect
+// the request.
+
+mx_status_t bind_system_exception_port(mx_handle_t eport) {
+    return mx_object_bind_exception_port(MX_HANDLE_INVALID, eport, kSysExceptionKey, 0);
+}
+
+// A small wrapper to provide a useful name to the API call used to effect
+// the request.
+
+mx_status_t unbind_system_exception_port() {
+    return mx_object_bind_exception_port(MX_HANDLE_INVALID, MX_HANDLE_INVALID,
+                                         kSysExceptionKey, 0);
+}
+
 void usage() {
-    fprintf(stderr, "Usage: crashlogger\n");
+    fprintf(stderr, "Usage: crashlogger [options]\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
 }
 
 int main(int argc, char** argv) {
-    if (argc != 1) {
-        usage();
-        return 1;
+    mx_status_t status;
+    bool force = false;
+
+    for (int i = 1; i < argc; ++i) {
+        const char* arg = argv[i];
+        if (strcmp(arg, "-f") == 0) {
+            force = true;
+        } else {
+            usage();
+            return 1;
+        }
+    }
+
+    // If asked, undo any previously installed exception port.
+    // This is useful if the system gets in a state where we want to replace
+    // an existing crashlogger with this one.
+    if (force) {
+        status = unbind_system_exception_port();
+        if (status != NO_ERROR) {
+            print_mx_error("unable to unbind system exception port", status);
+            return 1;
+        }
     }
 
     mx_handle_t ex_port = mx_port_create(0u);
@@ -177,9 +214,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_status_t status = mx_object_bind_exception_port(0, ex_port, kSysExceptionKey, 0);
+    status = bind_system_exception_port(ex_port);
     if (status < 0) {
-        print_mx_error("unable to set system exception port", status);
+        print_mx_error("unable to bind system exception port", status);
         return 1;
     }
 
