@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Copyright 2016 The Fuchsia Authors
 #
@@ -10,4 +10,4 @@ export PROJECT=magenta-qemu-arm32
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-$DIR/make-parallel $PROJECT
+$DIR/make-parallel -C $DIR/.. $PROJECT
