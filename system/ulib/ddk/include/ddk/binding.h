@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/driver.h>
 #include <magenta/compiler.h>
 #include <stdint.h>
 
@@ -124,13 +125,13 @@ typedef struct __attribute__((packed)) {
     char version[16];
 } magenta_note_driver_t;
 
-#define MAGENTA_DRIVER(DriverName,VendorName,Version,BindCount) \
+#define MAGENTA_DRIVER_BEGIN(DriverName,VendorName,Version,BindCount) \
 __attribute__((section(".note.magenta.driver")))\
 const struct {\
     magenta_note_header_t note;\
     magenta_note_driver_t driver;\
     mx_bind_inst_t binding[BindCount];\
-} magenta_driver = {\
+} __magenta_driver_note__ = {\
     .note = {\
         .namesz = 7,\
         .descsz = sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
@@ -147,8 +148,15 @@ const struct {\
 
 #define MAGENTA_DRIVER_END() }};
 
-#define MAGENTA_DRIVER_NAME magenta_driver.driver.name
-#define MAGENTA_DRIVER_BINDING magenta_driver.binding
-#define MAGENTA_DRIVER_BINDING_SIZE sizeof(magenta_driver.binding)
+#define MAGENTA_DRIVER_NAME __magenta_driver_note__.driver.name
+#define MAGENTA_DRIVER_BINDING __magenta_driver_note__.binding
+#define MAGENTA_DRIVER_BINDING_SIZE sizeof(__magenta_driver_note__.binding)
+
+
+#if MAGENTA_BUILTIN_DRIVERS
+#define MAGENTA_DRIVER(name) mx_driver_t name __ALIGNED(sizeof(void*)) __SECTION("builtin_drivers")
+#else
+#define MAGENTA_DRIVER(name) mx_driver_t __magenta_driver__
+#endif
 
 __END_CDECLS;

@@ -5,6 +5,7 @@
 #include "acpi.h"
 #include "devmgr.h"
 #include "devhost.h"
+#include "driver-api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,9 @@
 
 #include <mxio/util.h>
 
+#include <dirent.h>
+#include <dlfcn.h>
+
 int devhost_init(void);
 int devhost_cmdline(int argc, char** argv);
 int devhost_start(void);
@@ -36,30 +40,66 @@ extern mx_handle_t _dmctl_handle;
 extern mx_driver_t __start_builtin_drivers[] __WEAK;
 extern mx_driver_t __stop_builtin_drivers[] __WEAK;
 
-static void init_builtin_drivers(bool for_root) {
-    mx_driver_t* drv;
-    for (drv = __start_builtin_drivers; drv < __stop_builtin_drivers; drv++) {
+static void init_driver(mx_driver_t* drv, bool for_root) {
         if ((drv->binding_size == 0) && (!for_root)) {
             // only load root-level drivers in the root devhost
-            continue;
+            return;
         }
 #if !ONLY_ONE_DEVHOST
         if ((drv->binding_size > 0) && (for_root)) {
-            continue;
+            return;
         }
 #endif
         driver_add(drv);
+}
+
+static void init_builtin_drivers(bool for_root) {
+    mx_driver_t* drv;
+    for (drv = __start_builtin_drivers; drv < __stop_builtin_drivers; drv++) {
+        init_driver(drv, for_root);
     }
+}
+
+static void init_loadable_drivers(bool for_root) {
+    DIR* dir = opendir("/boot/lib/driver");
+    struct dirent* de;
+    while ((de = readdir(dir)) != NULL) {
+        char libname[256 + 32];
+        if (de->d_name[0] == '.') {
+            continue;
+        }
+        int r = snprintf(libname, sizeof(libname), "driver/%s", de->d_name);
+        if ((r < 0) || (r >= (int)sizeof(libname))) {
+            continue;
+        }
+        void* dl = dlopen(libname, RTLD_NOW);
+        if (dl == NULL) {
+            printf("devhost: cannot load '%s': %s\n", libname, dlerror());
+            continue;
+        }
+        mx_driver_t* drv = dlsym(dl, "__magenta_driver__");
+        //printf("devhost: driver '%s' %p\n", libname, drv);
+        if (drv != NULL) {
+            init_driver(drv, for_root);
+        }
+    }
+    closedir(dir);
 }
 
 static mx_handle_t mojo_launcher;
 
+extern driver_api_t devhost_api;
+
 int main(int argc, char** argv) {
     int r;
     bool as_root = false;
+
+    driver_api_init(&devhost_api);
+
     if ((r = devhost_init()) < 0) {
         return r;
     }
+
     if ((argc > 1) && (!strcmp(argv[1], "root"))) {
         as_root = true;
 
@@ -81,6 +121,7 @@ int main(int argc, char** argv) {
         driver_add(&_driver_dmctl);
     }
     init_builtin_drivers(as_root);
+    init_loadable_drivers(as_root);
     return devhost_start();
 }
 

@@ -71,8 +71,6 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
-#if LIBDRIVER
-
 static mx_driver_t __driver_kpci = {
     .name = "pci",
 };
@@ -80,8 +78,6 @@ static mx_driver_t __driver_kpci = {
 mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index) {
     return kpci_init_child(&__driver_kpci, out, index);
 }
-
-#else
 
 static mx_device_t* kpci_root_dev;
 
@@ -104,17 +100,6 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
         }
         mx_handle_close(h);
 
-        // if there's an external driver for this device, prefer it
-        char binname[64];
-        snprintf(binname, sizeof(binname), "/boot/bin/driver-pci-%04x-%04x",
-                 info.vendor_id, info.device_id);
-        struct stat s;
-        if (stat(binname, &s)) {
-            strcpy(binname, "/boot/bin/devhost");
-        } else {
-            printf("FOUND EXTERNAL DRIVER: %s\n", binname);
-        }
-
         char name[32];
         snprintf(name, sizeof(name), "%02x:%02x:%02x",
                  info.bus_id, info.dev_id, info.func_id);
@@ -126,7 +111,7 @@ static mx_status_t kpci_init_children(mx_driver_t* drv, mx_device_t* parent) {
         char arg1[20];
         snprintf(arg1, sizeof(arg1), "pci=%d", index);
 
-        const char* args[2] = { binname, arg1 };
+        const char* args[2] = { "/boot/bin/devhost", arg1 };
         devhost_launch_devhost(parent, name, MX_PROTOCOL_PCI, procname, 2, (char**)args);
 #endif
     }
@@ -159,5 +144,3 @@ mx_driver_t _driver_kpci BUILTIN_DRIVER = {
         .init = kpci_drv_init,
     },
 };
-
-#endif

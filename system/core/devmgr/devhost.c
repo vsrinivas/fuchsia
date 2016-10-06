@@ -142,10 +142,6 @@ mx_status_t devhost_remove(mx_device_t* dev) {
 
 mx_handle_t root_resource_handle;
 
-__EXPORT mx_handle_t get_root_resource(void) {
-    return root_resource_handle;
-}
-
 static mx_driver_t root_driver = {
     .name = "root",
 };

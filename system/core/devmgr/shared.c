@@ -62,7 +62,6 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
 
     uint32_t hcount = 5;
 
-#if !LIBDRIVER
 #if !DEVMGR
     // pass acpi handle if available
     ids[hcount] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HACPI);
@@ -78,7 +77,6 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
             hcount++;
         }
     }
-#endif
 #endif
 
     printf("devmgr: launch: %s %s %s\n", name, argv[0], argv[1]);

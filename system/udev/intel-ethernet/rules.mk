@@ -4,6 +4,17 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DRIVER_SRCS += \
+MODULE := $(LOCAL_DIR)
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := \
     $(LOCAL_DIR)/ethernet.c \
     $(LOCAL_DIR)/ie.c
+
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := \
+    ulib/driver ulib/magenta ulib/musl
+
+include make/module.mk

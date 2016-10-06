@@ -60,11 +60,18 @@ DRIVERS += $(patsubst %/rules.mk,%,$(wildcard third_party/udev/*/driver.mk))
 -include $(DRIVERS)
 LOCAL_DIR := $(LOCAL_SAVEDIR)
 
+MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
+
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
     $(LOCAL_DIR)/dmctl.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/devhost-main.c \
+    $(LOCAL_DIR)/devhost.c \
+    $(LOCAL_DIR)/devhost-api.c \
+    $(LOCAL_DIR)/devhost-binding.c \
+    $(LOCAL_DIR)/devhost-core.c \
+    $(LOCAL_DIR)/devhost-rpc-server.c \
     $(DRIVER_SRCS) \
 
 # hexdump, hid, gfx are needed for various drivers
