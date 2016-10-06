@@ -1,0 +1,31 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+source_set("util") {
+  sources = [
+    "priority_queue_of_unique_ptr.h",
+  ]
+
+  deps = [
+  ]
+}
+
+executable("apptests") {
+  output_name = "media_util_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/priority_queue_of_unique_ptr_test.cc",
+    "test/run_all_tests.cc",
+  ]
+
+  deps = [
+    ":util",
+    "//mojo/system",
+    "//third_party/gtest",
+  ]
+}

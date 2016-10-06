@@ -28,5 +28,6 @@ group("apptests") {
     "//apps/media/services/common:apptests",
     "//apps/media/services/framework:apptests",
     "//apps/media/services/media_service:apptests",
+    "//apps/media/services/util:apptests",
   ]
 }
