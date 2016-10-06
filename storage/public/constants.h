@@ -13,6 +13,8 @@ extern const unsigned long kCommitIdSize;
 // The size of an object id in number of bytes.
 extern const unsigned long kObjectIdSize;
 
+extern const char kFirstPageCommitId[];
+
 }  // namespace storage
 
 #endif  // APPS_LEDGER_STORAGE_PUBLIC_CONSTANTS_H_

@@ -40,12 +40,13 @@ enum class ChangeSource { LOCAL, SYNC };
 
 enum class Status {
   OK,
-  PAGE_DELETED,
-  NOT_FOUND,
-  OBJECT_ID_MISSMATCH,
-  IO_ERROR,
+  FORMAT_ERROR,
   ILLEGAL_STATE,
+  IO_ERROR,
+  NOT_FOUND,
   NOT_IMPLEMENTED,
+  OBJECT_ID_MISMATCH,
+  PAGE_DELETED,
 };
 
 }  // namespace storage

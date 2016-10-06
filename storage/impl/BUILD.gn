@@ -54,6 +54,7 @@ executable("unittests") {
     "db_unittest.cc",
     "ledger_storage_unittest.cc",
     "object_impl_unittest.cc",
+    "page_storage_unittest.cc",
   ]
 
   deps = [

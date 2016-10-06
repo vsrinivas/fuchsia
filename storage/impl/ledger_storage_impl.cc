@@ -29,7 +29,14 @@ Status LedgerStorageImpl::CreatePageStorage(
     FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
     return Status::IO_ERROR;
   }
-  page_storage->reset(new PageStorageImpl(GetPathFor(page_id), page_id));
+  std::unique_ptr<PageStorageImpl> result(
+      new PageStorageImpl(GetPathFor(page_id), page_id));
+  Status s = result->Init();
+  if (s != Status::OK) {
+    FTL_LOG(ERROR) << "Failed to initialize PageStorage.";
+    return s;
+  }
+  *page_storage = std::move(result);
   return Status::OK;
 }
 

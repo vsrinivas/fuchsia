@@ -8,5 +8,6 @@ namespace storage {
 
 const unsigned long kCommitIdSize = 32;
 const unsigned long kObjectIdSize = 32;
+const char kFirstPageCommitId[kCommitIdSize] = {0};
 
 }  // namespace storage

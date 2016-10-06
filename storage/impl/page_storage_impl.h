@@ -7,12 +7,22 @@
 
 #include "apps/ledger/storage/public/page_storage.h"
 
+#include "apps/ledger/storage/impl/db.h"
+
 namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(std::string page_path, PageId page_id);
   ~PageStorageImpl() override;
+
+  // Initializes this PageStorageImpl. This includes initializing the underlying
+  // database, adding the default page head if the page is empty, removing
+  // uncommitted explicit and committing implicit journals.
+  Status Init();
+
+  // Adds the given locally created |commit| in this |PageStorage|.
+  Status AddCommitFromLocal(std::unique_ptr<Commit> commit);
 
   // PageStorage:
   PageId GetId() override;
@@ -51,8 +61,11 @@ class PageStorageImpl : public PageStorage {
           callback) override;
 
  private:
+  Status AddCommit(std::unique_ptr<Commit> commit, ChangeSource source);
+
   std::string page_path_;
   PageId page_id_;
+  DB db_;
 };
 
 }  // namespace storage
