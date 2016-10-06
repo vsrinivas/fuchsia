@@ -155,9 +155,12 @@ void process_report(const mx_exception_report_t* report) {
         printf("unsupported architecture .. coming soon.\n");
     }
 
-    // allow the thread (and then process) to die:
 Fail:
+    debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
+
+    // allow the thread (and then process) to die:
     mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
+
     mx_handle_close(thread);
     mx_handle_close(process);
 }
@@ -180,6 +183,7 @@ mx_status_t unbind_system_exception_port() {
 void usage() {
     fprintf(stderr, "Usage: crashlogger [options]\n");
     fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -d[n] = set debug level to N\n");
     fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
 }
 
@@ -189,7 +193,13 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
-        if (strcmp(arg, "-f") == 0) {
+        if (strncmp(arg, "-d", 2) == 0) {
+            if (arg[2] != '\0') {
+                debug_level = atoi(arg + 2);
+            } else {
+                debug_level = 1;
+            }
+        } else if (strcmp(arg, "-f") == 0) {
             force = true;
         } else {
             usage();

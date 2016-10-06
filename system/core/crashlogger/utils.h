@@ -8,6 +8,17 @@
 
 extern const char* cl_basename(const char* file);
 
+extern int debug_level;
+
+extern void do_print_debug(const char* file, int line, const char* func, const char* fmt, ...);
+
+#define debugf(level, fmt...) \
+  do { \
+    if (debug_level >= (level)) { \
+      do_print_debug (__FILE__, __LINE__, __func__, fmt); \
+    } \
+  } while (0)
+
 extern void do_print_error(const char* file, int line, const char* fmt, ...);
 
 extern void do_print_mx_error(const char* file, int line, const char* what, mx_status_t status);
@@ -22,3 +33,5 @@ extern void do_print_mx_error(const char* file, int line, const char* what, mx_s
     do_print_mx_error(__FILE__, __LINE__, \
                       (what), static_cast<mx_status_t>(status)); \
   } while (0)
+
+extern mx_koid_t get_koid(mx_handle_t handle);
