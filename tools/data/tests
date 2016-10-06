@@ -17,4 +17,5 @@ unittests = [
 # List of apptest binaries.
 apptests = [
     'mojo:ledger_abax_apptests',
+    'mojo:ledger_codex_apptests',
 ]
