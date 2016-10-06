@@ -212,12 +212,10 @@ func TestOpenFlags(t *testing.T) {
 
 			// Re-open the file as append-only
 			f = checkOpenFile(t, d, "foo", fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagAppend)
-			// Test that file is not seekable
-			if _, err := f.Seek(10, fs.WhenceFromStart); err != fs.ErrPermission {
-				t.Fatal("Expected seek to fail for append-only files")
-			}
+			// Test that file is still seekable
+			checkSeek(t, f, 1, fs.WhenceFromStart)
 			sizeBefore, _, _ := checkStat(t, f)
-			// Pass in "non-append" flags
+			// Test a command that normally would not append
 			if _, err := f.Write(bufA, 0, fs.WhenceFromStart); err != nil {
 				t.Fatal(err)
 			}
@@ -513,15 +511,6 @@ func TestDup(t *testing.T) {
 		f = checkOpenFile(t, root, "foo", fs.OpenFlagRead)
 		f2 = checkDupFile(t, f)
 		if _, err := f2.Write(buf, 0, fs.WhenceFromEnd); err != fs.ErrPermission {
-			t.Fatal("Expected permission error")
-		}
-		checkClose(t, f)
-		checkClose(t, f2)
-
-		// Try Dup with an append-only file
-		f = checkOpenFile(t, root, "foo", fs.OpenFlagWrite|fs.OpenFlagAppend)
-		f2 = checkDupFile(t, f)
-		if _, err := f2.Seek(0, fs.WhenceFromStart); err != fs.ErrPermission {
 			t.Fatal("Expected permission error")
 		}
 		checkClose(t, f)

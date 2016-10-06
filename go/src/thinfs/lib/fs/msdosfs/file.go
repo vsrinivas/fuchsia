@@ -278,10 +278,6 @@ func (f *file) Seek(offset int64, whence int) (int64, error) {
 		return 0, fs.ErrNotOpen
 	}
 
-	if f.flags.Append() {
-		return 0, fs.ErrPermission // Cannot seek on an append-only file
-	}
-
 	f.node.RLock() // Possibly reading 'Size'
 	defer f.node.RUnlock()
 	f.position.Lock() // Setting position
