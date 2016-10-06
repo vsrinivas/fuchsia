@@ -8,7 +8,7 @@
 
 #include "apps/maxwell/context_service/context_service.mojom.h"
 
-#include "graph.h"
+#include "apps/maxwell/context_service/graph.h"
 
 namespace intelligence {
 namespace context_service {
@@ -57,11 +57,11 @@ class Repo {
              ContextSubscriberLinkPtr subscriber);
 
  private:
-  // TODO(rosswang): This may become an unconditional part of Query after we
-  // support open-ended queries.
-  void AddPendingQuery(const std::string& label,
-                       const std::string& schema,
-                       ContextSubscriberLinkPtr subscriber);
+  class QuerySet
+      : public maxwell::BoundSet<struct Query, ContextSubscriberLink> {
+   protected:
+    ContextSubscriberLinkPtr* GetPtr(struct Query* element) override;
+  };
 
   // TODO(rosswang): Is there a good way to not require a separate index
   // structure for each combination we can come up with?
@@ -73,7 +73,7 @@ class Repo {
   // TODO(rosswang): Right now, this could just be a 2-D map. In general though,
   // since queries can have arbitrary dimensionality and complexity, I don't
   // know how well we can optimize this.
-  std::vector<struct Query> queries_;
+  QuerySet queries_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(Repo);
 };

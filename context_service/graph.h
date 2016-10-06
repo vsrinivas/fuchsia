@@ -9,6 +9,8 @@
 #include "apps/maxwell/context_service/context_service.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
+#include "apps/maxwell/bound_set.h"
+
 namespace intelligence {
 namespace context_service {
 
@@ -59,7 +61,11 @@ class DataNode : public ContextPublisherLink {
   DataNode(ComponentNode* const component,
            const std::string& label,
            const std::string& schema)
-      : label(label), schema(schema), component_(component), publisher_(this) {}
+      : label(label),
+        schema(schema),
+        component_(component),
+        publisher_(this),
+        subscribers_(this) {}
 
   void Update(const mojo::String& json_value) override;
   void Subscribe(ContextSubscriberLinkPtr link);
@@ -72,12 +78,24 @@ class DataNode : public ContextPublisherLink {
   const std::string schema;
 
  private:
+  class SubscriberSet
+      : public maxwell::ExtensibleInterfacePtrSet<ContextSubscriberLink> {
+   public:
+    SubscriberSet(DataNode* node) : node_(node) {}
+
+   protected:
+    void OnConnectionError(ContextSubscriberLink* interface_ptr) override;
+
+   private:
+    DataNode* node_;
+  };
+
   ComponentNode* const component_;
   std::string json_value_;
 
   ContextPublisherControllerPtr publisher_controller_;
   mojo::Binding<ContextPublisherLink> publisher_;
-  std::vector<ContextSubscriberLinkPtr> subscribers_;
+  SubscriberSet subscribers_;
 
   MOJO_MOVE_ONLY_TYPE(DataNode);
 };

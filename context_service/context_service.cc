@@ -10,8 +10,8 @@
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 
-#include "graph.h"
-#include "repo.h"
+#include "apps/maxwell/context_service/graph.h"
+#include "apps/maxwell/context_service/repo.h"
 
 namespace {
 

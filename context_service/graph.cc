@@ -2,10 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "graph.h"
+#include "apps/maxwell/context_service/graph.h"
 
 namespace intelligence {
 namespace context_service {
+
+void DataNode::SubscriberSet::OnConnectionError(
+    ContextSubscriberLink* interface_ptr) {
+  MOJO_LOG(VERBOSE) << "Subscription to " << node_->label << " lost";
+
+  maxwell::ExtensibleInterfacePtrSet<ContextSubscriberLink>::OnConnectionError(
+      interface_ptr);
+
+  // Notify if this was the last subscriber.
+  if (node_->subscribers_.empty() && node_->publisher_controller_) {
+    MOJO_LOG(VERBOSE) << "No more subscribers to " << node_->label;
+    node_->publisher_controller_->OnNoSubscribers();
+  }
+}
 
 void DataNode::Update(const mojo::String& json_value) {
   json_value_ = json_value;
@@ -20,33 +34,6 @@ void DataNode::Update(const mojo::String& json_value) {
 }
 
 void DataNode::Subscribe(ContextSubscriberLinkPtr link) {
-  // Taken from mojo::InterfacePtrSet; remove link on error.
-  ContextSubscriberLink* ifc = link.get();
-  link.set_connection_error_handler([this, ifc] {
-    // General note: since Mojo message processing, including error handling,
-    // is single-threaded, this is guaranteed not to happen at least until the
-    // next processing loop.
-
-    MOJO_LOG(VERBOSE) << "Subscription to " << label << " lost";
-
-    auto it = std::find_if(subscribers_.begin(), subscribers_.end(),
-                           [ifc](const ContextSubscriberLinkPtr& sub) {
-                             return sub.get() == ifc;
-                           });
-
-    assert(it != subscribers_.end());
-
-    // Notify if this was the last subscriber.
-    if (subscribers_.size() == 1 && publisher_controller_) {
-      MOJO_LOG(VERBOSE) << "No more subscribers to " << label;
-      publisher_controller_->OnNoSubscribers();
-    }
-
-    // This must be the last line in the error handler, because once we do
-    // this the lambda is destroyed and subsequent capture accesses seg-fault.
-    subscribers_.erase(it);
-  });
-
   // If there is already context, send it as an initial update. If it could
   // be stale, it is up to the publisher to have removed it.
   if (!json_value_.empty()) {
@@ -61,7 +48,7 @@ void DataNode::Subscribe(ContextSubscriberLinkPtr link) {
     publisher_controller_->OnHasSubscribers();
   }
 
-  subscribers_.emplace_back(link.Pass());
+  subscribers_.emplace(link.Pass());
 }
 
 void DataNode::SetPublisher(

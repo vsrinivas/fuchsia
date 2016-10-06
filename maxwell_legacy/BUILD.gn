@@ -4,12 +4,12 @@
 
 group("maxwell") {
   deps = [
+    ":maxwell_test",
     "acquirers:all",
     "agents:all",
     "context_service:all",
     "document_store",
     "suggestions",
-    ":maxwell_test",
   ]
 }
 
