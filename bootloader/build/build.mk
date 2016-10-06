@@ -26,7 +26,7 @@ out/%.efi: out/%.so
 	@mkdir -p $(dir $@)
 	@echo building: $@
 	$(QUIET)$(EFI_OBJCOPY) --target=pei-$(subst _,-,$(ARCH)) --subsystem 10 $(EFI_SECTIONS) $< $@
-	$(QUIET)if [ "`nm $< | grep ' U '`" != "" ]; then echo "error: $<: undefined symbols"; nm $< | grep ' U '; rm $<; exit 1; fi
+	$(QUIET)if [ "`$(EFI_NM) $< | grep ' U '`" != "" ]; then echo "error: $<: undefined symbols"; $(EFI_NM) $< | grep ' U '; rm $<; exit 1; fi
 
 # _efi_app <basename> <obj-files> <dep-files>
 define _efi_app
@@ -37,7 +37,7 @@ out/$1.so: $2 $(EFI_CRT0) out/libxefi.a
 	@mkdir -p $$(dir $$@)
 	@echo linking: $$@
 	$(QUIET)$(EFI_LD) -o $$@ $(EFI_LDFLAGS) $2 $(EFI_LIBS)
-	@if ! $(EFI_READELF) -r $$@ | grep -q 'no relocations'; then \
+	$(QUIET)if ! $(EFI_READELF) -r $$@ | grep -q 'no relocations'; then \
 	    echo "error: $$@ has relocations"; \
 	    $(EFI_READELF) -r $$@; \
 	    rm $$@; \

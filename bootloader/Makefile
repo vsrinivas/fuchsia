@@ -4,20 +4,24 @@
 
 ARCH		:= x86_64
 
-EFI_TOOLCHAIN	:=
+# Temporary ugliness until we integrate gigaboot build into magenta build
+LK_ROOT         := ..
+LKMAKEROOT      := $(LK_ROOT)
+-include $(LK_ROOT)/prebuilt/config.mk
+
+EFI_TOOLCHAIN	:= $(LK_ROOT)/prebuilt/$(ARCH_x86_64_TOOLCHAIN_PREFIX)
 EFI_CC		:= $(EFI_TOOLCHAIN)gcc
 EFI_LD		:= $(EFI_TOOLCHAIN)ld
 EFI_READELF	:= $(EFI_TOOLCHAIN)readelf
 EFI_OBJCOPY	:= $(EFI_TOOLCHAIN)objcopy
 EFI_AR		:= $(EFI_TOOLCHAIN)ar
+EFI_NM          := $(EFI_TOOLCHAIN)nm
 
 EFI_LINKSCRIPT	:= build/efi-x86-64.lds
 
 EFI_CFLAGS	:= -fPIE -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -Iinclude -Isrc
-# Temporary ugliness until we integrate gigaboot build into magenta build
-LK_ROOT         := ..
 EFI_CFLAGS      += -I$(LK_ROOT)/system/public
 
 EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie
@@ -63,7 +67,7 @@ out/libxefi.a: $(LIB_OBJS)
 	@mkdir -p $(dir $@)
 	@echo archiving: $@
 	$(QUIET)rm -f $@
-	$(QUIET)ar rc $@ $^
+	$(QUIET)$(EFI_AR) rc $@ $^
 
 out/BOOTx64.EFI: $(APP)
 	@mkdir -p $(dir $@)
@@ -77,7 +81,8 @@ out/disk.img: $(APPS) out/BOOTx64.EFI
 	$(QUIET)mcopy -o -i out/disk.img@@1024K $(APPS) README.txt ::
 	$(QUIET)mcopy -o -i out/disk.img@@1024K $(APPS) out/BOOTx64.EFI ::EFI/BOOT/
 
-ALL += out/disk.img
+#disable disk.img by default; doesn't build on macOS
+#ALL += out/disk.img
 
 -include $(DEPS)
 
