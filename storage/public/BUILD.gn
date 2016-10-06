@@ -13,7 +13,6 @@ source_set("public") {
     "constants.h",
     "iterator.h",
     "journal.h",
-    "ledger_storage.h",
     "object.h",
     "page_storage.h",
     "types.cc",

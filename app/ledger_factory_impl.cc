@@ -6,14 +6,18 @@
 
 #include "apps/ledger/app/ledger_impl.h"
 #include "apps/ledger/glue/crypto/base64.h"
+#include "apps/ledger/storage/impl/application_storage_impl.h"
 #include "mojo/public/cpp/application/connect.h"
 
 namespace ledger {
 
 LedgerFactoryImpl::LedgerFactoryImpl(
     mojo::InterfaceRequest<LedgerFactory> request,
-    storage::LedgerStorage* storage)
-    : binding_(this, std::move(request)), storage_(storage) {}
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    const std::string& base_storage_dir)
+    : binding_(this, std::move(request)),
+      task_runner_(task_runner),
+      base_storage_dir_(base_storage_dir) {}
 
 LedgerFactoryImpl::~LedgerFactoryImpl() {}
 
@@ -25,15 +29,12 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
     // User identity cannot be empty.
     callback.Run(Status::AUTHENTICATION_ERROR, nullptr);
   } else {
-    std::unique_ptr<storage::ApplicationStorage> app_storage =
-        storage_->CreateApplicationStorage(
-            GetIdentityString(std::move(identity)));
-    if (app_storage) {
-      new LedgerImpl(GetProxy(&ledger), std::move(app_storage));
-      callback.Run(Status::OK, std::move(ledger));
-    } else {
-      callback.Run(Status::AUTHENTICATION_ERROR, std::move(ledger));
-    }
+    std::unique_ptr<storage::ApplicationStorage> app_storage(
+        new storage::ApplicationStorageImpl(
+            task_runner_, base_storage_dir_,
+            GetIdentityString(std::move(identity))));
+    new LedgerImpl(GetProxy(&ledger), std::move(app_storage));
+    callback.Run(Status::OK, std::move(ledger));
   }
 }
 

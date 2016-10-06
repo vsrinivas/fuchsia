@@ -14,8 +14,11 @@ namespace storage {
 
 ApplicationStorageImpl::ApplicationStorageImpl(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
-    std::string storage_dir)
-    : task_runner_(std::move(task_runner)), storage_dir_(storage_dir) {}
+    const std::string& base_storage_dir,
+    const std::string& identity)
+    : task_runner_(std::move(task_runner)) {
+  storage_dir_ = base_storage_dir + "/" + identity;
+}
 
 ApplicationStorageImpl::~ApplicationStorageImpl() {}
 

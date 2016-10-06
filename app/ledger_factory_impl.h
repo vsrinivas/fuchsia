@@ -9,8 +9,8 @@
 #include <string>
 
 #include "apps/ledger/api/ledger.mojom.h"
-#include "apps/ledger/storage/public/ledger_storage.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/interfaces/application/shell.mojom.h"
 
@@ -18,8 +18,12 @@ namespace ledger {
 
 class LedgerFactoryImpl : public LedgerFactory {
  public:
+  // |task_runner| executes asynchronous tasks for the created ledgers
+  // |base_storage_dir| is the base directory where disk storage for the created
+  // ledgers is hosted in separate subdirectories
   LedgerFactoryImpl(mojo::InterfaceRequest<LedgerFactory> request,
-                    storage::LedgerStorage* storage);
+                    ftl::RefPtr<ftl::TaskRunner> task_runner,
+                    const std::string& base_storage_dir);
   ~LedgerFactoryImpl() override;
 
  private:
@@ -30,7 +34,8 @@ class LedgerFactoryImpl : public LedgerFactory {
   std::string GetIdentityString(IdentityPtr identity);
 
   mojo::StrongBinding<LedgerFactory> binding_;
-  storage::LedgerStorage* storage_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  const std::string base_storage_dir_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerFactoryImpl);
 };

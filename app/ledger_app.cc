@@ -10,8 +10,6 @@
 
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/ledger/app/ledger_factory_impl.h"
-#include "apps/ledger/storage/impl/ledger_storage_impl.h"
-#include "apps/ledger/storage/public/ledger_storage.h"
 #include "apps/network/interfaces/network_service.mojom.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -41,19 +39,20 @@ class LedgerApp : public mojo::ApplicationImplBase {
  private:
   void OnInitialize() override {
     message_loop_ = mtl::MessageLoop::GetCurrent();
+
+    bool storage_path_given = false;
     for (const std::string& arg : args()) {
       if (arg.size() > kStorageArgLength &&
           arg.substr(0, kStorageArgLength) == kStorageArg) {
         std::string storage_path = arg.substr(kStorageArgLength);
-        storage_.reset(new storage::LedgerStorageImpl(
-            message_loop_->task_runner(), storage_path));
+        storage_path_ = storage_path;
+        storage_path_given = true;
         break;
       }
     }
-    if (!storage_) {
+    if (!storage_path_given) {
       temp_storage_.reset(new files::ScopedTempDir());
-      storage_.reset(new storage::LedgerStorageImpl(
-          message_loop_->task_runner(), temp_storage_->path()));
+      storage_path_ = temp_storage_->path();
     }
   }
 
@@ -62,12 +61,13 @@ class LedgerApp : public mojo::ApplicationImplBase {
     service_provider_impl->AddService<LedgerFactory>(
         [this](const mojo::ConnectionContext& connection_context,
                mojo::InterfaceRequest<LedgerFactory> ledger_request) {
-          new LedgerFactoryImpl(std::move(ledger_request), storage_.get());
+          new LedgerFactoryImpl(std::move(ledger_request),
+                                message_loop_->task_runner(), storage_path_);
         });
     return true;
   }
 
-  std::unique_ptr<storage::LedgerStorage> storage_;
+  std::string storage_path_;
   std::unique_ptr<files::ScopedTempDir> temp_storage_;
   mtl::MessageLoop* message_loop_;
 

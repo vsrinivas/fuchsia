@@ -25,8 +25,6 @@ source_set("lib") {
     "db.h",
     "journal_db_impl.cc",
     "journal_db_impl.h",
-    "ledger_storage_impl.cc",
-    "ledger_storage_impl.h",
     "object_impl.cc",
     "object_impl.h",
     "page_storage_impl.cc",

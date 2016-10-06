@@ -42,8 +42,8 @@ class ApplicationStorageTest : public ::testing::Test {
 
   // Test:
   void SetUp() override {
-    storage_.reset(new ApplicationStorageImpl(message_loop_.task_runner(),
-                                              tmp_dir_.path()));
+    storage_.reset(new ApplicationStorageImpl(
+        message_loop_.task_runner(), tmp_dir_.path(), "test_identity"));
     std::srand(0);
   }
 
