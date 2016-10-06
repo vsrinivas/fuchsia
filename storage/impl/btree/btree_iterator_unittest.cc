@@ -16,7 +16,6 @@
 #include "lib/ftl/logging.h"
 
 namespace storage {
-
 namespace {
 
 ObjectId RandomId() {
@@ -25,8 +24,6 @@ ObjectId RandomId() {
   glue::RandBytes(&result[0], kObjectIdSize);
   return result;
 }
-
-}  // namespace
 
 class BTreeIteratorTest : public ::testing::Test {
  public:
@@ -192,4 +189,5 @@ TEST_F(BTreeIteratorTest, Seek) {
   EXPECT_EQ(Status::OK, it->GetStatus());
 }
 
+}  // namespace
 }  // namespace storage

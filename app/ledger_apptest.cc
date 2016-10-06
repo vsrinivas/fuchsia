@@ -15,8 +15,8 @@
 #include "mojo/public/cpp/environment/logging.h"
 
 namespace ledger {
-namespace test {
 namespace {
+
 mojo::Array<uint8_t> RandomArray(size_t size,
                                  const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
@@ -44,8 +44,6 @@ mojo::Array<uint8_t> GetPageId(PagePtr page) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
   return pageId;
 }
-
-}  // namespace
 
 class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
  public:
@@ -208,7 +206,7 @@ TEST_F(LedgerApplicationTest, LedgerDeletePage) {
   DeletePage(testId, Status::PAGE_NOT_FOUND);
 }
 
-}  // namespace test
+}  // namespace
 }  // namespace ledger
 
 MojoResult MojoMain(MojoHandle handle) {

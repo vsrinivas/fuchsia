@@ -16,7 +16,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
-
 namespace {
 
 std::string RandomId(size_t size) {
@@ -34,8 +33,6 @@ void CheckCommitStorageBytes(const CommitId& id, const Commit& commit) {
   EXPECT_EQ(commit.GetParentIds(), copy->GetParentIds());
   // TODO(nellyv): Check that the root node is also correctly (de)serialized.
 }
-
-}  // namespace
 
 class ApplicationStorageTest : public ::testing::Test {
  public:
@@ -119,4 +116,5 @@ TEST_F(ApplicationStorageTest, Commit) {
   CheckCommitStorageBytes(id, commit2);
 }
 
+}  // namespace
 }  // namespace storage

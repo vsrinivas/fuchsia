@@ -11,14 +11,13 @@
 #include "lib/ftl/time/time_delta.h"
 
 namespace cloud_provider {
-
 namespace {
+
 // Allows to create correct std::strings with \0 bytes inside from C-style
 // string constants.
 std::string operator"" _s(const char* str, size_t size) {
   return std::string(str, size);
 }
-}  // namespace
 
 TEST(EncodingTest, Encode) {
   Notification notification(
@@ -113,4 +112,5 @@ TEST(EncodingTest, EncodeDecodeZeroByte) {
   EXPECT_EQ(ServerTimestampToBytes(42), output_record->timestamp);
 }
 
+}  // namespace
 }  // namespace cloud_provider

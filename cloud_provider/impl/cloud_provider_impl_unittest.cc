@@ -22,6 +22,7 @@
 #include <rapidjson/document.h>
 
 namespace cloud_provider {
+namespace {
 
 class CloudProviderImplTest : public ::testing::Test,
                               public firebase::Firebase,
@@ -274,4 +275,5 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
   EXPECT_TRUE(callback_called);
 }
 
+}  // namespace
 }  // namespace cloud_provider

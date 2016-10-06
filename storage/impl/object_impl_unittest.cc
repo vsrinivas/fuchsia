@@ -15,7 +15,6 @@
 #include "lib/ftl/logging.h"
 
 namespace storage {
-
 namespace {
 
 const size_t kFileSize = 256;
@@ -33,8 +32,6 @@ std::string ObjectFilePathFor(const std::string& path, const ObjectId& id) {
   std::replace(base64.begin(), base64.end(), '/', '-');
   return path + '/' + base64;
 }
-
-}  // namespace
 
 class ObjectTest : public ::testing::Test {
  public:
@@ -74,4 +71,5 @@ TEST_F(ObjectTest, Object) {
   EXPECT_EQ(0, memcmp(data.data(), foundData, kFileSize));
 }
 
+}  // namespace
 }  // namespace storage

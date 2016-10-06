@@ -20,7 +20,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace gcs {
-
 namespace {
 
 mojo::HttpHeaderPtr GetHeader(const mojo::Array<mojo::HttpHeaderPtr>& headers,
@@ -32,8 +31,6 @@ mojo::HttpHeaderPtr GetHeader(const mojo::Array<mojo::HttpHeaderPtr>& headers,
   }
   return nullptr;
 }
-
-}  // namespace
 
 class CloudStorageImplTest : public ::testing::Test {
  public:
@@ -180,4 +177,5 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   EXPECT_EQ(Status::UNKNOWN_ERROR, status);
 }
 
+}  // namespace
 }  // namespace gcs

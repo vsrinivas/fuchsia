@@ -12,7 +12,6 @@
 #include "lib/ftl/logging.h"
 
 namespace storage {
-
 namespace {
 
 ObjectId RandomId() {
@@ -32,8 +31,6 @@ std::vector<Entry> GetEntries(int size) {
   }
   return entries;
 }
-
-}  // namespace
 
 class ObjectStoreTest : public ::testing::Test {
  public:
@@ -328,4 +325,5 @@ TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
   }
 }
 
+}  // namespace
 }  // namespace storage

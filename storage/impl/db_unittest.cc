@@ -13,7 +13,6 @@
 #include "lib/ftl/macros.h"
 
 namespace storage {
-
 namespace {
 
 std::string RandomId(size_t size) {
@@ -50,8 +49,6 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
     EXPECT_EQ(expected.entry.priority, found.entry.priority);
   }
 }
-
-}  // namespace
 
 class DBTest : public ::testing::Test {
  public:
@@ -221,4 +218,5 @@ TEST_F(DBTest, UnsyncedObjects) {
   EXPECT_TRUE(isSynced);
 }
 
+}  // namespace
 }  // namespace storage
