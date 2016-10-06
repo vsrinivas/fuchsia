@@ -6,18 +6,57 @@
 
 set -e
 
+function HELP {
+  echo "help:"
+  echo "--goma                    : Use Goma"
+  echo "--sysroot                 : Build sysroot"
+  echo "--help"
+  exit 1
+}
+
 MODULAR_DIR="$( cd "$( dirname "$( dirname "${BASH_SOURCE[0]}" )" )" && pwd )"
 ROOT_DIR="$( dirname "$(dirname $MODULAR_DIR)" )"
-GOMA_FLAG=
-JOB_COUNT_FLAG=
 
-if [[ $1 == "--goma" ]]; then
+GOMA=0
+SYSROOT=0
+
+for i in "$@"; do
+  case $i in
+    --goma)
+      GOMA=1
+      shift
+      ;;
+    --sysroot)
+      SYSROOT=1
+      shift
+      ;;
+    --help)
+      shift
+      HELP
+      ;;
+    *)
+      echo unrecognized option
+      HELP
+      ;;
+  esac
+done
+
+if [ "$GOMA"  -eq 1 ]; then
   GOMA_FLAG=--goma
-  JOB_COUNT_FLAG=-j1000
+  case $OSTYPE in
+    darwin) JOB_COUNT_FLAG=-j50 ;;
+    linux-gnu) JOB_COUNT_FLAG=-j1000 ;;
+    *) JOB_COUNT_FLAG= ;;
+  esac
+else
+  GOMA_FLAG=
+  JOB_COUNT_FLAG=
 fi
 
-# Build sysroot.
-$ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
+if [ "$SYSROOT" -eq 1 ]; then
+  # Build sysroot.
+  $ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
+fi
 
 # Generate ninja files.
 $ROOT_DIR/packages/gn/gen.py $GOMA_FLAG
