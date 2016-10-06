@@ -232,8 +232,8 @@ Status DB::GetImplicitJournal(const JournalId& journal_id,
 }
 
 Status DB::RemoveExplicitJournals() {
-  static std::string kExplicitJournalPrefix(kJournalPrefix +
-                                            kImplicitJournalIdPrefix);
+  static std::string kExplicitJournalPrefix =
+      std::string(kJournalPrefix).append(1, kImplicitJournalIdPrefix);
   return DeleteByPrefix(kExplicitJournalPrefix);
 }
 

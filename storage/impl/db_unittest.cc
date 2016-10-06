@@ -124,6 +124,9 @@ TEST_F(DBTest, Journals) {
   EXPECT_EQ(Status::OK, db->CreateJournal(true, commitId, &implicitJournal));
   EXPECT_EQ(Status::OK, db->CreateJournal(false, commitId, &explicitJournal));
 
+  EXPECT_EQ(Status::OK, db->RemoveExplicitJournals());
+
+  // Removing explicit journals should not affect the implicit ones.
   std::vector<JournalId> journalIds;
   EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journalIds));
   EXPECT_EQ(1u, journalIds.size());
@@ -135,8 +138,6 @@ TEST_F(DBTest, Journals) {
             db->GetImplicitJournal(journalIds[0], &foundJournal));
   EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journalIds));
   EXPECT_EQ(0u, journalIds.size());
-
-  EXPECT_EQ(Status::OK, db->RemoveExplicitJournals());
 }
 
 TEST_F(DBTest, JournalEntries) {
