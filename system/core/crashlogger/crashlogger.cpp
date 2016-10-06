@@ -164,7 +164,16 @@ Fail:
     mx_handle_close(process);
 }
 
+void usage() {
+    fprintf(stderr, "Usage: crashlogger\n");
+}
+
 int main(int argc, char** argv) {
+    if (argc != 1) {
+        usage();
+        return 1;
+    }
+
     mx_handle_t ex_port = mx_port_create(0u);
     if (ex_port < 0) {
         print_error(__LINE__);
