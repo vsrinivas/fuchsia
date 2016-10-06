@@ -107,4 +107,48 @@ mx_bind_inst_t i915_binding[] = {
 };
 #endif
 
+#define MAGENTA_NOTE_DRIVER 0x00010000
+
+typedef struct __attribute__((packed)) {
+    uint32_t namesz;
+    uint32_t descsz;
+    uint32_t type;
+    char name[8];
+} magenta_note_header_t;
+
+typedef struct __attribute__((packed)) {
+    uint32_t bindcount;
+    uint32_t reserved;
+    char name[32];
+    char vendor[16];
+    char version[16];
+} magenta_note_driver_t;
+
+#define MAGENTA_DRIVER(DriverName,VendorName,Version,BindCount) \
+__attribute__((section(".note.magenta.driver")))\
+const struct {\
+    magenta_note_header_t note;\
+    magenta_note_driver_t driver;\
+    mx_bind_inst_t binding[BindCount];\
+} magenta_driver = {\
+    .note = {\
+        .namesz = 7,\
+        .descsz = sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
+        .type = MAGENTA_NOTE_DRIVER,\
+        .name = "Magenta",\
+    },\
+    .driver = {\
+        .bindcount = (BindCount),\
+        .name = DriverName,\
+        .vendor = VendorName,\
+        .version = Version,\
+    },\
+    .binding = {
+
+#define MAGENTA_DRIVER_END() }};
+
+#define MAGENTA_DRIVER_NAME magenta_driver.driver.name
+#define MAGENTA_DRIVER_BINDING magenta_driver.binding
+#define MAGENTA_DRIVER_BINDING_SIZE sizeof(magenta_driver.binding)
+
 __END_CDECLS;

@@ -42,7 +42,7 @@ struct mx_driver {
 
     struct list_node node;
 
-    mx_bind_inst_t* binding;
+    const mx_bind_inst_t* binding;
     uint32_t binding_size;
     // binding instructions
 };

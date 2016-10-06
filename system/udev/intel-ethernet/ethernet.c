@@ -233,6 +233,7 @@ fail:
     return ERR_NOT_SUPPORTED;
 }
 
+#if 0
 //TODO: figure out more complete set of supported DIDs
 static mx_bind_inst_t binding[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
@@ -250,4 +251,25 @@ mx_driver_t _driver_intel_ethernet BUILTIN_DRIVER = {
     },
     .binding = binding,
     .binding_size = sizeof(binding),
+};
+#endif
+
+MAGENTA_DRIVER("intel-ethernet", "magenta", "0.1", 5)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
+MAGENTA_DRIVER_END()
+
+#include <assert.h>
+
+static_assert(sizeof(magenta_driver) == (sizeof(magenta_note_driver_t) + sizeof(magenta_note_header_t) + 5 * sizeof(mx_bind_inst_t)), "");
+mx_driver_t _driver_intel_ethernet BUILTIN_DRIVER = {
+    .name = MAGENTA_DRIVER_NAME,
+    .ops = {
+        .bind = eth_bind,
+    },
+    .binding = MAGENTA_DRIVER_BINDING,
+    .binding_size = MAGENTA_DRIVER_BINDING_SIZE,
 };
