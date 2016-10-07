@@ -16,7 +16,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include "asix.h"
+#include "asix-88772b.h"
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 4
@@ -615,7 +615,7 @@ mx_driver_t _driver_usb_ethernet = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_ethernet, "usb-ethernet", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(_driver_usb_ethernet, "usb-ethernet-ax88772b", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
