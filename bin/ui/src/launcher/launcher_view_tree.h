@@ -21,11 +21,11 @@ class LauncherViewTree : public mozart::ViewTreeListener,
                    mozart::ViewManager* view_manager,
                    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                    mojo::FramebufferInfoPtr framebuffer_info,
+                   mozart::ViewOwnerPtr root_view,
                    const ftl::Closure& shutdown_callback);
 
   ~LauncherViewTree() override;
 
-  void SetRoot(mozart::ViewOwnerPtr owner);
   void DispatchEvent(mozart::EventPtr event);
 
  private:

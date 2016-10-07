@@ -18,6 +18,7 @@ LauncherViewTree::LauncherViewTree(
     mozart::ViewManager* view_manager,
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
+    mozart::ViewOwnerPtr root_view,
     const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
@@ -61,23 +62,15 @@ LauncherViewTree::LauncherViewTree(
                               std::move(framebuffer_info), GetProxy(&renderer),
                               "Launcher");
   view_tree_->SetRenderer(std::move(renderer));
+  if (root_view) {
+    root_was_set_ = true;
+    view_container_->AddChild(++root_key_, std::move(root_view));
+  }
 
   UpdateViewProperties();
 }
 
 LauncherViewTree::~LauncherViewTree() {}
-
-void LauncherViewTree::SetRoot(mozart::ViewOwnerPtr owner) {
-  if (root_was_set_) {
-    root_was_set_ = false;
-    view_container_->RemoveChild(root_key_, nullptr);
-  }
-  if (owner) {
-    root_was_set_ = true;
-    view_container_->AddChild(++root_key_, std::move(owner));
-    UpdateViewProperties();
-  }
-}
 
 void LauncherViewTree::DispatchEvent(mozart::EventPtr event) {
   if (input_dispatcher_)

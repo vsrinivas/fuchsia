@@ -32,14 +32,13 @@ class LauncherApp : public mojo::ApplicationImplBase, public mozart::Launcher {
       mojo::ServiceProviderImpl* service_provider_impl) override;
 
   // |Launcher|:
-  void Display(
-      mojo::InterfaceHandle<mozart::ViewProvider> view_provider) override;
+  void Display(mojo::InterfaceHandle<mozart::ViewOwner> view_owner) override;
 
   void Launch(const mojo::String& application_url);
 
   void DisplayInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                        mojo::FramebufferInfoPtr framebuffer_info,
-                       mozart::ViewProviderPtr view_provider);
+                       mozart::ViewOwnerPtr view_owner);
   void OnLaunchTermination(uint32_t id);
 
   void OnCompositorConnectionError();

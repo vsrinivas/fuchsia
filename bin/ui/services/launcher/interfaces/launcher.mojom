@@ -4,11 +4,11 @@
 
 module mozart;
 
-import "apps/mozart/services/views/interfaces/view_provider.mojom";
+import "apps/mozart/services/views/interfaces/view_token.mojom";
 
 // A way to run the launcher as a mojo service (as opposed to via command-line
 // arguments).
 [ServiceName="mozart::Launcher"]
 interface Launcher {
-  Display(mozart.ViewProvider view_provider);
+  Display(mozart.ViewOwner view_owner);
 };

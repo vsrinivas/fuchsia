@@ -10,7 +10,7 @@
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "apps/mozart/services/input/interfaces/input_events.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "apps/mozart/src/launcher/input/input_device.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -27,7 +27,7 @@ class LaunchInstance {
                  mozart::ViewManager* view_manager,
                  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
                  mojo::FramebufferInfoPtr framebuffer_info,
-                 mozart::ViewProviderPtr view_provider,
+                 mozart::ViewOwnerPtr view_owner,
                  const ftl::Closure& shutdown_callback);
   ~LaunchInstance();
 
@@ -43,13 +43,11 @@ class LaunchInstance {
   mojo::FramebufferInfoPtr framebuffer_info_;
   mojo::Size framebuffer_size_;
   mojo::PointF mouse_coordinates_;
-  mozart::ViewProviderPtr view_provider_;
+  mozart::ViewOwnerPtr root_view_owner_;
 
   ftl::Closure shutdown_callback_;
 
   std::unique_ptr<LauncherViewTree> view_tree_;
-
-  mozart::ViewOwnerPtr client_view_owner_;
 
   InputReader input_device_monitor_;
 

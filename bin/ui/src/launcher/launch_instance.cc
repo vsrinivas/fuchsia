@@ -16,20 +16,19 @@ LaunchInstance::LaunchInstance(
     mozart::ViewManager* view_manager,
     mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
     mojo::FramebufferInfoPtr framebuffer_info,
-    mozart::ViewProviderPtr view_provider,
+    mozart::ViewOwnerPtr view_owner,
     const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
       framebuffer_(std::move(framebuffer)),
       framebuffer_info_(std::move(framebuffer_info)),
       framebuffer_size_(*framebuffer_info_->size),
-      view_provider_(std::move(view_provider)),
+      root_view_owner_(std::move(view_owner)),
       shutdown_callback_(shutdown_callback) {
   FTL_DCHECK(compositor_);
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(framebuffer_);
   FTL_DCHECK(framebuffer_info_);
-  FTL_DCHECK(view_provider_);
 }
 
 LaunchInstance::~LaunchInstance() {}
@@ -37,13 +36,10 @@ LaunchInstance::~LaunchInstance() {}
 void LaunchInstance::Launch() {
   TRACE_EVENT0("launcher", __func__);
 
-  view_provider_->CreateView(GetProxy(&client_view_owner_), nullptr);
-  view_provider_.reset();
-
   view_tree_.reset(
       new LauncherViewTree(compositor_, view_manager_, std::move(framebuffer_),
-                           std::move(framebuffer_info_), shutdown_callback_));
-  view_tree_->SetRoot(std::move(client_view_owner_));
+                           std::move(framebuffer_info_),
+                           std::move(root_view_owner_), shutdown_callback_));
 
   input_device_monitor_.Start([this](mozart::EventPtr event) {
     if (event->pointer_data) {
