@@ -1,11 +1,16 @@
-// A service and supporting structures for Agents that wish to contribute
-// Proposals to the Suggestion engine.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module intelligence.suggestion_engine;
+
+// A service and supporting structures enabling Agents to contribute Proposals
+// to the Suggestion engine.
 //
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left
 // here for informational purposes at this time.
-
-interface ProposalService {
+interface ProposalManager {
   // Includes the given |proposal| in the list from this Agent. Proposals are
   // identified by |proposal.id|, and are namespaced by the Agent's ID.
   // If a Proposal with the same id is already present, it is overwritten.

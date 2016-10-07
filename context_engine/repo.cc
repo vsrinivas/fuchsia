@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/context_service/repo.h"
+#include "apps/maxwell/context_engine/repo.h"
 
 namespace intelligence {
-namespace context_service {
+namespace context_engine {
 
 using std::string;
 
-ContextSubscriberLinkPtr* Repo::QuerySet::GetPtr(struct Query* element) {
+ContextSubscriberLinkPtr* Repo::QuerySet::GetPtr(SimpleQuery* element) {
   return &element->subscriber;
 }
 
@@ -46,5 +46,5 @@ void Repo::Query(const string& label,
   }
 }
 
-}  // namespace context_service
+}  // namespace context_engine
 }  // namespace intelligence

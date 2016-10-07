@@ -1,8 +1,14 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module intelligence.suggestion_engine;
+
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based
 // on contextual changes, as well as Suggestions derived from
 // user-driven "Asks".
-interface SuggestionService {
+interface SuggestionManager {
   // Creates a subscription to the "interruptions" category of Suggestions.
   // Interruptions are delivered immediately once they become available, and
   // are potentially unlimited in number.

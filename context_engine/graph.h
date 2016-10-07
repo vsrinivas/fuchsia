@@ -6,13 +6,13 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/context_service/context_service.mojom.h"
+#include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
 #include "apps/maxwell/bound_set.h"
 
 namespace intelligence {
-namespace context_service {
+namespace context_engine {
 
 // The context graph consists of component nodes and data nodes. Component nodes
 // represent Mojo components, such as acquirers, agents, and modules. Data nodes
@@ -109,5 +109,5 @@ inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label,
               .first->second;
 }
 
-}  // namespace context_service
+}  // namespace context_engine
 }  // namespace intelligence

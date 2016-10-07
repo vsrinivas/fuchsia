@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("all") {
+group("acquirers") {
   deps = [
     ":acquirers/gps",
   ]
@@ -14,7 +14,7 @@ executable("acquirers/gps") {
   ]
 
   deps = [
-    "//apps/maxwell/context_service:interfaces",
+    "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/utility:utility",
     "//mojo/system",

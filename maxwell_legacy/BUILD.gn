@@ -5,11 +5,11 @@
 group("maxwell") {
   deps = [
     ":maxwell_test",
-    "acquirers:all",
-    "agents:all",
-    "context_service:all",
+    "acquirers",
+    "agents",
+    "context_engine",
     "document_store",
-    "suggestions",
+    "suggestion_engine",
   ]
 }
 
@@ -19,7 +19,7 @@ executable("maxwell_test") {
   ]
 
   deps = [
-    "//apps/maxwell/context_service:interfaces",
+    "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/utility:utility",
     "//mojo/system",

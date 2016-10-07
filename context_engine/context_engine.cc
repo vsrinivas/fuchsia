@@ -4,14 +4,14 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/maxwell/context_service/context_service.mojom.h"
+#include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 
-#include "apps/maxwell/context_service/graph.h"
-#include "apps/maxwell/context_service/repo.h"
+#include "apps/maxwell/context_engine/graph.h"
+#include "apps/maxwell/context_engine/repo.h"
 
 namespace {
 
@@ -22,8 +22,7 @@ using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 using mojo::StrongBindingSet;
 
-using namespace intelligence;
-using namespace intelligence::context_service;
+using namespace intelligence::context_engine;
 
 template <typename Interface>
 class ContextPublisherClient : public virtual Interface {
@@ -83,9 +82,9 @@ class ContextAgentClientImpl
 typedef ContextSubscriberClient<SuggestionAgentClient>
     SuggestionAgentClientImpl;
 
-class ContextServiceApp : public ApplicationImplBase {
+class ContextEngineApp : public ApplicationImplBase {
  public:
-  ContextServiceApp() {}
+  ContextEngineApp() {}
 
   bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
     // TODO(rosswang): Lifecycle management for ComponentNodes (and graph
@@ -122,12 +121,12 @@ class ContextServiceApp : public ApplicationImplBase {
   StrongBindingSet<ContextAgentClient> cag_clients_;
   StrongBindingSet<SuggestionAgentClient> sag_clients_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(ContextServiceApp);
+  MOJO_DISALLOW_COPY_AND_ASSIGN(ContextEngineApp);
 };
 
 }  // namespace
 
 MojoResult MojoMain(MojoHandle request) {
-  ContextServiceApp app;
+  ContextEngineApp app;
   return mojo::RunApplication(request, &app);
 }

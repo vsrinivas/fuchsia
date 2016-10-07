@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/context_service/graph.h"
+#include "apps/maxwell/context_engine/graph.h"
 
 namespace intelligence {
-namespace context_service {
+namespace context_engine {
 
 void DataNode::SubscriberSet::OnConnectionError(
     ContextSubscriberLink* interface_ptr) {
@@ -70,5 +70,5 @@ void DataNode::SetPublisher(
   publisher_.Bind(link_request.Pass());
 }
 
-}  // namespace context_service
+}  // namespace context_engine
 }  // namespace intelligence

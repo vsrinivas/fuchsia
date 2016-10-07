@@ -2,31 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("all") {
-  deps = [
-    ":context_service",
-  ]
-}
-
-executable("context_service") {
+executable("context_engine") {
   sources = [
-    "context_service.cc",
+    "context_engine.cc",
     "graph.cc",
     "repo.cc",
   ]
 
   deps = [
-    "//apps/maxwell/context_service:interfaces",
+    "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
     "//mojo/system",
-  ]
-}
-
-import("//mojo/public/tools/bindings/mojom.gni")
-
-mojom("interfaces") {
-  sources = [
-    "context_service.mojom",
   ]
 }

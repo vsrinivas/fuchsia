@@ -4,7 +4,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/maxwell/context_service/context_service.mojom.h"
+#include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -12,7 +12,7 @@
 
 namespace {
 
-using namespace intelligence;
+using namespace intelligence::context_engine;
 
 using mojo::ApplicationImplBase;
 using mojo::Binding;
@@ -34,7 +34,7 @@ class MaxwellTestApp : public ApplicationImplBase,
     shell()->ConnectToApplication("mojo:agents/carmen_sandiego",
                                   GetProxy(&carmen_sandiego_));
 
-    ConnectToService(shell(), "mojo:context_service", GetProxy(&cx_));
+    ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx_));
     Subscribe();
   }
 

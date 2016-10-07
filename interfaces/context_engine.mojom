@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module intelligence;
+module intelligence.context_engine;
 
 // Client that should be requested by context acquirers. Acquirers are Mojo apps
 // that publish context based on sensors and/or network sources. They have

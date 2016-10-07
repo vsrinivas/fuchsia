@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
-mojom("interfaces") {
-  sources = [
-    "proposal_service.mojom",
-    "suggestion_service.mojom",
+group("suggestion_engine") {
+  deps = [
+    "//apps/maxwell/interfaces",
   ]
 }

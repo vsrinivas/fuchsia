@@ -6,16 +6,16 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/context_service/context_service.mojom.h"
+#include "apps/maxwell/interfaces/context_engine.mojom.h"
 
-#include "apps/maxwell/context_service/graph.h"
+#include "apps/maxwell/context_engine/graph.h"
 
 namespace intelligence {
-namespace context_service {
+namespace context_engine {
 
 // TODO(rosswang): V.5 query richness.
-struct Query {
-  Query(const std::string& label,
+struct SimpleQuery {
+  SimpleQuery(const std::string& label,
         const std::string& schema,
         ContextSubscriberLinkPtr subscriber)
       : label(label), schema(schema), subscriber(subscriber.Pass()) {}
@@ -58,9 +58,9 @@ class Repo {
 
  private:
   class QuerySet
-      : public maxwell::BoundSet<struct Query, ContextSubscriberLink> {
+      : public maxwell::BoundSet<SimpleQuery, ContextSubscriberLink> {
    protected:
-    ContextSubscriberLinkPtr* GetPtr(struct Query* element) override;
+    ContextSubscriberLinkPtr* GetPtr(SimpleQuery* element) override;
   };
 
   // TODO(rosswang): Is there a good way to not require a separate index
@@ -78,5 +78,5 @@ class Repo {
   MOJO_DISALLOW_COPY_AND_ASSIGN(Repo);
 };
 
-}  // namespace context_service
+}  // namespace context_engine
 }  // namespace intelligence

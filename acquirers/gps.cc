@@ -4,7 +4,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/maxwell/context_service/context_service.mojom.h"
+#include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -16,7 +16,7 @@ using mojo::ApplicationImplBase;
 using mojo::Binding;
 using mojo::RunLoop;
 
-using namespace intelligence;
+using namespace intelligence::context_engine;
 
 #define ONE_MOJO_SECOND 1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
@@ -32,7 +32,7 @@ class GpsAcquirer : public ApplicationImplBase,
     srand(time(NULL));
 
     ContextAcquirerClientPtr cx;
-    ConnectToService(shell(), "mojo:context_service", GetProxy(&cx));
+    ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx));
 
     ContextPublisherControllerPtr ctl_ptr;
     ctl_.Bind(GetProxy(&ctl_ptr));
