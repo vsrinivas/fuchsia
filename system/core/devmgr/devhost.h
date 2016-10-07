@@ -50,13 +50,13 @@ bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev);
 
 
 // shared between devhost.c and rpc-device.c
-typedef struct iostate {
+typedef struct devhost_iostate {
     mx_device_t* dev;
     size_t io_off;
     mtx_t lock;
-} iostate_t;
+} devhost_iostate_t;
 
-iostate_t* create_iostate(mx_device_t* dev);
+devhost_iostate_t* create_devhost_iostate(mx_device_t* dev);
 mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 // routines devhost uses to talk to devmgr

@@ -107,7 +107,7 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
 //TODO: finer grained locking
 extern mtx_t vfs_lock;
 
-typedef struct iostate {
+typedef struct vfs_iostate {
     union {
         mx_device_t* dev;
         vnode_t* vn;
@@ -118,9 +118,9 @@ typedef struct iostate {
 
     list_node_t node;
     const char* fn;
-} iostate_t;
+} vfs_iostate_t;
 
-void track_iostate(iostate_t* ios, const char* fn);
-void untrack_iostate(iostate_t* ios);
+void track_vfs_iostate(vfs_iostate_t* ios, const char* fn);
+void untrack_vfs_iostate(vfs_iostate_t* ios);
 
-iostate_t* create_iostate(mx_device_t* dev);
+vfs_iostate_t* create_vfs_iostate(mx_device_t* dev);

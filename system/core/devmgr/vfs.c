@@ -32,24 +32,24 @@
 
 mtx_t vfs_lock = MTX_INIT;
 
-static list_node_t iostate_list = LIST_INITIAL_VALUE(iostate_list);
-static mtx_t iostate_lock = MTX_INIT;
+static list_node_t vfs_iostate_list = LIST_INITIAL_VALUE(vfs_iostate_list);
+static mtx_t vfs_iostate_lock = MTX_INIT;
 
-void track_iostate(iostate_t* ios, const char* fn) {
+void track_vfs_iostate(vfs_iostate_t* ios, const char* fn) {
 #if DEBUG_TRACK_NAMES
     if (fn) {
         ios->fn = strdup(fn);
     }
 #endif
-    mtx_lock(&iostate_lock);
-    list_add_tail(&iostate_list, &ios->node);
-    mtx_unlock(&iostate_lock);
+    mtx_lock(&vfs_iostate_lock);
+    list_add_tail(&vfs_iostate_list, &ios->node);
+    mtx_unlock(&vfs_iostate_lock);
 }
 
-void untrack_iostate(iostate_t* ios) {
-    mtx_lock(&iostate_lock);
+void untrack_vfs_iostate(vfs_iostate_t* ios) {
+    mtx_lock(&vfs_iostate_lock);
     list_delete(&ios->node);
-    mtx_unlock(&iostate_lock);
+    mtx_unlock(&vfs_iostate_lock);
 #if DEBUG_TRACK_NAMES
     free((void*)ios->fn);
     ios->fn = NULL;
@@ -311,12 +311,12 @@ void vn_release(vnode_t* vn) {
 }
 
 void vfs_dump_handles(void) {
-    iostate_t* ios;
-    mtx_lock(&iostate_lock);
-    list_for_every_entry (&iostate_list, ios, iostate_t, node) {
+    vfs_iostate_t* ios;
+    mtx_lock(&vfs_iostate_lock);
+    list_for_every_entry (&vfs_iostate_list, ios, vfs_iostate_t, node) {
         printf("obj %p '%s'\n", ios->vn, ios->fn ? ios->fn : "???");
     }
-    mtx_unlock(&iostate_lock);
+    mtx_unlock(&vfs_iostate_lock);
 }
 
 void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {

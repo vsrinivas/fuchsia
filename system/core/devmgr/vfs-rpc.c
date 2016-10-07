@@ -34,9 +34,9 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn, uint32_t flags) {
     mx_handle_t h[2];
     mx_status_t r;
-    iostate_t* ios;
+    vfs_iostate_t* ios;
 
-    if ((ios = calloc(1, sizeof(iostate_t))) == NULL)
+    if ((ios = calloc(1, sizeof(vfs_iostate_t))) == NULL)
         return ERR_NO_MEMORY;
     ios->vn = vn;
     ios->io_flags = flags;
@@ -51,7 +51,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn, uint32_t 
         free(ios);
         return r;
     }
-    track_iostate(ios, trackfn);
+    track_vfs_iostate(ios, trackfn);
     // take a ref for the dispatcher
     vn_acquire(vn);
     return h[1];
@@ -77,10 +77,10 @@ static mx_handle_t devmgr_connect(const char* where) {
 // TODO(smklein): No one is calling this yet...
 // Assumes vfs_dispatcher is already running
 mx_handle_t vfs_rpc_mount(vnode_t* vn, const char* where) {
-    iostate_t* ios;
+    vfs_iostate_t* ios;
     mx_status_t r;
 
-    if ((ios = calloc(1, sizeof(iostate_t))) == NULL)
+    if ((ios = calloc(1, sizeof(vfs_iostate_t))) == NULL)
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
@@ -193,7 +193,7 @@ static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 
 static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    iostate_t* ios = cookie;
+    vfs_iostate_t* ios = cookie;
     vnode_t* vn = ios->vn;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -221,7 +221,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     case MXRIO_CLOSE:
         // this will drop the ref on the vn
         vn->ops->close(vn);
-        untrack_iostate(ios);
+        untrack_vfs_iostate(ios);
         free(ios);
         return NO_ERROR;
     case MXRIO_CLONE:

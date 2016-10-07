@@ -29,9 +29,9 @@
 
 mxio_dispatcher_t* devhost_rio_dispatcher;
 
-iostate_t* create_iostate(mx_device_t* dev) {
-    iostate_t* ios;
-    if ((ios = calloc(1, sizeof(iostate_t))) == NULL) {
+devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
+    devhost_iostate_t* ios;
+    if ((ios = calloc(1, sizeof(devhost_iostate_t))) == NULL) {
         return NULL;
     }
     ios->dev = dev;
@@ -44,9 +44,9 @@ mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
                                       mx_handle_t* handles, uint32_t* ids) {
     mx_status_t r;
-    iostate_t* newios;
+    devhost_iostate_t* newios;
 
-    if ((newios = create_iostate(dev)) == NULL) {
+    if ((newios = create_devhost_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
 
@@ -193,7 +193,8 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
     return r;
 }
 
-static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostate_t* ios) {
+static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
+                                        devhost_iostate_t* ios) {
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -345,7 +346,7 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, iostat
 }
 
 mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
-    iostate_t* ios = cookie;
+    devhost_iostate_t* ios = cookie;
     mx_status_t status;
     mtx_lock(&ios->lock);
     if (ios->dev != NULL) {

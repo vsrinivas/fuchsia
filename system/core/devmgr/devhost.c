@@ -88,9 +88,9 @@ __EXPORT mx_status_t devhost_add_internal(mx_device_t* parent,
 }
 
 static mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_handle_t hrpc) {
-    iostate_t* ios;
-    if ((ios = create_iostate(dev)) == NULL) {
-        printf("devhost_connect: cannot alloc iostate\n");
+    devhost_iostate_t* ios;
+    if ((ios = create_devhost_iostate(dev)) == NULL) {
+        printf("devhost_connect: cannot alloc devhost_iostate\n");
         mx_handle_close(hdevice);
         mx_handle_close(hrpc);
         return ERR_NO_MEMORY;
@@ -128,7 +128,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     //printf("devhost_remove(%p:%s) ios=%p\n", dev, dev->name, dev->ctx);
 
     // ensure we don't pull the rug out from under devhost_rio_handler()
-    iostate_t* ios = dev->ctx;
+    devhost_iostate_t* ios = dev->ctx;
     mtx_lock(&ios->lock);
     dev->ctx = NULL;
     ios->dev = NULL;
