@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/application_storage_impl.h"
+#include "apps/ledger/storage/impl/ledger_storage_impl.h"
 
 #include <memory>
 
@@ -34,30 +34,30 @@ void CheckCommitStorageBytes(const CommitId& id, const Commit& commit) {
   // TODO(nellyv): Check that the root node is also correctly (de)serialized.
 }
 
-class ApplicationStorageTest : public ::testing::Test {
+class LedgerStorageTest : public ::testing::Test {
  public:
-  ApplicationStorageTest() {}
+  LedgerStorageTest() {}
 
-  ~ApplicationStorageTest() override {}
+  ~LedgerStorageTest() override {}
 
   // Test:
   void SetUp() override {
-    storage_.reset(new ApplicationStorageImpl(
-        message_loop_.task_runner(), tmp_dir_.path(), "test_identity"));
+    storage_.reset(new LedgerStorageImpl(message_loop_.task_runner(),
+                                         tmp_dir_.path(), "test_identity"));
     std::srand(0);
   }
 
  protected:
   mtl::MessageLoop message_loop_;
-  std::unique_ptr<ApplicationStorageImpl> storage_;
+  std::unique_ptr<LedgerStorageImpl> storage_;
 
  private:
   files::ScopedTempDir tmp_dir_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationStorageTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);
 };
 
-TEST_F(ApplicationStorageTest, CreateGetCreatePageStorage) {
+TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   PageId pageId = "1234";
   storage_->GetPageStorage(pageId,
                            [](std::unique_ptr<PageStorage> page_storage) {
@@ -77,7 +77,7 @@ TEST_F(ApplicationStorageTest, CreateGetCreatePageStorage) {
   glue::test::RunLoop();
 }
 
-TEST_F(ApplicationStorageTest, CreateDeletePageStorage) {
+TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   PageId pageId = "1234";
   std::unique_ptr<PageStorage> pageStorage =
       storage_->CreatePageStorage(pageId);
@@ -98,7 +98,7 @@ TEST_F(ApplicationStorageTest, CreateDeletePageStorage) {
   glue::test::RunLoop();
 }
 
-TEST_F(ApplicationStorageTest, Commit) {
+TEST_F(LedgerStorageTest, Commit) {
   CommitId id = RandomId(kCommitIdSize);
   int64_t timestamp = 1234;
   ObjectId rootNodeId = RandomId(kObjectIdSize);

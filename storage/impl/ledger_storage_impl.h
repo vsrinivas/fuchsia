@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_STORAGE_IMPL_APPLICATION_STORAGE_IMPL_H_
-#define APPS_LEDGER_STORAGE_IMPL_APPLICATION_STORAGE_IMPL_H_
+#ifndef APPS_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
+#define APPS_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 
 #include <string>
 
-#include "apps/ledger/storage/public/application_storage.h"
+#include "apps/ledger/storage/public/ledger_storage.h"
 
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace storage {
 
-class ApplicationStorageImpl : public ApplicationStorage {
+class LedgerStorageImpl : public LedgerStorage {
  public:
-  ApplicationStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                         const std::string& base_storage_dir,
-                         const std::string& identity);
-  ~ApplicationStorageImpl() override;
+  LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                    const std::string& base_storage_dir,
+                    const std::string& identity);
+  ~LedgerStorageImpl() override;
 
   std::unique_ptr<PageStorage> CreatePageStorage(
       const PageId& page_id) override;
@@ -38,4 +38,4 @@ class ApplicationStorageImpl : public ApplicationStorage {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_STORAGE_IMPL_APPLICATION_STORAGE_IMPL_H_
+#endif  // APPS_LEDGER_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_

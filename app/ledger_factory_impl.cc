@@ -6,7 +6,7 @@
 
 #include "apps/ledger/app/ledger_impl.h"
 #include "apps/ledger/glue/crypto/base64.h"
-#include "apps/ledger/storage/impl/application_storage_impl.h"
+#include "apps/ledger/storage/impl/ledger_storage_impl.h"
 #include "mojo/public/cpp/application/connect.h"
 
 namespace ledger {
@@ -29,8 +29,8 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
     // User identity cannot be empty.
     callback.Run(Status::AUTHENTICATION_ERROR, nullptr);
   } else {
-    std::unique_ptr<storage::ApplicationStorage> app_storage(
-        new storage::ApplicationStorageImpl(
+    std::unique_ptr<storage::LedgerStorage> app_storage(
+        new storage::LedgerStorageImpl(
             task_runner_, base_storage_dir_,
             GetIdentityString(std::move(identity))));
     new LedgerImpl(GetProxy(&ledger), std::move(app_storage));

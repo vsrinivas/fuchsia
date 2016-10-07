@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/application_storage_impl.h"
+#include "apps/ledger/storage/impl/ledger_storage_impl.h"
 
 #include "apps/ledger/glue/crypto/base64.h"
 #include "apps/ledger/storage/impl/page_storage_impl.h"
@@ -12,17 +12,16 @@
 
 namespace storage {
 
-ApplicationStorageImpl::ApplicationStorageImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::string& base_storage_dir,
-    const std::string& identity)
+LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                     const std::string& base_storage_dir,
+                                     const std::string& identity)
     : task_runner_(std::move(task_runner)) {
   storage_dir_ = base_storage_dir + "/" + identity;
 }
 
-ApplicationStorageImpl::~ApplicationStorageImpl() {}
+LedgerStorageImpl::~LedgerStorageImpl() {}
 
-std::unique_ptr<PageStorage> ApplicationStorageImpl::CreatePageStorage(
+std::unique_ptr<PageStorage> LedgerStorageImpl::CreatePageStorage(
     const PageId& page_id) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
@@ -33,7 +32,7 @@ std::unique_ptr<PageStorage> ApplicationStorageImpl::CreatePageStorage(
       new PageStorageImpl(GetPathFor(page_id), page_id));
 }
 
-void ApplicationStorageImpl::GetPageStorage(
+void LedgerStorageImpl::GetPageStorage(
     const PageId& page_id,
     const std::function<void(std::unique_ptr<PageStorage>)>& callback) {
   std::string path = GetPathFor(page_id);
@@ -49,7 +48,7 @@ void ApplicationStorageImpl::GetPageStorage(
   task_runner_->PostTask([callback]() { callback(nullptr); });
 }
 
-bool ApplicationStorageImpl::DeletePageStorage(const PageId& page_id) {
+bool LedgerStorageImpl::DeletePageStorage(const PageId& page_id) {
   // TODO(nellyv): We need to synchronize the page deletion with the cloud.
   std::string path = GetPathFor(page_id);
   if (!files::IsDirectory(path)) {
@@ -62,7 +61,7 @@ bool ApplicationStorageImpl::DeletePageStorage(const PageId& page_id) {
   return true;
 }
 
-std::string ApplicationStorageImpl::GetPathFor(const PageId& page_id) {
+std::string LedgerStorageImpl::GetPathFor(const PageId& page_id) {
   std::string encoded;
   glue::Base64Encode(page_id, &encoded);
   return storage_dir_ + "/" + encoded;

@@ -17,14 +17,14 @@ group("impl") {
 
 source_set("lib") {
   sources = [
-    "application_storage_impl.cc",
-    "application_storage_impl.h",
     "commit_impl.cc",
     "commit_impl.h",
     "db.cc",
     "db.h",
     "journal_db_impl.cc",
     "journal_db_impl.h",
+    "ledger_storage_impl.cc",
+    "ledger_storage_impl.h",
     "object_impl.cc",
     "object_impl.h",
     "page_storage_impl.cc",
@@ -51,8 +51,8 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "application_storage_unittest.cc",
     "db_unittest.cc",
+    "ledger_storage_unittest.cc",
     "object_impl_unittest.cc",
   ]
 

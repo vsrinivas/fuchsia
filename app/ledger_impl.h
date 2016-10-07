@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "apps/ledger/api/ledger.mojom.h"
-#include "apps/ledger/storage/public/application_storage.h"
+#include "apps/ledger/storage/public/ledger_storage.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 
@@ -18,7 +18,7 @@ namespace ledger {
 class LedgerImpl : public Ledger {
  public:
   LedgerImpl(mojo::InterfaceRequest<Ledger> request,
-             std::unique_ptr<storage::ApplicationStorage> storage);
+             std::unique_ptr<storage::LedgerStorage> storage);
   ~LedgerImpl() override;
 
  private:
@@ -35,7 +35,7 @@ class LedgerImpl : public Ledger {
       const SetConflictResolverFactoryCallback& callback) override;
 
   mojo::StrongBinding<Ledger> binding_;
-  std::unique_ptr<storage::ApplicationStorage> storage_;
+  std::unique_ptr<storage::LedgerStorage> storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
 };

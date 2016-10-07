@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_STORAGE_PUBLIC_APPLICATION_STORAGE_H_
-#define APPS_LEDGER_STORAGE_PUBLIC_APPLICATION_STORAGE_H_
+#ifndef APPS_LEDGER_STORAGE_PUBLIC_LEDGER_STORAGE_H_
+#define APPS_LEDGER_STORAGE_PUBLIC_LEDGER_STORAGE_H_
 
 #include <memory>
 
@@ -13,11 +13,11 @@
 
 namespace storage {
 
-// The |ApplicationStorage| is responsible for managing |PageStorage| objects.
-class ApplicationStorage {
+// Manages storage for a single Ledger instance.
+class LedgerStorage {
  public:
-  ApplicationStorage() {}
-  virtual ~ApplicationStorage() {}
+  LedgerStorage() {}
+  virtual ~LedgerStorage() {}
 
   // Creates a new |PageStorage| for the Page with the given |page_id|.
   virtual std::unique_ptr<PageStorage> CreatePageStorage(
@@ -33,9 +33,9 @@ class ApplicationStorage {
   virtual bool DeletePageStorage(const PageId& page_id) = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationStorage);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);
 };
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_STORAGE_PUBLIC_APPLICATION_STORAGE_H_
+#endif  // APPS_LEDGER_STORAGE_PUBLIC_LEDGER_STORAGE_H_

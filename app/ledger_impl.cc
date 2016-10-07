@@ -30,7 +30,7 @@ storage::PageId RandomId() {
 }  // namespace
 
 LedgerImpl::LedgerImpl(mojo::InterfaceRequest<Ledger> request,
-                       std::unique_ptr<storage::ApplicationStorage> storage)
+                       std::unique_ptr<storage::LedgerStorage> storage)
     : binding_(this, std::move(request)), storage_(std::move(storage)) {}
 
 LedgerImpl::~LedgerImpl() {}

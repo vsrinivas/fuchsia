@@ -4,7 +4,6 @@
 
 source_set("public") {
   sources = [
-    "application_storage.h",
     "blob.h",
     "commit.h",
     "commit_contents.h",
@@ -13,6 +12,7 @@ source_set("public") {
     "constants.h",
     "iterator.h",
     "journal.h",
+    "ledger_storage.h",
     "object.h",
     "page_storage.h",
     "types.cc",
