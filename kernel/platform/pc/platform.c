@@ -161,6 +161,7 @@ static void platform_early_display_init(void) {
     if (bootloader_fb_base == 0) {
         return;
     }
+
     if (cmdline_get_bool("gfxconsole.early", false) == false) {
         early_console_disabled = true;
         return;
@@ -363,11 +364,6 @@ void platform_init(void)
 #if WITH_SMP
     platform_init_smp();
 #endif
-
-    if (!early_console_disabled) {
-        // detach the early console - pcie init may move it
-        gfxconsole_bind_display(NULL, NULL);
-    }
 }
 
 #if WITH_DEV_PCIE

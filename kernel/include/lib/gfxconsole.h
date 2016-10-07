@@ -9,10 +9,15 @@
 #define __LIB_GFXCONSOLE_H
 
 #include <lib/gfx.h>
+#include <magenta/compiler.h>
+
+__BEGIN_CDECLS
 
 status_t gfxconsole_display_get_info(struct display_info *info);
 void gfxconsole_start(gfx_surface *surface, gfx_surface *hw_surface);
 void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb);
+
+__END_CDECLS
 
 #endif
 

@@ -26,7 +26,7 @@
 #include <dev/display.h>
 
 #define TEXT_COLOR 0xffffffff
-#define BACK_COLOR 0x00000000
+#define BACK_COLOR 0xff000000
 
 /** @addtogroup graphics
  * @{

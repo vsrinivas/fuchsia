@@ -29,6 +29,21 @@
 
 #define LOCAL_TRACE 0
 
+#if WITH_LIB_GFXCONSOLE
+// If we were built with the GFX console, make sure that it is un-bound when
+// user mode takes control of PCI.  Note: there should probably be a cleaner way
+// of doing this.  Not all system have PCI, and (eventually) not all systems
+// will attempt to initialize PCI.  Someday, there should be a different way of
+// handing off from early/BSOD kernel mode graphics to user mode.
+#include <lib/gfxconsole.h>
+static inline void shutdown_early_init_console() {
+    gfxconsole_bind_display(NULL, NULL);
+}
+#else
+static inline void shutdown_early_init_console() { }
+#endif
+
+
 #if WITH_DEV_PCIE
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -191,7 +206,10 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
         init_info.legacy_irq_swizzle = pcie_irq_swizzle_from_table;
     }
 
-    return pcie_init(&init_info);
+    status_t ret = pcie_init(&init_info);
+    if (ret == NO_ERROR)
+        shutdown_early_init_console();
+    return ret;
 }
 
 mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_get_nth_info_t* out_info) {
@@ -461,6 +479,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
 }
 #else  // WITH_DEV_PCIE
 mx_status_t sys_pci_init(mx_handle_t, user_ptr<mx_pci_init_arg_t>, uint32_t) {
+    shutdown_early_init_console();
     return ERR_NOT_SUPPORTED;
 }
 
