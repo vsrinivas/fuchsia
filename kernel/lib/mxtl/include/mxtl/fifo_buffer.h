@@ -67,7 +67,7 @@ public:
         clear();
         free_memory();
 
-        log2_ = log2_uint(buffer_count);
+        log2_ = log2_uint_floor(buffer_count);
         if (valpow2(log2_) != buffer_count)
             return false;
 

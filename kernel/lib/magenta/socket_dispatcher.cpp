@@ -63,7 +63,7 @@ bool SocketDispatcher::CBuf::Init(uint32_t len) {
 
     if (!buf_)
         return false;
-    len_pow2_ = log2_uint(len);
+    len_pow2_ = log2_uint_floor(len);
     return true;
 }
 

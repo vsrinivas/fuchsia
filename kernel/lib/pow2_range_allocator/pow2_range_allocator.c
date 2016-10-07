@@ -134,7 +134,7 @@ status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     }
 
     /* Allocate the storage for our free buckets */
-    state->bucket_count = log2_uint(max_alloc_size) + 1;
+    state->bucket_count = log2_uint_floor(max_alloc_size) + 1;
     state->free_block_buckets = malloc(state->bucket_count * sizeof(state->free_block_buckets[0]));
     if (!state->free_block_buckets) {
         TRACEF("Failed to allocate storage for %u free bucket lists!\n", state->bucket_count);
@@ -292,7 +292,7 @@ status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_sta
         return ERR_INVALID_ARGS;
     }
 
-    uint orig_bucket = log2_uint(size);
+    uint orig_bucket = log2_uint_floor(size);
     uint bucket      = orig_bucket;
     if (bucket >= state->bucket_count) {
         TRACEF("Invalid size (%u).  Valid sizes are integer powers of 2 from [1, %u]\n",
@@ -366,7 +366,7 @@ void p2ra_free_range(p2ra_state_t* state, uint range_start, uint size) {
     DEBUG_ASSERT(state);
     DEBUG_ASSERT(size && ispow2(size));
 
-    uint bucket = log2_uint(size);
+    uint bucket = log2_uint_floor(size);
 
     mutex_acquire(&state->lock);
 

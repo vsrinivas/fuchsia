@@ -293,7 +293,7 @@ status_t x86_alloc_msi_block(uint requested_irqs,
 
     status_t res;
     uint alloc_start;
-    uint alloc_size = 1u << log2_uint_roundup(requested_irqs);
+    uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
 
     res = p2ra_allocate_range(&x86_irq_vector_allocator, alloc_size, &alloc_start);
     if (res == NO_ERROR) {

@@ -88,7 +88,7 @@ status_t arm_gicv2m_alloc_msi_block(uint requested_irqs,
 
     status_t ret = ERR_INTERNAL;
     bool is_32bit = false;
-    uint alloc_size = 1u << log2_uint_roundup(requested_irqs);
+    uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
     uint alloc_start;
 
     /* If this MSI request can tolerate a 64 bit target address, start by

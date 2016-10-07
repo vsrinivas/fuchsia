@@ -560,7 +560,7 @@ static void pcie_set_msi_multi_message_enb(pcie_device_state_t* dev, uint reques
     DEBUG_ASSERT(dev->irq.msi.cfg);
     DEBUG_ASSERT((requested_irqs >= 1) && (requested_irqs <= PCIE_MAX_MSI_IRQS));
 
-    uint log2 = log2_uint_roundup(requested_irqs);
+    uint log2 = log2_uint_ceil(requested_irqs);
 
     DEBUG_ASSERT(log2 <= 5);
     DEBUG_ASSERT(!log2 || ((0x1u << (log2 - 1)) < requested_irqs));
