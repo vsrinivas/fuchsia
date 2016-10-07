@@ -116,7 +116,7 @@ void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
             continue;
         }
         Elf64_Off off;
-        Elf64_Word size;
+        Elf64_Xword size;
         if (read_mem(h, phaddr + phdr_off_offset, &off, sizeof(off)) ||
             read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size))) {
             return;
