@@ -34,13 +34,13 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
     }
     size_t len = strlen(name);
     auto dso = reinterpret_cast<dsoinfo_t*> (calloc(1, sizeof(dsoinfo_t) + len + 1));
-    if (dso == NULL) {
-        return NULL;
+    if (dso == nullptr) {
+        return nullptr;
     }
     memcpy(dso->name, name, len + 1);
     memset(dso->buildid, 'x', sizeof(dso->buildid) - 1);
     dso->base = base;
-    while (*list != NULL) {
+    while (*list != nullptr) {
         if ((*list)->base < dso->base) {
             dso->next = *list;
             *list = dso;
@@ -49,7 +49,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
         list = &((*list)->next);
     }
     *list = dso;
-    dso->next = NULL;
+    dso->next = nullptr;
     return dso;
 }
 
@@ -188,9 +188,9 @@ void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
 dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
     uintptr_t lmap;
     if (read_mem(h, rdebug_vaddr + rdebug_off_lmap, &lmap, sizeof(lmap))) {
-        return NULL;
+        return nullptr;
     }
-    dsoinfo_t* dsolist = NULL;
+    dsoinfo_t* dsolist = nullptr;
     while (lmap != 0) {
         char dsoname[64];
         mx_vaddr_t base;
@@ -209,7 +209,7 @@ dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
             break;
         }
         dsoinfo_t* dso = dsolist_add(&dsolist, dsoname[0] ? dsoname : name, base);
-        if (dso != NULL) {
+        if (dso != nullptr) {
             fetch_build_id(h, dso);
         }
         lmap = next;
@@ -220,12 +220,12 @@ dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
 
 static void btprint(dsoinfo_t* list, int n, uintptr_t pc, uintptr_t sp) {
     dsoinfo_t* dso;
-    for (dso = list; dso != NULL; dso = dso->next) {
+    for (dso = list; dso != nullptr; dso = dso->next) {
         if (pc >= dso->base) {
             break;
         }
     }
-    if (dso == NULL) {
+    if (dso == nullptr) {
         fprintf(stderr, "bt#%02d: pc %p sp %p\n",
                 n, (void*)pc, (void*)sp);
     } else {
@@ -238,7 +238,7 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
     dsoinfo_t* list = fetch_dso_list(h, "app");
     int n = 1;
 
-    for (dsoinfo_t* dso = list; dso != NULL; dso = dso->next) {
+    for (dsoinfo_t* dso = list; dso != nullptr; dso = dso->next) {
         printf("dso: id=%s base=%p name=%s\n",
                dso->buildid, (void*)dso->base, dso->name);
     }
@@ -255,7 +255,7 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
     }
     fprintf(stderr, "bt#%02d: end\n", n);
 
-    while (list != NULL) {
+    while (list != nullptr) {
         dsoinfo_t* next = list->next;
         free(list);
         list = next;
