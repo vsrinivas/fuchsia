@@ -243,6 +243,9 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
                dso->buildid, (void*)dso->base, dso->name);
     }
 
+    // N.B. This unwinder assumes code is compiled with -fno-omit-frame-pointer
+    // and -mno-omit-leaf-frame-pointer on arm64.
+
     btprint(list, n++, pc, fp);
     while ((fp >= 0x1000000) && (n < 50)) {
         if (read_mem(h, fp + 8, &pc, sizeof(pc))) {

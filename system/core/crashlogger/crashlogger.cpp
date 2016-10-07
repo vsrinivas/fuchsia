@@ -147,6 +147,9 @@ void process_report(const mx_exception_report_t* report) {
     int regs;
 #endif
 
+    mx_vaddr_t pc = 0, sp = 0, fp = 0;
+    const char* arch = "unknown";
+
     uint32_t regs_size = sizeof(regs);
     auto status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, &regs_size);
     if (status < 0) {
@@ -160,30 +163,36 @@ void process_report(const mx_exception_report_t* report) {
 
     if (context.arch_id == ARCH_ID_X86_64) {
 #if defined(__x86_64__)
+        arch = "x86_64";
         output_frame_x86_64(context.arch.u.x86_64, regs);
-        printf("bottom of user stack:\n");
-        dump_memory(process, regs.rsp, kMemoryDumpSize);
-        printf("arch: x86_64\n");
-        backtrace(process, regs.rip, regs.rbp);
+        pc = regs.rip;
+        sp = regs.rsp;
+        fp = regs.rbp;
 #endif
     } else if (context.arch_id == ARCH_ID_ARM_64) {
 #if defined(__aarch64__)
+        arch = "aarch64";
         output_frame_arm64(context.arch.u.arm_64, regs);
 
         // Only output the Fault address register if there's a data fault.
         if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type)
             printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
 
-        printf("bottom of user stack:\n");
-        dump_memory(process, regs.sp, kMemoryDumpSize);
-        printf("arch: aarch64\n");
-        backtrace(process, regs.pc, regs.sp);
+        pc = regs.pc;
+        sp = regs.sp;
+        fp = regs.r[29];
 #endif
     } else {
         // TODO: support other architectures. It's unlikely we'll get here as
         // trying to read the regs will likely fail, but we don't assume that.
         printf("unsupported architecture .. coming soon.\n");
+        goto Fail;
     }
+
+    printf("bottom of user stack:\n");
+    dump_memory(process, sp, kMemoryDumpSize);
+    printf("arch: %s\n", arch);
+    backtrace(process, pc, fp);
 
 Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
