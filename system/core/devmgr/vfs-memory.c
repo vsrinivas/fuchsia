@@ -453,8 +453,10 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
         return ERR_ACCESS_DENIED;
     }
     mtx_lock(&vfs_lock);
+    // We cannot mount if anything else is already installed remotely
     if (vn->remote > 0) {
-        mx_handle_close(vn->remote);
+        mtx_unlock(&vfs_lock);
+        return ERR_ALREADY_BOUND;
     }
     vn->remote = h;
     vn->flags |= V_FLAG_REMOTE;
