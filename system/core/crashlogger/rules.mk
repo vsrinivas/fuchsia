@@ -10,7 +10,7 @@ MODULE_TYPE := userapp
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/crashlogger.cpp \
-    $(LOCAL_DIR)/backtrace.c \
+    $(LOCAL_DIR)/backtrace.cpp \
     $(LOCAL_DIR)/utils.cpp \
 
 MODULE_NAME := crashlogger

@@ -4,6 +4,7 @@
 
 #include <elf.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <link.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -32,7 +33,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
         name = "libmusl.so";
     }
     size_t len = strlen(name);
-    dsoinfo_t* dso = calloc(1, sizeof(dsoinfo_t) + len + 1);
+    auto dso = reinterpret_cast<dsoinfo_t*> (calloc(1, sizeof(dsoinfo_t) + len + 1));
     if (dso == NULL) {
         return NULL;
     }
@@ -59,19 +60,20 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
 #define lmap_off_name offsetof(struct link_map, l_name)
 #define lmap_off_addr offsetof(struct link_map, l_addr)
 
-typedef uint64_t mem_handle_t;
-
-static inline mx_status_t read_mem(mx_handle_t h, uint64_t vaddr, void* ptr, size_t len) {
-    mx_status_t status = mx_debug_read_memory(h, vaddr, len, ptr);
-    if (status != (mx_status_t)len) {
-        printf("read_mem @%p FAILED %d\n", (void*) (uintptr_t)vaddr, status);
-        return ERR_IO;
-    } else {
-        return NO_ERROR;
+static inline mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {
+    mx_ssize_t bytes_read = mx_debug_read_memory(h, vaddr, len, ptr);
+    if (bytes_read < 0) {
+        printf("read_mem @%p FAILED %d\n", (void*) vaddr, (int) bytes_read);
+        return (mx_status_t) bytes_read;
     }
+    if (bytes_read != (mx_ssize_t) len) {
+        printf("read_mem @%p FAILED, short read %ld\n", (void*) vaddr, (long) bytes_read);
+        return ERR_IO;
+    }
+    return NO_ERROR;
 }
 
-static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size_t max) {
+static mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max) {
     while (max > 1) {
         mx_status_t status;
         if ((status = read_mem(h, vaddr, ptr, 1)) < 0) {
@@ -86,6 +88,23 @@ static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size
     return NO_ERROR;
 }
 
+#if UINT_MAX == ULONG_MAX
+
+#define ehdr_off_phoff offsetof(Elf32_Ehdr, e_phoff)
+#define ehdr_off_phnum offsetof(Elf32_Ehdr, e_phnum)
+
+#define phdr_off_type offsetof(Elf32_Phdr, p_type)
+#define phdr_off_offset offsetof(Elf32_Phdr, p_offset)
+#define phdr_off_filesz offsetof(Elf32_Phdr, p_filesz)
+
+typedef Elf32_Half elf_half_t;
+typedef Elf32_Off elf_off_t;
+// ELF used "word" for 32 bits, sigh.
+typedef Elf32_Word elf_word_t;
+typedef Elf32_Word elf_native_word_t;
+
+#else
+
 #define ehdr_off_phoff offsetof(Elf64_Ehdr, e_phoff)
 #define ehdr_off_phnum offsetof(Elf64_Ehdr, e_phnum)
 
@@ -93,30 +112,37 @@ static mx_status_t fetch_string(mem_handle_t h, uintptr_t vaddr, char* ptr, size
 #define phdr_off_offset offsetof(Elf64_Phdr, p_offset)
 #define phdr_off_filesz offsetof(Elf64_Phdr, p_filesz)
 
+typedef Elf64_Half elf_half_t;
+typedef Elf64_Off elf_off_t;
+typedef Elf64_Word elf_word_t;
+typedef Elf64_Xword elf_native_word_t;
+
+#endif
+
 void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
-    uint64_t vaddr = dso->base;
+    mx_vaddr_t vaddr = dso->base;
     uint8_t tmp[4];
     if (read_mem(h, vaddr, tmp, 4) ||
         memcmp(tmp, ELFMAG, SELFMAG)) {
         return;
     }
-    Elf64_Off phoff;
-    Elf64_Half num;
+    elf_off_t phoff;
+    elf_half_t num;
     if (read_mem(h, vaddr + ehdr_off_phoff, &phoff, sizeof(phoff)) ||
         read_mem(h, vaddr + ehdr_off_phnum, &num, sizeof(num))) {
         return;
     }
     for (unsigned n = 0; n < num; n++) {
-        uint64_t phaddr = vaddr + phoff + (n * sizeof(Elf64_Phdr));
-        Elf64_Word type;
+        mx_vaddr_t phaddr = vaddr + phoff + (n * sizeof(Elf64_Phdr));
+        elf_word_t type;
         if (read_mem(h, phaddr + phdr_off_type, &type, sizeof(type))) {
             return;
         }
         if (type != PT_NOTE) {
             continue;
         }
-        Elf64_Off off;
-        Elf64_Xword size;
+        elf_off_t off;
+        elf_native_word_t size;
         if (read_mem(h, phaddr + phdr_off_offset, &off, sizeof(off)) ||
             read_mem(h, phaddr + phdr_off_filesz, &size, sizeof(size))) {
             return;
@@ -134,7 +160,7 @@ void fetch_build_id(mx_handle_t h, dsoinfo_t* dso) {
             size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
             off += header_size;
             size -= header_size;
-            uint64_t payload_vaddr = vaddr + off;
+            mx_vaddr_t payload_vaddr = vaddr + off;
             off += payload_size;
             size -= payload_size;
             if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
@@ -167,7 +193,7 @@ dsoinfo_t* fetch_dso_list(mx_handle_t h, const char* name) {
     dsoinfo_t* dsolist = NULL;
     while (lmap != 0) {
         char dsoname[64];
-        uint64_t base;
+        mx_vaddr_t base;
         uintptr_t next;
         uintptr_t str;
         if (read_mem(h, lmap + lmap_off_addr, &base, sizeof(base))) {
