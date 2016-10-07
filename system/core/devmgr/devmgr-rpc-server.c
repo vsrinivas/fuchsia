@@ -213,6 +213,9 @@ mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
         devhost_remote_remove(dev, true);
         // positive return indicates clean shutdown
         return 1;
+    case DH_OP_SHUTDOWN:
+        devmgr_vfs_exit();
+        return NO_ERROR;
     default:
         goto fail;
     }

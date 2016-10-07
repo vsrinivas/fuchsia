@@ -30,6 +30,8 @@ static mx_protocol_device_t dmctl_device_proto = {
     .write = dmctl_write,
 };
 
+mx_handle_t _dmctl_handle;
+
 mx_status_t dmctl_init(mx_driver_t* driver) {
     mx_device_t* dev;
     if (device_create(&dev, driver, "dmctl", &dmctl_device_proto) == NO_ERROR) {
@@ -37,6 +39,7 @@ mx_status_t dmctl_init(mx_driver_t* driver) {
             free(dev);
         }
     }
+    _dmctl_handle = dev->rpc;
     return NO_ERROR;
 }
 

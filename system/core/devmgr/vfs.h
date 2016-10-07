@@ -102,6 +102,7 @@ ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len
                     void* out_data, size_t out_len);
 
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
+mx_status_t vfs_uninstall_all(void);
 
 // big vfs lock protects lookup and walk operations
 //TODO: finer grained locking

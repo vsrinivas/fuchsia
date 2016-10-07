@@ -31,6 +31,7 @@ mx_status_t devhost_add_internal(mx_device_t* parent,
                                  mx_handle_t* _hdevice, mx_handle_t* _hrpc);
 
 extern mx_driver_t _driver_dmctl;
+extern mx_handle_t _dmctl_handle;
 
 extern mx_driver_t __start_builtin_drivers[] __WEAK;
 extern mx_driver_t __stop_builtin_drivers[] __WEAK;
@@ -92,6 +93,17 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
     devmgr_launch_devhost(procname, argc, argv, hdevice, hrpc);
 }
 
+void signal_devmgr_shutdown(void) {
+    devhost_msg_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.op = DH_OP_SHUTDOWN;
+
+    mx_status_t status = mx_msgpipe_write(_dmctl_handle, &msg, sizeof(msg), 0, 0, 0);
+    if (status) {
+        printf("Unexpected error signalling shutdown: %d\n", status);
+    }
+}
+
 mx_status_t devmgr_control(const char* cmd) {
     if (!strcmp(cmd, "help")) {
         printf("dump        - dump device tree\n"
@@ -111,10 +123,12 @@ mx_status_t devmgr_control(const char* cmd) {
         return NO_ERROR;
     }
     if (!strcmp(cmd, "poweroff")) {
+        signal_devmgr_shutdown();
         devmgr_poweroff();
         return ERR_NOT_SUPPORTED;
     }
     if (!strcmp(cmd, "reboot")) {
+        signal_devmgr_shutdown();
         devmgr_reboot();
         return ERR_NOT_SUPPORTED;
     }
