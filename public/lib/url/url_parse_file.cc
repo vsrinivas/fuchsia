@@ -48,14 +48,14 @@ namespace {
 // query, and ref, and leave the other output components untouched
 // (DoInitFileURL handles these for us).
 void DoParseUNC(const char* spec,
-                int after_slashes,
-                int spec_len,
+                size_t after_slashes,
+                size_t spec_len,
                Parsed* parsed) {
-  int next_slash = FindNextSlash(spec, after_slashes, spec_len);
+  size_t next_slash = FindNextSlash(spec, after_slashes, spec_len);
   if (next_slash == spec_len) {
     // No additional slash found, as in "file://foo", treat the text as the
     // host with no path (this will end up being UNC to server "foo").
-    int host_len = spec_len - after_slashes;
+    size_t host_len = spec_len - after_slashes;
     if (host_len)
       parsed->host = Component(after_slashes, host_len);
     else
@@ -69,7 +69,7 @@ void DoParseUNC(const char* spec,
   // will get a server name of "foo" and a path of "/bar". Later, on Windows,
   // this should be treated as the filename "\\foo\bar.txt" in proper UNC
   // notation.
-  int host_len = next_slash - after_slashes;
+  size_t host_len = next_slash - after_slashes;
   if (host_len)
     parsed->host = MakeRange(after_slashes, next_slash);
   else
@@ -87,8 +87,8 @@ void DoParseUNC(const char* spec,
 // initialize the host, path, query, and ref, and leave the other output
 // components untouched (DoInitFileURL handles these for us).
 void DoParseLocalFile(const char* spec,
-                      int path_begin,
-                      int spec_len,
+                      size_t path_begin,
+                      size_t spec_len,
                       Parsed* parsed) {
   parsed->host.reset();
   ParsePathInternal(spec, MakeRange(path_begin, spec_len),
@@ -101,7 +101,7 @@ void DoParseLocalFile(const char* spec,
 // Handles cases where there is a scheme, but also when handed the first
 // character following the "file:" at the beginning of the spec. If so,
 // this is usually a slash, but needn't be; we allow paths like "file:c:\foo".
-void ParseFileURL(const char* spec, int spec_len, Parsed* parsed) {
+void ParseFileURL(const char* spec, size_t spec_len, Parsed* parsed) {
   FTL_DCHECK(spec_len >= 0);
 
   // Get the parts we never use for file URLs out of the way.
@@ -115,13 +115,13 @@ void ParseFileURL(const char* spec, int spec_len, Parsed* parsed) {
   parsed->ref.reset();
 
   // Strip leading & trailing spaces and control characters.
-  int begin = 0;
+  size_t begin = 0;
   TrimURL(spec, &begin, &spec_len);
 
   // Find the scheme, if any.
-  int num_slashes = CountConsecutiveSlashes(spec, begin, spec_len);
-  int after_scheme;
-  int after_slashes;
+  size_t num_slashes = CountConsecutiveSlashes(spec, begin, spec_len);
+  size_t after_scheme;
+  size_t after_slashes;
   {
     // ExtractScheme doesn't understand the possibility of filenames with
     // colons in them, in which case it returns the entire spec up to the

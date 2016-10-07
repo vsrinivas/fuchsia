@@ -108,13 +108,13 @@ void ScanHostname(const char* spec,
 // The return value indicates if the output is a potentially valid host name.
 template<typename INCHAR, typename OUTCHAR>
 bool DoSimpleHost(const INCHAR* host,
-                  int host_len,
+                  size_t host_len,
                   CanonOutputT<OUTCHAR>* output,
                   bool* has_non_ascii) {
   *has_non_ascii = false;
 
   bool success = true;
-  for (int i = 0; i < host_len; ++i) {
+  for (size_t i = 0; i < host_len; ++i) {
     unsigned int source = host[i];
     if (source == '%') {
       // Unescape first, if possible.
@@ -159,7 +159,7 @@ bool DoSimpleHost(const INCHAR* host,
 }
 
 // Canonicalizes a host that requires IDN conversion. Returns true on success
-bool DoIDNHost(const uint16_t* src, int src_len, CanonOutput* output) {
+bool DoIDNHost(const uint16_t* src, size_t src_len, CanonOutput* output) {
   // We need to escape URL before doing IDN conversion, since punicode strings
   // cannot be escaped after they are created.
   RawCanonOutputW<> url_escaped_host;
@@ -189,16 +189,16 @@ bool DoIDNHost(const uint16_t* src, int src_len, CanonOutput* output) {
 // 8-bit convert host to its ASCII version: this converts the UTF-8 input to
 // UTF-16. The has_escaped flag should be set if the input string requires
 // unescaping.
-bool DoComplexHost(const char* host, int host_len,
+bool DoComplexHost(const char* host, size_t host_len,
                    bool has_non_ascii, bool has_escaped, CanonOutput* output) {
   // Save the current position in the output. We may write stuff and rewind it
   // below, so we need to know where to rewind to.
-  int begin_length = output->length();
+  size_t begin_length = output->length();
 
   // Points to the UTF-8 data we want to convert. This will either be the
   // input or the unescaped version written to |*output| if necessary.
   const char* utf8_source;
-  int utf8_source_len;
+  size_t utf8_source_len;
   if (has_escaped) {
     // Unescape before converting to UTF-16 for IDN. We write this into the
     // output because it most likely does not require IDNization, and we can
@@ -236,7 +236,7 @@ bool DoComplexHost(const char* host, int host_len,
   if (!ConvertUTF8ToUTF16(utf8_source, utf8_source_len, &utf16)) {
     // In this error case, the input may or may not be the output.
     RawCanonOutput<> utf8;
-    for (int i = 0; i < utf8_source_len; i++)
+    for (size_t i = 0; i < utf8_source_len; i++)
       utf8.push_back(utf8_source[i]);
     output->set_length(begin_length);
     AppendInvalidNarrowString(utf8.data(), 0, utf8.length(), output);
@@ -255,7 +255,7 @@ void CanonicalizeHostVerbose(const char* spec,
             const Component& host,
             CanonOutput* output,
             CanonHostInfo* host_info) {
-  if (host.len <= 0) {
+  if (host.is_invalid_or_empty()) {
     // Empty hosts don't need anything.
     host_info->family = CanonHostInfo::NEUTRAL;
     host_info->out_host = Component();
@@ -266,15 +266,15 @@ void CanonicalizeHostVerbose(const char* spec,
   ScanHostname(spec, host, &has_non_ascii, &has_escaped);
 
   // Keep track of output's initial length, so we can rewind later.
-  const int output_begin = output->length();
+  const size_t output_begin = output->length();
 
   bool success;
   if (!has_non_ascii && !has_escaped) {
-    success = DoSimpleHost(&spec[host.begin], host.len,
+    success = DoSimpleHost(&spec[host.begin], host.len(),
                            output, &has_non_ascii);
     FTL_DCHECK(!has_non_ascii);
   } else {
-    success = DoComplexHost(&spec[host.begin], host.len,
+    success = DoComplexHost(&spec[host.begin], host.len(),
                             has_non_ascii, has_escaped, output);
   }
 

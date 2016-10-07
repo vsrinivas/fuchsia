@@ -31,9 +31,9 @@ bool AreSchemesEqual(const char* base,
                      const Component& base_scheme,
                      const char* cmp,
                      const Component& cmp_scheme) {
-  if (base_scheme.len != cmp_scheme.len)
+  if (base_scheme.len() != cmp_scheme.len())
     return false;
-  for (int i = 0; i < base_scheme.len; i++) {
+  for (size_t i = 0; i < base_scheme.len(); i++) {
     // We assume the base is already canonical, so we don't have to
     // canonicalize it.
     if (CanonicalSchemeChar(cmp[cmp_scheme.begin + i]) !=
@@ -77,7 +77,7 @@ void CopyOneComponent(const char* source,
                       const Component& source_component,
                       CanonOutput* output,
                       Component* output_component) {
-  if (source_component.len < 0) {
+  if (!source_component.is_valid()) {
     // This component is not present.
     *output_component = Component();
     return;
@@ -87,7 +87,7 @@ void CopyOneComponent(const char* source,
   int source_end = source_component.end();
   for (int i = source_component.begin; i < source_end; i++)
     output->push_back(source[i]);
-  output_component->len = output->length() - output_component->begin;
+  output_component->set_len(output->length() - output_component->begin);
 }
 
 // A subroutine of DoResolveRelativeURL, this resolves the URL knowning that
@@ -109,7 +109,7 @@ bool DoResolveRelativePath(const char* base_url,
   // Canonical URLs always have a path, so we can use that offset.
   output->Append(base_url, base_parsed.path.begin);
 
-  if (path.len > 0) {
+  if (path.is_nonempty()) {
     // The path is replaced or modified.
     int true_path_begin = output->length();
     int base_path_begin = base_parsed.path.begin;
@@ -187,11 +187,11 @@ bool DoResolveAbsoluteFile(const char* relative_url,
   // as we do for determining if the file is absolute, in which case it will
   // not bother to look for a scheme.
   Parsed relative_parsed;
-  ParseFileURL(&relative_url[relative_component.begin], relative_component.len,
+  ParseFileURL(&relative_url[relative_component.begin], relative_component.len(),
                &relative_parsed);
 
   return CanonicalizeFileURL(&relative_url[relative_component.begin],
-                             relative_component.len, relative_parsed,
+                             relative_component.len(), relative_parsed,
                              query_converter, output, out_parsed);
 }
 
@@ -201,14 +201,14 @@ bool DoResolveAbsoluteFile(const char* relative_url,
 bool IsRelativeURL(const char* base,
                      const Parsed& base_parsed,
                      const char* url,
-                     int url_len,
+                     size_t url_len,
                      bool is_base_hierarchical,
                      bool* is_relative,
                      Component* relative_component) {
   *is_relative = false;  // So we can default later to not relative.
 
   // Trim whitespace and construct a new range for the substring.
-  int begin = 0;
+  size_t begin = 0;
   TrimURL(url, &begin, &url_len);
   if (begin >= url_len) {
     // Empty URLs are relative, but do nothing.
@@ -223,7 +223,7 @@ bool IsRelativeURL(const char* base,
   // empty, we treat it as relative (":foo"), like IE does.
   Component scheme;
   const bool scheme_is_empty =
-      !ExtractScheme(url, url_len, &scheme) || scheme.len == 0;
+      !ExtractScheme(url, url_len, &scheme) || scheme.len() == 0;
   if (scheme_is_empty) {
     if (url[begin] == '#') {
       // |url| is a bare fragment (e.g. "#foo"). This can be resolved against
@@ -262,12 +262,12 @@ bool IsRelativeURL(const char* base,
   if (!is_base_hierarchical)
     return true;
 
-  int colon_offset = scheme.end();
+  size_t colon_offset = scheme.end();
 
   // ExtractScheme guarantees that the colon immediately follows what it
   // considers to be the scheme. CountConsecutiveSlashes will handle the
   // case where the begin offset is the end of the input.
-  int num_slashes = CountConsecutiveSlashes(url, colon_offset + 1, url_len);
+  size_t num_slashes = CountConsecutiveSlashes(url, colon_offset + 1, url_len);
 
   if (num_slashes == 0 || num_slashes == 1) {
     // No slashes means it's a relative path like "http:foo.html". One slash
@@ -298,25 +298,27 @@ bool ResolveRelativeURL(const char* base_url,
   // paths (even the default path of "/" is OK).
   //
   // We allow hosts with no length so we can handle file URLs, for example.
-  if (base_parsed.path.len <= 0) {
+  if (base_parsed.path.is_invalid_or_empty()) {
     // On error, return the input (resolving a relative URL on a non-relative
     // base = the base).
-    int base_len = base_parsed.Length();
-    for (int i = 0; i < base_len; i++)
+    size_t base_len = base_parsed.Length();
+    for (size_t i = 0; i < base_len; i++)
       output->push_back(base_url[i]);
     return false;
   }
 
-  if (relative_component.len <= 0) {
+  if (relative_component.is_invalid_or_empty()) {
     // Empty relative URL, leave unchanged, only removing the ref component.
-    int base_len = base_parsed.Length();
-    base_len -= base_parsed.ref.len + 1;
+    size_t base_len = base_parsed.Length();
+    if (base_parsed.ref.is_valid()) {
+      base_len -= base_parsed.ref.len() + 1;
+    }
     out_parsed->ref.reset();
     output->Append(base_url, base_len);
     return true;
   }
 
-  int num_slashes = CountConsecutiveSlashes(
+  size_t num_slashes = CountConsecutiveSlashes(
       relative_url, relative_component.begin, relative_component.end());
 
   // Other platforms need explicit handling for file: URLs with multiple
@@ -328,7 +330,7 @@ bool ResolveRelativeURL(const char* base_url,
   // This also handles the special case where the URL is only slashes,
   // since that doesn't have a host part either.
   if (base_is_file &&
-      (num_slashes >= 2 || num_slashes == relative_component.len)) {
+      (num_slashes >= 2 || num_slashes == relative_component.len())) {
     return DoResolveAbsoluteFile(relative_url, relative_component,
                                  query_converter, output, out_parsed);
   }
@@ -337,10 +339,10 @@ bool ResolveRelativeURL(const char* base_url,
   if (num_slashes >= 2) {
     // Make & parse an url with base_url's scheme and everything else from relative_url.
     std::string new_url;
-    new_url.reserve(base_parsed.scheme.len + 1 + relative_component.len);
-    new_url.append(&base_url[base_parsed.scheme.begin], base_parsed.scheme.len);
+    new_url.reserve(base_parsed.scheme.len() + 1 + relative_component.len());
+    new_url.append(&base_url[base_parsed.scheme.begin], base_parsed.scheme.len());
     new_url.push_back(':');
-    new_url.append(&relative_url[relative_component.begin], relative_component.len);
+    new_url.append(&relative_url[relative_component.begin], relative_component.len());
     Parsed new_parsed;
     ParseStandardURL(new_url.c_str(), new_url.size(), &new_parsed);
 

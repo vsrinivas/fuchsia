@@ -20,9 +20,9 @@ namespace {
 // This function assumes the input values are all contained in 8-bit,
 // although it allows any type. Returns true if input is valid, false if not.
 template<typename CHAR, typename UCHAR>
-void DoAppendInvalidNarrowString(const CHAR* spec, int begin, int end,
+void DoAppendInvalidNarrowString(const CHAR* spec, size_t begin, size_t end,
                                  CanonOutput* output) {
-  for (int i = begin; i < end; i++) {
+  for (size_t i = begin; i < end; i++) {
     UCHAR uch = static_cast<UCHAR>(spec[i]);
     if (uch >= 0x80) {
       // Handle UTF-8/16 encodings. This call will correctly handle the error
@@ -40,8 +40,8 @@ void DoAppendInvalidNarrowString(const CHAR* spec, int begin, int end,
 }
 
 static inline bool ReadUnicodeCharacter(const uint16_t* src,
-                          int32_t src_len,
-                          int32_t* char_index,
+                          size_t src_len,
+                          size_t* char_index,
                           uint32_t* code_point) {
   if (FTL_U16_IS_SURROGATE(src[*char_index])) {
     if (!FTL_U16_IS_SURROGATE_LEAD(src[*char_index]) ||
@@ -193,10 +193,10 @@ const char kCharToHexLookup[8] = {
 
 const uint32_t kUnicodeReplacementCharacter = 0xfffd;
 
-void AppendStringOfType(const char* source, int length,
+void AppendStringOfType(const char* source, size_t length,
                           SharedCharTypes type,
                           CanonOutput* output) {
-  for (int i = 0; i < length; i++) {
+  for (size_t i = 0; i < length; i++) {
     if (static_cast<unsigned char>(source[i]) >= 0x80) {
       // ReadChar will fill the code point with kUnicodeReplacementCharacter
       // when the input is invalid, which is what we want.
@@ -214,23 +214,20 @@ void AppendStringOfType(const char* source, int length,
   }
 }
 
-bool ReadUTFChar(const char* str, int* begin, int length,
+bool ReadUTFChar(const char* str, size_t* begin, size_t length,
                  uint32_t* code_point_out) {
   // This depends on ints and int32s being the same thing. If they're not, it
   // will fail to compile.
   // TODO(mmenke): This should probably be fixed.
-  size_t begin_size;
-  if (!ftl::ReadUnicodeCharacter(str, length, &begin_size, code_point_out) ||
+  if (!ftl::ReadUnicodeCharacter(str, length, begin, code_point_out) ||
       !ftl::IsValidCharacter(*code_point_out)) {
     *code_point_out = kUnicodeReplacementCharacter;
     return false;
   }
-  FTL_DCHECK(begin);
-  *begin = begin_size;
   return true;
 }
 
-bool ReadUTFChar(const uint16_t* str, int* begin, int length,
+bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length,
                  unsigned* code_point_out) {
   // This depends on ints and int32s being the same thing. If they're not, it
   // will fail to compile.
@@ -243,20 +240,20 @@ bool ReadUTFChar(const uint16_t* str, int* begin, int length,
   return true;
 }
 
-void AppendInvalidNarrowString(const char* spec, int begin, int end,
+void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end,
                                CanonOutput* output) {
   DoAppendInvalidNarrowString<char, unsigned char>(spec, begin, end, output);
 }
 
-void AppendInvalidNarrowString(const uint16_t* spec, int begin, int end,
+void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end,
                                CanonOutput* output) {
   DoAppendInvalidNarrowString<uint16_t, uint16_t>(spec, begin, end, output);
 }
 
-bool ConvertUTF16ToUTF8(const uint16_t* input, int input_len,
+bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len,
                         CanonOutput* output) {
   bool success = true;
-  for (int i = 0; i < input_len; i++) {
+  for (size_t i = 0; i < input_len; i++) {
     unsigned code_point;
     success &= ReadUTFChar(input, &i, input_len, &code_point);
     AppendUTF8Value(code_point, output);
@@ -264,10 +261,10 @@ bool ConvertUTF16ToUTF8(const uint16_t* input, int input_len,
   return success;
 }
 
-bool ConvertUTF8ToUTF16(const char* input, int input_len,
+bool ConvertUTF8ToUTF16(const char* input, size_t input_len,
                         CanonOutputT<uint16_t>* output) {
   bool success = true;
-  for (int i = 0; i < input_len; i++) {
+  for (size_t i = 0; i < input_len; i++) {
     unsigned code_point;
     success &= ReadUTFChar(input, &i, input_len, &code_point);
     AppendUTF16Value(code_point, output);
@@ -284,8 +281,8 @@ int IntToString(int value, char* buffer, size_t size_in_chars, int radix) {
   else
     return EINVAL;
 
-  int written = snprintf(buffer, size_in_chars, format_str, value);
-  if (static_cast<size_t>(written) >= size_in_chars) {
+  size_t written = snprintf(buffer, size_in_chars, format_str, value);
+  if (written >= size_in_chars) {
     // Output was truncated, or written was negative.
     return EINVAL;
   }

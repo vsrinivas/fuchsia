@@ -90,7 +90,7 @@ static bool DoCanonicalizeFileURL(const URLComponentSource& source,
   output->push_back('i');
   output->push_back('l');
   output->push_back('e');
-  new_parsed->scheme.len = output->length() - new_parsed->scheme.begin;
+  new_parsed->scheme.set_len(output->length() - new_parsed->scheme.begin);
   output->push_back(':');
 
   // Write the separator for the host.
@@ -116,7 +116,7 @@ static bool DoCanonicalizeFileURL(const URLComponentSource& source,
 
   // Copy the rest of the path.
   FileDoPath<char, unsigned char>(source.path, after_drive, parsed.path.end(), output);
-  new_parsed->path.len = output->length() - new_parsed->path.begin;
+  new_parsed->path.set_len(output->length() - new_parsed->path.begin);
 
   // For things following the path, we can use the standard canonicalizers.
   success &= URLCanonInternal<char, unsigned char>::DoQuery(

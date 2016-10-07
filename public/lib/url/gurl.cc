@@ -178,7 +178,7 @@ GURL GURL::GetWithEmptyPath() const {
   // We could optimize this since we know that the URL is canonical, and we are
   // appending a canonical path, so avoiding re-parsing.
   GURL other(*this);
-  if (parsed_.path.len == 0)
+  if (parsed_.path.is_invalid_or_empty())
     return other;
 
   // Clear everything after the path.
@@ -188,7 +188,7 @@ GURL GURL::GetWithEmptyPath() const {
   // Set the path, since the path is longer than one, we can just set the
   // first character and resize.
   other.spec_[other.parsed_.path.begin] = '/';
-  other.parsed_.path.len = 1;
+  other.parsed_.path.set_len(1);
   other.spec_.resize(other.parsed_.path.begin + 1);
   return other;
 }
@@ -198,11 +198,11 @@ bool GURL::IsStandard() const {
 }
 
 bool GURL::SchemeIs(const char* lower_ascii_scheme) const {
-  if (parsed_.scheme.len <= 0)
+  if (parsed_.scheme.is_invalid_or_empty())
     return lower_ascii_scheme == NULL;
   return url::LowerCaseEqualsASCII(
       ftl::StringView(spec_.data() + parsed_.scheme.begin,
-                        parsed_.scheme.len),
+                        parsed_.scheme.len()),
       ftl::StringView(lower_ascii_scheme));
 }
 
@@ -224,7 +224,7 @@ int GURL::EffectiveIntPort() const {
   int int_port = IntPort();
   if (int_port == url::PORT_UNSPECIFIED && IsStandard())
     return url::DefaultPortForScheme(spec_.data() + parsed_.scheme.begin,
-                                     parsed_.scheme.len);
+                                     parsed_.scheme.len());
   return int_port;
 }
 
@@ -235,9 +235,9 @@ std::string GURL::ExtractFileName() const {
 }
 
 std::string GURL::PathForRequest() const {
-  FTL_DCHECK(parsed_.path.len > 0)
+  FTL_DCHECK(parsed_.path.is_nonempty())
       << "Canonical path for requests should be non-empty";
-  if (parsed_.ref.len >= 0) {
+  if (parsed_.ref.is_valid()) {
     // Clip off the reference when it exists. The reference starts after the
     // #-sign, so we have to subtract one to also remove it.
     return std::string(spec_, parsed_.path.begin,
@@ -246,7 +246,7 @@ std::string GURL::PathForRequest() const {
   // Compute the actual path length, rather than depending on the spec's
   // terminator. If we're an inner_url, our spec continues on into our outer
   // URL's path/query/ref.
-  int path_len = parsed_.path.len;
+  size_t path_len = parsed_.path.len();
   if (parsed_.query.is_valid())
     path_len = parsed_.query.end() - parsed_.path.begin;
 
@@ -256,9 +256,9 @@ std::string GURL::PathForRequest() const {
 std::string GURL::HostNoBrackets() const {
   // If host looks like an IPv6 literal, strip the square brackets.
   url::Component h(parsed_.host);
-  if (h.len >= 2 && spec_[h.begin] == '[' && spec_[h.end() - 1] == ']') {
+  if (h.is_valid() && h.len() >= 2 && spec_[h.begin] == '[' && spec_[h.end() - 1] == ']') {
     h.begin++;
-    h.len -= 2;
+    h.set_len(h.len() - 2);
   }
   return ComponentString(h);
 }
@@ -292,14 +292,14 @@ bool GURL::DomainIs(ftl::StringView lower_ascii_domain) const {
   if (!is_valid_ || lower_ascii_domain.empty())
     return false;
 
-  if (!parsed_.host.is_nonempty())
+  if (parsed_.host.is_invalid_or_empty())
     return false;
 
   // If the host name ends with a dot but the input domain doesn't,
   // then we ignore the dot in the host name.
   const char* host_last_pos = spec_.data() + parsed_.host.end() - 1;
-  int host_len = parsed_.host.len;
-  int domain_len = lower_ascii_domain.size();
+  size_t host_len = parsed_.host.len();
+  size_t domain_len = lower_ascii_domain.size();
   if ('.' == *host_last_pos && '.' != lower_ascii_domain[domain_len - 1]) {
     host_last_pos--;
     host_len--;

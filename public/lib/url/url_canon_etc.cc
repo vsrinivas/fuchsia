@@ -62,7 +62,7 @@ const char* RemoveURLWhitespace(const char* input, size_t input_len,
   // Fast verification that there's nothing that needs removal. This is the 99%
   // case, so we want it to be fast and don't care about impacting the speed
   // when we do find whitespace.
-  int found_whitespace = false;
+  bool found_whitespace = false;
   for (size_t i = 0; i < input_len; i++) {
     if (!IsRemovableURLWhitespace(input[i]))
       continue;
@@ -90,7 +90,7 @@ bool CanonicalizeScheme(const char* spec,
               const Component& scheme,
               CanonOutput* output,
               Component* out_scheme) {
-  if (scheme.len <= 0) {
+  if (scheme.is_invalid_or_empty()) {
     // Scheme is unspecified or empty, convert to empty by appending a colon.
     *out_scheme = Component(output->length(), 0);
     output->push_back(':');
@@ -106,8 +106,8 @@ bool CanonicalizeScheme(const char* spec,
   // FindAndCompareScheme, which could cause some security checks on
   // schemes to be incorrect.
   bool success = true;
-  int end = scheme.end();
-  for (int i = scheme.begin; i < end; i++) {
+  size_t end = scheme.end();
+  for (size_t i = scheme.begin; i < end; i++) {
     unsigned char ch = static_cast<unsigned char>(spec[i]);
     char replacement = 0;
     if (ch < 0x80) {
@@ -140,7 +140,7 @@ bool CanonicalizeScheme(const char* spec,
 
   // The output scheme ends with the the current position, before appending
   // the colon.
-  out_scheme->len = output->length() - out_scheme->begin;
+  out_scheme->set_len(output->length() - out_scheme->begin);
   output->push_back(':');
   return success;
 }
@@ -156,7 +156,7 @@ bool CanonicalizeUserInfo(const char* username_spec,
                 CanonOutput* output,
                 Component* out_username,
                 Component* out_password) {
-  if (username.len <= 0 && password.len <= 0) {
+  if (username.is_invalid_or_empty() && password.is_invalid_or_empty()) {
     // Common case: no user info. We strip empty username/passwords.
     *out_username = Component();
     *out_password = Component();
@@ -165,21 +165,21 @@ bool CanonicalizeUserInfo(const char* username_spec,
 
   // Write the username.
   out_username->begin = output->length();
-  if (username.len > 0) {
+  if (username.is_nonempty()) {
     // This will escape characters not valid for the username.
-    AppendStringOfType(&username_spec[username.begin], username.len,
+    AppendStringOfType(&username_spec[username.begin], username.len(),
                        CHAR_USERINFO, output);
   }
-  out_username->len = output->length() - out_username->begin;
+  out_username->set_len(output->length() - out_username->begin);
 
   // When there is a password, we need the separator. Note that we strip
   // empty but specified passwords.
-  if (password.len > 0) {
+  if (password.is_nonempty()) {
     output->push_back(':');
     out_password->begin = output->length();
-    AppendStringOfType(&password_spec[password.begin], password.len,
+    AppendStringOfType(&password_spec[password.begin], password.len(),
                        CHAR_USERINFO, output);
-    out_password->len = output->length() - out_password->begin;
+    out_password->set_len(output->length() - out_password->begin);
   } else {
     *out_password = Component();
   }
@@ -206,23 +206,23 @@ bool CanonicalizePort(const char* spec,
     output->push_back(':');
     out_port->begin = output->length();
     AppendInvalidNarrowString(spec, port.begin, port.end(), output);
-    out_port->len = output->length() - out_port->begin;
+    out_port->set_len(output->length() - out_port->begin);
     return false;
   }
 
   // Convert port number back to an integer. Max port value is 5 digits, and
   // the Parsed::ExtractPort will have made sure the integer is in range.
-  const int buf_size = 6;
+  const size_t buf_size = 6;
   char buf[buf_size];
   WritePortInt(buf, buf_size, port_num);
 
   // Append the port number to the output, preceded by a colon.
   output->push_back(':');
   out_port->begin = output->length();
-  for (int i = 0; i < buf_size && buf[i]; i++)
+  for (size_t i = 0; i < buf_size && buf[i]; i++)
     output->push_back(buf[i]);
 
-  out_port->len = output->length() - out_port->begin;
+  out_port->set_len(output->length() - out_port->begin);
   return true;
 }
 
@@ -230,7 +230,7 @@ void CanonicalizeRef(const char* spec,
                        const Component& ref,
                        CanonOutput* output,
                        Component* out_ref) {
-  if (ref.len < 0) {
+  if (!ref.is_valid()) {
     // Common case of no ref.
     *out_ref = Component();
     return;
@@ -242,8 +242,8 @@ void CanonicalizeRef(const char* spec,
   out_ref->begin = output->length();
 
   // Now iterate through all the characters, converting to UTF-8 and validating.
-  int end = ref.end();
-  for (int i = ref.begin; i < end; i++) {
+  size_t end = ref.end();
+  for (size_t i = ref.begin; i < end; i++) {
     if (spec[i] == 0) {
       // IE just strips NULLs, so we do too.
       continue;
@@ -266,7 +266,7 @@ void CanonicalizeRef(const char* spec,
     }
   }
 
-  out_ref->len = output->length() - out_ref->begin;
+  out_ref->set_len(output->length() - out_ref->begin);
 }
 
 char CanonicalSchemeChar(char ch) {

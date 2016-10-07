@@ -23,7 +23,7 @@ void StdStringCanonOutput::Complete() {
   buffer_len_ = cur_len_;
 }
 
-void StdStringCanonOutput::Resize(int sz) {
+void StdStringCanonOutput::Resize(size_t sz) {
   str_->resize(sz);
   buffer_ = str_->empty() ? NULL : &(*str_)[0];
   buffer_len_ = sz;

@@ -29,15 +29,15 @@ bool DoCanonicalizePathComponent(const char* source,
     // javascript:). We convert to UTF-8 and escape non-ASCII, but leave all
     // ASCII characters alone. This helps readability of JavaStript.
     new_component->begin = output->length();
-    int end = component.end();
-    for (int i = component.begin; i < end; i++) {
+    size_t end = component.end();
+    for (size_t i = component.begin; i < end; i++) {
       unsigned char uch = static_cast<unsigned char>(source[i]);
       if (uch < 0x20 || uch >= 0x80)
         success &= AppendUTF8EscapedChar(source, &i, end, output);
       else
         output->push_back(static_cast<char>(uch));
     }
-    new_component->len = output->length() - new_component->begin;
+    new_component->set_len(output->length() - new_component->begin);
   } else {
     // Empty part.
     new_component->reset();
@@ -48,7 +48,7 @@ bool DoCanonicalizePathComponent(const char* source,
 }  // namespace
 
 bool CanonicalizePathURL(const char* spec,
-                         int spec_len,
+                         size_t spec_len,
                            const Parsed& parsed,
                            CanonOutput* output,
                            Parsed* new_parsed) {

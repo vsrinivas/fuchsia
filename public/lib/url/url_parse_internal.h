@@ -27,7 +27,7 @@ inline bool ShouldTrimFromURL(char ch) {
 // indicate the length of untrimmed data from |*begin|, but rather the position
 // in the input string (so the string starts at character |*begin| in the spec,
 // and goes until |*len|).
-inline void TrimURL(const char* spec, int* begin, int* len,
+inline void TrimURL(const char* spec, size_t* begin, size_t* len,
                     bool trim_path_end = true) {
   // Strip leading whitespace and control characters.
   while (*begin < *len && ShouldTrimFromURL(spec[*begin]))
@@ -44,9 +44,9 @@ inline void TrimURL(const char* spec, int* begin, int* len,
 
 // Counts the number of consecutive slashes starting at the given offset
 // in the given string of the given length.
-inline int CountConsecutiveSlashes(const char *str,
-                                   int begin_offset, int str_len) {
-  int count = 0;
+inline size_t CountConsecutiveSlashes(const char *str,
+                                   size_t begin_offset, size_t str_len) {
+  size_t count = 0;
   while (begin_offset + count < str_len &&
          IsURLSlash(str[begin_offset + count]))
     ++count;
@@ -70,8 +70,8 @@ void ParsePathInternal(const char* spec,
 // scheme, this parses it and fills in the structure, Every item in the parsed
 // structure is filled EXCEPT for the scheme, which is untouched.
 void ParseAfterScheme(const char* spec,
-                      int spec_len,
-                      int after_scheme,
+                      size_t spec_len,
+                      size_t after_scheme,
                       Parsed* parsed);
 }  // namespace url
 

@@ -18,7 +18,7 @@ namespace url {
 
 namespace {
 
-const int kNumStandardURLSchemes = 7;
+const size_t kNumStandardURLSchemes = 7;
 const char* kStandardURLSchemes[kNumStandardURLSchemes] = {
   kHttpScheme,
   kHttpsScheme,
@@ -43,7 +43,7 @@ void InitStandardSchemes() {
   if (standard_schemes)
     return;
   standard_schemes = new std::vector<const char*>;
-  for (int i = 0; i < kNumStandardURLSchemes; i++)
+  for (size_t i = 0; i < kNumStandardURLSchemes; i++)
     standard_schemes->push_back(kStandardURLSchemes[i]);
 }
 
@@ -52,10 +52,10 @@ void InitStandardSchemes() {
 inline bool DoCompareSchemeComponent(const char* spec,
                                      const Component& component,
                                      const char* compare_to) {
-  if (!component.is_nonempty())
+  if (component.is_invalid_or_empty())
     return compare_to[0] == 0;  // When component is empty, match empty scheme.
   return LowerCaseEqualsASCII(
-      ftl::StringView(&spec[component.begin], component.len),
+      ftl::StringView(&spec[component.begin], component.len()),
       ftl::StringView(compare_to));
 }
 
@@ -64,13 +64,13 @@ inline bool DoCompareSchemeComponent(const char* spec,
 // Returns true if the given scheme identified by |scheme| within |spec| is one
 // of the registered "standard" schemes.
 bool IsStandard(const char* spec, const Component& scheme) {
-  if (!scheme.is_nonempty())
+  if (scheme.is_invalid_or_empty())
     return false;  // Empty or invalid schemes are non-standard.
 
   InitStandardSchemes();
   for (size_t i = 0; i < standard_schemes->size(); i++) {
     if (LowerCaseEqualsASCII(
-            ftl::StringView(&spec[scheme.begin], scheme.len),
+            ftl::StringView(&spec[scheme.begin], scheme.len()),
             ftl::StringView(standard_schemes->at(i))))
       return true;
   }
@@ -78,7 +78,7 @@ bool IsStandard(const char* spec, const Component& scheme) {
 }
 
 bool FindAndCompareScheme(const char* str,
-                            int str_len,
+                            size_t str_len,
                             const char* compare,
                             Component* found_scheme) {
   // Before extracting scheme, canonicalize the URL to remove any whitespace.
@@ -101,7 +101,7 @@ bool FindAndCompareScheme(const char* str,
 }
 
 bool Canonicalize(const char* in_spec,
-                    int in_spec_len,
+                    size_t in_spec_len,
                     bool trim_path_end,
                     CharsetConverter* charset_converter,
                     CanonOutput* output,
@@ -150,10 +150,10 @@ bool Canonicalize(const char* in_spec,
 }
 
 bool ResolveRelative(const char* base_spec,
-                       int base_spec_len,
+                       size_t base_spec_len,
                        const Parsed& base_parsed,
                        const char* in_relative,
-                       int in_relative_length,
+                       size_t in_relative_length,
                        CharsetConverter* charset_converter,
                        CanonOutput* output,
                        Parsed* output_parsed) {
@@ -168,8 +168,8 @@ bool ResolveRelative(const char* base_spec,
   bool base_is_hierarchical = false;
   if (base_spec &&
       base_parsed.scheme.is_nonempty()) {
-    int after_scheme = base_parsed.scheme.end() + 1;  // Skip past the colon.
-    int num_slashes = CountConsecutiveSlashes(base_spec, after_scheme,
+    size_t after_scheme = base_parsed.scheme.end() + 1;  // Skip past the colon.
+    size_t num_slashes = CountConsecutiveSlashes(base_spec, after_scheme,
                                               base_spec_len);
     base_is_authority_based = num_slashes > 1;
     base_is_hierarchical = num_slashes > 0;
@@ -262,8 +262,8 @@ void LockStandardSchemes() {
   standard_schemes_locked = true;
 }
 
-void EncodeURIComponent(const char* input, int length, CanonOutput* output) {
-  for (int i = 0; i < length; ++i) {
+void EncodeURIComponent(const char* input, size_t length, CanonOutput* output) {
+  for (size_t i = 0; i < length; ++i) {
     unsigned char c = static_cast<unsigned char>(input[i]);
     if (IsComponentChar(c))
       output->push_back(c);

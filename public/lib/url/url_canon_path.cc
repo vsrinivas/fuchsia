@@ -97,8 +97,8 @@ enum DotDisposition {
 // If the input is "../foo", |after_dot| = 1, |end| = 6, and
 // at the end, |*consumed_len| = 2 for the "./" this function consumed. The
 // original dot length should be handled by the caller.
-DotDisposition ClassifyAfterDot(const char* spec, int after_dot,
-                                int end, int* consumed_len) {
+DotDisposition ClassifyAfterDot(const char* spec, size_t after_dot,
+                                size_t end, size_t* consumed_len) {
   if (after_dot == end) {
     // Single dot at the end.
     *consumed_len = 0;
@@ -110,9 +110,9 @@ DotDisposition ClassifyAfterDot(const char* spec, int after_dot,
     return DIRECTORY_CUR;
   }
 
-  int second_dot_len = IsDot(spec, after_dot, end);
+  size_t second_dot_len = IsDot(spec, after_dot, end);
   if (second_dot_len) {
-    int after_second_dot = after_dot + second_dot_len;
+    size_t after_second_dot = after_dot + second_dot_len;
     if (after_second_dot == end) {
       // Double dot at the end.
       *consumed_len = second_dot_len;
@@ -143,11 +143,11 @@ DotDisposition ClassifyAfterDot(const char* spec, int after_dot,
 // because it is run only on the canonical output.
 //
 // The output is guaranteed to end in a slash when this function completes.
-void BackUpToPreviousSlash(int path_begin_in_output,
+void BackUpToPreviousSlash(size_t path_begin_in_output,
                            CanonOutput* output) {
   FTL_DCHECK(output->length() > 0);
 
-  int i = output->length() - 1;
+  size_t i = output->length() - 1;
   FTL_DCHECK(output->at(i) == '/');
   if (i == path_begin_in_output)
     return;  // We're at the first slash, nothing to do.
@@ -178,12 +178,12 @@ void BackUpToPreviousSlash(int path_begin_in_output,
 // it would be correct for most systems.
 bool CanonicalizePartialPath(const char* spec,
                    const Component& path,
-                   int path_begin_in_output,
+                   size_t path_begin_in_output,
                    CanonOutput* output) {
-  int end = path.end();
+  size_t end = path.end();
 
   bool success = true;
-  for (int i = path.begin; i < end; i++) {
+  for (size_t i = path.begin; i < end; i++) {
     unsigned char uch = static_cast<unsigned char>(spec[i]);
     if (sizeof(char) > sizeof(char) && uch >= 0x80) {
       // We only need to test wide input for having non-ASCII characters. For
@@ -198,7 +198,7 @@ bool CanonicalizePartialPath(const char* spec,
       unsigned char flags = kPathCharLookup[out_ch];
       if (flags & SPECIAL) {
         // Needs special handling of some sort.
-        int dotlen;
+        size_t dotlen;
         if ((dotlen = IsDot(spec, i, end)) > 0) {
           // See if this dot was preceded by a slash in the output. We
           // assume that when canonicalizing paths, they will always
@@ -213,7 +213,7 @@ bool CanonicalizePartialPath(const char* spec,
           if (output->length() > path_begin_in_output &&
               output->at(output->length() - 1) == '/') {
             // Slash followed by a dot, check to see if this is means relative
-            int consumed_len;
+            size_t consumed_len;
             switch (ClassifyAfterDot(spec, i + dotlen, end,
                                            &consumed_len)) {
               case NOT_A_DIRECTORY:
@@ -299,7 +299,7 @@ bool CanonicalizePath(const char* spec,
             Component* out_path) {
   bool success = true;
   out_path->begin = output->length();
-  if (path.len > 0) {
+  if (path.is_nonempty()) {
     // Write out an initial slash if the input has none. If we just parse a URL
     // and then canonicalize it, it will of course have a slash already. This
     // check is for the replacement and relative URL resolving cases of file
@@ -312,7 +312,7 @@ bool CanonicalizePath(const char* spec,
     // No input, canonical path is a slash.
     output->push_back('/');
   }
-  out_path->len = output->length() - out_path->begin;
+  out_path->set_len(output->length() - out_path->begin);
   return success;
 }
 

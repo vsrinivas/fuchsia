@@ -243,31 +243,31 @@ class URL_EXPORT GURL {
   // being nonempty. http://www.google.com/? has a query that just happens to
   // be empty, and has_query() will return true.
   bool has_scheme() const {
-    return parsed_.scheme.len >= 0;
+    return parsed_.scheme.is_nonempty();
   }
   bool has_username() const {
-    return parsed_.username.len >= 0;
+    return parsed_.username.is_nonempty();
   }
   bool has_password() const {
-    return parsed_.password.len >= 0;
+    return parsed_.password.is_nonempty();
   }
   bool has_host() const {
     // Note that hosts are special, absence of host means length 0.
-    return parsed_.host.len > 0;
+    return parsed_.host.is_nonempty();
   }
   bool has_port() const {
-    return parsed_.port.len >= 0;
+    return parsed_.port.is_nonempty();
   }
   bool has_path() const {
     // Note that http://www.google.com/" has a path, the path is "/". This can
     // return false only for invalid or nonstandard URLs.
-    return parsed_.path.len >= 0;
+    return parsed_.path.is_nonempty();
   }
   bool has_query() const {
-    return parsed_.query.len >= 0;
+    return parsed_.query.is_nonempty();
   }
   bool has_ref() const {
-    return parsed_.ref.len >= 0;
+    return parsed_.ref.is_nonempty();
   }
 
   // Returns a parsed version of the port. Can also be any of the special
@@ -326,9 +326,9 @@ class URL_EXPORT GURL {
 
   // Returns the substring of the input identified by the given component.
   std::string ComponentString(const url::Component& comp) const {
-    if (comp.len <= 0)
+    if (comp.is_invalid_or_empty())
       return std::string();
-    return std::string(spec_, comp.begin, comp.len);
+    return std::string(spec_, comp.begin, comp.len());
   }
 
   // The actual text of the URL, in canonical ASCII form.

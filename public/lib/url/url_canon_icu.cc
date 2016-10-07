@@ -32,17 +32,17 @@ void appendURLEscapedChar(const void* context,
   if (reason == UCNV_UNASSIGNED) {
     *err = U_ZERO_ERROR;
 
-    const static int prefix_len = 6;
+    const static size_t prefix_len = 6;
     const static char prefix[prefix_len + 1] = "%26%23";  // "&#" percent-escaped
     ucnv_cbFromUWriteBytes(from_args, prefix, prefix_len, 0, err);
 
     FTL_DCHECK(code_point < 0x110000);
     char number[8];  // Max Unicode code point is 7 digits.
     IntToString(code_point, number, 10);
-    int number_len = static_cast<int>(strlen(number));
+    size_t number_len = strlen(number);
     ucnv_cbFromUWriteBytes(from_args, number, number_len, 0, err);
 
-    const static int postfix_len = 3;
+    const static size_t postfix_len = 3;
     const static char postfix[postfix_len + 1] = "%3B";   // ";" percent-escaped
     ucnv_cbFromUWriteBytes(from_args, postfix, postfix_len, 0, err);
   }
@@ -117,21 +117,21 @@ ICUCharsetConverter::~ICUCharsetConverter() {
 }
 
 void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input,
-                                           int input_len,
+                                           size_t input_len,
                                            CanonOutput* output) {
   // Install our error handler. It will be called for character that can not
   // be represented in the destination character set.
   AppendHandlerInstaller handler(converter_);
 
-  int begin_offset = output->length();
-  int dest_capacity = output->capacity() - begin_offset;
+  size_t begin_offset = output->length();
+  size_t dest_capacity = output->capacity() - begin_offset;
   output->set_length(output->length());
 
   do {
     UErrorCode err = U_ZERO_ERROR;
     char* dest = &output->data()[begin_offset];
-    int required_capacity = ucnv_fromUChars(converter_, dest, dest_capacity,
-                                            input, input_len, &err);
+    size_t required_capacity = ucnv_fromUChars(converter_, dest, dest_capacity,
+                                               input, input_len, &err);
     if (err != U_BUFFER_OVERFLOW_ERROR) {
       output->set_length(begin_offset + required_capacity);
       return;
@@ -157,7 +157,7 @@ void ICUCharsetConverter::ConvertFromUTF16(const uint16_t* input,
 // conversions in our code. In addition, consider using icu::IDNA's UTF-8/ASCII
 // version with StringByteSink. That way, we can avoid C wrappers and additional
 // string conversion.
-bool IDNToASCII(const uint16_t* src, int src_len, CanonOutputW* output) {
+bool IDNToASCII(const uint16_t* src, size_t src_len, CanonOutputW* output) {
   FTL_DCHECK(output->length() == 0);  // Output buffer is assumed empty.
 
   static UIDNAWrapper static_uidna;
@@ -167,8 +167,8 @@ bool IDNToASCII(const uint16_t* src, int src_len, CanonOutputW* output) {
   while (true) {
     UErrorCode err = U_ZERO_ERROR;
     UIDNAInfo info = UIDNA_INFO_INITIALIZER;
-    int output_length = uidna_nameToASCII(uidna, src, src_len, output->data(),
-                                          output->capacity(), &info, &err);
+    size_t output_length = uidna_nameToASCII(uidna, src, src_len, output->data(),
+                                             output->capacity(), &info, &err);
     if (U_SUCCESS(err) && info.errors == 0) {
       output->set_length(output_length);
       return true;

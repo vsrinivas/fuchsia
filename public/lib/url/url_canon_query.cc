@@ -73,7 +73,7 @@ void RunConverter(const char* spec,
   // This function will replace any misencoded values with the invalid
   // character. This is what we want so we don't have to check for error.
   RawCanonOutputW<1024> utf16;
-  ConvertUTF8ToUTF16(&spec[query.begin], query.len, &utf16);
+  ConvertUTF8ToUTF16(&spec[query.begin], query.len(), &utf16);
   converter->ConvertFromUTF16(utf16.data(), utf16.length(), output);
 }
 
@@ -83,7 +83,7 @@ void DoConvertToQueryEncoding(const char* spec,
                               CanonOutput* output) {
   if (IsAllASCII(spec, query)) {
     // Easy: the input can just appended with no character set conversions.
-    AppendRaw8BitQueryString(&spec[query.begin], query.len, output);
+    AppendRaw8BitQueryString(&spec[query.begin], query.len(), output);
 
   } else {
     // Harder: convert to the proper encoding first.
@@ -96,7 +96,7 @@ void DoConvertToQueryEncoding(const char* spec,
 
     } else {
       // No converter, do our own UTF-8 conversion.
-      AppendStringOfType(&spec[query.begin], query.len, CHAR_QUERY, output);
+      AppendStringOfType(&spec[query.begin], query.len(), CHAR_QUERY, output);
     }
   }
 }
@@ -108,7 +108,7 @@ void CanonicalizeQuery(const char* spec,
                          CharsetConverter* converter,
                          CanonOutput* output,
                          Component* out_query) {
-  if (query.len < 0) {
+  if (!query.is_valid()) {
     *out_query = Component();
     return;
   }
@@ -118,7 +118,7 @@ void CanonicalizeQuery(const char* spec,
 
   DoConvertToQueryEncoding(spec, query, converter, output);
 
-  out_query->len = output->length() - out_query->begin;
+  out_query->set_len(output->length() - out_query->begin);
 }
 
 }  // namespace url

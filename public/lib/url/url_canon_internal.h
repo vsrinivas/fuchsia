@@ -74,7 +74,7 @@ inline bool IsComponentChar(unsigned char c) {
 
 // Appends the given string to the output, escaping characters that do not
 // match the given |type| in SharedCharTypes.
-void AppendStringOfType(const char* source, int length,
+void AppendStringOfType(const char* source, size_t length,
                         SharedCharTypes type,
                         CanonOutput* output);
 
@@ -100,7 +100,7 @@ inline unsigned char HexCharToValue(unsigned char c) {
 // Indicates if the given character is a dot or dot equivalent, returning the
 // number of characters taken by it. This will be one for a literal dot, 3 for
 // an escaped dot. If the character is not a dot, this will return 0.
-inline int IsDot(const char* spec, int offset, int end) {
+inline size_t IsDot(const char* spec, size_t offset, size_t end) {
   if (spec[offset] == '.') {
     return 1;
   } else if (spec[offset] == '%' && offset + 3 <= end &&
@@ -141,7 +141,7 @@ inline void AppendEscapedChar(UINCHAR ch,
 // |*begin| will be updated to point to the last character consumed so it
 // can be incremented in a loop and will be ready for the next character.
 // (for a single-byte ASCII character, it will not be changed).
-URL_EXPORT bool ReadUTFChar(const char* str, int* begin, int length,
+URL_EXPORT bool ReadUTFChar(const char* str, size_t* begin, size_t length,
                             unsigned* code_point_out);
 
 // Generic To-UTF-8 converter. This will call the given append method for each
@@ -216,7 +216,7 @@ inline void AppendUTF8EscapedValue(unsigned char_value, CanonOutput* output) {
 // |*begin| will be updated to point to the last character consumed so it
 // can be incremented in a loop and will be ready for the next character.
 // (for a single-16-bit-word character, it will not be changed).
-URL_EXPORT bool ReadUTFChar(const uint16_t* str, int* begin, int length,
+URL_EXPORT bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length,
                             unsigned* code_point_out);
 
 // Equivalent to U16_APPEND_UNSAFE in ICU but uses our output method.
@@ -251,8 +251,8 @@ inline void AppendUTF16Value(unsigned code_point,
 //
 // Assumes that ch[begin] is within range in the array, but does not assume
 // that any following characters are.
-inline bool AppendUTF8EscapedChar(const uint16_t* str, int* begin,
-                                  int length, CanonOutput* output) {
+inline bool AppendUTF8EscapedChar(const uint16_t* str, size_t* begin,
+                                  size_t length, CanonOutput* output) {
   // UTF-16 input. ReadUTFChar will handle invalid characters for us and give
   // us the kUnicodeReplacementCharacter, so we don't have to do special
   // checking after failure, just pass through the failure to the caller.
@@ -263,7 +263,7 @@ inline bool AppendUTF8EscapedChar(const uint16_t* str, int* begin,
 }
 
 // Handles UTF-8 input. See the wide version above for usage.
-inline bool AppendUTF8EscapedChar(const char* str, int* begin, int length,
+inline bool AppendUTF8EscapedChar(const char* str, size_t* begin, size_t length,
                                   CanonOutput* output) {
   // ReadUTF8Char will handle invalid characters for us and give us the
   // kUnicodeReplacementCharacter, so we don't have to do special checking
@@ -292,7 +292,7 @@ inline bool Is8BitChar(uint16_t c) {
 }
 
 template<typename CHAR>
-inline bool DecodeEscaped(const CHAR* spec, int* begin, int end,
+inline bool DecodeEscaped(const CHAR* spec, size_t* begin, size_t end,
                           unsigned char* unescaped_value) {
   if (*begin + 3 > end ||
       !Is8BitChar(spec[*begin + 1]) || !Is8BitChar(spec[*begin + 2])) {
@@ -321,9 +321,9 @@ inline bool DecodeEscaped(const CHAR* spec, int* begin, int end,
 // This is used in error cases to append invalid output so that it looks
 // approximately correct. Non-error cases should not call this function since
 // the escaping rules are not guaranteed!
-void AppendInvalidNarrowString(const char* spec, int begin, int end,
+void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end,
                                CanonOutput* output);
-void AppendInvalidNarrowString(const uint16_t* spec, int begin, int end,
+void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end,
                                CanonOutput* output);
 
 // Misc canonicalization helpers ----------------------------------------------
@@ -336,9 +336,9 @@ void AppendInvalidNarrowString(const uint16_t* spec, int begin, int end,
 // replacing the invalid characters with the "invalid character". It will
 // return false in the failure case, and the caller should not continue as
 // normal.
-URL_EXPORT bool ConvertUTF16ToUTF8(const uint16_t* input, int input_len,
+URL_EXPORT bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len,
                                    CanonOutput* output);
-URL_EXPORT bool ConvertUTF8ToUTF16(const char* input, int input_len,
+URL_EXPORT bool ConvertUTF8ToUTF16(const char* input, size_t input_len,
                                    CanonOutputT<uint16_t>* output);
 
 // Converts from UTF-16 to 8-bit using the character set converter. If the
@@ -352,7 +352,7 @@ void ConvertUTF16ToQueryEncoding(const uint16_t* input,
 // resolver as well, so we declare them here.
 bool CanonicalizePartialPath(const char* spec,
                              const Component& path,
-                             int path_begin_in_output,
+                             size_t path_begin_in_output,
                              CanonOutput* output);
 
 // Implementations of Windows' int-to-string conversions
@@ -383,7 +383,7 @@ inline unsigned long long _strtoui64(const char* nptr,
 //
 // On error, returns false. The output in this case is undefined.
 URL_EXPORT bool IDNToASCII(const uint16_t* src,
-                           int src_len,
+                           size_t src_len,
                            CanonOutputW* output);
 }  // namespace url
 

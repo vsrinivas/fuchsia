@@ -12,7 +12,7 @@
 namespace url {
 
 bool CanonicalizeStandardURL(const char* spec,
-                             int spec_len,
+                             size_t spec_len,
                              const Parsed& parsed,
                              CharsetConverter* query_converter,
                              CanonOutput* output,
@@ -45,12 +45,12 @@ bool CanonicalizeStandardURL(const char* spec,
                                 output, &new_parsed->host);
 
     // Host must not be empty for standard URLs.
-    if (!parsed.host.is_nonempty())
+    if (parsed.host.is_invalid_or_empty())
       success = false;
 
     // Port: the port canonicalizer will handle the colon.
     int default_port = DefaultPortForScheme(
-        &output->data()[new_parsed->scheme.begin], new_parsed->scheme.len);
+        &output->data()[new_parsed->scheme.begin], new_parsed->scheme.len());
     success &= CanonicalizePort(source.port, parsed.port, default_port,
                                 output, &new_parsed->port);
   } else {
@@ -91,7 +91,7 @@ bool CanonicalizeStandardURL(const char* spec,
 
 // Returns the default port for the given canonical scheme, or PORT_UNSPECIFIED
 // if the scheme is unknown.
-int DefaultPortForScheme(const char* scheme, int scheme_len) {
+int DefaultPortForScheme(const char* scheme, size_t scheme_len) {
   int default_port = PORT_UNSPECIFIED;
   switch (scheme_len) {
     case 4:

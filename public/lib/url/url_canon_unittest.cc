@@ -46,11 +46,11 @@ struct IPAddressCase {
   const char* expected_address_hex;  // Two hex chars per IP address byte.
 };
 
-std::string BytesToHexString(unsigned char bytes[16], int length) {
+std::string BytesToHexString(unsigned char bytes[16], size_t length) {
   EXPECT_TRUE(length == 0 || length == 4 || length == 16)
       << "Bad IP address length: " << length;
   std::string result;
-  for (int i = 0; i < length; ++i) {
+  for (size_t i = 0; i < length; ++i) {
     result.push_back(kHexCharLookup[(bytes[i] >> 4) & 0xf]);
     result.push_back(kHexCharLookup[bytes[i] & 0xf]);
   }
@@ -134,9 +134,9 @@ TEST(URLCanonTest, UTF) {
     out_str.clear();
     StdStringCanonOutput output(&out_str);
 
-    int input_len = static_cast<int>(strlen(utf_cases[i].input8));
+    size_t input_len = strlen(utf_cases[i].input8);
     bool success = true;
-    for (int ch = 0; ch < input_len; ch++) {
+    for (size_t ch = 0; ch < input_len; ch++) {
       success &= AppendUTF8EscapedChar(utf_cases[i].input8, &ch, input_len,
                                        &output);
     }
@@ -169,7 +169,7 @@ TEST(URLCanonTest, Scheme) {
   std::string out_str;
 
   for (size_t i = 0; i < arraysize(scheme_cases); i++) {
-    int url_len = static_cast<int>(strlen(scheme_cases[i].input));
+    size_t url_len = strlen(scheme_cases[i].input);
     Component in_comp(0, url_len);
     Component out_comp;
 
@@ -182,7 +182,7 @@ TEST(URLCanonTest, Scheme) {
     EXPECT_EQ(scheme_cases[i].expected_success, success);
     EXPECT_EQ(std::string(scheme_cases[i].expected), out_str);
     EXPECT_EQ(scheme_cases[i].expected_component.begin, out_comp.begin);
-    EXPECT_EQ(scheme_cases[i].expected_component.len, out_comp.len);
+    EXPECT_EQ(scheme_cases[i].expected_component.len(), out_comp.len());
   }
 
   // Test the case where the scheme is declared nonexistent, it should be
@@ -191,12 +191,12 @@ TEST(URLCanonTest, Scheme) {
   out_str.clear();
   StdStringCanonOutput output(&out_str);
 
-  EXPECT_TRUE(CanonicalizeScheme("", Component(0, -1), &output, &out_comp));
+  EXPECT_TRUE(CanonicalizeScheme("", Component(false), &output, &out_comp));
   output.Complete();
 
   EXPECT_EQ(std::string(":"), out_str);
-  EXPECT_EQ(0, out_comp.begin);
-  EXPECT_EQ(0, out_comp.len);
+  EXPECT_EQ(0U, out_comp.begin);
+  EXPECT_EQ(0U, out_comp.len());
 }
 
 TEST(URLCanonTest, Host) {
@@ -396,7 +396,7 @@ TEST(URLCanonTest, Host) {
   std::string out_str;
   for (size_t i = 0; i < arraysize(host_cases); i++) {
     if (host_cases[i].input8) {
-      int host_len = static_cast<int>(strlen(host_cases[i].input8));
+      size_t host_len = strlen(host_cases[i].input8);
       Component in_comp(0, host_len);
       Component out_comp;
 
@@ -413,7 +413,7 @@ TEST(URLCanonTest, Host) {
                 "for input: " << host_cases[i].input8;
       EXPECT_EQ(host_cases[i].expected_component.begin, out_comp.begin) <<
                 "for input: " << host_cases[i].input8;
-      EXPECT_EQ(host_cases[i].expected_component.len, out_comp.len) <<
+      EXPECT_EQ(host_cases[i].expected_component.len(), out_comp.len()) <<
                 "for input: " << host_cases[i].input8;
     }
 
@@ -422,7 +422,7 @@ TEST(URLCanonTest, Host) {
   // CanonicalizeHostVerbose()
   for (size_t i = 0; i < arraysize(host_cases); i++) {
     if (host_cases[i].input8) {
-      int host_len = static_cast<int>(strlen(host_cases[i].input8));
+      size_t host_len = strlen(host_cases[i].input8);
       Component in_comp(0, host_len);
 
       out_str.clear();
@@ -437,7 +437,7 @@ TEST(URLCanonTest, Host) {
       EXPECT_EQ(std::string(host_cases[i].expected), out_str);
       EXPECT_EQ(host_cases[i].expected_component.begin,
                 host_info.out_host.begin);
-      EXPECT_EQ(host_cases[i].expected_component.len, host_info.out_host.len);
+      EXPECT_EQ(host_cases[i].expected_component.len(), host_info.out_host.len());
       EXPECT_EQ(std::string(host_cases[i].expected_address_hex),
                 BytesToHexString(host_info.address, host_info.AddressLength()));
       if (host_cases[i].expected_family == CanonHostInfo::IPV4) {
@@ -523,7 +523,7 @@ TEST(URLCanonTest, IPv4) {
   };
 
   for (size_t i = 0; i < arraysize(cases); i++) {
-    Component component(0, static_cast<int>(strlen(cases[i].input8)));
+    Component component(0, strlen(cases[i].input8));
 
     std::string out_str1;
     StdStringCanonOutput output1(&out_str1);
@@ -537,7 +537,7 @@ TEST(URLCanonTest, IPv4) {
     if (host_info.family == CanonHostInfo::IPV4) {
       EXPECT_STREQ(cases[i].expected, out_str1.c_str());
       EXPECT_EQ(cases[i].expected_component.begin, host_info.out_host.begin);
-      EXPECT_EQ(cases[i].expected_component.len, host_info.out_host.len);
+      EXPECT_EQ(cases[i].expected_component.len(), host_info.out_host.len());
       EXPECT_EQ(cases[i].expected_num_ipv4_components,
                 host_info.num_ipv4_components);
     }
@@ -656,7 +656,7 @@ TEST(URLCanonTest, IPv6) {
   };
 
   for (size_t i = 0; i < arraysize(cases); i++) {
-    Component component(0, static_cast<int>(strlen(cases[i].input8)));
+    Component component(0, strlen(cases[i].input8));
 
     std::string out_str1;
     StdStringCanonOutput output1(&out_str1);
@@ -671,7 +671,7 @@ TEST(URLCanonTest, IPv6) {
       EXPECT_STREQ(cases[i].expected, out_str1.c_str());
       EXPECT_EQ(cases[i].expected_component.begin,
                 host_info.out_host.begin);
-      EXPECT_EQ(cases[i].expected_component.len, host_info.out_host.len);
+      EXPECT_EQ(cases[i].expected_component.len(), host_info.out_host.len());
     }
   }
 }
@@ -703,9 +703,9 @@ TEST(URLCanonTest, UserInfo) {
     bool expected_success;
   } user_info_cases[] = {
     {"http://user:pass@host.com/", "user:pass@", Component(0, 4), Component(5, 4), true},
-    {"http://@host.com/", "", Component(0, -1), Component(0, -1), true},
-    {"http://:@host.com/", "", Component(0, -1), Component(0, -1), true},
-    {"http://foo:@host.com/", "foo@", Component(0, 3), Component(0, -1), true},
+    {"http://@host.com/", "", Component(false), Component(false), true},
+    {"http://:@host.com/", "", Component(false), Component(false), true},
+    {"http://foo:@host.com/", "foo@", Component(0, 3), Component(false), true},
     {"http://:foo@host.com/", ":foo@", Component(0, 0), Component(1, 3), true},
     {"http://^ :$\t@host.com/", "%5E%20:$%09@", Component(0, 6), Component(7, 4), true},
     {"http://user:pass@/", "user:pass@", Component(0, 4), Component(5, 4), true},
@@ -713,11 +713,11 @@ TEST(URLCanonTest, UserInfo) {
 
       // IE7 compatibility: old versions allowed backslashes in usernames, but
       // IE7 does not. We disallow it as well.
-    {"ftp://me\\mydomain:pass@foo.com/", "", Component(0, -1), Component(0, -1), true},
+    {"ftp://me\\mydomain:pass@foo.com/", "", Component(false), Component(false), true},
   };
 
   for (size_t i = 0; i < arraysize(user_info_cases); i++) {
-    int url_len = static_cast<int>(strlen(user_info_cases[i].input));
+    size_t url_len = strlen(user_info_cases[i].input);
     Parsed parsed;
     ParseStandardURL(user_info_cases[i].input, url_len, &parsed);
     Component out_user, out_pass;
@@ -736,9 +736,15 @@ TEST(URLCanonTest, UserInfo) {
     EXPECT_EQ(user_info_cases[i].expected_success, success);
     EXPECT_EQ(std::string(user_info_cases[i].expected), out_str);
     EXPECT_EQ(user_info_cases[i].expected_username.begin, out_user.begin);
-    EXPECT_EQ(user_info_cases[i].expected_username.len, out_user.len);
+    EXPECT_EQ(user_info_cases[i].expected_username.is_valid(), out_user.is_valid());
+    if (out_user.is_valid()) {
+      EXPECT_EQ(user_info_cases[i].expected_username.len(), out_user.len());
+    }
     EXPECT_EQ(user_info_cases[i].expected_password.begin, out_pass.begin);
-    EXPECT_EQ(user_info_cases[i].expected_password.len, out_pass.len);
+    EXPECT_EQ(user_info_cases[i].expected_password.is_valid(), out_pass.is_valid());
+    if (out_pass.is_valid()) {
+      EXPECT_EQ(user_info_cases[i].expected_password.len(), out_pass.len());
+    }
   }
 }
 
@@ -759,14 +765,14 @@ TEST(URLCanonTest, Port) {
     {"as df", 80, ":as%20df", Component(1, 7), false},
     {"-2", 80, ":-2", Component(1, 2), false},
       // Default port should be omitted.
-    {"80", 80, "", Component(0, -1), true},
+    {"80", 80, "", Component(false), true},
     {"8080", 80, ":8080", Component(1, 4), true},
       // PORT_UNSPECIFIED should mean always keep the port.
     {"80", PORT_UNSPECIFIED, ":80", Component(1, 2), true},
   };
 
   for (size_t i = 0; i < arraysize(port_cases); i++) {
-    int url_len = static_cast<int>(strlen(port_cases[i].input));
+    size_t url_len = strlen(port_cases[i].input);
     Component in_comp(0, url_len);
     Component out_comp;
     std::string out_str;
@@ -781,7 +787,10 @@ TEST(URLCanonTest, Port) {
     EXPECT_EQ(port_cases[i].expected_success, success);
     EXPECT_EQ(std::string(port_cases[i].expected), out_str);
     EXPECT_EQ(port_cases[i].expected_component.begin, out_comp.begin);
-    EXPECT_EQ(port_cases[i].expected_component.len, out_comp.len);
+    EXPECT_EQ(port_cases[i].expected_component.is_valid(), out_comp.is_valid());
+    if (out_comp.is_valid()) {
+      EXPECT_EQ(port_cases[i].expected_component.len(), out_comp.len());
+    }
   }
 }
 
@@ -859,7 +868,7 @@ TEST(URLCanonTest, Path) {
 
   for (size_t i = 0; i < arraysize(path_cases); i++) {
     if (path_cases[i].input8) {
-      int len = static_cast<int>(strlen(path_cases[i].input8));
+      size_t len = strlen(path_cases[i].input8);
       Component in_comp(0, len);
       Component out_comp;
       std::string out_str;
@@ -870,7 +879,10 @@ TEST(URLCanonTest, Path) {
 
       EXPECT_EQ(path_cases[i].expected_success, success);
       EXPECT_EQ(path_cases[i].expected_component.begin, out_comp.begin);
-      EXPECT_EQ(path_cases[i].expected_component.len, out_comp.len);
+      EXPECT_EQ(path_cases[i].expected_component.is_valid(), out_comp.is_valid());
+      if (out_comp.is_valid()) {
+        EXPECT_EQ(path_cases[i].expected_component.len(), out_comp.len());
+      }
       EXPECT_EQ(path_cases[i].expected, out_str);
     }
 
@@ -919,7 +931,7 @@ TEST(URLCanonTest, Query) {
     Component out_comp;
 
     if (query_cases[i].input8) {
-      int len = static_cast<int>(strlen(query_cases[i].input8));
+      size_t len = strlen(query_cases[i].input8);
       Component in_comp(0, len);
       std::string out_str;
 
@@ -963,7 +975,7 @@ TEST(URLCanonTest, Ref) {
   };
 
   for (size_t i = 0; i < arraysize(ref_cases); i++) {
-    int len = static_cast<int>(strlen(ref_cases[i].input8));
+    size_t len = strlen(ref_cases[i].input8);
     Component in_comp(0, len);
     Component out_comp;
 
@@ -973,7 +985,10 @@ TEST(URLCanonTest, Ref) {
     output.Complete();
 
     EXPECT_EQ(ref_cases[i].expected_component.begin, out_comp.begin);
-    EXPECT_EQ(ref_cases[i].expected_component.len, out_comp.len);
+    EXPECT_EQ(ref_cases[i].expected_component.is_valid(), out_comp.is_valid());
+    if (out_comp.is_valid()) {
+      EXPECT_EQ(ref_cases[i].expected_component.len(), out_comp.len());
+    }
     EXPECT_EQ(ref_cases[i].expected, out_str);
   }
 
@@ -987,8 +1002,8 @@ TEST(URLCanonTest, Ref) {
   CanonicalizeRef(null_input, null_input_component, &output, &out_comp);
   output.Complete();
 
-  EXPECT_EQ(1, out_comp.begin);
-  EXPECT_EQ(3, out_comp.len);
+  EXPECT_EQ(1U, out_comp.begin);
+  EXPECT_EQ(3U, out_comp.len());
   EXPECT_EQ("#abz", out_str);
 }
 
@@ -1040,7 +1055,7 @@ TEST(URLCanonTest, CanonicalizeStandardURL) {
   };
 
   for (size_t i = 0; i < arraysize(cases); i++) {
-    int url_len = static_cast<int>(strlen(cases[i].input));
+    size_t url_len = strlen(cases[i].input);
     Parsed parsed;
     ParseStandardURL(cases[i].input, url_len, &parsed);
 
@@ -1080,7 +1095,7 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
   };
 
   for (size_t i = 0; i < arraysize(cases); i++) {
-    int url_len = static_cast<int>(strlen(cases[i].input));
+    size_t url_len = strlen(cases[i].input);
     Parsed parsed;
     ParseFileURL(cases[i].input, url_len, &parsed);
 
@@ -1096,14 +1111,20 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
 
     // Make sure the spec was properly identified, the file canonicalizer has
     // different code for writing the spec.
-    EXPECT_EQ(0, out_parsed.scheme.begin);
-    EXPECT_EQ(4, out_parsed.scheme.len);
+    EXPECT_EQ(0U, out_parsed.scheme.begin);
+    EXPECT_EQ(4U, out_parsed.scheme.len());
 
     EXPECT_EQ(cases[i].expected_host.begin, out_parsed.host.begin);
-    EXPECT_EQ(cases[i].expected_host.len, out_parsed.host.len);
+    EXPECT_EQ(cases[i].expected_host.is_valid(), out_parsed.host.is_valid());
+    if (out_parsed.host.is_valid()) {
+      EXPECT_EQ(cases[i].expected_host.len(), out_parsed.host.len());
+    }
 
     EXPECT_EQ(cases[i].expected_path.begin, out_parsed.path.begin);
-    EXPECT_EQ(cases[i].expected_path.len, out_parsed.path.len);
+    EXPECT_EQ(cases[i].expected_path.is_valid(), out_parsed.path.is_valid());
+    if (out_parsed.path.is_valid()) {
+      EXPECT_EQ(cases[i].expected_path.len(), out_parsed.path.len());
+    }
   }
 }
 
@@ -1119,7 +1140,7 @@ TEST(URLCanonTest, CanonicalizePathURL) {
   };
 
   for (size_t i = 0; i < arraysize(path_cases); i++) {
-    int url_len = static_cast<int>(strlen(path_cases[i].input));
+    size_t url_len = strlen(path_cases[i].input);
     Parsed parsed;
     ParsePathURL(path_cases[i].input, url_len, true, &parsed);
 
@@ -1133,13 +1154,13 @@ TEST(URLCanonTest, CanonicalizePathURL) {
     EXPECT_TRUE(success);
     EXPECT_EQ(path_cases[i].expected, out_str);
 
-    EXPECT_EQ(0, out_parsed.host.begin);
-    EXPECT_EQ(-1, out_parsed.host.len);
+    EXPECT_EQ(0U, out_parsed.host.begin);
+    EXPECT_FALSE(out_parsed.host.is_valid());
 
     // When we end with a colon at the end, there should be no path.
     if (path_cases[i].input[url_len - 1] == ':') {
-      EXPECT_EQ(0, out_parsed.GetContent().begin);
-      EXPECT_EQ(-1, out_parsed.GetContent().len);
+      EXPECT_EQ(0U, out_parsed.GetContent().begin);
+      EXPECT_FALSE(out_parsed.GetContent().is_valid());
     }
   }
 }
@@ -1173,7 +1194,7 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
   Parsed out_parsed;
 
   for (size_t i = 0; i < arraysize(cases); i++) {
-    int url_len = static_cast<int>(strlen(cases[i].input));
+    size_t url_len = strlen(cases[i].input);
     if (i == 8) {
       // The 9th test case purposely has a '\0' in it -- don't count it
       // as the string terminator.
@@ -1191,14 +1212,20 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
     EXPECT_EQ(cases[i].expected, out_str);
 
     // Make sure the spec was properly identified
-    EXPECT_EQ(0, out_parsed.scheme.begin);
-    EXPECT_EQ(6, out_parsed.scheme.len);
+    EXPECT_EQ(0U, out_parsed.scheme.begin);
+    EXPECT_EQ(6U, out_parsed.scheme.len());
 
     EXPECT_EQ(cases[i].expected_path.begin, out_parsed.path.begin);
-    EXPECT_EQ(cases[i].expected_path.len, out_parsed.path.len);
+    EXPECT_EQ(cases[i].expected_path.is_valid(), out_parsed.path.is_valid());
+    if (out_parsed.path.is_valid()) {
+      EXPECT_EQ(cases[i].expected_path.len(), out_parsed.path.len());
+    }
 
     EXPECT_EQ(cases[i].expected_query.begin, out_parsed.query.begin);
-    EXPECT_EQ(cases[i].expected_query.len, out_parsed.query.len);
+    EXPECT_EQ(cases[i].expected_query.is_valid(), out_parsed.query.is_valid());
+    if (out_parsed.query.is_valid()) {
+      EXPECT_EQ(cases[i].expected_query.len(), out_parsed.query.len());
+    }
   }
 }
 
@@ -1241,16 +1268,21 @@ TEST(URLCanonTest, IntToString) {
   EXPECT_EQ('\xFF', buf[5]);
 }
 
+// Returns true if the given two Component structures are the same.
+static bool ComponentIsEqual(const Component& a, const Component& b) {
+  return a.begin == b.begin && a.is_valid() == b.is_valid() && (!a.is_valid() || a.len() == b.len());
+}
+
 // Returns true if the given two structures are the same.
 static bool ParsedIsEqual(const Parsed& a, const Parsed& b) {
-  return a.scheme.begin == b.scheme.begin && a.scheme.len == b.scheme.len &&
-         a.username.begin == b.username.begin && a.username.len == b.username.len &&
-         a.password.begin == b.password.begin && a.password.len == b.password.len &&
-         a.host.begin == b.host.begin && a.host.len == b.host.len &&
-         a.port.begin == b.port.begin && a.port.len == b.port.len &&
-         a.path.begin == b.path.begin && a.path.len == b.path.len &&
-         a.query.begin == b.query.begin && a.query.len == b.query.len &&
-         a.ref.begin == b.ref.begin && a.ref.len == b.ref.len;
+  return ComponentIsEqual(a.scheme, b.scheme) &&
+         ComponentIsEqual(a.username, b.username) &&
+         ComponentIsEqual(a.password, b.password) &&
+         ComponentIsEqual(a.host, b.host) &&
+         ComponentIsEqual(a.port, b.port) &&
+         ComponentIsEqual(a.path, b.path) &&
+         ComponentIsEqual(a.query, b.query) &&
+         ComponentIsEqual(a.ref, b.ref);
 }
 
 TEST(URLCanonTest, ResolveRelativeURL) {
@@ -1360,7 +1392,7 @@ TEST(URLCanonTest, ResolveRelativeURL) {
     const RelativeCase& cur_case = rel_cases[i];
 
     Parsed parsed;
-    int base_len = static_cast<int>(strlen(cur_case.base));
+    size_t base_len = strlen(cur_case.base);
     if (cur_case.is_base_file)
       ParseFileURL(cur_case.base, base_len, &parsed);
     else if (cur_case.is_base_hier)
@@ -1369,7 +1401,7 @@ TEST(URLCanonTest, ResolveRelativeURL) {
       ParsePathURL(cur_case.base, base_len, false, &parsed);
 
     // First see if it is relative.
-    int test_len = static_cast<int>(strlen(cur_case.test));
+    size_t test_len = strlen(cur_case.test);
     bool is_relative;
     Component relative_component;
     bool succeed_is_rel = IsRelativeURL(
@@ -1397,7 +1429,7 @@ TEST(URLCanonTest, ResolveRelativeURL) {
       // Verify that the output parsed structure is the same as parsing a
       // the URL freshly.
       Parsed ref_parsed;
-      int resolved_len = static_cast<int>(resolved.size());
+      size_t resolved_len = resolved.size();
       if (cur_case.is_base_file) {
         ParseFileURL(resolved.c_str(), resolved_len, &ref_parsed);
       } else if (cur_case.is_base_hier) {

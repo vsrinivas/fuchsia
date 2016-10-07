@@ -17,7 +17,7 @@ bool FileCanonicalizePath(const char* spec,
                             Component* out_path) {
   // Copies and normalizes the "c:" at the beginning, if present.
   out_path->begin = output->length();
-  int after_drive;
+  size_t after_drive;
   after_drive = path.begin;
 
   // Copies the rest of the path, starting from the slash following the
@@ -35,12 +35,12 @@ bool FileCanonicalizePath(const char* spec,
     output->push_back('/');
   }
 
-  out_path->len = output->length() - out_path->begin;
+  out_path->set_len(output->length() - out_path->begin);
   return success;
 }
 
 bool CanonicalizeFileURL(const char* spec,
-                         int spec_len,
+                         size_t spec_len,
                            const Parsed& parsed,
                            CharsetConverter* query_converter,
                            CanonOutput* output,
@@ -56,7 +56,7 @@ bool CanonicalizeFileURL(const char* spec,
   // complicated scheme canonicalizer).
   new_parsed->scheme.begin = output->length();
   output->Append("file://", 7);
-  new_parsed->scheme.len = 4;
+  new_parsed->scheme.set_len(4);
 
   // Append the host. For many file URLs, this will be empty. For UNC, this
   // will be present.

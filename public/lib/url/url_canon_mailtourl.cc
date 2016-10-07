@@ -12,7 +12,7 @@
 namespace url {
 
 bool CanonicalizeMailtoURL(const char* spec,
-                           int spec_len,
+                           size_t spec_len,
                              const Parsed& parsed,
                              CanonOutput* output,
                              Parsed* new_parsed) {
@@ -28,7 +28,7 @@ bool CanonicalizeMailtoURL(const char* spec,
   // complicated scheme canonicalizer).
   new_parsed->scheme.begin = output->length();
   output->Append("mailto:", 7);
-  new_parsed->scheme.len = 6;
+  new_parsed->scheme.set_len(6);
 
   bool success = true;
 
@@ -39,8 +39,8 @@ bool CanonicalizeMailtoURL(const char* spec,
     // Copy the path using path URL's more lax escaping rules.
     // We convert to UTF-8 and escape non-ASCII, but leave all
     // ASCII characters alone.
-    int end = parsed.path.end();
-    for (int i = parsed.path.begin; i < end; ++i) {
+    size_t end = parsed.path.end();
+    for (size_t i = parsed.path.begin; i < end; ++i) {
       unsigned char uch = static_cast<unsigned char>(source.path[i]);
       if (uch < 0x20 || uch >= 0x80)
         success &= AppendUTF8EscapedChar(source.path, &i, end, output);
@@ -48,7 +48,7 @@ bool CanonicalizeMailtoURL(const char* spec,
         output->push_back(static_cast<char>(uch));
     }
 
-    new_parsed->path.len = output->length() - new_parsed->path.begin;
+    new_parsed->path.set_len(output->length() - new_parsed->path.begin);
   } else {
     // No path at all
     new_parsed->path.reset();

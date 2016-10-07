@@ -37,22 +37,22 @@ class CanonOutputT {
   // the buffer must be copied over.
   //
   // The new size |sz| must be larger than buffer_len_.
-  virtual void Resize(int sz) = 0;
+  virtual void Resize(size_t sz) = 0;
 
   // Accessor for returning a character at a given position. The input offset
   // must be in the valid range.
-  inline T at(int offset) const {
+  inline T at(size_t offset) const {
     return buffer_[offset];
   }
 
   // Sets the character at the given position. The given position MUST be less
   // than the length().
-  inline void set(int offset, T ch) {
+  inline void set(size_t offset, T ch) {
     buffer_[offset] = ch;
   }
 
   // Returns the number of characters currently in the buffer.
-  inline int length() const {
+  inline size_t length() const {
     return cur_len_;
   }
 
@@ -61,7 +61,7 @@ class CanonOutputT {
   // the number that can be written without reallocation. If the caller must
   // write many characters at once, it can make sure there is enough capacity,
   // write the data, then use set_size() to declare the new length().
-  int capacity() const {
+  size_t capacity() const {
     return buffer_len_;
   }
 
@@ -81,7 +81,7 @@ class CanonOutputT {
   // to declare the new length.
   //
   // This MUST NOT be used to expand the size of the buffer beyond capacity().
-  void set_length(int new_len) {
+  void set_length(size_t new_len) {
     cur_len_ = new_len;
   }
 
@@ -107,12 +107,12 @@ class CanonOutputT {
   }
 
   // Appends the given string to the output.
-  void Append(const T* str, int str_len) {
+  void Append(const T* str, size_t str_len) {
     if (cur_len_ + str_len > buffer_len_) {
       if (!Grow(cur_len_ + str_len - buffer_len_))
         return;
     }
-    for (int i = 0; i < str_len; i++)
+    for (size_t i = 0; i < str_len; i++)
       buffer_[cur_len_ + i] = str[i];
     cur_len_ += str_len;
   }
@@ -120,9 +120,9 @@ class CanonOutputT {
  protected:
   // Grows the given buffer so that it can fit at least |min_additional|
   // characters. Returns true if the buffer could be resized, false on OOM.
-  bool Grow(int min_additional) {
-    static const int kMinBufferLen = 16;
-    int new_len = (buffer_len_ == 0) ? kMinBufferLen : buffer_len_;
+  bool Grow(size_t min_additional) {
+    static const size_t kMinBufferLen = 16;
+    size_t new_len = (buffer_len_ == 0) ? kMinBufferLen : buffer_len_;
     do {
       if (new_len >= (1 << 30))  // Prevent overflow below.
         return false;
@@ -133,16 +133,16 @@ class CanonOutputT {
   }
 
   T* buffer_;
-  int buffer_len_;
+  size_t buffer_len_;
 
   // Used characters in the buffer.
-  int cur_len_;
+  size_t cur_len_;
 };
 
 // Simple implementation of the CanonOutput using new[]. This class
 // also supports a static buffer so if it is allocated on the stack, most
 // URLs can be canonicalized with no heap allocations.
-template<typename T, int fixed_capacity = 1024>
+template<typename T, size_t fixed_capacity = 1024>
 class RawCanonOutputT : public CanonOutputT<T> {
  public:
   RawCanonOutputT() : CanonOutputT<T>() {
@@ -154,7 +154,7 @@ class RawCanonOutputT : public CanonOutputT<T> {
       delete[] this->buffer_;
   }
 
-  void Resize(int sz) override {
+  void Resize(size_t sz) override {
     T* new_buf = new T[sz];
     memcpy(new_buf, this->buffer_,
            sizeof(T) * (this->cur_len_ < sz ? this->cur_len_ : sz));
@@ -174,9 +174,9 @@ class RawCanonOutputT : public CanonOutputT<T> {
 typedef CanonOutputT<char> CanonOutput;
 typedef CanonOutputT<uint16_t> CanonOutputW;
 
-template<int fixed_capacity = 1024>
+template<size_t fixed_capacity = 1024>
 class RawCanonOutput : public RawCanonOutputT<char, fixed_capacity> {};
-template<int fixed_capacity = 1024>
+template<size_t fixed_capacity = 1024>
 class RawCanonOutputW : public RawCanonOutputT<uint16_t, fixed_capacity> {};
 
 // Character set converter ----------------------------------------------------
@@ -204,7 +204,7 @@ class URL_EXPORT CharsetConverter {
   // sign, and semicolon (in the previous example it would be
   // "%26%2320320%3B"). This rule is based on what IE does in this situation.
   virtual void ConvertFromUTF16(const uint16_t* input,
-                                int input_len,
+                                size_t input_len,
                                 CanonOutput* output) = 0;
 };
 
@@ -316,7 +316,7 @@ struct CanonHostInfo {
 
   // Convenience function to calculate the length of an IP address corresponding
   // to the current IP version in |family|, if any. For use with |address|.
-  int AddressLength() const {
+  size_t AddressLength() const {
     return family == IPV4 ? 4 : (family == IPV6 ? 16 : 0);
   }
 };
@@ -368,7 +368,7 @@ URL_EXPORT bool CanonicalizePort(const char* spec,
 
 // Returns the default port for the given canonical scheme, or PORT_UNSPECIFIED
 // if the scheme is unknown.
-URL_EXPORT int DefaultPortForScheme(const char* scheme, int scheme_len);
+URL_EXPORT int DefaultPortForScheme(const char* scheme, size_t scheme_len);
 
 // Path. If the input does not begin in a slash (including if the input is
 // empty), we'll prepend a slash to the path to make it canonical.
@@ -436,7 +436,7 @@ URL_EXPORT void CanonicalizeRef(const char* spec,
 
 // Use for standard URLs with authorities and paths.
 URL_EXPORT bool CanonicalizeStandardURL(const char* spec,
-                                        int spec_len,
+                                        size_t spec_len,
                                         const Parsed& parsed,
                                         CharsetConverter* query_converter,
                                         CanonOutput* output,
@@ -444,7 +444,7 @@ URL_EXPORT bool CanonicalizeStandardURL(const char* spec,
 
 // Use for file URLs.
 URL_EXPORT bool CanonicalizeFileURL(const char* spec,
-                                    int spec_len,
+                                    size_t spec_len,
                                     const Parsed& parsed,
                                     CharsetConverter* query_converter,
                                     CanonOutput* output,
@@ -453,7 +453,7 @@ URL_EXPORT bool CanonicalizeFileURL(const char* spec,
 // Use for path URLs such as javascript. This does not modify the path in any
 // way, for example, by escaping it.
 URL_EXPORT bool CanonicalizePathURL(const char* spec,
-                                    int spec_len,
+                                    size_t spec_len,
                                     const Parsed& parsed,
                                     CanonOutput* output,
                                     Parsed* new_parsed);
@@ -464,7 +464,7 @@ URL_EXPORT bool CanonicalizePathURL(const char* spec,
 // really intended for an external mail program, and the encoding of a page,
 // etc. which would influence a query encoding normally are irrelevant.
 URL_EXPORT bool CanonicalizeMailtoURL(const char* spec,
-                                      int spec_len,
+                                      size_t spec_len,
                                       const Parsed& parsed,
                                       CanonOutput* output,
                                       Parsed* new_parsed);
@@ -538,7 +538,7 @@ struct URLComponentSource {
 URL_EXPORT bool IsRelativeURL(const char* base,
                               const Parsed& base_parsed,
                               const char* fragment,
-                              int fragment_len,
+                              size_t fragment_len,
                               bool is_base_hierarchical,
                               bool* is_relative,
                               Component* relative_component);

@@ -91,28 +91,28 @@ struct FileSystemURLParseCase {
 bool ComponentMatches(const char* input,
                       const char* reference,
                       const Component& component) {
-  // If the component is nonexistent (length == -1), it should begin at 0.
-  EXPECT_TRUE(component.len >= 0 || component.len == -1);
+  // If the component is nonexistent, it should begin at 0.
+  EXPECT_TRUE(component.is_valid() || component.begin == 0);
 
   // Begin should be valid.
-  EXPECT_LE(0, component.begin);
+  EXPECT_LE(0U, component.begin);
 
   // A NULL reference means the component should be nonexistent.
   if (!reference)
-    return component.len == -1;
-  if (component.len < 0)
+    return !component.is_valid();
+  if (!component.is_valid())
     return false;  // Reference is not NULL but we don't have anything
 
-  if (strlen(reference) != static_cast<size_t>(component.len))
+  if (strlen(reference) != component.len())
     return false;  // Lengths don't match
 
   // Now check the actual characters.
-  return strncmp(reference, &input[component.begin], component.len) == 0;
+  return strncmp(reference, &input[component.begin], component.len()) == 0;
 }
 
 void ExpectInvalidComponent(const Component& component) {
-  EXPECT_EQ(0, component.begin);
-  EXPECT_EQ(-1, component.len);
+  EXPECT_EQ(0U, component.begin);
+  EXPECT_FALSE(component.is_valid());
 }
 
 // Parsed ----------------------------------------------------------------------
@@ -137,7 +137,7 @@ TEST(URLParser, Length) {
     "http:",
   };
   for (size_t i = 0; i < arraysize(length_cases); i++) {
-    int true_length = static_cast<int>(strlen(length_cases[i]));
+    size_t true_length = strlen(length_cases[i]);
 
     Parsed parsed;
     ParseStandardURL(length_cases[i], true_length, &parsed);
@@ -424,34 +424,34 @@ TEST(URLParser, ParseFileURL) {
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].scheme, parsed.scheme))
         << " for case #" << i << " [" << url << "] "
-        << parsed.scheme.begin << ", " << parsed.scheme.len;
+        << parsed.scheme.begin << ", " << parsed.scheme.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].username, parsed.username))
         << " for case #" << i << " [" << url << "] "
-        << parsed.username.begin << ", " << parsed.username.len;
+        << parsed.username.begin << ", " << parsed.username.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].password, parsed.password))
         << " for case #" << i << " [" << url << "] "
-        << parsed.password.begin << ", " << parsed.password.len;
+        << parsed.password.begin << ", " << parsed.password.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].host, parsed.host))
         << " for case #" << i << " [" << url << "] "
-        << parsed.host.begin << ", " << parsed.host.len;
+        << parsed.host.begin << ", " << parsed.host.len();
 
     EXPECT_EQ(file_cases[i].port, port)
         << " for case #" << i << " [ " << url << "] " << port;
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].path, parsed.path))
         << " for case #" << i << " [" << url << "] "
-        << parsed.path.begin << ", " << parsed.path.len;
+        << parsed.path.begin << ", " << parsed.path.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].query, parsed.query))
         << " for case #" << i << " [" << url << "] "
-        << parsed.query.begin << ", " << parsed.query.len;
+        << parsed.query.begin << ", " << parsed.query.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_cases[i].ref, parsed.ref))
         << " for case #" << i << " [ "<< url << "] "
-        << parsed.query.begin << ", " << parsed.scheme.len;
+        << parsed.query.begin << ", " << parsed.scheme.len();
   }
 }
 
@@ -480,7 +480,7 @@ TEST(URLParser, ExtractFileName) {
 
   for (size_t i = 0; i < arraysize(file_cases); i++) {
     const char* url = file_cases[i].input;
-    int len = static_cast<int>(strlen(url));
+    size_t len = strlen(url);
 
     Parsed parsed;
     ParseStandardURL(url, len, &parsed);
@@ -500,7 +500,7 @@ static bool NthParameterIs(const char* url,
                            const char* expected_key,
                            const char* expected_value) {
   Parsed parsed;
-  ParseStandardURL(url, static_cast<int>(strlen(url)), &parsed);
+  ParseStandardURL(url, strlen(url), &parsed);
 
   Component query = parsed.query;
 
@@ -516,9 +516,9 @@ static bool NthParameterIs(const char* url,
       if (!expected_key)
         return false;
 
-      if (strncmp(&url[key.begin], expected_key, key.len) != 0)
+      if (strncmp(&url[key.begin], expected_key, key.len()) != 0)
         return false;
-      if (strncmp(&url[value.begin], expected_value, value.len) != 0)
+      if (strncmp(&url[value.begin], expected_value, value.len()) != 0)
         return false;
       return true;
     }

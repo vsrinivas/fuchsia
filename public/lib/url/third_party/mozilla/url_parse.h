@@ -5,6 +5,9 @@
 #ifndef LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
 #define LIB_URL_THIRD_PARTY_MOZILLA_URL_PARSE_H_
 
+#include <stddef.h>
+
+#include "lib/ftl/logging.h"
 #include "lib/url/url_export.h"
 
 namespace url {
@@ -13,43 +16,61 @@ namespace url {
 
 // Represents a substring for URL parsing.
 struct Component {
-  Component() : begin(0), len(-1) {}
+  Component(bool is_valid = false) : begin(0), len_(0), is_valid_(is_valid) {}
 
   // Normal constructor: takes an offset and a length.
-  Component(int b, int l) : begin(b), len(l) {}
+  Component(size_t b, size_t l) : begin(b), len_(l), is_valid_(true) {}
 
-  int end() const {
-    return begin + len;
+  size_t end() const {
+    return begin + len_;
   }
 
   // Returns true if this component is valid, meaning the length is given. Even
   // valid components may be empty to record the fact that they exist.
   bool is_valid() const {
-    return (len != -1);
+    return is_valid_;
   }
 
   // Returns true if the given component is specified on false, the component
   // is either empty or invalid.
   bool is_nonempty() const {
-    return (len > 0);
+    return (len_ > 0);
+  }
+
+  // Returns true if the given component is invalid or empty.
+  bool is_invalid_or_empty() const {
+    return (len_ == 0);
   }
 
   void reset() {
     begin = 0;
-    len = -1;
+    len_ = 0;
+    is_valid_ = false;
   }
 
   bool operator==(const Component& other) const {
-    return begin == other.begin && len == other.len;
+    return begin == other.begin && len_ == other.len_ && is_valid_ == other.is_valid_;
   }
 
-  int begin;  // Byte offset in the string of this component.
-  int len;    // Will be -1 if the component is unspecified.
+  size_t begin;  // Byte offset in the string of this component.
+
+  size_t len() const {
+    FTL_DCHECK(is_valid_);
+    return len_;
+  }
+
+  void set_len(size_t len) {
+    len_ = len;
+    is_valid_ = true;
+  }
+ private:
+  size_t len_;
+  bool is_valid_;
 };
 
 // Helper that returns a component created with the given begin and ending
 // points. The ending point is non-inclusive.
-inline Component MakeRange(int begin, int end) {
+inline Component MakeRange(size_t begin, size_t end) {
   return Component(begin, end - begin);
 }
 
@@ -96,7 +117,7 @@ struct URL_EXPORT Parsed {
   // of the string. For example "http://": the parsed structure will only
   // contain an entry for the four-character scheme, and it doesn't know about
   // the "://". For all other last-components, it will return the real length.
-  int Length() const;
+  size_t Length() const;
 
   // Returns the number of characters before the given component if it exists,
   // or where the component would be if it did exist. This will return the
@@ -124,7 +145,7 @@ struct URL_EXPORT Parsed {
   //      *QUERY: 14                   15 <-
   //        *REF: 20                   20
   //
-  int CountCharactersBefore(ComponentType type, bool include_delimiter) const;
+  size_t CountCharactersBefore(ComponentType type, bool include_delimiter) const;
 
   // Scheme without the colon: "http://foo"/ would have a scheme of "http".
   // The length will be -1 if no scheme is specified ("foo.com"), or 0 if there
@@ -193,7 +214,7 @@ struct URL_EXPORT Parsed {
 // authority (host) like "http". This function will not handle weird ones
 // like "about:" and "javascript:", or do the right thing for "file:" URLs.
 URL_EXPORT void ParseStandardURL(const char* url,
-                                 int url_len,
+                                 size_t url_len,
                                  Parsed* parsed);
 
 // PathURL is for when the scheme is known not to have an authority (host)
@@ -201,16 +222,16 @@ URL_EXPORT void ParseStandardURL(const char* url,
 // everything after the scheme is considered as the path. This is used for
 // things like "about:" and "javascript:"
 URL_EXPORT void ParsePathURL(const char* url,
-                             int url_len,
+                             size_t url_len,
                              bool trim_path_end,
                              Parsed* parsed);
 
 // FileURL is for file URLs. There are some special rules for interpreting
 // these.
-URL_EXPORT void ParseFileURL(const char* url, int url_len, Parsed* parsed);
+URL_EXPORT void ParseFileURL(const char* url, size_t url_len, Parsed* parsed);
 
 // MailtoURL is for mailto: urls. They are made up scheme,path,query
-URL_EXPORT void ParseMailtoURL(const char* url, int url_len, Parsed* parsed);
+URL_EXPORT void ParseMailtoURL(const char* url, size_t url_len, Parsed* parsed);
 
 // Helper functions -----------------------------------------------------------
 
@@ -235,7 +256,7 @@ URL_EXPORT void ParseMailtoURL(const char* url, int url_len, Parsed* parsed);
 //
 // The 8-bit version requires UTF-8 encoding.
 URL_EXPORT bool ExtractScheme(const char* url,
-                              int url_len,
+                              size_t url_len,
                               Component* scheme);
 
 // Returns true if ch is a character that terminates the authority segment
