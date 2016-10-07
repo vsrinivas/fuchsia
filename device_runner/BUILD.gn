@@ -20,6 +20,7 @@ executable("device_runner") {
     ":interfaces",
     "//apps/modular/story_manager:interfaces",
     "//apps/mozart/services/launcher/interfaces",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",

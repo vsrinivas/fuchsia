@@ -7,6 +7,7 @@
 #include "apps/modular/device_runner/device_runner.mojom.h"
 #include "apps/modular/story_manager/story_manager.mojom.h"
 #include "apps/mozart/services/launcher/interfaces/launcher.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -52,13 +53,11 @@ class DeviceRunnerImpl : public DeviceRunner {
     ConnectToService(shell_, "mojo:story_manager", GetProxy(&story_manager_));
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
+    InterfaceHandle<mozart::ViewOwner> root_view;
     story_manager_->Launch(
-        std::move(identity),
-        [this](bool success,
-               InterfaceHandle<mozart::ViewProvider> view_provider) {
-          mozart_launcher_->Display(std::move(view_provider));
-          FTL_DLOG(INFO) << "story-manager launched.";
-        });
+        std::move(identity), GetProxy(&root_view),
+        [](bool success) { FTL_DLOG(INFO) << "story-manager launched."; });
+    mozart_launcher_->Display(std::move(root_view));
   }
 
   Shell* shell_;
