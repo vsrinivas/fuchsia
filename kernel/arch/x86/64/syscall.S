@@ -63,10 +63,11 @@ FUNCTION(x86_syscall)
     /* call the high level routine */
     call    x86_64_syscall
 
-    /* put everything back */
-    pop     %r12
-    pop     %r13
-    add     $8, %rsp /* skip the saved syscall # stack entry */
+    /* skip some of the arguments we pushed on the stack (rax, r13 and r12).
+     * r12 and r13 are callee-saved, so they won't have been clobbered. */
+    add     $8 * 3, %rsp
+
+    /* restore the registers from which SYSRET restores user state */
     pop     %rcx /* user RIP */
     pop     %r11 /* user RFLAGS */
 
