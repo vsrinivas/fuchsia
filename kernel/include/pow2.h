@@ -51,7 +51,7 @@ static inline __ALWAYS_INLINE uint log2_uint_ceil(uint val)
 
 // Compute log2(|val|), rounded as requested by |ceiling|.  We define
 // log2(0) to be 0.
-static inline __ALWAYS_INLINE ulong _log2_ulong(ulong val, bool ceiling)
+static inline __ALWAYS_INLINE uint _log2_ulong(ulong val, bool ceiling)
 {
     if (val == 0)
         return 0;
@@ -66,13 +66,13 @@ static inline __ALWAYS_INLINE ulong _log2_ulong(ulong val, bool ceiling)
 }
 
 // Compute floor(log2(|val|)), or 0 if |val| is 0
-static inline __ALWAYS_INLINE ulong log2_ulong_floor(ulong val)
+static inline __ALWAYS_INLINE uint log2_ulong_floor(ulong val)
 {
     return _log2_ulong(val, false);
 }
 
 // Compute ceil(log2(|val|)), or 0 if |val| is 0
-static inline __ALWAYS_INLINE ulong log2_ulong_ceil(ulong val)
+static inline __ALWAYS_INLINE uint log2_ulong_ceil(ulong val)
 {
     return _log2_ulong(val, true);
 }
