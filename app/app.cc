@@ -28,13 +28,16 @@ const size_t kStorageArgLength = sizeof(kStorageArg) - 1;
 
 }  // namespace
 
-// LedgerApp is the main entry point of the Ledger. It holds long-lived objects
-// handling client-independant work (such as tracking open objects or
-// performing background sync).
-class LedgerApp : public mojo::ApplicationImplBase {
+// App is the main entry point of the Ledger Mojo application.
+//
+// It is responsible for setting up the LedgerFactory, which connects clients to
+// individual ledger instances. It should not however hold long-lived objects
+// shared between ledger instances, as we need to be able to put them in
+// separate processes when the app becomes multi-instance.
+class App : public mojo::ApplicationImplBase {
  public:
-  explicit LedgerApp() {}
-  ~LedgerApp() override {}
+  App() {}
+  ~App() override {}
 
  private:
   void OnInitialize() override {
@@ -71,12 +74,12 @@ class LedgerApp : public mojo::ApplicationImplBase {
   std::unique_ptr<files::ScopedTempDir> temp_storage_;
   mtl::MessageLoop* message_loop_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApp);
+  FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace ledger
 
 MojoResult MojoMain(MojoHandle application_request) {
-  ledger::LedgerApp app;
+  ledger::App app;
   return mojo::RunApplication(application_request, &app);
 }

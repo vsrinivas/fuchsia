@@ -44,7 +44,7 @@ source_set("lib") {
 mojo_native_application("ledger_app") {
   output_name = "ledger_codex"
   sources = [
-    "ledger_app.cc",
+    "app.cc",
   ]
 
   deps = [
