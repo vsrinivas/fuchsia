@@ -729,11 +729,16 @@ void test_inferior(void)
 volatile int* crashing_ptr = (int*) 42;
 volatile int crash_depth;
 
+// This is used to cause fp != sp when the crash happens on arm64.
+int leaf_stack_size = 10;
+
 static int __NO_INLINE test_segfault_doit2(int*);
 
-static int __NO_INLINE test_segfault_leaf(int* p)
+static int __NO_INLINE test_segfault_leaf(int n, int* p)
 {
-    *crashing_ptr = *p;
+    volatile int x[n];
+    x[0] = *p;
+    *crashing_ptr = x[0];
     return 0;
 }
 
@@ -747,7 +752,7 @@ static int __NO_INLINE test_segfault_doit1(int* p)
         --crash_depth;
         return test_segfault_doit2(use_stack) + 99;
     }
-    return test_segfault_leaf(p) + 99;
+    return test_segfault_leaf(leaf_stack_size, p) + 99;
 }
 
 static int __NO_INLINE test_segfault_doit2(int* p)
