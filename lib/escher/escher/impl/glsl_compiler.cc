@@ -55,6 +55,8 @@ SpirvData GlslToSpirvCompiler::SynchronousCompile(
   return result;
 }
 
+// SynchronousCompileImpl has many return points; wrap it so that we don't
+// forget to --active_compile_count_ at one of them.
 SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
     vk::ShaderStageFlagBits stage_in,
     std::vector<std::string> source_code,
@@ -93,13 +95,12 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
     source_chars.push_back(s.c_str());
     source_lengths.push_back(s.length());
   }
-  shader.setStringsWithLengths(source_chars.data(),
-                               nullptr,  // source_lengths.data(),
+  shader.setStringsWithLengths(source_chars.data(), source_lengths.data(),
                                source_code.size());
-  if (preamble.length() > 0) {
+  if (!preamble.empty()) {
     shader.setPreamble(preamble.c_str());
   }
-  if (entry_point.length() > 0) {
+  if (!entry_point.empty()) {
     shader.setEntryPoint(entry_point.c_str());
   }
 

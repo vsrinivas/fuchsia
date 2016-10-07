@@ -63,6 +63,18 @@ TEST(GlslCompiler, CompileVertexShaderAsFragmentShader) {
   EXPECT_EQ(spirv.size(), 0U);
 }
 
+TEST(GlslCompiler, CompileInParallel) {
+  GlslToSpirvCompiler compiler;
+  std::vector<std::string> src1 = {{vertex_src}};
+  std::vector<std::string> src2 = {{fragment_src}};
+  auto result1 =
+      compiler.Compile(vk::ShaderStageFlagBits::eVertex, src1, "", "main");
+  auto result2 =
+      compiler.Compile(vk::ShaderStageFlagBits::eFragment, src2, "", "main");
+  EXPECT_GE(result1.get().size(), 0U);
+  EXPECT_GE(result2.get().size(), 0U);
+}
+
 }  // namespace
 }  // namespace impl
 }  // namespace escher

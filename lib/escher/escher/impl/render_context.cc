@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "escher/impl/render_context.h"
+
+#include "escher/impl/mesh_manager.h"
 #include "escher/impl/swapchain_manager.h"
 #include "escher/impl/temp_frame_renderer.h"
 #include "escher/impl/vulkan_utils.h"
@@ -11,8 +13,9 @@
 namespace escher {
 namespace impl {
 
-RenderContext::RenderContext(const VulkanContext& context)
-    : context_(context) {}
+RenderContext::RenderContext(const VulkanContext& context,
+                             MeshManager* mesh_manager)
+    : context_(context), mesh_manager_(mesh_manager) {}
 
 vk::Result RenderContext::Initialize(const VulkanSwapchain& swapchain) {
   vk::Result result = vk::Result::eSuccess;
@@ -41,17 +44,20 @@ vk::Result RenderContext::Initialize(const VulkanSwapchain& swapchain) {
   // Set up TempFrameRenderer, just so that we can get something up on the
   // screen.
   FTL_CHECK(!temp_frame_renderer_);
-  temp_frame_renderer_ = make_unique<TempFrameRenderer>(context_, render_pass_);
+  temp_frame_renderer_ =
+      make_unique<TempFrameRenderer>(context_, mesh_manager_, render_pass_);
 
   return vk::Result::eSuccess;
 }
 
 RenderContext::~RenderContext() {
+  context_.device.waitIdle();
+  temp_frame_renderer_.reset();
+
   CleanupFinishedFrames();
   FTL_DCHECK(pending_frames_.empty());
 
   DestroyCommandPool();
-  temp_frame_renderer_.reset();
   swapchain_manager_.reset();
   image_cache_.reset();
   if (render_pass_)
@@ -92,20 +98,33 @@ vk::Result RenderContext::Render(const Stage& stage, const Model& model) {
 
   // Submit the frame.
   {
+    // TODO: avoid this copying, not to mention ugliness
+    std::vector<vk::Semaphore> wait_semaphores;
+    // TODO:
+    wait_semaphores.reserve(frame.wait_semaphores_.size() + 1);
+    wait_semaphores.insert(wait_semaphores.begin(),
+                           frame.wait_semaphores_.begin(),
+                           frame.wait_semaphores_.end());
+    wait_semaphores.push_back(frame_info.image_available_semaphore);
+    // All wait-semaphores are for vertex-input...
+    std::vector<vk::PipelineStageFlags> wait_flags(
+        frame.wait_semaphores_.size() + 1,
+        vk::PipelineStageFlagBits::eVertexInput);
+    // ... except for the last, which is to present the rendered image.
+    wait_flags.back() = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
     vk::SubmitInfo info;
     info.commandBufferCount = frame.buffers_.size();
     info.pCommandBuffers = frame.buffers_.data();
-    info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &frame_info.image_available_semaphore;
-    vk::PipelineStageFlags flags =
-        vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    info.pWaitDstStageMask = &flags;
+    info.waitSemaphoreCount = wait_semaphores.size();
+    info.pWaitSemaphores = wait_semaphores.data();
+    info.pWaitDstStageMask = wait_flags.data();
     info.signalSemaphoreCount = 1;
     info.pSignalSemaphores = &frame_info.render_finished_semaphore;
     auto result = context_.queue.submit(1, &info, fence);
     if (result != vk::Result::eSuccess) {
       FTL_LOG(WARNING) << "failed to submit CommandBuffers for frame #"
-                       << frame.frame_number_ << ": " << to_string(result);
+                       << frame.frame_number() << ": " << to_string(result);
       CleanupFrame(&frame);
       context_.device.destroyFence(fence);
       return result;
@@ -128,14 +147,19 @@ void RenderContext::SetSwapchain(const VulkanSwapchain& swapchain) {
 }
 
 void RenderContext::CleanupFinishedFrames() {
+  uint32_t last_finished_frame = 0;
   while (!pending_frames_.empty()) {
     auto& frame = pending_frames_.front();
     if (vk::Result::eNotReady == context_.device.getFenceStatus(frame.fence_)) {
       // The first frame in the queue is not finished, so neither are the rest.
-      return;
+      break;
     }
+    last_finished_frame = frame.frame_number();
     CleanupFrame(&frame);
     pending_frames_.pop();
+  }
+  if (last_finished_frame > 0) {
+    mesh_manager_->Update(last_finished_frame);
   }
 }
 
@@ -151,6 +175,10 @@ void RenderContext::CleanupFrame(Frame* frame) {
   }
   context_.device.freeCommandBuffers(command_pool_, frame->buffers_);
   frame->buffers_.clear();
+  for (auto semaphore : frame->wait_semaphores_) {
+    context_.device.destroySemaphore(semaphore);
+  }
+  frame->wait_semaphores_.clear();
 }
 
 vk::Result RenderContext::CreateRenderPass() {
@@ -269,6 +297,7 @@ RenderContext::Frame::Frame(Frame&& other)
       vulkan_context_(other.vulkan_context_),
       fence_(other.fence_),
       buffers_(std::move(other.buffers_)),
+      wait_semaphores_(std::move(other.wait_semaphores_)),
       frame_number_(other.frame_number_) {
   other.render_context_ = nullptr;
   other.fence_ = nullptr;
@@ -284,6 +313,12 @@ vk::Result RenderContext::Frame::Render(const Stage& stage,
                                         const Model& model,
                                         vk::Framebuffer framebuffer) {
   return render_context_->temp_frame_renderer_->Render(this, framebuffer);
+}
+
+void RenderContext::Frame::AddWaitSemaphore(vk::Semaphore semaphore) {
+  if (semaphore) {
+    wait_semaphores_.push_back(semaphore);
+  }
 }
 
 AllocateCommandBuffersResult RenderContext::Frame::AllocateCommandBuffers(

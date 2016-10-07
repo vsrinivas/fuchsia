@@ -4,35 +4,41 @@
 
 #pragma once
 
+#include <map>
+
+// TODO: Consider defining MeshSpec without using Vulkan types.
+#include <vulkan/vulkan.hpp>
+
+#include "escher/forward_declarations.h"
 #include "ftl/memory/ref_counted.h"
 
 namespace escher {
 
-struct Tessellation;
+struct MeshSpec {
+  vk::VertexInputBindingDescription binding;
+  std::vector<vk::VertexInputAttributeDescription> attributes;
+  std::vector<std::string> attribute_names;
+
+  uint32_t GetVertexStride() const { return binding.stride; }
+  uint32_t GetVertexBinding() const { return binding.binding; }
+};
 
 // Immutable container for vertex indices and attribute data required to render
 // a triangle mesh.
 class Mesh : public ftl::RefCountedThreadSafe<Mesh> {
  public:
-  Mesh(const Tessellation& tessellation);
-
-  uint32_t num_indices() const { return num_indices_; }
-
-  uint32_t stride() const { return stride_; }
-  uint32_t normal_offset() const { return normal_offset_; }
-  uint32_t uv_offset() const { return uv_offset_; }
-
-  bool has_normals() const { return normal_offset_ > 0; }
-  bool has_uv() const { return uv_offset_ > 0; }
+  const MeshSpec spec;
+  const uint32_t num_vertices;
+  const uint32_t num_indices;
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(Mesh);
-  ~Mesh();
+  friend class escher::impl::MeshImpl;
+  Mesh(MeshSpec spec, uint32_t num_vertices, uint32_t num_indices);
+  virtual ~Mesh() {}
 
-  uint32_t num_indices_;
-  uint32_t stride_ = 0;
-  uint32_t normal_offset_ = 0;
-  uint32_t uv_offset_ = 0;
+  FRIEND_REF_COUNTED_THREAD_SAFE(Mesh);
 };
+
+typedef ftl::RefPtr<Mesh> MeshPtr;
 
 }  // namespace escher

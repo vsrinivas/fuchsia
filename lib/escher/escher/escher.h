@@ -5,27 +5,12 @@
 #pragma once
 
 #include <memory>
+
+#include "escher/forward_declarations.h"
+#include "escher/status.h"
 #include "ftl/macros.h"
 
 namespace escher {
-namespace impl {
-class EscherImpl;
-}
-
-class Model;
-class Stage;
-struct VulkanContext;
-struct VulkanSwapchain;
-
-enum class Status {
-  kOk,
-  kNotReady,
-  kTimeout,
-  kOutOfHostMemory,
-  kOutOfDeviceMemory,
-  kDeviceLost,
-  kInternalError  // should not occur
-};
 
 // Escher is the primary class used by clients of the Escher library.
 class Escher {
@@ -41,6 +26,10 @@ class Escher {
 
   // Notify Escher that the swapchain has changed.
   void SetSwapchain(const VulkanSwapchain& swapchain);
+
+  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
+                                size_t max_vertex_count,
+                                size_t max_index_count);
 
  private:
   std::unique_ptr<impl::EscherImpl> impl_;

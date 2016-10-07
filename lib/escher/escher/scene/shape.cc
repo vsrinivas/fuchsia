@@ -28,18 +28,4 @@ Shape Shape::CreateCircle(const vec2& center, float radius, float z) {
   return shape;
 }
 
-Shape Shape::CreateMesh(const Tessellation& tessellation,
-                        vec2 position,
-                        float z) {
-  return CreateMesh(ftl::MakeRefCounted<Mesh>(tessellation), position, z);
-}
-
-Shape Shape::CreateMesh(ftl::RefPtr<Mesh> mesh, vec2 position, float z) {
-  Shape shape(Type::kMesh);
-  shape.position_ = position;
-  shape.z_ = z;
-  shape.mesh_ = std::move(mesh);
-  return shape;
-}
-
 }  // namespace escher

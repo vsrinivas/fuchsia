@@ -17,6 +17,7 @@
 namespace escher {
 namespace impl {
 
+class MeshManager;
 class TempFrameRenderer;
 
 // Type returned by AllocateCommandBuffers().  Same as in vulkan.hpp.
@@ -27,7 +28,7 @@ typedef vk::ResultValueType<std::vector<vk::CommandBuffer>>::type
 // destroyed before all frames that use them are finished.
 class RenderContext {
  public:
-  RenderContext(const VulkanContext& context);
+  RenderContext(const VulkanContext& context, MeshManager* mesh_manager);
   ~RenderContext();
 
   vk::Result Initialize(const VulkanSwapchain& swapchain);
@@ -51,6 +52,10 @@ class RenderContext {
         uint32_t count,
         vk::CommandBufferLevel level);
 
+    // If the semaphore is not null, add it as a wait-dependency when submitting
+    // the frame's command-buffers.
+    void AddWaitSemaphore(vk::Semaphore semaphore);
+
     RenderContext* GetRenderContext() { return render_context_; }
 
     uint64_t frame_number() { return frame_number_; }
@@ -68,6 +73,7 @@ class RenderContext {
 
     vk::Fence fence_;
     std::vector<vk::CommandBuffer> buffers_;
+    std::vector<vk::Semaphore> wait_semaphores_;
     uint64_t frame_number_;
 
     friend class RenderContext;
@@ -83,6 +89,7 @@ class RenderContext {
   void DestroyCommandPool();
 
   VulkanContext context_;
+  MeshManager* mesh_manager_;
 
   vk::Format depth_format_ = vk::Format::eUndefined;
   vk::RenderPass render_pass_;
@@ -92,7 +99,7 @@ class RenderContext {
   std::unique_ptr<TempFrameRenderer> temp_frame_renderer_;
 
   std::queue<Frame> pending_frames_;
-  uint64_t frame_number_ = 0;
+  uint64_t frame_number_ = 1;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RenderContext);
 };

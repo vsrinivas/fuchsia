@@ -4,6 +4,7 @@
 
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
+#include "escher/impl/mesh_manager.h"
 #include "escher/util/cplusplus.h"
 
 namespace escher {
@@ -19,6 +20,13 @@ void Escher::SetSwapchain(const VulkanSwapchain& swapchain) {
 
 Status Escher::Render(const Stage& stage, const Model& model) {
   return impl_->Render(stage, model);
+}
+
+MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
+                                      size_t max_vertex_count,
+                                      size_t max_index_count) {
+  return impl_->GetMeshManager()->NewMeshBuilder(spec, max_vertex_count,
+                                                 max_index_count);
 }
 
 }  // namespace escher
