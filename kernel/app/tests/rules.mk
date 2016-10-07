@@ -26,10 +26,11 @@ MODULE_SRCS += \
 
 
 MODULE_DEPS += \
+    lib/crypto \
+    lib/header_tests \
+    lib/mxtl \
     lib/safeint \
     lib/unittest \
-    lib/mxtl \
-    lib/crypto \
 
 MODULE_COMPILEFLAGS += -Wno-format -fno-builtin
 
