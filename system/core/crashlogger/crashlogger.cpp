@@ -44,6 +44,10 @@ const char* excp_type_to_str(uint32_t type) {
 constexpr uint64_t kSysExceptionKey = 1166444u;
 constexpr uint64_t kSelfExceptionKey = 0x646a65u;
 
+// How much memory to dump, in bytes.
+// Space for this is allocated on the stack, so this can't be too large.
+constexpr size_t kMemoryDumpSize = 256;
+
 // Handle of the thread we're dumping.
 // This is used by both the main thread and the self-dumper thread.
 // However there is no need to lock it as the self-dumper thread only runs
@@ -89,7 +93,10 @@ void output_frame_arm64(const arm64_exc_data_t& exc_data,
 };
 
 void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
-    auto buf = static_cast<uint8_t*>(malloc(len));
+    // Make sure we're not allocating an excessive amount of stack.
+    DEBUG_ASSERT(len <= kMemoryDumpSize);
+
+    uint8_t buf[len];
     auto res = mx_debug_read_memory(proc, start, len, buf);
     if (res < 0) {
         printf("failed reading %p memory; error : %" PRIdPTR "\n", (void*)start, res);
@@ -155,7 +162,7 @@ void process_report(const mx_exception_report_t* report) {
 #if defined(__x86_64__)
         output_frame_x86_64(context.arch.u.x86_64, regs);
         printf("bottom of user stack:\n");
-        dump_memory(process, regs.rsp, 256u);
+        dump_memory(process, regs.rsp, kMemoryDumpSize);
         printf("arch: x86_64\n");
         backtrace(process, regs.rip, regs.rbp);
 #endif
@@ -168,7 +175,7 @@ void process_report(const mx_exception_report_t* report) {
             printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
 
         printf("bottom of user stack:\n");
-        dump_memory(process, regs.sp, 256u);
+        dump_memory(process, regs.sp, kMemoryDumpSize);
         printf("arch: aarch64\n");
         backtrace(process, regs.pc, regs.sp);
 #endif
