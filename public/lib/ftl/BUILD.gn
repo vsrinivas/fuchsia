@@ -97,6 +97,8 @@ static_library("ftl") {
 }
 
 executable("ftl_unittests") {
+  testonly = true
+
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
