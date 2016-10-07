@@ -49,12 +49,6 @@ FUNCTION(x86_syscall)
     /* save away the user stack pointer */
     push    %gs:PERCPU_SAVED_USER_SP_OFFSET
 
-    /* callee saved */
-    push    %rbx
-    push    %rbp
-    push    %r14
-    push    %r15
-
     push    %r11 /* user RFLAGS */
 
     /* start to push the rest of the args on the stack as per C calling convention */
@@ -75,12 +69,6 @@ FUNCTION(x86_syscall)
     add     $8, %rsp /* skip the saved syscall # stack entry */
     pop     %rcx /* user RIP */
     pop     %r11 /* user RFLAGS */
-
-    /* callee saved regs */
-    pop     %r15
-    pop     %r14
-    pop     %rbp
-    pop     %rbx
 
     /* zero out trashed arg registers */
     xor     %rdi, %rdi
