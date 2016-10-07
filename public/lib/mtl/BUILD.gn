@@ -18,6 +18,8 @@ static_library("mtl") {
 }
 
 executable("mtl_unittests") {
+  testonly = true
+
   sources = [
     "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/unique_handle_unittest.cc",
