@@ -16,8 +16,8 @@
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
         {
-            "binary": "context_service",
-            "bootfs_path": "apps/context_service"
+            "binary": "context_engine",
+            "bootfs_path": "apps/context_engine"
         },
         {
             "binary": "dart_content_handler",
