@@ -12,3 +12,15 @@ source_set("single_service_application") {
   ]
 }
 
+source_set("single_service_view_app") {
+  sources = [
+    "single_service_view_app.h",
+  ]
+
+  deps = [
+    "//apps/mozart/services/views/interfaces",
+    "//lib/ftl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+  ]
+}

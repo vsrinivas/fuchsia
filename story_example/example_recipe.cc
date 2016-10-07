@@ -9,33 +9,52 @@
 #include <vector>
 
 #include "apps/maxwell/document_store/interfaces/document.mojom.h"
-#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
+#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/logging.h"
+#include "mojo/public/cpp/application/application_impl_base.h"
+#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
+#include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/map.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/cpp/bindings/strong_binding_set.h"
 #include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/system/macros.h"
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkColor.h"
+#include "third_party/skia/include/core/SkRect.h"
 
 namespace {
 
+constexpr uint32_t kContentImageResourceId = 1;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr float kSpeed = 0.25f;
 constexpr char kValueLabel[] = "value";
 constexpr char kSenderLabel[] = "sender";
 
 using document_store::Document;
 
+using mojo::ApplicationImplBase;
 using mojo::Binding;
+using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::Map;
+using mojo::ServiceProviderImpl;
+using mojo::Shell;
 using mojo::StrongBinding;
+using mojo::StrongBindingSet;
 using mojo::String;
 using mojo::StructPtr;
 
@@ -59,7 +78,8 @@ class LinkConnection : public LinkChanged {
   }
 
   void Notify(StructPtr<Document> doc) override {
-    FTL_LOG(INFO) << "LinkConnection::Notify() " << DocumentEditor::ToString(doc);
+    FTL_LOG(INFO) << "LinkConnection::Notify() "
+                  << DocumentEditor::ToString(doc);
     dst_->AddDocument(std::move(doc));
   }
 
@@ -113,10 +133,16 @@ class ModuleMonitor : public ModuleWatcher {
 
 // Module implementation that acts as a recipe. It implements both
 // Module and the LinkChanged observer of its own Link.
-class RecipeImpl : public Module, public LinkChanged {
+class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
  public:
-  explicit RecipeImpl(InterfaceRequest<Module> req)
-      : module_binding_(this, std::move(req)), watcher_binding_(this) {
+  RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
+             InterfaceRequest<Module> module_request,
+             mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : BaseView(app_connector.Pass(),
+                 view_owner_request.Pass(),
+                 "Spinning Square"),
+        module_binding_(this, std::move(module_request)),
+        watcher_binding_(this) {
     FTL_LOG(INFO) << "RecipeImpl";
   }
   ~RecipeImpl() override { FTL_LOG(INFO) << "~RecipeImpl"; }
@@ -148,11 +174,13 @@ class RecipeImpl : public Module, public LinkChanged {
 
     FTL_LOG(INFO) << "recipe start module module1";
     session_->StartModule("mojo:example_module1",
-                          std::move(module1_link_handle), GetProxy(&module1_));
+                          std::move(module1_link_handle), GetProxy(&module1_),
+                          GetProxy(&module1_view_));
 
     FTL_LOG(INFO) << "recipe start module module2";
     session_->StartModule("mojo:example_module2",
-                          std::move(module2_link_handle), GetProxy(&module2_));
+                          std::move(module2_link_handle), GetProxy(&module2_),
+                          GetProxy(&module2_view_));
 
     monitors_.emplace_back(new LinkMonitor("module1", module1_link_));
     monitors_.emplace_back(new LinkMonitor("module2", module2_link_));
@@ -176,6 +204,52 @@ class RecipeImpl : public Module, public LinkChanged {
   }
 
  private:
+  // Copied from
+  // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
+  // |BaseView|:
+  void OnDraw() override {
+    FTL_DCHECK(properties());
+    auto update = mozart::SceneUpdate::New();
+    const mojo::Size& size = *properties()->view_layout->size;
+    if (size.width > 0 && size.height > 0) {
+      mojo::RectF bounds;
+      bounds.width = size.width;
+      bounds.height = size.height;
+      mozart::SkiaSurfaceHolder surface_holder(size);
+      DrawContent(surface_holder.surface()->getCanvas(), size);
+      auto content_resource = mozart::Resource::New();
+      content_resource->set_image(mozart::ImageResource::New());
+      content_resource->get_image()->image = surface_holder.TakeImage();
+      update->resources.insert(kContentImageResourceId,
+                               content_resource.Pass());
+      auto root_node = mozart::Node::New();
+      root_node->op = mozart::NodeOp::New();
+      root_node->op->set_image(mozart::ImageNodeOp::New());
+      root_node->op->get_image()->content_rect = bounds.Clone();
+      root_node->op->get_image()->image_resource_id = kContentImageResourceId;
+      update->nodes.insert(kRootNodeId, root_node.Pass());
+    } else {
+      auto root_node = mozart::Node::New();
+      update->nodes.insert(kRootNodeId, root_node.Pass());
+    }
+    scene()->Update(update.Pass());
+    scene()->Publish(CreateSceneMetadata());
+    Invalidate();
+  }
+  void DrawContent(SkCanvas* canvas, const mojo::Size& size) {
+    canvas->clear(SK_ColorBLUE);
+    canvas->translate(size.width / 2, size.height / 2);
+    float t =
+        fmod(frame_tracker().frame_info().frame_time * 0.000001f * kSpeed, 1.f);
+    canvas->rotate(360.f * t);
+    SkPaint paint;
+    paint.setColor(0xFFFF00FF);
+    paint.setAntiAlias(true);
+    float d = std::min(size.width, size.height) / 4;
+    canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
+    canvas->flush();
+  }
+
   StrongBinding<Module> module_binding_;
   StrongBinding<LinkChanged> watcher_binding_;
 
@@ -192,13 +266,15 @@ class RecipeImpl : public Module, public LinkChanged {
   std::vector<std::unique_ptr<LinkMonitor>> monitors_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
+  InterfacePtr<mozart::ViewOwner> module1_view_;
+  InterfacePtr<mozart::ViewOwner> module2_view_;
+
   MOJO_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
-  FTL_LOG(INFO) << "recipe main";
-  modular::SingleServiceApplication<Module, RecipeImpl> app;
-  return mojo::RunApplication(request, &app);
+MojoResult MojoMain(MojoHandle application_request) {
+  modular::SingleServiceViewApp<modular::Module, RecipeImpl> app;
+  return mojo::RunApplication(application_request, &app);
 }

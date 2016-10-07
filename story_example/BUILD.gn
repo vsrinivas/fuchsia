@@ -17,8 +17,8 @@ executable("example_module1") {
 
   deps = [
     "//apps/maxwell/document_store/interfaces",
-    "//apps/modular/mojo:single_service_application",
     "//apps/modular/document_editor",
+    "//apps/modular/mojo:single_service_view_app",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -34,8 +34,8 @@ executable("example_module2") {
 
   deps = [
     "//apps/maxwell/document_store/interfaces",
-    "//apps/modular/mojo:single_service_application",
     "//apps/modular/document_editor",
+    "//apps/modular/mojo:single_service_view_app",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -51,12 +51,20 @@ executable("example_recipe") {
 
   deps = [
     "//apps/maxwell/document_store/interfaces",
-    "//apps/modular/mojo:single_service_application",
     "//apps/modular/document_editor",
+    "//apps/modular/mojo:single_service_view_app",
+    "//apps/mozart/lib/skia",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views/interfaces",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
-    "//mojo/public/cpp/application:standalone",
+    "//lib/mtl",
+    "//mojo/public/c:system",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/public/cpp/utility",
     "//mojo/system",
-    "//mojo/public/cpp/bindings:utility",
+    "//third_party/skia",
   ]
 }

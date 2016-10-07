@@ -5,8 +5,8 @@
 #include <mojo/system/main.h>
 
 #include "apps/maxwell/document_store/interfaces/document.mojom.h"
-#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -27,6 +27,7 @@ using document_store::Document;
 using document_store::Property;
 using document_store::Value;
 
+using mojo::ApplicationConnector;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -44,8 +45,11 @@ using modular::Session;
 // both Module and the LinkChanged observer of its own Link.
 class Module1Impl : public Module, public LinkChanged {
  public:
-  explicit Module1Impl(InterfaceRequest<Module> req)
-      : module_binding_(this, std::move(req)), watcher_binding_(this) {
+  explicit Module1Impl(InterfaceHandle<ApplicationConnector> app_connector,
+                       InterfaceRequest<Module> module_request,
+                       InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : module_binding_(this, std::move(module_request)),
+        watcher_binding_(this) {
     FTL_LOG(INFO) << "Module1Impl";
   }
 
@@ -98,6 +102,6 @@ class Module1Impl : public Module, public LinkChanged {
 
 MojoResult MojoMain(MojoHandle request) {
   FTL_LOG(INFO) << "module1 main";
-  modular::SingleServiceApplication<Module, Module1Impl> app;
+  modular::SingleServiceViewApp<modular::Module, Module1Impl> app;
   return mojo::RunApplication(request, &app);
 }

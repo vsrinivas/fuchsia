@@ -39,19 +39,13 @@ executable("dummy_user_shell") {
 
   deps = [
     ":interfaces",
-    "//apps/mozart/lib/skia",
-    "//apps/mozart/lib/view_framework",
+    "//apps/modular/mojo:single_service_view_app",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
-    "//lib/mtl",
     "//mojo/public/c:system",
-    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/system",
-    "//mojo/public/cpp/utility",
-    "//mojo/services/geometry/interfaces",
     "//mojo/system",
-    "//third_party/skia",
   ]
 }
 

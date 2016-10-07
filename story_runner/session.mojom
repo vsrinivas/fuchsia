@@ -5,7 +5,7 @@
 module modular;
 
 import "apps/modular/story_runner/link.mojom";
-
+import "apps/mozart/services/views/interfaces/view_token.mojom";
 
 // This service is implemented by a mojo app that is meant to be run
 // in a story.
@@ -66,7 +66,8 @@ interface Session {
   // The implementation of StartModule() invokes Initialize() on the
   // created Module instance, so it must return it and cannot take an
   // interface request.
-  StartModule(string query, Link link, ModuleClient& module_client);
+  StartModule(string query, Link link, ModuleClient& module_client,
+              mozart.ViewOwner& view_owner);
 
   // The module holding this handle to the Session declares it's done
   // and wants to be torn down. This causes the story runner to take

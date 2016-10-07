@@ -16,6 +16,7 @@
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/modular/story_runner/resolver.mojom.h"
 #include "apps/modular/story_runner/session.mojom.h"
+#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
@@ -63,9 +64,9 @@ class ModuleClientImpl : public ModuleClient {
 // correctly.
 class SessionHost : public Session {
  public:
-  // Primary session host created when SessionImpl is created from story manager.
-  SessionHost(SessionImpl* impl,
-              mojo::InterfaceRequest<Session> session);
+  // Primary session host created when SessionImpl is created from story
+  // manager.
+  SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> session);
 
   // Non-primary session host created for the module started by StartModule().
   SessionHost(SessionImpl* impl,
@@ -76,8 +77,11 @@ class SessionHost : public Session {
 
   // Implements Session interface. Forwards to SessionImpl.
   void CreateLink(mojo::InterfaceRequest<Link> link) override;
-  void StartModule(const mojo::String& query, mojo::InterfaceHandle<Link> link,
-                   mojo::InterfaceRequest<ModuleClient> module_client) override;
+  void StartModule(
+      const mojo::String& query,
+      mojo::InterfaceHandle<Link> link,
+      mojo::InterfaceRequest<ModuleClient> module_client,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void Done() override;
 
   // Called by ModuleClientImpl.
@@ -98,7 +102,8 @@ class SessionHost : public Session {
 // SessionHost above.
 class SessionImpl {
  public:
-  SessionImpl(mojo::Shell* shell, mojo::InterfaceHandle<Resolver> resolver,
+  SessionImpl(mojo::Shell* shell,
+              mojo::InterfaceHandle<Resolver> resolver,
               mojo::InterfaceHandle<ledger::Page> session_page,
               mojo::InterfaceRequest<Session> req);
   ~SessionImpl();
@@ -108,7 +113,8 @@ class SessionImpl {
   void Remove(SessionHost* client);
   void StartModule(const mojo::String& query,
                    mojo::InterfaceHandle<Link> link,
-                   mojo::InterfaceRequest<ModuleClient> module_client);
+                   mojo::InterfaceRequest<ModuleClient> module_client,
+                   mojo::InterfaceRequest<mozart::ViewOwner> view_owner);
 
  private:
   // Used to pass handles into callback lambdas.
@@ -123,7 +129,6 @@ class SessionImpl {
   std::vector<SessionHost*> clients_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
-
 
 }  // namespace modular
 

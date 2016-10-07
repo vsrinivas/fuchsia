@@ -20,6 +20,7 @@ executable("story_runner") {
 
   deps = [
     ":interfaces",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//apps/maxwell/document_store/interfaces",
     "//apps/modular/document_editor",
@@ -58,5 +59,6 @@ mojom("interfaces") {
 
   deps = [
     "//apps/ledger/api",
+    "//apps/mozart/services/views/interfaces",
   ]
 }
