@@ -17,7 +17,7 @@ using mojo::ApplicationImplBase;
 using mojo::Binding;
 using mojo::InterfaceHandle;
 
-using namespace intelligence::context_engine;
+using namespace maxwell::context_engine;
 using namespace rapidjson;
 
 class CarmenSandiego : public ApplicationImplBase,

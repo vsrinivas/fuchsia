@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module intelligence.context_engine;
+module maxwell.context_engine;
 
 // Client that should be requested by context acquirers. Acquirers are Mojo apps
 // that publish context based on sensors and/or network sources. They have
@@ -13,7 +13,7 @@ module intelligence.context_engine;
 // publisher as to whether any subscribers exist. The publisher is free to not
 // publish until subscribers exist, and to delete context once the last
 // subscriber is removed.
-[ServiceName="intelligence.ContextAcquirerClient"]
+[ServiceName="maxwell.ContextAcquirerClient"]
 interface ContextAcquirerClient {
   // Registers a potential context publisher and attains a publish link for it.
   // When the existence or nonexistence of subscribers changes, the publisher is
@@ -26,7 +26,7 @@ interface ContextAcquirerClient {
 // apps that infer higher level context from other available context. They have
 // pub-sub access to Context Service. All context read or written by this client
 // is attributed to the bound agent.
-[ServiceName="intelligence.ContextAgentClient"]
+[ServiceName="maxwell.ContextAgentClient"]
 interface ContextAgentClient {
   // Registers a potential context publisher and attains a publish link for it.
   // When the existence or nonexistence of subscribers changes, the publisher is
@@ -50,7 +50,7 @@ interface ContextAgentClient {
 // Mojo apps that produce suggestions based on available context. They have
 // subscribe-only access to Context Service. All context read by this client is
 // attributed to the bound agent.
-[ServiceName="intelligence.SuggestionAgentClient"]
+[ServiceName="maxwell.SuggestionAgentClient"]
 interface SuggestionAgentClient {
   // Registers a listener to a context label.
   Subscribe(string label, string schema, ContextSubscriberLink link);
@@ -115,7 +115,7 @@ struct ContextUpdate {
 // Query
 ////////////////////////////////////////////////////////////////////////////////
 
-[ServiceName="intelligence.ContextQuery"]
+[ServiceName="maxwell.ContextQuery"]
 interface ContextQuery {
   // Registers a query for a label and creates a listener to determine when the
   // query evaluates to true.

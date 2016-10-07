@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module intelligence.suggestion_engine;
+module maxwell.suggestion_engine;
 
 // A service and supporting structures enabling Agents to contribute Proposals
 // to the Suggestion engine.

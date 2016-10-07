@@ -10,7 +10,7 @@
 
 #include "apps/maxwell/context_engine/graph.h"
 
-namespace intelligence {
+namespace maxwell {
 namespace context_engine {
 
 // TODO(rosswang): V.5 query richness.
@@ -57,8 +57,7 @@ class Repo {
              ContextSubscriberLinkPtr subscriber);
 
  private:
-  class QuerySet
-      : public maxwell::BoundSet<SimpleQuery, ContextSubscriberLink> {
+  class QuerySet : public BoundSet<SimpleQuery, ContextSubscriberLink> {
    protected:
     ContextSubscriberLinkPtr* GetPtr(SimpleQuery* element) override;
   };
@@ -79,4 +78,4 @@ class Repo {
 };
 
 }  // namespace context_engine
-}  // namespace intelligence
+}  // namespace maxwell

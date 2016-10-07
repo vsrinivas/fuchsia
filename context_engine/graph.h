@@ -11,7 +11,7 @@
 
 #include "apps/maxwell/bound_set.h"
 
-namespace intelligence {
+namespace maxwell {
 namespace context_engine {
 
 // The context graph consists of component nodes and data nodes. Component nodes
@@ -79,7 +79,7 @@ class DataNode : public ContextPublisherLink {
 
  private:
   class SubscriberSet
-      : public maxwell::ExtensibleInterfacePtrSet<ContextSubscriberLink> {
+      : public ExtensibleInterfacePtrSet<ContextSubscriberLink> {
    public:
     SubscriberSet(DataNode* node) : node_(node) {}
 
@@ -110,4 +110,4 @@ inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label,
 }
 
 }  // namespace context_engine
-}  // namespace intelligence
+}  // namespace maxwell

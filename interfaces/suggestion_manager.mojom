@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module intelligence.suggestion_engine;
+module maxwell.suggestion_engine;
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based

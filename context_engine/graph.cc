@@ -4,14 +4,14 @@
 
 #include "apps/maxwell/context_engine/graph.h"
 
-namespace intelligence {
+namespace maxwell {
 namespace context_engine {
 
 void DataNode::SubscriberSet::OnConnectionError(
     ContextSubscriberLink* interface_ptr) {
   MOJO_LOG(VERBOSE) << "Subscription to " << node_->label << " lost";
 
-  maxwell::ExtensibleInterfacePtrSet<ContextSubscriberLink>::OnConnectionError(
+  ExtensibleInterfacePtrSet<ContextSubscriberLink>::OnConnectionError(
       interface_ptr);
 
   // Notify if this was the last subscriber.
@@ -71,4 +71,4 @@ void DataNode::SetPublisher(
 }
 
 }  // namespace context_engine
-}  // namespace intelligence
+}  // namespace maxwell

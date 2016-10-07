@@ -12,7 +12,7 @@
 
 namespace {
 
-using namespace intelligence::context_engine;
+using namespace maxwell::context_engine;
 
 using mojo::ApplicationImplBase;
 using mojo::Binding;

@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/context_engine/repo.h"
 
-namespace intelligence {
+namespace maxwell {
 namespace context_engine {
 
 using std::string;
@@ -47,4 +47,4 @@ void Repo::Query(const string& label,
 }
 
 }  // namespace context_engine
-}  // namespace intelligence
+}  // namespace maxwell

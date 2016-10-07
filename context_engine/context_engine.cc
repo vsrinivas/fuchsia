@@ -22,7 +22,7 @@ using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 using mojo::StrongBindingSet;
 
-using namespace intelligence::context_engine;
+using namespace maxwell::context_engine;
 
 template <typename Interface>
 class ContextPublisherClient : public virtual Interface {

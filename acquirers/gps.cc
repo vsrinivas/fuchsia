@@ -16,7 +16,7 @@ using mojo::ApplicationImplBase;
 using mojo::Binding;
 using mojo::RunLoop;
 
-using namespace intelligence::context_engine;
+using namespace maxwell::context_engine;
 
 #define ONE_MOJO_SECOND 1000000
 #define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
