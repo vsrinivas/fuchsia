@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <ddk/protocol/device.h>
+#include <magenta/device/console.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
@@ -157,6 +158,9 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
     for (unsigned i = 0; i < VC_COUNT; i++) {
         int fd;
         if ((fd = openat(dirfd, name, O_RDWR)) >= 0) {
+            if (i == 0 && getenv("vc.sticky-log") == NULL) {
+                ioctl_console_set_active_vc(fd);
+            }
             devmgr_launch("mxsh:vc", 1, argv_mxsh, fd, 0, 0);
         }
     }
