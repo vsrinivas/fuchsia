@@ -4,6 +4,37 @@
 
 group("document_store") {
   deps = [
-    ":interfaces",
+    ":document_store_factory",
+    ":document_store_test",
+  ]
+}
+
+executable("document_store_factory") {
+  sources = [
+    "document_store_factory.cc"
+  ]
+
+  deps = [
+    "//apps/maxwell/document_store/interfaces",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+    "//apps/ledger/api",
+  ]
+}
+
+executable("document_store_test") {
+  sources = [
+    "document_store_test.cc"
+  ]
+
+  deps = [
+    "//apps/maxwell/document_store/interfaces",
+    "//apps/maxwell/document_store/interfaces:interfaces_sync",
+    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+    "//apps/ledger/api",
+    "//apps/ledger/api:api_sync",
   ]
 }
