@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 #include <cstdlib>
+#include <memory>
 #include <iostream>
+#include <vector>
 
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
+#include "process.h"
 #include "server.h"
 
 namespace {
@@ -46,7 +49,21 @@ int main(int argc, char* argv[]) {
 
   FTL_LOG(INFO) << "Starting server.";
 
+  // Create the process. Since we currently support running only one process
+  // during a single run of the stub, we initialize it here.
+  // TODO(armansito): Change this while adding support for creating and/or
+  // attaching to a process later.
+  std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
+                                         cl.positional_args().end());
+  auto inferior = std::make_unique<debugserver::Process>(inferior_argv);
+  if (!inferior->Initialize()) {
+    FTL_LOG(ERROR) << "Failed to set up inferior";
+    return EXIT_FAILURE;
+  }
+
   debugserver::Server server(port);
+  server.set_current_process(inferior.release());
+
   bool status = server.Run();
   if (!status) {
     FTL_LOG(ERROR) << "Server exited with error";

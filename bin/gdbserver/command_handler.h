@@ -10,10 +10,12 @@
 
 namespace debugserver {
 
+class Server;
+
 // CommandHandler is responsible for handling GDB Remote Protocol commands.
 class CommandHandler final {
  public:
-  CommandHandler() = default;
+  explicit CommandHandler(Server* server);
   ~CommandHandler() = default;
 
   // Handles the command packet |packet| of size |packet_size| bytes. Returns
@@ -32,10 +34,22 @@ class CommandHandler final {
                      const ResponseCallback& callback);
 
  private:
+  // Command handlers for each "letter" packet. We use underscores in the method
+  // names to clearly delineate lowercase letters.
+  bool Handle_H(const uint8_t* packet,
+                size_t packet_size,
+                const ResponseCallback& callback);
+  bool Handle_q(const uint8_t* packet,
+                size_t packet_size,
+                const ResponseCallback& callback);
+
   // qSupported
-  bool HandleQSupported(const uint8_t* packet,
-                        size_t packet_size,
-                        const ResponseCallback& callback);
+  bool HandleQuerySupported(const uint8_t* packet,
+                            size_t packet_size,
+                            const ResponseCallback& callback);
+
+  // The root Server instance that owns us.
+  Server* server_;  // weak
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandHandler);
 };

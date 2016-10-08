@@ -5,12 +5,15 @@
 #pragma once
 
 #include <array>
+#include <memory>
 
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "command_handler.h"
+#include "process.h"
+#include "thread.h"
 
 namespace debugserver {
 
@@ -30,6 +33,23 @@ class Server final {
   // error.
   // TODO(armansito): More clearly define the error scenario.
   bool Run();
+
+  // Returns a raw pointer to the current inferior. The instance pointed to by
+  // the returned pointer is owned by this Server instance and should not be
+  // deleted.
+  Process* current_process() const { return current_process_.get(); }
+
+  // Sets the current process. This cleans up the current process (if any) and
+  // takes ownership of |process|.
+  void set_current_process(Process* process) {
+    current_process_.reset(process);
+  }
+
+  // Returns a raw pointer to the current thread.
+  Thread* current_thread() const { return current_thread_.get(); }
+
+  // Assigns the current thread.
+  void SetCurrentThread(Thread* thread);
 
  private:
   // Maximum number of characters in inbound/outbound buffers.
@@ -76,6 +96,13 @@ class Server final {
   // The CommandHandler that is responsible for interpreting received command
   // packets and routing them to the correct handler.
   CommandHandler command_handler_;
+
+  // Strong pointer to the current inferior process that is being debugged.
+  std::unique_ptr<Process> current_process_;
+
+  // The current thread under debug. We only keep a weak pointer here, since the
+  // instance itself is owned by a Process and may get removed.
+  ftl::WeakPtr<Thread> current_thread_;
 
   // The main loop.
   mtl::MessageLoop message_loop_;

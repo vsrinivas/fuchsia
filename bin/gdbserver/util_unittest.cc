@@ -88,6 +88,76 @@ TEST(UtilTest, EncodeByteString) {
   }
 }
 
+TEST(UtilTest, BuildErrorPacket) {
+  EXPECT_EQ("E01", BuildErrorPacket(ErrorCode::PERM));
+  EXPECT_EQ("E02", BuildErrorPacket(ErrorCode::NOENT));
+  EXPECT_EQ("E13", BuildErrorPacket(ErrorCode::ACCES));
+  EXPECT_EQ("E91", BuildErrorPacket(ErrorCode::NAMETOOLONG));
+  EXPECT_EQ("E9999", BuildErrorPacket(ErrorCode::UNKNOWN));
+}
+
+TEST(UtilTest, ParseThreadId) {
+  bool has_pid;
+  int64_t pid, tid;
+
+  constexpr char kInvalid1[] = "";
+  constexpr char kInvalid2[] = "hello";
+  constexpr char kInvalid3[] = "phello.world";
+  constexpr char kInvalid4[] = "p123.world";
+  constexpr char kInvalid5[] = "phello.123";
+
+  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid1, std::strlen(kInvalid1),
+                             &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid2, std::strlen(kInvalid2),
+                             &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid3, std::strlen(kInvalid3),
+                             &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid4, std::strlen(kInvalid4),
+                             &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid5, std::strlen(kInvalid5),
+                             &has_pid, &pid, &tid));
+
+  constexpr char kValid1[] = "0";
+  constexpr char kValid2[] = "123";
+  constexpr char kValid3[] = "-1";
+  constexpr char kValid4[] = "p0.0";
+  constexpr char kValid5[] = "p123.-1";
+  constexpr char kValid6[] = "p-1.1234";
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid1, std::strlen(kValid1),
+                            &has_pid, &pid, &tid));
+  EXPECT_FALSE(has_pid);
+  EXPECT_EQ(0, tid);
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid2, std::strlen(kValid2),
+                            &has_pid, &pid, &tid));
+  EXPECT_FALSE(has_pid);
+  EXPECT_EQ(123, tid);
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid3, std::strlen(kValid3),
+                            &has_pid, &pid, &tid));
+  EXPECT_FALSE(has_pid);
+  EXPECT_EQ(-1, tid);
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid4, std::strlen(kValid4),
+                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(has_pid);
+  EXPECT_EQ(0, tid);
+  EXPECT_EQ(0, pid);
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid5, std::strlen(kValid5),
+                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(has_pid);
+  EXPECT_EQ(-1, tid);
+  EXPECT_EQ(123, pid);
+
+  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid6, std::strlen(kValid6),
+                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(has_pid);
+  EXPECT_EQ(1234, tid);
+  EXPECT_EQ(-1, pid);
+}
+
 }  // namespace
 }  // namespace util
 }  // namespace debugserver
