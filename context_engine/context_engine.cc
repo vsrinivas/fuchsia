@@ -15,11 +15,9 @@
 
 namespace {
 
-using mojo::ApplicationImplBase;
 using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
 using mojo::InterfaceRequest;
-using mojo::ServiceProviderImpl;
 using mojo::StrongBindingSet;
 
 using namespace maxwell::context_engine;
@@ -82,11 +80,12 @@ class ContextAgentClientImpl
 typedef ContextSubscriberClient<SuggestionAgentClient>
     SuggestionAgentClientImpl;
 
-class ContextEngineApp : public ApplicationImplBase {
+class ContextEngineApp : public mojo::ApplicationImplBase {
  public:
   ContextEngineApp() {}
 
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
+  bool OnAcceptConnection(
+      mojo::ServiceProviderImpl* service_provider_impl) override {
     // TODO(rosswang): Lifecycle management for ComponentNodes (and graph
     // structure in general). Right now, they are immortal. In the future, we'll
     // probably want to give the client class ownership.

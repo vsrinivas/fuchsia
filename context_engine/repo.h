@@ -16,8 +16,8 @@ namespace context_engine {
 // TODO(rosswang): V.5 query richness.
 struct SimpleQuery {
   SimpleQuery(const std::string& label,
-        const std::string& schema,
-        ContextSubscriberLinkPtr subscriber)
+              const std::string& schema,
+              ContextSubscriberLinkPtr subscriber)
       : label(label), schema(schema), subscriber(subscriber.Pass()) {}
 
   std::string label;

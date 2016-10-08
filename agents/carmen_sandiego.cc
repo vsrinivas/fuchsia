@@ -9,7 +9,6 @@
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/utility/run_loop.h"
 
 namespace {
 
@@ -24,7 +23,7 @@ class CarmenSandiego : public ApplicationImplBase,
                        public ContextPublisherController,
                        public ContextSubscriberLink {
  public:
-  CarmenSandiego(): ctl_(this), in_(this) {}
+  CarmenSandiego() : ctl_(this), in_(this) {}
 
   void OnInitialize() override {
     ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx_));
@@ -35,15 +34,16 @@ class CarmenSandiego : public ApplicationImplBase,
     // so the labels have to be explicitly different. In the future, these could
     // all be refinements on "location"
     cx_->Publish("/location/region", "json:string",
-                  ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
+                 ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
   }
 
   void OnHasSubscribers() override {
     ContextSubscriberLinkPtr in_ptr;
     in_.Bind(GetProxy(&in_ptr));
-    cx_->Subscribe("/location/gps", "https://developers.google.com/maps/"
-        "documentation/javascript/3.exp/reference#LatLngLiteral",
-        in_ptr.PassInterfaceHandle());
+    cx_->Subscribe("/location/gps",
+                   "https://developers.google.com/maps/"
+                   "documentation/javascript/3.exp/reference#LatLngLiteral",
+                   in_ptr.PassInterfaceHandle());
   }
 
   void OnNoSubscribers() override {
@@ -52,8 +52,7 @@ class CarmenSandiego : public ApplicationImplBase,
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
-    MOJO_LOG(INFO) << "OnUpdate from "
-                   << update->source << ": "
+    MOJO_LOG(INFO) << "OnUpdate from " << update->source << ": "
                    << update->json_value;
 
     std::string hlloc = "somewhere";
@@ -69,8 +68,8 @@ class CarmenSandiego : public ApplicationImplBase,
         hlloc = "The Arctic";
       } else if (latitude < -66) {
         hlloc = "Antarctica";
-      } else if (latitude < 49 && latitude > 25 &&
-                 longitude > -125 && longitude < -67) {
+      } else if (latitude < 49 && latitude > 25 && longitude > -125 &&
+                 longitude < -67) {
         hlloc = "America";
       }
     }
@@ -88,7 +87,7 @@ class CarmenSandiego : public ApplicationImplBase,
   ContextPublisherLinkPtr out_;
 };
 
-} // namespace
+}  // namespace
 
 MojoResult MojoMain(MojoHandle request) {
   CarmenSandiego app;

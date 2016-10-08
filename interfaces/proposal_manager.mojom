@@ -10,6 +10,7 @@ module maxwell.suggestion_engine;
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left
 // here for informational purposes at this time.
+[ServiceName="maxwell.suggestion_engine.ProposalManager"]
 interface ProposalManager {
   // Includes the given |proposal| in the list from this Agent. Proposals are
   // identified by |proposal.id|, and are namespaced by the Agent's ID.

@@ -8,6 +8,7 @@ module maxwell.suggestion_engine;
 // through the results. Supports both passive consumption of Suggestions based
 // on contextual changes, as well as Suggestions derived from
 // user-driven "Asks".
+[ServiceName="maxwell.suggestion_engine.SuggestionManager"]
 interface SuggestionManager {
   // Creates a subscription to the "interruptions" category of Suggestions.
   // Interruptions are delivered immediately once they become available, and
