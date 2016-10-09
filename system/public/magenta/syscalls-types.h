@@ -185,6 +185,7 @@ typedef enum {
     MX_OBJ_TYPE_SOCKET              = 14,
     MX_OBJ_TYPE_RESOURCE            = 15,
     MX_OBJ_TYPE_EVENT_PAIR          = 16,
+    MX_OBJ_TYPE_JOB                 = 17,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 

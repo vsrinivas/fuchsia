@@ -19,6 +19,7 @@ class Handle;
 class Dispatcher;
 class ExceptionPort;
 class ProcessDispatcher;
+class JobDispatcher;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
@@ -41,13 +42,15 @@ mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
 void ResetSystemExceptionPort();
 mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
+mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
+
+bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired);
+
 struct handle_delete {
     inline void operator()(Handle* h) const {
         DeleteHandle(h);
     }
 };
-
-bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired);
 
 using HandleUniquePtr = mxtl::unique_ptr<Handle, handle_delete>;
 

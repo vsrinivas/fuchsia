@@ -17,6 +17,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/excp_port.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/handle.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
@@ -45,8 +46,12 @@ mxtl::TypedArena<Handle> handle_arena;
 static mxtl::RefPtr<ExceptionPort> system_exception_port;
 static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
 
+// All jobs and processes are rooted at the |root_job|.
+static mxtl::RefPtr<JobDispatcher> root_job;
+
 void magenta_init(uint level) {
     handle_arena.Init("handles", kMaxHandleCount);
+    root_job = JobDispatcher::CreateRootJob();
 }
 
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
@@ -123,6 +128,10 @@ void ResetSystemExceptionPort() {
 mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort() {
     AutoLock lock(&system_exception_mutex);
     return system_exception_port;
+}
+
+mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
+    return root_job;
 }
 
 bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired) {
