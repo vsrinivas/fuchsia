@@ -17,93 +17,6 @@
 #include "util.h"
 
 namespace debugserver {
-namespace {
-
-// Verifies that the given command is formatted correctly and that the checksum
-// is correct. Returns false verification fails. Otherwise returns true, and
-// returns a pointer to the beginning of the packet data and the size of the
-// packet data in the out parameters. A GDB Remote Protocol packet is defined
-// as:
-//
-//   $<packet-data>#<2-digit checksum>
-//
-bool VerifyPacket(const uint8_t* packet,
-                  size_t packet_size,
-                  const uint8_t** out_packet_data,
-                  size_t* out_packet_data_size) {
-  FTL_DCHECK(packet);
-  FTL_DCHECK(out_packet_data);
-  FTL_DCHECK(out_packet_data_size);
-
-  // Loop through the packet until we get to '$'. Ignore all other characters.
-  // TODO(armansito): Not all packets need to start with '$', e.g. notifications
-  // and acknowledgments. Handle those here as well.
-  for (; packet_size && *packet != '$'; packet++, packet_size--)
-    ;
-
-  // The packet should contain at least 4 bytes ($, #, 2-digit checksum).
-  if (packet_size < 4)
-    return false;
-
-  if (packet[0] != '$') {
-    FTL_LOG(ERROR) << "Packet does not start with \"$\": "
-                   << std::string((const char*)packet, packet_size);
-    return false;
-  }
-
-  const uint8_t* pound = nullptr;
-  for (size_t i = 1; i < packet_size; ++i) {
-    if (packet[i] != '#')
-      continue;
-
-    pound = packet + i;
-  }
-
-  if (!pound) {
-    FTL_LOG(ERROR) << "Packet does not contain \"#\"";
-    return false;
-  }
-
-  const uint8_t* packet_data = packet + 1;
-  size_t packet_data_size = pound - packet_data;
-
-  // Extract the packet checksum
-
-  // First check if the packet contains the 2 digit checksum. The difference
-  // between the payload size and the full packet size should exactly match the
-  // number of required characters (i.e. '$', '#', and checksum).
-  if (packet_size - packet_data_size != 4) {
-    FTL_LOG(ERROR) << "Packet does not contain 2 digit checksum";
-    return false;
-  }
-
-  // TODO(armansito): Ignore the checksum if we're in no-acknowledgment mode.
-
-  uint8_t received_checksum;
-  if (!util::DecodeByteString(pound + 1, &received_checksum)) {
-    FTL_LOG(ERROR) << "Malformed packet checksum received";
-    return false;
-  }
-
-  // Compute the checksum over packet payload
-  uint8_t local_checksum = 0;
-  for (size_t i = 0; i < packet_data_size; ++i) {
-    local_checksum += packet_data[i];
-  }
-
-  if (local_checksum != received_checksum) {
-    FTL_LOG(ERROR) << "Bad checksum: computed = " << (unsigned)local_checksum
-                   << ", received = " << (unsigned)received_checksum;
-    return false;
-  }
-
-  *out_packet_data = packet_data;
-  *out_packet_data_size = packet_data_size;
-
-  return true;
-}
-
-}  // namespace
 
 Server::Server(uint16_t port)
     : port_(port),
@@ -216,8 +129,8 @@ void Server::PostReadTask() {
 
     const uint8_t* packet_data = nullptr;
     size_t packet_size = 0;
-    bool verified =
-        VerifyPacket(in_buffer_.data(), bytes_read, &packet_data, &packet_size);
+    bool verified = util::VerifyPacket(in_buffer_.data(), bytes_read,
+                                       &packet_data, &packet_size);
 
     // Send acknowledgment back (this blocks)
     if (!SendAck(verified)) {
@@ -248,6 +161,8 @@ void Server::PostReadTask() {
 
     // If the command wasn't handled, that's because we do not support it, so we
     // respond with an empty response and continue.
+    FTL_LOG(ERROR) << "Command not supported: "
+                   << std::string((const char*)packet_data, packet_size);
     callback(nullptr, 0);
   });
 }

@@ -19,17 +19,8 @@ namespace {
 // TODO(armansito): Update this as we add more features.
 const char kSupportedFeatures[] = "QNonStop+;";
 
+const char kNonStop[] = "NonStop";
 const char kSupported[] = "Supported";
-
-bool PacketHasPrefix(const uint8_t* packet,
-                     size_t packet_size,
-                     const std::string& cmd_name) {
-  if (packet_size < cmd_name.size())
-    return false;
-
-  return std::strncmp((const char*)packet, cmd_name.c_str(),
-                      cmd_name.length()) == 0;
-}
 
 void ReplyOK(const CommandHandler::ResponseCallback& callback) {
   callback((const uint8_t*)"OK", 2U);
@@ -62,14 +53,24 @@ bool CommandHandler::HandleCommand(const uint8_t* packet,
   switch (packet[0]) {
     case 'H':  // Set a thread for subsequent operations
       return Handle_H(packet + 1, packet_size - 1, callback);
-    case 'q':  // General query
-      return Handle_q(packet + 1, packet_size - 1, callback);
+    case 'q':  // General query packet
+    case 'Q':  // General set packet
+    {
+      const uint8_t* prefix_bytes, *params;
+      size_t prefix_size, params_size;
+      util::ExtractParameters(packet + 1, packet_size - 1, &prefix_bytes,
+                              &prefix_size, &params, &params_size);
+
+      // Copy the prefix into a string for easy comparison.
+      std::string prefix((const char*)prefix_bytes, prefix_size);
+      if (packet[0] == 'q')
+        return Handle_q(prefix, params, params_size, callback);
+      return Handle_Q(prefix, params, params_size, callback);
+    }
     default:
       break;
   }
 
-  FTL_LOG(ERROR) << "Command not supported: "
-                 << std::string((const char*)packet, packet_size);
   return false;
 }
 
@@ -176,29 +177,56 @@ bool CommandHandler::Handle_H(const uint8_t* packet,
   return false;
 }
 
-bool CommandHandler::Handle_q(const uint8_t* packet,
-                              size_t packet_size,
+bool CommandHandler::Handle_q(const std::string& prefix,
+                              const uint8_t* params,
+                              size_t params_size,
                               const ResponseCallback& callback) {
-  if (PacketHasPrefix(packet, packet_size, kSupported))
-    return HandleQuerySupported(packet, packet_size, callback);
+  if (prefix == kSupported)
+    return HandleQuerySupported(params, params_size, callback);
 
   return false;
 }
 
-bool CommandHandler::HandleQuerySupported(const uint8_t* packet,
-                                          size_t packet_size,
+bool CommandHandler::Handle_Q(const std::string& prefix,
+                              const uint8_t* params,
+                              size_t params_size,
+                              const ResponseCallback& callback) {
+  if (prefix == kNonStop)
+    return HandleSetNonStop(params, params_size, callback);
+
+  return false;
+}
+
+bool CommandHandler::HandleQuerySupported(const uint8_t* params,
+                                          size_t params_size,
                                           const ResponseCallback& callback) {
-  // Verify the packet contents. We ignore the payload for now. The payload
-  // comes after an optional ":" character.
-  size_t prefix_len = std::strlen(kSupported);
-  if (packet_size > prefix_len &&
-      ((packet_size - prefix_len) < 2 || packet[prefix_len] != ':')) {
-    FTL_LOG(ERROR) << "Malformed \"qSupported\" packet";
-    return false;
+  // We ignore the parameters for qSupported. Respond with the supported
+  // features.
+  callback((const uint8_t*)kSupportedFeatures, std::strlen(kSupportedFeatures));
+  return true;
+}
+
+bool CommandHandler::HandleSetNonStop(const uint8_t* params,
+                                      size_t params_size,
+                                      const ResponseCallback& callback) {
+  // The only values we accept are "1" and "0".
+  if (params_size != 1) {
+    ReplyWithError(util::ErrorCode::INVAL, callback);
+    return true;
   }
 
-  // Respond with the supported features
-  callback((const uint8_t*)kSupportedFeatures, std::strlen(kSupportedFeatures));
+  // We currently only support non-stop mode.
+  uint8_t value = *params;
+  if (value == '1') {
+    ReplyOK(callback);
+  } else if (value == '0') {
+    ReplyWithError(util::ErrorCode::PERM, callback);
+  } else {
+    FTL_LOG(ERROR) << "QNonStop received with invalid value: "
+                   << (unsigned)value;
+    ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
   return true;
 }
 

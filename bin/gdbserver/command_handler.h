@@ -39,14 +39,23 @@ class CommandHandler final {
   bool Handle_H(const uint8_t* packet,
                 size_t packet_size,
                 const ResponseCallback& callback);
-  bool Handle_q(const uint8_t* packet,
-                size_t packet_size,
+  bool Handle_q(const std::string& prefix,
+                const uint8_t* params,
+                size_t params_size,
+                const ResponseCallback& callback);
+  bool Handle_Q(const std::string& prefix,
+                const uint8_t* params,
+                size_t params_size,
                 const ResponseCallback& callback);
 
   // qSupported
-  bool HandleQuerySupported(const uint8_t* packet,
-                            size_t packet_size,
+  bool HandleQuerySupported(const uint8_t* params,
+                            size_t params_size,
                             const ResponseCallback& callback);
+  // QNonStop
+  bool HandleSetNonStop(const uint8_t* params,
+                        size_t params_size,
+                        const ResponseCallback& callback);
 
   // The root Server instance that owns us.
   Server* server_;  // weak

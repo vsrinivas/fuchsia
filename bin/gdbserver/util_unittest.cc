@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <string>
+
 #include "gtest/gtest.h"
 
 namespace debugserver {
@@ -156,6 +158,58 @@ TEST(UtilTest, ParseThreadId) {
   EXPECT_TRUE(has_pid);
   EXPECT_EQ(1234, tid);
   EXPECT_EQ(-1, pid);
+}
+
+TEST(UtilTest, VerifyPacket) {
+  const uint8_t* result;
+  size_t result_size;
+
+#define TEST_PACKET(var, type)                                               \
+  EXPECT_##type(VerifyPacket((const uint8_t*)var, std::strlen(var), &result, \
+                             &result_size))
+#define TEST_VALID(var) TEST_PACKET(var, TRUE)
+#define TEST_INVALID(var) TEST_PACKET(var, FALSE)
+#define TEST_RESULT(expected) \
+  EXPECT_EQ(expected, std::string((const char*)result, result_size))
+
+  // Invalid packets
+  TEST_INVALID("");                // Empty
+  TEST_INVALID("foo");             // No '$'
+  TEST_INVALID("$foo");            // No '#'
+  TEST_INVALID("$foo#");           // No checksum
+  TEST_INVALID("$foo#4");          // No checksum
+  TEST_INVALID("$foo#43");         // Wrong checksum
+  TEST_INVALID("$foo#4Z");         // Malformed checksum
+  TEST_INVALID("$foo#G0");         // Malvormed checksum
+  TEST_INVALID("$foo#44$foo#44");  // Malvormed checksum
+
+  // Valid packets
+  TEST_VALID("$foo#44");
+  TEST_RESULT("foo");
+  TEST_VALID("$#00");
+  TEST_RESULT("");
+
+#undef TEST_INVALID
+#undef TEST_VALID
+#undef TEST_PACKET
+}
+
+TEST(UtilTest, ExtractParameters) {
+  const uint8_t *params, *prefix;
+  size_t params_size, prefix_size;
+
+#define TEST_PARAMS(packet, expected_prefix, expected_params)                \
+  ExtractParameters((const uint8_t*)packet, std::strlen(packet), &prefix,    \
+                    &prefix_size, &params, &params_size);                    \
+  EXPECT_EQ(expected_prefix, std::string((const char*)prefix, prefix_size)); \
+  EXPECT_EQ(expected_params, std::string((const char*)params, params_size));
+
+  TEST_PARAMS("foo", "foo", "");
+  TEST_PARAMS("foo:", "foo", "");
+  TEST_PARAMS("foo:b", "foo", "b");
+  TEST_PARAMS("foo:bar", "foo", "bar");
+
+#undef TEST_PARAMS
 }
 
 }  // namespace

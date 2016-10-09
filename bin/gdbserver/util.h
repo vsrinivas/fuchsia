@@ -81,5 +81,31 @@ bool ParseThreadId(const uint8_t* bytes,
                    int64_t* out_pid,
                    int64_t* out_tid);
 
+// Verifies that the given command is formatted correctly and that the checksum
+// is correct. Returns false verification fails. Otherwise returns true, and
+// returns a pointer to the beginning of the packet data and the size of the
+// packet data in the out parameters. A GDB Remote Protocol packet is defined
+// as:
+//
+//   $<packet-data>#<2-digit checksum>
+//
+bool VerifyPacket(const uint8_t* packet,
+                  size_t packet_size,
+                  const uint8_t** out_packet_data,
+                  size_t* out_packet_data_size);
+
+// Extracts the prefix and the parameters from |packet| and returns them in the
+// |out_*| variables. The prefix and the parameters should be separated by a
+// colon (':'). If |packet| does not contain a colon, or if there are no
+// characters following a colon, the returned parameters will be an empty
+// string. |packet| cannot be empty.
+//
+// TODO(armansito): Consider passing around (const char*) instead of (const
+// uint8_t*) since all the repeated casting is unnecessary. All GDB Remote
+// Protocol packets bytes are ASCII encoded.
+void ExtractParameters(const uint8_t* packet, size_t packet_size,
+                       const uint8_t** out_prefix, size_t* prefix_size,
+                       const uint8_t** out_params, size_t* params_size);
+
 }  // namespace util
 }  // namespace debugserver
