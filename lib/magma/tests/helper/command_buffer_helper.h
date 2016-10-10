@@ -55,7 +55,16 @@ public:
     msd_context* ctx() { return ctx_->msd_ctx(); }
     MagmaSystemDevice* dev() { return dev_.get(); }
 
-    bool Execute() { return ctx_->ExecuteCommandBuffer(abi_cmd_buf()); }
+    bool Execute()
+    {
+        if (!ctx_->ExecuteCommandBuffer(abi_cmd_buf()))
+            return false;
+        if (msd_connection_wait_rendering(
+                connection_->msd_connection(),
+                msd_resources_[abi_cmd_buf_->batch_buffer_resource_index]) != 0)
+            return false;
+        return true;
+    }
 
 private:
     CommandBufferHelper(msd_driver_unique_ptr_t msd_drv, std::unique_ptr<MagmaSystemDevice> dev,

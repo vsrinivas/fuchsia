@@ -45,6 +45,12 @@ void msd_connection_close(struct msd_connection* connection);
 // Creates a context for the given connection. returns null on failure.
 struct msd_context* msd_connection_create_context(struct msd_connection* connection);
 
+// Returns 0 on success.
+// Blocks until all currently outstanding work on the given buffer completes.
+// If more work that references this buffer is queued while waiting, this may return before that
+// work is completed.
+int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf);
+
 // Destroys the given context.
 void msd_context_destroy(struct msd_context* ctx);
 

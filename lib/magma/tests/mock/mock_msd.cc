@@ -49,6 +49,11 @@ msd_context* msd_connection_create_context(msd_connection* dev)
     return MsdMockConnection::cast(dev)->CreateContext();
 }
 
+int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf)
+{
+    return 0;
+}
+
 void msd_context_destroy(msd_context* ctx) { delete MsdMockContext::cast(ctx); }
 
 msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
