@@ -1774,11 +1774,10 @@ int dladdr(const void* addr, Dl_info* info) {
     return 1;
 }
 
-__attribute__((__visibility__("hidden"))) void* __dlsym(void* restrict p, const char* restrict s,
-                                                        void* restrict ra) {
+void* dlsym(void* restrict p, const char* restrict s) {
     void* res;
     pthread_rwlock_rdlock(&lock);
-    res = do_dlsym(p, s, ra);
+    res = do_dlsym(p, s, __builtin_return_address(0));
     pthread_rwlock_unlock(&lock);
     return res;
 }

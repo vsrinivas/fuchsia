@@ -1082,7 +1082,6 @@ ifeq ($(ARCH),arm64)
 LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/aarch64/fenv.s \
     $(LOCAL_DIR)/src/internal/syscall.c \
-    $(LOCAL_DIR)/src/ldso/aarch64/dlsym.s \
     $(LOCAL_DIR)/src/ldso/aarch64/tlsdesc.s \
     $(LOCAL_DIR)/src/math/aarch64/fabs.s \
     $(LOCAL_DIR)/src/math/aarch64/fabsf.s \
@@ -1127,7 +1126,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/arm/fenv-hf.S \
     $(LOCAL_DIR)/src/fenv/fenv.c \
     $(LOCAL_DIR)/src/internal/syscall.c \
-    $(LOCAL_DIR)/src/ldso/arm/dlsym.s \
     $(LOCAL_DIR)/src/ldso/arm/find_exidx.c \
     $(LOCAL_DIR)/src/ldso/tlsdesc.c \
     $(LOCAL_DIR)/src/math/ceill.c \
@@ -1171,7 +1169,6 @@ LOCAL_SRCS += \
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/x86_64/fenv.s \
-    $(LOCAL_DIR)/src/ldso/x86_64/dlsym.s \
     $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.s \
     $(LOCAL_DIR)/src/math/x86_64/__invtrigl.s \
     $(LOCAL_DIR)/src/math/x86_64/acosl.s \
