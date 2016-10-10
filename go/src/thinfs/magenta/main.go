@@ -22,6 +22,7 @@ import (
 
 var devicePathPtr = flag.String("devicepath", "", "Path to Block Device")
 var mountPathPtr = flag.String("mountpath", "", "Path to Mounted Filesystem")
+var readOnlyPtr = flag.Bool("readonly", false, "Determines if Filesystem is mounted as Read-Only")
 
 func parseArgs() (string, error) {
 	flag.Usage = func() {
@@ -72,7 +73,11 @@ func main() {
 		}
 
 		// Start the target filesystem (FAT)
-		filesys, err := msdosfs.New("Thinfs FAT", dev, fs.ReadWrite)
+		opts := fs.ReadWrite
+		if *readOnlyPtr {
+			opts = fs.ReadOnly
+		}
+		filesys, err := msdosfs.New("Thinfs FAT", dev, opts)
 		if err != nil {
 			println("Failed to create FAT fs: ", err.Error())
 			os.Exit(1)
