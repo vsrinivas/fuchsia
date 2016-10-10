@@ -5,6 +5,8 @@
 import("//magma/gnbuild/magma.gni")
 
 source_set("msd_unit_tests") {
+  testonly = true
+
   sources = [
     "test_buffer.cc",
     "test_command_buffer.cc",

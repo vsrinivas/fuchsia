@@ -5,6 +5,8 @@
 import("//magma/gnbuild/magma.gni")
 
 group("tests") {
+  testonly = true
+
   public_configs = [ "$msd_intel_gen_build_root:msd_tests_include_config" ]
 
   deps = [

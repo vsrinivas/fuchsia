@@ -6,14 +6,19 @@ import("//magma/gnbuild/magma.gni")
 
 executable("msd-intel-gen") {
   deps = [
-    ":msd_tests",
     "$magma_build_root/src/main",
     "src",
   ]
 }
 
-group("msd_tests") {
+executable("test") {
+  testonly = true
+
+  output_name = "msd-intel-gen-test"
+
   deps = [
+    "$magma_build_root/src/main:test_driver",
+    "src",
     "tests",
   ]
 }
