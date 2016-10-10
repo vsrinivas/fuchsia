@@ -75,7 +75,7 @@ class Server final {
 
   // Posts an asynchronous task on the message loop to send a packet over the
   // wire.
-  void PostWriteTask(const uint8_t* rsp, size_t rsp_bytes);
+  void PostWriteTask(const ftl::StringView& rsp);
 
   // Sets the run status and quits the main message loop.
   void QuitMessageLoop(bool status);
@@ -90,8 +90,8 @@ class Server final {
   ftl::UniqueFD server_sock_;
 
   // Buffers used for reading/writing incoming/outgoing bytes.
-  std::array<uint8_t, kMaxBufferSize> in_buffer_;
-  std::array<uint8_t, kMaxBufferSize> out_buffer_;
+  std::array<char, kMaxBufferSize> in_buffer_;
+  std::array<char, kMaxBufferSize> out_buffer_;
 
   // The CommandHandler that is responsible for interpreting received command
   // packets and routing them to the correct handler.

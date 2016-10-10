@@ -10,16 +10,18 @@
 #include <magenta/syscalls-types.h>
 #include <magenta/types.h>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace debugserver {
 namespace util {
 
 // Decodes the 2 character ASCII string |hex| and returns the result in
 // |out_byte|. Returns false if |hex| contains invalid characters.
-bool DecodeByteString(const uint8_t hex[2], uint8_t* out_byte);
+bool DecodeByteString(const char hex[2], uint8_t* out_byte);
 
 // Encodes |byte| into a 2 character ASCII string and returns the result in
 // |out_hex|.
-void EncodeByteString(uint8_t byte, uint8_t out_hex[2]);
+void EncodeByteString(const uint8_t byte, char out_hex[2]);
 
 // Logs the given |message| using the global errno variable, including the
 // result of strerror in a nicely formatted way.
@@ -75,8 +77,7 @@ std::string BuildErrorPacket(ErrorCode error_code);
 // (See
 // https://sourceware.org/gdb/current/onlinedocs/gdb/Packets.html#thread%2did%20syntax
 // for reference).
-bool ParseThreadId(const uint8_t* bytes,
-                   size_t num_bytes,
+bool ParseThreadId(const ftl::StringView& bytes,
                    bool* out_has_pid,
                    int64_t* out_pid,
                    int64_t* out_tid);
@@ -89,23 +90,16 @@ bool ParseThreadId(const uint8_t* bytes,
 //
 //   $<packet-data>#<2-digit checksum>
 //
-bool VerifyPacket(const uint8_t* packet,
-                  size_t packet_size,
-                  const uint8_t** out_packet_data,
-                  size_t* out_packet_data_size);
+bool VerifyPacket(ftl::StringView packet, ftl::StringView* out_packet_data);
 
 // Extracts the prefix and the parameters from |packet| and returns them in the
 // |out_*| variables. The prefix and the parameters should be separated by a
 // colon (':'). If |packet| does not contain a colon, or if there are no
 // characters following a colon, the returned parameters will be an empty
 // string. |packet| cannot be empty.
-//
-// TODO(armansito): Consider passing around (const char*) instead of (const
-// uint8_t*) since all the repeated casting is unnecessary. All GDB Remote
-// Protocol packets bytes are ASCII encoded.
-void ExtractParameters(const uint8_t* packet, size_t packet_size,
-                       const uint8_t** out_prefix, size_t* prefix_size,
-                       const uint8_t** out_params, size_t* params_size);
+void ExtractParameters(const ftl::StringView& packet,
+                       ftl::StringView* out_prefix,
+                       ftl::StringView* out_params);
 
 }  // namespace util
 }  // namespace debugserver

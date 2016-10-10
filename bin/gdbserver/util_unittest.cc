@@ -39,14 +39,14 @@ const uint8_t kByte6 = 0xff;
 TEST(UtilTest, DecodeByteString) {
   uint8_t result;
 
-  EXPECT_FALSE(DecodeByteString((const uint8_t*)kInvalidInput1, &result));
-  EXPECT_FALSE(DecodeByteString((const uint8_t*)kInvalidInput2, &result));
-  EXPECT_FALSE(DecodeByteString((const uint8_t*)kInvalidInput3, &result));
-  EXPECT_FALSE(DecodeByteString((const uint8_t*)kInvalidInput4, &result));
+  EXPECT_FALSE(DecodeByteString(kInvalidInput1, &result));
+  EXPECT_FALSE(DecodeByteString(kInvalidInput2, &result));
+  EXPECT_FALSE(DecodeByteString(kInvalidInput3, &result));
+  EXPECT_FALSE(DecodeByteString(kInvalidInput4, &result));
 
   struct {
     const char* str;
-    uint8_t byte;
+    const uint8_t byte;
   } kTestCases[] = {
     { kByteStr1, kByte1 },
     { kByteStr2, kByte2 },
@@ -63,7 +63,7 @@ TEST(UtilTest, DecodeByteString) {
   };
 
   for (int i = 0; kTestCases[i].str; ++i) {
-    EXPECT_TRUE(DecodeByteString((const uint8_t*)kTestCases[i].str, &result));
+    EXPECT_TRUE(DecodeByteString(kTestCases[i].str, &result));
     EXPECT_EQ(kTestCases[i].byte, result);
   }
 }
@@ -71,7 +71,7 @@ TEST(UtilTest, DecodeByteString) {
 TEST(UtilTest, EncodeByteString) {
   struct {
     const char* str;
-    uint8_t byte;
+    const uint8_t byte;
   } kTestCases[] = {
     { kByteStr1, kByte1 },
     { kByteStr7, kByte2 },
@@ -83,7 +83,7 @@ TEST(UtilTest, EncodeByteString) {
   };
 
   for (int i = 0; kTestCases[i].str; ++i) {
-    uint8_t result[2];
+    char result[2];
     EncodeByteString(kTestCases[i].byte, result);
     EXPECT_EQ(kTestCases[i].str[0], result[0]);
     EXPECT_EQ(kTestCases[i].str[1], result[1]);
@@ -108,16 +108,11 @@ TEST(UtilTest, ParseThreadId) {
   constexpr char kInvalid4[] = "p123.world";
   constexpr char kInvalid5[] = "phello.123";
 
-  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid1, std::strlen(kInvalid1),
-                             &has_pid, &pid, &tid));
-  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid2, std::strlen(kInvalid2),
-                             &has_pid, &pid, &tid));
-  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid3, std::strlen(kInvalid3),
-                             &has_pid, &pid, &tid));
-  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid4, std::strlen(kInvalid4),
-                             &has_pid, &pid, &tid));
-  EXPECT_FALSE(ParseThreadId((const uint8_t*)kInvalid5, std::strlen(kInvalid5),
-                             &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId(kInvalid1, &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId(kInvalid2, &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId(kInvalid3, &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId(kInvalid4, &has_pid, &pid, &tid));
+  EXPECT_FALSE(ParseThreadId(kInvalid5, &has_pid, &pid, &tid));
 
   constexpr char kValid1[] = "0";
   constexpr char kValid2[] = "123";
@@ -126,51 +121,41 @@ TEST(UtilTest, ParseThreadId) {
   constexpr char kValid5[] = "p123.-1";
   constexpr char kValid6[] = "p-1.1234";
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid1, std::strlen(kValid1),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid1, &has_pid, &pid, &tid));
   EXPECT_FALSE(has_pid);
   EXPECT_EQ(0, tid);
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid2, std::strlen(kValid2),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid2, &has_pid, &pid, &tid));
   EXPECT_FALSE(has_pid);
   EXPECT_EQ(123, tid);
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid3, std::strlen(kValid3),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid3, &has_pid, &pid, &tid));
   EXPECT_FALSE(has_pid);
   EXPECT_EQ(-1, tid);
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid4, std::strlen(kValid4),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid4, &has_pid, &pid, &tid));
   EXPECT_TRUE(has_pid);
   EXPECT_EQ(0, tid);
   EXPECT_EQ(0, pid);
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid5, std::strlen(kValid5),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid5, &has_pid, &pid, &tid));
   EXPECT_TRUE(has_pid);
   EXPECT_EQ(-1, tid);
   EXPECT_EQ(123, pid);
 
-  EXPECT_TRUE(ParseThreadId((const uint8_t*)kValid6, std::strlen(kValid6),
-                            &has_pid, &pid, &tid));
+  EXPECT_TRUE(ParseThreadId(kValid6, &has_pid, &pid, &tid));
   EXPECT_TRUE(has_pid);
   EXPECT_EQ(1234, tid);
   EXPECT_EQ(-1, pid);
 }
 
 TEST(UtilTest, VerifyPacket) {
-  const uint8_t* result;
-  size_t result_size;
+  ftl::StringView result;
 
-#define TEST_PACKET(var, type)                                               \
-  EXPECT_##type(VerifyPacket((const uint8_t*)var, std::strlen(var), &result, \
-                             &result_size))
+#define TEST_PACKET(var, type) EXPECT_##type(VerifyPacket(var, &result))
 #define TEST_VALID(var) TEST_PACKET(var, TRUE)
 #define TEST_INVALID(var) TEST_PACKET(var, FALSE)
-#define TEST_RESULT(expected) \
-  EXPECT_EQ(expected, std::string((const char*)result, result_size))
+#define TEST_RESULT(expected) EXPECT_EQ(expected, result)
 
   // Invalid packets
   TEST_INVALID("");                // Empty
@@ -195,14 +180,12 @@ TEST(UtilTest, VerifyPacket) {
 }
 
 TEST(UtilTest, ExtractParameters) {
-  const uint8_t *params, *prefix;
-  size_t params_size, prefix_size;
+  ftl::StringView prefix, params;
 
-#define TEST_PARAMS(packet, expected_prefix, expected_params)                \
-  ExtractParameters((const uint8_t*)packet, std::strlen(packet), &prefix,    \
-                    &prefix_size, &params, &params_size);                    \
-  EXPECT_EQ(expected_prefix, std::string((const char*)prefix, prefix_size)); \
-  EXPECT_EQ(expected_params, std::string((const char*)params, params_size));
+#define TEST_PARAMS(packet, expected_prefix, expected_params) \
+  ExtractParameters(packet, &prefix, &params);                \
+  EXPECT_EQ(expected_prefix, prefix);                         \
+  EXPECT_EQ(expected_params, params);
 
   TEST_PARAMS("foo", "foo", "");
   TEST_PARAMS("foo:", "foo", "");

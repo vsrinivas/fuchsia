@@ -23,13 +23,13 @@ const char kNonStop[] = "NonStop";
 const char kSupported[] = "Supported";
 
 void ReplyOK(const CommandHandler::ResponseCallback& callback) {
-  callback((const uint8_t*)"OK", 2U);
+  callback("OK");
 }
 
 void ReplyWithError(util::ErrorCode error_code,
                     const CommandHandler::ResponseCallback& callback) {
   std::string error_rsp = util::BuildErrorPacket(error_code);
-  callback((const uint8_t*)error_rsp.c_str(), error_rsp.length());
+  callback(error_rsp);
 }
 
 }  // namespace
@@ -38,13 +38,12 @@ CommandHandler::CommandHandler(Server* server) : server_(server) {
   FTL_DCHECK(server_);
 }
 
-bool CommandHandler::HandleCommand(const uint8_t* packet,
-                                   size_t packet_size,
+bool CommandHandler::HandleCommand(const ftl::StringView& packet,
                                    const ResponseCallback& callback) {
   // GDB packets are prefixed with a letter that maps to a particular command
   // "family". We do the initial multiplexing here and let each individual
   // sub-handler deal with the rest.
-  if (packet_size == 0) {
+  if (packet.empty()) {
     // TODO(armansito): Is there anything meaningful that we can do here?
     FTL_LOG(ERROR) << "Empty packet received";
     return false;
@@ -52,20 +51,16 @@ bool CommandHandler::HandleCommand(const uint8_t* packet,
 
   switch (packet[0]) {
     case 'H':  // Set a thread for subsequent operations
-      return Handle_H(packet + 1, packet_size - 1, callback);
+      return Handle_H(packet.substr(1), callback);
     case 'q':  // General query packet
     case 'Q':  // General set packet
     {
-      const uint8_t* prefix_bytes, *params;
-      size_t prefix_size, params_size;
-      util::ExtractParameters(packet + 1, packet_size - 1, &prefix_bytes,
-                              &prefix_size, &params, &params_size);
+      ftl::StringView prefix, params;
+      util::ExtractParameters(packet.substr(1), &prefix, &params);
 
-      // Copy the prefix into a string for easy comparison.
-      std::string prefix((const char*)prefix_bytes, prefix_size);
       if (packet[0] == 'q')
-        return Handle_q(prefix, params, params_size, callback);
-      return Handle_Q(prefix, params, params_size, callback);
+        return Handle_q(prefix, params, callback);
+      return Handle_Q(prefix, params, callback);
     }
     default:
       break;
@@ -74,8 +69,7 @@ bool CommandHandler::HandleCommand(const uint8_t* packet,
   return false;
 }
 
-bool CommandHandler::Handle_H(const uint8_t* packet,
-                              size_t packet_size,
+bool CommandHandler::Handle_H(const ftl::StringView& packet,
                               const ResponseCallback& callback) {
   // Here we set the "current thread" for subsequent operations
   // (‘m’, ‘M’, ‘g’, ‘G’, et.al.).
@@ -84,7 +78,7 @@ bool CommandHandler::Handle_H(const uint8_t* packet,
 
   // Packet should at least contain 'c' or 'g' and some characters for the
   // thread id.
-  if (packet_size < 2) {
+  if (packet.size() < 2) {
     ReplyWithError(util::ErrorCode::INVAL, callback);
     return true;
   }
@@ -96,8 +90,7 @@ bool CommandHandler::Handle_H(const uint8_t* packet,
     case 'g': {
       int64_t pid, tid;
       bool has_pid;
-      if (!util::ParseThreadId(packet + 1, packet_size - 1, &has_pid, &pid,
-                               &tid)) {
+      if (!util::ParseThreadId(packet.substr(1), &has_pid, &pid, &tid)) {
         ReplyWithError(util::ErrorCode::INVAL, callback);
         return true;
       }
@@ -177,46 +170,42 @@ bool CommandHandler::Handle_H(const uint8_t* packet,
   return false;
 }
 
-bool CommandHandler::Handle_q(const std::string& prefix,
-                              const uint8_t* params,
-                              size_t params_size,
+bool CommandHandler::Handle_q(const ftl::StringView& prefix,
+                              const ftl::StringView& params,
                               const ResponseCallback& callback) {
   if (prefix == kSupported)
-    return HandleQuerySupported(params, params_size, callback);
+    return HandleQuerySupported(params, callback);
 
   return false;
 }
 
-bool CommandHandler::Handle_Q(const std::string& prefix,
-                              const uint8_t* params,
-                              size_t params_size,
+bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
+                              const ftl::StringView& params,
                               const ResponseCallback& callback) {
   if (prefix == kNonStop)
-    return HandleSetNonStop(params, params_size, callback);
+    return HandleSetNonStop(params, callback);
 
   return false;
 }
 
-bool CommandHandler::HandleQuerySupported(const uint8_t* params,
-                                          size_t params_size,
+bool CommandHandler::HandleQuerySupported(const ftl::StringView& params,
                                           const ResponseCallback& callback) {
   // We ignore the parameters for qSupported. Respond with the supported
   // features.
-  callback((const uint8_t*)kSupportedFeatures, std::strlen(kSupportedFeatures));
+  callback(kSupportedFeatures);
   return true;
 }
 
-bool CommandHandler::HandleSetNonStop(const uint8_t* params,
-                                      size_t params_size,
+bool CommandHandler::HandleSetNonStop(const ftl::StringView& params,
                                       const ResponseCallback& callback) {
   // The only values we accept are "1" and "0".
-  if (params_size != 1) {
+  if (params.size() != 1) {
     ReplyWithError(util::ErrorCode::INVAL, callback);
     return true;
   }
 
   // We currently only support non-stop mode.
-  uint8_t value = *params;
+  char value = params[0];
   if (value == '1') {
     ReplyOK(callback);
   } else if (value == '0') {

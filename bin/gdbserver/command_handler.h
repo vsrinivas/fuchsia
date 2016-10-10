@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -27,34 +28,27 @@ class CommandHandler final {
   // If this method returns false, then |callback| will never be called. If this
   // returns true, |callback| is guaranteed to be called exactly once.
   // |callback| can be called before HandleCommand returns.
-  using ResponseCallback =
-      std::function<void(const uint8_t* rsp, size_t rsp_size)>;
-  bool HandleCommand(const uint8_t* packet,
-                     size_t packet_size,
+  using ResponseCallback = std::function<void(const ftl::StringView& rsp)>;
+  bool HandleCommand(const ftl::StringView& packet,
                      const ResponseCallback& callback);
 
  private:
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
-  bool Handle_H(const uint8_t* packet,
-                size_t packet_size,
+  bool Handle_H(const ftl::StringView& packet,
                 const ResponseCallback& callback);
-  bool Handle_q(const std::string& prefix,
-                const uint8_t* params,
-                size_t params_size,
+  bool Handle_q(const ftl::StringView& prefix,
+                const ftl::StringView& params,
                 const ResponseCallback& callback);
-  bool Handle_Q(const std::string& prefix,
-                const uint8_t* params,
-                size_t params_size,
+  bool Handle_Q(const ftl::StringView& prefix,
+                const ftl::StringView& params,
                 const ResponseCallback& callback);
 
   // qSupported
-  bool HandleQuerySupported(const uint8_t* params,
-                            size_t params_size,
+  bool HandleQuerySupported(const ftl::StringView& params,
                             const ResponseCallback& callback);
   // QNonStop
-  bool HandleSetNonStop(const uint8_t* params,
-                        size_t params_size,
+  bool HandleSetNonStop(const ftl::StringView& params,
                         const ResponseCallback& callback);
 
   // The root Server instance that owns us.

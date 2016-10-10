@@ -127,10 +127,9 @@ void Server::PostReadTask() {
       return;
     }
 
-    const uint8_t* packet_data = nullptr;
-    size_t packet_size = 0;
-    bool verified = util::VerifyPacket(in_buffer_.data(), bytes_read,
-                                       &packet_data, &packet_size);
+    ftl::StringView packet_data;
+    bool verified = util::VerifyPacket(
+        ftl::StringView(in_buffer_.data(), bytes_read), &packet_data);
 
     // Send acknowledgment back (this blocks)
     if (!SendAck(verified)) {
@@ -146,9 +145,9 @@ void Server::PostReadTask() {
     }
 
     // Route the packet data to the command handler.
-    auto callback = [this](const uint8_t* rsp, size_t rsp_size) {
+    auto callback = [this](const ftl::StringView& rsp) {
       // Send the response if there is one.
-      PostWriteTask(rsp, rsp_size);
+      PostWriteTask(rsp);
 
       // Wait for the next command.
       PostReadTask();
@@ -156,32 +155,29 @@ void Server::PostReadTask() {
 
     // If the command is handled, then |callback| will be called at some point,
     // so we're done.
-    if (command_handler_.HandleCommand(packet_data, packet_size, callback))
+    if (command_handler_.HandleCommand(packet_data, callback))
       return;
 
     // If the command wasn't handled, that's because we do not support it, so we
     // respond with an empty response and continue.
-    FTL_LOG(ERROR) << "Command not supported: "
-                   << std::string((const char*)packet_data, packet_size);
-    callback(nullptr, 0);
+    FTL_LOG(ERROR) << "Command not supported: " << packet_data;
+    callback("");
   });
 }
 
-void Server::PostWriteTask(const uint8_t* rsp, size_t rsp_bytes) {
-  FTL_DCHECK(!rsp == !rsp_bytes);
-  FTL_DCHECK(rsp_bytes + 4 < kMaxBufferSize);
+void Server::PostWriteTask(const ftl::StringView& rsp) {
+  FTL_DCHECK(rsp.size() + 4 < kMaxBufferSize);
 
   // Copy the data to capture it in the closure.
-  std::vector<uint8_t> packet_data(rsp, rsp + rsp_bytes);
-  message_loop_.task_runner()->PostTask([this, packet_data] {
+  message_loop_.task_runner()->PostTask([this, rsp] {
     int index = 0;
     out_buffer_[index++] = '$';
-    memcpy(out_buffer_.data() + index, packet_data.data(), packet_data.size());
-    index += packet_data.size();
+    memcpy(out_buffer_.data() + index, rsp.data(), rsp.size());
+    index += rsp.size();
     out_buffer_[index++] = '#';
 
     uint8_t checksum = 0;
-    for (uint8_t byte : packet_data)
+    for (uint8_t byte : rsp)
       checksum += byte;
 
     util::EncodeByteString(checksum, out_buffer_.data() + index);
