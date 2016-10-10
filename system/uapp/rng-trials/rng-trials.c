@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
     mx_ssize_t read = mx_cprng_draw(&buf, sizeof(buf));
     if (read != sizeof(buf)) {
-        printf("mx_cprng_draw had unexpected return: %ld\n", read);
+        printf("mx_cprng_draw had unexpected return: %" PRIdPTR "\n", read);
         return 1;
     }
     printf("Drew %zd bytes: ", sizeof(buf));
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         uint8_t byte;
         read = mx_cprng_draw(&byte, 1);
         if (read != 1) {
-            printf("mx_cprng_draw returned an error: %ld\n", read);
+            printf("mx_cprng_draw returned an error: %" PRIdPTR "\n", read);
             return 1;
         }
         values[byte % BINS]++;

@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -439,7 +440,7 @@ void joinproc(mx_handle_t p) {
     mx_ssize_t ret = mx_object_get_info(p, MX_INFO_PROCESS, sizeof(proc_info.rec),
             &proc_info, sizeof(proc_info));
     if (ret != sizeof(proc_info)) {
-        fprintf(stderr, "[process(%x): object_get_info failed? %ld]\n", p, ret);
+        fprintf(stderr, "[process(%x): object_get_info failed? %" PRIdPTR "]\n", p, ret);
     } else {
         fprintf(stderr, "[process(%x): status: %d]\n", p, proc_info.rec.return_code);
     }

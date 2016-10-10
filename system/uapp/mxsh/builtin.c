@@ -143,7 +143,7 @@ static int mxc_ls(int argc, char** argv) {
             snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
             stat(tmp, &s);
         }
-        printf("%s %8" PRIu64 " %s\n", modestr(s.st_mode), s.st_size, de->d_name);
+        printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
     }
     closedir(dir);
     return 0;

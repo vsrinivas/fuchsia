@@ -59,11 +59,17 @@
 #define __INT_LEAST32_FMT_MODIFIER__ __INT32_FMT_MODIFIER__
 #define __INT_LEAST64_FMT_MODIFIER__ __INT64_FMT_MODIFIER__
 
-// The *-elf and arm-eabi GCC targets use 'int' for the fast{8,16,32} types.
+// The *-elf and arm-eabi GCC targets use 'int' for the fast{8,16,32}
+// types. On LP64 systems, 'long' is used for the fast64 type, and
+// 'long long' on non-LP64 systems.
 #define __INT_FAST8_FMT_MODIFIER__   ""
 #define __INT_FAST16_FMT_MODIFIER__  ""
 #define __INT_FAST32_FMT_MODIFIER__  ""
-#define __INT_FAST64_FMT_MODIFIER__  ""
+#if _LP64
+#define __INT_FAST64_FMT_MODIFIER__  "l"
+#else
+#define __INT_FAST64_FMT_MODIFIER__  "ll"
+#endif
 
 // On machines where 'long' types are 64 bits, the compiler defines
 // __INT64_TYPE__ et al using 'long', not 'long long', though both are
@@ -270,7 +276,7 @@ typedef __UINTMAX_TYPE__  uintmax_t;
 #define __INT8_C(c)       __int_c(c, __INT8_C_SUFFIX__)
 #define __INT16_C(c)      __int_c(c, __INT16_C_SUFFIX__)
 #define __INT32_C(c)      __int_c(c, __INT32_C_SUFFIX__)
-#define __INT64_C(c)      __int_c(c, __INT16_C_SUFFIX__)
+#define __INT64_C(c)      __int_c(c, __INT64_C_SUFFIX__)
 
 #define __UINT8_C(c)      __int_c(c, __UINT8_C_SUFFIX__)
 #define __UINT16_C(c)     __int_c(c, __UINT16_C_SUFFIX__)

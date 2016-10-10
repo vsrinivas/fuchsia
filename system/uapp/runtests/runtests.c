@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <limits.h>
 #include <magenta/listnode.h>
@@ -110,7 +111,7 @@ static int runtests(int argc, char** argv) {
         mx_handle_close(handle);
 
         if (info_status != sizeof(proc_info)) {
-            printf("FAILURE: Failed to get process return code %s: %ld\n", de->d_name, info_status);
+            printf("FAILURE: Failed to get process return code %s: %" PRIdPTR "\n", de->d_name, info_status);
             fail_test(&failures, de->d_name, FAILED_TO_RETURN_CODE, 0);
             failed_count++;
             continue;

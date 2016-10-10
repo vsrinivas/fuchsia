@@ -139,7 +139,7 @@ static int cmd_read_blk(const char* dev, off_t offset, size_t count) {
     if (offset) {
         rc = lseek(fd, offset, SEEK_SET);
         if (rc < 0) {
-            printf("Error %zd seeking to offset %" PRId64 "\n", rc, offset);
+            printf("Error %zd seeking to offset %jd\n", rc, (intmax_t)offset);
             goto out2;
         }
     }

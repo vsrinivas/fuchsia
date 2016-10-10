@@ -9,7 +9,6 @@
 #include <magenta/device/ioctl-wrapper.h>
 #include <magenta/compiler.h>
 #include <stddef.h>
-#include <sys/types.h>
 
 __BEGIN_CDECLS;
 

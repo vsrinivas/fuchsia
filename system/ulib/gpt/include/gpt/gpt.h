@@ -6,7 +6,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 typedef struct gpt_device gpt_device_t;
 

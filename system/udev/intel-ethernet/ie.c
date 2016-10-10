@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <magenta/listnode.h>
 
@@ -167,7 +168,7 @@ void eth_init_hw(ethdev_t* eth) {
 }
 
 void eth_setup_buffers(ethdev_t* eth, void* iomem, mx_paddr_t iophys) {
-    printf("eth: iomem @%p (phys %lx)\n", iomem, iophys);
+    printf("eth: iomem @%p (phys %" PRIxPTR ")\n", iomem, iophys);
 
     list_initialize(&eth->free_frames);
     list_initialize(&eth->busy_frames);

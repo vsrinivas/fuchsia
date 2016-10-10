@@ -7,6 +7,7 @@
 #include <mxio/io.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <sys/types.h>
 #include <threads.h>
 
 #include "private.h"

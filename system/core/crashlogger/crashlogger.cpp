@@ -82,7 +82,7 @@ void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
     auto buf = static_cast<uint8_t*>(malloc(len));
     auto res = mx_debug_read_memory(proc, start, len, buf);
     if (res < 0) {
-        printf("failed reading %p memory; error : %ld\n", (void*)start, res);
+        printf("failed reading %p memory; error : %" PRIdPTR "\n", (void*)start, res);
     } else if (res != 0) {
         hexdump(buf, (uint32_t)res);
     }
@@ -95,7 +95,7 @@ void process_report(const mx_exception_report_t* report) {
 
     auto context = report->context;
     printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
-    printf("<== %s , PC at 0x%lx\n", excp_type_to_str(report->header.type), context.arch.pc);
+    printf("<== %s , PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
 
     auto process = mx_debug_task_get_child(0, context.pid);
     if (process <= 0) {

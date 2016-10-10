@@ -6,7 +6,6 @@
 
 #include <magenta/types.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #include <stdatomic.h>
 
