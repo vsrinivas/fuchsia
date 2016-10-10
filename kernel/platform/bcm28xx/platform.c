@@ -156,24 +156,6 @@ void platform_init(void)
 {
     uart_init();
 
-#if 0
-//#if WITH_SMP
-    uintptr_t sec_entry = (uintptr_t)0x80000;//&arm_reset - KERNEL_ASPACE_BASE;
-    uintptr_t *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
-
-    for (uint i = 1; i <= 3; i++) {
-        spin_table[i] = sec_entry;
-        __asm__ __volatile__ ("" : : : "memory");
-        arch_clean_cache_range(0xffff000000000000,256);
-        __asm__ __volatile__("sev");
-        //printf("writing spin entry %lx with %lx\n",(uintptr_t)&spin_table[i],sec_entry);
-    }
-#endif
-
-
-
-
-
     /* Get framebuffer for jraphics */
 
     // framebuff_descriptor.phys_width  = 960;
