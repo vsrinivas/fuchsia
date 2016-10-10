@@ -8,7 +8,6 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm.h>
 #include <kernel/vm/vm_object.h>
 #include <lib/console.h>
 #include <lk/init.h>
@@ -37,45 +36,6 @@ extern unsigned __kernel_cmdline_count;
 // These are defined in assembly by vdso.S; code-start.h
 // gives details about their size and layout.
 extern "C" const char vdso_image[], userboot_image[];
-
-// Hold onto the vmos constructed from pages stolen from the kernel forever.
-// Since user space code may close the last handle to these, we need
-// to make sure they never get destructed to avoid returning the pages to the system.
-//
-// TODO: make this unnecessary by making sure on all archtectures the kernel can
-// tolerate a hole in its mapping. Currently on arm/arm64 this is not possible.
-static mxtl::RefPtr<VmObject> vdso_vmo;
-static mxtl::RefPtr<VmObject> userboot_vmo;
-static mxtl::RefPtr<VmObject> bootfs_vmo;
-static mxtl::RefPtr<VmObject> rootfs_vmo;
-
-// Make a new VM object populated from some pages we have on hand.
-static mxtl::RefPtr<VmObject> make_vmo_from_memory(const void* data,
-                                                    size_t size) {
-    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, size);
-    if (vmo && size > 0) {
-        ASSERT(IS_PAGE_ALIGNED((uintptr_t)data));
-        ASSERT(IS_PAGE_ALIGNED(size));
-
-        // do a direct lookup of the physical pages backing the range of the kernel
-        // that these addresses belong to and jam directly into the VMO.
-        // NOTE: relies on the kernel not otherwise owning the pages. If the set up
-        // of the kernel's address space changes so that the pages are attached to a
-        // kernel VMO, this will need to change.
-        paddr_t start_paddr = vaddr_to_paddr(data);
-        ASSERT(start_paddr != 0);
-        for (size_t count = 0; count < size / PAGE_SIZE; count++) {
-            vm_page_t *page = paddr_to_vm_page(start_paddr + count * PAGE_SIZE);
-            ASSERT(page);
-
-            // make sure the page isn't already attached to another object
-            ASSERT(!list_in_list(&page->node));
-
-            vmo->AddPage(page, count * PAGE_SIZE);
-        }
-    }
-    return vmo;
-}
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
 static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
@@ -280,21 +240,19 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
-    vdso_vmo = make_vmo_from_memory(vdso_image, VDSO_CODE_END);
-    userboot_vmo = make_vmo_from_memory(userboot_image, USERBOOT_CODE_END);
+    auto vdso_vmo = VmObject::CreateFromROData(vdso_image, VDSO_CODE_END);
+    auto userboot_vmo = VmObject::CreateFromROData(userboot_image,
+                                                   USERBOOT_CODE_END);
     auto stack_vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, stack_size);
-    if (!vdso_vmo || !userboot_vmo || !stack_vmo)
-        return ERR_NO_MEMORY;
+    auto bootfs_vmo = VmObject::CreateFromROData(bootfs, bfslen);
+    auto rootfs_vmo = VmObject::CreateFromROData(rbase, rsize);
 
     HandleUniquePtr handles[BOOTSTRAP_HANDLES];
-    bootfs_vmo = make_vmo_from_memory(bootfs, bfslen);
     mx_status_t status = get_vmo_handle(bootfs_vmo, false, NULL,
                                         &handles[BOOTSTRAP_BOOTFS]);
-    if (status == NO_ERROR) {
-        rootfs_vmo = make_vmo_from_memory(rbase, rsize);
+    if (status == NO_ERROR)
         status = get_vmo_handle(rootfs_vmo, false, NULL,
                                 &handles[BOOTSTRAP_RAMDISK]);
-    }
     mxtl::RefPtr<VmObjectDispatcher> userboot_vmo_dispatcher;
     if (status == NO_ERROR)
         status = get_vmo_handle(userboot_vmo, true,

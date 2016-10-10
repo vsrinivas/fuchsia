@@ -25,6 +25,9 @@ class VmObject : public mxtl::RefCounted<VmObject> {
 public:
     static mxtl::RefPtr<VmObject> Create(uint32_t pmm_alloc_flags, uint64_t size);
 
+    static mxtl::RefPtr<VmObject> CreateFromROData(const void* data,
+                                                   size_t size);
+
     status_t Resize(uint64_t size);
 
     uint64_t size() const { return size_; }

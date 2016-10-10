@@ -178,6 +178,46 @@ status_t VmObject::AddPage(vm_page_t* p, uint64_t offset) {
     return NO_ERROR;
 }
 
+mxtl::RefPtr<VmObject> VmObject::CreateFromROData(const void* data,
+                                                  size_t size) {
+    auto vmo = Create(PMM_ALLOC_FLAG_ANY, size);
+    if (vmo && size > 0) {
+        ASSERT(IS_PAGE_ALIGNED(size));
+        ASSERT(IS_PAGE_ALIGNED(reinterpret_cast<uintptr_t>(data)));
+
+        // Do a direct lookup of the physical pages backing the range of
+        // the kernel that these addresses belong to and jam them directly
+        // into the VMO.
+        //
+        // NOTE: This relies on the kernel not otherwise owning the pages.
+        // If the setup of the kernel's address space changes so that the
+        // pages are attached to a kernel VMO, this will need to change.
+
+        paddr_t start_paddr = vaddr_to_paddr(data);
+        ASSERT(start_paddr != 0);
+
+        for (size_t offset = 0; offset < size; offset += PAGE_SIZE) {
+            vm_page_t *page = paddr_to_vm_page(start_paddr + offset);
+            ASSERT(page);
+
+            // Make sure the page isn't already attached to another object.
+            ASSERT(!list_in_list(&page->node));
+
+            vmo->AddPage(page, offset);
+        }
+
+        // TODO(mcgrathr): If the last reference to this VMO were released
+        // so the VMO got destroyed, that would attempt to return these
+        // pages to the system.  On arm and arm64, the kernel cannot
+        // tolerate a hole being created in the kernel image mapping, so
+        // bad things happen.  Until that issue is fixed, just leak a
+        // reference here so that the new VMO will never be destroyed.
+        vmo.reset(vmo.leak_ref());
+    }
+
+    return vmo;
+}
+
 vm_page_t* VmObject::GetPageLocked(uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
