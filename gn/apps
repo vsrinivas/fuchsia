@@ -16,6 +16,10 @@
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
         {
+            "binary": "agents/ideas",
+            "bootfs_path": "apps/agents/ideas"
+        },
+        {
             "binary": "context_engine",
             "bootfs_path": "apps/context_engine"
         },
@@ -50,6 +54,10 @@
         {
             "binary": "resolver",
             "bootfs_path": "apps/resolver"
+        },
+        {
+            "binary": "suggestion_engine",
+            "bootfs_path": "apps/suggestion_engine"
         },
         {
             "binary": "story_manager",
