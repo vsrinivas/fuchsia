@@ -48,6 +48,38 @@ static bool switch_to_first_vc(void) {
     return v ? strcmp(v, "true") != 0 : true;
 }
 
+static void launch_minfs(const char* device_name) {
+    char device_path[MXIO_MAX_FILENAME + 64];
+    snprintf(device_path, sizeof(device_path), "/dev/class/block/%s", device_name);
+    const char* argv[] = { "/boot/bin/minfs", device_path, "mount" };
+    printf("devmgr: /dev/class/block/%s: minfs?\n", device_name);
+    devmgr_launch("minfs:/data", 3, argv, -1, 0, 0);
+}
+
+static void launch_fat(const char* device_name) {
+    char device_path_arg[MXIO_MAX_FILENAME + 64];
+    snprintf(device_path_arg, sizeof(device_path_arg),
+             "-devicepath=/dev/class/block/%s", device_name);
+
+    static int fat_counter = 0;
+    char mount_path[MXIO_MAX_FILENAME + 64];
+    snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
+    mkdir(mount_path, 0755);
+
+    char mount_path_arg[MXIO_MAX_FILENAME + 64];
+    snprintf(mount_path_arg, sizeof(mount_path_arg), "-mountpath=%s", mount_path);
+
+    const char* argv[] = {
+        "/boot/bin/thinfs",
+        device_path_arg,
+        mount_path_arg,
+        "-readonly=true",
+        "mount",
+    };
+    printf("devmgr: /dev/class/block/%s: fatfs?\n", device_name);
+    devmgr_launch("fatfs:/volume", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+}
+
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
     uint8_t data[4096];
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
@@ -67,27 +99,13 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         // probe for partition table
         ioctl_device_bind(fd, "gpt", 4);
     } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
-        char path[MXIO_MAX_FILENAME + 64];
-        snprintf(path, sizeof(path), "/dev/class/block/%s", name);
-        const char* argv[] = { "/boot/bin/minfs", path, "mount" };
-        printf("devmgr: /dev/class/block/%s: minfs?\n", name);
-        devmgr_launch("minfs:/data", 3, argv, -1, 0, 0);
+        launch_minfs(name);
     } else if ((data[510] == 0x55 && data[511] == 0xAA) && (data[38] == 0x29 ||
                                                             data[66] == 0x29)) {
         // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
         // 0x29 is the Boot Signature, but it is placed at either offset 38 or
         // 66 (depending on FAT type).
-        char device_path[MXIO_MAX_FILENAME + 64];
-        snprintf(device_path, sizeof(device_path), "-devicepath=/dev/class/block/%s", name);
-        const char* argv[] = {
-            "/boot/bin/thinfs",
-            device_path,
-            "-mountpath=/data",
-            "-readonly=true",
-            "mount",
-        };
-        printf("devmgr: /dev/class/block/%s: fatfs?\n", name);
-        devmgr_launch("fatfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+        launch_fat(name);
     }
 
     close(fd);
