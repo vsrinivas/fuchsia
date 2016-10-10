@@ -692,18 +692,19 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
         }
         if (r == ERR_SHOULD_WAIT) {
             // TODO: follow socket blocking/nonblocking state
+
+            // No wait for PEER_CLOSED signal. PEER_CLOSED could be signaled
+            // even if the socket is only half-closed for read.
+            // TODO: how to detect if the write direction is closed?
             mx_signals_state_t pending;
             r = mx_handle_wait_one(rio->h2,
-                                   MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                   MX_SIGNAL_WRITABLE,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
             if (pending.satisfied & MX_SIGNAL_WRITABLE) {
                 continue;
-            }
-            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
-                return ERR_REMOTE_CLOSED;
             }
             // impossible
             return ERR_INTERNAL;
