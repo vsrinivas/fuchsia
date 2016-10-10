@@ -13,15 +13,13 @@
 #include "apps/ledger/storage/public/page_storage.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace ledger {
 
 // An implementation of the |Page| interface.
 class PageImpl : public Page {
  public:
-  PageImpl(mojo::InterfaceRequest<Page> request,
-           std::unique_ptr<storage::PageStorage> storage);
+  PageImpl(storage::PageStorage* storage);
   ~PageImpl() override;
 
  private:
@@ -81,8 +79,7 @@ class PageImpl : public Page {
 
   void Rollback(const RollbackCallback& callback) override;
 
-  mojo::StrongBinding<Page> binding_;
-  std::unique_ptr<storage::PageStorage> storage_;
+  storage::PageStorage* storage_;
   std::unique_ptr<storage::Journal> journal_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);

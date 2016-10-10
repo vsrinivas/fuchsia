@@ -24,9 +24,7 @@ Status ConvertStatus(storage::Status status) {
 
 }  // namespace
 
-PageImpl::PageImpl(mojo::InterfaceRequest<Page> request,
-                   std::unique_ptr<storage::PageStorage> storage)
-    : binding_(this, std::move(request)), storage_(std::move(storage)) {}
+PageImpl::PageImpl(storage::PageStorage* storage) : storage_(storage) {}
 
 PageImpl::~PageImpl() {}
 

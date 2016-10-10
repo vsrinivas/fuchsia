@@ -4,6 +4,8 @@
 
 #include "apps/ledger/app/page_impl.h"
 
+#include <memory>
+
 #include "apps/ledger/app/constants.h"
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/fake/fake_journal.h"
@@ -13,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "mojo/public/cpp/bindings/binding.h"
 
 namespace ledger {
 namespace {
@@ -28,52 +31,48 @@ class PageImplTest : public ::testing::Test {
     ::testing::Test::SetUp();
     page_id1_ = storage::PageId(kPageIdSize, 'a');
     fake_storage_.reset(new storage::fake::FakePageStorage(page_id1_));
-    fake_storage_ptr_ = fake_storage_.get();
+
+    page_impl_.reset(new PageImpl(fake_storage_.get()));
+    binding_.reset(
+        new mojo::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
   }
 
-  void TearDown() override { ::testing::Test::TearDown(); }
-
   storage::PageId page_id1_;
-  // FakePageStorage is owned by the PageImpl objects. For testing, we keep
-  // around a pointer to the object to inspect its state. |fake_storage_ptr_|
-  // remains valid as long as |fake_storage_| is valid, or as long as the
-  // |PageImpl| owning it is valid.
   std::unique_ptr<storage::fake::FakePageStorage> fake_storage_;
-  storage::fake::FakePageStorage* fake_storage_ptr_;
+
+  PagePtr page_ptr_;
 
   mtl::MessageLoop message_loop_;
 
  private:
+  std::unique_ptr<PageImpl> page_impl_;
+  std::unique_ptr<mojo::Binding<Page>> binding_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
 
 TEST_F(PageImplTest, GetId) {
-  PagePtr page_ptr;
-
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-  page_ptr->GetId([this](mojo::Array<uint8_t> page_id) {
-    EXPECT_EQ(this->page_id1_, convert::ToString(page_id));
+  page_ptr_->GetId([this](mojo::Array<uint8_t> page_id) {
+    EXPECT_EQ(page_id1_, convert::ToString(page_id));
     message_loop_.QuitNow();
   });
   message_loop_.Run();
 }
 
 TEST_F(PageImplTest, PutNoTransaction) {
-  PagePtr page_ptr;
   std::string key("some_key");
   std::string value("a little value");
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
   auto callback = [this, &key, &value](Status status) {
     EXPECT_EQ(Status::OK, status);
     const std::unordered_map<storage::ObjectId, std::string> objects =
-        fake_storage_ptr_->GetObjects();
+        fake_storage_->GetObjects();
     EXPECT_EQ(1u, objects.size());
     storage::ObjectId object_id = objects.begin()->first;
     std::string actual_value = objects.begin()->second;
     EXPECT_EQ(value, actual_value);
 
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsCommitted());
     EXPECT_EQ(1u, journals[0]->GetData().size());
@@ -84,27 +83,25 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.QuitNow();
   };
-  page_ptr->Put(convert::ToArray(key), convert::ToArray(value), callback);
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
   message_loop_.Run();
 }
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
-  PagePtr page_ptr;
   std::string key("some_key");
   storage::ObjectId object_id("some_id");
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id);
 
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
   auto callback = [this, &key, &object_id](Status status) {
     EXPECT_EQ(Status::OK, status);
     const std::unordered_map<storage::ObjectId, std::string> objects =
-        fake_storage_ptr_->GetObjects();
+        fake_storage_->GetObjects();
     // No object should have been added.
     EXPECT_EQ(0u, objects.size());
 
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsCommitted());
     EXPECT_EQ(1u, journals[0]->GetData().size());
@@ -115,25 +112,23 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.QuitNow();
   };
-  page_ptr->PutReference(convert::ToArray(key), std::move(reference),
-                         Priority::LAZY, callback);
+  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+                          Priority::LAZY, callback);
   message_loop_.Run();
 }
 
 TEST_F(PageImplTest, DeleteNoTransaction) {
-  PagePtr page_ptr;
   std::string key("some_key");
 
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-  page_ptr->Delete(convert::ToArray(key), [this, &key](Status status) {
+  page_ptr_->Delete(convert::ToArray(key), [this, &key](Status status) {
     EXPECT_EQ(Status::OK, status);
     const std::unordered_map<storage::ObjectId, std::string> objects =
-        fake_storage_ptr_->GetObjects();
+        fake_storage_->GetObjects();
     // No object should have been added.
     EXPECT_EQ(0u, objects.size());
 
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsCommitted());
     EXPECT_EQ(1u, journals[0]->GetData().size());
@@ -146,7 +141,6 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
 }
 
 TEST_F(PageImplTest, TransactionCommit) {
-  PagePtr page_ptr;
   std::string key1("some_key1");
   storage::ObjectId object_id1;
   std::string value("a little value");
@@ -155,15 +149,13 @@ TEST_F(PageImplTest, TransactionCommit) {
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id2);
 
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-
   // Sequence of operations:
   //  - StartTransaction
   //  - Put
   //  - PutReference
   //  - Delete
   //  - Commit
-  page_ptr->StartTransaction([this](Status status) {
+  page_ptr_->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.QuitNow();
   });
@@ -172,7 +164,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   auto put_callback = [this, &key1, &value, &object_id1](Status status) {
     EXPECT_EQ(Status::OK, status);
     const std::unordered_map<storage::ObjectId, std::string> objects =
-        fake_storage_ptr_->GetObjects();
+        fake_storage_->GetObjects();
     EXPECT_EQ(1u, objects.size());
     object_id1 = objects.begin()->first;
     std::string actual_value = objects.begin()->second;
@@ -180,7 +172,7 @@ TEST_F(PageImplTest, TransactionCommit) {
 
     // No finished commit yet.
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_FALSE(journals[0]->IsCommitted());
     EXPECT_EQ(1u, journals[0]->GetData().size());
@@ -192,16 +184,16 @@ TEST_F(PageImplTest, TransactionCommit) {
     message_loop_.QuitNow();
 
   };
-  page_ptr->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
   message_loop_.Run();
 
   auto put_reference_callback = [this, &key2, &object_id2](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_ptr_->GetObjects().size());
+    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with now two entries.
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_FALSE(journals[0]->IsCommitted());
     EXPECT_EQ(2u, journals[0]->GetData().size());
@@ -213,17 +205,17 @@ TEST_F(PageImplTest, TransactionCommit) {
     message_loop_.QuitNow();
 
   };
-  page_ptr->PutReference(convert::ToArray(key2), std::move(reference),
-                         Priority::LAZY, put_reference_callback);
+  page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
+                          Priority::LAZY, put_reference_callback);
   message_loop_.Run();
 
   auto delete_callback = [this, &key2](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_ptr_->GetObjects().size());
+    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with the second entry deleted.
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_FALSE(journals[0]->IsCommitted());
     EXPECT_EQ(2u, journals[0]->GetData().size());
@@ -233,15 +225,15 @@ TEST_F(PageImplTest, TransactionCommit) {
     message_loop_.QuitNow();
 
   };
-  page_ptr->Delete(convert::ToArray(key2), delete_callback);
+  page_ptr_->Delete(convert::ToArray(key2), delete_callback);
   message_loop_.Run();
 
-  page_ptr->Commit([this](Status status) {
+  page_ptr_->Commit([this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_ptr_->GetObjects().size());
+    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsCommitted());
     EXPECT_EQ(2u, journals[0]->GetData().size());
@@ -251,22 +243,18 @@ TEST_F(PageImplTest, TransactionCommit) {
 }
 
 TEST_F(PageImplTest, TransactionRollback) {
-  PagePtr page_ptr;
-
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-
   // Sequence of operations:
   //  - StartTransaction
   //  - Rollback
-  page_ptr->StartTransaction(
+  page_ptr_->StartTransaction(
       [](Status status) { EXPECT_EQ(Status::OK, status); });
-  page_ptr->Rollback([this](Status status) {
+  page_ptr_->Rollback([this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(0u, fake_storage_ptr_->GetObjects().size());
+    EXPECT_EQ(0u, fake_storage_->GetObjects().size());
 
     // Only one journal, rollbacked.
     const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_ptr_->GetJournals();
+        journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsRolledBack());
     EXPECT_EQ(0u, journals[0]->GetData().size());
@@ -276,16 +264,12 @@ TEST_F(PageImplTest, TransactionRollback) {
 }
 
 TEST_F(PageImplTest, NoTwoTransactions) {
-  PagePtr page_ptr;
-
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-
   // Sequence of operations:
   //  - StartTransaction
   //  - StartTransaction
-  page_ptr->StartTransaction(
+  page_ptr_->StartTransaction(
       [](Status status) { EXPECT_EQ(Status::OK, status); });
-  page_ptr->StartTransaction([this](Status status) {
+  page_ptr_->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status);
     message_loop_.QuitNow();
   });
@@ -293,13 +277,9 @@ TEST_F(PageImplTest, NoTwoTransactions) {
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
-  PagePtr page_ptr;
-
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-
   // Sequence of operations:
   //  - Commit
-  page_ptr->Commit([this](Status status) {
+  page_ptr_->Commit([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
     message_loop_.QuitNow();
   });
@@ -307,13 +287,9 @@ TEST_F(PageImplTest, NoTransactionCommit) {
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
-  PagePtr page_ptr;
-
-  new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
-
   // Sequence of operations:
   //  - Rollback
-  page_ptr->Rollback([this](Status status) {
+  page_ptr_->Rollback([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
     message_loop_.QuitNow();
   });

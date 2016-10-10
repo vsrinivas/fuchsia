@@ -5,7 +5,9 @@
 #include <mojo/system/main.h>
 
 #include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/convert/convert.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
@@ -38,10 +40,11 @@ mojo::Array<uint8_t> RandomArray(int size) {
   return RandomArray(size, std::vector<uint8_t>());
 }
 
-mojo::Array<uint8_t> GetPageId(PagePtr page) {
+mojo::Array<uint8_t> GetPageId(PagePtr* page) {
   mojo::Array<uint8_t> pageId;
-  page->GetId([&pageId](mojo::Array<uint8_t> id) { pageId = std::move(id); });
-  EXPECT_TRUE(page.WaitForIncomingResponse());
+  (*page)->GetId(
+      [&pageId](mojo::Array<uint8_t> id) { pageId = std::move(id); });
+  EXPECT_TRUE(page->WaitForIncomingResponse());
   return pageId;
 }
 
@@ -163,7 +166,7 @@ TEST_F(LedgerApplicationTest, GetLedger) {
   EXPECT_NE(nullptr, ledger_.get());
 }
 
-TEST_F(LedgerApplicationTest, LedgerGetRootPage) {
+TEST_F(LedgerApplicationTest, GetRootPage) {
   Status status;
   ledger_->GetRootPage(
       [&status](Status s, mojo::InterfaceHandle<Page> p) { status = s; });
@@ -171,17 +174,20 @@ TEST_F(LedgerApplicationTest, LedgerGetRootPage) {
   EXPECT_EQ(Status::OK, status);
 }
 
-TEST_F(LedgerApplicationTest, LedgerNewPage) {
+TEST_F(LedgerApplicationTest, NewPage) {
   // Get two pages and check that their ids are different.
-  mojo::Array<uint8_t> id1 = GetPageId(GetTestPage());
-  mojo::Array<uint8_t> id2 = GetPageId(GetTestPage());
+  PagePtr page1 = GetTestPage();
+  mojo::Array<uint8_t> id1 = GetPageId(&page1);
+  PagePtr page2 = GetTestPage();
+  mojo::Array<uint8_t> id2 = GetPageId(&page2);
 
   EXPECT_TRUE(!id1.Equals(id2));
 }
 
-TEST_F(LedgerApplicationTest, LedgerGetPage) {
+TEST_F(LedgerApplicationTest, GetPage) {
   // Create a page and expect to find it by its id.
-  mojo::Array<uint8_t> id = GetPageId(GetTestPage());
+  PagePtr page = GetTestPage();
+  mojo::Array<uint8_t> id = GetPageId(&page);
   GetPage(id, Status::OK);
 
   // Search with a random id and expect a PAGE_NOT_FOUND result.
@@ -189,21 +195,37 @@ TEST_F(LedgerApplicationTest, LedgerGetPage) {
   GetPage(testId, Status::PAGE_NOT_FOUND);
 }
 
-TEST_F(LedgerApplicationTest, LedgerDeletePage) {
-  // Create a page, remove it and expect it doesn't exist.
-  mojo::Array<uint8_t> id = GetPageId(GetTestPage());
-  PagePtr page = GetPage(id, Status::OK);
+// Verifies that a page can be connected to twice.
+TEST_F(LedgerApplicationTest, MultiplePageConnections) {
+  // Create a new page and find its id.
+  PagePtr page1 = GetTestPage();
+  mojo::Array<uint8_t> page_id_1 = GetPageId(&page1);
+
+  // Connect to the same page again.
+  PagePtr page2 = GetPage(page_id_1, Status::OK);
+  mojo::Array<uint8_t> page_id_2 = GetPageId(&page2);
+  EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
+}
+
+TEST_F(LedgerApplicationTest, DeletePage) {
+  // Create a new page and find its id.
+  PagePtr page = GetTestPage();
+  mojo::Array<uint8_t> id = GetPageId(&page);
+
+  // Delete the page.
   bool page_closed = false;
-  page.set_connection_error_handler([&page_closed]() { page_closed = true; });
+  page.set_connection_error_handler([&page_closed] { page_closed = true; });
   DeletePage(id, Status::OK);
-  EXPECT_FALSE(page.WaitForIncomingResponseWithTimeout(100000));
-  // TODO(etiennej): page_closed should be true (connections should get closed).
-  EXPECT_FALSE(page_closed);
+
+  // Verify that deletion of the page closed the page connection.
+  page.WaitForIncomingResponse();
+  EXPECT_TRUE(page_closed);
+
+  // Verify that the deleted page cannot be retrieved.
   GetPage(id, Status::PAGE_NOT_FOUND);
 
-  // Remove a page with a random id and expect a PAGE_NOT_FOUND result.
-  mojo::Array<uint8_t> testId = RandomArray(16);
-  DeletePage(testId, Status::PAGE_NOT_FOUND);
+  // Delete the same page again and expect a PAGE_NOT_FOUND result.
+  DeletePage(id, Status::PAGE_NOT_FOUND);
 }
 
 }  // namespace

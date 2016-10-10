@@ -24,6 +24,8 @@ source_set("lib") {
     "ledger_impl.h",
     "page_impl.cc",
     "page_impl.h",
+    "page_manager.cc",
+    "page_manager.h",
   ]
 
   deps = [
@@ -66,6 +68,7 @@ executable("unittests") {
 
   sources = [
     "page_impl_unittest.cc",
+    "page_manager_unittest.cc",
   ]
 
   deps = [
@@ -76,6 +79,7 @@ executable("unittests") {
     "//apps/ledger/test",
     "//lib/ftl",
     "//lib/mtl",
+    "//mojo/public/cpp/bindings:core",
     "//mojo/system:libmojo",
     "//third_party/gtest",
   ]
