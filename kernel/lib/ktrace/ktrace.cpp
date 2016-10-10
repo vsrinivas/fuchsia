@@ -40,14 +40,35 @@ static uint32_t probe_number = 1;
 extern ktrace_probe_info_t __start_ktrace_probe[] __WEAK;
 extern ktrace_probe_info_t __stop_ktrace_probe[] __WEAK;
 
+static ktrace_probe_info_t* probe_list;
+static mutex_t probe_list_lock = MUTEX_INITIAL_VALUE(probe_list_lock);
+
+static ktrace_probe_info_t* ktrace_find_probe(const char* name) {
+    ktrace_probe_info_t* probe;
+    for (probe = probe_list; probe != nullptr; probe = probe->next) {
+        if (!strcmp(name, probe->name)) {
+            return probe;
+        }
+    }
+    return nullptr;
+}
+
+static void ktrace_add_probe(ktrace_probe_info_t* probe) {
+    if (probe->num == 0) {
+        probe->num = probe_number++;
+    }
+    probe->next = probe_list;
+    probe_list = probe;
+    ktrace_name_etc(TAG_PROBE_NAME, probe->num, 0, probe->name, true);
+}
+
 static void ktrace_report_probes(void) {
     ktrace_probe_info_t *probe;
-    for (probe = __start_ktrace_probe; probe != __stop_ktrace_probe; probe++) {
-        if (probe->num == 0) {
-            probe->num = probe_number++;
-        }
+    mutex_acquire(&probe_list_lock);
+    for (probe = probe_list; probe != nullptr; probe = probe->next) {
         ktrace_name_etc(TAG_PROBE_NAME, probe->num, 0, probe->name, true);
     }
+    mutex_release(&probe_list_lock);
 }
 
 typedef struct ktrace_state {
@@ -105,7 +126,7 @@ int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
     return len;
 }
 
-status_t ktrace_control(uint32_t action, uint32_t options) {
+status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     ktrace_state_t* ks = &KTRACE_STATE;
     switch (action) {
     case KTRACE_ACTION_START:
@@ -130,6 +151,24 @@ status_t ktrace_control(uint32_t action, uint32_t options) {
         ktrace_report_syscalls();
         ktrace_report_probes();
         break;
+    case KTRACE_ACTION_NEW_PROBE: {
+        ktrace_probe_info_t* probe;
+        mutex_acquire(&probe_list_lock);
+        if ((probe = ktrace_find_probe((const char*) ptr)) != nullptr) {
+            mutex_release(&probe_list_lock);
+            return probe->num;
+        }
+        probe = (ktrace_probe_info_t*) calloc(sizeof(probe) + MX_MAX_NAME_LEN, 1);
+        if (probe == NULL) {
+            mutex_release(&probe_list_lock);
+            return ERR_NO_MEMORY;
+        }
+        probe->name = (const char*) (probe + 1);
+        memcpy(probe + 1, ptr, MX_MAX_NAME_LEN);
+        ktrace_add_probe(probe);
+        mutex_release(&probe_list_lock);
+        return probe->num;
+    }
     default:
         return ERR_INVALID_ARGS;
     }
@@ -164,6 +203,14 @@ void ktrace_init(unsigned level) {
     ks->bufsize = mb - 256;
 
     dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", ks->buffer, mb);
+
+    // register all static probes
+    ktrace_probe_info_t *probe;
+    mutex_acquire(&probe_list_lock);
+    for (probe = __start_ktrace_probe; probe != __stop_ktrace_probe; probe++) {
+        ktrace_add_probe(probe);
+    }
+    mutex_release(&probe_list_lock);
 
     // write metadata to the first two event slots
     uint64_t n = ktrace_ticks_per_ms();

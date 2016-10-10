@@ -13,10 +13,14 @@
 __BEGIN_CDECLS
 
 #if WITH_LIB_KTRACE
-typedef struct {
-    uint32_t num;
+
+typedef struct ktrace_probe_info ktrace_probe_info_t;
+
+struct ktrace_probe_info {
+    ktrace_probe_info_t* next;
     const char* name;
-} ktrace_probe_info_t;
+    uint32_t num;
+};
 
 void* ktrace_open(uint32_t tag);
 void ktrace_tiny(uint32_t tag, uint32_t arg);
@@ -27,11 +31,11 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
     }
 }
 #define ktrace_probe0(name) { \
-    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { 0, name }; \
+    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { .name = name }; \
     ktrace_open(TAG_PROBE_16(info.num)); \
 }
 #define ktrace_probe2(name,arg0,arg1) { \
-    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { 0, name }; \
+    static __SECTION("ktrace_probe") ktrace_probe_info_t info = { .name = name }; \
     uint32_t* args = ktrace_open(TAG_PROBE_24(info.num)); \
     if (args) { \
         args[0] = arg0; \
@@ -40,7 +44,7 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
 }
 void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name);
 int ktrace_read_user(void* ptr, uint32_t off, uint32_t len);
-status_t ktrace_control(uint32_t action, uint32_t options);
+status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 #else
 static inline void* ktrace_open(uint32_t tag) { return NULL; }
 static inline void ktrace_tiny(uint32_t tag, uint32_t arg) {}
@@ -55,7 +59,7 @@ static inline ssize_t ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
         return ERR_INVALID_ARGS;
     }
 }
-static inline status_t ktrace_control(uint32_t action, uint32_t options) {
+static inline status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     return ERR_NOT_SUPPORTED;
 }
 #endif

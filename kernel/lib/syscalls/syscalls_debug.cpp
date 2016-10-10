@@ -283,14 +283,39 @@ mx_ssize_t sys_ktrace_read(mx_handle_t handle, void* ptr, uint32_t off, uint32_t
     return ktrace_read_user(ptr, off, len);
 }
 
-mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options) {
+mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options, user_ptr<void> ptr) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
         return status;
     }
 
-    return ktrace_control(action, options);
+    switch (action) {
+    case KTRACE_ACTION_NEW_PROBE: {
+        char name[MX_MAX_NAME_LEN];
+        if (ptr.copy_array_from_user(name, sizeof(name - 1)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        name[sizeof(name) - 1] = 0;
+        return ktrace_control(action, options, name);
+    }
+    default:
+        return ktrace_control(action, options, nullptr);
+    }
+}
+
+void sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
+    // TODO: finer grained validation
+    if (validate_resource_handle(handle) < 0) {
+        return;
+    }
+    if (event_id > 0x7FF) {
+        return;
+    }
+    uint32_t* args = (uint32_t*) ktrace_open(TAG_PROBE_24(event_id));
+    if (args) {
+        args[0] = arg0;
+        args[1] = arg1;
+    }
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,

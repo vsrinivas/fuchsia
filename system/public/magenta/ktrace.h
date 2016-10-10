@@ -83,8 +83,9 @@ enum {
 #define TAG_PROBE_24(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,24)
 
 // Actions for ktrace control
-#define KTRACE_ACTION_START    1 // options = grpmask, 0 = all
-#define KTRACE_ACTION_STOP     2 // options ignored
-#define KTRACE_ACTION_REWIND   3 // options ignored
+#define KTRACE_ACTION_START     1 // options = grpmask, 0 = all
+#define KTRACE_ACTION_STOP      2 // options ignored
+#define KTRACE_ACTION_REWIND    3 // options ignored
+#define KTRACE_ACTION_NEW_PROBE 4 // options ignored, ptr = name
 
 __END_CDECLS

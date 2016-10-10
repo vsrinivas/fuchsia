@@ -5,8 +5,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include <magenta/ktrace.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+
+#include <magenta/device/ktrace.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +24,44 @@ static mx_off_t ktrace_get_size(mx_device_t* dev) {
     return mx_ktrace_read(get_root_resource(), NULL, 0, 0);
 }
 
+static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
+                            const void* cmd, size_t cmdlen,
+                            void* reply, size_t max) {
+    switch (op) {
+    case IOCTL_KTRACE_GET_HANDLE: {
+        if (max < sizeof(mx_handle_t)) {
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        //TODO: ktrace-only handle once resources are further along
+        mx_handle_t h = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
+        if (h < 0) {
+            return h;
+        }
+        *((mx_handle_t*) reply) = h;
+        return sizeof(mx_handle_t);
+    }
+    case IOCTL_KTRACE_ADD_PROBE: {
+        char name[MX_MAX_NAME_LEN];
+        if ((cmdlen >= MX_MAX_NAME_LEN) || (cmdlen < 1) || (max != sizeof(uint32_t))) {
+            return ERR_INVALID_ARGS;
+        }
+        memcpy(name, cmd, cmdlen);
+        name[cmdlen] = 0;
+        mx_status_t status = mx_ktrace_control(get_root_resource(), KTRACE_ACTION_NEW_PROBE, 0, name);
+        if (status < 0) {
+            return status;
+        }
+        *((uint32_t*) reply) = status;
+        return sizeof(uint32_t);
+    }
+    default:
+        return ERR_INVALID_ARGS;
+    }
+}
+
 static mx_protocol_device_t ktrace_device_proto = {
     .read = ktrace_read,
+    .ioctl = ktrace_ioctl,
     .get_size = ktrace_get_size,
 };
 

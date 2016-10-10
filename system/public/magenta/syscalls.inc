@@ -67,7 +67,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 10, mx_ssize_t, debug_write_memory, mx_handle_t proc, 
                     mx_size_t len, USER_PTR(const void) buffer)
 
 MAGENTA_SYSCALL_DEF(4, 4, 11, mx_ssize_t, ktrace_read, mx_handle_t handle, void* ptr, uint32_t off, uint32_t len)
-MAGENTA_SYSCALL_DEF(3, 3, 12, mx_status_t, ktrace_control, mx_handle_t handle, uint32_t action, uint32_t options)
+MAGENTA_SYSCALL_DEF(4, 4, 12, mx_status_t, ktrace_control, mx_handle_t handle, uint32_t action, uint32_t options, USER_PTR(void))
+MAGENTA_SYSCALL_DEF(4, 4, 13, void, ktrace_write, mx_handle_t handle, uint32_t id, uint32_t arg0, uint32_t arg1)
 
 // Logging
 MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags)
