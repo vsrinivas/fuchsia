@@ -11,11 +11,32 @@ declare_args() {
 }
 
 source_set("main") {
+  sources = [
+    "driver_main.cpp",
+  ]
+
+  deps = [
+    "$magma_build_root:libmsd",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform/magenta",
+  ]
+
+  libs = [
+    "driver",
+    "ddk",
+    "magenta",
+  ]
+}
+
+source_set("test_driver") {
+  testonly = true
+
   configs += [ "$magma_build_root:magma_tests_include_config" ]
 
   sources = [
     "driver_main.cpp",
   ]
+
   deps = [
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",

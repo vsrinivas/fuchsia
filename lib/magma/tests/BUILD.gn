@@ -5,6 +5,8 @@
 import("//magma/gnbuild/magma.gni")
 
 group("tests") {
+  testonly = true
+
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
   deps = [

@@ -10,6 +10,14 @@ group("magma_service_driver") {
   ]
 }
 
+group("magma_service_driver_test") {
+  testonly = true
+
+  deps = [
+    "$msd_intel_gen_build_root:test",
+  ]
+}
+
 source_set("libmad") {
   public_deps = [
     "include:mad_abi",
@@ -48,6 +56,8 @@ source_set("libmsd") {
 }
 
 group("magma_tests") {
+  testonly = true
+
   deps = [
     "tests",
   ]

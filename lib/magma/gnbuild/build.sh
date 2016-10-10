@@ -21,17 +21,17 @@ rm -f $bootfs_output_file
 
 echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 
-autorun_unit_tests=false;
+autorun_unit_tests=true;
 
 if $autorun_unit_tests; then
-	autorun_readback_test=false;
+	autorun_readback_test=true;
 	autorun_spinning_cube_test=false;
 	autorun_msd_intel_tests=true;
 	autorun_magma_app_tests=true;
 	autorun_magma_sys_tests=true;
 else
-	autorun_readback_test=false;
-	autorun_spinning_cube_test=true;
+	autorun_readback_test=true;
+	autorun_spinning_cube_test=false;
 	autorun_msd_intel_tests=false;
 	autorun_magma_app_tests=false;
 	autorun_magma_sys_tests=false;
@@ -40,11 +40,11 @@ fi
 $tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="unit_test=$autorun_msd_intel_tests readback_test=$autorun_readback_test spinning_cube_test=$autorun_spinning_cube_test"
 
 echo "Building magma_service_driver"
-$tools_path/ninja -C $build_dir magma_service_driver magma_tests
+$tools_path/ninja -C $build_dir magma_service_driver magma_service_driver_test magma_tests
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
-cp $build_dir/msd-intel-gen $bootfs_path/bin/driver-pci-8086-1916
+cp $build_dir/msd-intel-gen-test $bootfs_path/bin/driver-pci-8086-1916
 
 mkdir -p $bootfs_path/lib
 cp $sysroot_path/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
