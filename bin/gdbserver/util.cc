@@ -132,8 +132,10 @@ bool VerifyPacket(ftl::StringView packet, ftl::StringView* out_packet_data) {
   }
 
   // Loop through the packet until we get to '$'. Ignore all other characters.
-  // TODO(armansito): Not all packets need to start with '$', e.g. notifications
-  // and acknowledgments. Handle those here as well.
+  // To quote the protocol specification "There are no notifications defined for
+  // gdb to send at the moment", thus we ignore everything until the first '$'.
+  // (see
+  // https://sourceware.org/gdb/current/onlinedocs/gdb/Notification-Packets.html)
   for (; packet.size() && packet[0] != '$'; packet.remove_prefix(1))
     ;
 

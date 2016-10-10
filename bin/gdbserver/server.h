@@ -6,9 +6,11 @@
 
 #include <array>
 #include <memory>
+#include <queue>
 
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "command_handler.h"
@@ -19,8 +21,15 @@ namespace debugserver {
 
 // Server implements the main loop and handles commands received over a TCP port
 // (from gdb or lldb).
+//
+// NOTE: This class is generally not thread safe. Care must be taken when
+// calling methods such as set_current_thread(), SetCurrentThread(), and
+// SendNotification() which modify the internal state of a Server instance.
 class Server final {
  public:
+  // The default timeout interval used by SendNotification().
+  constexpr static int64_t kDefaultTimeoutSeconds = 30;
+
   explicit Server(uint16_t port);
   ~Server() = default;
 
@@ -51,9 +60,36 @@ class Server final {
   // Assigns the current thread.
   void SetCurrentThread(Thread* thread);
 
+  // Sends out a notification packet. The GDB Remote Protocol defines a specific
+  // control-flow for notification packets, such that each notification packet
+  // will be pending until the remote end acknowledges it. There can be only one
+  // pending notification at a time.
+  //
+  // A notification will time out if the remote end does not acknowledge it
+  // within |timeout|. If a notification times out, it will be sent again based
+  // on the value of |retry_count|. If |retry_count| is 0, then the next queued
+  // up notification will be sent.
+  void SendNotification(
+      const ftl::StringView& name,
+      const ftl::StringView& event,
+      const ftl::TimeDelta& timeout =
+          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds),
+      size_t retry_count = 0);
+
  private:
   // Maximum number of characters in inbound/outbound buffers.
   constexpr static size_t kMaxBufferSize = 4096;
+
+  // Represents a pending notification packet.
+  struct PendingNotification {
+    PendingNotification(const std::string& bytes,
+                        const ftl::TimeDelta& timeout,
+                        size_t retries_left);
+
+    std::string bytes;
+    ftl::TimeDelta timeout;
+    size_t retries_left;
+  };
 
   Server() = default;
 
@@ -74,8 +110,20 @@ class Server final {
   void PostReadTask();
 
   // Posts an asynchronous task on the message loop to send a packet over the
-  // wire.
-  void PostWriteTask(const ftl::StringView& rsp);
+  // wire. |data| will be wrapped in a GDB Remote Protocol packet after
+  // computing the checksum. If |notify| is true, then a notification packet
+  // will be sent (where the first byte of the packet equals '%'), otherwise a
+  // regular packet will be sent (first byte is '$').
+  void PostWriteTask(bool notify, const ftl::StringView& data);
+
+  // Convenience helpers for PostWriteTask
+  void PostPacketWriteTask(const ftl::StringView& data);
+  void PostNotificationWriteTask(const ftl::StringView& data);
+
+  // If |pending_notification_| is NULL, this pops the next lined-up
+  // notification from |notify_queue_| and assigns it as the new pending
+  // notification and sends it to the remote device.
+  void TryPostNextNotification();
 
   // Sets the run status and quits the main message loop.
   void QuitMessageLoop(bool status);
@@ -103,6 +151,13 @@ class Server final {
   // The current thread under debug. We only keep a weak pointer here, since the
   // instance itself is owned by a Process and may get removed.
   ftl::WeakPtr<Thread> current_thread_;
+
+  // The current queue of notifications that have not been sent out yet.
+  std::queue<std::unique_ptr<PendingNotification>> notify_queue_;
+
+  // The currently pending notification that has been sent out but has NOT been
+  // acknowledged by the remote end yet.
+  std::unique_ptr<PendingNotification> pending_notification_;
 
   // The main loop.
   mtl::MessageLoop message_loop_;

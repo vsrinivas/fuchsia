@@ -18,6 +18,19 @@
 
 namespace debugserver {
 
+namespace {
+
+constexpr char kStopNotification[] = "Stop";
+constexpr char kStopAck[] = "vStopped";
+
+}  // namespace
+
+Server::PendingNotification::PendingNotification(
+    const std::string& bytes,
+    const ftl::TimeDelta& timeout,
+    size_t retries_left)
+    : bytes(bytes), timeout(timeout), retries_left(retries_left) {}
+
 Server::Server(uint16_t port)
     : port_(port),
       client_sock_(-1),
@@ -46,6 +59,19 @@ void Server::SetCurrentThread(Thread* thread) {
     current_thread_.reset();
   else
     current_thread_ = thread->AsWeakPtr();
+}
+
+void Server::SendNotification(
+    const ftl::StringView& name,
+    const ftl::StringView& event,
+    const ftl::TimeDelta& timeout,
+    size_t retry_count) {
+  // The GDB Remote protocol defines only the "Stop" notification
+  FTL_DCHECK(name == kStopNotification);
+  std::string bytes = name.ToString() + ":" + event.ToString();
+  notify_queue_.push(std::make_unique<PendingNotification>(
+      bytes, timeout, retry_count));
+  TryPostNextNotification();
 }
 
 bool Server::Listen() {
@@ -98,7 +124,7 @@ bool Server::SendAck(bool ack) {
   // TODO(armansito): Don't send anything if we're in no-acknowledgment mode. We
   // currently don't support this mode.
 
-  uint8_t payload = ack ? '+' : '-';
+  char payload = ack ? '+' : '-';
   ssize_t bytes_written = write(client_sock_.get(), &payload, 1);
 
   return bytes_written > 0;
@@ -106,7 +132,7 @@ bool Server::SendAck(bool ack) {
 
 void Server::PostReadTask() {
   message_loop_.task_runner()->PostTask([this] {
-    ssize_t bytes_read =
+    ssize_t read_size =
         read(client_sock_.get(), in_buffer_.data(), kMaxBufferSize);
 
     // If the remote end closed the TCP connection, then we're done.
@@ -114,22 +140,33 @@ void Server::PostReadTask() {
     // that a stub usually supports and there are ways for gdbserver to stay up
     // even when a client (gdb, lldb, etc) closes the connection. We will worry
     // about supporting those later.
-    if (bytes_read == 0) {
+    if (read_size == 0) {
       FTL_LOG(INFO) << "Client closed connection";
       QuitMessageLoop(true);
       return;
     }
 
     // If there was an error
-    if (bytes_read < 0) {
+    if (read_size < 0) {
       util::LogErrorWithErrno("Error occured while waiting for command");
       QuitMessageLoop(false);
       return;
     }
 
+    ftl::StringView bytes_read(in_buffer_.data(), read_size);
+
+    // Before anything else, check to see if this is an acknowledgment in
+    // response to a notification. The GDB Remote protocol defines only the
+    // "Stop" notification, so we specially handle its acknowledgment here.
+    if (bytes_read == kStopAck && pending_notification_) {
+      FTL_LOG(INFO) << "Notification acknowledged";
+      pending_notification_.reset();
+      TryPostNextNotification();
+      return;
+    }
+
     ftl::StringView packet_data;
-    bool verified = util::VerifyPacket(
-        ftl::StringView(in_buffer_.data(), bytes_read), &packet_data);
+    bool verified = util::VerifyPacket(bytes_read, &packet_data);
 
     // Send acknowledgment back (this blocks)
     if (!SendAck(verified)) {
@@ -147,7 +184,7 @@ void Server::PostReadTask() {
     // Route the packet data to the command handler.
     auto callback = [this](const ftl::StringView& rsp) {
       // Send the response if there is one.
-      PostWriteTask(rsp);
+      PostPacketWriteTask(rsp);
 
       // Wait for the next command.
       PostReadTask();
@@ -165,19 +202,19 @@ void Server::PostReadTask() {
   });
 }
 
-void Server::PostWriteTask(const ftl::StringView& rsp) {
-  FTL_DCHECK(rsp.size() + 4 < kMaxBufferSize);
+void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
+  FTL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
   // Copy the data to capture it in the closure.
-  message_loop_.task_runner()->PostTask([this, rsp] {
+  message_loop_.task_runner()->PostTask([this, data, notify] {
     int index = 0;
-    out_buffer_[index++] = '$';
-    memcpy(out_buffer_.data() + index, rsp.data(), rsp.size());
-    index += rsp.size();
+    out_buffer_[index++] = notify ? '%' : '$';
+    memcpy(out_buffer_.data() + index, data.data(), data.size());
+    index += data.size();
     out_buffer_[index++] = '#';
 
     uint8_t checksum = 0;
-    for (uint8_t byte : rsp)
+    for (uint8_t byte : data)
       checksum += byte;
 
     util::EncodeByteString(checksum, out_buffer_.data() + index);
@@ -186,10 +223,58 @@ void Server::PostWriteTask(const ftl::StringView& rsp) {
     ssize_t bytes_written =
         write(client_sock_.get(), out_buffer_.data(), index);
     if (bytes_written != index) {
-      util::LogErrorWithErrno("Failed to send response");
+      util::LogErrorWithErrno("Failed to send packet");
       QuitMessageLoop(false);
     }
   });
+}
+
+void Server::PostPacketWriteTask(const ftl::StringView& data) {
+  PostWriteTask(false, data);
+}
+
+void Server::PostNotificationWriteTask(const ftl::StringView& data) {
+  PostWriteTask(true, data);
+}
+
+void Server::TryPostNextNotification() {
+  if (pending_notification_ || notify_queue_.empty())
+    return;
+
+  pending_notification_ = std::move(notify_queue_.front());
+  notify_queue_.pop();
+  FTL_DCHECK(pending_notification_);
+
+  // Send the notification
+  PostNotificationWriteTask(pending_notification_->bytes);
+
+  // Set up a timeout handler.
+  // NOTE: There is a potential race in the logic below where the remote end
+  // COULD send an acknowledgment right after the timeout has expired and we
+  // have already sent the next queued up notification. In that case we could
+  // potentially interpret the acknowledgment packet for the previous
+  // notification as if it has been sent for the current one. The default time
+  // out interval is defined to be long enough that this is very unlikely.
+  message_loop_.task_runner()->PostDelayedTask(
+      [this, pending = pending_notification_.get()] {
+        // If the notification that we set this timeout for has already been
+        // acknowledged by the remote, then we have nothing to do.
+        if (pending_notification_.get() != pending)
+          return;
+
+        // If the notification has a positive retry count, then send it again.
+        if (pending_notification_->retries_left-- > 0) {
+          FTL_LOG(WARNING) << "Notification timed out; retrying";
+          PostNotificationWriteTask(pending_notification_->bytes);
+          return;
+        }
+
+        // The retry count has reached 0. Remove the pending notification and
+        // queue up the next one.
+        pending_notification_.reset();
+        TryPostNextNotification();
+      },
+      pending_notification_->timeout);
 }
 
 void Server::QuitMessageLoop(bool status) {
