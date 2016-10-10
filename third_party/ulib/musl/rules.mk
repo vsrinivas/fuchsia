@@ -295,13 +295,9 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/ipc/shmctl.c \
     $(LOCAL_DIR)/src/ipc/shmdt.c \
     $(LOCAL_DIR)/src/ipc/shmget.c \
-    $(LOCAL_DIR)/src/ldso/__dlsym.c \
-    $(LOCAL_DIR)/src/ldso/dl_iterate_phdr.c \
-    $(LOCAL_DIR)/src/ldso/dladdr.c \
     $(LOCAL_DIR)/src/ldso/dlclose.c \
     $(LOCAL_DIR)/src/ldso/dlerror.c \
     $(LOCAL_DIR)/src/ldso/dlinfo.c \
-    $(LOCAL_DIR)/src/ldso/dlopen.c \
     $(LOCAL_DIR)/src/legacy/cuserid.c \
     $(LOCAL_DIR)/src/legacy/daemon.c \
     $(LOCAL_DIR)/src/legacy/err.c \
