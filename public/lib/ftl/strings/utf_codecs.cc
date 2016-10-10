@@ -10,8 +10,8 @@ namespace ftl {
 
 bool IsStringUTF8(ftl::StringView str) {
   const char *src = str.data();
-  int32_t src_len = static_cast<int32_t>(str.size());
-  int32_t char_index = 0;
+  size_t src_len = str.size();
+  size_t char_index = 0;
 
   while (char_index < src_len) {
     int32_t code_point;
@@ -25,8 +25,8 @@ bool IsStringUTF8(ftl::StringView str) {
 // ReadUnicodeCharacter --------------------------------------------------------
 
 bool ReadUnicodeCharacter(const char* src,
-                          int32_t src_len,
-                          int32_t* char_index,
+                          size_t src_len,
+                          size_t* char_index,
                           uint32_t* code_point_out) {
   // U8_NEXT expects to be able to use -1 to signal an error, so we must
   // use a signed type for code_point.  But this function returns false

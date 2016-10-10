@@ -17,6 +17,7 @@
 #ifndef LIB_FTL_THIRD_PARTY_ICU_ICU_UTF_H_
 #define LIB_FTL_THIRD_PARTY_ICU_ICU_UTF_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace ftl_icu {
@@ -173,8 +174,8 @@ extern const uint8_t utf8_countTrailBytes[256];
  * @internal
  */
 UChar32 utf8_nextCharSafeBody(const uint8_t* s,
-                              int32_t* pi,
-                              int32_t length,
+                              size_t* pi,
+                              size_t length,
                               UChar32 c,
                               UBool strict);
 
@@ -202,7 +203,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
     if (((uint8_t)(c)) >= 0x80) {                                       \
       if (FTL_U8_IS_LEAD(c)) {                                          \
         (c) = ftl_icu::utf8_nextCharSafeBody((const uint8_t*)s, &(i),   \
-                                             (int32_t)(length), c, -1); \
+                                             (size_t)(length), c, -1); \
       } else {                                                          \
         (c) = FTL_U_SENTINEL;                                           \
       }                                                                 \

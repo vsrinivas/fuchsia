@@ -17,6 +17,8 @@
 *   that would otherwise be too long as macros.
 */
 
+#include <stddef.h>
+
 #include "lib/ftl/third_party/icu/icu_utf.h"
 
 namespace ftl_icu {
@@ -129,11 +131,11 @@ static const UChar32 utf8_errorValue[6] = {FTL_UTF8_ERROR_VALUE_1,
  * Note that a UBool is the same as an int8_t.
  */
 UChar32 utf8_nextCharSafeBody(const uint8_t* s,
-                              int32_t* pi,
-                              int32_t length,
+                              size_t* pi,
+                              size_t length,
                               UChar32 c,
                               UBool strict) {
-  int32_t i = *pi;
+  size_t i = *pi;
   uint8_t count = FTL_U8_COUNT_TRAIL_BYTES(c);
   if ((i) + count <= (length)) {
     uint8_t trail, illegal = 0;
@@ -211,7 +213,7 @@ UChar32 utf8_nextCharSafeBody(const uint8_t* s,
     }
   } else /* too few bytes left */ {
     /* error handling */
-    int32_t i0 = i;
+    size_t i0 = i;
     /* don't just set (i)=(length) in case there is an illegal sequence */
     while ((i) < (length) && FTL_U8_IS_TRAIL(s[i])) {
       ++(i);

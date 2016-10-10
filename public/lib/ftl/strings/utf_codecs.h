@@ -43,8 +43,8 @@ bool IsStringUTF8(ftl::StringView str);
 //
 // Returns true on success. On false, |*code_point| will be invalid.
 bool ReadUnicodeCharacter(const char* src,
-                          int32_t src_len,
-                          int32_t* char_index,
+                          size_t src_len,
+                          size_t* char_index,
                           uint32_t* code_point_out);
 
 // WriteUnicodeCharacter -------------------------------------------------------
