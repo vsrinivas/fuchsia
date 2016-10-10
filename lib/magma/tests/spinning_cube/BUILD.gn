@@ -9,6 +9,8 @@ config("spinning_cube_public_config") {
 }
 
 source_set("spinning_cube") {
+  testonly = true
+
   public_configs = [ ":spinning_cube_public_config" ]
 
   sources = [

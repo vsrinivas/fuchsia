@@ -4,23 +4,21 @@
 
 import("//magma/gnbuild/magma.gni")
 
-config("gpureadback_public_config"){
-  include_dirs = ["."]
+config("gpureadback_public_config") {
+  include_dirs = [ "." ]
 }
 
 source_set("gpureadback") {
-  public_configs = [
-    ":gpureadback_public_config"
-  ]
+  testonly = true
 
-  cflags = [
-    "-std=c++0x",
-  ]
+  public_configs = [ ":gpureadback_public_config" ]
+
+  cflags = [ "-std=c++0x" ]
 
   sources = [
+    "gpureadback.h",
     "magma_readback_test.cc",
     "magma_readback_test.h",
-    "gpureadback.h",
   ]
 
   public_deps = [
@@ -28,11 +26,13 @@ source_set("gpureadback") {
   ]
 }
 
-executable("gpu_readback_test"){
+executable("gpu_readback_test") {
+  testonly = true
+
   sources = [
-    "main.c"
+    "main.c",
   ]
   deps = [
-    ":gpureadback"
+    ":gpureadback",
   ]
 }
