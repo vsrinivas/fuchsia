@@ -45,7 +45,6 @@ executable("unittests") {
   deps = [
     ":lib",
     "//apps/ledger/glue",
-    "//apps/ledger/glue/test",
     "//apps/ledger/storage/impl/store:lib",
     "//apps/ledger/storage/public",
     "//apps/ledger/test",

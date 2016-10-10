@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "apps/ledger/fake_network_service/fake_network_service.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "apps/network/interfaces/network_service.mojom.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
@@ -91,11 +90,11 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   ASSERT_TRUE(CreateFile(content, &file));
 
   SetResponse("", 0, 200);
-  gcs_->UploadFile("hello/world/baz/quz", file, [&status](Status s) {
+  gcs_->UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
@@ -128,11 +127,11 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   ASSERT_TRUE(CreateFile("", &file));
 
   SetResponse("", 0, 412);
-  gcs_->UploadFile("hello/world/baz/quz", file, [&status](Status s) {
+  gcs_->UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(Status::OBJECT_ALREADY_EXIST, status);
 }
@@ -144,11 +143,11 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   ASSERT_TRUE(CreateFile("", &file));
 
   SetResponse(content, content.size(), 200);
-  gcs_->DownloadFile("hello/world/baz/quz", file, [&status](Status s) {
+  gcs_->DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
@@ -168,11 +167,11 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   ASSERT_TRUE(CreateFile(content, &file));
 
   SetResponse(content, content.size() - 1, 200);
-  gcs_->DownloadFile("hello/world/baz/quz", file, [&status](Status s) {
+  gcs_->DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(Status::UNKNOWN_ERROR, status);
 }

@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "apps/ledger/glue/crypto/rand.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
@@ -60,21 +59,21 @@ class LedgerStorageTest : public ::testing::Test {
 TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   PageId pageId = "1234";
   storage_->GetPageStorage(pageId,
-                           [](std::unique_ptr<PageStorage> page_storage) {
+                           [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_EQ(page_storage, nullptr);
-                             glue::test::QuitLoop();
+                             message_loop_.QuitNow();
                            });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   std::unique_ptr<PageStorage> pageStorage =
       storage_->CreatePageStorage(pageId);
   EXPECT_EQ(pageId, pageStorage->GetId());
   storage_->GetPageStorage(pageId,
-                           [](std::unique_ptr<PageStorage> page_storage) {
+                           [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);
-                             glue::test::QuitLoop();
+                             message_loop_.QuitNow();
                            });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
@@ -83,19 +82,19 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       storage_->CreatePageStorage(pageId);
   EXPECT_EQ(pageId, pageStorage->GetId());
   storage_->GetPageStorage(pageId,
-                           [](std::unique_ptr<PageStorage> page_storage) {
+                           [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);
-                             glue::test::QuitLoop();
+                             message_loop_.QuitNow();
                            });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_TRUE(storage_->DeletePageStorage(pageId));
   storage_->GetPageStorage(pageId,
-                           [](std::unique_ptr<PageStorage> page_storage) {
+                           [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_EQ(nullptr, page_storage);
-                             glue::test::QuitLoop();
+                             message_loop_.QuitNow();
                            });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(LedgerStorageTest, Commit) {

@@ -6,7 +6,6 @@
 
 #include "apps/ledger/app/constants.h"
 #include "apps/ledger/convert/convert.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "apps/ledger/storage/fake/fake_journal.h"
 #include "apps/ledger/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
@@ -42,9 +41,9 @@ class PageImplTest : public ::testing::Test {
   std::unique_ptr<storage::fake::FakePageStorage> fake_storage_;
   storage::fake::FakePageStorage* fake_storage_ptr_;
 
- private:
   mtl::MessageLoop message_loop_;
 
+ private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
 
@@ -54,9 +53,9 @@ TEST_F(PageImplTest, GetId) {
   new PageImpl(GetProxy(&page_ptr), std::move(fake_storage_));
   page_ptr->GetId([this](mojo::Array<uint8_t> page_id) {
     EXPECT_EQ(this->page_id1_, convert::ToString(page_id));
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, PutNoTransaction) {
@@ -83,10 +82,10 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   };
   page_ptr->Put(convert::ToArray(key), convert::ToArray(value), callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
@@ -114,11 +113,11 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   };
   page_ptr->PutReference(convert::ToArray(key), std::move(reference),
                          Priority::LAZY, callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, DeleteNoTransaction) {
@@ -141,9 +140,9 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
     storage::fake::FakeJournalDelegate::Entry entry =
         journals[0]->GetData().at(key);
     EXPECT_TRUE(entry.deleted);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, TransactionCommit) {
@@ -164,11 +163,11 @@ TEST_F(PageImplTest, TransactionCommit) {
   //  - PutReference
   //  - Delete
   //  - Commit
-  page_ptr->StartTransaction([](Status status) {
+  page_ptr->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   auto put_callback = [this, &key1, &value, &object_id1](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -190,11 +189,11 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(object_id1, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
 
   };
   page_ptr->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   auto put_reference_callback = [this, &key2, &object_id2](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -211,12 +210,12 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(object_id2, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
 
   };
   page_ptr->PutReference(convert::ToArray(key2), std::move(reference),
                          Priority::LAZY, put_reference_callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   auto delete_callback = [this, &key2](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -231,11 +230,11 @@ TEST_F(PageImplTest, TransactionCommit) {
     storage::fake::FakeJournalDelegate::Entry entry =
         journals[0]->GetData().at(key2);
     EXPECT_TRUE(entry.deleted);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
 
   };
   page_ptr->Delete(convert::ToArray(key2), delete_callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   page_ptr->Commit([this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -246,9 +245,9 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsCommitted());
     EXPECT_EQ(2u, journals[0]->GetData().size());
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, TransactionRollback) {
@@ -271,9 +270,9 @@ TEST_F(PageImplTest, TransactionRollback) {
     EXPECT_EQ(1u, journals.size());
     EXPECT_TRUE(journals[0]->IsRolledBack());
     EXPECT_EQ(0u, journals[0]->GetData().size());
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, NoTwoTransactions) {
@@ -286,11 +285,11 @@ TEST_F(PageImplTest, NoTwoTransactions) {
   //  - StartTransaction
   page_ptr->StartTransaction(
       [](Status status) { EXPECT_EQ(Status::OK, status); });
-  page_ptr->StartTransaction([](Status status) {
+  page_ptr->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
@@ -300,11 +299,11 @@ TEST_F(PageImplTest, NoTransactionCommit) {
 
   // Sequence of operations:
   //  - Commit
-  page_ptr->Commit([](Status status) {
+  page_ptr->Commit([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
@@ -314,11 +313,11 @@ TEST_F(PageImplTest, NoTransactionRollback) {
 
   // Sequence of operations:
   //  - Rollback
-  page_ptr->Rollback([](Status status) {
+  page_ptr->Rollback([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 }  // namespace

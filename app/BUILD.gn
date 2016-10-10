@@ -71,7 +71,6 @@ executable("unittests") {
   deps = [
     ":lib",
     "//apps/ledger/convert",
-    "//apps/ledger/glue/test",
     "//apps/ledger/storage/fake:lib",
     "//apps/ledger/storage/public",
     "//apps/ledger/test",

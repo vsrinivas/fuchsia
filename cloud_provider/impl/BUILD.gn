@@ -39,7 +39,6 @@ executable("unittests") {
   deps = [
     ":impl",
     "//apps/ledger/firebase",
-    "//apps/ledger/glue/test",
     "//apps/ledger/test",
     "//lib/ftl",
     "//lib/mtl",

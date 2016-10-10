@@ -13,7 +13,6 @@
 #include "apps/ledger/firebase/encoding.h"
 #include "apps/ledger/firebase/firebase.h"
 #include "apps/ledger/firebase/status.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -42,7 +41,7 @@ class CloudProviderImplTest : public ::testing::Test,
     get_queries_.push_back(query);
     message_loop_.task_runner()->PostTask([this, callback]() {
       callback(firebase::Status::OK, *get_response_);
-      glue::test::QuitLoop();
+      message_loop_.QuitNow();
     });
   }
 
@@ -52,9 +51,9 @@ class CloudProviderImplTest : public ::testing::Test,
       const std::function<void(firebase::Status status)>& callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    message_loop_.task_runner()->PostTask([callback]() {
+    message_loop_.task_runner()->PostTask([this, callback]() {
       callback(firebase::Status::OK);
-      glue::test::QuitLoop();
+      message_loop_.QuitNow();
     });
   }
 
@@ -125,7 +124,7 @@ TEST_F(CloudProviderImplTest, AddNotification) {
                                      EXPECT_EQ(Status::OK, status);
                                      callback_called = true;
                                    });
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(1u, put_keys_.size());
@@ -266,7 +265,7 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
 
   cloud_provider_->GetNotifications("page_id", ServerTimestampToBytes(42),
                                     callback);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ(1u, get_queries_.size());

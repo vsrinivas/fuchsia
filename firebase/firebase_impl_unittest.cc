@@ -10,7 +10,6 @@
 #include <rapidjson/document.h>
 
 #include "apps/ledger/fake_network_service/fake_network_service.h"
-#include "apps/ledger/glue/test/run_loop.h"
 #include "apps/network/interfaces/network_service.mojom.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -71,7 +70,7 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
 
   void OnError() override { error_count_++; }
 
-  void OnDone() override { glue::test::QuitLoop(); }
+  void OnDone() override { message_loop_.QuitNow(); }
 
   void SetPipeResponse(mojo::ScopedDataPipeConsumerHandle body,
                        uint32_t status_code) {
@@ -109,7 +108,7 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
  private:
   void QuitLoopIfNeeded() {
     if (quit_loop_on_next_event_) {
-      glue::test::QuitLoop();
+      message_loop_.QuitNow();
       quit_loop_on_next_event_ = false;
     }
   }
@@ -125,15 +124,15 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
 TEST_F(FirebaseImplTest, Get) {
   SetStringResponse("\"content\"", 200);
   firebase_->Get("bazinga", "",
-                 [](Status status, const rapidjson::Value& value) {
+                 [this](Status status, const rapidjson::Value& value) {
                    std::string response_string;
                    EXPECT_EQ(Status::OK, status);
                    EXPECT_TRUE(value.IsString());
                    EXPECT_EQ("content", value);
-                   glue::test::QuitLoop();
+                   message_loop_.QuitNow();
                  });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/bazinga.json",
             fake_network_service_->GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_->GetRequest()->method);
@@ -142,24 +141,24 @@ TEST_F(FirebaseImplTest, Get) {
 TEST_F(FirebaseImplTest, GetError) {
   SetStringResponse("\"content\"", 404);
   firebase_->Get("bazinga", "",
-                 [](Status status, const rapidjson::Value& value) {
+                 [this](Status status, const rapidjson::Value& value) {
                    std::string response_string;
                    EXPECT_NE(Status::OK, status);
                    EXPECT_TRUE(value.IsNull());
-                   glue::test::QuitLoop();
+                   message_loop_.QuitNow();
                  });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
 }
 
 TEST_F(FirebaseImplTest, GetWithQuery) {
   SetStringResponse("content", 200);
   firebase_->Get("bazinga", "orderBy=\"timestamp\"",
-                 [](Status status, const rapidjson::Value& value) {
-                   glue::test::QuitLoop();
+                 [this](Status status, const rapidjson::Value& value) {
+                   message_loop_.QuitNow();
                  });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?orderBy=\"timestamp\"",
@@ -170,11 +169,11 @@ TEST_F(FirebaseImplTest, GetWithQuery) {
 // Verifies that request urls for root of the db are correctly formed.
 TEST_F(FirebaseImplTest, Root) {
   SetStringResponse("42", 200);
-  firebase_->Get("", "", [](Status status, const rapidjson::Value& value) {
-    glue::test::QuitLoop();
+  firebase_->Get("", "", [this](Status status, const rapidjson::Value& value) {
+    message_loop_.QuitNow();
   });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/.json",
             fake_network_service_->GetRequest()->url);
 }
@@ -184,12 +183,12 @@ TEST_F(FirebaseImplTest, Put) {
   // Firebase server seems to respond with the data we sent to it. This is not
   // useful for the client so our API doesn't expose it to the client.
   SetStringResponse("\"Alice\"", 200);
-  firebase_->Put("name", "\"Alice\"", [](Status status) {
+  firebase_->Put("name", "\"Alice\"", [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_service_->GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_service_->GetRequest()->method);
@@ -198,12 +197,12 @@ TEST_F(FirebaseImplTest, Put) {
 // Verifies that DELETE requests are made correctly.
 TEST_F(FirebaseImplTest, Delete) {
   SetStringResponse("", 200);
-  firebase_->Delete("name", [](Status status) {
+  firebase_->Delete("name", [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    glue::test::QuitLoop();
+    message_loop_.QuitNow();
   });
 
-  glue::test::RunLoop();
+  message_loop_.Run();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_service_->GetRequest()->url);
   EXPECT_EQ("DELETE", fake_network_service_->GetRequest()->method);
@@ -214,7 +213,7 @@ TEST_F(FirebaseImplTest, WatchRequest) {
   SetStringResponse("", 200);
 
   firebase_->Watch("some/path", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/some/path.json",
             fake_network_service_->GetRequest()->url);
@@ -229,7 +228,7 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   SetStringResponse("", 200);
 
   firebase_->Watch("some/path", "orderBy=\"timestamp\"", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/some/path.json"
@@ -256,7 +255,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(3u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -283,7 +282,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(1u, patch_count_);
@@ -304,7 +303,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("name", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -321,7 +320,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -338,7 +337,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -357,7 +356,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
   SetStringResponse(stream_body, 200);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -370,7 +369,7 @@ TEST_F(FirebaseImplTest, WatchHttpError) {
   SetStringResponse("", 404);
 
   firebase_->Watch("/", "", this);
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -390,7 +389,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(1u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -400,7 +399,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
-  glue::test::RunLoop();
+  message_loop_.Run();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -416,8 +415,9 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(
-      [] { glue::test::QuitLoop(); }, ftl::TimeDelta::FromMilliseconds(100));
-  glue::test::RunLoop();
+      [this] { message_loop_.QuitNow(); },
+      ftl::TimeDelta::FromMilliseconds(100));
+  message_loop_.Run();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);
