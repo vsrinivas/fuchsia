@@ -431,9 +431,6 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp,
                        uintptr_t arg1, uintptr_t arg2) {
     thread_t *ct = get_current_thread();
 
-    vaddr_t kernel_stack_top = (uintptr_t)ct->stack + ct->stack_size;
-    kernel_stack_top = ROUNDDOWN(kernel_stack_top, 8);
-
     uint32_t spsr = CPSR_MODE_USR;
     // An entry point with the low bit set is Thumb code.
     if (pc & 1)
@@ -446,7 +443,7 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp,
                                  uintptr_t pc) __NO_RETURN;
     LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
             ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
-            arg1, arg2, spsr, kernel_stack_top, sp, pc);
-    arm_uspace_entry(arg1, arg2, spsr, kernel_stack_top, sp, 0, pc);
+            arg1, arg2, spsr, ct->stack_top, sp, pc);
+    arm_uspace_entry(arg1, arg2, spsr, ct->stack_top, sp, 0, pc);
     __UNREACHABLE;
 }

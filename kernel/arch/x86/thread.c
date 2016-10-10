@@ -27,11 +27,13 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
 #if ARCH_X86_32
     // make sure the top of the stack is 8 byte aligned for ABI compliance
     stack_top = ROUNDDOWN(stack_top, 8);
+    t->stack_top = stack_top;
     struct x86_32_context_switch_frame *frame = (struct x86_32_context_switch_frame *)(stack_top);
 #endif
 #if ARCH_X86_64
     // make sure the top of the stack is 16 byte aligned for ABI compliance
     stack_top = ROUNDDOWN(stack_top, 16);
+    t->stack_top = stack_top;
 
     // make sure we start the frame 8 byte unaligned (relative to the 16 byte alignment) because
     // of the way the context switch will pop the return address off the stack. After the first
@@ -133,17 +135,13 @@ void arch_context_switch(thread_t *oldthread, thread_t *newthread)
 {
     x86_extended_register_context_switch(oldthread, newthread);
 
-    /* TODO: precompute the stack top and put in the thread structure directly */
-    vaddr_t kstack_top = (vaddr_t)newthread->stack + newthread->stack_size;
-    kstack_top = ROUNDDOWN(kstack_top, 16);
-
     //printf("cs 0x%llx\n", kstack_top);
 
     /* set the tss SP0 value to point at the top of our stack */
-    x86_set_tss_sp(kstack_top);
+    x86_set_tss_sp(newthread->stack_top);
 
     /* set the kernel sp in our per cpu gs: structure */
-    x86_set_percpu_kernel_sp(kstack_top);
+    x86_set_percpu_kernel_sp(newthread->stack_top);
 
     /* user and kernel gs have been swapped, so unswap them when loading
      * from the msrs

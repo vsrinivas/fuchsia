@@ -126,6 +126,7 @@ typedef struct thread {
     /* stack stuff */
     void *stack;
     size_t stack_size;
+    vaddr_t stack_top;
 
     /* entry point */
     thread_start_routine entry;

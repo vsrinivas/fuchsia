@@ -114,9 +114,6 @@ void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3
 void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) {
     thread_t *ct = get_current_thread();
 
-    vaddr_t kernel_stack_top = (uintptr_t)ct->stack + ct->stack_size;
-    kernel_stack_top = ROUNDDOWN(kernel_stack_top, 16);
-
     /* set up a default spsr to get into 64bit user space:
      * zeroed NZCV
      * no SS, no IL, no D
@@ -129,8 +126,8 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
 
     LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
             ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
-            arg1, arg2, spsr, kernel_stack_top, sp, pc);
-    arm64_uspace_entry(arg1, arg2, pc, sp, kernel_stack_top, spsr);
+            arg1, arg2, spsr, ct->stack_top, sp, pc);
+    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack_top, spsr);
     __UNREACHABLE;
 }
 
