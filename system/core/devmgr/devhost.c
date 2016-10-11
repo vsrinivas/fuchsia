@@ -12,6 +12,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 
 #include <launchpad/launchpad.h>
 
@@ -225,6 +226,19 @@ __EXPORT int devhost_cmdline(int argc, char** argv) {
             printf("devhost: cannot create pci device: %d\n", status);
             return -1;
         }
+    } else if (!strcmp(argv[1], "soc")) {
+        if (argc < 4) return -1;
+        if ((status = device_create(&dev, &root_driver, "soc", &root_ops)) < 0) {
+            printf("devhost: cannot create SoC device: %d\n", status);
+            return -1;
+        }
+        dev->protocol_id = MX_PROTOCOL_SOC;
+        dev->props = calloc(2, sizeof(mx_device_prop_t));
+        dev->props[0].id = BIND_SOC_VID;
+        dev->props[0].value = strtoul(argv[2],NULL,10);
+        dev->props[1].id = BIND_SOC_PID;
+        dev->props[1].value = strtoul(argv[3],NULL,10);
+        dev->prop_count=2;
     } else {
         printf("devhost: unsupported mode: %s\n", argv[1]);
         return -1;
