@@ -14,6 +14,9 @@ import sys
 # be updated.
 ROOT_PUBSPECS = [
     'dart/pkg/analysis_server',
+    'dart/pkg/analyzer',
+    'dart/pkg/typed_mock',
+    'lib/flutter/packages/flutter',
     'lib/flutter/packages/flutter_test',
     'lib/flutter/packages/flutter_tools',
 ]
