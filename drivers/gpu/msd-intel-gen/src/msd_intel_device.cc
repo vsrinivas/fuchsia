@@ -164,11 +164,21 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
         dump_out.append("No engine faults detected.");
     }
 }
+bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
+{
+    bool res = render_engine_cs_->WaitRendering(std::move(buf));
+    if (!res) {
+        std::string s;
+        DumpToString(s);
+        printf("WaitRendering timed out!\n\n%s\n", s.c_str());
+    }
+    return res;
+}
 
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
-    if (!render_engine_cs_->WaitRendering(buffer)) {
+    if (!WaitRendering(buffer)) {
         DLOG("WaitRendering failed");
         if (callback)
             (*callback)(-ETIMEDOUT, data);
