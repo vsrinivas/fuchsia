@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtt.h"
+#include "magma_util/macros.h"
 #include "magma_util/simple_allocator.h"
 #include "registers.h"
 #include <vector>
@@ -95,8 +96,7 @@ bool Gtt::InitScratch()
     if (!scratch_->MapPageBus(0, &scratch_gpu_addr_))
         return DRETF(false, "MapPageBus failed");
 
-#if MAGMA_DEBUG
-    {
+    if (magma::kDebug) {
         void* vaddr;
         if (!scratch_->MapPageCpu(0, &vaddr)) {
             DLOG("MapPageCpu failed");
@@ -107,7 +107,6 @@ bool Gtt::InitScratch()
             scratch_->UnmapPageCpu(0);
         }
     }
-#endif
 
     return true;
 }
@@ -211,16 +210,17 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
     }
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
-#if MAGMA_DEBUG
-    auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type, true);
-    if (readback != expected) {
-        DLOG("Mismatch posting read: 0x%0llx != 0x%0llx", readback, expected);
-        DASSERT(false);
+
+    if (magma::kDebug) {
+        auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type, true);
+        if (readback != expected) {
+            DLOG("Mismatch posting read: 0x%0llx != 0x%0llx", readback, expected);
+            DASSERT(false);
+        }
+    } else {
+        // Avoid compiler warnings
+        (void)readback;
     }
-#else
-    // Avoid compiler warnings
-    (void)readback;
-#endif
 
 // TODO(MA-36) - gtt - remove GFX_FLSH_CNTL_GEN6 because not documented for bdw
 #define GFX_FLSH_CNTL_GEN6 0x101008
