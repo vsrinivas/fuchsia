@@ -14,13 +14,42 @@
 namespace ftl {
 namespace {
 
+template <typename NumberType>
+bool GetDigitValue(const char s, Base base, NumberType* out_digit) {
+  FTL_DCHECK(out_digit);
+
+  if (s < '0')
+    return false;
+
+  if (s <= '9') {
+    *out_digit = static_cast<NumberType>(s - '0');
+    return true;
+  }
+
+  if (base != Base::k16)
+    return false;
+
+  if (s >= 'a' && s <= 'f') {
+    *out_digit = static_cast<NumberType>(s - 'a' + 10);
+    return true;
+  }
+
+  if (s >= 'A' && s <= 'F') {
+    *out_digit = static_cast<NumberType>(s - 'A' + 10);
+    return true;
+  }
+
+  return false;
+}
+
 // Helper for |StringToNumberWithError()|. Note that this may modify |*number|
 // even on failure.
 template <typename NumberType>
 bool StringToPositiveNumberWithError(const char* s,
                                      size_t length,
+                                     Base base,
                                      NumberType* number) {
-  constexpr NumberType kBase = static_cast<NumberType>(10);
+  const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMaxAllowed = std::numeric_limits<NumberType>::max();
 
   FTL_DCHECK(s);
@@ -29,9 +58,10 @@ bool StringToPositiveNumberWithError(const char* s,
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
-    if (s[i] < '0' || s[i] > '9')
+    NumberType new_digit;
+    if (!GetDigitValue(s[i], base, &new_digit))
       return false;
-    NumberType new_digit = static_cast<NumberType>(s[i] - '0');
+
     // This is really a check of "*number * kBase + new_digit > kMaxAllowed":
     if (*number > kMaxAllowed / kBase ||
         (*number == kMaxAllowed / kBase && new_digit > kMaxAllowed % kBase))
@@ -47,8 +77,9 @@ bool StringToPositiveNumberWithError(const char* s,
 template <typename NumberType>
 bool StringToNegativeNumberWithError(const char* s,
                                      size_t length,
+                                     Base base,
                                      NumberType* number) {
-  constexpr NumberType kBase = static_cast<NumberType>(10);
+  const NumberType kBase = static_cast<NumberType>(base == Base::k10 ? 10 : 16);
   constexpr NumberType kMinAllowed = std::numeric_limits<NumberType>::min();
 
   FTL_DCHECK(s);
@@ -57,9 +88,10 @@ bool StringToNegativeNumberWithError(const char* s,
 
   *number = 0;
   for (size_t i = 0; i < length; i++) {
-    if (s[i] < '0' || s[i] > '9')
+    NumberType new_digit;
+    if (!GetDigitValue(s[i], base, &new_digit))
       return false;
-    NumberType new_digit = static_cast<NumberType>(s[i] - '0');
+
     // This is really a check of "*number * kBase - new_digit > kMinAllowed":
     if (*number < kMinAllowed / kBase ||
         (kMinAllowed / kBase == *number && new_digit > -(kMinAllowed % kBase)))
@@ -73,7 +105,7 @@ bool StringToNegativeNumberWithError(const char* s,
 }  // namespace
 
 template <typename NumberType>
-std::string NumberToString(NumberType number) {
+std::string NumberToString(NumberType number, Base base) {
   // Special-case zero (since nonzero cases naturally produce digits).
   if (!number)
     return std::string("0");
@@ -91,8 +123,14 @@ std::string NumberToString(NumberType number) {
   size_t i = sizeof(buf);
   while (abs_number) {
     i--;
-    buf[i] = '0' + abs_number % 10u;
-    abs_number /= 10u;
+    if (base == Base::k10) {
+      buf[i] = '0' + abs_number % 10u;
+      abs_number /= 10u;
+    } else {
+      UnsignedNumberType val = abs_number % 16u;
+      buf[i] = (val < 10) ? ('0' + val) : ('A' + val % 10u);
+      abs_number /= 16u;
+    }
   }
   if (number_is_negative) {
     i--;
@@ -103,7 +141,9 @@ std::string NumberToString(NumberType number) {
 }
 
 template <typename NumberType>
-bool StringToNumberWithError(ftl::StringView string, NumberType* number) {
+bool StringToNumberWithError(ftl::StringView string,
+                             NumberType* number,
+                             Base base) {
   FTL_DCHECK(number);
 
   if (string.empty())
@@ -115,11 +155,11 @@ bool StringToNumberWithError(ftl::StringView string, NumberType* number) {
   if (std::is_signed<NumberType>::value && string[0] == '-') {
     if (length < 2)
       return false;
-    if (!StringToNegativeNumberWithError<NumberType>(s + 1, length - 1u,
+    if (!StringToNegativeNumberWithError<NumberType>(s + 1, length - 1u, base,
                                                      &result))
       return false;
   } else {
-    if (!StringToPositiveNumberWithError<NumberType>(s, length, &result))
+    if (!StringToPositiveNumberWithError<NumberType>(s, length, base, &result))
       return false;
   }
 
@@ -129,29 +169,37 @@ bool StringToNumberWithError(ftl::StringView string, NumberType* number) {
 
 // Explicit instantiatiations for (u)intN_t; count on (unsigned) int being one
 // of these:
-template std::string NumberToString<int8_t>(int8_t number);
-template std::string NumberToString<uint8_t>(uint8_t number);
-template std::string NumberToString<int16_t>(int16_t number);
-template std::string NumberToString<uint16_t>(uint16_t number);
-template std::string NumberToString<int32_t>(int32_t number);
-template std::string NumberToString<uint32_t>(uint32_t number);
-template std::string NumberToString<int64_t>(int64_t number);
-template std::string NumberToString<uint64_t>(uint64_t number);
+template std::string NumberToString<int8_t>(int8_t number, Base base);
+template std::string NumberToString<uint8_t>(uint8_t number, Base base);
+template std::string NumberToString<int16_t>(int16_t number, Base base);
+template std::string NumberToString<uint16_t>(uint16_t number, Base base);
+template std::string NumberToString<int32_t>(int32_t number, Base base);
+template std::string NumberToString<uint32_t>(uint32_t number, Base base);
+template std::string NumberToString<int64_t>(int64_t number, Base base);
+template std::string NumberToString<uint64_t>(uint64_t number, Base base);
 template bool StringToNumberWithError<int8_t>(ftl::StringView string,
-                                              int8_t* number);
+                                              int8_t* number,
+                                              Base base);
 template bool StringToNumberWithError<uint8_t>(ftl::StringView string,
-                                               uint8_t* number);
+                                               uint8_t* number,
+                                               Base base);
 template bool StringToNumberWithError<int16_t>(ftl::StringView string,
-                                               int16_t* number);
+                                               int16_t* number,
+                                               Base base);
 template bool StringToNumberWithError<uint16_t>(ftl::StringView string,
-                                                uint16_t* number);
+                                                uint16_t* number,
+                                                Base base);
 template bool StringToNumberWithError<int32_t>(ftl::StringView string,
-                                               int32_t* number);
+                                               int32_t* number,
+                                               Base base);
 template bool StringToNumberWithError<uint32_t>(ftl::StringView string,
-                                                uint32_t* number);
+                                                uint32_t* number,
+                                                Base base);
 template bool StringToNumberWithError<int64_t>(ftl::StringView string,
-                                               int64_t* number);
+                                               int64_t* number,
+                                               Base base);
 template bool StringToNumberWithError<uint64_t>(ftl::StringView string,
-                                                uint64_t* number);
+                                                uint64_t* number,
+                                                Base base);
 
 }  // namespace ftl

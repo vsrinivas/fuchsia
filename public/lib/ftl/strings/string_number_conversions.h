@@ -14,13 +14,20 @@
 
 namespace ftl {
 
+// Supported base values used for converting a string to a number. Currently
+// only bases 10 and 16 are supported.
+enum class Base {
+  k10,
+  k16 
+};
+
 // Converts |number| to a string with a locale-independent decimal
 // representation of it. This is available for all |NumberType|s (u)intN_t (from
 // <stdint.h>) and also (unsigned) int.
 template <typename NumberType>
-std::string NumberToString(NumberType number);
+std::string NumberToString(NumberType number, Base base = Base::k10);
 
-// Converts |string| containing a locale-independent decimal representation of a
+// Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns
 // false and leaves |*number| alone.) This is available for all |NumberType|s
 // (u)intN_t (from <stdint.h>) and also (unsigned) int.
@@ -29,16 +36,20 @@ std::string NumberToString(NumberType number);
 // unsigned types, unary '-' is not allowed. For signed types, "-0", "-00", etc.
 // are also allowed.
 template <typename NumberType>
-bool StringToNumberWithError(ftl::StringView string, NumberType* number);
+bool StringToNumberWithError(ftl::StringView string,
+                             NumberType* number,
+                             Base base = Base::k10);
 
-// Converts |string| containing a locale-independent decimal representation of a
+// Converts |string| containing a locale-independent representation of a
 // number to a numeric representation of that number. (On error, this returns
 // zero.) This is available for all |NumberType|s (u)intN_t (from <stdint.h>)
 // and also (unsigned) int. (See |StringToNumberWithError()| for more details.)
 template <typename NumberType>
-NumberType StringToNumber(ftl::StringView string) {
+NumberType StringToNumber(ftl::StringView string, Base base = Base::k10) {
   NumberType rv = static_cast<NumberType>(0);
-  return StringToNumberWithError(string, &rv) ? rv : static_cast<NumberType>(0);
+  return StringToNumberWithError(string, &rv, base)
+             ? rv
+             : static_cast<NumberType>(0);
 }
 
 }  // namespace ftl
