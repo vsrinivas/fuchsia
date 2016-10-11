@@ -108,6 +108,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     char ackbuf[2048];
     char tmp[INET6_ADDRSTRLEN];
     struct timeval tv;
+    struct timeval begin, end;
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
     int s, r;
@@ -128,6 +129,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         goto done;
     }
     fprintf(stderr, "%s: sending '%s'...\n", appname, fn);
+    gettimeofday(&begin, NULL);
     tv.tv_sec = 0;
     tv.tv_usec = 250 * 1000;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -148,10 +150,11 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
 
     msg->cmd = NB_DATA;
     msg->arg = 0;
+    char* nl = "";
     do {
         r = xread(&xd, msg->data, 1024);
         if (r < 0) {
-            fprintf(stderr, "\n%s: error: reading '%s'\n", appname, fn);
+            fprintf(stderr, "%s%s: error: reading '%s'\n", nl, appname, fn);
             goto done;
         }
         if (r == 0) {
@@ -161,9 +164,10 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         if (count >= (32 * 1024)) {
             count = 0;
             fprintf(stderr, "#");
+            nl = "\n";
         }
         if (io(s, msg, sizeof(nbmsg) + r, ack)) {
-            fprintf(stderr, "\n%s: error: sending '%s'\n", appname, fn);
+            fprintf(stderr, "%s%s: error: sending '%s'\n", nl, appname, fn);
             goto done;
         }
         msg->arg += r;
@@ -175,14 +179,21 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         msg->cmd = NB_BOOT;
         msg->arg = 0;
         if (io(s, msg, sizeof(nbmsg), ack)) {
-            fprintf(stderr, "\n%s: failed to send boot command\n", appname);
+            fprintf(stderr, "%s%s: failed to send boot command\n", nl, appname);
         } else {
-            fprintf(stderr, "\n%s: sent boot command\n", appname);
+            fprintf(stderr, "%s%s: sent boot command\n", nl, appname);
         }
     } else {
-        fprintf(stderr, "\n");
+        fprintf(stderr, "%s", nl);
     }
 done:
+    gettimeofday(&end, NULL);
+    if (end.tv_usec < begin.tv_usec) {
+        end.tv_sec -= 1;
+        end.tv_usec += 1000000;
+    }
+    fprintf(stderr, "%s: %d.%06d sec\n\n", appname, (int)(end.tv_sec - begin.tv_sec),
+            (int)(end.tv_usec - begin.tv_usec));
     if (s >= 0) {
         close(s);
     }
