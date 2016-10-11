@@ -26,7 +26,11 @@ endif
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
+
 USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(USER_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+USER_MANIFEST_DEBUG_INPUTS += $(addsuffix .debug,$(MODULE_USERAPP_OBJECT))
+endif
 
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)

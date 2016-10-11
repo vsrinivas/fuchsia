@@ -73,6 +73,10 @@ $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	@echo generating $@
 	$(NOECHO)$(STRIP) $< -o $@
 
+$(BUILDDIR)/%.debug: $(BUILDDIR)/%
+	@echo generating separate debug info file $@
+	$(NOECHO)$(OBJCOPY) --only-keep-debug $< $@
+
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	@echo generating symbols: $@
 	$(NOECHO)$(OBJDUMP) -Ct $< > $@
@@ -89,11 +93,17 @@ $(BUILDDIR)/%.id: $(BUILDDIR)/%
 	$(NOECHO)scripts/get-build-id $< > $@
 
 # generate a new manifest and compare to see if it differs from the previous one
+# USER_MANIFEST_DEBUG_INPUTS is a dependency here as the file name to put in
+# the manifest must be computed *after* the input file is produced (to get the
+# build id).
 .PHONY: usermanifestfile
-$(USER_MANIFEST): usermanifestfile
+$(USER_MANIFEST): usermanifestfile $(USER_MANIFEST_DEBUG_INPUTS)
 	@echo generating $@
 	@$(MKDIR)
 	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@.tmp
+	$(NOECHO)for f in $(USER_MANIFEST_DEBUG_INPUTS) ; do \
+	  echo debug/$$(scripts/get-build-id $$f).debug=$$f >> $@.tmp ; \
+	done
 	$(NOECHO)$(call TESTANDREPLACEFILE,$@.tmp,$@)
 
 GENERATED += $(USER_MANIFEST)

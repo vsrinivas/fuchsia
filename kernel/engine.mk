@@ -77,7 +77,8 @@ USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
 
 GLOBAL_INCLUDES := system/public system/private
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
-GLOBAL_COMPILEFLAGS := -g -finline -include $(GLOBAL_CONFIG_HEADER)
+GLOBAL_DEBUGFLAGS ?= -g
+GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS) -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += -Wno-error
@@ -234,6 +235,7 @@ USER_FS := $(BUILDDIR)/user.fs
 # manifest of files to include in the user bootfs
 USER_MANIFEST := $(BUILDDIR)/bootfs.manifest
 USER_MANIFEST_LINES :=
+USER_MANIFEST_DEBUG_INPUTS :=
 
 # construct a slightly prettier version of LKINC with . removed and trailing / added
 # used in module.mk

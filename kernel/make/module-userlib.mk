@@ -112,6 +112,9 @@ MODULE_SO_INSTALL_NAME := lib/lib$(MODULE_SO_NAME).so
 endif
 ifneq ($(MODULE_SO_INSTALL_NAME),-)
 USER_MANIFEST_LINES += $(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(USER_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+USER_MANIFEST_DEBUG_INPUTS += $(MODULE_LIBNAME).so.debug
+endif
 endif
 endif
 
