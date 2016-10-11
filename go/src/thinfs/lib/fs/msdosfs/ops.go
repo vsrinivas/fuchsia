@@ -572,8 +572,16 @@ func createIncremental(parent node.DirectoryNode, name string, flags fs.OpenFlag
 	child.Lock()
 	defer child.Unlock()
 
+	// "The dotdot entry points to the starting cluster of the parent directory..."
+	parentCluster := parent.StartCluster()
+	if parent.IsRoot() {
+		// "... which is 0 if this directory's parent is the root directory"
+		// - FAT: General Overview of On-Disk Format, Page 25
+		parentCluster = 0
+	}
+
 	// Initialize the new child directory
-	if err := node.WriteDotAndDotDot(child, newCluster, parent.StartCluster()); err != nil {
+	if err := node.WriteDotAndDotDot(child, newCluster, parentCluster); err != nil {
 		panic(err)
 	} else if err := node.MakeEmpty(child); err != nil {
 		panic(err)

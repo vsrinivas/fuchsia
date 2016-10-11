@@ -44,9 +44,9 @@ type DirectoryNode interface {
 
 	// Methods which do not require lock
 	IsRoot() bool // True iff the node corresponds to the root of a filesystem
-	ID() uint32   // Unique ID which identifies directory
+	ID() uint32   // Unique ID which identifies directory. Guaranteed to be 0 for root nodes
 
-	setChildFile(direntIndex int, child FileNode) // Internal method to place a child at an empty direntInex
+	setChildFile(direntIndex int, child FileNode) // Internal method to place a child at an empty direntIndex
 }
 
 // Node implements the interface of a single node (file, directory, or root) in the FAT filesystem.

@@ -121,7 +121,7 @@ func (r *root) StartCluster() uint32 {
 }
 
 func (r *root) ID() uint32 {
-	return r.metadata.ClusterMgr.ClusterEOF()
+	return 0
 }
 
 func (r *root) NumClusters() int {

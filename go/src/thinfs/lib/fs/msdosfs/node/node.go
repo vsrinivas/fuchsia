@@ -320,6 +320,8 @@ func (n *node) StartCluster() uint32 {
 func (n *node) ID() uint32 {
 	if !n.IsDirectory() {
 		panic("Non-directory nodes do not have IDs")
+	} else if n.IsRoot() {
+		return 0
 	}
 	return n.startCluster
 }
@@ -334,7 +336,7 @@ func (n *node) IsRoot() bool {
 		return false
 	} else if !n.IsDirectory() {
 		return false
-	} else if n.ID() == n.metadata.Br.RootCluster() {
+	} else if n.startCluster == n.metadata.Br.RootCluster() {
 		return true
 	}
 	return false
