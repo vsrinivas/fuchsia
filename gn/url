@@ -1,0 +1,12 @@
+{
+    "labels": [
+        "//lib/url",
+        "//lib/url:url_unittests"
+    ],
+    "binaries": [
+        {
+            "binary": "url_unittests",
+            "bootfs_path": "apps/url_unittests"
+        }
+    ]
+}
