@@ -9,10 +9,6 @@ namespace context_engine {
 
 using std::string;
 
-ContextSubscriberLinkPtr* Repo::QuerySet::GetPtr(SimpleQuery* element) {
-  return &element->subscriber;
-}
-
 void Repo::Index(DataNode* data_node) {
   by_label_and_schema_[data_node->label].emplace(data_node->schema, data_node);
 

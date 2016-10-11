@@ -78,8 +78,7 @@ class DataNode : public ContextPublisherLink {
   const std::string schema;
 
  private:
-  class SubscriberSet
-      : public ExtensibleInterfacePtrSet<ContextSubscriberLink> {
+  class SubscriberSet : public BoundSet<ContextSubscriberLink> {
    public:
     SubscriberSet(DataNode* node) : node_(node) {}
 

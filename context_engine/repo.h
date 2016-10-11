@@ -23,6 +23,10 @@ struct SimpleQuery {
   std::string label;
   std::string schema;
   ContextSubscriberLinkPtr subscriber;
+
+  static ContextSubscriberLinkPtr* GetPtr(SimpleQuery* element) {
+    return &element->subscriber;
+  }
 };
 
 class DataNodeQueryIterator {
@@ -57,10 +61,8 @@ class Repo {
              ContextSubscriberLinkPtr subscriber);
 
  private:
-  class QuerySet : public BoundSet<SimpleQuery, ContextSubscriberLink> {
-   protected:
-    ContextSubscriberLinkPtr* GetPtr(SimpleQuery* element) override;
-  };
+  typedef BoundPtrSet<ContextSubscriberLink, SimpleQuery, SimpleQuery::GetPtr>
+      QuerySet;
 
   // TODO(rosswang): Is there a good way to not require a separate index
   // structure for each combination we can come up with?

@@ -98,6 +98,7 @@ struct Suggestion {
   string uuid;
 
   // Specifies the sort order for Suggestions within a single subscription.
+  // Lower ranks appear first.
   float rank;
 
   SuggestionDisplayProperties display_properties;
