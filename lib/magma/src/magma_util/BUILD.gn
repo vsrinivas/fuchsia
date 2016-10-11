@@ -4,8 +4,19 @@
 
 import("//magma/gnbuild/magma.gni")
 
+config("magma_util_config") {
+  if (is_debug) {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=1" ]
+  } else {
+    defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=0" ]
+  }
+}
+
 group("magma_util") {
-  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
 
   deps = [
     ":common",
@@ -14,7 +25,10 @@ group("magma_util") {
 }
 
 source_set("common") {
-  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
 
   sources = [
     "dlog.h",
@@ -25,7 +39,10 @@ source_set("common") {
 }
 
 source_set("system") {
-  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
 
   sources = [
     "address_space_allocator.h",

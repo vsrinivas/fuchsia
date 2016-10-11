@@ -16,5 +16,6 @@ source_set("platform") {
 
   public_deps = [
     "$magma_build_root/include:msd_abi",
+    "..:common",
   ]
 }

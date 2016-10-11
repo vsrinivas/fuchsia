@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "magma_util/macros.h"
 #include "magma_util/mutex.h"
 #include "gtest/gtest.h"
 
@@ -55,4 +56,21 @@ TEST(MagmaUtil, RoundUp)
     EXPECT_EQ(magma::round_up(PAGE_SIZE - 1, PAGE_SIZE), PAGE_SIZE);
     EXPECT_EQ(magma::round_up(PAGE_SIZE, PAGE_SIZE), PAGE_SIZE);
     EXPECT_EQ(magma::round_up(PAGE_SIZE + 1, PAGE_SIZE), PAGE_SIZE * 2);
+}
+
+TEST(MagmaUtil, Dret)
+{
+    EXPECT_EQ(DRET(0), 0);
+    EXPECT_EQ(DRET(-1), -1);
+
+    EXPECT_TRUE(DRETF(true, "never see this"));
+    EXPECT_FALSE(DRETF(false, "see this in a debug build only"));
+    EXPECT_FALSE(DRETF(false, "see this in a debug build only: the number 3 [%d]", 3));
+
+    std::unique_ptr<int> myint(new int);
+    EXPECT_EQ(DRETP(myint.get(), "never see this"), myint.get());
+
+    EXPECT_EQ(DRETP(nullptr, "see this in a debug build only"), nullptr);
+    EXPECT_EQ(DRETP(nullptr, "see this in a debug build only: the number four [%s]", "four"),
+              nullptr);
 }

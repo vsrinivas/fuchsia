@@ -6,23 +6,28 @@
 #define MACROS_H_
 
 #include <assert.h>
+#include <limits.h> // PAGE_SIZE
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <limits.h> // PAGE_SIZE
 
-#define MAGMA_DEBUG 0
-
-#define MAGMA_DRET_ENABLE MAGMA_DEBUG
+#ifndef MAGMA_DEBUG_INTERNAL_USE_ONLY
+#error MAGMA_DEBUG_INTERNAL_USE_ONLY not defined, your gn foo needs magma_util_config
+#endif
 
 namespace magma {
 
-#define DASSERT(...)                                                                               \
-    if (!(__VA_ARGS__)) {                                                                          \
-        printf("%s:%d ASSERT\n", __FILE__, __LINE__);                                              \
-        assert(false);                                                                             \
-    }
+static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
-#if MAGMA_DRET_ENABLE
+#define DASSERT(...)                                                                               \
+    do {                                                                                           \
+        if (magma::kDebug && !(__VA_ARGS__)) {                                                     \
+            printf("%s:%d ASSERT\n", __FILE__, __LINE__);                                          \
+            assert(__VA_ARGS__);                                                                   \
+        }                                                                                          \
+    } while (0);
+
+static constexpr bool kMagmaDretEnable = kDebug;
 
 static inline int dret(const char* file, int line, int ret)
 {
@@ -30,28 +35,42 @@ static inline int dret(const char* file, int line, int ret)
     return ret;
 }
 
-#define DRET(ret) (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret))
+// Must provide const char* msg as the 2nd paramter; other parameters optional.
+#define DRET(ret)                                                                                  \
+    (magma::kMagmaDretEnable ? (ret == 0 ? 0 : magma::dret(__FILE__, __LINE__, ret)) : ret)
 
-static inline bool dret_false(const char* file, int line, const char* msg)
+static inline bool dret_false(const char* file, int line, const char* msg, ...)
 {
-    printf("%s:%d returning false: %s\n", file, line, msg);
+    printf("%s:%d returning false: ", file, line);
+    va_list args;
+    va_start(args, msg);
+    vprintf(msg, args);
+    va_end(args);
+    printf("\n");
     return false;
 }
 
-#define DRETF(ret, msg) (ret == true ? true : magma::dret_false(__FILE__, __LINE__, msg))
+// Must provide const char* msg as the 2nd paramter; other parameters optional.
+#define DRETF(ret, ...)                                                                            \
+    (magma::kMagmaDretEnable                                                                       \
+         ? (ret == true ? true : magma::dret_false(__FILE__, __LINE__, __VA_ARGS__))               \
+         : ret)
 
-static inline void dret_null(const char* file, int line, const char* msg)
+static inline void dret_null(const char* file, int line, const char* msg, ...)
 {
-    printf("%s:%d returning null: %s\n", file, line, msg);
+    printf("%s:%d returning null: ", file, line);
+    va_list args;
+    va_start(args, msg);
+    vprintf(msg, args);
+    va_end(args);
+    printf("\n");
 }
 
-#define DRETP(ret, msg) (ret == nullptr ? magma::dret_false(__FILE__, __LINE__, msg), ret : ret)
-
-#else
-#define DRET(ret) (ret)
-#define DRETF(ret, msg) (ret)
-#define DRETP(ret, msg) (ret)
-#endif
+// Must provide const char* msg as the 2nd paramter; other parameters optional.
+#define DRETP(ret, ...)                                                                            \
+    (magma::kMagmaDretEnable                                                                       \
+         ? (ret != nullptr ? ret : (magma::dret_null(__FILE__, __LINE__, __VA_ARGS__), nullptr))   \
+         : ret)
 
 #define UNIMPLEMENTED(...)                                                                         \
     do {                                                                                           \
