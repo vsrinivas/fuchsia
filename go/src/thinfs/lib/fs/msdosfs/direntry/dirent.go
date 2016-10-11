@@ -142,7 +142,7 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex int) (*Dirent, int, 
 	short := makeShort(buf)
 
 	// If the dirent is free, then a short dirent with "is free" set to true will be returned.
-	if short.attributes&attrLongname != attrLongname {
+	if (short.attributes&attrLongname != attrLongname) || short.isFree() {
 		glog.V(2).Info("Loaded dirent is short")
 		// The direntry is actually with a short filename.
 		return &Dirent{
@@ -170,7 +170,7 @@ func LoadDirent(callback GetDirentryCallback, direntryIndex int) (*Dirent, int, 
 		// been deleted.
 		return nil, 0, errLongDirentry
 	}
-	unixName, err := convertWinToUnix(callback, direntryIndex, checksum(short.nameRaw()), numDirentrySlots-1)
+	unixName, err := convertWinToUnix(callback, direntryIndex, checksum(short.nameRaw()), int(numDirentrySlots)-1)
 	if err != nil {
 		return nil, 0, err
 	}

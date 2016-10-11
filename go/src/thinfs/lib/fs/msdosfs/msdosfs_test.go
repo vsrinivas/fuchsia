@@ -292,6 +292,79 @@ func TestOpenFlags(t *testing.T) {
 	cleanup(fileBackedFAT, dev)
 }
 
+// Test that readdir still functions when the directory contains "free" direntries
+func TestDirectoryHoles(t *testing.T) {
+	doTest := func(dev block.Device) {
+		fatFS := checkNewFS(t, dev, fs.ReadWrite)
+		root := fatFS.RootDirectory()
+
+		// Confirm that the directory contains 'filenames' as files, in order.
+		confirmDirectoryContents := func(d fs.Directory, filenames []string) {
+			contents := checkReadDir(t, d, len(filenames)+2)
+			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
+			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
+			for i := range filenames {
+				checkDirent(t, contents[i+2], filenames[i], fs.FileTypeRegularFile)
+			}
+		}
+
+		doTest := func(d fs.Directory) {
+			// Start with an empty directory
+			contents := checkReadDir(t, d, 2)
+			checkDirent(t, contents[0], ".", fs.FileTypeDirectory)
+			checkDirent(t, contents[1], "..", fs.FileTypeDirectory)
+
+			filenames := []string{
+				"foo",
+				"This is a long file name",
+				"This is also a long file name, which uses multiple FAT direntries",
+				"short",
+				"One more long filename, for good measure",
+			}
+
+			// Create all files
+			for i := range filenames {
+				f := checkOpenFile(t, d, filenames[i], fs.OpenFlagCreate|fs.OpenFlagWrite|fs.OpenFlagFile)
+				checkClose(t, f)
+			}
+
+			// Verify initial state
+			confirmDirectoryContents(d, filenames)
+
+			for len(filenames) != 0 {
+				// Randomly pick one entry to remove until the directory is empty
+				i := rand.Intn(len(filenames))
+				checkUnlink(t, d, filenames[i])
+				filenames = append(filenames[:i], filenames[i+1:]...)
+
+				// Confirm the directory still contains the rest of the filenames
+				confirmDirectoryContents(d, filenames)
+			}
+
+			// When we're finished, the directory should be empty
+			checkDirectoryEmpty(t, d)
+		}
+
+		doTest(root)
+		subdir := checkOpenDirectory(t, root, "subdir", fs.OpenFlagCreate|fs.OpenFlagRead|fs.OpenFlagWrite)
+		doTest(subdir)
+
+		checkClose(t, subdir)
+		checkClose(t, root)
+		checkCloseFS(t, fatFS)
+	}
+
+	glog.Info("Testing FAT32")
+	fileBackedFAT, dev := setupFAT32(t)
+	doTest(dev)
+	cleanup(fileBackedFAT, dev)
+
+	glog.Info("Testing FAT16")
+	fileBackedFAT, dev = setupFAT16(t)
+	doTest(dev)
+	cleanup(fileBackedFAT, dev)
+}
+
 // Test unmounting a filesystem with open files and directories. Verify that the file hierarchy is
 // stored on disk when unmount is called while files are still open.
 func TestUnmountWithOpenFiles(t *testing.T) {

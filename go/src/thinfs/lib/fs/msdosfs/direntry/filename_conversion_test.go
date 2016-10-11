@@ -563,7 +563,7 @@ func TestConvertWinToUnix(t *testing.T) {
 			direntries[i].chksum = chksum
 		}
 
-		nameUnix, err := convertWinToUnix(callback, 0, chksum, uint8(len(direntries)))
+		nameUnix, err := convertWinToUnix(callback, 0, chksum, len(direntries))
 		if err != nil {
 			t.Fatal(err)
 		} else if nameUnix != goldNameUnix {
@@ -641,7 +641,7 @@ func TestConvertWinToUnixFailure(t *testing.T) {
 		callback := func(i int) ([]byte, error) {
 			return direntries[i].bytes(), nil
 		}
-		_, err := convertWinToUnix(callback, 0, chksum, uint8(len(direntries)))
+		_, err := convertWinToUnix(callback, 0, chksum, len(direntries))
 		if err != goldErr {
 			t.Fatalf("Expected error %s, saw error %s", goldErr, err)
 		}
@@ -757,7 +757,7 @@ func TestUnixWinCombo(t *testing.T) {
 		callback = func(i int) ([]byte, error) {
 			return direntries[i].bytes(), nil
 		}
-		newNameUnix, err := convertWinToUnix(callback, 0, checksum(nameDOS), uint8(len(direntries)))
+		newNameUnix, err := convertWinToUnix(callback, 0, checksum(nameDOS), len(direntries))
 		if err != nil {
 			t.Fatal(err)
 		}

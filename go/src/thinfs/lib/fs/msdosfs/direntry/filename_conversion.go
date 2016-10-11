@@ -412,8 +412,8 @@ func getShortEntryFromWin(callback GetDirentryCallback, startIndex int) (shortEn
 }
 
 // convertWinToUnix reads long direntries, verifies them, and compiles them into a unix name.
-func convertWinToUnix(callback GetDirentryCallback, startIndex int, chksum, highestOrder uint8) (nameUnix string, err error) {
-	order := uint8(0)
+func convertWinToUnix(callback GetDirentryCallback, startIndex int, chksum uint8, highestOrder int) (nameUnix string, err error) {
+	order := 0
 	nameBuffer := make([]uint16, 0, longnameMaxLen)
 
 	// Iterate in reverse, so we can append to the namebuffer.
@@ -427,7 +427,7 @@ func convertWinToUnix(callback GetDirentryCallback, startIndex int, chksum, high
 		dl := makeLong(buf)
 
 		// Validate order, checksum
-		order = dl.count & longOrdinalMask
+		order = int(dl.count & longOrdinalMask)
 		if order != (highestOrder - direntryIndex) { // We must be reading in an increasing order
 			return "", errLongDirentry
 		} else if order > maxLongDirentries || order == 0 { // The order must be in bounds
