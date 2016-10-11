@@ -38,13 +38,6 @@ config("magma_tests_include_config") {
   include_dirs = [ "tests" ]
 }
 
-# TODO(MA-29): remove this, just use src/magma_util instead
-group("util") {
-  public_deps = [
-    "src/magma_util",
-  ]
-}
-
 # internal only
 source_set("libmsd") {
   deps = [
