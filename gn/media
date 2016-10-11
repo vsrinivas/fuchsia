@@ -16,16 +16,12 @@
             "bootfs_path": "apps/flog_viewer"
         },
         {
-            "binary": "media_common_apptests",
-            "bootfs_path": "apps/media_common_apptests"
-        },
-        {
             "binary": "media_cpp_apptests",
             "bootfs_path": "apps/media_cpp_apptests"
         },
         {
-            "binary": "media_framework_apptests",
-            "bootfs_path": "apps/media_framework_apptests"
+            "binary": "media_demux_apptests",
+            "bootfs_path": "apps/media_demux_apptests"
         },
         {
             "binary": "media_service",
@@ -34,6 +30,10 @@
         {
             "binary": "media_service_apptests",
             "bootfs_path": "apps/media_service_apptests"
+        },
+        {
+            "binary": "media_util_apptests",
+            "bootfs_path": "apps/media_util_apptests"
         }
     ]
 }
