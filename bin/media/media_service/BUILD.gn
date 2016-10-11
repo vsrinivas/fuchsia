@@ -1,0 +1,71 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+executable("media_service") {
+  sources = [
+    "conversion_pipeline_builder.cc",
+    "conversion_pipeline_builder.h",
+    "main.cc",
+    "media_decoder_impl.cc",
+    "media_decoder_impl.h",
+    "media_demux_impl.cc",
+    "media_demux_impl.h",
+    "media_player_impl.cc",
+    "media_player_impl.h",
+    "media_service_impl.cc",
+    "media_service_impl.h",
+    "media_sink_impl.cc",
+    "media_sink_impl.h",
+    "media_source_impl.cc",
+    "media_source_impl.h",
+    "media_timeline_controller_impl.cc",
+    "media_timeline_controller_impl.h",
+  ]
+
+  deps = [
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/src/audio",
+    "//apps/media/src/decode",
+    "//apps/media/src/demux",
+    "//apps/media/src/framework",
+    "//apps/media/src/framework_create",
+    "//apps/media/src/mojo",
+    "//apps/media/src/util",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/system",
+  ]
+}
+
+executable("apptests") {
+  output_name = "media_service_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/fake_renderer.cc",
+    "test/fake_renderer.h",
+    "test/fake_wav_reader.cc",
+    "test/fake_wav_reader.h",
+    "test/media_player_test.cc",
+  ]
+
+  deps = [
+    ":media_service",
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/src/framework_create",
+    "//apps/media/src/mojo",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/system",
+  ]
+}

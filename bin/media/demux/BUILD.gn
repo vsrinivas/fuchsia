@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+source_set("demux") {
+  sources = [
+    "demux.h",
+    "reader_cache.cc",
+    "reader_cache.h",
+    "reader.h",
+    "sparse_byte_buffer.cc",
+    "sparse_byte_buffer.h",
+  ]
+
+  deps = [
+    "//apps/media/src/framework",
+    "//apps/media/src/util",
+    "//lib/ftl",
+  ]
+}
+
+executable("apptests") {
+  output_name = "media_demux_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/sparse_byte_buffer_test.cc",
+    "test/run_all_tests.cc",
+  ]
+
+  deps = [
+    ":demux",
+    "//mojo/system",
+    "//third_party/gtest",
+  ]
+}

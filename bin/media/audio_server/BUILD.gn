@@ -1,0 +1,36 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+executable("audio_server") {
+  deps = [
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/src/util",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/system",
+  ]
+
+  sources = [
+    "audio_output.cc",
+    "audio_output_manager.cc",
+    "audio_pipe.cc",
+    "audio_server_app.cc",
+    "audio_server_impl.cc",
+    "audio_track_impl.cc",
+    "audio_track_to_output_link.cc",
+    "gain.cc",
+    "platform/generic/mixer.cc",
+    "platform/generic/mixers/linear_sampler.cc",
+    "platform/generic/mixers/no_op.cc",
+    "platform/generic/mixers/point_sampler.cc",
+    "platform/generic/output_formatter.cc",
+    "platform/generic/standard_output_base.cc",
+    "platform/generic/throttle_output.cc",
+    "platform/stubs/alsa_output_stub.cc",
+  ]
+}

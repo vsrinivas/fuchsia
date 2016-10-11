@@ -1,0 +1,30 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+executable("flog_service") {
+  sources = [
+    "flog_directory.cc",
+    "flog_directory.h",
+    "flog_logger_impl.cc",
+    "flog_logger_impl.h",
+    "flog_reader_impl.cc",
+    "flog_reader_impl.h",
+    "flog_service_impl.cc",
+    "flog_service_impl.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//apps/media/interfaces/flog",
+    "//apps/media/src/util",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/system",
+    "//mojo/system",
+  ]
+}

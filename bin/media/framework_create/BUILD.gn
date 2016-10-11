@@ -1,0 +1,20 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+source_set("framework_create") {
+  sources = [
+    "decoder.cc",
+    "demux.cc",
+  ]
+
+  deps = [
+    "//apps/media/src/decode",
+    "//apps/media/src/demux",
+    "//apps/media/src/ffmpeg",
+    "//apps/media/src/framework",
+    "//apps/media/src/mojo",
+  ]
+}

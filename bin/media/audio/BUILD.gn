@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/tools/bindings/mojom.gni")
+
+source_set("audio") {
+  sources = [
+    "lpcm_reformatter.cc",
+    "lpcm_reformatter.h",
+    "lpcm_util.cc",
+    "lpcm_util.h",
+  ]
+
+  deps = [
+    "//apps/media/src/framework",
+    "//lib/ftl",
+  ]
+}

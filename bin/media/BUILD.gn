@@ -13,9 +13,9 @@ group("media") {
 
 group("services") {
   deps = [
-    "//apps/media/services/audio:audio_server",
-    "//apps/media/services/flog_service:flog_service",
-    "//apps/media/services/media_service:media_service",
+    "//apps/media/src/audio_server:audio_server",
+    "//apps/media/src/flog_service:flog_service",
+    "//apps/media/src/media_service:media_service",
     "//apps/media/tools/flog_viewer:flog_viewer",
   ]
 }
@@ -25,9 +25,8 @@ group("apptests") {
 
   deps = [
     "//apps/media/cpp:apptests",
-    "//apps/media/services/common:apptests",
-    "//apps/media/services/framework:apptests",
-    "//apps/media/services/media_service:apptests",
-    "//apps/media/services/util:apptests",
+    "//apps/media/src/demux:apptests",
+    "//apps/media/src/media_service:apptests",
+    "//apps/media/src/util:apptests",
   ]
 }
