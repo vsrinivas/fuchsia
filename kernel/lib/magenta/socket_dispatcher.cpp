@@ -367,7 +367,7 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
 
     state_tracker_.UpdateState(satisfied_clear, 0u, satisfiable_clear, 0u);
 
-    if (was_full && (st > 0))
+    if (!closed && was_full && (st > 0))
         other_->state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
 
     return st;
