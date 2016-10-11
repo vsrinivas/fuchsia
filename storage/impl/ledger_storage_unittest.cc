@@ -65,9 +65,9 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
                            });
   message_loop_.Run();
 
-  std::unique_ptr<PageStorage> pageStorage =
-      storage_->CreatePageStorage(pageId);
-  EXPECT_EQ(pageId, pageStorage->GetId());
+  std::unique_ptr<PageStorage> pageStorage;
+  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(pageId, &pageStorage));
+  ASSERT_EQ(pageId, pageStorage->GetId());
   storage_->GetPageStorage(pageId,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);
@@ -78,9 +78,9 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
 
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   PageId pageId = "1234";
-  std::unique_ptr<PageStorage> pageStorage =
-      storage_->CreatePageStorage(pageId);
-  EXPECT_EQ(pageId, pageStorage->GetId());
+  std::unique_ptr<PageStorage> pageStorage;
+  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(pageId, &pageStorage));
+  ASSERT_EQ(pageId, pageStorage->GetId());
   storage_->GetPageStorage(pageId,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);

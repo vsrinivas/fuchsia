@@ -21,15 +21,16 @@ LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
-std::unique_ptr<PageStorage> LedgerStorageImpl::CreatePageStorage(
-    const PageId& page_id) {
+Status LedgerStorageImpl::CreatePageStorage(
+    const PageId& page_id,
+    std::unique_ptr<PageStorage>* page_storage) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
     FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
-    return nullptr;
+    return Status::IO_ERROR;
   }
-  return std::unique_ptr<PageStorage>(
-      new PageStorageImpl(GetPathFor(page_id), page_id));
+  page_storage->reset(new PageStorageImpl(GetPathFor(page_id), page_id));
+  return Status::OK;
 }
 
 void LedgerStorageImpl::GetPageStorage(

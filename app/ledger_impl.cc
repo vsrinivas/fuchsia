@@ -51,8 +51,9 @@ void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
       page_id, [this, callback,
                 &page_id](std::unique_ptr<storage::PageStorage> page_storage) {
         if (!page_storage) {
-          page_storage = storage_->CreatePageStorage(page_id);
-          if (!page_storage) {
+          storage::Status s =
+              storage_->CreatePageStorage(page_id, &page_storage);
+          if (s != storage::Status::OK) {
             callback.Run(Status::INTERNAL_ERROR, nullptr);
             return;
           }
@@ -94,9 +95,9 @@ void LedgerImpl::GetPage(mojo::Array<uint8_t> id,
 // NewPage() => (Status status, Page? page);
 void LedgerImpl::NewPage(const NewPageCallback& callback) {
   const storage::PageId page_id = RandomId();
-  std::unique_ptr<storage::PageStorage> page_storage =
-      storage_->CreatePageStorage(page_id);
-  if (!page_storage) {
+  std::unique_ptr<storage::PageStorage> page_storage;
+  storage::Status s = storage_->CreatePageStorage(page_id, &page_storage);
+  if (s != storage::Status::OK) {
     callback.Run(Status::INTERNAL_ERROR, nullptr);
     return;
   }
