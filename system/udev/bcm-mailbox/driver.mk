@@ -8,6 +8,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 DRIVER_SRCS += \
     $(LOCAL_DIR)/mailbox.c \
-
+	$(LOCAL_DIR)/bcm-bus.c \
 
 endif
