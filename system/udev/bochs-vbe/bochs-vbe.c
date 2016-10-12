@@ -238,17 +238,14 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
-};
-
-mx_driver_t _driver_bochs_vbe BUILTIN_DRIVER = {
-    .name = "bochs_vbe",
+mx_driver_t _driver_bochs_vbe = {
     .ops = {
         .bind = bochs_vbe_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_bochs_vbe, "bochs-vbe", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
+MAGENTA_DRIVER_END(_driver_bochs_vbe)

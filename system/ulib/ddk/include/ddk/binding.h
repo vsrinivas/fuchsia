@@ -125,13 +125,32 @@ typedef struct __attribute__((packed)) {
     char version[16];
 } magenta_note_driver_t;
 
-#define MAGENTA_DRIVER_BEGIN(DriverName,VendorName,Version,BindCount) \
-__attribute__((section(".note.magenta.driver")))\
-const struct {\
+typedef struct magenta_driver_info {
+    mx_driver_t* driver;
+    const magenta_note_driver_t* note;
+    const mx_bind_inst_t* binding;
+    uint32_t binding_size;
+} magenta_driver_info_t;
+
+#define MAGENTA_DRIVER_PASTE(a,b) a##b
+
+#if MAGENTA_BUILTIN_DRIVERS
+#define MAGENTA_DRIVER_ATTR __ALIGNED(sizeof(void*)) __SECTION("magenta_drivers")
+#define MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_PASTE(__magenta_driver_info__,Driver)
+#define MAGENTA_DRIVER_NOTE(Driver)
+#else
+#define MAGENTA_DRIVER_ATTR
+#define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
+#define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver__
+#endif
+
+#define MAGENTA_DRIVER_BEGIN(Driver,DriverName,VendorName,Version,BindCount) \
+MAGENTA_DRIVER_NOTE(Driver)\
+const struct __attribute__((packed)) {\
     magenta_note_header_t note;\
     magenta_note_driver_t driver;\
     mx_bind_inst_t binding[BindCount];\
-} __magenta_driver_note__ = {\
+} MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver) = {\
     .note = {\
         .namesz = 7,\
         .descsz = sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
@@ -146,17 +165,12 @@ const struct {\
     },\
     .binding = {
 
-#define MAGENTA_DRIVER_END() }};
-
-#define MAGENTA_DRIVER_NAME __magenta_driver_note__.driver.name
-#define MAGENTA_DRIVER_BINDING __magenta_driver_note__.binding
-#define MAGENTA_DRIVER_BINDING_SIZE sizeof(__magenta_driver_note__.binding)
-
-
-#if MAGENTA_BUILTIN_DRIVERS
-#define MAGENTA_DRIVER(name) mx_driver_t name __ALIGNED(sizeof(void*)) __SECTION("builtin_drivers")
-#else
-#define MAGENTA_DRIVER(name) mx_driver_t __magenta_driver__
-#endif
+#define MAGENTA_DRIVER_END(Driver) }};\
+const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR = {\
+    .note = &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
+    .driver = &Driver,\
+    .binding = MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).binding,\
+    .binding_size = sizeof(MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver)).binding,\
+};
 
 __END_CDECLS;

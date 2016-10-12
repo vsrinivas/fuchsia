@@ -167,17 +167,14 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, AMD_GFX_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_KAVERI_R7_DID),
-};
-
-mx_driver_t _driver_kaveri_disp BUILTIN_DRIVER = {
-    .name = "amd_kaveri_disp",
+mx_driver_t _driver_kaveri_disp = {
     .ops = {
         .bind = kaveri_disp_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_kaveri_disp, "amd-kaveri-display", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, AMD_GFX_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_KAVERI_R7_DID),
+MAGENTA_DRIVER_END(_driver_kaveri_disp)

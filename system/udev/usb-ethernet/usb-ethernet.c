@@ -609,17 +609,14 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
-    BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
-    BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
-};
-
-mx_driver_t _driver_usb_ethernet BUILTIN_DRIVER = {
-    .name = "usb_ethernet",
+mx_driver_t _driver_usb_ethernet = {
     .ops = {
         .bind = usb_ethernet_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_usb_ethernet, "usb-ethernet", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
+    BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
+MAGENTA_DRIVER_END(_driver_usb_ethernet)

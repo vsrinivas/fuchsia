@@ -285,16 +285,13 @@ static mx_status_t gpt_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
-};
-
-mx_driver_t _driver_gpt BUILTIN_DRIVER = {
-    .name = "gpt",
+mx_driver_t _driver_gpt= {
     .ops = {
         .bind = gpt_bind,
     },
     .flags = DRV_FLAG_NO_AUTOBIND,
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_gpt, "gpt", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_BLOCK),
+MAGENTA_DRIVER_END(_driver_gpt)

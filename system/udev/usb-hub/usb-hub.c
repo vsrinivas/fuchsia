@@ -370,16 +370,13 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
-    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
-};
-
-mx_driver_t _driver_usb_hub BUILTIN_DRIVER = {
-    .name = "usb-hub",
+mx_driver_t _driver_usb_hub = {
     .ops = {
         .bind = usb_hub_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_usb_hub, "usb-hub", "magenta", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
+    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HUB),
+MAGENTA_DRIVER_END(_driver_usb_hub)

@@ -247,17 +247,14 @@ static mx_status_t i2c_hid_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0010),
-};
-
-mx_driver_t _driver_i2c_hid BUILTIN_DRIVER = {
-    .name = "i2c-hid",
+mx_driver_t _driver_i2c_hid = {
     .ops = {
         .bind = i2c_hid_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_i2c_hid, "i2c-hid", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
+    BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDR, 0x0010),
+MAGENTA_DRIVER_END(_driver_i2c_hid)

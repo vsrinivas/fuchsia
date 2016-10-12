@@ -742,7 +742,13 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
+mx_driver_t _driver_ahci = {
+    .ops = {
+        .bind = ahci_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 11)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),
     // intel devices
@@ -756,13 +762,4 @@ static mx_bind_inst_t binding[] = {
     BI_LABEL(1),
     BI_MATCH_IF(EQ, BIND_PCI_DID, AMD_FCH_AHCI_DID),
     BI_ABORT(),
-};
-
-mx_driver_t _driver_ahci BUILTIN_DRIVER = {
-    .name = "ahci",
-    .ops = {
-        .bind = ahci_bind,
-    },
-    .binding = binding,
-    .binding_size = sizeof(binding),
-};
+MAGENTA_DRIVER_END(_driver_ahci)

@@ -842,15 +842,12 @@ fail:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_DISPLAY),
-};
-
-mx_driver_t _driver_vc_root BUILTIN_DRIVER = {
-    .name = "vc-root",
+mx_driver_t _driver_vc_root = {
     .ops = {
         .bind = vc_root_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_vc_root, "virtconsole", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_DISPLAY),
+MAGENTA_DRIVER_END(_driver_vc_root)

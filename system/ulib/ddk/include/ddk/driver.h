@@ -100,8 +100,4 @@ enum {
 #include <ddk/protodefs.h>
 };
 
-#define BUILTIN_DRIVER       \
-    __ALIGNED(sizeof(void*)) \
-    __SECTION("builtin_drivers")
-
 __END_CDECLS;

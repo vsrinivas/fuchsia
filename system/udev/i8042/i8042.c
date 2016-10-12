@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/common/hid.h>
@@ -761,9 +762,11 @@ static mx_status_t i8042_init(mx_driver_t* driver) {
     return rc;
 }
 
-mx_driver_t _driver_i8042 BUILTIN_DRIVER = {
-    .name = "i8042",
+mx_driver_t _driver_i8042 = {
     .ops = {
         .init = i8042_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_i8042, "i8042", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_i8042)

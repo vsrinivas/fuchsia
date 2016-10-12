@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
@@ -77,9 +78,11 @@ mx_status_t ktrace_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _ktrace_console BUILTIN_DRIVER = {
-    .name = "ktrace",
+mx_driver_t _driver_ktrace = {
     .ops = {
         .init = ktrace_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_ktrace, "ktrace", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_ktrace)

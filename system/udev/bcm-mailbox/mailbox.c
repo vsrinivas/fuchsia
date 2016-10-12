@@ -188,9 +188,12 @@ mx_status_t mailbox_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_mailbox BUILTIN_DRIVER = {
-    .name = "bcm-vc-rpc",
+mx_driver_t _driver_bcm_mailbox = {
     .ops = {
         .init = mailbox_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_bcm_mailbox, "bcm-vc-rpc", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_bcm_mailbox)
+

@@ -13,6 +13,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 
 #include <launchpad/launchpad.h>
 
@@ -37,9 +38,6 @@ mx_status_t devhost_add_internal(mx_device_t* parent,
 extern mx_driver_t _driver_dmctl;
 extern mx_handle_t _dmctl_handle;
 
-extern mx_driver_t __start_builtin_drivers[] __WEAK;
-extern mx_driver_t __stop_builtin_drivers[] __WEAK;
-
 static void init_driver(mx_driver_t* drv, bool for_root) {
         if ((drv->binding_size == 0) && (!for_root)) {
             // only load root-level drivers in the root devhost
@@ -53,11 +51,12 @@ static void init_driver(mx_driver_t* drv, bool for_root) {
         driver_add(drv);
 }
 
-static void init_builtin_drivers(bool for_root) {
-    mx_driver_t* drv;
-    for (drv = __start_builtin_drivers; drv < __stop_builtin_drivers; drv++) {
-        init_driver(drv, for_root);
-    }
+static void init_from_driver_info(magenta_driver_info_t* di, bool for_root) {
+    mx_driver_t* drv = di->driver;
+    drv->name = di->note->name;
+    drv->binding = di->binding;
+    drv->binding_size = di->binding_size;
+    init_driver(drv, for_root);
 }
 
 static void init_loadable_drivers(bool for_root) {
@@ -77,13 +76,23 @@ static void init_loadable_drivers(bool for_root) {
             printf("devhost: cannot load '%s': %s\n", libname, dlerror());
             continue;
         }
-        mx_driver_t* drv = dlsym(dl, "__magenta_driver__");
-        //printf("devhost: driver '%s' %p\n", libname, drv);
-        if (drv != NULL) {
-            init_driver(drv, for_root);
+        magenta_driver_info_t* di = dlsym(dl, "__magenta_driver__");
+        if (di == NULL) {
+            printf("devhost: driver '%s' missing __magenta_driver__ symbol\n", libname);
+        } else {
+            init_from_driver_info(di, for_root);
         }
     }
     closedir(dir);
+}
+
+extern magenta_driver_info_t __start_magenta_drivers[] __WEAK;
+extern magenta_driver_info_t __stop_magenta_drivers[] __WEAK;
+static void init_builtin_drivers(bool for_root) {
+    magenta_driver_info_t* di;
+    for (di = __start_magenta_drivers; di < __stop_magenta_drivers; di++) {
+        init_from_driver_info(di, for_root);
+    }
 }
 
 static mx_handle_t mojo_launcher;

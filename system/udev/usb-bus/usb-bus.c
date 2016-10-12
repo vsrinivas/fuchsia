@@ -146,15 +146,12 @@ static mx_status_t usb_bus_bind(mx_driver_t* driver, mx_device_t* device) {
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_USB_HCI),
-};
-
-mx_driver_t _driver_usb_bus BUILTIN_DRIVER = {
-    .name = "usb_bus",
+mx_driver_t _driver_usb_bus = {
     .ops = {
         .bind = usb_bus_bind,
     },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_usb_bus, "usb-bus", "magenta", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_USB_HCI),
+MAGENTA_DRIVER_END(_driver_usb_bus)

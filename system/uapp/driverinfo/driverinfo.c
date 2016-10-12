@@ -26,13 +26,18 @@ typedef Elf64_Ehdr elfhdr;
 typedef Elf64_Phdr elfphdr;
 
 int find_note(const char* name, uint32_t type,
-              void* data, size_t size, void** out) {
+              void* data, size_t size,
+              void (*func)(void* note, size_t sz, void* cookie),
+              void* cookie) {
     size_t nlen = strlen(name) + 1;
     while (size >= sizeof(notehdr)) {
-        printf("find %zd\n", size);
+        // ignore padding between notes
+        if (*((uint32_t*) data) == 0) {
+            size -= sizeof(uint32_t);
+            data += sizeof(uint32_t);
+            continue;
+        }
         notehdr* hdr = data;
-        size -= sizeof(notehdr);
-
         uint32_t nsz = (hdr->namesz + 3) & (~3);
         if (nsz > size) {
             break;
@@ -46,8 +51,7 @@ int find_note(const char* name, uint32_t type,
         }
 
         if ((nsz >= nlen) && (memcmp(name, hdr->name, nlen) == 0)) {
-            *out = data;
-            return hdr->descsz;
+            func(data, hdr->descsz, cookie);
         }
 
         data += dsz;
@@ -56,28 +60,31 @@ int find_note(const char* name, uint32_t type,
     return 0;
 }
 
-size_t load_note(int fd, const char* name, uint32_t type,
-                 void* data, size_t dsize, void** out) {
+void for_each_note(int fd,
+                   const char* name, uint32_t type,
+                   void* data, size_t dsize,
+                   void (*func)(void* note, size_t sz, void* cookie),
+                   void* cookie) {
     elfphdr ph[64];
     elfhdr eh;
     if ((lseek(fd, 0, SEEK_SET) != 0)) {
-        return 0;
+        return;
     }
     if (read(fd, &eh, sizeof(eh)) != sizeof(eh)) {
-        return 0;
+        return;
     }
     if (memcmp(&eh, ELFMAG, 4) ||
         (eh.e_ehsize != sizeof(elfhdr)) ||
         (eh.e_phentsize != sizeof(elfphdr))) {
-        return 0;
+        return;
     }
     size_t sz = sizeof(elfphdr) * eh.e_phnum;
     if (sz > sizeof(ph)) {
-        return 0;
+        return;
     }
     if ((lseek(fd, eh.e_phoff, SEEK_SET) != (off_t)eh.e_phoff) ||
         (read(fd, ph, sz) != (ssize_t)sz)){
-        return 0;
+        return;
     }
     for (int i = 0; i < eh.e_phnum; i++) {
         if ((ph[i].p_type != PT_NOTE) ||
@@ -86,14 +93,10 @@ size_t load_note(int fd, const char* name, uint32_t type,
         }
         if ((lseek(fd, ph[i].p_offset, SEEK_SET) != (off_t)ph[i].p_offset) ||
             (read(fd, data, ph[i].p_filesz) != (ssize_t)ph[i].p_filesz)) {
-            return 0;
+            return;
         }
-
-        if ((sz = find_note(name, type, data, ph[i].p_filesz, out)) > 0) {
-            return sz;
-        }
+        find_note(name, type, data, ph[i].p_filesz, func, cookie);
     }
-    return 0;
 }
 
 typedef struct {
@@ -101,7 +104,9 @@ typedef struct {
     mx_bind_inst_t bi[0];
 } drivernote;
 
-void dump_note(const char* fn, drivernote* dn, size_t sz) {
+void dump_note(void* note, size_t sz, void* cookie) {
+    drivernote* dn = note;
+    const char* fn = cookie;
     if (sz < sizeof(drivernote)) {
         return;
     }
@@ -121,28 +126,13 @@ void dump_note(const char* fn, drivernote* dn, size_t sz) {
 
 int main(int argc, char** argv) {
     while (argc > 1) {
-        uint8_t data[1024];
-        drivernote* note = NULL;
+        uint8_t data[4096];
 
         int fd;
         if ((fd = open(argv[1], O_RDONLY)) >= 0) {
-            size_t sz = load_note(fd, "Magenta", 0x00010000,
-                               data, sizeof(data), (void**) &note);
+            for_each_note(fd, "Magenta", 0x00010000,
+                          data, sizeof(data), dump_note, argv[1]);
             close(fd);
-            if (sz >= sizeof(drivernote)) {
-                dump_note(argv[1], note, sz);
-#if DLTEST
-                void* dl = dlopen(argv[1], RTLD_NOW);
-                printf("dlopen() %p %s\n", dl, dl ? "" : dlerror());
-                if (dl) {
-                     void* sym = dlsym(dl, "magenta_driver");
-                     printf("dlsym() %p %s\n", sym, sym ? "" : dlerror());
-                     if (sym) {
-                              dump_note("<dlopen>", sym, 1024);
-                     }
-                }
-#endif
-            }
         }
         argc--;
         argv++;

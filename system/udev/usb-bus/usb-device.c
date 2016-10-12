@@ -125,7 +125,7 @@ static mx_protocol_device_t usb_device_proto = {
     .release = usb_device_release,
 };
 
-static mx_driver_t _driver_usb_device BUILTIN_DRIVER = {
+static mx_driver_t _driver_usb_device = {
     .name = "usb-device",
 };
 

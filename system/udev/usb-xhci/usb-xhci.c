@@ -440,18 +440,15 @@ error_return:
     return status;
 }
 
-static mx_bind_inst_t binding[] = {
+mx_driver_t _driver_usb_xhci = {
+    .ops = {
+        .bind = usb_xhci_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_driver_usb_xhci, "usb-xhci", "magenta", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
     BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x03),
     BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x30),
-};
-
-mx_driver_t _driver_usb_xhci BUILTIN_DRIVER = {
-    .name = "usb-xhci",
-    .ops = {
-        .bind = usb_xhci_bind,
-    },
-    .binding = binding,
-    .binding_size = sizeof(binding),
-};
+MAGENTA_DRIVER_END(_driver_usb_xhci)

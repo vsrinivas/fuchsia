@@ -14,6 +14,7 @@
 
 #include <assert.h>
 #include <endian.h>
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/tpm.h>
@@ -219,9 +220,11 @@ cleanup_device:
 #endif
 }
 
-mx_driver_t _driver_tpm BUILTIN_DRIVER = {
-    .name = "tpm",
+mx_driver_t _driver_tpm = {
     .ops = {
         .init = tpm_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_tpm, "tpm", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_tpm)

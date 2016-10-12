@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
@@ -37,9 +38,11 @@ mx_status_t null_init(mx_driver_t* driver) {
     return NO_ERROR;
 }
 
-mx_driver_t _driver_null BUILTIN_DRIVER = {
-    .name = "null",
+mx_driver_t _driver_null = {
     .ops = {
         .init = null_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_null, "null", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_null)

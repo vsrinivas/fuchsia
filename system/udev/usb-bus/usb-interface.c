@@ -66,7 +66,7 @@ static mx_protocol_device_t usb_interface_proto = {
     .release = usb_interface_release,
 };
 
-static mx_driver_t _driver_usb_interface BUILTIN_DRIVER = {
+static mx_driver_t _driver_usb_interface = {
     .name = "usb-interface",
 };
 

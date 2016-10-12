@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -138,9 +139,11 @@ static mx_status_t kpci_drv_init(mx_driver_t* drv) {
     }
 }
 
-mx_driver_t _driver_kpci BUILTIN_DRIVER = {
-    .name = "pci",
+mx_driver_t _driver_kpci = {
     .ops = {
         .init = kpci_drv_init,
     },
 };
+
+MAGENTA_DRIVER_BEGIN(_driver_kpci, "pci", "magenta", "0.1", 0)
+MAGENTA_DRIVER_END(_driver_kpci)

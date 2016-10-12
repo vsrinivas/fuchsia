@@ -63,7 +63,13 @@ static mx_status_t intel_serialio_bind(mx_driver_t* drv, mx_device_t* dev) {
     return res;
 }
 
-static mx_bind_inst_t binding[] = {
+mx_driver_t _intel_serialio = {
+    .ops = {
+        .bind = intel_serialio_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_intel_serialio, "intel-serialio", "magenta", "0.1", 14)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_DMA_DID),
@@ -78,13 +84,4 @@ static mx_bind_inst_t binding[] = {
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
-};
-
-mx_driver_t _intel_serialio BUILTIN_DRIVER = {
-    .name = "intel_serialio",
-    .ops = {
-        .bind = intel_serialio_bind,
-    },
-    .binding = binding,
-    .binding_size = sizeof(binding),
-};
+MAGENTA_DRIVER_END(_intel_serialio)

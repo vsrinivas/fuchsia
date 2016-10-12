@@ -221,19 +221,16 @@ static mx_status_t usb_audio_bind(mx_driver_t* driver, mx_device_t* device) {
     return NO_ERROR;
 }
 
-static mx_bind_inst_t binding[] = {
+mx_driver_t _driver_usb_audio = {
+    .ops = {
+        .bind = usb_audio_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_driver_usb_audio, "usb-audio", "magenta", "0.1", 4)
     // USB audio devices are always specified at the interface level
     BI_ABORT_IF(NE, BIND_USB_CLASS, 0),
     BI_ABORT_IF(NE, BIND_USB_IFC_CLASS, USB_CLASS_AUDIO),
     BI_ABORT_IF(NE, BIND_USB_IFC_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
     BI_MATCH_IF(EQ, BIND_USB_IFC_PROTOCOL, 0),
-};
-
-mx_driver_t _driver_usb_audio BUILTIN_DRIVER = {
-    .name = "usb_audio",
-    .ops = {
-        .bind = usb_audio_bind,
-    },
-    .binding = binding,
-    .binding_size = sizeof(binding),
-};
+MAGENTA_DRIVER_END(_driver_usb_audio)
