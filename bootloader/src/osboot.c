@@ -314,7 +314,13 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
             break;
         case BOOT_DEVICE_LOCAL: {
             size_t rsz = 0;
-            void* ramdisk = xefi_load_file(L"ramdisk.bin", &rsz);
+            void* ramdisk = NULL;
+            efi_file_protocol* ramdisk_file = xefi_open_file(L"ramdisk.bin");
+            if (ramdisk_file) {
+                printf("Loading ramdisk.bin...\n");
+                ramdisk = xefi_read_file(ramdisk_file, &rsz);
+                ramdisk_file->Close(ramdisk_file);
+            }
             boot_kernel(img, sys, kernel, ksz, ramdisk, rsz,
                         cmdline, csz, cmdextra, strlen(cmdextra));
             break;

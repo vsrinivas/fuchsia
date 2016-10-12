@@ -8,6 +8,7 @@
 #include <efi/system-table.h>
 #include <efi/types.h>
 #include <efi/protocol/device-path.h>
+#include <efi/protocol/file.h>
 #include <efi/protocol/simple-text-output.h>
 
 void xefi_init(efi_handle img, efi_system_table* sys);
@@ -28,6 +29,8 @@ int xefi_cmp_guid(efi_guid* guid1, efi_guid* guid2);
 efi_status xefi_open_protocol(efi_handle h, efi_guid* guid, void** ifc);
 efi_status xefi_close_protocol(efi_handle h, efi_guid* guid);
 
+efi_file_protocol* xefi_open_file(char16_t* filename);
+void* xefi_read_file(efi_file_protocol* file, size_t* _sz);
 void* xefi_load_file(char16_t* filename, size_t* size_out);
 
 efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc, uint64_t* mmio);
