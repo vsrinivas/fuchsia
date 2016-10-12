@@ -184,3 +184,95 @@ typedef __WCHAR_TYPE__ wchar_t;
 #define __DEFINED_wchar_t
 #endif
 #endif
+
+#if defined(__NEED_wint_t) && !defined(__DEFINED_wint_t)
+typedef unsigned wint_t;
+#define __DEFINED_wint_t
+#endif
+
+#if defined(__NEED_size_t) && !defined(__DEFINED_size_t)
+typedef __SIZE_TYPE__ size_t;
+#define __DEFINED_size_t
+#endif
+
+#if defined(__NEED_ptrdiff_t) && !defined(__DEFINED_ptrdiff_t)
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+#define __DEFINED_ptrdiff_t
+#endif
+
+#if defined(__NEED_va_list) && !defined(__DEFINED_va_list)
+typedef __builtin_va_list va_list;
+#define __DEFINED_va_list
+#endif
+
+#if defined(__NEED___isoc_va_list) && !defined(__DEFINED___isoc_va_list)
+typedef __builtin_va_list __isoc_va_list;
+#define __DEFINED___isoc_va_list
+#endif
+
+#if defined(__NEED_time_t) && !defined(__DEFINED_time_t)
+typedef long time_t;
+#define __DEFINED_time_t
+#endif
+
+#if defined(__NEED_max_align_t) && !defined(__DEFINED_max_align_t)
+typedef struct {
+    long long __ll;
+    long double __ld;
+} max_align_t;
+#define __DEFINED_max_align_t
+#endif
+
+#if defined(__NEED_suseconds_t) && !defined(__DEFINED_suseconds_t)
+typedef long suseconds_t;
+#define __DEFINED_suseconds_t
+#endif
+
+#if defined(__NEED_clock_t) && !defined(__DEFINED_clock_t)
+typedef long clock_t;
+#define __DEFINED_clock_t
+#endif
+
+#if defined(__NEED_pid_t) && !defined(__DEFINED_pid_t)
+typedef int pid_t;
+#define __DEFINED_pid_t
+#endif
+
+#if defined(__NEED_id_t) && !defined(__DEFINED_id_t)
+typedef unsigned id_t;
+#define __DEFINED_id_t
+#endif
+
+#if defined(__NEED_uid_t) && !defined(__DEFINED_uid_t)
+typedef unsigned uid_t;
+#define __DEFINED_uid_t
+#endif
+
+#if defined(__NEED_gid_t) && !defined(__DEFINED_gid_t)
+typedef unsigned gid_t;
+#define __DEFINED_gid_t
+#endif
+
+#if defined(__NEED_struct_iovec) && !defined(__DEFINED_struct_iovec)
+struct iovec {
+    void* iov_base;
+    size_t iov_len;
+};
+#define __DEFINED_struct_iovec
+#endif
+
+#if defined(__NEED_struct_timeval) && !defined(__DEFINED_struct_timeval)
+struct timeval {
+    time_t tv_sec;
+    suseconds_t tv_usec;
+};
+#define __DEFINED_struct_timeval
+#endif
+
+#if defined(__NEED_struct_timespec) && !defined(__DEFINED_struct_timespec)
+struct timespec {
+    time_t tv_sec;
+    long tv_nsec;
+};
+#define __DEFINED_struct_timespec
+#endif
