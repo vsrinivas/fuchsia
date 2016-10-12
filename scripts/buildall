@@ -9,6 +9,7 @@
 
 function HELP {
     echo "help:"
+    echo "-a arg              : Pass arg to make"
     echo "-f                  : Exit on first failure"
     echo "-m                  : Build magenta targets only"
     echo "-r                  : Also build release mode builds"
@@ -19,9 +20,11 @@ function HELP {
 FAIL_FAST=0
 DO_RELEASE=0
 MAGENTA_ONLY=0
+MAKE_ARGS=
 
-while getopts fhmr FLAG; do
+while getopts a:fhmr FLAG; do
     case $FLAG in
+        a) MAKE_ARGS="${MAKE_ARGS} ${OPTARG}";;
         f) FAIL_FAST=1;;
         h) HELP;;
         r) DO_RELEASE=1;;
@@ -45,7 +48,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 STATUS=0
 
 for p in $PROJECTS; do
-  nice $DIR/make-parallel $p
+  nice $DIR/make-parallel $p ${MAKE_ARGS}
   STATUS=$?
   if [ "$STATUS" -ne 0 ]; then
     FAILED="$FAILED $p"
@@ -55,7 +58,7 @@ for p in $PROJECTS; do
   fi
 
   if [ "$DO_RELEASE" -eq 1 ]; then
-    nice $DIR/make-release $p
+    nice $DIR/make-release $p ${MAKE_ARGS}
     STATUS=$?
     if [ "$STATUS" -ne 0 ]; then
       FAILED="$FAILED $p-release"
