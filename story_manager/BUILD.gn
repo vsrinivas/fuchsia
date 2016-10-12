@@ -19,6 +19,7 @@ executable("story_manager") {
   deps = [
     ":interfaces",
     "//apps/ledger/api",
+    "//apps/maxwell/document_store/interfaces",
     "//apps/modular/story_runner:interfaces",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",

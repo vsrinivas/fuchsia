@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <mojo/system/main.h>
-#include <stdio.h>
 
+#include "apps/maxwell/document_store/interfaces/document.mojom.h"
 #include "apps/modular/mojo/single_service_application.h"
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -20,6 +21,9 @@
 namespace {
 
 constexpr char kValueLabel[] = "value";
+constexpr char kSenderLabel[] = "sender";
+
+using document_store::Document;
 
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
@@ -30,8 +34,8 @@ using mojo::StructPtr;
 
 using modular::Link;
 using modular::LinkChanged;
-using modular::LinkValue;
 using modular::Module;
+using modular::DocumentEditor;
 using modular::Session;
 
 // Module implementation that acts as a leaf module. It implements
@@ -43,9 +47,7 @@ class Module2Impl : public Module, public LinkChanged {
     FTL_LOG(INFO) << "Module2Impl";
   }
 
-  ~Module2Impl() override {
-    FTL_LOG(INFO) << "~Module2Impl";
-  }
+  ~Module2Impl() override { FTL_LOG(INFO) << "~Module2Impl"; }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
@@ -65,10 +67,18 @@ class Module2Impl : public Module, public LinkChanged {
   // through one link handle is not notified of changes requested
   // through the same handle. It's really the handle identity that
   // decides.
-  void Value(StructPtr<LinkValue> value) override {
-    StructPtr<LinkValue>& v = value->get_object_value()[kValueLabel];
+  void Notify(StructPtr<Document> doc) override {
+    FTL_LOG(INFO) << "\nModule2Impl::Notify() " << (int64_t)this
+                  << DocumentEditor::ToString(doc);
+    DocumentEditor editor(std::move(doc));
+    auto v = editor.GetValue(kSenderLabel);
+    FTL_DCHECK(v != nullptr);
+    v->set_string_value("Module2Impl");
+
+    v = editor.GetValue(kValueLabel);
+    FTL_DCHECK(v != nullptr);
     v->set_int_value(v->get_int_value() + 1);
-    link_->SetValue(std::move(value));
+    link_->AddDocument(editor.TakeDocument());
   }
 
  private:

@@ -16,7 +16,9 @@ executable("example_module1") {
   ]
 
   deps = [
+    "//apps/maxwell/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
+    "//apps/modular/document_editor",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -31,7 +33,9 @@ executable("example_module2") {
   ]
 
   deps = [
+    "//apps/maxwell/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
+    "//apps/modular/document_editor",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
@@ -46,7 +50,9 @@ executable("example_recipe") {
   ]
 
   deps = [
+    "//apps/maxwell/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
+    "//apps/modular/document_editor",
     "//apps/modular/story_runner:interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",

@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 #include <mojo/system/main.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <strstream>
 
+#include "apps/maxwell/document_store/interfaces/document.mojom.h"
 #include "apps/modular/mojo/single_service_application.h"
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -23,6 +21,11 @@
 namespace {
 
 constexpr char kValueLabel[] = "value";
+constexpr char kSenderLabel[] = "sender";
+
+using document_store::Document;
+using document_store::Property;
+using document_store::Value;
 
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
@@ -33,8 +36,8 @@ using mojo::StructPtr;
 
 using modular::Link;
 using modular::LinkChanged;
-using modular::LinkValue;
 using modular::Module;
+using modular::DocumentEditor;
 using modular::Session;
 
 // Module implementation that acts as a leaf module. It implements
@@ -46,9 +49,7 @@ class Module1Impl : public Module, public LinkChanged {
     FTL_LOG(INFO) << "Module1Impl";
   }
 
-  ~Module1Impl() override {
-    FTL_LOG(INFO) << "~Module1Impl";
-  }
+  ~Module1Impl() override { FTL_LOG(INFO) << "~Module1Impl"; }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
@@ -63,14 +64,23 @@ class Module1Impl : public Module, public LinkChanged {
   }
 
   // See comments on Module2Impl in example-module2.cc.
-  void Value(StructPtr<LinkValue> value) override {
-    StructPtr<LinkValue>& v = value->get_object_value()[kValueLabel];
+  void Notify(StructPtr<Document> doc) override {
+    FTL_LOG(INFO) << "\nModule1Impl::Notify() " << (int64_t)this
+                  << DocumentEditor::ToString(doc);
+    DocumentEditor editor(std::move(doc));
+    auto v = editor.GetValue(kSenderLabel);
+    FTL_DCHECK(v != nullptr);
+    v->set_string_value("Module1Impl");
 
-    if (v->get_int_value() >= 10) {
+    v = editor.GetValue(kValueLabel);
+    FTL_DCHECK(v != nullptr);
+
+    int val = v->get_int_value();
+    if (val >= 10) {
       session_->Done();
     } else {
-      v->set_int_value(v->get_int_value() + 1);
-      link_->SetValue(std::move(value));
+      v->set_int_value(val + 1);
+      link_->AddDocument(editor.TakeDocument());
     }
   }
 

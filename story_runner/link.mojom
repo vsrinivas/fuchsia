@@ -7,13 +7,14 @@
 
 module modular;
 
+import "apps/maxwell/document_store/interfaces/document.mojom";
+
 // This interface is implemented by the story runner. The Session
 // service instance acts as a factory for it.
 //
-// An instance of Link holds a value, expressed as an instance of
-// LinkValue. The value is structured, however right now the value is
-// only set and read as a whole, but in the future it should be
-// possible to just set and read deltas to the value.
+// An instance of Link holds a document, expressed as an instance of
+// document_store.Document. The document is structured, however right now the
+// document is only set and read as a whole, but deltas will be supported soon.
 //
 // Each module receives a handle to one instance of Link at startup.
 // This instance is shared with the module that requested the start of
@@ -22,10 +23,10 @@ module modular;
 // do that? For example to share the Link instance with modules it
 // requests to start in turn.
 //
-// A client of Link can set the Value stored in the instance and
+// A client of Link can set the Document stored in the instance and
 // register a handler (an implementation of the LinkChanged interface)
 // to be notified of changes to the Value. A client is not notified of
-// changes it itself makes to the Link value. More specifically, a
+// changes it itself makes to the Link document. More specifically, a
 // watcher registered on one handle to a Link instance is not notified
 // of changes made *through the same handle*.
 //
@@ -42,19 +43,21 @@ module modular;
 //
 // No service name: created by Session.
 interface Link {
-  // Sets the value. Watchers will be notified. Before SetValue() is
-  // called for the first time, the value in the Link is null, but
-  // it's not possible to reset it back to null.
-  SetValue(LinkValue value);
+  // In the current simplified implementation, the Link contains a single
+  // Document, which is null when the Link is created. This AddDocument()
+  // function overwrites the document with the given Document. Watchers
+  // will be notified.  It's not currently possible to reset the Document
+  // back to null.
+  AddDocument(document_store.Document value);
 
-  // Obtains the current value. If SetValue() was not yet called, the
+  // Obtains the current document. If AddDocument() was not yet called, the
   // value returned is null.
-  Value() => (LinkValue? value);
+  Query() => (document_store.Document? value);
 
-  // Registers a watcher, which is notified whenever the value
+  // Registers a watcher, which is notified whenever the document
   // changes. If the value is not null at the time the watcher is
-  // registered, the Value() callbck method is invoked with the
-  // current value.
+  // registered, the Notify() callback method is invoked with the
+  // current document.
   Watch(LinkChanged watcher);
 
   // Like Watch(), but the watcher is notified also of changes made
@@ -62,7 +65,7 @@ interface Link {
   WatchAll(LinkChanged watcher);
 
   // Obtains another handle for the same Link instance. Can be used to
-  // keep a refernece to a Link instance and pass it as an argument to
+  // keep a reference to a Link instance and pass it as an argument to
   // another service.
   Dup(Link& dup);
 };
@@ -75,31 +78,5 @@ interface Link {
 //
 // No service name: created by Module.
 interface LinkChanged {
-  Value(LinkValue value);
-};
-
-// JSON-LD inspired structure for the value of a link. This allows to
-// represent JSON and thus also JSON-LD if we really want it to. (Read
-// the spec https://www.w3.org/TR/json-ld/ to help decide.) Once we go
-// for JSON-LD, special properties like @id, @value, @type, @context
-// and so on may be represented as actual struct fields to enforce
-// their presence.
-//
-// For now, LinkValue can just represent anything that can also be
-// represented as JSON, except for null values (which we might add if
-// we want them).
-//
-// NOTE(mesch): In the future I want to use *the same* data structure
-// to represent *deltas* in addition to the full value. The only thing
-// this requires is to add a "deleted" field to the union in order to
-// represent deleted fields. Even if we change the data structure to
-// something else, we should aim for this property (might be called
-// self duality if we need a name).
-union LinkValue {
-  string string_value;
-  int64 int_value;
-  double double_value;
-  bool bool_value;
-  map<string, LinkValue> object_value;
-  array<LinkValue> array_value;
+  Notify(document_store.Document document);
 };

@@ -21,6 +21,8 @@ executable("story_runner") {
   deps = [
     ":interfaces",
     "//lib/ftl",
+    "//apps/maxwell/document_store/interfaces",
+    "//apps/modular/document_editor",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
@@ -37,6 +39,7 @@ executable("resolver") {
 
   deps = [
     ":interfaces",
+    "//apps/maxwell/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",

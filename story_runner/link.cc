@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/maxwell/document_store/interfaces/document.mojom.h"
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/link.h"
-
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -13,11 +14,19 @@
 
 namespace modular {
 
+using document_store::Document;
+using document_store::Property;
+using document_store::Value;
+
+using modular::DocumentEditor;
+
+using mojo::InterfaceHandle;
+using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StructPtr;
 
 struct SharedLinkImplData {
-  StructPtr<LinkValue> value;
+  StructPtr<Document> doc;
   std::vector<LinkImpl*> impls;
 };
 
@@ -40,7 +49,7 @@ LinkImpl::~LinkImpl() {
   // how it is and may be revised in the future.
   if (primary_) {
     while (!shared_->impls.empty()) {
-      delete shared_->impls.back();  // Calls RemoveImpl(), which erases the
+      delete shared_->impls.back();   // Calls RemoveImpl(), which erases the
                                       // deleted element.
     }
 
@@ -52,37 +61,39 @@ void LinkImpl::New(InterfaceRequest<Link> req) {
   new LinkImpl(std::move(req), nullptr);
 }
 
-void LinkImpl::Value(const LinkImpl::ValueCallback& callback) {
-  callback.Run(shared_->value.Clone());
+void LinkImpl::Query(const LinkImpl::QueryCallback& callback) {
+  callback.Run(shared_->doc.Clone());
 }
 
-void LinkImpl::Watch(mojo::InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::Watch(InterfaceHandle<LinkChanged> watcher) {
   AddWatcher(std::move(watcher), false);
 }
 
-void LinkImpl::WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::WatchAll(InterfaceHandle<LinkChanged> watcher) {
   AddWatcher(std::move(watcher), true);
 }
 
-void LinkImpl::AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
+void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
                           const bool self) {
-  mojo::InterfacePtr<LinkChanged> watcher_ptr;
+  InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
   watchers_.emplace_back(std::make_pair(std::move(watcher_ptr), self));
 
-  // The current Value is sent to a newly registered watcher only if
+  // The current Document is sent to a newly registered watcher only if
   // it's not null.
-  if (!shared_->value.is_null()) {
-    watchers_.back().first->Value(shared_->value.Clone());
+  // TODO(jimbe) Sending an initial notification to the watcher smells wrong.
+  FTL_LOG(INFO) << "$$ Sending initial values notification";
+  if (!shared_->doc.is_null() && !shared_->doc->properties.is_null()) {
+    watchers_.back().first->Notify(shared_->doc.Clone());
   }
 }
 
-void LinkImpl::Notify(LinkImpl* const source,
-                      const StructPtr<LinkValue>& value) {
-  for (std::pair<mojo::InterfacePtr<LinkChanged>, bool>& watcher : watchers_) {
+void LinkImpl::Notify(LinkImpl* source,
+                      const StructPtr<Document>& doc) {
+  for (std::pair<InterfacePtr<LinkChanged>, bool>& watcher : watchers_) {
     if (watcher.second || this != source) {
       //TODO(jimbe) Watchers should actually be removed when they're closed.
-      if (watcher.first.is_bound()) watcher.first->Value(value.Clone());
+      if (watcher.first.is_bound()) watcher.first->Notify(doc.Clone());
     }
   }
 }
@@ -99,13 +110,17 @@ void LinkImpl::RemoveImpl(LinkImpl* impl) {
   shared_->impls.erase(std::next(f).base());
 }
 
-// SetValue knows which client a notification comes from, so it
-// notifies only all other clients, or the ones that requested all
-// notifications.
-void LinkImpl::SetValue(StructPtr<LinkValue> value) {
-  shared_->value = std::move(value);
+// The |LinkImpl| object knows which client made the call to AddDocument(), so
+// it notifies either all clients or all other clients, depending on whether
+// WatchAll() or Watch() was called, respectively.
+// TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
+// the call to AddDocument(). Need to find a way to improve this.
+void LinkImpl::AddDocument(StructPtr<Document> doc) {
+  FTL_LOG(INFO) << "LinkImpl::AddOne() " << std::hex << (int64_t)shared_
+      << DocumentEditor::ToString(doc);
+  shared_->doc = std::move(doc);
   for (auto dst : shared_->impls) {
-    dst->Notify(this, shared_->value);
+    dst->Notify(this, shared_->doc);
   }
 }
 

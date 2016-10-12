@@ -21,6 +21,7 @@
 
 #include <vector>
 
+#include "apps/maxwell/document_store/interfaces/document.mojom.h"
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -38,8 +39,8 @@ class LinkImpl : public Link {
   ~LinkImpl() override;
 
   // Implements Link interface.
-  void SetValue(mojo::StructPtr<LinkValue> value) override;
-  void Value(const ValueCallback& callback) override;
+  void AddDocument(mojo::StructPtr<document_store::Document> doc) override;
+  void Query(const QueryCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void Dup(mojo::InterfaceRequest<Link> dup) override;
@@ -59,7 +60,8 @@ class LinkImpl : public Link {
   void RemoveImpl(LinkImpl* client);
 
   void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self);
-  void Notify(LinkImpl* source, const mojo::StructPtr<LinkValue>& value);
+  void Notify(LinkImpl* source,
+              const mojo::StructPtr<document_store::Document>& doc);
 
   const bool primary_;
   // |shared_| is owned by the |primary_| LinkImpl.
