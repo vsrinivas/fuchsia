@@ -141,12 +141,14 @@ TEST_F(PageStorageTest, CreateJournals) {
   std::unique_ptr<Journal> journal;
 
   // Explicit journal.
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(), false, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::EXPLICIT, &journal));
   EXPECT_NE(nullptr, journal);
   journal.reset();
 
   // Implicit journal.
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(), true, &journal));
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::IMPLICIT, &journal));
   EXPECT_NE(nullptr, journal);
   journal.reset();
 

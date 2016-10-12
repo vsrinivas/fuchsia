@@ -52,7 +52,7 @@ class PageStorage {
   // changes will be lost after a crash. Otherwise, changes to implicit
   // journals will be committed on system restart.
   virtual Status StartCommit(const CommitId& commit_id,
-                             bool implicit,
+                             JournalType journal_type,
                              std::unique_ptr<Journal>* journal) = 0;
   // Starts a new |journal| for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All

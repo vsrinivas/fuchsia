@@ -79,10 +79,11 @@ std::string GetJournalEntryValueFor(ftl::StringView value,
   return Concatenate({{&kJournalEntryAdd, 1}, {&priorityByte, 1}, value});
 }
 
-std::string NewJournalId(bool implicit) {
+std::string NewJournalId(JournalType journal_type) {
   std::string id;
   id.resize(kJournalIdSize);
-  id[0] = (implicit ? kImplicitJournalIdPrefix : kExplicitJournalIdPrefix);
+  id[0] = (journal_type == JournalType::IMPLICIT ? kImplicitJournalIdPrefix
+                                                 : kExplicitJournalIdPrefix);
   glue::RandBytes(&id[1], kJournalIdSize - 1);
   return id;
 }
@@ -202,12 +203,12 @@ Status DB::RemoveCommit(const CommitId& commit_id) {
   return Delete(GetCommitKeyFor(commit_id));
 }
 
-Status DB::CreateJournal(bool implicit,
+Status DB::CreateJournal(JournalType journal_type,
                          const CommitId& base,
                          std::unique_ptr<Journal>* journal) {
-  JournalId id = NewJournalId(implicit);
+  JournalId id = NewJournalId(journal_type);
   *journal = JournalDBImpl::Simple(this, id, base);
-  if (implicit) {
+  if (journal_type == JournalType::IMPLICIT) {
     return Put(GetImplicitJournalMetaKeyFor(id), base);
   }
   return Status::OK;
@@ -216,7 +217,8 @@ Status DB::CreateJournal(bool implicit,
 Status DB::CreateMergeJournal(const CommitId& base,
                               const CommitId& other,
                               std::unique_ptr<Journal>* journal) {
-  *journal = JournalDBImpl::Merge(this, NewJournalId(false), base, other);
+  *journal = JournalDBImpl::Merge(this, NewJournalId(JournalType::EXPLICIT),
+                                  base, other);
   return Status::OK;
 }
 

@@ -53,7 +53,7 @@ class DB {
 
   // Creates a new |Journal| with the given |base| commit id and stores it on
   // the \journal| parameter.
-  Status CreateJournal(bool implicit,
+  Status CreateJournal(JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal);
   // Creates a new |Journal| for a merge commit with |base| and |other as

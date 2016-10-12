@@ -34,7 +34,7 @@ class PageStorageImpl : public PageStorage {
   Status AddCommitFromSync(const CommitId& id,
                            const std::string& storage_bytes) override;
   Status StartCommit(const CommitId& commit_id,
-                     bool implicit,
+                     JournalType journal_type,
                      std::unique_ptr<Journal>* journal) override;
   Status StartMergeCommit(const CommitId& left,
                           const CommitId& right,

@@ -71,7 +71,8 @@ Status PageImpl::RunInTransaction(
   // like to group changes that happen "close enough" together in one commit.
   storage::CommitId commit_id = GetLocalBranchHeadCommit();
   std::unique_ptr<storage::Journal> journal;
-  storage::Status status = storage_->StartCommit(commit_id, true, &journal);
+  storage::Status status = storage_->StartCommit(
+      commit_id, storage::JournalType::IMPLICIT, &journal);
   if (status != storage::Status::OK) {
     return ConvertStatus(status);
   }
@@ -180,7 +181,8 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
     return;
   }
   storage::CommitId commit_id = GetLocalBranchHeadCommit();
-  storage::Status status = storage_->StartCommit(commit_id, true, &journal_);
+  storage::Status status = storage_->StartCommit(
+      commit_id, storage::JournalType::EXPLICIT, &journal_);
   callback.Run(ConvertStatus(status));
 }
 

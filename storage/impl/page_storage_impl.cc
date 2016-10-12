@@ -82,9 +82,9 @@ Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
 }
 
 Status PageStorageImpl::StartCommit(const CommitId& commit_id,
-                                    bool implicit,
+                                    JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
-  return db_.CreateJournal(implicit, commit_id, journal);
+  return db_.CreateJournal(journal_type, commit_id, journal);
 }
 
 Status PageStorageImpl::StartMergeCommit(const CommitId& left,

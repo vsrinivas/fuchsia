@@ -121,8 +121,10 @@ TEST_F(DBTest, Journals) {
 
   std::unique_ptr<Journal> implicitJournal;
   std::unique_ptr<Journal> explicitJournal;
-  EXPECT_EQ(Status::OK, db->CreateJournal(true, commitId, &implicitJournal));
-  EXPECT_EQ(Status::OK, db->CreateJournal(false, commitId, &explicitJournal));
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commitId,
+                                          &implicitJournal));
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::EXPLICIT, commitId,
+                                          &explicitJournal));
 
   EXPECT_EQ(Status::OK, db->RemoveExplicitJournals());
 
@@ -145,7 +147,8 @@ TEST_F(DBTest, JournalEntries) {
   CommitId commitId = RandomId(kCommitIdSize);
 
   std::unique_ptr<Journal> implicitJournal;
-  EXPECT_EQ(Status::OK, db->CreateJournal(true, commitId, &implicitJournal));
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commitId,
+                                          &implicitJournal));
   EXPECT_EQ(Status::OK,
             implicitJournal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,

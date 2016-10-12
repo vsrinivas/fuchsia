@@ -61,7 +61,7 @@ Status FakePageStorage::AddCommitFromSync(const CommitId& id,
 }
 
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
-                                    bool implicit,
+                                    JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
   std::unique_ptr<FakeJournalDelegate> delegate(new FakeJournalDelegate);
   std::unique_ptr<Journal> fake_journal(new FakeJournal(delegate.get()));

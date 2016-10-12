@@ -44,6 +44,8 @@ struct EntryChange {
 
 enum class ChangeSource { LOCAL, SYNC };
 
+enum class JournalType { IMPLICIT, EXPLICIT };
+
 enum class Status {
   OK,
   FORMAT_ERROR,
