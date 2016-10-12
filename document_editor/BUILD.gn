@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("all") {
+  deps = [
+    ":document_editor",
+  ]
+}
+
+source_set("document_editor") {
+  sources = [
+    "document_editor.cc",
+  ]
+
+  deps = [
+    "//apps/maxwell/document_store/interfaces",
+  ]
+}
