@@ -4,14 +4,14 @@
 
 import("//magma/gnbuild/magma.gni")
 
-executable("msd-intel-gen") {
+shared_library("msd-intel-gen") {
   deps = [
     "$magma_build_root/src/main",
     "src",
   ]
 }
 
-executable("test") {
+shared_library("test") {
   testonly = true
 
   output_name = "msd-intel-gen-test"
