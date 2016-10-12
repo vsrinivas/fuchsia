@@ -104,4 +104,4 @@ template <typename Interface,
 using BoundPtrSet =
     BoundSet<Interface, mojo::InterfacePtr<Interface>, T, GetWrapper>;
 
-}  // namespace mojo
+}  // namespace maxwell

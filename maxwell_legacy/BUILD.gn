@@ -19,9 +19,14 @@ executable("maxwell_test") {
   ]
 
   deps = [
+    "//apps/maxwell/acquirers/mock",
+    "//apps/maxwell/integration",
     "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings:utility",
     "//mojo/public/cpp/utility:utility",
     "//mojo/system",
   ]
+
+  libs = [ "magenta" ]
 }

@@ -6,9 +6,10 @@
 #include <rapidjson/document.h>
 
 #include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
+
+#include "apps/maxwell/debug.h"
 
 namespace {
 
@@ -19,7 +20,7 @@ using mojo::InterfaceHandle;
 using namespace maxwell::context_engine;
 using namespace rapidjson;
 
-class CarmenSandiego : public ApplicationImplBase,
+class CarmenSandiego : public maxwell::DebuggableApp,
                        public ContextPublisherController,
                        public ContextSubscriberLink {
  public:

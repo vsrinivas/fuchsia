@@ -10,6 +10,7 @@
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 
+#include "apps/maxwell/debug.h"
 #include "apps/maxwell/context_engine/graph.h"
 #include "apps/maxwell/context_engine/repo.h"
 
@@ -111,10 +112,12 @@ class ContextEngineApp : public mojo::ApplicationImplBase {
           sag_clients_.AddBinding(new SuggestionAgentClientImpl(&repo_),
                                   request.Pass());
         });
+    debug_.AddService(shell(), service_provider_impl);
     return true;
   }
 
  private:
+  maxwell::DebugSupport debug_;
   Repo repo_;
   StrongBindingSet<ContextAcquirerClient> caq_clients_;
   StrongBindingSet<ContextAgentClient> cag_clients_;

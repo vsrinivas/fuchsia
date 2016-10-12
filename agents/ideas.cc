@@ -7,9 +7,10 @@
 
 #include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "apps/maxwell/interfaces/proposal_manager.mojom.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
+
+#include "apps/maxwell/debug.h"
 
 namespace {
 
@@ -23,7 +24,7 @@ using namespace rapidjson;
 
 constexpr char kIdeaId[] = "";
 
-class Ideas : public ApplicationImplBase, public ContextSubscriberLink {
+class Ideas : public maxwell::DebuggableApp, public ContextSubscriberLink {
  public:
   Ideas() : in_(this) {}
 

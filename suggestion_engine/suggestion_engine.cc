@@ -14,6 +14,8 @@
 #include "mojo/public/cpp/bindings/binding_set.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 
+#include "apps/maxwell/debug.h"
+
 namespace {
 
 using mojo::Binding;
@@ -244,10 +246,12 @@ class SuggestionEngineApp : public mojo::ApplicationImplBase {
         suggestion_bindings_.AddBinding(&suggestinator_, std::move(request));
       }
     });
+    debug_.AddService(shell(), service_provider_impl);
     return true;
   }
 
  private:
+  maxwell::DebugSupport debug_;
   SuggestionManagerImpl suggestinator_;
   mojo::StrongBindingSet<ProposalManager> proposal_bindings_;
   mojo::BindingSet<SuggestionManager> suggestion_bindings_;

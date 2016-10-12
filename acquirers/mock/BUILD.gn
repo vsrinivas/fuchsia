@@ -2,13 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
-mojom("interfaces") {
+static_library("mock") {
   sources = [
-    "context_engine.mojom",
-    "debug.mojom",
-    "proposal_manager.mojom",
-    "suggestion_manager.mojom",
+    "mock_gps.cc",
+  ]
+
+  deps = [
+    "//mojo/public/cpp/application:standalone",
   ]
 }

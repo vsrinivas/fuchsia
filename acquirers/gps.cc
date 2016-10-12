@@ -2,13 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/maxwell/acquirers/gps.h"
+
 #include <mojo/system/main.h>
 
 #include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/utility/run_loop.h"
+
+#include "apps/maxwell/debug.h"
+
+using maxwell::acquirers::GpsAcquirer;
+
+constexpr char GpsAcquirer::kLabel[];
+constexpr char GpsAcquirer::kSchema[];
 
 namespace {
 
@@ -23,10 +31,11 @@ using namespace maxwell::context_engine;
 #define KEEP_ALIVE_TICKS 3
 #define HAS_SUBSCRIBERS -1
 
-class GpsAcquirer : public ApplicationImplBase,
-                    public ContextPublisherController {
+class GpsAcquirerImpl : public GpsAcquirer,
+                        public maxwell::DebuggableApp,
+                        public ContextPublisherController {
  public:
-  GpsAcquirer() : ctl_(this) {}
+  GpsAcquirerImpl() : ctl_(this) {}
 
   void OnInitialize() override {
     srand(time(NULL));
@@ -37,10 +46,8 @@ class GpsAcquirer : public ApplicationImplBase,
     ContextPublisherControllerPtr ctl_ptr;
     ctl_.Bind(GetProxy(&ctl_ptr));
 
-    cx->Publish("/location/gps",
-                "https://developers.google.com/maps/documentation/javascript/"
-                "3.exp/reference#LatLngLiteral",
-                ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
+    cx->Publish(kLabel, kSchema, ctl_ptr.PassInterfaceHandle(),
+                GetProxy(&out_));
   }
 
   void OnHasSubscribers() override {
@@ -60,10 +67,6 @@ class GpsAcquirer : public ApplicationImplBase,
   }
 
  private:
-  Binding<ContextPublisherController> ctl_;
-  ContextPublisherLinkPtr out_;
-  int tick_keep_alive_;
-
   inline void PublishLocation() {
     // For now, this representation must be agreed upon by all parties out of
     // band. In the future, we will want to represent most mathematical typing
@@ -94,11 +97,15 @@ class GpsAcquirer : public ApplicationImplBase,
     RunLoop::current()->PostDelayedTask([this] { PublishingTick(); },
                                         GPS_UPDATE_PERIOD);
   }
+
+  Binding<ContextPublisherController> ctl_;
+  ContextPublisherLinkPtr out_;
+  int tick_keep_alive_;
 };
 
 }  // namespace
 
 MojoResult MojoMain(MojoHandle request) {
-  GpsAcquirer app;
+  GpsAcquirerImpl app;
   return mojo::RunApplication(request, &app);
 }
