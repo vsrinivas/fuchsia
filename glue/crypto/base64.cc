@@ -12,8 +12,8 @@ namespace glue {
 
 namespace {
 
-const uint8_t* ToUnsigned(const std::string& str) {
-  return reinterpret_cast<const uint8_t*>(&str[0]);
+const uint8_t* ToUnsigned(ftl::StringView str) {
+  return reinterpret_cast<const uint8_t*>(str.data());
 }
 
 uint8_t* ToUnsigned(std::string& str) {
@@ -22,7 +22,7 @@ uint8_t* ToUnsigned(std::string& str) {
 
 }  // namespace
 
-void Base64Encode(const std::string& input, std::string* output) {
+void Base64Encode(ftl::StringView input, std::string* output) {
   std::string tmp_output;
   size_t output_length;
   FTL_CHECK(EVP_EncodedLength(&output_length, input.size()));
@@ -34,7 +34,7 @@ void Base64Encode(const std::string& input, std::string* output) {
   output->swap(tmp_output);
 }
 
-bool Base64Decode(const std::string& input, std::string* output) {
+bool Base64Decode(ftl::StringView input, std::string* output) {
   std::string tmp_output;
   size_t output_maxlength;
   if (!EVP_DecodedLength(&output_maxlength, input.size()))
