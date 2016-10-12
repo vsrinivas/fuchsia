@@ -22,6 +22,8 @@ source_set("lib") {
     "ledger_factory_impl.h",
     "ledger_impl.cc",
     "ledger_impl.h",
+    "ledger_manager.cc",
+    "ledger_manager.h",
     "page_impl.cc",
     "page_impl.h",
     "page_manager.cc",
@@ -58,6 +60,7 @@ mojo_native_application("ledger_app") {
     "//lib/ftl",
     "//lib/mtl",
     "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings:utility",
   ]
 }
 
@@ -67,6 +70,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "ledger_manager_unittest.cc",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",
   ]
@@ -74,6 +78,7 @@ executable("unittests") {
   deps = [
     ":lib",
     "//apps/ledger/convert",
+    "//apps/ledger/glue",
     "//apps/ledger/storage/fake:lib",
     "//apps/ledger/storage/public",
     "//apps/ledger/test",

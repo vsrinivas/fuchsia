@@ -11,13 +11,23 @@
 
 namespace ledger {
 
-LedgerFactoryImpl::LedgerFactoryImpl(
-    mojo::InterfaceRequest<LedgerFactory> request,
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::string& base_storage_dir)
-    : binding_(this, std::move(request)),
-      task_runner_(task_runner),
-      base_storage_dir_(base_storage_dir) {}
+size_t LedgerFactoryImpl::ArrayHash::operator()(
+    const mojo::Array<uint8_t>& array) const {
+  size_t result = 5381;
+  for (uint8_t b : array.storage())
+    result = ((result << 5) + result) ^ b;
+  return result;
+}
+
+size_t LedgerFactoryImpl::ArrayEquals::operator()(
+    const mojo::Array<uint8_t>& array_1,
+    const mojo::Array<uint8_t>& array_2) const {
+  return array_1.Equals(array_2);
+}
+
+LedgerFactoryImpl::LedgerFactoryImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                     const std::string& base_storage_dir)
+    : task_runner_(task_runner), base_storage_dir_(base_storage_dir) {}
 
 LedgerFactoryImpl::~LedgerFactoryImpl() {}
 
@@ -28,17 +38,28 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
   if (identity->user_id.size() == 0) {
     // User identity cannot be empty.
     callback.Run(Status::AUTHENTICATION_ERROR, nullptr);
-  } else {
-    std::unique_ptr<storage::LedgerStorage> app_storage(
-        new storage::LedgerStorageImpl(
-            task_runner_, base_storage_dir_,
-            GetIdentityString(std::move(identity))));
-    new LedgerImpl(GetProxy(&ledger), std::move(app_storage));
-    callback.Run(Status::OK, std::move(ledger));
+    return;
   }
+
+  // If we have the ledger manager ready, just bind to its impl.
+  auto it = ledger_managers_.find(identity->user_id);
+  if (it != ledger_managers_.end()) {
+    callback.Run(Status::OK, it->second->GetLedgerPtr());
+    return;
+  }
+
+  // If not, create one.
+  std::unique_ptr<storage::LedgerStorage> ledger_storage(
+      new storage::LedgerStorageImpl(task_runner_, base_storage_dir_,
+                                     GetIdentityString(identity)));
+
+  auto ret = ledger_managers_.insert(std::make_pair(
+      std::move(identity->user_id),
+      std::make_unique<LedgerManager>(std::move(ledger_storage))));
+  callback.Run(Status::OK, ret.first->second->GetLedgerPtr());
 }
 
-std::string LedgerFactoryImpl::GetIdentityString(IdentityPtr identity) {
+std::string LedgerFactoryImpl::GetIdentityString(const IdentityPtr& identity) {
   std::string identity_string(
       reinterpret_cast<const char*>(identity->user_id.data()),
       identity->user_id.size());

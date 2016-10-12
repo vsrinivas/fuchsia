@@ -6,22 +6,38 @@
 #define APPS_LEDGER_APP_LEDGER_IMPL_H_
 
 #include <memory>
-#include <type_traits>
-#include <unordered_map>
 
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/ledger/app/page_manager.h"
 #include "apps/ledger/storage/public/ledger_storage.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
 
 namespace ledger {
 
 class LedgerImpl : public Ledger {
  public:
-  LedgerImpl(mojo::InterfaceRequest<Ledger> request,
-             std::unique_ptr<storage::LedgerStorage> storage);
+  // Delegate capable of actually performing the page operations.
+  class Delegate {
+   public:
+    Delegate() {}
+    ~Delegate() {}
+
+    virtual void CreatePage(std::function<void(Status, PagePtr)> callback) = 0;
+
+    enum class CreateIfNotFound { YES, NO };
+    virtual void GetPage(ftl::StringView page_id,
+                         CreateIfNotFound create_if_not_found,
+                         std::function<void(Status, PagePtr)> callback) = 0;
+
+    virtual Status DeletePage(ftl::StringView page_id) = 0;
+
+   private:
+    FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);
+  };
+
+  // |delegate| outlives LedgerImpl.
+  LedgerImpl(Delegate* delegate);
   ~LedgerImpl() override;
 
  private:
@@ -37,35 +53,7 @@ class LedgerImpl : public Ledger {
       mojo::InterfaceHandle<ConflictResolverFactory> factory,
       const SetConflictResolverFactoryCallback& callback) override;
 
-  // Adds a new PageManager for |page_id| and configures its so that we delete
-  // it from |page_managers_| automatically when the last local client
-  // disconnects from the page.
-  PageManager& AddPageManager(
-      const storage::PageId& page_id,
-      std::unique_ptr<storage::PageStorage> page_storage);
-
-  mojo::StrongBinding<Ledger> binding_;
-  std::unique_ptr<storage::LedgerStorage> storage_;
-
-  // Comparator that allows heterogeneous lookup by StringView and
-  // storage::PageId in a container with the key type of storage::PageId.
-  struct Comparator {
-    using is_transparent = std::true_type;
-    bool operator()(const storage::PageId& lhs,
-                    const storage::PageId& rhs) const {
-      return lhs < rhs;
-    }
-
-    bool operator()(const storage::PageId& lhs, ftl::StringView rhs) const {
-      return ftl::StringView(lhs) < rhs;
-    }
-    bool operator()(ftl::StringView lhs, const storage::PageId& rhs) const {
-      return lhs < ftl::StringView(rhs);
-    }
-  };
-  // Mapping from page id to the manager of that page.
-  std::map<storage::PageId, std::unique_ptr<PageManager>, Comparator>
-      page_managers_;
+  Delegate* const delegate_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
 };

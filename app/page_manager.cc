@@ -29,7 +29,7 @@ PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
 
 PageManager::~PageManager() {}
 
-PagePtr PageManager::NewPageImpl() {
+PagePtr PageManager::GetPagePtr() {
   PagePtr page;
 
   pages_.push_back(

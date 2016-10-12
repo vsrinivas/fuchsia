@@ -46,15 +46,15 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       });
 
   EXPECT_FALSE(on_empty_called);
-  PagePtr page1 = page_manager.NewPageImpl();
-  PagePtr page2 = page_manager.NewPageImpl();
+  PagePtr page1 = page_manager.GetPagePtr();
+  PagePtr page2 = page_manager.GetPagePtr();
   page1.reset();
   page2.reset();
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
-  PagePtr page3 = page_manager.NewPageImpl();
+  PagePtr page3 = page_manager.GetPagePtr();
   page3.reset();
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
@@ -64,7 +64,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   std::unique_ptr<PageManager> page_manager = std::make_unique<PageManager>(
       std::make_unique<storage::fake::FakePageStorage>(page_id_), [] {});
 
-  PagePtr page = page_manager->NewPageImpl();
+  PagePtr page = page_manager->GetPagePtr();
   bool page_closed = false;
   page.set_connection_error_handler([this, &page_closed] {
     page_closed = true;

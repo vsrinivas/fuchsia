@@ -57,7 +57,7 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
   // ApplicationTestBase:
   void SetUp() override {
     ApplicationTestBase::SetUp();
-
+    ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledgerFactory_));
     ledger_ = GetTestLedger();
     std::srand(0);
   }
@@ -71,34 +71,31 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
     ApplicationTestBase::TearDown();
   }
 
+  LedgerPtr GetTestLedger();
   PagePtr GetTestPage();
   PagePtr GetPage(const mojo::Array<uint8_t>& pageId, Status expected_status);
   void DeletePage(const mojo::Array<uint8_t>& pageId, Status expected_status);
 
+  LedgerFactoryPtr ledgerFactory_;
   LedgerPtr ledger_;
   std::vector<mojo::Array<uint8_t>> page_ids_;
 
  private:
-  LedgerPtr GetTestLedger();
-
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApplicationTest);
 };
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
-  LedgerFactoryPtr ledgerFactory;
-  ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledgerFactory));
-
   Status status;
   mojo::InterfaceHandle<Ledger> ledger;
   IdentityPtr identity = Identity::New();
   identity->user_id = RandomArray(1);
-  ledgerFactory->GetLedger(
+  ledgerFactory_->GetLedger(
       std::move(identity),
       [&status, &ledger](Status s, mojo::InterfaceHandle<Ledger> l) {
         status = s;
         ledger = std::move(l);
       });
-  EXPECT_TRUE(ledgerFactory.WaitForIncomingResponse());
+  EXPECT_TRUE(ledgerFactory_.WaitForIncomingResponse());
 
   EXPECT_EQ(Status::OK, status);
   return mojo::InterfacePtr<Ledger>::Create(std::move(ledger));
@@ -218,7 +215,7 @@ TEST_F(LedgerApplicationTest, DeletePage) {
   DeletePage(id, Status::OK);
 
   // Verify that deletion of the page closed the page connection.
-  page.WaitForIncomingResponse();
+  EXPECT_FALSE(page.WaitForIncomingResponse());
   EXPECT_TRUE(page_closed);
 
   // Verify that the deleted page cannot be retrieved.
@@ -226,6 +223,31 @@ TEST_F(LedgerApplicationTest, DeletePage) {
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
   DeletePage(id, Status::PAGE_NOT_FOUND);
+}
+
+TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
+  // Connect to the same ledger instance twice.
+  LedgerPtr ledger_connection_1 = GetTestLedger();
+  LedgerPtr ledger_connection_2 = GetTestLedger();
+
+  // Create a page on the first connection.
+  PagePtr page;
+  Status status;
+  ledger_connection_1->NewPage(
+      [&status, &page](Status s, mojo::InterfaceHandle<Page> p) {
+        status = s;
+        page = PagePtr::Create(std::move(p));
+      });
+  EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
+  EXPECT_EQ(Status::OK, status);
+
+  // Delete this page on the second connection and verify that the operation
+  // succeeds.
+  mojo::Array<uint8_t> id = GetPageId(&page);
+  ledger_connection_2->DeletePage(std::move(id),
+                                  [&status](Status s) { status = s; });
+  EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
+  EXPECT_EQ(Status::OK, status);
 }
 
 }  // namespace

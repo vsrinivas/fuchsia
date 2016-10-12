@@ -38,7 +38,7 @@ class PageManager {
 
   // Creates a new PageImpl managed by this PageManager, and returns a proxy
   // bound to it.
-  PagePtr NewPageImpl();
+  PagePtr GetPagePtr();
 
  private:
   struct BoundPage;

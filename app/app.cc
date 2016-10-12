@@ -18,6 +18,7 @@
 #include "mojo/public/cpp/application/connection_context.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
+#include "mojo/public/cpp/bindings/binding_set.h"
 
 namespace ledger {
 
@@ -41,8 +42,6 @@ class App : public mojo::ApplicationImplBase {
 
  private:
   void OnInitialize() override {
-    message_loop_ = mtl::MessageLoop::GetCurrent();
-
     bool storage_path_given = false;
     for (const std::string& arg : args()) {
       if (arg.size() > kStorageArgLength &&
@@ -57,22 +56,26 @@ class App : public mojo::ApplicationImplBase {
       temp_storage_.reset(new files::ScopedTempDir());
       storage_path_ = temp_storage_->path();
     }
+
+    factory_impl_.reset(new LedgerFactoryImpl(
+        mtl::MessageLoop::GetCurrent()->task_runner(), storage_path_));
   }
 
   bool OnAcceptConnection(
       mojo::ServiceProviderImpl* service_provider_impl) override {
     service_provider_impl->AddService<LedgerFactory>(
         [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<LedgerFactory> ledger_request) {
-          new LedgerFactoryImpl(std::move(ledger_request),
-                                message_loop_->task_runner(), storage_path_);
+               mojo::InterfaceRequest<LedgerFactory> factory_request) {
+          factory_bindings_.AddBinding(factory_impl_.get(),
+                                       std::move(factory_request));
         });
     return true;
   }
 
   std::string storage_path_;
   std::unique_ptr<files::ScopedTempDir> temp_storage_;
-  mtl::MessageLoop* message_loop_;
+  std::unique_ptr<LedgerFactoryImpl> factory_impl_;
+  mojo::BindingSet<LedgerFactory> factory_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
