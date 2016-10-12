@@ -13,9 +13,8 @@
 
 namespace storage {
 
-CommitContentsImpl::CommitContentsImpl(const ObjectId& root_id,
-                                       ObjectStore* store)
-    : root_id_(root_id), store_(store) {}
+CommitContentsImpl::CommitContentsImpl(ObjectIdView root_id, ObjectStore* store)
+    : root_id_(root_id.ToString()), store_(store) {}
 
 CommitContentsImpl::~CommitContentsImpl() {}
 

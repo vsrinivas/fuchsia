@@ -30,7 +30,7 @@ class FakeJournalDelegate {
   CommitId GetId() const { return id_; }
 
   Status SetValue(const std::string& key,
-                  const ObjectId& value,
+                  ObjectIdView value,
                   KeyPriority priority);
   Status Delete(const std::string& key);
 

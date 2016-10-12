@@ -24,7 +24,7 @@ class FakeJournal : public Journal {
 
   // Journal:
   Status Put(const std::string& key,
-             const ObjectId& blob_id,
+             ObjectIdView blob_id,
              KeyPriority priority) override;
   Status Delete(const std::string& key) override;
   Status Commit(CommitId* commit_id) override;

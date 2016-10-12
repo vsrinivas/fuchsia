@@ -45,8 +45,8 @@ class TreeNode : public Object {
     // corresponding child nodes are expected to be the result of spliting the
     // the previous child node in that entry's position.
     Mutation& AddEntry(const Entry& entry,
-                       const ObjectId& left_id,
-                       const ObjectId& right_id);
+                       ObjectIdView left_id,
+                       ObjectIdView right_id);
 
     // Updates the value and/or priority of an existing key.
     Mutation& UpdateEntry(const Entry& entry);
@@ -54,11 +54,11 @@ class TreeNode : public Object {
     // Removes the entry with the given |key| from this node and updates the id
     // of the child in that position. The new |child_id| is expected to be the
     // result of the merge of the left and right children of the deleted entry.
-    Mutation& RemoveEntry(const std::string& key, const ObjectId& child_id);
+    Mutation& RemoveEntry(const std::string& key, ObjectIdView child_id);
 
     // Updates the id of a child on the left of the entry with the given key.
     Mutation& UpdateChildId(const std::string& key_after,
-                            const ObjectId& child_id);
+                            ObjectIdView child_id);
 
     // Creates the new TreeNode as a result of the given updates. After calling
     // this method, this Mutation object is no longer valid and calling any
@@ -86,7 +86,7 @@ class TreeNode : public Object {
   // Creates a |TreeNode| object for an existing node and stores it in the given
   // |node|.
   static Status FromId(ObjectStore* store,
-                       const ObjectId& id,
+                       ObjectIdView id,
                        std::unique_ptr<const TreeNode>* node);
 
   // Creates a |TreeNode| object with the given entries. Contents of |children|
@@ -101,9 +101,9 @@ class TreeNode : public Object {
   // Creates a new tree node by merging |left| and |right|. The id of the new
   // node is stored in |merged_id|.
   static Status Merge(ObjectStore* store,
-                      const ObjectId& left,
-                      const ObjectId& right,
-                      const ObjectId& merged_child_id,
+                      ObjectIdView left,
+                      ObjectIdView right,
+                      ObjectIdView merged_child_id,
                       ObjectId* merged_id);
 
   // Starts a new mutation based on this node. See also |TreeNode::Mutation|.
@@ -116,8 +116,8 @@ class TreeNode : public Object {
   // |left_rightmost_child| and |right_leftmost_child| can be empty, if there is
   // no child in the given position.
   Status Split(int index,
-               const ObjectId& left_rightmost_child,
-               const ObjectId& right_leftmost_child,
+               ObjectIdView left_rightmost_child,
+               ObjectIdView right_leftmost_child,
                ObjectId* left,
                ObjectId* right) const;
 
@@ -145,7 +145,7 @@ class TreeNode : public Object {
 
  private:
   TreeNode(ObjectStore* store,
-           const ObjectId& id,
+           ObjectIdView id,
            const std::vector<Entry>& entries,
            const std::vector<ObjectId>& children);
 

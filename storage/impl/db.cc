@@ -4,6 +4,7 @@
 
 #include "apps/ledger/storage/impl/db.h"
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/journal_db_impl.h"
 #include "lib/ftl/files/directory.h"
@@ -12,63 +13,70 @@ namespace storage {
 
 namespace {
 
-const char kHeadPrefix[] = "heads/";
-const char kCommitPrefix[] = "commits/";
+constexpr ftl::StringView kHeadPrefix = "heads/";
+constexpr ftl::StringView kCommitPrefix = "commits/";
 
 // Journal keys
 const size_t kJournalIdSize = 16;
-const char kJournalPrefix[] = "journals/";
-const char kImplicitJournalMetaPrefix[] = "journals/implicit/";
+constexpr ftl::StringView kJournalPrefix = "journals/";
+constexpr ftl::StringView kImplicitJournalMetaPrefix = "journals/implicit/";
 const char kImplicitJournalIdPrefix = 'I';
 const char kExplicitJournalIdPrefix = 'E';
 // Journal values
 const char kJournalEntryAdd = 'A';
-const char kJournalEntryDelete[] = "D";
+constexpr ftl::StringView kJournalEntryDelete = "D";
 const char kJournalLazyEntry = 'L';
 const char kJournalEagerEntry = 'E';
 
-const char kUnsyncedCommitPrefix[] = "unsynced/commits/";
-const char kUnsyncedObjectPrefix[] = "unsynced/objects/";
+constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
+constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
+
+std::string Concatenate(std::initializer_list<ftl::StringView> l) {
+  std::string result;
+  size_t result_size = 0;
+  for (const ftl::StringView& s : l) {
+    result_size += s.size();
+  }
+  result.reserve(result_size);
+  for (const ftl::StringView& s : l) {
+    result.append(s.data(), s.size());
+  }
+  return result;
+}
 
 std::string GetHeadKeyFor(const CommitId& head) {
-  return kHeadPrefix + head;
+  return Concatenate({kHeadPrefix, head});
 }
 
 std::string GetCommitKeyFor(const CommitId& commit_id) {
-  return kCommitPrefix + commit_id;
+  return Concatenate({kCommitPrefix, commit_id});
 }
 
 std::string GetUnsyncedCommitKeyFor(const CommitId& commit_id) {
-  return kUnsyncedCommitPrefix + commit_id;
+  return Concatenate({kUnsyncedCommitPrefix, commit_id});
 }
 
-std::string GetUnsyncedObjectKeyFor(const ObjectId& object_id) {
-  return kUnsyncedObjectPrefix + object_id;
+std::string GetUnsyncedObjectKeyFor(ObjectIdView object_id) {
+  return Concatenate({kUnsyncedObjectPrefix, object_id});
 }
 
 std::string GetImplicitJournalMetaKeyFor(const JournalId& journal_id) {
-  return kImplicitJournalMetaPrefix + journal_id;
+  return Concatenate({kImplicitJournalMetaPrefix, journal_id});
 }
 
 std::string GetJournalEntryPrefixFor(const JournalId& journal_id) {
-  return kJournalPrefix + journal_id;
+  return Concatenate({kJournalPrefix, journal_id});
 }
 
-std::string GetJournalEntryKeyFor(const JournalId id, const std::string& key) {
-  std::string result;
-  result.reserve(sizeof(kJournalPrefix) + kJournalIdSize + key.size());
-  return result.append(kJournalPrefix).append(id).append("/").append(key);
+std::string GetJournalEntryKeyFor(const JournalId id, ftl::StringView key) {
+  return Concatenate({kJournalPrefix, id, "/", key});
 }
 
-std::string GetJournalEntryValueFor(const std::string& value,
+std::string GetJournalEntryValueFor(ftl::StringView value,
                                     KeyPriority priority) {
-  std::string result;
   char priorityByte =
       (priority == KeyPriority::EAGER) ? kJournalEagerEntry : kJournalLazyEntry;
-  result.reserve(value.size() + 2);
-  return result.append(1, kJournalEntryAdd)
-      .append(1, priorityByte)
-      .append(value);
+  return Concatenate({{&kJournalEntryAdd, 1}, {&priorityByte, 1}, value});
 }
 
 std::string NewJournalId(bool implicit) {
@@ -114,7 +122,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
     }
     change_.reset(new EntryChange());
 
-    static int journalPrefixLength = sizeof(kJournalPrefix) + kJournalIdSize;
+    static int journalPrefixLength = kJournalPrefix.size() + kJournalIdSize + 1;
     leveldb::Slice keySlice = it_->key();
     keySlice.remove_prefix(journalPrefixLength);
     change_->entry.key = keySlice.ToString();
@@ -164,8 +172,7 @@ Status DB::Init() {
 }
 
 Status DB::GetHeads(std::vector<CommitId>* heads) {
-  return GetByPrefix(leveldb::Slice(kHeadPrefix, sizeof(kHeadPrefix) - 1),
-                     heads);
+  return GetByPrefix(convert::ToSlice(kHeadPrefix), heads);
 }
 
 Status DB::AddHead(const CommitId& head) {
@@ -214,9 +221,7 @@ Status DB::CreateMergeJournal(const CommitId& base,
 }
 
 Status DB::GetImplicitJournalIds(std::vector<JournalId>* journal_ids) {
-  return GetByPrefix(leveldb::Slice(kImplicitJournalMetaPrefix,
-                                    sizeof(kImplicitJournalMetaPrefix) - 1),
-                     journal_ids);
+  return GetByPrefix(convert::ToSlice(kImplicitJournalMetaPrefix), journal_ids);
 }
 
 Status DB::GetImplicitJournal(const JournalId& journal_id,
@@ -232,8 +237,8 @@ Status DB::GetImplicitJournal(const JournalId& journal_id,
 }
 
 Status DB::RemoveExplicitJournals() {
-  static std::string kExplicitJournalPrefix =
-      std::string(kJournalPrefix).append(1, kImplicitJournalIdPrefix);
+  static std::string kExplicitJournalPrefix = Concatenate(
+      {kJournalPrefix, ftl::StringView(&kImplicitJournalIdPrefix, 1)});
   return DeleteByPrefix(kExplicitJournalPrefix);
 }
 
@@ -248,8 +253,8 @@ Status DB::RemoveJournal(const JournalId& journal_id) {
 }
 
 Status DB::AddJournalEntry(const JournalId& journal_id,
-                           const std::string& key,
-                           const std::string& value,
+                           ftl::StringView key,
+                           ftl::StringView value,
                            KeyPriority priority) {
   return Put(GetJournalEntryKeyFor(journal_id, key),
              GetJournalEntryValueFor(value, priority));
@@ -272,9 +277,7 @@ Status DB::GetJournalEntries(
 }
 
 Status DB::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
-  return GetByPrefix(
-      leveldb::Slice(kUnsyncedCommitPrefix, sizeof(kUnsyncedCommitPrefix) - 1),
-      commit_ids);
+  return GetByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), commit_ids);
 }
 
 Status DB::MarkCommitIdSynced(const CommitId& commit_id) {
@@ -296,20 +299,18 @@ Status DB::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
 }
 
 Status DB::GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) {
-  return GetByPrefix(
-      leveldb::Slice(kUnsyncedObjectPrefix, sizeof(kUnsyncedObjectPrefix) - 1),
-      object_ids);
+  return GetByPrefix(convert::ToSlice(kUnsyncedObjectPrefix), object_ids);
 }
 
-Status DB::MarkObjectIdSynced(const ObjectId& object_id) {
+Status DB::MarkObjectIdSynced(ObjectIdView object_id) {
   return Delete(GetUnsyncedObjectKeyFor(object_id));
 }
 
-Status DB::MarkObjectIdUnsynced(const ObjectId& object_id) {
+Status DB::MarkObjectIdUnsynced(ObjectIdView object_id) {
   return Put(GetUnsyncedObjectKeyFor(object_id), "");
 }
 
-Status DB::IsObjectSynced(const ObjectId& object_id, bool* is_synced) {
+Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   std::string value;
   Status s = Get(GetUnsyncedObjectKeyFor(object_id), &value);
   if (s == Status::IO_ERROR) {
@@ -356,8 +357,8 @@ Status DB::Get(const std::string& key, std::string* value) {
   return Status::OK;
 }
 
-Status DB::Put(const std::string& key, const std::string& value) {
-  leveldb::Status s = db_->Put(write_options_, key, value);
+Status DB::Put(const std::string& key, ftl::StringView value) {
+  leveldb::Status s = db_->Put(write_options_, key, convert::ToSlice(value));
   return s.ok() ? Status::OK : Status::IO_ERROR;
 }
 

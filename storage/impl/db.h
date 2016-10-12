@@ -14,6 +14,7 @@
 #include "apps/ledger/storage/public/types.h"
 #include "leveldb/db.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace storage {
 
@@ -75,8 +76,8 @@ class DB {
   // Adds a new |key|-|value| pair with the given |priority| to the journal with
   // the given |journal_id|.
   Status AddJournalEntry(const JournalId& journal_id,
-                         const std::string& key,
-                         const std::string& value,
+                         ftl::StringView key,
+                         ftl::StringView value,
                          KeyPriority priority);
   // Removes the given key from the journal with the given |journal_id|.
   Status RemoveJournalEntry(const JournalId& journal_id,
@@ -101,18 +102,18 @@ class DB {
   // |object_ids| with their ids.
   Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids);
   // Marks the given |object_id| as synced.
-  Status MarkObjectIdSynced(const ObjectId& object_id);
+  Status MarkObjectIdSynced(ObjectIdView object_id);
   // Marks the given |object_id| as unsynced.
-  Status MarkObjectIdUnsynced(const ObjectId& object_id);
+  Status MarkObjectIdUnsynced(ObjectIdView object_id);
   // Checks if the object with the given |object_id| is synced.
-  Status IsObjectSynced(const ObjectId& object_id, bool* is_synced);
+  Status IsObjectSynced(ObjectIdView object_id, bool* is_synced);
 
  private:
   Status GetByPrefix(const leveldb::Slice& prefix,
                      std::vector<std::string>* keySuffixes);
   Status DeleteByPrefix(const leveldb::Slice& prefix);
   Status Get(const std::string& key, std::string* value);
-  Status Put(const std::string& key, const std::string& value);
+  Status Put(const std::string& key, ftl::StringView value);
   Status Delete(const std::string& key);
 
   const std::string db_path_;

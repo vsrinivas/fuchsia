@@ -86,11 +86,11 @@ class PageStorage {
   virtual Status GetUnsyncedObjects(const CommitId& commit_id,
                                     std::vector<Object>* objects) = 0;
   // Marks the object with the given |object_id| as synced.
-  virtual Status MarkObjectSynced(const ObjectId& object_id) = 0;
+  virtual Status MarkObjectSynced(ObjectIdView object_id) = 0;
   // Stores the given synced object. \object_id\ will be validated against the
   // expected one based on the \data\ and an |OBJECT_ID_MISSMATCH| error will be
   // returned in case of missmatch.
-  virtual Status AddObjectFromSync(const ObjectId& object_id,
+  virtual Status AddObjectFromSync(ObjectIdView object_id,
                                    mojo::DataPipeConsumerHandle data,
                                    size_t size) = 0;
   // Stores the given local object and stores the new object's id in the
@@ -102,7 +102,7 @@ class PageStorage {
   // Finds the Blob associated with the given |blob_id|. The result or an
   // an error will be returned through the given |callback|.
   virtual void GetBlob(
-      const ObjectId& blob_id,
+      ObjectIdView blob_id,
       const std::function<void(Status status, std::unique_ptr<Blob> blob)>
           callback) = 0;
 

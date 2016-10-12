@@ -7,12 +7,18 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace storage {
 
 using PageId = std::string;
+using PageIdView = ftl::StringView;
 using CommitId = std::string;
+using CommitIdView = ftl::StringView;
 using ObjectId = std::string;
+using ObjectIdView = ftl::StringView;
 using JournalId = std::string;
+using JournalIdView = ftl::StringView;
 
 // The priority at which the key value is downloaded, and the cache policy.
 enum class KeyPriority {

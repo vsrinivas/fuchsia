@@ -18,7 +18,7 @@ namespace storage {
 // B-Tree implementation of |CommitContents|.
 class CommitContentsImpl : public CommitContents {
  public:
-  CommitContentsImpl(const ObjectId& root_id, ObjectStore* store);
+  CommitContentsImpl(ObjectIdView root_id, ObjectStore* store);
   ~CommitContentsImpl() override;
 
   // CommitContents:

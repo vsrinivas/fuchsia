@@ -60,6 +60,21 @@ mojo::Array<uint8_t> ToArray(const ExtendedStringView& value);
 // Returns the std::string representation of the given value.
 std::string ToString(const ExtendedStringView& value);
 
+// Comparator that allows heterogeneous lookup by StringView and
+// std::string in a container with the key type of std::string.
+struct StringViewComparator {
+  using is_transparent = std::true_type;
+  bool operator()(const std::string& lhs, const std::string& rhs) const {
+    return lhs < rhs;
+  }
+  bool operator()(ftl::StringView lhs, const std::string& rhs) const {
+    return lhs < ftl::StringView(rhs);
+  }
+  bool operator()(const std::string& lhs, ftl::StringView rhs) const {
+    return ftl::StringView(lhs) < rhs;
+  }
+};
+
 }  // namespace convert
 
 #endif  // APPS_LEDGER_CONVERT_CONVERT_H_

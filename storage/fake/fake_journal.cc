@@ -14,7 +14,7 @@ FakeJournal::FakeJournal(FakeJournalDelegate* delegate) : delegate_(delegate) {}
 FakeJournal::~FakeJournal() {}
 
 Status FakeJournal::Put(const std::string& key,
-                        const ObjectId& blob_id,
+                        ObjectIdView blob_id,
                         KeyPriority priority) {
   return delegate_->SetValue(key, blob_id, priority);
 }

@@ -19,7 +19,7 @@ class Journal {
   // Adds an entry with the given |key| and |blob_id| to this |Journal|. Returns
   // |OK| on success or the error code otherwise.
   virtual Status Put(const std::string& key,
-                     const ObjectId& blob_id,
+                     ObjectIdView blob_id,
                      KeyPriority priority) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|. Returns |OK|

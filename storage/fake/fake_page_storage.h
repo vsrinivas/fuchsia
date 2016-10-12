@@ -45,15 +45,15 @@ class FakePageStorage : public PageStorage {
                          std::vector<Object>* objects) override;
   Status GetUnsyncedObjects(const CommitId& commit_id,
                             std::vector<Object>* objects) override;
-  Status MarkObjectSynced(const ObjectId& object_id) override;
-  Status AddObjectFromSync(const ObjectId& object_id,
+  Status MarkObjectSynced(ObjectIdView object_id) override;
+  Status AddObjectFromSync(ObjectIdView object_id,
                            mojo::DataPipeConsumerHandle data,
                            size_t size) override;
   Status AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
                             size_t size,
                             ObjectId* object_id) override;
   void GetBlob(
-      const ObjectId& blob_id,
+      ObjectIdView blob_id,
       const std::function<void(Status status, std::unique_ptr<Blob> blob)>
           callback) override;
 

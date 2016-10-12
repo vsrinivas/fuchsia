@@ -137,11 +137,11 @@ Status PageStorageImpl::GetUnsyncedObjects(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::MarkObjectSynced(const ObjectId& object_id) {
+Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::AddObjectFromSync(const ObjectId& object_id,
+Status PageStorageImpl::AddObjectFromSync(ObjectIdView object_id,
                                           mojo::DataPipeConsumerHandle data,
                                           size_t size) {
   return Status::NOT_IMPLEMENTED;
@@ -154,7 +154,7 @@ Status PageStorageImpl::AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
 }
 
 void PageStorageImpl::GetBlob(
-    const ObjectId& blob_id,
+    ObjectIdView blob_id,
     const std::function<void(Status status, std::unique_ptr<Blob> blob)>
         callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr);

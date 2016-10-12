@@ -26,7 +26,7 @@ std::string RandomString(size_t size) {
   return result;
 }
 
-std::string ObjectFilePathFor(const std::string& path, const ObjectId& id) {
+std::string ObjectFilePathFor(const std::string& path, ObjectIdView id) {
   std::string base64;
   glue::Base64Encode(id, &base64);
   std::replace(base64.begin(), base64.end(), '/', '-');

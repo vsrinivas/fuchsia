@@ -15,7 +15,7 @@ class CommitImpl : public Commit {
   // the number of nanoseconds since epoch.
   CommitImpl(const CommitId& id,
              int64_t timestamp,
-             const ObjectId& root_node_id,
+             ObjectIdView root_node_id,
              const std::vector<CommitId>& parent_ids);
 
   ~CommitImpl() override;

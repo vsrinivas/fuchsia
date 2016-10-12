@@ -32,15 +32,18 @@ TreeNode::TreeNode(const TreeNode& node)
 }
 
 TreeNode::TreeNode(ObjectStore* store,
-                   const ObjectId& id,
+                   ObjectIdView id,
                    const std::vector<Entry>& entries,
                    const std::vector<ObjectId>& children)
-    : store_(store), id_(id), entries_(entries), children_(children) {}
+    : store_(store),
+      id_(id.ToString()),
+      entries_(entries),
+      children_(children) {}
 
 TreeNode::~TreeNode() {}
 
 Status TreeNode::FromId(ObjectStore* store,
-                        const ObjectId& id,
+                        ObjectIdView id,
                         std::unique_ptr<const TreeNode>* node) {
   return store->GetTreeNode(id, node);
 }
@@ -61,9 +64,9 @@ Status TreeNode::FromEntries(ObjectStore* store,
 }
 
 Status TreeNode::Merge(ObjectStore* store,
-                       const ObjectId& left,
-                       const ObjectId& right,
-                       const ObjectId& merged_child_id,
+                       ObjectIdView left,
+                       ObjectIdView right,
+                       ObjectIdView merged_child_id,
                        ObjectId* merged_id) {
   std::unique_ptr<const TreeNode> leftNode;
   std::unique_ptr<const TreeNode> rightNode;
@@ -87,7 +90,7 @@ Status TreeNode::Merge(ObjectStore* store,
   // instead.
   children.insert(children.end(), leftNode->children_.begin(),
                   leftNode->children_.end() - 1);
-  children.push_back(merged_child_id);
+  children.push_back(merged_child_id.ToString());
   children.insert(children.end(), rightNode->children_.begin() + 1,
                   rightNode->children_.end());
 
@@ -99,8 +102,8 @@ TreeNode::Mutation TreeNode::StartMutation() const {
 }
 
 Status TreeNode::Split(int index,
-                       const ObjectId& left_rightmost_child,
-                       const ObjectId& right_leftmost_child,
+                       ObjectIdView left_rightmost_child,
+                       ObjectIdView right_leftmost_child,
                        ObjectId* left,
                        ObjectId* right) const {
   FTL_DCHECK(index >= 0 && index < GetKeyCount());
@@ -111,7 +114,7 @@ Status TreeNode::Split(int index,
     entries.push_back(entries_[i]);
     children.push_back(children_[i]);
   }
-  children.push_back(left_rightmost_child);
+  children.push_back(left_rightmost_child.ToString());
   // TODO(nellyv): replace random id with the hash over the stored bytes.
   ObjectId leftId = RandomId();
   Status s = FromEntries(store_, entries, children, &leftId);
@@ -122,7 +125,7 @@ Status TreeNode::Split(int index,
   entries.clear();
   children.clear();
   // Right node
-  children.push_back(right_leftmost_child);
+  children.push_back(right_leftmost_child.ToString());
   for (int i = index; i < GetKeyCount(); ++i) {
     entries.push_back(entries_[i]);
     children.push_back(children_[i + 1]);
@@ -194,21 +197,21 @@ TreeNode::Mutation::Mutation(const TreeNode& node) : node_(node) {}
 TreeNode::Mutation::~Mutation() {}
 
 TreeNode::Mutation& TreeNode::Mutation::AddEntry(const Entry& entry,
-                                                 const ObjectId& left_id,
-                                                 const ObjectId& right_id) {
+                                                 ObjectIdView left_id,
+                                                 ObjectIdView right_id) {
   FTL_DCHECK(!finished);
   FTL_DCHECK(entries_.empty() || entries_.back().key < entry.key);
   CopyUntil(entry.key);
 
   entries_.push_back(entry);
   if (children_.size() < entries_.size()) {
-    children_.push_back(left_id);
+    children_.push_back(left_id.ToString());
   } else {
     // On two consecutive |AddEntry| calls or |RemoveEntry| and AddEntry
     // calls the last defined child must match the given |left_id|.
     FTL_DCHECK(children_.back() == left_id);
   }
-  children_.push_back(right_id);
+  children_.push_back(right_id.ToString());
 
   return *this;
 }
@@ -228,14 +231,14 @@ TreeNode::Mutation& TreeNode::Mutation::UpdateEntry(const Entry& entry) {
 }
 
 TreeNode::Mutation& TreeNode::Mutation::RemoveEntry(const std::string& key,
-                                                    const ObjectId& child_id) {
+                                                    ObjectIdView child_id) {
   FTL_DCHECK(!finished);
   FTL_DCHECK(entries_.empty() || entries_.back().key < key);
   CopyUntil(key);
 
   FTL_DCHECK(node_.entries_[node_index_].key == key);
   if (children_.size() == entries_.size()) {
-    children_.push_back(child_id);
+    children_.push_back(child_id.ToString());
   } else {
     // On two consecutive |RemoveEntry| calls the last defined child must
     // match the given |child_id|.
@@ -248,12 +251,12 @@ TreeNode::Mutation& TreeNode::Mutation::RemoveEntry(const std::string& key,
 
 TreeNode::Mutation& TreeNode::Mutation::UpdateChildId(
     const std::string& key_after,
-    const ObjectId& child_id) {
+    ObjectIdView child_id) {
   FTL_DCHECK(!finished);
   FTL_DCHECK(entries_.empty() || entries_.back().key < key_after);
   CopyUntil(key_after);
 
-  children_.push_back(child_id);
+  children_.push_back(child_id.ToString());
   return *this;
 }
 

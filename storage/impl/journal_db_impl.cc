@@ -36,7 +36,7 @@ JournalId JournalDBImpl::GetId() const {
 }
 
 Status JournalDBImpl::Put(const std::string& key,
-                          const ObjectId& blob_id,
+                          ObjectIdView blob_id,
                           KeyPriority priority) {
   if (!valid_) {
     return Status::ILLEGAL_STATE;

@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/blob.h"
 #include "apps/ledger/storage/public/object.h"
 
@@ -24,13 +25,14 @@ class ObjectStore {
 
   Status AddObject(std::unique_ptr<Object> object);
 
-  Status GetBlob(const ObjectId& id, std::unique_ptr<const Blob>* object);
-  Status GetTreeNode(const ObjectId& id,
+  Status GetBlob(ObjectIdView id, std::unique_ptr<const Blob>* object);
+  Status GetTreeNode(ObjectIdView id,
                      std::unique_ptr<const TreeNode>* tree_node);
 
  private:
   // TODO(nellyv): use file system instead and remove this map.
-  std::map<std::string, std::unique_ptr<Object>> map_;
+  std::map<std::string, std::unique_ptr<Object>, convert::StringViewComparator>
+      map_;
 };
 
 }  // namespace storage

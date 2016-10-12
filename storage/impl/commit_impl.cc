@@ -35,11 +35,11 @@ int64_t BytesToTimestamp(std::string bytes) {
 
 CommitImpl::CommitImpl(const CommitId& id,
                        int64_t timestamp,
-                       const ObjectId& root_node_id,
+                       ObjectIdView root_node_id,
                        const std::vector<CommitId>& parent_ids)
     : id_(id),
       timestamp_(timestamp),
-      root_node_id_(root_node_id),
+      root_node_id_(root_node_id.ToString()),
       parent_ids_(parent_ids) {
   FTL_DCHECK(!parent_ids_.empty() && parent_ids_.size() <= 2);
 }

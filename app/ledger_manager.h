@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "apps/ledger/app/ledger_impl.h"
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -51,24 +52,10 @@ class LedgerManager : public LedgerImpl::Delegate {
   LedgerImpl ledger_impl_;
   mojo::BindingSet<Ledger> bindings_;
 
-  // Comparator that allows heterogeneous lookup by StringView and
-  // storage::PageId in a container with the key type of storage::PageId.
-  struct Comparator {
-    using is_transparent = std::true_type;
-    bool operator()(const storage::PageId& lhs,
-                    const storage::PageId& rhs) const {
-      return lhs < rhs;
-    }
-
-    bool operator()(const storage::PageId& lhs, ftl::StringView rhs) const {
-      return ftl::StringView(lhs) < rhs;
-    }
-    bool operator()(ftl::StringView lhs, const storage::PageId& rhs) const {
-      return lhs < ftl::StringView(rhs);
-    }
-  };
   // Mapping from page id to the manager of that page.
-  std::map<storage::PageId, std::unique_ptr<PageManager>, Comparator>
+  std::map<storage::PageId,
+           std::unique_ptr<PageManager>,
+           convert::StringViewComparator>
       page_managers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);

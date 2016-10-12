@@ -25,12 +25,12 @@ FakeJournalDelegate::FakeJournalDelegate() : id_(RandomId()) {}
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
 Status FakeJournalDelegate::SetValue(const std::string& key,
-                                     const ObjectId& value,
+                                     ObjectIdView value,
                                      KeyPriority priority) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  data_[key].value = value;
+  data_[key].value = value.ToString();
   data_[key].priority = priority;
   return Status::OK;
 }

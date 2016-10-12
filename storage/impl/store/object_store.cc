@@ -17,12 +17,12 @@ Status ObjectStore::AddObject(std::unique_ptr<Object> object) {
   return Status::OK;
 }
 
-Status ObjectStore::GetBlob(const ObjectId& id,
+Status ObjectStore::GetBlob(ObjectIdView id,
                             std::unique_ptr<const Blob>* blob) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status ObjectStore::GetTreeNode(const ObjectId& id,
+Status ObjectStore::GetTreeNode(ObjectIdView id,
                                 std::unique_ptr<const TreeNode>* tree_node) {
   auto iterator = map_.find(id);
   if (iterator == map_.end()) {

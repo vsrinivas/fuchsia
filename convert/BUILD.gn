@@ -14,6 +14,7 @@ source_set("convert") {
 
   public_deps = [
     "//lib/ftl",
+    "//mojo/public/cpp/environment:logging_only",
     "//third_party/leveldb",
   ]
 }
@@ -28,7 +29,6 @@ executable("convert_unittests") {
   deps = [
     ":convert",
     "//apps/ledger/test",
-    "//mojo/public/cpp/environment:logging_only",
     "//third_party/gtest",
   ]
 }

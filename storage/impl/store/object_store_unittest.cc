@@ -45,7 +45,7 @@ class ObjectStoreTest : public ::testing::Test {
   }
 
  protected:
-  std::unique_ptr<const TreeNode> FromId(const ObjectId& id) {
+  std::unique_ptr<const TreeNode> FromId(ObjectIdView id) {
     std::unique_ptr<const TreeNode> node;
     EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, id, &node));
     return node;
