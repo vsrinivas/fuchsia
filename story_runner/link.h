@@ -22,69 +22,54 @@
 #include <vector>
 
 #include "apps/modular/story_runner/link.mojom.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/bindings/struct_ptr.h"
-#include "mojo/public/cpp/system/macros.h"
 
 namespace modular {
 
-class LinkImpl;
+struct SharedLinkImplData;
 
-// LinkHost keeps a single connection from a client to a LinkImpl
-// together with pointers to all watchers registered through this
-// connection. We need this as a separate class so that we can
-// identify where an updated value comes from, so that we are able to
-// suppress notifications sent to the same client.
-//
-// A host can be primary. If it's primary, then it deletes the
-// LinkImpl instance that is shared between all connections when it's
-// closed, analog to a strong Binding.
-class LinkHost : public Link {
+class LinkImpl : public Link {
  public:
-  LinkHost(LinkImpl* impl, mojo::InterfaceRequest<Link> req, bool primary);
-  ~LinkHost();
+  ~LinkImpl() override;
 
-  // Implements Link interface. Forwards to LinkImpl, therefore the
-  // methods are implemented below, after LinkImpl is defined.
+  // Implements Link interface.
   void SetValue(mojo::StructPtr<LinkValue> value) override;
   void Value(const ValueCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void Dup(mojo::InterfaceRequest<Link> dup) override;
 
-  // Called back from LinkImpl.
-  void Notify(LinkHost* source, const mojo::StructPtr<LinkValue>& value);
+  // Connect a new LinkImpl object on the heap. It manages its own lifetime.
+  // If this pipe is closed, then everything will be torn down. In comparison,
+  // handles created by Dup() do not affect other handles.
+  static void New(mojo::InterfaceRequest<Link> req);
 
  private:
+  // LinkImpl may not be constructed on the stack.
+  LinkImpl(mojo::InterfaceRequest<Link> req, SharedLinkImplData* shared);
+
+  // For use by the constructor only
+  void AddImpl(LinkImpl* client);
+  // For use by the destructor only
+  void RemoveImpl(LinkImpl* client);
+
   void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self);
+  void Notify(LinkImpl* source, const mojo::StructPtr<LinkValue>& value);
 
-  LinkImpl* const impl_;
-  mojo::StrongBinding<Link> binding_;
   const bool primary_;
+  // |shared_| is owned by the |primary_| LinkImpl.
+  SharedLinkImplData* shared_;
+  mojo::StrongBinding<Link> binding_;
+  // |watchers_| are maintained on a per-handle basis.
+  // TODO(jimbe) Need to make this smarter in case watchers close their handles.
   std::vector<std::pair<mojo::InterfacePtr<LinkChanged>, bool>> watchers_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkHost);
-};
 
-// The actual implementation of the Link service. Called from LinkHost
-// instances above.
-class LinkImpl {
- public:
-  explicit LinkImpl(mojo::InterfaceRequest<Link> req);
-  ~LinkImpl();
-
-  // The methods below are all called from LinkHost.
-  void Add(LinkHost* const client);
-  void Remove(LinkHost* const client);
-  void SetValue(LinkHost* const src, mojo::StructPtr<LinkValue> value);
-  const mojo::StructPtr<LinkValue>& Value() const;
-
- private:
-  mojo::StructPtr<LinkValue> value_;
-  std::vector<LinkHost*> clients_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
 }  // namespace modular

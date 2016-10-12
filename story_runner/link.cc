@@ -13,103 +13,100 @@
 
 namespace modular {
 
-LinkHost::LinkHost(LinkImpl* const impl, mojo::InterfaceRequest<Link> req,
-                   const bool primary)
-    : impl_(impl), binding_(this, std::move(req)), primary_(primary) {
-  FTL_LOG(INFO) << "LinkHost()" << (primary_ ? " primary" : "");
-  impl_->Add(this);
+using mojo::InterfaceRequest;
+using mojo::StructPtr;
+
+struct SharedLinkImplData {
+  StructPtr<LinkValue> value;
+  std::vector<LinkImpl*> impls;
+};
+
+LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* shared)
+    : primary_(shared == nullptr), binding_(this, std::move(req)) {
+  FTL_LOG(INFO) << "LinkImpl()" << (primary_ ? " primary" : "");
+  shared_ = shared ? shared : new SharedLinkImplData();
+  AddImpl(this);
 }
 
-LinkHost::~LinkHost() {
-  FTL_LOG(INFO) << "~LinkHost()";
-  impl_->Remove(this);
+LinkImpl::~LinkImpl() {
+  FTL_LOG(INFO) << "~LinkImpl()" << (primary_ ? " primary" : "");
+  watchers_.clear();
+  RemoveImpl(this);
 
   // If a "primary" (currently that's the first) connection goes down,
   // the whole implementation is deleted, taking down all remaining
   // connections. This corresponds to a strong binding on the first
   // connection, and regular bindings on all later ones. This is just
   // how it is and may be revised in the future.
-  //
-  // Order is important: this delete call MUST happen after the
-  // Remove() call above, otherwise double delete ensues.
   if (primary_) {
-    delete impl_;
+    while (!shared_->impls.empty()) {
+      delete shared_->impls.back();  // Calls RemoveImpl(), which erases the
+                                      // deleted element.
+    }
+
+    delete shared_;
   }
 }
 
-void LinkHost::SetValue(mojo::StructPtr<LinkValue> value) {
-  impl_->SetValue(this, std::move(value));
+void LinkImpl::New(InterfaceRequest<Link> req) {
+  new LinkImpl(std::move(req), nullptr);
 }
 
-void LinkHost::Value(const ValueCallback& callback) {
-  callback.Run(impl_->Value().Clone());
+void LinkImpl::Value(const LinkImpl::ValueCallback& callback) {
+  callback.Run(shared_->value.Clone());
 }
 
-void LinkHost::Watch(mojo::InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::Watch(mojo::InterfaceHandle<LinkChanged> watcher) {
   AddWatcher(std::move(watcher), false);
 }
 
-void LinkHost::WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) {
   AddWatcher(std::move(watcher), true);
 }
 
-void LinkHost::AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
+void LinkImpl::AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
                           const bool self) {
   mojo::InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
+  watchers_.emplace_back(std::make_pair(std::move(watcher_ptr), self));
 
   // The current Value is sent to a newly registered watcher only if
   // it's not null.
-  if (!impl_->Value().is_null()) {
-    watcher_ptr->Value(impl_->Value().Clone());
+  if (!shared_->value.is_null()) {
+    watchers_.back().first->Value(shared_->value.Clone());
   }
-
-  watchers_.push_back(std::make_pair(std::move(watcher_ptr), self));
 }
 
-void LinkHost::Dup(mojo::InterfaceRequest<Link> dup) {
-  new LinkHost(impl_, std::move(dup), false);
-}
-
-void LinkHost::Notify(LinkHost* const source,
-                      const mojo::StructPtr<LinkValue>& value) {
+void LinkImpl::Notify(LinkImpl* const source,
+                      const StructPtr<LinkValue>& value) {
   for (std::pair<mojo::InterfacePtr<LinkChanged>, bool>& watcher : watchers_) {
     if (watcher.second || this != source) {
-      watcher.first->Value(value.Clone());
+      //TODO(jimbe) Watchers should actually be removed when they're closed.
+      if (watcher.first.is_bound()) watcher.first->Value(value.Clone());
     }
   }
 }
 
-LinkImpl::LinkImpl(mojo::InterfaceRequest<Link> req) {
-  FTL_LOG(INFO) << "LinkImpl()";
-  new LinkHost(this, std::move(req), true);  // Calls Add().
+void LinkImpl::Dup(InterfaceRequest<Link> dup) {
+  new LinkImpl(std::move(dup), shared_);
 }
 
-LinkImpl::~LinkImpl() {
-  while (!clients_.empty()) {
-    delete clients_.back();  // Calls Remove(), which erases the
-                             // deleted element.
-  }
-}
+void LinkImpl::AddImpl(LinkImpl* client) { shared_->impls.push_back(client); }
 
-void LinkImpl::Add(LinkHost* const client) { clients_.push_back(client); }
-
-void LinkImpl::Remove(LinkHost* const client) {
-  auto f = std::find(clients_.begin(), clients_.end(), client);
-  FTL_DCHECK(f != clients_.end());
-  clients_.erase(f);
+void LinkImpl::RemoveImpl(LinkImpl* impl) {
+  auto f = std::find(shared_->impls.rbegin(), shared_->impls.rend(), impl);
+  FTL_DCHECK(f != shared_->impls.rend());
+  shared_->impls.erase(std::next(f).base());
 }
 
 // SetValue knows which client a notification comes from, so it
 // notifies only all other clients, or the ones that requested all
 // notifications.
-void LinkImpl::SetValue(LinkHost* const src, mojo::StructPtr<LinkValue> value) {
-  value_ = std::move(value);
-  for (auto dst : clients_) {
-    dst->Notify(src, value_);
+void LinkImpl::SetValue(StructPtr<LinkValue> value) {
+  shared_->value = std::move(value);
+  for (auto dst : shared_->impls) {
+    dst->Notify(this, shared_->value);
   }
 }
-
-const mojo::StructPtr<LinkValue>& LinkImpl::Value() const { return value_; }
 
 }  // modular

@@ -91,7 +91,7 @@ SessionHost::~SessionHost() {
 
 void SessionHost::CreateLink(mojo::InterfaceRequest<Link> link) {
   FTL_LOG(INFO) << "story-runner create link";
-  new LinkImpl(std::move(link));
+  LinkImpl::New(std::move(link));
 }
 
 void SessionHost::StartModule(const mojo::String& query,

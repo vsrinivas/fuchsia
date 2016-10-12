@@ -66,7 +66,7 @@ class Module1Impl : public Module, public LinkChanged {
   void Value(StructPtr<LinkValue> value) override {
     StructPtr<LinkValue>& v = value->get_object_value()[kValueLabel];
 
-    if (v->get_int_value() >= 100) {
+    if (v->get_int_value() >= 10) {
       session_->Done();
     } else {
       v->set_int_value(v->get_int_value() + 1);
