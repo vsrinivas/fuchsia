@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include <algorithm>
+#include <ctime>
+#include <list>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -112,15 +114,20 @@ private:
     const std::vector<string>& tokens_;
 };
 
-using ProcFn = bool (*) (TokenStream& ts);
+template<typename P>
+using ProcFn = bool (*) (P* parser, TokenStream& ts);
 
+template<typename P>
 struct Dispatch {
     const char* first_token;
     const char* last_token;
-    ProcFn fn;
+    ProcFn<P> fn;
 };
 
-bool process_line(const Dispatch* table, const std::vector<string>& tokens, const FileCtx& fc) {
+template<typename P>
+bool process_line(P* parser, const Dispatch<P>* table,
+                  const std::vector<string>& tokens,
+                  const FileCtx& fc) {
     static std::vector<string> acc;
     static int start = 0;
 
@@ -136,18 +143,18 @@ bool process_line(const Dispatch* table, const std::vector<string>& tokens, cons
 
             TokenStream ts(tokens, fc);
             if (!d.last_token)
-                return d.fn(ts);
+                return d.fn(parser, ts);
 
             if (last == d.last_token) {
                 if (acc.empty()) {
                     // single line case.
-                    return d.fn(ts);
+                    return d.fn(parser, ts);
                 } else {
                     // multiline case.
                     std::vector<string> t(std::move(acc));
                     t += tokens;
                     TokenStream mts(t, FileCtx(fc, start));
-                    return d.fn(mts);
+                    return d.fn(parser, mts);
                 }
             } else {
                 // more input is needed.
@@ -164,7 +171,8 @@ bool process_line(const Dispatch* table, const std::vector<string>& tokens, cons
     return false;
 }
 
-bool run_parser(const char* input, const char* output, const Dispatch* table, bool verbose) {
+template<typename P>
+bool run_parser(P* parser, const Dispatch<P>* table, const char* input, bool verbose) {
     std::ifstream infile;
     infile.open(input, std::ifstream::in);
 
@@ -187,7 +195,7 @@ bool run_parser(const char* input, const char* output, const Dispatch* table, bo
         if (tokens.empty())
             continue;
 
-        if (!process_line(table, tokens, fc)) {
+        if (!process_line(parser, table, tokens, fc)) {
             error = true;
             break;
         }
@@ -201,7 +209,7 @@ bool run_parser(const char* input, const char* output, const Dispatch* table, bo
     return true;
 }
 
-// ================================== sysgen specific ============================================
+// ====================== sysgen specific parsing and generation =================================
 
 // TODO(cpu): put the 2 and 8 below as pragmas on the file?
 constexpr size_t kMaxReturnArgs = 2;
@@ -414,13 +422,114 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
     return true;
 }
 
-bool process_comment(TokenStream& ts) {
-    if (ts.filectx().verbose)
-        ts.filectx().print_info("comment found");
+constexpr char kAuthors[] = "The Fuchsia Authors";
+constexpr unsigned kSpaces = 4u;
+
+bool generate_header(std::ofstream& os) {
+    auto t = std::time(nullptr);
+    auto ltime = std::localtime(&t);
+
+    os << "// Copyright " << ltime->tm_year + 1900
+       << " " << kAuthors << ". All rights reserved.\n";
+    os << "// This is a GENERATED file. The license governing this file can be ";
+    os << "found in the LICENSE file.\n\n";
+    return os.good();
+}
+
+string replace_type(const string* type) {
+    if (!type)
+        return string("void");
+    if (*type == "any")
+        return string("void*");
+    return *type;
+}
+
+bool generate_legacy_c(std::ofstream& os, const Syscall& sc, const string& prefix) {
+    // writes "[return-type] prefix_[syscall-name]("
+    os << replace_type(sc.ret_spec.empty() ? nullptr : &sc.ret_spec[0].type);
+    os << " " << prefix << sc.name << "(";
+
+    for (const auto& arg : sc.arg_spec) {
+        if (!os.good())
+            return false;
+        // writes each parameter in its own line.
+        os << "\n" << string(kSpaces, ' ');
+
+        auto replaced = replace_type(&arg.type);
+        if (replaced != arg.type) {
+            os << replaced << " " << arg.name;
+        } else {
+            os << arg.type << " " << arg.name;
+            if (arg.arr_spec) {
+                os << "[";
+                if (arg.arr_spec->count)
+                    os << arg.arr_spec->count;
+                os << "]";
+            }
+        }
+
+        os << ",";
+    }
+
+    if (!sc.arg_spec.empty())
+        os.seekp(-1, std::ios_base::end);
+
+    os << ");\n\n";
+    return os.good();
+}
+
+class SygenGenerator {
+public:
+    SygenGenerator(bool verbose) : verbose_(verbose) {}
+
+    bool AddSyscall(const Syscall& syscall) {
+        if (!syscall.validate())
+            return false;
+        calls_.push_back(syscall);
+        return true;
+    }
+
+    bool Generate(const char* output_file) {
+        std::ofstream ofile;
+        ofile.open(output_file, std::ofstream::out);
+
+        if (!ofile.good()) {
+            fprintf(stderr, "error: unable to open %s\n", output_file);
+            return false;
+        }
+
+        if (!generate_header(ofile)) {
+            print_error("i/o error", output_file);
+            return false;
+        }
+
+        for (const auto& sc : calls_) {
+            if (verbose_)
+                sc.debug_dump();
+            if (!generate_legacy_c(ofile, sc, "sys_")) {
+                print_error("generation failed", output_file);
+                return false;
+            }
+        }
+
+        ofile << "\n";
+        return true;
+    }
+
+private:
+    void print_error(const char* what, const string& file) {
+        fprintf(stderr, "error: %s for %s\n", what, file.c_str());
+    }
+
+    std::list<Syscall> calls_;
+    const bool verbose_;
+};
+
+bool process_comment(SygenGenerator* parser, TokenStream& ts) {
     return true;
 }
 
-bool process_syscall(TokenStream& ts) {
+bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     auto name = ts.next();
 
     if (!vet_identifier(name, ts.filectx()))
@@ -443,13 +552,10 @@ bool process_syscall(TokenStream& ts) {
     if (!parse_argpack(ts, &syscall.ret_spec))
         return false;
 
-    if (ts.filectx().verbose)
-        syscall.debug_dump();
-
-    return syscall.validate();
+    return parser->AddSyscall(syscall);
 }
 
-constexpr Dispatch sysgen_table[] = {
+constexpr Dispatch<SygenGenerator> sysgen_table[] = {
     // comments start with '#' and terminate at the end of line.
     { "#", nullptr, process_comment },
     // sycalls start with 'syscall' and terminate with ';'.
@@ -461,7 +567,7 @@ constexpr Dispatch sysgen_table[] = {
 // =================================== driver ====================================================
 
 int main(int argc, char* argv[]) {
-    const char* output = "foo.bar";
+    const char* output = "generated.h";
     bool verbose = false;
 
     argc--;
@@ -495,10 +601,12 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    SygenGenerator generator(verbose);
+
     for (int ix = 0; ix < argc; ix++) {
-        if (!run_parser(argv[ix], output, sysgen_table, verbose))
+        if (!run_parser(&generator, sysgen_table, argv[ix], verbose))
             return 1;
     }
 
-    return 0;
+    return generator.Generate(output) ? 0 : 1;
 }
