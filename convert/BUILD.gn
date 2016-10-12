@@ -13,6 +13,7 @@ source_set("convert") {
   ]
 
   public_deps = [
+    "//lib/ftl",
     "//third_party/leveldb",
   ]
 }

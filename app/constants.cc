@@ -8,7 +8,11 @@
 
 namespace ledger {
 
+namespace {
+const char kNullPageId[kPageIdSize] = {};
+}  // namespace
+
 // The zero-initialized root id.
-const char kRootPageId[kPageIdSize] = {};
+constexpr ftl::StringView kRootPageId(kNullPageId, kPageIdSize);
 
 }  // namespace ledger

@@ -21,7 +21,7 @@ LedgerImpl::~LedgerImpl() {}
 
 // GetRootPage() => (Status status, Page? page);
 void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
-  const storage::PageId page_id = storage::PageId(kRootPageId, kPageIdSize);
+  const storage::PageId page_id = kRootPageId.ToString();
 
   delegate_->GetPage(ftl::StringView(page_id), Delegate::CreateIfNotFound::YES,
                      [callback](Status status, PagePtr page) {

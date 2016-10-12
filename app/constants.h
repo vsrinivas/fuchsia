@@ -6,14 +6,15 @@
 #define APPS_LEDGER_APP_CONSTANTS_H_
 
 #include "apps/ledger/storage/public/types.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace ledger {
 
 // The size of a page id array.
-const size_t kPageIdSize = 16;
+constexpr size_t kPageIdSize = 16;
 
 // The root id. The array size must be equal to kPageIdSize.
-extern const char kRootPageId[kPageIdSize];
+extern const ftl::StringView kRootPageId;
 
 }  // namespace ledger
 
