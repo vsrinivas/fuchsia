@@ -8,9 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/binding.h>
 #include <ddk/protocol/bcm.h>
 #include <ddk/protocol/display.h>
 
@@ -248,7 +248,7 @@ static mx_protocol_device_t mailbox_device_proto = {
 
 static mx_protocol_device_t vc_device_proto = {};
 
-mx_status_t mailbox_init(mx_driver_t* driver, mx_device_t* parent) {
+mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent) {
     void* page_base;
 
     // Carve out some address space for the device -- it's memory mapped.
@@ -319,21 +319,16 @@ mx_status_t mailbox_init(mx_driver_t* driver, mx_device_t* parent) {
     return NO_ERROR;
 }
 
-static mx_bind_inst_t binding[] = {
+mx_driver_t _driver_bcm_mailbox = {
+    .name = "bcm-vc-rpc",
+    .ops = {
+        .bind = mailbox_bind,
+    },
+};
+
+MAGENTA_DRIVER_BEGIN(_driver_bcm_mailbox, "bcm-vc-rpc", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_PID, SOC_PID_BROADCOMM_VIDEOCORE_BUS),
-};
-
-mx_driver_t _driver_mailbox BUILTIN_DRIVER = {
-    .name = "bcm-vc-rpc",
-    .ops = {
-        .bind = mailbox_init,
-    },
-    .binding = binding,
-    .binding_size = sizeof(binding),
-};
-
-MAGENTA_DRIVER_BEGIN(_driver_bcm_mailbox, "bcm-vc-rpc", "magenta", "0.1", 0)
 MAGENTA_DRIVER_END(_driver_bcm_mailbox)
 

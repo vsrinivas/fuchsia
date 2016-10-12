@@ -2,12 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(gkalsi, MG-295): Remove this compile time flag.
-ifeq ($(PLATFORM),bcm28xx)
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DRIVER_SRCS += \
-    $(LOCAL_DIR)/mailbox.c \
-	$(LOCAL_DIR)/bcm-bus.c \
+MODULE := $(LOCAL_DIR)
 
-endif
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/mailbox.c \
+
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/driver ulib/musl ulib/magenta
+
+include make/module.mk
