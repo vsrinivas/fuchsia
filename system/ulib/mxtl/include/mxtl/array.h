@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <assert.h>
+#include <magenta/assert.h>
 #include <mxtl/unique_ptr.h>
 
 namespace mxtl {
