@@ -4,9 +4,14 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DRIVER_SRCS += \
-    $(LOCAL_DIR)/vc-device.c \
-    $(LOCAL_DIR)/vc-gfx.c \
-    $(LOCAL_DIR)/textcon.c \
-    $(LOCAL_DIR)/main.c \
+MODULE := $(LOCAL_DIR)
 
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_DIR)/intel-i915.c
+
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+
+include make/module.mk

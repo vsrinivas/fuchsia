@@ -4,6 +4,14 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DRIVER_SRCS += \
-    $(LOCAL_DIR)/ahci.c \
-    $(LOCAL_DIR)/sata.c \
+MODULE := $(LOCAL_DIR)
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_DIR)/usb-hub.c
+
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+
+include make/module.mk

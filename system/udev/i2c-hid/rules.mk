@@ -8,9 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ethernet.c $(LOCAL_DIR)/ie.c
+MODULE_SRCS := $(LOCAL_DIR)/i2c-hid.c
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/hid
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 

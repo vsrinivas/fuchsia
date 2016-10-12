@@ -4,7 +4,11 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-DRIVER_SRCS += \
+MODULE := $(LOCAL_DIR)
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := \
     $(LOCAL_DIR)/audio-util.c \
     $(LOCAL_DIR)/midi.c \
     $(LOCAL_DIR)/usb-audio.c \
@@ -12,3 +16,9 @@ DRIVER_SRCS += \
     $(LOCAL_DIR)/usb-audio-source.c \
     $(LOCAL_DIR)/usb-midi-sink.c \
     $(LOCAL_DIR)/usb-midi-source.c \
+
+MODULE_STATIC_LIBS := ulib/ddk
+
+MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+
+include make/module.mk

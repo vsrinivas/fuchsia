@@ -7,7 +7,6 @@
 #include <intel-serialio/reg.h>
 #include <magenta/types.h>
 #include <magenta/device/i2c.h>
-#include <mxio/util.h>
 #include <magenta/listnode.h>
 #include <stddef.h>
 #include <stdio.h>

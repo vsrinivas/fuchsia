@@ -8,7 +8,11 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ethernet.c $(LOCAL_DIR)/ie.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/usb-bus.c \
+    $(LOCAL_DIR)/usb-device.c \
+    $(LOCAL_DIR)/usb-interface.c \
+    $(LOCAL_DIR)/util.c \
 
 MODULE_STATIC_LIBS := ulib/ddk
 

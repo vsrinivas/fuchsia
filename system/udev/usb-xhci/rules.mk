@@ -8,7 +8,14 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ethernet.c $(LOCAL_DIR)/ie.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/usb-xhci.c \
+    $(LOCAL_DIR)/xhci.c \
+    $(LOCAL_DIR)/xhci-device-manager.c \
+    $(LOCAL_DIR)/xhci-root-hub.c \
+    $(LOCAL_DIR)/xhci-transfer.c \
+    $(LOCAL_DIR)/xhci-trb.c \
+    $(LOCAL_DIR)/xhci-util.c \
 
 MODULE_STATIC_LIBS := ulib/ddk
 

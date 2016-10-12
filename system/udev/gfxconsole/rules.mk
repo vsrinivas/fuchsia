@@ -8,10 +8,14 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
-MODULE_SRCS := $(LOCAL_DIR)/ethernet.c $(LOCAL_DIR)/ie.c
+MODULE_SRCS := \
+    $(LOCAL_DIR)/vc-device.c \
+    $(LOCAL_DIR)/vc-gfx.c \
+    $(LOCAL_DIR)/textcon.c \
+    $(LOCAL_DIR)/main.c \
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
