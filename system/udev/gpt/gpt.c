@@ -54,10 +54,11 @@ static void uint8_to_guid_string(char* dst, uint8_t* src) {
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2, guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3], guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }
 
-static void utf16_to_cstring(char* dst, uint8_t* src, size_t count) {
-    while (count--) {
+static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
+    while (charcount > 0) {
         *dst++ = *src;
         src += 2; // FIXME cheesy
+        charcount -= 2;
     }
 }
 
