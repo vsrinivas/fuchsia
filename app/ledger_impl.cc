@@ -49,7 +49,7 @@ void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
 
   storage_->GetPageStorage(
       page_id, [this, callback,
-                &page_id](std::unique_ptr<storage::PageStorage> page_storage) {
+                page_id](std::unique_ptr<storage::PageStorage> page_storage) {
         if (!page_storage) {
           storage::Status s =
               storage_->CreatePageStorage(page_id, &page_storage);
