@@ -21,11 +21,14 @@
 static mx_handle_t s_ctrl[2];
 static mx_handle_t s_waitset;
 
-static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
+static mx_status_t get_satisfied_signals(mx_handle_t handle,
+                                         mx_signals_t* satisfied) {
   mx_signals_state_t signals_state = {0, 0};
-  mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-  assert(status == ERR_BAD_STATE);
-  return signals_state.satisfied;
+  mx_status_t r = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+  if (r != ERR_BAD_STATE)  // ERR_BAD_STATE is expected
+    return r;
+  *satisfied = signals_state.satisfied;
+  return NO_ERROR;
 }
 
 #define START 1
@@ -49,7 +52,12 @@ mx_status_t handle_watcher_stop(void) {
   vdebug("watch_stop: enter\n");
   mx_status_t r;
   uint8_t c;
-  if (!(get_satisfied_signals(s_ctrl[1]) & MX_SIGNAL_READABLE)) {
+  mx_signals_t satisfied;
+  if ((r = get_satisfied_signals(s_ctrl[1], &satisfied)) < 0) {
+    error("handle_watcher_stop: get_satisfied_signals failed (r=%d)\n", r);
+    return r;
+  }
+  if (!(satisfied & MX_SIGNAL_READABLE)) {
     vdebug("watch_stop: send ABORT\n");
     c = ABORT;
     if ((r = mx_msgpipe_write(s_ctrl[1], &c, 1u, NULL, 0u, 0u)) < 0) {
