@@ -6,7 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 group("magma_service_driver") {
   deps = [
-    "$msd_intel_gen_build_root",
+    "$msd_intel_gen_build_root(//build/toolchain/fuchsia:${target_cpu}-shared)",
   ]
 }
 
@@ -14,7 +14,7 @@ group("magma_service_driver_test") {
   testonly = true
 
   deps = [
-    "$msd_intel_gen_build_root:test",
+    "$msd_intel_gen_build_root:test(//build/toolchain/fuchsia:${target_cpu}-shared)",
   ]
 }
 

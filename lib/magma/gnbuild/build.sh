@@ -48,14 +48,17 @@ $tools_path/ninja -C $build_dir magma_service_driver magma_service_driver_test m
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
-cp $build_dir/msd-intel-gen-test $bootfs_path/bin/driver-pci-8086-1916
 
 mkdir -p $bootfs_path/lib
-cp $build_dir/libcrypto.so* $bootfs_path/lib
-cp $build_dir/libssl.so* $bootfs_path/lib
+cp $build_dir/x64-shared/libcrypto.so* $bootfs_path/lib
+cp $build_dir/x64-shared/libssl.so* $bootfs_path/lib
 
 cp $sysroot_path/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
 cp $sysroot_path/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
+
+driver_path=$bootfs_path/lib/driver
+mkdir -p $driver_path
+cp $build_dir/x64-shared/libmsd-intel-gen-test.so  $driver_path
 
 autorun_path=$bootfs_path/autorun
 

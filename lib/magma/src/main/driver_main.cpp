@@ -260,7 +260,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
     device->parent_device = dev;
     device_add(&device->device, dev);
 
-    xprintf("initialized magma intel display driver, fb=0x%p fbsize=0x%llx\n", device->framebuffer,
+    xprintf("initialized magma intel display driver, fb=0x%p fbsize=0x%lx\n", device->framebuffer,
             device->framebuffer_size);
 
     if (MAGMA_START) {
@@ -271,44 +271,26 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
     return NO_ERROR;
 }
 
-static mx_bind_inst_t binding[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI), BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_BROADWELL_DID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_I915_SKYLAKE_DID),
-};
-
-mx_driver_t _driver_intel_i915 BUILTIN_DRIVER = {
-    .name = "intel_i915_disp",
+mx_driver_t _driver_intel_gen_gpu = {
     .ops =
         {
             .bind = intel_i915_bind,
         },
-    .binding = binding,
-    .binding_size = sizeof(binding),
 };
 
-int main(int argc, char** argv)
+extern const magenta_driver_info_t __magenta_driver__;
+
+// clang-format off
+MAGENTA_DRIVER_BEGIN(_driver_intel_gen_gpu, "intel-gen-gpu", "magenta", "!0.1", 5)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_CLASS, 0x3), // Display class
+MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
+    // clang-format on
+
+    static int magma_hook(void* param)
 {
-    int r;
-    if ((r = devhost_init()) < 0) {
-        return r;
-    }
-    if ((r = devhost_cmdline(argc, argv)) < 0) {
-        return r;
-    }
 
-    xprintf("magma main starting\n");
-
-    driver_add(&_driver_intel_i915);
-    r = devhost_start();
-
-    xprintf("magma main returning %d\n", r);
-
-    return r;
-}
-
-static int magma_hook(void* param)
-{
     xprintf("magma_hook start\n");
 
     auto dev = reinterpret_cast<intel_i915_device_t*>(param);
