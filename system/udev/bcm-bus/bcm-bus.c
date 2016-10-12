@@ -31,7 +31,7 @@ static mx_status_t bcm_root_init(mx_driver_t* driver) {
     snprintf(arg2, sizeof(arg2), "%d", SOC_VID_BROADCOMM);
 
     char arg3[20];
-    snprintf(arg3, sizeof(arg3), "%d", SOC_PID_BROADCOMM_VIDEOCORE_BUS);
+    snprintf(arg3, sizeof(arg3), "%d", SOC_DID_BROADCOMM_VIDEOCORE_BUS);
 
     const char* args[4] = { "/boot/bin/devhost", arg1 , arg2, arg3};
     devhost_launch_devhost(driver_get_root_device(), name, MX_PROTOCOL_SOC, procname, 4, (char**)args);

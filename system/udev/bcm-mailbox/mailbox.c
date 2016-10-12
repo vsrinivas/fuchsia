@@ -270,7 +270,7 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent) {
 
     dev->props = calloc(2, sizeof(mx_device_prop_t));
     dev->props[0] = (mx_device_prop_t){BIND_SOC_VID, 0, SOC_VID_BROADCOMM};
-    dev->props[1] = (mx_device_prop_t){BIND_SOC_PID, 0, SOC_PID_BROADCOMM_MAILBOX};
+    dev->props[1] = (mx_device_prop_t){BIND_SOC_DID, 0, SOC_DID_BROADCOMM_MAILBOX};
     dev->prop_count = 2;
 
     status = device_add(dev, parent);
@@ -329,6 +329,6 @@ mx_driver_t _driver_bcm_mailbox = {
 MAGENTA_DRIVER_BEGIN(_driver_bcm_mailbox, "bcm-vc-rpc", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_SOC),
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
-    BI_MATCH_IF(EQ, BIND_SOC_PID, SOC_PID_BROADCOMM_VIDEOCORE_BUS),
+    BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_VIDEOCORE_BUS),
 MAGENTA_DRIVER_END(_driver_bcm_mailbox)
 

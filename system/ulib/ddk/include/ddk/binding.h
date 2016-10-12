@@ -84,6 +84,7 @@ __BEGIN_CDECLS;
 // System on Chip (SoC) binding variables at 0x03XX
 #define BIND_SOC_VID          0x0300
 #define BIND_SOC_PID          0x0301
+#define BIND_SOC_DID          0x0302
 
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This

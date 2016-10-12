@@ -17,8 +17,8 @@ __BEGIN_CDECLS;
 
 
 // Broadcomm specific PIDs
-#define SOC_PID_BROADCOMM_VIDEOCORE_BUS 0x0000  // Videocore device (used as root bus)
-#define SOC_PID_BROADCOMM_MAILBOX       0x0001  // Videocore mailbox, used for comms between cpu/gpu
+#define SOC_DID_BROADCOMM_VIDEOCORE_BUS 0x0000  // Videocore device (used as root bus)
+#define SOC_DID_BROADCOMM_MAILBOX       0x0001  // Videocore mailbox, used for comms between cpu/gpu
 
 
 typedef struct {
