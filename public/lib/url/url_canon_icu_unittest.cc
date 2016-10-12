@@ -54,20 +54,20 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
       "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
   };
 
-  for (size_t i = 0; i < arraysize(icu_cases); i++) {
-    UConvScoper conv(icu_cases[i].encoding);
+  for (const auto& icu_case : icu_cases) {
+    UConvScoper conv(icu_case.encoding);
     ASSERT_TRUE(conv.converter() != NULL);
     ICUCharsetConverter converter(conv.converter());
 
     std::string str;
     StdStringCanonOutput output(&str);
 
-    std::basic_string<uint16_t> input_str(WStringToUTF16(icu_cases[i].input));
+    std::basic_string<uint16_t> input_str(WStringToUTF16(icu_case.input));
     int input_len = static_cast<int>(input_str.length());
     converter.ConvertFromUTF16(input_str.c_str(), input_len, &output);
     output.Complete();
 
-    EXPECT_STREQ(icu_cases[i].expected, str.c_str());
+    EXPECT_STREQ(icu_case.expected, str.c_str());
   }
 
   // Test string sizes around the resize boundary for the output to make sure
@@ -110,23 +110,23 @@ TEST(URLCanonIcuTest, QueryWithConverter) {
       "?q=Chinese%26%2365319%3B"},
   };
 
-  for (size_t i = 0; i < arraysize(query_cases); i++) {
+  for (const auto& query_case : query_cases) {
     Component out_comp;
 
-    UConvScoper conv(query_cases[i].encoding);
-    ASSERT_TRUE(!query_cases[i].encoding || conv.converter());
+    UConvScoper conv(query_case.encoding);
+    ASSERT_TRUE(!query_case.encoding || conv.converter());
     ICUCharsetConverter converter(conv.converter());
 
-    int len = static_cast<int>(strlen(query_cases[i].input8));
+    int len = static_cast<int>(strlen(query_case.input8));
     Component in_comp(0, len);
     std::string out_str;
 
     StdStringCanonOutput output(&out_str);
-    CanonicalizeQuery(query_cases[i].input8, in_comp, &converter, &output,
+    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output,
                       &out_comp);
     output.Complete();
 
-    EXPECT_EQ(query_cases[i].expected, out_str);
+    EXPECT_EQ(query_case.expected, out_str);
   }
 
   // Extra test for input with embedded NULL;

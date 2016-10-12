@@ -163,9 +163,10 @@ TEST(GURLTest, IsValid) {
     "http:path",
     "://google.com",
   };
-  for (size_t i = 0; i < arraysize(valid_cases); i++) {
-    EXPECT_TRUE(GURL(valid_cases[i]).is_valid())
-        << "Case: " << valid_cases[i];
+
+  for (const char* valid_case : valid_cases) {
+    EXPECT_TRUE(GURL(valid_case).is_valid())
+        << "Case: " << valid_case;
   }
 
   const char* invalid_cases[] = {
@@ -175,9 +176,9 @@ TEST(GURLTest, IsValid) {
     "http://google.com:12three45",
     "path",
   };
-  for (size_t i = 0; i < arraysize(invalid_cases); i++) {
-    EXPECT_FALSE(GURL(invalid_cases[i]).is_valid())
-        << "Case: " << invalid_cases[i];
+  for (const char* invalid_case : invalid_cases) {
+    EXPECT_FALSE(GURL(invalid_case).is_valid())
+        << "Case: " << invalid_case;
   }
 }
 
@@ -230,11 +231,11 @@ TEST(GURLTest, Resolve) {
     {"data:blahblah", "http:google.com", true, "http://google.com/"},
   };
 
-  for (size_t i = 0; i < arraysize(resolve_cases); i++) {
-    GURL input(resolve_cases[i].base);
-    GURL output = input.Resolve(resolve_cases[i].relative);
-    EXPECT_EQ(resolve_cases[i].expected_valid, output.is_valid()) << i;
-    EXPECT_EQ(resolve_cases[i].expected, output.spec()) << i;
+  for (const auto& resolve_case : resolve_cases) {
+    GURL input(resolve_case.base);
+    GURL output = input.Resolve(resolve_case.relative);
+    EXPECT_EQ(resolve_case.expected_valid, output.is_valid()) << resolve_case.expected;
+    EXPECT_EQ(resolve_case.expected, output.spec()) << resolve_case.expected;
   }
 }
 
@@ -248,10 +249,10 @@ TEST(GURLTest, GetWithEmptyPath) {
     {"http://www.google.com/foo/bar.html?baz=22", "http://www.google.com/"},
   };
 
-  for (size_t i = 0; i < arraysize(cases); i++) {
-    GURL url(cases[i].input);
+  for (const auto& test_case : cases) {
+    GURL url(test_case.input);
     GURL empty_path = url.GetWithEmptyPath();
-    EXPECT_EQ(cases[i].expected, empty_path.spec());
+    EXPECT_EQ(test_case.expected, empty_path.spec());
   }
 }
 
@@ -267,10 +268,10 @@ TEST(GURLTest, PathForRequest) {
     {"http://www.google.com/foo/bar.html?query#ref", "/foo/bar.html?query"},
   };
 
-  for (size_t i = 0; i < arraysize(cases); i++) {
-    GURL url(cases[i].input);
+  for (const auto& test_case : cases) {
+    GURL url(test_case.input);
     std::string path_request = url.PathForRequest();
-    EXPECT_EQ(cases[i].expected, path_request);
+    EXPECT_EQ(test_case.expected, path_request);
   }
 }
 
@@ -308,9 +309,9 @@ TEST(GURLTest, EffectiveIntPort) {
     {"data:www.google.com", PORT_UNSPECIFIED},
   };
 
-  for (size_t i = 0; i < arraysize(port_tests); i++) {
-    GURL url(port_tests[i].spec);
-    EXPECT_EQ(port_tests[i].expected_int_port, url.EffectiveIntPort());
+  for (const auto& port_test : port_tests) {
+    GURL url(port_test.spec);
+    EXPECT_EQ(port_test.expected_int_port, url.EffectiveIntPort());
   }
 }
 
@@ -329,9 +330,9 @@ TEST(GURLTest, IPAddress) {
     {"some random input!", false},
   };
 
-  for (size_t i = 0; i < arraysize(ip_tests); i++) {
-    GURL url(ip_tests[i].spec);
-    EXPECT_EQ(ip_tests[i].expected_ip, url.HostIsIPAddress());
+  for (const auto& ip_test : ip_tests) {
+    GURL url(ip_test.spec);
+    EXPECT_EQ(ip_test.expected_ip, url.HostIsIPAddress());
   }
 }
 
@@ -354,10 +355,10 @@ TEST(GURLTest, HostNoBrackets) {
     {"http://]/", "]", "]"},
     {"", "", ""},
   };
-  for (size_t i = 0; i < arraysize(cases); i++) {
-    GURL url(cases[i].input);
-    EXPECT_EQ(cases[i].expected_host, url.host());
-    EXPECT_EQ(cases[i].expected_plainhost, url.HostNoBrackets());
+  for (const auto& test_case : cases) {
+    GURL url(test_case.input);
+    EXPECT_EQ(test_case.expected_host, url.host());
+    EXPECT_EQ(test_case.expected_plainhost, url.HostNoBrackets());
   }
 }
 

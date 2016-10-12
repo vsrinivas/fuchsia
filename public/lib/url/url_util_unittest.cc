@@ -85,12 +85,12 @@ TEST(URLUtilTest, TestEncodeURIComponent) {
      "pqrstuvwxyz%7B%7C%7D~%7F"},
   };
 
-  for (size_t i = 0; i < arraysize(encode_cases); i++) {
-    const char* input = encode_cases[i].input;
+  for (const auto& encode_case : encode_cases) {
+    const char* input = encode_case.input;
     RawCanonOutputT<char> buffer;
     EncodeURIComponent(input, strlen(input), &buffer);
     std::string output(buffer.data(), buffer.length());
-    EXPECT_EQ(encode_cases[i].output, output);
+    EXPECT_EQ(encode_case.output, output);
   }
 }
 
@@ -159,8 +159,7 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
     {"aaa://a\\", "aaa:.", true, "aaa://a\\." }
   };
 
-  for (size_t i = 0; i < arraysize(resolve_non_standard_cases); i++) {
-    const ResolveRelativeCase& test_data = resolve_non_standard_cases[i];
+  for (const auto& test_data : resolve_non_standard_cases) {
     Parsed base_parsed;
     ParsePathURL(test_data.base, strlen(test_data.base), false, &base_parsed);
 
@@ -173,9 +172,9 @@ TEST(URLUtilTest, TestResolveRelativeWithNonStandardBase) {
                                  &resolved_parsed);
     output.Complete();
 
-    EXPECT_EQ(test_data.is_valid, valid) << i;
+    EXPECT_EQ(test_data.is_valid, valid);
     if (test_data.is_valid && valid)
-      EXPECT_EQ(test_data.out, resolved) << i;
+      EXPECT_EQ(test_data.out, resolved);
   }
 }
 

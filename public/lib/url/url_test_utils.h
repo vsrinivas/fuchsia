@@ -32,17 +32,6 @@ inline std::basic_string<uint16_t> WStringToUTF16(const wchar_t* src) {
 
 }  // namespace test_utils
 
-// The arraysize(arr) macro returns the # of elements in an array arr.
-// The expression is a compile-time constant, and therefore can be
-// used in defining new arrays, for example.  If you use arraysize on
-// a pointer by mistake, you will get a compile-time error.
-
-// This template function declaration is used in defining arraysize.
-// Note that the function doesn't need an implementation, as we only
-// use its type.
-template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
-#define arraysize(array) (sizeof(ArraySizeHelper(array)))
-
 }  // namespace url
 
 #endif  // LIB_URL_URL_TEST_UTILS_H_
