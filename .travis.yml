@@ -5,6 +5,7 @@ env:
     - PROJECT=magenta-pc-x86-64
     - PROJECT=magenta-qemu-arm64
     - PROJECT=magenta-qemu-arm32
+    - PROJECT=rpi3-test
 
     # kernel only, no-magenta builds
     - PROJECT=pc-x86-64-test
