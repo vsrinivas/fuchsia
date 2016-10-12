@@ -5,7 +5,6 @@
 package msdosfs
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -114,7 +113,7 @@ func (f *file) Reopen(flags fs.OpenFlags) (fs.File, error) {
 	}
 
 	if (flags.Read() && !f.flags.Read()) || (flags.Write() && !f.flags.Write()) {
-		return nil, errors.New("Cannot increase permissions through Reopen()")
+		return nil, fs.ErrPermission
 	} else if flags.Directory() {
 		return nil, fs.ErrNotADir
 	}
@@ -158,7 +157,7 @@ func (f *file) Read(p []byte, off int64, whence int) (int, error) {
 	case fs.WhenceFromEnd:
 		off += f.node.Size()
 	default:
-		return 0, errors.New("Invalid value of whence (invalid arg)")
+		return 0, fs.ErrInvalidArgs
 	}
 
 	bytesRead, err := f.node.ReadAt(p, off)
@@ -209,7 +208,7 @@ func (f *file) Write(p []byte, off int64, whence int) (int, error) {
 	case fs.WhenceFromEnd:
 		off += f.node.Size()
 	default:
-		return 0, errors.New("Invalid value of whence")
+		return 0, fs.ErrInvalidArgs
 	}
 
 	bytesWritten, err := f.node.WriteAt(p, off)
@@ -232,10 +231,8 @@ func (f *file) Truncate(size uint64) error {
 		return fs.ErrNotOpen
 	}
 
-	if f.fs.info.Readonly {
+	if f.fs.info.Readonly || !f.flags.Write() {
 		return fs.ErrPermission
-	} else if !f.flags.Write() {
-		return errors.New("Missing Write permission")
 	}
 
 	f.node.Lock()
@@ -304,7 +301,7 @@ func (f *file) Seek(offset int64, whence int) (int64, error) {
 	case fs.WhenceFromEnd:
 		f.position.offset = f.node.Size() + offset
 	default:
-		return 0, errors.New("Invalid whence value")
+		return 0, fs.ErrInvalidArgs
 	}
 
 	return f.position.offset, nil

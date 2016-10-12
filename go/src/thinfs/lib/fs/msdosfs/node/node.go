@@ -208,7 +208,7 @@ func (n *node) readAt(buf []byte, off int64) (int, error) {
 		}
 	}
 	if bytesRead < len(buf) {
-		return bytesRead, ErrEOF
+		return bytesRead, fs.ErrEOF
 	}
 	return bytesRead, nil
 }

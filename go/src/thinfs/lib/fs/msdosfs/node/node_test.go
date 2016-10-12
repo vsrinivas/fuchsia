@@ -183,7 +183,7 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 			// A read of 'one more byte' should work, but also return an EOF error.
 			readbuf = make([]byte, len(buf)+1)
-			if l, err := n.readAt(readbuf, 0); err != ErrEOF {
+			if l, err := n.readAt(readbuf, 0); err != fs.ErrEOF {
 				t.Fatal("Expected an EOF error")
 			} else if l != len(readbuf)-1 {
 				t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf)-1)
@@ -231,9 +231,9 @@ func TestSingleNodeReadWrite(t *testing.T) {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, 0)
 		}
 
-		// A large read should fail with ErrEOF; it's only partially out of bounds
+		// A large read should fail with fs.ErrEOF; it's only partially out of bounds
 		largeOffset = int64(len(bufCombined) - len(readbuf)/2)
-		if l, err := n.readAt(readbuf, largeOffset); err != ErrEOF {
+		if l, err := n.readAt(readbuf, largeOffset); err != fs.ErrEOF {
 			t.Fatal("Expected an EOF error")
 		} else if l != len(readbuf)/2 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, len(readbuf)/2)

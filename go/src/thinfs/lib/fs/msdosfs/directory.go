@@ -5,7 +5,6 @@
 package msdosfs
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -106,7 +105,7 @@ func (d *directory) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
 	}
 
 	if (flags.Read() && !d.flags.Read()) || (flags.Write() && !d.flags.Write()) {
-		return nil, errors.New("Cannot increase permissions through Reopen()")
+		return nil, fs.ErrPermission
 	} else if flags.File() {
 		return nil, fs.ErrNotAFile
 	}

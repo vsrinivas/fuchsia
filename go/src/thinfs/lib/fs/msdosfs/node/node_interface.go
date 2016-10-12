@@ -5,7 +5,6 @@
 package node
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -13,9 +12,6 @@ import (
 )
 
 var (
-	// ErrEOF indicates the operation could not complete due to reaching the End of the File
-	ErrEOF = errors.New("FAT Node: EOF hit before operation completed")
-
 	// ErrNoSpace indicates the requested operation requires more space than is available
 	ErrNoSpace = fs.ErrResourceExhausted
 

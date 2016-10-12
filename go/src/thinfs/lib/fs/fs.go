@@ -61,6 +61,9 @@ var (
 	// ErrUnmounted indicates that the entire filesystem has been unmounted, and all future
 	// operations will fail
 	ErrUnmounted = errors.New("operation failed because filesystem is unmounted")
+
+	// ErrEOF indicates that an operation ended because the end the file / directory was reached
+	ErrEOF = errors.New("EOF hit before operation completed")
 )
 
 // FileType describes the type of a given file.
