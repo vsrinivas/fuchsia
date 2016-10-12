@@ -60,10 +60,6 @@ extern void intc_init(void);
 
 extern void arm_reset(void);
 
-//static fb_mbox_t framebuff_descriptor __ALIGNED(64);
-
-//static uint8_t * vbuff;
-
 static uint8_t * kernel_args;
 
 static pmm_arena_t arena = {
@@ -155,92 +151,12 @@ void platform_early_init(void)
 void platform_init(void)
 {
     uart_init();
-
-    /* Get framebuffer for jraphics */
-
-    // framebuff_descriptor.phys_width  = 960;
-    // framebuff_descriptor.phys_height = 540;
-    // framebuff_descriptor.virt_width  = 960;
-    // framebuff_descriptor.virt_height = 540;
-    // framebuff_descriptor.pitch       = 0;
-    // framebuff_descriptor.depth       = 32;
-    // framebuff_descriptor.virt_x_offs = 0;
-    // framebuff_descriptor.virt_y_offs = 0;
-    // framebuff_descriptor.fb_p        = 0;
-    // framebuff_descriptor.fb_size     = 0;
-
-    // if (!get_vcore_framebuffer(&framebuff_descriptor)) {
-    //     printf ("fb returned at 0x%08x of %d bytes in size\n",framebuff_descriptor.fb_p
-    //                                                          ,framebuff_descriptor.fb_size);
-
-    //     vbuff = (uint8_t *)((framebuff_descriptor.fb_p & 0x3fffffff) + KERNEL_BASE);
-    //     printf("video buffer at %lx\n",(uintptr_t )vbuff);
-    //     printf("pitch: %d\n",framebuff_descriptor.pitch);
-    // }
 }
-void arm64_get_cache_levels(uint32_t * levels);
-void arm64_get_cache_linesize(uint32_t * linesize);
 
 void target_init(void)
 {
 
-    //uint32_t * temp;
-
-    //uint32_t addr;
-
-    // temp = (uint32_t *)get_vcore_single(0x00010005,8,8);
-    // if (temp) printf ("ARM memory base:0x%08x len:0x%08x\n",temp[0],temp[1]);
-
-    // temp = (uint32_t *)get_vcore_single(0x00010006,8,8);
-    // if (temp) printf ("VC  memory base:0x%08x len:0x%08x\n",temp[0],temp[1]);
-
-    // temp = (uint32_t *)get_vcore_single(0x00010004,8,8);
-    // if (temp) printf ("SERIAL # %08x%08x\n",temp[1],temp[0]);
-
-    // arm64_get_cache_levels(temp);
-    // printf("Cache Levels= 0x%08x\n",*temp);
-
-    // arm64_get_cache_linesize(temp);
-    // printf("Cache Line Size= 0x%08x\n",*temp);
-
 }
-
-static void flush(void){
-    //arch_clean_cache_range(vbuff,framebuff_descriptor.fb_size);
-}
-
-// status_t display_get_framebuffer(struct display_framebuffer *fb)
-// {
-//     fb->image.pixels = (void *)vbuff;
-
-//     fb->format = DISPLAY_FORMAT_ARGB_8888;
-//     fb->image.format = IMAGE_FORMAT_ARGB_8888;
-//     fb->image.rowbytes = framebuff_descriptor.phys_width * 4;
-
-//     fb->image.width = framebuff_descriptor.phys_width;
-//     fb->image.height = framebuff_descriptor.phys_height;
-//     fb->image.stride = framebuff_descriptor.phys_width;
-//     fb->flush = flush;
-
-//     return NO_ERROR;
-// }
-
-// status_t display_get_info(struct display_info *info)
-// {
-//     info->format = DISPLAY_FORMAT_ARGB_8888;
-//     info->width = framebuff_descriptor.phys_width;
-//     info->height = framebuff_descriptor.phys_height;
-
-//     return NO_ERROR;
-// }
-
-// status_t display_present(struct display_image *image, uint starty, uint endy)
-// {
-//   TRACEF("display_present - not implemented");
-//   DEBUG_ASSERT(false);
-//   return NO_ERROR;
-// }
-
 
 void platform_dputc(char c)
 {
