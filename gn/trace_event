@@ -1,0 +1,9 @@
+{
+    "labels": [ "//lib/trace_event" ],
+    "binaries": [
+        {
+            "binary": "trace_event_tests",
+            "bootfs_path": "apps/trace_event_tests"
+        }
+    ]
+}
