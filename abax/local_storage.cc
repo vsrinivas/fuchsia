@@ -17,7 +17,7 @@ LocalStorage::LocalStorage(std::map<std::string, std::string>* db,
 
 LocalStorage::~LocalStorage() {}
 
-bool LocalStorage::WriteEntryValue(const convert::BytesReference& entry_value,
+bool LocalStorage::WriteEntryValue(convert::ExtendedStringView entry_value,
                                    std::string* value_row_key) {
   *value_row_key = serialization_->GetValueRowKey(entry_value);
   (*db_)[*value_row_key] = convert::ToString(entry_value);
@@ -25,7 +25,7 @@ bool LocalStorage::WriteEntryValue(const convert::BytesReference& entry_value,
 }
 
 bool LocalStorage::WriteReference(const mojo::Array<uint8_t>& entry_key,
-                                  convert::BytesReference value_row_key) {
+                                  convert::ExtendedStringView value_row_key) {
   (*db_)[serialization_->GetReferenceRowKey(entry_key)] =
       convert::ToString(value_row_key);
   return true;

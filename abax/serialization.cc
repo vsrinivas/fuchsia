@@ -44,7 +44,7 @@ mojo::Array<uint8_t> Serialization::GetEntryKey(
 }
 
 std::string Serialization::GetValueRowKey(
-    const convert::BytesReference& entry_value) {
+    convert::ExtendedStringView entry_value) {
   return value_row_prefix_ +
          glue::SHA256Hash(entry_value.data(), entry_value.size());
 }

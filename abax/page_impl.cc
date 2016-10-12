@@ -252,7 +252,7 @@ void PageImpl::CreateReference(
   });
 }
 
-Status PageImpl::GetReferenceById(const convert::BytesReference& id,
+Status PageImpl::GetReferenceById(convert::ExtendedStringView id,
                                   ValuePtr* value) {
   auto data = db_->find(convert::ToString(id));
   if (data == db_->end()) {

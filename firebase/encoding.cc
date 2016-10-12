@@ -64,12 +64,12 @@ std::string Encode(const std::string& s, bool verbatim) {
 
 }  // namespace
 
-std::string EncodeKey(const convert::BytesReference& bytes) {
+std::string EncodeKey(convert::ExtendedStringView bytes) {
   std::string s(bytes.data(), bytes.size());
   return Encode(s, IsValidKey(s));
 }
 
-std::string EncodeValue(const convert::BytesReference& bytes) {
+std::string EncodeValue(convert::ExtendedStringView bytes) {
   std::string s(bytes.data(), bytes.size());
   return Encode(s, IsValidValue(s));
 }

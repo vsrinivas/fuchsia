@@ -46,8 +46,30 @@ TEST(Convert, ToString) {
   EXPECT_EQ(str, result);
 
   mojo::Array<uint8_t> array = ToArray(str);
-  result = ToString(slice);
+  result = ToString(array);
   EXPECT_EQ(str, result);
+}
+
+TEST(Convert, ToStringView) {
+  std::string str = "Hello";
+  leveldb::Slice slice(str.data(), str.size());
+  ftl::StringView result = ToStringView(slice);
+  EXPECT_EQ(str, result.ToString());
+
+  mojo::Array<uint8_t> array = ToArray(str);
+  result = ToStringView(array);
+  EXPECT_EQ(str, result.ToString());
+}
+
+TEST(Conver, ImplicitConversion) {
+  std::string str = "Hello";
+  ExtendedStringView esv(str);
+
+  leveldb::Slice slice = esv;
+  EXPECT_EQ(str, ToString(slice));
+
+  ftl::StringView string_view = esv;
+  EXPECT_EQ(str, ToString(string_view));
 }
 
 }  // namespace

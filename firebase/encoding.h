@@ -23,8 +23,8 @@ namespace firebase {
 //
 // Strings that are not valid Firebase keys / values are encoded as base64 with
 // slashes replaced with backslashes and "B" added at the end.
-std::string EncodeKey(const convert::BytesReference& bytes);
-std::string EncodeValue(const convert::BytesReference& bytes);
+std::string EncodeKey(convert::ExtendedStringView bytes);
+std::string EncodeValue(convert::ExtendedStringView bytes);
 
 // Returns true iff the key or value was correctly decoded and stored in |out|.
 // We don't need separate methods for keys and values, as the decoding algorithm

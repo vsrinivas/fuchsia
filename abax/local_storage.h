@@ -19,12 +19,12 @@ class LocalStorage {
 
   // Writes the given entry value. The row under which the value is
   // written is decided based on its content, and written to |value_row_key|.
-  bool WriteEntryValue(const convert::BytesReference& entry_value,
+  bool WriteEntryValue(convert::ExtendedStringView entry_value,
                        std::string* value_row_key);
 
   // Writes the reference for the given entry key.
   bool WriteReference(const mojo::Array<uint8_t>& entry_key,
-                      convert::BytesReference value_row_key);
+                      convert::ExtendedStringView value_row_key);
 
  private:
   std::map<std::string, std::string>* const db_;

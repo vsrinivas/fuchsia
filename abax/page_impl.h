@@ -76,7 +76,7 @@ class PageImpl {
       mojo::ScopedDataPipeConsumerHandle data,
       const std::function<void(Status, ReferencePtr)>& callback);
 
-  Status GetReferenceById(const convert::BytesReference& id, ValuePtr* value);
+  Status GetReferenceById(convert::ExtendedStringView id, ValuePtr* value);
 
   Status GetReference(ReferencePtr reference, ValuePtr* value);
 

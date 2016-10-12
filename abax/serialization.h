@@ -40,7 +40,7 @@ class Serialization {
 
   // Returns the key of the value row for the given entry value. This is
   // computed based on a hash of the entry value.
-  std::string GetValueRowKey(const convert::BytesReference& entry_value);
+  std::string GetValueRowKey(convert::ExtendedStringView entry_value);
 
   // Returns the key representation of the metadata row.
   std::string MetaRowKey();
