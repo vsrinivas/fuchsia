@@ -67,7 +67,9 @@ mojo_native_application("url_unittests") {
   deps = [
     ":url",
     "//lib/ftl",
-    "//mojo/public/cpp/application:standalone",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
+    "//mojo/system",
     "//third_party/gtest",
     "//third_party/icu",
   ]
