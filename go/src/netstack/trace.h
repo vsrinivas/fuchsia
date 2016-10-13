@@ -28,7 +28,8 @@
 #define TRACE_FACIL_NET 0x2
 #define TRACE_FACIL_SOCKET 0x4
 #define TRACE_FACIL_RW 0x8
-#define TRACE_FACIL_OTHERS 0x100
+#define TRACE_FACIL_PORT 0x10
+#define TRACE_FACIL_OTHERS 0x80
 
 extern uint32_t g_trace_level;
 extern mtx_t g_trace_lock;
@@ -56,6 +57,7 @@ void set_trace_level(uint32_t facility, uint32_t level);
 #define debug_net(fmt...) trace(TRACE_FACIL_NET, TRACE_LEVEL_DEBUG, fmt)
 #define debug_socket(fmt...) trace(TRACE_FACIL_SOCKET, TRACE_LEVEL_DEBUG, fmt)
 #define debug_rw(fmt...) trace(TRACE_FACIL_RW, TRACE_LEVEL_DEBUG, fmt)
+#define debug_port(fmt...) trace(TRACE_FACIL_PORT, TRACE_LEVEL_DEBUG, fmt)
 
 const char* getopname(int op);
 

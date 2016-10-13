@@ -567,14 +567,6 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
                 "mxrio_gai_reply_t should fit into msg->data");
   mxrio_gai_reply_t* gai_replyp = (struct mxrio_gai_reply*)msg->data;
 
-  vdebug("do_gai: res: family=%d, socktype=%d, protocol=%d\n", res->ai_family,
-         res->ai_socktype, res->ai_protocol);
-  if (res->ai_addr)
-    vdebug("addr = 0x%08x\n",
-           ((struct sockaddr_in*)res->ai_addr)->sin_addr.s_addr);
-  else
-    vdebug("addr = NULL\n");
-
   // TODO: we are returning the first one only
   gai_replyp->nres = 1;
   memcpy(&gai_replyp->res[0].ai, res, sizeof(struct addrinfo));
@@ -583,7 +575,7 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
          gai_replyp->res[0].ai.ai_protocol);
 
   gai_replyp->res[0].ai.ai_addr = NULL;  // don't pass the pointer
-  memcpy(&gai_replyp->res[0].addr, res->ai_addr, sizeof(struct sockaddr_in));
+  memcpy(&gai_replyp->res[0].addr, res->ai_addr, res->ai_addrlen);
   gai_replyp->res[0].ai.ai_canonname = NULL;  // TODO
   gai_replyp->res[0].ai.ai_next = NULL;       // TODO
 
@@ -606,10 +598,6 @@ mx_status_t do_getsockname(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
-  struct sockaddr_in* sys_addr_in = (struct sockaddr_in*)&reply->addr;
-  vdebug("do_getsockname: sin_family=%d\n", sys_addr_in->sin_family);
-  vdebug("do_getsockname: sin_addr=%d\n", sys_addr_in->sin_addr.s_addr);
-  vdebug("do_getsockname: sin_port=%d\n", sys_addr_in->sin_port);
 
   msg->arg2.off = 0;
   msg->datalen = sizeof(*reply);

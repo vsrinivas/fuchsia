@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
+#include <netdb.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <netdb.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -20,22 +20,128 @@
 
 // Network Socket Layer for lwip
 
-// TODO: IPv6
-
 static void convert_sin_addr_to_lwip(const struct sockaddr_in* from,
                                      struct lwip_sockaddr_in* to) {
   memset(to, 0, sizeof(*to));
   to->sin_family = from->sin_family;
-  to->sin_addr.s_addr = from->sin_addr.s_addr;
   to->sin_port = from->sin_port;
+  to->sin_addr.s_addr = from->sin_addr.s_addr;
+
+  debug_port("sin_family=%d\n", to->sin_family);
+  char str[INET_ADDRSTRLEN];
+  debug_port("sin_addr=%s\n",
+             inet_ntop(AF_INET, &to->sin_addr, str, INET_ADDRSTRLEN));
+  debug_port("sin_port=%d\n", to->sin_port);
 }
 
 static void convert_sin_addr_from_lwip(const struct lwip_sockaddr_in* from,
                                        struct sockaddr_in* to) {
   memset(to, 0, sizeof(*to));
   to->sin_family = from->sin_family;
-  to->sin_addr.s_addr = from->sin_addr.s_addr;
   to->sin_port = from->sin_port;
+  to->sin_addr.s_addr = from->sin_addr.s_addr;
+
+  debug_port("sin_family=%d\n", to->sin_family);
+  char str[INET_ADDRSTRLEN];
+  debug_port("sin_addr=%s\n",
+             inet_ntop(AF_INET, &to->sin_addr, str, INET_ADDRSTRLEN));
+  debug_port("sin_port=%d\n", to->sin_port);
+}
+
+static void convert_sin6_addr_to_lwip(const struct sockaddr_in6* from,
+                                      struct lwip_sockaddr_in6* to) {
+  memset(to, 0, sizeof(*to));
+  to->sin6_family = from->sin6_family;
+  to->sin6_port = from->sin6_port;
+  to->sin6_flowinfo = from->sin6_flowinfo;
+  to->sin6_addr = from->sin6_addr;
+  to->sin6_scope_id = from->sin6_scope_id;
+
+  debug_port("sin6_family=%d\n", to->sin6_family);
+  char str[INET6_ADDRSTRLEN];
+  debug_port("sin6_addr=%s\n",
+             inet_ntop(AF_INET6, &to->sin6_addr, str, INET6_ADDRSTRLEN));
+  debug_port("sin6_port=%d\n", to->sin6_port);
+}
+
+static void convert_sin6_addr_from_lwip(const struct lwip_sockaddr_in6* from,
+                                        struct sockaddr_in6* to) {
+  memset(to, 0, sizeof(*to));
+  to->sin6_family = from->sin6_family;
+  to->sin6_port = from->sin6_port;
+  to->sin6_flowinfo = from->sin6_flowinfo;
+  to->sin6_addr = from->sin6_addr;
+  to->sin6_scope_id = from->sin6_scope_id;
+
+  debug_port("sin6_family=%d\n", to->sin6_family);
+  char str[INET6_ADDRSTRLEN];
+  debug_port("sin6_addr=%s\n",
+             inet_ntop(AF_INET6, &to->sin6_addr, str, INET6_ADDRSTRLEN));
+  debug_port("sin6_port=%d\n", to->sin6_port);
+}
+
+static int convert_addr_to_lwip(const struct sockaddr* from, socklen_t from_len,
+                                struct lwip_sockaddr* to,
+                                lwip_socklen_t* to_len) {
+  if (from->sa_family == AF_INET) {
+    if (from_len < sizeof(struct sockaddr_in) ||
+        *to_len < sizeof(struct lwip_sockaddr_in)) {
+      debug_port("from_len(%d) < %lu || to_len(%d) < %lu\n", from_len,
+                 sizeof(struct sockaddr_in), *to_len,
+                 sizeof(struct lwip_sockaddr_in));
+      return -1;
+    }
+    convert_sin_addr_to_lwip((const struct sockaddr_in*)from,
+                             (struct lwip_sockaddr_in*)to);
+    *to_len = sizeof(struct lwip_sockaddr_in);
+  } else if (from->sa_family == AF_INET6) {
+    if (from_len < sizeof(struct sockaddr_in6) ||
+        *to_len < sizeof(struct lwip_sockaddr_in6)) {
+      debug_port("from_len(%d) < %lu || to_len(%d) < %lu\n", from_len,
+                 sizeof(struct sockaddr_in6), *to_len,
+                 sizeof(struct lwip_sockaddr_in6));
+      return -1;
+    }
+    convert_sin6_addr_to_lwip((const struct sockaddr_in6*)from,
+                              (struct lwip_sockaddr_in6*)to);
+    *to_len = sizeof(struct lwip_sockaddr_in6);
+  } else {
+    debug_port("unknown family(%d)\n", from->sa_family);
+    return -1;
+  }
+  return 0;
+}
+
+static int convert_addr_from_lwip(const struct lwip_sockaddr* from,
+                                  lwip_socklen_t from_len, struct sockaddr* to,
+                                  socklen_t* to_len) {
+  if (from->sa_family == AF_INET) {
+    if (from_len < sizeof(struct lwip_sockaddr_in) ||
+        *to_len < sizeof(struct sockaddr_in)) {
+      debug_port("from_len(%d) < %lu || to_len(%d) < %lu\n", from_len,
+                 sizeof(struct lwip_sockaddr_in), *to_len,
+                 sizeof(struct sockaddr_in));
+      return -1;
+    }
+    convert_sin_addr_from_lwip((const struct lwip_sockaddr_in*)from,
+                               (struct sockaddr_in*)to);
+    *to_len = sizeof(struct sockaddr_in);
+  } else if (from->sa_family == AF_INET6) {
+    if (from_len < sizeof(struct lwip_sockaddr_in6) ||
+        *to_len < sizeof(struct sockaddr_in6)) {
+      debug_port("from_len(%d) < %lu || to_len(%d) < %lu\n", from_len,
+                 sizeof(struct lwip_sockaddr_in6), *to_len,
+                 sizeof(struct sockaddr_in6));
+      return -1;
+    }
+    convert_sin6_addr_from_lwip((const struct lwip_sockaddr_in6*)from,
+                                (struct sockaddr_in6*)to);
+    *to_len = sizeof(struct sockaddr_in6);
+  } else {
+    debug_port("unknown family(%d)\n", from->sa_family);
+    return -1;
+  }
+  return 0;
 }
 
 int net_socket(int domain, int type, int protocol) {
@@ -48,37 +154,30 @@ int net_socket(int domain, int type, int protocol) {
 }
 
 int net_connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
-  const struct sockaddr_in* addr_in = (const struct sockaddr_in*)addr;
-
-  struct lwip_sockaddr_in lwip_addr_in;
-  convert_sin_addr_to_lwip(addr_in, &lwip_addr_in);
-  vdebug("net_connect: sin_family=%d\n", lwip_addr_in.sin_family);
-  vdebug("net_connect: sin_addr=0x%x\n", lwip_addr_in.sin_addr.s_addr);
-  vdebug("net_connect: sin_port=%d\n", lwip_addr_in.sin_port);
-
-  return lwip_connect(sockfd, (struct lwip_sockaddr*)&lwip_addr_in,
-                      sizeof(lwip_addr_in));
+  struct lwip_sockaddr_storage lwip_addr;
+  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
+  if (convert_addr_to_lwip(addr, addrlen, (struct lwip_sockaddr*)&lwip_addr,
+                           &lwip_addrlen) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  return lwip_connect(sockfd, (struct lwip_sockaddr*)&lwip_addr, lwip_addrlen);
 }
 
 int net_bind(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
-  const struct sockaddr_in* addr_in = (const struct sockaddr_in*)addr;
-
-  struct lwip_sockaddr_in lwip_addr_in;
-  convert_sin_addr_to_lwip(addr_in, &lwip_addr_in);
-  vdebug("net_bind: sin_family=%d\n", lwip_addr_in.sin_family);
-  vdebug("net_bind: sin_addr=%d\n", lwip_addr_in.sin_addr.s_addr);
-  vdebug("net_bind: sin_port=%d\n", lwip_addr_in.sin_port);
-
-  return lwip_bind(sockfd, (struct lwip_sockaddr*)&lwip_addr_in,
-                   sizeof(lwip_addr_in));
+  struct lwip_sockaddr_storage lwip_addr;
+  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
+  if (convert_addr_to_lwip(addr, addrlen, (struct lwip_sockaddr*)&lwip_addr,
+                           &lwip_addrlen) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  return lwip_bind(sockfd, (struct lwip_sockaddr*)&lwip_addr, lwip_addrlen);
 }
 
 int net_listen(int sockfd, int backlog) { return lwip_listen(sockfd, backlog); }
 
 int net_accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
-  struct lwip_sockaddr_in lwip_addr_in;
-  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr_in);
-
   int ret;
   if (addr == NULL && addrlen == NULL) {
     ret = lwip_accept(sockfd, NULL, NULL);
@@ -86,20 +185,15 @@ int net_accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
     errno = EINVAL;
     return -1;
   } else {
-    ret = lwip_accept(sockfd, (struct lwip_sockaddr*)&lwip_addr_in,
-                      &lwip_addrlen);
-    if (ret < 0) return ret;
-    // TODO: IPv6
-    if (*addrlen < sizeof(struct sockaddr_in)) {
+    struct lwip_sockaddr_storage lwip_addr;
+    lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
+    ret = lwip_accept(sockfd, (struct lwip_sockaddr*)&lwip_addr, &lwip_addrlen);
+    if (ret < 0) return ret;  // errno is propagated
+    if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_addr,
+                               lwip_addrlen, addr, addrlen) < 0) {
       errno = EINVAL;
       return -1;
     }
-    vdebug("net_accept: sin_family=%d\n", lwip_addr_in.sin_family);
-    vdebug("net_accept: sin_addr=%d\n", lwip_addr_in.sin_addr.s_addr);
-    vdebug("net_accept: sin_port=%d\n", lwip_addr_in.sin_port);
-
-    convert_sin_addr_from_lwip(&lwip_addr_in, (struct sockaddr_in*)addr);
-    *addrlen = sizeof(struct sockaddr_in);
   }
   return ret;
 }
@@ -181,47 +275,40 @@ int net_setsockopt(int sockfd, int level, int optname, const void* optval,
 }
 
 int net_getpeername(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
-  struct lwip_sockaddr_in lwip_addr_in;
-  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr_in);
+  struct lwip_sockaddr_storage lwip_addr;
+  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
 
   int ret;
   if (addr == NULL || addrlen == NULL) {
     errno = EINVAL;
     return -1;
   } else {
-    ret = lwip_getpeername(sockfd, (struct lwip_sockaddr*)&lwip_addr_in,
+    ret = lwip_getpeername(sockfd, (struct lwip_sockaddr*)&lwip_addr,
                            &lwip_addrlen);
     if (ret < 0) return ret;
-    // TODO: IPv6
-    if (*addrlen < sizeof(struct sockaddr_in)) {
+    if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_addr,
+                               lwip_addrlen, addr, addrlen) < 0) {
       errno = EINVAL;
       return -1;
     }
-    convert_sin_addr_from_lwip(&lwip_addr_in, (struct sockaddr_in*)addr);
-    *addrlen = sizeof(struct sockaddr_in);
   }
   return 0;
 }
 
 int net_getsockname(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
-  struct lwip_sockaddr_in lwip_addr_in;
-  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr_in);
+  struct lwip_sockaddr_storage lwip_addr;
+  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
 
   int ret;
   if (addr == NULL || addrlen == NULL) {
     errno = EINVAL;
     return -1;
   } else {
-    ret = lwip_getsockname(sockfd, (struct lwip_sockaddr*)&lwip_addr_in,
+    ret = lwip_getsockname(sockfd, (struct lwip_sockaddr*)&lwip_addr,
                            &lwip_addrlen);
     if (ret < 0) return ret;
-    // TODO: IPv6
-    if (*addrlen < sizeof(struct sockaddr_in)) {
-      errno = EINVAL;
-      return -1;
-    }
-    convert_sin_addr_from_lwip(&lwip_addr_in, (struct sockaddr_in*)addr);
-    *addrlen = sizeof(struct sockaddr_in);
+    convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_addr,
+                           lwip_addrlen, addr, addrlen);
   }
   return 0;
 }
@@ -276,12 +363,18 @@ int net_getaddrinfo(const char* node, const char* service,
     res->ai_addrlen = 0;
     res->ai_addr = NULL;
   } else {
-    res->ai_addrlen = sizeof(struct sockaddr_in);
-    struct sockaddr_in* sockaddr_in = malloc(sizeof(struct sockaddr_in));
-    assert(sockaddr_in);
-    convert_sin_addr_from_lwip(
-        (const struct lwip_sockaddr_in*)lwip_res->ai_addr, sockaddr_in);
-    res->ai_addr = (struct sockaddr*)sockaddr_in;
+    struct sockaddr* addr = malloc(sizeof(struct sockaddr_storage));
+    assert(addr);
+    socklen_t addrlen = sizeof(struct sockaddr_storage);
+
+    if (convert_addr_from_lwip((const struct lwip_sockaddr*)lwip_res->ai_addr,
+                               lwip_res->ai_addrlen, addr, &addrlen) < 0) {
+      free(addr);
+      errno = EINVAL;
+      return EAI_SYSTEM;
+    }
+    res->ai_addr = addr;
+    res->ai_addrlen = addrlen;
   }
   res->ai_canonname = NULL;  // TODO
   res->ai_next = NULL;       // TODO

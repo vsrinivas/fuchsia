@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,24 +13,26 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void dump_addr_in(struct sockaddr_in* addr) {
-  printf("0x%08x\n", addr->sin_addr.s_addr);
+const char* sa_to_str(const struct sockaddr* sa, char* str, size_t strlen) {
+  if (sa->sa_family == AF_INET) {
+    struct sockaddr_in* sin = (struct sockaddr_in*)sa;
+    return inet_ntop(AF_INET, &sin->sin_addr, str, strlen);
+  } else if (sa->sa_family == AF_INET6) {
+    struct sockaddr_in6* sin6 = (struct sockaddr_in6*)sa;
+    return inet_ntop(AF_INET6, &sin6->sin6_addr, str, strlen);
+  } else {
+    return NULL;
+  }
 }
 
 void dump_ai(struct addrinfo* ai) {
-  printf("family = %d", ai->ai_family);
-  printf(", socktype = %d", ai->ai_socktype);
-  printf(", flags = 0x%x", ai->ai_flags);
-  printf(", protocol = %d", ai->ai_protocol);
-  printf(", addrlen = %d", ai->ai_addrlen);
-  if (ai->ai_addr != NULL) {
-    // TODO: could be IPv6
-    printf(", addr = ");
-    dump_addr_in((struct sockaddr_in*)ai->ai_addr);
-
-  } else {
-    printf(", addr = NULL\n");
-  }
+  char str[INET6_ADDRSTRLEN];
+  printf(
+      "family %d, socktype %d, flags %d, protocol %d, addrlen %d, "
+      "addr %s\n",
+      ai->ai_family, ai->ai_socktype, ai->ai_flags, ai->ai_protocol,
+      ai->ai_addrlen,
+      ai->ai_addr ? sa_to_str(ai->ai_addr, str, sizeof(str)) : "NULL");
 }
 
 int client(const char* address, const char* service, const char* message) {
@@ -42,8 +45,6 @@ int client(const char* address, const char* service, const char* message) {
   hints.ai_flags = 0;
   hints.ai_protocol = 0;
 
-  // printf("hints: "); dump_ai(&hints);
-
   int r;
   r = getaddrinfo(address, service, &hints, &result);
   if (r != 0) {
@@ -51,10 +52,11 @@ int client(const char* address, const char* service, const char* message) {
     return -1;
   }
 
-  // int i = 0;
-  // for (rp = result; rp != NULL; rp = rp->ai_next) {
-  //     printf("[%d] ", i++); dump_ai(rp);
-  // }
+  int i = 0;
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    printf("[%d] ", i++);
+    dump_ai(rp);
+  }
 
   int s;
   for (rp = result; rp != NULL; rp = rp->ai_next) {
@@ -64,7 +66,8 @@ int client(const char* address, const char* service, const char* message) {
       continue;
     }
     if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1) {
-      printf("connected\n");
+      char str[INET6_ADDRSTRLEN];
+      printf("connected to %s\n", sa_to_str(rp->ai_addr, str, sizeof(str)));
       break;
     }
     printf("connect failed (errno = %d)\n", errno);
@@ -101,17 +104,17 @@ int server(const char* service) {
   int16_t port = atoi(service);
   printf("listen on port %d\n", port);
 
-  int s = socket(AF_INET, SOCK_STREAM, 0);
+  int s = socket(AF_INET6, SOCK_STREAM, 0);
   if (s < 0) {
     printf("socket failed (errno = %d)\n", errno);
     return -1;
   }
 
-  struct sockaddr_in addr;
+  struct sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(port);
+  addr.sin6_family = AF_INET6;
+  addr.sin6_addr = in6addr_any;  // works with IPv4
+  addr.sin6_port = htons(port);
 
   if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
     printf("bind failed (errno = %d)\n", errno);
@@ -134,8 +137,9 @@ int server(const char* service) {
       printf("accept failed (errno = %d)\n", errno);
       return -1;
     }
-    printf("connected\n");
-    dump_addr_in(&addr);
+    char str[INET6_ADDRSTRLEN];
+    printf("connected from %s\n",
+           sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
 
     int total_read = 0;
     int total_write = 0;

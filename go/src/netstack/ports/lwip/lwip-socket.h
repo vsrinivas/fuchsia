@@ -5,6 +5,9 @@
 #ifndef APPS_NETSTACK_PORTS_LWIP_LWIP_SOCKET_H_
 #define APPS_NETSTACK_PORTS_LWIP_LWIP_SOCKET_H_
 
+// The definitions here are identical to the ones in lwip/sockets.h
+// except the "lwip_" prefix.
+
 typedef uint8_t lwip_sa_family_t;
 typedef uint16_t lwip_in_port_t;
 typedef uint32_t lwip_in_addr_t;
@@ -12,6 +15,23 @@ typedef uint32_t lwip_socklen_t;
 
 struct lwip_in_addr {
   lwip_in_addr_t s_addr;
+};
+
+struct lwip_sockaddr_in {
+  uint8_t sin_len;
+  lwip_sa_family_t sin_family;
+  lwip_in_port_t sin_port;
+  struct lwip_in_addr sin_addr;
+  int8_t sin_zero[8];
+};
+
+struct lwip_sockaddr_in6 {
+  uint8_t sin6_len;
+  lwip_sa_family_t sin6_family;
+  lwip_in_port_t sin6_port;
+  uint32_t sin6_flowinfo;
+  struct in6_addr sin6_addr;
+  uint32_t sin6_scope_id;
 };
 
 struct lwip_sockaddr {
@@ -26,14 +46,6 @@ struct lwip_sockaddr_storage {
   char s2_data1[2];
   uint32_t s2_data2[3];
   uint32_t s2_data3[3];
-};
-
-struct lwip_sockaddr_in {
-  uint8_t sin_len;
-  lwip_sa_family_t sin_family;
-  lwip_in_port_t sin_port;
-  struct lwip_in_addr sin_addr;
-  int8_t sin_zero[8];
 };
 
 int lwip_socket(int domain, int type, int protocol);
