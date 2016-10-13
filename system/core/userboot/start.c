@@ -94,6 +94,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t resource_root = MX_HANDLE_INVALID;
     mx_handle_t bootfs_vmo = MX_HANDLE_INVALID;
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
+    mx_handle_t job = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
     mx_handle_t* thread_handle_loc = NULL;
     mx_handle_t* stack_vmo_handle_loc = NULL;
@@ -118,6 +119,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         case MX_HND_TYPE_RESOURCE:
             resource_root = handles[i];
             break;
+        case MX_HND_TYPE_JOB:
+            job = handles[i];
+            break;
         }
     }
     if (bootfs_vmo == MX_HANDLE_INVALID)
@@ -126,6 +130,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         fail(log, ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
     if (resource_root == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no resource handle in bootstrap message\n");
+    if (job == MX_HANDLE_INVALID)
+        fail(log, ERR_INVALID_ARGS, "no job handlke in bootstrap message\n");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
@@ -193,7 +199,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
                  "mx_handle_duplicate failed on child thread handle\n");
     }
 
-    // Now send the bootstrap message, consuming both our VMO handles.
+    // Now send the bootstrap message, consuming both our VMO handles. We also
+    // send the job handle, which in the future means that we can't create more
+    // processes from here on.
     status = mx_msgpipe_write(to_child, buffer, nbytes, handles, nhandles, 0);
     check(log, status, "mx_msgpipe_write to child failed\n");
     status = mx_handle_close(to_child);

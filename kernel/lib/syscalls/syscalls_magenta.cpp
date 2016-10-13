@@ -32,6 +32,7 @@
 #include <magenta/event_dispatcher.h>
 #include <magenta/event_pair_dispatcher.h>
 #include <magenta/io_port_dispatcher.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
@@ -213,7 +214,7 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
                 return ERR_BUFFER_TOO_SMALL;
 
             // Getting the list of threads is inherently racy (unless the
-            // caller has already stopped all threads, but that's not our 
+            // caller has already stopped all threads, but that's not our
             // concern). Still, we promise to either return all threads we know
             // about at a particular point in time, or notify the caller that
             // more threads exist than what we computed at that same point in
@@ -1122,4 +1123,29 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     return flags == MX_SOCKET_CONTROL?
         socket->OOB_Read(_buffer.get(), size, true) :
         socket->Read(_buffer.get(), size, true);
+}
+
+mx_handle_t sys_job_create(mx_handle_t parent_job, uint32_t flags) {
+    LTRACEF("parent: %d\n", parent_job);
+
+    if (flags != 0u)
+        return ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<JobDispatcher> parent;
+    mx_status_t status = up->GetDispatcher(parent_job, &parent, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    mxtl::RefPtr<Dispatcher> job;
+    mx_rights_t rights;
+    status = JobDispatcher::Create(flags, mxtl::move(parent), &job, &rights);
+    if (status != NO_ERROR)
+        return status;
+
+    HandleUniquePtr job_handle(MakeHandle(mxtl::move(job), rights));
+    mx_handle_t hv = up->MapHandleToValue(job_handle.get());
+    up->AddHandle(mxtl::move(job_handle));
+    return hv;
 }

@@ -84,6 +84,11 @@ struct mx_proc_args {
 // The "arg" field used with this type is a simple ordinal.
 #define MX_HND_TYPE_BOOTFS_VMO 5
 
+// Handle to a Job object which can be used to make child processes. The
+// Job can be the same as the one used to create this process or it can
+// be different.
+#define MX_HND_TYPE_JOB 6
+
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10
 #define MX_HND_TYPE_MXIO_REMOTE 0x11

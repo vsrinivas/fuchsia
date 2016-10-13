@@ -22,6 +22,7 @@
 #define VC_COUNT 3
 
 static mx_handle_t root_resource_handle;
+static mx_handle_t root_job_handle;
 
 static mx_handle_t mojo_launcher_child;
 mx_handle_t mojo_launcher;
@@ -178,6 +179,7 @@ int main(int argc, char** argv) {
     devmgr_io_init();
 
     root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
+    root_job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
 
     printf("devmgr: main()\n");
 
@@ -199,6 +201,11 @@ int main(int argc, char** argv) {
     // from the linker in the log
     putenv(strdup("LD_DEBUG=1"));
 #endif
+
+    mx_handle_t job = mx_job_create(root_job_handle, 0u);
+    if (job < 0) {
+        printf("unable to create child jobs\n");
+    }
 
     start_console_shell();
 

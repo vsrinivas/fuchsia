@@ -18,6 +18,7 @@ void DumpProcessListKeyMap() {
     printf("-s  : state: R = running D = dead\n");
     printf("#t  : number of threads\n");
     printf("#h  : total number of handles\n");
+    printf("#jb : number of job handles\n");
     printf("#pr : number of process handles\n");
     printf("#th : number of thread handles\n");
     printf("#vm : number of vm map handles\n");
@@ -91,8 +92,9 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
+             types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
              types[MX_OBJ_TYPE_THREAD],
              types[MX_OBJ_TYPE_VMEM],
@@ -108,10 +110,10 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #h:  #pr #th #vm #mp #ev #ip #dp #it #io[name]\n", "id");
+    printf("%8s-s  #t  #h:  #jb #pr #th #vm #mp #ev #ip #dp [name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
-        printf("%8" PRIu64 "-%c %3u %s [%s]\n",
+        printf("%8" PRIu64 "-%c %3u %s  [%s]\n",
                process.get_koid(),
                StateChar(process),
                process.ThreadCount(),

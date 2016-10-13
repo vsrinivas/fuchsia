@@ -17,6 +17,8 @@
 #include <string.h>
 #include <trace.h>
 
+#include <magenta/job_dispatcher.h>
+#include <magenta/magenta.h>
 #include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
@@ -54,6 +56,17 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
             rights &= ~MX_RIGHT_WRITE;
         if (ptr)
             *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
+    }
+    return result;
+}
+
+static mx_status_t get_job_handle(HandleUniquePtr* ptr) {
+    mx_rights_t rights;
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_status_t result = JobDispatcher::Create(
+        0u, GetRootJobDispatcher(), &dispatcher, &rights);
+    if (result == NO_ERROR) {
+        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
     }
     return result;
 }
@@ -181,6 +194,7 @@ enum bootstrap_handle_index {
     BOOTSTRAP_STACK,
     BOOTSTRAP_PROC,
     BOOTSTRAP_THREAD,
+    BOOTSTRAP_JOB,
     BOOTSTRAP_HANDLES
 };
 
@@ -213,14 +227,17 @@ static uint32_t prepare_bootstrap_msg(struct bootstrap_message* msg) {
         case BOOTSTRAP_RESOURCE_ROOT:
             info = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
             break;
+        case BOOTSTRAP_STACK:
+            info = MX_HND_INFO(MX_HND_TYPE_STACK_VMO, 0);
+            break;
         case BOOTSTRAP_PROC:
             info = MX_HND_INFO(MX_HND_TYPE_PROC_SELF, 0);
             break;
         case BOOTSTRAP_THREAD:
             info = MX_HND_INFO(MX_HND_TYPE_THREAD_SELF, 0);
             break;
-        case BOOTSTRAP_STACK:
-            info = MX_HND_INFO(MX_HND_TYPE_STACK_VMO, 0);
+        case BOOTSTRAP_JOB:
+            info = MX_HND_INFO(MX_HND_TYPE_JOB, 0);
             break;
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();
@@ -267,6 +284,10 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
                                 &handles[BOOTSTRAP_STACK]);
     if (status == NO_ERROR)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
+
+    if (status == NO_ERROR)
+        status = get_job_handle(&handles[BOOTSTRAP_JOB]);
+
     if (status != NO_ERROR)
         return status;
 
