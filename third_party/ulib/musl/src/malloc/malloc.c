@@ -37,7 +37,7 @@ static struct {
 #define DONTCARE 16
 #define RECLAIM 163840
 
-#define FREE_FILL 0x77
+#define FREE_FILL 0x79
 
 #define BIN_TO_CHUNK(i) (MEM_TO_CHUNK(&mal.bins[i].head))
 
