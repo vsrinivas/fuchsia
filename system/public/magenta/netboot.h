@@ -55,7 +55,7 @@ void netboot_close(void);
 
 // Ask for a buffer suitable to put the file /name/ in
 // Return NULL to indicate /name/ is not wanted.
-nbfile* netboot_get_buffer(const char* name);
+nbfile* netboot_get_buffer(const char* name, size_t size);
 
 #define DEBUGLOG_PORT         33337
 #define DEBUGLOG_ACK_PORT     33338

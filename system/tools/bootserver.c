@@ -23,6 +23,7 @@
 
 static uint32_t cookie = 1;
 static char* appname;
+static const char spinner[] = {'|', '/', '-', '\\'};
 
 static int io(int s, nbmsg* msg, size_t len, nbmsg* ack) {
     int retries = 5;
@@ -42,6 +43,7 @@ static int io(int s, nbmsg* msg, size_t len, nbmsg* ack) {
         }
     again:
         r = read(s, ack, 2048);
+
         if (r < 0) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 retries--;
@@ -56,24 +58,44 @@ static int io(int s, nbmsg* msg, size_t len, nbmsg* ack) {
             return -1;
         }
         if (r < sizeof(nbmsg)) {
-            fprintf(stderr, "Z");
+            fprintf(stderr, "\n%s: Read too short\n", appname);
             goto again;
         }
         if (ack->magic != NB_MAGIC) {
-            fprintf(stderr, "?");
+            fprintf(stderr, "\n%s: Bad magic\n", appname);
             goto again;
         }
         if (ack->cookie != msg->cookie) {
-            fprintf(stderr, "C");
+            fprintf(stderr, "\n%s: Bad cookie\n", appname);
             goto again;
         }
         if (ack->arg != msg->arg) {
-            fprintf(stderr, "A");
+            fprintf(stderr, "\n%s: Argument mismatch\n", appname);
             goto again;
         }
         if (ack->cmd == NB_ACK)
             return 0;
-        fprintf(stderr, "?");
+
+        switch (ack->cmd) {
+        case NB_ERROR:
+            fprintf(stderr, "\n%s: Generic error\n", appname);
+            return -1;
+        case NB_ERROR_BAD_CMD:
+            fprintf(stderr, "\n%s: Bad command\n", appname);
+            return -1;
+        case NB_ERROR_BAD_PARAM:
+            fprintf(stderr, "\n%s: Bad parameter\n", appname);
+            return -1;
+        case NB_ERROR_TOO_LARGE:
+            fprintf(stderr, "\n%s: File too large\n", appname);
+            return -1;
+        case NB_ERROR_BAD_FILE:
+            fprintf(stderr, "\n%s: Bad file\n", appname);
+            return -1;
+        default:
+            fprintf(stderr, "\n%s: Unknown command 0x%08X\n", appname, ack->cmd);
+        }
+
         goto again;
     }
 }
@@ -102,6 +124,11 @@ static ssize_t xread(xferdata *xd, void* data, size_t len) {
     }
 }
 
+// UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
+//      1452           1514   -     14      -     40      -    8
+// nbfile is PAYLOAD_SIZE + 2 * sizeof(size_t)
+#define PAYLOAD_SIZE 1436
+
 static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool boot) {
     xferdata xd;
     char msgbuf[2048];
@@ -112,8 +139,11 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
     int s, r;
-    int count = 0;
+    int count = 0, spin = 0;
     int status = -1;
+
+    // This only works on POSIX systems
+    bool is_redirected = !isatty(fileno(stdout));
 
     if (!strcmp(fn, "(cmdline)")) {
         xd.fp = NULL;
@@ -124,6 +154,18 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         fprintf(stderr, "%s: could not open file %s\n", appname, fn);
         return -1;
     }
+
+    long sz = 0;
+    if (fseek(xd.fp, 0L, SEEK_END)) {
+        fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+    } else if ((sz = ftell(xd.fp)) < 0) {
+        fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+        sz = 0;
+    } else if (fseek(xd.fp, 0L, SEEK_SET)) {
+        fprintf(stderr, "%s: failed to rewind %s\n", appname, fn);
+        return -1;
+    }
+
     if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
         fprintf(stderr, "%s: cannot create socket %d\n", appname, errno);
         goto done;
@@ -141,7 +183,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     }
 
     msg->cmd = NB_SEND_FILE;
-    msg->arg = 0;
+    msg->arg = sz;
     strcpy((void*)msg->data, name);
     if (io(s, msg, sizeof(nbmsg) + strlen(name) + 1, ack)) {
         fprintf(stderr, "%s: failed to start transfer\n", appname);
@@ -150,24 +192,45 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
 
     msg->cmd = NB_DATA;
     msg->arg = 0;
-    char* nl = "";
+
     do {
-        r = xread(&xd, msg->data, 1024);
+        r = xread(&xd, msg->data, PAYLOAD_SIZE);
         if (r < 0) {
-            fprintf(stderr, "%s%s: error: reading '%s'\n", nl, appname, fn);
+            fprintf(stderr, "\n%s: error: reading '%s'\n", appname, fn);
             goto done;
         }
         if (r == 0) {
             break;
         }
-        count += r;
-        if (count >= (32 * 1024)) {
-            count = 0;
-            fprintf(stderr, "#");
-            nl = "\n";
+
+        if (is_redirected) {
+            if (count++ > 8 * 1024) {
+                fprintf(stderr, "%.01f%%\n", 100.0 * (float)msg->arg / (float)sz);
+                count = 0;
+            }
+        } else {
+            if (count++ > 1024) {
+                count = 0;
+                gettimeofday(&end, NULL);
+                if (end.tv_usec < begin.tv_usec) {
+                    end.tv_sec -= 1;
+                    end.tv_usec += 1000000;
+                }
+                float bw = 0;
+                if (end.tv_sec > begin.tv_sec) {
+                    bw = (float)msg->arg / (1024.0 * 1024.0 * (float)(end.tv_sec - begin.tv_sec));
+                }
+                fprintf(stderr, "\33[2K\r");
+                if (sz > 0) {
+                    fprintf(stderr, "%c %.01f%% %.01fMB/s", spinner[(spin++) % 4], 100.0 * (float)msg->arg / (float)sz, bw);
+                } else {
+                    fprintf(stderr, "%c %.01fMB/s", spinner[(spin++) % 4], bw);
+                }
+            }
         }
+
         if (io(s, msg, sizeof(nbmsg) + r, ack)) {
-            fprintf(stderr, "%s%s: error: sending '%s'\n", nl, appname, fn);
+            fprintf(stderr, "\n%s: error: sending '%s'\n", appname, fn);
             goto done;
         }
         msg->arg += r;
@@ -179,12 +242,12 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         msg->cmd = NB_BOOT;
         msg->arg = 0;
         if (io(s, msg, sizeof(nbmsg), ack)) {
-            fprintf(stderr, "%s%s: failed to send boot command\n", nl, appname);
+            fprintf(stderr, "\n%s: failed to send boot command\n", appname);
         } else {
-            fprintf(stderr, "%s%s: sent boot command\n", nl, appname);
+            fprintf(stderr, "\n%s: sent boot command\n", appname);
         }
     } else {
-        fprintf(stderr, "%s", nl);
+        fprintf(stderr, "\n");
     }
 done:
     gettimeofday(&end, NULL);

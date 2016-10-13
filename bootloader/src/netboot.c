@@ -66,9 +66,10 @@ void udp6_recv(void* data, size_t len,
                 msg->data[i] = '.';
             }
         }
-        item = netboot_get_buffer((const char*) msg->data);
+        item = netboot_get_buffer((const char*)msg->data, msg->arg);
         if (item) {
             item->offset = 0;
+            ack.arg = msg->arg;
             printf("netboot: Receive File '%s'...\n", (char*) msg->data);
         } else {
             printf("netboot: Rejected File '%s'...\n", (char*) msg->data);

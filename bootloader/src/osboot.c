@@ -6,10 +6,10 @@
 #include <string.h>
 
 #include <efi/boot-services.h>
-#include <efi/system-table.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/graphics-output.h>
 #include <efi/protocol/simple-text-input.h>
+#include <efi/system-table.h>
 
 #include <cmdline.h>
 #include <framebuffer.h>
@@ -21,7 +21,7 @@
 #define DEFAULT_TIMEOUT 3
 
 #define KBUFSIZE (32*1024*1024)
-#define RBUFSIZE (256*1024*1024)
+#define RBUFSIZE (512 * 1024 * 1024)
 
 static char cmdextra[256];
 
@@ -29,16 +29,42 @@ static nbfile nbkernel;
 static nbfile nbramdisk;
 static nbfile nbcmdline;
 
-nbfile* netboot_get_buffer(const char* name) {
+nbfile* netboot_get_buffer(const char* name, size_t size) {
     // we know these are in a buffer large enough
     // that this is safe (todo: implement strcmp)
     if (!memcmp(name, "kernel.bin", 11)) {
         return &nbkernel;
     }
-    if (!memcmp(name, "ramdisk.bin", 11)) {
+    if (!memcmp(name, "ramdisk.bin", 12)) {
+        efi_physical_addr mem = 0xFFFFFFFF;
+        size_t buf_size = size > 0 ? (size + 4095) & ~4095 : RBUFSIZE;
+
+        if (nbramdisk.size > 0) {
+            if (nbramdisk.size < buf_size) {
+                mem = (efi_physical_addr)nbramdisk.data;
+                nbramdisk.data = 0;
+                if (gBS->FreePages(mem, nbramdisk.size / 4096)) {
+                    printf("Could not free previous ramdisk allocation\n");
+                    nbramdisk.size = 0;
+                    return NULL;
+                }
+                nbramdisk.size = 0;
+            } else {
+                return &nbramdisk;
+            }
+        }
+
+        printf("netboot: allocating %ld for ramdisk (requested %ld)\n", buf_size, size);
+        if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, buf_size / 4096, &mem)) {
+            printf("Failed to allocate network io buffer\n");
+            return NULL;
+        }
+        nbramdisk.data = (void*)mem;
+        nbramdisk.size = buf_size;
+
         return &nbramdisk;
     }
-    if (!memcmp(name, "cmdline", 7)) {
+    if (!memcmp(name, "cmdline", 8)) {
         return &nbcmdline;
     }
     return NULL;
@@ -148,13 +174,9 @@ void do_netboot(efi_handle img, efi_system_table* sys) {
     nbkernel.data = (void*) mem;
     nbkernel.size = KBUFSIZE;
 
-    mem = 0xFFFFFFFF;
-    if (bs->AllocatePages(AllocateMaxAddress, EfiLoaderData, RBUFSIZE / 4096, &mem)) {
-        printf("Failed to allocate network io buffer\n");
-        return;
-    }
-    nbramdisk.data = (void*) mem;
-    nbramdisk.size = RBUFSIZE;
+    // ramdisk is dynamically allocated now
+    nbramdisk.data = 0;
+    nbramdisk.size = 0;
 
     nbcmdline.data = (void*) cmdline;
     nbcmdline.size = sizeof(cmdline) - 1;
