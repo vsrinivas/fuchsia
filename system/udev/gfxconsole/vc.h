@@ -102,7 +102,6 @@ void vc_device_free(vc_device_t* dev);
 
 mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
-void vc_get_topic_line(char* str, int n);
 
 void vc_device_write_status(vc_device_t* dev);
 void vc_device_render(vc_device_t* dev);

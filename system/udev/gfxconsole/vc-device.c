@@ -221,28 +221,26 @@ static void vc_device_reset(vc_device_t* dev) {
     vc_gfx_invalidate_all(dev);
 }
 
-static void vc_write_line(vc_device_t* dev, const char* line, unsigned char_x, unsigned char_y) {
+void vc_device_write_status(vc_device_t* dev) {
     static enum { NORMAL,
                   ESCAPE } state = NORMAL;
-
-    if (char_x >= dev->columns || char_y >= dev->rows)
-        return;
-
     int fg = 7;
     int bg = 0;
-    char c;
+    char c, str[512];
     int idx = 0;
     int p_num = 0;
-
-    for (unsigned i = 0; i < MIN(dev->columns - char_x, strlen(line)); i++) {
-        c = line[i];
+    vc_get_status_line(str, sizeof(str));
+    // TODO clean this up with textcon stuff
+    gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, bg));
+    for (unsigned i = 0; i < MIN(dev->columns, strlen(str)); i++) {
+        c = str[i];
         if (state == NORMAL) {
             if (c == 0x1b) {
                 state = ESCAPE;
                 p_num = 0;
             } else {
-                gfx_putchar(dev->st_gfx, dev->font, c, (char_x + idx++) * dev->charw,
-                            char_y * dev->charh, palette_to_color(dev, fg), palette_to_color(dev, bg));
+                gfx_putchar(dev->st_gfx, dev->font, c, idx++ * dev->charw, 0,
+                            palette_to_color(dev, fg), palette_to_color(dev, bg));
             }
         } else if (state == ESCAPE) {
             if (c >= '0' && c <= '9') {
@@ -264,17 +262,6 @@ static void vc_write_line(vc_device_t* dev, const char* line, unsigned char_x, u
             }
         }
     }
-}
-
-void vc_device_write_status(vc_device_t* dev) {
-    char str[512];
-    // TODO clean this up with textcon stuff
-    gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, 0));
-    vc_get_topic_line(str, sizeof(str));
-    vc_write_line(dev, str, 0, 0);
-    vc_get_status_line(str, sizeof(str));
-    vc_write_line(dev, str, 0, 1);
-
     gfx_flush(dev->st_gfx);
 }
 
@@ -357,7 +344,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     device->charh = device->font->height;
 
     // init the status bar
-    device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, 2 * device->charh, hw_gfx->stride, hw_gfx->format, 0);
+    device->st_gfx = gfx_create_surface(NULL, hw_gfx->width, device->charh, hw_gfx->stride, hw_gfx->format, 0);
     if (!device->st_gfx)
         goto fail;
 

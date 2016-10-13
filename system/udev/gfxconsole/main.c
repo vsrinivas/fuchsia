@@ -397,16 +397,9 @@ void vc_get_status_line(char* str, int n) {
                              lines > 0 && -device->vpy < lines ? '<' : ' ',
                              device->vpy < 0 ? '>' : ' ');
         ptr += chars;
-        n -= chars;
         i++;
     }
     mtx_unlock(&vc_lock);
-}
-
-void vc_get_topic_line(char* str, int n) {
-    snprintf(str, n,
-             "Alt-{Tab,F$(n)} cycles/selects vc"
-             " || indicators: *: new input, <: has scrollback, >: scrolled");
 }
 
 // implement device protocol:
@@ -838,9 +831,6 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
             dev->name, info.width, info.height, info.stride, info.format);
 
     if (vc_root_open(NULL, &dev, 0) == NO_ERROR) {
-        const char title[] = "\e]2;log\a";
-        vc_device_write(dev, title, sizeof(title), 0);
-
         thrd_t t;
         thrd_create_with_name(&t, vc_log_reader_thread, dev, "vc-log-reader");
     }
