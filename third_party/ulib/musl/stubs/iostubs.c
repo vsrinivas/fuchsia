@@ -188,6 +188,12 @@ static struct dirent* stub_readdir(DIR* dir) {
 }
 weak_alias(stub_readdir, readdir);
 
+static int stub_readdir_r(DIR* dir, struct dirent* entry, struct dirent** result) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_readdir_r, readdir_r);
+
 static int stub_access(const char* path, int mode) {
     errno = ENOSYS;
     return -1;
