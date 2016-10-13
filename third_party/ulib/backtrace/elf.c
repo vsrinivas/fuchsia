@@ -512,12 +512,13 @@ elf_syminfo (struct backtrace_state *state, uintptr_t addr,
 
 /* Add the backtrace data for one ELF file.  Returns 1 on success,
    0 on failure (in both cases descriptor is closed) or -1 if exe
-   is non-zero and the ELF file is ET_DYN, which tells the caller that
-   elf_add will need to be called on the descriptor again after
-   base_address is determined.  */
+   is non-zero and the ELF file is ET_DYN and !BASE_ADDRESS_SET,
+   which tells the caller that elf_add will need to be called on the
+   descriptor again after base_address is determined.  */
 
 static int
-elf_add (struct backtrace_state *state, int descriptor, uintptr_t base_address,
+elf_add (struct backtrace_state *state, int descriptor,
+	 uintptr_t base_address, int base_address_set,
 	 backtrace_error_callback error_callback, void *data,
 	 fileline *fileline_fn, int *found_sym, int *found_dwarf, int exe)
 {
@@ -599,9 +600,10 @@ elf_add (struct backtrace_state *state, int descriptor, uintptr_t base_address,
     }
 
   /* If the executable is ET_DYN, it is either a PIE, or we are running
-     directly a shared library with .interp.  We need to wait for
-     dl_iterate_phdr in that case to determine the actual base_address.  */
-  if (exe && ehdr.e_type == ET_DYN)
+     directly a shared library with .interp.  If we don't know the base
+     address yet then we need to wait for dl_iterate_phdr (or equivalent)
+     to determine the actual base_address.  */
+  if (exe && ehdr.e_type == ET_DYN && !base_address_set)
     return -1;
 
   shoff = ehdr.e_shoff;
@@ -900,7 +902,7 @@ phdr_callback (const char *name, uintptr_t addr, void *pdata)
 	return 0;
     }
 
-  if (elf_add (pd->state, descriptor, addr, pd->error_callback,
+  if (elf_add (pd->state, descriptor, addr, 1, pd->error_callback,
 	       pd->data, &elf_fileline_fn, pd->found_sym, &found_dwarf, 0))
     {
       if (found_dwarf)
@@ -955,7 +957,9 @@ backtrace_initialize (struct backtrace_state *state, int descriptor,
   fileline elf_fileline_fn = elf_nodebug;
   struct phdr_data pd;
 
-  ret = elf_add (state, descriptor, 0, error_callback, data, &elf_fileline_fn,
+  ret = elf_add (state, descriptor,
+		 state->base_address, state->base_address_set,
+		 error_callback, data, &elf_fileline_fn,
 		 &found_sym, &found_dwarf, 1);
   if (!ret)
     return 0;

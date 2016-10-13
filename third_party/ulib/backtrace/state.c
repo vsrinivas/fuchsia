@@ -96,3 +96,10 @@ backtrace_set_so_iterator (struct backtrace_state *state,
   state->so_iterator = func;
   state->iter_state = iter_state;
 }
+
+void
+backtrace_set_base_address (struct backtrace_state *state, uintptr_t base)
+{
+    state->base_address = base;
+    state->base_address_set = 1;
+}

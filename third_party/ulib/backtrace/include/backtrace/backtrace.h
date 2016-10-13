@@ -108,6 +108,12 @@ extern void backtrace_set_so_iterator (struct backtrace_state *state,
                                        backtrace_so_iterator *func,
                                        void *iter_state);
 
+/* Set the base address of the file FILENAME passed to
+   backtrace_create_state.  */
+
+extern void backtrace_set_base_address (struct backtrace_state *state,
+                                        uintptr_t base);
+
 /* The type of the callback argument to the backtrace_full function.
    DATA is the argument passed to backtrace_full.  PC is the program
    counter.  FILENAME is the name of the file containing PC, or NULL

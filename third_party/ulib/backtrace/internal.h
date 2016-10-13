@@ -153,6 +153,12 @@ struct backtrace_state
   backtrace_so_iterator *so_iterator;
   /* The ITER_STATE argument to SO_ITERATOR.  */
   void *iter_state;
+  /* The base address of FILENAME.
+     This is for PIE executables and shared libraries where the caller already
+     knows it.  */
+  uintptr_t base_address;
+  /* Non-zero if BASE_ADDRESS has been set.  */
+  int base_address_set;
 };
 
 /* Open a file for reading.  Returns -1 on error.  If DOES_NOT_EXIST
