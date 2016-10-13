@@ -6,37 +6,32 @@
 
 #include <map>
 
-// TODO: Consider defining MeshSpec without using Vulkan types.
-#include <vulkan/vulkan.hpp>
-
 #include "escher/forward_declarations.h"
-#include "ftl/memory/ref_counted.h"
+#include "escher/impl/resource.h"
+#include "escher/shape/mesh_spec.h"
 
 namespace escher {
 
-struct MeshSpec {
-  vk::VertexInputBindingDescription binding;
-  std::vector<vk::VertexInputAttributeDescription> attributes;
-  std::vector<std::string> attribute_names;
-
-  uint32_t GetVertexStride() const { return binding.stride; }
-  uint32_t GetVertexBinding() const { return binding.binding; }
-};
-
 // Immutable container for vertex indices and attribute data required to render
 // a triangle mesh.
-class Mesh : public ftl::RefCountedThreadSafe<Mesh> {
+class Mesh : public impl::Resource {
  public:
   const MeshSpec spec;
   const uint32_t num_vertices;
   const uint32_t num_indices;
 
+ protected:
+  FRIEND_REF_COUNTED_THREAD_SAFE(Mesh);
+  virtual ~Mesh();
+
  private:
   friend class escher::impl::MeshImpl;
-  Mesh(MeshSpec spec, uint32_t num_vertices, uint32_t num_indices);
-  virtual ~Mesh() {}
+  Mesh(impl::EscherImpl* escher,
+       MeshSpec spec,
+       uint32_t num_vertices,
+       uint32_t num_indices);
 
-  FRIEND_REF_COUNTED_THREAD_SAFE(Mesh);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Mesh);
 };
 
 typedef ftl::RefPtr<Mesh> MeshPtr;

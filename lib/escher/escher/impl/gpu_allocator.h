@@ -7,36 +7,10 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/vk/vulkan_context.h"
+#include "escher/impl/gpu_mem.h"
 
 namespace escher {
 namespace impl {
-
-class GpuAllocator;
-
-// Memory allocated by GpuAllocator.
-class GpuMem {
- public:
-  // Called by GpuAllocator::Allocate().
-  GpuMem(vk::DeviceMemory base,
-         vk::DeviceSize offset,
-         vk::DeviceSize size,
-         uint32_t memory_type_index,
-         GpuAllocator* allocator);
-  GpuMem(GpuMem&& other);
-  ~GpuMem();
-
-  vk::DeviceMemory base() const { return base_; }
-  vk::DeviceSize offset() const { return offset_; }
-  vk::DeviceSize size() const { return size_; }
-  uint32_t memory_type_index() const { return memory_type_index_; }
-
- private:
-  vk::DeviceMemory base_;
-  vk::DeviceSize offset_;
-  vk::DeviceSize size_;
-  uint32_t memory_type_index_;
-  GpuAllocator* allocator_;
-};
 
 // Vulkan does not support large numbers of memory allocations.  Instead,
 // applications are expected to allocate larger chunks of memory, and do their
@@ -61,6 +35,8 @@ class GpuAllocator {
   vk::PhysicalDevice physical_device_;
   vk::Device device_;
   vk::DeviceSize num_bytes_allocated_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GpuAllocator);
 };
 
 }  // namespace impl

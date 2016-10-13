@@ -8,7 +8,8 @@ namespace escher {
 
 Object::Object(const Shape& shape, const Material* material)
     : shape_(shape), material_(material) {
-  FTL_DCHECK(material);
+  // TODO: add support for materials.
+  FTL_DCHECK(!material);
 }
 
 Object::~Object() {}

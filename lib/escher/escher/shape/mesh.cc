@@ -6,9 +6,15 @@
 
 namespace escher {
 
-Mesh::Mesh(MeshSpec spec, uint32_t num_vertices, uint32_t num_indices)
-    : spec(std::move(spec)),
+Mesh::Mesh(impl::EscherImpl* escher,
+           MeshSpec spec,
+           uint32_t num_vertices,
+           uint32_t num_indices)
+    : Resource(escher),
+      spec(std::move(spec)),
       num_vertices(num_vertices),
       num_indices(num_indices) {}
+
+Mesh::~Mesh() {}
 
 }  // namespace escher

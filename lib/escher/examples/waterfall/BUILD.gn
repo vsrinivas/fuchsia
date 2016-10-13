@@ -41,6 +41,7 @@ if (is_linux) {
     include_dirs = [
       "//lib",
       "//lib/escher",
+      "//third_party/glm",
       "$vulkan_sdk/include",
       "third_party/glfw/include",
     ]

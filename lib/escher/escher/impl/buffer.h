@@ -24,7 +24,7 @@ class Buffer {
   vk::DeviceSize GetSize() const { return mem_.size(); }
   vk::Buffer buffer() const { return buffer_; }
 
-  void* Map();
+  uint8_t* Map();
   void Unmap();
 
  private:

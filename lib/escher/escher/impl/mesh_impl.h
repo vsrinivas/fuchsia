@@ -11,6 +11,11 @@ namespace escher {
 namespace impl {
 class MeshManager;
 
+struct MeshSpecImpl {
+  vk::VertexInputBindingDescription binding;
+  std::vector<vk::VertexInputAttributeDescription> attributes;
+};
+
 class MeshImpl : public Mesh {
  public:
   MeshImpl(MeshSpec spec,
@@ -19,20 +24,23 @@ class MeshImpl : public Mesh {
            MeshManager* manager,
            Buffer vertex_buffer,
            Buffer index_buffer,
-           vk::Semaphore mesh_ready_semaphore);
+           const MeshSpecImpl& spec_impl);
   ~MeshImpl();
 
-  // Bind the Mesh's vertex/index buffers and issue a drawIndexed() command.
-  // If the mesh contents depend on some previously submitted command-buffer,
-  // return a semaphore that should be waited upon (otherwise return nullptr).
-  vk::Semaphore Draw(vk::CommandBuffer command_buffer, uint64_t frame_number);
+  vk::Buffer vertex_buffer() const { return vertex_buffer_.buffer(); }
+  vk::Buffer index_buffer() const { return index_buffer_.buffer(); }
+
+  // TODO: in the future, some or all of these may not be zero.
+  vk::DeviceSize index_buffer_offset() const { return 0; }
+  vk::DeviceSize vertex_buffer_offset() const { return 0; }
+
+  uint32_t vertex_buffer_binding() const { return spec_impl_.binding.binding; }
 
  private:
   MeshManager* manager_;
   Buffer vertex_buffer_;
   Buffer index_buffer_;
-  vk::Semaphore mesh_ready_semaphore_;
-  uint64_t last_rendered_frame_ = 0;
+  const MeshSpecImpl& spec_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MeshImpl);
 };

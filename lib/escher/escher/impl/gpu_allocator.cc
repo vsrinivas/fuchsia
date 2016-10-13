@@ -9,39 +9,6 @@
 namespace escher {
 namespace impl {
 
-GpuMem::GpuMem(vk::DeviceMemory base,
-               vk::DeviceSize offset,
-               vk::DeviceSize size,
-               uint32_t memory_type_index,
-               GpuAllocator* allocator)
-    : base_(base),
-      offset_(offset),
-      size_(size),
-      memory_type_index_(memory_type_index),
-      allocator_(allocator) {}
-
-GpuMem::GpuMem(GpuMem&& other)
-    : base_(other.base_),
-      offset_(other.offset_),
-      size_(other.size_),
-      memory_type_index_(other.memory_type_index_),
-      allocator_(other.allocator_) {
-  other.base_ = 0;
-  other.offset_ = 0;
-  other.size_ = 0;
-  other.memory_type_index_ = UINT32_MAX;
-  other.allocator_ = nullptr;
-}
-
-GpuMem::~GpuMem() {
-  // If this object has been moved, then destruction is a no-op.
-  if (allocator_) {
-    GpuAllocator* saved = allocator_;
-    allocator_ = nullptr;
-    saved->Free(std::move(*this));
-  }
-}
-
 GpuAllocator::GpuAllocator(const VulkanContext& context)
     : physical_device_(context.physical_device), device_(context.device) {}
 

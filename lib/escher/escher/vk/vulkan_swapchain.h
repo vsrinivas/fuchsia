@@ -7,17 +7,21 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
+#include "escher/forward_declarations.h"
+#include "escher/renderer/image.h"
+
 namespace escher {
 
 struct VulkanSwapchain {
   vk::SwapchainKHR swapchain;
-  std::vector<vk::Image> images;
+  std::vector<ImagePtr> images;
+  // TODO: remove image_views when no longer needed
   std::vector<vk::ImageView> image_views;
   uint32_t width;
   uint32_t height;
 
   VulkanSwapchain(vk::SwapchainKHR swapchain_in,
-                  std::vector<vk::Image> images_in,
+                  std::vector<ImagePtr> images_in,
                   std::vector<vk::ImageView> image_views_in,
                   uint32_t width_in,
                   uint32_t height_in)

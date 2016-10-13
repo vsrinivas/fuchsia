@@ -21,15 +21,11 @@ class Escher {
   Escher(const VulkanContext& context, const VulkanSwapchain& swapchain);
   ~Escher();
 
-  // Render a frame.
-  Status Render(const Stage& stage, const Model& model);
-
-  // Notify Escher that the swapchain has changed.
-  void SetSwapchain(const VulkanSwapchain& swapchain);
-
   MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
                                 size_t max_vertex_count,
                                 size_t max_index_count);
+
+  PaperRendererPtr NewPaperRenderer();
 
  private:
   std::unique_ptr<impl::EscherImpl> impl_;

@@ -68,16 +68,23 @@ Buffer::~Buffer() {
   }
 }
 
-void* Buffer::Map() {
+uint8_t* Buffer::Map() {
   if (!mapped_) {
     mapped_ = ESCHER_CHECKED_VK_RESULT(
         device_.mapMemory(mem_.base(), mem_.offset(), mem_.size()));
   }
-  return mapped_;
+  return reinterpret_cast<uint8_t*>(mapped_);
 }
 
 void Buffer::Unmap() {
   if (mapped_) {
+    // TODO: only flush if the coherent bit isn't set.
+    vk::MappedMemoryRange range;
+    range.memory = mem_.base();
+    range.offset = mem_.offset();
+    range.size = mem_.size();
+    device_.flushMappedMemoryRanges(1, &range);
+
     device_.unmapMemory(mem_.base());
     mapped_ = nullptr;
   }

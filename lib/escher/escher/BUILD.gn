@@ -7,13 +7,15 @@ import("//lib/escher/vulkan.gni")
 config("thread_safety_warning") {
   cflags = [
     "-Wthread-safety",
-    "-fcolor-diagnostics"
+    "-fcolor-diagnostics",
   ]
 }
 
 static_library("escher") {
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
   deps = [ "//lib/ftl" ]
+
   sources = [
     "escher.cc",
     "escher.h",
@@ -36,21 +38,43 @@ static_library("escher") {
     "impl/glsl_compiler.h",
     "impl/gpu_allocator.cc",
     "impl/gpu_allocator.h",
+    "impl/gpu_mem.cc",
+    "impl/gpu_mem.h",
     "impl/image_cache.cc",
     "impl/image_cache.h",
     "impl/mesh_impl.cc",
     "impl/mesh_impl.h",
     "impl/mesh_manager.cc",
     "impl/mesh_manager.h",
-    "impl/render_context.cc",
-    "impl/render_context.h",
-    "impl/swapchain_manager.cc",
-    "impl/swapchain_manager.h",
-    "impl/temp_frame_renderer.cc",
-    "impl/temp_frame_renderer.h",
+    "impl/model_data.cc",
+    "impl/model_data.h",
+    "impl/model_renderer.cc",
+    "impl/model_renderer.h",
+    "impl/model_uniform_writer.cc",
+    "impl/model_uniform_writer.h",
+    "impl/pipeline.cc",
+    "impl/pipeline.h",
+    "impl/pipeline_cache.cc",
+    "impl/pipeline_cache.h",
+    "impl/render_frame.cc",
+    "impl/render_frame.h",
+    "impl/render_pass_manager.cc",
+    "impl/render_pass_manager.h",
+    "impl/resource.cc",
+    "impl/resource.h",
     "impl/vulkan_utils.cc",
     "impl/vulkan_utils.h",
     "material/material.h",
+    "renderer/framebuffer.cc",
+    "renderer/framebuffer.h",
+    "renderer/image.cc",
+    "renderer/image.h",
+    "renderer/paper_renderer.cc",
+    "renderer/paper_renderer.h",
+    "renderer/renderer.cc",
+    "renderer/renderer.h",
+    "renderer/semaphore_wait.cc",
+    "renderer/semaphore_wait.h",
     "scene/ambient_light.cc",
     "scene/ambient_light.h",
     "scene/binding.h",
@@ -73,15 +97,17 @@ static_library("escher") {
     "shape/mesh_builder.cc",
     "shape/mesh_builder.h",
     "util/need.h",
+    "util/stopwatch.h",
     "vk/vulkan_context.h",
     "vk/vulkan_swapchain.h",
+    "vk/vulkan_swapchain_helper.cc",
+    "vk/vulkan_swapchain_helper.h",
   ]
 
   include_dirs = [
     "//lib",  # for ftl/
     "//lib/escher", # TODO: make //lib/escher/src|include directories.
     "//third_party/glm",
-    "third_party",
     "$glslang_compiler_src",
     "$vulkan_sdk/include",
   ]

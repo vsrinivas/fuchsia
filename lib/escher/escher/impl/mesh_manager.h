@@ -7,9 +7,12 @@
 #include <atomic>
 #include <list>
 #include <queue>
+#include <unordered_map>
+
 #include <vulkan/vulkan.hpp>
 
 #include "escher/impl/buffer.h"
+#include "escher/impl/mesh_impl.h"
 #include "escher/shape/mesh_builder.h"
 #include "escher/vk/vulkan_context.h"
 #include "ftl/memory/ref_ptr.h"
@@ -29,12 +32,7 @@ class MeshManager {
                                 size_t max_vertex_count,
                                 size_t max_index_count);
 
-  void Update(uint64_t last_finished_frame);
-
-  void DestroyMeshResources(uint64_t last_rendered_frame,
-                            Buffer vertex_buffer,
-                            Buffer index_buffer,
-                            vk::Semaphore mesh_ready_semaphore_);
+  const MeshSpecImpl& GetMeshSpecImpl(MeshSpec spec);
 
  private:
   Buffer GetStagingBuffer(uint32_t size);
@@ -47,7 +45,8 @@ class MeshManager {
                 size_t max_vertex_count,
                 size_t max_index_count,
                 Buffer vertex_staging_buffer,
-                Buffer index_staging_buffer);
+                Buffer index_staging_buffer,
+                const MeshSpecImpl& spec_impl);
     ~MeshBuilder() override;
 
     MeshPtr Build() override;
@@ -58,7 +57,12 @@ class MeshManager {
     bool is_built_;
     Buffer vertex_staging_buffer_;
     Buffer index_staging_buffer_;
+    const MeshSpecImpl& spec_impl_;
   };
+
+  friend class MeshImpl;
+  void IncrementMeshCount() { ++mesh_count_; }
+  void DecrementMeshCount() { --mesh_count_; }
 
   vk::Device device_;
   vk::Queue queue_;
@@ -76,13 +80,8 @@ class MeshManager {
   std::list<Buffer> free_staging_buffers_;
   std::queue<BusyResources> busy_resources_;
 
-  struct DoomedResources {
-    std::vector<Buffer> buffers;
-    std::vector<vk::Semaphore> semaphores;
-  };
-  // Map of resources that are no longer used and should be destroyed.  The keys
-  // are the last frame that the resources were used.
-  std::map<uint64_t, DoomedResources> doomed_resources_;
+  std::unordered_map<MeshSpec, std::unique_ptr<MeshSpecImpl>, MeshSpec::Hash>
+      spec_cache_;
 
   std::atomic<uint32_t> builder_count_;
   std::atomic<uint32_t> mesh_count_;

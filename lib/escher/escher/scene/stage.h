@@ -38,12 +38,18 @@ class Stage {
 
   const SizeI& viewport_offset() const { return viewport_offset_; }
 
+  // TODO: remove... just for initial testing of uniform binding.
+  float brightness() const { return brightness_; }
+  void set_brightness(float brightness) { brightness_ = brightness; }
+
  private:
   SizeI physical_size_;
   SizeI viewport_offset_;
   ViewingVolume viewing_volume_;
   DirectionalLight key_light_;
   AmbientLight fill_light_;
+
+  float brightness_ = 1.0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Stage);
 };

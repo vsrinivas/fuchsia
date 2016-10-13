@@ -13,7 +13,7 @@ namespace escher {
 // obtain one via Esher::NewMeshBuilder(), repeatedly call AddVertex() and
 // AddIndex() to add data for the Mesh, and then call Build() once all data has
 // been added.
-class MeshBuilder : public ftl::RefCountedThreadSafe<Mesh> {
+class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
  public:
   // Return a mesh constructed from the indices and vertices added by AddIndex()
   // and AddVertex(), respectively.  This can only be called once.
@@ -36,6 +36,7 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<Mesh> {
               size_t vertex_stride,
               uint8_t* vertex_staging_buffer,
               uint32_t* index_staging_buffer);
+  FRIEND_REF_COUNTED_THREAD_SAFE(MeshBuilder);
   virtual ~MeshBuilder();
 
   const size_t max_vertex_count_;
@@ -45,6 +46,8 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<Mesh> {
   uint32_t* index_staging_buffer_;
   size_t vertex_count_ = 0;
   size_t index_count_ = 0;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(MeshBuilder);
 };
 
 typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;

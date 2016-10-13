@@ -4,7 +4,9 @@
 
 #include "demo.h"
 
+#include "escher/renderer/image.h"
 #include "ftl/logging.h"
+#include "ftl/memory/ref_ptr.h"
 
 #include <iostream>
 #include <set>
@@ -357,9 +359,15 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     VK_CHECK_RESULT(result);
 
     std::vector<vk::Image> images(std::move(result.value));
+    std::vector<escher::ImagePtr> escher_images;
     std::vector<vk::ImageView> image_views;
     image_views.reserve(images.size());
+    escher_images.reserve(images.size());
     for (auto& im : images) {
+      escher_images.push_back(ftl::MakeRefCounted<escher::Image>(
+          im, surface_formats[0].format, swapchain_extent.width,
+          swapchain_extent.height));
+
       vk::ImageSubresourceRange range;
       range.aspectMask = vk::ImageAspectFlagBits::eColor;
       range.levelCount = 1;
@@ -376,7 +384,7 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
 
       image_views.push_back(result.value);
     }
-    swapchain_ = escher::VulkanSwapchain(swapchain, images, image_views,
+    swapchain_ = escher::VulkanSwapchain(swapchain, escher_images, image_views,
                                          swapchain_extent.width,
                                          swapchain_extent.height);
   }

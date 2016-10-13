@@ -12,7 +12,7 @@ Shape::Shape(Type type) : type_(type) {}
 
 Shape::~Shape() {}
 
-Shape Shape::CreateRect(const vec2& position, const vec2& size, float z) {
+Shape Shape::NewRect(const vec2& position, const vec2& size, float z) {
   Shape shape(Type::kRect);
   shape.position_ = position;
   shape.size_ = size;
@@ -20,7 +20,7 @@ Shape Shape::CreateRect(const vec2& position, const vec2& size, float z) {
   return shape;
 }
 
-Shape Shape::CreateCircle(const vec2& center, float radius, float z) {
+Shape Shape::NewCircle(const vec2& center, float radius, float z) {
   Shape shape(Type::kCircle);
   shape.position_ = vec2(center.x - radius, center.y - radius);
   shape.size_ = vec2(radius * 2.0f, radius * 2.0f);

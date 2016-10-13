@@ -20,8 +20,8 @@ class Shape {
 
   ~Shape();
 
-  static Shape CreateRect(const vec2& position, const vec2& size, float z);
-  static Shape CreateCircle(const vec2& center, float radius, float z);
+  static Shape NewRect(const vec2& position, const vec2& size, float z);
+  static Shape NewCircle(const vec2& center, float radius, float z);
 
   // TODO(jeffbrown): CreateMesh (with bounding box?)
 
@@ -42,9 +42,9 @@ class Shape {
     return size_.x * 0.5f;
   }
 
-  const Mesh& mesh() const {
+  const MeshPtr& mesh() const {
     FTL_DCHECK(type_ == Type::kMesh);
-    return *mesh_.get();
+    return mesh_;
   }
 
  private:

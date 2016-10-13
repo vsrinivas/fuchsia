@@ -6,6 +6,7 @@
 
 #include <iterator>
 
+#include "escher/geometry/types.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/vulkan_context.h"
@@ -42,32 +43,6 @@ MeshManager::~MeshManager() {
   if (command_pool_) {
     device_.destroyCommandPool(command_pool_);
     command_pool_ = nullptr;
-  }
-}
-
-void MeshManager::Update(uint64_t last_finished_frame) {
-  auto it = doomed_resources_.begin();
-  while (it != doomed_resources_.end() && it->first <= last_finished_frame) {
-    // Need to explicitly destroy semaphores.  Buffers will clean themselves up
-    // below.
-    for (auto& semaphore : it->second.semaphores) {
-      device_.destroySemaphore(semaphore);
-    }
-    ++it;
-  }
-  // Buffers are destroyed here.
-  doomed_resources_.erase(doomed_resources_.begin(), it);
-}
-
-void MeshManager::DestroyMeshResources(uint64_t last_rendered_frame,
-                                       Buffer vertex_buffer,
-                                       Buffer index_buffer,
-                                       vk::Semaphore mesh_ready_semaphore) {
-  auto& doomed_resources_for_frame = doomed_resources_[last_rendered_frame];
-  doomed_resources_for_frame.buffers.push_back(std::move(vertex_buffer));
-  doomed_resources_for_frame.buffers.push_back(std::move(index_buffer));
-  if (mesh_ready_semaphore) {
-    doomed_resources_for_frame.semaphores.push_back(mesh_ready_semaphore);
   }
 }
 
@@ -109,10 +84,11 @@ Buffer MeshManager::GetStagingBuffer(uint32_t size) {
 MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
                                            size_t max_vertex_count,
                                            size_t max_index_count) {
+  auto& spec_impl = GetMeshSpecImpl(spec);
   return AdoptRef(new MeshManager::MeshBuilder(
       this, spec, max_vertex_count, max_index_count,
-      GetStagingBuffer(max_vertex_count * spec.GetVertexStride()),
-      GetStagingBuffer(max_index_count * sizeof(uint32_t))));
+      GetStagingBuffer(max_vertex_count * spec_impl.binding.stride),
+      GetStagingBuffer(max_index_count * sizeof(uint32_t)), spec_impl));
 }
 
 MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
@@ -120,18 +96,20 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
                                       size_t max_vertex_count,
                                       size_t max_index_count,
                                       Buffer vertex_staging_buffer,
-                                      Buffer index_staging_buffer)
+                                      Buffer index_staging_buffer,
+                                      const MeshSpecImpl& spec_impl)
     : escher::MeshBuilder(
           max_vertex_count,
           max_index_count,
-          spec.GetVertexStride(),
+          spec_impl.binding.stride,
           reinterpret_cast<uint8_t*>(vertex_staging_buffer.Map()),
           reinterpret_cast<uint32_t*>(index_staging_buffer.Map())),
       manager_(manager),
       spec_(spec),
       is_built_(false),
       vertex_staging_buffer_(std::move(vertex_staging_buffer)),
-      index_staging_buffer_(std::move(index_staging_buffer)) {}
+      index_staging_buffer_(std::move(index_staging_buffer)),
+      spec_impl_(spec_impl) {}
 
 MeshManager::MeshBuilder::~MeshBuilder() {
   if (!is_built_) {
@@ -171,10 +149,9 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   allocate_info.commandBufferCount = 1;
   vk::CommandBuffer command_buffer =
       ESCHER_CHECKED_VK_RESULT(device.allocateCommandBuffers(allocate_info))[0];
-  vk::Semaphore semaphore = ESCHER_CHECKED_VK_RESULT(
-      device.createSemaphore(vk::SemaphoreCreateInfo()));
   vk::Fence fence =
       ESCHER_CHECKED_VK_RESULT(device.createFence(vk::FenceCreateInfo()));
+  SemaphorePtr semaphore = Semaphore::New(device);
 
   vk::CommandBufferBeginInfo begin_info;
   begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -198,7 +175,8 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   submit_info.commandBufferCount = 1;
   submit_info.pCommandBuffers = &command_buffer;
   submit_info.signalSemaphoreCount = 1;
-  submit_info.pSignalSemaphores = &semaphore;
+  auto s = semaphore->value();
+  submit_info.pSignalSemaphores = &s;
   auto submit_result = manager_->transfer_queue_.submit(1, &submit_info, fence);
   FTL_CHECK(submit_result == vk::Result::eSuccess);
 
@@ -206,9 +184,76 @@ MeshPtr MeshManager::MeshBuilder::Build() {
                                   std::move(index_staging_buffer_),
                                   command_buffer});
 
-  return AdoptRef(new MeshImpl(spec_, vertex_count_, index_count_, manager_,
-                               std::move(vertex_buffer),
-                               std::move(index_buffer), semaphore));
+  auto mesh = ftl::MakeRefCounted<MeshImpl>(
+      spec_, vertex_count_, index_count_, manager_, std::move(vertex_buffer),
+      std::move(index_buffer), spec_impl_);
+  mesh->SetWaitSemaphore(std::move(semaphore));
+  return mesh;
+}
+
+const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
+  auto ptr = spec_cache_[spec].get();
+  if (ptr) {
+    return *ptr;
+  }
+
+  auto impl = std::make_unique<MeshSpecImpl>();
+
+  vk::DeviceSize stride = 0;
+  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = 0;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    impl->attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kColor) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = 1;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32B32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec3);
+    impl->attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kUV) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = 2;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    impl->attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = 3;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec2);
+    impl->attributes.push_back(attribute);
+  }
+
+  impl->binding.binding = 0;
+  impl->binding.stride = stride;
+  impl->binding.inputRate = vk::VertexInputRate::eVertex;
+
+  // TODO: We currenty hardcode support for a single mesh layout.
+  FTL_CHECK(spec.flags ==
+            (MeshAttributeFlags(MeshAttributeFlagBits::kPosition) |
+             MeshAttributeFlagBits::kColor));
+  FTL_CHECK(stride == 5 * sizeof(float));
+
+  ptr = impl.get();
+  spec_cache_[spec] = std::move(impl);
+  return *ptr;
 }
 
 }  // namespace impl

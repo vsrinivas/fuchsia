@@ -12,8 +12,9 @@
 namespace escher {
 namespace impl {
 class GpuAllocator;
+class ImageCache;
 class MeshManager;
-class RenderContext;
+class RenderPassManager;
 
 // Implements the public Escher API.
 class EscherImpl {
@@ -21,24 +22,27 @@ class EscherImpl {
   EscherImpl(const VulkanContext& context, const VulkanSwapchain& swapchain);
   ~EscherImpl();
 
-  // Public API methods.  See escher.h
-  Status Render(const Stage& stage, const Model& model);
-  void SetSwapchain(const VulkanSwapchain& swapchain);
-
-  MeshManager* GetMeshManager();
+  ImageCache* image_cache();
+  RenderPassManager* render_pass_manager();
+  MeshManager* mesh_manager();
+  GpuAllocator* gpu_allocator();
+  const VulkanContext& vulkan_context();
 
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
 
- private:
-  vk::Device device_;
-  std::unique_ptr<GpuAllocator> allocator_;
-  std::unique_ptr<MeshManager> mesh_manager_;
-  std::unique_ptr<RenderContext> render_context_;
+  void IncrementResourceCount() { ++resource_count_; }
+  void DecrementResourceCount() { --resource_count_; }
 
-  bool device_lost_ = false;
+ private:
+  VulkanContext vulkan_context_;
+  std::unique_ptr<RenderPassManager> render_pass_manager_;
+  std::unique_ptr<GpuAllocator> gpu_allocator_;
+  std::unique_ptr<ImageCache> image_cache_;
+  std::unique_ptr<MeshManager> mesh_manager_;
 
   std::atomic<uint32_t> renderer_count_;
+  std::atomic<uint32_t> resource_count_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EscherImpl);
 };

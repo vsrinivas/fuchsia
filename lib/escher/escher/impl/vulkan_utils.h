@@ -26,7 +26,6 @@
   }
 
 namespace escher {
-namespace impl {
 
 // Panic if operation was unsuccessful.
 template <typename T>
@@ -34,6 +33,8 @@ auto ESCHER_CHECKED_VK_RESULT(typename vk::ResultValue<T> result) -> T {
   FTL_CHECK(result.result == vk::Result::eSuccess);
   return result.value;
 }
+
+namespace impl {
 
 // Filter the |desired_formats| list to contain only those formats which support
 // optimal tiling.

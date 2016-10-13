@@ -24,6 +24,14 @@ class Object {
   // The material with which to fill the shape.
   const Material* material() const { return material_; }
 
+  // TODO: make non-public
+  float x = 0.f;
+  float y = 0.f;
+  float scale = 1.f;
+  float red = 0.f;
+  float green = 0.f;
+  float blue = 0.f;
+
  private:
   Shape shape_;
   const Material* material_;

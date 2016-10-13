@@ -5,6 +5,8 @@
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/mesh_manager.h"
+#include "escher/impl/mesh_impl.h"
+#include "escher/renderer/paper_renderer.h"
 #include "escher/util/cplusplus.h"
 
 namespace escher {
@@ -14,19 +16,16 @@ Escher::Escher(const VulkanContext& context, const VulkanSwapchain& swapchain)
 
 Escher::~Escher() {}
 
-void Escher::SetSwapchain(const VulkanSwapchain& swapchain) {
-  impl_->SetSwapchain(swapchain);
-}
-
-Status Escher::Render(const Stage& stage, const Model& model) {
-  return impl_->Render(stage, model);
-}
-
 MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
                                       size_t max_vertex_count,
                                       size_t max_index_count) {
-  return impl_->GetMeshManager()->NewMeshBuilder(spec, max_vertex_count,
-                                                 max_index_count);
+  return impl_->mesh_manager()->NewMeshBuilder(spec, max_vertex_count,
+                                               max_index_count);
+}
+
+PaperRendererPtr Escher::NewPaperRenderer() {
+  auto renderer = new PaperRenderer(impl_.get());
+  return ftl::AdoptRef(renderer);
 }
 
 }  // namespace escher

@@ -6,6 +6,12 @@
 
 namespace escher {
 
-class Material {};
+// TODO: be hashable/comparable.
+class MaterialSpec {};
+
+class Material {
+ public:
+  virtual const MaterialSpec& GetSpec() const = 0;
+};
 
 }  // namespace escher
