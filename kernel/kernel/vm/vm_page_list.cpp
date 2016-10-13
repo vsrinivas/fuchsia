@@ -25,7 +25,7 @@ VmPageListNode::~VmPageListNode() {
     LTRACEF("%p offset %#" PRIx64 "\n", this, obj_offset_);
     DEBUG_ASSERT(magic_ == kMagic);
 
-    for (auto p : pages_) {
+    for (__UNUSED auto p : pages_) {
         DEBUG_ASSERT(p == nullptr);
     }
     magic_ = 0;
@@ -71,7 +71,7 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
             return ERR_NO_MEMORY;
 
         LTRACEF("allocating new inner node %p\n", pl.get());
-        auto status = pl->AddPage(p, index);
+        __UNUSED auto status = pl->AddPage(p, index);
         DEBUG_ASSERT(status == NO_ERROR);
 
         list_.insert(mxtl::move(pl));

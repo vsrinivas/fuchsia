@@ -217,7 +217,7 @@ vm_page_t* VmObject::FaultPageLocked(uint64_t offset, uint pf_flags) {
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
 
-    auto status = page_list_.AddPage(p, offset);
+    __UNUSED auto status = page_list_.AddPage(p, offset);
     DEBUG_ASSERT(status == NO_ERROR);
 
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
