@@ -6,6 +6,10 @@ import("//mojo/public/tools/bindings/mojom.gni")
 
 source_set("audio") {
   sources = [
+    "gain.h",
+    "gain.cc",
+    "level.cc",
+    "level.h",
     "lpcm_reformatter.cc",
     "lpcm_reformatter.h",
     "lpcm_util.cc",
@@ -15,5 +19,22 @@ source_set("audio") {
   deps = [
     "//apps/media/src/framework",
     "//lib/ftl",
+  ]
+}
+
+executable("apptests") {
+  output_name = "media_audio_apptests"
+
+  testonly = true
+
+  sources = [
+    "test/level_test.cc",
+    "test/run_all_tests.cc",
+  ]
+
+  deps = [
+    ":audio",
+    "//mojo/system",
+    "//third_party/gtest",
   ]
 }
