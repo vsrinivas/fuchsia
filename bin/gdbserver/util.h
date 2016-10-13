@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <deque>
+#include <string>
 
 #include <magenta/syscalls-types.h>
 #include <magenta/types.h>
@@ -14,6 +15,9 @@
 
 namespace debugserver {
 namespace util {
+
+// The escape character used in the GDB Remote Protocol.
+constexpr char kEscapeChar = '}';
 
 // Decodes the 2 character ASCII string |hex| and returns the result in
 // |out_byte|. Returns false if |hex| contains invalid characters.
@@ -82,6 +86,8 @@ bool ParseThreadId(const ftl::StringView& bytes,
                    int64_t* out_pid,
                    int64_t* out_tid);
 
+// Encodes the given thread ID |thread_id|
+
 // Verifies that the given command is formatted correctly and that the checksum
 // is correct. Returns false verification fails. Otherwise returns true, and
 // returns a pointer to the beginning of the packet data and the size of the
@@ -100,6 +106,25 @@ bool VerifyPacket(ftl::StringView packet, ftl::StringView* out_packet_data);
 void ExtractParameters(const ftl::StringView& packet,
                        ftl::StringView* out_prefix,
                        ftl::StringView* out_params);
+
+// Joins multiple strings using the given delimiter. This aims to avoid
+// repeated dynamic allocations and simply writes the strings into the given
+// pre-allocated buffer.
+//
+// If the resulting string doesn't fit inside the given buffer this will cause
+// an assertion failure.
+//
+// Returns the size of the resulting string.
+size_t JoinStrings(const std::deque<std::string>& strings,
+                   const char delimiter,
+                   char* buffer,
+                   size_t buffer_size);
+
+// Finds and returns the index of the first occurence of |val| within |packet|,
+// such that it is not preceded by an escape character.
+bool FindUnescapedChar(const char val,
+                       const ftl::StringView& packet,
+                       size_t* out_index);
 
 }  // namespace util
 }  // namespace debugserver

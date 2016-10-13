@@ -154,6 +154,7 @@ void Server::PostReadTask() {
     }
 
     ftl::StringView bytes_read(in_buffer_.data(), read_size);
+    FTL_VLOG(1) << "rx: " << bytes_read;
 
     // Before anything else, check to see if this is an acknowledgment in
     // response to a notification. The GDB Remote protocol defines only the
@@ -162,6 +163,13 @@ void Server::PostReadTask() {
       FTL_LOG(INFO) << "Notification acknowledged";
       pending_notification_.reset();
       TryPostNextNotification();
+      return;
+    }
+
+    // If this is a packet acknowledgment then ignore it and read again.
+    // TODO(armansito): Re-send previous packet if we got "-".
+    if (bytes_read == "+") {
+      PostReadTask();
       return;
     }
 
@@ -205,28 +213,31 @@ void Server::PostReadTask() {
 void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
   FTL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
-  // Copy the data to capture it in the closure.
-  message_loop_.task_runner()->PostTask([this, data, notify] {
-    int index = 0;
-    out_buffer_[index++] = notify ? '%' : '$';
-    memcpy(out_buffer_.data() + index, data.data(), data.size());
-    index += data.size();
-    out_buffer_[index++] = '#';
+  // Copy the data into a std::string capture it in the closure.
+  message_loop_.task_runner()->PostTask(
+      [ this, data = data.ToString(), notify ] {
+        int index = 0;
+        out_buffer_[index++] = notify ? '%' : '$';
+        memcpy(out_buffer_.data() + index, data.data(), data.size());
+        index += data.size();
+        out_buffer_[index++] = '#';
 
-    uint8_t checksum = 0;
-    for (uint8_t byte : data)
-      checksum += byte;
+        uint8_t checksum = 0;
+        for (uint8_t byte : data)
+          checksum += byte;
 
-    util::EncodeByteString(checksum, out_buffer_.data() + index);
-    index += 2;
+        util::EncodeByteString(checksum, out_buffer_.data() + index);
+        index += 2;
 
-    ssize_t bytes_written =
-        write(client_sock_.get(), out_buffer_.data(), index);
-    if (bytes_written != index) {
-      util::LogErrorWithErrno("Failed to send packet");
-      QuitMessageLoop(false);
-    }
-  });
+        ssize_t bytes_written =
+            write(client_sock_.get(), out_buffer_.data(), index);
+        if (bytes_written != index) {
+          util::LogErrorWithErrno("Failed to send packet");
+          QuitMessageLoop(false);
+        }
+
+        FTL_VLOG(1) << "tx: " << ftl::StringView(out_buffer_.data(), index);
+      });
 }
 
 void Server::PostPacketWriteTask(const ftl::StringView& data) {

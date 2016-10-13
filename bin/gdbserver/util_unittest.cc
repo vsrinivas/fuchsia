@@ -115,11 +115,11 @@ TEST(UtilTest, ParseThreadId) {
   EXPECT_FALSE(ParseThreadId(kInvalid5, &has_pid, &pid, &tid));
 
   constexpr char kValid1[] = "0";
-  constexpr char kValid2[] = "123";
+  constexpr char kValid2[] = "7b";
   constexpr char kValid3[] = "-1";
   constexpr char kValid4[] = "p0.0";
-  constexpr char kValid5[] = "p123.-1";
-  constexpr char kValid6[] = "p-1.1234";
+  constexpr char kValid5[] = "p7b.-1";
+  constexpr char kValid6[] = "p-1.4d2";
 
   EXPECT_TRUE(ParseThreadId(kValid1, &has_pid, &pid, &tid));
   EXPECT_FALSE(has_pid);
@@ -165,8 +165,8 @@ TEST(UtilTest, VerifyPacket) {
   TEST_INVALID("$foo#4");          // No checksum
   TEST_INVALID("$foo#43");         // Wrong checksum
   TEST_INVALID("$foo#4Z");         // Malformed checksum
-  TEST_INVALID("$foo#G0");         // Malvormed checksum
-  TEST_INVALID("$foo#44$foo#44");  // Malvormed checksum
+  TEST_INVALID("$foo#G0");         // Malformed checksum
+  TEST_INVALID("$foo#44$foo#44");  // Wrong checksum
 
   // Valid packets
   TEST_VALID("$foo#44");
@@ -193,6 +193,68 @@ TEST(UtilTest, ExtractParameters) {
   TEST_PARAMS("foo:bar", "foo", "bar");
 
 #undef TEST_PARAMS
+}
+
+TEST(UtilTest, JoinStrings) {
+  constexpr char kEntry1[] = "an entry";
+  constexpr char kEntry2[] = "another entry";
+  constexpr char kEntry3[] = "banana";
+
+  // Allocate a buffer that's just large enough to join all three entries above
+  // (including 2 commas).
+  const size_t kBufferSize =
+      std::strlen(kEntry1) + std::strlen(kEntry2) + std::strlen(kEntry3) + 2;
+  char buffer[kBufferSize];
+  std::deque<std::string> strings;
+
+  EXPECT_EQ(0u, JoinStrings(strings, ',', buffer, kBufferSize));
+
+  strings.push_back(kEntry1);
+  size_t result_size = JoinStrings(strings, ',', buffer, kBufferSize);
+  EXPECT_EQ(std::strlen(kEntry1), result_size);
+  EXPECT_EQ(kEntry1, ftl::StringView(buffer, result_size));
+
+  strings.push_back(kEntry2);
+  result_size = JoinStrings(strings, ',', buffer, kBufferSize);
+  EXPECT_EQ(std::strlen(kEntry1) + std::strlen(kEntry2) + 1, result_size);
+  EXPECT_EQ("an entry,another entry", ftl::StringView(buffer, result_size));
+
+  strings.push_back(kEntry3);
+  result_size = JoinStrings(strings, ',', buffer, kBufferSize);
+  EXPECT_EQ(kBufferSize, result_size);
+  EXPECT_EQ("an entry,another entry,banana",
+            ftl::StringView(buffer, result_size));
+}
+
+TEST(UtilTest, FindUnescapedChar) {
+  constexpr char kChar = '$';
+  constexpr char kPacket1[] = "";
+  constexpr char kPacket2[] = "$";
+  constexpr char kPacket3[] = "}$";
+  constexpr char kPacket4[] = "}$$";
+  constexpr char kPacket5[] = "}}$";
+  constexpr char kPacket6[] = "}}}$";
+  constexpr char kPacket7[] = "}}}$$";
+
+  size_t index;
+  EXPECT_FALSE(FindUnescapedChar(kChar, kPacket1, &index));
+  EXPECT_TRUE(FindUnescapedChar(kChar, kPacket2, &index));
+  EXPECT_EQ(0u, index);
+  EXPECT_FALSE(FindUnescapedChar(kChar, kPacket3, &index));
+  EXPECT_TRUE(FindUnescapedChar(kChar, kPacket4, &index));
+  EXPECT_EQ(2u, index);
+  EXPECT_TRUE(FindUnescapedChar(kChar, kPacket5, &index));
+  EXPECT_EQ(2u, index);
+  EXPECT_FALSE(FindUnescapedChar(kChar, kPacket6, &index));
+  EXPECT_TRUE(FindUnescapedChar(kChar, kPacket7, &index));
+  EXPECT_EQ(4u, index);
+
+  // The escape character itself can not be searched for as "unescaped".
+  EXPECT_FALSE(FindUnescapedChar(kEscapeChar, kPacket3, &index));
+  EXPECT_FALSE(FindUnescapedChar(kEscapeChar, kPacket4, &index));
+  EXPECT_FALSE(FindUnescapedChar(kEscapeChar, kPacket5, &index));
+  EXPECT_FALSE(FindUnescapedChar(kEscapeChar, kPacket6, &index));
+  EXPECT_FALSE(FindUnescapedChar(kEscapeChar, kPacket7, &index));
 }
 
 }  // namespace

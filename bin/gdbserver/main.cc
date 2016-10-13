@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <cstdlib>
-#include <memory>
 #include <iostream>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "lib/ftl/command_line.h"
@@ -25,7 +26,10 @@ constexpr char kUsageString[] =
     "e.g. debugserver 2345 /path/to/executable\n"
     "\n"
     "Options:\n"
-    "  --help    show this help message\n";
+    "  --help           show this help message\n"
+    "  --debug=[level]  set debug verbosity level\n";
+
+constexpr char kDebugOption[] = "debug";
 
 void PrintUsageString() {
   std::cout << kUsageString << std::endl;
@@ -38,7 +42,21 @@ int main(int argc, char* argv[]) {
 
   if (cl.HasOption("help", nullptr) || cl.positional_args().size() < 2) {
     PrintUsageString();
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
+  }
+
+  if (cl.HasOption(kDebugOption, nullptr)) {
+    std::string debug_level;
+    cl.GetOptionValue(kDebugOption, &debug_level);
+
+    // Parse the verbosity level as a positive integer.
+    unsigned int level;
+    if (!ftl::StringToNumberWithError<unsigned int>(debug_level, &level)) {
+      FTL_LOG(ERROR) << "Invalid log level: " << debug_level;
+      return EXIT_FAILURE;
+    }
+
+    ftl::SetMinLogLevel(-level);
   }
 
   uint16_t port;

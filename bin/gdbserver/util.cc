@@ -92,7 +92,8 @@ bool ParseThreadId(const ftl::StringView& bytes,
 
   if (bytes[0] != 'p') {
     *out_has_pid = false;
-    return ftl::StringToNumberWithError<int64_t>(bytes, out_tid);
+    return ftl::StringToNumberWithError<int64_t>(bytes, out_tid,
+                                                 ftl::Base::k16);
   }
 
   *out_has_pid = true;
@@ -112,13 +113,14 @@ bool ParseThreadId(const ftl::StringView& bytes,
   if (!found_dot)
     return false;
 
-  if (!ftl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1),
-                                             out_pid)) {
+  if (!ftl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1), out_pid,
+                                             ftl::Base::k16)) {
     FTL_LOG(ERROR) << "Could not parse process id: " << bytes;
     return false;
   }
 
-  return ftl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid);
+  return ftl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid,
+                                               ftl::Base::k16);
 }
 
 // We take |packet| by copying since we modify it internally while processing
@@ -136,28 +138,23 @@ bool VerifyPacket(ftl::StringView packet, ftl::StringView* out_packet_data) {
   // gdb to send at the moment", thus we ignore everything until the first '$'.
   // (see
   // https://sourceware.org/gdb/current/onlinedocs/gdb/Notification-Packets.html)
-  for (; packet.size() && packet[0] != '$'; packet.remove_prefix(1))
-    ;
-
-  // The packet should contain at least 4 bytes ($, #, 2-digit checksum).
-  if (packet.size() < 4)
-    return false;
-
-  if (packet[0] != '$') {
+  size_t dollar_sign;
+  if (!FindUnescapedChar('$', packet, &dollar_sign)) {
     FTL_LOG(ERROR) << "Packet does not start with \"$\": " << packet;
     return false;
   }
 
-  size_t pound;
-  bool found_pound = false;
-  for (pound = 1; pound < packet.size(); ++pound) {
-    if (packet[pound] == '#') {
-      found_pound = true;
-      break;
-    }
+  packet.remove_prefix(dollar_sign);
+  FTL_DCHECK(packet[0] == '$');
+
+  // The packet should contain at least 4 bytes ($, #, 2-digit checksum).
+  if (packet.size() < 4) {
+    FTL_LOG(ERROR) << "Malformed packet: " << packet;
+    return false;
   }
 
-  if (!found_pound) {
+  size_t pound;
+  if (!FindUnescapedChar('#', packet, &pound)) {
     FTL_LOG(ERROR) << "Packet does not contain \"#\"";
     return false;
   }
@@ -220,6 +217,59 @@ void ExtractParameters(const ftl::StringView& packet,
   *out_prefix = packet.substr(0, colon);
   *out_params = packet.substr(
       colon + 1, packet.size() == colon ? 0 : packet.size() - colon - 1);
+}
+
+size_t JoinStrings(const std::deque<std::string>& strings,
+                   const char delimiter,
+                   char* buffer,
+                   size_t buffer_size) {
+  FTL_DCHECK(buffer);
+
+  size_t index = 0, count = 0;
+  for (const auto& str : strings) {
+    FTL_DCHECK(index + str.length() <= buffer_size);
+    memcpy(buffer + index, str.data(), str.length());
+    index += str.length();
+    if (++count == strings.size())
+      break;
+    FTL_DCHECK(index < buffer_size);
+    buffer[index++] = delimiter;
+  }
+
+  return index;
+}
+
+bool FindUnescapedChar(const char val,
+                       const ftl::StringView& packet,
+                       size_t* out_index) {
+  FTL_DCHECK(out_index);
+
+  size_t i;
+  bool found = false;
+  bool in_escape = false;
+  for (i = 0; i < packet.size(); ++i) {
+    // The previous character was the escape character. Exit the escape sequence
+    // and continue.
+    if (in_escape) {
+      in_escape = false;
+      continue;
+    }
+
+    if (packet[i] == kEscapeChar) {
+      in_escape = true;
+      continue;
+    }
+
+    if (packet[i] == val) {
+      found = true;
+      break;
+    }
+  }
+
+  if (found)
+    *out_index = i;
+
+  return found;
 }
 
 }  // namespace util

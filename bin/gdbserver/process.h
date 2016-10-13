@@ -44,13 +44,24 @@ class Process final {
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
   // owned and managed by this Process instance.
+  // NOTE: The returned thread might be stale. Call RefreshAllThreads()
+  // beforehand if this is a problem.
   Thread* FindThreadById(mx_koid_t thread_id);
 
   // Returns an arbitrary thread that is owned by this process. This picks the
   // first thread that is returned from mx_object_get_info for the
-  // MX_INFO_PROCESS_THREADS topic or the first thread from previously
-  // initialized threads.
+  // MX_INFO_PROCESS_THREADS topic. This will refresh all threads.
   Thread* PickOneThread();
+
+  // Refreshes the complete Thread list for this process. Returns false if an
+  // error is returned from a syscall.
+  bool RefreshAllThreads();
+
+  // Iterates through all cached threads and invokes |callback| for each of
+  // them. |callback| is guaranteed to get called only before ForEachThread()
+  // returns, so it is safe to bind local variables to |callback|.
+  using ThreadCallback = std::function<void(Thread*)>;
+  void ForEachThread(const ThreadCallback& callback);
 
  private:
   Process() = default;
@@ -69,11 +80,14 @@ class Process final {
   bool started_;
 
   // The threads owned by this process. This is map is populated lazily when
-  // threads are requested through the corresponding public methods (e.g.
-  // FindThreadById).
-  // TODO(armansito): We need to watch the handles somehow to find out when a
-  // thread goes away so it can be removed from this list.
-  std::unordered_map<mx_koid_t, std::unique_ptr<Thread>> threads_;
+  // threads are requested through FindThreadById() but gets fully refreshed
+  // through PickOneThread() and RefreshAllThreads().
+  //
+  // TODO(armansito): Currently the contents of |threads_| can be stale unless
+  // RefreshAllThreads() gets called frequently. Once we have support for thread
+  // lifecycle events we can partially update the mapping based on events.
+  using ThreadMap = std::unordered_map<mx_koid_t, std::unique_ptr<Thread>>;
+  ThreadMap threads_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

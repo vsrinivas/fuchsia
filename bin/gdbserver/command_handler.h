@@ -35,6 +35,7 @@ class CommandHandler final {
  private:
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
+  bool HandleQuestionMark(const ResponseCallback& callback);
   bool Handle_H(const ftl::StringView& packet,
                 const ResponseCallback& callback);
   bool Handle_q(const ftl::StringView& prefix,
@@ -50,9 +51,14 @@ class CommandHandler final {
   // QNonStop
   bool HandleSetNonStop(const ftl::StringView& params,
                         const ResponseCallback& callback);
+  // qfThreadInfo and qsThreadInfo
+  bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
 
   // The root Server instance that owns us.
   Server* server_;  // weak
+
+  // Indicates whether we are currently in a qfThreadInfo/qsThreadInfo sequence.
+  bool in_thread_info_sequence_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandHandler);
 };

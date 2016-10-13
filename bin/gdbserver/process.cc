@@ -223,36 +223,75 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 Thread* Process::PickOneThread() {
   FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
 
-  if (!threads_.empty()) {
-    return threads_.begin()->second.get();
-  }
+  // TODO(armansito): It's not ideal to refresh the entire thread list but this
+  // is the most accurate way for now. When we have thread life-time events in
+  // the future we can manage |threads_| using events and only partially refresh
+  // it as needed.
+  RefreshAllThreads();
 
-  // We make a syscall to get the info about the first thread. We use a
-  // unique_ptr to manage the buffer used for the syscall.
-  const size_t buf_size =
-      sizeof(mx_info_process_threads_t) + sizeof(mx_record_process_thread_t);
-  std::unique_ptr<uint8_t[]> buffer(new uint8_t[buf_size]);
+  if (threads_.empty())
+    return nullptr;
 
+  return threads_.begin()->second.get();
+}
+
+bool Process::RefreshAllThreads() {
+  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
+
+  // First get the thread count so that we can allocate an appropriately sized
+  // buffer.
+  mx_info_header_t hdr;
   mx_ssize_t result_size = mx_object_get_info(
-      debug_handle_, MX_INFO_PROCESS_THREADS,
-      sizeof(mx_record_process_thread_t), buffer.get(), buf_size);
+      debug_handle_, MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr));
   if (result_size < 0) {
     util::LogErrorWithMxStatus("Failed to get process thread info",
                                result_size);
-    return nullptr;
+    return false;
   }
+
+  const size_t buffer_size =
+      sizeof(mx_info_process_threads_t) +
+      hdr.avail_count * sizeof(mx_record_process_thread_t);
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
+  result_size = mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS,
+                                   sizeof(mx_record_process_thread_t),
+                                   buffer.get(), buffer_size);
+  if (result_size < 0) {
+    util::LogErrorWithMxStatus("Failed to get process thread info",
+                               result_size);
+    return false;
+  }
+
+  // This comparison is OK (size_t vs mx_ssize_t) since |hdr.avail_count| is a
+  // uint32_t. The cast is OK because we know that |result_size| is a natural
+  // number here.
+  FTL_DCHECK(buffer_size == static_cast<size_t>(result_size));
 
   mx_info_process_threads_t* thread_info =
       reinterpret_cast<mx_info_process_threads_t*>(buffer.get());
-  if (thread_info->hdr.avail_count == 0) {
-    FTL_LOG(INFO) << "Process has no threads";
-    return nullptr;
+  ThreadMap new_threads;
+  for (size_t i = 0; i < hdr.avail_count; ++i) {
+    mx_koid_t thread_id = thread_info->rec[i].koid;
+    mx_handle_t thread_debug_handle =
+        mx_debug_task_get_child(debug_handle_, thread_id);
+    if (thread_debug_handle < 0) {
+      util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
+                                 thread_debug_handle);
+      continue;
+    }
+    new_threads[thread_id] =
+        std::make_unique<Thread>(this, thread_debug_handle, thread_id);
   }
 
-  // We should have gotten info on exactly one thread at this point.
-  FTL_DCHECK(buf_size == result_size);
+  // Just clear the existing list and repopulate it.
+  threads_ = std::move(new_threads);
 
-  return FindThreadById(thread_info->rec[0].koid);
+  return true;
+}
+
+void Process::ForEachThread(const ThreadCallback& callback) {
+  for (const auto& iter : threads_)
+    callback(iter.second.get());
 }
 
 }  // namespace debugserver
