@@ -298,7 +298,6 @@ static pcie_legacy_irq_handler_state_t* pcie_find_legacy_irq_handler(
     list_add_tail  (&bus_drv.legacy_irq_list, &ret->legacy_irq_list_node);
 
     register_int_handler(ret->irq_id, pcie_legacy_irq_handler, (void*)ret);
-    unmask_interrupt(ret->irq_id);
 
 finished:
     MUTEX_RELEASE(&bus_drv, legacy_irq_list_lock);
@@ -315,9 +314,21 @@ static void pcie_register_legacy_irq_handler(const mxtl::RefPtr<pcie_device_stat
     pcie_legacy_irq_handler_state_t* handler = dev->irq.legacy.shared_handler;
     spin_lock_saved_state_t          irq_state;
 
-    /* Add this dev to the handler's list. */
+    /* Make certain that the device's legacy IRQ has been masked at the PCI
+     * device level.  Then add this dev to the handler's list.  If this was the
+     * first device added to the handler list, unmask the handler IRQ at the top
+     * level. */
     spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
+
+    bool first_device = list_is_empty(&handler->device_handler_list);
+
+    pcie_write16(&dev->cfg->base.command, pcie_read16(&dev->cfg->base.command) |
+                                          PCIE_CFG_COMMAND_INT_DISABLE);
     list_add_tail(&handler->device_handler_list, &dev->irq.legacy.shared_handler_node);
+
+    if (first_device)
+        unmask_interrupt(handler->irq_id);
+
     spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 }
 
@@ -332,15 +343,20 @@ static void pcie_unregister_legacy_irq_handler(const mxtl::RefPtr<pcie_device_st
 
     pcie_bus_driver_state_t& bus_drv = dev->bus_drv;
     spin_lock_saved_state_t  irq_state;
+    pcie_legacy_irq_handler_state_t* handler = dev->irq.legacy.shared_handler;
 
-    /* Make absolutely sure we have been masked at the PCIe config level before
-     * removing ourselves from the shared handler list. */
+    /* Make absolutely sure we have been masked at the PCIe config level, then
+     * remove the device from the shared handler list.  If this was the last
+     * device on the list, mask the top level IRQ */
+    spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
+
     pcie_write16(&dev->cfg->base.command, pcie_read16(&dev->cfg->base.command) |
                                           PCIE_CFG_COMMAND_INT_DISABLE);
-
-    /* Remove the dev from the shared handler's list */
-    spin_lock_irqsave(&bus_drv.legacy_irq_handler_lock, irq_state);
     list_delete(&dev->irq.legacy.shared_handler_node);
+
+    if (list_is_empty(&handler->device_handler_list))
+        mask_interrupt(handler->irq_id);
+
     spin_unlock_irqrestore(&bus_drv.legacy_irq_handler_lock, irq_state);
 }
 
@@ -965,6 +981,11 @@ status_t pcie_init_device_irq_state(const mxtl::RefPtr<pcie_device_state_t>& dev
     DEBUG_ASSERT(!dev->irq.legacy.pin);
     DEBUG_ASSERT(!dev->irq.legacy.shared_handler);
     DEBUG_ASSERT(is_mutex_held(&dev->dev_lock));
+
+    // Make certain that the device's legacy IRQ (if any) has been disabled.
+    uint16_t cmd_reg = pcie_read16(&dev->cfg->base.command);
+    cmd_reg = static_cast<uint16_t>(cmd_reg | PCIE_CFG_COMMAND_INT_DISABLE);
+    pcie_write16(&dev->cfg->base.command, cmd_reg);
 
     dev->irq.legacy.pin = pcie_read8(&dev->cfg->base.interrupt_pin);
     if (dev->irq.legacy.pin) {
