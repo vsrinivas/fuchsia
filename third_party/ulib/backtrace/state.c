@@ -87,3 +87,12 @@ backtrace_destroy_state (struct backtrace_state *state,
 
   backtrace_free(&final_state, state, sizeof *state, error_callback, data);
 }
+
+void
+backtrace_set_so_iterator (struct backtrace_state *state,
+                           backtrace_so_iterator *func,
+                           void *iter_state)
+{
+  state->so_iterator = func;
+  state->iter_state = iter_state;
+}

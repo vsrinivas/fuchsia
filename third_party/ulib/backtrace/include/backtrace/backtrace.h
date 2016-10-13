@@ -87,6 +87,27 @@ extern void backtrace_destroy_state (struct backtrace_state *state,
                                      backtrace_error_callback error_callback,
                                      void *data);
 
+/* The type of the function called by backtrace_so_iterator.  */
+
+typedef int backtrace_so_callback (const char *name, uintptr_t addr, void *data);
+
+/* The type of the function that iterates over shared libs.
+   ITER_STATE is the iter_state argument to backtrace_set_so_iterator.
+   DATA is passed to CALLBACK.
+   The semantics are the same as dl_iterate_phdr.
+   CALLBACK is called for each shared library until are shared libs
+   are processed or a callback returns non-zero.  */
+
+typedef int backtrace_so_iterator (void* iter_state,
+                                   backtrace_so_callback *callback,
+                                   void *data);
+
+/* Set the shared library(object) iterator.  */
+
+extern void backtrace_set_so_iterator (struct backtrace_state *state,
+                                       backtrace_so_iterator *func,
+                                       void *iter_state);
+
 /* The type of the callback argument to the backtrace_full function.
    DATA is the argument passed to backtrace_full.  PC is the program
    counter.  FILENAME is the name of the file containing PC, or NULL

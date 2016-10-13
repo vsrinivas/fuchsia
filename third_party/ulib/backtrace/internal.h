@@ -148,6 +148,11 @@ struct backtrace_state
   int lock_alloc;
   /* The freelist when using mmap.  */
   struct backtrace_freelist_struct *freelist;
+  /* The shared library iterator.
+     If this is NULL then dl_iterate_phdr is used (via a wrapper).  */
+  backtrace_so_iterator *so_iterator;
+  /* The ITER_STATE argument to SO_ITERATOR.  */
+  void *iter_state;
 };
 
 /* Open a file for reading.  Returns -1 on error.  If DOES_NOT_EXIST

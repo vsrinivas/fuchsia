@@ -862,15 +862,13 @@ struct phdr_data
   int exe_descriptor;
 };
 
-/* Callback passed to dl_iterate_phdr.  Load debug info from shared
-   libraries.  */
+/* Shared lib iterator callback to load the debug info.  */
 
 static int
 #ifdef __i386__
 __attribute__ ((__force_align_arg_pointer__))
 #endif
-phdr_callback (struct dl_phdr_info *info, size_t size ATTRIBUTE_UNUSED,
-	       void *pdata)
+phdr_callback (const char *name, uintptr_t addr, void *pdata)
 {
   struct phdr_data *pd = (struct phdr_data *) pdata;
   int descriptor;
@@ -881,7 +879,7 @@ phdr_callback (struct dl_phdr_info *info, size_t size ATTRIBUTE_UNUSED,
   /* There is not much we can do if we don't have the module name,
      unless executable is ET_DYN, where we expect the very first
      phdr_callback to be for the PIE.  */
-  if (info->dlpi_name == NULL || info->dlpi_name[0] == '\0')
+  if (name == NULL || name[0] == '\0')
     {
       if (pd->exe_descriptor == -1)
 	return 0;
@@ -896,13 +894,13 @@ phdr_callback (struct dl_phdr_info *info, size_t size ATTRIBUTE_UNUSED,
 	  pd->exe_descriptor = -1;
 	}
 
-      descriptor = backtrace_open (info->dlpi_name, pd->error_callback,
+      descriptor = backtrace_open (name, pd->error_callback,
 				   pd->data, &does_not_exist);
       if (descriptor < 0)
 	return 0;
     }
 
-  if (elf_add (pd->state, descriptor, info->dlpi_addr, pd->error_callback,
+  if (elf_add (pd->state, descriptor, addr, pd->error_callback,
 	       pd->data, &elf_fileline_fn, pd->found_sym, &found_dwarf, 0))
     {
       if (found_dwarf)
@@ -913,6 +911,33 @@ phdr_callback (struct dl_phdr_info *info, size_t size ATTRIBUTE_UNUSED,
     }
 
   return 0;
+}
+
+/* Translate dl_iterate_phdr's args to ours.  */
+
+struct dl_iterate_data
+{
+  backtrace_so_callback *callback;
+  void *data;
+};
+
+static int
+dl_iterate_phdr_callback (struct dl_phdr_info *info,
+			  size_t size ATTRIBUTE_UNUSED,
+			  void *data)
+{
+  struct dl_iterate_data *dl_data = data;
+  return dl_data->callback (info->dlpi_name, info->dlpi_addr, dl_data->data);
+}
+
+static int
+dl_iterate_phdr_wrapper (void *iter_state ATTRIBUTE_UNUSED,
+			 backtrace_so_callback *func, void *data)
+{
+  struct dl_iterate_data dl_data;
+  dl_data.callback = phdr_callback;
+  dl_data.data = data;
+  return dl_iterate_phdr (dl_iterate_phdr_callback, &dl_data);
 }
 
 /* Initialize the backtrace data we need from an ELF executable.  At
@@ -943,7 +968,10 @@ backtrace_initialize (struct backtrace_state *state, int descriptor,
   pd.found_dwarf = &found_dwarf;
   pd.exe_descriptor = ret < 0 ? descriptor : -1;
 
-  dl_iterate_phdr (phdr_callback, (void *) &pd);
+  backtrace_so_iterator *iter_func = state->so_iterator;
+  if (iter_func == NULL)
+      iter_func = dl_iterate_phdr_wrapper;
+  iter_func (state->iter_state, phdr_callback, (void *) &pd);
 
   if (!state->threaded)
     {
