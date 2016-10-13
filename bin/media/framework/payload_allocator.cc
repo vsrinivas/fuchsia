@@ -25,7 +25,7 @@ class DefaultAllocator : public PayloadAllocator {
 
 void* DefaultAllocator::AllocatePayloadBuffer(size_t size) {
   FTL_DCHECK(size > 0);
-  return std::malloc(static_cast<size_t>(size));
+  return std::malloc(size);
 }
 
 void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
