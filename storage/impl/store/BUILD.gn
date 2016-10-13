@@ -15,6 +15,8 @@ group("store") {
 
 source_set("lib") {
   sources = [
+    "encoding.cc",
+    "encoding.h",
     "object_store.cc",
     "object_store.h",
     "tree_node.cc",
@@ -26,6 +28,7 @@ source_set("lib") {
     "//apps/ledger/storage/public",
     "//lib/ftl",
     "//mojo/public/cpp/system",
+    "//third_party/rapidjson",
   ]
 
   public_deps = [
@@ -40,6 +43,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "encoding_unittest.cc",
     "object_store_unittest.cc",
   ]
 
