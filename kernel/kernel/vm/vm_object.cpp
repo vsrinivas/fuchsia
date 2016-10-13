@@ -7,11 +7,13 @@
 #include "kernel/vm/vm_object.h"
 
 #include "vm_priv.h"
+
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
+#include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
 #include <stdlib.h>
@@ -80,17 +82,27 @@ mxtl::RefPtr<VmObject> VmObject::Create(uint32_t pmm_alloc_flags, uint64_t size)
     return vmo;
 }
 
-void VmObject::Dump() {
-    DEBUG_ASSERT(magic_ == MAGIC);
+void VmObject::Dump(bool page_dump) {
+    if (magic_ != MAGIC) {
+        printf("VmObject at %p has bad magic\n", this);
+        return;
+    }
+
+    AutoLock a(lock_);
 
     size_t count = 0;
-    {
-        AutoLock a(lock_);
+    page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
 
-        page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
-    }
     printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n",
            this, ref_count_debug(), size_, count);
+
+    if (page_dump) {
+        auto f = [](const auto p, uint64_t offset) {
+            printf("\t\t\toffset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n",
+                offset, p, vm_page_to_paddr(p));
+        };
+        page_list_.ForEveryPage(f);
+    }
 }
 
 status_t VmObject::Resize(uint64_t s) {
@@ -508,3 +520,42 @@ status_t VmObject::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffe
 
     return NO_ERROR;
 }
+
+static int cmd_vm_object(int argc, const cmd_args* argv) {
+    if (argc < 2) {
+    notenoughargs:
+        printf("not enough arguments\n");
+    usage:
+        printf("usage:\n");
+        printf("%s dump <address>\n", argv[0].str);
+        printf("%s dump_pages <address>\n", argv[0].str);
+        return ERR_INTERNAL;
+    }
+
+    if (!strcmp(argv[1].str, "dump")) {
+        if (argc < 2)
+            goto notenoughargs;
+
+        VmObject *o = reinterpret_cast<VmObject *>(argv[2].u);
+
+        o->Dump();
+    } else if (!strcmp(argv[1].str, "dump_pages")) {
+        if (argc < 2)
+            goto notenoughargs;
+
+        VmObject *o = reinterpret_cast<VmObject *>(argv[2].u);
+
+        o->Dump(true);
+    } else {
+        printf("unknown command\n");
+        goto usage;
+    }
+
+    return NO_ERROR;
+}
+
+STATIC_COMMAND_START
+#if LK_DEBUGLEVEL > 0
+STATIC_COMMAND("vm_object", "vm object debug commands", &cmd_vm_object)
+#endif
+STATIC_COMMAND_END(vm_opject);

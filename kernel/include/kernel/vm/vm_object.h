@@ -59,7 +59,7 @@ public:
     // translate a range of the vmo to physical addresses and store in the buffer
     status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t);
 
-    void Dump();
+    void Dump(bool page_dump = false);
 
 private:
     // kill copy constructors
