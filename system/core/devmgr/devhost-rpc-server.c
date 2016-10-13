@@ -6,6 +6,7 @@
 #include "device-internal.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,11 +195,13 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
 }
 
 static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
-                                        devhost_iostate_t* ios) {
+                                        devhost_iostate_t* ios, bool* should_free_ios) {
     mx_device_t* dev = ios->dev;
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
+
+    *should_free_ios = false;
 
     for (unsigned i = 0; i < msg->hcount; i++) {
         mx_handle_close(msg->handle[i]);
@@ -207,7 +210,7 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
         device_close(dev);
-        free(ios);
+        *should_free_ios = true;
         return NO_ERROR;
     case MXRIO_OPEN:
         if ((len < 1) || (len > 1024)) {
@@ -348,14 +351,17 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     devhost_iostate_t* ios = cookie;
     mx_status_t status;
+    bool should_free_ios = false;
     mtx_lock(&ios->lock);
     if (ios->dev != NULL) {
-        status = _devhost_rio_handler(msg, rh, ios);
+        status = _devhost_rio_handler(msg, rh, ios, &should_free_ios);
     } else {
         printf("rpc-device: stale ios %p\n", ios);
         status = NO_ERROR;
     }
     mtx_unlock(&ios->lock);
+    if (should_free_ios) {
+        free(ios);
+    }
     return status;
 }
-
