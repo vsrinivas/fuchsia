@@ -81,6 +81,12 @@ extern struct backtrace_state *backtrace_create_state (
     const char *filename, int threaded,
     backtrace_error_callback error_callback, void *data);
 
+/* Release all resources held by STATE.  */
+
+extern void backtrace_destroy_state (struct backtrace_state *state,
+                                     backtrace_error_callback error_callback,
+                                     void *data);
+
 /* The type of the callback argument to the backtrace_full function.
    DATA is the argument passed to backtrace_full.  PC is the program
    counter.  FILENAME is the name of the file containing PC, or NULL

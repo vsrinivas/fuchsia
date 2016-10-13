@@ -70,3 +70,20 @@ backtrace_create_state (const char *filename, int threaded,
 
   return state;
 }
+
+/* Release all resources held by STATE.  */
+
+void
+backtrace_destroy_state (struct backtrace_state *state,
+                         backtrace_error_callback error_callback,
+                         void *data)
+{
+  if (state == NULL)
+    return;
+
+  /* We need to pass a state pointer to backtrace_free, but it's state
+     that we're freeing!  */
+  struct backtrace_state final_state = *state;
+
+  backtrace_free(&final_state, state, sizeof *state, error_callback, data);
+}
