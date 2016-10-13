@@ -88,9 +88,7 @@ struct FileSystemURLParseCase {
   const char* ref;
 };
 
-bool ComponentMatches(const char* input,
-                      const char* reference,
-                      const Component& component) {
+bool ComponentMatches(const char* input, const char* reference, const Component& component) {
   // If the component is nonexistent, it should begin at 0.
   EXPECT_TRUE(component.is_valid() || component.begin == 0);
 
@@ -98,13 +96,10 @@ bool ComponentMatches(const char* input,
   EXPECT_LE(0U, component.begin);
 
   // A NULL reference means the component should be nonexistent.
-  if (!reference)
-    return !component.is_valid();
-  if (!component.is_valid())
-    return false;  // Reference is not NULL but we don't have anything
+  if (!reference) return !component.is_valid();
+  if (!component.is_valid()) return false;  // Reference is not NULL but we don't have anything
 
-  if (strlen(reference) != component.len())
-    return false;  // Lengths don't match
+  if (strlen(reference) != component.len()) return false;  // Lengths don't match
 
   // Now check the actual characters.
   return strncmp(reference, &input[component.begin], component.len()) == 0;
@@ -119,22 +114,24 @@ void ExpectInvalidComponent(const Component& component) {
 
 TEST(URLParser, Length) {
   const char* length_cases[] = {
+      // clang-format off
       // One with everything in it.
-    "http://user:pass@host:99/foo?bar#baz",
+      "http://user:pass@host:99/foo?bar#baz",
       // One with nothing in it.
-    "",
+      "",
       // Working backwards, let's start taking off stuff from the full one.
-    "http://user:pass@host:99/foo?bar#",
-    "http://user:pass@host:99/foo?bar",
-    "http://user:pass@host:99/foo?",
-    "http://user:pass@host:99/foo",
-    "http://user:pass@host:99/",
-    "http://user:pass@host:99",
-    "http://user:pass@host:",
-    "http://user:pass@host",
-    "http://host",
-    "http://user@",
-    "http:",
+      "http://user:pass@host:99/foo?bar#",
+      "http://user:pass@host:99/foo?bar",
+      "http://user:pass@host:99/foo?",
+      "http://user:pass@host:99/foo",
+      "http://user:pass@host:99/",
+      "http://user:pass@host:99",
+      "http://user:pass@host:",
+      "http://user:pass@host",
+      "http://host",
+      "http://user@",
+      "http:",
+      // clang-format on
   };
   for (const auto& length_case : length_cases) {
     size_t true_length = strlen(length_case);
@@ -153,47 +150,49 @@ TEST(URLParser, CountCharactersBefore) {
     bool include_delimiter;
     int expected_count;
   } count_cases[] = {
+      // clang-format off
   // Test each possibility in the case where all components are present.
   //    0         1         2
   //    0123456789012345678901
-    {"http://u:p@h:8/p?q#r", Parsed::SCHEME, true, 0},
-    {"http://u:p@h:8/p?q#r", Parsed::SCHEME, false, 0},
-    {"http://u:p@h:8/p?q#r", Parsed::USERNAME, true, 7},
-    {"http://u:p@h:8/p?q#r", Parsed::USERNAME, false, 7},
-    {"http://u:p@h:8/p?q#r", Parsed::PASSWORD, true, 9},
-    {"http://u:p@h:8/p?q#r", Parsed::PASSWORD, false, 9},
-    {"http://u:p@h:8/p?q#r", Parsed::HOST, true, 11},
-    {"http://u:p@h:8/p?q#r", Parsed::HOST, false, 11},
-    {"http://u:p@h:8/p?q#r", Parsed::PORT, true, 12},
-    {"http://u:p@h:8/p?q#r", Parsed::PORT, false, 13},
-    {"http://u:p@h:8/p?q#r", Parsed::PATH, false, 14},
-    {"http://u:p@h:8/p?q#r", Parsed::PATH, true, 14},
-    {"http://u:p@h:8/p?q#r", Parsed::QUERY, true, 16},
-    {"http://u:p@h:8/p?q#r", Parsed::QUERY, false, 17},
-    {"http://u:p@h:8/p?q#r", Parsed::REF, true, 18},
-    {"http://u:p@h:8/p?q#r", Parsed::REF, false, 19},
+      {"http://u:p@h:8/p?q#r", Parsed::SCHEME, true, 0},
+      {"http://u:p@h:8/p?q#r", Parsed::SCHEME, false, 0},
+      {"http://u:p@h:8/p?q#r", Parsed::USERNAME, true, 7},
+      {"http://u:p@h:8/p?q#r", Parsed::USERNAME, false, 7},
+      {"http://u:p@h:8/p?q#r", Parsed::PASSWORD, true, 9},
+      {"http://u:p@h:8/p?q#r", Parsed::PASSWORD, false, 9},
+      {"http://u:p@h:8/p?q#r", Parsed::HOST, true, 11},
+      {"http://u:p@h:8/p?q#r", Parsed::HOST, false, 11},
+      {"http://u:p@h:8/p?q#r", Parsed::PORT, true, 12},
+      {"http://u:p@h:8/p?q#r", Parsed::PORT, false, 13},
+      {"http://u:p@h:8/p?q#r", Parsed::PATH, false, 14},
+      {"http://u:p@h:8/p?q#r", Parsed::PATH, true, 14},
+      {"http://u:p@h:8/p?q#r", Parsed::QUERY, true, 16},
+      {"http://u:p@h:8/p?q#r", Parsed::QUERY, false, 17},
+      {"http://u:p@h:8/p?q#r", Parsed::REF, true, 18},
+      {"http://u:p@h:8/p?q#r", Parsed::REF, false, 19},
       // Now test when the requested component is missing.
-    {"http://u:p@h:8/p?", Parsed::REF, true, 17},
-    {"http://u:p@h:8/p?q", Parsed::REF, true, 18},
-    {"http://u:p@h:8/p#r", Parsed::QUERY, true, 16},
-    {"http://u:p@h:8#r", Parsed::PATH, true, 14},
-    {"http://u:p@h/", Parsed::PORT, true, 12},
-    {"http://u:p@/", Parsed::HOST, true, 11},
+      {"http://u:p@h:8/p?", Parsed::REF, true, 17},
+      {"http://u:p@h:8/p?q", Parsed::REF, true, 18},
+      {"http://u:p@h:8/p#r", Parsed::QUERY, true, 16},
+      {"http://u:p@h:8#r", Parsed::PATH, true, 14},
+      {"http://u:p@h/", Parsed::PORT, true, 12},
+      {"http://u:p@/", Parsed::HOST, true, 11},
       // This case is a little weird. It will report that the password would
       // start where the host begins. This is arguably correct, although you
       // could also argue that it should start at the '@' sign. Doing it
       // starting with the '@' sign is actually harder, so we don't bother.
-    {"http://u@h/", Parsed::PASSWORD, true, 9},
-    {"http://h/", Parsed::USERNAME, true, 7},
-    {"http:", Parsed::USERNAME, true, 5},
-    {"", Parsed::SCHEME, true, 0},
+      {"http://u@h/", Parsed::PASSWORD, true, 9},
+      {"http://h/", Parsed::USERNAME, true, 7},
+      {"http:", Parsed::USERNAME, true, 5},
+      {"", Parsed::SCHEME, true, 0},
       // Make sure a random component still works when there's nothing there.
-    {"", Parsed::REF, true, 0},
+      {"", Parsed::REF, true, 0},
       // File URLs are special with no host, so we test those.
-    {"file:///c:/foo", Parsed::USERNAME, true, 7},
-    {"file:///c:/foo", Parsed::PASSWORD, true, 7},
-    {"file:///c:/foo", Parsed::HOST, true, 7},
-    {"file:///c:/foo", Parsed::PATH, true, 7},
+      {"file:///c:/foo", Parsed::USERNAME, true, 7},
+      {"file:///c:/foo", Parsed::PASSWORD, true, 7},
+      {"file:///c:/foo", Parsed::HOST, true, 7},
+      {"file:///c:/foo", Parsed::PATH, true, 7},
+      // clang-format on
   };
   for (const auto& count_case : count_cases) {
     int length = static_cast<int>(strlen(count_case.url));
@@ -205,12 +204,13 @@ TEST(URLParser, CountCharactersBefore) {
     else
       ParseStandardURL(count_case.url, length, &parsed);
 
-    int chars_before = parsed.CountCharactersBefore(
-        count_case.component, count_case.include_delimiter);
+    int chars_before =
+        parsed.CountCharactersBefore(count_case.component, count_case.include_delimiter);
     EXPECT_EQ(count_case.expected_count, chars_before);
   }
 }
 
+// clang-format off
 // Standard --------------------------------------------------------------------
 
 // Input                               Scheme  Usrname Passwd     Host         Port Path       Query        Ref
@@ -308,6 +308,7 @@ static URLParseCase standard_cases[] = {
 {"http://[[::]]",                       "http", NULL,  NULL,      "[[::]]",     -1, NULL,      NULL,        NULL},
 
 };
+// clang-format on
 
 TEST(URLParser, Standard) {
   // Declared outside for loop to try to catch cases in init() where we forget
@@ -331,6 +332,7 @@ TEST(URLParser, Standard) {
 
 // PathURL --------------------------------------------------------------------
 
+// clang-format off
 // Various incarnations of path URLs.
 static PathURLParseCase path_cases[] = {
 {"",                                        NULL,          NULL},
@@ -343,6 +345,7 @@ static PathURLParseCase path_cases[] = {
 {"  about: blank ",                         "about",       " blank "},
 {"javascript :alert(\"He:/l\\l#o?foo\"); ", "javascript ", "alert(\"He:/l\\l#o?foo\"); "},
 };
+// clang-format on
 
 TEST(URLParser, PathURL) {
   // Declared outside for loop to try to catch cases in init() where we forget
@@ -364,6 +367,7 @@ TEST(URLParser, PathURL) {
 }
 
 // Various incarnations of file URLs.
+// clang-format off
 static URLParseCase file_cases[] = {
   // No slashes.
   {"file:",                    "file", NULL, NULL, NULL,      -1, NULL,             NULL, NULL},
@@ -410,6 +414,7 @@ static URLParseCase file_cases[] = {
   {"file:///foo.html?#",       "file", NULL, NULL, NULL,       -1, "/foo.html",     "",   ""},
   {"file:///foo.html?q=y#ref", "file", NULL, NULL, NULL,       -1, "/foo.html",    "q=y", "ref"},
 };
+// clang-format on
 
 TEST(URLParser, ParseFileURL) {
   // Declared outside for loop to try to catch cases in init() where we forget
@@ -441,31 +446,30 @@ TEST(URLParser, ParseFileURL) {
         << " [" << url << "] " << parsed.query.begin << ", " << parsed.query.len();
 
     EXPECT_TRUE(ComponentMatches(url, file_case.ref, parsed.ref))
-        << " [ "<< url << "] " << parsed.query.begin << ", " << parsed.scheme.len();
+        << " [ " << url << "] " << parsed.query.begin << ", " << parsed.scheme.len();
   }
 }
-
 
 TEST(URLParser, ExtractFileName) {
   struct FileCase {
     const char* input;
     const char* expected;
   } file_cases[] = {
-    {"http://www.google.com", NULL},
-    {"http://www.google.com/", ""},
-    {"http://www.google.com/search", "search"},
-    {"http://www.google.com/search/", ""},
-    {"http://www.google.com/foo/bar.html?baz=22", "bar.html"},
-    {"http://www.google.com/foo/bar.html#ref", "bar.html"},
-    {"http://www.google.com/search/;param", ""},
-    {"http://www.google.com/foo/bar.html;param#ref", "bar.html"},
-    {"http://www.google.com/foo/bar.html;foo;param#ref", "bar.html"},
-    {"http://www.google.com/foo/bar.html?query#ref", "bar.html"},
-    {"http://www.google.com/foo;/bar.html", "bar.html"},
-    {"http://www.google.com/foo;/", ""},
-    {"http://www.google.com/foo;", "foo"},
-    {"http://www.google.com/;", ""},
-    {"http://www.google.com/foo;bar;html", "foo"},
+      {"http://www.google.com", NULL},
+      {"http://www.google.com/", ""},
+      {"http://www.google.com/search", "search"},
+      {"http://www.google.com/search/", ""},
+      {"http://www.google.com/foo/bar.html?baz=22", "bar.html"},
+      {"http://www.google.com/foo/bar.html#ref", "bar.html"},
+      {"http://www.google.com/search/;param", ""},
+      {"http://www.google.com/foo/bar.html;param#ref", "bar.html"},
+      {"http://www.google.com/foo/bar.html;foo;param#ref", "bar.html"},
+      {"http://www.google.com/foo/bar.html?query#ref", "bar.html"},
+      {"http://www.google.com/foo;/bar.html", "bar.html"},
+      {"http://www.google.com/foo;/", ""},
+      {"http://www.google.com/foo;", "foo"},
+      {"http://www.google.com/;", ""},
+      {"http://www.google.com/foo;bar;html", "foo"},
   };
 
   for (const auto& file_case : file_cases) {
@@ -485,9 +489,7 @@ TEST(URLParser, ExtractFileName) {
 // Returns true if the parameter with index |parameter| in the given URL's
 // query string. The expected key can be NULL to indicate no such key index
 // should exist. The parameter number is 1-based.
-static bool NthParameterIs(const char* url,
-                           int parameter,
-                           const char* expected_key,
+static bool NthParameterIs(const char* url, int parameter, const char* expected_key,
                            const char* expected_value) {
   Parsed parsed;
   ParseStandardURL(url, strlen(url), &parsed);
@@ -497,19 +499,15 @@ static bool NthParameterIs(const char* url,
   for (int i = 1; i <= parameter; i++) {
     Component key, value;
     if (!ExtractQueryKeyValue(url, &query, &key, &value)) {
-      if (parameter >= i && !expected_key)
-        return true;  // Expected nonexistent key, got one.
-      return false;  // Not enough keys.
+      if (parameter >= i && !expected_key) return true;  // Expected nonexistent key, got one.
+      return false;                                      // Not enough keys.
     }
 
     if (i == parameter) {
-      if (!expected_key)
-        return false;
+      if (!expected_key) return false;
 
-      if (strncmp(&url[key.begin], expected_key, key.len()) != 0)
-        return false;
-      if (strncmp(&url[value.begin], expected_value, value.len()) != 0)
-        return false;
+      if (strncmp(&url[key.begin], expected_key, key.len()) != 0) return false;
+      if (strncmp(&url[value.begin], expected_value, value.len()) != 0) return false;
       return true;
     }
   }
@@ -558,6 +556,7 @@ TEST(URLParser, ExtractQueryKeyValue) {
 
 // MailtoURL --------------------------------------------------------------------
 
+// clang-format off
 static MailtoURLParseCase mailto_cases[] = {
 //|input                       |scheme   |path               |query
 {"mailto:foo@gmail.com",        "mailto", "foo@gmail.com",    NULL},
@@ -571,6 +570,7 @@ static MailtoURLParseCase mailto_cases[] = {
 {"mailto:?body=#foobar#",       "mailto", NULL,               "body=#foobar#",},
 {"mailto:#?body=#foobar#",      "mailto", "#",                "body=#foobar#"},
 };
+// clang-format on
 
 TEST(URLParser, MailtoUrl) {
   // Declared outside for loop to try to catch cases in init() where we forget

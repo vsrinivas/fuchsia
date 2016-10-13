@@ -17,7 +17,6 @@ namespace url {
 
 namespace test_utils {
 
-
 // Converts a UTF-16 string from native wchar_t format to uint16_t, by
 // truncating the high 32 bits. This is not meant to handle true UTF-32
 // encoded strings.

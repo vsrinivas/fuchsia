@@ -16,8 +16,7 @@ namespace url {
 // spec_len if the end of the input is reached.
 inline int FindNextSlash(const char* spec, size_t begin_index, size_t spec_len) {
   size_t idx = begin_index;
-  while (idx < spec_len && !IsURLSlash(spec[idx]))
-    idx++;
+  while (idx < spec_len && !IsURLSlash(spec[idx])) idx++;
   return idx;
 }
 

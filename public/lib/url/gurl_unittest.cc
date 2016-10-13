@@ -26,8 +26,7 @@ std::string TypesTestCase(const char* src) {
 TEST(GURLTest, Types) {
   // URLs with unknown schemes should be treated as path URLs, even when they
   // have things like "://".
-  EXPECT_EQ("something:///HOSTNAME.com/",
-            TypesTestCase("something:///HOSTNAME.com/"));
+  EXPECT_EQ("something:///HOSTNAME.com/", TypesTestCase("something:///HOSTNAME.com/"));
 
   // Conversely, URLs with known schemes should always trigger standard URL
   // handling.
@@ -151,34 +150,22 @@ TEST(GURLTest, Assign) {
 
 TEST(GURLTest, IsValid) {
   const char* valid_cases[] = {
-    "http://google.com",
-    "unknown://google.com",
-    "http://user:pass@google.com",
-    "http://google.com:12345",
-    "http://google.com/path",
-    "http://google.com//path",
-    "http://google.com?k=v#fragment",
-    "http://user:pass@google.com:12345/path?k=v#fragment",
-    "http:/path",
-    "http:path",
-    "://google.com",
+      "http://google.com", "unknown://google.com", "http://user:pass@google.com",
+      "http://google.com:12345", "http://google.com/path", "http://google.com//path",
+      "http://google.com?k=v#fragment", "http://user:pass@google.com:12345/path?k=v#fragment",
+      "http:/path", "http:path", "://google.com",
   };
 
   for (const char* valid_case : valid_cases) {
-    EXPECT_TRUE(GURL(valid_case).is_valid())
-        << "Case: " << valid_case;
+    EXPECT_TRUE(GURL(valid_case).is_valid()) << "Case: " << valid_case;
   }
 
   const char* invalid_cases[] = {
-    "http://?k=v",
-    "http:://google.com",
-    "http//google.com",
-    "http://google.com:12three45",
-    "path",
+      "http://?k=v", "http:://google.com", "http//google.com", "http://google.com:12three45",
+      "path",
   };
   for (const char* invalid_case : invalid_cases) {
-    EXPECT_FALSE(GURL(invalid_case).is_valid())
-        << "Case: " << invalid_case;
+    EXPECT_FALSE(GURL(invalid_case).is_valid()) << "Case: " << invalid_case;
   }
 }
 
@@ -218,17 +205,19 @@ TEST(GURLTest, Resolve) {
     bool expected_valid;
     const char* expected;
   } resolve_cases[] = {
-    {"http://www.google.com/", "foo.html", true, "http://www.google.com/foo.html"},
-    {"http://www.google.com/foo/", "bar", true, "http://www.google.com/foo/bar"},
-    {"http://www.google.com/foo/", "/bar", true, "http://www.google.com/bar"},
-    {"http://www.google.com/foo", "bar", true, "http://www.google.com/bar"},
-    {"http://www.google.com/", "http://images.google.com/foo.html", true, "http://images.google.com/foo.html"},
-    {"http://www.google.com/blah/bloo?c#d", "../../../hello/./world.html?a#b", true, "http://www.google.com/hello/world.html?a#b"},
-    {"http://www.google.com/foo#bar", "#com", true, "http://www.google.com/foo#com"},
-    {"http://www.google.com/", "Https:images.google.com", true, "https://images.google.com/"},
+      {"http://www.google.com/", "foo.html", true, "http://www.google.com/foo.html"},
+      {"http://www.google.com/foo/", "bar", true, "http://www.google.com/foo/bar"},
+      {"http://www.google.com/foo/", "/bar", true, "http://www.google.com/bar"},
+      {"http://www.google.com/foo", "bar", true, "http://www.google.com/bar"},
+      {"http://www.google.com/", "http://images.google.com/foo.html", true,
+       "http://images.google.com/foo.html"},
+      {"http://www.google.com/blah/bloo?c#d", "../../../hello/./world.html?a#b", true,
+       "http://www.google.com/hello/world.html?a#b"},
+      {"http://www.google.com/foo#bar", "#com", true, "http://www.google.com/foo#com"},
+      {"http://www.google.com/", "Https:images.google.com", true, "https://images.google.com/"},
       // A non-standard base can be replaced with a standard absolute URL.
-    {"data:blahblah", "http://google.com/", true, "http://google.com/"},
-    {"data:blahblah", "http:google.com", true, "http://google.com/"},
+      {"data:blahblah", "http://google.com/", true, "http://google.com/"},
+      {"data:blahblah", "http:google.com", true, "http://google.com/"},
   };
 
   for (const auto& resolve_case : resolve_cases) {
@@ -244,9 +233,9 @@ TEST(GURLTest, GetWithEmptyPath) {
     const char* input;
     const char* expected;
   } cases[] = {
-    {"http://www.google.com", "http://www.google.com/"},
-    {"javascript:window.alert(\"hello, world\");", ""},
-    {"http://www.google.com/foo/bar.html?baz=22", "http://www.google.com/"},
+      {"http://www.google.com", "http://www.google.com/"},
+      {"javascript:window.alert(\"hello, world\");", ""},
+      {"http://www.google.com/foo/bar.html?baz=22", "http://www.google.com/"},
   };
 
   for (const auto& test_case : cases) {
@@ -261,11 +250,11 @@ TEST(GURLTest, PathForRequest) {
     const char* input;
     const char* expected;
   } cases[] = {
-    {"http://www.google.com", "/"},
-    {"http://www.google.com/", "/"},
-    {"http://www.google.com/foo/bar.html?baz=22", "/foo/bar.html?baz=22"},
-    {"http://www.google.com/foo/bar.html#ref", "/foo/bar.html"},
-    {"http://www.google.com/foo/bar.html?query#ref", "/foo/bar.html?query"},
+      {"http://www.google.com", "/"},
+      {"http://www.google.com/", "/"},
+      {"http://www.google.com/foo/bar.html?baz=22", "/foo/bar.html?baz=22"},
+      {"http://www.google.com/foo/bar.html#ref", "/foo/bar.html"},
+      {"http://www.google.com/foo/bar.html?query#ref", "/foo/bar.html?query"},
   };
 
   for (const auto& test_case : cases) {
@@ -280,33 +269,33 @@ TEST(GURLTest, EffectiveIntPort) {
     const char* spec;
     int expected_int_port;
   } port_tests[] = {
-    // http
-    {"http://www.google.com/", 80},
-    {"http://www.google.com:80/", 80},
-    {"http://www.google.com:443/", 443},
+      // http
+      {"http://www.google.com/", 80},
+      {"http://www.google.com:80/", 80},
+      {"http://www.google.com:443/", 443},
 
-    // https
-    {"https://www.google.com/", 443},
-    {"https://www.google.com:443/", 443},
-    {"https://www.google.com:80/", 80},
+      // https
+      {"https://www.google.com/", 443},
+      {"https://www.google.com:443/", 443},
+      {"https://www.google.com:80/", 80},
 
-    // ftp
-    {"ftp://www.google.com/", 21},
-    {"ftp://www.google.com:21/", 21},
-    {"ftp://www.google.com:80/", 80},
+      // ftp
+      {"ftp://www.google.com/", 21},
+      {"ftp://www.google.com:21/", 21},
+      {"ftp://www.google.com:80/", 80},
 
-    // gopher
-    {"gopher://www.google.com/", 70},
-    {"gopher://www.google.com:70/", 70},
-    {"gopher://www.google.com:80/", 80},
+      // gopher
+      {"gopher://www.google.com/", 70},
+      {"gopher://www.google.com:70/", 70},
+      {"gopher://www.google.com:80/", 80},
 
-    // file - no port
-    {"file://www.google.com/", PORT_UNSPECIFIED},
-    {"file://www.google.com:443/", PORT_UNSPECIFIED},
+      // file - no port
+      {"file://www.google.com/", PORT_UNSPECIFIED},
+      {"file://www.google.com:443/", PORT_UNSPECIFIED},
 
-    // data - no port
-    {"data:www.google.com:90", PORT_UNSPECIFIED},
-    {"data:www.google.com", PORT_UNSPECIFIED},
+      // data - no port
+      {"data:www.google.com:90", PORT_UNSPECIFIED},
+      {"data:www.google.com", PORT_UNSPECIFIED},
   };
 
   for (const auto& port_test : port_tests) {
@@ -320,14 +309,14 @@ TEST(GURLTest, IPAddress) {
     const char* spec;
     bool expected_ip;
   } ip_tests[] = {
-    {"http://www.google.com/", false},
-    {"http://192.168.9.1/", true},
-    {"http://192.168.9.1.2/", false},
-    {"http://192.168.m.1/", false},
-    {"http://2001:db8::1/", false},
-    {"http://[2001:db8::1]/", true},
-    {"", false},
-    {"some random input!", false},
+      {"http://www.google.com/", false},
+      {"http://192.168.9.1/", true},
+      {"http://192.168.9.1.2/", false},
+      {"http://192.168.m.1/", false},
+      {"http://2001:db8::1/", false},
+      {"http://[2001:db8::1]/", true},
+      {"", false},
+      {"some random input!", false},
   };
 
   for (const auto& ip_test : ip_tests) {
@@ -342,18 +331,18 @@ TEST(GURLTest, HostNoBrackets) {
     const char* expected_host;
     const char* expected_plainhost;
   } cases[] = {
-    {"http://www.google.com", "www.google.com", "www.google.com"},
-    {"http://[2001:db8::1]/", "[2001:db8::1]", "2001:db8::1"},
-    {"http://[::]/", "[::]", "::"},
+      {"http://www.google.com", "www.google.com", "www.google.com"},
+      {"http://[2001:db8::1]/", "[2001:db8::1]", "2001:db8::1"},
+      {"http://[::]/", "[::]", "::"},
 
-    // Don't require a valid URL, but don't crash either.
-    {"http://[]/", "[]", ""},
-    {"http://[x]/", "[x]", "x"},
-    {"http://[x/", "[x", "[x"},
-    {"http://x]/", "x]", "x]"},
-    {"http://[/", "[", "["},
-    {"http://]/", "]", "]"},
-    {"", "", ""},
+      // Don't require a valid URL, but don't crash either.
+      {"http://[]/", "[]", ""},
+      {"http://[x]/", "[x]", "x"},
+      {"http://[x/", "[x", "[x"},
+      {"http://x]/", "x]", "x]"},
+      {"http://[/", "[", "["},
+      {"http://]/", "]", "]"},
+      {"", "", ""},
   };
   for (const auto& test_case : cases) {
     GURL url(test_case.input);
@@ -455,13 +444,11 @@ TEST(GURLTest, ContentAndPathForNonStandardURLs) {
     const char* expected;
   } cases[] = {
       {"null", ""},
-      {"not-a-standard-scheme:this is arbitrary content",
-       "this is arbitrary content"},
+      {"not-a-standard-scheme:this is arbitrary content", "this is arbitrary content"},
       {"view-source:http://example.com/path", "http://example.com/path"},
       {"blob:http://example.com/GUID", "http://example.com/GUID"},
       {"blob://http://example.com/GUID", "//http://example.com/GUID"},
-      {"blob:http://user:password@example.com/GUID",
-       "http://user:password@example.com/GUID"},
+      {"blob:http://user:password@example.com/GUID", "http://user:password@example.com/GUID"},
   };
 
   for (const auto& test : cases) {

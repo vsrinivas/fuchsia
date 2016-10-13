@@ -11,10 +11,8 @@
 
 namespace url {
 
-bool FileCanonicalizePath(const char* spec,
-                            const Component& path,
-                            CanonOutput* output,
-                            Component* out_path) {
+bool FileCanonicalizePath(const char* spec, const Component& path, CanonOutput* output,
+                          Component* out_path) {
   // Copies and normalizes the "c:" at the beginning, if present.
   out_path->begin = output->length();
   size_t after_drive;
@@ -39,12 +37,9 @@ bool FileCanonicalizePath(const char* spec,
   return success;
 }
 
-bool CanonicalizeFileURL(const char* spec,
-                         size_t spec_len,
-                           const Parsed& parsed,
-                           CharsetConverter* query_converter,
-                           CanonOutput* output,
-                           Parsed* new_parsed) {
+bool CanonicalizeFileURL(const char* spec, size_t spec_len, const Parsed& parsed,
+                         CharsetConverter* query_converter, CanonOutput* output,
+                         Parsed* new_parsed) {
   URLComponentSource source(spec);
 
   // Things we don't set in file: URLs.
@@ -63,12 +58,9 @@ bool CanonicalizeFileURL(const char* spec,
   // TODO(brettw) This doesn't do any checking for host name validity. We
   // should probably handle validity checking of UNC hosts differently than
   // for regular IP hosts.
-  bool success = CanonicalizeHost(source.host, parsed.host,
-                                  output, &new_parsed->host);
-  success &= FileCanonicalizePath(source.path, parsed.path,
-                                    output, &new_parsed->path);
-  CanonicalizeQuery(source.query, parsed.query, query_converter,
-                    output, &new_parsed->query);
+  bool success = CanonicalizeHost(source.host, parsed.host, output, &new_parsed->host);
+  success &= FileCanonicalizePath(source.path, parsed.path, output, &new_parsed->path);
+  CanonicalizeQuery(source.query, parsed.query, query_converter, output, &new_parsed->query);
 
   // Ignore failure for refs since the URL can probably still be loaded.
   CanonicalizeRef(source.ref, parsed.ref, output, &new_parsed->ref);

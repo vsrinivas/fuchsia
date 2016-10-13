@@ -38,9 +38,7 @@ class URL_EXPORT GURL {
   // Constructor for URLs that have already been parsed and canonicalized. This
   // is used for conversions from KURL, for example. The caller must supply all
   // information associated with the URL, which must be correct and consistent.
-  GURL(const char* canonical_spec,
-       size_t canonical_spec_len,
-       const url::Parsed& parsed,
+  GURL(const char* canonical_spec, size_t canonical_spec_len, const url::Parsed& parsed,
        bool is_valid);
   // Notice that we take the canonical_spec by value so that we can convert
   // from WebURL without copying the string. When we call this constructor
@@ -59,16 +57,12 @@ class URL_EXPORT GURL {
   // data out in the format you may be expecting. Instead, we keep something
   // "reasonable looking" so that the user can see how it's busted if
   // displayed to them.
-  bool is_valid() const {
-    return is_valid_;
-  }
+  bool is_valid() const { return is_valid_; }
 
   // Returns true if the URL is zero-length. Note that empty URLs are also
   // invalid, and is_valid() will return false for them. This is provided
   // because some users may want to treat the empty case differently.
-  bool is_empty() const {
-    return spec_.empty();
-  }
+  bool is_empty() const { return spec_.empty(); }
 
   // Returns the raw spec, i.e., the full text of the URL, in canonical UTF-8,
   // if the URL is valid. If the URL is not valid, this will assert and return
@@ -92,9 +86,7 @@ class URL_EXPORT GURL {
   // If the spec is valid, the valid spec will be returned.
   //
   // The returned string is guaranteed to be valid UTF-8.
-  const std::string& possibly_invalid_spec() const {
-    return spec_;
-  }
+  const std::string& possibly_invalid_spec() const { return spec_; }
 
   // Getter for the raw parsed structure. This allows callers to locate parts
   // of the URL within the spec themselves. Most callers should consider using
@@ -104,9 +96,7 @@ class URL_EXPORT GURL {
   // or may not be valid. If you are using this to index into the spec, BE
   // SURE YOU ARE USING possibly_invalid_spec() to get the spec, and that you
   // don't do anything "important" with invalid specs.
-  const url::Parsed& parsed_for_possibly_invalid_spec() const {
-    return parsed_;
-  }
+  const url::Parsed& parsed_for_possibly_invalid_spec() const { return parsed_; }
 
   // Defiant equality operator!
   bool operator==(const GURL& other) const;
@@ -164,9 +154,7 @@ class URL_EXPORT GURL {
 
   // We often need to know if this is a file URL. File URLs are "standard", but
   // are often treated separately by some programs.
-  bool SchemeIsFile() const {
-    return SchemeIs(url::kFileScheme);
-  }
+  bool SchemeIsFile() const { return SchemeIs(url::kFileScheme); }
 
   // Returns true if the scheme indicates a secure connection.
   //
@@ -179,9 +167,7 @@ class URL_EXPORT GURL {
   // TODO(palmer): Audit callers and change them to |SchemeIsCryptographic| or
   // |IsOriginSecure|, as appropriate. Then remove |SchemeIsSecure|.
   // crbug.com/362214
-  bool SchemeIsSecure() const {
-    return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme);
-  }
+  bool SchemeIsSecure() const { return SchemeIs(url::kHttpsScheme) || SchemeIs(url::kWssScheme); }
 
   // Returns true if the scheme indicates a network connection that uses TLS or
   // some other cryptographic protocol (e.g. QUIC) for security.
@@ -195,9 +181,7 @@ class URL_EXPORT GURL {
   }
 
   // Returns true if the scheme is "blob".
-  bool SchemeIsBlob() const {
-    return SchemeIs(url::kBlobScheme);
-  }
+  bool SchemeIsBlob() const { return SchemeIs(url::kBlobScheme); }
 
   // The "content" of the URL is everything after the scheme (skipping the
   // scheme delimiting colon). It is an error to get the content of an invalid
@@ -213,18 +197,12 @@ class URL_EXPORT GURL {
   std::string scheme() const {  // Not including the colon. See also SchemeIs.
     return ComponentString(parsed_.scheme);
   }
-  std::string username() const {
-    return ComponentString(parsed_.username);
-  }
-  std::string password() const {
-    return ComponentString(parsed_.password);
-  }
+  std::string username() const { return ComponentString(parsed_.username); }
+  std::string password() const { return ComponentString(parsed_.password); }
   // Note that this may be a hostname, an IPv4 address, or an IPv6 literal
   // surrounded by square brackets, like "[2001:db8::1]".  To exclude these
   // brackets, use HostNoBrackets() below.
-  std::string host() const {
-    return ComponentString(parsed_.host);
-  }
+  std::string host() const { return ComponentString(parsed_.host); }
   std::string port() const {  // Returns -1 if "default"
     return ComponentString(parsed_.port);
   }
@@ -242,33 +220,21 @@ class URL_EXPORT GURL {
   // URL component exists in this URL. Note that existence is different than
   // being nonempty. http://www.google.com/? has a query that just happens to
   // be empty, and has_query() will return true.
-  bool has_scheme() const {
-    return parsed_.scheme.is_nonempty();
-  }
-  bool has_username() const {
-    return parsed_.username.is_nonempty();
-  }
-  bool has_password() const {
-    return parsed_.password.is_nonempty();
-  }
+  bool has_scheme() const { return parsed_.scheme.is_nonempty(); }
+  bool has_username() const { return parsed_.username.is_nonempty(); }
+  bool has_password() const { return parsed_.password.is_nonempty(); }
   bool has_host() const {
     // Note that hosts are special, absence of host means length 0.
     return parsed_.host.is_nonempty();
   }
-  bool has_port() const {
-    return parsed_.port.is_nonempty();
-  }
+  bool has_port() const { return parsed_.port.is_nonempty(); }
   bool has_path() const {
     // Note that http://www.google.com/" has a path, the path is "/". This can
     // return false only for invalid or nonstandard URLs.
     return parsed_.path.is_nonempty();
   }
-  bool has_query() const {
-    return parsed_.query.is_nonempty();
-  }
-  bool has_ref() const {
-    return parsed_.ref.is_nonempty();
-  }
+  bool has_query() const { return parsed_.query.is_nonempty(); }
+  bool has_ref() const { return parsed_.ref.is_nonempty(); }
 
   // Returns a parsed version of the port. Can also be any of the special
   // values defined in Parsed for ExtractPort.
@@ -326,8 +292,7 @@ class URL_EXPORT GURL {
 
   // Returns the substring of the input identified by the given component.
   std::string ComponentString(const url::Component& comp) const {
-    if (comp.is_invalid_or_empty())
-      return std::string();
+    if (comp.is_invalid_or_empty()) return std::string();
     return std::string(spec_, comp.begin, comp.len());
   }
 

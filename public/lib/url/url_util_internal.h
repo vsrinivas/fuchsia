@@ -15,23 +15,15 @@ namespace url {
 
 // Given a string and a range inside the string, compares it to the given
 // lower-case |compare_to| buffer.
-bool CompareSchemeComponent(const char* spec,
-                            const Component& component,
-                            const char* compare_to);
+bool CompareSchemeComponent(const char* spec, const Component& component, const char* compare_to);
 
-
-
-static inline bool LowerCaseEqualsASCII(ftl::StringView str,
-                                        ftl::StringView lowercase_ascii) {
-  if (str.size() != lowercase_ascii.size())
-    return false;
+static inline bool LowerCaseEqualsASCII(ftl::StringView str, ftl::StringView lowercase_ascii) {
+  if (str.size() != lowercase_ascii.size()) return false;
   for (size_t i = 0; i < str.size(); i++) {
-    if (ftl::ToLowerASCII(str[i]) != lowercase_ascii[i])
-      return false;
+    if (ftl::ToLowerASCII(str[i]) != lowercase_ascii[i]) return false;
   }
   return true;
 }
-
 
 }  // namespace url
 

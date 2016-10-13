@@ -48,6 +48,7 @@ enum CharacterFlags {
 // Dot is even more special, and the escaped version is handled specially by
 // IsDot. Therefore, we don't need the "escape" flag, and even the "unescape"
 // bit is never handled (we just need the "special") bit.
+// clang-format off
 const unsigned char kPathCharLookup[0x100] = {
 //   NULL     control chars...
      INVALID, ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,
@@ -74,6 +75,7 @@ const unsigned char kPathCharLookup[0x100] = {
      ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,
      ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,
      ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE,  ESCAPE};
+// clang-format on
 
 enum DotDisposition {
   // The given dot is just part of a filename and is not special.
@@ -97,8 +99,8 @@ enum DotDisposition {
 // If the input is "../foo", |after_dot| = 1, |end| = 6, and
 // at the end, |*consumed_len| = 2 for the "./" this function consumed. The
 // original dot length should be handled by the caller.
-DotDisposition ClassifyAfterDot(const char* spec, size_t after_dot,
-                                size_t end, size_t* consumed_len) {
+DotDisposition ClassifyAfterDot(const char* spec, size_t after_dot, size_t end,
+                                size_t* consumed_len) {
   if (after_dot == end) {
     // Single dot at the end.
     *consumed_len = 0;
@@ -143,19 +145,16 @@ DotDisposition ClassifyAfterDot(const char* spec, size_t after_dot,
 // because it is run only on the canonical output.
 //
 // The output is guaranteed to end in a slash when this function completes.
-void BackUpToPreviousSlash(size_t path_begin_in_output,
-                           CanonOutput* output) {
+void BackUpToPreviousSlash(size_t path_begin_in_output, CanonOutput* output) {
   FTL_DCHECK(output->length() > 0);
 
   size_t i = output->length() - 1;
   FTL_DCHECK(output->at(i) == '/');
-  if (i == path_begin_in_output)
-    return;  // We're at the first slash, nothing to do.
+  if (i == path_begin_in_output) return;  // We're at the first slash, nothing to do.
 
   // Now back up (skipping the trailing slash) until we find another slash.
   i--;
-  while (output->at(i) != '/' && i > path_begin_in_output)
-    i--;
+  while (output->at(i) != '/' && i > path_begin_in_output) i--;
 
   // Now shrink the output to just include that last slash we found.
   output->set_length(i + 1);
@@ -176,10 +175,8 @@ void BackUpToPreviousSlash(size_t path_begin_in_output,
 // We do not collapse multiple slashes in a row to a single slash. It seems
 // no web browsers do this, and we don't want incompatibilities, even though
 // it would be correct for most systems.
-bool CanonicalizePartialPath(const char* spec,
-                   const Component& path,
-                   size_t path_begin_in_output,
-                   CanonOutput* output) {
+bool CanonicalizePartialPath(const char* spec, const Component& path, size_t path_begin_in_output,
+                             CanonOutput* output) {
   size_t end = path.end();
 
   bool success = true;
@@ -210,12 +207,10 @@ bool CanonicalizePartialPath(const char* spec,
           // dots, this actually increases performance measurably (though
           // slightly).
           FTL_DCHECK(output->length() > path_begin_in_output);
-          if (output->length() > path_begin_in_output &&
-              output->at(output->length() - 1) == '/') {
+          if (output->length() > path_begin_in_output && output->at(output->length() - 1) == '/') {
             // Slash followed by a dot, check to see if this is means relative
             size_t consumed_len;
-            switch (ClassifyAfterDot(spec, i + dotlen, end,
-                                           &consumed_len)) {
+            switch (ClassifyAfterDot(spec, i + dotlen, end, &consumed_len)) {
               case NOT_A_DIRECTORY:
                 // Copy the dot to the output, it means nothing special.
                 output->push_back('.');
@@ -293,10 +288,8 @@ bool CanonicalizePartialPath(const char* spec,
   return success;
 }
 
-bool CanonicalizePath(const char* spec,
-            const Component& path,
-            CanonOutput* output,
-            Component* out_path) {
+bool CanonicalizePath(const char* spec, const Component& path, CanonOutput* output,
+                      Component* out_path) {
   bool success = true;
   out_path->begin = output->length();
   if (path.is_nonempty()) {
@@ -304,8 +297,7 @@ bool CanonicalizePath(const char* spec,
     // and then canonicalize it, it will of course have a slash already. This
     // check is for the replacement and relative URL resolving cases of file
     // URLs.
-    if (!IsURLSlash(spec[path.begin]))
-      output->push_back('/');
+    if (!IsURLSlash(spec[path.begin])) output->push_back('/');
 
     success = CanonicalizePartialPath(spec, path, out_path->begin, output);
   } else {

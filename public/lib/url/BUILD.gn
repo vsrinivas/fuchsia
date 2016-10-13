@@ -49,7 +49,6 @@ static_library("url") {
   public_deps = [
     "//mojo/services/icu_data/cpp",
   ]
-
 }
 
 mojo_native_application("url_unittests") {
@@ -75,5 +74,4 @@ mojo_native_application("url_unittests") {
   ]
 
   libs = [ "magenta" ]
-
 }

@@ -59,23 +59,14 @@ extern const unsigned char kSharedCharTypeTable[0x100];
 inline bool IsCharOfType(unsigned char c, SharedCharTypes type) {
   return !!(kSharedCharTypeTable[c] & type);
 }
-inline bool IsQueryChar(unsigned char c) {
-  return IsCharOfType(c, CHAR_QUERY);
-}
-inline bool IsIPv4Char(unsigned char c) {
-  return IsCharOfType(c, CHAR_IPV4);
-}
-inline bool IsHexChar(unsigned char c) {
-  return IsCharOfType(c, CHAR_HEX);
-}
-inline bool IsComponentChar(unsigned char c) {
-  return IsCharOfType(c, CHAR_COMPONENT);
-}
+inline bool IsQueryChar(unsigned char c) { return IsCharOfType(c, CHAR_QUERY); }
+inline bool IsIPv4Char(unsigned char c) { return IsCharOfType(c, CHAR_IPV4); }
+inline bool IsHexChar(unsigned char c) { return IsCharOfType(c, CHAR_HEX); }
+inline bool IsComponentChar(unsigned char c) { return IsCharOfType(c, CHAR_COMPONENT); }
 
 // Appends the given string to the output, escaping characters that do not
 // match the given |type| in SharedCharTypes.
-void AppendStringOfType(const char* source, size_t length,
-                        SharedCharTypes type,
+void AppendStringOfType(const char* source, size_t length, SharedCharTypes type,
                         CanonOutput* output);
 
 // Maps the hex numerical values 0x0 to 0xf to the corresponding ASCII digit
@@ -93,9 +84,7 @@ URL_EXPORT extern const char kHexCharLookup[0x10];
 extern const char kCharToHexLookup[8];
 
 // Assumes the input is a valid hex digit! Call IsHexChar before using this.
-inline unsigned char HexCharToValue(unsigned char c) {
-  return c - kCharToHexLookup[c / 0x20];
-}
+inline unsigned char HexCharToValue(unsigned char c) { return c - kCharToHexLookup[c / 0x20]; }
 
 // Indicates if the given character is a dot or dot equivalent, returning the
 // number of characters taken by it. This will be one for a literal dot, 3 for
@@ -103,8 +92,7 @@ inline unsigned char HexCharToValue(unsigned char c) {
 inline size_t IsDot(const char* spec, size_t offset, size_t end) {
   if (spec[offset] == '.') {
     return 1;
-  } else if (spec[offset] == '%' && offset + 3 <= end &&
-             spec[offset + 1] == '2' &&
+  } else if (spec[offset] == '%' && offset + 3 <= end && spec[offset + 1] == '2' &&
              (spec[offset + 2] == 'e' || spec[offset + 2] == 'E')) {
     // Found "%2e"
     return 3;
@@ -123,9 +111,8 @@ char CanonicalSchemeChar(char ch);
 // does no checking that thee character requires escaping.
 // Escaping makes sense only 8 bit chars, so code works in all cases of
 // input parameters (8/16bit).
-template<typename UINCHAR, typename OUTCHAR>
-inline void AppendEscapedChar(UINCHAR ch,
-                              CanonOutputT<OUTCHAR>* output) {
+template <typename UINCHAR, typename OUTCHAR>
+inline void AppendEscapedChar(UINCHAR ch, CanonOutputT<OUTCHAR>* output) {
   output->push_back('%');
   output->push_back(kHexCharLookup[(ch >> 4) & 0xf]);
   output->push_back(kHexCharLookup[ch & 0xf]);
@@ -150,34 +137,25 @@ URL_EXPORT bool ReadUTFChar(const char* str, size_t* begin, size_t length,
 //
 // The char_value must have already been checked that it's a valid Unicode
 // character.
-template<class Output, void Appender(unsigned char, Output*)>
+template <class Output, void Appender(unsigned char, Output*)>
 inline void DoAppendUTF8(unsigned char_value, Output* output) {
   if (char_value <= 0x7f) {
     Appender(static_cast<unsigned char>(char_value), output);
   } else if (char_value <= 0x7ff) {
     // 110xxxxx 10xxxxxx
-    Appender(static_cast<unsigned char>(0xC0 | (char_value >> 6)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)),
-             output);
+    Appender(static_cast<unsigned char>(0xC0 | (char_value >> 6)), output);
+    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)), output);
   } else if (char_value <= 0xffff) {
     // 1110xxxx 10xxxxxx 10xxxxxx
-    Appender(static_cast<unsigned char>(0xe0 | (char_value >> 12)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 6) & 0x3f)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)),
-             output);
+    Appender(static_cast<unsigned char>(0xe0 | (char_value >> 12)), output);
+    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 6) & 0x3f)), output);
+    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)), output);
   } else if (char_value <= 0x10FFFF) {  // Max Unicode code point.
     // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-    Appender(static_cast<unsigned char>(0xf0 | (char_value >> 18)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 12) & 0x3f)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 6) & 0x3f)),
-             output);
-    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)),
-             output);
+    Appender(static_cast<unsigned char>(0xf0 | (char_value >> 18)), output);
+    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 12) & 0x3f)), output);
+    Appender(static_cast<unsigned char>(0x80 | ((char_value >> 6) & 0x3f)), output);
+    Appender(static_cast<unsigned char>(0x80 | (char_value & 0x3f)), output);
   } else {
     // Invalid UTF-8 character (>20 bits).
     FTL_NOTREACHED();
@@ -220,8 +198,7 @@ URL_EXPORT bool ReadUTFChar(const uint16_t* str, size_t* begin, size_t length,
                             unsigned* code_point_out);
 
 // Equivalent to U16_APPEND_UNSAFE in ICU but uses our output method.
-inline void AppendUTF16Value(unsigned code_point,
-                             CanonOutputT<uint16_t>* output) {
+inline void AppendUTF16Value(unsigned code_point, CanonOutputT<uint16_t>* output) {
   if (code_point > 0xffff) {
     output->push_back(static_cast<uint16_t>((code_point >> 10) + 0xd7c0));
     output->push_back(static_cast<uint16_t>((code_point & 0x3ff) | 0xdc00));
@@ -251,8 +228,8 @@ inline void AppendUTF16Value(unsigned code_point,
 //
 // Assumes that ch[begin] is within range in the array, but does not assume
 // that any following characters are.
-inline bool AppendUTF8EscapedChar(const uint16_t* str, size_t* begin,
-                                  size_t length, CanonOutput* output) {
+inline bool AppendUTF8EscapedChar(const uint16_t* str, size_t* begin, size_t length,
+                                  CanonOutput* output) {
   // UTF-16 input. ReadUTFChar will handle invalid characters for us and give
   // us the kUnicodeReplacementCharacter, so we don't have to do special
   // checking after failure, just pass through the failure to the caller.
@@ -287,15 +264,12 @@ inline bool Is8BitChar(char c) {
   return true;  // this case is specialized to avoid a warning
 }
 
-inline bool Is8BitChar(uint16_t c) {
-  return c <= 255;
-}
+inline bool Is8BitChar(uint16_t c) { return c <= 255; }
 
-template<typename CHAR>
+template <typename CHAR>
 inline bool DecodeEscaped(const CHAR* spec, size_t* begin, size_t end,
                           unsigned char* unescaped_value) {
-  if (*begin + 3 > end ||
-      !Is8BitChar(spec[*begin + 1]) || !Is8BitChar(spec[*begin + 2])) {
+  if (*begin + 3 > end || !Is8BitChar(spec[*begin + 1]) || !Is8BitChar(spec[*begin + 2])) {
     // Invalid escape sequence because there's not enough room, or the
     // digits are not ASCII.
     return false;
@@ -321,10 +295,8 @@ inline bool DecodeEscaped(const CHAR* spec, size_t* begin, size_t end,
 // This is used in error cases to append invalid output so that it looks
 // approximately correct. Non-error cases should not call this function since
 // the escaping rules are not guaranteed!
-void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end,
-                               CanonOutput* output);
-void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end,
-                               CanonOutput* output);
+void AppendInvalidNarrowString(const char* spec, size_t begin, size_t end, CanonOutput* output);
+void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end, CanonOutput* output);
 
 // Misc canonicalization helpers ----------------------------------------------
 
@@ -336,38 +308,31 @@ void AppendInvalidNarrowString(const uint16_t* spec, size_t begin, size_t end,
 // replacing the invalid characters with the "invalid character". It will
 // return false in the failure case, and the caller should not continue as
 // normal.
-URL_EXPORT bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len,
-                                   CanonOutput* output);
+URL_EXPORT bool ConvertUTF16ToUTF8(const uint16_t* input, size_t input_len, CanonOutput* output);
 URL_EXPORT bool ConvertUTF8ToUTF16(const char* input, size_t input_len,
                                    CanonOutputT<uint16_t>* output);
 
 // Converts from UTF-16 to 8-bit using the character set converter. If the
 // converter is NULL, this will use UTF-8.
-void ConvertUTF16ToQueryEncoding(const uint16_t* input,
-                                 const Component& query,
-                                 CharsetConverter* converter,
-                                 CanonOutput* output);
+void ConvertUTF16ToQueryEncoding(const uint16_t* input, const Component& query,
+                                 CharsetConverter* converter, CanonOutput* output);
 
 // Implemented in url_canon_path.cc, these are required by the relative URL
 // resolver as well, so we declare them here.
-bool CanonicalizePartialPath(const char* spec,
-                             const Component& path,
-                             size_t path_begin_in_output,
+bool CanonicalizePartialPath(const char* spec, const Component& path, size_t path_begin_in_output,
                              CanonOutput* output);
 
 // Implementations of Windows' int-to-string conversions
 int IntToString(int value, char* buffer, size_t size_in_chars, int radix);
 
 // Secure template overloads for these functions
-template<size_t N>
-inline int IntToString(int value, char (&buffer)[N], int radix) {
+template <size_t N>
+inline int IntToString(int value, char(&buffer)[N], int radix) {
   return IntToString(value, buffer, N, radix);
 }
 
-
 // _strtoui64 and strtoull behave the same
-inline unsigned long long _strtoui64(const char* nptr,
-                                     char** endptr, int base) {
+inline unsigned long long _strtoui64(const char* nptr, char** endptr, int base) {
   return strtoull(nptr, endptr, base);
 }
 
@@ -382,9 +347,7 @@ inline unsigned long long _strtoui64(const char* nptr,
 // the length of the output will be set to the length of the new host name.
 //
 // On error, returns false. The output in this case is undefined.
-URL_EXPORT bool IDNToASCII(const uint16_t* src,
-                           size_t src_len,
-                           CanonOutputW* output);
+URL_EXPORT bool IDNToASCII(const uint16_t* src, size_t src_len, CanonOutputW* output);
 }  // namespace url
 
 #endif  // LIB_URL_URL_CANON_INTERNAL_H_

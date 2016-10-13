@@ -24,9 +24,8 @@ class TestApp : public mojo::ApplicationImplBase {
     FTL_DCHECK(icu_success);
 
     // InitGoogleTest needs an argv.
-    std::array<const char*, 1> fake_args({{
-      "test",
-      }});
+    std::array<const char *, 1> fake_args({{
+        "test", }});
     int argc = fake_args.size();
     ::testing::InitGoogleTest(&argc, const_cast<char **>(fake_args.data()));
 

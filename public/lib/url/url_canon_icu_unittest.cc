@@ -25,8 +25,7 @@ class UConvScoper {
   }
 
   ~UConvScoper() {
-    if (converter_)
-      ucnv_close(converter_);
+    if (converter_) ucnv_close(converter_);
   }
 
   // Returns the converter object, may be NULL.
@@ -43,15 +42,14 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
     const char* expected;
   } icu_cases[] = {
       // UTF-8.
-    {L"Hello, world", "utf-8", "Hello, world"},
-    {L"\x4f60\x597d", "utf-8", "\xe4\xbd\xa0\xe5\xa5\xbd"},
+      {L"Hello, world", "utf-8", "Hello, world"},
+      {L"\x4f60\x597d", "utf-8", "\xe4\xbd\xa0\xe5\xa5\xbd"},
       // Non-BMP UTF-8.
-    {L"!\xd800\xdf00!", "utf-8", "!\xf0\x90\x8c\x80!"},
+      {L"!\xd800\xdf00!", "utf-8", "!\xf0\x90\x8c\x80!"},
       // Big5
-    {L"\x4f60\x597d", "big5", "\xa7\x41\xa6\x6e"},
+      {L"\x4f60\x597d", "big5", "\xa7\x41\xa6\x6e"},
       // Unrepresentable character in the destination set.
-    {L"hello\x4f60\x06de\x597dworld", "big5",
-      "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
+      {L"hello\x4f60\x06de\x597dworld", "big5", "hello\xa7\x41%26%231758%3B\xa6\x6eworld"},
   };
 
   for (const auto& icu_case : icu_cases) {
@@ -79,12 +77,10 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
   for (int i = static_size - 2; i <= static_size + 2; i++) {
     // Make a string with the appropriate length.
     std::basic_string<uint16_t> input;
-    for (int ch = 0; ch < i; ch++)
-      input.push_back('a');
+    for (int ch = 0; ch < i; ch++) input.push_back('a');
 
     RawCanonOutput<static_size> output;
-    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()),
-                               &output);
+    converter.ConvertFromUTF16(input.c_str(), static_cast<int>(input.length()), &output);
     EXPECT_EQ(input.length(), static_cast<size_t>(output.length()));
   }
 }
@@ -96,18 +92,16 @@ TEST(URLCanonIcuTest, QueryWithConverter) {
     const char* expected;
   } query_cases[] = {
       // Regular ASCII case in some different encodings.
-    {"foo=bar", "utf-8", "?foo=bar"},
-    {"foo=bar", "shift_jis", "?foo=bar"},
-    {"foo=bar", "gb2312", "?foo=bar"},
+      {"foo=bar", "utf-8", "?foo=bar"},
+      {"foo=bar", "shift_jis", "?foo=bar"},
+      {"foo=bar", "gb2312", "?foo=bar"},
       // Chinese input/output
-    {"q=\xe4\xbd\xa0\xe5\xa5\xbd", "gb2312",
-      "?q=%C4%E3%BA%C3"},
-    {"q=\xe4\xbd\xa0\xe5\xa5\xbd", "big5", "?q=%A7A%A6n"},
+      {"q=\xe4\xbd\xa0\xe5\xa5\xbd", "gb2312", "?q=%C4%E3%BA%C3"},
+      {"q=\xe4\xbd\xa0\xe5\xa5\xbd", "big5", "?q=%A7A%A6n"},
       // Unencodable character in the destination character set should be
       // escaped. The escape sequence unescapes to be the entity name:
       // "?q=&#20320;"
-    {"q=Chinese\xef\xbc\xa7", "iso-8859-1",
-      "?q=Chinese%26%2365319%3B"},
+      {"q=Chinese\xef\xbc\xa7", "iso-8859-1", "?q=Chinese%26%2365319%3B"},
   };
 
   for (const auto& query_case : query_cases) {
@@ -122,8 +116,7 @@ TEST(URLCanonIcuTest, QueryWithConverter) {
     std::string out_str;
 
     StdStringCanonOutput output(&out_str);
-    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output,
-                      &out_comp);
+    CanonicalizeQuery(query_case.input8, in_comp, &converter, &output, &out_comp);
     output.Complete();
 
     EXPECT_EQ(query_case.expected, out_str);

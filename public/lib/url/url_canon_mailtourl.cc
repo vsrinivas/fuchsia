@@ -11,11 +11,8 @@
 
 namespace url {
 
-bool CanonicalizeMailtoURL(const char* spec,
-                           size_t spec_len,
-                             const Parsed& parsed,
-                             CanonOutput* output,
-                             Parsed* new_parsed) {
+bool CanonicalizeMailtoURL(const char* spec, size_t spec_len, const Parsed& parsed,
+                           CanonOutput* output, Parsed* new_parsed) {
   URLComponentSource source(spec);
   // mailto: only uses {scheme, path, query} -- clear the rest.
   new_parsed->username = Component();
@@ -55,8 +52,7 @@ bool CanonicalizeMailtoURL(const char* spec,
   }
 
   // Query -- always use the default UTF8 charset converter.
-  CanonicalizeQuery(source.query, parsed.query, NULL,
-                    output, &new_parsed->query);
+  CanonicalizeQuery(source.query, parsed.query, NULL, output, &new_parsed->query);
 
   return success;
 }

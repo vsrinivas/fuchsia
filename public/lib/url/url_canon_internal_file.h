@@ -14,7 +14,6 @@
 // *** This file must be included after url_canon_internal as we depend on some
 // functions in it. ***
 
-
 #include "lib/url/url_file.h"
 #include "lib/url/url_parse_internal.h"
 
@@ -25,8 +24,7 @@ namespace url {
 // spec, it won't do anything. The index of the next character in the input
 // spec is returned (after the colon when a drive spec is found, the begin
 // offset if one is not).
-static int FileDoDriveSpec(const char* spec, int begin, int end,
-                           CanonOutput* output) {
+static int FileDoDriveSpec(const char* spec, int begin, int end, CanonOutput* output) {
   // The path could be one of several things: /foo/bar, c:/foo/bar, /c:/foo,
   // (with backslashes instead of slashes as well).
   int num_slashes = CountConsecutiveSlashes(spec, begin, end);
@@ -52,8 +50,7 @@ static int FileDoDriveSpec(const char* spec, int begin, int end,
 
 // FileDoDriveSpec will have already added the first backslash, so we need to
 // write everything following the slashes using the path canonicalizer.
-static void FileDoPath(const char* spec, int begin, int end,
-                       CanonOutput* output) {
+static void FileDoPath(const char* spec, int begin, int end, CanonOutput* output) {
   // Normalize the number of slashes after the drive letter. The path
   // canonicalizer expects the input to begin in a slash already so
   // doesn't check. We want to handle no-slashes
@@ -69,15 +66,12 @@ static void FileDoPath(const char* spec, int begin, int end,
     // Give it a fake output component to write into. DoCanonicalizeFile will
     // compute the full path component.
     ParsedComponent fake_output_path;
-    URLCanonInternal<char, unsigned char>::DoPath(
-        spec, sub_path, output, &fake_output_path);
+    URLCanonInternal<char, unsigned char>::DoPath(spec, sub_path, output, &fake_output_path);
   }
 }
 
-static bool DoCanonicalizeFileURL(const URLComponentSource& source,
-                                  const ParsedURL& parsed,
-                                  CanonOutput* output,
-                                  ParsedURL* new_parsed) {
+static bool DoCanonicalizeFileURL(const URLComponentSource& source, const ParsedURL& parsed,
+                                  CanonOutput* output, ParsedURL* new_parsed) {
   // Things we don't set in file: URLs.
   new_parsed->username = ParsedComponent(0, -1);
   new_parsed->password = ParsedComponent(0, -1);
@@ -102,8 +96,8 @@ static bool DoCanonicalizeFileURL(const URLComponentSource& source,
   // TODO(brettw) This doesn't do any checking for host name validity. We
   // should probably handle validity checking of UNC hosts differently than
   // for regular IP hosts.
-  bool success = URLCanonInternal<char, unsigned char>::DoHost(
-      source.host, parsed.host, output, &new_parsed->host);
+  bool success = URLCanonInternal<char, unsigned char>::DoHost(source.host, parsed.host, output,
+                                                               &new_parsed->host);
 
   // Write a separator for the start of the path. We'll ignore any slashes
   // already at the beginning of the path.
@@ -111,18 +105,17 @@ static bool DoCanonicalizeFileURL(const URLComponentSource& source,
   output->push_back('/');
 
   // Copy and normalize the "c:" at the beginning, if present.
-  int after_drive = FileDoDriveSpec(source.path, parsed.path.begin,
-                                    parsed.path.end(), output);
+  int after_drive = FileDoDriveSpec(source.path, parsed.path.begin, parsed.path.end(), output);
 
   // Copy the rest of the path.
   FileDoPath<char, unsigned char>(source.path, after_drive, parsed.path.end(), output);
   new_parsed->path.set_len(output->length() - new_parsed->path.begin);
 
   // For things following the path, we can use the standard canonicalizers.
-  success &= URLCanonInternal<char, unsigned char>::DoQuery(
-      source.query, parsed.query, output, &new_parsed->query);
-  success &= URLCanonInternal<char, unsigned char>::DoRef(
-      source.ref, parsed.ref, output, &new_parsed->ref);
+  success &= URLCanonInternal<char, unsigned char>::DoQuery(source.query, parsed.query, output,
+                                                            &new_parsed->query);
+  success &= URLCanonInternal<char, unsigned char>::DoRef(source.ref, parsed.ref, output,
+                                                          &new_parsed->ref);
 
   return success;
 }

@@ -48,38 +48,29 @@ namespace url {
 namespace {
 
 // Returns true if the given character is a valid digit to use in a port.
-inline bool IsPortDigit(char ch) {
-  return ch >= '0' && ch <= '9';
-}
+inline bool IsPortDigit(char ch) { return ch >= '0' && ch <= '9'; }
 
 // Returns the offset of the next authority terminator in the input starting
 // from start_offset. If no terminator is found, the return value will be equal
 // to spec_len.
-size_t FindNextAuthorityTerminator(const char* spec,
-                                size_t start_offset,
-                                size_t spec_len) {
+size_t FindNextAuthorityTerminator(const char* spec, size_t start_offset, size_t spec_len) {
   for (size_t i = start_offset; i < spec_len; i++) {
-    if (IsAuthorityTerminator(spec[i]))
-      return i;
+    if (IsAuthorityTerminator(spec[i])) return i;
   }
   return spec_len;  // Not found.
 }
 
-void ParseUserInfo(const char* spec,
-                   const Component& user,
-                   Component* username,
+void ParseUserInfo(const char* spec, const Component& user, Component* username,
                    Component* password) {
   // Find the first colon in the user section, which separates the username and
   // password.
   size_t colon_offset = 0;
-  while (colon_offset < user.len() && spec[user.begin + colon_offset] != ':')
-    colon_offset++;
+  while (colon_offset < user.len() && spec[user.begin + colon_offset] != ':') colon_offset++;
 
   if (colon_offset < user.len()) {
     // Found separator: <username>:<password>
     *username = Component(user.begin, colon_offset);
-    *password = MakeRange(user.begin + colon_offset + 1,
-                          user.begin + user.len());
+    *password = MakeRange(user.begin + colon_offset + 1, user.begin + user.len());
   } else {
     // No separator, treat everything as the username
     *username = user;
@@ -87,9 +78,7 @@ void ParseUserInfo(const char* spec,
   }
 }
 
-void ParseServerInfo(const char* spec,
-                     const Component& serverinfo,
-                     Component* hostname,
+void ParseServerInfo(const char* spec, const Component& serverinfo, Component* hostname,
                      Component* port_num) {
   if (serverinfo.is_invalid_or_empty()) {
     // No server info, host name is empty.
@@ -122,8 +111,7 @@ void ParseServerInfo(const char* spec,
   if (colon > ipv6_terminator) {
     // Found a port number: <hostname>:<port>
     *hostname = MakeRange(serverinfo.begin, colon);
-    if (hostname->is_invalid_or_empty())
-      hostname->reset();
+    if (hostname->is_invalid_or_empty()) hostname->reset();
     *port_num = MakeRange(colon + 1, serverinfo.end());
   } else {
     // No port: <hostname>
@@ -136,12 +124,8 @@ void ParseServerInfo(const char* spec,
 // parts. The port number will be parsed and the resulting integer will be
 // filled into the given *port variable, or -1 if there is no port number or it
 // is invalid.
-void DoParseAuthority(const char* spec,
-                      const Component& auth,
-                      Component* username,
-                      Component* password,
-                      Component* hostname,
-                      Component* port_num) {
+void DoParseAuthority(const char* spec, const Component& auth, Component* username,
+                      Component* password, Component* hostname, Component* port_num) {
   FTL_DCHECK(auth.is_valid()) << "We should always get an authority";
   if (auth.is_invalid_or_empty()) {
     username->reset();
@@ -154,15 +138,12 @@ void DoParseAuthority(const char* spec,
   // Search backwards for @, which is the separator between the user info and
   // the server info.
   size_t i = auth.begin + auth.len() - 1;
-  while (i > auth.begin && spec[i] != '@')
-    i--;
+  while (i > auth.begin && spec[i] != '@') i--;
 
   if (spec[i] == '@') {
     // Found user info: <user-info>@<server-info>
-    ParseUserInfo(spec, Component(auth.begin, i - auth.begin),
-                  username, password);
-    ParseServerInfo(spec, MakeRange(i + 1, auth.begin + auth.len()),
-                    hostname, port_num);
+    ParseUserInfo(spec, Component(auth.begin, i - auth.begin), username, password);
+    ParseServerInfo(spec, MakeRange(i + 1, auth.begin + auth.len()), hostname, port_num);
   } else {
     // No user info, everything is server info.
     username->reset();
@@ -171,10 +152,7 @@ void DoParseAuthority(const char* spec,
   }
 }
 
-void ParsePath(const char* spec,
-               const Component& path,
-               Component* filepath,
-               Component* query,
+void ParsePath(const char* spec, const Component& path, Component* filepath, Component* query,
                Component* ref) {
   // path = [/]<segment1>/<segment2>/<...>/<segmentN>;<param>?<query>#<ref>
 
@@ -197,13 +175,11 @@ void ParsePath(const char* spec,
       case '?':
         // Only match the query string if it precedes the reference fragment
         // and when we haven't found one already.
-        if (ref_separator < 0 && query_separator < 0)
-          query_separator = i;
+        if (ref_separator < 0 && query_separator < 0) query_separator = i;
         break;
       case '#':
         // Record the first # sign only.
-        if (ref_separator < 0)
-          ref_separator = i;
+        if (ref_separator < 0) ref_separator = i;
         break;
     }
   }
@@ -238,15 +214,11 @@ void ParsePath(const char* spec,
     filepath->reset();
 }
 
-bool DoExtractScheme(const char* url,
-                     size_t url_len,
-                     Component* scheme) {
+bool DoExtractScheme(const char* url, size_t url_len, Component* scheme) {
   // Skip leading whitespace and control characters.
   size_t begin = 0;
-  while (begin < url_len && ShouldTrimFromURL(url[begin]))
-    begin++;
-  if (begin == url_len)
-    return false;  // Input is empty or all whitespace.
+  while (begin < url_len && ShouldTrimFromURL(url[begin])) begin++;
+  if (begin == url_len) return false;  // Input is empty or all whitespace.
 
   // Find the first colon character.
   for (size_t i = begin; i < url_len; i++) {
@@ -276,10 +248,7 @@ bool DoExtractScheme(const char* url,
 // (*) Interestingly, although IE fails to load these URLs, its history
 // canonicalizer handles them, meaning if you've been to the corresponding
 // "http://foo.com/" link, it will be colored.
-void DoParseAfterScheme(const char* spec,
-                        size_t spec_len,
-                        size_t after_scheme,
-                        Parsed* parsed) {
+void DoParseAfterScheme(const char* spec, size_t spec_len, size_t after_scheme, Parsed* parsed) {
   size_t num_slashes = CountConsecutiveSlashes(spec, after_scheme, spec_len);
   size_t after_slashes = after_scheme + num_slashes;
 
@@ -300,8 +269,8 @@ void DoParseAfterScheme(const char* spec,
     full_path = Component(end_auth, spec_len - end_auth);
 
   // Now parse those two sub-parts.
-  DoParseAuthority(spec, authority, &parsed->username, &parsed->password,
-                   &parsed->host, &parsed->port);
+  DoParseAuthority(spec, authority, &parsed->username, &parsed->password, &parsed->host,
+                   &parsed->port);
   ParsePath(spec, full_path, &parsed->path, &parsed->query, &parsed->ref);
 }
 
@@ -329,9 +298,7 @@ void DoParseStandardURL(const char* spec, size_t spec_len, Parsed* parsed) {
 
 // Initializes a path URL which is merely a scheme followed by a path. Examples
 // include "about:foo" and "javascript:alert('bar');"
-void DoParsePathURL(const char* spec, size_t spec_len,
-                    bool trim_path_end,
-                    Parsed* parsed) {
+void DoParsePathURL(const char* spec, size_t spec_len, bool trim_path_end, Parsed* parsed) {
   // Get the non-path and non-scheme parts of the URL out of the way, we never
   // use them.
   parsed->username.reset();
@@ -356,8 +323,7 @@ void DoParsePathURL(const char* spec, size_t spec_len,
   size_t path_begin;
   // Extract the scheme, with the path being everything following. We also
   // handle the case where there is no scheme.
-  if (ExtractScheme(&spec[scheme_begin], spec_len - scheme_begin,
-                    &parsed->scheme)) {
+  if (ExtractScheme(&spec[scheme_begin], spec_len - scheme_begin, &parsed->scheme)) {
     // Offset the results since we gave ExtractScheme a substring.
     parsed->scheme.begin += scheme_begin;
     path_begin = parsed->scheme.end() + 1;
@@ -367,15 +333,10 @@ void DoParsePathURL(const char* spec, size_t spec_len,
     path_begin = scheme_begin;
   }
 
-  if (path_begin == spec_len)
-    return;
+  if (path_begin == spec_len) return;
   FTL_DCHECK(path_begin < spec_len);
 
-  ParsePath(spec,
-            MakeRange(path_begin, spec_len),
-            &parsed->path,
-            &parsed->query,
-            &parsed->ref);
+  ParsePath(spec, MakeRange(path_begin, spec_len), &parsed->path, &parsed->query, &parsed->ref);
 }
 
 void DoParseMailtoURL(const char* spec, size_t spec_len, Parsed* parsed) {
@@ -446,8 +407,7 @@ void DoParseMailtoURL(const char* spec, size_t spec_len, Parsed* parsed) {
 int DoParsePort(const char* spec, const Component& component) {
   // Easy success case when there is no port.
   const size_t kMaxDigits = 5;
-  if (component.is_invalid_or_empty())
-    return PORT_UNSPECIFIED;
+  if (component.is_invalid_or_empty()) return PORT_UNSPECIFIED;
 
   // Skip over any leading 0s.
   Component digits_comp(component.end(), 0);
@@ -457,13 +417,11 @@ int DoParsePort(const char* spec, const Component& component) {
       break;
     }
   }
-  if (digits_comp.is_invalid_or_empty())
-    return 0;  // All digits were 0.
+  if (digits_comp.is_invalid_or_empty()) return 0;  // All digits were 0.
 
   // Verify we don't have too many digits (we'll be copying to our buffer so
   // we need to double-check).
-  if (digits_comp.len() > kMaxDigits)
-    return PORT_INVALID;
+  if (digits_comp.len() > kMaxDigits) return PORT_INVALID;
 
   // Copy valid digits to the buffer.
   char digits[kMaxDigits + 1];  // +1 for null terminator
@@ -480,14 +438,11 @@ int DoParsePort(const char* spec, const Component& component) {
   // only digits, atoi's lack of error handling is OK.
   digits[digits_comp.len()] = 0;
   int port = atoi(digits);
-  if (port > 65535)
-    return PORT_INVALID;  // Out of range.
+  if (port > 65535) return PORT_INVALID;  // Out of range.
   return port;
 }
 
-void DoExtractFileName(const char* spec,
-                       const Component& path,
-                       Component* file_name) {
+void DoExtractFileName(const char* spec, const Component& path, Component* file_name) {
   // Handle empty paths: they have no file names.
   if (path.is_invalid_or_empty()) {
     file_name->reset();
@@ -513,12 +468,8 @@ void DoExtractFileName(const char* spec,
   return;
 }
 
-bool DoExtractQueryKeyValue(const char* spec,
-                            Component* query,
-                            Component* key,
-                            Component* value) {
-  if (query->is_invalid_or_empty())
-    return false;
+bool DoExtractQueryKeyValue(const char* spec, Component* query, Component* key, Component* value) {
+  if (query->is_invalid_or_empty()) return false;
 
   size_t start = query->begin;
   size_t cur = start;
@@ -527,23 +478,19 @@ bool DoExtractQueryKeyValue(const char* spec,
   // We assume the beginning of the input is the beginning of the "key" and we
   // skip to the end of it.
   key->begin = cur;
-  while (cur < end && spec[cur] != '&' && spec[cur] != '=')
-    cur++;
+  while (cur < end && spec[cur] != '&' && spec[cur] != '=') cur++;
   key->set_len(cur - key->begin);
 
   // Skip the separator after the key (if any).
-  if (cur < end && spec[cur] == '=')
-    cur++;
+  if (cur < end && spec[cur] == '=') cur++;
 
   // Find the value part.
   value->begin = cur;
-  while (cur < end && spec[cur] != '&')
-    cur++;
+  while (cur < end && spec[cur] != '&') cur++;
   value->set_len(cur - value->begin);
 
   // Finally skip the next separator if any
-  if (cur < end && spec[cur] == '&')
-    cur++;
+  if (cur < end && spec[cur] == '&') cur++;
 
   // Save the new query
   *query = MakeRange(cur, end);
@@ -552,19 +499,17 @@ bool DoExtractQueryKeyValue(const char* spec,
 
 }  // namespace
 
-Parsed::Parsed() {
-}
+Parsed::Parsed() {}
 
-Parsed::Parsed(const Parsed& other) :
-    scheme(other.scheme),
-    username(other.username),
-    password(other.password),
-    host(other.host),
-    port(other.port),
-    path(other.path),
-    query(other.query),
-    ref(other.ref) {
-}
+Parsed::Parsed(const Parsed& other)
+    : scheme(other.scheme),
+      username(other.username),
+      password(other.password),
+      host(other.host),
+      port(other.port),
+      path(other.path),
+      query(other.query),
+      ref(other.ref) {}
 
 Parsed& Parsed::operator=(const Parsed& other) {
   if (this != &other) {
@@ -581,65 +526,54 @@ Parsed& Parsed::operator=(const Parsed& other) {
 }
 
 size_t Parsed::Length() const {
-  if (ref.is_valid())
-    return ref.end();
+  if (ref.is_valid()) return ref.end();
   return CountCharactersBefore(REF, false);
 }
 
-size_t Parsed::CountCharactersBefore(ComponentType type,
-                                  bool include_delimiter) const {
-  if (type == SCHEME)
-    return scheme.begin;
+size_t Parsed::CountCharactersBefore(ComponentType type, bool include_delimiter) const {
+  if (type == SCHEME) return scheme.begin;
 
   // There will be some characters after the scheme like "://" and we don't
   // know how many. Search forwards for the next thing until we find one.
   size_t cur = 0;
-  if (scheme.is_valid())
-    cur = scheme.end() + 1;  // Advance over the ':' at the end of the scheme.
+  if (scheme.is_valid()) cur = scheme.end() + 1;  // Advance over the ':' at the end of the scheme.
 
   if (username.is_valid()) {
-    if (type <= USERNAME)
-      return username.begin;
+    if (type <= USERNAME) return username.begin;
     cur = username.end() + 1;  // Advance over the '@' or ':' at the end.
   }
 
   if (password.is_valid()) {
-    if (type <= PASSWORD)
-      return password.begin;
+    if (type <= PASSWORD) return password.begin;
     cur = password.end() + 1;  // Advance over the '@' at the end.
   }
 
   if (host.is_valid()) {
-    if (type <= HOST)
-      return host.begin;
+    if (type <= HOST) return host.begin;
     cur = host.end();
   }
 
   if (port.is_valid()) {
     if (type < PORT || (type == PORT && include_delimiter))
-      return port.begin - 1;  // Back over delimiter.
-    if (type == PORT)
-      return port.begin;  // Don't want delimiter counted.
+      return port.begin - 1;              // Back over delimiter.
+    if (type == PORT) return port.begin;  // Don't want delimiter counted.
     cur = port.end();
   }
 
   if (path.is_valid()) {
-    if (type <= PATH)
-      return path.begin;
+    if (type <= PATH) return path.begin;
     cur = path.end();
   }
 
   if (query.is_valid()) {
     if (type < QUERY || (type == QUERY && include_delimiter))
-      return query.begin - 1;  // Back over delimiter.
-    if (type == QUERY)
-      return query.begin;  // Don't want delimiter counted.
+      return query.begin - 1;               // Back over delimiter.
+    if (type == QUERY) return query.begin;  // Don't want delimiter counted.
     cur = query.end();
   }
 
   if (ref.is_valid()) {
-    if (type == REF && !include_delimiter)
-      return ref.begin;  // Back over delimiter.
+    if (type == REF && !include_delimiter) return ref.begin;  // Back over delimiter.
 
     // When there is a ref and we get here, the component we wanted was before
     // this and not found, so we always know the beginning of the ref is right.
@@ -664,44 +598,28 @@ bool ExtractScheme(const char* url, size_t url_len, Component* scheme) {
 
 // This handles everything that may be an authority terminator, including
 // backslash. For special backslash handling see DoParseAfterScheme.
-bool IsAuthorityTerminator(char ch) {
-  return IsURLSlash(ch) || ch == '?' || ch == '#';
-}
+bool IsAuthorityTerminator(char ch) { return IsURLSlash(ch) || ch == '?' || ch == '#'; }
 
-void ExtractFileName(const char* url,
-                     const Component& path,
-                     Component* file_name) {
+void ExtractFileName(const char* url, const Component& path, Component* file_name) {
   DoExtractFileName(url, path, file_name);
 }
 
-bool ExtractQueryKeyValue(const char* url,
-                          Component* query,
-                          Component* key,
-                          Component* value) {
+bool ExtractQueryKeyValue(const char* url, Component* query, Component* key, Component* value) {
   return DoExtractQueryKeyValue(url, query, key, value);
 }
 
-void ParseAuthority(const char* spec,
-                    const Component& auth,
-                    Component* username,
-                    Component* password,
-                    Component* hostname,
-                    Component* port_num) {
+void ParseAuthority(const char* spec, const Component& auth, Component* username,
+                    Component* password, Component* hostname, Component* port_num) {
   DoParseAuthority(spec, auth, username, password, hostname, port_num);
 }
 
-int ParsePort(const char* url, const Component& port) {
-  return DoParsePort(url, port);
-}
+int ParsePort(const char* url, const Component& port) { return DoParsePort(url, port); }
 
 void ParseStandardURL(const char* url, size_t url_len, Parsed* parsed) {
   DoParseStandardURL(url, url_len, parsed);
 }
 
-void ParsePathURL(const char* url,
-                  size_t url_len,
-                  bool trim_path_end,
-                  Parsed* parsed) {
+void ParsePathURL(const char* url, size_t url_len, bool trim_path_end, Parsed* parsed) {
   DoParsePathURL(url, url_len, trim_path_end, parsed);
 }
 
@@ -709,18 +627,12 @@ void ParseMailtoURL(const char* url, size_t url_len, Parsed* parsed) {
   DoParseMailtoURL(url, url_len, parsed);
 }
 
-void ParsePathInternal(const char* spec,
-                       const Component& path,
-                       Component* filepath,
-                       Component* query,
-                       Component* ref) {
+void ParsePathInternal(const char* spec, const Component& path, Component* filepath,
+                       Component* query, Component* ref) {
   ParsePath(spec, path, filepath, query, ref);
 }
 
-void ParseAfterScheme(const char* spec,
-                      size_t spec_len,
-                      size_t after_scheme,
-                      Parsed* parsed) {
+void ParseAfterScheme(const char* spec, size_t spec_len, size_t after_scheme, Parsed* parsed) {
   DoParseAfterScheme(spec, spec_len, after_scheme, parsed);
 }
 
