@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("shared_buffer") {
+  sources = [
+    "strings.cc",
+    "strings.h",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
+    "//mojo/public/c:environment",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
+  ]
+}

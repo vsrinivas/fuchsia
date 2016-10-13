@@ -8,6 +8,7 @@ group("mtl") {
     "//lib/mtl/data_pipe",
     "//lib/mtl/environment",
     "//lib/mtl/handles",
+    "//lib/mtl/shared_buffer",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
   ]
@@ -23,6 +24,7 @@ executable("mtl_unittests") {
   sources = [
     "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/unique_handle_unittest.cc",
+    "shared_buffer/strings_unittest.cc",
     "tasks/message_loop_unittest.cc",
     "test/run_all_unittests.cc",
     "threading/create_thread_unittest.cc",
