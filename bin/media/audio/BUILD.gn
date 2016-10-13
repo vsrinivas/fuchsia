@@ -14,6 +14,7 @@ source_set("audio") {
     "lpcm_reformatter.h",
     "lpcm_util.cc",
     "lpcm_util.h",
+    "mixdown_table.h",
   ]
 
   deps = [
@@ -29,6 +30,7 @@ executable("apptests") {
 
   sources = [
     "test/level_test.cc",
+    "test/mixdown_table_test.cc",
     "test/run_all_tests.cc",
   ]
 
