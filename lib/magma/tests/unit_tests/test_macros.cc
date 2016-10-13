@@ -63,6 +63,9 @@ TEST(MagmaUtil, Dret)
     EXPECT_EQ(DRET(0), 0);
     EXPECT_EQ(DRET(-1), -1);
 
+    EXPECT_EQ(DRET_MSG(0, "see this in a debug build only"), 0);
+    EXPECT_EQ(DRET_MSG(-1, "see this in a debug build only: the number 1 [%d]", 1), -1);
+
     EXPECT_TRUE(DRETF(true, "never see this"));
     EXPECT_FALSE(DRETF(false, "see this in a debug build only"));
     EXPECT_FALSE(DRETF(false, "see this in a debug build only: the number 3 [%d]", 3));
