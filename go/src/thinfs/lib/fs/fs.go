@@ -33,12 +33,6 @@ var (
 	// ErrFailedPrecondition indicates the system is not in a state where the operation can succeed
 	ErrFailedPrecondition = errors.New("the filesystem is not in a state required for the operation")
 
-	// ErrAborted indicates that due to a system state change, the operation was aborted
-	ErrAborted = errors.New("the operation was aborted")
-
-	// ErrOutOfRange indicates the operation is not in a valid range
-	ErrOutOfRange = errors.New("requested operation would be out of valid range")
-
 	// ErrNotEmpty indicates that the caller attempted to remove a non-empty directory
 	ErrNotEmpty = errors.New("directory is not empty")
 

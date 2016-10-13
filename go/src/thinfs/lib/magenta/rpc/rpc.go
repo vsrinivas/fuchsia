@@ -82,8 +82,35 @@ func (vfs *ThinVFS) CreateHandle(obj interface{}) (mx.Handle, error) {
 	return h[1], nil
 }
 
-// TODO(smklein): Convert errors to proper Magenta equivalent.
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
+
+func errorToRIO(err error) mx.Status {
+	switch err {
+	case nil, fs.ErrEOF:
+		// ErrEOF can be translated directly to ErrOk. For operations which return with an error if
+		// partially complete (such as 'Read'), RemoteIO does not flag an error -- instead, it
+		// simply returns the number of bytes which were processed.
+		return mx.ErrOk
+	case fs.ErrInvalidArgs:
+		return mx.ErrInvalidArgs
+	case fs.ErrNotFound:
+		return mx.ErrNotFound
+	case fs.ErrAlreadyExists:
+		return mx.ErrAlreadyExists
+	case fs.ErrPermission, fs.ErrReadOnly:
+		return mx.ErrAccessDenied
+	case fs.ErrResourceExhausted:
+		return mx.ErrNoResources
+	case fs.ErrFailedPrecondition, fs.ErrNotEmpty, fs.ErrNotOpen, fs.ErrIsActive, fs.ErrUnmounted:
+		return mx.ErrBadState
+	case fs.ErrNotAFile:
+		return mx.ErrNotFile
+	case fs.ErrNotADir:
+		return mx.ErrNotDir
+	default:
+		return mx.ErrInternal
+	}
+}
 
 func fileTypeToRIO(t fs.FileType) uint32 {
 	switch t {
@@ -147,8 +174,8 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 	switch msg.Op() {
 	case rio.OpClone:
 		f2, err := f.Dup()
-		if err != nil {
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		h, err := vfs.CreateHandle(f2)
 		if err != nil {
@@ -161,66 +188,53 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 	case rio.OpClose:
 		err := f.Close()
 		vfs.freeCookie(cookie)
-		if err != nil {
-			return mx.ErrInternal
-		}
-		return mx.ErrOk
+		return errorToRIO(err)
 	case rio.OpRead:
 		r, err := f.Read(msg.Data[:msg.Arg], 0, fs.WhenceFromCurrent)
-		if err != nil {
-			println("file read internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		msg.Datalen = uint32(r)
 		return mx.Status(r)
 	case rio.OpReadAt:
 		r, err := f.Read(msg.Data[:msg.Arg], msg.Off(), fs.WhenceFromStart)
-		if err != nil {
-			println("file readat internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		msg.Datalen = uint32(r)
 		return mx.Status(r)
 	case rio.OpWrite:
 		r, err := f.Write(inputData, 0, fs.WhenceFromCurrent)
-		if err != nil {
-			println("file write internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		return mx.Status(r)
 	case rio.OpWriteAt:
 		r, err := f.Write(inputData, msg.Off(), fs.WhenceFromStart)
-		if err != nil {
-			println("file writeat internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		return mx.Status(r)
 	case rio.OpSeek:
 		r, err := f.Seek(msg.Off(), int(msg.Arg))
-		if err != nil {
-			println("file seek internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		msg.SetOff(r)
 		return mx.ErrOk
 	case rio.OpStat:
 		size, _, _, err := f.Stat()
-		if err != nil {
-			println("file stat internal error: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		return statShared(msg, size, false)
 	case rio.OpTruncate:
 		off := msg.Off()
 		if off < 0 {
-			return mx.ErrInternal
+			return mx.ErrInvalidArgs
 		}
 		err := f.Truncate(uint64(off))
-		if err != nil {
-			println("file truncate internal error: ", err.Error())
-			return mx.ErrInternal
-		}
-		return mx.ErrOk
+		return errorToRIO(err)
 	default:
 		println("ThinFS FILE UNKNOWN OP")
 		return mx.ErrNotSupported
@@ -248,15 +262,13 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 	switch msg.Op() {
 	case rio.OpOpen:
 		if len(inputData) < 1 {
-			println("dir open path too short")
-			return mx.ErrInternal
+			return mx.ErrInvalidArgs
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
 		f, d, err := dir.Open(path, flags)
-		if err != nil {
-			println("dir open err: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		var obj interface{}
 		if f != nil {
@@ -281,9 +293,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		return mx.ErrOk
 	case rio.OpClone:
 		d2, err := dir.Dup()
-		if err != nil {
-			println("dir clone dup err: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		h, err := vfs.CreateHandle(&directoryWrapper{d: d2})
 		if err != nil {
@@ -297,15 +308,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 	case rio.OpClose:
 		err := dir.Close()
 		vfs.freeCookie(cookie)
-		if err != nil {
-			return mx.ErrInternal
-		}
-		return mx.ErrOk
+		return errorToRIO(err)
 	case rio.OpStat:
 		size, _, _, err := dir.Stat()
-		if err != nil {
-			println("dir stat err: ", err.Error())
-			return mx.ErrInternal
+		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+			return mxErr
 		}
 		return statShared(msg, size, true)
 	case rio.OpReaddir:
@@ -316,9 +323,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		}
 		if !dw.reading {
 			dirents, err := dir.Read()
-			if err != nil {
-				println("readdir err: ", err.Error())
-				return mx.ErrInternal
+			if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
+				return mxErr
 			}
 			dw.reading = true
 			dw.dirents = dirents
@@ -355,29 +361,19 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 	case rio.OpUnlink:
 		path := strings.TrimRight(string(inputData), "\x00")
 		err := dir.Unlink(path)
-		if err != nil {
-			println("dir unlink err: ", err.Error())
-			return mx.ErrInternal
-		}
 		msg.Datalen = 0
-		return mx.ErrOk
+		return errorToRIO(err)
 	case rio.OpRename:
 		if len(inputData) < 4 { // Src + null + dst + null
-			println("dir rename name too short")
-			return mx.ErrInternal
+			return mx.ErrInvalidArgs
 		}
 		paths := strings.Split(strings.TrimRight(string(inputData), "\x00"), "\x00")
 		if len(paths) != 2 {
-			println("dir rename invalid number of paths: ", len(paths))
-			return mx.ErrInternal
+			return mx.ErrInvalidArgs
 		}
 		err := dir.Rename(paths[0], paths[1])
-		if err != nil {
-			println("dir rename err: ", err.Error())
-			return mx.ErrInternal
-		}
 		msg.Datalen = 0
-		return mx.ErrOk
+		return errorToRIO(err)
 	default:
 		println("ThinFS DIR UNKNOWN OP")
 		return mx.ErrNotSupported
