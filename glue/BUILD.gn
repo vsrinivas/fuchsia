@@ -24,7 +24,6 @@ executable("unittests") {
   output_name = "ledger_glue_unittests"
 
   sources = [
-    "data_pipe/data_pipe_drainer_unittest.cc",
     "data_pipe/data_pipe_writer_unittest.cc",
   ]
 

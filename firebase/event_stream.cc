@@ -21,7 +21,7 @@ void EventStream::Start(
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;
   completion_callback_ = completion_callback;
-  drainer_.reset(new glue::DataPipeDrainer(this));
+  drainer_.reset(new mtl::DataPipeDrainer(this));
   drainer_->Start(std::move(source));
 }
 
@@ -84,8 +84,7 @@ void EventStream::ProcessLine(ftl::StringView line) {
   ProcessField(line, "");
 }
 
-void EventStream::ProcessField(ftl::StringView field,
-                               ftl::StringView value) {
+void EventStream::ProcessField(ftl::StringView field, ftl::StringView value) {
   if (field == "event") {
     event_type_ = value.ToString();
   } else if (field == "data") {

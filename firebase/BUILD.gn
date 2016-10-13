@@ -25,6 +25,7 @@ source_set("firebase") {
     "//apps/ledger/glue",
     "//apps/ledger/glue/data_pipe",
     "//lib/ftl",
+    "//lib/mtl",
     "//mojo/public/cpp/system",
   ]
 }

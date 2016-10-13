@@ -4,8 +4,6 @@
 
 source_set("data_pipe") {
   sources = [
-    "data_pipe_drainer.cc",
-    "data_pipe_drainer.h",
     "data_pipe_drainer_client.cc",
     "data_pipe_drainer_client.h",
     "data_pipe_writer.cc",

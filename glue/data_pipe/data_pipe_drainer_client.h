@@ -9,12 +9,12 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/glue/data_pipe/data_pipe_drainer.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
 namespace glue {
 
-class DataPipeDrainerClient : public glue::DataPipeDrainer::Client {
+class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
  public:
   DataPipeDrainerClient();
 
@@ -30,7 +30,7 @@ class DataPipeDrainerClient : public glue::DataPipeDrainer::Client {
 
   std::function<void(std::string)> callback_;
   std::string data_;
-  glue::DataPipeDrainer drainer_;
+  mtl::DataPipeDrainer drainer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainerClient);
 };
