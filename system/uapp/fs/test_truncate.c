@@ -104,7 +104,7 @@ void checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
         TRY(lseek(fd, old_len, SEEK_SET));
         TRY((r = read(fd, readbuf, new_len - old_len)));
         assert(r == (new_len - old_len));
-        for (unsigned n = 0; n < (new_len - old_len); n++) {
+        for (ssize_t n = 0; n < (new_len - old_len); n++) {
             assert(readbuf[n] == 0);
         }
         // Overwrite those zeroes with the contents of u8
