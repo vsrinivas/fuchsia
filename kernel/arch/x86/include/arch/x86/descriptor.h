@@ -41,9 +41,18 @@
 
 #ifndef ASSEMBLY
 
+#include <arch/aspace.h>
 #include <magenta/compiler.h>
-#include <sys/types.h>
 #include <reg.h>
+#include <sys/types.h>
+
+#ifdef __cplusplus
+#include <bitmap/rle-bitmap.h>
+
+void x86_set_tss_io_bitmap(const bitmap::RleBitmap& extent);
+void x86_clear_tss_io_bitmap(const bitmap::RleBitmap& extent);
+void x86_reset_tss_io_bitmap(void);
+#endif // __cplusplus
 
 __BEGIN_CDECLS
 
@@ -62,10 +71,6 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
 void x86_initialize_percpu_tss(void);
 
 void x86_set_tss_sp(vaddr_t sp);
-
-void x86_set_tss_io_bitmap(uint8_t *bitmap);
-
-void x86_clear_tss_io_bitmap(void);
 
 __END_CDECLS
 

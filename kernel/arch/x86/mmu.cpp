@@ -19,6 +19,8 @@
 #include <kernel/mp.h>
 #include <kernel/vm.h>
 
+#include <bitmap/rle-bitmap.h>
+
 #define LOCAL_TRACE 0
 
 /* Default address width including virtual/physical address.
@@ -1090,7 +1092,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
         LTRACEF("user aspace: pt phys %#" PRIxPTR ", virt %p\n", aspace->pt_phys, aspace->pt_virt);
 #endif
     }
-    aspace->io_bitmap_ptr = NULL;
+    aspace->io_bitmap = nullptr;
     spin_lock_init(&aspace->io_bitmap_lock);
 
     return NO_ERROR;
@@ -1118,8 +1120,8 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     }
 #endif
 
-    if (aspace->io_bitmap_ptr) {
-        free(aspace->io_bitmap_ptr);
+    if (aspace->io_bitmap) {
+        delete static_cast<bitmap::RleBitmap*>(aspace->io_bitmap);
     }
 
     pmm_free_page(paddr_to_vm_page(aspace->pt_phys));
@@ -1139,18 +1141,18 @@ void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace) {
         x86_set_cr3(kernel_pt_phys);
     }
 
-    /* set the io bitmap for this thread */
-    bool set_bitmap = false;
-    if (aspace) {
-        spin_lock(&aspace->io_bitmap_lock);
-        if (aspace->io_bitmap_ptr) {
-            x86_set_tss_io_bitmap(static_cast<uint8_t *>(aspace->io_bitmap_ptr));
-            set_bitmap = true;
-        }
-        spin_unlock(&aspace->io_bitmap_lock);
+    /* Cleanup io bitmap entries from previous thread */
+    if (old_aspace && old_aspace->io_bitmap) {
+        spin_lock(&old_aspace->io_bitmap_lock);
+        x86_clear_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(old_aspace->io_bitmap));
+        spin_unlock(&old_aspace->io_bitmap_lock);
     }
-    if (!set_bitmap && old_aspace && old_aspace->io_bitmap_ptr) {
-        x86_clear_tss_io_bitmap();
+
+    /* Set the io bitmap for this thread */
+    if (aspace && aspace->io_bitmap) {
+        spin_lock(&aspace->io_bitmap_lock);
+        x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(aspace->io_bitmap));
+        spin_unlock(&aspace->io_bitmap_lock);
     }
 }
 

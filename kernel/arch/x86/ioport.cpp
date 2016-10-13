@@ -11,11 +11,13 @@
 #include <assert.h>
 #include <bits.h>
 #include <err.h>
+#include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <malloc.h>
 #include <string.h>
 
+#include <bitmap/rle-bitmap.h>
 #include <mxtl/unique_ptr.h>
 #include <new.h>
 
@@ -40,7 +42,11 @@ static void ioport_update_task(void* raw_context) {
     }
 
     spin_lock(&as->io_bitmap_lock);
-    x86_set_tss_io_bitmap(static_cast<uint8_t*>(as->io_bitmap_ptr));
+
+    // This is overkill, but it's much simpler to reason about
+    x86_reset_tss_io_bitmap();
+    x86_set_tss_io_bitmap(*static_cast<bitmap::RleBitmap*>(as->io_bitmap));
+
     spin_unlock(&as->io_bitmap_lock);
 }
 
@@ -57,14 +63,28 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
     }
 
     struct arch_aspace* as = vmm_get_arch_aspace(t->aspace);
+    auto bitmap = static_cast<bitmap::RleBitmap*>(as->io_bitmap);
 
-    // Optimistically allocate the bitmap pointer if it doesn't exist.  Once
-    // we're in the spinlock, we'll see if we actually need this allocation or
-    // not.  In the common case, when we make the allocation we will use it.
-    mxtl::unique_ptr<unsigned long> optimistic_alloc;
-    if (!as->io_bitmap_ptr) {
+    mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
+    if (!bitmap) {
+        // Optimistically allocate a bitmap structure if we don't have one, and
+        // we'll see if we actually need this allocation later.  In the common
+        // case, when we make the allocation we will use it.
         AllocChecker ac;
-        optimistic_alloc.reset(new (&ac) unsigned long[IO_BITMAP_LONGS]());
+        optimistic_bitmap.reset(new (&ac) bitmap::RleBitmap());
+        if (!ac.check()) {
+            return ERR_NO_MEMORY;
+        }
+    }
+
+    // Create a free-list in case any of our bitmap operations need to free any
+    // nodes.
+    bitmap::RleBitmap::FreeList bitmap_freelist;
+
+    // Optimistically allocate an element for the bitmap, in case we need one.
+    {
+        AllocChecker ac;
+        bitmap_freelist.push_back(mxtl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
             return ERR_NO_MEMORY;
         }
@@ -72,38 +92,70 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, 0);
-    spin_lock(&as->io_bitmap_lock);
 
-    // Initialize the io bitmap if this is the first call for this process
-    if (as->io_bitmap_ptr == NULL) {
-        DEBUG_ASSERT(optimistic_alloc);
-        if (!optimistic_alloc) {
-            spin_unlock(&as->io_bitmap_lock);
-            arch_interrupt_restore(state, 0);
-            return ERR_NO_MEMORY;
+    status_t status = NO_ERROR;
+    do {
+        AutoSpinLock guard(as->io_bitmap_lock);
+
+        if (!as->io_bitmap) {
+            bitmap = optimistic_bitmap.release();
+            as->io_bitmap = static_cast<void*>(bitmap);
         }
 
-        as->io_bitmap_ptr = optimistic_alloc.release();
-    }
+        status = enable ?
+                bitmap->SetNoAlloc(port, port + len, &bitmap_freelist) :
+                bitmap->ClearNoAlloc(port, port + len, &bitmap_freelist);
+        if (status != NO_ERROR) {
+            break;
+        }
 
-    // Set the io bitmap in the thread structure and the tss
-    tss_t* tss = &x86_get_percpu()->default_tss;
-
-    if (enable) {
-        bitmap_clear(static_cast<unsigned long*>(as->io_bitmap_ptr), port, len);
-        bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
-    } else {
-        bitmap_set(static_cast<unsigned long*>(as->io_bitmap_ptr), port, len);
-        bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
-    }
-
-    spin_unlock(&as->io_bitmap_lock);
+        // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
+        tss_t* tss = &x86_get_percpu()->default_tss;
+        if (enable) {
+            bitmap_clear(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+        } else {
+            bitmap_set(reinterpret_cast<unsigned long*>(tss->tss_bitmap), port, len);
+        }
+    } while (0);
 
     // Let all other CPUs know about the update
-    struct ioport_update_context task_context = {.aspace = as};
-    mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, ioport_update_task, &task_context);
+    if (status == NO_ERROR) {
+        struct ioport_update_context task_context = {.aspace = as};
+        mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, ioport_update_task, &task_context);
+    }
 
     arch_interrupt_restore(state, 0);
+    return status;
+}
 
-    return NO_ERROR;
+void x86_set_tss_io_bitmap(const bitmap::RleBitmap& bitmap)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t *tss = &x86_get_percpu()->default_tss;
+
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+    for (const auto& extent : bitmap) {
+        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
+        bitmap_clear(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
+    }
+}
+
+void x86_reset_tss_io_bitmap(void) {
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t *tss = &x86_get_percpu()->default_tss;
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+
+    bitmap_set(tss_bitmap, 0, IO_BITMAP_BITS);
+}
+
+void x86_clear_tss_io_bitmap(const bitmap::RleBitmap& bitmap)
+{
+    DEBUG_ASSERT(arch_ints_disabled());
+    tss_t *tss = &x86_get_percpu()->default_tss;
+
+    auto tss_bitmap = reinterpret_cast<unsigned long*>(tss->tss_bitmap);
+    for (const auto& extent : bitmap) {
+        DEBUG_ASSERT(extent.bitoff + extent.bitlen <= IO_BITMAP_BITS);
+        bitmap_set(tss_bitmap, static_cast<int>(extent.bitoff), static_cast<int>(extent.bitlen));
+    }
 }

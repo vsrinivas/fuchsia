@@ -14,6 +14,7 @@
 #include <arch/x86/mp.h>
 #include <arch/arch_ops.h>
 #include <assert.h>
+#include <bits.h>
 #include <magenta/compiler.h>
 #include <err.h>
 #include <string.h>
@@ -77,20 +78,6 @@ void x86_set_tss_sp(vaddr_t sp)
 #elif ARCH_X86_64
     tss->rsp0 = sp;
 #endif
-}
-
-void x86_set_tss_io_bitmap(uint8_t *bitmap)
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    tss_t *tss = &x86_get_percpu()->default_tss;
-    memcpy(tss->tss_bitmap, bitmap, IO_BITMAP_BYTES);
-}
-
-void x86_clear_tss_io_bitmap(void)
-{
-    DEBUG_ASSERT(arch_ints_disabled());
-    tss_t *tss = &x86_get_percpu()->default_tss;
-    memset(tss->tss_bitmap, 0xff, IO_BITMAP_BYTES);
 }
 
 void set_global_desc_32(seg_sel_t sel, uint32_t base, uint32_t limit,

@@ -29,8 +29,9 @@ struct arch_aspace {
     vaddr_t base;
     size_t size;
 
-    /* if not NULL, pointer to the port IO permissions for this address space */
-    void *io_bitmap_ptr;
+    /* Pointer to a bitmap::RleBitmap representing the range of ports
+     * enabled in this aspace. */
+    void *io_bitmap;
     spin_lock_t io_bitmap_lock;
 };
 

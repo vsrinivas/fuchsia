@@ -94,6 +94,8 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/user_copy.S
 endif
 
+MODULE_DEPS += lib/bitmap
+
 include $(LOCAL_DIR)/toolchain.mk
 
 # Enable SMP for x86-64
