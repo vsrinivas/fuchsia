@@ -111,7 +111,8 @@ void PageImpl::DataPipeDrainerClient::Start(
     mojo::ScopedDataPipeConsumerHandle source,
     const std::function<void(const std::string&)>& callback) {
   callback_ = callback,
-  drainer_.reset(new mtl::DataPipeDrainer(this, std::move(source)));
+  drainer_.reset(new mtl::DataPipeDrainer(this));
+  drainer_->Start(std::move(source));
 }
 
 void PageImpl::DataPipeDrainerClient::OnDataAvailable(const void* data,
