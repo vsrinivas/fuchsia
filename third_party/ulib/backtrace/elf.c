@@ -944,7 +944,8 @@ dl_iterate_phdr_wrapper (void *iter_state ATTRIBUTE_UNUSED,
 
 /* Initialize the backtrace data we need from an ELF executable.  At
    the ELF level, all we need to do is find the debug info
-   sections.  */
+   sections.
+   Returns non-zero for success, zero for failure.  */
 
 int
 backtrace_initialize (struct backtrace_state *state, int descriptor,

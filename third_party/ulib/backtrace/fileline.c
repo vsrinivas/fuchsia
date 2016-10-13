@@ -176,7 +176,12 @@ backtrace_pcinfo (struct backtrace_state *state, uintptr_t pc,
   return state->fileline_fn (state, pc, callback, error_callback, data);
 }
 
-/* Given a PC, find the symbol for it, and its value.  */
+/* Given a PC, find the symbol for it, and its value.
+   Returns non-zero on success, zero on failure.
+   N.B. If the result is "success" error_callback may still have been called.
+   Plus if the result is "success", a symbol may not have been found.
+   CALLBACK will be called with NULL parameter values if a symbol isn't found.
+   It is up to the caller to handle all of this appropriately.  */
 
 int
 backtrace_syminfo (struct backtrace_state *state, uintptr_t pc,
