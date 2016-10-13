@@ -24,22 +24,22 @@ FakeJournalDelegate::FakeJournalDelegate() : id_(RandomId()) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
-Status FakeJournalDelegate::SetValue(const std::string& key,
+Status FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
                                      ObjectIdView value,
                                      KeyPriority priority) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  data_[key].value = value.ToString();
-  data_[key].priority = priority;
+  Get(key).value = value.ToString();
+  Get(key).priority = priority;
   return Status::OK;
 }
 
-Status FakeJournalDelegate::Delete(const std::string& key) {
+Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
   if (is_committed_ || is_rolled_back_) {
     return Status::ILLEGAL_STATE;
   }
-  data_[key].deleted = true;
+  Get(key).deleted = true;
   return Status::OK;
 }
 
@@ -67,9 +67,18 @@ bool FakeJournalDelegate::IsRolledBack() const {
   return is_rolled_back_;
 }
 
-const std::map<std::string, FakeJournalDelegate::Entry>
-FakeJournalDelegate::GetData() const {
+const std::
+    map<std::string, FakeJournalDelegate::Entry, convert::StringViewComparator>&
+    FakeJournalDelegate::GetData() const {
   return data_;
+}
+
+FakeJournalDelegate::Entry& FakeJournalDelegate::Get(
+    convert::ExtendedStringView key) {
+  auto it = data_.find(key);
+  if (it != data_.end())
+    return it->second;
+  return data_[key.ToString()];
 }
 
 }  // namespace fake

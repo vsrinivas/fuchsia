@@ -263,7 +263,7 @@ Status DB::AddJournalEntry(const JournalId& journal_id,
 }
 
 Status DB::RemoveJournalEntry(const JournalId& journal_id,
-                              const std::string& key) {
+                              convert::ExtendedStringView key) {
   return Put(GetJournalEntryKeyFor(journal_id, key), kJournalEntryDelete);
 }
 
@@ -348,7 +348,7 @@ Status DB::DeleteByPrefix(const leveldb::Slice& prefix) {
   return it->status().ok() ? Status::OK : Status::IO_ERROR;
 }
 
-Status DB::Get(const std::string& key, std::string* value) {
+Status DB::Get(convert::ExtendedStringView key, std::string* value) {
   leveldb::Status s = db_->Get(read_options_, key, value);
   if (s.IsNotFound()) {
     return Status::NOT_FOUND;
@@ -359,12 +359,12 @@ Status DB::Get(const std::string& key, std::string* value) {
   return Status::OK;
 }
 
-Status DB::Put(const std::string& key, ftl::StringView value) {
+Status DB::Put(convert::ExtendedStringView key, ftl::StringView value) {
   leveldb::Status s = db_->Put(write_options_, key, convert::ToSlice(value));
   return s.ok() ? Status::OK : Status::IO_ERROR;
 }
 
-Status DB::Delete(const std::string& key) {
+Status DB::Delete(convert::ExtendedStringView key) {
   leveldb::Status s = db_->Delete(write_options_, key);
   return s.ok() ? Status::OK : Status::IO_ERROR;
 }

@@ -35,7 +35,7 @@ JournalId JournalDBImpl::GetId() const {
   return id_;
 }
 
-Status JournalDBImpl::Put(const std::string& key,
+Status JournalDBImpl::Put(convert::ExtendedStringView key,
                           ObjectIdView blob_id,
                           KeyPriority priority) {
   if (!valid_) {
@@ -44,7 +44,7 @@ Status JournalDBImpl::Put(const std::string& key,
   return db_->AddJournalEntry(id_, key, blob_id, priority);
 }
 
-Status JournalDBImpl::Delete(const std::string& key) {
+Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   if (!valid_) {
     return Status::ILLEGAL_STATE;
   }

@@ -37,9 +37,14 @@ class ExtendedStringView : public ftl::StringView {
   mojo::Array<uint8_t> ToArray();
 };
 
+// Returns the ExtendedStringView representation of the given value.
+inline ExtendedStringView ToStringView(ExtendedStringView value) {
+  return value;
+}
+
 // Returns the representation of the given value in LevelDB.
 inline leveldb::Slice ToSlice(ExtendedStringView value) {
-  return ExtendedStringView(value);
+  return value;
 }
 
 // Returns the mojo::Array representation of the given value.

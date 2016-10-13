@@ -9,6 +9,7 @@
 #include <string>
 
 #include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/journal.h"
 #include "apps/ledger/storage/public/page_storage.h"
 #include "apps/ledger/storage/public/types.h"
@@ -28,8 +29,8 @@ class PageImpl : public Page {
   // commit. If multiple heads match this criteria, returns one arbitrarily.
   storage::CommitId GetLocalBranchHeadCommit();
 
-  Status PutInCommit(const std::string& key,
-                     const storage::ObjectId& value,
+  Status PutInCommit(convert::ExtendedStringView key,
+                     storage::ObjectIdView value,
                      storage::KeyPriority priority);
 
   Status RunInTransaction(

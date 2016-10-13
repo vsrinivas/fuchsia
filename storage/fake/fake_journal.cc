@@ -13,13 +13,13 @@ FakeJournal::FakeJournal(FakeJournalDelegate* delegate) : delegate_(delegate) {}
 
 FakeJournal::~FakeJournal() {}
 
-Status FakeJournal::Put(const std::string& key,
+Status FakeJournal::Put(convert::ExtendedStringView key,
                         ObjectIdView blob_id,
                         KeyPriority priority) {
   return delegate_->SetValue(key, blob_id, priority);
 }
 
-Status FakeJournal::Delete(const std::string& key) {
+Status FakeJournal::Delete(convert::ExtendedStringView key) {
   return delegate_->Delete(key);
 }
 

@@ -81,7 +81,7 @@ class DB {
                          KeyPriority priority);
   // Removes the given key from the journal with the given |journal_id|.
   Status RemoveJournalEntry(const JournalId& journal_id,
-                            const std::string& key);
+                            convert::ExtendedStringView key);
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
   Status GetJournalEntries(
@@ -112,9 +112,9 @@ class DB {
   Status GetByPrefix(const leveldb::Slice& prefix,
                      std::vector<std::string>* keySuffixes);
   Status DeleteByPrefix(const leveldb::Slice& prefix);
-  Status Get(const std::string& key, std::string* value);
-  Status Put(const std::string& key, ftl::StringView value);
-  Status Delete(const std::string& key);
+  Status Get(convert::ExtendedStringView key, std::string* value);
+  Status Put(convert::ExtendedStringView key, ftl::StringView value);
+  Status Delete(convert::ExtendedStringView key);
 
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;

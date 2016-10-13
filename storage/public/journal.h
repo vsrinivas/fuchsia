@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 #define APPS_LEDGER_STORAGE_PUBLIC_JOURNAL_H_
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -18,13 +19,13 @@ class Journal {
 
   // Adds an entry with the given |key| and |blob_id| to this |Journal|. Returns
   // |OK| on success or the error code otherwise.
-  virtual Status Put(const std::string& key,
+  virtual Status Put(convert::ExtendedStringView key,
                      ObjectIdView blob_id,
                      KeyPriority priority) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|. Returns |OK|
   // on success or the error code otherwise.
-  virtual Status Delete(const std::string& key) = 0;
+  virtual Status Delete(convert::ExtendedStringView key) = 0;
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
   // will fail after a successful commit. The id of the created commit is

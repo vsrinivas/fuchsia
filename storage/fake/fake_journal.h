@@ -23,10 +23,10 @@ class FakeJournal : public Journal {
   ~FakeJournal() override;
 
   // Journal:
-  Status Put(const std::string& key,
+  Status Put(convert::ExtendedStringView key,
              ObjectIdView blob_id,
              KeyPriority priority) override;
-  Status Delete(const std::string& key) override;
+  Status Delete(convert::ExtendedStringView key) override;
   Status Commit(CommitId* commit_id) override;
   Status Rollback() override;
 

@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -29,10 +30,10 @@ class FakeJournalDelegate {
 
   CommitId GetId() const { return id_; }
 
-  Status SetValue(const std::string& key,
+  Status SetValue(convert::ExtendedStringView key,
                   ObjectIdView value,
                   KeyPriority priority);
-  Status Delete(const std::string& key);
+  Status Delete(convert::ExtendedStringView key);
 
   Status Commit();
   bool IsCommitted() const;
@@ -40,11 +41,14 @@ class FakeJournalDelegate {
   Status Rollback();
   bool IsRolledBack() const;
 
-  const std::map<std::string, Entry> GetData() const;
+  const std::map<std::string, Entry, convert::StringViewComparator>& GetData()
+      const;
 
  private:
+  Entry& Get(convert::ExtendedStringView key);
+
   const CommitId id_;
-  std::map<std::string, Entry> data_;
+  std::map<std::string, Entry, convert::StringViewComparator> data_;
 
   bool is_committed_ = false;
   bool is_rolled_back_ = false;

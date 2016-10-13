@@ -103,7 +103,7 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
   // until the pipe is drained.
   mojo::ScopedDataPipeConsumerHandle data_pipe =
-      mtl::WriteStringToConsumerHandle(convert::ToString(value));
+      mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
   storage::Status status = storage_->AddObjectFromLocal(
       data_pipe.release(), value.size(), &object_id);
   if (status != storage::Status::OK) {
@@ -111,7 +111,7 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
     return;
   }
 
-  callback.Run(PutInCommit(convert::ToString(key), object_id,
+  callback.Run(PutInCommit(key, object_id,
                            priority == Priority::EAGER
                                ? storage::KeyPriority::EAGER
                                : storage::KeyPriority::LAZY));
@@ -123,15 +123,15 @@ void PageImpl::PutReference(mojo::Array<uint8_t> key,
                             ReferencePtr reference,
                             Priority priority,
                             const PutReferenceCallback& callback) {
-  storage::ObjectId object_id(convert::ToString(reference->opaque_id));
-  callback.Run(PutInCommit(convert::ToString(key), object_id,
+  storage::ObjectIdView object_id(reference->opaque_id);
+  callback.Run(PutInCommit(key, object_id,
                            priority == Priority::EAGER
                                ? storage::KeyPriority::EAGER
                                : storage::KeyPriority::LAZY));
 }
 
-Status PageImpl::PutInCommit(const std::string& key,
-                             const storage::ObjectId& object_id,
+Status PageImpl::PutInCommit(convert::ExtendedStringView key,
+                             storage::ObjectIdView object_id,
                              storage::KeyPriority priority) {
   return RunInTransaction(
       [&key, &object_id, &priority](storage::Journal* journal) {
@@ -143,7 +143,7 @@ Status PageImpl::PutInCommit(const std::string& key,
 void PageImpl::Delete(mojo::Array<uint8_t> key,
                       const DeleteCallback& callback) {
   callback.Run(RunInTransaction([&key](storage::Journal* journal) {
-    return ConvertStatus(journal->Delete(convert::ToString(key)));
+    return ConvertStatus(journal->Delete(key));
   }));
 }
 
