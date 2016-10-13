@@ -2717,9 +2717,11 @@ report_inlined_functions (uintptr_t pc, struct function *function,
 }
 
 /* Look for a PC in the DWARF mapping for one module.  On success,
-   call CALLBACK and return whatever it returns.  On error, call
-   ERROR_CALLBACK and return 0.  Sets *FOUND to 1 if the PC is found,
-   0 if not.  */
+   call CALLBACK and return whatever it returns.
+   On error, call ERROR_CALLBACK and return 0.
+   Sets *FOUND to 1 if PC is found, 0 if not, independent of the result.
+   If PC is found but there is no debug info for it, CALLBACK is called
+   with NULL for all parameters.  */
 
 static int
 dwarf_lookup_pc (struct backtrace_state *state, struct dwarf_data *ddata,

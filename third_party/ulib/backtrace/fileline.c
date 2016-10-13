@@ -160,7 +160,11 @@ fileline_initialize (struct backtrace_state *state,
   return 1;
 }
 
-/* Given a PC, find the file name, line number, and function name.  */
+/* Given a PC, find the file name, line number, and function name.
+   N.B. The result is not necessarily useful. It will be zero if
+   fileline_initialize fails, but it will also be zero if everything
+   succeeds and CALLBACK returns 0 (which is intended behavior for
+   CALLBACK: see backtrace.h:backtrace_full_callback).  */
 
 int
 backtrace_pcinfo (struct backtrace_state *state, uintptr_t pc,
