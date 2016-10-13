@@ -565,6 +565,8 @@ InputReader::~InputReader() {
   if (input_directory_handle_) {
     close(input_directory_handle_);
   }
+  while (!devices_.empty())
+    DeviceRemoved(devices_.begin()->second.first);
 }
 
 void InputReader::Start(const OnEventCallback& callback) {
