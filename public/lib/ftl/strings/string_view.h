@@ -11,13 +11,6 @@
 
 #include "lib/ftl/logging.h"
 
-#if __cplusplus >= 201402L
-// C++14 relaxed the limitation of the content of a constexpr function.
-#define CONSTEXPR_IN_CPP14 constexpr
-#else
-#define CONSTEXPR_IN_CPP14
-#endif
-
 namespace ftl {
 
 // A string-like object that points to a sized piece of memory.
@@ -89,20 +82,20 @@ class StringView {
   }
 
   // Modifier methods.
-  CONSTEXPR_IN_CPP14 void clear() {
+  constexpr void clear() {
     data_ = "";
     size_ = 0;
   }
-  CONSTEXPR_IN_CPP14 void remove_prefix(size_t n) {
+  constexpr void remove_prefix(size_t n) {
     FTL_DCHECK(n <= size_);
     data_ += n;
     size_ -= n;
   }
-  CONSTEXPR_IN_CPP14 void remove_suffix(size_t n) {
+  constexpr void remove_suffix(size_t n) {
     FTL_DCHECK(n <= size_);
     size_ -= n;
   }
-  CONSTEXPR_IN_CPP14 void swap(StringView& other) {
+  constexpr void swap(StringView& other) {
     const char* data = data_;
     data_ = other.data_;
     other.data_ = data;
@@ -152,7 +145,5 @@ bool operator>=(StringView lhs, StringView rhs);
 std::ostream& operator<<(std::ostream& o, StringView string_view);
 
 }  // namespace ftl
-
-#undef CONSTEXPR_IN_CPP14
 
 #endif  // LIB_FTL_STRINGS_STRING_VIEW_H_
