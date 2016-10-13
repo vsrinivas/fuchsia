@@ -15,6 +15,8 @@
 //#define TRACE 1
 #include "xhci-debug.h"
 
+#define DEBUG_PORTSC    0
+
 #define MANUFACTURER_STRING 1
 #define PRODUCT_STRING_2    2
 #define PRODUCT_STRING_3    3
@@ -122,6 +124,94 @@ static const usb_speed_t xhci_rh_speeds[] = {
     USB_SPEED_SUPER,
 };
 
+#if DEBUG_PORTSC
+static void print_portsc(int port, uint32_t portsc) {
+    printf("port %d:", port);
+    if (portsc & PORTSC_CCS) printf(" CCS");
+    if (portsc & PORTSC_PED) printf(" PED");
+    if (portsc & PORTSC_OCA) printf(" OCA");
+    if (portsc & PORTSC_PR) printf(" PR");
+    uint32_t pls = (portsc >> PORTSC_PLS_START) & ((1 << PORTSC_PLS_BITS) - 1);
+    switch (pls) {
+        case 0:
+            printf(" U0");
+            break;
+        case 1:
+            printf(" U1");
+            break;
+        case 2:
+            printf(" U2");
+            break;
+        case 3:
+            printf(" U3");
+            break;
+        case 4:
+            printf(" Disabled");
+            break;
+        case 5:
+            printf(" RxDetect");
+            break;
+        case 6:
+            printf(" Inactive");
+            break;
+        case 7:
+            printf(" Polling");
+            break;
+        case 8:
+            printf(" Recovery");
+            break;
+        case 9:
+            printf(" Hot Reset");
+            break;
+        case 10:
+            printf(" Compliance Mode");
+            break;
+        case 11:
+            printf(" Test Mode");
+            break;
+        case 15:
+            printf(" Resume");
+            break;
+        default:
+            printf(" PLS%d", pls);
+            break;
+    }
+    if (portsc & PORTSC_PP) printf(" PP");
+    uint32_t speed = (portsc >> PORTSC_SPEED_START) & ((1 << PORTSC_SPEED_BITS) - 1);
+    switch (speed) {
+        case 1:
+            printf(" FULL_SPEED");
+            break;
+        case 2:
+            printf(" LOW_SPEED");
+            break;
+        case 3:
+            printf(" HIGH_SPEED");
+            break;
+        case 4:
+            printf(" SUPER_SPEED");
+            break;
+    }
+    uint32_t pic = (portsc >> PORTSC_PIC_START) & ((1 << PORTSC_PIC_BITS) - 1);
+    printf(" PIC%d", pic);
+    if (portsc & PORTSC_LWS) printf(" LWS");
+    if (portsc & PORTSC_CSC) printf(" CSC");
+    if (portsc & PORTSC_PEC) printf(" PEC");
+    if (portsc & PORTSC_WRC) printf(" WRC");
+    if (portsc & PORTSC_OCC) printf(" OCC");
+    if (portsc & PORTSC_PRC) printf(" PRC");
+    if (portsc & PORTSC_PLC) printf(" PLC");
+    if (portsc & PORTSC_CEC) printf(" CEC");
+    if (portsc & PORTSC_CAS) printf(" CAS");
+    if (portsc & PORTSC_WCE) printf(" WCE");
+    if (portsc & PORTSC_WDE) printf(" WDE");
+    if (portsc & PORTSC_WOE) printf(" WOE");
+    if (portsc & PORTSC_DR) printf(" DR");
+    if (portsc & PORTSC_WPR) printf(" WPR");
+    printf("\n");
+}
+#endif // DEBUG_PORTSC
+
 static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index) {
     volatile uint32_t* portsc = &xhci->op_regs->port_regs[rh_port_index].portsc;
     uint32_t temp = XHCI_READ32(portsc);
@@ -202,6 +292,9 @@ mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
     for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
         volatile uint32_t* portsc = &xhci->op_regs->port_regs[i].portsc;
         uint32_t temp = XHCI_READ32(portsc);
+#if DEBUG_PORTSC
+        print_portsc(i, temp);
+#endif
         // power off
         temp = (temp & PORTSC_CONTROL_BITS) & ~PORTSC_PP;
         XHCI_WRITE32(portsc, temp);
@@ -411,8 +504,10 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
     for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
         uint32_t portsc = XHCI_READ32(&port_regs[i].portsc);
         uint32_t speed = (portsc & XHCI_MASK(PORTSC_SPEED_START, PORTSC_SPEED_BITS)) >> PORTSC_SPEED_START;
-
         uint32_t status_bits = portsc & PORTSC_STATUS_BITS;
+#if DEBUG_PORTSC
+        print_portsc(i, portsc);
+#endif
         if (status_bits) {
             bool connected = !!(portsc & PORTSC_CCS);
             bool enabled = !!(portsc & PORTSC_PED);
