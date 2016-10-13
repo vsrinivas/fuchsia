@@ -25,10 +25,11 @@ class DataPipeDrainer {
   };
 
   DataPipeDrainer(Client* client,
-                  mojo::ScopedDataPipeConsumerHandle source,
                   const MojoAsyncWaiter* waiter =
                       mojo::Environment::GetDefaultAsyncWaiter());
   ~DataPipeDrainer();
+
+  void Start(mojo::ScopedDataPipeConsumerHandle source);
 
  private:
   void ReadData();

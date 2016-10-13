@@ -12,20 +12,19 @@
 
 namespace mtl {
 
-DataPipeDrainer::DataPipeDrainer(Client* client,
-                                 mojo::ScopedDataPipeConsumerHandle source,
-                                 const MojoAsyncWaiter* waiter)
-    : client_(client),
-      source_(std::move(source)),
-      waiter_(waiter),
-      wait_id_(0) {
+DataPipeDrainer::DataPipeDrainer(Client* client, const MojoAsyncWaiter* waiter)
+    : client_(client), waiter_(waiter), wait_id_(0) {
   FTL_DCHECK(client_);
-  ReadData();
 }
 
 DataPipeDrainer::~DataPipeDrainer() {
   if (wait_id_)
     waiter_->CancelWait(wait_id_);
+}
+
+void DataPipeDrainer::Start(mojo::ScopedDataPipeConsumerHandle source) {
+  source_ = std::move(source);
+  ReadData();
 }
 
 void DataPipeDrainer::ReadData() {

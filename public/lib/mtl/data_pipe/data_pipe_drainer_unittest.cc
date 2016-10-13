@@ -16,27 +16,23 @@ class Client : public DataPipeDrainer::Client {
   Client(const std::function<void()>& callback) : callback_(callback) {}
   ~Client() override {}
 
-  std::string GetValue() {
-    return value_;
-  }
+  std::string GetValue() { return value_; }
 
  private:
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     value_.append(static_cast<const char*>(data), num_bytes);
   }
-  void OnDataComplete() override {
-    callback_();
-  }
+  void OnDataComplete() override { callback_(); }
 
   std::string value_;
   std::function<void()> callback_;
-
 };
 
 TEST(DataPipeDrainer, ReadData) {
   MessageLoop message_loop;
   Client client([&message_loop]() { message_loop.QuitNow(); });
-  DataPipeDrainer drainer(&client, mtl::WriteStringToConsumerHandle("Hello"));
+  DataPipeDrainer drainer(&client);
+  drainer.Start(mtl::WriteStringToConsumerHandle("Hello"));
   message_loop.Run();
   EXPECT_EQ("Hello", client.GetValue());
 }
