@@ -70,23 +70,14 @@ bool PlatformBuffer::MapCpu(void** addr_out)
 
 bool PlatformBuffer::UnmapCpu() { return msd_platform_buffer_unmap_cpu(token_) == 0; }
 
-bool PlatformBuffer::PinPages() { return msd_platform_buffer_pin_pages(token_) == 0; }
-
-bool PlatformBuffer::PinPages(uint32_t* num_pages_out)
+bool PlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)
 {
-    DASSERT(num_pages_out);
-    if (!PinPages())
-        return DRETF(false, "PinPages failed");
-    if (!PinnedPageCount(num_pages_out))
-        return DRETF(false, "PinnedPageCount failed");
-    return true;
+    return msd_platform_buffer_pin_pages(token_, start_page_index, page_count) == 0;
 }
 
-bool PlatformBuffer::UnpinPages() { return msd_platform_buffer_unpin_pages(token_) == 0; }
-
-bool PlatformBuffer::PinnedPageCount(uint32_t* num_pages_out)
+bool PlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_count)
 {
-    return msd_platform_buffer_pinned_page_count(token_, num_pages_out) == 0;
+    return msd_platform_buffer_unpin_pages(token_, start_page_index, page_count) == 0;
 }
 
 bool PlatformBuffer::MapPageCpu(unsigned int page_index, void** addr_out)

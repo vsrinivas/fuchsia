@@ -36,16 +36,14 @@ int32_t msd_platform_buffer_map_cpu(struct msd_platform_buffer* buffer, void** a
 // Releases the cpu virtual mapping for the buffer.
 int32_t msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer);
 
-// Ensures that the buffer's backing store is physically resident.
-// May be called multiple times.
-int32_t msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer);
+// Ensures that the buffer's backing store is physically resident for the given range.
+// May be called multiple times with different ranges.
+int32_t msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer, uint32_t start_page_index,
+                                      uint32_t page_count);
 
 // Releases a corresponding call to pin.
-int32_t msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer);
-
-// Returns success and the number of pinned pages if the buffer is pinned.
-int32_t msd_platform_buffer_pinned_page_count(struct msd_platform_buffer* buffer,
-                                              uint32_t* num_pages_out);
+int32_t msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer, uint32_t start_page_index,
+                                        uint32_t page_count);
 
 // Returns a cpu virtual address for the given page.
 int32_t msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,

@@ -28,10 +28,8 @@ public:
     bool MapCpu(void** addr_out);
     bool UnmapCpu();
 
-    bool PinPages();
-    bool PinPages(uint32_t* num_pages_out);
-    bool UnpinPages();
-    bool PinnedPageCount(uint32_t* num_pages_out);
+    bool PinPages(uint32_t start_page_index, uint32_t page_count);
+    bool UnpinPages(uint32_t start_page_index, uint32_t page_count);
 
     bool MapPageCpu(uint32_t page_index, void** addr_out);
     bool UnmapPageCpu(uint32_t page_index);

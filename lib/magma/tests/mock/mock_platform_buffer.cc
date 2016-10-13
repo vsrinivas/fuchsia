@@ -59,21 +59,21 @@ int32_t msd_platform_buffer_unmap_cpu(struct msd_platform_buffer* buffer)
     return 0; // NoOp
 }
 
-int32_t msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer)
+int32_t msd_platform_buffer_pin_pages(struct msd_platform_buffer* buffer, uint32_t start_page_index,
+                                      uint32_t page_count)
 {
     return 0; // NoOp
 }
 
-int32_t msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer)
+int32_t msd_platform_buffer_unpin_pages(struct msd_platform_buffer* buffer, uint32_t start_page_index,
+                                      uint32_t page_count)
 {
     return 0; // NoOp
 }
 
-int32_t msd_platform_buffer_pinned_page_count(struct msd_platform_buffer* buffer,
-                                              uint32_t* num_pages_out)
+uint32_t msd_platform_buffer_pinned_page_count(struct msd_platform_buffer* buffer)
 {
-    *num_pages_out = MockPlatformBuffer::cast(buffer)->num_pages();
-    return 0;
+    return MockPlatformBuffer::cast(buffer)->num_pages();
 }
 
 int32_t msd_platform_buffer_map_page_cpu(struct msd_platform_buffer* buffer, uint32_t page_index,
