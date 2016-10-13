@@ -131,6 +131,7 @@ typedef struct __attribute__((packed)) {
 } magenta_note_driver_t;
 
 typedef struct magenta_driver_info {
+    list_node_t node;
     mx_driver_t* driver;
     const magenta_note_driver_t* note;
     const mx_bind_inst_t* binding;

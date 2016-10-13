@@ -59,6 +59,8 @@ static void init_from_driver_info(magenta_driver_info_t* di, bool for_root) {
     init_driver(drv, for_root);
 }
 
+static list_node_t driver_list = LIST_INITIAL_VALUE(driver_list);
+
 static void init_loadable_drivers(bool for_root) {
     DIR* dir = opendir("/boot/lib/driver");
     struct dirent* de;
@@ -80,10 +82,24 @@ static void init_loadable_drivers(bool for_root) {
         if (di == NULL) {
             printf("devhost: driver '%s' missing __magenta_driver__ symbol\n", libname);
         } else {
-            init_from_driver_info(di, for_root);
+            if (di->note->version[0] == '!') {
+                // debugging / development hack
+                // prioritize drivers with version "!..." over others
+                list_add_head(&driver_list, &di->node);
+            } else {
+                list_add_tail(&driver_list, &di->node);
+            }
         }
     }
     closedir(dir);
+
+    // We have to dlopen() all drivers before init'ing them, because
+    // drivers can start threads that map memory which can interfere
+    // with further dlopen() operations.
+    magenta_driver_info_t* di;
+    list_for_every_entry(&driver_list, di, magenta_driver_info_t, node) {
+        init_from_driver_info(di, for_root);
+    }
 }
 
 extern magenta_driver_info_t __start_magenta_drivers[] __WEAK;
