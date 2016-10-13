@@ -93,13 +93,14 @@ Status LedgerManager::DeletePage(ftl::StringView page_id) {
 }
 
 PagePtr LedgerManager::AddPageManagerAndGetPagePtr(
-    const storage::PageId& page_id,
+    storage::PageIdView page_id,
     std::unique_ptr<storage::PageStorage> page_storage) {
   auto ret = page_managers_.insert(std::make_pair(
-      page_id,
-      std::make_unique<PageManager>(std::move(page_storage), [this, page_id] {
-        page_managers_.erase(page_id);
-      })));
+      page_id.ToString(),
+      std::make_unique<PageManager>(std::move(page_storage),
+                                    [ this, page_id = page_id.ToString() ] {
+                                      page_managers_.erase(page_id);
+                                    })));
   FTL_DCHECK(ret.second);
   return ret.first->second->GetPagePtr();
 }

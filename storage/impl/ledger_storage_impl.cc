@@ -22,7 +22,7 @@ LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
 Status LedgerStorageImpl::CreatePageStorage(
-    const PageId& page_id,
+    PageIdView page_id,
     std::unique_ptr<PageStorage>* page_storage) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
@@ -41,7 +41,7 @@ Status LedgerStorageImpl::CreatePageStorage(
 }
 
 void LedgerStorageImpl::GetPageStorage(
-    const PageId& page_id,
+    PageIdView page_id,
     const std::function<void(std::unique_ptr<PageStorage>)>& callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
@@ -56,7 +56,7 @@ void LedgerStorageImpl::GetPageStorage(
   task_runner_->PostTask([callback]() { callback(nullptr); });
 }
 
-bool LedgerStorageImpl::DeletePageStorage(const PageId& page_id) {
+bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
   // TODO(nellyv): We need to synchronize the page deletion with the cloud.
   std::string path = GetPathFor(page_id);
   if (!files::IsDirectory(path)) {
@@ -69,7 +69,7 @@ bool LedgerStorageImpl::DeletePageStorage(const PageId& page_id) {
   return true;
 }
 
-std::string LedgerStorageImpl::GetPathFor(const PageId& page_id) {
+std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FTL_DCHECK(!page_id.empty());
   std::string encoded;
   glue::Base64Encode(page_id, &encoded);

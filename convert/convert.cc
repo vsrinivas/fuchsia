@@ -9,14 +9,18 @@
 
 namespace convert {
 
-mojo::Array<uint8_t> ToArray(const ExtendedStringView& value) {
-  mojo::Array<uint8_t> result = mojo::Array<uint8_t>::New(value.size());
-  memcpy(result.data(), value.data(), value.size());
+mojo::Array<uint8_t> ExtendedStringView::ToArray() {
+  mojo::Array<uint8_t> result = mojo::Array<uint8_t>::New(size());
+  memcpy(result.data(), data(), size());
   return result;
 }
 
-std::string ToString(const ExtendedStringView& bytes) {
-  return std::string(bytes.data(), bytes.size());
+mojo::Array<uint8_t> ToArray(ExtendedStringView value) {
+  return value.ToArray();
+}
+
+std::string ToString(ExtendedStringView value) {
+  return value.ToString();
 }
 
 }  // namespace convert

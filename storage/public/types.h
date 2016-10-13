@@ -7,18 +7,18 @@
 
 #include <string>
 
-#include "lib/ftl/strings/string_view.h"
+#include "apps/ledger/convert/convert.h"
 
 namespace storage {
 
 using PageId = std::string;
-using PageIdView = ftl::StringView;
+using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
-using CommitIdView = ftl::StringView;
+using CommitIdView = convert::ExtendedStringView;
 using ObjectId = std::string;
-using ObjectIdView = ftl::StringView;
+using ObjectIdView = convert::ExtendedStringView;
 using JournalId = std::string;
-using JournalIdView = ftl::StringView;
+using JournalIdView = convert::ExtendedStringView;
 
 // The priority at which the key value is downloaded, and the cache policy.
 enum class KeyPriority {

@@ -21,19 +21,19 @@ class LedgerStorage {
 
   // Creates a new |PageStorage| for the Page with the given |page_id|.
   virtual Status CreatePageStorage(
-      const PageId& page_id,
+      PageIdView page_id,
       std::unique_ptr<PageStorage>* page_storage) = 0;
 
   // Finds the |PageStorage| corresponding to the page with the given |page_id|.
   // The result will be returned through the given |callback|. If the storage
   // for the given page doesn't exist a NULL pointer will be returned instead.
   virtual void GetPageStorage(
-      const PageId& page_id,
+      PageIdView page_id,
       const std::function<void(std::unique_ptr<PageStorage>)>& callback) = 0;
 
   // Deletes the storage related to the page with |page_id|. This includes all
   // commits, tree nodes and blobs.
-  virtual bool DeletePageStorage(const PageId& page_id) = 0;
+  virtual bool DeletePageStorage(PageIdView page_id) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);

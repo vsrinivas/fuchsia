@@ -53,11 +53,11 @@ TEST(Convert, ToString) {
 TEST(Convert, ToStringView) {
   std::string str = "Hello";
   leveldb::Slice slice(str.data(), str.size());
-  ftl::StringView result = ToStringView(slice);
+  ExtendedStringView result = slice;
   EXPECT_EQ(str, result.ToString());
 
   mojo::Array<uint8_t> array = ToArray(str);
-  result = ToStringView(array);
+  result = array;
   EXPECT_EQ(str, result.ToString());
 }
 

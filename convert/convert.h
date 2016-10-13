@@ -19,46 +19,34 @@ namespace convert {
 // This class doesn't take ownership of the data used to construct it. The data
 // must outlive it. It is used to allow transparent handling of mojo arrays,
 // leveldb slices and strings.
-class ExtendedStringView {
+class ExtendedStringView : public ftl::StringView {
  public:
   ExtendedStringView(const mojo::Array<uint8_t>& array)
-      : string_view_(reinterpret_cast<const char*>(array.data()),
-                     array.size()) {}
+      : ftl::StringView(reinterpret_cast<const char*>(array.data()),
+                        array.size()) {}
   ExtendedStringView(const leveldb::Slice& slice)
-      : string_view_(slice.data(), slice.size()) {}
-  ExtendedStringView(const std::string& string) : string_view_(string) {}
+      : ftl::StringView(slice.data(), slice.size()) {}
+  ExtendedStringView(const std::string& string) : ftl::StringView(string) {}
   constexpr ExtendedStringView(ftl::StringView string_view)
-      : string_view_(string_view) {}
+      : ftl::StringView(string_view) {}
   template <size_t N>
-  constexpr ExtendedStringView(const char (&str)[N]) : string_view_(str) {}
+  constexpr ExtendedStringView(const char (&str)[N]) : ftl::StringView(str) {}
 
-  constexpr const char* data() const { return string_view_.data(); }
-  constexpr size_t size() const { return string_view_.size(); }
+  operator leveldb::Slice() const { return leveldb::Slice(data(), size()); }
 
-  operator ftl::StringView() const { return string_view_; }
-  operator leveldb::Slice() const {
-    return leveldb::Slice(string_view_.data(), string_view_.size());
-  }
-
- private:
-  ftl::StringView string_view_;
+  mojo::Array<uint8_t> ToArray();
 };
 
-// Returns the ftl::StringView representation of the given value.
-inline ftl::StringView ToStringView(const ExtendedStringView& value) {
-  return value;
-}
-
 // Returns the representation of the given value in LevelDB.
-inline leveldb::Slice ToSlice(const ExtendedStringView& value) {
-  return value;
+inline leveldb::Slice ToSlice(ExtendedStringView value) {
+  return ExtendedStringView(value);
 }
 
 // Returns the mojo::Array representation of the given value.
-mojo::Array<uint8_t> ToArray(const ExtendedStringView& value);
+mojo::Array<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the std::string representation of the given value.
-std::string ToString(const ExtendedStringView& value);
+std::string ToString(ExtendedStringView value);
 
 // Comparator that allows heterogeneous lookup by StringView and
 // std::string in a container with the key type of std::string.

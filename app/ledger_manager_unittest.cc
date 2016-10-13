@@ -31,23 +31,23 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   ~FakeLedgerStorage() {}
 
   storage::Status CreatePageStorage(
-      const storage::PageId& page_id,
+      storage::PageIdView page_id,
       std::unique_ptr<storage::PageStorage>* page_storage) override {
-    create_page_calls.push_back(page_id);
+    create_page_calls.push_back(page_id.ToString());
     page_storage->reset();
     return storage::Status::IO_ERROR;
   }
 
   void GetPageStorage(
-      const storage::PageId& page_id,
+      storage::PageIdView page_id,
       const std::function<void(std::unique_ptr<storage::PageStorage>)>&
           callback) override {
-    get_page_calls.push_back(page_id);
+    get_page_calls.push_back(page_id.ToString());
     callback(nullptr);
   }
 
-  bool DeletePageStorage(const storage::PageId& page_id) override {
-    delete_page_calls.push_back(page_id);
+  bool DeletePageStorage(storage::PageIdView page_id) override {
+    delete_page_calls.push_back(page_id.ToString());
     return false;
   }
 

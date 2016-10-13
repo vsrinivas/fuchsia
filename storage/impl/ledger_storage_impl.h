@@ -20,17 +20,17 @@ class LedgerStorageImpl : public LedgerStorage {
                     const std::string& identity);
   ~LedgerStorageImpl() override;
 
-  Status CreatePageStorage(const PageId& page_id,
+  Status CreatePageStorage(PageIdView page_id,
                            std::unique_ptr<PageStorage>* page_storage) override;
 
-  void GetPageStorage(const PageId& page_id,
+  void GetPageStorage(PageIdView page_id,
                       const std::function<void(std::unique_ptr<PageStorage>)>&
                           callback) override;
 
-  bool DeletePageStorage(const PageId& page_id) override;
+  bool DeletePageStorage(PageIdView page_id) override;
 
  private:
-  std::string GetPathFor(const PageId& page_id);
+  std::string GetPathFor(PageIdView page_id);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string storage_dir_;

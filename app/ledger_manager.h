@@ -45,7 +45,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // it from |page_managers_| automatically when the last local client
   // disconnects from the page. Returns a new PagePtr bound to this manager.
   PagePtr AddPageManagerAndGetPagePtr(
-      const storage::PageId& page_id,
+      storage::PageIdView page_id,
       std::unique_ptr<storage::PageStorage> page_storage);
 
   std::unique_ptr<storage::LedgerStorage> storage_;

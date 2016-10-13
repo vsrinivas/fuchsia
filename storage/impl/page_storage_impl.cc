@@ -9,8 +9,8 @@
 
 namespace storage {
 
-PageStorageImpl::PageStorageImpl(std::string page_path, PageId page_id)
-    : page_path_(page_path), page_id_(page_id), db_(page_path_) {}
+PageStorageImpl::PageStorageImpl(std::string page_path, PageIdView page_id)
+    : page_path_(page_path), page_id_(page_id.ToString()), db_(page_path_) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 

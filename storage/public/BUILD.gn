@@ -19,7 +19,8 @@ source_set("public") {
     "types.h",
   ]
 
-  deps = [
+  public_deps = [
+    "//apps/ledger/convert",
     "//lib/ftl",
     "//lib/mtl",
   ]

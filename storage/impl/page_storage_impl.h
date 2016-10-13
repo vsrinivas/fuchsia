@@ -13,7 +13,7 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(std::string page_path, PageId page_id);
+  PageStorageImpl(std::string page_path, PageIdView page_id);
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
