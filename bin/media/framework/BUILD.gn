@@ -22,8 +22,6 @@ source_set("framework") {
     "models/multistream_source.h",
     "models/part.h",
     "models/transform.h",
-    "null_sink.cc",
-    "null_sink.h",
     "packet.cc",
     "packet.h",
     "payload_allocator.cc",

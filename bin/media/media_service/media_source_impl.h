@@ -12,7 +12,6 @@
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/demux/reader.h"
-#include "apps/media/src/framework/null_sink.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/mojo/mojo_packet_producer.h"
 #include "apps/media/src/util/incident.h"
@@ -76,9 +75,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     // Gets the producer.
     void GetPacketProducer(InterfaceRequest<MediaPacketProducer> producer);
 
-    // Makes sure the stream has a sink.
-    void EnsureSink();
-
     // Tells the producer to flush its connection.
     void FlushConnection(
         const MojoPacketProducer::FlushConnectionCallback callback);
@@ -89,7 +85,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     Graph* graph_;
     OutputRef output_;
     std::shared_ptr<MojoPacketProducer> producer_;
-    std::shared_ptr<NullSink> null_sink_;
   };
 
   // Handles the completion of demux initialization.

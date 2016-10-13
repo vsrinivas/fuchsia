@@ -140,9 +140,6 @@ void MediaSourceImpl::GetStatus(uint64_t version_last_seen,
 void MediaSourceImpl::Prepare(const PrepareCallback& callback) {
   RCHECK(init_complete_.occurred());
 
-  for (std::unique_ptr<Stream>& stream : streams_) {
-    stream->EnsureSink();
-  }
   graph_.Prepare();
   callback.Run();
   status_publisher_.SendUpdates();
@@ -193,6 +190,9 @@ MediaSourceImpl::Stream::Stream(
     FTL_LOG(ERROR) << "can't convert to any allowed type";
     abort();
   }
+
+  producer_ = MojoPacketProducer::Create();
+  graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
 }
 
 MediaSourceImpl::Stream::~Stream() {}
@@ -207,19 +207,8 @@ MediaTypePtr MediaSourceImpl::Stream::original_media_type() const {
 
 void MediaSourceImpl::Stream::GetPacketProducer(
     InterfaceRequest<MediaPacketProducer> producer) {
-  if (!producer_) {
-    producer_ = MojoPacketProducer::Create();
-    graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
-  }
-
+  FTL_DCHECK(producer_ != nullptr);
   producer_->Bind(producer.Pass());
-}
-
-void MediaSourceImpl::Stream::EnsureSink() {
-  if (producer_ == nullptr) {
-    null_sink_ = NullSink::Create();
-    graph_->ConnectOutputToPart(output_, graph_->Add(null_sink_));
-  }
 }
 
 void MediaSourceImpl::Stream::FlushConnection(
