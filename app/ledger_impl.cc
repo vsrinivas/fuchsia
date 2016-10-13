@@ -21,9 +21,7 @@ LedgerImpl::~LedgerImpl() {}
 
 // GetRootPage() => (Status status, Page? page);
 void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
-  const storage::PageId page_id = kRootPageId.ToString();
-
-  delegate_->GetPage(ftl::StringView(page_id), Delegate::CreateIfNotFound::YES,
+  delegate_->GetPage(kRootPageId, Delegate::CreateIfNotFound::YES,
                      [callback](Status status, PagePtr page) {
                        callback.Run(status, std::move(page));
                      });
@@ -32,10 +30,7 @@ void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
 // GetPage(array<uint8> id) => (Status status, Page? page);
 void LedgerImpl::GetPage(mojo::Array<uint8_t> id,
                          const GetPageCallback& callback) {
-  const ftl::StringView page_id(reinterpret_cast<const char*>(id.data()),
-                                id.size());
-
-  delegate_->GetPage(page_id, Delegate::CreateIfNotFound::NO,
+  delegate_->GetPage(id, Delegate::CreateIfNotFound::NO,
                      [callback](Status status, PagePtr page) {
                        callback.Run(status, std::move(page));
                      });
@@ -51,9 +46,7 @@ void LedgerImpl::NewPage(const NewPageCallback& callback) {
 // DeletePage(array<uint8> id) => (Status status);
 void LedgerImpl::DeletePage(mojo::Array<uint8_t> id,
                             const DeletePageCallback& callback) {
-  const ftl::StringView page_id(reinterpret_cast<const char*>(id.data()),
-                                id.size());
-  callback.Run(delegate_->DeletePage(page_id));
+  callback.Run(delegate_->DeletePage(id));
 }
 
 // SetConflictResolverFactory(ConflictResolverFactory? factory)

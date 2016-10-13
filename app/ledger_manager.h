@@ -35,10 +35,10 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   // LedgerImpl::Delegate:
   void CreatePage(std::function<void(Status, PagePtr)> callback) override;
-  void GetPage(ftl::StringView page_id,
+  void GetPage(convert::ExtendedStringView page_id,
                CreateIfNotFound create_if_not_found,
                std::function<void(Status, PagePtr)> callback) override;
-  Status DeletePage(ftl::StringView page_id) override;
+  Status DeletePage(convert::ExtendedStringView page_id) override;
 
  private:
   // Adds a new PageManager for |page_id| and configures its so that we delete

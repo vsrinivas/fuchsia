@@ -12,6 +12,7 @@
 #include "apps/ledger/firebase/status.h"
 #include "apps/ledger/glue/data_pipe/data_pipe_drainer.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace firebase {
@@ -40,9 +41,9 @@ class EventStream : public glue::DataPipeDrainer::Client {
   void OnDataAvailable(const void* data, size_t num_bytes) override;
   void OnDataComplete() override;
 
-  void ProcessLine(const std::string& line);
+  void ProcessLine(ftl::StringView line);
 
-  void ProcessField(const std::string& field, const std::string& value);
+  void ProcessField(ftl::StringView field, ftl::StringView value);
 
   std::function<EventCallback> event_callback_;
   std::function<CompletionCallback> completion_callback_;

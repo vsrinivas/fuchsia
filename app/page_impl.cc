@@ -111,10 +111,9 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
     return;
   }
 
-  callback.Run(PutInCommit(key, object_id,
-                           priority == Priority::EAGER
-                               ? storage::KeyPriority::EAGER
-                               : storage::KeyPriority::LAZY));
+  callback.Run(PutInCommit(key, object_id, priority == Priority::EAGER
+                                               ? storage::KeyPriority::EAGER
+                                               : storage::KeyPriority::LAZY));
 }
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
@@ -124,10 +123,9 @@ void PageImpl::PutReference(mojo::Array<uint8_t> key,
                             Priority priority,
                             const PutReferenceCallback& callback) {
   storage::ObjectIdView object_id(reference->opaque_id);
-  callback.Run(PutInCommit(key, object_id,
-                           priority == Priority::EAGER
-                               ? storage::KeyPriority::EAGER
-                               : storage::KeyPriority::LAZY));
+  callback.Run(PutInCommit(key, object_id, priority == Priority::EAGER
+                                               ? storage::KeyPriority::EAGER
+                                               : storage::KeyPriority::LAZY));
 }
 
 Status PageImpl::PutInCommit(convert::ExtendedStringView key,

@@ -9,6 +9,7 @@
 
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/ledger/app/page_manager.h"
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/ledger_storage.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -26,11 +27,11 @@ class LedgerImpl : public Ledger {
     virtual void CreatePage(std::function<void(Status, PagePtr)> callback) = 0;
 
     enum class CreateIfNotFound { YES, NO };
-    virtual void GetPage(ftl::StringView page_id,
+    virtual void GetPage(convert::ExtendedStringView page_id,
                          CreateIfNotFound create_if_not_found,
                          std::function<void(Status, PagePtr)> callback) = 0;
 
-    virtual Status DeletePage(ftl::StringView page_id) = 0;
+    virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);

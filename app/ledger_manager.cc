@@ -48,7 +48,7 @@ void LedgerManager::CreatePage(std::function<void(Status, PagePtr)> callback) {
            AddPageManagerAndGetPagePtr(page_id, std::move(page_storage)));
 }
 
-void LedgerManager::GetPage(ftl::StringView page_id,
+void LedgerManager::GetPage(convert::ExtendedStringView page_id,
                             CreateIfNotFound create_if_not_found,
                             std::function<void(Status, PagePtr)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
@@ -58,34 +58,33 @@ void LedgerManager::GetPage(ftl::StringView page_id,
     return;
   }
 
-  const std::string page_id_str = page_id.ToString();
-  storage_->GetPageStorage(
-      page_id_str, [this, create_if_not_found, page_id_str, callback](
-                       std::unique_ptr<storage::PageStorage> page_storage) {
-        if (!page_storage) {
-          if (create_if_not_found == CreateIfNotFound::NO) {
-            callback(Status::PAGE_NOT_FOUND, nullptr);
-            return;
-          }
-          storage::Status status =
-              storage_->CreatePageStorage(page_id_str, &page_storage);
-          if (status != storage::Status::OK) {
-            callback(Status::INTERNAL_ERROR, nullptr);
-            return;
-          }
-        }
-        callback(Status::OK, AddPageManagerAndGetPagePtr(
-                                 page_id_str, std::move(page_storage)));
-      });
+  storage_->GetPageStorage(page_id, [
+    this, create_if_not_found, page_id = page_id.ToString(), callback
+  ](std::unique_ptr<storage::PageStorage> page_storage) {
+    if (!page_storage) {
+      if (create_if_not_found == CreateIfNotFound::NO) {
+        callback(Status::PAGE_NOT_FOUND, nullptr);
+        return;
+      }
+      storage::Status status =
+          storage_->CreatePageStorage(page_id, &page_storage);
+      if (status != storage::Status::OK) {
+        callback(Status::INTERNAL_ERROR, nullptr);
+        return;
+      }
+    }
+    callback(Status::OK,
+             AddPageManagerAndGetPagePtr(page_id, std::move(page_storage)));
+  });
 }
 
-Status LedgerManager::DeletePage(ftl::StringView page_id) {
+Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {
     page_managers_.erase(it);
   }
 
-  if (storage_->DeletePageStorage(page_id.ToString())) {
+  if (storage_->DeletePageStorage(page_id)) {
     return Status::OK;
   } else {
     return Status::PAGE_NOT_FOUND;
