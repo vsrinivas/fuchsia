@@ -26,7 +26,7 @@ bool BlockingCopyToString(mojo::ScopedDataPipeConsumerHandle source,
 }
 
 bool BlockingCopyFromString(
-    const std::string& source,
+    ftl::StringView source,
     const mojo::ScopedDataPipeProducerHandle& destination) {
   auto it = source.begin();
   for (;;) {
@@ -58,7 +58,7 @@ bool BlockingCopyFromString(
 }
 
 mojo::ScopedDataPipeConsumerHandle WriteStringToConsumerHandle(
-    const std::string& source) {
+    ftl::StringView source) {
   constexpr size_t max_buffer_size = 2 * 1024 * 1024;  // 2MB
   uint32_t size = source.size();
   FTL_CHECK(size <= max_buffer_size);

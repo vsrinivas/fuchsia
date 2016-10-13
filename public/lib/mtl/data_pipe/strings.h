@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace mtl {
@@ -18,13 +19,13 @@ bool BlockingCopyToString(mojo::ScopedDataPipeConsumerHandle source,
                           std::string* contents);
 
 bool BlockingCopyFromString(
-    const std::string& source,
+    ftl::StringView source,
     const mojo::ScopedDataPipeProducerHandle& destination);
 
 // Copies the string |contents| to a temporary data pipe and returns the
 // consumer handle.
 mojo::ScopedDataPipeConsumerHandle WriteStringToConsumerHandle(
-    const std::string& source);
+    ftl::StringView source);
 
 }  // namespace mtl
 
