@@ -10,6 +10,8 @@ __BEGIN_CDECLS;
 
 #include <inttypes.h>
 
-void backtrace(mx_handle_t, uintptr_t pc, uintptr_t fp);
+void backtrace(mx_handle_t process, mx_handle_t thread,
+               uintptr_t pc, uintptr_t sp, uintptr_t fp,
+               bool use_libunwind);
 
 __END_CDECLS;

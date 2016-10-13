@@ -19,6 +19,11 @@ MODULE_NAME := crashlogger
 MODULE_STATIC_LIBS := ulib/hexdump ulib/runtime
 
 MODULE_LIBS := \
+    ulib/backtrace \
+    ulib/ngunwind \
+    ulib/launchpad \
+    ulib/mxcpp \
+    ulib/mxtl \
     ulib/mxio \
     ulib/magenta \
     ulib/musl

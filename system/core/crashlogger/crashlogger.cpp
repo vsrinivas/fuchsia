@@ -117,7 +117,7 @@ void resume_crashed_thread(mx_handle_t thread) {
     }
 }
 
-void process_report(const mx_exception_report_t* report) {
+void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     if (!MX_EXCP_IS_ARCH(report->header.type))
         return;
 
@@ -194,7 +194,7 @@ void process_report(const mx_exception_report_t* report) {
     printf("bottom of user stack:\n");
     dump_memory(process, sp, kMemoryDumpSize);
     printf("arch: %s\n", arch);
-    backtrace(process, pc, fp);
+    backtrace(process, thread, pc, sp, fp, use_libunwind);
 
 Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
@@ -261,7 +261,13 @@ int self_dump_func(void* arg) {
         exit(1);
     }
 
-    process_report(&packet.report);
+    // Pass false for use_libunwind on the assumption that if we crashed
+    // because of libunwind then we might crash again (which is ok, we'll
+    // handle it appropriately). In order to get a useful backtrace in this
+    // situation crashlogger,libunwind,libbacktrace are compiled with frame
+    // pointers. This decision needs to be revisited if/when we need/want
+    // to compile any of these without frame pointers.
+    process_report(&packet.report, false);
 
     exit(1);
 }
@@ -271,11 +277,16 @@ void usage() {
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -d[n] = set debug level to N\n");
     fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
+    fprintf(stderr, "  -n = do not use libunwind\n");
 }
 
 int main(int argc, char** argv) {
     mx_status_t status;
     bool force = false;
+    // Whether to use libunwind or not.
+    // If not then we use a simple algorithm that assumes ABI-specific
+    // frame pointers are present.
+    bool use_libunwind = true;
 
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
@@ -287,6 +298,8 @@ int main(int argc, char** argv) {
             }
         } else if (strcmp(arg, "-f") == 0) {
             force = true;
+        } else if (strcmp(arg, "-n") == 0) {
+            use_libunwind = false;
         } else {
             usage();
             return 1;
@@ -371,7 +384,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        process_report(&packet.report);
+        process_report(&packet.report, use_libunwind);
     }
 
     return 0;
