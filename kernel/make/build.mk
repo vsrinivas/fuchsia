@@ -90,7 +90,7 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	$(NOECHO)$(NM) -S --size-sort $< > $@
 
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
-	$(NOECHO)scripts/get-build-id $< > $@
+	$(NOECHO)env READELF=$(READELF) scripts/get-build-id $< > $@
 
 # generate a new manifest and compare to see if it differs from the previous one
 # USER_MANIFEST_DEBUG_INPUTS is a dependency here as the file name to put in
@@ -102,7 +102,7 @@ $(USER_MANIFEST): usermanifestfile $(USER_MANIFEST_DEBUG_INPUTS)
 	@$(MKDIR)
 	$(NOECHO)echo $(USER_MANIFEST_LINES) | tr ' ' '\n' | sort > $@.tmp
 	$(NOECHO)for f in $(USER_MANIFEST_DEBUG_INPUTS) ; do \
-	  echo debug/$$(scripts/get-build-id $$f).debug=$$f >> $@.tmp ; \
+	  echo debug/$$(env READELF=$(READELF) scripts/get-build-id $$f).debug=$$f >> $@.tmp ; \
 	done
 	$(NOECHO)$(call TESTANDREPLACEFILE,$@.tmp,$@)
 
