@@ -1,15 +1,12 @@
 #if defined(__x86_64__)
-#include "x86_64/alltypes.h"
 #define _Int64 long long
 #define _Reg long
 
 #elif defined(__aarch64__)
-#include "aarch64/alltypes.h"
 #define _Int64 long long
 #define _Reg long
 
 #elif defined(__arm__)
-#include "arm/alltypes.h"
 #define _Int64 long long
 #define _Reg int
 
@@ -477,6 +474,162 @@ typedef struct __pthread* pthread_t;
 typedef struct __mbstate_t { unsigned __opaque1, __opaque2; } mbstate_t;
 #define __DEFINED_mbstate_t
 #endif
+
+#if _LP64
+
+#if defined(__NEED_pthread_attr_t) && !defined(__DEFINED_pthread_attr_t)
+typedef struct {
+    const char* __name;
+    int __c11;
+    union {
+        int __i[14];
+        volatile int __vi[14];
+        unsigned long __s[7];
+    } __u;
+} pthread_attr_t;
+#define __DEFINED_pthread_attr_t
+#endif
+
+#if defined(__NEED_pthread_mutex_t) && !defined(__DEFINED_pthread_mutex_t)
+typedef struct {
+    union {
+        int __i[10];
+        volatile int __vi[10];
+        volatile void* volatile __p[5];
+    } __u;
+} pthread_mutex_t;
+#define __DEFINED_pthread_mutex_t
+#endif
+
+#if defined(__NEED_mtx_t) && !defined(__DEFINED_mtx_t)
+typedef struct {
+    int __i[1];
+} mtx_t;
+#define __DEFINED_mtx_t
+#endif
+
+#if defined(__NEED_pthread_cond_t) && !defined(__DEFINED_pthread_cond_t)
+typedef struct {
+    union {
+        int __i[12];
+        volatile int __vi[12];
+        void* __p[6];
+    } __u;
+} pthread_cond_t;
+#define __DEFINED_pthread_cond_t
+#endif
+
+#if defined(__NEED_cnd_t) && !defined(__DEFINED_cnd_t)
+typedef struct {
+    union {
+        int __i[12];
+        volatile int __vi[12];
+        void* __p[6];
+    } __u;
+} cnd_t;
+#define __DEFINED_cnd_t
+#endif
+
+#if defined(__NEED_pthread_rwlock_t) && !defined(__DEFINED_pthread_rwlock_t)
+typedef struct {
+    union {
+        int __i[14];
+        volatile int __vi[14];
+        void* __p[7];
+    } __u;
+} pthread_rwlock_t;
+#define __DEFINED_pthread_rwlock_t
+#endif
+
+#if defined(__NEED_pthread_barrier_t) && !defined(__DEFINED_pthread_barrier_t)
+typedef struct {
+    union {
+        int __i[8];
+        volatile int __vi[8];
+        void* __p[4];
+    } __u;
+} pthread_barrier_t;
+#define __DEFINED_pthread_barrier_t
+#endif
+
+#else // _LP64
+
+#if defined(__NEED_pthread_attr_t) && !defined(__DEFINED_pthread_attr_t)
+typedef struct {
+    const char* __name;
+    int __c11;
+    union {
+        int __i[9];
+        volatile int __vi[9];
+        unsigned __s[9];
+    } __u;
+} pthread_attr_t;
+#define __DEFINED_pthread_attr_t
+#endif
+
+#if defined(__NEED_pthread_mutex_t) && !defined(__DEFINED_pthread_mutex_t)
+typedef struct {
+    union {
+        int __i[6];
+        volatile int __vi[6];
+        volatile void* volatile __p[6];
+    } __u;
+} pthread_mutex_t;
+#define __DEFINED_pthread_mutex_t
+#endif
+
+#if defined(__NEED_mtx_t) && !defined(__DEFINED_mtx_t)
+typedef struct {
+    int __i[1];
+} mtx_t;
+#define __DEFINED_mtx_t
+#endif
+
+#if defined(__NEED_pthread_cond_t) && !defined(__DEFINED_pthread_cond_t)
+typedef struct {
+    union {
+        int __i[12];
+        volatile int __vi[12];
+        void* __p[12];
+    } __u;
+} pthread_cond_t;
+#define __DEFINED_pthread_cond_t
+#endif
+
+#if defined(__NEED_cnd_t) && !defined(__DEFINED_cnd_t)
+typedef struct {
+    union {
+        int __i[12];
+        volatile int __vi[12];
+        void* __p[12];
+    } __u;
+} cnd_t;
+#define __DEFINED_cnd_t
+#endif
+
+#if defined(__NEED_pthread_rwlock_t) && !defined(__DEFINED_pthread_rwlock_t)
+typedef struct {
+    union {
+        int __i[8];
+        volatile int __vi[8];
+        void* __p[8];
+    } __u;
+} pthread_rwlock_t;
+#define __DEFINED_pthread_rwlock_t
+#endif
+
+#if defined(__NEED_pthread_barrier_t) && !defined(__DEFINED_pthread_barrier_t)
+typedef struct {
+    union {
+        int __i[5];
+        volatile int __vi[5];
+        void* __p[5];
+    } __u;
+} pthread_barrier_t;
+#define __DEFINED_pthread_barrier_t
+#endif
+
+#endif // _LP64
 
 #undef _Int64
 #undef _Reg
