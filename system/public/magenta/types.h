@@ -68,6 +68,7 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_PERM_READ      (1u << 1)
 #define MX_VM_FLAG_PERM_WRITE     (1u << 2)
 #define MX_VM_FLAG_PERM_EXECUTE   (1u << 3)
+#define MX_VM_FLAG_ALLOC_BASE     (1u << 4)
 
 // flags to message pipe routines
 #define MX_FLAG_REPLY_PIPE        (1u << 0)
