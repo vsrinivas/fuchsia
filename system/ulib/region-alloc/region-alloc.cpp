@@ -147,20 +147,10 @@ mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
 }
 
 mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
-    // Check our RegionPool
-    if (region_pool_ == nullptr)
-        return ERR_BAD_STATE;
-
-    // Sanity check the region to make sure that it is well formed.  We do not
-    // allow a region which is of size zero, or which wraps around the
-    // allocation space.
-    if ((region.base + region.size) <= region.base)
-        return ERR_INVALID_ARGS;
-
-    // Next, make sure the region we are adding does not intersect any
-    // region which is currently allocated.
-    if (Intersects(allocated_regions_by_base_, region))
-        return ERR_INVALID_ARGS;
+    // Start with sanity checks
+    mx_status_t ret = AddSubtractSanityCheck(region);
+    if (ret != NO_ERROR)
+        return ret;
 
     // Make sure that we do not intersect with the available regions if we do
     // not allow overlaps.
@@ -179,6 +169,182 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 
     AddRegionToAvail(to_add, allow_overlap);
 
+    return NO_ERROR;
+}
+
+mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
+                                            bool allow_incomplete) {
+    // Start with sanity checks
+    mx_status_t ret = AddSubtractSanityCheck(to_subtract);
+    if (ret != NO_ERROR)
+        return ret;
+
+    // Make a copy of the region to subtract.  We may need to modify the region
+    // as part of the subtraction algorithm.
+    ralloc_region_t region = to_subtract;
+
+    // Find the region whose base address is <= the specified region (if any).
+    // If we do not allow incomplete subtraction, this is the region which must
+    // entirely contain the subtracted region.
+    //
+    // Additionally, the only time we should ever need any extra bookkeeping
+    // allocation is if this region (if present) needs to be split into two
+    // regions.
+    auto before = avail_regions_by_base_.upper_bound(region.base);
+    auto after  = before--;
+    uint64_t region_end = region.base + region.size;  // exclusive end
+    uint64_t before_end;
+
+    if (before.IsValid()) {
+        before_end = before->base + before->size;  // exclusive end
+        if ((region.base >= before->base) && (region_end <= before_end)) {
+            // Looks like we found an available region which completely contains the
+            // region to be subtracted.  Handle the 4 possible cases.
+
+            // Case 1: The regions are the same.  This one is easy.
+            if ((region.base == before->base) && (region_end == before_end)) {
+                Region* removed = avail_regions_by_base_.erase(before);
+                avail_regions_by_size_.erase(*removed);
+                region_pool_->FreeRegion(removed);
+                return NO_ERROR;
+            }
+
+            // Case 2: before completely contains region.  The before region needs
+            // to be split into two regions.  If we are out of bookkeeping space, we
+            // are out of luck.
+            if ((region.base != before->base) && (region_end != before_end)) {
+                Region* second = region_pool_->AllocRegion(this);
+                if (second == nullptr)
+                    return ERR_NO_MEMORY;
+
+                // Looks like we have the memory we need.  Compute the base/size of
+                // the two regions which will be left over, then update the first
+                // region's position in the size index, and add the second region to
+                // the set of available regions.
+                Region* first = avail_regions_by_size_.erase(*before);
+                first->size  = region.base - first->base;
+                second->base = region_end;
+                second->size = before_end - region_end;
+
+                avail_regions_by_size_.insert(first);
+                avail_regions_by_base_.insert(second);
+                avail_regions_by_size_.insert(second);
+                return NO_ERROR;
+            }
+
+            // Case 3: region trims the front of before.  Update before's base and
+            // size, and recompute its position in the size index.  Note: there is
+            // no need to recompute its position in the base index, this has not
+            // changed.
+            if (region.base == before->base) {
+                DEBUG_ASSERT(region_end < before_end);
+
+                Region* bptr = avail_regions_by_size_.erase(*before);
+                bptr->base += region.size;
+                bptr->size -= region.size;
+                avail_regions_by_size_.insert(bptr);
+
+                return NO_ERROR;
+            }
+
+            // Case 4: region trims the end of before.  Update before's size and
+            // recompute its position in the size index.
+            DEBUG_ASSERT(region.base != before->base);
+            DEBUG_ASSERT(region_end == before_end);
+
+            Region* bptr = avail_regions_by_size_.erase(*before);
+            bptr->size -= region.size;
+            avail_regions_by_size_.insert(bptr);
+
+            return NO_ERROR;
+        }
+    }
+
+    // If we have gotten this far, then there is no single region in the
+    // available set which completely contains the subtraction region.  We
+    // cannot continue unless allow_incomplete is true.
+    if (!allow_incomplete)
+        return ERR_INVALID_ARGS;
+
+    // Great!  At this point we know that we are going to succeed, we just need
+    // to go about updating all of the bookkeeping.  We may need to trim the end
+    // of the region which comes before us, and then consume some of the regions
+    // which come after us, finishing by trimming the front of (at most) one of
+    // the regions which comes after us.  At no point in time do we need to
+    // allocate any more bookkeeping, success is guaranteed.  Start by
+    // considering the before region.
+    if (before.IsValid()) {
+        DEBUG_ASSERT(region.base >= before->base);
+        DEBUG_ASSERT(region_end  >  before_end);
+        if (before_end > region.base) {
+            // No matter what, 'before' needs to be removed from the size index.
+            Region* bptr = avail_regions_by_size_.erase(*before);
+
+            // If before's base is the same as the region's base, then we are
+            // subtracting out all of before.  Otherwise, we are trimming the back
+            // before and need to recompute its size and position in the size index.
+            if (bptr->base == region.base) {
+                avail_regions_by_base_.erase(*bptr);
+                region_pool_->FreeRegion(bptr);
+            } else {
+                bptr->size = region.base - bptr->base;
+                avail_regions_by_size_.insert(bptr);
+            }
+
+            // Either way, the region we are subtracting now starts where before
+            // used to end.
+            region.base = before_end;
+            region.size = region_end - region.base;
+            DEBUG_ASSERT(region.size > 0);
+        }
+    }
+
+    // While there are regions whose base address comes after the base address
+    // of what we want to subtract, we need to do one of three things...
+    //
+    // 1) Consume entire regions which are contained entirely within our
+    //    subtraction region.
+    // 2) Trim the front of a region which is clipped by our subtraction region.
+    // 3) Stop because all remaining regions start after the end of our
+    //    subtraction region.
+    while (after.IsValid()) {
+        DEBUG_ASSERT(after->base > region.base);
+
+        // Case #3
+        if (after->base >= region_end)
+            break;
+
+        // Cases #1 and #2.  No matter what, we need to...
+        // 1) Advance after, re-naming the old 'after' to 'trim in the process.
+        // 2) Remove trim from the size index.
+        auto     trim_iter = after++;
+        Region*  trim      = avail_regions_by_size_.erase(*trim_iter);
+        uint64_t trim_end  = trim->base + trim->size;
+
+        if (trim_end > region_end) {
+            // Case #2.  We are guaranteed to be done at this point.
+            trim->base = region_end;
+            trim->size = trim_end - trim->base;
+            avail_regions_by_size_.insert(trim);
+            break;
+        }
+
+        // Case #1.  Advance the subtraction region to the end of the region we
+        // just trimmed into oblivion.  If we have run out of region to trim,
+        // then we know we are done.
+        avail_regions_by_base_.erase(*trim);
+        region.base = trim_end;
+        region.size = region_end - region.base;
+        region_pool_->FreeRegion(trim);
+
+        if (!region.size)
+            break;
+    }
+
+
+    // Sanity check.  The number of elements in the base index should match the
+    // number of elements in the size index.
+    DEBUG_ASSERT(avail_regions_by_base_.size() == avail_regions_by_size_.size());
     return NO_ERROR;
 }
 
@@ -274,6 +440,25 @@ mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
     // common AllocFromAvail method to handle the bookkeeping involved.
     auto by_size_iter = avail_regions_by_size_.make_iterator(*iter);
     return AllocFromAvail(by_size_iter, out_region, base, size);
+}
+
+mx_status_t RegionAllocator::AddSubtractSanityCheck(const ralloc_region_t& region) {
+    // Check our RegionPool
+    if (region_pool_ == nullptr)
+        return ERR_BAD_STATE;
+
+    // Sanity check the region to make sure that it is well formed.  We do not
+    // allow a region which is of size zero, or which wraps around the
+    // allocation space.
+    if ((region.base + region.size) <= region.base)
+        return ERR_INVALID_ARGS;
+
+    // Next, make sure the region we are adding or subtracting does not
+    // intersect any region which is currently allocated.
+    if (Intersects(allocated_regions_by_base_, region))
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }
 
 void RegionAllocator::ReleaseRegion(Region* region) {

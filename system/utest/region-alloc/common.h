@@ -272,3 +272,157 @@ static const alloc_add_overlap_test_t ADD_OVERLAP_TESTS[] = {
 
     // Current: [0xD000,  0x1E000)
 };
+
+typedef struct {
+    ralloc_region_t reg;        // Region to add or subtract
+    bool            add;        // Whether to this is an add operation or not.
+    bool            incomplete; // If subtracting, do we allow incomplete subtraction?
+    size_t          cnt;        // Expected available region count the operation.
+    bool            res;        // Whether we expect succes ERR_INVALID_ARGS.
+} alloc_subtract_test_t;
+
+// Temp macro to help make the test table pretty.
+#define REG(_b, _s) { .base = (_b), .size = (_s) }
+
+static const alloc_subtract_test_t SUBTRACT_TESTS[] = {
+    // Try to subtract a region while the allocator is empty.  This should fail unless we allow
+    // incomplete subtraction.
+    { .reg = REG(0x1000, 0x1000), .add = false, .incomplete = false, .cnt = 0, .res = false },
+    { .reg = REG(0x1000, 0x1000), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // allow_incomplete == false
+    // Tests where incomplete subtraction is not allowed.
+
+    // Add a region, then subtract it out.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1000, 0x1000), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then trim the front of it.  Finally, cleanup by removing
+    // the specific regions which should be left.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1800,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then trim the back of it.  Then cleanup.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1800,  0x800), .add = false, .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then punch a hole in the middle of it. then cleanup.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1600,  0x400), .add = false, .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x1000,  0x600), .add = false, .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1A00,  0x600), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then fail to remove parts of it with a number of attempts
+    // which would require trimming or splitting the region.  Then cleanup.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG( 0x800, 0x1000), .add = false, .incomplete = false, .cnt = 1, .res = false },
+    { .reg = REG(0x1800, 0x1000), .add = false, .incomplete = false, .cnt = 1, .res = false },
+    { .reg = REG( 0x800, 0x2000), .add = false, .incomplete = false, .cnt = 1, .res = false },
+    { .reg = REG(0x1000, 0x1000), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // allow_incomplete == true
+    // Tests where incomplete subtraction is allowed.  Start by repeating the
+    // tests for allow_incomplete = false where success was expected.  These
+    // should work too.
+
+    // Add a region, then subtract it out.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1000, 0x1000), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Add a region, then trim the front of it.  Finally, cleanup by removing
+    // the specific regions which should be left.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x1800,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then trim the back of it.  Then cleanup.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1800,  0x800), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then punch a hole in the middle of it. then cleanup.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1600,  0x400), .add = false, .incomplete = true,  .cnt = 2, .res = true  },
+    { .reg = REG(0x1000,  0x600), .add = false, .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1A00,  0x600), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Now try scenarios which only work when allow_incomplete is true.
+    // Add a region, then trim the front.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG( 0x800, 0x1000), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x1800,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then trim the back.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x1800, 0x1000), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Add a region, then consume the whole thing.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG( 0x800, 0x2000), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Add a bunch of separate regions, then consume them all using a subtract
+    // which lines up perfectly with the begining and the end of the regions.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG(0x1000, 0xA000), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Same as before, but this time, trim past the start
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG( 0x800, 0xA800), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Same as before, but this time, trim past the end
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG(0x1000, 0xA800), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Same as before, but this time, trim past both ends
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG( 0x800, 0xB000), .add = false, .incomplete = true,  .cnt = 0, .res = true  },
+
+    // Same as before, but this time, don't consume all of the first region.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG(0x1800, 0x9800), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Same as before, but this time, don't consume all of the last region.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG(0x1000, 0x8800), .add = false, .incomplete = true,  .cnt = 1, .res = true  },
+    { .reg = REG(0x9800,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+
+    // Same as before, but this time, don't consume all of the first or last regions.
+    { .reg = REG(0x1000, 0x1000), .add = true,  .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x3000, 0x1000), .add = true,  .incomplete = false, .cnt = 2, .res = true  },
+    { .reg = REG(0x5000, 0x1000), .add = true,  .incomplete = false, .cnt = 3, .res = true  },
+    { .reg = REG(0x7000, 0x1000), .add = true,  .incomplete = false, .cnt = 4, .res = true  },
+    { .reg = REG(0x9000, 0x1000), .add = true,  .incomplete = false, .cnt = 5, .res = true  },
+    { .reg = REG(0x1800, 0x8000), .add = false, .incomplete = true,  .cnt = 2, .res = true  },
+    { .reg = REG(0x1000,  0x800), .add = false, .incomplete = false, .cnt = 1, .res = true  },
+    { .reg = REG(0x9800,  0x800), .add = false, .incomplete = false, .cnt = 0, .res = true  },
+};
+
+#undef REG

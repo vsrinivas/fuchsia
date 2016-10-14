@@ -281,9 +281,50 @@ static bool ralloc_add_overlap_c_api_test(void) {
     END_TEST;
 }
 
+static bool ralloc_subtract_c_api_test(void) {
+    BEGIN_TEST;
+
+    // Make a pool and attach it to an allocator.
+    ralloc_allocator_t* alloc = NULL;
+    {
+        ralloc_pool_t* pool;
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
+                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_NONNULL(pool, "");
+
+        // Create an allocator and add our region pool to it.
+        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_NONNULL(alloc, "");
+        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+
+        // Release our pool reference.  The allocator should be holding onto its own
+        // reference at this point.
+        ralloc_release_pool(pool);
+    }
+
+    // Run the test sequence, adding and subtracting regions and verifying the results.
+    for (size_t i = 0; i < countof(SUBTRACT_TESTS); ++i) {
+        const alloc_subtract_test_t* TEST = SUBTRACT_TESTS + i;
+
+        mx_status_t res;
+        if (TEST->add)
+            res = ralloc_add_region(alloc, &TEST->reg, false);
+        else
+            res = ralloc_sub_region(alloc, &TEST->reg, TEST->incomplete);
+
+        EXPECT_EQ(TEST->res ? NO_ERROR : ERR_INVALID_ARGS, res, "");
+        EXPECT_EQ(TEST->cnt, ralloc_get_available_region_count(alloc), "");
+    }
+
+    // Destroy our allocator.
+    ralloc_destroy_allocator(alloc);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ralloc_c_api_tests)
 RUN_NAMED_TEST("Region Pools (C-API)",   ralloc_pools_c_api_test)
 RUN_NAMED_TEST("Alloc by size (C-API)",  ralloc_by_size_c_api_test)
 RUN_NAMED_TEST("Alloc specific (C-API)", ralloc_specific_c_api_test)
-RUN_NAMED_TEST("Add/Overlap (C-API)",    ralloc_add_overlap_c_api_test)
+RUN_NAMED_TEST("Subtract (C-API)",       ralloc_subtract_c_api_test)
 END_TEST_CASE(ralloc_c_api_tests)

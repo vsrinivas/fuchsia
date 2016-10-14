@@ -215,6 +215,30 @@ static bool ralloc_add_overlap_test() {
     END_TEST;
 }
 
+static bool ralloc_subtract_test() {
+    BEGIN_TEST;
+
+    // Make a pool and attach it to an allocator.  Then add the test regions to it.
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
+                                                              REGION_POOL_MAX_SIZE));
+
+    // Run the test sequence, adding and subtracting regions and verifying the results.
+    for (size_t i = 0; i < countof(SUBTRACT_TESTS); ++i) {
+        const alloc_subtract_test_t* TEST = SUBTRACT_TESTS + i;
+
+        mx_status_t res;
+        if (TEST->add)
+            res = alloc.AddRegion(TEST->reg);
+        else
+            res = alloc.SubtractRegion(TEST->reg, TEST->incomplete);
+
+        EXPECT_EQ(TEST->res ? NO_ERROR : ERR_INVALID_ARGS, res, "");
+        EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount(), "");
+    }
+
+    END_TEST;
+}
+
 } //namespace
 
 BEGIN_TEST_CASE(ralloc_tests)
@@ -222,4 +246,5 @@ RUN_NAMED_TEST("Region Pools",   ralloc_region_pools_test)
 RUN_NAMED_TEST("Alloc by size",  ralloc_by_size_test)
 RUN_NAMED_TEST("Alloc specific", ralloc_specific_test)
 RUN_NAMED_TEST("Add/Overlap",    ralloc_add_overlap_test)
+RUN_NAMED_TEST("Subtract",       ralloc_subtract_test)
 END_TEST_CASE(ralloc_tests)

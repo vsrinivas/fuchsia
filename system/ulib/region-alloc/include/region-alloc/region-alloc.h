@@ -163,6 +163,7 @@ void        ralloc_release_pool(ralloc_pool_t* pool);
 // ++ Reset (destroys all regions which are available for allocation and returns them to the pool)
 // ++ Destroy
 // ++ AddRegion (adds a region to the set of regions available for allocation)
+// ++ SubtractRegion (subtracts a region from the set of regions available for allocation)
 // ++ GetBySize (allocates a region based on size/alignment requirements)
 // ++ GetSpecific (allocates a region based on specific base/size requirements)
 //
@@ -173,6 +174,9 @@ void ralloc_destroy_allocator(ralloc_allocator_t* allocator);
 mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
                               const ralloc_region_t* region,
                               bool allow_overlap);
+mx_status_t ralloc_sub_region(ralloc_allocator_t* allocator,
+                              const ralloc_region_t* region,
+                              bool allow_incomplete);
 
 mx_status_t ralloc_get_sized_region_ex(
         ralloc_allocator_t* allocator,
@@ -395,9 +399,37 @@ public:
     // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
     // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to add the region.
-    // ++ ERR_INVALID_ARGS : the region being added collides with a previously
-    // added, or currently allocated region.
+    // ++ ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++++ The region is invalid (wraps the space, or size is zero)
+    // ++++ The region being added intersects one or more currently
+    //      allocated regions.
+    // ++++ The region being added intersects one ore more of the currently
+    //      available regions, and allow_overlap is false.
     mx_status_t AddRegion(const ralloc_region_t& region, bool allow_overlap = false);
+
+    // Subtract a region from the set of allocatable regions.
+    //
+    // If allow_incomplete is false, the subtracted region must exist entirely
+    // within the set of available regions.  If allow_incomplete is true, the
+    // subracted region will remove any portion of any availble region it
+    // intersects with.
+    //
+    // Regardless of the value of the allow_incomplete flag, it is illegal to
+    // attempt to subtract a region which intersects any currently allocated
+    // region.
+    //
+    // Possible return values
+    // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
+    // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
+    // assigned region pool to subtract the region.
+    // ++ ERR_INVALID_ARGS : One of the following conditions applies.
+    // ++++ The region is invalid (wraps the space, or size is zero)
+    // ++++ The region being subtracted intersects one or more currently
+    //      allocated regions.
+    // ++++ The region being subtracted intersects portions of the space which
+    //      are absent from both the allocated and available sets, and
+    //      allow_incomplete is false.
+    mx_status_t SubtractRegion(const ralloc_region_t& region, bool allow_incomplete = false);
 
     // Get a region out of the set of currently available regions which has a
     // specified size and alignment.  Note; the alignment must be a power of
@@ -457,6 +489,7 @@ public:
 private:
     friend class Region::ReturnToAllocatorTraits;
 
+    mx_status_t AddSubtractSanityCheck(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);
     void AddRegionToAvail(Region* region, bool allow_overlap = false);
 

@@ -84,6 +84,15 @@ mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
     return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(*region, allow_overlap);
 }
 
+mx_status_t ralloc_sub_region(ralloc_allocator_t* allocator,
+                              const ralloc_region_t* region,
+                              bool allow_incomplete) {
+    if (!allocator || !region)
+        return ERR_INVALID_ARGS;
+
+    return reinterpret_cast<RegionAllocator*>(allocator)->SubtractRegion(*region, allow_incomplete);
+}
+
 mx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator,
                                        uint64_t size,
                                        uint64_t alignment,
