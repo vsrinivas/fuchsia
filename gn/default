@@ -21,6 +21,7 @@
         "mojo",
         "mozart",
         "mtl",
+        "netstack",
         "re2",
         "wpa_supplicant"
     ]
