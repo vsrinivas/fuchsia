@@ -17,7 +17,7 @@
 #include <mxtl/ref_counted.h>
 
 class VmObject;
-class IOPortClient;
+class PortClient;
 
 class SocketDispatcher final : public Dispatcher {
 public:
@@ -30,7 +30,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_SOCKET; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    status_t set_port_client(mxtl::unique_ptr<IOPortClient> client) final;
+    status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
     mx_ssize_t Write(const void* src, mx_size_t len, bool from_user) {
@@ -82,7 +82,7 @@ private:
     Mutex lock_;
     CBuf cbuf_;
     mxtl::RefPtr<SocketDispatcher> other_;
-    mxtl::unique_ptr<IOPortClient> iopc_;
+    mxtl::unique_ptr<PortClient> iopc_;
     mx_size_t oob_len_;
     // half_closed_[0] is this end and [1] is the other end.
     bool half_closed_[2];

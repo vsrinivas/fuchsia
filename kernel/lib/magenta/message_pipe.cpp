@@ -13,10 +13,10 @@
 #include <kernel/auto_lock.h>
 
 #include <magenta/handle.h>
-#include <magenta/io_port_dispatcher.h>
-#include <magenta/io_port_client.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
+#include <magenta/port_dispatcher.h>
+#include <magenta/port_client.h>
 
 namespace {
 
@@ -120,7 +120,7 @@ StateTracker* MessagePipe::GetStateTracker(size_t side) {
     return &state_tracker_[side];
 }
 
-status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<IOPortClient> client) {
+status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<PortClient> client) {
     AutoLock lock(&lock_);
     if (iopc_[side])
         return ERR_BAD_STATE;

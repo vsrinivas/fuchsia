@@ -12,7 +12,7 @@
 #include <lib/ktrace.h>
 
 #include <magenta/handle.h>
-#include <magenta/io_port_client.h>
+#include <magenta/port_client.h>
 #include <magenta/magenta.h>
 #include <magenta/types.h>
 
@@ -33,7 +33,7 @@ DECLARE_DISPTAG(ThreadDispatcher, MX_OBJ_TYPE_THREAD)
 DECLARE_DISPTAG(VmObjectDispatcher, MX_OBJ_TYPE_VMEM)
 DECLARE_DISPTAG(MessagePipeDispatcher, MX_OBJ_TYPE_MESSAGE_PIPE)
 DECLARE_DISPTAG(EventDispatcher, MX_OBJ_TYPE_EVENT)
-DECLARE_DISPTAG(IOPortDispatcher, MX_OBJ_TYPE_IOPORT)
+DECLARE_DISPTAG(PortDispatcher, MX_OBJ_TYPE_IOPORT)
 DECLARE_DISPTAG(DataPipeProducerDispatcher, MX_OBJ_TYPE_DATA_PIPE_PRODUCER)
 DECLARE_DISPTAG(DataPipeConsumerDispatcher, MX_OBJ_TYPE_DATA_PIPE_CONSUMER)
 DECLARE_DISPTAG(InterruptDispatcher, MX_OBJ_TYPE_INTERRUPT)
@@ -69,7 +69,7 @@ public:
 
     virtual StateTracker* get_state_tracker() { return nullptr; }
 
-    virtual status_t set_port_client(mxtl::unique_ptr<IOPortClient>) { return ERR_NOT_SUPPORTED; }
+    virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return ERR_NOT_SUPPORTED; }
 
     virtual void on_zero_handles() { }
 

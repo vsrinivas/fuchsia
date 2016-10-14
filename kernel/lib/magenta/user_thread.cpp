@@ -25,7 +25,6 @@
 
 #include <magenta/exception.h>
 #include <magenta/excp_port.h>
-#include <magenta/io_port_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>

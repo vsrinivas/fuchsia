@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+#include <new.h>
 #include <platform.h>
 #include <stdint.h>
 #include <stdio.h>

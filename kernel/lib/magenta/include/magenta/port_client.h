@@ -12,25 +12,25 @@
 
 #include <mxtl/ref_ptr.h>
 
-class IOPortDispatcher;
+class PortDispatcher;
 class Mutex;
 
-class IOPortClient {
+class PortClient {
 public:
-    IOPortClient(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t key, mx_signals_t signals);
-    ~IOPortClient();
+    PortClient(mxtl::RefPtr<PortDispatcher> port, uint64_t key, mx_signals_t signals);
+    ~PortClient();
 
     mx_signals_t get_trigger_signals() const { return signals_; }
     bool Signal(mx_signals_t signals, const Mutex* mutex);
     bool Signal(mx_signals_t signals, mx_size_t byte_count, const Mutex* mutex);
 
 private:
-    IOPortClient() = delete;
-    IOPortClient(const IOPortClient&) = delete;
-    IOPortClient& operator=(const IOPortClient&) = delete;
+    PortClient() = delete;
+    PortClient(const PortClient&) = delete;
+    PortClient& operator=(const PortClient&) = delete;
 
     const uint64_t key_;
     const mx_signals_t signals_;
-    mxtl::RefPtr<IOPortDispatcher> io_port_;
+    mxtl::RefPtr<PortDispatcher> port_;
     void* cookie_[8];
 };

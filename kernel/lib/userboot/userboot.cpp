@@ -7,15 +7,19 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/cmdline.h>
-#include <kernel/vm/vm_object.h>
-#include <lib/console.h>
-#include <lk/init.h>
+#include <new.h>
 #include <platform.h>
+#include <trace.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <trace.h>
+
+#include <kernel/cmdline.h>
+#include <kernel/vm/vm_object.h>
+
+#include <lib/console.h>
+#include <lk/init.h>
 
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>

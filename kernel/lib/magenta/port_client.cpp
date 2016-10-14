@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/io_port_client.h>
+#include <magenta/port_client.h>
 
 #include <assert.h>
 #include <err.h>
@@ -14,7 +14,7 @@
 #include <kernel/mutex.h>
 #include <pow2.h>
 
-#include <magenta/io_port_dispatcher.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/state_tracker.h>
 
 #include <mxtl/type_support.h>
@@ -33,35 +33,35 @@ uint32_t signal_to_slot(mx_signals_t signal) {
 }
 }
 
-IOPortClient::IOPortClient(mxtl::RefPtr<IOPortDispatcher> io_port,
+PortClient::PortClient(mxtl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : key_(key),
       signals_(signals),
-      io_port_(mxtl::move(io_port)),
+      port_(mxtl::move(port)),
       cookie_{nullptr, nullptr, nullptr, nullptr} {
 }
 
-IOPortClient::~IOPortClient() {}
+PortClient::~PortClient() {}
 
-bool IOPortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
+bool PortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
     return Signal(signals, 0u, mutex);
 }
 
-bool IOPortClient::Signal(mx_signals_t signal, mx_size_t count, const Mutex* mutex) {
+bool PortClient::Signal(mx_signals_t signal, mx_size_t count, const Mutex* mutex) {
     DEBUG_ASSERT(signal);
     DEBUG_ASSERT(mutex->IsHeld());
     if ((signal & signals_) == 0)
         return true;
 
-    if (!io_port_)
+    if (!port_)
         return true;
     // TODO(cpu): wire back the |count|.
     auto slot = signal_to_slot(signal);
     DEBUG_ASSERT(slot < countof(cookie_));
-    auto c = io_port_->Signal(cookie_[slot], key_, signal);
+    auto c = port_->Signal(cookie_[slot], key_, signal);
 
     if (!c) {
-        io_port_.reset();
+        port_.reset();
         return false;
     }
 

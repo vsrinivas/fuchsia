@@ -17,7 +17,7 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
 
-class IOPortClient;
+class PortClient;
 
 class MessagePipeDispatcher final : public Dispatcher {
 public:
@@ -28,7 +28,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_MESSAGE_PIPE; }
     StateTracker* get_state_tracker() final;
     mx_koid_t get_inner_koid() const final { return inner_koid_; }
-    status_t set_port_client(mxtl::unique_ptr<IOPortClient> client) final;
+    status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     bool is_reply_pipe() const { return (flags_ & MX_FLAG_REPLY_PIPE) ? true : false; }
 

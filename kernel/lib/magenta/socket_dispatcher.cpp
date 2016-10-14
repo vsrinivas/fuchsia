@@ -21,7 +21,7 @@
 #include <kernel/vm/vm_object.h>
 
 #include <magenta/handle.h>
-#include <magenta/io_port_client.h>
+#include <magenta/port_client.h>
 
 #define LOCAL_TRACE 0
 
@@ -240,7 +240,7 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
     return NO_ERROR;
 }
 
-status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client) {
+status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
     if (iopc_)
         return ERR_BAD_STATE;
 

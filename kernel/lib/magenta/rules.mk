@@ -24,8 +24,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/io_mapping_dispatcher.cpp \
-    $(LOCAL_DIR)/io_port_client.cpp \
-    $(LOCAL_DIR)/io_port_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/magenta.cpp \
@@ -34,6 +32,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \
+    $(LOCAL_DIR)/port_client.cpp \
+    $(LOCAL_DIR)/port_dispatcher.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
     $(LOCAL_DIR)/resource_dispatcher.cpp \
     $(LOCAL_DIR)/socket_dispatcher.cpp \

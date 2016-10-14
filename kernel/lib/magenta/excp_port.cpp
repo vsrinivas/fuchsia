@@ -5,6 +5,7 @@
 
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_thread.h>
@@ -13,19 +14,35 @@
 
 #define LOCAL_TRACE 0
 
+static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report, mx_size_t size) {
+    auto pk = IOP_Packet::Alloc(size + sizeof(mx_packet_header_t));
+    if (!pk)
+        return nullptr;
+
+    auto pkt_data = reinterpret_cast<mx_exception_packet_t*>(
+        reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
+
+    memcpy(&pkt_data->report, report, size);
+    pkt_data->hdr.key = key;
+    pkt_data->hdr.type = MX_PORT_PKT_TYPE_EXCEPTION;
+    pkt_data->hdr.extra = 0; // currently unused
+
+    return pk;
+}
+
 // static
-mx_status_t ExceptionPort::Create(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key,
+mx_status_t ExceptionPort::Create(mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   mxtl::RefPtr<ExceptionPort>* out_eport) {
     AllocChecker ac;
-    auto eport = new (&ac) ExceptionPort(mxtl::move(io_port), io_port_key);
+    auto eport = new (&ac) ExceptionPort(mxtl::move(port), port_key);
     if (!ac.check())
         return ERR_NO_MEMORY;
     *out_eport = mxtl::AdoptRef<ExceptionPort>(eport);
     return NO_ERROR;
 }
 
-ExceptionPort::ExceptionPort(mxtl::RefPtr<IOPortDispatcher> io_port, uint64_t io_port_key)
-    : io_port_(io_port), io_port_key_(io_port_key) {
+ExceptionPort::ExceptionPort(mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
+    : port_(port), port_key_(port_key) {
     LTRACE_ENTRY_OBJ;
 }
 
@@ -47,32 +64,16 @@ void ExceptionPort::OnDestruction() {
     // TODO(dje): Remember this isn't wired up yet.
 }
 
-IOP_Packet* ExceptionPort::MakePacket(uint64_t key, const mx_exception_report_t* report, mx_size_t size) {
-    auto pk = IOP_Packet::Alloc(size + sizeof(mx_packet_header_t));
-    if (!pk)
-        return nullptr;
-
-    auto pkt_data = reinterpret_cast<mx_exception_packet_t*>(
-        reinterpret_cast<char*>(pk) + sizeof(IOP_Packet));
-
-    memcpy(&pkt_data->report, report, size);
-    pkt_data->hdr.key = key;
-    pkt_data->hdr.type = MX_PORT_PKT_TYPE_EXCEPTION;
-    pkt_data->hdr.extra = 0; // currently unused
-
-    return pk;
-}
-
 mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
     LTRACEF("Sending exception report, type %u, pid %"
             PRIu64 ", tid %" PRIu64 "\n",
             report->header.type, report->context.pid, report->context.tid);
 
-    auto iopk = MakePacket(io_port_key_, report, sizeof(*report));
+    auto iopk = MakePacket(port_key_, report, sizeof(*report));
     if (!iopk)
         return ERR_NO_MEMORY;
 
-    return io_port_->Queue(iopk);
+    return port_->Queue(iopk);
 }
 
 void ExceptionPort::BuildProcessGoneReport(mx_exception_report_t* report,

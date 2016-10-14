@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <new.h>
+
 #include <magenta/io_mapping_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 

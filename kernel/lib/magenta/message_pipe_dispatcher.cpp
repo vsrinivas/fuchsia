@@ -16,7 +16,7 @@
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
 #include <magenta/message_pipe.h>
-#include <magenta/io_port_client.h>
+#include <magenta/port_client.h>
 
 #include <mxtl/type_support.h>
 
@@ -83,7 +83,7 @@ status_t MessagePipeDispatcher::Write(mxtl::Array<uint8_t> data, mxtl::Array<Han
     return pipe_->Write(side_, mxtl::move(msg));
 }
 
-status_t MessagePipeDispatcher::set_port_client(mxtl::unique_ptr<IOPortClient> client) {
+status_t MessagePipeDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
     LTRACE_ENTRY;
     return pipe_->SetIOPort(side_, mxtl::move(client));
 }

@@ -17,7 +17,7 @@
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 
-class IOPortClient;
+class PortClient;
 class MessagePacket;
 
 class MessagePipe : public mxtl::RefCounted<MessagePipe> {
@@ -38,7 +38,7 @@ public:
     status_t Write(size_t side, mxtl::unique_ptr<MessagePacket> msg);
 
     StateTracker* GetStateTracker(size_t side);
-    status_t SetIOPort(size_t side, mxtl::unique_ptr<IOPortClient> client);
+    status_t SetIOPort(size_t side, mxtl::unique_ptr<PortClient> client);
 
 private:
     using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
@@ -47,5 +47,5 @@ private:
     bool dispatcher_alive_[2];
     MessageList messages_[2];
     NonIrqStateTracker state_tracker_[2];
-    mxtl::unique_ptr<IOPortClient> iopc_[2];
+    mxtl::unique_ptr<PortClient> iopc_[2];
 };

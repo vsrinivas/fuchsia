@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/io_port_dispatcher.h>
+#include <magenta/port_dispatcher.h>
 
 #include <assert.h>
 #include <err.h>
@@ -73,11 +73,11 @@ IOP_Signal::IOP_Signal(uint64_t key, mx_signals_t signal)
       count(1u) {
 }
 
-mx_status_t IOPortDispatcher::Create(uint32_t options,
-                                     mxtl::RefPtr<Dispatcher>* dispatcher,
-                                     mx_rights_t* rights) {
+mx_status_t PortDispatcher::Create(uint32_t options,
+                                   mxtl::RefPtr<Dispatcher>* dispatcher,
+                                   mx_rights_t* rights) {
     AllocChecker ac;
-    auto disp = new (&ac) IOPortDispatcher(options);
+    auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -86,19 +86,19 @@ mx_status_t IOPortDispatcher::Create(uint32_t options,
     return NO_ERROR;
 }
 
-IOPortDispatcher::IOPortDispatcher(uint32_t options)
+PortDispatcher::PortDispatcher(uint32_t options)
     : options_(options),
       no_clients_(false) {
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 
-IOPortDispatcher::~IOPortDispatcher() {
+PortDispatcher::~PortDispatcher() {
     FreePackets_NoLock();
     DEBUG_ASSERT(packets_.is_empty());
     event_destroy(&event_);
 }
 
-void IOPortDispatcher::FreePackets_NoLock() {
+void PortDispatcher::FreePackets_NoLock() {
     while (!packets_.is_empty()) {
         IOP_Packet::Delete(packets_.pop_front());
     }
@@ -111,13 +111,13 @@ void IOPortDispatcher::FreePackets_NoLock() {
     }
 }
 
-void IOPortDispatcher::on_zero_handles() {
+void PortDispatcher::on_zero_handles() {
     AutoLock al(&lock_);
     no_clients_ = true;
     FreePackets_NoLock();
 }
 
-mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
+mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
     int wake_count = 0;
     mx_status_t status = NO_ERROR;
     {
@@ -141,7 +141,7 @@ mx_status_t IOPortDispatcher::Queue(IOP_Packet* packet) {
     return NO_ERROR;
 }
 
-void* IOPortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
+void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
     IOP_Signal* node;
     int prev_count;
 
@@ -177,7 +177,7 @@ void* IOPortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) 
     return node;
 }
 
-mx_status_t IOPortDispatcher::Wait(IOP_Packet** packet) {
+mx_status_t PortDispatcher::Wait(IOP_Packet** packet) {
     while (true) {
         {
             AutoLock al(&lock_);

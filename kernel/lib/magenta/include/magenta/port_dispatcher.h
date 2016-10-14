@@ -45,7 +45,7 @@ struct IOP_Signal : public IOP_Packet {
     IOP_Signal(uint64_t key, mx_signals_t signal);
 };
 
-// IO Port job is to deliver packets to threads waiting in Wait(). There
+// Port job is to deliver packets to threads waiting in Wait(). There
 // are two types of packets:
 //
 // 1- Manually posted via Queue(), they are allocated in the
@@ -68,13 +68,13 @@ struct IOP_Signal : public IOP_Packet {
 //                           +------>at_zero_ <-----+
 //
 
-class IOPortDispatcher final : public Dispatcher {
+class PortDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t options,
                            mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
 
-    ~IOPortDispatcher() final;
+    ~PortDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_IOPORT; }
     void on_zero_handles() final;
 
@@ -84,7 +84,7 @@ public:
     mx_status_t Wait(IOP_Packet** packet);
 
 private:
-    IOPortDispatcher(uint32_t options);
+    PortDispatcher(uint32_t options);
     void FreePackets_NoLock();
 
     const uint32_t options_;
