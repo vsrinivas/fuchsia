@@ -101,8 +101,8 @@ class TreeNode : public Object {
   // Creates a new tree node by merging |left| and |right|. The id of the new
   // node is stored in |merged_id|.
   static Status Merge(ObjectStore* store,
-                      ObjectIdView left,
-                      ObjectIdView right,
+                      std::unique_ptr<const TreeNode> left,
+                      std::unique_ptr<const TreeNode> right,
                       ObjectIdView merged_child_id,
                       ObjectId* merged_id);
 

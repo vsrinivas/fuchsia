@@ -140,8 +140,8 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
 
   // Merge
   ObjectId mergedId;
-  EXPECT_EQ(Status::OK,
-            TreeNode::Merge(&store_, leftId, rightId, "", &mergedId));
+  EXPECT_EQ(Status::OK, TreeNode::Merge(&store_, std::move(leftNode),
+                                        std::move(rightNode), "", &mergedId));
   std::unique_ptr<const TreeNode> mergedNode = FromId(mergedId);
   EXPECT_EQ(size, mergedNode->GetKeyCount());
   for (int i = 0; i < size; ++i) {

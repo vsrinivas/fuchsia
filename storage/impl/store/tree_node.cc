@@ -64,35 +64,22 @@ Status TreeNode::FromEntries(ObjectStore* store,
 }
 
 Status TreeNode::Merge(ObjectStore* store,
-                       ObjectIdView left,
-                       ObjectIdView right,
+                       std::unique_ptr<const TreeNode> left,
+                       std::unique_ptr<const TreeNode> right,
                        ObjectIdView merged_child_id,
                        ObjectId* merged_id) {
-  std::unique_ptr<const TreeNode> leftNode;
-  std::unique_ptr<const TreeNode> rightNode;
-  Status s = store->GetTreeNode(left, &leftNode);
-  if (s != Status::OK) {
-    return s;
-  }
-  s = store->GetTreeNode(right, &rightNode);
-  if (s != Status::OK) {
-    return s;
-  }
-
   std::vector<Entry> entries;
-  entries.insert(entries.end(), leftNode->entries_.begin(),
-                 leftNode->entries_.end());
-  entries.insert(entries.end(), rightNode->entries_.begin(),
-                 rightNode->entries_.end());
+  entries.insert(entries.end(), left->entries_.begin(), left->entries_.end());
+  entries.insert(entries.end(), right->entries_.begin(), right->entries_.end());
 
   std::vector<ObjectId> children;
   // Skip the last child of left, the first of the right and add merged_child_id
   // instead.
-  children.insert(children.end(), leftNode->children_.begin(),
-                  leftNode->children_.end() - 1);
+  children.insert(children.end(), left->children_.begin(),
+                  left->children_.end() - 1);
   children.push_back(merged_child_id.ToString());
-  children.insert(children.end(), rightNode->children_.begin() + 1,
-                  rightNode->children_.end());
+  children.insert(children.end(), right->children_.begin() + 1,
+                  right->children_.end());
 
   return FromEntries(store, entries, children, merged_id);
 }
