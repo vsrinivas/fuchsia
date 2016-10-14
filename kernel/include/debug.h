@@ -28,9 +28,6 @@ typedef int(hexdump_print_fn_t)(const char* fmt, ...);
 
 #if !DISABLE_DEBUG_OUTPUT
 
-/* Obtain the panic file descriptor. */
-FILE *get_panic_fd(void);
-
 /* dump memory */
 void hexdump_very_ex(const void *ptr,
                      size_t len,

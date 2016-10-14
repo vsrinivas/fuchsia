@@ -810,34 +810,57 @@ static int cmd_echo(int argc, const cmd_args *argv)
     return NO_ERROR;
 }
 
-static void read_line_panic(char *buffer, const size_t len, FILE *panic_fd)
+static void panic_putc(char c) {
+    platform_pputc(c);
+}
+
+static void panic_puts(const char* str) {
+    for (;;) {
+        char c = *str++;
+        if (c == 0) {
+            break;
+        }
+        platform_pputc(c);
+    }
+}
+
+static int panic_getc(void) {
+    char c;
+    if (platform_pgetc(&c, false) < 0) {
+        return -1;
+    } else {
+        return c;
+    }
+}
+
+static void read_line_panic(char *buffer, const size_t len)
 {
     size_t pos = 0;
 
     for (;;) {
         int c;
-        if ((c = getc(panic_fd)) < 0) {
+        if ((c = panic_getc()) < 0) {
             continue;
         }
 
         switch (c) {
             case '\r':
             case '\n':
-                fputc('\n', panic_fd);
+                panic_putc('\n');
                 goto done;
             case 0x7f: // backspace or delete
             case 0x8:
                 if (pos > 0) {
                     pos--;
-                    fputs("\b \b", panic_fd); // wipe out a character
+                    panic_puts("\b \b"); // wipe out a character
                 }
                 break;
             default:
                 buffer[pos++] = c;
-                fputc(c, panic_fd);
+                panic_putc(c);
         }
         if (pos == (len - 1)) {
-            fputs("\nerror: line too long\n", panic_fd);
+            panic_puts("\nerror: line too long\n");
             pos = 0;
             goto done;
         }
@@ -852,15 +875,9 @@ void panic_shell_start(void)
     char input_buffer[PANIC_LINE_LEN];
     cmd_args args[MAX_NUM_ARGS];
 
-    // panic_fd allows us to do I/O using the polling drivers.
-    // These drivers function even if interrupts are disabled.
-    FILE *panic_fd = get_panic_fd();
-    if (!panic_fd)
-        return;
-
     for (;;) {
-        fputs("! ", panic_fd);
-        read_line_panic(input_buffer, PANIC_LINE_LEN, panic_fd);
+        panic_puts("! ");
+        read_line_panic(input_buffer, PANIC_LINE_LEN);
 
         int argc;
         char *tok = strtok(input_buffer, WHITESPACE);
@@ -880,7 +897,7 @@ void panic_shell_start(void)
 
         const cmd *command = match_command(args[0].str, CMD_AVAIL_PANIC);
         if (!command) {
-            fputs("command not found\n", panic_fd);
+            panic_puts("command not found\n");
             continue;
         }
 

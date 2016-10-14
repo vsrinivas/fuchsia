@@ -26,37 +26,11 @@ struct __print_callback {
 void register_print_callback(print_callback_t *cb);
 void unregister_print_callback(print_callback_t *cb);
 
-/* the underlying handle to talk to io devices */
-struct io_handle;
-typedef struct io_handle_hooks {
-    ssize_t (*write)(struct io_handle *handle, const char *buf, size_t len);
-    ssize_t (*read)(struct io_handle *handle, char *buf, size_t len);
-} io_handle_hooks_t;
-
-#define IO_HANDLE_MAGIC (0x696f6820)  // "ioh "
-
-typedef struct io_handle {
-    uint32_t magic;
-    const io_handle_hooks_t *hooks;
-} io_handle_t;
-
-/* routines to call through the io handle */
-ssize_t io_write(io_handle_t *io, const char *buf, size_t len);
-ssize_t io_read(io_handle_t *io, char *buf, size_t len);
-
-/* initialization routine */
-#define IO_HANDLE_INITIAL_VALUE(_hooks) { .magic = IO_HANDLE_MAGIC, .hooks = _hooks }
-
-static inline void io_handle_init(io_handle_t *io, io_handle_hooks_t *hooks)
-{
-    *io = (io_handle_t)IO_HANDLE_INITIAL_VALUE(hooks);
-}
-
-/* the main console io handle */
-extern io_handle_t console_io;
-
 /* back doors to directly write to the kernel serial and console */
 void __kernel_serial_write(const char *str, size_t len);
 void __kernel_console_write(const char *str, size_t len);
+
+/* path from printf() to kernel debug output */
+int __printf_output_func(const char *s, size_t len, void *state);
 
 __END_CDECLS

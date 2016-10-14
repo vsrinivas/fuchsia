@@ -13,6 +13,5 @@ MODULE_DEPS := \
 
 MODULE_SRCS += \
    $(LOCAL_DIR)/console.c \
-   $(LOCAL_DIR)/io.c \
 
 include make/module.mk

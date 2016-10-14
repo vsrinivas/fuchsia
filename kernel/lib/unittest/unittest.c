@@ -21,9 +21,6 @@
 #include <string.h>
 #include <unittest.h>
 
-// Default output FILE is stdout
-static FILE* output_target = stdout;
-
 /**
  * \brief Function called to dump results
  *
@@ -33,12 +30,10 @@ int unittest_printf (const char *format, ...)
 {
     int ret = 0;
 
-    if (output_target) {
-        va_list argp;
-        va_start (argp, format);
-        ret = vfprintf(output_target, format, argp);
-        va_end (argp);
-    }
+    va_list argp;
+    va_start (argp, format);
+    ret = vprintf(format, argp);
+    va_end (argp);
 
     return ret;
 }
@@ -73,10 +68,6 @@ bool unittest_expect_bytes(const uint8_t* expected,
         return false;
     }
     return true;
-}
-
-void unittest_set_output_file_target(FILE* target) {
-    output_target = target;
 }
 
 #if defined(WITH_LIB_CONSOLE)

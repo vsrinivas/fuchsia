@@ -40,54 +40,6 @@ void _panic(void *caller, const char *fmt, ...)
 
 #if !DISABLE_DEBUG_OUTPUT
 
-static int __panic_stdio_fgetc(void *ctx)
-{
-    char c;
-    int err;
-
-    err = platform_pgetc(&c, false);
-    if (err < 0)
-        return err;
-    return (unsigned char)c;
-}
-
-static ssize_t __panic_stdio_read(io_handle_t *io, char *s, size_t len)
-{
-    if (len == 0)
-        return 0;
-
-    int err = platform_pgetc(s, false);
-    if (err < 0)
-        return err;
-
-    return 1;
-}
-
-static ssize_t __panic_stdio_write(io_handle_t *io, const char *s, size_t len)
-{
-    for (size_t i = 0; i < len; i++) {
-        platform_pputc(s[i]);
-    }
-    return len;
-}
-
-FILE *get_panic_fd(void)
-{
-    static const io_handle_hooks_t panic_hooks = {
-        .write = __panic_stdio_write,
-        .read = __panic_stdio_read,
-    };
-    static io_handle_t panic_io = {
-        .magic = IO_HANDLE_MAGIC,
-        .hooks = &panic_hooks
-    };
-    static FILE panic_fd = {
-        .io = &panic_io
-    };
-
-    return &panic_fd;
-}
-
 void hexdump_very_ex(const void *ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn)
 {
     addr_t address = (addr_t)ptr;

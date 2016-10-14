@@ -142,7 +142,7 @@ void unregister_print_callback(print_callback_t *cb)
     spin_unlock_restore(&print_spin_lock, state, PRINT_LOCK_FLAGS);
 }
 
-static ssize_t __debug_stdio_write(io_handle_t *io, const char *s, size_t len)
+int __printf_output_func(const char *s, size_t len, void *state)
 {
 #if WITH_DEBUG_LINEBUFFER
     __kernel_stdout_write_buffered(s, len);
@@ -152,22 +152,3 @@ static ssize_t __debug_stdio_write(io_handle_t *io, const char *s, size_t len)
     return len;
 }
 
-static ssize_t __debug_stdio_read(io_handle_t *io, char *s, size_t len)
-{
-    if (len == 0)
-        return 0;
-
-    int err = platform_dgetc(s, true);
-    if (err < 0)
-        return err;
-
-    return 1;
-}
-
-/* global console io handle */
-static const io_handle_hooks_t console_io_hooks = {
-    .write  = __debug_stdio_write,
-    .read   = __debug_stdio_read,
-};
-
-io_handle_t console_io = IO_HANDLE_INITIAL_VALUE(&console_io_hooks);
