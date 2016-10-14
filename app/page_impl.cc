@@ -203,14 +203,14 @@ void PageImpl::GetReference(ReferencePtr reference,
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, Stream? stream);
+//   => (Status status, handle<shared_buffer>? buffer);
 void PageImpl::GetPartialReference(
     ReferencePtr reference,
     int64_t offset,
     int64_t max_size,
     const GetPartialReferenceCallback& callback) {
   FTL_LOG(ERROR) << "PageImpl::GetPartialReference not implemented";
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  callback.Run(Status::UNKNOWN_ERROR, mojo::ScopedSharedBufferHandle());
 }
 
 // StartTransaction() => (Status status);

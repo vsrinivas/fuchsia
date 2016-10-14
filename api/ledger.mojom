@@ -63,18 +63,12 @@ interface Ledger {
       => (Status status);
 };
 
-// A value streamed to the client using a data pipe.
-struct Stream {
-  uint64 size;
-  handle<data_pipe_consumer> data;
-};
-
 // A value that can be either directly represented by |bytes|, or that is too
-// big to be sent over a message pipe and is then represented by the streamed
-// value |stream|.
+// big to be sent over a message pipe and is then represented by the shared
+// buffer |buffer|.
 union Value {
   array<uint8> bytes;
-  Stream stream;
+  handle<shared_buffer> buffer;
 };
 
 // A reference to a value. The value can be retrieved using |GetReference| or
@@ -138,14 +132,14 @@ interface Page {
       => (Status status, Reference? reference);
   // Returns the value of the given reference.
   GetReference(Reference reference) => (Status status, Value? value);
-  // Returns a stream of a part of the value of a given reference.
+  // Returns a shared handle to a part of the value of a given reference.
   //
   // Start at the position that is specified by |offset|. If |offset| is less
   // than 0, starts at |-offset| from the end of the value.
   // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
   // everything.
   GetPartialReference(Reference reference, int64 offset, int64 max_size)
-      => (Status status, Stream? stream);
+      => (Status status, handle<shared_buffer>? buffer);
 
   // Transactions.
   //
@@ -197,14 +191,14 @@ interface PageSnapshot {
   // Returns the value of a given key.
   Get(array<uint8> key) => (Status status, Value? value);
 
-  // Returns a stream of a part of the value of a given key.
+  // Returns a shared handle of a part of the value of a given key.
   //
   // Start at the position that is specified by |offset|. If |offset| is less
   // than 0, starts at |-offset| from the end of the value.
   // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
   // everything.
   GetPartial(array<uint8> key, int64 offset, int64 max_size)
-      => (Status status, Stream? stream);
+      => (Status status, handle<shared_buffer>? buffer);
 
   // TODO(qsr) Add pagination.
 };

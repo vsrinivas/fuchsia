@@ -68,7 +68,7 @@ void PageConnector::Delete(mojo::Array<uint8_t> key,
   callback.Run(page_->Delete(std::move(key), ChangeSource::LOCAL));
 }
 
-// CreateReference(int64 size, handle<data_pipe_producer> data)
+// CreateReference(int64 size, handle<data_pipe_producer> buffer)
 //   => (Status status, Reference reference);
 void PageConnector::CreateReference(int64_t size,
                                     mojo::ScopedDataPipeConsumerHandle data,
@@ -88,16 +88,16 @@ void PageConnector::GetReference(ReferencePtr reference,
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, Stream? stream);
+//   => (Status status, handle<shared_buffer>? buffer);
 void PageConnector::GetPartialReference(
     ReferencePtr reference,
     int64_t offset,
     int64_t max_size,
     const GetPartialReferenceCallback& callback) {
-  StreamPtr stream;
+  mojo::ScopedSharedBufferHandle buffer;
   Status status = page_->GetPartialReference(std::move(reference), offset,
-                                             max_size, &stream);
-  callback.Run(status, std::move(stream));
+                                             max_size, &buffer);
+  callback.Run(status, std::move(buffer));
 }
 
 // StartTransaction() => (Status status);

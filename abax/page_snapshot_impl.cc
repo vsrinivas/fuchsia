@@ -75,13 +75,13 @@ void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,
 }
 
 // GetPartial(array<uint8> key, int64 offset, int64 max_size)
-//   => (Status status, Stream? stream);
+//   => (Status status, handle<shared_buffer>? buffer);
 void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
                                   int64_t offset,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
   FTL_LOG(ERROR) << "PageSnapshotImpl::GetPartial not implemented.";
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  callback.Run(Status::UNKNOWN_ERROR, mojo::ScopedSharedBufferHandle());
 }
 
 }  // namespace ledger

@@ -14,7 +14,7 @@
 #include "apps/ledger/abax/page_connector.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/shared_buffer/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -69,17 +69,19 @@ PageChangePtr NewSingleReferencePageChange(mojo::Array<uint8_t> key,
       NewReferenceEntryChange(std::move(key), std::move(reference)));
 }
 
-StreamPtr ToStream(const std::string& value, int64_t offset, int64_t max_size) {
+Status ToBuffer(convert::ExtendedStringView value,
+                int64_t offset,
+                int64_t max_size,
+                mojo::ScopedSharedBufferHandle* buffer) {
   size_t start = value.size();
   if (static_cast<size_t>(std::abs(offset)) < value.size()) {
     start = offset < 0 ? value.size() + offset : offset;
   }
   size_t length = max_size < 0 ? value.size() : max_size;
-  std::string value_to_send = value.substr(start, length);
-  StreamPtr streamed_value = Stream::New();
-  streamed_value->size = value_to_send.size();
-  streamed_value->data = mtl::WriteStringToConsumerHandle(value_to_send);
-  return streamed_value;
+
+  bool result =
+      mtl::SharedBufferFromString(value.substr(start, length), buffer);
+  return result ? Status::OK : Status::UNKNOWN_ERROR;
 }
 
 }  // namespace
@@ -110,7 +112,7 @@ PageImpl::DataPipeDrainerClient::~DataPipeDrainerClient() {}
 void PageImpl::DataPipeDrainerClient::Start(
     mojo::ScopedDataPipeConsumerHandle source,
     const std::function<void(const std::string&)>& callback) {
-  callback_ = callback,
+  callback_ = callback;
   drainer_.reset(new mtl::DataPipeDrainer(this));
   drainer_->Start(std::move(source));
 }
@@ -273,18 +275,16 @@ Status PageImpl::GetReference(ReferencePtr reference, ValuePtr* value) {
 Status PageImpl::GetPartialReference(ReferencePtr reference,
                                      int64_t offset,
                                      int64_t max_size,
-                                     StreamPtr* stream) {
+                                     mojo::ScopedSharedBufferHandle* buffer) {
   ValuePtr value;
   Status status = GetReference(std::move(reference), &value);
 
   if (status != Status::OK) {
-    *stream = nullptr;
     return status;
   }
 
-  FTL_DCHECK(!value->is_stream());
-  *stream = ToStream(convert::ToString(value->get_bytes()), offset, max_size);
-  return status;
+  FTL_DCHECK(!value->is_buffer());
+  return ToBuffer(value->get_bytes(), offset, max_size, buffer);
 }
 
 void PageImpl::UpdateWatchers(const PageChangePtr& change) {

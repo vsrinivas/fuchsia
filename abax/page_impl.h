@@ -83,7 +83,7 @@ class PageImpl {
   Status GetPartialReference(ReferencePtr reference,
                              int64_t offset,
                              int64_t max_size,
-                             StreamPtr* stream);
+                             mojo::ScopedSharedBufferHandle* buffer);
 
  private:
   class DataPipeDrainerClient;

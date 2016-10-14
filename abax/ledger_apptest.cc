@@ -7,6 +7,7 @@
 #include "apps/ledger/api/ledger.mojom.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/shared_buffer/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
@@ -34,9 +35,8 @@ bool IsValueEqual(const mojo::Array<uint8_t>& expected_value,
   }
 
   std::string content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(value->get_stream()->data),
-                                        &content));
-  EXPECT_EQ(value->get_stream()->size, content.size());
+  EXPECT_TRUE(
+      mtl::StringFromSharedBuffer(std::move(value->get_buffer()), &content));
   return ToString(expected_value) == content;
 }
 
@@ -446,14 +446,15 @@ void LedgerApplicationTest::GetPartialReference(
     const mojo::Array<uint8_t>& expected_value) {
   Status status;
   ValuePtr value;
-  (*page)->GetPartialReference(std::move(reference), offset, max_size,
-                               [&status, &value](Status s, StreamPtr stream) {
-                                 status = s;
-                                 if (stream) {
-                                   value = Value::New();
-                                   value->set_stream(std::move(stream));
-                                 }
-                               });
+  (*page)->GetPartialReference(
+      std::move(reference), offset, max_size,
+      [&status, &value](Status s, mojo::ScopedSharedBufferHandle buffer) {
+        status = s;
+        if (status == Status::OK) {
+          value = Value::New();
+          value->set_buffer(std::move(buffer));
+        }
+      });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
   EXPECT_TRUE(IsValueEqual(expected_value, value));
