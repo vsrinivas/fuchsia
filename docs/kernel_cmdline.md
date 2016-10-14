@@ -66,6 +66,11 @@ unit tests).
 If this option is set, userboot will attempt to power off the machine
 when the process it launches exits.
 
+## startup.keep-log-visible=<bool>
+
+If this option is set, devmgr will not activate the first interactive
+console. It is useful for scenarios in which user input handling (and
+the ability to switch vcs) is not available. Defaults to false.
 
 # How to get pass the commandline to the kernel
 
