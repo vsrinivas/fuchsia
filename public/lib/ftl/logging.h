@@ -7,24 +7,10 @@
 
 #include <sstream>
 
+#include "lib/ftl/log_level.h"
 #include "lib/ftl/macros.h"
 
 namespace ftl {
-
-typedef int LogSeverity;
-
-constexpr LogSeverity LOG_INFO = 0;
-constexpr LogSeverity LOG_WARNING = 1;
-constexpr LogSeverity LOG_ERROR = 2;
-constexpr LogSeverity LOG_FATAL = 3;
-constexpr LogSeverity LOG_NUM_SEVERITIES = 4;
-
-// LOG_DFATAL is LOG_FATAL in debug mode, ERROR in normal mode
-#ifdef NDEBUG
-const LogSeverity LOG_DFATAL = LOG_ERROR;
-#else
-const LogSeverity LOG_DFATAL = LOG_FATAL;
-#endif
 
 class LogMessageVoidify {
  public:
@@ -50,6 +36,9 @@ class LogMessage {
   FTL_DISALLOW_COPY_AND_ASSIGN(LogMessage);
 };
 
+// Gets the FTL_VLOG default verbosity level.
+int GetVlogVerbosity();
+
 }  // namespace ftl
 
 #define FTL_LOG(severity) \
@@ -69,6 +58,16 @@ class LogMessage {
       ::ftl::LogMessage(::ftl::LOG_FATAL, __FILE__, __LINE__, #condition) \
           .stream(),                                                      \
       !(condition))
+
+#define FTL_VLOG_IS_ON(verbose_level) \
+  ((verbose_level) <= ::ftl::GetVlogVerbosity())
+
+// The VLOG macros log with negative verbosities.
+#define FTL_VLOG_STREAM(verbose_level) \
+  ::ftl::LogMessage(-verbose_level, __FILE__, __LINE__, nullptr).stream()
+
+#define FTL_VLOG(verbose_level) \
+  FTL_LAZY_STREAM(FTL_VLOG_STREAM(verbose_level), FTL_VLOG_IS_ON(verbose_level))
 
 #ifndef NDEBUG
 #define FTL_DLOG(severity) FTL_LOG(severity)

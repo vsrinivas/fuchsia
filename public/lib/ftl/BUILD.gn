@@ -12,6 +12,15 @@ config("thread_safety_warning") {
   }
 }
 
+# These are sources that store static global state that may impose potential
+# constraints on dynamic linking. We separate these out here.
+source_set("stateful_sources") {
+  sources = [
+    "log_level.cc",
+    "log_level.h",
+  ]
+}
+
 static_library("ftl") {
   sources = [
     "arraysize.h",
@@ -94,6 +103,10 @@ static_library("ftl") {
   }
 
   public_configs = [ ":thread_safety_warning" ]
+
+  public_deps = [
+    ":stateful_sources",
+  ]
 }
 
 executable("ftl_unittests") {

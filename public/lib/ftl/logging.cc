@@ -71,4 +71,8 @@ LogMessage::~LogMessage() {
     BreakDebugger();
 }
 
+int GetVlogVerbosity() {
+  return std::max(-1, LOG_INFO - GetMinLogLevel());
+}
+
 }  // namespace ftl
