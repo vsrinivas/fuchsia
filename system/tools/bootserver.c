@@ -127,7 +127,10 @@ static ssize_t xread(xferdata *xd, void* data, size_t len) {
 // UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 //      1452           1514   -     14      -     40      -    8
 // nbfile is PAYLOAD_SIZE + 2 * sizeof(size_t)
-#define PAYLOAD_SIZE 1436
+
+// Some EFI network stacks have problems with larger packets
+// 1280 is friendlier
+#define PAYLOAD_SIZE 1280
 
 static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, bool boot) {
     xferdata xd;
