@@ -13,6 +13,7 @@
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/interfaces/application/shell.mojom.h"
+#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
 class StoryProviderState;
@@ -21,7 +22,7 @@ class StoryState : public Story, public ModuleWatcher {
  public:
   StoryState(mojo::StructPtr<StoryInfo> story_info,
              StoryProviderState* story_provider_state,
-             mojo::Shell* shell,
+             mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              mojo::InterfaceRequest<Story> request);
   ~StoryState() override;
 
@@ -49,7 +50,7 @@ class StoryState : public Story, public ModuleWatcher {
 
   mojo::StructPtr<StoryInfo> story_info_;
   StoryProviderState* story_provider_state_;
-  mojo::Shell* shell_;
+  mojo::InterfacePtr<mojo::ApplicationConnector> app_connector_;
   mojo::StrongBinding<Story> binding_;
   mojo::Binding<ModuleWatcher> module_watcher_binding_;
 

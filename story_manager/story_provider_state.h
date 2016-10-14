@@ -14,16 +14,17 @@
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/string.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
+#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
 class StoryState;
 
 class StoryProviderState : public StoryProvider {
  public:
-  StoryProviderState(mojo::Shell* shell,
-                     mojo::InterfacePtr<ledger::Ledger> ledger,
-                     mojo::InterfaceHandle<StoryProvider>* service);
+  StoryProviderState(
+      mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
+      mojo::InterfacePtr<ledger::Ledger> ledger,
+      mojo::InterfaceHandle<StoryProvider>* service);
   ~StoryProviderState() override;
 
   // Used to resume a story. Fetches the Session Page associated with
@@ -55,7 +56,7 @@ class StoryProviderState : public StoryProvider {
   // as a story id.
   std::string GenerateNewStoryId(size_t length);
 
-  mojo::Shell* shell_;
+  mojo::InterfacePtr<mojo::ApplicationConnector> app_connector_;
   mojo::StrongBinding<StoryProvider> binding_;
   mojo::InterfacePtr<ledger::Ledger> ledger_;
 

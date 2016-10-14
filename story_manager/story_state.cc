@@ -10,13 +10,15 @@
 
 namespace modular {
 
-StoryState::StoryState(mojo::StructPtr<StoryInfo> story_info,
-                       StoryProviderState* story_provider_state,
-                       mojo::Shell* shell,
-                       mojo::InterfaceRequest<Story> request)
+StoryState::StoryState(
+    mojo::StructPtr<StoryInfo> story_info,
+    StoryProviderState* story_provider_state,
+    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
+    mojo::InterfaceRequest<Story> request)
     : story_info_(std::move(story_info)),
       story_provider_state_(story_provider_state),
-      shell_(shell),
+      app_connector_(mojo::InterfacePtr<mojo::ApplicationConnector>::Create(
+          std::move(app_connector))),
       binding_(this, std::move(request)),
       module_watcher_binding_(this) {
   FTL_LOG(INFO) << "StoryState()";
@@ -37,8 +39,10 @@ void StoryState::RunStory(
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   FTL_LOG(INFO) << "StoryState::RunStory()";
   mojo::InterfacePtr<ResolverFactory> resolver_factory;
-  mojo::ConnectToService(shell_, "mojo:resolver", GetProxy(&resolver_factory));
-  mojo::ConnectToService(shell_, "mojo:story_runner", GetProxy(&runner_));
+  mojo::ConnectToService(app_connector_.get(), "mojo:resolver",
+                         GetProxy(&resolver_factory));
+  mojo::ConnectToService(app_connector_.get(), "mojo:story_runner",
+                         GetProxy(&runner_));
   runner_->Initialize(std::move(resolver_factory));
   runner_->StartStory(session_page.PassInterfaceHandle(), GetProxy(&session_));
   mojo::InterfaceHandle<Link> link;

@@ -6,6 +6,7 @@
 
 #include "apps/modular/story_manager/story_state.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/array.h"
 
 namespace modular {
@@ -26,10 +27,13 @@ mojo::Array<uint8_t> KeyToByteArray(const std::string& key) {
 // assumes that only one device can access a user's ledger. Re-visit this
 // assumption.
 StoryProviderState::StoryProviderState(
-    mojo::Shell* shell,
+    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
     mojo::InterfacePtr<ledger::Ledger> ledger,
     mojo::InterfaceHandle<StoryProvider>* service)
-    : shell_(shell), binding_(this, service), ledger_(std::move(ledger)) {
+    : app_connector_(mojo::InterfacePtr<mojo::ApplicationConnector>::Create(
+          std::move(app_connector))),
+      binding_(this, service),
+      ledger_(std::move(ledger)) {
   ledger_->GetRootPage([this](ledger::Status status,
                               mojo::InterfaceHandle<ledger::Page> root_page) {
     if (status != ledger::Status::OK) {
@@ -93,8 +97,10 @@ void StoryProviderState::CreateStory(const mojo::String& url,
           info->is_running = false;
 
           mojo::InterfaceHandle<Story> story;
-          StoryState* story_state =
-              new StoryState(std::move(info), this, shell_, GetProxy(&story));
+          StoryState* story_state = new StoryState(
+              std::move(info), this,
+              mojo::DuplicateApplicationConnector(app_connector_.get()),
+              GetProxy(&story));
           story_ids_.insert(story_id);
           story_state_to_id_.emplace(story_state, story_id);
           story_id_to_state_.emplace(story_id, story_state);

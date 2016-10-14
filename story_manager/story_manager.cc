@@ -21,18 +21,23 @@
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
 
+using mojo::ApplicationConnector;
 using mojo::ApplicationImplBase;
 using mojo::Array;
 using mojo::Binding;
 using mojo::ConnectionContext;
+using mojo::CreateApplicationConnector;
+using mojo::DuplicateApplicationConnector;
 using mojo::GetProxy;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfacePtrSet;
 using mojo::InterfaceRequest;
+using mojo::ServiceProvider;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
@@ -41,8 +46,11 @@ using mojo::String;
 
 class StoryManagerImpl : public StoryManager {
  public:
-  StoryManagerImpl(Shell* shell, InterfaceRequest<StoryManager> request)
-      : shell_(shell), binding_(this, std::move(request)) {}
+  StoryManagerImpl(InterfaceHandle<ApplicationConnector> app_connector,
+                   InterfaceRequest<StoryManager> request)
+      : app_connector_(InterfacePtr<ApplicationConnector>::Create(
+            std::move(app_connector))),
+        binding_(this, std::move(request)) {}
   ~StoryManagerImpl() override {}
 
  private:
@@ -52,7 +60,8 @@ class StoryManagerImpl : public StoryManager {
     FTL_LOG(INFO) << "StoryManagerImpl::Launch()";
 
     // Establish connection with Ledger.
-    ConnectToService(shell_, "mojo:ledger", GetProxy(&ledger_factory_));
+    ConnectToService(app_connector_.get(), "mojo:ledger",
+                     GetProxy(&ledger_factory_));
     ledger_factory_->GetLedger(
         std::move(identity), ftl::MakeCopyable([
           this, callback, request = std::move(view_owner_request)
@@ -74,8 +83,9 @@ class StoryManagerImpl : public StoryManager {
     // First use ViewProvider service to plumb |view_owner_request| and get the
     // associated service provider.
     InterfacePtr<mozart::ViewProvider> view_provider;
-    InterfacePtr<mojo::ServiceProvider> service_provider;
-    ConnectToService(shell_, "mojo:dummy_user_shell", GetProxy(&view_provider));
+    InterfacePtr<ServiceProvider> service_provider;
+    ConnectToService(app_connector_.get(), "mojo:dummy_user_shell",
+                     GetProxy(&view_provider));
     view_provider->CreateView(std::move(view_owner_request),
                               GetProxy(&service_provider));
     user_shell_ptrs_.AddInterfacePtr(std::move(view_provider));
@@ -85,12 +95,12 @@ class StoryManagerImpl : public StoryManager {
         UserShell::Name_, GetProxy(&user_shell_).PassMessagePipe());
     InterfaceHandle<StoryProvider> service;
     new StoryProviderState(
-        shell_, InterfacePtr<ledger::Ledger>::Create(std::move(ledger)),
-        &service);
+        DuplicateApplicationConnector(app_connector_.get()),
+        InterfacePtr<ledger::Ledger>::Create(std::move(ledger)), &service);
     user_shell_->SetStoryProvider(std::move(service));
   }
 
-  Shell* shell_;
+  InterfacePtr<ApplicationConnector> app_connector_;
   StrongBinding<StoryManager> binding_;
   InterfacePtrSet<mozart::ViewProvider> user_shell_ptrs_;
 
@@ -114,7 +124,8 @@ class StoryManagerApp : public ApplicationImplBase {
     service_provider_impl->AddService<StoryManager>(
         [this](const ConnectionContext& connection_context,
                InterfaceRequest<StoryManager> launcher_request) {
-          new StoryManagerImpl(shell(), std::move(launcher_request));
+          new StoryManagerImpl(CreateApplicationConnector(shell()),
+                               std::move(launcher_request));
         });
     return true;
   }
