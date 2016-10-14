@@ -14,6 +14,10 @@ group("all") {
 executable("story_manager") {
   sources = [
     "story_manager.cc",
+    "story_provider_state.cc",
+    "story_provider_state.h",
+    "story_state.cc",
+    "story_state.h",
   ]
 
   deps = [
