@@ -35,6 +35,8 @@
 #define NB_ERROR_TOO_LARGE    0x80000003
 #define NB_ERROR_BAD_FILE     0x80000004
 
+#define NB_VERSION_1_0  0x0001000
+
 typedef struct nbmsg_t {
     uint32_t magic;
     uint32_t cookie;

@@ -113,7 +113,7 @@ transmit:
 }
 
 static char advertise_data[] =
-    "version\00.1\0"
+    "version\01.0\0"
     "serialno\0unknown\0"
     "board\0unknown\0";
 
@@ -123,7 +123,7 @@ static void advertise(void) {
     msg->magic = NB_MAGIC;
     msg->cookie = 0;
     msg->cmd = NB_ADVERTISE;
-    msg->arg = 0;
+    msg->arg = NB_VERSION_1_0;
     memcpy(msg->data, advertise_data, sizeof(advertise_data));
     udp6_send(buffer, sizeof(nbmsg) + sizeof(advertise_data),
               &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT);
