@@ -1,0 +1,20 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("thinfs") {
+  script = "scripts/build_fuchsia.py"
+
+  outputs = [ "$target_gen_dir/thinfs" ]
+
+  args = [
+    "--fuchsia_root",
+    rebase_path("//."),
+    "--go_binary",
+    rebase_path("$root_gen_dir/third_party/go/bin/go"),
+  ]
+
+  deps = [
+    "//third_party/go:go_runtime",
+  ]
+}
