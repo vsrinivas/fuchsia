@@ -216,6 +216,8 @@ template("clang_toolchain") {
       target_toolchain = target_toolchain
       target_os = target_os
       target_cpu = target_cpu
+
+      is_pic_default = invoker.is_pic_default
     }
   }
 }

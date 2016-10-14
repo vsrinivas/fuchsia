@@ -5,46 +5,55 @@
 import("//build/toolchain/clang_toolchain.gni")
 import("//build/config/fuchsia/config.gni")
 
-clang_toolchain(target_cpu) {
-  if (host_cpu == "arm64") {
-    clang_cpu = "aarch64"
-  } else if (host_cpu == "x64") {
-    clang_cpu = "x86_64"
-  } else {
-    assert(false, "Host CPU not supported")
+template("fuchsia_toolchain") {
+  clang_toolchain(target_name) {
+    forward_variables_from(invoker, "*")
+
+    if (host_cpu == "arm64") {
+      clang_cpu = "aarch64"
+    } else if (host_cpu == "x64") {
+      clang_cpu = "x86_64"
+    } else {
+      assert(false, "Host CPU not supported")
+    }
+
+    if (host_os == "linux") {
+      clang_os = "linux"
+      strip_os = "Linux"
+    } else if (host_os == "mac") {
+      clang_os = "darwin"
+      strip_os = "Darwin"
+    } else {
+      assert(false, "Host OS not supported")
+    }
+
+    clang_name = "clang+llvm-$clang_cpu-$clang_os"
+    clang_path = "$fuchsia_sdk/toolchain/$clang_name"
+    prefix = rebase_path("$clang_path/bin/", root_build_dir)
+
+    cc = "${prefix}clang"
+    cxx = "${prefix}clang++"
+    ld = cxx
+    ar = "${prefix}llvm-ar"
+
+    magenta_prebuilt_downloads_root =
+        rebase_path("//magenta/prebuilt/downloads/", root_build_dir)
+    if (target_cpu == "x64") {
+      strip_target_cpu = "x86_64"
+    } else if (target_cpu == "arm64") {
+      strip_target_cpu = "aarch64"
+    } else {
+      assert(false, "Target CPU not supported")
+    }
+    strip_binary = "${strip_target_cpu}-elf-6.2.0-${strip_os}-${clang_cpu}/bin/${strip_target_cpu}-elf-strip"
+    strip = magenta_prebuilt_downloads_root + strip_binary
+
+    toolchain_cpu = target_cpu
+    toolchain_os = target_os
   }
+}
 
-  if (host_os == "linux") {
-    clang_os = "linux"
-    strip_os = "Linux"
-  } else if (host_os == "mac") {
-    clang_os = "darwin"
-    strip_os = "Darwin"
-  } else {
-    assert(false, "Host OS not supported")
-  }
-
-  clang_name = "clang+llvm-$clang_cpu-$clang_os"
-  clang_path = "$fuchsia_sdk/toolchain/$clang_name"
-  prefix = rebase_path("$clang_path/bin/", root_build_dir)
-
-  cc = "${prefix}clang"
-  cxx = "${prefix}clang++"
-  ld = cxx
-  ar = "${prefix}llvm-ar"
-
-  magenta_prebuilt_downloads_root =
-      rebase_path("//magenta/prebuilt/downloads/", root_build_dir)
-  if (target_cpu == "x64") {
-    strip_target_cpu = "x86_64"
-  } else if (target_cpu == "arm64") {
-    strip_target_cpu = "aarch64"
-  } else {
-    assert(false, "Target CPU not supported")
-  }
-  strip_binary = "${strip_target_cpu}-elf-6.2.0-${strip_os}-${clang_cpu}/bin/${strip_target_cpu}-elf-strip"
-  strip = magenta_prebuilt_downloads_root + strip_binary
-
-  toolchain_cpu = target_cpu
-  toolchain_os = target_os
+fuchsia_toolchain(target_cpu) {}
+fuchsia_toolchain("${target_cpu}-shared") {
+  is_pic_default = true
 }

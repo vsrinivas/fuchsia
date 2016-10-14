@@ -26,6 +26,9 @@ declare_args() {
 
   # This should not be set as a build argument.
   host_toolchain = ""
+
+  # Whether the toolchain defaults to PIC.
+  is_pic_default = false
 }
 
 # All binary targets will get this list of configs by default.
@@ -47,6 +50,10 @@ _shared_library_target_configs = _shared_binary_target_configs + [
                                  ]
 _executable_target_configs =
     _shared_binary_target_configs + [ "//build/config:executable_config" ]
+
+if (is_pic_default) {
+  _shared_binary_target_configs += [ "//build/config:shared_library_config" ]
+}
 
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
