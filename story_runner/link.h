@@ -19,15 +19,14 @@
 #ifndef MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 #define MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 
-#include <vector>
-
 #include "apps/maxwell/document_store/interfaces/document.mojom.h"
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/macros.h"
+#include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
+#include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/bindings/struct_ptr.h"
 
 namespace modular {
@@ -54,22 +53,22 @@ class LinkImpl : public Link {
   // LinkImpl may not be constructed on the stack.
   LinkImpl(mojo::InterfaceRequest<Link> req, SharedLinkImplData* shared);
 
-  // For use by the constructor only
-  void AddImpl(LinkImpl* client);
   // For use by the destructor only
   void RemoveImpl(LinkImpl* client);
 
-  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self);
-  void Notify(LinkImpl* source,
-              const mojo::StructPtr<document_store::Document>& doc);
+  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self_notify);
+  void NotifyWatchers(const mojo::StructPtr<document_store::Document>& doc,
+                      bool self_notify);
+  void DatabaseChanged(mojo::StructPtr<document_store::Document>& doc);
 
-  const bool primary_;
-  // |shared_| is owned by the |primary_| LinkImpl.
-  SharedLinkImplData* shared_;
-  mojo::StrongBinding<Link> binding_;
-  // |watchers_| are maintained on a per-handle basis.
-  // TODO(jimbe) Need to make this smarter in case watchers close their handles.
-  std::vector<std::pair<mojo::InterfacePtr<LinkChanged>, bool>> watchers_;
+  // |shared_| is owned by the LinkImpl that called "new SharedLinkImplData()".
+  SharedLinkImplData* const shared_;
+  mojo::Binding<Link> binding_;
+
+  // These watchers do not want self notifications.
+  mojo::InterfacePtrSet<LinkChanged> watchers_;
+  // These watchers want all notifications.
+  mojo::InterfacePtrSet<LinkChanged> all_watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
