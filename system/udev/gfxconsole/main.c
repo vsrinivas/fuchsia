@@ -391,6 +391,10 @@ void vc_get_status_line(char* str, int n) {
     // TODO add process name, etc.
     mtx_lock(&vc_lock);
     list_for_every_entry (&vc_list, device, vc_device_t, node) {
+        if (n <= 0) {
+            break;
+        }
+
         int lines = vc_device_get_scrollback_lines(device);
         int chars = snprintf(ptr, n, "%s[%u] %s%c    %c%c \033[m",
                              device->active ? "\033[36m\033[1m" : "",
@@ -400,6 +404,7 @@ void vc_get_status_line(char* str, int n) {
                              lines > 0 && -device->vpy < lines ? '<' : ' ',
                              device->vpy < 0 ? '>' : ' ');
         ptr += chars;
+        n -= chars;
         i++;
     }
     mtx_unlock(&vc_lock);
