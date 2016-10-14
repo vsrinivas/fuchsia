@@ -106,6 +106,9 @@ void platform_init_debug(void)
 
 static void debug_uart_putc(char c)
 {
+#if WITH_LEGACY_PC_CONSOLE
+    cputc(c);
+#endif
     if (unlikely(!output_enabled))
         return;
 
@@ -114,13 +117,15 @@ static void debug_uart_putc(char c)
     outp(uart_io_port + 0, c);
 }
 
-void platform_dputc(char c)
+void platform_dputs(const char* str, size_t len)
 {
-    if (c == '\n')
-        platform_dputc('\r');
-
-    cputc(c);
-    debug_uart_putc(c);
+    while (len-- > 0) {
+        char c = *str++;
+        if (c == '\n') {
+            debug_uart_putc('\r');
+        }
+        debug_uart_putc(c);
+    }
 }
 
 int platform_dgetc(char *c, bool wait)

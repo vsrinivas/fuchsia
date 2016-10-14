@@ -24,11 +24,15 @@
 #error define DEBUG_UART to something valid
 #endif
 
-void platform_dputc(char c)
+void platform_dputs(const char* str, size_t len)
 {
-    if (c == '\n')
-        uart_putc(DEBUG_UART, '\r');
-    uart_putc(DEBUG_UART, c);
+    while (len-- > 0) {
+        char c = *str++;
+        if (c == '\n') {
+            uart_putc(DEBUG_UART, '\r');
+        }
+        uart_putc(DEBUG_UART, c);
+    }
 }
 
 int platform_dgetc(char *c, bool wait)

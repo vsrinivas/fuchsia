@@ -229,8 +229,10 @@ void platform_early_init(void)
     /* get the debug output working */
     platform_init_debug_early();
 
+#if WITH_LEGACY_PC_CONSOLE
     /* get the text console working */
     platform_init_console();
+#endif
 
     /* extract "zero page" data while still accessible */
     platform_save_bootloader_data();

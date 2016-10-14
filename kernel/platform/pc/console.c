@@ -6,6 +6,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#if WITH_LEGACY_PC_CONSOLE
+
 #include <arch/x86.h>
 #include <platform/pc.h>
 #include <platform/console.h>
@@ -297,3 +299,5 @@ int printf_xy(int x, int y, char attr, char *fmt, ...)
 
     return result;
 }
+
+#endif
