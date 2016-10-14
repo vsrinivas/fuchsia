@@ -42,7 +42,7 @@ char* gen_text(char* time) {
 int main(int argc, char** argv) {
     printf("=@ clock @=\n");
 
-    int rtc_fd = open("dev/rtc", O_RDONLY);
+    int rtc_fd = open("/dev/misc/rtc", O_RDONLY);
     if (rtc_fd < 0) {
         printf("cannot open rtc device\n");
         return -1;
