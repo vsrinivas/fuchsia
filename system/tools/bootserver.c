@@ -156,14 +156,16 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     }
 
     long sz = 0;
-    if (fseek(xd.fp, 0L, SEEK_END)) {
-        fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
-    } else if ((sz = ftell(xd.fp)) < 0) {
-        fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
-        sz = 0;
-    } else if (fseek(xd.fp, 0L, SEEK_SET)) {
-        fprintf(stderr, "%s: failed to rewind %s\n", appname, fn);
-        return -1;
+    if (xd.fp) {
+        if (fseek(xd.fp, 0L, SEEK_END)) {
+            fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+        } else if ((sz = ftell(xd.fp)) < 0) {
+            fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+            sz = 0;
+        } else if (fseek(xd.fp, 0L, SEEK_SET)) {
+            fprintf(stderr, "%s: failed to rewind %s\n", appname, fn);
+            return -1;
+        }
     }
 
     if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
