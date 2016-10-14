@@ -39,6 +39,15 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
+// HACK: move the mmio mappings to a high address to get out of the way of DSOs and other user data.
+// Will go away once these mappings move into a generic VMO map call.
+static const vaddr_t mmio_map_base_address =
+#if _LP64
+    0x7ff0'0000'0000ULL;
+#else
+    0x2000'0000UL;
+#endif
+
 mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
     LTRACEF("vector %u flags 0x%x\n", vector, flags);
 
@@ -89,7 +98,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     if (!out_vaddr)
         return ERR_INVALID_ARGS;
 
-    void* vaddr = nullptr;
+    void* vaddr = (void *)mmio_map_base_address;
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
         ARCH_MMU_FLAG_PERM_USER;
@@ -113,7 +122,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
                                          PAGE_SIZE_SHIFT, 0, (paddr_t)paddr,
-                                         0,  // vmm flags
+                                         VMM_FLAG_VALLOC_BASE,  // vmm flags
                                          arch_mmu_flags);
 
     if (res != NO_ERROR)
@@ -142,14 +151,14 @@ mx_status_t sys_alloc_device_memory(mx_handle_t hrsrc, uint32_t len,
     if (!out_vaddr)
         return ERR_INVALID_ARGS;
 
-    void* vaddr = nullptr;
+    void* vaddr = (void *)mmio_map_base_address;
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
         ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
     status_t res = aspace->AllocContiguous("user_mmio", len, &vaddr,
-                                           PAGE_SIZE_SHIFT, 0, VMM_FLAG_COMMIT,
+                                           PAGE_SIZE_SHIFT, 0, VMM_FLAG_COMMIT | VMM_FLAG_VALLOC_BASE,
                                            arch_mmu_flags);
     if (res != NO_ERROR)
         return res;
