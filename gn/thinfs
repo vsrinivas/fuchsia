@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//go/src/fuchsia.googlesource.com/thinfs"
+    ],
+    "binaries": [
+        {
+            "binary": "thinfs",
+            "bootfs_path": "bin/thinfs"
+        }
+    ]
+}

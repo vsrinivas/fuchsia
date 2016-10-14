@@ -23,6 +23,7 @@
         "mtl",
         "netstack",
         "re2",
+        "thinfs",
         "wpa_supplicant"
     ]
 }
