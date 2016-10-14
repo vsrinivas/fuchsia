@@ -17,6 +17,8 @@ executable("bin") {
   sources = [
     "command_handler.cc",
     "command_handler.h",
+    "io_loop.cc",
+    "io_loop.h",
     "main.cc",
     "process.cc",
     "process.h",

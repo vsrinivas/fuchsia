@@ -14,6 +14,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "command_handler.h"
+#include "io_loop.h"
 #include "process.h"
 #include "thread.h"
 
@@ -25,13 +26,13 @@ namespace debugserver {
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_thread(), SetCurrentThread(), and
 // SendNotification() which modify the internal state of a Server instance.
-class Server final {
+class Server final : public IOLoop::Delegate {
  public:
   // The default timeout interval used by SendNotification().
   constexpr static int64_t kDefaultTimeoutSeconds = 30;
 
   explicit Server(uint16_t port);
-  ~Server() = default;
+  ~Server();
 
   // Starts the main loop. This will first block and wait for an incoming
   // connection. Once there is a connection, this will start an event loop for
@@ -77,7 +78,7 @@ class Server final {
       size_t retry_count = 0);
 
  private:
-  // Maximum number of characters in inbound/outbound buffers.
+  // Maximum number of characters in the outbound buffer.
   constexpr static size_t kMaxBufferSize = 4096;
 
   // Represents a pending notification packet.
@@ -100,14 +101,9 @@ class Server final {
 
   // Send an acknowledgment packet. If |ack| is true, then a '+' ACK will be
   // sent to indicate that a packet was received correctly, or '-' to request
-  // retransmission. Returns false if there is an error while writing to the
-  // socket. This method blocks until the syscall to write to the socket
+  // retransmission. This method blocks until the syscall to write to the socket
   // returns.
-  bool SendAck(bool ack);
-
-  // Posts an asynchronous task on the message loop to listen for an incoming
-  // packet.
-  void PostReadTask();
+  void SendAck(bool ack);
 
   // Posts an asynchronous task on the message loop to send a packet over the
   // wire. |data| will be wrapped in a GDB Remote Protocol packet after
@@ -128,6 +124,11 @@ class Server final {
   // Sets the run status and quits the main message loop.
   void QuitMessageLoop(bool status);
 
+  // IOLoop::Delegate overrides.
+  void OnBytesRead(const ftl::StringView& bytes) override;
+  void OnDisconnected() override;
+  void OnIOError() override;
+
   // TCP port number that we will listen on.
   uint16_t port_;
 
@@ -137,8 +138,7 @@ class Server final {
   ftl::UniqueFD client_sock_;
   ftl::UniqueFD server_sock_;
 
-  // Buffers used for reading/writing incoming/outgoing bytes.
-  std::array<char, kMaxBufferSize> in_buffer_;
+  // Buffer used for writing outgoing bytes.
   std::array<char, kMaxBufferSize> out_buffer_;
 
   // The CommandHandler that is responsible for interpreting received command
@@ -161,6 +161,11 @@ class Server final {
 
   // The main loop.
   mtl::MessageLoop message_loop_;
+
+  // The IOLoop used for blocking I/O operations over |client_sock_|.
+  // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
+  // care to clean it up in the destructor.
+  std::unique_ptr<IOLoop> io_loop_;
 
   // Stores the global error state. This is used to determine the return value
   // for "Run()" when |message_loop_| exits.

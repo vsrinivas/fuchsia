@@ -6,7 +6,6 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
 #include <cstdlib>
 #include <string>
@@ -38,18 +37,31 @@ Server::Server(uint16_t port)
       command_handler_(this),
       run_status_(true) {}
 
+Server::~Server() {
+  // This will invoke the IOLoop destructor which will clean up and join the I/O
+  // threads.
+  io_loop_.reset();
+}
+
 bool Server::Run() {
+  FTL_DCHECK(!io_loop_);
+
   // Listen for an incoming connection.
   if (!Listen())
     return false;
 
   // |client_sock_| should be ready to be consumed now.
   FTL_DCHECK(client_sock_.is_valid());
+  io_loop_ = std::make_unique<IOLoop>(client_sock_.get(), this);
+  io_loop_->Run();
 
-  // Start the main loop after posting a task to wait for the first incoming
-  // command packet.
-  PostReadTask();
+  // Start the main loop.
   message_loop_.Run();
+
+  // Tell the I/O loop to quit its message loop and wait for it to finish.
+  io_loop_->Quit();
+
+  // TODO: why does this keep returning false?
 
   return run_status_;
 }
@@ -120,100 +132,19 @@ bool Server::Listen() {
   return true;
 }
 
-bool Server::SendAck(bool ack) {
+void Server::SendAck(bool ack) {
   // TODO(armansito): Don't send anything if we're in no-acknowledgment mode. We
   // currently don't support this mode.
-
+  FTL_DCHECK(io_loop_);
   char payload = ack ? '+' : '-';
-  ssize_t bytes_written = write(client_sock_.get(), &payload, 1);
-
-  return bytes_written > 0;
-}
-
-void Server::PostReadTask() {
-  message_loop_.task_runner()->PostTask([this] {
-    ssize_t read_size =
-        read(client_sock_.get(), in_buffer_.data(), kMaxBufferSize);
-
-    // If the remote end closed the TCP connection, then we're done.
-    // TODO(armansito): Note that this is not the default (or only) behavior
-    // that a stub usually supports and there are ways for gdbserver to stay up
-    // even when a client (gdb, lldb, etc) closes the connection. We will worry
-    // about supporting those later.
-    if (read_size == 0) {
-      FTL_LOG(INFO) << "Client closed connection";
-      QuitMessageLoop(true);
-      return;
-    }
-
-    // If there was an error
-    if (read_size < 0) {
-      util::LogErrorWithErrno("Error occured while waiting for command");
-      QuitMessageLoop(false);
-      return;
-    }
-
-    ftl::StringView bytes_read(in_buffer_.data(), read_size);
-    FTL_VLOG(1) << "rx: " << bytes_read;
-
-    // Before anything else, check to see if this is an acknowledgment in
-    // response to a notification. The GDB Remote protocol defines only the
-    // "Stop" notification, so we specially handle its acknowledgment here.
-    if (bytes_read == kStopAck && pending_notification_) {
-      FTL_LOG(INFO) << "Notification acknowledged";
-      pending_notification_.reset();
-      TryPostNextNotification();
-      return;
-    }
-
-    // If this is a packet acknowledgment then ignore it and read again.
-    // TODO(armansito): Re-send previous packet if we got "-".
-    if (bytes_read == "+") {
-      PostReadTask();
-      return;
-    }
-
-    ftl::StringView packet_data;
-    bool verified = util::VerifyPacket(bytes_read, &packet_data);
-
-    // Send acknowledgment back (this blocks)
-    if (!SendAck(verified)) {
-      util::LogErrorWithErrno("Failed to send acknowledgment");
-      QuitMessageLoop(false);
-      return;
-    }
-
-    // Wait for the next command if we requested retransmission
-    if (!verified) {
-      PostReadTask();
-      return;
-    }
-
-    // Route the packet data to the command handler.
-    auto callback = [this](const ftl::StringView& rsp) {
-      // Send the response if there is one.
-      PostPacketWriteTask(rsp);
-
-      // Wait for the next command.
-      PostReadTask();
-    };
-
-    // If the command is handled, then |callback| will be called at some point,
-    // so we're done.
-    if (command_handler_.HandleCommand(packet_data, callback))
-      return;
-
-    // If the command wasn't handled, that's because we do not support it, so we
-    // respond with an empty response and continue.
-    FTL_LOG(ERROR) << "Command not supported: " << packet_data;
-    callback("");
-  });
+  io_loop_->PostWriteTask(ftl::StringView(&payload, 1));
 }
 
 void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
+  FTL_DCHECK(io_loop_);
   FTL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
-  // Copy the data into a std::string capture it in the closure.
+  // Copy the data into a std::string to capture it in the closure.
   message_loop_.task_runner()->PostTask(
       [ this, data = data.ToString(), notify ] {
         int index = 0;
@@ -229,14 +160,7 @@ void Server::PostWriteTask(bool notify, const ftl::StringView& data) {
         util::EncodeByteString(checksum, out_buffer_.data() + index);
         index += 2;
 
-        ssize_t bytes_written =
-            write(client_sock_.get(), out_buffer_.data(), index);
-        if (bytes_written != index) {
-          util::LogErrorWithErrno("Failed to send packet");
-          QuitMessageLoop(false);
-        }
-
-        FTL_VLOG(1) << "tx: " << ftl::StringView(out_buffer_.data(), index);
+        io_loop_->PostWriteTask(ftl::StringView(out_buffer_.data(), index));
       });
 }
 
@@ -291,6 +215,59 @@ void Server::TryPostNextNotification() {
 void Server::QuitMessageLoop(bool status) {
   run_status_ = status;
   message_loop_.QuitNow();
+}
+
+void Server::OnBytesRead(const ftl::StringView& bytes_read) {
+  // Before anything else, check to see if this is an acknowledgment in
+  // response to a notification. The GDB Remote protocol defines only the
+  // "Stop" notification, so we specially handle its acknowledgment here.
+  if (bytes_read == kStopAck && pending_notification_) {
+    FTL_LOG(INFO) << "Notification acknowledged";
+    pending_notification_.reset();
+    TryPostNextNotification();
+    return;
+  }
+
+  // If this is a packet acknowledgment then ignore it and read again.
+  // TODO(armansito): Re-send previous packet if we got "-".
+  if (bytes_read == "+")
+    return;
+
+  ftl::StringView packet_data;
+  bool verified = util::VerifyPacket(bytes_read, &packet_data);
+
+  // Send acknowledgment back
+  SendAck(verified);
+
+  // Wait for the next command if we requested retransmission
+  if (!verified)
+    return;
+
+  // Route the packet data to the command handler.
+  auto callback = [this](const ftl::StringView& rsp) {
+    // Send the response if there is one.
+    PostPacketWriteTask(rsp);
+  };
+
+  // If the command is handled, then |callback| will be called at some point,
+  // so we're done.
+  if (command_handler_.HandleCommand(packet_data, callback))
+    return;
+
+  // If the command wasn't handled, that's because we do not support it, so we
+  // respond with an empty response and continue.
+  FTL_LOG(ERROR) << "Command not supported: " << packet_data;
+  callback("");
+}
+
+void Server::OnDisconnected() {
+  // Exit successfully in the case of a remote disconnect.
+  QuitMessageLoop(true);
+}
+
+void Server::OnIOError() {
+  FTL_LOG(ERROR) << "An I/O error has occurred. Exiting the main loop";
+  QuitMessageLoop(false);
 }
 
 }  // namespace debugserver
