@@ -8,4 +8,5 @@ declare_args() {
   expat_build_root = "//third_party/expat"
   msd_intel_gen_build_root = "//driver/msd-intel-gen"
   glm_build_root = "//third_party/glm"
+  boringssl_build_root = "//third_party/boringssl"
 }
