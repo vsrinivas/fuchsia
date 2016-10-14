@@ -20,12 +20,10 @@ These instructions configure the machine to boot from a USB flash drive.
 12. F10 to save settings, Y to confirm
 
 ## GigaBoot20x6 Setup
-1. Format the first partition on a usb flash drive as FAT
-2. git clone https://fuchsia.googlesource.com/gigaboot20x6
-3. cd gigaboot20x6
-4. make
-5. copy out/osboot.efi to /EFI/BOOT/BOOTX64.EFI on the usb flash drive
-6. Use this flash drive to network boot.
-7. If you copy magenta.bin to /magenta.bin on the flash drive it will boot from the flash drive instead of the network
+1. Format the first partition on a USB flash drive as FAT.
+2. Build the bootloader: `(cd $MAGENTA_ROOT/bootloader; make)`
+3. Copy `$MAGENTA_ROOT/bootloader/out/osboot.efi` to `/EFI/BOOT/BOOTX64.EFI` on the USB flash drive.
+4. Use this flash drive to network boot.
+5. If you copy `magenta.bin` to `/magenta.bin` on the flash drive it will boot from the flash drive instead of the network.
 
 ## Important: network booting only works with the *built-in* ethernet port on the NUC, not via a USB dongle.

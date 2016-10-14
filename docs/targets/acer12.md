@@ -53,12 +53,12 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 7. Check that “Windows Boot Manager” didn’t get moved to the top of the boot order, fix it if it did
 
 ## How to Create a Bootable USB Flash Drive
-1. Check out and build GigaBoot20x6: https://fuchsia.googlesource.com/gigaboot20x6
-  * Note: build without parallelism (no -j flag to make)
+1. Build the bootloader
+  * `(cd $MAGENTA_ROOT/bootloader; make)`
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
-3. Copy gigaboot20x6/out/osboot.efi to EFI/BOOT/BOOTX64.EFI on the USB Flash Drive
-4. Copy build-magenta-pc-x86-64/magenta.bin to the root of the USB Flash Drive
-5. Optionally copy an additional bootfs image to ramdisk.bin on the root of the USB Flash Drive
+3. Copy `$MAGENTA_ROOT/bootloader/out/osboot.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive
+4. Copy `build-magenta-pc-x86-64/magenta.bin` to the root of the USB Flash Drive
+5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive
 
 If you need to boot magenta over the network, skip step 4 and/or delete
 magenta.bin from the root of the USB Flash Drive.
