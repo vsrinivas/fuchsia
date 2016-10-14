@@ -766,7 +766,7 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
     // ensure file does not exist
     mx_status_t status;
     if ((status = vn_dir_for_each(vndir, &args, cb_dir_find)) != ERR_NOT_FOUND) {
-        return ERR_IO; //TODO: err exists
+        return ERR_ALREADY_EXISTS;
     }
 
     // creating a directory?
