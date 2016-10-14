@@ -138,8 +138,8 @@ typedef struct {
     uint8_t  io_base;
     uint8_t  io_limit;
     uint16_t secondary_status;
-    uint16_t memory_limit;
     uint16_t memory_base;
+    uint16_t memory_limit;
     uint16_t prefetchable_memory_limit;
     uint16_t prefetchable_memory_base;
     uint32_t prefetchable_memory_base_upper;
