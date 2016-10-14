@@ -8,9 +8,18 @@
 
 #include <stdio.h>
 
-static uint32_t dev_get_prop(mx_device_t* dev, uint32_t id) {
-    const mx_device_prop_t* props = dev->props;
-    const mx_device_prop_t* end = dev->props + dev->prop_count;
+typedef struct {
+    const mx_device_prop_t* props;
+    const mx_device_prop_t* end;
+    uint32_t protocol_id;
+    uint32_t binding_size;
+    const mx_bind_inst_t* binding;
+    const char* name;
+} bpctx_t;
+
+static uint32_t dev_get_prop(bpctx_t* ctx, uint32_t id) {
+    const mx_device_prop_t* props = ctx->props;
+    const mx_device_prop_t* end = ctx->end;
 
     while (props < end) {
         if (props->id == id) {
@@ -21,16 +30,16 @@ static uint32_t dev_get_prop(mx_device_t* dev, uint32_t id) {
 
     // fallback for devices without properties
     if (id == BIND_PROTOCOL) {
-        return dev->protocol_id;
+        return ctx->protocol_id;
     }
 
     // TODO: better process for missing properties
     return 0;
 }
 
-bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
-    const mx_bind_inst_t* ip = drv->binding;
-    const mx_bind_inst_t* end = ip + (drv->binding_size / sizeof(mx_bind_inst_t));
+static bool is_bindable(bpctx_t* ctx) {
+    const mx_bind_inst_t* ip = ctx->binding;
+    const mx_bind_inst_t* end = ip + (ctx->binding_size / sizeof(mx_bind_inst_t));
     uint32_t flags = 0;
 
     while (ip < end) {
@@ -42,7 +51,7 @@ bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
             uint32_t pid = BINDINST_PB(inst);
             uint32_t pval;
             if (pid != BIND_FLAGS) {
-                pval = dev_get_prop(dev, pid);
+                pval = dev_get_prop(ctx, pid);
             } else {
                 pval = flags;
             }
@@ -75,7 +84,7 @@ bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
                 break;
             default:
                 // illegal instruction: abort
-                printf("devmgr: dev %p illegal bindinst 0x%08x\n", dev, inst);
+                printf("devmgr: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
                 return false;
             }
         } else {
@@ -96,7 +105,7 @@ bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
                         goto next_instruction;
                     }
                 }
-                printf("devmgr: dev %p illegal GOTO\n", dev);
+                printf("devmgr: driver '%s' illegal GOTO\n", ctx->name);
                 return false;
             }
             case OP_SET:
@@ -110,7 +119,7 @@ bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev) {
                 break;
             default:
                 // illegal instruction: abort
-                printf("devmgr: dev %p illegal bindinst 0x%08x\n", dev, inst);
+                printf("devmgr: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
                 return false;
             }
         }
@@ -121,4 +130,38 @@ next_instruction:
 
     // default if we leave the program is no-match
     return false;
+}
+
+bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev) {
+    bpctx_t ctx;
+    ctx.props = dev->props;
+    ctx.end = dev->props + dev->prop_count;
+    ctx.protocol_id = dev->protocol_id;
+    ctx.binding = drv->binding;
+    ctx.binding_size = drv->binding_size;
+    ctx.name = drv->name;
+    return is_bindable(&ctx);
+}
+
+bool devhost_is_bindable_di(magenta_driver_info_t* di, mx_device_t* dev) {
+    bpctx_t ctx;
+    ctx.props = dev->props;
+    ctx.end = dev->props + dev->prop_count;
+    ctx.protocol_id = dev->protocol_id;
+    ctx.binding = di->binding;
+    ctx.binding_size = di->binding_size;
+    ctx.name = di->note->name;
+    return is_bindable(&ctx);
+}
+
+bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
+                         mx_device_prop_t* props, uint32_t prop_count) {
+    bpctx_t ctx;
+    ctx.props = props;
+    ctx.end = props + prop_count;
+    ctx.protocol_id = protocol_id;
+    ctx.binding = di->binding;
+    ctx.binding_size = di->binding_size;
+    ctx.name = di->note->name;
+    return is_bindable(&ctx);
 }

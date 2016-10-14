@@ -150,7 +150,7 @@ static mx_status_t devhost_device_probe(mx_device_t* dev, mx_driver_t* drv) {
     }
 
     // evaluate the driver's binding program against the device's properties
-    if (!devhost_is_bindable(drv, dev)) {
+    if (!devhost_is_bindable_drv(drv, dev)) {
         return ERR_NOT_SUPPORTED;
     }
 

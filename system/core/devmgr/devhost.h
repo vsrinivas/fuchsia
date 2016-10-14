@@ -5,6 +5,8 @@
 #pragma once
 
 #include "device-internal.h"
+
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
@@ -46,8 +48,11 @@ void devhost_device_set_bindable(mx_device_t* dev, bool bindable);
 mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out,
                                  const char* path, uint32_t flags);
 mx_status_t devhost_device_close(mx_device_t* dev);
-bool devhost_is_bindable(mx_driver_t* drv, mx_device_t* dev);
 
+bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev);
+bool devhost_is_bindable_di(magenta_driver_info_t* di, mx_device_t* dev);
+bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
+                         mx_device_prop_t* props, uint32_t prop_count);
 
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
