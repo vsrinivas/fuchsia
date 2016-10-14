@@ -124,6 +124,10 @@ mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_
         // TODO: test against right
         vmm_flags |= VMM_FLAG_VALLOC_SPECIFIC;
     }
+    if (flags & MX_VM_FLAG_ALLOC_BASE) {
+        // TODO: test against right
+        vmm_flags |= VMM_FLAG_VALLOC_BASE;
+    }
 
     // convert MX level mapping flags to internal VM flags
     uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;

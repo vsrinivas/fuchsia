@@ -111,12 +111,13 @@ private:
     mxtl::RefPtr<VmRegion> AllocRegion(const char* name, size_t size, vaddr_t vaddr,
                                        uint8_t align_pow2, size_t min_alloc_gap,
                                        uint vmm_flags, uint arch_mmu_flags);
-    vaddr_t AllocSpot(size_t size, uint8_t align_pow2, size_t min_alloc_gap,
-                      uint arch_mmu_flags, RegionTree::iterator* after);
+    vaddr_t AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_t min_alloc_gap,
+                      uint arch_mmu_flags);
     mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
     bool CheckGap(const RegionTree::iterator& prev,
                   const RegionTree::iterator& next,
-                  vaddr_t* pva, vaddr_t align, size_t region_size, size_t min_gap, uint arch_mmu_flags);
+                  vaddr_t* pva, vaddr_t search_base, vaddr_t align, size_t region_size,
+                  size_t min_gap, uint arch_mmu_flags);
 
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS

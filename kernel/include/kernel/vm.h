@@ -187,8 +187,9 @@ status_t vmm_reserve_space(vmm_aspace_t* aspace, const char* name, size_t size, 
     __NONNULL((1));
 
 /* For region creation routines */
-#define VMM_FLAG_VALLOC_SPECIFIC (1 << 0) /* allocate at specific address */
-#define VMM_FLAG_COMMIT (1 << 1)          /* commit memory up front (no demand paging) */
+#define VMM_FLAG_VALLOC_SPECIFIC (1u << 0) /* allocate at specific address */
+#define VMM_FLAG_VALLOC_BASE (1u << 1)     /* allocate starting at base address */
+#define VMM_FLAG_COMMIT (1u << 2)          /* commit memory up front (no demand paging) */
 
 /* allocate a region of virtual space that maps a physical piece of address space.
    the physical pages that back this are not allocated from the pmm. */
