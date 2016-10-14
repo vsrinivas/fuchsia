@@ -134,6 +134,13 @@ typedef struct mx_protocol_device {
                      const void* in_buf, size_t in_len,
                      void* out_buf, size_t out_len);
     // optional: do an device-specific io operation
+
+    mx_status_t (*suspend)(mx_device_t* dev);
+    // Stops the device and puts it in a low power mode
+
+    mx_status_t (*resume)(mx_device_t* dev);
+    // Restarts the device after being suspended
+
 } mx_protocol_device_t;
 
 // Device Convenience Wrappers

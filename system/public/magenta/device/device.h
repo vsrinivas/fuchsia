@@ -38,6 +38,20 @@
 #define IOCTL_DEVICE_GET_DEVICE_NAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 4)
 
+// Suspends the device
+// (intended for driver suspend/resume testing)
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_DEBUG_SUSPEND \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 5)
+
+// Resumes the device
+// (intended for driver suspend/resume testing)
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_DEBUG_RESUME \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 6)
+
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
 #define DEVICE_SIGNAL_READABLE MX_SIGNAL_SIGNAL0
@@ -58,3 +72,9 @@ IOCTL_WRAPPER_VAROUT(ioctl_device_get_driver_name, IOCTL_DEVICE_GET_DRIVER_NAME,
 
 // ssize_t ioctl_device_get_device_name(int fd, char* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_device_get_device_name, IOCTL_DEVICE_GET_DEVICE_NAME, char);
+
+// ssize_t ioctl_device_debug_suspend(int fd);
+IOCTL_WRAPPER(ioctl_device_debug_suspend, IOCTL_DEVICE_DEBUG_SUSPEND);
+
+// ssize_t ioctl_device_debug_resume(int fd);
+IOCTL_WRAPPER(ioctl_device_debug_resume, IOCTL_DEVICE_DEBUG_RESUME);

@@ -102,6 +102,14 @@ static ssize_t default_ioctl(mx_device_t* dev, uint32_t op,
     return ERR_NOT_SUPPORTED;
 }
 
+static mx_status_t default_suspend(mx_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static mx_status_t default_resume(mx_device_t* dev) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
 static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
 
@@ -272,6 +280,8 @@ static mx_status_t device_validate(mx_device_t* dev) {
     DEFAULT_IF_NULL(ops, iotxn_queue);
     DEFAULT_IF_NULL(ops, get_size);
     DEFAULT_IF_NULL(ops, ioctl);
+    DEFAULT_IF_NULL(ops, suspend);
+    DEFAULT_IF_NULL(ops, resume);
 
     return NO_ERROR;
 }

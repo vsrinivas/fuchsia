@@ -188,6 +188,14 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
         }
         break;
     }
+    case IOCTL_DEVICE_DEBUG_SUSPEND: {
+        r = dev->ops->suspend(dev);
+        break;
+    }
+    case IOCTL_DEVICE_DEBUG_RESUME: {
+        r = dev->ops->resume(dev);
+        break;
+    }
     default:
         r = dev->ops->ioctl(dev, op, in_buf, in_len, out_buf, out_len);
     }
