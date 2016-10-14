@@ -19,6 +19,33 @@ static efi_simple_network_protocol* snp;
 static efi_mac_addr mcast_filters[MAX_FILTER];
 static unsigned mcast_filter_count = 0;
 
+// if nonzero, drop 1 in DROP_PACKETS packets at random
+#define DROP_PACKETS 0
+
+#if DROP_PACKETS > 0
+
+//TODO: use libc random() once it's actually random
+
+// Xorshift32 prng
+typedef struct {
+    uint32_t n;
+} rand32_t;
+
+static inline uint32_t rand32(rand32_t* state) {
+    uint32_t n = state->n;
+    n ^= (n << 13);
+    n ^= (n >> 17);
+    n ^= (n << 5);
+    return (state->n = n);
+}
+
+rand32_t rstate = {.n = 0x8716253};
+#define random() rand32(&rstate)
+
+static int txc;
+static int rxc;
+#endif
+
 #define NUM_BUFFER_PAGES 8
 #define ETH_BUFFER_SIZE 1516
 #define ETH_HEADER_SIZE 16
@@ -62,8 +89,15 @@ void eth_put_buffer(void* data) {
 }
 
 int eth_send(void* data, size_t len) {
+#if DROP_PACKETS
+    txc++;
+    if ((random() % DROP_PACKETS) == 0) {
+        printf("tx drop %d\n", txc);
+        eth_put_buffer(data);
+        return 0;
+    }
+#endif
     efi_status r;
-
     if ((r = snp->Transmit(snp, 0, len, (void*)data, NULL, NULL, NULL))) {
         eth_put_buffer(data);
         return -1;
@@ -312,6 +346,15 @@ void netifc_poll(void) {
     if (r != EFI_SUCCESS) {
         return;
     }
+
+#if DROP_PACKETS
+    rxc++;
+    if ((random() % DROP_PACKETS) == 0) {
+        printf("rx drop %d\n", rxc);
+        return;
+    }
+#endif
+
 #if TRACE
     printf("RX %02x:%02x:%02x:%02x:%02x:%02x < %02x:%02x:%02x:%02x:%02x:%02x %02x%02x %d\n",
             data[0], data[1], data[2], data[3], data[4], data[5],

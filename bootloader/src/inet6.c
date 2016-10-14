@@ -9,10 +9,12 @@
 #include <inet6.h>
 
 #if 1
-#define BAD(n)                    \
-    do {                          \
-        printf("error: %s\n", n); \
-        return;                   \
+#define BAD(n, ...)                 \
+    do {                            \
+        printf("error: ");          \
+        printf(n, ####__VA_ARGS__); \
+        printf("\n");               \
+        return;                     \
     } while (0)
 #else
 #define BAD(n)  \
@@ -324,7 +326,7 @@ void icmp6_recv(ip6_hdr* ip, void* _data, size_t len) {
         return;
     }
 
-    BAD("ICMP6 Unhandled");
+    BAD("ICMP6 Unhandled %d", icmp->type);
 }
 
 void eth_recv(void* _data, size_t len) {
@@ -350,7 +352,7 @@ void eth_recv(void* _data, size_t len) {
     // ensure length is sane
     n = ntohs(ip->length);
     if (n > len)
-        BAD("IP6 Length Mismatch");
+        BAD("IP6 Length Mismatch %d %zu", n, len);
 
     // ignore any trailing data in the ethernet frame
     len = n;
@@ -375,7 +377,7 @@ void eth_recv(void* _data, size_t len) {
         return;
     }
 
-    BAD("Unhandled IP6");
+    BAD("Unhandled IP6 %d", ip->next_header);
 }
 
 char* ip6toa(char* _out, void* ip6addr) {

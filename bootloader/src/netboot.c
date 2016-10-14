@@ -27,6 +27,7 @@ void udp6_recv(void* data, size_t len,
                const ip6_addr* saddr, uint16_t sport) {
     nbmsg* msg = data;
     nbmsg ack;
+    int do_transmit = 1;
 
     if (dport != NB_SERVER_PORT)
         return;
@@ -35,11 +36,11 @@ void udp6_recv(void* data, size_t len,
         return;
     len -= sizeof(nbmsg);
 
-    //printf("netboot: MSG %08x %08x %08x %08x datalen %d\n",
-    //	msg->magic, msg->cookie, msg->cmd, msg->arg, len);
+    // printf("netboot: MSG %08x %08x %08x %08x datalen %zu\n",
+    //        msg->magic, msg->cookie, msg->cmd, msg->arg, len);
 
     if ((last_cookie == msg->cookie) &&
-        (last_cmd == msg->cmd) && (last_arg = msg->arg)) {
+        (last_cmd == msg->cmd) && (last_arg == msg->arg)) {
         // host must have missed the ack. resend
         ack.magic = NB_MAGIC;
         ack.cookie = last_cookie;
@@ -76,18 +77,27 @@ void udp6_recv(void* data, size_t len,
             ack.cmd = NB_ERROR_BAD_FILE;
         }
         break;
+
     case NB_DATA:
-        if (item == 0)
+    case NB_LAST_DATA:
+        if (item == 0) {
+            printf("netboot: > received chunk before NB_FILE\n");
             return;
-        if (msg->arg != item->offset)
-            return;
-        ack.arg = msg->arg;
-        if ((item->offset + len) > item->size) {
+        }
+        if (msg->arg != item->offset) {
+            printf("netboot: < received chunk at offset %d but current offset is %zu\n", msg->arg, item->offset);
+            ack.arg = item->offset;
+            ack.cmd = NB_ACK;
+        } else if ((item->offset + len) > item->size) {
             ack.cmd = NB_ERROR_TOO_LARGE;
+            ack.arg = msg->arg;
         } else {
             memcpy(item->data + item->offset, msg->data, len);
             item->offset += len;
-            ack.cmd = NB_ACK;
+            ack.cmd = msg->cmd == NB_LAST_DATA ? NB_FILE_RECEIVED : NB_ACK;
+            if (msg->cmd != NB_LAST_DATA) {
+                do_transmit = 0;
+            }
         }
         break;
     case NB_BOOT:
@@ -109,11 +119,16 @@ void udp6_recv(void* data, size_t len,
     ack.magic = NB_MAGIC;
 transmit:
     nb_active = 1;
-    udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
+    if (do_transmit) {
+        printf("netboot: MSG %08x %08x %08x %08x\n",
+           ack.magic, ack.cookie, ack.cmd, ack.arg);
+
+        udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
+    }
 }
 
 static char advertise_data[] =
-    "version\01.0\0"
+    "version\01.1\0"
     "serialno\0unknown\0"
     "board\0unknown\0";
 
@@ -123,7 +138,7 @@ static void advertise(void) {
     msg->magic = NB_MAGIC;
     msg->cookie = 0;
     msg->cmd = NB_ADVERTISE;
-    msg->arg = NB_VERSION_1_0;
+    msg->arg = NB_VERSION_CURRENT;
     memcpy(msg->data, advertise_data, sizeof(advertise_data));
     udp6_send(buffer, sizeof(nbmsg) + sizeof(advertise_data),
               &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT);

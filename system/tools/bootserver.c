@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <errno.h>
@@ -24,89 +25,170 @@
 static uint32_t cookie = 1;
 static char* appname;
 static const char spinner[] = {'|', '/', '-', '\\'};
+static const int MAX_READ_RETRIES = 10;
+static const int MAX_SEND_RETRIES = 10000;
 
-static int io(int s, nbmsg* msg, size_t len, nbmsg* ack) {
-    int retries = 5;
-    int r;
+static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
+    for (int i = 0; i < MAX_READ_RETRIES; i++) {
+        bool retry_allowed = i + 1 < MAX_READ_RETRIES;
 
-    msg->magic = NB_MAGIC;
-    msg->cookie = cookie++;
-
-    for (;;) {
-        r = write(s, msg, len);
+        int r = read(s, ack, 2048);
         if (r < 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+            if (retry_allowed && errno == EAGAIN) {
                 continue;
             }
-            fprintf(stderr, "\n%s: socket write error %d\n", appname, errno);
-            return -1;
-        }
-    again:
-        r = read(s, ack, 2048);
-
-        if (r < 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                retries--;
-                if (retries > 0) {
-                    fprintf(stderr, "T");
-                    continue;
-                }
-                fprintf(stderr, "\n%s: timed out\n", appname);
-            } else {
-                fprintf(stderr, "\n%s: socket read error %d\n", appname, errno);
-            }
+            fprintf(stderr, "\n%s: error: Socket read error %d\n", appname, errno);
             return -1;
         }
         if (r < sizeof(nbmsg)) {
-            fprintf(stderr, "\n%s: Read too short\n", appname);
-            goto again;
+            fprintf(stderr, "\n%s: error: Read too short\n", appname);
+            return -1;
         }
+#ifdef DEBUG
+        fprintf(stdout, " < magic = %08x, cookie = %08x, cmd = %08x, arg = %08x\n",
+                ack->magic, ack->cookie, ack->cmd, ack->arg);
+#endif
+
         if (ack->magic != NB_MAGIC) {
-            fprintf(stderr, "\n%s: Bad magic\n", appname);
-            goto again;
-        }
-        if (ack->cookie != msg->cookie) {
-            fprintf(stderr, "\n%s: Bad cookie\n", appname);
-            goto again;
-        }
-        if (ack->arg != msg->arg) {
-            fprintf(stderr, "\n%s: Argument mismatch\n", appname);
-            goto again;
-        }
-        if (ack->cmd == NB_ACK)
+            fprintf(stderr, "\n%s: error: Bad magic\n", appname);
             return 0;
+        }
+        if (msg) {
+            if (ack->cookie > msg->cookie) {
+                fprintf(stderr, "\n%s: error: Bad cookie\n", appname);
+                return 0;
+            }
+        }
+
+        if (ack->cmd == NB_ACK || ack->cmd == NB_FILE_RECEIVED) {
+            if (msg && ack->arg > msg->arg) {
+                fprintf(stderr, "\n%s: error: Argument mismatch\n", appname);
+                return 0;
+            }
+            return 0;
+        }
 
         switch (ack->cmd) {
         case NB_ERROR:
-            fprintf(stderr, "\n%s: Generic error\n", appname);
-            return -1;
+            fprintf(stderr, "\n%s: error: Generic error\n", appname);
+            break;
         case NB_ERROR_BAD_CMD:
-            fprintf(stderr, "\n%s: Bad command\n", appname);
-            return -1;
+            fprintf(stderr, "\n%s: error: Bad command\n", appname);
+            break;
         case NB_ERROR_BAD_PARAM:
-            fprintf(stderr, "\n%s: Bad parameter\n", appname);
-            return -1;
+            fprintf(stderr, "\n%s: error: Bad parameter\n", appname);
+            break;
         case NB_ERROR_TOO_LARGE:
-            fprintf(stderr, "\n%s: File too large\n", appname);
-            return -1;
+            fprintf(stderr, "\n%s: error: File too large\n", appname);
+            break;
         case NB_ERROR_BAD_FILE:
-            fprintf(stderr, "\n%s: Bad file\n", appname);
-            return -1;
+            fprintf(stderr, "\n%s: error: Bad file\n", appname);
+            break;
         default:
-            fprintf(stderr, "\n%s: Unknown command 0x%08X\n", appname, ack->cmd);
+            fprintf(stderr, "\n%s: error: Unknown command 0x%08X\n", appname, ack->cmd);
         }
-
-        goto again;
+        return -1;
     }
+    fprintf(stderr, "\n%s: error: Unexpected code path\n", appname);
+    return -1;
+}
+
+static int io_send(int s, nbmsg* msg, size_t len) {
+    for (int i = 0; i < MAX_SEND_RETRIES; i++) {
+#if defined(__APPLE__)
+        bool retry_allowed = i + 1 < MAX_SEND_RETRIES;
+#endif
+
+        int r = write(s, msg, len);
+        if (r < 0) {
+#if defined(__APPLE__)
+            if (retry_allowed && errno == ENOBUFS) {
+                // On Darwin we manage to overflow the ethernet driver, so retry
+                struct timespec reqtime;
+                reqtime.tv_sec = 0;
+                reqtime.tv_nsec = 50 * 1000;
+                nanosleep(&reqtime, NULL);
+                continue;
+            }
+#endif
+            fprintf(stderr, "\n%s: error: Socket write error %d\n", appname, errno);
+            return -1;
+        }
+        return 0;
+    }
+    fprintf(stderr, "\n%s: error: Unexpected code path\n", appname);
+    return -1;
+}
+
+static int io(int s, nbmsg* msg, size_t len, nbmsg* ack, bool wait_reply) {
+    int r, n;
+    struct timeval tv;
+    fd_set reads, writes;
+    fd_set* ws = NULL;
+    fd_set* rs = NULL;
+
+    ack->cookie = 0;
+    ack->cmd = 0;
+    ack->arg = 0;
+
+    FD_ZERO(&reads);
+    if (!wait_reply) {
+        FD_SET(s, &reads);
+        rs = &reads;
+    }
+
+    FD_ZERO(&writes);
+    if (msg && len > 0) {
+        msg->magic = NB_MAGIC;
+        msg->cookie = cookie++;
+
+        FD_SET(s, &writes);
+        ws = &writes;
+    }
+
+    if (rs || ws) {
+        n = s + 1;
+        tv.tv_sec = 10;
+        tv.tv_usec = 500000;
+        int rv = select(n, rs, ws, NULL, &tv);
+        if (rv == -1) {
+            fprintf(stderr, "\n%s: error: Select failed %d\n", appname, errno);
+            return -1;
+        } else if (rv == 0) {
+            // Timed-out
+            fprintf(stderr, "\n%s: error: Select timed out\n", appname);
+            return -1;
+        } else {
+            if (FD_ISSET(s, &reads)) {
+                r = io_rcv(s, msg, ack);
+            }
+
+            if (FD_ISSET(s, &writes)) {
+                r = io_send(s, msg, len);
+            }
+
+            if (!wait_reply) {
+                return r;
+            }
+        }
+    } else if (!wait_reply) { // no-op
+        return 0;
+    }
+
+    if (wait_reply) {
+        return io_rcv(s, msg, ack);
+    }
+    fprintf(stderr, "\n%s: error: Select triggered without events\n", appname);
+    return -1;
 }
 
 typedef struct {
     FILE* fp;
-    const char *data;
+    const char* data;
     size_t datalen;
 } xferdata;
 
-static ssize_t xread(xferdata *xd, void* data, size_t len) {
+static ssize_t xread(xferdata* xd, void* data, size_t len) {
     if (xd->fp == NULL) {
         if (len > xd->datalen) {
             len = xd->datalen;
@@ -138,12 +220,13 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     char ackbuf[2048];
     char tmp[INET6_ADDRSTRLEN];
     struct timeval tv;
-    struct timeval begin, end;
+    struct timeval begin, last, end;
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
     int s, r;
     int count = 0, spin = 0;
     int status = -1;
+    size_t current_pos = 0;
 
     // This only works on POSIX systems
     bool is_redirected = !isatty(fileno(stdout));
@@ -154,34 +237,35 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
         xd.datalen = strlen(name) + 1;
         name = "cmdline";
     } else if ((xd.fp = fopen(fn, "rb")) == NULL) {
-        fprintf(stderr, "%s: could not open file %s\n", appname, fn);
+        fprintf(stderr, "%s: error: Could not open file %s\n", appname, fn);
         return -1;
     }
 
     long sz = 0;
     if (xd.fp) {
         if (fseek(xd.fp, 0L, SEEK_END)) {
-            fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+            fprintf(stderr, "%s: error: Could not determine size of %s\n", appname, fn);
         } else if ((sz = ftell(xd.fp)) < 0) {
-            fprintf(stderr, "%s: could not determine size of %s\n", appname, fn);
+            fprintf(stderr, "%s: error: Could not determine size of %s\n", appname, fn);
             sz = 0;
         } else if (fseek(xd.fp, 0L, SEEK_SET)) {
-            fprintf(stderr, "%s: failed to rewind %s\n", appname, fn);
+            fprintf(stderr, "%s: error: Failed to rewind %s\n", appname, fn);
             return -1;
         }
     }
 
     if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-        fprintf(stderr, "%s: cannot create socket %d\n", appname, errno);
+        fprintf(stderr, "%s: error: Cannot create socket %d\n", appname, errno);
         goto done;
     }
     fprintf(stderr, "%s: sending '%s'...\n", appname, fn);
     gettimeofday(&begin, NULL);
+    last = begin;
     tv.tv_sec = 0;
     tv.tv_usec = 250 * 1000;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     if (connect(s, (void*)addr, sizeof(*addr)) < 0) {
-        fprintf(stderr, "%s: cannot connect to [%s]%d\n", appname,
+        fprintf(stderr, "%s: error: Cannot connect to [%s]%d\n", appname,
                 inet_ntop(AF_INET6, &addr->sin6_addr, tmp, sizeof(tmp)),
                 ntohs(addr->sin6_port));
         goto done;
@@ -190,22 +274,26 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     msg->cmd = NB_SEND_FILE;
     msg->arg = sz;
     strcpy((void*)msg->data, name);
-    if (io(s, msg, sizeof(nbmsg) + strlen(name) + 1, ack)) {
-        fprintf(stderr, "%s: failed to start transfer\n", appname);
+    if (io(s, msg, sizeof(nbmsg) + strlen(name) + 1, ack, true)) {
+        fprintf(stderr, "%s: error: Failed to start transfer\n", appname);
         goto done;
     }
 
     msg->cmd = NB_DATA;
     msg->arg = 0;
 
+    bool completed = false;
     do {
         r = xread(&xd, msg->data, PAYLOAD_SIZE);
         if (r < 0) {
-            fprintf(stderr, "\n%s: error: reading '%s'\n", appname, fn);
+            fprintf(stderr, "\n%s: error: Reading '%s'\n", appname, fn);
             goto done;
         }
-        if (r == 0) {
-            break;
+
+        gettimeofday(&end, NULL);
+        if (end.tv_usec < begin.tv_usec) {
+            end.tv_sec -= 1;
+            end.tv_usec += 1000000;
         }
 
         if (is_redirected) {
@@ -214,40 +302,81 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
                 count = 0;
             }
         } else {
-            if (count++ > 1024) {
+            if (count++ > 1024 || r == 0) {
                 count = 0;
-                gettimeofday(&end, NULL);
-                if (end.tv_usec < begin.tv_usec) {
-                    end.tv_sec -= 1;
-                    end.tv_usec += 1000000;
-                }
                 float bw = 0;
                 if (end.tv_sec > begin.tv_sec) {
-                    bw = (float)msg->arg / (1024.0 * 1024.0 * (float)(end.tv_sec - begin.tv_sec));
+                    bw = (float)current_pos / (1024.0 * 1024.0 * (float)(end.tv_sec - begin.tv_sec));
                 }
                 fprintf(stderr, "\33[2K\r");
                 if (sz > 0) {
-                    fprintf(stderr, "%c %.01f%% %.01fMB/s", spinner[(spin++) % 4], 100.0 * (float)msg->arg / (float)sz, bw);
+                    fprintf(stderr, "%c %.01f%%", spinner[(spin++) % 4], 100.0 * (float)current_pos / (float)sz);
                 } else {
-                    fprintf(stderr, "%c %.01fMB/s", spinner[(spin++) % 4], bw);
+                    fprintf(stderr, "%c", spinner[(spin++) % 4]);
+                }
+                if (bw > 0.1) {
+                    fprintf(stderr, " %.01fMB/s", bw);
                 }
             }
         }
 
-        if (io(s, msg, sizeof(nbmsg) + r, ack)) {
-            fprintf(stderr, "\n%s: error: sending '%s'\n", appname, fn);
-            goto done;
+        if (r == 0) {
+            fprintf(stderr, "\n%s: Reached end of file, waiting for confirmation.\n", appname);
+            // Do not send anything, but keep waiting on incoming messages
+            if (io(s, NULL, 0, ack, true)) {
+                goto done;
+            }
+        } else {
+            if (current_pos + r >= sz) {
+                msg->cmd = NB_LAST_DATA;
+            } else {
+                msg->cmd = NB_DATA;
+            }
+
+            if (io(s, msg, sizeof(nbmsg) + r, ack, false)) {
+                goto done;
+            }
+
+            // Some UEFI netstacks can lose back-to-back packets at max speed
+            // so throttle output.
+            // At 1280 bytes per packet, we should at least have 10 microseconds
+            // between packets, to be safe using 20 microseconds here.
+            // 1280 bytes * (1,000,000/10) seconds = 128,000,000 bytes/seconds = 122MB/s = 976Mb/s
+            int64_t microseconds = (end.tv_sec - last.tv_sec) * 1000000 + ((int)end.tv_usec - (int)last.tv_usec);
+            uint64_t throttle = 20 - microseconds;
+            if (throttle > 0 && throttle < 1000) {
+                struct timespec reqtime;
+                reqtime.tv_sec = 0;
+                reqtime.tv_nsec = throttle * 1000;
+                nanosleep(&reqtime, NULL);
+            }
         }
-        msg->arg += r;
-    } while (r != 0);
+        last = end;
+
+        // ACKs really are NACKs
+        if (ack->cookie > 0 && ack->cmd == NB_ACK && ack->arg != current_pos) {
+            fprintf(stderr, "\n%s: need to rewind to %d from %zu\n", appname, ack->arg, current_pos);
+            current_pos = ack->arg;
+            if (fseek(xd.fp, current_pos, SEEK_SET)) {
+                fprintf(stderr, "\n%s: error: Failed to rewind '%s' to %zu\n", appname, fn, current_pos);
+                goto done;
+            }
+        } else if (ack->cmd == NB_FILE_RECEIVED) {
+            completed = true;
+        } else {
+            current_pos += r;
+        }
+
+        msg->arg = current_pos;
+    } while (!completed);
 
     status = 0;
 
     if (boot) {
         msg->cmd = NB_BOOT;
         msg->arg = 0;
-        if (io(s, msg, sizeof(nbmsg), ack)) {
-            fprintf(stderr, "\n%s: failed to send boot command\n", appname);
+        if (io(s, msg, sizeof(nbmsg), ack, true)) {
+            fprintf(stderr, "\n%s: error: Failed to send boot command\n", appname);
         } else {
             fprintf(stderr, "\n%s: sent boot command\n", appname);
         }
@@ -260,7 +389,8 @@ done:
         end.tv_sec -= 1;
         end.tv_usec += 1000000;
     }
-    fprintf(stderr, "%s: %d.%06d sec\n\n", appname, (int)(end.tv_sec - begin.tv_sec),
+    fprintf(stderr, "%s: %s %ldMB %d.%06d sec\n\n", appname,
+            fn, current_pos / (1024 * 1024), (int)(end.tv_sec - begin.tv_sec),
             (int)(end.tv_usec - begin.tv_usec));
     if (s >= 0) {
         close(s);
@@ -293,7 +423,7 @@ int main(int argc, char** argv) {
     struct sockaddr_in6 addr;
     char tmp[INET6_ADDRSTRLEN];
     char cmdline[4096];
-    char *cmdnext = cmdline;
+    char* cmdnext = cmdline;
     int r, s, n = 1;
     const char* kernel_fn = NULL;
     const char* ramdisk_fn = NULL;
@@ -386,7 +516,7 @@ int main(int argc, char** argv) {
             continue;
         if (msg->cmd != NB_ADVERTISE)
             continue;
-        if (msg->arg != NB_VERSION_1_0) {
+        if (msg->arg != NB_VERSION_CURRENT) {
             fprintf(stderr, "%s: Incompatible version 0x%08X of booloader detected from [%s]%d, please upgrade your bootloader\n", appname, msg->arg,
                     inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
                     ntohs(ra.sin6_port));
