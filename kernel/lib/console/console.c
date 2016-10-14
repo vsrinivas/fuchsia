@@ -243,7 +243,7 @@ static inline void cputchar(char c) {
     putchar(c);
 }
 static inline void cputs(const char* s) {
-    fputs(s, stdout);
+    puts(s);
 }
 #endif
 
