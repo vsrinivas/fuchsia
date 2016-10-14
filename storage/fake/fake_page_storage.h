@@ -5,13 +5,14 @@
 #ifndef APPS_LEDGER_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 #define APPS_LEDGER_STORAGE_FAKE_FAKE_PAGE_STORAGE_H_
 
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "apps/ledger/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -47,9 +48,9 @@ class FakePageStorage : public PageStorage {
                             std::vector<Object>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   Status AddObjectFromSync(ObjectIdView object_id,
-                           mojo::DataPipeConsumerHandle data,
+                           mojo::ScopedDataPipeConsumerHandle data,
                            size_t size) override;
-  Status AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
+  Status AddObjectFromLocal(mojo::ScopedDataPipeConsumerHandle data,
                             size_t size,
                             ObjectId* object_id) override;
   void GetBlob(
@@ -59,11 +60,12 @@ class FakePageStorage : public PageStorage {
 
   // For testing:
   const std::vector<std::unique_ptr<FakeJournalDelegate>>& GetJournals() const;
-  const std::unordered_map<ObjectId, std::string>& GetObjects() const;
+  const std::map<ObjectId, std::string, convert::StringViewComparator>&
+  GetObjects() const;
 
  private:
   std::vector<std::unique_ptr<FakeJournalDelegate>> journals_;
-  std::unordered_map<ObjectId, std::string> objects_;
+  std::map<ObjectId, std::string, convert::StringViewComparator> objects_;
   PageId page_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);

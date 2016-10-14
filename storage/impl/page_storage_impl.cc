@@ -141,15 +141,17 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::AddObjectFromSync(ObjectIdView object_id,
-                                          mojo::DataPipeConsumerHandle data,
-                                          size_t size) {
+Status PageStorageImpl::AddObjectFromSync(
+    ObjectIdView object_id,
+    mojo::ScopedDataPipeConsumerHandle data,
+    size_t size) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
-                                           size_t size,
-                                           ObjectId* object_id) {
+Status PageStorageImpl::AddObjectFromLocal(
+    mojo::ScopedDataPipeConsumerHandle data,
+    size_t size,
+    ObjectId* object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 

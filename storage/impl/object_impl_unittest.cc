@@ -63,12 +63,10 @@ TEST_F(ObjectTest, Object) {
 
   ObjectImpl object(object_id_, object_file_path_);
   EXPECT_EQ(object_id_, object.GetId());
-  int64_t foundSize;
-  EXPECT_EQ(Status::OK, object.GetSize(&foundSize));
-  EXPECT_EQ(static_cast<int64_t>(kFileSize), foundSize);
-  const uint8_t* foundData;
+  ftl::StringView foundData;
   EXPECT_EQ(Status::OK, object.GetData(&foundData));
-  EXPECT_EQ(0, memcmp(data.data(), foundData, kFileSize));
+  EXPECT_EQ(kFileSize, foundData.size());
+  EXPECT_EQ(0, memcmp(data.data(), foundData.data(), kFileSize));
 }
 
 }  // namespace

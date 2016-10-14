@@ -16,6 +16,22 @@ namespace storage {
 namespace fake {
 namespace {
 
+class FakeObject : public Object {
+ public:
+  FakeObject(ObjectIdView id, ftl::StringView content)
+      : id_(id.ToString()), content_(content.ToString()) {}
+  ~FakeObject() {}
+  ObjectId GetId() const override { return id_; }
+  Status GetData(ftl::StringView* data) override {
+    *data = content_;
+    return Status::OK;
+  }
+
+ private:
+  ObjectId id_;
+  std::string content_;
+};
+
 storage::ObjectId RandomId() {
   std::string result;
   result.resize(kObjectIdSize);
@@ -107,17 +123,19 @@ Status FakePageStorage::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status FakePageStorage::AddObjectFromSync(ObjectIdView object_id,
-                                          mojo::DataPipeConsumerHandle data,
-                                          size_t size) {
+Status FakePageStorage::AddObjectFromSync(
+    ObjectIdView object_id,
+    mojo::ScopedDataPipeConsumerHandle data,
+    size_t size) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status FakePageStorage::AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
-                                           size_t size,
-                                           ObjectId* object_id) {
+Status FakePageStorage::AddObjectFromLocal(
+    mojo::ScopedDataPipeConsumerHandle data,
+    size_t size,
+    ObjectId* object_id) {
   std::string value;
-  mtl::BlockingCopyToString(mojo::ScopedDataPipeConsumerHandle(data), &value);
+  mtl::BlockingCopyToString(std::move(data), &value);
   if (value.size() != size) {
     return Status::ILLEGAL_STATE;
   }
@@ -130,7 +148,13 @@ void FakePageStorage::GetBlob(
     ObjectIdView blob_id,
     const std::function<void(Status status, std::unique_ptr<Blob> blob)>
         callback) {
-  callback(Status::NOT_IMPLEMENTED, nullptr);
+  auto it = objects_.find(blob_id);
+  if (it == objects_.end()) {
+    callback(Status::NOT_FOUND, nullptr);
+    return;
+  }
+
+  callback(Status::OK, std::make_unique<FakeObject>(blob_id, it->second));
 }
 
 const std::vector<std::unique_ptr<FakeJournalDelegate>>&
@@ -138,8 +162,8 @@ FakePageStorage::GetJournals() const {
   return journals_;
 }
 
-const std::unordered_map<ObjectId, std::string>& FakePageStorage::GetObjects()
-    const {
+const std::map<ObjectId, std::string, convert::StringViewComparator>&
+FakePageStorage::GetObjects() const {
   return objects_;
 }
 

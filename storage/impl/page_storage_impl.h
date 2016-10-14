@@ -50,9 +50,9 @@ class PageStorageImpl : public PageStorage {
                             std::vector<Object>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   Status AddObjectFromSync(ObjectIdView object_id,
-                           mojo::DataPipeConsumerHandle data,
+                           mojo::ScopedDataPipeConsumerHandle data,
                            size_t size) override;
-  Status AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
+  Status AddObjectFromLocal(mojo::ScopedDataPipeConsumerHandle data,
                             size_t size,
                             ObjectId* object_id) override;
   void GetBlob(

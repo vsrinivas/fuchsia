@@ -140,8 +140,7 @@ class TreeNode : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetSize(int64_t* size) override;
-  Status GetData(const uint8_t** data) override;
+  Status GetData(ftl::StringView* data) override;
 
  private:
   TreeNode(ObjectStore* store,

@@ -14,11 +14,18 @@
 
 namespace ledger {
 namespace {
-Status ConvertStatus(storage::Status status) {
-  if (status != storage::Status::OK) {
-    return Status::IO_ERROR;
-  } else {
-    return Status::OK;
+// Maximal size of data that will be returned inline.
+const size_t kMaxInlineDataSize = 2048;
+
+Status ConvertStatus(storage::Status status,
+                     Status not_found_status = Status::INTERNAL_ERROR) {
+  switch (status) {
+    case storage::Status::OK:
+      return Status::OK;
+    case storage::Status::NOT_FOUND:
+      return not_found_status;
+    default:
+      return Status::INTERNAL_ERROR;
   }
 }
 
@@ -105,7 +112,7 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
   mojo::ScopedDataPipeConsumerHandle data_pipe =
       mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
   storage::Status status = storage_->AddObjectFromLocal(
-      data_pipe.release(), value.size(), &object_id);
+      std::move(data_pipe), value.size(), &object_id);
   if (status != storage::Status::OK) {
     callback.Run(ConvertStatus(status));
     return;
@@ -141,7 +148,7 @@ Status PageImpl::PutInCommit(convert::ExtendedStringView key,
 void PageImpl::Delete(mojo::Array<uint8_t> key,
                       const DeleteCallback& callback) {
   callback.Run(RunInTransaction([&key](storage::Journal* journal) {
-    return ConvertStatus(journal->Delete(key));
+    return ConvertStatus(journal->Delete(key), Status::KEY_NOT_FOUND);
   }));
 }
 
@@ -150,15 +157,49 @@ void PageImpl::Delete(mojo::Array<uint8_t> key,
 void PageImpl::CreateReference(int64_t size,
                                mojo::ScopedDataPipeConsumerHandle data,
                                const CreateReferenceCallback& callback) {
-  FTL_LOG(ERROR) << "PageImpl::CreateReference not implemented";
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  storage::ObjectId object_id;
+  storage::Status status =
+      storage_->AddObjectFromLocal(std::move(data), size, &object_id);
+  if (status != storage::Status::OK) {
+    callback.Run(ConvertStatus(status), nullptr);
+    return;
+  }
+
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+  callback.Run(Status::OK, std::move(reference));
 }
 
 // GetReference(Reference reference) => (Status status, Value? value);
 void PageImpl::GetReference(ReferencePtr reference,
                             const GetReferenceCallback& callback) {
-  FTL_LOG(ERROR) << "PageImpl::GetReference not implemented";
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  storage_->GetBlob(
+      reference->opaque_id,
+      [callback](storage::Status status, std::unique_ptr<storage::Blob> blob) {
+        if (status != storage::Status::OK) {
+          callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
+                       nullptr);
+          return;
+        }
+        ftl::StringView data;
+        status = blob->GetData(&data);
+        if (status != storage::Status::OK) {
+          callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
+                       nullptr);
+          return;
+        }
+        if (data.size() <= kMaxInlineDataSize) {
+          ValuePtr value = Value::New();
+          value->set_bytes(convert::ToArray(data));
+          callback.Run(Status::OK, std::move(value));
+          return;
+        }
+
+        // TODO(qsr) Implements streaming.
+        FTL_LOG(ERROR)
+            << "PageImpl::PageImpl::GetReference doesn't handle large values.";
+        callback.Run(Status::UNKNOWN_ERROR, nullptr);
+      });
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)

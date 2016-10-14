@@ -9,6 +9,7 @@
 
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace storage {
 
@@ -20,11 +21,8 @@ class Object {
   // Returns the id of this storage object.
   virtual ObjectId GetId() const = 0;
 
-  // Returns the size in bytes of this object.
-  virtual Status GetSize(int64_t* size) = 0;
-
   // Returns the data of this object.
-  virtual Status GetData(const uint8_t** data) = 0;
+  virtual Status GetData(ftl::StringView* data) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Object);

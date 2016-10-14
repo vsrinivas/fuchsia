@@ -170,11 +170,7 @@ ObjectId TreeNode::GetId() const {
   return id_;
 }
 
-Status TreeNode::GetSize(int64_t* size) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status TreeNode::GetData(const uint8_t** data) {
+Status TreeNode::GetData(ftl::StringView* data) {
   return Status::NOT_IMPLEMENTED;
 }
 

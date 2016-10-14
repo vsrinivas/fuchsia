@@ -60,10 +60,10 @@ struct StringViewComparator {
   bool operator()(const std::string& lhs, const std::string& rhs) const {
     return lhs < rhs;
   }
-  bool operator()(ftl::StringView lhs, const std::string& rhs) const {
+  bool operator()(ExtendedStringView lhs, const std::string& rhs) const {
     return lhs < ftl::StringView(rhs);
   }
-  bool operator()(const std::string& lhs, ftl::StringView rhs) const {
+  bool operator()(const std::string& lhs, ExtendedStringView rhs) const {
     return ftl::StringView(lhs) < rhs;
   }
 };

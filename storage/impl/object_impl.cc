@@ -24,20 +24,7 @@ ObjectId ObjectImpl::GetId() const {
   return id_;
 }
 
-Status ObjectImpl::GetSize(int64_t* size) {
-  if (data_.empty()) {
-    int64_t res;
-    if (!files::GetFileSize(file_path_, &res)) {
-      return Status::IO_ERROR;
-    }
-    *size = res;
-    return Status::OK;
-  }
-  *size = data_.size();
-  return Status::OK;
-}
-
-Status ObjectImpl::GetData(const uint8_t** data) {
+Status ObjectImpl::GetData(ftl::StringView* data) {
   if (data_.empty()) {
     std::string res;
     // TODO(nellyv): Replace with mmap when supported.
@@ -46,7 +33,7 @@ Status ObjectImpl::GetData(const uint8_t** data) {
     }
     data_.swap(res);
   }
-  *data = reinterpret_cast<const uint8_t*>(data_.data());
+  *data = data_;
   return Status::OK;
 }
 

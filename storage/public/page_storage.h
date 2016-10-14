@@ -91,11 +91,11 @@ class PageStorage {
   // expected one based on the \data\ and an |OBJECT_ID_MISSMATCH| error will be
   // returned in case of missmatch.
   virtual Status AddObjectFromSync(ObjectIdView object_id,
-                                   mojo::DataPipeConsumerHandle data,
+                                   mojo::ScopedDataPipeConsumerHandle data,
                                    size_t size) = 0;
   // Stores the given local object and stores the new object's id in the
   // |object_id| parameter.
-  virtual Status AddObjectFromLocal(mojo::DataPipeConsumerHandle data,
+  virtual Status AddObjectFromLocal(mojo::ScopedDataPipeConsumerHandle data,
                                     size_t size,
                                     ObjectId* object_id) = 0;
 
