@@ -96,8 +96,3 @@ typedef struct {
 } pthread_barrier_t;
 #define __DEFINED_pthread_barrier_t
 #endif
-
-#if defined(__NEED_ssize_t) && !defined(__DEFINED_ssize_t)
-typedef long ssize_t;
-#define __DEFINED_ssize_t
-#endif
