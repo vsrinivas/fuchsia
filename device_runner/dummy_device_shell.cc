@@ -16,11 +16,13 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
 
 constexpr char kDummyUserName[] = "user1";
 
+using mojo::ApplicationConnector;
 using mojo::ApplicationImplBase;
 using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
@@ -31,7 +33,8 @@ using mojo::StrongBinding;
 
 class DummyDeviceShellImpl : public DeviceShell {
  public:
-  explicit DummyDeviceShellImpl(InterfaceRequest<DeviceShell> request)
+  DummyDeviceShellImpl(InterfaceHandle<ApplicationConnector> app_connector,
+                       InterfaceRequest<DeviceShell> request)
       : binding_(this, std::move(request)) {}
   ~DummyDeviceShellImpl() override{};
 
@@ -50,6 +53,8 @@ class DummyDeviceShellImpl : public DeviceShell {
 
 MojoResult MojoMain(MojoHandle application_request) {
   FTL_LOG(INFO) << "dummy_device_shell main";
-  modular::SingleServiceApplication<modular::DeviceShell, modular::DummyDeviceShellImpl> app;
+  modular::SingleServiceApplication<modular::DeviceShell,
+                                    modular::DummyDeviceShellImpl>
+      app;
   return mojo::RunApplication(application_request, &app);
 }

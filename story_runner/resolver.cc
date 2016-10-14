@@ -10,9 +10,11 @@
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
 
+using mojo::ApplicationConnector;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -37,7 +39,8 @@ class ResolverImpl : public Resolver {
 
 class ResolverFactoryImpl : public ResolverFactory {
  public:
-  explicit ResolverFactoryImpl(InterfaceRequest<ResolverFactory> request)
+  ResolverFactoryImpl(InterfaceHandle<ApplicationConnector> app_connector,
+                      InterfaceRequest<ResolverFactory> request)
       : binding_(this, request.Pass()) {}
 
   ~ResolverFactoryImpl() override {}

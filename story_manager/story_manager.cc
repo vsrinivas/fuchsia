@@ -6,6 +6,7 @@
 
 #include <mojo/system/main.h>
 
+#include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/story_manager/story_manager.mojom.h"
 #include "apps/modular/story_manager/story_provider_state.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
@@ -83,7 +84,7 @@ class StoryManagerImpl : public StoryManager {
     // First use ViewProvider service to plumb |view_owner_request| and get the
     // associated service provider.
     InterfacePtr<mozart::ViewProvider> view_provider;
-    InterfacePtr<ServiceProvider> service_provider;
+    InterfacePtr<mojo::ServiceProvider> service_provider;
     ConnectToService(app_connector_.get(), "mojo:dummy_user_shell",
                      GetProxy(&view_provider));
     view_provider->CreateView(std::move(view_owner_request),
@@ -111,31 +112,11 @@ class StoryManagerImpl : public StoryManager {
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerImpl);
 };
 
-class StoryManagerApp : public ApplicationImplBase {
- public:
-  StoryManagerApp() {}
-  ~StoryManagerApp() override {}
-
- private:
-  void OnInitialize() override { FTL_LOG(INFO) << "story-manager init"; }
-
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
-    // Register |StoryManager| implementation.
-    service_provider_impl->AddService<StoryManager>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<StoryManager> launcher_request) {
-          new StoryManagerImpl(CreateApplicationConnector(shell()),
-                               std::move(launcher_request));
-        });
-    return true;
-  }
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerApp);
-};
-
 }  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
-  modular::StoryManagerApp app;
+  modular::SingleServiceApplication<modular::StoryManager,
+                                    modular::StoryManagerImpl>
+      app;
   return mojo::RunApplication(application_request, &app);
 }

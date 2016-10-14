@@ -8,6 +8,7 @@
 #define APPS_MODULAR_APPLICATION_SINGLE_SERVICE_APPLICATION_H_
 
 #include "mojo/public/cpp/application/application_impl_base.h"
+#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace modular {
@@ -21,8 +22,8 @@ class SingleServiceApplication : public mojo::ApplicationImplBase {
   bool OnAcceptConnection(mojo::ServiceProviderImpl* const s) override {
     s->AddService<Service>([this](const mojo::ConnectionContext& ctx,
                                   mojo::InterfaceRequest<Service> request) {
-      service_impls_.emplace_back(
-          std::unique_ptr<ServiceImpl>(new ServiceImpl(request.Pass())));
+      service_impls_.emplace_back(std::unique_ptr<ServiceImpl>(new ServiceImpl(
+          mojo::CreateApplicationConnector(shell()), request.Pass())));
     });
     return true;
   }

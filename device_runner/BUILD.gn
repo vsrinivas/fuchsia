@@ -41,6 +41,7 @@ executable("dummy_device_shell") {
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
+    "//mojo/public/interfaces/application:application_cpp_sources",
     "//mojo/system",
   ]
 }
