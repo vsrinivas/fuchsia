@@ -53,6 +53,13 @@ else
   JOB_COUNT_FLAG=
 fi
 
+# IMPORTANT
+# On 10.14.2016, Toshi said the ordering must be:
+# build magenta => build sysroot => build fuchsia
+
+# Build Magenta.
+(cd $ROOT_DIR/magenta && make -j32 magenta-pc-x86-64)
+
 if [ "$SYSROOT" -eq 1 ]; then
   # Build sysroot.
   $ROOT_DIR/scripts/build-sysroot.sh -c -t x86_64
@@ -63,9 +70,6 @@ $ROOT_DIR/packages/gn/gen.py $GOMA_FLAG
 
 # Build Fuchsia and all its dependencies, including modular.
 $ROOT_DIR/buildtools/ninja -C $ROOT_DIR/out/debug-x86-64 $JOB_COUNT_FLAG
-
-# Build Magenta.
-(cd $ROOT_DIR/magenta && make -j32 magenta-pc-x86-64)
 
 # Run Fuchsia on QEMU. To run modular now, type mojo:device_runner at
 # the shell prompt.
