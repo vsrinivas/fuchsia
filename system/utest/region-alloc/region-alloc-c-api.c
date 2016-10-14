@@ -30,7 +30,7 @@ static bool ralloc_pools_c_api_test(void) {
         const ralloc_region_t tmp = { .base = 0u, .size = 1u };
         const ralloc_region_t* out;
 
-        EXPECT_EQ(ERR_BAD_STATE, ralloc_add_region(alloc, &tmp), "");
+        EXPECT_EQ(ERR_BAD_STATE, ralloc_add_region(alloc, &tmp, false), "");
         EXPECT_EQ(ERR_BAD_STATE, ralloc_get_sized_region_ex(alloc, 1u, 1u, &out), "");
         EXPECT_EQ(ERR_BAD_STATE, ralloc_get_specific_region_ex(alloc, &tmp, &out), "");
         EXPECT_NULL(ralloc_get_sized_region(alloc, 1u, 1u), "");
@@ -47,7 +47,7 @@ static bool ralloc_pools_c_api_test(void) {
 
     // Add some regions to our allocator.
     for (size_t i = 0; i < countof(GOOD_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &GOOD_REGIONS[i]), "");
+        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &GOOD_REGIONS[i], false), "");
 
     // Make a new pool and try to assign it to the allocator.  This should fail
     // because the allocator is currently using resources from its currently
@@ -65,7 +65,7 @@ static bool ralloc_pools_c_api_test(void) {
         ralloc_region_t tmp = { .base = GOOD_MERGE_REGION_BASE,
                                      .size = GOOD_MERGE_REGION_SIZE };
         for (size_t i = 0; i < OOM_RANGE_LIMIT; ++i) {
-            ASSERT_EQ(NO_ERROR, ralloc_add_region(alloc, &tmp), "");
+            ASSERT_EQ(NO_ERROR, ralloc_add_region(alloc, &tmp, false), "");
             tmp.base += tmp.size;
         }
     }
@@ -73,7 +73,7 @@ static bool ralloc_pools_c_api_test(void) {
     // Attempt (and fail) to add some bad regions (regions which overlap,
     // regions which wrap the address space)
     for (size_t i = 0; i < countof(BAD_REGIONS); ++i)
-        EXPECT_EQ(ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i]), "");
+        EXPECT_EQ(ERR_INVALID_ARGS, ralloc_add_region(alloc, &BAD_REGIONS[i], false), "");
 
     // Force the region bookkeeping pool to run out of memory by adding more and
     // more regions until we eventuall run out of room.  Make sure that the
@@ -86,7 +86,7 @@ static bool ralloc_pools_c_api_test(void) {
         for (i = 0; i < OOM_RANGE_LIMIT; ++i) {
             mx_status_t res;
 
-            res = ralloc_add_region(alloc, &tmp);
+            res = ralloc_add_region(alloc, &tmp, false);
             if (res != NO_ERROR) {
                 EXPECT_EQ(ERR_NO_MEMORY, res, "");
                 break;
@@ -137,7 +137,7 @@ static bool ralloc_by_size_c_api_test(void) {
     }
 
     for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i]), "");
+        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_BY_SIZE_REGIONS[i], false), "");
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // can be cleaned up properly when the test finishes.
@@ -208,7 +208,7 @@ static bool ralloc_specific_c_api_test(void) {
     }
 
     for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i)
-        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i]), "");
+        EXPECT_EQ(NO_ERROR, ralloc_add_region(alloc, &ALLOC_SPECIFIC_REGIONS[i], false), "");
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // can be cleaned up properly when the test finishes.
@@ -244,8 +244,46 @@ static bool ralloc_specific_c_api_test(void) {
     END_TEST;
 }
 
+static bool ralloc_add_overlap_c_api_test(void) {
+    BEGIN_TEST;
+
+    // Make a pool and attach it to an allocator.
+    ralloc_allocator_t* alloc = NULL;
+    {
+        ralloc_pool_t* pool;
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
+                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_NONNULL(pool, "");
+
+        // Create an allocator and add our region pool to it.
+        ASSERT_EQ(NO_ERROR, ralloc_create_allocator(&alloc), "");
+        ASSERT_NONNULL(alloc, "");
+        ASSERT_EQ(NO_ERROR, ralloc_set_region_pool(alloc, pool), "");
+
+        // Release our pool reference.  The allocator should be holding onto its own
+        // reference at this point.
+        ralloc_release_pool(pool);
+    }
+
+    // Add each of the regions specified by the test and check the expected results.
+    for (size_t i = 0; i < countof(ADD_OVERLAP_TESTS); ++i) {
+        const alloc_add_overlap_test_t* TEST = ADD_OVERLAP_TESTS + i;
+
+        mx_status_t res = ralloc_add_region(alloc, &TEST->reg, TEST->ovl);
+
+        EXPECT_EQ(TEST->res, res, "");
+        EXPECT_EQ(TEST->cnt, ralloc_get_available_region_count(alloc), "");
+    }
+
+    // Destroy our allocator.
+    ralloc_destroy_allocator(alloc);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ralloc_c_api_tests)
-RUN_NAMED_TEST("Region Pools (C-API)", ralloc_pools_c_api_test)
-RUN_NAMED_TEST("Alloc by size (C-API)", ralloc_by_size_c_api_test)
+RUN_NAMED_TEST("Region Pools (C-API)",   ralloc_pools_c_api_test)
+RUN_NAMED_TEST("Alloc by size (C-API)",  ralloc_by_size_c_api_test)
 RUN_NAMED_TEST("Alloc specific (C-API)", ralloc_specific_c_api_test)
+RUN_NAMED_TEST("Add/Overlap (C-API)",    ralloc_add_overlap_c_api_test)
 END_TEST_CASE(ralloc_c_api_tests)

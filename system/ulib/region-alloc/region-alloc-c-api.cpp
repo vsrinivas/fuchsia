@@ -8,7 +8,7 @@
 extern "C" {
 
 mx_status_t ralloc_create_pool(size_t slab_size, size_t max_memory, ralloc_pool_t** out_pool) {
-    if (out_pool == NULL)
+    if (out_pool == nullptr)
         return ERR_INVALID_ARGS;
 
     auto pool = RegionAllocator::RegionPool::Create(slab_size, max_memory);
@@ -76,11 +76,12 @@ void ralloc_destroy_allocator(ralloc_allocator_t* allocator) {
 }
 
 mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
-                                   const ralloc_region_t* region) {
+                              const ralloc_region_t* region,
+                              bool allow_overlap) {
     if (!allocator || !region)
         return ERR_INVALID_ARGS;
 
-    return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(*region);
+    return reinterpret_cast<RegionAllocator*>(allocator)->AddRegion(*region, allow_overlap);
 }
 
 mx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator,
@@ -103,7 +104,7 @@ mx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator,
         *out_region = static_cast<const ralloc_region_t*>(raw_region);
     } else {
         DEBUG_ASSERT(managed_region == nullptr);
-        *out_region = NULL;
+        *out_region = nullptr;
     }
 
     return result;
@@ -129,10 +130,22 @@ mx_status_t ralloc_get_specific_region_ex(
         *out_region = static_cast<const ralloc_region_t*>(raw_region);
     } else {
         DEBUG_ASSERT(managed_region == nullptr);
-        *out_region = NULL;
+        *out_region = nullptr;
     }
 
     return result;
+}
+
+size_t ralloc_get_allocated_region_count(const ralloc_allocator_t* allocator) {
+    DEBUG_ASSERT(allocator != nullptr);
+    const RegionAllocator& alloc = *(reinterpret_cast<const RegionAllocator*>(allocator));
+    return alloc.AllocatedRegionCount();
+}
+
+size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator) {
+    DEBUG_ASSERT(allocator != nullptr);
+    const RegionAllocator& alloc = *(reinterpret_cast<const RegionAllocator*>(allocator));
+    return alloc.AvailableRegionCount();
 }
 
 void ralloc_put_region(const ralloc_region_t* region) {

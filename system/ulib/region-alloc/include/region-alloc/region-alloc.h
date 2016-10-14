@@ -6,6 +6,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 // RegionAllocator
@@ -169,7 +170,9 @@ mx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator);
 mx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool_t* pool);
 void ralloc_reset_allocator(ralloc_allocator_t* allocator);
 void ralloc_destroy_allocator(ralloc_allocator_t* allocator);
-mx_status_t ralloc_add_region(ralloc_allocator_t* allocator, const ralloc_region_t* region);
+mx_status_t ralloc_add_region(ralloc_allocator_t* allocator,
+                              const ralloc_region_t* region,
+                              bool allow_overlap);
 
 mx_status_t ralloc_get_sized_region_ex(
         ralloc_allocator_t* allocator,
@@ -200,6 +203,11 @@ static inline const ralloc_region_t* ralloc_get_specific_region(
     ralloc_get_specific_region_ex(allocator, requested_region, &ret);
     return ret;
 }
+
+// Report the number of regions which are available for allocation, or which are
+// currently allocated.
+size_t ralloc_get_allocated_region_count(const ralloc_allocator_t* allocator);
+size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator);
 
 // RegionAllocator::Region interface.  In addition to the base/size members
 // which may be used to determine the location of the allocation,  valid
@@ -377,13 +385,19 @@ public:
 
     // Add a region to the set of allocatable regions.
     //
+    // If allow_overlap is false, the added region may not overlap with any
+    // previously added region and will be rejected if it does.  If
+    // allow_overlap is true, the added region will be union'ed with existing
+    // available regions, provided it does not intersect any currently allocated
+    // region.
+    //
     // Possible return values
     // ++ ERR_BAD_STATE : Allocator has no RegionPool assigned.
     // ++ ERR_NO_MEMORY : not enough bookkeeping memory available in our
     // assigned region pool to add the region.
     // ++ ERR_INVALID_ARGS : the region being added collides with a previously
-    // added region.
-    mx_status_t AddRegion(const ralloc_region_t& region);
+    // added, or currently allocated region.
+    mx_status_t AddRegion(const ralloc_region_t& region, bool allow_overlap = false);
 
     // Get a region out of the set of currently available regions which has a
     // specified size and alignment.  Note; the alignment must be a power of
@@ -437,11 +451,14 @@ public:
         return ret;
     }
 
+    size_t AllocatedRegionCount() const { return allocated_regions_by_base_.size(); }
+    size_t AvailableRegionCount() const { return avail_regions_by_base_.size(); }
+
 private:
     friend class Region::ReturnToAllocatorTraits;
 
     void ReleaseRegion(Region* region);
-    void AddRegionToAvail(Region* region);
+    void AddRegionToAvail(Region* region, bool allow_overlap = false);
 
     mx_status_t AllocFromAvail(Region::WAVLTreeSortBySize::iterator source,
                                Region::UPtr& out_region,

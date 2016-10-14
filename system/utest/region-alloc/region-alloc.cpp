@@ -195,10 +195,31 @@ static bool ralloc_specific_test() {
     END_TEST;
 }
 
+static bool ralloc_add_overlap_test() {
+    BEGIN_TEST;
+
+    // Make a pool and attach it to an allocator.  Then add the test regions to it.
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
+                                                              REGION_POOL_MAX_SIZE));
+
+    // Add each of the regions specified by the test and check the expected results.
+    for (size_t i = 0; i < countof(ADD_OVERLAP_TESTS); ++i) {
+        const alloc_add_overlap_test_t* TEST = ADD_OVERLAP_TESTS + i;
+
+        mx_status_t res = alloc.AddRegion(TEST->reg, TEST->ovl);
+
+        EXPECT_EQ(TEST->res, res, "");
+        EXPECT_EQ(TEST->cnt, alloc.AvailableRegionCount(), "");
+    }
+
+    END_TEST;
+}
+
 } //namespace
 
 BEGIN_TEST_CASE(ralloc_tests)
 RUN_NAMED_TEST("Region Pools",   ralloc_region_pools_test)
 RUN_NAMED_TEST("Alloc by size",  ralloc_by_size_test)
 RUN_NAMED_TEST("Alloc specific", ralloc_specific_test)
+RUN_NAMED_TEST("Add/Overlap",    ralloc_add_overlap_test)
 END_TEST_CASE(ralloc_tests)

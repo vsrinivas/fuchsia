@@ -146,7 +146,7 @@ mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
     return NO_ERROR;
 }
 
-mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region) {
+mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
     // Check our RegionPool
     if (region_pool_ == nullptr)
         return ERR_BAD_STATE;
@@ -158,11 +158,13 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region) {
         return ERR_INVALID_ARGS;
 
     // Next, make sure the region we are adding does not intersect any
-    // region which has been previously added.  We need to check both the
-    // regions we have available as well as the regions we have already
-    // allocated.
-    if (Intersects(allocated_regions_by_base_, region) ||
-        Intersects(avail_regions_by_base_, region))
+    // region which is currently allocated.
+    if (Intersects(allocated_regions_by_base_, region))
+        return ERR_INVALID_ARGS;
+
+    // Make sure that we do not intersect with the available regions if we do
+    // not allow overlaps.
+    if (!allow_overlap && Intersects(avail_regions_by_base_, region))
         return ERR_INVALID_ARGS;
 
     // All sanity checks passed.  Grab a piece of free bookeeping from our pool,
@@ -175,7 +177,7 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region) {
     to_add->base = region.base;
     to_add->size = region.size;
 
-    AddRegionToAvail(to_add);
+    AddRegionToAvail(to_add, allow_overlap);
 
     return NO_ERROR;
 }
@@ -387,76 +389,61 @@ mx_status_t RegionAllocator::AllocFromAvail(Region::WAVLTreeSortBySize::iterator
     return NO_ERROR;
 }
 
-void RegionAllocator::AddRegionToAvail(Region* region) {
+void RegionAllocator::AddRegionToAvail(Region* region, bool allow_overlap) {
     // Sanity checks.  This region should not exist in any bookkeeping, and
     // should not overlap with any of the regions we are currently tracking.
     DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
     DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
-    DEBUG_ASSERT(!Intersects(avail_regions_by_base_, *region));
     DEBUG_ASSERT(!Intersects(allocated_regions_by_base_, *region));
+    DEBUG_ASSERT(allow_overlap || !Intersects(avail_regions_by_base_, *region));
 
     // Find the region which comes before us and the region which comes after us
     // in the tree.
     auto before = avail_regions_by_base_.upper_bound(region->base);
     auto after  = before--;
 
-    // Check to see if we are adjacent to either the node which comes before us
-    // or after us.
-    bool adjacent_to_before = before.IsValid() &&
-                              ((before->base + before->size) == region->base);
-    bool adjacent_to_after  = after.IsValid() &&
-                              ((region->base + region->size) == after->base);
+    // Merge with the region which comes before us if we can.
+    uint64_t region_end = (region->base + region->size);    // exclusive end
+    if (before.IsValid()) {
+        DEBUG_ASSERT(before->base <= region->base);
 
-    if (!adjacent_to_before && !adjacent_to_after) {
-        // We are adjacent to neither before or after, just add ourselves to
-        // both sets of bookkeeping.
-        avail_regions_by_base_.insert(region);
-        avail_regions_by_size_.insert(region);
-    } else if (!adjacent_to_before) {
-        // We are adjacent to the node after us, but not before.  Merge this
-        // node with the after node.  Because none of our regions ever overlap,
-        // we do not need to compute a new position for the after-node in the
-        // by-base-address index, but we do need to remove and re-insert into
-        // the by-size index.
-        Region* after_ptr = after.CopyPointer();
-        avail_regions_by_size_.erase(*after_ptr);
+        uint64_t before_end = (before->base + before->size);    // exclusive end
+        if (allow_overlap ? (before_end >= region->base) : (before_end == region->base)) {
+            region_end   = mxtl::max(region_end, before_end);
+            region->base = before->base;
 
-        DEBUG_ASSERT((after_ptr->base - region->size) == region->base);
-        after_ptr->base  = region->base;
-        after_ptr->size += region->size;
-
-        avail_regions_by_size_.insert(after_ptr);
-        region_pool_->FreeRegion(region);
-    } else if (!adjacent_to_after) {
-        // We are adjacent to the node before us, but not after.  Same actions
-        // as the previous case, we are just merging with before instead of
-        // after.
-        Region* before_ptr = before.CopyPointer();
-        avail_regions_by_size_.erase(*before_ptr);
-
-        DEBUG_ASSERT((before_ptr->base + before_ptr->size) == region->base);
-        before_ptr->size += region->size;
-
-        avail_regions_by_size_.insert(before_ptr);
-        region_pool_->FreeRegion(region);
-    } else {
-        // We are adjacent to both before and after.  Squash everything into
-        // before.
-        Region* after_ptr  = after.CopyPointer();
-        Region* before_ptr = before.CopyPointer();
-
-        avail_regions_by_base_.erase(*after_ptr);
-        avail_regions_by_size_.erase(*after_ptr);
-        avail_regions_by_size_.erase(*before_ptr);
-
-        DEBUG_ASSERT((before_ptr->base + before_ptr->size) == region->base);
-        DEBUG_ASSERT((region->base + region->size) == after_ptr->base);
-        before_ptr->size += after_ptr->size + region->size;
-
-        avail_regions_by_size_.insert(before_ptr);
-        region_pool_->FreeRegion(after_ptr);
-        region_pool_->FreeRegion(region);
+            auto removed = avail_regions_by_base_.erase(before);
+            avail_regions_by_size_.erase(*removed);
+            region_pool_->FreeRegion(removed);
+        }
     }
+
+    // Merge with the region which comes after us if we can, keep merging if we
+    // allow overlaps.
+    while (after.IsValid()) {
+        DEBUG_ASSERT(region->base < after->base);
+
+        if (!(allow_overlap ? (region_end >= after->base) : (region_end == after->base)))
+            break;
+
+        uint64_t after_end = (after->base + after->size);
+        region_end = mxtl::max(region_end, after_end);
+
+        auto remove_me = after++;
+        auto removed  = avail_regions_by_base_.erase(remove_me);
+        avail_regions_by_size_.erase(*removed);
+        region_pool_->FreeRegion(removed);
+
+        if (!allow_overlap)
+            break;
+
+    }
+
+    // Update the region's size to reflect any mergers which may have taken
+    // place, then add the region to the two indexes.
+    region->size = region_end - region->base;
+    avail_regions_by_base_.insert(region);
+    avail_regions_by_size_.insert(region);
 }
 
 bool RegionAllocator::Intersects(const Region::WAVLTreeSortByBase& tree,

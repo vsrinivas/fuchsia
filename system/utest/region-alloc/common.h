@@ -192,3 +192,83 @@ static const alloc_specific_alloc_test_t ALLOC_SPECIFIC_TESTS[] = {
     { .req = { .base = 0x1100, .size = 0x600 }, .res = NO_ERROR },
     { .req = { .base = 0x1900, .size = 0x600 }, .res = NO_ERROR },
 };
+
+typedef struct {
+    ralloc_region_t reg;    // Region to add
+    bool            ovl;    // Whether to allow overlap or not.
+    size_t          cnt;    // Expected available region count afterwards.
+    mx_status_t     res;    // Expected result.
+} alloc_add_overlap_test_t;
+
+static const alloc_add_overlap_test_t ADD_OVERLAP_TESTS[] = {
+    // Add a region, then try to add it again without allowing overlap.  This
+    // should fail.  Then add the region again, this time allowing overlap.
+    // This should succeed.
+    { .reg = { .base = 0x10000, .size = 0x1000 }, .ovl = false, .cnt = 1, .res = NO_ERROR },
+    { .reg = { .base = 0x10000, .size = 0x1000 }, .ovl = false, .cnt = 1, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0x10000, .size = 0x1000 }, .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0x10000, 0x11000)
+    // Add a region to the front which fits perfectly with the existing region.
+    // This should succeed, even when we do not allow overlapping.
+    { .reg = { .base = 0xF800,  .size = 0x800 },  .ovl = false, .cnt = 1, .res = NO_ERROR },
+    { .reg = { .base = 0xF800,  .size = 0x800 },  .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0xF800, 0x11000)
+    // Same exercise, but this time add to the back.
+    { .reg = { .base = 0x11000, .size = 0x800 },  .ovl = false, .cnt = 1, .res = NO_ERROR },
+    { .reg = { .base = 0x11000, .size = 0x800 },  .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0xF800, 0x11800)
+    // Now attempt to add a region which overlaps the front by a single byte.
+    // This should fail unless we explicitly permit it.
+    { .reg = { .base = 0xF000,  .size = 0x801 },  .ovl = false, .cnt = 1, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0xF000,  .size = 0x801 },  .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0xF000, 0x12000)
+    // Same exercise, this time adding to the back.
+    { .reg = { .base = 0x117FF, .size = 0x801 },  .ovl = false, .cnt = 1, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0x117FF, .size = 0x801 },  .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0xE000, 0x13000)
+    // Add a region which completely contains the existing region.
+    { .reg = { .base = 0xE000,  .size = 0x5000 }, .ovl = false, .cnt = 1, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0xE000,  .size = 0x5000 }, .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Add some regions which are not connected to the existing region.
+    { .reg = { .base = 0x14000, .size = 0x1000 }, .ovl = false, .cnt = 2, .res = NO_ERROR },
+    { .reg = { .base = 0x16000, .size = 0x1000 }, .ovl = false, .cnt = 3, .res = NO_ERROR },
+    { .reg = { .base = 0x18000, .size = 0x1000 }, .ovl = false, .cnt = 4, .res = NO_ERROR },
+    { .reg = { .base = 0x1A000, .size = 0x1000 }, .ovl = false, .cnt = 5, .res = NO_ERROR },
+    { .reg = { .base = 0x1C000, .size = 0x1000 }, .ovl = false, .cnt = 6, .res = NO_ERROR },
+
+    // Current: [0xE000,  0x13000) [0x14000, 0x15000) [0x16000, 0x17000) [0x18000, 0x19000)
+    //          [0x1A000, 0x1B000) [0x1C000, 0x1D000)
+
+    // Add a region which ties two regions together.
+    { .reg = { .base = 0x12FFF, .size = 0x1002 }, .ovl = false, .cnt = 6, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0x12FFF, .size = 0x1002 }, .ovl = true,  .cnt = 5, .res = NO_ERROR },
+
+    // Current: [0xE000,  0x15000) [0x16000, 0x17000) [0x18000, 0x19000) [0x1A000, 0x1B000)
+    //          [0x1C000, 0x1D000)
+
+    // Add a region which completely consumes one region, and intersects the
+    // front of another.
+    { .reg = { .base = 0x15800, .size = 0x3000 }, .ovl = false, .cnt = 5, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0x15800, .size = 0x3000 }, .ovl = true,  .cnt = 4, .res = NO_ERROR },
+
+    // Current: [0xE000,  0x15000) [0x15800, 0x19000) [0x1A000, 0x1B000) [0x1C000, 0x1D000)
+
+    // Same test as before, but this time from the end.
+    { .reg = { .base = 0x18800, .size = 0x3000 }, .ovl = false, .cnt = 4, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0x18800, .size = 0x3000 }, .ovl = true,  .cnt = 3, .res = NO_ERROR },
+
+    // Current: [0xE000,  0x15000) [0x15800, 0x1B800) [0x1C000, 0x1D000)
+
+    // Add one more region, this one should consume and unify all regions in the
+    // set.
+    { .reg = { .base = 0xD000, .size = 0x11000 }, .ovl = false, .cnt = 3, .res = ERR_INVALID_ARGS },
+    { .reg = { .base = 0xD000, .size = 0x11000 }, .ovl = true,  .cnt = 1, .res = NO_ERROR },
+
+    // Current: [0xD000,  0x1E000)
+};
