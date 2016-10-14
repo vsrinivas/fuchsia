@@ -9,6 +9,7 @@ source_set("magenta") {
     "magenta_platform_buffer.cc",
     "magenta_platform_device.cc",
     "magenta_platform_device.h",
+    "magenta_platform_futex.cc",
   ]
 
   deps = [

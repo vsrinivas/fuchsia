@@ -11,6 +11,7 @@ source_set("platform") {
     "platform_buffer.cc",
     "platform_buffer.h",
     "platform_device.h",
+    "platform_futex.h",
     "platform_mmio.h",
   ]
 

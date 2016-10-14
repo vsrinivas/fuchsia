@@ -90,6 +90,7 @@ source_set("magma_platform_tests") {
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_device.cc",
+    "test_platform_futex.cc",
   ]
 
   deps = [
