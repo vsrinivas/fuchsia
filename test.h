@@ -15,8 +15,19 @@ struct Test {
   const TestRoutine run;
 };
 
+void Yield();
+
+template <typename Predicate>
+void WaitUntil(Predicate until) {
+  do {
+    Yield();
+  } while (!until());
+}
+
 void StartComponent(mojo::Shell* shell, const std::string& url);
 void Sleep(unsigned int millis);
 
-// Pauses the main thread to allow Mojo messages to propagate.
+// Pauses the main thread to allow Mojo messages to propagate. It will wait
+// until no new debuggable have been launched for 500 ms, for a max of 2
+// seconds.
 void Pause();

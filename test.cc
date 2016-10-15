@@ -20,6 +20,19 @@
 using namespace maxwell;
 using namespace mojo;
 
+void Yield() {
+  // To sleep successfully we need to both yield the thread and process Mojo
+  // messages.
+  //
+  // If we don't yield the thread, other processes run extremely slowly (for
+  // example, each dependency may take about 5 seconds to start up). Yielding
+  // immediately with 0 is not sufficient to remedy this.
+  //
+  // If we don't run the message loop, we never receive IPCs.
+  mx_nanosleep(500000);  // .5 ms; lower-capped to 1 ms by Magenta
+  RunLoop::current()->RunUntilIdle();
+}
+
 void StartComponent(mojo::Shell* shell, const std::string& url) {
   InterfacePtr<ServiceProvider> component;
   shell->ConnectToApplication(url, GetProxy(&component));
@@ -27,22 +40,25 @@ void StartComponent(mojo::Shell* shell, const std::string& url) {
 
 void Sleep(unsigned int millis) {
   MojoTimeTicks deadline = GetTimeTicksNow() + millis * 1000;
-  do {
-    // To sleep successfully we need to both yield the thread and process Mojo
-    // messages.
-    //
-    // If we don't yield the thread, other processes run extremely slowly (for
-    // example, each dependency may take about 5 seconds to start up). Yielding
-    // immediately with 0 is not sufficient to remedy this.
-    //
-    // If we don't run the message loop, we never receive IPCs.
-    mx_nanosleep(millis > 0 ? 1000000 : 0);  // 1 ms
-    RunLoop::current()->RunUntilIdle();
-  } while (GetTimeTicksNow() < deadline);
+  WaitUntil([deadline] { return GetTimeTicksNow() >= deadline; });
 }
 
+constexpr MojoTimeTicks kPauseIdle = 250 * 1000;
+constexpr MojoTimeTicks kPauseMax = 2000 * 1000;
+// This is approximated by updating it when a dependency app is launched.
+MojoTimeTicks last_activity;
+
 void Pause() {
-  Sleep(1000);
+  // In practice, the amount of time one needs to pause increases with the
+  // number of apps being spun up as a result of a test call. This
+  // implementation pauses longer if apps are starting up.
+  last_activity = GetTimeTicksNow();
+  MojoTimeTicks deadline = last_activity + kPauseMax;
+  WaitUntil([deadline] {
+    MojoTimeTicks now = GetTimeTicksNow();
+
+    return now >= last_activity + kPauseIdle || now >= deadline;
+  });
 }
 
 #define TEST(name) void name(Shell*)
@@ -85,6 +101,8 @@ class MaxwellTestApp : public ApplicationImplBase, public TestParent {
     ConnectToService(shell(), url, GetProxy(&debug));
     if (debug)
       child_apps_.AddInterfacePtr(std::move(debug));
+
+    last_activity = GetTimeTicksNow();
   }
 
   bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override {
