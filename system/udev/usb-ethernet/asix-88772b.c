@@ -357,12 +357,14 @@ static ethernet_protocol_t ax88772b_proto = {
 
 static void ax88772b_unbind(mx_device_t* device) {
     ax88772b_t* eth = get_ax88772b(device);
-    device_remove(&eth->device);
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
     update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
+
+    // this must be last since this can trigger releasing the device
+    device_remove(&eth->device);
 }
 
 static mx_status_t ax88772b_release(mx_device_t* device) {

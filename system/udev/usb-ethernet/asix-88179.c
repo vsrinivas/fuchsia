@@ -448,12 +448,14 @@ static ethernet_protocol_t ax88179_proto = {
 
 static void ax88179_unbind(mx_device_t* device) {
     ax88179_t* eth = get_ax88179(device);
-    device_remove(&eth->device);
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
     update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
+
+    // this must be last since this can trigger releasing the device
+    device_remove(&eth->device);
 }
 
 static mx_status_t ax88179_release(mx_device_t* device) {
