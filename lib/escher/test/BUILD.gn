@@ -6,6 +6,8 @@ import("//lib/escher/vulkan.gni")
 
 if (is_linux) {
   executable("escher_unittests") {
+    testonly = true
+
     defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
     sources = [
