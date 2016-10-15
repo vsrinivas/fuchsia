@@ -50,10 +50,10 @@ typedef struct {
     mx_signals_t signals;
 
     mtx_t mutex;
-} usb_ethernet_t;
-#define get_usb_ethernet(dev) containerof(dev, usb_ethernet_t, device)
+} ax88772b_t;
+#define get_ax88772b(dev) containerof(dev, ax88772b_t, device)
 
-static void update_signals_locked(usb_ethernet_t* eth) {
+static void update_signals_locked(ax88772b_t* eth) {
     mx_signals_t new_signals = 0;
 
     if (eth->dead)
@@ -68,14 +68,14 @@ static void update_signals_locked(usb_ethernet_t* eth) {
     }
 }
 
-static mx_status_t usb_ethernet_set_value(usb_ethernet_t* eth, uint8_t request, uint16_t value) {
+static mx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                        request, value, 0, NULL, 0);
 }
 
-static mx_status_t usb_ethernet_mdio_read(usb_ethernet_t* eth, uint8_t offset, uint16_t* value) {
+static mx_status_t ax88772b_mdio_read(ax88772b_t* eth, uint8_t offset, uint16_t* value) {
 
-    mx_status_t status = usb_ethernet_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
+    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
@@ -87,7 +87,7 @@ static mx_status_t usb_ethernet_mdio_read(usb_ethernet_t* eth, uint8_t offset, u
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
     }
-    status = usb_ethernet_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
+    status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_HW_SERIAL_MGMT_CTRL failed\n");
         return status;
@@ -96,9 +96,9 @@ static mx_status_t usb_ethernet_mdio_read(usb_ethernet_t* eth, uint8_t offset, u
     return NO_ERROR;
 }
 
-static mx_status_t usb_ethernet_mdio_write(usb_ethernet_t* eth, uint8_t offset, uint16_t value) {
+static mx_status_t ax88772b_mdio_write(ax88772b_t* eth, uint8_t offset, uint16_t value) {
 
-    mx_status_t status = usb_ethernet_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
+    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_SW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_SERIAL_MGMT_CTRL failed\n");
         return status;
@@ -110,7 +110,7 @@ static mx_status_t usb_ethernet_mdio_write(usb_ethernet_t* eth, uint8_t offset, 
         printf("ASIX_REQ_PHY_READ failed\n");
         return status;
     }
-    status = usb_ethernet_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
+    status = ax88772b_set_value(eth, ASIX_REQ_HW_SERIAL_MGMT_CTRL, 0);
     if (status < 0) {
         printf("ASIX_REQ_HW_SERIAL_MGMT_CTRL failed\n");
         return status;
@@ -119,13 +119,13 @@ static mx_status_t usb_ethernet_mdio_write(usb_ethernet_t* eth, uint8_t offset, 
     return NO_ERROR;
 }
 
-static mx_status_t usb_ethernet_wait_for_phy(usb_ethernet_t* eth) {
+static mx_status_t ax88772b_wait_for_phy(ax88772b_t* eth) {
 
     for (int i = 0; i < 100; i++) {
         uint16_t bmsr;
-        mx_status_t status = usb_ethernet_mdio_read(eth, ASIX_PHY_BMSR, &bmsr);
+        mx_status_t status = ax88772b_mdio_read(eth, ASIX_PHY_BMSR, &bmsr);
         if (status < 0) {
-            printf("usb_ethernet_mdio_read failed\n");
+            printf("ax88772b_mdio_read failed\n");
             return status;
         }
         if (bmsr)
@@ -133,17 +133,17 @@ static mx_status_t usb_ethernet_wait_for_phy(usb_ethernet_t* eth) {
         usleep(50);
     }
 
-    printf("usb_ethernet_wait_for_phy timeout\n");
+    printf("ax88772b_wait_for_phy timeout\n");
     return ERR_TIMED_OUT;
 }
 
-static void requeue_read_request_locked(usb_ethernet_t* eth, iotxn_t* req) {
+static void requeue_read_request_locked(ax88772b_t* eth, iotxn_t* req) {
     if (eth->online) {
         iotxn_queue(eth->usb_device, req);
     }
 }
 
-static void queue_interrupt_requests_locked(usb_ethernet_t* eth) {
+static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     list_node_t* node;
     while ((node = list_remove_head(&eth->free_intr_reqs)) != NULL) {
         iotxn_t* req = containerof(node, iotxn_t, node);
@@ -151,8 +151,8 @@ static void queue_interrupt_requests_locked(usb_ethernet_t* eth) {
     }
 }
 
-static void usb_ethernet_read_complete(iotxn_t* request, void* cookie) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
+static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
+    ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
         request->ops->release(request);
@@ -169,8 +169,8 @@ static void usb_ethernet_read_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void usb_ethernet_write_complete(iotxn_t* request, void* cookie) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
+static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
+    ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
         request->ops->release(request);
@@ -183,8 +183,8 @@ static void usb_ethernet_write_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)cookie;
+static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
+    ax88772b_t* eth = (ax88772b_t*)cookie;
 
     if (request->status == ERR_REMOTE_CLOSED) {
         request->ops->release(request);
@@ -199,7 +199,7 @@ static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
         if (memcmp(eth->status, status, sizeof(eth->status))) {
 #if 0
             const uint8_t* b = status;
-            printf("usb_ethernet status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            printf("ax88772b status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
                    b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
 #endif
             memcpy(eth->status, status, sizeof(eth->status));
@@ -226,8 +226,8 @@ static void usb_ethernet_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-mx_status_t usb_ethernet_send(mx_device_t* device, const void* buffer, size_t length) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+mx_status_t ax88772b_send(mx_device_t* device, const void* buffer, size_t length) {
+    ax88772b_t* eth = get_ax88772b(device);
 
     if (eth->dead) {
         return ERR_REMOTE_CLOSED;
@@ -269,8 +269,8 @@ out:
     return status;
 }
 
-mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+mx_status_t ax88772b_recv(mx_device_t* device, void* buffer, size_t length) {
+    ax88772b_t* eth = get_ax88772b(device);
 
     if (eth->dead) {
         return ERR_REMOTE_CLOSED;
@@ -289,7 +289,7 @@ mx_status_t usb_ethernet_recv(mx_device_t* device, void* buffer, size_t length) 
     iotxn_t* request = containerof(node, iotxn_t, node);
     int remaining = request->actual - offset;
     if (remaining < 4) {
-        printf("usb_ethernet_recv short packet\n");
+        printf("ax88772b_recv short packet\n");
         status = ERR_INTERNAL;
         list_remove_head(&eth->completed_reads);
         requeue_read_request_locked(eth, request);
@@ -332,31 +332,31 @@ out:
     return status;
 }
 
-mx_status_t usb_ethernet_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+mx_status_t ax88772b_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
+    ax88772b_t* eth = get_ax88772b(device);
     memcpy(out_addr, eth->mac_addr, sizeof(eth->mac_addr));
     return NO_ERROR;
 }
 
-bool usb_ethernet_is_online(mx_device_t* device) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+bool ax88772b_is_online(mx_device_t* device) {
+    ax88772b_t* eth = get_ax88772b(device);
     return eth->online;
 }
 
-size_t usb_ethernet_get_mtu(mx_device_t* device) {
+size_t ax88772b_get_mtu(mx_device_t* device) {
     return USB_BUF_SIZE - ETH_HEADER_SIZE;
 }
 
-static ethernet_protocol_t usb_ethernet_proto = {
-    .send = usb_ethernet_send,
-    .recv = usb_ethernet_recv,
-    .get_mac_addr = usb_ethernet_get_mac_addr,
-    .is_online = usb_ethernet_is_online,
-    .get_mtu = usb_ethernet_get_mtu,
+static ethernet_protocol_t ax88772b_proto = {
+    .send = ax88772b_send,
+    .recv = ax88772b_recv,
+    .get_mac_addr = ax88772b_get_mac_addr,
+    .is_online = ax88772b_is_online,
+    .get_mtu = ax88772b_get_mtu,
 };
 
-static void usb_ethernet_unbind(mx_device_t* device) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+static void ax88772b_unbind(mx_device_t* device) {
+    ax88772b_t* eth = get_ax88772b(device);
     device_remove(&eth->device);
 
     mtx_lock(&eth->mutex);
@@ -365,8 +365,8 @@ static void usb_ethernet_unbind(mx_device_t* device) {
     mtx_unlock(&eth->mutex);
 }
 
-static mx_status_t usb_ethernet_release(mx_device_t* device) {
-    usb_ethernet_t* eth = get_usb_ethernet(device);
+static mx_status_t ax88772b_release(mx_device_t* device) {
+    ax88772b_t* eth = get_ax88772b(device);
 
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
@@ -385,34 +385,34 @@ static mx_status_t usb_ethernet_release(mx_device_t* device) {
 
 // simplified read/write interface
 
-static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
+static ssize_t ax88772b_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
     // special case reading MAC address
     if (len == ETH_MAC_SIZE) {
-        usb_ethernet_get_mac_addr(dev, data);
+        ax88772b_get_mac_addr(dev, data);
         return len;
     }
-    if (len < usb_ethernet_get_mtu(dev)) {
+    if (len < ax88772b_get_mtu(dev)) {
         return ERR_BUFFER_TOO_SMALL;
     }
-    return usb_ethernet_recv(dev, data, len);
+    return ax88772b_recv(dev, data, len);
 }
 
-static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
-    return usb_ethernet_send(dev, data, len);
+static ssize_t ax88772b_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
+    return ax88772b_send(dev, data, len);
 }
 
-static mx_protocol_device_t usb_ethernet_device_proto = {
-    .unbind = usb_ethernet_unbind,
-    .release = usb_ethernet_release,
-    .read = eth_read,
-    .write = eth_write,
+static mx_protocol_device_t ax88772b_device_proto = {
+    .unbind = ax88772b_unbind,
+    .release = ax88772b_release,
+    .read = ax88772b_read,
+    .write = ax88772b_write,
 };
 
-static int usb_ethernet_start_thread(void* arg) {
-    usb_ethernet_t* eth = (usb_ethernet_t*)arg;
+static int ax88772b_start_thread(void* arg) {
+    ax88772b_t* eth = (ax88772b_t*)arg;
 
     // set some GPIOs
-    mx_status_t status = usb_ethernet_set_value(eth, ASIX_REQ_GPIOS,
+    mx_status_t status = ax88772b_set_value(eth, ASIX_REQ_GPIOS,
                                                 ASIX_GPIO_GPO2EN | ASIX_GPIO_GPO_2 | ASIX_GPIO_RSE);
     if (status < 0) {
         printf("ASIX_REQ_WRITE_GPIOS failed\n");
@@ -429,42 +429,42 @@ static int usb_ethernet_start_thread(void* arg) {
     }
     eth->phy_id = phy_addr[1];
     int embed_phy = (eth->phy_id & 0x1F) == 0x10 ? 1 : 0;
-    status = usb_ethernet_set_value(eth, ASIX_REQ_SW_PHY_SELECT, embed_phy);
+    status = ax88772b_set_value(eth, ASIX_REQ_SW_PHY_SELECT, embed_phy);
     if (status < 0) {
         printf("ASIX_REQ_SW_PHY_SELECT failed\n");
         goto fail;
     }
 
     // Reset
-    status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET, ASIX_RESET_PRL | ASIX_RESET_IPPD);
+    status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET, ASIX_RESET_PRL | ASIX_RESET_IPPD);
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
         goto fail;
     }
-    status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET, 0);
+    status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET, 0);
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
         goto fail;
     }
-    status = usb_ethernet_set_value(eth, ASIX_REQ_SW_RESET,
+    status = ax88772b_set_value(eth, ASIX_REQ_SW_RESET,
                                     (embed_phy ? ASIX_RESET_IPRL : ASIX_RESET_PRTE));
     if (status < 0) {
         printf("ASIX_REQ_SW_RESET failed\n");
         goto fail;
     }
-    status = usb_ethernet_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, 0);
+    status = ax88772b_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, 0);
     if (status < 0) {
         printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
         goto fail;
     }
 
-    status = usb_ethernet_wait_for_phy(eth);
+    status = ax88772b_wait_for_phy(eth);
     if (status < 0) {
         goto fail;
     }
 
     uint16_t medium = ASIX_MEDIUM_MODE_FD | ASIX_MEDIUM_MODE_AC | ASIX_MEDIUM_MODE_RFC | ASIX_MEDIUM_MODE_TFC | ASIX_MEDIUM_MODE_JFE | ASIX_MEDIUM_MODE_RE | ASIX_MEDIUM_MODE_PS;
-    status = usb_ethernet_set_value(eth, ASIX_REQ_MEDIUM_MODE, medium);
+    status = ax88772b_set_value(eth, ASIX_REQ_MEDIUM_MODE, medium);
     if (status < 0) {
         printf("ASIX_REQ_MEDIUM_MODE failed\n");
         goto fail;
@@ -478,7 +478,7 @@ static int usb_ethernet_start_thread(void* arg) {
         goto fail;
     }
 
-    status = usb_ethernet_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, ASIX_RX_CTRL_AMALL | ASIX_RX_CTRL_AB | ASIX_RX_CTRL_S0);
+    status = ax88772b_set_value(eth, ASIX_REQ_RX_CONTROL_WRITE, ASIX_RX_CTRL_AMALL | ASIX_RX_CTRL_AB | ASIX_RX_CTRL_S0);
     if (status < 0) {
         printf("ASIX_REQ_RX_CONTROL_WRITE failed\n");
         goto fail;
@@ -490,27 +490,27 @@ static int usb_ethernet_start_thread(void* arg) {
         printf("ASIX_REQ_NODE_ID_READ failed\n");
         goto fail;
     }
-    printf("usb_ethernet MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+    printf("ax88772b MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    device_init(&eth->device, eth->driver, "usb-ethernet", &usb_ethernet_device_proto);
+    device_init(&eth->device, eth->driver, "usb-ethernet", &ax88772b_device_proto);
 
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
 
     eth->device.protocol_id = MX_PROTOCOL_ETHERNET;
-    eth->device.protocol_ops = &usb_ethernet_proto;
+    eth->device.protocol_ops = &ax88772b_proto;
     status = device_add(&eth->device, eth->usb_device);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:
-    usb_ethernet_release(&eth->device);
+    ax88772b_release(&eth->device);
     return status;
 }
 
-static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
+static mx_status_t ax88772b_bind(mx_driver_t* driver, mx_device_t* device) {
     // find our endpoints
     usb_desc_iter_t iter;
     mx_status_t result = usb_desc_iter_init(device, &iter);
@@ -544,13 +544,13 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
     usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-        printf("usb_ethernet_bind could not find endpoints\n");
+        printf("ax88772b_bind could not find endpoints\n");
         return ERR_NOT_SUPPORTED;
     }
 
-    usb_ethernet_t* eth = calloc(1, sizeof(usb_ethernet_t));
+    ax88772b_t* eth = calloc(1, sizeof(ax88772b_t));
     if (!eth) {
-        printf("Not enough memory for usb_ethernet_t\n");
+        printf("Not enough memory for ax88772b_t\n");
         return ERR_NO_MEMORY;
     }
 
@@ -570,7 +570,7 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
             goto fail;
         }
         req->length = USB_BUF_SIZE;
-        req->complete_cb = usb_ethernet_read_complete;
+        req->complete_cb = ax88772b_read_complete;
         req->cookie = eth;
         list_add_head(&eth->free_read_reqs, &req->node);
     }
@@ -581,7 +581,7 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
             goto fail;
         }
         req->length = USB_BUF_SIZE;
-        req->complete_cb = usb_ethernet_write_complete;
+        req->complete_cb = ax88772b_write_complete;
         req->cookie = eth;
         list_add_head(&eth->free_write_reqs, &req->node);
     }
@@ -592,31 +592,31 @@ static mx_status_t usb_ethernet_bind(mx_driver_t* driver, mx_device_t* device) {
             goto fail;
         }
         req->length = INTR_REQ_SIZE;
-        req->complete_cb = usb_ethernet_interrupt_complete;
+        req->complete_cb = ax88772b_interrupt_complete;
         req->cookie = eth;
         list_add_head(&eth->free_intr_reqs, &req->node);
     }
 
     thrd_t thread;
-    thrd_create_with_name(&thread, usb_ethernet_start_thread, eth, "usb_ethernet_start_thread");
+    thrd_create_with_name(&thread, ax88772b_start_thread, eth, "ax88772b_start_thread");
     thrd_detach(thread);
 
     return NO_ERROR;
 
 fail:
-    printf("usb_ethernet_bind failed: %d\n", status);
-    usb_ethernet_release(&eth->device);
+    printf("ax88772b_bind failed: %d\n", status);
+    ax88772b_release(&eth->device);
     return status;
 }
 
-mx_driver_t _driver_usb_ethernet = {
+mx_driver_t _driver_ax88772b = {
     .ops = {
-        .bind = usb_ethernet_bind,
+        .bind = ax88772b_bind,
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_usb_ethernet, "usb-ethernet-ax88772b", "magenta", "0.1", 3)
+MAGENTA_DRIVER_BEGIN(_driver_ax88772b, "usb-ethernet-ax88772b", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_VID, ASIX_VID),
     BI_MATCH_IF(EQ, BIND_USB_PID, ASIX_PID),
-MAGENTA_DRIVER_END(_driver_usb_ethernet)
+MAGENTA_DRIVER_END(_driver_ax88772b)
