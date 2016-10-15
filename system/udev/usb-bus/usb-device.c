@@ -100,6 +100,18 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         *reply = dev->hci_protocol->get_current_frame(dev->hci_device);
         return sizeof(*reply);
     }
+    case IOCTL_USB_GET_DEVICE_ID: {
+        uint64_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        *reply = dev->device_id;
+        return sizeof(*reply);
+    }
+    case IOCTL_USB_GET_DEVICE_HUB_ID: {
+        uint64_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        *reply = dev->hub_id;
+        return sizeof(*reply);
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }

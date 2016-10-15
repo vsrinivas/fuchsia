@@ -64,6 +64,16 @@ __BEGIN_CDECLS
 // call with out_len = sizeof(uint64_t)
 #define IOCTL_USB_GET_CURRENT_FRAME     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 9)
 
+// returns an implementation specific device ID for a USB device
+// for informational purposes only
+// call with out_len = sizeof(uint64_t)
+#define IOCTL_USB_GET_DEVICE_ID         IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 10)
+
+// returns the device ID for the hub that a USB device is connected to
+// for informational purposes only
+// call with out_len = sizeof(uint64_t)
+#define IOCTL_USB_GET_DEVICE_HUB_ID     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 11)
+
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_type, IOCTL_USB_GET_DEVICE_TYPE, int);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_speed, IOCTL_USB_GET_DEVICE_SPEED, int);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_desc, IOCTL_USB_GET_DEVICE_DESC, usb_device_descriptor_t);
@@ -78,5 +88,7 @@ static inline ssize_t ioctl_usb_set_interface(int fd, const int in[static 2]) {
 }
 
 IOCTL_WRAPPER_OUT(ioctl_usb_get_current_frame, IOCTL_USB_GET_CURRENT_FRAME, uint64_t);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_device_id, IOCTL_USB_GET_DEVICE_ID, uint64_t);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_device_hub_id, IOCTL_USB_GET_DEVICE_HUB_ID, uint64_t);
 
 __END_CDECLS

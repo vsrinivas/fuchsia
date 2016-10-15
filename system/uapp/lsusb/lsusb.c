@@ -34,8 +34,7 @@ static const char* usb_speeds[] = {
     "SUPER",
 };
 
-static int list_device(const char* device_id, bool verbose) {
-    char devname[128];
+static int do_list_device(int fd, bool verbose, const char* devname) {
     usb_device_descriptor_t device_desc;
     char manufacturer[256];
     char product[256];
@@ -43,34 +42,27 @@ static int list_device(const char* device_id, bool verbose) {
     product[0] = 0;
     ssize_t ret = 0;
 
-    snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
-    int fd = open(devname, O_RDONLY);
-    if (fd < 0) {
-        printf("Error opening %s\n", devname);
-        return fd;
-    }
-
     int device_type;
     ret = ioctl_usb_get_device_type(fd, &device_type);
     if (ret != sizeof(device_type)) {
         printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s\n", devname);
-        goto out;
+        return ret;
     }
     if (device_type != USB_DEVICE_TYPE_DEVICE) {
-        goto out;
+        return ret;
     }
 
     ret = ioctl_usb_get_device_desc(fd, &device_desc);
     if (ret != sizeof(device_desc)) {
         printf("IOCTL_USB_GET_DEVICE_DESC failed for %s\n", devname);
-        goto out;
+        return ret;
     }
 
     int speed;
     ret = ioctl_usb_get_device_speed(fd, &speed);
     if (ret != sizeof(speed) || speed < 0 || (size_t)speed >= countof(usb_speeds)) {
         printf("IOCTL_USB_GET_DEVICE_SPEED failed for %s\n", devname);
-        goto out;
+        return ret;
     }
 
     get_string_desc(fd, device_desc.iManufacturer, manufacturer, sizeof(manufacturer));
@@ -107,13 +99,13 @@ static int list_device(const char* device_id, bool verbose) {
         ret = ioctl_usb_get_config_desc_size(fd, &desc_size);
         if (ret != sizeof(desc_size)) {
             printf("IOCTL_USB_GET_CONFIG_DESC_SIZE failed for %s\n", devname);
-            goto out;
+            return ret;
         }
 
         uint8_t* desc = malloc(desc_size);
         if (!desc) {
             ret = -1;
-            goto out;
+            return ret;
         }
         ret = ioctl_usb_get_config_desc(fd, desc, desc_size);
         if (ret != desc_size) {
@@ -209,7 +201,20 @@ free_out:
         free(desc);
     }
 
-out:
+    return 0;
+}
+
+static int list_device(const char* device_id, bool verbose) {
+    char devname[128];
+
+    snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
+    int fd = open(devname, O_RDONLY);
+    if (fd < 0) {
+        printf("Error opening %s\n", devname);
+        return fd;
+    }
+
+    int ret = do_list_device(fd, verbose, devname);
     close(fd);
     return ret;
 }
@@ -229,16 +234,110 @@ static int list_devices(bool verbose) {
     closedir(dir);
     return 0;
 }
+struct device_node {
+    int fd;
+    char devname[30];
+    uint64_t device_id;
+    uint64_t hub_id;
+    struct device_node* next;
+};
+
+static void do_list_tree(struct device_node* devices, uint64_t hub_id, int indent) {
+    struct device_node* node = devices;
+    while (node) {
+        if (node->hub_id == hub_id) {
+            for (int i = 0; i < indent; i++) {
+                printf(" ");
+            }
+            do_list_device(node->fd, false, node->devname);
+            do_list_tree(devices, node->device_id, indent + 4);
+        }
+        node = node->next;
+    }
+}
+
+static int list_tree(void) {
+    struct dirent* de;
+    DIR* dir = opendir(DEV_USB);
+    if (!dir) {
+        printf("Error opening %s\n", DEV_USB);
+        return -1;
+    }
+
+    struct device_node* devices = NULL;
+    struct device_node* tail = NULL;
+
+    while ((de = readdir(dir)) != NULL) {
+        char devname[30];
+
+        snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, de->d_name);
+        int fd = open(devname, O_RDONLY);
+        if (fd < 0) {
+            printf("Error opening %s\n", devname);
+            continue;
+        }
+        int device_type = -1;
+        ioctl_usb_get_device_type(fd, &device_type);
+        if (device_type != USB_DEVICE_TYPE_DEVICE) {
+            close(fd);
+            continue;
+        }
+
+        struct device_node* node = (struct device_node *)malloc(sizeof(struct device_node));
+        if (!node) return -1;
+
+        int ret = ioctl_usb_get_device_id(fd, &node->device_id);
+        if (ret < 0) {
+            printf("ioctl_usb_get_device_id failed for %s/%s\n", DEV_USB, de->d_name);
+            free(node);
+            close(fd);
+            continue;
+        }
+        ret = ioctl_usb_get_device_hub_id(fd, &node->hub_id);
+        if (ret < 0) {
+            printf("ioctl_usb_get_device_hub_id failed for %s/%s\n", DEV_USB, de->d_name);
+            free(node);
+            close(fd);
+            continue;
+        }
+        node->fd = fd;
+        strlcpy(node->devname, devname, sizeof(node->devname));
+        if (devices == NULL) {
+            devices = node;
+        } else {
+            tail->next = node;
+        }
+        tail = node;
+        node->next = NULL;
+    }
+    closedir(dir);
+
+    // print device tree recursively
+    do_list_tree(devices, 0, 0);
+
+    struct device_node* node = devices;
+    while (node) {
+        struct device_node* next = node->next;
+        close(node->fd);
+        free(node);
+        node = next;
+    }
+
+    return 0;
+}
 
 int main(int argc, const char** argv) {
     int result = 0;
     bool verbose = false;
+    bool tree = false;
     const char* device_id = NULL;
 
     for (int i = 1; i < argc; i++) {
         const char* arg = argv[i];
         if (!strcmp(arg, "-v")) {
             verbose = true;
+        } else if (!strcmp(arg, "-t")) {
+            tree = true;
         } else if (!strcmp(arg, "-d")) {
             if (++i == argc) {
                 printf("device ID required after -d option\n");
@@ -253,7 +352,9 @@ int main(int argc, const char** argv) {
         }
     }
 
-    if (device_id) {
+    if (tree) {
+        return list_tree();
+    } else if (device_id) {
         return list_device(device_id, verbose);
     } else {
         return list_devices(verbose);
@@ -262,6 +363,7 @@ int main(int argc, const char** argv) {
 usage:
     printf("Usage:\n");
     printf("%s [-v] [-d <device ID>]", argv[0]);
+    printf("  -t   Prints USB device tree\n");
     printf("  -v   Verbose output (prints descriptors\n");
     printf("  -d   Prints only specified device\n");
     return result;
