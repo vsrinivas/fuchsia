@@ -42,7 +42,7 @@ void Sleep(unsigned int millis) {
 }
 
 void Pause() {
-  Sleep(2000);
+  Sleep(1000);
 }
 
 #define TEST(name) void name(Shell*)

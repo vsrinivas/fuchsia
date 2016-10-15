@@ -9,6 +9,7 @@ static_library("integration") {
   ]
 
   deps = [
+    "//apps/maxwell/acquirers/mock",
     "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
   ]

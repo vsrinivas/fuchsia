@@ -46,20 +46,23 @@ class NextSubscriber : public NextController {
   }
 
   void SetResultCount(int32_t count) override {
-    size_t effective_count =
-        std::min((size_t)count, ranked_suggestions_->size());
+    if (count < 0)
+      count = 0;
 
-    if (effective_count != (size_t)max_results_) {
-      if (effective_count > (size_t)max_results_) {
+    size_t target = std::min((size_t)count, ranked_suggestions_->size());
+    size_t prev = std::min((size_t)max_results_, ranked_suggestions_->size());
+
+    if (target != prev) {
+      if (target > prev) {
         mojo::Array<SuggestionPtr> delta;
-        for (size_t i = max_results_; i < effective_count; i++) {
+        for (size_t i = prev; i < target; i++) {
           delta.push_back((*ranked_suggestions_)[i].Clone());
         }
         listener_->OnAdd(std::move(delta));
-      } else if (effective_count == 0) {
+      } else if (target == 0) {
         listener_->OnRemoveAll();
-      } else if (effective_count < (size_t)max_results_) {
-        for (size_t i = max_results_ - 1; i >= effective_count; i--) {
+      } else if (target < prev) {
+        for (size_t i = prev - 1; i >= target; i--) {
           listener_->OnRemove((*ranked_suggestions_)[i]->uuid);
         }
       }

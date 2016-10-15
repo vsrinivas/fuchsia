@@ -9,6 +9,9 @@
 namespace maxwell {
 namespace acquirers {
 
+constexpr char GpsAcquirer::kLabel[];
+constexpr char GpsAcquirer::kSchema[];
+
 using namespace maxwell::context_engine;
 
 MockGps::MockGps(mojo::Shell* shell) : ctl_(this) {

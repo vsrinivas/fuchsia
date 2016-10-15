@@ -9,7 +9,13 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 
+#include "apps/maxwell/acquirers/gps.h"
 #include "apps/maxwell/debug.h"
+
+using maxwell::acquirers::GpsAcquirer;
+
+constexpr char GpsAcquirer::kLabel[];
+constexpr char GpsAcquirer::kSchema[];
 
 namespace {
 
@@ -41,9 +47,7 @@ class CarmenSandiego : public maxwell::DebuggableApp,
   void OnHasSubscribers() override {
     ContextSubscriberLinkPtr in_ptr;
     in_.Bind(GetProxy(&in_ptr));
-    cx_->Subscribe("/location/gps",
-                   "https://developers.google.com/maps/"
-                   "documentation/javascript/3.exp/reference#LatLngLiteral",
+    cx_->Subscribe(GpsAcquirer::kLabel, GpsAcquirer::kSchema,
                    in_ptr.PassInterfaceHandle());
   }
 
