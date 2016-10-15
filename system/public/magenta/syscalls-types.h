@@ -305,6 +305,8 @@ typedef struct mx_log_record {
     uint16_t datalen;
     uint16_t flags;
     mx_time_t timestamp;
+    uint64_t pid;
+    uint64_t tid;
     char data[0];
 } mx_log_record_t;
 

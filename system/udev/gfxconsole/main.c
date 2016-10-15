@@ -761,10 +761,11 @@ static int vc_log_reader_thread(void* arg) {
     mx_log_record_t* rec = (mx_log_record_t*)buf;
     while (mx_log_read(h, MX_LOG_RECORD_MAX, rec, MX_LOG_FLAG_WAIT) > 0) {
         char tmp[64];
-        snprintf(tmp, 64, "[%05d.%03d] %c ",
+        snprintf(tmp, 64, "\033[32m%05d.%03d\033[39m] \033[31m%05" PRIu64 ".\033[36m%05" PRIu64 "\033[39m> ",
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
+//                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U',
+                 rec->pid, rec->tid);
         vc_device_write(dev, tmp, strlen(tmp), 0);
         vc_device_write(dev, rec->data, rec->datalen, 0);
         if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {

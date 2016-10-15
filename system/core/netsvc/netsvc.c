@@ -4,6 +4,7 @@
 
 #include "netsvc.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,11 +32,10 @@ int get_log_line(char* out) {
             rec->datalen--;
         }
         rec->data[rec->datalen] = 0;
-        snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %c %s\n",
+        snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
                  (int)(rec->timestamp / 1000000000ULL),
                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                 (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U',
-                 rec->data);
+                 rec->pid, rec->tid, rec->data);
         return strlen(out);
     } else {
         return 0;

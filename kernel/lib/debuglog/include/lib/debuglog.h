@@ -61,6 +61,8 @@ struct dlog_record {
     uint16_t datalen;
     uint16_t flags;
     uint64_t timestamp;
+    uint64_t pid;
+    uint64_t tid;
     char data[0];
 };
 

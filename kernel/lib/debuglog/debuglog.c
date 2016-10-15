@@ -92,6 +92,14 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     rec->datalen = len;
     rec->flags = flags;
     rec->timestamp = current_time_hires();
+#if WITH_LIB_KTRACE
+    thread_t* t = get_current_thread();
+    rec->pid = t->user_pid;
+    rec->tid = t->user_tid;
+#else
+    rec->pid = 0;
+    rec->tid = 0;
+#endif
     memcpy(rec->data, ptr, len);
 
     // Advance the head pointer
