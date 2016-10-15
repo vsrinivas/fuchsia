@@ -7,7 +7,6 @@
 
 #include <magenta/compiler.h>
 #include <debug.h>
-#include <kernel/debug.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/mp.h>
@@ -16,12 +15,6 @@ void kernel_init(void);
 
 void kernel_init(void)
 {
-    // if enabled, configure kernel log
-    kernel_log_init();
-
-    // if enabled, configure the kernel's event log
-    kernel_evlog_init();
-
     // initialize the threading system
     dprintf(SPEW, "initializing mp\n");
     mp_init();

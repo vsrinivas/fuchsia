@@ -22,7 +22,6 @@
 #include <string.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/debug.h>
 #include <kernel/mp.h>
 #include <err.h>
 #include <platform.h>
@@ -33,7 +32,6 @@
 static int cmd_threads(int argc, const cmd_args *argv);
 static int cmd_threadstats(int argc, const cmd_args *argv);
 static int cmd_threadload(int argc, const cmd_args *argv);
-static int cmd_kevlog(int argc, const cmd_args *argv);
 static int cmd_kill(int argc, const cmd_args *argv);
 
 STATIC_COMMAND_START
@@ -43,9 +41,6 @@ STATIC_COMMAND_MASKED("threads", "list kernel threads", &cmd_threads, CMD_AVAIL_
 #if THREAD_STATS
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
-#endif
-#if WITH_KERNEL_EVLOG
-STATIC_COMMAND_MASKED("kevlog", "dump kernel event log", &cmd_kevlog, CMD_AVAIL_ALWAYS)
 #endif
 STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
@@ -176,99 +171,3 @@ static int cmd_kill(int argc, const cmd_args *argv)
 }
 
 #endif // WITH_LIB_CONSOLE
-
-#if WITH_KERNEL_EVLOG
-
-#include <lib/evlog.h>
-
-static evlog_t kernel_evlog;
-volatile bool kernel_evlog_enable;
-
-void kernel_evlog_init(void)
-{
-    evlog_init(&kernel_evlog, KERNEL_EVLOG_LEN, 4);
-
-    kernel_evlog_enable = true;
-}
-
-void kernel_evlog_add(uintptr_t id, uintptr_t arg0, uintptr_t arg1)
-{
-    if (kernel_evlog_enable) {
-        uint index = evlog_bump_head(&kernel_evlog);
-
-        kernel_evlog.items[index] = (uintptr_t)current_time_hires();
-        kernel_evlog.items[index+1] = (arch_curr_cpu_num() << 16) | id;
-        kernel_evlog.items[index+2] = arg0;
-        kernel_evlog.items[index+3] = arg1;
-    }
-}
-
-#if WITH_LIB_CONSOLE
-
-static void kevdump_cb(const uintptr_t *i)
-{
-    switch (i[1] & 0xffff) {
-        case KERNEL_EVLOG_CONTEXT_SWITCH:
-            printf("%lu.%lu: context switch from %p to %p\n", i[0], i[1] >> 16, (void *)i[2], (void *)i[3]);
-            break;
-        case KERNEL_EVLOG_PREEMPT:
-            printf("%lu.%lu: preempt on thread %p\n", i[0], i[1] >> 16, (void *)i[2]);
-            break;
-        case KERNEL_EVLOG_TIMER_TICK:
-            printf("%lu.%lu: timer tick\n", i[0], i[1] >> 16);
-            break;
-        case KERNEL_EVLOG_TIMER_CALL:
-            printf("%lu.%lu: timer call %p, arg %p\n", i[0], i[1] >> 16, (void *)i[2], (void *)i[3]);
-            break;
-        case KERNEL_EVLOG_IRQ_ENTER:
-            printf("%lu.%lu: irq entry %lu\n", i[0], i[1] >> 16, i[2]);
-            break;
-        case KERNEL_EVLOG_IRQ_EXIT:
-            printf("%lu.%lu: irq exit  %lu\n", i[0], i[1] >> 16, i[2]);
-            break;
-        default:
-            printf("%lu: unknown id 0x%lx 0x%lx 0x%lx\n", i[0], i[1], i[2], i[3]);
-    }
-}
-
-void kernel_evlog_dump(void)
-{
-    kernel_evlog_enable = false;
-    evlog_dump(&kernel_evlog, &kevdump_cb);
-    kernel_evlog_enable = true;
-}
-
-static int cmd_kevlog(int argc, const cmd_args *argv)
-{
-    printf("kernel event log:\n");
-    kernel_evlog_dump();
-
-    return NO_ERROR;
-}
-
-#endif
-
-#endif // WITH_KERNEL_EVLOG
-
-#if WITH_LIB_KLOG
-
-#include <lib/klog.h>
-
-#include <lib/io.h>
-#include <kernel/vm.h>
-
-#define NUM_KLOGS     1
-#define KLOG_BUF_LEN  (1 << 12) // 4k
-#define KLOG_BUFS_LEN (KLOG_BUF_LEN * NUM_KLOGS)
-
-static char __klog_bufs[KLOG_BUFS_LEN] __ALIGNED(PAGE_SIZE);
-
-void kernel_log_init(void)
-{
-    status_t res = klog_create(__klog_bufs, KLOG_BUFS_LEN, NUM_KLOGS);
-    if (res != NO_ERROR)
-        return;
-    klog_init();
-}
-
-#endif // WITH_LIB_KLOG

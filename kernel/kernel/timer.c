@@ -25,7 +25,6 @@
 #include <list.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/debug.h>
 #include <kernel/spinlock.h>
 #include <platform/timer.h>
 #include <platform.h>
@@ -209,7 +208,6 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
     DEBUG_ASSERT(arch_ints_disabled());
 
     THREAD_STATS_INC(timer_ints);
-//  KEVLOG_TIMER_TICK(); // enable only if necessary
 
     uint cpu = arch_curr_cpu_num();
 
@@ -241,7 +239,6 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         bool periodic = timer->periodic_time > 0;
 
         LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
-        KEVLOG_TIMER_CALL(timer->callback, timer->arg);
         if (timer->callback(timer, now, timer->arg) == INT_RESCHEDULE)
             ret = INT_RESCHEDULE;
 

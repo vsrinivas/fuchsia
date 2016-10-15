@@ -15,7 +15,6 @@
 #include <dev/interrupt/arm_gic_regs.h>
 #include <reg.h>
 #include <kernel/thread.h>
-#include <kernel/debug.h>
 #include <lk/init.h>
 #include <dev/interrupt.h>
 #include <arch/ops.h>
@@ -368,7 +367,6 @@ enum handler_return __platform_irq(struct iframe *frame)
     }
 
     THREAD_STATS_INC(interrupts);
-    KEVLOG_IRQ_ENTER(vector);
 
     uint cpu = arch_curr_cpu_num();
 
@@ -391,8 +389,6 @@ enum handler_return __platform_irq(struct iframe *frame)
     LTRACEF_LEVEL(2, "cpu %u exit %u\n", cpu, ret);
 
     ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
-
-    KEVLOG_IRQ_EXIT(vector);
 
     return ret;
 }

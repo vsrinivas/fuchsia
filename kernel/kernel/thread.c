@@ -25,7 +25,6 @@
 #include <err.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/debug.h>
 #include <kernel/mp.h>
 #include <platform.h>
 #include <target.h>
@@ -679,8 +678,6 @@ static void thread_resched(void)
            (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
 #endif
 
-    KEVLOG_THREAD_SWITCH(oldthread, newthread);
-
 #if PLATFORM_HAS_DYNAMIC_TIMER
     if (thread_is_real_time_or_idle(newthread)) {
         if (!thread_is_real_time_or_idle(oldthread)) {
@@ -814,8 +811,6 @@ void thread_preempt(bool interrupt)
         }
     }
 #endif
-
-    KEVLOG_THREAD_PREEMPT(current_thread);
 
     THREAD_LOCK(state);
 
