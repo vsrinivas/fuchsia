@@ -1,5 +1,6 @@
 {
     "labels": [
-        "//lib/escher/examples"
+        "//lib/escher:examples",
+        "//lib/escher:tests"
     ]
 }
