@@ -43,10 +43,15 @@ typedef struct mxrio_gai_reply {
     // 'res[0].ai' should be the first field
     struct {
         struct addrinfo ai;
-        struct sockaddr_in addr;
+        struct sockaddr_storage addr;
     } res[MXRIO_GAI_REPLY_MAX];
     int32_t nres;
 } mxrio_gai_reply_t;
+
+typedef union {
+    mxrio_gai_req_t req;
+    mxrio_gai_reply_t reply;
+} mxrio_gai_req_reply_t;
 
 // MXRIO_GETSOCKNAME
 // MXRIO_GETPEERNAME

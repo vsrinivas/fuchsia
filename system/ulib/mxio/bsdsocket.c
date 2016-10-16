@@ -135,32 +135,32 @@ int getaddrinfo(const char* __restrict node,
         return ERROR(r);
     }
 
-    static_assert(sizeof(mxrio_gai_req_t) >= sizeof(mxrio_gai_reply_t),
-                  "this code assumes req is larger than or equal to reply");
+    static_assert(sizeof(mxrio_gai_req_reply_t) <= MXIO_CHUNK_SIZE,
+                  "this type should be no larger than MXIO_CHUNK_SIZE");
 
-    mxrio_gai_req_t req;
+    mxrio_gai_req_reply_t gai;
 
-    req.node_is_null = (node == NULL) ? 1 : 0;
-    req.service_is_null = (service == NULL) ? 1 : 0;
-    req.hints_is_null = (hints == NULL) ? 1 : 0;
+    gai.req.node_is_null = (node == NULL) ? 1 : 0;
+    gai.req.service_is_null = (service == NULL) ? 1 : 0;
+    gai.req.hints_is_null = (hints == NULL) ? 1 : 0;
     if (node) {
-        strncpy(req.node, node, MXRIO_GAI_REQ_NODE_MAXLEN);
-        req.node[MXRIO_GAI_REQ_NODE_MAXLEN-1] = '\0';
+        strncpy(gai.req.node, node, MXRIO_GAI_REQ_NODE_MAXLEN);
+        gai.req.node[MXRIO_GAI_REQ_NODE_MAXLEN-1] = '\0';
     }
     if (service) {
-        strncpy(req.service, service, MXRIO_GAI_REQ_SERVICE_MAXLEN);
-        req.service[MXRIO_GAI_REQ_SERVICE_MAXLEN-1] = '\0';
+        strncpy(gai.req.service, service, MXRIO_GAI_REQ_SERVICE_MAXLEN);
+        gai.req.service[MXRIO_GAI_REQ_SERVICE_MAXLEN-1] = '\0';
     }
     if (hints) {
         if (hints->ai_addrlen != 0 || hints->ai_addr != NULL ||
             hints->ai_canonname != NULL || hints->ai_next != NULL) {
             return ERRNO(EINVAL);
         }
-        memcpy(&req.hints, hints, sizeof(struct addrinfo));
+        memcpy(&gai.req.hints, hints, sizeof(struct addrinfo));
     }
 
     r = io->ops->misc(io, MXRIO_GETADDRINFO, 0, sizeof(mxrio_gai_reply_t),
-                      &req, sizeof(mxrio_gai_req_t));
+                      &gai, sizeof(gai));
     io->ops->close(io);
     mxio_release(io);
 
@@ -169,9 +169,9 @@ int getaddrinfo(const char* __restrict node,
     }
 
     // alloc the memory for the out param
-    mxrio_gai_reply_t* reply = calloc(1, sizeof(mxrio_gai_reply_t));
+    mxrio_gai_reply_t* reply = calloc(1, sizeof(*reply));
     // copy the reply
-    memcpy(reply, &req, sizeof(mxrio_gai_reply_t));
+    memcpy(reply, &gai.reply, sizeof(*reply));
 
     // link all entries in the reply
     struct addrinfo *next = NULL;
