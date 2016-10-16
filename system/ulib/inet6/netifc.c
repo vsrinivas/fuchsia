@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <magenta/types.h>
@@ -104,6 +105,10 @@ int eth_send(void* data, size_t len) {
     return r;
 }
 
+void netifc_send(const void* data, size_t len) {
+    write(netfd, data, len);
+}
+
 int eth_add_mcast_filter(const mac_addr_t* addr) {
     return 0;
 }
@@ -122,6 +127,11 @@ int netifc_timer_expired(void) {
         return 1;
     }
     return 0;
+}
+
+void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
+    memcpy(addr, netmac, 6);
+    *mtu = 1500;
 }
 
 static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
@@ -185,7 +195,7 @@ int netifc_poll(void) {
                 continue;
             }
 #endif
-            eth_recv(buffer, r);
+            netifc_recv(buffer, r);
         }
         if (errno == ENOTCONN) {
             return -1;

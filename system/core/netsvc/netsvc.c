@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <threads.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
@@ -20,6 +21,8 @@
 #include <launchpad/launchpad.h>
 
 #include <magenta/netboot.h>
+
+#define FILTER_IPV6 1
 
 #define MAX_LOG_LINE (MX_LOG_RECORD_MAX + 32)
 
@@ -54,14 +57,9 @@ typedef struct logpacket {
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-void run_command(const char* cmd) {
-    printf("net cmd: %s\n", cmd);
-
-    const char* args[] = {
-        "/boot/bin/mxsh", "-c", cmd
-    };
-    mx_handle_t handles[3];
-    uint32_t ids[3];
+static void run_program(int argc, const char** argv, mx_handle_t h) {
+    mx_handle_t handles[4];
+    uint32_t ids[4];
 
     if (mxio_clone_root(handles, ids) < 0) {
         return;
@@ -75,15 +73,29 @@ void run_command(const char* cmd) {
         mx_handle_close(handles[1]);
         return;
     }
+    handles[3] = h;
     ids[1] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
     ids[2] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
+    ids[3] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
 
     mx_handle_t proc;
-    if ((proc = launchpad_launch_mxio_etc("net:mxsh", 3, args,
+    if ((proc = launchpad_launch_mxio_etc("net:mxsh", argc, argv,
                                           (const char* const*) environ,
-                                          3, handles, ids)) < 0) {
-        printf("error: cannot launch shell\n");
+                                          (h != 0) ? 4 : 3, handles, ids)) < 0) {
+        printf("netsvc: cannot launch %s\n", argv[0]);
     }
+}
+
+static void run_command(const char* cmd) {
+    const char* args[] = {
+        "/boot/bin/mxsh", "-c", cmd
+    };
+    printf("net cmd: %s\n", cmd);
+    run_program(3, args, 0);
+}
+
+static void run_server(const char* bin, mx_handle_t h) {
+    run_program(1, &bin, h);
 }
 
 static const char* hostname = "magenta";
@@ -160,6 +172,49 @@ void udp6_recv(void* data, size_t len,
     }
 }
 
+mx_handle_t ipc_handle;
+
+static int ipc_thread(void* arg) {
+    uint8_t data[2048];
+
+    for (;;) {
+        mx_status_t status;
+        uint32_t n = sizeof(data);
+        if ((status = mx_msgpipe_read(ipc_handle, data, &n, NULL, NULL, 0)) < 0) {
+            if (status == ERR_SHOULD_WAIT) {
+                mx_handle_wait_one(ipc_handle, MX_SIGNAL_READABLE, 0, NULL);
+                continue;
+            }
+            printf("netsvc: ipc read failed: %d\n", status);
+            break;
+        }
+#if FILTER_IPV6
+        if ((n >= ETH_HDR_LEN) &&
+            (*((uint16_t*) (data + 12)) == ETH_IP6)) {
+            continue;
+        }
+#endif
+        netifc_send(data, n);
+    }
+    mx_handle_close(ipc_handle);
+    ipc_handle = 0;
+    return 0;
+}
+
+void netifc_recv(void* data, size_t len) {
+    eth_recv(data, len);
+
+    if (ipc_handle) {
+#if FILTER_IPV6
+        if ((len >= ETH_HDR_LEN) &&
+            (*((uint16_t*) (data + 12)) == ETH_IP6)) {
+            return;
+        }
+#endif
+        mx_msgpipe_write(ipc_handle, data, len, NULL, 0, 0);
+    }
+}
+
 int main(int argc, char** argv) {
     logpacket_t pkt;
     int len = 0;
@@ -169,10 +224,26 @@ int main(int argc, char** argv) {
 
     printf("netsvc: main()\n");
 
+    mx_handle_t h[2] = { 0, 0 };
+    if (mx_msgpipe_create(h, 0) == NO_ERROR) {
+        run_server("/boot/bin/netstack", h[1]);
+        ipc_handle = h[0];
+        thrd_t t;
+        if (thrd_create(&t, ipc_thread, h) != thrd_success) {
+            mx_handle_close(ipc_handle);
+            ipc_handle = 0;
+        }
+    }
     for (;;) {
         if (netifc_open() != 0) {
-            printf("netsvc: fatal error initialzing network\n");
+            printf("netsvc: fatal error initializing network\n");
             return -1;
+        }
+
+        if (ipc_handle) {
+            uint8_t info[8];
+            netifc_get_info(info, (uint16_t*) (info + 6));
+            mx_msgpipe_write(ipc_handle, info, 8, NULL, 0, 0);
         }
 
         printf("netsvc: start\n");
@@ -207,6 +278,11 @@ int main(int argc, char** argv) {
                 break;
         }
         netifc_close();
+
+        if (ipc_handle) {
+            uint8_t info[8] = { 0, };
+            mx_msgpipe_write(ipc_handle, info, 8, NULL, 0, 0);
+        }
     }
 
     return 0;
