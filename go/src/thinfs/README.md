@@ -10,16 +10,16 @@ Thinfs currently includes an implementation of:
 
 ### Download ThinFS sources ###
 ```shell
-# This path is customizable, but it MUST be set.
-GOPATH=~/go
-
-cd $GOPATH
-mkdir -p src/fuchsia.googlesource.com
-cd src/fuchsia.googlesource.com
-git clone --recursive https://fuchsia.googlesource.com/thinfs
+jiri import thinfs
+jiri update
+cd $FUCHSIA_ROOT/go/src/fuchsia.googlesource.com/thinfs
 ```
 
 ### Download Mojo sources ###
+
+NOTE: At the moment, using ThinFS with Mojo is not recommended. Currently,
+ThinFS is only compatible with the Remote IO protocol within Magenta.
+
 ```shell
 # This path is customizable, but it MUST be set.
 MOJO_DIR=~/mojo
@@ -37,12 +37,6 @@ mojo/tools/mojob.py build --release
 # and remove the "go" and "src" arguments.
 # TODO(https://github.com/domokit/mojo/issues/768).
 $EDITOR $MOJO_DIR/src/mojo/public/tools/bindings/generators/mojom_go_generator.py
-```
-
-### Download Go dependencies ###
-```shell
-cd $GOPATH/src/fuchsia.googlesource.com/thinfs
-./scripts/do_glide.sh
 ```
 
 ## Building ##
