@@ -388,9 +388,12 @@ static void devhost_unbind_children(mx_device_t* dev) {
 #if TRACE_ADD_REMOVE
             printf("call unbind child: %p(%s)\n", child, child->name);
 #endif
+            // hold a reference so the child won't get released during its unbind callback.
+            dev_ref_acquire(child);
             DM_UNLOCK();
             child->ops->unbind(child);
             DM_LOCK();
+            dev_ref_release(child);
         }
     }
 }
