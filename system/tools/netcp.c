@@ -135,6 +135,7 @@ again:
             } else if (print_len < 0) {
                 return print_len;
             }
+            dst_len = print_len;
             goto again;
         }
         fprintf(stderr, "%s: error opening remote file %s (%d)\n",

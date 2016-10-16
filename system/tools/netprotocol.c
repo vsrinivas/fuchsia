@@ -68,6 +68,9 @@ int netboot_open(const char* hostname, unsigned port, struct sockaddr_in6* addr_
     for (int i = 0; i < 5; i++) {
         // transmit query on all local links
         for (; ifa != NULL; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr == NULL) {
+                continue;
+            }
             if (ifa->ifa_addr->sa_family != AF_INET6) {
                 continue;
             }
