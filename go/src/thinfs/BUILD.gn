@@ -8,9 +8,9 @@ action("thinfs") {
   outputs = [ "$target_gen_dir/thinfs" ]
 
   args = [
-    "--fuchsia_root",
+    "--fuchsia-root",
     rebase_path("//."),
-    "--go_binary",
+    "--go-binary",
     rebase_path("$root_gen_dir/third_party/go/bin/go"),
   ]
 
