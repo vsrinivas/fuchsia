@@ -14,6 +14,8 @@ group("fake") {
 
 source_set("lib") {
   sources = [
+    "fake_commit.cc",
+    "fake_commit.h",
     "fake_journal.cc",
     "fake_journal.h",
     "fake_journal_delegate.cc",

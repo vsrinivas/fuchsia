@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/app/page_snapshot_impl.h"
 #include "apps/ledger/convert/convert.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -58,8 +59,24 @@ void PageImpl::GetId(const GetIdCallback& callback) {
 
 // GetSnapshot() => (Status status, PageSnapshot? snapshot);
 void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
-  FTL_LOG(ERROR) << "PageImpl::GetSnapshot not implemented";
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  // TODO(etiennej): Commit implicit transactions when we have those.
+  storage::CommitId commit_id;
+  if (!journal_) {
+    commit_id = GetLocalBranchHeadCommit();
+  } else {
+    commit_id = journal_parent_commit_;
+  }
+  std::unique_ptr<storage::Commit> commit;
+  storage::Status status = storage_->GetCommit(commit_id, &commit);
+  if (status != storage::Status::OK) {
+    callback.Run(ConvertStatus(status), nullptr);
+    return;
+  }
+  PageSnapshotPtr snapshot_ptr;
+  page_snapshot_bindings_.AddBinding(
+      new PageSnapshotImpl(storage_, commit->GetContents()),
+      GetProxy(&snapshot_ptr));
+  callback.Run(Status::OK, snapshot_ptr.Pass());
 }
 
 // Watch(PageWatcher watcher) => (Status status);
@@ -228,6 +245,7 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
   storage::CommitId commit_id = GetLocalBranchHeadCommit();
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::EXPLICIT, &journal_);
+  journal_parent_commit_ = commit_id;
   callback.Run(ConvertStatus(status));
 }
 
@@ -239,6 +257,8 @@ void PageImpl::Commit(const CommitCallback& callback) {
   }
   storage::CommitId new_commit_id;
   storage::Status status = journal_->Commit(&new_commit_id);
+  journal_.reset();
+  journal_parent_commit_.clear();
   callback.Run(ConvertStatus(status));
 }
 
@@ -249,6 +269,8 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
     return;
   }
   storage::Status status = journal_->Rollback();
+  journal_.reset();
+  journal_parent_commit_.clear();
   callback.Run(ConvertStatus(status));
 }
 

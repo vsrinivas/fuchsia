@@ -14,6 +14,7 @@
 #include "apps/ledger/storage/public/page_storage.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
+#include "mojo/public/cpp/bindings/strong_binding_set.h"
 
 namespace ledger {
 
@@ -81,7 +82,9 @@ class PageImpl : public Page {
   void Rollback(const RollbackCallback& callback) override;
 
   storage::PageStorage* storage_;
+  storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
+  mojo::StrongBindingSet<PageSnapshot> page_snapshot_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

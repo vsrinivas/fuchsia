@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/fake/fake_commit.h"
 #include "apps/ledger/storage/fake/fake_journal.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/mtl/data_pipe/strings.h"
@@ -55,9 +56,10 @@ void FakePageStorage::SetPageDeletionHandler(
 Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   commit_ids->clear();
 
-  for (auto it = journals_.begin(); it < journals_.end(); ++it) {
-    if ((*it)->IsCommitted()) {
-      commit_ids->push_back((*it)->GetId());
+  for (auto it = journals_.rbegin(); it != journals_.rend(); ++it) {
+    if (it->second->IsCommitted()) {
+      commit_ids->push_back(it->second->GetId());
+      break;
     }
   }
   if (commit_ids->size() == 0) {
@@ -68,7 +70,12 @@ Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 
 Status FakePageStorage::GetCommit(const CommitId& commit_id,
                                   std::unique_ptr<Commit>* commit) {
-  return Status::NOT_IMPLEMENTED;
+  auto it = journals_.find(commit_id);
+  if (it == journals_.end()) {
+    return Status::NOT_FOUND;
+  }
+  commit->reset(new FakeCommit(journals_[commit_id].get()));
+  return Status::OK;
 }
 
 Status FakePageStorage::AddCommitFromSync(const CommitId& id,
@@ -82,7 +89,7 @@ Status FakePageStorage::StartCommit(const CommitId& commit_id,
   std::unique_ptr<FakeJournalDelegate> delegate(new FakeJournalDelegate);
   std::unique_ptr<Journal> fake_journal(new FakeJournal(delegate.get()));
   journal->swap(fake_journal);
-  journals_.push_back(std::move(delegate));
+  journals_[delegate->GetId()] = std::move(delegate);
   return Status::OK;
 }
 
@@ -158,7 +165,7 @@ void FakePageStorage::GetBlob(
   callback(Status::OK, std::make_unique<FakeObject>(blob_id, it->second));
 }
 
-const std::vector<std::unique_ptr<FakeJournalDelegate>>&
+const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
 FakePageStorage::GetJournals() const {
   return journals_;
 }

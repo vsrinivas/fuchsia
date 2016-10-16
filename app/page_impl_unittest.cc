@@ -17,6 +17,7 @@
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/bindings/binding.h"
+#include "mojo/public/cpp/bindings/callback.h"
 
 namespace ledger {
 namespace {
@@ -71,13 +72,15 @@ TEST_F(PageImplTest, PutNoTransaction) {
     std::string actual_value = objects.begin()->second;
     EXPECT_EQ(value, actual_value);
 
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_TRUE(journals[0]->IsCommitted());
-    EXPECT_EQ(1u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_TRUE(it->second->IsCommitted());
+    EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key);
+        it->second->GetData().at(key);
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
@@ -99,13 +102,15 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     // No object should have been added.
     EXPECT_EQ(0u, objects.size());
 
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_TRUE(journals[0]->IsCommitted());
-    EXPECT_EQ(1u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_TRUE(it->second->IsCommitted());
+    EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key);
+        it->second->GetData().at(key);
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
@@ -125,13 +130,15 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
     // No object should have been added.
     EXPECT_EQ(0u, objects.size());
 
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_TRUE(journals[0]->IsCommitted());
-    EXPECT_EQ(1u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_TRUE(it->second->IsCommitted());
+    EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key);
+        it->second->GetData().at(key);
     EXPECT_TRUE(entry.deleted);
     message_loop_.QuitNow();
   });
@@ -168,13 +175,15 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(value, actual_value);
 
     // No finished commit yet.
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_FALSE(journals[0]->IsCommitted());
-    EXPECT_EQ(1u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_FALSE(it->second->IsCommitted());
+    EXPECT_EQ(1u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key1);
+        it->second->GetData().at(key1);
     EXPECT_EQ(object_id1, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
@@ -189,13 +198,15 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with now two entries.
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_FALSE(journals[0]->IsCommitted());
-    EXPECT_EQ(2u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_FALSE(it->second->IsCommitted());
+    EXPECT_EQ(2u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key2);
+        it->second->GetData().at(key2);
     EXPECT_EQ(object_id2, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
@@ -211,17 +222,19 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with the second entry deleted.
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_FALSE(journals[0]->IsCommitted());
-    EXPECT_EQ(2u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_FALSE(it->second->IsCommitted());
+    EXPECT_EQ(2u, it->second->GetData().size());
     storage::fake::FakeJournalDelegate::Entry entry =
-        journals[0]->GetData().at(key2);
+        it->second->GetData().at(key2);
     EXPECT_TRUE(entry.deleted);
     message_loop_.QuitNow();
-
   };
+
   page_ptr_->Delete(convert::ToArray(key2), delete_callback);
   message_loop_.Run();
 
@@ -229,11 +242,13 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(1u, fake_storage_->GetObjects().size());
 
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_TRUE(journals[0]->IsCommitted());
-    EXPECT_EQ(2u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_TRUE(it->second->IsCommitted());
+    EXPECT_EQ(2u, it->second->GetData().size());
     message_loop_.QuitNow();
   });
   message_loop_.Run();
@@ -250,11 +265,13 @@ TEST_F(PageImplTest, TransactionRollback) {
     EXPECT_EQ(0u, fake_storage_->GetObjects().size());
 
     // Only one journal, rollbacked.
-    const std::vector<std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
         journals = fake_storage_->GetJournals();
     EXPECT_EQ(1u, journals.size());
-    EXPECT_TRUE(journals[0]->IsRolledBack());
-    EXPECT_EQ(0u, journals[0]->GetData().size());
+    auto it = journals.begin();
+    EXPECT_TRUE(it->second->IsRolledBack());
+    EXPECT_EQ(0u, it->second->GetData().size());
     message_loop_.QuitNow();
   });
   message_loop_.Run();
@@ -359,6 +376,92 @@ TEST_F(PageImplTest, GetUnknownReference) {
       });
   message_loop_.Run();
   EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetAll) {
+  std::string key("some_key");
+  std::string value("a small value");
+  PageSnapshotPtr snapshot;
+
+  auto callback_put = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this, &snapshot](
+      Status status,
+      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(callback_getsnapshot);
+  message_loop_.Run();
+
+  mojo::Array<EntryPtr> actual_entries;
+  auto callback_getall = [this, &actual_entries](
+      Status status, mojo::Array<EntryPtr> entries) {
+    EXPECT_EQ(Status::OK, status);
+    actual_entries = std::move(entries);
+    message_loop_.QuitNow();
+  };
+  snapshot->GetAll(nullptr, callback_getall);
+  message_loop_.Run();
+
+  EXPECT_EQ(1u, actual_entries.size());
+  EXPECT_EQ(key, convert::ExtendedStringView(actual_entries[0]->key));
+  EXPECT_EQ(value, convert::ExtendedStringView(actual_entries[0]->value));
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
+  std::string key1("some_key");
+  std::string value1("a small value");
+  std::string key2("some_key2");
+  std::string value2("another value");
+  PageSnapshotPtr snapshot;
+
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->StartTransaction(callback_statusok);
+  message_loop_.Run();
+  page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
+                 callback_statusok);
+  message_loop_.Run();
+  page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
+                 callback_statusok);
+  message_loop_.Run();
+  page_ptr_->Commit(callback_statusok);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this, &snapshot](
+      Status status,
+      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(callback_getsnapshot);
+  message_loop_.Run();
+
+  mojo::Array<mojo::Array<uint8_t>> actual_keys;
+  auto callback_getkeys = [this, &actual_keys](
+      Status status, mojo::Array<mojo::Array<uint8_t>> keys) {
+    EXPECT_EQ(Status::OK, status);
+    actual_keys = std::move(keys);
+    message_loop_.QuitNow();
+  };
+  snapshot->GetKeys(nullptr, callback_getkeys);
+  message_loop_.Run();
+
+  EXPECT_EQ(2u, actual_keys.size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
 }
 
 }  // namespace

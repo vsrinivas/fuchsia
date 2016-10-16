@@ -28,6 +28,8 @@ source_set("lib") {
     "page_impl.h",
     "page_manager.cc",
     "page_manager.h",
+    "page_snapshot_impl.cc",
+    "page_snapshot_impl.h",
   ]
 
   deps = [

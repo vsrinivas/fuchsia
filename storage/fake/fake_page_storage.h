@@ -60,12 +60,13 @@ class FakePageStorage : public PageStorage {
                    callback) override;
 
   // For testing:
-  const std::vector<std::unique_ptr<FakeJournalDelegate>>& GetJournals() const;
+  const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
+  GetJournals() const;
   const std::map<ObjectId, std::string, convert::StringViewComparator>&
   GetObjects() const;
 
  private:
-  std::vector<std::unique_ptr<FakeJournalDelegate>> journals_;
+  std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectId, std::string, convert::StringViewComparator> objects_;
   PageId page_id_;
 

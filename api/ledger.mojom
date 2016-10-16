@@ -178,7 +178,8 @@ struct Entry {
   array<uint8>? value;
 };
 
-// The content of a page at a given time.
+// The content of a page at a given time. Closing the connection to a |Page|
+// interface closes all |PageSnapshot| interfaces it created.
 interface PageSnapshot {
   // Returns all the entries in the database sharing the given key prefix. If
   // |key_prefix| is NULL, all entries are returned. |entries| are sorted by
