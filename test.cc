@@ -33,18 +33,32 @@ void Yield() {
   RunLoop::current()->RunUntilIdle();
 }
 
+Predicate operator&&(const Predicate& a, const Predicate& b) {
+  return [&a, &b] { return a() && b(); };
+}
+
+Predicate operator||(const Predicate& a, const Predicate& b) {
+  return [&a, &b] { return a() || b(); };
+}
+
+Predicate operator!(const Predicate& a) {
+  return [&a] { return !a(); };
+}
+
+Predicate Deadline(unsigned int millis) {
+  MojoTimeTicks deadline = GetTimeTicksNow() + millis * 1000;
+  return [deadline] { return GetTimeTicksNow() >= deadline; };
+}
+
 void StartComponent(mojo::Shell* shell, const std::string& url) {
   InterfacePtr<ServiceProvider> component;
   shell->ConnectToApplication(url, GetProxy(&component));
 }
 
 void Sleep(unsigned int millis) {
-  MojoTimeTicks deadline = GetTimeTicksNow() + millis * 1000;
-  WaitUntil([deadline] { return GetTimeTicksNow() >= deadline; });
+  WaitUntil(Deadline(millis));
 }
 
-constexpr MojoTimeTicks kPauseIdle = 250 * 1000;
-constexpr MojoTimeTicks kPauseMax = 2000 * 1000;
 // This is approximated by updating it when a dependency app is launched.
 MojoTimeTicks last_activity;
 
@@ -53,11 +67,11 @@ void Pause() {
   // number of apps being spun up as a result of a test call. This
   // implementation pauses longer if apps are starting up.
   last_activity = GetTimeTicksNow();
-  MojoTimeTicks deadline = last_activity + kPauseMax;
+  MojoTimeTicks deadline = last_activity + kPauseMaxMs * 1000;
   WaitUntil([deadline] {
     MojoTimeTicks now = GetTimeTicksNow();
 
-    return now >= last_activity + kPauseIdle || now >= deadline;
+    return now >= last_activity + kPauseIdleMs * 1000 || now >= deadline;
   });
 }
 

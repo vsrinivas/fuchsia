@@ -53,42 +53,40 @@ void TestSuggestionEngine(Shell* shell) {
 
   s->SubscribeToNext(lp.PassInterfaceHandle(), GetProxy(&ctl));
   ctl->SetResultCount(3);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 0);
+  ASYNC_CHECK(listener.suggestion_count() == 0);
 
   gps.Publish(90, 0);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 1);
+  ASYNC_CHECK(listener.suggestion_count() == 1);
+  // Note that without the above ASYNC_CHECK or a pause, this context update may
+  // be lost due to the subscription not yet having happened.
 
   gps.Publish(-90, 0);
-  Pause();
   // TODO(rosswang): After Suggestion Engine dedups by id, change this.
-  MOJO_CHECK(listener.suggestion_count() == 2);
+  ASYNC_CHECK(listener.suggestion_count() == 2);
 
   ctl->SetResultCount(0);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 0);
+  ASYNC_CHECK(listener.suggestion_count() == 0);
 
   ctl->SetResultCount(3);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 2);
+  ASYNC_CHECK(listener.suggestion_count() == 2);
 
   // TODO(rosswang): Populate additional suggestions through a legit channel.
   gps.Publish(90, 0);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 3);
-  gps.Publish(-90, 0);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 3);
+  ASYNC_CHECK(listener.suggestion_count() == 3);
+  gps.Publish(-90, 0);  // available = 4
+  ASYNC_CHECK(listener.suggestion_count() == 3);
   ctl->SetResultCount(3);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 3);
+  ASYNC_CHECK(listener.suggestion_count() == 3);
 
   ctl->SetResultCount(4);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 4);
+  ASYNC_CHECK(listener.suggestion_count() == 4);
+
+  ctl->SetResultCount(10);
+  ASYNC_CHECK(listener.suggestion_count() == 4);
+  gps.Publish(90, 0);
+  gps.Publish(-90, 0);  // available = 6
+  ASYNC_CHECK(listener.suggestion_count() == 6);
 
   ctl->SetResultCount(1);
-  Pause();
-  MOJO_CHECK(listener.suggestion_count() == 1);
+  ASYNC_CHECK(listener.suggestion_count() == 1);
 }
