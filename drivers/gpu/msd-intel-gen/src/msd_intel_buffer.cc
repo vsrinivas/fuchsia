@@ -47,7 +47,9 @@ bool MsdIntelBuffer::MapGpu(AddressSpace* address_space, uint32_t alignment)
     if (size > address_space->Size())
         return DRETF(false, "buffer size greater than address space size");
 
-    if (!platform_buffer()->PinPages())
+    DASSERT(magma::is_page_aligned(size));
+
+    if (!platform_buffer()->PinPages(0, size / PAGE_SIZE))
         return DRETF(false, "failed to pin pages");
 
     gpu_addr_t gpu_addr;
@@ -72,7 +74,7 @@ bool MsdIntelBuffer::UnmapGpu(AddressSpace* address_space)
 
     bool ret = true;
 
-    if (!platform_buffer()->UnpinPages()) {
+    if (!platform_buffer()->UnpinPages(0, platform_buffer()->size() / PAGE_SIZE)) {
         DLOG("failed to unpin pages");
         ret = false;
     }

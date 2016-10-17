@@ -90,7 +90,7 @@ bool Gtt::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE);
 
-    if (!scratch_->PinPages())
+    if (!scratch_->PinPages(0, 1))
         return DRETF(false, "PinPages failed");
 
     if (!scratch_->MapPageBus(0, &scratch_gpu_addr_))
@@ -174,20 +174,17 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
 {
     DLOG("InsertEntries addr 0x%llx", addr);
 
-    uint32_t num_pages;
+    uint64_t length = buffer->size();
 
-    if (!buffer->PinnedPageCount(&num_pages))
-        return DRETF(false, "PinnedPageCount failed");
+    size_t allocated_length;
+    if (!allocator_->GetSize(addr, &allocated_length))
+        return DRETF(false, "couldn't get allocated length for addr");
 
-    if (num_pages == 0)
-        return DRETF(false, "num_pages is 0");
+    if (length != allocated_length)
+        return DRETF(false, "allocated length %lld doesn't match length %lld", allocated_length,
+                     length);
 
-    size_t length;
-    if (!allocator_->GetSize(addr, &length))
-        return DRETF(false, "couldn't get size for addr");
-
-    if (length != num_pages * PAGE_SIZE)
-        return DRETF(false, "allocated length doesn't match buffer size");
+    uint32_t num_pages = length / PAGE_SIZE;
 
     uint64_t first_entry = addr >> PAGE_SHIFT;
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);

@@ -83,14 +83,12 @@ static void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* 
     uint64_t* pte_array =
         reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mmio->addr()) + mmio->size() / 2);
 
-    uint32_t page_count;
-    bool ret = buffer->PinnedPageCount(&page_count);
-    EXPECT_TRUE(true);
+    ASSERT_TRUE(magma::is_page_aligned(buffer->size()));
+    uint32_t page_count = buffer->size() / PAGE_SIZE;
 
     for (unsigned int i = 0; i < page_count; i++) {
         uint64_t bus_addr;
-        ret = buffer->MapPageBus(i, &bus_addr);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(buffer->MapPageBus(i, &bus_addr));
 
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
@@ -98,8 +96,7 @@ static void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* 
         EXPECT_TRUE(pte & 0x3); // rw
         EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
 
-        ret = buffer->UnmapPageBus(i);
-        EXPECT_TRUE(ret);
+        EXPECT_TRUE(buffer->UnmapPageBus(i));
     }
 }
 
@@ -171,9 +168,9 @@ public:
         ret = gtt->Insert(addr[0], buffer[0].get(), CACHING_NONE);
         EXPECT_EQ(ret, false);
 
-        ret = buffer[0]->PinPages();
+        ret = buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE);
         EXPECT_EQ(ret, true);
-        ret = buffer[1]->PinPages();
+        ret = buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE);
         EXPECT_EQ(ret, true);
 
         // Mismatch addr and buffer
