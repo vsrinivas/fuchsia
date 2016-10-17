@@ -123,7 +123,7 @@ void CloudStorageImpl::UploadFile(const std::string& key,
 
   mtl::CopyFromFileDescriptor(
       std::move(fd), std::move(data_pipe.producer_handle), task_runner_,
-      [](bool result) {
+      [](bool result, ftl::UniqueFD fd) {
         if (!result) {
           // An error while reading the file means that
           // the data sent to the server will not match
@@ -232,12 +232,13 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  mtl::CopyToFileDescriptor(
-      std::move(body), std::move(fd), task_runner_,
-      [destination, callback, expected_file_size](bool success) {
-        OnFileWritten(std::move(destination), std::move(callback),
-                      expected_file_size, success);
-      });
+  mtl::CopyToFileDescriptor(std::move(body), std::move(fd), task_runner_,
+                            [destination, callback, expected_file_size](
+                                bool success, ftl::UniqueFD fd) {
+                              OnFileWritten(std::move(destination),
+                                            std::move(callback),
+                                            expected_file_size, success);
+                            });
 }
 
 }  // namespace gcs
