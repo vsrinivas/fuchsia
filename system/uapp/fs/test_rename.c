@@ -11,24 +11,57 @@
 #include "misc.h"
 
 int test_rename(void) {
-    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename when src does not exist
+    // Cannot rename when src does not exist
+    EXPECT_FAIL(rename("::alpha", "::bravo"));
+
+    // Cannot rename to self
     TRY(mkdir("::alpha", 0755));
-    EXPECT_FAIL(rename("::alpha", "::alpha")); // Cannot rename to self
+    EXPECT_FAIL(rename("::alpha", "::alpha"));
+
+    // Cannot rename dir to file
     int fd = TRY(open("::bravo", O_RDWR|O_CREAT|O_EXCL, 0644));
     close(fd);
-    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename dir to file
+    EXPECT_FAIL(rename("::alpha", "::bravo"));
     TRY(unlink("::bravo"));
-    TRY(rename("::alpha", "::bravo")); // Rename dir (dst does not exist)
+
+    // Rename dir (dst does not exist)
+    TRY(rename("::alpha", "::bravo"));
     TRY(mkdir("::alpha", 0755));
-    TRY(rename("::bravo", "::alpha")); // Rename dir (dst does exist)
+    // Rename dir (dst does exist)
+    TRY(rename("::bravo", "::alpha"));
+
+    // Rename file (dst does not exist)
     fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
-    TRY(rename("::alpha/charlie", "::alpha/delta")); // Rename file (dst does not exist)
+    TRY(rename("::alpha/charlie", "::alpha/delta"));
     close(fd);
+
+    // Rename file (dst does not exist)
     fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
-    TRY(rename("::alpha/delta", "::alpha/charlie")); // Rename file (dst does not exist)
-    EXPECT_FAIL(rename("::alpha/charlie", "::charlie")); // Cannot rename outside current directory
+    TRY(rename("::alpha/delta", "::alpha/charlie"));
     close(fd);
-    TRY(unlink("::alpha/charlie"));
+
+    // Rename to different directory
+    TRY(mkdir("::bravo", 0755));
+    TRY(rename("::alpha/charlie", "::charlie"));
+    TRY(rename("::charlie", "::alpha/charlie"));
+    TRY(rename("::bravo", "::alpha/bravo"));
+    TRY(rename("::alpha/charlie", "::alpha/bravo/charlie"));
+
+    // Cannot rename directory to subdirectory of itself
+    EXPECT_FAIL(rename("::alpha", "::alpha/bravo"));
+    EXPECT_FAIL(rename("::alpha", "::alpha/bravo/charlie"));
+    EXPECT_FAIL(rename("::alpha", "::alpha/bravo/charlie/delta"));
+    EXPECT_FAIL(rename("::alpha", "::alpha/delta"));
+    EXPECT_FAIL(rename("::alpha/bravo", "::alpha/bravo/charlie"));
+    EXPECT_FAIL(rename("::alpha/bravo", "::alpha/bravo/charlie/delta"));
+    // Cannot rename to non-empty directory
+    EXPECT_FAIL(rename("::alpha/bravo/charlie", "::alpha/bravo"));
+    EXPECT_FAIL(rename("::alpha/bravo/charlie", "::alpha"));
+    EXPECT_FAIL(rename("::alpha/bravo", "::alpha"));
+
+    // Clean up
+    TRY(unlink("::alpha/bravo/charlie"));
+    TRY(unlink("::alpha/bravo"));
     TRY(unlink("::alpha"));
     return 0;
 }
