@@ -158,7 +158,7 @@ status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
             mutex_release(&probe_list_lock);
             return probe->num;
         }
-        probe = (ktrace_probe_info_t*) calloc(sizeof(probe) + MX_MAX_NAME_LEN, 1);
+        probe = (ktrace_probe_info_t*) calloc(sizeof(*probe) + MX_MAX_NAME_LEN, 1);
         if (probe == NULL) {
             mutex_release(&probe_list_lock);
             return ERR_NO_MEMORY;
