@@ -288,23 +288,16 @@ static mx_status_t xhci_start_root_hub(xhci_t* xhci, xhci_root_hub_t* rh, int rh
 mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
     xprintf("xhci_start_root_hubs\n");
 
-    // power cycle all the root hubs first to make sure we start off with a clean slate
+    // reset all the root hub ports first to make sure we start off with a clean slate
     for (uint32_t i = 0; i < xhci->rh_num_ports; i++) {
         volatile uint32_t* portsc = &xhci->op_regs->port_regs[i].portsc;
         uint32_t temp = XHCI_READ32(portsc);
 #if DEBUG_PORTSC
         print_portsc(i, temp);
 #endif
-        // power off
-        temp = (temp & PORTSC_CONTROL_BITS) & ~PORTSC_PP;
+        // reset the port
+        temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PR;
         XHCI_WRITE32(portsc, temp);
-        xhci_wait_bits(portsc, PORTSC_PP, 0);
-
-        // power port back on
-        temp = XHCI_READ32(portsc);
-        temp = (temp & PORTSC_CONTROL_BITS) | PORTSC_PP;
-        XHCI_WRITE32(portsc, temp);
-        xhci_wait_bits(portsc, PORTSC_PP, PORTSC_PP);
     }
 
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
@@ -314,6 +307,10 @@ mx_status_t xhci_start_root_hubs(xhci_t* xhci) {
             return status;
         }
     }
+
+    // process initial port states
+    xhci_handle_root_hub_change(xhci, true);
+
     return NO_ERROR;
 }
 
@@ -369,7 +366,6 @@ static mx_status_t xhci_rh_get_descriptor(uint8_t request_type, xhci_root_hub_t*
     txn->ops->complete(txn, ERR_NOT_SUPPORTED, 0);
     return ERR_NOT_SUPPORTED;
 }
-
 
 // handles control requests for virtual root hub devices
 static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_t* setup, iotxn_t* txn) {
@@ -496,7 +492,7 @@ mx_status_t xhci_rh_iotxn_queue(xhci_t* xhci, iotxn_t* txn, int rh_index) {
     return ERR_NOT_SUPPORTED;
 }
 
-void xhci_handle_root_hub_change(xhci_t* xhci) {
+void xhci_handle_root_hub_change(xhci_t* xhci, bool initial_state) {
     volatile xhci_port_regs_t* port_regs = xhci->op_regs->port_regs;
 
     xprintf("xhci_handle_root_hub_change\n");
@@ -508,7 +504,7 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
 #if DEBUG_PORTSC
         print_portsc(i, portsc);
 #endif
-        if (status_bits) {
+        if (status_bits || initial_state) {
             bool connected = !!(portsc & PORTSC_CCS);
             bool enabled = !!(portsc & PORTSC_PED);
 
@@ -521,12 +517,14 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
             int port_index = xhci->rh_port_map[i];
             usb_port_status_t* status = &rh->port_status[port_index];
 
-            if (portsc & PORTSC_CSC) {
+            // We may not have the PORTSC_CSC "connect state changed" bit set
+            // if the device was already connected at boot
+            if ((portsc & PORTSC_CSC) || (initial_state && connected)) {
                 // connect status change
                 xprintf("port %d PORTSC_CSC connected: %d\n", i, connected);
                 if (connected) {
                      status->wPortStatus |= USB_PORT_CONNECTION;
-               } else {
+                } else {
                     if (status->wPortStatus & USB_PORT_ENABLE) {
                         status->wPortChange |= USB_PORT_ENABLE;
                     }
