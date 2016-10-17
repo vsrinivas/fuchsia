@@ -6,6 +6,7 @@
 
 #include "lib/ftl/macros.h"
 #include "third_party/gtest/include/gtest/gtest.h"
+#include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_internal.h"
@@ -15,6 +16,14 @@
 namespace url {
 
 namespace {
+
+class URLCanonTest : public url::test::IcuUnitTestBase {
+ public:
+  URLCanonTest() {}
+  ~URLCanonTest() override {}
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(URLCanonTest);
+};
 
 struct ComponentCase {
   const char* input;
@@ -58,7 +67,7 @@ std::string BytesToHexString(unsigned char bytes[16], size_t length) {
 
 }  // namespace
 
-TEST(URLCanonTest, DoAppendUTF8) {
+TEST_F(URLCanonTest, DoAppendUTF8) {
   struct UTF8Case {
     unsigned input;
     const char* output;
@@ -89,7 +98,7 @@ TEST(URLCanonTest, DoAppendUTF8) {
 #else
 #define MAYBE_DoAppendUTF8Invalid DISABLED_DoAppendUTF8Invalid
 #endif
-TEST(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
+TEST_F(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
   std::string out_str;
   StdStringCanonOutput output(&out_str);
   // Invalid code point (too large).
@@ -101,7 +110,7 @@ TEST(URLCanonTest, MAYBE_DoAppendUTF8Invalid) {
 }
 #endif  // defined(GTEST_HAS_DEATH_TEST)
 
-TEST(URLCanonTest, UTF) {
+TEST_F(URLCanonTest, UTF) {
   // Low-level test that we handle reading, canonicalization, and writing
   // UTF-8/UTF-16 strings properly.
   struct UTFCase {
@@ -144,7 +153,7 @@ TEST(URLCanonTest, UTF) {
   }
 }
 
-TEST(URLCanonTest, Scheme) {
+TEST_F(URLCanonTest, Scheme) {
   // Here, we're mostly testing that unusual characters are handled properly.
   // The canonicalizer doesn't do any parsing or whitespace detection. It will
   // also do its best on error, and will escape funny sequences (these won't be
@@ -196,7 +205,7 @@ TEST(URLCanonTest, Scheme) {
   EXPECT_EQ(0U, out_comp.len());
 }
 
-TEST(URLCanonTest, Host) {
+TEST_F(URLCanonTest, Host) {
   IPAddressCase host_cases[] = {
       // Basic canonicalization, uppercase should be converted to lowercase.
       {"GoOgLe.CoM", "google.com", Component(0, 10), CanonHostInfo::NEUTRAL, -1, ""},
@@ -429,7 +438,7 @@ TEST(URLCanonTest, Host) {
   }
 }
 
-TEST(URLCanonTest, IPv4) {
+TEST_F(URLCanonTest, IPv4) {
   IPAddressCase host_cases[] = {
       // Empty is not an IP address.
       {"", "", Component(), CanonHostInfo::NEUTRAL, -1, ""},
@@ -526,7 +535,7 @@ TEST(URLCanonTest, IPv4) {
   }
 }
 
-TEST(URLCanonTest, IPv6) {
+TEST_F(URLCanonTest, IPv6) {
   IPAddressCase cases[] = {
       // Empty is not an IP address.
       {"", "", Component(), CanonHostInfo::NEUTRAL, -1, ""},
@@ -673,7 +682,7 @@ TEST(URLCanonTest, IPv6) {
   }
 }
 
-TEST(URLCanonTest, IPEmpty) {
+TEST_F(URLCanonTest, IPEmpty) {
   std::string out_str1;
   StdStringCanonOutput output1(&out_str1);
   CanonHostInfo host_info;
@@ -687,7 +696,7 @@ TEST(URLCanonTest, IPEmpty) {
   EXPECT_FALSE(host_info.IsIPAddress());
 }
 
-TEST(URLCanonTest, UserInfo) {
+TEST_F(URLCanonTest, UserInfo) {
   // Note that the canonicalizer should escape and treat empty components as
   // not being there.
 
@@ -740,7 +749,7 @@ TEST(URLCanonTest, UserInfo) {
   }
 }
 
-TEST(URLCanonTest, Port) {
+TEST_F(URLCanonTest, Port) {
   // We only need to test that the number gets properly put into the output
   // buffer. The parser unit tests will test scanning the number correctly.
   //
@@ -783,7 +792,7 @@ TEST(URLCanonTest, Port) {
   }
 }
 
-TEST(URLCanonTest, Path) {
+TEST_F(URLCanonTest, Path) {
   DualComponentCase path_cases[] = {
       // ----- path collapsing tests -----
       {"/././foo", "/foo", Component(0, 4), true},
@@ -890,7 +899,7 @@ TEST(URLCanonTest, Path) {
   EXPECT_EQ("/ab%00c", out_str);
 }
 
-TEST(URLCanonTest, Query) {
+TEST_F(URLCanonTest, Query) {
   struct QueryCase {
     const char* input8;
     const char* expected;
@@ -940,7 +949,7 @@ TEST(URLCanonTest, Query) {
   EXPECT_EQ("?a%20%00z%01", out_str);
 }
 
-TEST(URLCanonTest, Ref) {
+TEST_F(URLCanonTest, Ref) {
   // Refs are trivial, it just checks the encoding.
   DualComponentCase ref_cases[] = {
       // Regular one, we shouldn't escape spaces, et al.
@@ -993,7 +1002,7 @@ TEST(URLCanonTest, Ref) {
   EXPECT_EQ("#abz", out_str);
 }
 
-TEST(URLCanonTest, CanonicalizeStandardURL) {
+TEST_F(URLCanonTest, CanonicalizeStandardURL) {
   // The individual component canonicalize tests should have caught the cases
   // for each of those components. Here, we just need to test that the various
   // parts are included or excluded properly, and have the correct separators.
@@ -1057,7 +1066,7 @@ TEST(URLCanonTest, CanonicalizeStandardURL) {
   }
 }
 
-TEST(URLCanonTest, CanonicalizeFileURL) {
+TEST_F(URLCanonTest, CanonicalizeFileURL) {
   struct URLCase {
     const char* input;
     const char* expected;
@@ -1113,7 +1122,7 @@ TEST(URLCanonTest, CanonicalizeFileURL) {
   }
 }
 
-TEST(URLCanonTest, CanonicalizePathURL) {
+TEST_F(URLCanonTest, CanonicalizePathURL) {
   // Path URLs should get canonicalized schemes but nothing else.
   struct PathCase {
     const char* input;
@@ -1149,7 +1158,7 @@ TEST(URLCanonTest, CanonicalizePathURL) {
   }
 }
 
-TEST(URLCanonTest, CanonicalizeMailtoURL) {
+TEST_F(URLCanonTest, CanonicalizeMailtoURL) {
   struct URLCase {
     const char* input;
     size_t url_len_override;  // if != 0, use this instead of strlen
@@ -1212,7 +1221,7 @@ TEST(URLCanonTest, CanonicalizeMailtoURL) {
   }
 }
 
-TEST(URLCanonTest, IntToString) {
+TEST_F(URLCanonTest, IntToString) {
   // We fill the buffer with 0xff to ensure that it's getting properly
   // null-terminated. We also allocate one byte more than what we tell
   // IntToString about, and ensure that the extra byte is untouched.
@@ -1265,7 +1274,7 @@ static bool ParsedIsEqual(const Parsed& a, const Parsed& b) {
          ComponentIsEqual(a.query, b.query) && ComponentIsEqual(a.ref, b.ref);
 }
 
-TEST(URLCanonTest, ResolveRelativeURL) {
+TEST_F(URLCanonTest, ResolveRelativeURL) {
   struct RelativeCase {
     const char* base;       // Input base URL: MUST BE CANONICAL
     bool is_base_hier;      // Is the base URL hierarchical

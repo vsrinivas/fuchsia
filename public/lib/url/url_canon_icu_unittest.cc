@@ -2,19 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/macros.h"
-#include "third_party/gtest/include/gtest/gtest.h"
-#include "third_party/icu/source/common/unicode/ucnv.h"
+#include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/url_canon.h"
 #include "lib/url/url_canon_icu.h"
 #include "lib/url/url_canon_stdstring.h"
 #include "lib/url/url_test_utils.h"
+#include "third_party/icu/source/common/unicode/ucnv.h"
 
 namespace url {
 
 using test_utils::WStringToUTF16;
 
 namespace {
+
+class URLCanonIcuTest : public url::test::IcuUnitTestBase {
+ public:
+  URLCanonIcuTest() {}
+  ~URLCanonIcuTest() override {}
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(URLCanonIcuTest);
+};
 
 // Wrapper around a UConverter object that managers creation and destruction.
 class UConvScoper {
@@ -35,7 +42,7 @@ class UConvScoper {
   UConverter* converter_;
 };
 
-TEST(URLCanonIcuTest, ICUCharsetConverter) {
+TEST_F(URLCanonIcuTest, ICUCharsetConverter) {
   struct ICUCase {
     const wchar_t* input;
     const char* encoding;
@@ -85,7 +92,7 @@ TEST(URLCanonIcuTest, ICUCharsetConverter) {
   }
 }
 
-TEST(URLCanonIcuTest, QueryWithConverter) {
+TEST_F(URLCanonIcuTest, QueryWithConverter) {
   struct QueryCase {
     const char* input8;
     const char* encoding;
