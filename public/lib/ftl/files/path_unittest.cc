@@ -149,17 +149,21 @@ TEST(Path, DeletePathRecursively) {
   std::string sub_dir = dir.path() + "/dir";
   CreateDirectory(sub_dir);
   EXPECT_TRUE(IsDirectory(sub_dir));
-  std::string sub_sub_dir = sub_dir + "/dir";
-  CreateDirectory(sub_sub_dir);
-  EXPECT_TRUE(IsDirectory(sub_sub_dir));
+
+  std::string sub_sub_dir1 = sub_dir + "/dir1";
+  CreateDirectory(sub_sub_dir1);
+  EXPECT_TRUE(IsDirectory(sub_sub_dir1));
+  std::string sub_sub_dir2 = sub_dir + "/dir2";
+  CreateDirectory(sub_sub_dir2);
+  EXPECT_TRUE(IsDirectory(sub_sub_dir2));
 
   EXPECT_FALSE(DeletePath(sub_dir, false));
   EXPECT_TRUE(IsDirectory(sub_dir));
-  EXPECT_TRUE(IsDirectory(sub_sub_dir));
+  EXPECT_TRUE(IsDirectory(sub_sub_dir1));
 
   EXPECT_TRUE(DeletePath(sub_dir, true));
   EXPECT_FALSE(IsDirectory(sub_dir));
-  EXPECT_FALSE(IsDirectory(sub_sub_dir));
+  EXPECT_FALSE(IsDirectory(sub_sub_dir1));
 }
 
 }  // namespace

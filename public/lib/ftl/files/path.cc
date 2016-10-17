@@ -5,8 +5,8 @@
 #include "lib/ftl/files/path.h"
 
 #include <functional>
+#include <list>
 #include <memory>
-#include <vector>
 
 #include <dirent.h>
 #include <errno.h>
@@ -178,10 +178,12 @@ bool DeletePath(const std::string& path, bool recursive) {
   if (!S_ISDIR(stat_buffer.st_mode)) return (unlink(path.c_str()) == 0);
   if (!recursive) return (rmdir(path.c_str()) == 0);
 
-  std::vector<std::string> directories;
+  // Use std::list, as ForEachEntry callback will modify the container. If the
+  // container is a vector, this will invalidate the reference to the content.
+  std::list<std::string> directories;
   directories.push_back(path);
-  for (size_t index = 0; index < directories.size(); ++index) {
-    if (!ForEachEntry(directories[index],
+  for (auto it = directories.begin(); it != directories.end(); ++it) {
+    if (!ForEachEntry(*it,
                       [&directories](const std::string& child) {
                         if (IsDirectory(child)) {
                           directories.push_back(child);
