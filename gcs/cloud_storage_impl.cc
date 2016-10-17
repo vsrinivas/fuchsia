@@ -49,7 +49,7 @@ void RunUploadFileCallback(const std::function<void(Status)>& callback,
 
 void OnFileWritten(const std::string& destination,
                    const std::function<void(Status)>& callback,
-                   int64_t expected_file_size,
+                   uint64_t expected_file_size,
                    bool success) {
   if (!success) {
     files::DeletePath(destination, false);
@@ -57,7 +57,7 @@ void OnFileWritten(const std::string& destination,
     return;
   }
 
-  int64_t file_size;
+  uint64_t file_size;
   if (!files::GetFileSize(destination, &file_size)) {
     files::DeletePath(destination, false);
     callback(Status::UNKNOWN_ERROR);
@@ -87,7 +87,7 @@ CloudStorageImpl::~CloudStorageImpl() {}
 void CloudStorageImpl::UploadFile(const std::string& key,
                                   const std::string& source,
                                   const std::function<void(Status)>& callback) {
-  int64_t file_size;
+  uint64_t file_size;
   if (!files::GetFileSize(source, &file_size)) {
     callback(Status::UNKNOWN_ERROR);
     return;
@@ -218,7 +218,7 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  int64_t expected_file_size;
+  uint64_t expected_file_size;
   if (!ftl::StringToNumberWithError(size_header->value.get(),
                                     &expected_file_size)) {
     callback(Status::UNKNOWN_ERROR);
