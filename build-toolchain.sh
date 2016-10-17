@@ -13,6 +13,7 @@ readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 if [[ "x${HOST_OS}" == "xlinux" ]]; then
   readonly JOBS=$(grep ^processor /proc/cpuinfo | wc -l)
   readonly CMAKE_HOST_TOOLS="\
+    -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
     -DCMAKE_C_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang \
     -DCMAKE_CXX_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang++ \
     -DCMAKE_AR=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/llvm-ar \
@@ -24,6 +25,8 @@ if [[ "x${HOST_OS}" == "xlinux" ]]; then
   readonly LLVM_CONFIG_OPTS="-DLLVM_ENABLE_LLD=ON"
 elif [[ "x${HOST_OS}" == "xdarwin" ]]; then
   readonly JOBS=$(sysctl -n hw.ncpu)
+  readonly CMAKE_HOST_TOOLS="\
+    -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja"
 else
   echo "Unsupported system: ${HOST_OS}" 1>&2
   exit 1
@@ -78,6 +81,7 @@ build() {
   mkdir -p -- "${outdir}/build-compiler-rt-aarch64+x86_64"
   pushd "${outdir}/build-compiler-rt-aarch64+x86_64"
   CFLAGS="-fPIC -isystem ${ROOT_DIR}/magenta/third_party/ulib/musl/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+    -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
     -DCMAKE_C_COMPILER=${toolchain}/bin/clang \
     -DCMAKE_CXX_COMPILER=${toolchain}/bin/clang++ \
     -DCMAKE_AR=${toolchain}/bin/llvm-ar \
