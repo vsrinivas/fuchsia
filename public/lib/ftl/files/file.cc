@@ -18,7 +18,8 @@ namespace files {
 
 bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), 0666)));
-  if (!fd.is_valid()) return false;
+  if (!fd.is_valid())
+    return false;
   return ftl::WriteFileDescriptor(fd.get(), data, size);
 }
 
@@ -27,7 +28,8 @@ bool ReadFileToString(const std::string& path, std::string* result) {
   result->clear();
 
   ftl::UniqueFD fd(open(path.c_str(), O_RDONLY));
-  if (!fd.is_valid()) return false;
+  if (!fd.is_valid())
+    return false;
 
   constexpr size_t kBufferSize = 1 << 16;
   size_t offset = 0;
@@ -47,11 +49,17 @@ bool ReadFileToString(const std::string& path, std::string* result) {
   return true;
 }
 
+bool IsFile(const std::string& path) {
+  struct stat buf;
+  if (stat(path.c_str(), &buf) != 0)
+    return false;
+  return S_ISREG(buf.st_mode);
+}
+
 bool GetFileSize(const std::string& path, uint64_t* size) {
   struct stat stat_buffer;
-  if (stat(path.c_str(), &stat_buffer) != 0) {
+  if (stat(path.c_str(), &stat_buffer) != 0)
     return false;
-  }
   *size = stat_buffer.st_size;
   return true;
 }

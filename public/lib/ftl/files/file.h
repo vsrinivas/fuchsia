@@ -18,6 +18,9 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size);
 // false. If this function returns false, |result| will be the empty string.
 bool ReadFileToString(const std::string& path, std::string* result);
 
+// Returns whether the given path is a file.
+bool IsFile(const std::string& path);
+
 // If the given path is a file, set size to the size of the file.
 bool GetFileSize(const std::string& path, uint64_t* size);
 
