@@ -51,9 +51,9 @@ static bool switch_to_first_vc(void) {
 static void launch_minfs(const char* device_name) {
     char device_path[MXIO_MAX_FILENAME + 64];
     snprintf(device_path, sizeof(device_path), "/dev/class/block/%s", device_name);
-    const char* argv[] = { "/boot/bin/minfs", device_path, "mount" };
+    const char* argv[] = { "/boot/bin/minfs", device_path, "mount", "/data" };
     printf("devmgr: /dev/class/block/%s: minfs?\n", device_name);
-    devmgr_launch("minfs:/data", 3, argv, -1, 0, 0);
+    devmgr_launch("minfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
 }
 
 static void launch_fat(const char* device_name) {
