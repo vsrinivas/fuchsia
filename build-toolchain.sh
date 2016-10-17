@@ -43,12 +43,14 @@ build() {
   local toolchain="${destdir}/clang+llvm-${HOST_TRIPLE}"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${toolchain}" "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64"
+    rm -rf -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64"
   fi
+
+  rm -rf -- "${toolchain}" && mkdir -p -- "${toolchain}"
 
   mkdir -p -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}"
   pushd "${outdir}/build-binutils-gdb-${HOST_TRIPLE}"
-  ${ROOT_DIR}/third_party/binutils-gdb/configure \
+  [[ -f "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/Makefile" ]] || ${ROOT_DIR}/third_party/binutils-gdb/configure \
     --prefix='' \
     --program-prefix='' \
     --enable-targets=arm-elf,aarch64-elf,x86_64-elf \
@@ -63,7 +65,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-clang+llvm-${HOST_TRIPLE}"
   pushd "${outdir}/build-clang+llvm-${HOST_TRIPLE}"
-  ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-clang+llvm-${HOST_TRIPLE}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${LLVM_CONFIG_OPTS:-} \
     -DCMAKE_BUILD_TYPE=Release \
@@ -80,7 +82,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-compiler-rt-aarch64+x86_64"
   pushd "${outdir}/build-compiler-rt-aarch64+x86_64"
-  CFLAGS="-fPIC -isystem ${ROOT_DIR}/magenta/third_party/ulib/musl/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-compiler-rt-aarch64+x86_64/build.ninja" ]] || CFLAGS="-fPIC -isystem ${ROOT_DIR}/magenta/third_party/ulib/musl/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
     -DCMAKE_C_COMPILER=${toolchain}/bin/clang \
     -DCMAKE_CXX_COMPILER=${toolchain}/bin/clang++ \

@@ -10,6 +10,15 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | sed 'y/LINUXDARWIN/linuxdarwin/')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
+if [[ "x${HOST_OS}" == "xlinux" ]]; then
+  readonly JOBS=$(grep ^processor /proc/cpuinfo | wc -l)
+elif [[ "x${HOST_OS}" == "xdarwin" ]]; then
+  readonly JOBS=$(sysctl -n hw.ncpu)
+else
+  echo "Unsupported system: ${HOST_OS}" 1>&2
+  exit 1
+fi
+
 readonly CMAKE_HOST_TOOLS="\
   -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
   -DCMAKE_C_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang \
@@ -40,7 +49,7 @@ build() {
   local sysroot="${destdir}/${target}-fuchsia"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${sysroot}" "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
+    rm -rf -- "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
   fi
 
   case "${target}" in
@@ -50,12 +59,20 @@ build() {
   esac
 
   rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
-  cp -r -- "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/include" \
-    "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/lib" "${sysroot}"
+
+  pushd "${ROOT_DIR}/magenta"
+  rm -rf -- "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot"
+  make -j ${JOBS} BUILDROOT=${ROOT_DIR}/${magenta_buildroot} ${magenta_target}
+  popd
+
+  cp -r -- \
+    "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/include" \
+    "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot/lib" \
+    "${sysroot}"
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
-  CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/projects/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/projects/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -70,7 +87,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libcxxabi-${target}"
   pushd "${outdir}/build-libcxxabi-${target}"
-  ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libcxxabi-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -87,7 +104,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libcxx-${target}"
   pushd "${outdir}/build-libcxx-${target}"
-  ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libcxx-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
