@@ -85,6 +85,8 @@ backtrace_destroy_state (struct backtrace_state *state,
      that we're freeing!  */
   struct backtrace_state final_state = *state;
 
+  backtrace_destroy_target (&final_state, error_callback, data);
+
   backtrace_free(&final_state, state, sizeof *state, error_callback, data);
 }
 

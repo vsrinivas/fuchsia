@@ -43,6 +43,25 @@ POSSIBILITY OF SUCH DAMAGE.  */
 #include "backtrace.h"
 #include "internal.h"
 
+/* ELF-specific state.  */
+
+struct elf_state
+{
+  /* The "view" of the strtab section.  */
+  struct backtrace_view strtab_view;
+
+  /* Non-zero if valid.  */
+  int strtab_view_valid;
+
+  /* The "view" of the debug sections.
+     All debug sections are loaded into one view since they're generally
+     contiguous in the file.  */
+  struct backtrace_view debug_view;
+
+  /* Non-zero if valid.  */
+  int debug_view_valid;
+};
+
 #ifndef HAVE_DL_ITERATE_PHDR
 
 /* Dummy version of dl_iterate_phdr for systems that don't have it.  */
@@ -522,6 +541,7 @@ elf_add (struct backtrace_state *state, int descriptor,
 	 backtrace_error_callback error_callback, void *data,
 	 fileline *fileline_fn, int *found_sym, int *found_dwarf, int exe)
 {
+  struct elf_state *elf_state = state->target_state;
   struct backtrace_view ehdr_view;
   b_elf_ehdr ehdr;
   off_t shoff;
@@ -793,6 +813,8 @@ elf_add (struct backtrace_state *state, int descriptor,
     {
       if (!backtrace_close (descriptor, error_callback, data))
 	goto fail;
+      elf_state->strtab_view = strtab_view;
+      elf_state->strtab_view_valid = 1;
       return 1;
     }
 
@@ -832,6 +854,10 @@ elf_add (struct backtrace_state *state, int descriptor,
     goto fail;
 
   *found_dwarf = 1;
+  elf_state->strtab_view = strtab_view;
+  elf_state->strtab_view_valid = 1;
+  elf_state->debug_view = debug_view;
+  elf_state->debug_view_valid = 1;
 
   return 1;
 
@@ -958,6 +984,12 @@ backtrace_initialize (struct backtrace_state *state, int descriptor,
   fileline elf_fileline_fn = elf_nodebug;
   struct phdr_data pd;
 
+  state->target_state =
+    backtrace_alloc (state, sizeof (struct elf_state), error_callback, data);
+  if (state->target_state == NULL)
+    return 0;
+  memset (state->target_state, 0, sizeof (*state->target_state));
+
   ret = elf_add (state, descriptor,
 		 state->base_address, state->base_address_set,
 		 error_callback, data, &elf_fileline_fn,
@@ -1009,4 +1041,25 @@ backtrace_initialize (struct backtrace_state *state, int descriptor,
     }
 
   return 1;
+}
+
+/* Free ELF-specific state.
+   I desperately want to name this backtrace_finalize.  */
+
+void
+backtrace_destroy_target (struct backtrace_state *state,
+                          backtrace_error_callback error_callback,
+                          void *data)
+{
+  struct elf_state *elf = state->target_state;
+
+  if (elf == NULL)
+      return;
+
+  if (elf->strtab_view_valid)
+    backtrace_release_view (state, &elf->strtab_view, error_callback, data);
+  if (elf->debug_view_valid)
+    backtrace_release_view (state, &elf->debug_view, error_callback, data);
+
+  backtrace_free (state, elf, sizeof *elf, error_callback, data);
 }

@@ -159,6 +159,10 @@ struct backtrace_state
   uintptr_t base_address;
   /* Non-zero if BASE_ADDRESS has been set.  */
   int base_address_set;
+  /* Target-specific state.
+     This is generally initialized inside backtrace_initialize and then
+     freed in backtrace_destroy_target.  */
+  void *target_state;
 };
 
 /* Open a file for reading.  Returns -1 on error.  If DOES_NOT_EXIST
@@ -283,6 +287,13 @@ extern int backtrace_initialize (struct backtrace_state *state,
 				 backtrace_error_callback error_callback,
 				 void *data,
 				 fileline *fileline_fn);
+
+/* Called by backtrace_destroy_state to free all target-specific resources
+   held by STATE.  */
+
+extern void backtrace_destroy_target (struct backtrace_state *state,
+                                      backtrace_error_callback error_callback,
+                                      void *data);
 
 /* Add file/line information for a DWARF module.  */
 
