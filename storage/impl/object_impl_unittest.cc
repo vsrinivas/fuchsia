@@ -61,7 +61,7 @@ TEST_F(ObjectTest, Object) {
   std::string data = RandomString(kFileSize);
   EXPECT_TRUE(files::WriteFile(object_file_path_, data.data(), kFileSize));
 
-  ObjectImpl object(object_id_, object_file_path_);
+  ObjectImpl object((std::string(object_id_)), std::string(object_file_path_));
   EXPECT_EQ(object_id_, object.GetId());
   ftl::StringView foundData;
   EXPECT_EQ(Status::OK, object.GetData(&foundData));

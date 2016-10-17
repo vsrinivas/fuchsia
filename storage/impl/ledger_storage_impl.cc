@@ -30,7 +30,7 @@ Status LedgerStorageImpl::CreatePageStorage(
     return Status::INTERNAL_IO_ERROR;
   }
   std::unique_ptr<PageStorageImpl> result(
-      new PageStorageImpl(GetPathFor(page_id), page_id));
+      new PageStorageImpl(task_runner_, GetPathFor(page_id), page_id));
   Status s = result->Init();
   if (s != Status::OK) {
     FTL_LOG(ERROR) << "Failed to initialize PageStorage.";
@@ -47,7 +47,7 @@ void LedgerStorageImpl::GetPageStorage(
   if (files::IsDirectory(path)) {
     task_runner_->PostTask([this, callback, page_id]() {
       callback(std::unique_ptr<PageStorage>(
-          new PageStorageImpl(GetPathFor(page_id), page_id)));
+          new PageStorageImpl(task_runner_, GetPathFor(page_id), page_id)));
     });
     return;
   }

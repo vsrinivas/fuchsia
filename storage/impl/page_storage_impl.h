@@ -8,12 +8,16 @@
 #include "apps/ledger/storage/public/page_storage.h"
 
 #include "apps/ledger/storage/impl/db.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(std::string page_path, PageIdView page_id);
+  PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                  std::string page_path,
+                  PageIdView page_id);
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
@@ -66,6 +70,7 @@ class PageStorageImpl : public PageStorage {
 
   Status AddCommit(std::unique_ptr<Commit> commit, ChangeSource source);
 
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string page_path_;
   PageId page_id_;
   DB db_;

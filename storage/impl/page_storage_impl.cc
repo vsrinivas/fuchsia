@@ -13,6 +13,7 @@
 
 #include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
+#include "apps/ledger/storage/impl/object_impl.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/files/directory.h"
@@ -31,7 +32,7 @@ const char kStagingDir[] = "/staging";
 
 const char kHexDigits[] = "0123456789ABCDEF";
 
-std::string ToHex(const std::string& string) {
+std::string ToHex(convert::ExtendedStringView string) {
   std::string result;
   result.reserve(string.size() * 2);
   for (unsigned char c : string) {
@@ -169,8 +170,11 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   uint64_t size_;
 };
 
-PageStorageImpl::PageStorageImpl(std::string page_path, PageIdView page_id)
-    : page_path_(page_path),
+PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                 std::string page_path,
+                                 PageIdView page_id)
+    : task_runner_(task_runner),
+      page_path_(page_path),
       page_id_(page_id.ToString()),
       db_(page_path_ + kLevelDbDir),
       objects_path_(page_path_ + kObjectDir),
@@ -349,7 +353,20 @@ void PageStorageImpl::AddObjectFromLocal(
 void PageStorageImpl::GetBlob(
     ObjectIdView blob_id,
     const std::function<void(Status, std::unique_ptr<Blob>)>& callback) {
-  callback(Status::NOT_IMPLEMENTED, nullptr);
+  std::string file_path = objects_path_ + "/" + ToHex(blob_id);
+  if (!files::IsFile(file_path)) {
+    // TODO(qsr): Request data from sync: LE-30
+    callback(Status::NOT_FOUND, nullptr);
+    return;
+  }
+
+  task_runner_->PostTask([
+    callback, blob_id = convert::ToString(blob_id),
+    file_path = std::move(file_path)
+  ]() mutable {
+    callback(Status::OK, std::make_unique<ObjectImpl>(std::move(blob_id),
+                                                      std::move(file_path)));
+  });
 }
 
 Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,

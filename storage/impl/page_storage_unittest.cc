@@ -48,7 +48,8 @@ class PageStorageTest : public ::testing::Test {
   void SetUp() override {
     std::srand(0);
     PageId id = RandomId(16);
-    storage_.reset(new PageStorageImpl(tmp_dir_.path(), id));
+    storage_.reset(
+        new PageStorageImpl(message_loop_.task_runner(), tmp_dir_.path(), id));
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
   }
@@ -196,6 +197,30 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(content, file_content);
+}
+
+TEST_F(PageStorageTest, GetBlob) {
+  std::string content("Some data");
+  ObjectId object_id = glue::SHA256Hash(content.data(), content.size());
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
+  ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
+
+  Status status;
+  std::unique_ptr<Blob> blob;
+  storage_->GetBlob(
+      object_id, [this, &status, &blob](Status returned_status,
+                                   std::unique_ptr<Blob> returned_blob) {
+        status = returned_status;
+        blob = std::move(returned_blob);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(object_id, blob->GetId());
+  ftl::StringView data;
+  ASSERT_EQ(Status::OK, blob->GetData(&data));
+  EXPECT_EQ(content, convert::ToString(data));
 }
 
 }  // namespace
