@@ -49,7 +49,6 @@ MAGENTA_SYSCALL_DEF(3, 3, 5, int, debug_send_command, mx_handle_t, const void* b
 MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
 
 // Temporary syscall to aid debuggers
-MAGENTA_SYSCALL_DEF(2, 3, 7, mx_handle_t, debug_task_get_child, mx_handle_t handle, uint64_t koid)
 MAGENTA_SYSCALL_DEF(2, 2, 8, mx_handle_t, debug_transfer_handle, mx_handle_t proc, mx_handle_t handle)
 MAGENTA_SYSCALL_DEF(4, 4, 9, mx_ssize_t, debug_read_memory, mx_handle_t proc, uintptr_t vaddr,
                     mx_size_t len, USER_PTR(void) buffer)
@@ -82,6 +81,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 45, mx_status_t, object_signal, mx_handle_t handle, ui
                     uint32_t set_mask)
 MAGENTA_SYSCALL_DEF(4, 4, 46, mx_ssize_t, object_get_info, mx_handle_t handle, uint32_t topic,
                     uint16_t topic_size, USER_PTR(void) buffer, mx_size_t buffer_size)
+MAGENTA_SYSCALL_DEF(2, 3, 47, mx_handle_t, object_get_child, mx_handle_t handle, uint64_t koid, mx_rights_t rights)
 
 // Threads
 MAGENTA_SYSCALL_DEF(4, 4, 50, mx_handle_t, thread_create, mx_handle_t process, USER_PTR(const char) name, uint32_t name_len, uint32_t flags)

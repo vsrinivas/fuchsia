@@ -21,13 +21,14 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_debug.cpp \
     $(LOCAL_DIR)/syscalls_ddk.cpp \
     $(LOCAL_DIR)/syscalls_ddk_pci.cpp \
+    $(LOCAL_DIR)/syscalls_handle_ops.cpp \
+    $(LOCAL_DIR)/syscalls_handle_wait.cpp \
     $(LOCAL_DIR)/syscalls_exceptions.cpp \
     $(LOCAL_DIR)/syscalls_magenta.cpp \
     $(LOCAL_DIR)/syscalls_msgpipe.cpp \
+    $(LOCAL_DIR)/syscalls_object.cpp \
     $(LOCAL_DIR)/syscalls_port.cpp \
     $(LOCAL_DIR)/syscalls_test.cpp \
-    $(LOCAL_DIR)/syscalls_handle_ops.cpp \
-    $(LOCAL_DIR)/syscalls_handle_wait.cpp \
     $(LOCAL_DIR)/syscalls_vmo.cpp \
 
 include make/module.mk

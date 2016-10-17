@@ -365,7 +365,7 @@ static bool wait_inferior_thread_worker(void* arg)
         }
 
         mx_koid_t tid = packet.report.context.tid;
-        mx_handle_t thread = mx_debug_task_get_child(inferior, tid);
+        mx_handle_t thread = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS);
         ASSERT_GT(thread, 0, "mx_debug_task_get_child failed");
 
         dump_inferior_regs(thread);
@@ -586,7 +586,7 @@ static bool debugger_thread_list_test(void)
     for (uint32_t i = 0; i < num_threads; ++i) {
         mx_koid_t koid = threads->rec[i].koid;
         unittest_printf("Looking up thread %llu\n", (long long) koid);
-        mx_handle_t thread = mx_debug_task_get_child(inferior, koid);
+        mx_handle_t thread = mx_object_get_child(inferior, koid, MX_RIGHT_SAME_RIGHTS);
         EXPECT_GT(thread, 0, "mx_debug_task_get_child failed");
         mx_info_handle_basic_t info;
         size = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, sizeof(mx_record_handle_basic_t), &info, sizeof(info));

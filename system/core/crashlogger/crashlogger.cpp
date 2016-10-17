@@ -123,12 +123,12 @@ void process_report(const mx_exception_report_t* report) {
     printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
 
-    auto process = mx_debug_task_get_child(0, context.pid);
+    auto process = mx_object_get_child(0, context.pid, MX_RIGHT_SAME_RIGHTS);
     if (process <= 0) {
         printf("failed to get a handle to [%" PRIu64 "] : error %d\n", context.pid, process);
         return;
     }
-    auto thread = mx_debug_task_get_child(process, context.tid);
+    auto thread = mx_object_get_child(process, context.tid, MX_RIGHT_SAME_RIGHTS);
     if (thread <= 0) {
         printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, thread);
         mx_handle_close(process);

@@ -118,7 +118,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 
 static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
 {
-    mx_handle_t thread = mx_debug_task_get_child(process, tid);
+    mx_handle_t thread = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS);
     mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
@@ -141,7 +141,7 @@ static bool test_received_exception(mx_handle_t eport,
     EXPECT_EQ(packet.hdr.key, 0u, "bad report key");
 
     if (strcmp(kind, "process") == 0) {
-        mx_handle_t debug_child = mx_debug_task_get_child(MX_HANDLE_INVALID, report->context.pid);
+        mx_handle_t debug_child = mx_object_get_child(MX_HANDLE_INVALID, report->context.pid, MX_RIGHT_SAME_RIGHTS);
         if (debug_child < 0)
             tu_fatal("mx_process_debug", debug_child);
         mx_info_handle_basic_t process_info;
