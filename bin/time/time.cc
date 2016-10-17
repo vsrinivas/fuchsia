@@ -4,6 +4,7 @@
 
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 #include <stdio.h>
 #include <sys/time.h>
