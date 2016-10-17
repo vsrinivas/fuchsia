@@ -14,6 +14,7 @@
 #define MINFS_MAGIC1         (0x385000d3d3d3d304ULL)
 #define MINFS_VERSION        0x00000001
 
+#define MINFS_ROOT_INO       1
 #define MINFS_FLAG_CLEAN     1
 #define MINFS_BLOCK_SIZE     8192
 #define MINFS_BLOCK_BITS     (MINFS_BLOCK_SIZE * 8)

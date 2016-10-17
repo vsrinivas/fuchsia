@@ -294,8 +294,8 @@ mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
     }
 
     vnode_t* vn;
-    if (minfs_vnode_get(fs, &vn, 1)) {
-        error("minfs: cannot find inode 1\n");
+    if (minfs_vnode_get(fs, &vn, MINFS_ROOT_INO)) {
+        error("minfs: cannot find root inode\n");
         return -1;
     }
 
@@ -344,12 +344,12 @@ int minfs_mkfs(bcache_t* bc) {
 
     // write rootdir
     blk = bcache_get_zero(bc, info.dat_block, &bdata);
-    minfs_dir_init(bdata, 1, 1);
+    minfs_dir_init(bdata, MINFS_ROOT_INO, MINFS_ROOT_INO);
     bcache_put(bc, blk, BLOCK_DIRTY);
 
     // update inode bitmap
     bitmap_set(&ibm, 0);
-    bitmap_set(&ibm, 1);
+    bitmap_set(&ibm, MINFS_ROOT_INO);
 
     // update block bitmap:
     // reserve all blocks before the data storage area
@@ -384,12 +384,12 @@ int minfs_mkfs(bcache_t* bc) {
     // setup root inode
     blk = bcache_get(bc, info.ino_block, &bdata);
     minfs_inode_t* ino = (void*) bdata;
-    ino[1].magic = MINFS_MAGIC_DIR;
-    ino[1].size = MINFS_BLOCK_SIZE;
-    ino[1].block_count = 1;
-    ino[1].link_count = 1;
-    ino[1].dirent_count = 2;
-    ino[1].dnum[0] = info.dat_block;
+    ino[MINFS_ROOT_INO].magic = MINFS_MAGIC_DIR;
+    ino[MINFS_ROOT_INO].size = MINFS_BLOCK_SIZE;
+    ino[MINFS_ROOT_INO].block_count = 1;
+    ino[MINFS_ROOT_INO].link_count = 1;
+    ino[MINFS_ROOT_INO].dirent_count = 2;
+    ino[MINFS_ROOT_INO].dnum[0] = info.dat_block;
     bcache_put(bc, blk, BLOCK_DIRTY);
 
     blk = bcache_get_zero(bc, 0, &bdata);
