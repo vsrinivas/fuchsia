@@ -11,9 +11,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/debug.cpp \
 	$(LOCAL_DIR)/pcie.cpp \
+	$(LOCAL_DIR)/pcie_bus_driver.cpp \
 	$(LOCAL_DIR)/pcie_caps.cpp \
-	$(LOCAL_DIR)/pcie_irqs.cpp \
-	$(LOCAL_DIR)/pcie_topology.cpp
+	$(LOCAL_DIR)/pcie_irqs.cpp
 
 MODULE_DEPS += \
     lib/mxtl \

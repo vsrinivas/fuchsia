@@ -178,89 +178,19 @@
  *  the core code is transitioned to C++.
  *
  */
-#define LOCK_TRACING 0
-#if LOCK_TRACING
-#define MUTEX_ACQUIRE(_obj, _lock_name) \
-    do { \
-        TRACEF("Acquire %s (obj %p lock %p)\n", #_lock_name, (_obj), &(_obj)->_lock_name); \
-        mutex_acquire(&(_obj)->_lock_name); \
-    } while (0)
-#define MUTEX_RELEASE(_obj, _lock_name) \
-    do { \
-        TRACEF("Release %s (obj %p lock %p)\n", #_lock_name, (_obj), &(_obj)->_lock_name); \
-        mutex_release(&(_obj)->_lock_name); \
-    } while (0)
-#else
-#define MUTEX_ACQUIRE(_obj, _lock_name) mutex_acquire(&(_obj)->_lock_name)
-#define MUTEX_RELEASE(_obj, _lock_name) mutex_release(&(_obj)->_lock_name)
-#endif
-
-typedef struct pcie_kmap_ecam_range {
-    pcie_ecam_range_t ecam;
-    void*             vaddr;
-} pcie_kmap_ecam_range_t;
-
-typedef struct pcie_legacy_irq_handler_state {
-    pcie_bus_driver_state_t*      bus_drv;
-    struct list_node              legacy_irq_list_node;
-    struct list_node              device_handler_list;
-    uint                          irq_id;
-} pcie_legacy_irq_handler_state_t;
-
-struct pcie_bus_driver_state_t {
-    pcie_bus_driver_state_t();
-    ~pcie_bus_driver_state_t();
-
-    mutex_t                           bus_topology_lock;
-    mutex_t                           bus_rescan_lock;
-    mxtl::RefPtr<pcie_bridge_state_t> root_complex;
-
-    vmm_aspace_t*                              aspace;
-    mxtl::unique_ptr<pcie_kmap_ecam_range_t[]> ecam_windows;
-    size_t                                     ecam_window_count;
-    RegionAllocator::RegionPool::RefPtr        region_bookkeeping;
-
-    platform_legacy_irq_swizzle_t   legacy_irq_swizzle;
-    spin_lock_t                     legacy_irq_handler_lock;
-    mutex_t                         legacy_irq_list_lock;
-    struct list_node                legacy_irq_list;
-
-    platform_alloc_msi_block_t      alloc_msi_block;
-    platform_free_msi_block_t       free_msi_block;
-    platform_register_msi_handler_t register_msi_handler;
-    platform_mask_unmask_msi_t      mask_unmask_msi;
-};
 
 /******************************************************************************
  *
  *  pcie.c
  *
  ******************************************************************************/
-pcie_bus_driver_state_t* pcie_get_bus_driver_state(void);
-void pcie_scan_and_start_devices(pcie_bus_driver_state_t& bus_drv);
-void pcie_unplug_device(const mxtl::RefPtr<pcie_device_state_t>& dev);
+void pcie_allocate_downstream_bars(const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
+void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
+status_t pcie_start_device(const mxtl::RefPtr<pcie_device_state_t>& dev);
+bool pcie_claim_devices_helper(const mxtl::RefPtr<pcie_device_state_t>& dev,
+                               void* ctx, uint level);
 void pcie_modify_cmd_internal(const mxtl::RefPtr<pcie_device_state_t>& dev,
                               uint16_t clr_bits, uint16_t set_bits);
-pcie_config_t* pcie_get_config(const pcie_bus_driver_state_t& bus_drv,
-                               uint64_t* cfg_phys,
-                               uint bus_id,
-                               uint dev_id,
-                               uint func_id);
-
-/******************************************************************************
- *
- *  pcie_topology.c
- *
- ******************************************************************************/
-typedef bool (*pcie_foreach_device_cbk)(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                                        void* ctx, uint level);
-
-void pcie_link_device_to_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                                  const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
-void pcie_unlink_device_from_upstream(const mxtl::RefPtr<pcie_device_state_t>& dev);
-void pcie_foreach_device(pcie_bus_driver_state_t& drv, pcie_foreach_device_cbk cbk, void* ctx);
-mxtl::RefPtr<pcie_device_state_t> pcie_get_refed_device(pcie_bus_driver_state_t& drv,
-                                                        uint bus_id, uint dev_id, uint func_id);
 
 
 /******************************************************************************
@@ -302,5 +232,3 @@ status_t pcie_mask_unmask_irq_internal(
 
 status_t pcie_init_device_irq_state(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                     const mxtl::RefPtr<pcie_bridge_state_t>& upstream);
-status_t pcie_init_irqs(pcie_bus_driver_state_t* drv, const pcie_init_info_t* init_info);
-void     pcie_shutdown_irqs(pcie_bus_driver_state_t* drv);

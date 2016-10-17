@@ -13,6 +13,8 @@
 #include <dev/pcie_platform.h>
 #include <err.h>
 #include <kernel/spinlock.h>
+#include <mxtl/macros.h>
+#include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
@@ -122,13 +124,46 @@ typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(
  * Structure used internally to hold the state of a registered handler.
  */
 typedef struct pcie_irq_handler_state {
-    spin_lock_t           lock;
-    pcie_irq_handler_fn_t handler;
-    void*                 ctx;
-    pcie_device_state_t*  dev;
+    SpinLock              lock;
+    pcie_irq_handler_fn_t handler = nullptr;
+    void*                 ctx = nullptr;
+    pcie_device_state_t*  dev = nullptr;
     uint                  pci_irq_id;
     bool                  masked;
 } pcie_irq_handler_state_t;
+
+/**
+ * Class for managing shared legacy IRQ handlers.
+ */
+class SharedLegacyIrqHandler
+    : public mxtl::SinglyLinkedListable<mxtl::RefPtr<SharedLegacyIrqHandler>>,
+      public mxtl::RefCounted<SharedLegacyIrqHandler> {
+public:
+    static mxtl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
+    ~SharedLegacyIrqHandler();
+
+    void AddDevice(const mxtl::RefPtr<pcie_device_state_t>& dev);
+    void RemoveDevice(const mxtl::RefPtr<pcie_device_state_t>& dev);
+
+    uint irq_id() const { return irq_id_; }
+
+    // Copy construction and assignement is disallowed.
+    DELETE_ALL_COPY_AND_ASSIGN(SharedLegacyIrqHandler);
+
+private:
+    explicit SharedLegacyIrqHandler(uint irq_id);
+
+    static enum handler_return HandlerThunk(void *arg) {
+        DEBUG_ASSERT(arg);
+        return reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
+    }
+
+    enum handler_return Handler();
+
+    struct list_node  device_handler_list_;
+    SpinLock          device_handler_list_lock_;
+    const uint        irq_id_;
+};
 
 /**
  * Query the number of IRQs which are supported for a given IRQ mode by a given

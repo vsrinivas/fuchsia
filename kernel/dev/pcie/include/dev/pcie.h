@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <magenta/compiler.h>
 #include <dev/pci.h>
+#include <dev/pcie_bus_driver.h>
 #include <dev/pcie_caps.h>
 #include <dev/pcie_constants.h>
 #include <dev/pcie_irqs.h>
@@ -19,21 +20,21 @@
 #include <err.h>
 #include <kernel/mutex.h>
 #include <region-alloc/region-alloc.h>
+#include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
-typedef struct pcie_config {
+struct pcie_config_t {
     pci_config_t base;
     uint8_t      __pad0[PCIE_BASE_CONFIG_SIZE - sizeof(pci_config_t)];
     uint8_t      extended[PCIE_EXTENDED_CONFIG_SIZE - PCIE_BASE_CONFIG_SIZE];
-} __PACKED pcie_config_t;
+} __PACKED;
 
 /* Fwd decls */
 struct pcie_driver_registration;
 struct pcie_legacy_irq_handler_state;
 
-struct pcie_bus_driver_state_t;
 struct pcie_bridge_state_t;
 struct pcie_device_state_t;
 
@@ -110,13 +111,16 @@ typedef struct pcie_driver_registration {
  * pcie_device_state struct, with the driver owned fields filled out.
  */
 struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
-    pcie_device_state_t(pcie_bus_driver_state_t& bus_driver);
+    pcie_device_state_t(PcieBusDriver& bus_driver);
     virtual ~pcie_device_state_t();
 
-    mxtl::RefPtr<pcie_bridge_state_t> GetUpstream();
+    DELETE_ALL_COPY_AND_ASSIGN(pcie_device_state_t);
+
+    virtual void Unplug();
+    mxtl::RefPtr<pcie_bridge_state_t> GetUpstream() { return bus_drv.GetUpstream(*this); }
     mxtl::RefPtr<pcie_bridge_state_t> DowncastToBridge();
 
-    pcie_bus_driver_state_t&          bus_drv;   // Reference to our bus driver state.
+    PcieBusDriver&                    bus_drv;   // Reference to our bus driver state.
     pcie_config_t*                    cfg;       // Pointer to the memory mapped ECAM (kernel vaddr)
     paddr_t                           cfg_phys;  // The physical address of the device's ECAM
     mxtl::RefPtr<pcie_bridge_state_t> upstream;  // The upstream bridge, or NULL if we are root
@@ -129,10 +133,11 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
     uint                              bus_id;    // The bus ID this bridge/device exists on
     uint                              dev_id;    // The device ID of this bridge/device
     uint                              func_id;   // The function ID of this bridge/device
+    SpinLock                          cmd_reg_lock;
 
     /* State related to lifetime management */
-    mutable mutex_t                   dev_lock;
-    mutable mutex_t                   start_claim_lock;
+    mutable Mutex                     dev_lock;
+    mutable Mutex                     start_claim_lock;
     bool                              plugged_in;
     bool                              disabled;
 
@@ -170,25 +175,27 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
     /* IRQ configuration and handling state */
     struct {
         /* Shared state */
-        pcie_irq_mode_t           mode;
+        pcie_irq_mode_t           mode = PCIE_IRQ_MODE_DISABLED;
         pcie_irq_handler_state_t  singleton_handler;
-        pcie_irq_handler_state_t* handlers;
-        uint                      handler_count;
-        uint                      registered_handler_count;
+        pcie_irq_handler_state_t* handlers = nullptr;
+        uint                      handler_count = 0;
+        uint                      registered_handler_count = 0;
 
         /* Legacy IRQ state */
         struct {
-            uint8_t pin;
-            struct list_node shared_handler_node;
-            struct pcie_legacy_irq_handler_state* shared_handler;
+            // TODO(johngro): clean up the messy list_node initialization below
+            // by converting to mxtl intrusive lists.
+            uint8_t pin = 0;
+            struct list_node shared_handler_node = { nullptr, nullptr};
+            mxtl::RefPtr<SharedLegacyIrqHandler> shared_handler;
         } legacy;
 
         /* MSI state */
         struct {
-            pcie_cap_msi_t*    cfg;
-            uint               max_irqs;
+            pcie_cap_msi_t*    cfg = nullptr;
+            uint               max_irqs = 0;
             bool               is64bit;
-            volatile uint32_t* pvm_mask_reg;
+            volatile uint32_t* pvm_mask_reg = nullptr;
             pcie_msi_block_t   irq_block;
         } msi;
 
@@ -199,10 +206,16 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
 };
 
 struct pcie_bridge_state_t : public pcie_device_state_t {
-    pcie_bridge_state_t(pcie_bus_driver_state_t& bus_driver, uint mbus_id);
+    pcie_bridge_state_t(PcieBusDriver& bus_driver, uint mbus_id);
     virtual ~pcie_bridge_state_t();
 
-    mxtl::RefPtr<pcie_device_state_t> GetDownstream(uint ndx);
+    DELETE_ALL_COPY_AND_ASSIGN(pcie_bridge_state_t);
+
+    mxtl::RefPtr<pcie_device_state_t> GetDownstream(uint ndx) {
+        return bus_drv.GetDownstream(*this, ndx);
+    }
+
+    void Unplug() override;
 
     const uint managed_bus_id;  // The ID of the downstream bus which this bridge manages.
 

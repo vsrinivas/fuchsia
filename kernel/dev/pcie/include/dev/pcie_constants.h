@@ -88,3 +88,15 @@ static_assert(sizeof(pci_config_t) == PCIE_STANDARD_CONFIG_HDR_SIZE, "");
 #define PCIE_CFG_STATUS_INT_STS         ((uint16_t)(1 << 3))
 
 __END_CDECLS
+
+#ifdef __cplusplus
+#if ARCH_X86
+constexpr bool PCIE_HAS_IO_ADDR_SPACE = true;
+constexpr uint64_t PCIE_PIO_ADDR_SPACE_MASK = 0xFFFF;
+constexpr uint64_t PCIE_PIO_ADDR_SPACE_SIZE = 0x10000;
+#else  // #if (defined(ARCH_X86) && ARCH_X86)
+constexpr bool PCIE_HAS_IO_ADDR_SPACE = false;
+constexpr uint64_t PCIE_PIO_ADDR_SPACE_MASK = 0xFFFFFFFF;
+constexpr uint64_t PCIE_PIO_ADDR_SPACE_SIZE = 0x100000000;
+#endif  // #if (defined(ARCH_X86) && ARCH_X86)
+#endif  // __cplusplus

@@ -400,17 +400,17 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
-    mutex_acquire(&dev->dev_lock);
+    AutoLock lock(dev->dev_lock);
 
     /* If the device has already been unplugged, just skip it */
     if (!dev->plugged_in)
-        goto finished;
+        return true;
 
     match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
              ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
              ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
     if (!match)
-        goto finished;
+        return true;
 
     if (!params->found && (params->bus_id != WILDCARD_ID)) {
         params->base_level = level;
@@ -464,8 +464,6 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
     if (params->cfg_dump_amt)
         dump_pcie_raw_config(params->cfg_dump_amt, dev->cfg, (uint64_t)dev->cfg_phys);
 
-finished:
-    mutex_release(&dev->dev_lock);
     return true;
 }
 
@@ -555,11 +553,11 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         }
     }
 
-    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    pcie_foreach_device(*bus_drv, dump_pcie_device, &params);
+    bus_drv->ForeachDevice(dump_pcie_device, &params);
 
     if (!params.found && params.force_dump_cfg &&
         (params.bus_id  != WILDCARD_ID) &&
@@ -568,7 +566,7 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         pcie_config_t* cfg;
         uint64_t cfg_phys;
 
-        cfg = pcie_get_config(*bus_drv, &cfg_phys, params.bus_id, params.dev_id, params.func_id);
+        cfg = bus_drv->GetConfig(&cfg_phys, params.bus_id, params.dev_id, params.func_id);
         if (!cfg) {
             printf("Config space for %02x:%02x.%01x not mapped by bus driver!\n",
                    params.bus_id, params.dev_id, params.func_id);
@@ -605,12 +603,11 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(*bus_drv,
-                                                                  bus_id, dev_id, func_id);
+    mxtl::RefPtr<pcie_device_state_t> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
@@ -618,7 +615,7 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
         printf("Shutting down and unplugging PCI device %02x:%02x.%x (%s)...\n",
                 bus_id, dev_id, func_id, pcie_driver_name(dev->driver));
         pcie_shutdown_device(dev);
-        pcie_unplug_device(dev);
+        dev->Unplug();
         dev = nullptr;
         printf("done\n");
     }
@@ -649,12 +646,11 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
         return NO_ERROR;
     }
 
-    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    mxtl::RefPtr<pcie_device_state_t> dev = pcie_get_refed_device(*bus_drv,
-                                                                  bus_id, dev_id, func_id);
+    mxtl::RefPtr<pcie_device_state_t> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
@@ -673,11 +669,12 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
 
 static int cmd_pcirescan(int argc, const cmd_args *argv)
 {
-    pcie_bus_driver_state_t* bus_drv = pcie_get_bus_driver_state();
+    auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    pcie_scan_and_start_devices(*bus_drv);
+    bus_drv->ScanAndStartDevices();
+
     return NO_ERROR;
 }
 
