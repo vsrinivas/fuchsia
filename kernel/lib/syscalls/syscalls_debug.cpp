@@ -234,7 +234,7 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
     switch (action) {
     case KTRACE_ACTION_NEW_PROBE: {
         char name[MX_MAX_NAME_LEN];
-        if (ptr.copy_array_from_user(name, sizeof(name - 1)) != NO_ERROR)
+        if (ptr.copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
             return ERR_INVALID_ARGS;
         name[sizeof(name) - 1] = 0;
         return ktrace_control(action, options, name);
