@@ -18,11 +18,15 @@ int do_minfs_check(bcache_t* bc, int argc, char** argv) {
 
 #ifdef __Fuchsia__
 int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
+    if (argc != 1) {
+        fprintf(stderr, "mount requires one argument: A mount path\n");
+        return -1;
+    }
     vnode_t* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
-    vfs_rpc_server(vn, "/data");
+    vfs_rpc_server(vn, argv[0]);
     return 0;
 }
 #else
@@ -115,7 +119,7 @@ struct {
     { "check",  do_minfs_check, O_RDONLY,         "check filesystem integrity"},
     { "fsck",   do_minfs_check, O_RDONLY,         "check filesystem integrity"},
 #ifdef __Fuchsia__
-    { "mount",  do_minfs_mount, O_RDWR,           "mount filesystem at /data" },
+    { "mount",  do_minfs_mount, O_RDWR,           "mount filesystem at a path" },
 #else
     { "test",   do_minfs_test,  O_RDWR,           "run tests against filesystem" },
     { "cp",     do_cp,          O_RDWR,           "copy to/from fs" },
