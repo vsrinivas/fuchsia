@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <stdarg.h>
 #include <string.h>
 

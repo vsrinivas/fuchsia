@@ -9,6 +9,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 
 #include <unittest/unittest.h>
 

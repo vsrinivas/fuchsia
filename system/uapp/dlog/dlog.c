@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 
 int main(int argc, char** argv) {
     bool tail = false;

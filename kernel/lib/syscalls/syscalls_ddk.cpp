@@ -23,7 +23,7 @@
 #include <magenta/io_mapping_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
 
 #include "syscalls_priv.h"

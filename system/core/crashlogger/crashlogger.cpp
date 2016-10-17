@@ -14,7 +14,9 @@
 #include <magenta/assert.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-debug.h>
+#include <magenta/syscalls/debug.h>
+#include <magenta/syscalls/exception.h>
+#include <magenta/syscalls/port.h>
 #include <mxio/util.h>
 
 #include "backtrace.h"

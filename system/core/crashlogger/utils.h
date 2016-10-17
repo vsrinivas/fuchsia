@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/syscalls-types.h>
+#include <magenta/types.h>
 
 extern const char* cl_basename(const char* file);
 

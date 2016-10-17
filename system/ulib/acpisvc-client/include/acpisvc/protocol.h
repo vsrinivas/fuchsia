@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/pci.h>
 
 #define ACPI_MAX_REQUEST_SIZE 2048
 #define ACPI_MAX_RESPONSE_SIZE 2048

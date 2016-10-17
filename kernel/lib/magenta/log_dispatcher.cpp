@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/log_dispatcher.h>
+#include <magenta/syscalls/log.h>
 
 #include <err.h>
 #include <new.h>

@@ -14,6 +14,7 @@
 #include <magenta/handle.h>
 #include <magenta/port_client.h>
 #include <magenta/magenta.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 
 #include <mxtl/ref_counted.h>

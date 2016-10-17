@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
 static uint32_t lcg_rand(uint32_t seed) {

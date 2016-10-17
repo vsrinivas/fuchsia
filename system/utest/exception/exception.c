@@ -15,6 +15,8 @@
 #include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/exception.h>
+#include <magenta/syscalls/port.h>
 #include <magenta/threads.h>
 #include <mxio/util.h>
 #include <test-utils/test-utils.h>

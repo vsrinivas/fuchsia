@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
 static void check_signals_state(mx_handle_t h, mx_signals_t satisfied, mx_signals_t satisfiable) {

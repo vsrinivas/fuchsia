@@ -17,6 +17,7 @@
 #include <threads.h>
 #include <magenta/types.h>
 #include <magenta/compiler.h>
+#include <magenta/syscalls/object.h>
 
 __BEGIN_CDECLS
 

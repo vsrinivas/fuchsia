@@ -21,6 +21,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 
 #include <mxio/debug.h>
 #include <mxio/io.h>

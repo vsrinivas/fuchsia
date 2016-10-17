@@ -8,6 +8,7 @@ port_wait - wait for a packet in an IO port
 
 ```
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 
 mx_status_t mx_port_wait(mx_handle_t handle, void* packet, mx_size_t size);
 ```

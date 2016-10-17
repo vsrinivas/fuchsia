@@ -4,15 +4,10 @@
 
 #pragma once
 
-#include <magenta/types.h>
 #include <magenta/process.h>
-#include <stdbool.h>
+#include <magenta/syscalls/types.h>
 
-#include <magenta/syscalls-types.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
 // define all of the syscalls from the syscall list header.
 // user space syscall veneer routines are all prefixed with mx_
@@ -25,6 +20,4 @@ extern "C" {
 
 #include <magenta/syscalls.inc>
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

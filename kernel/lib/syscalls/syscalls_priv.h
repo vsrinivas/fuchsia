@@ -7,7 +7,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/types.h>
 #include <lib/user_copy/user_ptr.h>
 
 // Please don't put CDECLS here. We want the stricter declaration matching

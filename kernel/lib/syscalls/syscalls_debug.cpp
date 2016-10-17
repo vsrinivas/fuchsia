@@ -26,6 +26,7 @@
 #include <platform/debug.h>
 
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls/debug.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 

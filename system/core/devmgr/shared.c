@@ -10,11 +10,11 @@
 
 #include <launchpad/launchpad.h>
 #include <magenta/processargs.h>
-
+#include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
-#include <magenta/syscalls.h>
 
 #if DEVMGR
 mx_handle_t vfs_create_global_root_handle(void);

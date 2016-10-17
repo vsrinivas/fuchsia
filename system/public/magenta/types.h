@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <stdint.h>
-
+#include <magenta/compiler.h>
 #include <magenta/fuchsia-types.h>
-
-#ifdef __cplusplus
-extern "C" {
+#include <stdint.h>
+#ifndef __cplusplus
+#include <stdatomic.h>
 #endif
+
+__BEGIN_CDECLS
 
 // ask clang format not to mess up the indentation:
 // clang-format off
@@ -93,6 +94,27 @@ typedef int64_t mx_rel_off_t;
 // interrupt flags
 #define MX_FLAG_REMAP_IRQ  0x1
 
+// Flags which can be used to to control cache policy for APIs which map memory.
+typedef enum {
+    MX_CACHE_POLICY_CACHED          = 0,
+    MX_CACHE_POLICY_UNCACHED        = 1,
+    MX_CACHE_POLICY_UNCACHED_DEVICE = 2,
+    MX_CACHE_POLICY_WRITE_COMBINING = 3,
+} mx_cache_policy_t;
+
 #ifdef __cplusplus
-}
+// We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by
+// C11 is not valid in C++11. There is not a single standard name that can
+// be used in both C and C++. C++ <atomic> defines names which are equivalent
+// to those in <stdatomic.h>, but these are contained in the std namespace.
+//
+// The proper C++ version would be 'using mx_futex_t = std::atomic_int;' but
+// in the GCC Magenta build, we don't have a C++ <atomic> and hence cannot use
+// it; instead we use this workaround until we decide what the correct solution
+// should be.
+typedef int mx_futex_t;
+#else
+typedef atomic_int mx_futex_t;
 #endif
+
+__END_CDECLS

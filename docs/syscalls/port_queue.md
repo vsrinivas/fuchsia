@@ -8,6 +8,7 @@ port_queue - queue a packet to an IO port
 
 ```
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 
 mx_status_t mx_port_queue(mx_handle_t handle, const void* packet, mx_size_t size);
 

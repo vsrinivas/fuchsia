@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

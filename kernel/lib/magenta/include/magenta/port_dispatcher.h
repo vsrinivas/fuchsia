@@ -11,6 +11,7 @@
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/syscalls/port.h>
 #include <magenta/types.h>
 
 #include <mxtl/intrusive_double_list.h>

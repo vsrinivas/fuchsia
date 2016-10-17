@@ -10,7 +10,9 @@
 #include <launchpad/vmo.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls-debug.h>
+#include <magenta/syscalls/debug.h>
+#include <magenta/syscalls/exception.h>
+#include <magenta/syscalls/port.h>
 #include <mxio/util.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>

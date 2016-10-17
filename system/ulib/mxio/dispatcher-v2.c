@@ -8,6 +8,7 @@
 #include <threads.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <magenta/listnode.h>

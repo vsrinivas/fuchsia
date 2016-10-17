@@ -10,7 +10,6 @@
 
 #include <magenta/prctl.h>
 #include <magenta/types.h>
-#include <magenta/syscalls-types.h>
 
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>

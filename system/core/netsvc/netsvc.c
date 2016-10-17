@@ -15,6 +15,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <mxio/util.h>
 #include <launchpad/launchpad.h>
 

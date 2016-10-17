@@ -22,7 +22,7 @@
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
 
 #include "syscalls_priv.h"
@@ -434,7 +434,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
  * @param out_len Out param which will hold the maximum number of IRQs supported by the mode.
  */
 mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
-                                        mx_pci_irq_mode_t mode,
+                                        uint32_t mode,
                                         uint32_t* out_max_irqs) {
     LTRACEF("handle %d\n", handle);
 
@@ -446,7 +446,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
         return status;
 
     uint32_t max_irqs;
-    status_t result = pci_device->QueryIrqModeCaps(mode, &max_irqs);
+    status_t result = pci_device->QueryIrqModeCaps((mx_pci_irq_mode_t)mode, &max_irqs);
     if (result != NO_ERROR)
         return result;
 
@@ -464,7 +464,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
  * @param requested_irq_count The number of IRQs to select request for the given mode.
  */
 mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
-                                 mx_pci_irq_mode_t mode,
+                                 uint32_t mode,
                                  uint32_t requested_irq_count) {
     LTRACEF("handle %d\n", handle);
 
@@ -475,7 +475,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
     if (status != NO_ERROR)
         return status;
 
-    return pci_device->SetIrqMode(mode, requested_irq_count);
+    return pci_device->SetIrqMode((mx_pci_irq_mode_t)mode, requested_irq_count);
 }
 #else  // WITH_DEV_PCIE
 mx_status_t sys_pci_init(mx_handle_t, user_ptr<mx_pci_init_arg_t>, uint32_t) {

@@ -20,6 +20,7 @@
 #include <magenta/ktrace.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <magenta/types.h>
 
 #include <mxio/util.h>

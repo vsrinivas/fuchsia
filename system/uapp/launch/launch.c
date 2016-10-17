@@ -7,6 +7,7 @@
 #include <launchpad/vmo.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <mxio/util.h>
 #include <stdbool.h>
 #include <stdio.h>

@@ -4,6 +4,6 @@
 
 #pragma once
 
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/pci.h>
 
 mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size);

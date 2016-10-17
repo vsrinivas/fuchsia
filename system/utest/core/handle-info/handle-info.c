@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
 bool handle_info_test(void) {

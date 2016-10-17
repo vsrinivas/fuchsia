@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <runtime/status.h>
 
 #include "utils.h"

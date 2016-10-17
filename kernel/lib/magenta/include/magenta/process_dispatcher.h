@@ -15,6 +15,7 @@
 #include <magenta/futex_context.h>
 #include <magenta/magenta.h>
 #include <magenta/state_tracker.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 #include <magenta/user_thread.h>
 

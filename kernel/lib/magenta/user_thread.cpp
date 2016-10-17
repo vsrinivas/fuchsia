@@ -27,6 +27,7 @@
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/syscalls/debug.h>
 #include <magenta/thread_dispatcher.h>
 
 #define LOCAL_TRACE 0

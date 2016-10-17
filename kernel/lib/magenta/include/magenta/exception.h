@@ -9,7 +9,7 @@
 #include <magenta/compiler.h>
 #include <sys/types.h>
 #include <magenta/types.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/exception.h>
 
 __BEGIN_CDECLS
 

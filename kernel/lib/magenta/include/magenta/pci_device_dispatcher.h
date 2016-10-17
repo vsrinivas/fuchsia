@@ -13,6 +13,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <magenta/dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
+#include <magenta/syscalls/pci.h>
 #include <sys/types.h>
 #include <mxtl/intrusive_single_list.h>
 

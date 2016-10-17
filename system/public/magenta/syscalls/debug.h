@@ -4,11 +4,10 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
 // The format of data for r/w of x86_64 general regs.
 // By convention this is MX_THREAD_STATE_REGSET0.
@@ -45,6 +44,23 @@ typedef struct mx_arm64_general_regs {
     uint64_t cpsr;
 } mx_aarch64_general_regs_t;
 
-#ifdef __cplusplus
-}
-#endif
+
+// mx_thread_read_state, mx_thread_write_state
+// The maximum size of thread state, in bytes, that can be processed by the
+// read_state/write_state syscalls. It exists so code can expect a sane limit
+// on the amount of memory needed to process the request.
+#define MX_MAX_THREAD_STATE_SIZE 4096u
+
+// The "general regs" are by convention in regset 0.
+#define MX_THREAD_STATE_REGSET0 0u
+#define MX_THREAD_STATE_REGSET1 1u
+#define MX_THREAD_STATE_REGSET2 2u
+#define MX_THREAD_STATE_REGSET3 3u
+#define MX_THREAD_STATE_REGSET4 4u
+#define MX_THREAD_STATE_REGSET5 5u
+#define MX_THREAD_STATE_REGSET6 6u
+#define MX_THREAD_STATE_REGSET7 7u
+#define MX_THREAD_STATE_REGSET8 8u
+#define MX_THREAD_STATE_REGSET9 9u
+
+__END_CDECLS

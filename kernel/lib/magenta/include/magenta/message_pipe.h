@@ -11,8 +11,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/state_tracker.h>
-#include <magenta/syscalls-types.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/port.h>
 
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>

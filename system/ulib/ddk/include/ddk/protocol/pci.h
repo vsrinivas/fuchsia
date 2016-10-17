@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/pci.h>
 #include <ddk/driver.h>
 #include <hw/pci.h>
 

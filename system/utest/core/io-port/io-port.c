@@ -6,6 +6,7 @@
 #include <threads.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 #include <unittest/unittest.h>
 
 #define NUM_IO_THREADS 5

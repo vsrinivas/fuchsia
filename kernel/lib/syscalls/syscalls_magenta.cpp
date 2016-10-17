@@ -36,6 +36,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/socket_dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <magenta/syscalls/log.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>

@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/types.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_ptr.h>
 

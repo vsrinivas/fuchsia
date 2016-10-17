@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>

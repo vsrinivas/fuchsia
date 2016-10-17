@@ -11,6 +11,7 @@
 
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
 #include <stdalign.h>

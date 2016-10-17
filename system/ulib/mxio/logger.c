@@ -9,6 +9,7 @@
 #include <threads.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/log.h>
 #include <magenta/processargs.h>
 
 #include "private.h"
