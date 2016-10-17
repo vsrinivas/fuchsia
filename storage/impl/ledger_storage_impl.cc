@@ -27,7 +27,7 @@ Status LedgerStorageImpl::CreatePageStorage(
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
     FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
-    return Status::IO_ERROR;
+    return Status::INTERNAL_IO_ERROR;
   }
   std::unique_ptr<PageStorageImpl> result(
       new PageStorageImpl(GetPathFor(page_id), page_id));

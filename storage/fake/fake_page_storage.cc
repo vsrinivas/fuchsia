@@ -123,31 +123,32 @@ Status FakePageStorage::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status FakePageStorage::AddObjectFromSync(
+void FakePageStorage::AddObjectFromSync(
     ObjectIdView object_id,
     mojo::ScopedDataPipeConsumerHandle data,
-    size_t size) {
-  return Status::NOT_IMPLEMENTED;
+    size_t size,
+    const std::function<void(Status)>& callback) {
+  callback(Status::NOT_IMPLEMENTED);
 }
 
-Status FakePageStorage::AddObjectFromLocal(
+void FakePageStorage::AddObjectFromLocal(
     mojo::ScopedDataPipeConsumerHandle data,
     size_t size,
-    ObjectId* object_id) {
+    const std::function<void(Status, ObjectId)>& callback) {
   std::string value;
   mtl::BlockingCopyToString(std::move(data), &value);
   if (value.size() != size) {
-    return Status::ILLEGAL_STATE;
+    callback(Status::IO_ERROR, "");
+    return;
   }
-  *object_id = RandomId();
-  objects_[*object_id] = value;
-  return Status::OK;
+  std::string object_id = RandomId();
+  objects_[object_id] = value;
+  callback(Status::OK, std::move(object_id));
 }
 
 void FakePageStorage::GetBlob(
     ObjectIdView blob_id,
-    const std::function<void(Status status, std::unique_ptr<Blob> blob)>
-        callback) {
+    const std::function<void(Status, std::unique_ptr<Blob>)>& callback) {
   auto it = objects_.find(blob_id);
   if (it == objects_.end()) {
     callback(Status::NOT_FOUND, nullptr);

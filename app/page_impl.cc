@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "apps/ledger/convert/convert.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/strings.h"
 
@@ -22,6 +23,8 @@ Status ConvertStatus(storage::Status status,
   switch (status) {
     case storage::Status::OK:
       return Status::OK;
+    case storage::Status::IO_ERROR:
+      return Status::IO_ERROR;
     case storage::Status::NOT_FOUND:
       return not_found_status;
     default:
@@ -105,22 +108,24 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
                                mojo::Array<uint8_t> value,
                                Priority priority,
                                const PutWithPriorityCallback& callback) {
-  // Store the value.
-  storage::ObjectId object_id;
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
   // until the pipe is drained.
   mojo::ScopedDataPipeConsumerHandle data_pipe =
       mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
-  storage::Status status = storage_->AddObjectFromLocal(
-      std::move(data_pipe), value.size(), &object_id);
-  if (status != storage::Status::OK) {
-    callback.Run(ConvertStatus(status));
-    return;
-  }
+  storage_->AddObjectFromLocal(
+      std::move(data_pipe), value.size(),
+      ftl::MakeCopyable([ this, key = std::move(key), priority, callback ](
+          storage::Status status, storage::ObjectId object_id) {
+        if (status != storage::Status::OK) {
+          callback.Run(ConvertStatus(status));
+          return;
+        }
 
-  callback.Run(PutInCommit(key, object_id, priority == Priority::EAGER
-                                               ? storage::KeyPriority::EAGER
-                                               : storage::KeyPriority::LAZY));
+        callback.Run(
+            PutInCommit(key, object_id, priority == Priority::EAGER
+                                            ? storage::KeyPriority::EAGER
+                                            : storage::KeyPriority::LAZY));
+      }));
 }
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
@@ -157,17 +162,18 @@ void PageImpl::Delete(mojo::Array<uint8_t> key,
 void PageImpl::CreateReference(int64_t size,
                                mojo::ScopedDataPipeConsumerHandle data,
                                const CreateReferenceCallback& callback) {
-  storage::ObjectId object_id;
-  storage::Status status =
-      storage_->AddObjectFromLocal(std::move(data), size, &object_id);
-  if (status != storage::Status::OK) {
-    callback.Run(ConvertStatus(status), nullptr);
-    return;
-  }
+  storage_->AddObjectFromLocal(
+      std::move(data), size,
+      [callback](storage::Status status, storage::ObjectId object_id) {
+        if (status != storage::Status::OK) {
+          callback.Run(ConvertStatus(status), nullptr);
+          return;
+        }
 
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-  callback.Run(Status::OK, std::move(reference));
+        ReferencePtr reference = Reference::New();
+        reference->opaque_id = convert::ToArray(object_id);
+        callback.Run(Status::OK, std::move(reference));
+      });
 }
 
 // GetReference(Reference reference) => (Status status, Value? value);

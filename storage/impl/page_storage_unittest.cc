@@ -6,12 +6,16 @@
 
 #include <memory>
 
+#include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
@@ -21,6 +25,16 @@ std::string RandomId(size_t size) {
   std::string result;
   result.resize(size);
   glue::RandBytes(&result[0], size);
+  return result;
+}
+
+std::string ToHex(const std::string& string) {
+  std::string result;
+  for (char c : string) {
+    if (c >= 0 && c < 16)
+      result += "0";
+    result += NumberToString(static_cast<uint8_t>(c), ftl::Base::k16);
+  }
   return result;
 }
 
@@ -47,9 +61,10 @@ class PageStorageTest : public ::testing::Test {
     return ids[0];
   }
 
- private:
+  mtl::MessageLoop message_loop_;
   files::ScopedTempDir tmp_dir_;
 
+ private:
  protected:
   std::unique_ptr<PageStorageImpl> storage_;
 
@@ -157,6 +172,30 @@ TEST_F(PageStorageTest, CreateJournals) {
             storage_->StartMergeCommit(RandomId(kCommitIdSize),
                                        RandomId(kCommitIdSize), &journal));
   EXPECT_NE(nullptr, journal);
+}
+
+TEST_F(PageStorageTest, AddObjectFromLocal) {
+  std::string content("Some data");
+
+  Status status;
+  ObjectId object_id;
+  storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(content), content.size(),
+      [this, &status, &object_id](Status returned_status,
+                                  ObjectId returned_object_id) {
+        status = returned_status;
+        object_id = std::move(returned_object_id);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_EQ(Status::OK, status);
+  std::string hash = glue::SHA256Hash(content.data(), content.size());
+  EXPECT_EQ(hash, object_id);
+
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
+  std::string file_content;
+  EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
+  EXPECT_EQ(content, file_content);
 }
 
 }  // namespace

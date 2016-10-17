@@ -47,16 +47,17 @@ class FakePageStorage : public PageStorage {
   Status GetUnsyncedObjects(const CommitId& commit_id,
                             std::vector<Object>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
-  Status AddObjectFromSync(ObjectIdView object_id,
-                           mojo::ScopedDataPipeConsumerHandle data,
-                           size_t size) override;
-  Status AddObjectFromLocal(mojo::ScopedDataPipeConsumerHandle data,
-                            size_t size,
-                            ObjectId* object_id) override;
-  void GetBlob(
-      ObjectIdView blob_id,
-      const std::function<void(Status status, std::unique_ptr<Blob> blob)>
-          callback) override;
+  void AddObjectFromSync(ObjectIdView object_id,
+                         mojo::ScopedDataPipeConsumerHandle data,
+                         size_t size,
+                         const std::function<void(Status)>& callback) override;
+  void AddObjectFromLocal(
+      mojo::ScopedDataPipeConsumerHandle data,
+      size_t size,
+      const std::function<void(Status, ObjectId)>& callback) override;
+  void GetBlob(ObjectIdView blob_id,
+               const std::function<void(Status, std::unique_ptr<Blob>)>&
+                   callback) override;
 
   // For testing:
   const std::vector<std::unique_ptr<FakeJournalDelegate>>& GetJournals() const;

@@ -315,11 +315,17 @@ TEST_F(PageImplTest, CreateReference) {
 
 TEST_F(PageImplTest, GetReference) {
   std::string value_string("a small value");
+  storage::Status storage_status;
   storage::ObjectId object_id;
-  ASSERT_EQ(storage::Status::OK,
-            fake_storage_->AddObjectFromLocal(
-                mtl::WriteStringToConsumerHandle(value_string),
-                value_string.size(), &object_id));
+  // FakeStorage is synchronous.
+  fake_storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
+      [&storage_status, &object_id](storage::Status returned_status,
+                                    storage::ObjectId returned_object_id) {
+        storage_status = returned_status;
+        object_id = std::move(returned_object_id);
+      });
+  ASSERT_EQ(storage::Status::OK, storage_status);
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id);
 

@@ -4,13 +4,177 @@
 
 #include "apps/ledger/storage/impl/page_storage_impl.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
 #include "apps/ledger/storage/public/constants.h"
+#include "lib/ftl/arraysize.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/file.h"
+#include "lib/ftl/files/file_descriptor.h"
+#include "lib/ftl/files/unique_fd.h"
+#include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
 namespace storage {
 
+namespace {
+
+const char kLevelDbDir[] = "/leveldb";
+const char kObjectDir[] = "/objects";
+const char kStagingDir[] = "/staging";
+
+const char kHexDigits[] = "0123456789ABCDEF";
+
+std::string ToHex(const std::string& string) {
+  std::string result;
+  result.reserve(string.size() * 2);
+  for (unsigned char c : string) {
+    result.push_back(kHexDigits[c >> 4]);
+    result.push_back(kHexDigits[c & 0xf]);
+  }
+  return result;
+}
+
+// TODO(qsr): Use the rename libc function when MG-329 is fixed.
+int Rename(const char* src, const char* dst) {
+  {
+    ftl::UniqueFD src_fd(open(src, O_RDONLY));
+    if (!src_fd.is_valid())
+      return 1;
+    ftl::UniqueFD dst_fd(open(dst, O_WRONLY | O_CREAT | O_EXCL));
+    if (!dst_fd.is_valid())
+      return 1;
+
+    char buffer[4096];
+    for (;;) {
+      ssize_t read =
+          ftl::ReadFileDescriptor(src_fd.get(), buffer, arraysize(buffer));
+      if (read < 0)
+        return 1;
+      if (read == 0)
+        break;
+      if (!ftl::WriteFileDescriptor(dst_fd.get(), buffer, read))
+        return 1;
+    }
+  }
+
+  unlink(src);
+  return 0;
+}
+
+}  // namespace
+
+class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
+ public:
+  FileWriter(const std::string& staging_dir, const std::string& object_dir)
+      : staging_dir_(staging_dir),
+        object_dir_(object_dir),
+        drainer_(this),
+        expected_size_(0u),
+        size_(0u) {}
+
+  ~FileWriter() override {
+    // Cleanup staging file.
+    if (!file_path_.empty()) {
+      fd_.reset();
+      unlink(file_path_.c_str());
+    }
+  }
+
+  void Start(mojo::ScopedDataPipeConsumerHandle source,
+             uint64_t expected_size,
+             std::function<void(Status, ObjectId)> callback) {
+    expected_size_ = expected_size;
+    callback_ = std::move(callback);
+    file_path_ = staging_dir_ + "/XXXXXX";
+    fd_.reset(mkstemp(&file_path_[0]));
+    if (!fd_.is_valid()) {
+      FTL_LOG(ERROR) << "Unable to create file in staging directory ("
+                     << staging_dir_ << ")";
+      callback_(Status::INTERNAL_IO_ERROR, "");
+      return;
+    }
+    drainer_.Start(std::move(source));
+  }
+
+  void OnDataAvailable(const void* data, size_t num_bytes) override {
+    size_ += num_bytes;
+    hash_.Update(data, num_bytes);
+    if (!ftl::WriteFileDescriptor(fd_.get(), static_cast<const char*>(data),
+                                  num_bytes)) {
+      FTL_LOG(ERROR) << "Error writing data to disk: " << strerror(errno);
+      callback_(Status::INTERNAL_IO_ERROR, "");
+      return;
+    }
+  }
+
+  void OnDataComplete() override {
+    fd_.reset();
+    if (size_ != expected_size_) {
+      FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
+                     << expected_size_ << ", but received: " << size_;
+      callback_(Status::IO_ERROR, "");
+      return;
+    }
+
+    std::string object_id;
+    hash_.Finish(&object_id);
+
+    std::string final_path = object_dir_ + "/" + ToHex(object_id);
+
+    // Check if file already exists.
+    size_t size;
+    if (files::GetFileSize(final_path, &size)) {
+      if (size != expected_size_) {
+        // If size is not the correct one, something is really wrong.
+        FTL_LOG(ERROR) << "Internal error. Path \"" << final_path
+                       << "\" has wrong size. Expected: " << expected_size_
+                       << ", but found: " << size;
+
+        callback_(Status::INTERNAL_IO_ERROR, "");
+        return;
+      }
+    } else {
+      if (Rename(file_path_.c_str(), final_path.c_str()) != 0) {
+        // If rename failed, the file might have been saved by another call.
+        if (!files::GetFileSize(final_path, &size) || size != expected_size_) {
+          // If size is not the correct one, something is really wrong.
+          FTL_LOG(ERROR) << "Internal error. Path \"" << final_path
+                         << "\" has wrong size. Expected: " << expected_size_
+                         << ", but found: " << size;
+          callback_(Status::INTERNAL_IO_ERROR, "");
+          return;
+        }
+      }
+    }
+
+    callback_(Status::OK, std::move(object_id));
+  }
+
+ private:
+  const std::string& staging_dir_;
+  const std::string& object_dir_;
+  std::function<void(Status, const ObjectId&)> callback_;
+  mtl::DataPipeDrainer drainer_;
+  std::string file_path_;
+  ftl::UniqueFD fd_;
+  glue::SHA256StreamingHash hash_;
+  uint64_t expected_size_;
+  uint64_t size_;
+};
+
 PageStorageImpl::PageStorageImpl(std::string page_path, PageIdView page_id)
-    : page_path_(page_path), page_id_(page_id.ToString()), db_(page_path_) {}
+    : page_path_(page_path),
+      page_id_(page_id.ToString()),
+      db_(page_path_ + kLevelDbDir),
+      objects_path_(page_path_ + kObjectDir),
+      staging_path_(page_path_ + kStagingDir) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 
@@ -19,6 +183,13 @@ Status PageStorageImpl::Init() {
   Status s = db_.Init();
   if (s != Status::OK) {
     return s;
+  }
+
+  // Initialize paths.
+  if (!files::CreateDirectory(objects_path_) ||
+      !files::CreateDirectory(staging_path_)) {
+    FTL_LOG(ERROR) << "Unable to create directories for PageStorageImpl.";
+    return Status::INTERNAL_IO_ERROR;
   }
 
   // Add the default page head if this page is empty.
@@ -141,24 +312,43 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::AddObjectFromSync(
+void PageStorageImpl::AddObjectFromSync(
     ObjectIdView object_id,
     mojo::ScopedDataPipeConsumerHandle data,
-    size_t size) {
-  return Status::NOT_IMPLEMENTED;
+    size_t size,
+    const std::function<void(Status)>& callback) {
+  callback(Status::NOT_IMPLEMENTED);
 }
 
-Status PageStorageImpl::AddObjectFromLocal(
+void PageStorageImpl::AddObjectFromLocal(
     mojo::ScopedDataPipeConsumerHandle data,
     size_t size,
-    ObjectId* object_id) {
-  return Status::NOT_IMPLEMENTED;
+    const std::function<void(Status, ObjectId)>& callback) {
+  auto file_writer = std::make_unique<FileWriter>(staging_path_, objects_path_);
+  FileWriter* file_writer_ptr = file_writer.get();
+  writers_.push_back(std::move(file_writer));
+
+  auto cleanup = [this, file_writer_ptr]() {
+    auto writer_it =
+        std::find_if(writers_.begin(), writers_.end(),
+                     [file_writer_ptr](const std::unique_ptr<FileWriter>& c) {
+                       return c.get() == file_writer_ptr;
+                     });
+    FTL_DCHECK(writer_it != writers_.end());
+    writers_.erase(writer_it);
+  };
+
+  file_writer_ptr->Start(std::move(data), size, [
+    cleanup = std::move(cleanup), callback = std::move(callback)
+  ](Status status, ObjectId object_id) {
+    callback(status, std::move(object_id));
+    cleanup();
+  });
 }
 
 void PageStorageImpl::GetBlob(
     ObjectIdView blob_id,
-    const std::function<void(Status status, std::unique_ptr<Blob> blob)>
-        callback) {
+    const std::function<void(Status, std::unique_ptr<Blob>)>& callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 

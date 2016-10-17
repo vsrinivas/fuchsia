@@ -6,7 +6,28 @@
 
 #include <openssl/sha.h>
 
+#include "lib/ftl/logging.h"
+
 namespace glue {
+
+struct SHA256StreamingHash::Context {
+  SHA256_CTX sha256;
+};
+
+SHA256StreamingHash::~SHA256StreamingHash() {}
+
+SHA256StreamingHash::SHA256StreamingHash() : context_(new Context()) {
+  SHA256_Init(&context_->sha256);
+}
+
+void SHA256StreamingHash::Update(const void* input, size_t len) {
+  SHA256_Update(&context_->sha256, input, len);
+}
+
+void SHA256StreamingHash::Finish(std::string* output) {
+  output->resize(SHA256_DIGEST_LENGTH);
+  SHA256_Final(reinterpret_cast<uint8_t*>(&(*output)[0]), &context_->sha256);
+}
 
 std::string SHA256Hash(const void* input, size_t input_lenght) {
   std::string result;

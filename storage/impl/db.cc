@@ -109,7 +109,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
   }
 
   Status GetStatus() const override {
-    return it_->status().ok() ? Status::OK : Status::IO_ERROR;
+    return it_->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
   }
 
   const EntryChange& operator*() const override { return *(change_.get()); }
@@ -157,7 +157,7 @@ DB::~DB() {}
 Status DB::Init() {
   if (!files::CreateDirectory(db_path_)) {
     FTL_LOG(ERROR) << "Failed to create directory under " << db_path_;
-    return Status::IO_ERROR;
+    return Status::INTERNAL_IO_ERROR;
   }
   leveldb::DB* db = nullptr;
   leveldb::Options options;
@@ -166,7 +166,7 @@ Status DB::Init() {
   if (!status.ok()) {
     FTL_LOG(ERROR) << "Failed to open ledger at " << db_path_
                    << " with status: " << status.ToString();
-    return Status::IO_ERROR;
+    return Status::INTERNAL_IO_ERROR;
   }
   db_.reset(db);
   return Status::OK;
@@ -293,7 +293,7 @@ Status DB::MarkCommitIdUnsynced(const CommitId& commit_id) {
 Status DB::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
   std::string value;
   Status s = Get(GetUnsyncedCommitKeyFor(commit_id), &value);
-  if (s == Status::IO_ERROR) {
+  if (s == Status::INTERNAL_IO_ERROR) {
     return s;
   }
   *is_synced = (s == Status::NOT_FOUND);
@@ -315,7 +315,7 @@ Status DB::MarkObjectIdUnsynced(ObjectIdView object_id) {
 Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   std::string value;
   Status s = Get(GetUnsyncedObjectKeyFor(object_id), &value);
-  if (s == Status::IO_ERROR) {
+  if (s == Status::INTERNAL_IO_ERROR) {
     return s;
   }
   *is_synced = (s == Status::NOT_FOUND);
@@ -333,7 +333,7 @@ Status DB::GetByPrefix(const leveldb::Slice& prefix,
     result.push_back(key.ToString());
   }
   if (!it->status().ok()) {
-    return Status::IO_ERROR;
+    return Status::INTERNAL_IO_ERROR;
   }
   keySuffixes->swap(result);
   return Status::OK;
@@ -345,7 +345,7 @@ Status DB::DeleteByPrefix(const leveldb::Slice& prefix) {
        it->Next()) {
     db_->Delete(write_options_, it->key());
   }
-  return it->status().ok() ? Status::OK : Status::IO_ERROR;
+  return it->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
 Status DB::Get(convert::ExtendedStringView key, std::string* value) {
@@ -354,19 +354,19 @@ Status DB::Get(convert::ExtendedStringView key, std::string* value) {
     return Status::NOT_FOUND;
   }
   if (!s.ok()) {
-    return Status::IO_ERROR;
+    return Status::INTERNAL_IO_ERROR;
   }
   return Status::OK;
 }
 
 Status DB::Put(convert::ExtendedStringView key, ftl::StringView value) {
   leveldb::Status s = db_->Put(write_options_, key, convert::ToSlice(value));
-  return s.ok() ? Status::OK : Status::IO_ERROR;
+  return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
 Status DB::Delete(convert::ExtendedStringView key) {
   leveldb::Status s = db_->Delete(write_options_, key);
-  return s.ok() ? Status::OK : Status::IO_ERROR;
+  return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
 }  // namespace storage

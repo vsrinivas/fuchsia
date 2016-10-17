@@ -29,7 +29,7 @@ Status ObjectImpl::GetData(ftl::StringView* data) {
     std::string res;
     // TODO(nellyv): Replace with mmap when supported.
     if (!files::ReadFileToString(file_path_.data(), &res)) {
-      return Status::IO_ERROR;
+      return Status::INTERNAL_IO_ERROR;
     }
     data_.swap(res);
   }

@@ -202,23 +202,23 @@ TEST_F(DBTest, UnsyncedCommits) {
 TEST_F(DBTest, UnsyncedObjects) {
   std::unique_ptr<DB> db = GetDB();
 
-  ObjectId objectId = RandomId(kObjectIdSize);
-  std::vector<ObjectId> objectIds;
-  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&objectIds));
-  EXPECT_TRUE(objectIds.empty());
+  ObjectId object_id = RandomId(kObjectIdSize);
+  std::vector<ObjectId> object_ids;
+  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
+  EXPECT_TRUE(object_ids.empty());
 
-  EXPECT_EQ(Status::OK, db->MarkObjectIdUnsynced(objectId));
-  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&objectIds));
-  EXPECT_EQ(1u, objectIds.size());
-  EXPECT_EQ(objectId, objectIds[0]);
+  EXPECT_EQ(Status::OK, db->MarkObjectIdUnsynced(object_id));
+  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
+  EXPECT_EQ(1u, object_ids.size());
+  EXPECT_EQ(object_id, object_ids[0]);
   bool isSynced;
-  EXPECT_EQ(Status::OK, db->IsObjectSynced(objectId, &isSynced));
+  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &isSynced));
   EXPECT_FALSE(isSynced);
 
-  EXPECT_EQ(Status::OK, db->MarkObjectIdSynced(objectId));
-  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&objectIds));
-  EXPECT_TRUE(objectIds.empty());
-  EXPECT_EQ(Status::OK, db->IsObjectSynced(objectId, &isSynced));
+  EXPECT_EQ(Status::OK, db->MarkObjectIdSynced(object_id));
+  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
+  EXPECT_TRUE(object_ids.empty());
+  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &isSynced));
   EXPECT_TRUE(isSynced);
 }
 

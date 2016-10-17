@@ -47,14 +47,20 @@ enum class ChangeSource { LOCAL, SYNC };
 enum class JournalType { IMPLICIT, EXPLICIT };
 
 enum class Status {
+  // User visible status.
   OK,
-  FORMAT_ERROR,
-  ILLEGAL_STATE,
   IO_ERROR,
   NOT_FOUND,
-  NOT_IMPLEMENTED,
+
+  // Internal status.
+  FORMAT_ERROR,
+  ILLEGAL_STATE,
+  INTERNAL_IO_ERROR,
   OBJECT_ID_MISMATCH,
   PAGE_DELETED,
+
+  // Temporary status.
+  NOT_IMPLEMENTED,
 };
 
 }  // namespace storage
