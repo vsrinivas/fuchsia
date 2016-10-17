@@ -22,7 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/interrupts.c \
     $(LOCAL_DIR)/keyboard.c \
     $(LOCAL_DIR)/memory.c \
-    $(LOCAL_DIR)/pci.c \
     $(LOCAL_DIR)/pic.c \
     $(LOCAL_DIR)/platform.c \
     $(LOCAL_DIR)/power.c \
