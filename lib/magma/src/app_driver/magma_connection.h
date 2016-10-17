@@ -31,15 +31,15 @@ public:
     MagmaContext* CreateContext()
     {
         uint32_t context_id;
-        if (!magma_system_create_context(sys_connection_, &context_id))
-            return DRETP(nullptr, "magma_system_create_context failed");
+        magma_system_create_context(sys_connection_, &context_id);
 
         return new MagmaContext(this, context_id);
     }
 
     bool DestroyContext(MagmaContext* context)
     {
-        return magma_system_destroy_context(sys_connection_, context->context_id());
+        magma_system_destroy_context(sys_connection_, context->context_id());
+        return true;
     }
 
     uint64_t batch_size() { return batch_size_; }

@@ -187,8 +187,10 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
 
         printf("got token 0x%x for fb %d\n", fb_token, i);
 
-        if (!magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_token),
-                                                &(fb_[i].fb_handle))) {
+        magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_token),
+                                           &(fb_[i].fb_handle));
+
+        if (magma_system_display_get_error(magma_display_) != 0) {
             fprintf(stderr, "magma_system_display_import_buffer failed\n");
             return false;
         }

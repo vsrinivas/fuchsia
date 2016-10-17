@@ -40,15 +40,18 @@ TEST(MagmaSystemDisplay, PageFlip)
 
     uint64_t buf_size;
     uint32_t buf_handle;
-    ASSERT_TRUE(magma_system_alloc(connection.get(), PAGE_SIZE, &buf_size, &buf_handle));
+    magma_system_alloc(connection.get(), PAGE_SIZE, &buf_size, &buf_handle);
+    ASSERT_EQ(magma_system_get_error(connection.get()), 0);
 
     // should still be unable to page flip buffer because it hasnt been exported to display
     magma_system_display_page_flip(display.get(), buf_handle, &callback, test_invalid.get());
 
     uint32_t token;
     uint32_t imported_handle;
-    EXPECT_TRUE(magma_system_export(connection.get(), buf_handle, &token));
-    EXPECT_TRUE(magma_system_display_import_buffer(display.get(), token, &imported_handle));
+    magma_system_export(connection.get(), buf_handle, &token);
+    EXPECT_EQ(magma_system_get_error(connection.get()), 0);
+    magma_system_display_import_buffer(display.get(), token, &imported_handle);
+    EXPECT_EQ(magma_system_display_get_error(display.get()), 0);
 
     // should be ok to page flip now
     auto test_success = std::unique_ptr<TestPageFlip>(new TestPageFlip(0));

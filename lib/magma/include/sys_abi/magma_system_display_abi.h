@@ -20,8 +20,12 @@ struct magma_system_display* magma_system_display_open(int32_t file_descriptor);
 
 void magma_system_display_close(struct magma_system_display* display);
 
+// returns the last recorded error since the last time this function was called
+// clears the recorded error
+int32_t magma_system_display_get_error(struct magma_system_display* display);
+
 // TODO(MA-88) make these arguments less confusing
-bool magma_system_display_import_buffer(struct magma_system_display* display, uint32_t token,
+void magma_system_display_import_buffer(struct magma_system_display* display, uint32_t token,
                                         uint32_t* handle_out);
 
 // Provides a buffer to be scanned out on the next vblank event.

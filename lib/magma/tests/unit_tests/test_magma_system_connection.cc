@@ -108,7 +108,8 @@ TEST(MagmaSystemConnection, ContextManagement)
     EXPECT_TRUE(connection.CreateContext(&context_id_0));
     EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
 
-    EXPECT_TRUE(magma_system_create_context(&connection, &context_id_1));
+    magma_system_create_context(&connection, &context_id_1);
+    EXPECT_EQ(magma_system_get_error(&connection), 0);
     EXPECT_EQ(msd_connection->NumActiveContexts(), 2u);
 
     EXPECT_NE(context_id_0, context_id_1);
@@ -117,7 +118,9 @@ TEST(MagmaSystemConnection, ContextManagement)
     EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
     EXPECT_FALSE(connection.DestroyContext(context_id_0));
 
-    EXPECT_TRUE(magma_system_destroy_context(&connection, context_id_1));
+    magma_system_destroy_context(&connection, context_id_1);
+    EXPECT_EQ(magma_system_get_error(&connection), 0);
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
-    EXPECT_FALSE(magma_system_destroy_context(&connection, context_id_1));
+    magma_system_destroy_context(&connection, context_id_1);
+    EXPECT_NE(magma_system_get_error(&connection), 0);
 }

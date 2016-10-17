@@ -30,8 +30,8 @@ MagmaBuffer::~MagmaBuffer()
 bool MagmaBuffer::Alloc(uint64_t size)
 {
     uint32_t handle;
-    if (!magma_system_alloc(connection_->sys_connection(), size, &size, &handle))
-        return false;
+    if (magma_system_alloc(connection_->sys_connection(), size, &size, &handle) != 0)
+        return DRETF(false, "magma_system_alloc failed");
 
     this->handle = static_cast<uint32_t>(handle);
     this->size = size;
@@ -43,34 +43,33 @@ bool MagmaBuffer::Alloc(uint64_t size)
 
 bool MagmaBuffer::Export(uint32_t* token_out)
 {
-    return connection_->ExportBufferObject(this, token_out);
+    return DRETF(connection_->ExportBufferObject(this, token_out), "Failed to export buffer");
 }
 
 void MagmaBuffer::SetTilingMode(uint32_t tiling_mode)
 {
-    if (magma_system_set_tiling_mode(connection_->sys_connection(), this->handle, tiling_mode))
-        tiling_mode_ = tiling_mode;
+    magma_system_set_tiling_mode(connection_->sys_connection(), this->handle, tiling_mode);
+    tiling_mode_ = tiling_mode;
 }
 
 bool MagmaBuffer::Map(bool write)
 {
     void* addr;
-    if (!magma_system_map(connection_->sys_connection(), this->handle, &addr))
-        return false;
+    if (magma_system_map(connection_->sys_connection(), this->handle, &addr) != 0)
+        return DRETF(false, "magma_system_map failed");
 
     this->virt = addr;
 
-    if (!magma_system_set_domain(connection_->sys_connection(), this->handle, MAGMA_DOMAIN_CPU,
-                                 write ? MAGMA_DOMAIN_CPU : 0))
-        return false;
+    magma_system_set_domain(connection_->sys_connection(), this->handle, MAGMA_DOMAIN_CPU,
+                            write ? MAGMA_DOMAIN_CPU : 0);
 
     return true;
 }
 
 bool MagmaBuffer::Unmap()
 {
-    if (!magma_system_unmap(connection_->sys_connection(), this->handle, this->virt))
-        return false;
+    if (magma_system_unmap(connection_->sys_connection(), this->handle, this->virt) != 0)
+        return DRETF(false, "magma_system_unmap failed");
 
     this->virt = nullptr;
     return true;
@@ -78,7 +77,7 @@ bool MagmaBuffer::Unmap()
 
 void MagmaBuffer::WaitRendering()
 {
-    return magma_system_wait_rendering(connection_->sys_connection(), this->handle);
+    magma_system_wait_rendering(connection_->sys_connection(), this->handle);
 }
 
 void MagmaBuffer::EmitRelocation(uint32_t offset, MagmaBuffer* target, uint32_t target_offset,
