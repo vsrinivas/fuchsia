@@ -19,6 +19,8 @@ typedef enum {
     MX_INFO_HANDLE_BASIC,
     MX_INFO_PROCESS,
     MX_INFO_PROCESS_THREADS,
+    MX_INFO_RESOURCE_CHILDREN,
+    MX_INFO_RESOURCE_RECORDS,
 } mx_object_info_topic_t;
 
 typedef enum {

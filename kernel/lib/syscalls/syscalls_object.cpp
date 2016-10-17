@@ -14,6 +14,7 @@
 #include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/resource_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
@@ -421,6 +422,24 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (out.copy_to_user(up->MapHandleToValue(thread_h.get())) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(thread_h));
+        return NO_ERROR;
+    }
+
+    auto resource = dispatcher->get_specific<ResourceDispatcher>();
+    if (resource) {
+        auto child = resource->LookupChildById(koid);
+        if (!child)
+            return ERR_NOT_FOUND;
+        auto cd = mxtl::RefPtr<Dispatcher>(child.get());
+        if (!cd)
+            return ERR_NOT_FOUND;
+        HandleUniquePtr child_h(MakeHandle(cd, rights));
+        if (!child_h)
+            return ERR_NO_MEMORY;
+
+        if (out.copy_to_user(up->MapHandleToValue(child_h.get())) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+        up->AddHandle(mxtl::move(child_h));
         return NO_ERROR;
     }
 

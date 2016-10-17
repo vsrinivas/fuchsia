@@ -41,5 +41,6 @@ typedef struct mx_waitset_result {
 // forward declarations needed by syscalls.h
 typedef struct mx_pcie_get_nth_info mx_pcie_get_nth_info_t;
 typedef struct mx_pci_init_arg mx_pci_init_arg_t;
+typedef union mx_rrec mx_rrec_t;
 
 __END_CDECLS
