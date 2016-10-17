@@ -1,1 +1,1 @@
-This repository contains drivers for Qualcomm wireless devices.
+This repository contains drivers for wireless devices.
