@@ -19,7 +19,7 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size);
 bool ReadFileToString(const std::string& path, std::string* result);
 
 // If the given path is a file, set size to the size of the file.
-bool GetFileSize(const std::string& path, int64_t* size);
+bool GetFileSize(const std::string& path, uint64_t* size);
 
 }  // namespace files
 

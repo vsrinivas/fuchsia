@@ -15,14 +15,14 @@ TEST(File, GetFileSize) {
 
   ASSERT_TRUE(dir.NewTempFile(&path));
 
-  int64_t size;
+  uint64_t size;
   EXPECT_TRUE(GetFileSize(path, &size));
   EXPECT_EQ(0u, size);
 
   std::string content = "Hello World";
   ASSERT_TRUE(WriteFile(path, content.data(), content.size()));
   EXPECT_TRUE(GetFileSize(path, &size));
-  EXPECT_EQ(static_cast<int64_t>(content.size()), size);
+  EXPECT_EQ(content.size(), size);
 }
 
 }  // namespace

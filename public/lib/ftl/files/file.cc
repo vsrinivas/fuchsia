@@ -47,7 +47,7 @@ bool ReadFileToString(const std::string& path, std::string* result) {
   return true;
 }
 
-bool GetFileSize(const std::string& path, int64_t* size) {
+bool GetFileSize(const std::string& path, uint64_t* size) {
   struct stat stat_buffer;
   if (stat(path.c_str(), &stat_buffer) != 0) {
     return false;
