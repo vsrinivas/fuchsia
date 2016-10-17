@@ -33,7 +33,7 @@ accessible from Magenta.
 ```
  * Within Magenta, mount the MinFS volume
 ```
-> minfs /dev/class/block/000 mount &
+> minfs /dev/class/block/000 mount /data &
 ```
  * On any future boots, MinFS will be mounted automatically. Any files written
    to "/data" (the MinFS mount point) will persist across boots.
