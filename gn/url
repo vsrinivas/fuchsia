@@ -1,12 +1,12 @@
 {
     "labels": [
         "//lib/url",
-        "//lib/url:url_unittests"
+        "//lib/url:url_apptests"
     ],
     "binaries": [
         {
-            "binary": "url_unittests",
-            "bootfs_path": "apps/url_unittests"
+            "binary": "url_apptests",
+            "bootfs_path": "test/url_apptests"
         }
     ]
 }
