@@ -180,16 +180,26 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
         return ERR_BAD_STATE;
 
-    // TODO(smklein) Support cross-directory rename
-    if (olddir->dnode != newdir->dnode)
-        return ERR_NOT_SUPPORTED;
-
     dnode_t* olddn, *newdn;
     mx_status_t r;
     // The source must exist
     if ((r = dn_lookup(olddir->dnode, &olddn, oldname, oldlen)) < 0) {
         return r;
     }
+    bool srcIsFile = (olddn->vnode->dnode == NULL);
+    // Verify that the destination is not a subdirectory of the source (if
+    // both are directories).
+    if (!srcIsFile) {
+        dnode_t* observeddn = newdir->dnode;
+        // Iterate all the way up to root
+        while (observeddn->parent != observeddn) {
+            if (observeddn == olddn) {
+                return ERR_INVALID_ARGS;
+            }
+            observeddn = observeddn->parent;
+        }
+    }
+
     // The destination may or may not exist
     r = dn_lookup(newdir->dnode, &newdn, newname, newlen);
     if (r == NO_ERROR) {
@@ -198,7 +208,6 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
             // Cannot rename node to itself
             return ERR_INVALID_ARGS;
         }
-        bool srcIsFile = (olddn->vnode->dnode == NULL);
         bool dstIsFile = (newdn->vnode->dnode == NULL);
         if (srcIsFile != dstIsFile) {
             // Cannot rename files to directories (and vice versa)
