@@ -22,7 +22,8 @@ void CopyToFileDescriptor(
     mojo::ScopedDataPipeConsumerHandle source,
     ftl::UniqueFD destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool /*success*/)>& callback);
+    const std::function<void(bool /*success*/, ftl::UniqueFD /*destination*/)>&
+        callback);
 
 // Asynchronously copies data from source file to the destination. The given
 // |callback| is run upon completion. File reads and |callback| will be
@@ -31,7 +32,8 @@ void CopyFromFileDescriptor(
     ftl::UniqueFD source,
     mojo::ScopedDataPipeProducerHandle destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::function<void(bool /*success*/)>& callback);
+    const std::function<void(bool /*success*/, ftl::UniqueFD /*source*/)>&
+        callback);
 
 }  // namespace mtl
 
