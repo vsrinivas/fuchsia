@@ -8,6 +8,7 @@
 #include <iterator>
 #include <memory>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/public/iterator.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
@@ -26,7 +27,7 @@ class CommitContents {
   // Returns an iterator pointing to |key| if present, or pointing to the first
   // entry after |key| if |key| is not present.
   virtual std::unique_ptr<Iterator<const Entry>> find(
-      const std::string& key) const = 0;
+      convert::ExtendedStringView key) const = 0;
 
   // Returns an iterator over the difference between this object and other
   // object.

@@ -33,7 +33,7 @@ BTreeIterator::BTreeIterator(std::unique_ptr<const TreeNode> root) {
 
 BTreeIterator::~BTreeIterator() {}
 
-BTreeIterator& BTreeIterator::Seek(const std::string& key) {
+BTreeIterator& BTreeIterator::Seek(convert::ExtendedStringView key) {
   if (!Valid()) {
     return *this;
   }

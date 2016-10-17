@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "lib/ftl/logging.h"
@@ -23,7 +24,7 @@ std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::begin() const {
 }
 
 std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::find(
-    const std::string& key) const {
+    convert::ExtendedStringView key) const {
   std::unique_ptr<BTreeIterator> it(NewIterator());
   it->Seek(key);
   return std::unique_ptr<Iterator<const Entry>>(std::move(it));

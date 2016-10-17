@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/object.h"
@@ -136,7 +137,7 @@ class TreeNode : public Object {
   // returned and index contains the index of the entry. If not, |NOT_FOUND|
   // is returned and index stores the index of the child node where the key
   // might be found.
-  Status FindKeyOrChild(const std::string& key, int* index) const;
+  Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
   // Object:
   ObjectId GetId() const override;

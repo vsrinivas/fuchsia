@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/logging.h"
@@ -150,11 +151,13 @@ Status TreeNode::GetChild(int index,
   return store_->GetTreeNode(children_[index], child);
 }
 
-Status TreeNode::FindKeyOrChild(const std::string& key, int* index) const {
-  auto it = std::lower_bound(entries_.begin(), entries_.end(), key,
-                             [](const Entry& entry, const std::string& key) {
-                               return entry.key < key;
-                             });
+Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
+                                int* index) const {
+  auto it =
+      std::lower_bound(entries_.begin(), entries_.end(), key,
+                       [](const Entry& entry, convert::ExtendedStringView key) {
+                         return entry.key < key;
+                       });
   if (it == entries_.end()) {
     *index = entries_.size();
     return Status::NOT_FOUND;

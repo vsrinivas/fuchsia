@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
 #include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit_contents.h"
@@ -25,7 +26,7 @@ class CommitContentsImpl : public CommitContents {
   std::unique_ptr<Iterator<const Entry>> begin() const override;
 
   std::unique_ptr<Iterator<const Entry>> find(
-      const std::string& key) const override;
+      convert::ExtendedStringView key) const override;
 
   std::unique_ptr<Iterator<const EntryChange>> diff(
       const CommitContents& other) const override;

@@ -8,6 +8,7 @@
 #include <memory>
 #include <stack>
 
+#include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/position.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
@@ -28,7 +29,7 @@ class BTreeIterator : public Iterator<const Entry> {
   Status GetStatus() const override;
 
   // Advances the iterator to the entry equal or after the provided key.
-  BTreeIterator& Seek(const std::string& key);
+  BTreeIterator& Seek(convert::ExtendedStringView key);
 
   const Entry& operator*() const override;
   const Entry* operator->() const override;
