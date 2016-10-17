@@ -16,6 +16,10 @@
             "bootfs_path": "apps/flog_viewer"
         },
         {
+            "binary": "media_audio_apptests",
+            "bootfs_path": "apps/media_audio_apptests"
+        },
+        {
             "binary": "media_cpp_apptests",
             "bootfs_path": "apps/media_cpp_apptests"
         },
