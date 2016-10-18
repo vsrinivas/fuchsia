@@ -14,9 +14,9 @@ FakeJournal::FakeJournal(FakeJournalDelegate* delegate) : delegate_(delegate) {}
 FakeJournal::~FakeJournal() {}
 
 Status FakeJournal::Put(convert::ExtendedStringView key,
-                        ObjectIdView blob_id,
+                        ObjectIdView object_id,
                         KeyPriority priority) {
-  return delegate_->SetValue(key, blob_id, priority);
+  return delegate_->SetValue(key, object_id, priority);
 }
 
 Status FakeJournal::Delete(convert::ExtendedStringView key) {

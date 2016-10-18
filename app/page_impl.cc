@@ -196,16 +196,17 @@ void PageImpl::CreateReference(int64_t size,
 // GetReference(Reference reference) => (Status status, Value? value);
 void PageImpl::GetReference(ReferencePtr reference,
                             const GetReferenceCallback& callback) {
-  storage_->GetBlob(
+  storage_->GetObject(
       reference->opaque_id,
-      [callback](storage::Status status, std::unique_ptr<storage::Blob> blob) {
+      [callback](storage::Status status,
+                 std::unique_ptr<storage::Object> object) {
         if (status != storage::Status::OK) {
           callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
                        nullptr);
           return;
         }
         ftl::StringView data;
-        status = blob->GetData(&data);
+        status = object->GetData(&data);
         if (status != storage::Status::OK) {
           callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
                        nullptr);

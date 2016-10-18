@@ -79,7 +79,7 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
   Entry entry11 = Entry{"key11", RandomId(), KeyPriority::EAGER};
   Entry entry22 = Entry{"key22", RandomId(), KeyPriority::EAGER};
   Entry entry4bis = Entry{entry4.key, RandomId(), entry4.priority};
-  Entry entry5bis = Entry{entry5.key, entry5.blob_id, KeyPriority::EAGER};
+  Entry entry5bis = Entry{entry5.key, entry5.object_id, KeyPriority::EAGER};
   ObjectId node_id2;
   EXPECT_EQ(Status::OK,
             TreeNode::FromEntries(&store_,

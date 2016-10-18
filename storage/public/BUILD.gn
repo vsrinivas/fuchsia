@@ -4,7 +4,6 @@
 
 source_set("public") {
   sources = [
-    "blob.h",
     "commit.h",
     "commit_contents.h",
     "commit_watcher.h",

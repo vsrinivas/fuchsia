@@ -32,7 +32,7 @@ class LedgerStorage {
       const std::function<void(std::unique_ptr<PageStorage>)>& callback) = 0;
 
   // Deletes the storage related to the page with |page_id|. This includes all
-  // commits, tree nodes and blobs.
+  // commits, tree nodes and objects.
   virtual bool DeletePageStorage(PageIdView page_id) = 0;
 
  private:

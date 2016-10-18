@@ -136,7 +136,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
                                     : KeyPriority::EAGER;
 
       value.remove_prefix(2);
-      change_->entry.blob_id = value.ToString();
+      change_->entry.object_id = value.ToString();
     } else {
       change_->deleted = true;
     }

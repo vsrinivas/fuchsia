@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "apps/ledger/convert/convert.h"
-#include "apps/ledger/storage/public/blob.h"
 #include "apps/ledger/storage/public/object.h"
 
 namespace storage {
@@ -17,7 +16,7 @@ namespace storage {
 class TreeNode;
 
 // |ObjectStore| manages all Ledger related storage objects. This includes
-// |Blob|s and |TreeNode|s.
+// |Object|s and |TreeNode|s.
 class ObjectStore {
  public:
   ObjectStore();
@@ -25,7 +24,7 @@ class ObjectStore {
 
   Status AddObject(std::unique_ptr<Object> object);
 
-  Status GetBlob(ObjectIdView id, std::unique_ptr<const Blob>* object);
+  Status GetObject(ObjectIdView id, std::unique_ptr<const Object>* object);
   Status GetTreeNode(ObjectIdView id,
                      std::unique_ptr<const TreeNode>* tree_node);
 

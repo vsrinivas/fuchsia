@@ -55,9 +55,9 @@ class FakePageStorage : public PageStorage {
       mojo::ScopedDataPipeConsumerHandle data,
       size_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
-  void GetBlob(ObjectIdView blob_id,
-               const std::function<void(Status, std::unique_ptr<Blob>)>&
-                   callback) override;
+  void GetObject(ObjectIdView object_id,
+                 const std::function<void(Status, std::unique_ptr<Object>)>&
+                     callback) override;
 
   // For testing:
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

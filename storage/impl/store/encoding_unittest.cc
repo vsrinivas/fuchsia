@@ -37,7 +37,7 @@ TEST(EncodingTest, EmptyData) {
 
 TEST(EncodingTest, SingleEntry) {
   std::vector<Entry> entries = {
-      {"key", MakeObjectId("blob_id"), KeyPriority::EAGER}};
+      {"key", MakeObjectId("object_id"), KeyPriority::EAGER}};
   std::vector<ObjectId> children = {MakeObjectId("child_1"),
                                     MakeObjectId("child_2")};
 

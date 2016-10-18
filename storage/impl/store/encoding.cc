@@ -20,7 +20,7 @@ const int kPriorityLazy = 1;
 
 const char kEntries[] = "entries";
 const char kKey[] = "key";
-const char kBlobId[] = "blob_id";
+const char kObjectId[] = "object_id";
 const char kPriority[] = "priority";
 const char kChildren[] = "children";
 
@@ -59,8 +59,8 @@ std::string EncodeNode(const std::vector<Entry>& entries,
           writer.Key(kKey);
           WriteAsBase64(writer, entry.key);
 
-          writer.Key(kBlobId);
-          WriteAsBase64(writer, entry.blob_id);
+          writer.Key(kObjectId);
+          WriteAsBase64(writer, entry.object_id);
 
           writer.Key(kPriority);
           if (entry.priority == KeyPriority::EAGER) {
@@ -125,8 +125,8 @@ bool DecodeNode(ftl::StringView json,
       return false;
     }
 
-    if (!it.HasMember(kBlobId) ||
-        !ReadFromBase64(it[kBlobId], &entry.blob_id)) {
+    if (!it.HasMember(kObjectId) ||
+        !ReadFromBase64(it[kObjectId], &entry.object_id)) {
       return false;
     }
 

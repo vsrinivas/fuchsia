@@ -199,27 +199,27 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   EXPECT_EQ(content, file_content);
 }
 
-TEST_F(PageStorageTest, GetBlob) {
+TEST_F(PageStorageTest, GetObject) {
   std::string content("Some data");
   ObjectId object_id = glue::SHA256Hash(content.data(), content.size());
   std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
   ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
 
   Status status;
-  std::unique_ptr<Blob> blob;
-  storage_->GetBlob(
-      object_id, [this, &status, &blob](Status returned_status,
-                                   std::unique_ptr<Blob> returned_blob) {
-        status = returned_status;
-        blob = std::move(returned_blob);
-        message_loop_.QuitNow();
-      });
+  std::unique_ptr<Object> object;
+  storage_->GetObject(object_id, [this, &status, &object](
+                                     Status returned_status,
+                                     std::unique_ptr<Object> returned_object) {
+    status = returned_status;
+    object = std::move(returned_object);
+    message_loop_.QuitNow();
+  });
   message_loop_.Run();
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(object_id, blob->GetId());
+  EXPECT_EQ(object_id, object->GetId());
   ftl::StringView data;
-  ASSERT_EQ(Status::OK, blob->GetData(&data));
+  ASSERT_EQ(Status::OK, object->GetData(&data));
   EXPECT_EQ(content, convert::ToString(data));
 }
 

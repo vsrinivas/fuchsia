@@ -7,7 +7,7 @@
 namespace storage {
 
 bool operator==(const Entry& lhs, const Entry& rhs) {
-  return lhs.key == rhs.key && lhs.blob_id == rhs.blob_id &&
+  return lhs.key == rhs.key && lhs.object_id == rhs.object_id &&
          lhs.priority == rhs.priority;
 }
 

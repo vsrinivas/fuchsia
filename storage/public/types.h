@@ -29,7 +29,7 @@ enum class KeyPriority {
 // An entry in a commit.
 struct Entry {
   std::string key;
-  ObjectId blob_id;
+  ObjectId object_id;
   KeyPriority priority;
 };
 

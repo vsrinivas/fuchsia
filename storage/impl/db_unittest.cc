@@ -23,12 +23,12 @@ std::string RandomId(size_t size) {
 }
 
 EntryChange newEntryChange(std::string key,
-                           std::string blob_id,
+                           std::string object_id,
                            KeyPriority priority) {
   EntryChange change;
   change.deleted = false;
   change.entry.key.swap(key);
-  change.entry.blob_id.swap(blob_id);
+  change.entry.object_id.swap(object_id);
   change.entry.priority = priority;
   return change;
 }
@@ -44,8 +44,8 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   EXPECT_EQ(expected.deleted, found.deleted);
   EXPECT_EQ(expected.entry.key, found.entry.key);
   if (!expected.deleted) {
-    // If the entry is deleted, blob_id and priority are not valid.
-    EXPECT_EQ(expected.entry.blob_id, found.entry.blob_id);
+    // If the entry is deleted, object_id and priority are not valid.
+    EXPECT_EQ(expected.entry.object_id, found.entry.object_id);
     EXPECT_EQ(expected.entry.priority, found.entry.priority);
   }
 }

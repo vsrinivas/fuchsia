@@ -37,7 +37,7 @@ class JournalDBImpl : public Journal {
 
   // Journal :
   Status Put(convert::ExtendedStringView key,
-             ObjectIdView blob_id,
+             ObjectIdView object_id,
              KeyPriority priority) override;
   Status Delete(convert::ExtendedStringView key) override;
   Status Commit(CommitId* commit_id) override;

@@ -8,7 +8,6 @@
 #include <functional>
 #include <memory>
 
-#include "apps/ledger/storage/public/blob.h"
 #include "apps/ledger/storage/public/commit.h"
 #include "apps/ledger/storage/public/commit_watcher.h"
 #include "apps/ledger/storage/public/journal.h"
@@ -101,11 +100,11 @@ class PageStorage {
       mojo::ScopedDataPipeConsumerHandle data,
       size_t size,
       const std::function<void(Status, ObjectId)>& callback) = 0;
-  // Finds the Blob associated with the given |blob_id|. The result or an
+  // Finds the Object associated with the given |object_id|. The result or an
   // an error will be returned through the given |callback|.
-  virtual void GetBlob(
-      ObjectIdView blob_id,
-      const std::function<void(Status, std::unique_ptr<Blob>)>& callback) = 0;
+  virtual void GetObject(
+      ObjectIdView object_id,
+      const std::function<void(Status, std::unique_ptr<Object>)>& callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorage);

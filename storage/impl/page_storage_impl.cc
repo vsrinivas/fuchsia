@@ -350,10 +350,10 @@ void PageStorageImpl::AddObjectFromLocal(
   });
 }
 
-void PageStorageImpl::GetBlob(
-    ObjectIdView blob_id,
-    const std::function<void(Status, std::unique_ptr<Blob>)>& callback) {
-  std::string file_path = objects_path_ + "/" + ToHex(blob_id);
+void PageStorageImpl::GetObject(
+    ObjectIdView object_id,
+    const std::function<void(Status, std::unique_ptr<Object>)>& callback) {
+  std::string file_path = objects_path_ + "/" + ToHex(object_id);
   if (!files::IsFile(file_path)) {
     // TODO(qsr): Request data from sync: LE-30
     callback(Status::NOT_FOUND, nullptr);
@@ -361,10 +361,10 @@ void PageStorageImpl::GetBlob(
   }
 
   task_runner_->PostTask([
-    callback, blob_id = convert::ToString(blob_id),
+    callback, object_id = convert::ToString(object_id),
     file_path = std::move(file_path)
   ]() mutable {
-    callback(Status::OK, std::make_unique<ObjectImpl>(std::move(blob_id),
+    callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
                                                       std::move(file_path)));
   });
 }

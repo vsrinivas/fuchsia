@@ -17,8 +17,8 @@ Status ObjectStore::AddObject(std::unique_ptr<Object> object) {
   return Status::OK;
 }
 
-Status ObjectStore::GetBlob(ObjectIdView id,
-                            std::unique_ptr<const Blob>* blob) {
+Status ObjectStore::GetObject(ObjectIdView id,
+                              std::unique_ptr<const Object>* object) {
   return Status::NOT_IMPLEMENTED;
 }
 

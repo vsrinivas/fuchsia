@@ -91,8 +91,8 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
                               const GetAllCallback& getall_callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
-  ftl::RefPtr<Waiter<storage::Blob>> waiter(
-      ftl::AdoptRef(new Waiter<storage::Blob>()));
+  ftl::RefPtr<Waiter<storage::Object>> waiter(
+      ftl::AdoptRef(new Waiter<storage::Object>()));
   mojo::Array<EntryPtr> entries = mojo::Array<EntryPtr>::New(0);
 
   while (it->Valid() &&
@@ -102,21 +102,21 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
     entry->key = convert::ToArray((*it)->key);
     entries.push_back(entry.Pass());
 
-    page_storage_->GetBlob((*it)->blob_id,
-                           [blob_callback = waiter->NewCallback()](
-                               storage::Status status,
-                               std::unique_ptr<storage::Blob> blob) mutable {
-                             blob_callback(status, std::move(blob));
-                           });
+    page_storage_->GetObject(
+        (*it)->object_id, [object_callback = waiter->NewCallback()](
+                              storage::Status status,
+                              std::unique_ptr<storage::Object> object) mutable {
+          object_callback(status, std::move(object));
+        });
     it->Next();
   }
 
   std::function<void(storage::Status,
-                     std::vector<std::unique_ptr<storage::Blob>>)>
+                     std::vector<std::unique_ptr<storage::Object>>)>
       result_callback = ftl::MakeCopyable([
         &getall_callback, entry_list = std::move(entries)
       ](storage::Status status,
-        std::vector<std::unique_ptr<storage::Blob>> results) mutable {
+        std::vector<std::unique_ptr<storage::Object>> results) mutable {
 
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "PageSnapshotImpl::GetAll error while reading.";
@@ -125,15 +125,15 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
         }
 
         for (size_t i = 0; i < results.size(); i++) {
-          ftl::StringView blob_contents;
+          ftl::StringView object_contents;
 
-          storage::Status read_status = results[i]->GetData(&blob_contents);
+          storage::Status read_status = results[i]->GetData(&object_contents);
           if (read_status != storage::Status::OK) {
             getall_callback.Run(Status::IO_ERROR, nullptr);
             return;
           }
 
-          entry_list[i]->value = convert::ToArray(blob_contents);
+          entry_list[i]->value = convert::ToArray(object_contents);
         }
         getall_callback.Run(Status::OK, std::move(entry_list));
       });

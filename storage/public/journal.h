@@ -17,10 +17,11 @@ class Journal {
   Journal() {}
   virtual ~Journal() {}
 
-  // Adds an entry with the given |key| and |blob_id| to this |Journal|. Returns
+  // Adds an entry with the given |key| and |object_id| to this |Journal|.
+  // Returns
   // |OK| on success or the error code otherwise.
   virtual Status Put(convert::ExtendedStringView key,
-                     ObjectIdView blob_id,
+                     ObjectIdView object_id,
                      KeyPriority priority) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|. Returns |OK|

@@ -23,7 +23,7 @@ class EntryMapIterator : public Iterator<const storage::Entry> {
       : it_(it), end_(end) {
     if (it_ != end_) {
       entry_.key = it_->first;
-      entry_.blob_id = it_->second.value;
+      entry_.object_id = it_->second.value;
       entry_.priority = it_->second.priority;
     }
   }
@@ -38,7 +38,7 @@ class EntryMapIterator : public Iterator<const storage::Entry> {
     }
     if (it_ != end_) {
       entry_.key = it_->first;
-      entry_.blob_id = it_->second.value;
+      entry_.object_id = it_->second.value;
       entry_.priority = it_->second.priority;
     }
     return *this;

@@ -36,12 +36,12 @@ JournalId JournalDBImpl::GetId() const {
 }
 
 Status JournalDBImpl::Put(convert::ExtendedStringView key,
-                          ObjectIdView blob_id,
+                          ObjectIdView object_id,
                           KeyPriority priority) {
   if (!valid_) {
     return Status::ILLEGAL_STATE;
   }
-  return db_->AddJournalEntry(id_, key, blob_id, priority);
+  return db_->AddJournalEntry(id_, key, object_id, priority);
 }
 
 Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
