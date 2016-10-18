@@ -334,7 +334,9 @@ struct cursor
 
 /* Platforms that support UNW_INFO_FORMAT_TABLE need to define
    tdep_search_unwind_table.  */
+#if !UNW_TARGET_ARM /* arm has its own version */
 #define tdep_search_unwind_table dwarf_search_unwind_table
+#endif
 
 #define tdep_find_unwind_table dwarf_find_unwind_table
 
