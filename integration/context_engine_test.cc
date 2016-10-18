@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/test.h"
+#include "apps/maxwell/integration/test.h"
 
 #include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/application/connect.h"

@@ -2,15 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("integration") {
+executable("maxwell_test") {
   sources = [
     "context_engine_test.cc",
     "suggestion_engine_test.cc",
+    "test.cc",
   ]
 
   deps = [
     "//apps/maxwell/acquirers/mock",
     "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/bindings:utility",
+    "//mojo/public/cpp/utility:utility",
+    "//mojo/system",
   ]
+
+  libs = [ "magenta" ]
 }
