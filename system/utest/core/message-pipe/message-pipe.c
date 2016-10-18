@@ -162,7 +162,7 @@ static bool message_pipe_read_error_test(void) {
 
     // Read from an empty message pipe.
     status = mx_msgpipe_read(pipe[0], NULL, 0u, NULL, 0u, 0u);
-    ASSERT_EQ(status, ERR_BAD_STATE, "read on empty non-closed pipe produced incorrect error");
+    ASSERT_EQ(status, ERR_SHOULD_WAIT, "read on empty non-closed pipe produced incorrect error");
 
     char data = 'x';
     status = mx_msgpipe_write(pipe[1], &data, 1u, NULL, 0u, 0u);

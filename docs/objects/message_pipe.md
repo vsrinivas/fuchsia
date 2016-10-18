@@ -14,5 +14,5 @@ TODO
 
 ## SEE ALSO
 
-[message_read](../syscalls/message_read.md),
-[message_write](../syscalls/message_write.md).
+[message_read](../syscalls/msgpipe_read.md),
+[message_write](../syscalls/msgpipe_write.md).

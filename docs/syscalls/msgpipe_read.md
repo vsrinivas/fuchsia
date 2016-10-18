@@ -52,7 +52,7 @@ invalid pointers.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 
-**ERR_BAD_STATE**  The message pipe contained no messages to read.
+**ERR_SHOULD_WAIT**  The message pipe contained no messages to read.
 
 **ERR_REMOTE_CLOSED**  The other side of the message pipe is closed.
 

@@ -78,7 +78,7 @@ status_t MessagePipe::Read(size_t side,
     bool other_alive = dispatcher_alive_[other];
 
     if (messages_[side].is_empty())
-        return other_alive ? ERR_BAD_STATE : ERR_REMOTE_CLOSED;
+        return other_alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
 
     *msg_size = messages_[side].front().data_size();
     *msg_handle_count = messages_[side].front().num_handles();
