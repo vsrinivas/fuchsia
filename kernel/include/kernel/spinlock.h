@@ -76,3 +76,35 @@ static inline void spin_unlock_restore(
 #define spin_unlock_irqrestore(lock, statep) spin_unlock_restore(lock, statep, SPIN_LOCK_FLAG_INTERRUPTS)
 
 __END_CDECLS
+
+#ifdef __cplusplus
+class SpinLock {
+public:
+    SpinLock()        { spin_lock_init(&spinlock_); }
+    void Acquire()    { spin_lock(&spinlock_); }
+    void TryAcquire() { spin_trylock(&spinlock_); }
+    void Release()    { spin_unlock(&spinlock_); }
+    bool IsHeld()     { return spin_lock_held(&spinlock_); }
+
+    void AcquireIrqSave(spin_lock_saved_state_t& state,
+                        spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) {
+        spin_lock_save(&spinlock_, &state, flags);
+    }
+
+    void ReleaseIrqRestore(spin_lock_saved_state_t state,
+                           spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) {
+        spin_unlock_restore(&spinlock_, state, flags);
+    }
+
+    spin_lock_t* GetInternal() { return &spinlock_; }
+
+    // suppress default constructors
+    SpinLock(const SpinLock& am) = delete;
+    SpinLock& operator=(const SpinLock& am) = delete;
+    SpinLock(SpinLock&& c) = delete;
+    SpinLock& operator=(SpinLock&& c) = delete;
+
+private:
+    spin_lock_t spinlock_;
+};
+#endif  // ifdef __cplusplus

@@ -7,41 +7,54 @@
 #pragma once
 
 #include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <mxtl/auto_lock.h>
 
-class AutoLock {
+class AutoSpinLock {
 public:
-    AutoLock(mutex_t* mutex)
-        :   mutex_(mutex) {
-        mutex_acquire(mutex_);
-    }
+    explicit AutoSpinLock(spin_lock_t& lock) : spinlock_(&lock) { acquire(); }
+    explicit AutoSpinLock(SpinLock& lock) : spinlock_(lock.GetInternal()) { acquire(); }
+    ~AutoSpinLock() { release(); }
 
-    AutoLock(mutex_t& mutex)
-        :   AutoLock(&mutex) {}
-
-    AutoLock(Mutex& mutex)
-        :   AutoLock(mutex.GetInternal()) {}
-
-    AutoLock(Mutex* mutex)
-        :   AutoLock(mutex->GetInternal()) {}
-
-    ~AutoLock() {
-        release();
-    }
-
-    // early release the mutex before the object goes out of scope
     void release() {
-        if (mutex_) {
-            mutex_release(mutex_);
-            mutex_ = nullptr;
+        if (spinlock_) {
+            spin_unlock(spinlock_);
+            spinlock_ = nullptr;
         }
     }
 
     // suppress default constructors
-    AutoLock(const AutoLock& am) = delete;
-    AutoLock& operator=(const AutoLock& am) = delete;
-    AutoLock(AutoLock&& c) = delete;
-    AutoLock& operator=(AutoLock&& c) = delete;
+    AutoSpinLock(const AutoSpinLock& am) = delete;
+    AutoSpinLock(AutoSpinLock&& c) = delete;
+    AutoSpinLock& operator=(const AutoSpinLock& am) = delete;
+    AutoSpinLock& operator=(AutoSpinLock&& c) = delete;
 
 private:
-    mutex_t* mutex_;
+    void acquire() { spin_lock(spinlock_); }
+    spin_lock_t* spinlock_;
+};
+
+class AutoSpinLockIrqSave {
+public:
+    explicit AutoSpinLockIrqSave(spin_lock_t& lock) : spinlock_(&lock) { acquire(); }
+    explicit AutoSpinLockIrqSave(SpinLock& lock) : spinlock_(lock.GetInternal()) { acquire(); }
+    ~AutoSpinLockIrqSave() { release(); }
+
+    void release() {
+        if (spinlock_) {
+            spin_unlock_irqrestore(spinlock_, state_);
+            spinlock_ = nullptr;
+        }
+    }
+
+    // suppress default constructors
+    AutoSpinLockIrqSave(const AutoSpinLockIrqSave& am) = delete;
+    AutoSpinLockIrqSave(AutoSpinLockIrqSave&& c) = delete;
+    AutoSpinLockIrqSave& operator=(const AutoSpinLockIrqSave& am) = delete;
+    AutoSpinLockIrqSave& operator=(AutoSpinLockIrqSave&& c) = delete;
+
+private:
+    void acquire() { spin_lock_irqsave(spinlock_, state_); }
+    spin_lock_t* spinlock_;
+    spin_lock_saved_state_t state_;
 };

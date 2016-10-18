@@ -13,6 +13,7 @@ MODULE_DEPS := \
 	lib/libc \
 	lib/debug \
 	lib/heap \
+    lib/mxtl \
 
 
 MODULE_SRCS := \
