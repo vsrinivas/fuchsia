@@ -30,6 +30,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #ifndef COMPILER_H
 #define COMPILER_H
 
+#ifdef __Fuchsia__
+/* Not ready to give up on linux support in this library just yet.
+   It may be useful when trying to debug something.
+   That is why this code is the way it is.  */
+#include <magenta/compiler.h>
+#undef likely
+#undef unlikely
+#endif
+
 #ifdef __GNUC__
 # define ALIGNED(x)     __attribute__((aligned(x)))
 # define CONST_ATTR     __attribute__((__const__))

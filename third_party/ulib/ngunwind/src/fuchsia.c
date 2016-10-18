@@ -32,6 +32,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/debug.h>
 
 #include "fuchsia.h"
 #include "fuchsia_i.h"
