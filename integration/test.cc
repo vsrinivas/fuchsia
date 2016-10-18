@@ -9,6 +9,7 @@
 
 #include "apps/maxwell/interfaces/suggestion_manager.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
+#include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
@@ -75,7 +76,7 @@ void Pause() {
   });
 }
 
-#define TEST(name) void name(Shell*)
+/*#define TEST(name) void name(Shell*)
 
 // TODO(rosswang): Can we register them at the same time?
 TEST(TestSuggestionEngine);
@@ -136,9 +137,4 @@ class MaxwellTestApp : public ApplicationImplBase, public TestParent {
   InterfacePtrSet<Debug> child_apps_;
 };
 
-}  // namespace
-
-MojoResult MojoMain(MojoHandle request) {
-  MaxwellTestApp test;
-  return mojo::RunApplication(request, &test);
-}
+}  // namespace*/

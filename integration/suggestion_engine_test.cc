@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/interfaces/suggestion_manager.mojom.h"
 #include "apps/maxwell/interfaces/formatting.h"
+#include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/binding.h"
 
@@ -38,55 +39,84 @@ class TestListener : public SuggestionListener {
   int suggestion_count_ = 0;
 };
 
-void TestSuggestionEngine(Shell* shell) {
-  MockGps gps(shell);
-  StartComponent(shell, "mojo:agents/carmen_sandiego");
-  StartComponent(shell, "mojo:agents/ideas");
+class ResultCountTest : public mojo::test::ApplicationTestBase {
+ public:
+  ResultCountTest() : listener_binding_(&listener_) {}
 
-  SuggestionManagerPtr s;
-  ConnectToService(shell, "mojo:suggestion_engine", GetProxy(&s));
+ protected:
+  void SetUp() override {
+    ApplicationTestBase::SetUp();
+    // shell is only available after base class SetUp; it is not available at
+    // construction time.
+    // TODO(rosswang): See if Mojo is open to initializing shell in the
+    // constructor.
+    gps_ = std::unique_ptr<MockGps>(new MockGps(shell()));
 
-  TestListener listener;
-  SuggestionListenerPtr lp;
-  Binding<SuggestionListener> listener_binding(&listener, GetProxy(&lp));
-  NextControllerPtr ctl;
+    StartComponent(shell(), "mojo:agents/carmen_sandiego");
+    StartComponent(shell(), "mojo:agents/ideas");
+    ConnectToService(shell(), "mojo:suggestion_engine",
+                     GetProxy(&suggestion_manager_));
 
-  s->SubscribeToNext(lp.PassInterfaceHandle(), GetProxy(&ctl));
-  ctl->SetResultCount(3);
-  ASYNC_CHECK(listener.suggestion_count() == 0);
+    SuggestionListenerPtr lp;
+    listener_binding_.Bind(GetProxy(&lp));
+    suggestion_manager_->SubscribeToNext(lp.PassInterfaceHandle(),
+                                         GetProxy(&ctl_));
+  }
 
-  gps.Publish(90, 0);
-  ASYNC_CHECK(listener.suggestion_count() == 1);
+  void SetResultCount(int count) { ctl_->SetResultCount(count); }
+
+  void PublishNewSignal() {
+    // TODO(rosswang): After Suggestion Engine dedups by id, change this.
+    // TODO(rosswang): Populate additional suggestions through a legit channel.
+    gps_->Publish(90, 0);
+  }
+
+  void CheckResultCount(int expected) {
+    ASYNC_CHECK(listener_.suggestion_count() == expected);
+  }
+
+ private:
+  std::unique_ptr<MockGps> gps_;
+  SuggestionManagerPtr suggestion_manager_;
+  TestListener listener_;
+  Binding<SuggestionListener> listener_binding_;
+  NextControllerPtr ctl_;
+};
+
+TEST_F(ResultCountTest, SetResultCount) {
+  SetResultCount(3);
+  CheckResultCount(0);
+
+  PublishNewSignal();
+  CheckResultCount(1);
   // Note that without the above ASYNC_CHECK or a pause, this context update may
   // be lost due to the subscription not yet having happened.
 
-  gps.Publish(-90, 0);
-  // TODO(rosswang): After Suggestion Engine dedups by id, change this.
-  ASYNC_CHECK(listener.suggestion_count() == 2);
+  PublishNewSignal();
+  CheckResultCount(2);
 
-  ctl->SetResultCount(0);
-  ASYNC_CHECK(listener.suggestion_count() == 0);
+  SetResultCount(0);
+  CheckResultCount(0);
 
-  ctl->SetResultCount(3);
-  ASYNC_CHECK(listener.suggestion_count() == 2);
+  SetResultCount(3);
+  CheckResultCount(2);
 
-  // TODO(rosswang): Populate additional suggestions through a legit channel.
-  gps.Publish(90, 0);
-  ASYNC_CHECK(listener.suggestion_count() == 3);
-  gps.Publish(-90, 0);  // available = 4
-  ASYNC_CHECK(listener.suggestion_count() == 3);
-  ctl->SetResultCount(3);
-  ASYNC_CHECK(listener.suggestion_count() == 3);
+  PublishNewSignal();
+  CheckResultCount(3);
+  PublishNewSignal();  // available = 4
+  CheckResultCount(3);
+  SetResultCount(3);
+  CheckResultCount(3);
 
-  ctl->SetResultCount(4);
-  ASYNC_CHECK(listener.suggestion_count() == 4);
+  SetResultCount(4);
+  CheckResultCount(4);
 
-  ctl->SetResultCount(10);
-  ASYNC_CHECK(listener.suggestion_count() == 4);
-  gps.Publish(90, 0);
-  gps.Publish(-90, 0);  // available = 6
-  ASYNC_CHECK(listener.suggestion_count() == 6);
+  SetResultCount(10);
+  CheckResultCount(4);
+  PublishNewSignal();
+  PublishNewSignal();  // available = 6
+  CheckResultCount(6);
 
-  ctl->SetResultCount(1);
-  ASYNC_CHECK(listener.suggestion_count() == 1);
+  SetResultCount(1);
+  CheckResultCount(1);
 }

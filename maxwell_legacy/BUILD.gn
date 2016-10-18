@@ -3,12 +3,14 @@
 # found in the LICENSE file.
 
 group("maxwell") {
+  testonly = true
+
   deps = [
     "acquirers",
     "agents",
     "context_engine",
     "document_store",
-    "integration:maxwell_test",
+    "integration",
     "suggestion_engine",
   ]
 }
