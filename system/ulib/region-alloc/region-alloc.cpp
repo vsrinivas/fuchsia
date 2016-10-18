@@ -193,7 +193,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
     auto before = avail_regions_by_base_.upper_bound(region.base);
     auto after  = before--;
     uint64_t region_end = region.base + region.size;  // exclusive end
-    uint64_t before_end;
+    uint64_t before_end = 0;
 
     if (before.IsValid()) {
         before_end = before->base + before->size;  // exclusive end
