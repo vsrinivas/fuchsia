@@ -6,7 +6,6 @@
 
 #include <magenta/syscalls.h>
 #include <mojo/system/result.h>
-#include <runtime/tls.h>
 
 #include <utility>
 
