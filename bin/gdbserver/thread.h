@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/syscalls-types.h>
+#include <magenta/syscalls/types.h>
 #include <magenta/types.h>
 
 #include "lib/ftl/macros.h"

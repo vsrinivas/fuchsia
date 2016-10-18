@@ -8,7 +8,6 @@
 #include <deque>
 #include <string>
 
-#include <magenta/syscalls-types.h>
 #include <magenta/types.h>
 
 #include "lib/ftl/strings/string_view.h"

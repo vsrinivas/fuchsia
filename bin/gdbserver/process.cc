@@ -6,6 +6,7 @@
 
 #include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 
 #include "lib/ftl/logging.h"
 
@@ -78,7 +79,7 @@ bool LoadBinary(launchpad_t* lp, const string& binary_path) {
 mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
   FTL_DCHECK(lp);
 
-  // We use the mx_debug_task_get_child syscall to obtain a debug-capable handle
+  // We use the mx_object_get_child syscall to obtain a debug-capable handle
   // to the process. For processes, the syscall expect the ID of the underlying
   // kernel object (koid, also passing for process id in Magenta).
   mx_handle_t process_handle = launchpad_get_process_handle(lp);
@@ -99,10 +100,10 @@ mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
 
   FTL_DCHECK(info.rec.type == MX_OBJ_TYPE_PROCESS);
 
-  mx_handle_t debug_handle =
-      mx_debug_task_get_child(MX_HANDLE_INVALID, info.rec.koid);
+  mx_handle_t debug_handle = mx_object_get_child(
+      MX_HANDLE_INVALID, info.rec.koid, MX_RIGHT_SAME_RIGHTS);
   if (debug_handle < 0) {
-    util::LogErrorWithMxStatus("mx_debug_task_get_child failed", debug_handle);
+    util::LogErrorWithMxStatus("mx_object_get_child failed", debug_handle);
     return MX_HANDLE_INVALID;
   }
 
@@ -208,7 +209,7 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
   mx_status_t thread_debug_handle =
-      mx_debug_task_get_child(debug_handle_, thread_id);
+      mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS);
   if (thread_debug_handle < 0) {
     util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                thread_debug_handle);
@@ -273,7 +274,7 @@ bool Process::RefreshAllThreads() {
   for (size_t i = 0; i < hdr.avail_count; ++i) {
     mx_koid_t thread_id = thread_info->rec[i].koid;
     mx_handle_t thread_debug_handle =
-        mx_debug_task_get_child(debug_handle_, thread_id);
+        mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS);
     if (thread_debug_handle < 0) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                  thread_debug_handle);
