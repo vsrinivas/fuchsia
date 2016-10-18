@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <ctime>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -215,14 +216,30 @@ bool run_parser(P* parser, const Dispatch<P>* table, const char* input, bool ver
 constexpr size_t kMaxReturnArgs = 2;
 constexpr size_t kMaxInputArgs = 8;
 
+constexpr char kAuthors[] = "The Fuchsia Authors";
+
 struct ArraySpec {
-    enum {
+    enum Kind : uint32_t {
         IN,
         OUT,
         INOUT
-    } kind;
+    };
+
+    Kind kind;
     uint32_t count;
     string name;
+
+    string kind_str() const {
+        switch (kind) {
+        case IN: return "IN";
+        case OUT: return "OUT";
+        default: return "INOUT";
+        }
+    }
+
+    string to_string() const {
+        return "[]" + kind_str();
+    }
 };
 
 struct TypeSpec {
@@ -239,13 +256,23 @@ struct TypeSpec {
                 fprintf(stderr, "      [%s]\n", arr_spec->name.c_str());
         }
     }
+
+    string to_string() const {
+        return type + (arr_spec ? arr_spec->to_string() : string());
+    }
 };
 
 struct Syscall {
+    enum Atrributes : uint32_t {
+        NORETURN,           // user mode: syscall does not return.
+        VDSOPURE,           // user mode: syscall is handled by the vdso.
+    };
+
     FileCtx fc;
     string name;
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
+    std::vector<Atrributes> attributes;
 
     bool validate() const {
         if (ret_spec.size() > kMaxReturnArgs) {
@@ -316,8 +343,10 @@ bool vet_identifier(const string& iden, const FileCtx& fc) {
         return false;
     }
 
-    if (iden == "syscall" || iden == "returns") {
-        fc.print_error("identifier cannot be keyword", iden);
+    if (iden == "syscall" ||
+        iden == "returns" || iden == "noreturn" ||
+        iden == "IN" || iden == "OUT" || iden == "INOUT") {
+        fc.print_error("identifier cannot be keyword or attribute", iden);
         return false;
     }
     if (!isalpha(iden[0])) {
@@ -331,6 +360,12 @@ bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
     std::string name;
     uint32_t count = 0;
 
+    if (ts.next() != "[")
+        return false;
+
+    if (ts.next().empty())
+        return false;
+
     auto c = ts.curr()[0];
 
     if (isalpha(c)) {
@@ -340,7 +375,7 @@ bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
 
     } else if (isdigit(c)) {
         count = c - '0';
-        if (ts.curr().size() > 1 || count == 0) {
+        if (ts.curr().size() > 1 || count == 0 || count > 9) {
             ts.filectx().print_error("only 1-9 explicit array count allowed", "");
             return false;
         }
@@ -354,7 +389,26 @@ bool parse_arrayspec(TokenStream& ts, TypeSpec* type_spec) {
         return false;
     }
 
-    type_spec->arr_spec = new ArraySpec {ArraySpec::INOUT, count, name};
+    if (ts.next() != "]") {
+        ts.filectx().print_error("expected", "]");
+        return false;
+    }
+
+    auto attr = ts.next();
+    ArraySpec::Kind kind;
+
+    if (attr == "IN") {
+        kind = ArraySpec::IN;
+    } else if (attr == "OUT") {
+        kind = ArraySpec::OUT;
+    } else if (attr == "INOUT") {
+        kind = ArraySpec::INOUT;
+    } else {
+        ts.filectx().print_error("invalid array attribute", attr);
+        return false;
+    }
+
+    type_spec->arr_spec = new ArraySpec {kind, count, name};
     return true;
 }
 
@@ -377,22 +431,10 @@ bool parse_typespec(TokenStream& ts, TypeSpec* type_spec) {
 
     type_spec->type = type;
 
-    if (ts.peek_next() == "[") {
-        ts.next();
-        if (ts.next().empty()) {
-            return false;
-        }
+    if (ts.peek_next() != "[")
+        return true;
 
-        if (!parse_arrayspec(ts, type_spec))
-            return false;
-
-        if (ts.next() != "]") {
-            ts.filectx().print_error("expected", "]");
-            return false;
-        }
-    }
-
-    return true;
+    return parse_arrayspec(ts, type_spec);
 }
 
 bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
@@ -422,10 +464,53 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
     return true;
 }
 
-constexpr char kAuthors[] = "The Fuchsia Authors";
-constexpr unsigned kSpaces = 4u;
+enum GenType : uint32_t {
+    UserHeaderC,
+    KernelHeaderCPP,
+    Max
+};
 
-bool generate_header(std::ofstream& os) {
+struct GenParams {
+    const char* file_postfix;
+    const char* entry_prefix;
+    const char* name_prefix;
+    const char* empty_args;
+    uint32_t indent_spaces;
+    std::map<string, string> overrides;
+    std::map<uint32_t, string> attributes;
+};
+
+const std::map<string, string> c_overrides = {
+    {"", "void"},
+    {"any[]IN", "const void*"},
+    {"any[]OUT", "void*"},
+    {"any[]INOUT", "void*"}
+};
+
+const GenParams gen_params[] = {
+    // The user header, pure C.  (UserHeaderC)
+    {
+        ".user.h",          // file postfix.
+        "extern",           // function prefix.
+        "mx_",              // function name prefix.
+        "void",             // no args special type.
+        4u,                 // argument indent.
+        c_overrides,
+        {{Syscall::NORETURN, "__attribute__((noreturn))"}},
+    },
+    // The kernel header, C++.  (KernelHeaderCPP)
+    {
+        ".kernel.h",        // file postix.
+        nullptr,            // no function prefix
+        "sys_",             // function name prefix.
+        nullptr,            // no args.
+        4u,                 // argument indent.
+        c_overrides,
+        {},
+    }
+};
+
+bool generate_file_header(std::ofstream& os) {
     auto t = std::time(nullptr);
     auto ltime = std::localtime(&t);
 
@@ -436,45 +521,73 @@ bool generate_header(std::ofstream& os) {
     return os.good();
 }
 
-string replace_type(const string* type) {
-    if (!type)
-        return string("void");
-    if (*type == "any")
-        return string("void*");
-    return *type;
+const string override_type(const GenParams& gp, const string& type_name) {
+    auto ft = gp.overrides.find(type_name);
+    return (ft == gp.overrides.end()) ? type_name : ft->second;
 }
 
-bool generate_legacy_c(std::ofstream& os, const Syscall& sc, const string& prefix) {
-    // writes "[return-type] prefix_[syscall-name]("
-    os << replace_type(sc.ret_spec.empty() ? nullptr : &sc.ret_spec[0].type);
-    os << " " << prefix << sc.name << "(";
+const string add_attribute(const GenParams& gp, uint32_t attribute) {
+    auto ft = gp.attributes.find(attribute);
+    return (ft == gp.attributes.end()) ? string() : ft->second;
+}
 
+bool generate_legacy_c(const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (gp.entry_prefix) {
+        os << gp.entry_prefix << " ";
+    }
+
+    // writes "[return-type] prefix_[syscall-name]("
+    os << override_type(gp, (sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string()));
+    os << " " << gp.name_prefix << sc.name << "(";
+
+    // Writes all arguments.
     for (const auto& arg : sc.arg_spec) {
         if (!os.good())
             return false;
         // writes each parameter in its own line.
-        os << "\n" << string(kSpaces, ' ');
+        os << "\n" << string(gp.indent_spaces, ' ');
 
-        auto replaced = replace_type(&arg.type);
-        if (replaced != arg.type) {
-            os << replaced << " " << arg.name;
-        } else {
+        auto overrided = override_type(gp, arg.to_string());
+
+        if (overrided != arg.to_string()) {
+            os << overrided << " " << arg.name;
+        } else if (!arg.arr_spec) {
             os << arg.type << " " << arg.name;
-            if (arg.arr_spec) {
-                os << "[";
-                if (arg.arr_spec->count)
-                    os << arg.arr_spec->count;
-                os << "]";
-            }
+        } else {
+            if (arg.arr_spec->kind == ArraySpec::IN)
+                os << "const ";
+
+            os << arg.type << " " << arg.name;
+            os << "[";
+            if (arg.arr_spec->count)
+                os << arg.arr_spec->count;
+            os << "]";
         }
 
         os << ",";
     }
 
-    if (!sc.arg_spec.empty())
+    if (!sc.arg_spec.empty()) {
+        // remove the comma.
         os.seekp(-1, std::ios_base::end);
+    } else {
+        // empty args might have a special type.
+        if (gp.empty_args)
+            os << gp.empty_args;
+    }
 
-    os << ");\n\n";
+    os << ") ";
+
+    // Writes attributes after arguments.
+    for (const auto& attr : sc.attributes) {
+        auto a = add_attribute(gp, attr);
+        if (!a.empty())
+            os << a << " ";
+    }
+
+    os.seekp(-1, std::ios_base::end);
+
+    os << ";\n\n";
     return os.good();
 }
 
@@ -489,16 +602,20 @@ public:
         return true;
     }
 
-    bool Generate(const char* output_file) {
+    bool Generate(const GenType type, const char* output_prefix) {
+        auto gp = &gen_params[type];
+
+        string output_file = string(output_prefix) + gp->file_postfix;
+
         std::ofstream ofile;
-        ofile.open(output_file, std::ofstream::out);
+        ofile.open(output_file.c_str(), std::ofstream::out);
 
         if (!ofile.good()) {
-            fprintf(stderr, "error: unable to open %s\n", output_file);
+            print_error("unable to open", output_file);
             return false;
         }
 
-        if (!generate_header(ofile)) {
+        if (!generate_file_header(ofile)) {
             print_error("i/o error", output_file);
             return false;
         }
@@ -506,7 +623,7 @@ public:
         for (const auto& sc : calls_) {
             if (verbose_)
                 sc.debug_dump();
-            if (!generate_legacy_c(ofile, sc, "sys_")) {
+            if (!generate_legacy_c(*gp, ofile, sc)) {
                 print_error("generation failed", output_file);
                 return false;
             }
@@ -542,15 +659,29 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     if (!parse_argpack(ts, &syscall.arg_spec))
         return false;
 
-    if (ts.next() != "returns") {
+    auto return_spec = ts.next();
+
+    if (return_spec == "noreturn") {
+        // nothing else follows except terminator.
+        syscall.attributes.push_back(Syscall::Atrributes::NORETURN);
+    } else if (return_spec == "returns") {
+        ts.next();
+
+        if (!parse_argpack(ts, &syscall.ret_spec))
+            return false;
+        if (syscall.ret_spec.empty()) {
+            ts.filectx().print_error("empty return, expected", "noreturn");
+            return false;
+        }
+    } else {
         ts.filectx().print_error("expected", "returns");
         return false;
     }
 
-    ts.next();
-
-    if (!parse_argpack(ts, &syscall.ret_spec))
+    if (ts.next() != ";") {
+        ts.filectx().print_error("expected", ";");
         return false;
+    }
 
     return parser->AddSyscall(syscall);
 }
@@ -567,7 +698,7 @@ constexpr Dispatch<SygenGenerator> sysgen_table[] = {
 // =================================== driver ====================================================
 
 int main(int argc, char* argv[]) {
-    const char* output = "generated.h";
+    const char* output_prefix = "generated";
     bool verbose = false;
 
     argc--;
@@ -580,14 +711,14 @@ int main(int argc, char* argv[]) {
             verbose = true;
         } else if (!strcmp(cmd,"-o")) {
             if (argc < 2) {
-              fprintf(stderr, "no output file given\n");
+              fprintf(stderr, "no output prefix given\n");
               return -1;
             }
-            output = argv[1];
+            output_prefix = argv[1];
             argc--;
             argv++;
         } else if (!strcmp(cmd,"-h")) {
-            fprintf(stderr, "usage: sysgen [-v] [-o output_file] file1 ... fileN\n");
+            fprintf(stderr, "usage: sysgen [-v] [-o output_prefix] file1 ... fileN\n");
             return 0;
         } else {
             fprintf(stderr, "unknown option: %s\n", cmd);
@@ -608,5 +739,10 @@ int main(int argc, char* argv[]) {
             return 1;
     }
 
-    return generator.Generate(output) ? 0 : 1;
+    if (!generator.Generate(GenType::UserHeaderC, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::KernelHeaderCPP, output_prefix))
+        return 1;
+
+    return 0;
 }
