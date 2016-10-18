@@ -519,11 +519,11 @@ mx_handle_t sys_pci_map_config(mx_handle_t) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t, mx_pci_irq_mode_t, uint32_t*) {
+mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t, uint32_t, uint32_t*) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t sys_pci_set_irq_mode(mx_handle_t, mx_pci_irq_mode_t, uint32_t) {
+mx_status_t sys_pci_set_irq_mode(mx_handle_t, uint32_t, uint32_t) {
     return ERR_NOT_SUPPORTED;
 }
 #endif  // WITH_DEV_PCIE
