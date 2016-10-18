@@ -1,0 +1,23 @@
+{
+    "labels": [
+        "//bin/gdbserver"
+    ],
+    "binaries": [
+        {
+            "binary": "debugserver",
+            "bootfs_path": "bin/debugserver"
+        },
+        {
+            "binary": "gdbserver_unittests",
+            "bootfs_path": "test/gdbserver_unittests"
+        },
+        {
+            "binary": "crash_test",
+            "bootfs_path": "test/gdbserver/crash_test"
+        },
+        {
+            "binary": "loop_test",
+            "bootfs_path": "test/gdbserver/loop_test"
+        }
+    ]
+}

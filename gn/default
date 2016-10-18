@@ -12,6 +12,7 @@
         "fortune",
         "framebuffer",
         "ftl",
+        "gdbserver",
         "icu_data",
         "ledger",
         "leveldb",
