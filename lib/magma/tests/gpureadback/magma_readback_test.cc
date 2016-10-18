@@ -191,8 +191,14 @@ bool MagmaReadbackTest::Draw(void* results_buffer)
 
 extern "C" {
 
-int test_gpu_readback(int fd)
+int test_gpu_readback()
 {
+    int fd = open("/dev/class/display/000", O_RDONLY);
+    if (fd < 0) {
+        printf("could not open gpu: %d\n", fd);
+        return -1;
+    }
+
     MagmaReadbackTest app;
     if (!app.Initialize(fd)) {
         printf("could not initialize app\n");

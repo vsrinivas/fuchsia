@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern "C" {
+#include "test_spinning_cube.h"
+}
+
 #include "magma_spinning_cube_app.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -322,9 +326,15 @@ bool MagmaSpinningCubeApp::ProcessTouchscreenInput(void* buf, size_t len)
 
 extern "C" {
 
-int test_spinning_cube(uint32_t device_handle)
+int test_spinning_cube()
 {
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    int fd = open("/dev/class/display/000", O_RDONLY);
+    if (fd < 0) {
+        printf("failed to open gpu %d", fd);
+        return -1;
+    }
 
     // Scan /dev/class/input to find the touchscreen
     struct dirent* de;
@@ -402,7 +412,7 @@ int test_spinning_cube(uint32_t device_handle)
     }
 
     MagmaSpinningCubeApp app;
-    if (!app.Initialize(device_handle)) {
+    if (!app.Initialize(fd)) {
         return -1;
     }
 

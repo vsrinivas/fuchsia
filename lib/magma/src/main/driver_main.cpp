@@ -123,6 +123,37 @@ static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
+static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void* in_buf,
+                                size_t in_len, void* out_buf, size_t out_len)
+{
+    intel_i915_device_t* device = get_i915_device(mx_device);
+    DASSERT(device->magma_system_device);
+
+    ssize_t result = ERR_NOT_SUPPORTED;
+
+    switch (op) {
+    case 0: {
+        auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
+        if (!out_buf || out_len < sizeof(*device_id_out))
+            return ERR_INVALID_ARGS;
+        *device_id_out = device->magma_system_device->GetDeviceId();
+        result = sizeof(*device_id_out);
+        break;
+    }
+    case 1: {
+        auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
+        if (!out_buf || out_len < sizeof(*device_handle_out))
+            return ERR_INVALID_ARGS;
+        *device_handle_out = 0xdeadbeef;
+        result = sizeof(*device_handle_out);
+        break;
+    }
+    }
+    xprintf("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
+
+    return result;
+}
+
 static mx_status_t intel_i915_close(mx_device_t* dev) { return NO_ERROR; }
 
 static mx_status_t intel_i915_release(mx_device_t* dev)
@@ -139,7 +170,10 @@ static mx_status_t intel_i915_release(mx_device_t* dev)
 }
 
 static mx_protocol_device_t intel_i915_device_proto = {
-    .open = intel_i915_open, .close = intel_i915_close, .release = intel_i915_release,
+    .open = intel_i915_open,
+    .close = intel_i915_close,
+    .ioctl = intel_i915_ioctl,
+    .release = intel_i915_release,
 };
 
 // implement driver object:
@@ -217,7 +251,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
     device->parent_device = dev;
     device_add(&device->device, dev);
 
-    xprintf("initialized intel i915 display driver, fb=0x%p fbsize=0x%llx\n", device->framebuffer,
+    xprintf("initialized magma intel display driver, fb=0x%p fbsize=0x%llx\n", device->framebuffer,
             device->framebuffer_size);
 
     if (MAGMA_START) {
@@ -292,14 +326,11 @@ static int magma_hook(void* param)
 
 #if MAGMA_READBACK_TEST
     xprintf("running magma readback tests\n");
-    uint32_t device_handle = 0xdeadbeef;
-    test_gpu_readback(device_handle);
+    test_gpu_readback();
 
 #elif MAGMA_SPINNING_CUBE_TEST
-
     xprintf("running magma spinning cube test\n");
-    uint32_t device_handle = 0xdeadbeef;
-    test_spinning_cube(device_handle);
+    test_spinning_cube();
 
 #endif
 

@@ -4,9 +4,9 @@
 
 #include "magma_connection.h"
 
-MagmaConnection* MagmaConnection::Open(uint32_t device_handle, int batch_size)
+MagmaConnection* MagmaConnection::Open(int32_t fd, int batch_size)
 {
-    auto sys_connection = magma_system_open(device_handle);
+    auto sys_connection = magma_system_open(fd);
     if (!sys_connection) {
         DLOG("magma_system_open failed");
         return nullptr;

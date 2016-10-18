@@ -17,11 +17,11 @@ struct magma_system_connection {
 };
 
 // Opens a device - triggered by a client action. returns null on failure
-struct magma_system_connection* magma_system_open(uint32_t device_handle);
+struct magma_system_connection* magma_system_open(int32_t file_descriptor);
 void magma_system_close(struct magma_system_connection* connection);
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(struct magma_system_connection* connection);
+uint32_t magma_system_get_device_id(int fd);
 
 bool magma_system_create_context(struct magma_system_connection* connection, uint32_t* context_id);
 bool magma_system_destroy_context(struct magma_system_connection* connection, uint32_t context_id);

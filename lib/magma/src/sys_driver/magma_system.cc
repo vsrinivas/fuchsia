@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "magma_system.h"
+#include "magenta/device/ioctl-wrapper.h"
 #include "magma_driver.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"
@@ -17,11 +18,15 @@ static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
 
 MagmaSystemDevice* MagmaDriver::g_device;
 
-magma_system_connection* magma_system_open(uint32_t device_handle)
+magma_system_connection* magma_system_open(int fd)
 {
+    uint32_t device_handle;
+    int ioctl_ret = mxio_ioctl(fd, 1, NULL, 0, &device_handle, sizeof(device_handle));
+    if (ioctl_ret < 0)
+        return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
+
     if (device_handle != 0xdeadbeef)
         return DRETP(nullptr, "Unexpected device_handle");
-
 
     MagmaSystemDevice* dev = MagmaDriver::GetDevice();
     DASSERT(dev);
@@ -39,9 +44,15 @@ magma_system_connection* magma_system_open(uint32_t device_handle)
 void magma_system_close(magma_system_connection* connection) { delete connection; }
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(magma_system_connection* connection)
+uint32_t magma_system_get_device_id(int fd)
 {
-    return MagmaSystemConnection::cast(connection)->GetDeviceId();
+    uint32_t device_id;
+    int ioctl_ret = mxio_ioctl(fd, 0, NULL, 0, &device_id, sizeof(device_id));
+    if (ioctl_ret < 0) {
+        DLOG("mxio_ioctl failed: %d", ioctl_ret);
+        return 0;
+    }
+    return device_id;
 }
 
 bool magma_system_create_context(magma_system_connection* connection, uint32_t* context_id_out)
@@ -126,8 +137,13 @@ void magma_system_wait_rendering(magma_system_connection* connection, uint32_t h
 
 ///////////////////////////////////////////////////////////////////////////////////
 
-magma_system_display* magma_system_display_open(uint32_t device_handle)
+magma_system_display* magma_system_display_open(int32_t fd)
 {
+    uint32_t device_handle;
+    int ioctl_ret = mxio_ioctl(fd, 1, NULL, 0, &device_handle, sizeof(device_handle));
+    if (ioctl_ret < 0)
+        return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
+
     if (device_handle != 0xdeadbeef)
         return DRETP(nullptr, "Unexpected device_handle");
 

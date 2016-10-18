@@ -16,7 +16,7 @@ struct magma_system_display {
 };
 
 // Opens a device - triggered by a client action. returns null on failure
-struct magma_system_display* magma_system_display_open(uint32_t device_handle);
+struct magma_system_display* magma_system_display_open(int32_t file_descriptor);
 
 void magma_system_display_close(struct magma_system_display* display);
 

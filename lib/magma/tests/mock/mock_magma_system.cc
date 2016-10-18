@@ -5,15 +5,12 @@
 #include "magma_system.h"
 #include "magma_util/dlog.h"
 
-magma_system_connection* magma_system_open(uint32_t device_handle)
-{
-    return new magma_system_connection();
-}
+magma_system_connection* magma_system_open(int32_t fd) { return new magma_system_connection(); }
 
 void magma_system_close(magma_system_connection* connection) { delete connection; }
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(magma_system_connection* connection) { return 0; }
+uint32_t magma_system_get_device_id(int32_t fd) { return 0; }
 
 uint32_t next_context_id;
 bool magma_system_create_context(magma_system_connection* connection, uint32_t* context_id_out)

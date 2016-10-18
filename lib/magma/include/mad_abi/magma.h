@@ -91,7 +91,7 @@ void magma_bufmgr_gem_set_aub_annotations(struct magma_buffer* bo,
                                           drm_intel_aub_annotation* annotations, unsigned count);
 
 int32_t magma_get_aperture_sizes(int32_t fd, size_t* mappable, size_t* total);
-int32_t magma_bufmgr_gem_get_devid(struct magma_connection* connection);
+int32_t magma_gem_get_devid(int32_t fd);
 int32_t magma_gem_bo_wait(struct magma_buffer* bo, int64_t timeout_ns);
 
 struct magma_context* magma_gem_context_create(struct magma_connection* connection);

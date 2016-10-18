@@ -192,20 +192,17 @@ void magma_bufmgr_gem_enable_reuse(magma_connection* connection)
     DLOG("magma_bufmgr_gem_enable_reuse - STUB");
 }
 
-int32_t magma_bufmgr_gem_get_devid(magma_connection* connection)
+int32_t magma_gem_get_devid(int fd)
 {
-    DLOG("magma_bufmgr_gem_get_devid");
-    int32_t id = static_cast<int>(MagmaConnection::cast(connection)->GetDeviceId());
-    DLOG("returning id 0x%x", id);
-    return id;
+    DLOG("magma_gem_get_devid");
+    return magma_system_get_device_id(fd);
 }
 
-magma_connection* magma_bufmgr_gem_init(int32_t connection_handle, int32_t batch_size)
+magma_connection* magma_bufmgr_gem_init(int32_t fd, int32_t batch_size)
 {
-    DLOG("magma_bufmgr_gem_init connection_handle 0x%x batch_size %d", connection_handle,
-         batch_size);
+    DLOG("magma_bufmgr_gem_init fd 0x%x batch_size %d", fd, batch_size);
 
-    auto connection = MagmaConnection::Open(connection_handle, batch_size);
+    auto connection = MagmaConnection::Open(fd, batch_size);
     if (!connection) {
         DLOG("Failed to open connection");
         return nullptr;

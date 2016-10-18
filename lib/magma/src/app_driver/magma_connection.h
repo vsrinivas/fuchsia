@@ -16,12 +16,10 @@
 
 class MagmaConnection : public magma_connection {
 public:
-    static MagmaConnection* Open(uint32_t device_handle, int batch_size);
+    static MagmaConnection* Open(int32_t fd, int batch_size);
     ~MagmaConnection();
 
     magma_system_connection* sys_connection() { return sys_connection_; }
-
-    uint32_t GetDeviceId() { return magma_system_get_device_id(sys_connection_); }
 
     bool Init(uint64_t batch_size);
 

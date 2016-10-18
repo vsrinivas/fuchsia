@@ -101,6 +101,19 @@ source_set("magma_platform_tests") {
   ]
 }
 
+source_set("sys_abi_conformance_tests") {
+  testonly = true
+
+  sources = [
+    "test_sys_abi_connection.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/sys_driver",
+    "//third_party/gtest",
+  ]
+}
+
 source_set("msd_abi_conformance_tests") {
   testonly = true
 
