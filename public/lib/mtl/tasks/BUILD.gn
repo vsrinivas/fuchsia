@@ -15,7 +15,6 @@ source_set("tasks") {
   ]
   libs = [
     "magenta",
-    "runtime",
   ]
   public_deps = [
     "//lib/ftl",
