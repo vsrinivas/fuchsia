@@ -118,6 +118,9 @@ KERNEL_COMPILEFLAGS += -mgeneral-regs-only -DWITH_NO_FP=1
 #TODO: remove once userspace backtracing is smarter
 USER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
 
+# See engine.mk.
+KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifndef ARCH_arm64_CLANG_TARGET
 ARCH_arm64_CLANG_TARGET := aarch64-fuchsia

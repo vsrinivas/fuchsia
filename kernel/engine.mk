@@ -105,6 +105,13 @@ KERNEL_CFLAGS := -Wmissing-prototypes
 KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
 
+# Build flags for modules that want frame pointers.
+# crashlogger, ngunwind, backtrace use this so that the simplisitic unwinder
+# will work with them. These are recorded here so that modules don't need
+# knowledge of the details. They just need to do:
+# GLOBAL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+KEEP_FRAME_POINTER_COMPILEFLAGS := -fno-omit-frame-pointer
+
 # User space compile flags
 USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER) -fPIC -D_ALL_SOURCE=1
 #TODO: remove once userspace backtracing is smarter
