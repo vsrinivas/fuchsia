@@ -162,4 +162,26 @@ struct is_unsigned_integer : integral_constant<bool, is_integral<T>::value && (T
 template<typename T>
 struct is_standard_layout : integral_constant<bool, __is_standard_layout(T)> { };
 
+// match_cv: match_cv<SrcType, DestType>::type is DestType cv-qualified in the same way as SrcType.
+
+// Primary template:
+template <typename SrcType, typename DestType>
+struct match_cv {
+  using type = typename remove_cv<DestType>::type;
+};
+
+// Specializations for const/volatile/const volatile:
+template <typename SrcType, typename DestType>
+struct match_cv<const SrcType, DestType> {
+  using type = typename remove_cv<DestType>::type const;
+};
+template <typename SrcType, typename DestType>
+struct match_cv<volatile SrcType, DestType> {
+  using type = typename remove_cv<DestType>::type volatile;
+};
+template <typename SrcType, typename DestType>
+struct match_cv<const volatile SrcType, DestType> {
+  using type = typename remove_cv<DestType>::type const volatile;
+};
+
 }  // namespace mxtl

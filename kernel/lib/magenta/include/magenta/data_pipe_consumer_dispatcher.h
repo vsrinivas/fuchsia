@@ -15,7 +15,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
-#include <lib/user_copy/user_ptr.h>
+#include <lib/user_copy/user_array.h>
 #include <mxtl/ref_counted.h>
 
 class DataPipe;
@@ -31,7 +31,11 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_DATA_PIPE_CONSUMER; }
     StateTracker* get_state_tracker() final;
 
-    mx_status_t Read(user_ptr<void> buffer, mx_size_t* requested, bool all_or_none, bool discard, bool peek);
+    mx_status_t Read(user_array<void> buffer,
+                     bool all_or_none,
+                     bool discard,
+                     bool peek,
+                     mx_size_t* size_read);
     mx_ssize_t Query();
     mx_ssize_t BeginRead(mxtl::RefPtr<VmAspace> aspace, void** buffer);
     mx_status_t EndRead(mx_size_t read);

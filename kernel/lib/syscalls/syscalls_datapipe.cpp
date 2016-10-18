@@ -11,6 +11,7 @@
 #include <trace.h>
 
 #include <lib/ktrace.h>
+#include <lib/user_copy/user_array.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <magenta/data_pipe.h>
@@ -84,6 +85,8 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
                               user_ptr<const void> _buffer) {
     LTRACEF("handle %d\n", producer_handle);
 
+    user_array<const void> buffer(_buffer.get(), requested);
+
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<DataPipeProducerDispatcher> producer;
@@ -94,8 +97,8 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
     if (flags & ~MX_DATAPIPE_WRITE_FLAG_MASK)
         return ERR_NOT_SUPPORTED;
 
-    mx_size_t written = requested;
-    status = producer->Write(_buffer, &written, flags & MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE);
+    mx_size_t written;
+    status = producer->Write(buffer, flags & MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE, &written);
     if (status < 0)
         return status;
 
@@ -105,6 +108,8 @@ mx_ssize_t sys_datapipe_write(mx_handle_t producer_handle, uint32_t flags, mx_si
 mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_size_t requested,
                              user_ptr<void> _buffer) {
     LTRACEF("handle %d\n", consumer_handle);
+
+    user_array<void> buffer(_buffer.get(), requested);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -129,8 +134,8 @@ mx_ssize_t sys_datapipe_read(mx_handle_t consumer_handle, uint32_t flags, mx_siz
     if (discard && peek)
         return ERR_INVALID_ARGS;
 
-    mx_size_t read = requested;
-    status = consumer->Read(_buffer, &read, all_or_none, discard, peek);
+    mx_size_t read;
+    status = consumer->Read(buffer, all_or_none, discard, peek, &read);
     if (status < 0)
         return status;
 

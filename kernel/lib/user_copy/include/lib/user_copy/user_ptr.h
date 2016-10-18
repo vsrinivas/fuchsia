@@ -6,25 +6,15 @@
 
 #include <kernel/vm.h>
 #include <lib/user_copy.h>
+#include <lib/user_copy/internal.h>
 #include <mxtl/type_support.h>
 
-namespace internal {
-
-// A helper that we can specialize, so we can make user_ptr<T>::copy_array_{to,from}_user() work
-// even when T is void. (Function specializations have to be in namespace scope, so this can't be
-// internal to |user_ptr|.)
-template <typename S> inline constexpr size_t type_size() { return sizeof(S); }
-template <> inline constexpr size_t type_size<void>() { return 1u; }
-
-}  // namespace internal
-
-// user_ptr<> wraps a pointer to user memory, to differntiate it from kernel
+// user_ptr<> wraps a pointer to user memory, to differentiate it from kernel
 // memory.
 template <typename T>
 class user_ptr {
 public:
-    explicit user_ptr(T* const p)
-        : ptr_(p) {}
+    explicit user_ptr(T* p) : ptr_(p) {}
 
     T* get() const { return ptr_; }
 
@@ -48,6 +38,7 @@ public:
     }
 
     // check that the address is inside user space
+    // TODO(vtl): Make this more robust -- this only checks the initial address.
     bool is_user_address() const { return ::is_user_address(reinterpret_cast<vaddr_t>(ptr_)); }
 
     // Copies a single T to user memory. (Using this will fail to compile if T is |void|.)
@@ -62,8 +53,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     status_t copy_array_to_user(const T* src, size_t count) const {
-        return copy_to_user_unsafe(
-                ptr_, src, count * internal::type_size<typename mxtl::remove_volatile<T>::type>());
+        return copy_to_user_unsafe(ptr_, src, count * internal::type_size<T>());
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
@@ -77,8 +67,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count) const {
-        return copy_from_user_unsafe(
-                dst, ptr_, count * internal::type_size<typename mxtl::remove_cv<T>::type>());
+        return copy_from_user_unsafe(dst, ptr_, count * internal::type_size<T>());
     }
 
 private:

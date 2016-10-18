@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <kernel/mutex.h>
-#include <lib/user_copy/user_ptr.h>
+#include <lib/user_copy/user_array.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <magenta/state_tracker.h>
@@ -39,17 +39,19 @@ public:
     StateTracker* get_producer_state_tracker() { return &producer_.state_tracker; }
     StateTracker* get_consumer_state_tracker() { return &consumer_.state_tracker; }
 
-    mx_status_t ProducerWriteFromUser(user_ptr<const void> ptr, mx_size_t* requested, bool all_or_none);
+    mx_status_t ProducerWriteFromUser(user_array<const void> buffer,
+                                      bool all_or_none,
+                                      mx_size_t* size_written);
     mx_ssize_t ProducerWriteBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ProducerWriteEnd(mx_size_t written);
     mx_size_t ProducerGetWriteThreshold();
     mx_status_t ProducerSetWriteThreshold(mx_size_t threshold);
 
-    mx_status_t ConsumerReadFromUser(user_ptr<void> ptr,
-                                     mx_size_t* requested,
+    mx_status_t ConsumerReadFromUser(user_array<void> buffer,
                                      bool all_or_none,
                                      bool discard,
-                                     bool peek);
+                                     bool peek,
+                                     mx_size_t* size_read);
     mx_ssize_t ConsumerQuery();
     mx_ssize_t ConsumerReadBegin(mxtl::RefPtr<VmAspace> aspace, void** ptr);
     mx_status_t ConsumerReadEnd(mx_size_t read);

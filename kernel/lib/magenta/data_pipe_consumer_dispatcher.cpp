@@ -41,12 +41,12 @@ StateTracker* DataPipeConsumerDispatcher::get_state_tracker() {
     return pipe_->get_consumer_state_tracker();
 }
 
-mx_status_t DataPipeConsumerDispatcher::Read(user_ptr<void> buffer,
-                                             mx_size_t* requested,
+mx_status_t DataPipeConsumerDispatcher::Read(user_array<void> buffer,
                                              bool all_or_none,
                                              bool discard,
-                                             bool peek) {
-    return pipe_->ConsumerReadFromUser(buffer, requested, all_or_none, discard, peek);
+                                             bool peek,
+                                             mx_size_t* size_read) {
+    return pipe_->ConsumerReadFromUser(buffer, all_or_none, discard, peek, size_read);
 }
 
 mx_ssize_t DataPipeConsumerDispatcher::Query() {

@@ -173,49 +173,51 @@ void DataPipe::UpdateConsumerSignalsNoLock() {
     }
 }
 
-mx_status_t DataPipe::ProducerWriteFromUser(user_ptr<const void> ptr,
-                                            mx_size_t* requested,
-                                            bool all_or_none) {
+mx_status_t DataPipe::ProducerWriteFromUser(user_array<const void> buffer,
+                                            bool all_or_none,
+                                            mx_size_t* size_written) {
     AutoLock al(&lock_);
 
     // |expected| > 0 means there is a pending ProducerWriteBegin().
     if (producer_.expected)
         return ERR_ALREADY_BOUND;
 
-    if (*requested % element_size_ != 0u)
+    if (buffer.size() % element_size_ != 0u)
         return ERR_INVALID_ARGS;
 
     if (!consumer_.alive)
         return ERR_REMOTE_CLOSED;
 
-    if (*requested == 0u)
+    if (buffer.size() == 0u)
         return NO_ERROR;
 
     if (free_space_ == 0u)
         return ERR_SHOULD_WAIT;
 
-    mx_size_t to_write = mxtl::min(*requested, free_space_no_lock());
+    mx_size_t to_write = mxtl::min(buffer.size(), free_space_no_lock());
     DEBUG_ASSERT(to_write % element_size_ == 0u);
     // TODO(vtl): Change OUT_OF_RANGE to SHOULD_WAIT when we have write thresholds (also update mojo
     // to match).
-    if (all_or_none && to_write != *requested)
+    if (all_or_none && to_write != buffer.size())
         return ERR_OUT_OF_RANGE;
-    *requested = to_write;
+    *size_written = to_write;
 
-    if (!ptr)
+    if (!buffer)
         return ERR_INVALID_ARGS;
 
     mx_size_t to_write_first = mxtl::min(to_write, contiguous_free_space_no_lock());
     size_t written;
-    status_t status = vmo_->WriteUser(ptr, producer_.cursor, to_write_first, &written);
+    // TODO(vtl): Here and below: make (a version of?) WriteUser take a user_array?
+    status_t status =
+            vmo_->WriteUser(buffer.get_user_ptr(), producer_.cursor, to_write_first, &written);
     if (status < 0)
         return status;
     DEBUG_ASSERT(written == to_write_first);
 
     if (to_write_first < to_write) {
-        auto ptr2 = ptr.byte_offset(to_write_first);
-        DEBUG_ASSERT(ptr2.is_user_address());
-        status = vmo_->WriteUser(ptr2, 0u, to_write - to_write_first, &written);
+        auto buffer2 = buffer.byte_offset(to_write_first);
+        DEBUG_ASSERT(buffer2.is_user_address());
+        status = vmo_->WriteUser(buffer2.get_user_ptr(), 0u, to_write - to_write_first, &written);
         if (status < 0)
             return status;
         DEBUG_ASSERT(written == to_write - to_write_first);
@@ -298,11 +300,11 @@ mx_status_t DataPipe::ProducerSetWriteThreshold(mx_size_t threshold) {
     return NO_ERROR;
 }
 
-mx_status_t DataPipe::ConsumerReadFromUser(user_ptr<void> ptr,
-                                           mx_size_t* requested,
+mx_status_t DataPipe::ConsumerReadFromUser(user_array<void> buffer,
                                            bool all_or_none,
                                            bool discard,
-                                           bool peek) {
+                                           bool peek,
+                                           mx_size_t* size_read) {
     DEBUG_ASSERT(!discard || !peek);
 
     AutoLock al(&lock_);
@@ -311,40 +313,41 @@ mx_status_t DataPipe::ConsumerReadFromUser(user_ptr<void> ptr,
     if (consumer_.expected)
         return ERR_ALREADY_BOUND;
 
-    if (*requested % element_size_ != 0u)
+    if (buffer.size() % element_size_ != 0u)
         return ERR_INVALID_ARGS;
 
-    if (*requested == 0)
+    if (buffer.size() == 0)
         return NO_ERROR;
 
     if (free_space_ == capacity_)
         return producer_.alive ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
 
-    mx_size_t to_read = mxtl::min(*requested, available_size_no_lock());
+    mx_size_t to_read = mxtl::min(buffer.size(), available_size_no_lock());
     DEBUG_ASSERT(to_read % element_size_ == 0u);
     // TODO(vtl): Change OUT_OF_RANGE to SHOULD_WAIT when we have write thresholds (also update mojo
     // to match).
-    if (all_or_none && to_read != *requested)
+    if (all_or_none && to_read != buffer.size())
         return producer_.alive ? ERR_OUT_OF_RANGE : ERR_REMOTE_CLOSED;
-    *requested = to_read;
+    *size_read = to_read;
 
     if (!discard) {
-        if (!ptr)
+        if (!buffer)
             return ERR_INVALID_ARGS;
 
         mx_size_t to_read_first = mxtl::min(to_read, contiguous_available_size_no_lock());
         size_t read;
-        status_t st = vmo_->ReadUser(ptr, consumer_.cursor, to_read_first, &read);
-        if (st != NO_ERROR)
-            return st;
+        status_t status =
+                vmo_->ReadUser(buffer.get_user_ptr(), consumer_.cursor, to_read_first, &read);
+        if (status < 0)
+            return status;
         DEBUG_ASSERT(read == to_read_first);
 
         if (to_read > to_read_first) {
-            auto ptr2 = ptr.byte_offset(to_read_first);
-            DEBUG_ASSERT(ptr2.is_user_address());
-            status_t st = vmo_->ReadUser(ptr2, 0u, to_read - to_read_first, &read);
-            if (st != NO_ERROR)
-                return st;
+            auto buffer2 = buffer.byte_offset(to_read_first);
+            DEBUG_ASSERT(buffer2.is_user_address());
+            status = vmo_->ReadUser(buffer2.get_user_ptr(), 0u, to_read - to_read_first, &read);
+            if (status < 0)
+                return status;
             DEBUG_ASSERT(read == to_read - to_read_first);
         }
 
