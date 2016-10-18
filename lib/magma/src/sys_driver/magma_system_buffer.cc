@@ -11,10 +11,9 @@ MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> plat
 {
 }
 
-std::unique_ptr<MagmaSystemBuffer> MagmaSystemBuffer::Create(uint64_t size)
+std::unique_ptr<MagmaSystemBuffer>
+MagmaSystemBuffer::Create(std::unique_ptr<magma::PlatformBuffer> platform_buffer)
 {
-
-    std::unique_ptr<magma::PlatformBuffer> platform_buffer(magma::PlatformBuffer::Create(size));
     if (!platform_buffer)
         return DRETP(nullptr, "Failed to create PlatformBuffer");
 

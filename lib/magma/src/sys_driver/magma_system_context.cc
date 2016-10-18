@@ -27,13 +27,17 @@ bool MagmaSystemContext::ExecuteCommandBuffer(magma_system_command_buffer* cmd_b
 
     // validate batch buffer index
     if (cmd_buf->batch_buffer_resource_index >= cmd_buf->num_resources)
-        return DRETF(false, "ExecuteCommandBuffer: batch buffer handle invalid");
+        return DRETF(false, "ExecuteCommandBuffer: batch buffer resource index invalid");
 
     // validate exec resources
     for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
         uint32_t handle = cmd_buf->resources[i].buffer_handle;
 
-        auto buf = owner_->LookupBufferForContext(handle);
+        uint64_t id;
+        if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+            return DRETF(false, "ExecuteCommandBuffer: batch buffer handle invalid");
+
+        auto buf = owner_->LookupBufferForContext(id);
         if (!buf)
             return DRETF(false, "ExecuteCommandBuffer: exec resource has invalid buffer handle");
 

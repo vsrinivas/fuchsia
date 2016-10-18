@@ -20,21 +20,22 @@ static inline msd_buffer_unique_ptr_t MsdBufferUniquePtr(msd_buffer* buffer)
 
 class MagmaSystemBuffer {
 public:
-    static std::unique_ptr<MagmaSystemBuffer> Create(uint64_t size);
+    static std::unique_ptr<MagmaSystemBuffer>
+    Create(std::unique_ptr<magma::PlatformBuffer> platform_buffer);
     ~MagmaSystemBuffer() {}
 
     uint64_t size() { return platform_buf_->size(); }
-    uint32_t handle() { return platform_buf_->handle(); }
+    uint64_t id() { return platform_buf_->id(); }
 
     // note: this does not relinquish ownership of the PlatformBuffer
-    magma::PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
+    magma::OpaquePlatformBuffer* platform_buffer() { return platform_buf_.get(); }
 
     msd_buffer* msd_buf() { return msd_buf_.get(); }
 
 private:
     MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf,
                       msd_buffer_unique_ptr_t msd_buf);
-    std::unique_ptr<magma::PlatformBuffer> platform_buf_;
+    std::unique_ptr<magma::OpaquePlatformBuffer> platform_buf_;
     msd_buffer_unique_ptr_t msd_buf_;
 };
 

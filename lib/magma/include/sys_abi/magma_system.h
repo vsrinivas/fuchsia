@@ -41,7 +41,8 @@ void magma_system_free(struct magma_system_connection* connection, uint32_t hand
 void magma_system_set_tiling_mode(struct magma_system_connection* connection, uint32_t handle,
                                   uint32_t tiling_mode);
 
-int32_t magma_system_map(struct magma_system_connection* connection, uint32_t handle, void** paddr);
+int32_t magma_system_map(struct magma_system_connection* connection, uint32_t handle,
+                         void** addr_out);
 int32_t magma_system_unmap(struct magma_system_connection* connection, uint32_t handle, void* addr);
 
 void magma_system_set_domain(struct magma_system_connection* connection, uint32_t handle,
@@ -55,7 +56,8 @@ void magma_system_wait_rendering(struct magma_system_connection* connection, uin
 
 // makes the buffer returned by |handle| able to be imported via |token|
 // TODO(MA-88) make these arguments less confusing
-void magma_system_export(magma_system_connection* connection, uint32_t handle, uint32_t* token_out);
+int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,
+                            uint32_t* token_out);
 
 #if defined(__cplusplus)
 }

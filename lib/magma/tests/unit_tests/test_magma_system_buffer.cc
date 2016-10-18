@@ -41,24 +41,27 @@ TEST(MagmaSystemBuffer, Create)
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
-    auto connection = dev.Open(0);
+    auto msd_connection = msd_device_open(msd_dev, 0);
+    ASSERT_NE(msd_connection, nullptr);
+    auto connection = std::unique_ptr<MagmaSystemConnection>(
+        new MagmaSystemConnection(&dev, MsdConnectionUniquePtr(msd_connection)));
     ASSERT_NE(connection, nullptr);
 
     EXPECT_FALSE(bufmgr->has_created_buffer());
     EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
     {
-        auto buf = connection->AllocateBuffer(0);
-        EXPECT_FALSE(bufmgr->has_created_buffer());
-        EXPECT_FALSE(bufmgr->has_destroyed_buffer());
-    }
+        auto buf = magma::PlatformBuffer::Create(256);
 
-    {
-        auto buf = connection->AllocateBuffer(256);
+        uint32_t duplicate_handle;
+        ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle));
+
+        uint64_t id;
+        EXPECT_TRUE(connection->ImportBuffer(duplicate_handle, &id));
         EXPECT_TRUE(bufmgr->has_created_buffer());
         EXPECT_FALSE(bufmgr->has_destroyed_buffer());
 
-        connection->FreeBuffer(buf->handle());
+        EXPECT_TRUE(connection->ReleaseBuffer(id));
     }
     EXPECT_TRUE(bufmgr->has_created_buffer());
     EXPECT_TRUE(bufmgr->has_destroyed_buffer());

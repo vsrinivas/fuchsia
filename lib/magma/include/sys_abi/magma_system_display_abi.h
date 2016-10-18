@@ -25,8 +25,8 @@ void magma_system_display_close(struct magma_system_display* display);
 int32_t magma_system_display_get_error(struct magma_system_display* display);
 
 // TODO(MA-88) make these arguments less confusing
-void magma_system_display_import_buffer(struct magma_system_display* display, uint32_t token,
-                                        uint32_t* handle_out);
+int32_t magma_system_display_import_buffer(struct magma_system_display* display, uint32_t token,
+                                           uint32_t* handle_out);
 
 // Provides a buffer to be scanned out on the next vblank event.
 // |callback| will be called with |data| as its second argument when the buffer

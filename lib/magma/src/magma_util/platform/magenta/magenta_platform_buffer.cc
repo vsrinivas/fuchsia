@@ -132,12 +132,8 @@ public:
         DASSERT(magma::is_page_aligned(size));
         pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
 
-        mx_info_handle_basic_t info;
-        mx_ssize_t info_size = mx_object_get_info(handle_, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
-                                                  &info, sizeof(info));
-        DASSERT(info_size == sizeof(info));
-
-        koid_ = info.rec.koid;
+        bool success = OpaquePlatformBuffer::IdFromHandle(handle_, &koid_);
+        DASSERT(success);
     }
 
     ~MagentaPlatformBuffer() override
@@ -151,8 +147,6 @@ public:
     uint64_t size() override { return size_; }
 
     uint64_t id() override { return koid_; }
-
-    uint32_t handle() override { return handle_; }
 
     bool duplicate_handle(uint32_t* handle_out) override
     {
@@ -362,6 +356,18 @@ bool MagentaPlatformBuffer::MapPageBus(uint32_t page_index, uint64_t* addr_out)
 }
 
 bool MagentaPlatformBuffer::UnmapPageBus(uint32_t page_index) { return true; }
+
+bool OpaquePlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
+{
+    mx_info_handle_basic_t info;
+    mx_ssize_t info_size =
+        mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info));
+    if (info_size != sizeof(info))
+        return DRETF(false, "mx_object_get_info failed");
+
+    *id_out = info.rec.koid;
+    return true;
+}
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
 {

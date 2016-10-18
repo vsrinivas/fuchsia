@@ -30,45 +30,6 @@ TEST(MagmaSystemConnection, GetDeviceId)
     EXPECT_EQ(device_id, test_id);
 }
 
-TEST(MagmaSystemConnection, BufferManagement)
-{
-    auto msd_drv = msd_driver_create();
-    auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
-    auto connection = dev.Open(0);
-    ASSERT_NE(connection, nullptr);
-
-    uint64_t test_size = 4096;
-
-    {
-        // allocating a zero size buffer should fail
-        EXPECT_EQ(connection->AllocateBuffer(0), nullptr);
-
-        auto buf = connection->AllocateBuffer(test_size);
-        // assert because if this fails the rest of this is gonna be bogus anyway
-        ASSERT_NE(buf, nullptr);
-        EXPECT_GE(buf->size(), test_size);
-
-        auto handle = buf->handle();
-        EXPECT_EQ(handle, buf->platform_buffer()->handle());
-
-        // should be able to get the buffer by handle
-        auto get_buf = connection->LookupBuffer(handle);
-        EXPECT_NE(get_buf, nullptr);
-        EXPECT_EQ(get_buf, buf); // they are shared ptrs after all
-
-        // freeing the allocated buffer should work
-        EXPECT_TRUE(connection->FreeBuffer(handle));
-
-        // should no longer be able to get it from the map
-        EXPECT_EQ(connection->LookupBuffer(handle), nullptr);
-
-        // should not be able to double free it
-        EXPECT_FALSE(connection->FreeBuffer(handle));
-    }
-
-    msd_driver_destroy(msd_drv);
-}
 
 class MsdMockConnection_ContextManagement : public MsdMockConnection {
 public:
@@ -102,25 +63,20 @@ TEST(MagmaSystemConnection, ContextManagement)
 
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
 
-    uint32_t context_id_0;
-    uint32_t context_id_1;
+    uint32_t context_id_0 = 0;
+    uint32_t context_id_1 = 1;
 
-    EXPECT_TRUE(connection.CreateContext(&context_id_0));
+    EXPECT_TRUE(connection.CreateContext(context_id_0));
     EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
 
-    magma_system_create_context(&connection, &context_id_1);
-    EXPECT_EQ(magma_system_get_error(&connection), 0);
+    EXPECT_TRUE(connection.CreateContext(context_id_1));
     EXPECT_EQ(msd_connection->NumActiveContexts(), 2u);
-
-    EXPECT_NE(context_id_0, context_id_1);
 
     EXPECT_TRUE(connection.DestroyContext(context_id_0));
     EXPECT_EQ(msd_connection->NumActiveContexts(), 1u);
     EXPECT_FALSE(connection.DestroyContext(context_id_0));
 
-    magma_system_destroy_context(&connection, context_id_1);
-    EXPECT_EQ(magma_system_get_error(&connection), 0);
+    EXPECT_TRUE(connection.DestroyContext(context_id_1));
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
-    magma_system_destroy_context(&connection, context_id_1);
-    EXPECT_NE(magma_system_get_error(&connection), 0);
+    EXPECT_FALSE(connection.DestroyContext(context_id_1));
 }

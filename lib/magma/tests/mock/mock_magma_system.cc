@@ -63,6 +63,8 @@ void magma_system_wait_rendering(magma_system_connection* connection, uint32_t h
 {
 }
 
-void magma_system_export(magma_system_connection* connection, uint32_t handle, uint32_t* token_out)
+int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,
+                            uint32_t* token_out)
 {
+    return 0;
 }

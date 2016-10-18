@@ -29,7 +29,9 @@ TEST(MagmaSystemDisplay, PageFlip)
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
-    auto connection = dev.Open(0);
+    uint32_t connection_handle;
+    ASSERT_TRUE(dev.Open(0, &connection_handle));
+    auto connection = magma::PlatformIpcConnection::Create(connection_handle);
     ASSERT_NE(connection, nullptr);
     auto display = dev.OpenDisplay();
     ASSERT_NE(display, nullptr);

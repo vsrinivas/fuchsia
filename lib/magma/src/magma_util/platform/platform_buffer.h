@@ -20,11 +20,10 @@ public:
     // returns a unique, immutable id for the underlying memory object
     virtual uint64_t id() = 0;
 
-    // returns the value of the handle but does not transfer ownership
-    virtual uint32_t handle() = 0;
-
     // on success, duplicate of the underlying handle which is owned by the caller
     virtual bool duplicate_handle(uint32_t* handle_out) = 0;
+
+    static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 };
 
 class PlatformBuffer : public OpaquePlatformBuffer {

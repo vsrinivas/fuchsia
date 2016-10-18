@@ -5,14 +5,15 @@
 #ifndef _MAGMA_SYSTEM_CONNECTION_H_
 #define _MAGMA_SYSTEM_CONNECTION_H_
 
-#include "magma_system.h"
 #include "magma_system_buffer.h"
+#include "magma_system_buffer_manager.h"
 #include "magma_system_context.h"
 #include "magma_util/macros.h"
+#include "magma_util/platform/platform_connection.h"
 #include "msd.h"
 
-#include <map>
 #include <memory>
+#include <unordered_map>
 
 using msd_connection_unique_ptr_t =
     std::unique_ptr<msd_connection, decltype(&msd_connection_close)>;
@@ -22,60 +23,45 @@ static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection*
     return msd_connection_unique_ptr_t(conn, &msd_connection_close);
 }
 
-class MagmaSystemConnection : public magma_system_connection, private MagmaSystemContext::Owner {
+class MagmaSystemConnection : public MagmaSystemBufferManager,
+                              private MagmaSystemContext::Owner,
+                              public magma::PlatformConnection::Delegate {
 public:
-    class Owner {
+    class Owner : virtual public MagmaSystemBufferManager::Owner {
     public:
-        virtual uint32_t GetTokenForBuffer(std::shared_ptr<MagmaSystemBuffer>) = 0;
         virtual uint32_t GetDeviceId() = 0;
     };
 
     MagmaSystemConnection(Owner* owner, msd_connection_unique_ptr_t msd_connection);
 
-    // Allocates a buffer of at least the requested size and adds it to the
-    // buffer map. Returns a shared_ptr to the allocated buffer on success
-    // or nullptr on allocation failure
-    std::shared_ptr<MagmaSystemBuffer> AllocateBuffer(uint64_t size);
-    // Attempts to locate a buffer by handle in the buffer map and return it.
-    // Returns nullptr if the buffer is not found
-    std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint32_t handle);
-    // This removes the reference to the shared_ptr in the map
-    // other instances remain valid until deleted
-    // Returns false if no buffer with the given handle exists in the map
-    bool FreeBuffer(uint32_t handle);
-    // This does not modify the buffer map, but makes the buffer referred
-    // to by |handle| available for import using the value of |token_out|
-    bool ExportBuffer(uint32_t handle, uint32_t* token_out);
+    bool ImportBuffer(uint32_t handle, uint64_t* id_out) override
+    {
+        return MagmaSystemBufferManager::ImportBuffer(handle, id_out);
+    }
 
-    bool CreateContext(uint32_t* context_id_out);
-    bool DestroyContext(uint32_t context_id);
+    bool ReleaseBuffer(uint64_t id) override { return MagmaSystemBufferManager::ReleaseBuffer(id); }
+
+    bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
+                              uint32_t context_id) override;
+
+    bool CreateContext(uint32_t context_id) override;
+    bool DestroyContext(uint32_t context_id) override;
     MagmaSystemContext* LookupContext(uint32_t context_id);
 
     uint32_t GetDeviceId() { return owner_->GetDeviceId(); }
 
     msd_connection* msd_connection() { return msd_connection_.get(); }
 
-    static MagmaSystemConnection* cast(magma_system_connection* connection)
-    {
-        DASSERT(connection);
-        DASSERT(connection->magic_ == kMagic);
-        return static_cast<MagmaSystemConnection*>(connection);
-    }
-
 private:
     Owner* owner_;
     msd_connection_unique_ptr_t msd_connection_;
-    std::map<uint32_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
-    std::map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
-    uint32_t next_context_id_{};
+    std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
 
     // MagmaSystemContext::Owner
-    std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint32_t handle) override
+    std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override
     {
-        return LookupBuffer(handle);
+        return LookupBuffer(id);
     }
-
-    static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 };
 
 #endif //_MAGMA_SYSTEM_CONNECTION_H_

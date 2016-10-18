@@ -5,8 +5,11 @@
 import("//magma/gnbuild/magma.gni")
 
 source_set("magenta") {
+  configs += [ "$magma_build_root:magma_src_include_config" ]
+
   sources = [
     "magenta_platform_buffer.cc",
+    "magenta_platform_connection.cc",
     "magenta_platform_device.cc",
     "magenta_platform_device.h",
     "magenta_platform_futex.cc",

@@ -23,11 +23,15 @@ public:
             return DRETP(nullptr, "failed to create msd device");
         auto dev = std::unique_ptr<MagmaSystemDevice>(
             new MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy)));
-        uint32_t ctx_id;
-        auto connection = dev->Open(0);
+        uint32_t ctx_id = 0;
+        auto msd_connection = msd_device_open(msd_dev, 0);
+        if (!msd_connection)
+            return DRETP(nullptr, "msd_device_open failed");
+        auto connection = std::unique_ptr<MagmaSystemConnection>(
+            new MagmaSystemConnection(dev.get(), MsdConnectionUniquePtr(msd_connection)));
         if (!connection)
             return DRETP(nullptr, "failed to connect to msd device");
-        connection->CreateContext(&ctx_id);
+        connection->CreateContext(ctx_id);
         auto ctx = connection->LookupContext(ctx_id);
         if (!msd_dev)
             return DRETP(nullptr, "failed to create context");
@@ -81,10 +85,15 @@ private:
         // batch buffer
         {
             auto batch_buf = &abi_cmd_buf_->resources[0];
-            auto buffer = connection_->AllocateBuffer(kBufferSize);
+            auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
             DASSERT(buffer);
-            resources_.push_back(buffer.get());
-            batch_buf->buffer_handle = buffer->handle();
+            uint32_t duplicate_handle;
+            DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
+            uint64_t id;
+            DASSERT(connection_->ImportBuffer(duplicate_handle, &id));
+            resources_.push_back(connection_->LookupBuffer(id).get());
+            DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
+            batch_buf->buffer_handle = duplicate_handle;
             batch_buf->num_relocations = kNumResources - 1;
             batch_buf->relocations = new magma_system_relocation_entry[batch_buf->num_relocations];
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
@@ -101,10 +110,15 @@ private:
         // relocated buffers
         for (uint32_t i = 1; i < kNumResources; i++) {
             auto resource = &abi_cmd_buf_->resources[i];
-            auto buffer = connection_->AllocateBuffer(kBufferSize);
+            auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
             DASSERT(buffer);
-            resources_.push_back(buffer.get());
-            resource->buffer_handle = buffer->handle();
+            uint32_t duplicate_handle;
+            DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
+            uint64_t id;
+            DASSERT(connection_->ImportBuffer(duplicate_handle, &id));
+            resources_.push_back(connection_->LookupBuffer(id).get());
+            DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
+            resource->buffer_handle = duplicate_handle;
             resource->num_relocations = 0;
             resource->relocations = nullptr;
         }
