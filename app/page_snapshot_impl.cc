@@ -167,7 +167,7 @@ void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
   // TODO(etiennej): To be implemented.
-  callback.Run(Status::UNKNOWN_ERROR, nullptr);
+  callback.Run(Status::UNKNOWN_ERROR, mojo::ScopedSharedBufferHandle());
 }
 
 }  // namespace ledger
