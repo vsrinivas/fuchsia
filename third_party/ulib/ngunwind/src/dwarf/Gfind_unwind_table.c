@@ -53,7 +53,8 @@ dwarf_find_unwind_table (struct elf_dyn_info *edi, unw_addr_space_t as,
 #endif
   int i, ret, found = 0;
 
-  Debug (3, "(edi %p, %p, \"%s\", 0x%lx, 0x%lx, 0x%lx)\n", edi, as, path, segbase, mapoff, ip);
+  Debug (3, "(edi %p, %p, \"%s\", 0x%lx, 0x%lx, 0x%lx)\n",
+         edi, as, path, (long) segbase, (long) mapoff, (long) ip);
 
   /* XXX: Much of this code is Linux/LSB-specific.  */
 
@@ -262,7 +263,8 @@ dwarf_as_find_unwind_table (struct as_elf_dyn_info *edi, unw_addr_space_t as,
 #endif
   int i, ret, found = 0;
 
-  Debug (3, "(edi %p, %p, \"%s\", 0x%lx, 0x%lx, 0x%lx)\n", edi, as, path, segbase, mapoff, ip);
+  Debug (3, "(edi %p, %p, \"%s\", 0x%lx, 0x%lx, 0x%lx)\n",
+         edi, as, path, (long) segbase, (long) mapoff, (long) ip);
 
   // TODO(dje): byteswapping of ehdr values
   ret = unwi_load_as_contents(as, &edi->ehdr, segbase, sizeof(*ehdr), edi->arg);

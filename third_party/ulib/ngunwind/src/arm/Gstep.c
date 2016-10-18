@@ -79,7 +79,7 @@ unw_step (unw_cursor_t *cursor)
   int ret = -UNW_EUNSPEC;
 
   Debug (1, "(cursor=%p, ip=0x%lx, cfa=0x%lx))\n",
-         c, c->dwarf.ip, c->dwarf.cfa);
+         c, (long) c->dwarf.ip, (long) c->dwarf.cfa);
 
   /* Check if this is a signal frame. */
   ret = unw_is_signal_frame (cursor);
@@ -177,7 +177,7 @@ unw_step (unw_cursor_t *cursor)
               c->dwarf.loc[UNW_ARM_R12] = ip_loc;
               c->dwarf.loc[UNW_ARM_R11] = fp_loc;
               c->dwarf.pi_valid = 0;
-              Debug(15, "ip=%lx\n", c->dwarf.ip);
+              Debug(15, "ip=%lx\n", (long) c->dwarf.ip);
             }
           else
             {

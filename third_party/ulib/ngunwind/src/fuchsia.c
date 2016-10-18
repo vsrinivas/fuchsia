@@ -129,7 +129,7 @@ get_unwind_info (unw_fuchsia_info_t* cxt, unw_addr_space_t as, unw_word_t ip)
     Debug (3, "pc 0x%lx not in any dso\n", (long) ip);
     return -UNW_ENOINFO;
   }
-  Debug (3, "pc 0x%lx in dso %s, base 0x%lx\n", (long) ip, name, base);
+  Debug (3, "pc 0x%lx in dso %s, base 0x%lx\n", (long) ip, name, (long) base);
 
   segbase = base;
   mapoff = 0;
