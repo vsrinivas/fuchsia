@@ -185,8 +185,6 @@ MODULE_CFLAGS += -Wno-discarded-qualifiers
 endif
 MODULE_CFLAGS += -Wno-strict-aliasing -I$(SRC_DIR)/include/acpica
 
-MODULE_EXPORT := acpica
-
 MODULE_STATIC_LIBS := \
     ulib/ddk \
     ulib/magenta
