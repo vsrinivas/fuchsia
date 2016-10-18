@@ -87,3 +87,6 @@ Temporary Items
 
 # commonly generated files
 *.pyc
+
+# Atom configuration
+.atom-build.json
