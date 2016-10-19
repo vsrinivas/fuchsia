@@ -713,6 +713,39 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
     }
 }
 
+static mx_status_t mxsio_wait(mxio_t* io, uint32_t _events, uint32_t* _pending, mx_time_t timeout) {
+    mxrio_t* rio = (void*)io;
+
+    if (rio->h2 == 0) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    uint32_t events = 0;
+    mx_status_t r;
+    mx_signals_state_t pending;
+
+    if (_events & MXIO_EVT_READABLE) {
+        events |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    }
+    if (_events & MXIO_EVT_WRITABLE) {
+        events |= MX_SIGNAL_WRITABLE;
+    }
+    if ((r = mx_handle_wait_one(rio->h2, events, timeout, &pending)) < 0) {
+        return r;
+    }
+    if (_pending) {
+        uint32_t out = 0;
+        if (pending.satisfied & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
+            out |= MXIO_EVT_READABLE;
+        }
+        if (pending.satisfied & MX_SIGNAL_WRITABLE) {
+            out |= MXIO_EVT_WRITABLE;
+        }
+        *_pending = out;
+    }
+    return NO_ERROR;
+}
+
 static mxio_ops_t mxio_socket_ops = {
     .read = mxsio_read,
     .write = mxsio_write,
@@ -721,7 +754,7 @@ static mxio_ops_t mxio_socket_ops = {
     .close = mxrio_close,
     .open = mxrio_open,
     .clone = mxio_default_clone,
-    .wait = mxrio_wait,
+    .wait = mxsio_wait,
     .ioctl = mxrio_ioctl,
 };
 
