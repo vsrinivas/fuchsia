@@ -15,9 +15,10 @@ RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t s
 
     RefPtr ret = mxtl::AdoptRef(new RegionPool(slab_size, max_memory));
 
-    // Allocate at least one slab to start with.
+    // Allocate at least one slab to start with.  No need to actually hold the
+    // pool_lock_ here, as no one else knows about us yet.
     if (ret != nullptr)
-        ret->Grow();
+        ret->GrowLocked();
 
     return ret;
 }
@@ -30,7 +31,7 @@ RegionAllocator::RegionPool::~RegionPool() {
     slabs_.clear();
 }
 
-void RegionAllocator::RegionPool::Grow() {
+void RegionAllocator::RegionPool::GrowLocked() {
     DEBUG_ASSERT(alloc_size_ <= max_memory_);
 
     // If growing would put us over our max_memory limit, do not grow.
@@ -64,8 +65,10 @@ void RegionAllocator::RegionPool::Grow() {
 }
 
 RegionAllocator::Region* RegionAllocator::RegionPool::AllocRegion(RegionAllocator* owner) {
+    mxtl::AutoLock pool_lock(pool_lock_);
+
     if (free_regions_.is_empty()) {
-        Grow();
+        GrowLocked();
         if (free_regions_.is_empty())
             return nullptr;
     }
@@ -90,6 +93,8 @@ RegionAllocator::Region* RegionAllocator::RegionPool::AllocRegion(RegionAllocato
 }
 
 void RegionAllocator::RegionPool::FreeRegion(Region* region) {
+    mxtl::AutoLock pool_lock(pool_lock_);
+
     DEBUG_ASSERT(region);
     DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
     DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
@@ -126,6 +131,8 @@ RegionAllocator::~RegionAllocator() {
 }
 
 void RegionAllocator::Reset() {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     DEBUG_ASSERT((region_pool_ != nullptr) || avail_regions_by_base_.is_empty());
 
     Region* removed;
@@ -139,6 +146,8 @@ void RegionAllocator::Reset() {
 }
 
 mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     if (!allocated_regions_by_base_.is_empty() || !avail_regions_by_base_.is_empty())
         return ERR_BAD_STATE;
 
@@ -147,14 +156,16 @@ mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
 }
 
 mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     // Start with sanity checks
-    mx_status_t ret = AddSubtractSanityCheck(region);
+    mx_status_t ret = AddSubtractSanityCheckLocked(region);
     if (ret != NO_ERROR)
         return ret;
 
     // Make sure that we do not intersect with the available regions if we do
     // not allow overlaps.
-    if (!allow_overlap && Intersects(avail_regions_by_base_, region))
+    if (!allow_overlap && IntersectsLocked(avail_regions_by_base_, region))
         return ERR_INVALID_ARGS;
 
     // All sanity checks passed.  Grab a piece of free bookeeping from our pool,
@@ -167,15 +178,17 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
     to_add->base = region.base;
     to_add->size = region.size;
 
-    AddRegionToAvail(to_add, allow_overlap);
+    AddRegionToAvailLocked(to_add, allow_overlap);
 
     return NO_ERROR;
 }
 
 mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
                                             bool allow_incomplete) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     // Start with sanity checks
-    mx_status_t ret = AddSubtractSanityCheck(to_subtract);
+    mx_status_t ret = AddSubtractSanityCheckLocked(to_subtract);
     if (ret != NO_ERROR)
         return ret;
 
@@ -351,6 +364,8 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 mx_status_t RegionAllocator::GetRegion(uint64_t size,
                                        uint64_t alignment,
                                        Region::UPtr& out_region) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     // Check our RegionPool
     if (region_pool_ == nullptr)
         return ERR_BAD_STATE;
@@ -391,11 +406,13 @@ mx_status_t RegionAllocator::GetRegion(uint64_t size,
     if (!iter.IsValid())
         return ERR_NOT_FOUND;
 
-    return AllocFromAvail(iter, out_region, aligned_base, size);
+    return AllocFromAvailLocked(iter, out_region, aligned_base, size);
 }
 
 mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
                                        Region::UPtr& out_region) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     // Check our RegionPool
     if (region_pool_ == nullptr)
         return ERR_BAD_STATE;
@@ -437,12 +454,12 @@ mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
 
     // Great, we have found a region which should be able to satisfy our
     // allocation request.  Get an iterator for the by-size index, then use the
-    // common AllocFromAvail method to handle the bookkeeping involved.
+    // common AllocFromAvailLocked method to handle the bookkeeping involved.
     auto by_size_iter = avail_regions_by_size_.make_iterator(*iter);
-    return AllocFromAvail(by_size_iter, out_region, base, size);
+    return AllocFromAvailLocked(by_size_iter, out_region, base, size);
 }
 
-mx_status_t RegionAllocator::AddSubtractSanityCheck(const ralloc_region_t& region) {
+mx_status_t RegionAllocator::AddSubtractSanityCheckLocked(const ralloc_region_t& region) {
     // Check our RegionPool
     if (region_pool_ == nullptr)
         return ERR_BAD_STATE;
@@ -455,13 +472,15 @@ mx_status_t RegionAllocator::AddSubtractSanityCheck(const ralloc_region_t& regio
 
     // Next, make sure the region we are adding or subtracting does not
     // intersect any region which is currently allocated.
-    if (Intersects(allocated_regions_by_base_, region))
+    if (IntersectsLocked(allocated_regions_by_base_, region))
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
 }
 
 void RegionAllocator::ReleaseRegion(Region* region) {
+    mxtl::AutoLock alloc_lock(alloc_lock_);
+
     DEBUG_ASSERT(region != nullptr);
 
     // When a region comes back from a user, it should be in the
@@ -472,13 +491,13 @@ void RegionAllocator::ReleaseRegion(Region* region) {
     DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
 
     allocated_regions_by_base_.erase(*region);
-    AddRegionToAvail(region);
+    AddRegionToAvailLocked(region);
 }
 
-mx_status_t RegionAllocator::AllocFromAvail(Region::WAVLTreeSortBySize::iterator source,
-                                            Region::UPtr& out_region,
-                                            uint64_t base,
-                                            uint64_t size) {
+mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::iterator source,
+                                                  Region::UPtr& out_region,
+                                                  uint64_t base,
+                                                  uint64_t size) {
     DEBUG_ASSERT(out_region == nullptr);
     DEBUG_ASSERT(source.IsValid());
     DEBUG_ASSERT(base >= source->base);
@@ -574,13 +593,13 @@ mx_status_t RegionAllocator::AllocFromAvail(Region::WAVLTreeSortBySize::iterator
     return NO_ERROR;
 }
 
-void RegionAllocator::AddRegionToAvail(Region* region, bool allow_overlap) {
+void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap) {
     // Sanity checks.  This region should not exist in any bookkeeping, and
     // should not overlap with any of the regions we are currently tracking.
     DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
     DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
-    DEBUG_ASSERT(!Intersects(allocated_regions_by_base_, *region));
-    DEBUG_ASSERT(allow_overlap || !Intersects(avail_regions_by_base_, *region));
+    DEBUG_ASSERT(!IntersectsLocked(allocated_regions_by_base_, *region));
+    DEBUG_ASSERT(allow_overlap || !IntersectsLocked(avail_regions_by_base_, *region));
 
     // Find the region which comes before us and the region which comes after us
     // in the tree.
@@ -631,8 +650,8 @@ void RegionAllocator::AddRegionToAvail(Region* region, bool allow_overlap) {
     avail_regions_by_size_.insert(region);
 }
 
-bool RegionAllocator::Intersects(const Region::WAVLTreeSortByBase& tree,
-                                 const ralloc_region_t& region) {
+bool RegionAllocator::IntersectsLocked(const Region::WAVLTreeSortByBase& tree,
+                                       const ralloc_region_t& region) {
     // Find the first entry in the tree whose base is >= region.base.  If this
     // element exists, and its base is < the exclusive end of region, then
     // we have an intersection.

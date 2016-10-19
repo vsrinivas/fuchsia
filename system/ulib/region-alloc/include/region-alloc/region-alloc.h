@@ -6,6 +6,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -75,11 +77,15 @@
 // the user.
 //
 // == Thread Safety ==
-// RegionAllocators do not address issues of thread safety.  Care must be taken
-// to ensure that the interactions between Allocators/Pools/Regions are properly
-// serialized when operating in multithreaded environments.  In particular, be
-// careful about when Region unique_ptrs go out of scope as they will
-// automatically be returned to their RegionAllocator as a side effect.
+// RegionAllocator and RegionPools use mxtl::Mutex objects to provide thread
+// safety in multi-threaded environments.  As such, RegionAllocators are not
+// currently suitable for use in code which may run at IRQ context, or which
+// must never block.
+//
+// Each RegionAllocator has its own mutex allowing for concurrent access across
+// multiple allocators, even when the allocators share the same RegionPool.
+// RegionPools also hold their own mutex which may be obtained by an Allocator
+// while holding the Allocator's Mutex.
 //
 // == Simple Usage Example ==
 //
@@ -347,7 +353,15 @@ public:
             : slab_size_(slab_size),
               max_memory_(max_memory) { }
 
-        void Grow();
+        void GrowLocked();
+
+        /* Locking notes:
+         *
+         * pool_lock_ protects the slabs_ list and the free_regions_ list.  It
+         * is acquired during AllocRegion and FreeRegion operations, and must be
+         * already held during internal GrowLocked operations.
+         */
+        mxtl::Mutex pool_lock_;
 
         mxtl::SinglyLinkedList<Slab::UPtr> slabs_;
         mxtl::SinglyLinkedList<SlabEntry*> free_regions_;
@@ -483,24 +497,42 @@ public:
         return ret;
     }
 
-    size_t AllocatedRegionCount() const { return allocated_regions_by_base_.size(); }
-    size_t AvailableRegionCount() const { return avail_regions_by_base_.size(); }
+    size_t AllocatedRegionCount() const {
+        mxtl::AutoLock alloc_lock(alloc_lock_);
+        return allocated_regions_by_base_.size();
+    }
+
+    size_t AvailableRegionCount() const {
+        mxtl::AutoLock alloc_lock(alloc_lock_);
+        return avail_regions_by_base_.size();
+    }
 
 private:
     friend class Region::ReturnToAllocatorTraits;
 
-    mx_status_t AddSubtractSanityCheck(const ralloc_region_t& region);
+    mx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);
-    void AddRegionToAvail(Region* region, bool allow_overlap = false);
+    void AddRegionToAvailLocked(Region* region, bool allow_overlap = false);
 
-    mx_status_t AllocFromAvail(Region::WAVLTreeSortBySize::iterator source,
-                               Region::UPtr& out_region,
-                               uint64_t base,
-                               uint64_t size);
+    mx_status_t AllocFromAvailLocked(Region::WAVLTreeSortBySize::iterator source,
+                                     Region::UPtr& out_region,
+                                     uint64_t base,
+                                     uint64_t size);
 
-    static bool Intersects(const Region::WAVLTreeSortByBase& tree,
-                           const ralloc_region_t& region);
+    static bool IntersectsLocked(const Region::WAVLTreeSortByBase& tree,
+                                 const ralloc_region_t& region);
 
+    /* Locking notes:
+     *
+     * alloc_lock_ protects all of the bookkeeping members of the
+     * RegionAllocator.  This includes the allocated index, the available
+     * indicies (by base and by size) and the region pool.
+     *
+     * The alloc_lock_ may be held while calling into a RegionAllocator's
+     * assigned RegionPool, but code from the RegionPool will never call into
+     * the RegionAllocator.
+     */
+    mutable mxtl::Mutex alloc_lock_;
     Region::WAVLTreeSortByBase allocated_regions_by_base_;
     Region::WAVLTreeSortByBase avail_regions_by_base_;
     Region::WAVLTreeSortBySize avail_regions_by_size_;
