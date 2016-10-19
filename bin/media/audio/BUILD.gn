@@ -16,11 +16,14 @@ source_set("audio") {
     "lpcm_util.h",
     "mixdown_table.h",
     "mixer_input.h",
+    "mixer_input_impl.cc",
+    "mixer_input_impl.h",
     "mixer.h",
   ]
 
   deps = [
     "//apps/media/src/framework",
+    "//apps/media/src/util",
     "//lib/ftl",
   ]
 }
@@ -33,11 +36,14 @@ executable("apptests") {
   sources = [
     "test/level_test.cc",
     "test/mixdown_table_test.cc",
+    "test/mixer_test.cc",
     "test/run_all_tests.cc",
   ]
 
   deps = [
     ":audio",
+    "//apps/media/cpp",
+    "//apps/media/src/framework_create",
     "//mojo/system",
     "//third_party/gtest",
   ]
