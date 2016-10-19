@@ -13,6 +13,7 @@ enum Status {
   OK = 0,
   PAGE_NOT_FOUND,
   DOCUMENT_NOT_FOUND,
+  DOCUMENT_DATA_ERROR,
   DOCUMENT_ALREADY_EXISTS,
   TRANSACTION_ALREADY_IN_PROGRESS,
   UNKNOWN_ERROR = -1,
@@ -39,11 +40,11 @@ interface DocumentStore {
   Watch(DocumentStoreWatcher water) => (Status status);
 
   // All queries and read operations must be run against a Snapshot.
-  GetSnapshot(Snapshot& snapshot);
+  GetSnapshot() => (Snapshot snapshot);
 
   // Only one transaction can be in progress at a time.
   // TODO(azani): Allow multiple simultaneous transactions.
-  BeginTransaction(Transaction& transaction);
+  BeginTransaction() => (Transaction transaction);
 
   GetIndexManager(IndexManager& manager);
 };

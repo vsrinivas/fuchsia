@@ -11,7 +11,7 @@ group("document_store") {
 
 executable("document_store_factory") {
   sources = [
-    "document_store_factory.cc"
+    "document_store_factory.cc",
   ]
 
   deps = [
@@ -25,7 +25,7 @@ executable("document_store_factory") {
 
 executable("document_store_test") {
   sources = [
-    "document_store_test.cc"
+    "document_store_test.cc",
   ]
 
   deps = [

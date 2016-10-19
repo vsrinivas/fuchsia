@@ -44,6 +44,9 @@ std::string statustostr(const Status status) {
     case Status::DOCUMENT_NOT_FOUND:
       status_str = "DOCUMENT_NOT_FOUND";
       break;
+    case Status::DOCUMENT_DATA_ERROR:
+      status_str = "DOCUMENT_DATA_ERROR";
+      break;
     case Status::DOCUMENT_ALREADY_EXISTS:
       status_str = "DOCUMENT_ALREADY_EXISTS";
       break;
@@ -80,6 +83,7 @@ class DocumentStoreTest : public mojo::ApplicationImplBase {
     MOJO_CHECK(ledger.is_valid());
     MOJO_CHECK(ledger_status == ledger::Status::OK);
 
+    // Test that it is possible to connect to the document store factory.
     mojo::SynchronousInterfacePtr<DocumentStoreFactory> docstore_factory;
     ConnectToService(shell(), "mojo:document_store",
                      GetSynchronousProxy(&docstore_factory));
@@ -89,6 +93,7 @@ class DocumentStoreTest : public mojo::ApplicationImplBase {
     MOJO_CHECK(docstore_factory->Initialize(std::move(ledger)));
     MOJO_LOG(INFO) << "Sending ledger over!";
 
+    // Test that it is possible to create a new document store succesfully.
     document_store::Status docstore_status;
     mojo::InterfaceHandle<DocumentStore> docstore_handle;
     docstore_factory->NewDocumentStore(&docstore_status, &docstore_handle);
@@ -97,6 +102,7 @@ class DocumentStoreTest : public mojo::ApplicationImplBase {
     MOJO_CHECK(docstore_handle.is_valid());
     MOJO_CHECK(docstore_status == Status::OK);
 
+    // Test the most basic functionality of the new document store: GetId.
     mojo::SynchronousInterfacePtr<DocumentStore> docstore;
     docstore = mojo::SynchronousInterfacePtr<DocumentStore>::Create(
         std::move(docstore_handle));
@@ -104,12 +110,53 @@ class DocumentStoreTest : public mojo::ApplicationImplBase {
     docstore->GetId(&page_id);
     MOJO_LOG(INFO) << "DocumentStore Page ID " << bytestohex(page_id);
 
+    // Check that it is possible to obtain an interface to an existing document
+    // store.
     mojo::InterfaceHandle<DocumentStore> docstore_handle2;
     MOJO_CHECK(docstore_factory->GetDocumentStore(
         page_id.Clone(), &docstore_status, &docstore_handle2));
     MOJO_LOG(INFO) << "GetDocumentStore status "
                    << statustostr(docstore_status);
 
+    // Test it is possible to start a transaction and use it to save a document
+    // to the document store.
+    mojo::InterfaceHandle<Transaction> transaction_handle;
+    MOJO_CHECK(docstore->BeginTransaction(&transaction_handle));
+
+    auto transaction = mojo::SynchronousInterfacePtr<Transaction>::Create(
+        std::move(transaction_handle));
+    DocumentPtr document(Document::New());
+    document->docid = "some document id";
+    document->properties = mojo::Array<PropertyPtr>::New(1);
+    document->properties[0] = Property::New();
+    document->properties[0]->property = "hello prop";
+    document->properties[0]->value = Value::New();
+    document->properties[0]->value->set_string_value("hello world!");
+    transaction->AddOne(std::move(document));
+
+    transaction->Commit(&docstore_status);
+    MOJO_CHECK(docstore_status == Status::OK);
+
+    // Test it is possible to get a document store snapshot and obtain a stored
+    // document from that snapshot.
+    mojo::InterfaceHandle<Snapshot> snapshot_handle;
+    MOJO_CHECK(docstore->GetSnapshot(&snapshot_handle));
+
+    auto snapshot = mojo::SynchronousInterfacePtr<Snapshot>::Create(
+        std::move(snapshot_handle));
+    mojo::String docid = "some document id";
+    snapshot->GetOne(std::move(docid), &docstore_status, &document);
+    MOJO_LOG(INFO) << "GetOne docstore_status: "
+                   << statustostr(docstore_status);
+    MOJO_CHECK(docstore_status == Status::OK);
+    MOJO_LOG(INFO) << "Document: docid: " << document->docid;
+    MOJO_LOG(INFO) << "Properties:";
+    for (size_t i = 0; i < document->properties.size(); i++) {
+      MOJO_LOG(INFO) << document->properties[i]->property << ": "
+                     << document->properties[i]->value->get_string_value();
+    }
+
+    // Clean up the data stored during the test.
     MOJO_CHECK(docstore_factory->DeleteDocumentStore(page_id.Clone(),
                                                      &docstore_status));
     MOJO_LOG(INFO) << "DeleteDocumentStore status "
@@ -117,6 +164,8 @@ class DocumentStoreTest : public mojo::ApplicationImplBase {
     // TODO(azani): Figure out how to check that the docstore message pipe is
     // closed.
 
+    // Check that the document store was deleted by the DeleteDocumentStore
+    // call above.
     docstore_factory->GetDocumentStore(page_id.Clone(), &docstore_status,
                                        &docstore_handle2);
     MOJO_LOG(INFO) << "GetDocumentStore status  "
