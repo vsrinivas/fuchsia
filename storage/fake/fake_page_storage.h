@@ -58,6 +58,10 @@ class FakePageStorage : public PageStorage {
   void GetObject(ObjectIdView object_id,
                  const std::function<void(Status, std::unique_ptr<Object>)>&
                      callback) override;
+  Status GetObjectSynchronous(ObjectIdView object_id,
+                              std::unique_ptr<Object>* object) override;
+  Status AddObjectSynchronous(convert::ExtendedStringView data,
+                              std::unique_ptr<Object>* object) override;
 
   // For testing:
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

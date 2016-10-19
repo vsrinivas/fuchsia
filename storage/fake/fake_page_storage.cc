@@ -165,6 +165,24 @@ void FakePageStorage::GetObject(
   callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
 }
 
+Status FakePageStorage::GetObjectSynchronous(ObjectIdView object_id,
+                                             std::unique_ptr<Object>* object) {
+  auto it = objects_.find(object_id);
+  if (it == objects_.end()) {
+    return Status::NOT_FOUND;
+  }
+
+  *object = std::make_unique<FakeObject>(object_id, it->second);
+  return Status::OK;
+}
+
+Status FakePageStorage::AddObjectSynchronous(convert::ExtendedStringView data,
+                                             std::unique_ptr<Object>* object) {
+  std::string object_id = RandomId();
+  objects_[object_id] = data.ToString();
+  return GetObjectSynchronous(object_id, object);
+}
+
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
 FakePageStorage::GetJournals() const {
   return journals_;

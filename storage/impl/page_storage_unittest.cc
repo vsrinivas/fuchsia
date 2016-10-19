@@ -223,5 +223,36 @@ TEST_F(PageStorageTest, GetObject) {
   EXPECT_EQ(content, convert::ToString(data));
 }
 
+TEST_F(PageStorageTest, AddObjectSynchronous) {
+  std::string content("Some data");
+
+  std::unique_ptr<Object> object;
+  Status status = storage_->AddObjectSynchronous(content, &object);
+  EXPECT_EQ(Status::OK, status);
+  std::string hash = glue::SHA256Hash(content.data(), content.size());
+  EXPECT_EQ(hash, object->GetId());
+
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(hash);
+  std::string file_content;
+  EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
+  EXPECT_EQ(content, file_content);
+}
+
+TEST_F(PageStorageTest, GetObjectSynchronous) {
+  std::string content("Some data");
+  ObjectId object_id = glue::SHA256Hash(content.data(), content.size());
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
+  ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
+
+  std::unique_ptr<Object> object;
+  Status status = storage_->GetObjectSynchronous(object_id, &object);
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(object_id, object->GetId());
+  ftl::StringView data;
+  ASSERT_EQ(Status::OK, object->GetData(&data));
+  EXPECT_EQ(content, convert::ToString(data));
+}
+
 }  // namespace
 }  // namespace storage

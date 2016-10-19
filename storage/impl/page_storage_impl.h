@@ -16,7 +16,7 @@ namespace storage {
 class PageStorageImpl : public PageStorage {
  public:
   PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                  std::string page_path,
+                  std::string page_dir,
                   PageIdView page_id);
   ~PageStorageImpl() override;
 
@@ -64,6 +64,10 @@ class PageStorageImpl : public PageStorage {
   void GetObject(ObjectIdView object_id,
                  const std::function<void(Status, std::unique_ptr<Object>)>&
                      callback) override;
+  Status GetObjectSynchronous(ObjectIdView object_id,
+                              std::unique_ptr<Object>* object) override;
+  Status AddObjectSynchronous(convert::ExtendedStringView data,
+                              std::unique_ptr<Object>* object) override;
 
  private:
   class FileWriter;
@@ -71,11 +75,11 @@ class PageStorageImpl : public PageStorage {
   Status AddCommit(std::unique_ptr<Commit> commit, ChangeSource source);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  std::string page_path_;
+  std::string page_dir_;
   PageId page_id_;
   DB db_;
-  std::string objects_path_;
-  std::string staging_path_;
+  std::string objects_dir_;
+  std::string staging_dir_;
   std::vector<std::unique_ptr<FileWriter>> writers_;
 };
 

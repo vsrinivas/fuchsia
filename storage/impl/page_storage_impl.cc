@@ -69,6 +69,36 @@ int Rename(const char* src, const char* dst) {
   return 0;
 }
 
+Status StagingToDestination(size_t expected_size,
+                            std::string source_path,
+                            std::string destination_path) {
+  // Check if file already exists.
+  size_t size;
+  if (files::GetFileSize(destination_path, &size)) {
+    if (size != expected_size) {
+      // If size is not the correct one, something is really wrong.
+      FTL_LOG(ERROR) << "Internal error. Path \"" << destination_path
+                     << "\" has wrong size. Expected: " << expected_size
+                     << ", but found: " << size;
+
+      return Status::INTERNAL_IO_ERROR;
+    }
+  } else {
+    if (Rename(source_path.c_str(), destination_path.c_str()) != 0) {
+      // If rename failed, the file might have been saved by another call.
+      if (!files::GetFileSize(destination_path, &size) ||
+          size != expected_size) {
+        // If size is not the correct one, something is really wrong.
+        FTL_LOG(ERROR) << "Internal error. Path \"" << destination_path
+                       << "\" has wrong size. Expected: " << expected_size
+                       << ", but found: " << size;
+        return Status::INTERNAL_IO_ERROR;
+      }
+    }
+  }
+  return Status::OK;
+}
+
 }  // namespace
 
 class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
@@ -93,6 +123,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
              std::function<void(Status, ObjectId)> callback) {
     expected_size_ = expected_size;
     callback_ = std::move(callback);
+    // Using mkstemp to create an unique file. XXXXXX will be replaced.
     file_path_ = staging_dir_ + "/XXXXXX";
     fd_.reset(mkstemp(&file_path_[0]));
     if (!fd_.is_valid()) {
@@ -128,31 +159,11 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     hash_.Finish(&object_id);
 
     std::string final_path = object_dir_ + "/" + ToHex(object_id);
-
-    // Check if file already exists.
-    size_t size;
-    if (files::GetFileSize(final_path, &size)) {
-      if (size != expected_size_) {
-        // If size is not the correct one, something is really wrong.
-        FTL_LOG(ERROR) << "Internal error. Path \"" << final_path
-                       << "\" has wrong size. Expected: " << expected_size_
-                       << ", but found: " << size;
-
-        callback_(Status::INTERNAL_IO_ERROR, "");
-        return;
-      }
-    } else {
-      if (Rename(file_path_.c_str(), final_path.c_str()) != 0) {
-        // If rename failed, the file might have been saved by another call.
-        if (!files::GetFileSize(final_path, &size) || size != expected_size_) {
-          // If size is not the correct one, something is really wrong.
-          FTL_LOG(ERROR) << "Internal error. Path \"" << final_path
-                         << "\" has wrong size. Expected: " << expected_size_
-                         << ", but found: " << size;
-          callback_(Status::INTERNAL_IO_ERROR, "");
-          return;
-        }
-      }
+    Status status =
+        StagingToDestination(expected_size_, file_path_, std::move(final_path));
+    if (status != Status::OK) {
+      callback_(Status::INTERNAL_IO_ERROR, "");
+      return;
     }
 
     callback_(Status::OK, std::move(object_id));
@@ -171,14 +182,14 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
 };
 
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                 std::string page_path,
+                                 std::string page_dir,
                                  PageIdView page_id)
     : task_runner_(task_runner),
-      page_path_(page_path),
+      page_dir_(page_dir),
       page_id_(page_id.ToString()),
-      db_(page_path_ + kLevelDbDir),
-      objects_path_(page_path_ + kObjectDir),
-      staging_path_(page_path_ + kStagingDir) {}
+      db_(page_dir_ + kLevelDbDir),
+      objects_dir_(page_dir_ + kObjectDir),
+      staging_dir_(page_dir_ + kStagingDir) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 
@@ -190,8 +201,8 @@ Status PageStorageImpl::Init() {
   }
 
   // Initialize paths.
-  if (!files::CreateDirectory(objects_path_) ||
-      !files::CreateDirectory(staging_path_)) {
+  if (!files::CreateDirectory(objects_dir_) ||
+      !files::CreateDirectory(staging_dir_)) {
     FTL_LOG(ERROR) << "Unable to create directories for PageStorageImpl.";
     return Status::INTERNAL_IO_ERROR;
   }
@@ -328,7 +339,7 @@ void PageStorageImpl::AddObjectFromLocal(
     mojo::ScopedDataPipeConsumerHandle data,
     size_t size,
     const std::function<void(Status, ObjectId)>& callback) {
-  auto file_writer = std::make_unique<FileWriter>(staging_path_, objects_path_);
+  auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);
   FileWriter* file_writer_ptr = file_writer.get();
   writers_.push_back(std::move(file_writer));
 
@@ -353,7 +364,7 @@ void PageStorageImpl::AddObjectFromLocal(
 void PageStorageImpl::GetObject(
     ObjectIdView object_id,
     const std::function<void(Status, std::unique_ptr<Object>)>& callback) {
-  std::string file_path = objects_path_ + "/" + ToHex(object_id);
+  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
   if (!files::IsFile(file_path)) {
     // TODO(qsr): Request data from sync: LE-30
     callback(Status::NOT_FOUND, nullptr);
@@ -367,6 +378,33 @@ void PageStorageImpl::GetObject(
     callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
                                                       std::move(file_path)));
   });
+}
+
+Status PageStorageImpl::GetObjectSynchronous(ObjectIdView object_id,
+                                             std::unique_ptr<Object>* object) {
+  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+  if (!files::IsFile(file_path))
+    return Status::NOT_FOUND;
+
+  *object =
+      std::make_unique<ObjectImpl>(object_id.ToString(), std::move(file_path));
+  return Status::OK;
+}
+
+Status PageStorageImpl::AddObjectSynchronous(convert::ExtendedStringView data,
+                                             std::unique_ptr<Object>* object) {
+  ObjectId object_id = glue::SHA256Hash(data.data(), data.size());
+
+  // Using mkstemp to create an unique file. XXXXXX will be replaced.
+  std::string staging_path = staging_dir_ + "/XXXXXX";
+  ftl::UniqueFD fd(mkstemp(&staging_path[0]));
+  if (!ftl::WriteFileDescriptor(fd.get(), data.data(), data.size()))
+    return Status::INTERNAL_IO_ERROR;
+  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+  Status status = StagingToDestination(data.size(), staging_path, file_path);
+  if (status != Status::OK)
+    return status;
+  return GetObjectSynchronous(object_id, object);
 }
 
 Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,

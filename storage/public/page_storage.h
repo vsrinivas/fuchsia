@@ -106,6 +106,13 @@ class PageStorage {
       ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<Object>)>& callback) = 0;
 
+  // Synchronous access to the store. These methods are a stop-gap to implement
+  // the first version of the Ledger and should be removed. See: LE-31.
+  virtual Status GetObjectSynchronous(ObjectIdView object_id,
+                                      std::unique_ptr<Object>* object) = 0;
+  virtual Status AddObjectSynchronous(convert::ExtendedStringView data,
+                                      std::unique_ptr<Object>* object) = 0;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
