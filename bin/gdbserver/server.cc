@@ -52,16 +52,25 @@ bool Server::Run() {
 
   // |client_sock_| should be ready to be consumed now.
   FTL_DCHECK(client_sock_.is_valid());
+
+  if (!exception_port_.Run()) {
+    FTL_LOG(ERROR) << "Failed to initialize exception port!";
+    return false;
+  }
+
   io_loop_ = std::make_unique<IOLoop>(client_sock_.get(), this);
   io_loop_->Run();
 
   // Start the main loop.
   message_loop_.Run();
 
+  FTL_LOG(INFO) << "Main loop exited";
+
   // Tell the I/O loop to quit its message loop and wait for it to finish.
   io_loop_->Quit();
 
-  // TODO: why does this keep returning false?
+  // Tell the exception port to quit and wait for it to finish.
+  exception_port_.Quit();
 
   return run_status_;
 }
@@ -262,6 +271,7 @@ void Server::OnBytesRead(const ftl::StringView& bytes_read) {
 
 void Server::OnDisconnected() {
   // Exit successfully in the case of a remote disconnect.
+  FTL_LOG(INFO) << "Client disconnected";
   QuitMessageLoop(true);
 }
 

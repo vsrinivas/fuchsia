@@ -14,6 +14,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "command_handler.h"
+#include "exception_port.h"
 #include "io_loop.h"
 #include "process.h"
 #include "thread.h"
@@ -60,6 +61,14 @@ class Server final : public IOLoop::Delegate {
 
   // Assigns the current thread.
   void SetCurrentThread(Thread* thread);
+
+  // Returns a mutable reference to the main message loop. The returned instance
+  // is owned by this Server instance and should not be deleted.
+  mtl::MessageLoop* message_loop() { return &message_loop_; }
+
+  // Returns a mutable reference to the exception port. The returned instance is
+  // owned by this Server instance and should not be deleted.
+  ExceptionPort* exception_port() { return &exception_port_; }
 
   // Sends out a notification packet. The GDB Remote Protocol defines a specific
   // control-flow for notification packets, such that each notification packet
@@ -145,9 +154,6 @@ class Server final : public IOLoop::Delegate {
   // packets and routing them to the correct handler.
   CommandHandler command_handler_;
 
-  // Strong pointer to the current inferior process that is being debugged.
-  std::unique_ptr<Process> current_process_;
-
   // The current thread under debug. We only keep a weak pointer here, since the
   // instance itself is owned by a Process and may get removed.
   ftl::WeakPtr<Thread> current_thread_;
@@ -166,6 +172,16 @@ class Server final : public IOLoop::Delegate {
   // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
   // care to clean it up in the destructor.
   std::unique_ptr<IOLoop> io_loop_;
+
+  // The ExceptionPort used by inferiors to receive exceptions.
+  // (This is declared after |message_loop_| since that needs to have been
+  // created before this can be initialized).
+  ExceptionPort exception_port_;
+
+  // Strong pointer to the current inferior process that is being debugged.
+  // NOTE: This must be declared after |exception_port_| above, since the
+  // process may do work in its destructor to detach itself.
+  std::unique_ptr<Process> current_process_;
 
   // Stores the global error state. This is used to determine the return value
   // for "Run()" when |message_loop_| exits.

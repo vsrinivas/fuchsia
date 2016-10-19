@@ -10,6 +10,7 @@
 
 #include "lib/ftl/logging.h"
 
+#include "server.h"
 #include "util.h"
 
 using std::string;
@@ -118,24 +119,31 @@ mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
 
 }  // namespace
 
-Process::Process(const vector<string>& argv)
-    : argv_(argv),
+Process::Process(Server* server, const vector<string>& argv)
+    : server_(server),
+      argv_(argv),
       launchpad_(nullptr),
-      debug_handle_(MX_HANDLE_INVALID),
+      eport_key_(0),
       started_(false) {
+  FTL_DCHECK(server_);
   FTL_DCHECK(argv_.size() > 0);
 }
 
 Process::~Process() {
+  if (IsAttached())
+    Detach();
+
   if (launchpad_)
     launchpad_destroy(launchpad_);
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
+
+  // TODO(armanisto): Somehow kill the process here if it's running.
+  // launchpad_destroy doesn't seem to do this.
 }
 
 bool Process::Initialize() {
   FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(debug_handle_ == MX_HANDLE_INVALID);
+  FTL_DCHECK(!debug_handle_.is_valid());
+  FTL_DCHECK(!eport_key_);
 
   if (!SetupLaunchpad(&launchpad_, argv_))
     return false;
@@ -148,8 +156,8 @@ bool Process::Initialize() {
   FTL_LOG(INFO) << "Binary loaded";
 
   // Now we need a debug-capable handle of the process.
-  debug_handle_ = GetProcessDebugHandle(launchpad_);
-  if (debug_handle_ == MX_HANDLE_INVALID)
+  debug_handle_.reset(GetProcessDebugHandle(launchpad_));
+  if (!debug_handle_.is_valid())
     goto fail;
 
   FTL_LOG(INFO) << "mx_debug handle obtained for process";
@@ -163,15 +171,46 @@ fail:
 }
 
 bool Process::Attach() {
-  // TODO(armansito): Implement.
+  FTL_DCHECK(debug_handle_.is_valid());
+
+  if (IsAttached()) {
+    FTL_LOG(ERROR) << "Cannot attach an already attached process";
+    return false;
+  }
+
+  ExceptionPort::Key key = server_->exception_port()->Bind(
+      *this, std::bind(&Process::OnException, this, std::placeholders::_1,
+                       std::placeholders::_2));
+  if (!key) {
+    FTL_LOG(ERROR) << "Failed to attach: could not bind exception port";
+    return false;
+  }
+
+  eport_key_ = key;
+
+  return true;
+}
+
+bool Process::Detach() {
+  FTL_DCHECK(debug_handle_.is_valid());
+
+  if (!IsAttached()) {
+    FTL_LOG(ERROR) << "Cannot detach an already detached process";
+    return false;
+  }
+
+  FTL_DCHECK(eport_key_);
+  if (!server_->exception_port()->Unbind(eport_key_))
+    FTL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
+
+  eport_key_ = 0;
+
   return true;
 }
 
 bool Process::Start() {
   FTL_DCHECK(launchpad_);
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
-  // TODO(armansito): Assert that Attach has been called successfully once it's
-  // been implemented.
+  FTL_DCHECK(debug_handle_.is_valid());
 
   if (started_) {
     FTL_LOG(WARNING) << "Process already started";
@@ -179,24 +218,28 @@ bool Process::Start() {
   }
 
   // launchpad_start returns a dup of the process handle (owned by
-  // |launchpad_|), where the original handle is given to the child. We hae to
+  // |launchpad_|), where the original handle is given to the child. We have to
   // close the dup handle to avoid leaking it.
-  mx_handle_t dup_handle = launchpad_start(launchpad_);
-  if (dup_handle < 0) {
-    util::LogErrorWithMxStatus("Failed to start inferior process", dup_handle);
+  mtl::UniqueHandle dup_handle(launchpad_start(launchpad_));
+  if (dup_handle.get() < 0) {
+    util::LogErrorWithMxStatus("Failed to start inferior process",
+                               dup_handle.get());
     return false;
   }
 
-  FTL_DCHECK(dup_handle != MX_HANDLE_INVALID);
-  mx_handle_close(dup_handle);
+  FTL_DCHECK(dup_handle.is_valid());
 
   started_ = true;
 
   return true;
 }
 
+bool Process::IsAttached() const {
+  return !!eport_key_;
+}
+
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
+  FTL_DCHECK(debug_handle_.is_valid());
   if (thread_id == MX_HANDLE_INVALID) {
     FTL_LOG(WARNING) << "Invalid thread ID given: " << thread_id;
     return nullptr;
@@ -209,7 +252,7 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
   mx_status_t thread_debug_handle =
-      mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS);
+      mx_object_get_child(debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS);
   if (thread_debug_handle < 0) {
     util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                thread_debug_handle);
@@ -222,8 +265,6 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 }
 
 Thread* Process::PickOneThread() {
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
-
   // TODO(armansito): It's not ideal to refresh the entire thread list but this
   // is the most accurate way for now. When we have thread life-time events in
   // the future we can manage |threads_| using events and only partially refresh
@@ -237,13 +278,13 @@ Thread* Process::PickOneThread() {
 }
 
 bool Process::RefreshAllThreads() {
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
+  FTL_DCHECK(debug_handle_.is_valid());
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
   mx_info_header_t hdr;
   mx_ssize_t result_size = mx_object_get_info(
-      debug_handle_, MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr));
+      debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr));
   if (result_size < 0) {
     util::LogErrorWithMxStatus("Failed to get process thread info",
                                result_size);
@@ -254,7 +295,7 @@ bool Process::RefreshAllThreads() {
       sizeof(mx_info_process_threads_t) +
       hdr.avail_count * sizeof(mx_record_process_thread_t);
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
-  result_size = mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS,
+  result_size = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
                                    sizeof(mx_record_process_thread_t),
                                    buffer.get(), buffer_size);
   if (result_size < 0) {
@@ -273,8 +314,8 @@ bool Process::RefreshAllThreads() {
   ThreadMap new_threads;
   for (size_t i = 0; i < hdr.avail_count; ++i) {
     mx_koid_t thread_id = thread_info->rec[i].koid;
-    mx_handle_t thread_debug_handle =
-        mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t thread_debug_handle = mx_object_get_child(
+        debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS);
     if (thread_debug_handle < 0) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                  thread_debug_handle);
@@ -293,6 +334,13 @@ bool Process::RefreshAllThreads() {
 void Process::ForEachThread(const ThreadCallback& callback) {
   for (const auto& iter : threads_)
     callback(iter.second.get());
+}
+
+void Process::OnException(const mx_excp_type_t type,
+                          const mx_exception_context_t& context) {
+  FTL_LOG(INFO) << "Process exception received";
+
+  // TODO(armansito): Implement.
 }
 
 }  // namespace debugserver

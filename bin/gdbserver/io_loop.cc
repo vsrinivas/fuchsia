@@ -40,6 +40,8 @@ void IOLoop::Run() {
 void IOLoop::Quit() {
   FTL_DCHECK(is_running_);
 
+  FTL_LOG(INFO) << "Quitting socket I/O loop";
+
   quit_called_ = true;
 
   auto quit_task = [] {
@@ -54,6 +56,8 @@ void IOLoop::Quit() {
     read_thread_.join();
   if (write_thread_.joinable())
     write_thread_.join();
+
+  FTL_LOG(INFO) << "Socket I/O loop exited";
 }
 
 void IOLoop::StartReadLoop() {
@@ -66,7 +70,7 @@ void IOLoop::StartReadLoop() {
 
     // 0 bytes means that the remote end closed the TCP connection.
     if (read_size == 0) {
-      FTL_LOG(INFO) << "Client closed connection";
+      FTL_VLOG(1) << "Client closed connection";
       ReportDisconnected();
       return;
     }
@@ -79,7 +83,7 @@ void IOLoop::StartReadLoop() {
     }
 
     ftl::StringView bytes_read(in_buffer_.data(), read_size);
-    FTL_VLOG(1) << "rx: " << bytes_read;
+    FTL_VLOG(2) << "rx: " << bytes_read;
 
     // Notify the delegate that we read some bytes. We copy the buffer data
     // into the closure as |in_buffer_| can get modified before the closure
@@ -110,7 +114,7 @@ void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
       ReportError();
       return;
     }
-    FTL_VLOG(1) << "tx: " << bytes;
+    FTL_VLOG(2) << "tx: " << bytes;
   });
 }
 

@@ -9,20 +9,27 @@
 #include <vector>
 
 #include <launchpad/launchpad.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
 #include "lib/ftl/macros.h"
+#include "lib/mtl/handles/unique_handle.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop_handler.h"
 
+#include "exception_port.h"
 #include "thread.h"
 
 namespace debugserver {
+
+class Server;
 
 // Represents an inferior process that the stub is currently attached to.
 class Process final {
  public:
   // TODO(armansito): Add a different constructor later for attaching to an
   // already running process.
-  explicit Process(const std::vector<std::string>& argv);
+  explicit Process(Server* server, const std::vector<std::string>& argv);
   ~Process();
 
   // Creates and initializes the inferior process but does not start it. Returns
@@ -34,12 +41,22 @@ class Process final {
   // be called successfully before calling Attach().
   bool Attach();
 
+  // Detaches an attached process.
+  bool Detach();
+
   // Starts running the process. Returns false in case of an error. Initialize()
-  // and Attach() MUST be called successfully before calling Start().
+  // MUST be called successfully before calling Start().
   bool Start();
 
   // Returns true if the process has been started via a call to Start();
   bool started() const { return started_; }
+
+  // Returns true if the process is currently attached.
+  bool IsAttached() const;
+
+  // Returns the process handle. This handle is owned and managed by this
+  // Process instance, thus the caller should not close the handle.
+  mx_handle_t handle() const { return debug_handle_.get(); }
 
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
@@ -66,6 +83,13 @@ class Process final {
  private:
   Process() = default;
 
+  // The exception handler invoked by ExceptionPort.
+  void OnException(const mx_excp_type_t type,
+                   const mx_exception_context_t& context);
+
+  // The server that owns us.
+  Server* server_;  // weak
+
   // The argv that this process was initialized with.
   std::vector<std::string> argv_;
 
@@ -74,7 +98,10 @@ class Process final {
   launchpad_t* launchpad_;
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx_handle_t debug_handle_;
+  mtl::UniqueHandle debug_handle_;
+
+  // The key we receive after binding an exception port.
+  ExceptionPort::Key eport_key_;
 
   // True, if the inferior has been run via a call to Start().
   bool started_;
