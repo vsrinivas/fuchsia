@@ -149,9 +149,10 @@ class DocumentStoreFactoryImpl : public DocumentStoreFactory {
   void DeleteDocumentStore(
       mojo::Array<uint8_t> page_id,
       const DeleteDocumentStoreCallback& callback) override {
-    ledger_->DeletePage([this, callback](ledger::Status ledger_status) {
-      callback.Run(internal::LedgerStatusToStatus(ledger_status));
-    });
+    ledger_->DeletePage(
+        std::move(page_id), [this, callback](ledger::Status ledger_status) {
+          callback.Run(internal::LedgerStatusToStatus(ledger_status));
+        });
   }
 
  private:

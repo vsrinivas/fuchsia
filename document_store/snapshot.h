@@ -125,28 +125,23 @@ class SnapshotImpl : public Snapshot {
               const GetOneCallback& callback) override {
     mojo::Array<uint8_t> key_prefix;
     internal::DocumentLedgerKeyPrefix(docid, &key_prefix);
-    snapshot_->GetAll([callback](ledger::Status ledger_status,
-                                 mojo::Array<ledger::EntryPtr> entries) {
-      DocumentPtr doc;
-      if (ledger_status != ledger::Status::OK) {
-        callback.Run(internal::LedgerStatusToStatus(ledger_status),
-                     std::move(doc));
-        return;
-      }
-
-      if (entries.size() == 0) {
-        callback.Run(Status::DOCUMENT_NOT_FOUND, std::move(doc));
-        return;
-      }
-
-      if (!internal::DocumentFromEntries(entries, &doc)) {
-        doc.reset();
-        callback.Run(Status::DOCUMENT_DATA_ERROR, std::move(doc));
-      }
-
-      callback.Run(Status::OK, std::move(doc));
-
-    });
+    snapshot_->GetAll(
+        std::move(key_prefix),
+        [callback](ledger::Status ledger_status,
+                   mojo::Array<ledger::EntryPtr> entries) {
+          DocumentPtr doc;
+          if (ledger_status != ledger::Status::OK) {
+            callback.Run(internal::LedgerStatusToStatus(ledger_status),
+                         std::move(doc));
+          } else if (entries.size() == 0) {
+            callback.Run(Status::DOCUMENT_NOT_FOUND, std::move(doc));
+          } else if (!internal::DocumentFromEntries(entries, &doc)) {
+            doc.reset();
+            callback.Run(Status::DOCUMENT_DATA_ERROR, std::move(doc));
+          } else {
+            callback.Run(Status::OK, std::move(doc));
+          }
+        });
   };
 
   void Get(mojo::Array<mojo::String> docids,
