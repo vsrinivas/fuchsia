@@ -58,6 +58,10 @@ endif
 
 ARCH_OPTFLAGS := -O2
 
+# Turn on -fasynchronous-unwind-tables to get .eh_frame.
+# This is necessary for unwinding through optimized code.
+GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
+
 # we have a mmu and want the vmm/pmm
 WITH_KERNEL_VM ?= 1
 
