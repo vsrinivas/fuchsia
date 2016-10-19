@@ -16,7 +16,7 @@ namespace handlers {
 
 MediaDecoderDigest::MediaDecoderDigest(const std::string& format)
     : accumulator_(std::make_shared<MediaDecoderAccumulator>()) {
-  MOJO_DCHECK(format == FlogViewer::kFormatDigest);
+  FTL_DCHECK(format == FlogViewer::kFormatDigest);
   stub_.set_sink(this);
 }
 
@@ -34,8 +34,8 @@ void MediaDecoderDigest::Config(mojo::media::MediaTypePtr input_type,
                                 mojo::media::MediaTypePtr output_type,
                                 uint64_t consumer_address,
                                 uint64_t producer_address) {
-  MOJO_DCHECK(input_type);
-  MOJO_DCHECK(output_type);
+  FTL_DCHECK(input_type);
+  FTL_DCHECK(output_type);
 
   accumulator_->input_type_ = input_type.Pass();
   accumulator_->output_type_ = output_type.Pass();
@@ -55,15 +55,21 @@ void MediaDecoderAccumulator::Print(std::ostream& os) {
   os << begl << "input_type: " << input_type_;
   os << begl << "output_type: " << output_type_;
 
-  os << begl << "consumer: " << *consumer_channel_ << " ";
-  MOJO_DCHECK(consumer_channel_);
-  MOJO_DCHECK(consumer_channel_->resolved());
-  consumer_channel_->PrintAccumulator(os);
+  if (consumer_channel_) {
+    os << begl << "consumer: " << *consumer_channel_ << " ";
+    FTL_DCHECK(consumer_channel_->resolved());
+    consumer_channel_->PrintAccumulator(os);
+  } else {
+    os << begl << "consumer: <none>" << std::endl;
+  }
 
-  os << begl << "producer: " << *producer_channel_ << " ";
-  MOJO_DCHECK(producer_channel_);
-  MOJO_DCHECK(producer_channel_->resolved());
-  producer_channel_->PrintAccumulator(os);
+  if (producer_channel_) {
+    os << begl << "producer: " << *producer_channel_ << " ";
+    FTL_DCHECK(producer_channel_->resolved());
+    producer_channel_->PrintAccumulator(os);
+  } else {
+    os << begl << "producer: <none>" << std::endl;
+  }
 
   Accumulator::Print(os);
   os << outdent;

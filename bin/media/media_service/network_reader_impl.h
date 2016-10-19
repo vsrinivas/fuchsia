@@ -14,7 +14,7 @@
 namespace mojo {
 namespace media {
 
-// Mojo agent that decodes a stream.
+// Mojo agent that reads from an HTTP service.
 class NetworkReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
                           public SeekingReader {
  public:
@@ -38,9 +38,6 @@ class NetworkReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   static constexpr uint32_t kStatusOk = 200u;
   static constexpr uint32_t kStatusPartialContent = 206u;
   static constexpr uint32_t kStatusNotFound = 404u;
-
-  // Calls ReadResponseBody.
-  static void ReadResponseBodyStatic(void* self, MojoResult result);
 
   NetworkReaderImpl(const String& url,
                     InterfaceRequest<SeekingReader> request,

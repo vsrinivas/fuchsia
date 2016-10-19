@@ -16,7 +16,7 @@ namespace handlers {
 
 MediaPacketConsumerDigest::MediaPacketConsumerDigest(const std::string& format)
     : accumulator_(std::make_shared<MediaPacketConsumerAccumulator>()) {
-  MOJO_DCHECK(format == FlogViewer::kFormatDigest);
+  FTL_DCHECK(format == FlogViewer::kFormatDigest);
   stub_.set_sink(this);
 }
 

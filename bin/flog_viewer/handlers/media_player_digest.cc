@@ -42,7 +42,7 @@ std::ostream& operator<<(std::ostream& os,
 
 MediaPlayerDigest::MediaPlayerDigest(const std::string& format)
     : accumulator_(std::make_shared<MediaPlayerAccumulator>()) {
-  MOJO_DCHECK(format == FlogViewer::kFormatDigest);
+  FTL_DCHECK(format == FlogViewer::kFormatDigest);
   stub_.set_sink(this);
 }
 

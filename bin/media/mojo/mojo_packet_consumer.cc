@@ -40,7 +40,7 @@ void MojoPacketConsumer::OnFlushRequested(const FlushCallback& callback) {
   if (flush_requested_callback_) {
     flush_requested_callback_(callback);
   } else {
-    MOJO_DLOG(WARNING) << "flush requested but no callback registered";
+    FTL_DLOG(WARNING) << "flush requested but no callback registered";
     callback.Run();
   }
 }
@@ -50,7 +50,7 @@ bool MojoPacketConsumer::can_accept_allocator() const {
 }
 
 void MojoPacketConsumer::set_allocator(PayloadAllocator* allocator) {
-  MOJO_DLOG(ERROR) << "set_allocator called on MojoPacketConsumer";
+  FTL_DLOG(ERROR) << "set_allocator called on MojoPacketConsumer";
 }
 
 void MojoPacketConsumer::SetSupplyCallback(

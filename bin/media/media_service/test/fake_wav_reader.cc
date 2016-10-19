@@ -146,7 +146,7 @@ void FakeWavReader::WriteToProducerHandleStatic(void* reader_void_ptr,
   }
 
   if (result != MOJO_RESULT_OK) {
-    MOJO_LOG(ERROR) << "AsyncWait failed " << result;
+    FTL_LOG(ERROR) << "AsyncWait failed " << result;
     reader->producer_handle_.reset();
     return;
   }

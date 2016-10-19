@@ -24,17 +24,19 @@ std::ostream& operator<<(std::ostream& os,
 
   os << indent;
   os << begl << "type: " << value.type_;
-  os << begl << "producer: " << *value.producer_channel_ << " ";
-
-  MOJO_DCHECK(value.producer_channel_);
-  value.producer_channel_->PrintAccumulator(os);
+  if (value.producer_channel_) {
+    os << begl << "producer: " << *value.producer_channel_ << " ";
+    value.producer_channel_->PrintAccumulator(os);
+  } else {
+    os << begl << "producer: <none>" << std::endl;
+  }
 
   return os << outdent;
 }
 
 MediaDemuxDigest::MediaDemuxDigest(const std::string& format)
     : accumulator_(std::make_shared<MediaDemuxAccumulator>()) {
-  MOJO_DCHECK(format == FlogViewer::kFormatDigest);
+  FTL_DCHECK(format == FlogViewer::kFormatDigest);
   stub_.set_sink(this);
 }
 
@@ -51,7 +53,7 @@ std::shared_ptr<Accumulator> MediaDemuxDigest::GetAccumulator() {
 void MediaDemuxDigest::NewStream(uint32_t index,
                                  mojo::media::MediaTypePtr type,
                                  uint64_t producer_address) {
-  MOJO_DCHECK(type);
+  FTL_DCHECK(type);
 
   while (accumulator_->streams_.size() <= index) {
     accumulator_->streams_.emplace_back();

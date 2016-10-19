@@ -125,7 +125,7 @@ void FakeRenderer::OnPacketSupplied(
 
   if (!expected_packets_info_.empty()) {
     if (expected_packets_info_iter_ == expected_packets_info_.end()) {
-      MOJO_DLOG(ERROR) << "packet supplied after expected packets";
+      FTL_DLOG(ERROR) << "packet supplied after expected packets";
       expected_ = false;
     }
 
@@ -136,7 +136,7 @@ void FakeRenderer::OnPacketSupplied(
             supplied_packet->payload_size() ||
         expected_packets_info_iter_->hash() !=
             Hash(supplied_packet->payload(), supplied_packet->payload_size())) {
-      MOJO_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
+      FTL_DLOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
 
