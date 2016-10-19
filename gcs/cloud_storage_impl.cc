@@ -132,7 +132,8 @@ void CloudStorageImpl::UploadFile(const std::string& key,
           FTL_LOG(ERROR) << "Error when reading the data.";
         }
       });
-  request->body.push_back(std::move(data_pipe.consumer_handle));
+  request->body = mojo::URLBody::New();
+  request->body->set_stream(std::move(data_pipe.consumer_handle));
 
   Request(std::move(request), [callback](Status status,
                                          mojo::URLResponsePtr response) {
@@ -225,14 +226,16 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  auto body = std::move(response->body);
+  mojo::URLBodyPtr body = std::move(response->body);
+  FTL_DCHECK(body->is_stream());
+
   ftl::UniqueFD fd(HANDLE_EINTR(creat(destination.c_str(), 0666)));
   if (!fd.is_valid()) {
     callback(Status::UNKNOWN_ERROR);
     return;
   }
 
-  mtl::CopyToFileDescriptor(std::move(body), std::move(fd), task_runner_,
+  mtl::CopyToFileDescriptor(std::move(body->get_stream()), std::move(fd), task_runner_,
                             [destination, callback, expected_file_size](
                                 bool success, ftl::UniqueFD fd) {
                               OnFileWritten(std::move(destination),

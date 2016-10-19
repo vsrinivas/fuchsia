@@ -27,7 +27,8 @@ mojo::URLRequestPtr MakeRequest(const std::string& url,
     // Deletes itself.
     glue::DataPipeWriter* writer = new glue::DataPipeWriter();
     writer->Start(message, std::move(data_pipe.producer_handle));
-    request->body.push_back(std::move(data_pipe.consumer_handle));
+    request->body = mojo::URLBody::New();
+    request->body->set_stream(std::move(data_pipe.consumer_handle));
   }
   return request;
 }
@@ -199,8 +200,9 @@ void FirebaseImpl::OnResponse(
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
     request_data_[url_loader]->drainer.reset(new glue::DataPipeDrainerClient());
+    FTL_DCHECK(response->body->is_stream());
     request_data_[url_loader]->drainer->Start(
-        std::move(response->body), [this, callback, url_loader, url,
+        std::move(response->body->get_stream()), [this, callback, url_loader, url,
                                     status_line](const std::string& body) {
           FTL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
                          << body;
@@ -210,9 +212,10 @@ void FirebaseImpl::OnResponse(
     return;
   }
 
+  FTL_DCHECK(response->body->is_stream());
   request_data_[url_loader]->drainer.reset(new glue::DataPipeDrainerClient());
   request_data_[url_loader]->drainer->Start(
-      std::move(response->body),
+      std::move(response->body->get_stream()),
       [this, callback, url_loader](const std::string& body) {
         callback(Status::OK, body);
         request_data_.erase(url_loader);
@@ -236,8 +239,9 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     const std::string& status_line = response->status_line;
     // DataPipeDrainerClient deletes itself once it's done.
     watch_data_[watch_client]->drainer.reset(new glue::DataPipeDrainerClient());
+    FTL_DCHECK(response->body->is_stream());
     watch_data_[watch_client]->drainer->Start(
-        std::move(response->body),
+        std::move(response->body->get_stream()),
         [this, watch_client, url, status_line](const std::string& body) {
           FTL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
                          << body;
@@ -249,8 +253,9 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
   }
 
   watch_data_[watch_client]->event_stream.reset(new EventStream());
+  FTL_DCHECK(response->body->is_stream());
   watch_data_[watch_client]->event_stream->Start(
-      std::move(response->body),
+      std::move(response->body->get_stream()),
       [this, watch_client](Status status, const std::string& event,
                            const std::string& data) {
         OnStreamEvent(watch_client, status, event, data);

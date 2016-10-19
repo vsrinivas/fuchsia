@@ -55,7 +55,8 @@ class CloudStorageImplTest : public ::testing::Test {
                    int64_t content_length,
                    uint32_t status_code) {
     mojo::URLResponsePtr server_response = mojo::URLResponse::New();
-    server_response->body = mtl::WriteStringToConsumerHandle(body);
+    server_response->body = mojo::URLBody::New();
+    server_response->body->set_stream(mtl::WriteStringToConsumerHandle(body));
     server_response->status_code = status_code;
 
     mojo::HttpHeaderPtr content_length_header = mojo::HttpHeader::New();
@@ -100,10 +101,10 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
             fake_network_service_->GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_service_->GetRequest()->method);
-  EXPECT_EQ(1u, fake_network_service_->GetRequest()->body.size());
+  EXPECT_TRUE(fake_network_service_->GetRequest()->body->is_stream());
   std::string sent_content;
   EXPECT_TRUE(mtl::BlockingCopyToString(
-      std::move(fake_network_service_->GetRequest()->body[0]), &sent_content));
+      std::move(fake_network_service_->GetRequest()->body->get_stream()), &sent_content));
   EXPECT_EQ(content, sent_content);
 
   mojo::HttpHeaderPtr content_length_header =

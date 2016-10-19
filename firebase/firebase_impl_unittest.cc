@@ -75,7 +75,8 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   void SetPipeResponse(mojo::ScopedDataPipeConsumerHandle body,
                        uint32_t status_code) {
     mojo::URLResponsePtr server_response = mojo::URLResponse::New();
-    server_response->body = std::move(body);
+    server_response->body = mojo::URLBody::New();
+    server_response->body->set_stream(std::move(body));
     server_response->status_code = status_code;
     fake_network_service_->SetResponse(std::move(server_response));
   }
