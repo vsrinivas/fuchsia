@@ -48,18 +48,25 @@ class CommandHandler final {
                 const ResponseCallback& callback);
 
   // q/Q packets:
+  // qAttached
+  bool HandleQueryAttached(const ftl::StringView& params,
+                           const ResponseCallback& callback);
+  // qC
+  bool HandleQueryCurrentThreadId(const ftl::StringView& params,
+                                  const ResponseCallback& callback);
   // qSupported
   bool HandleQuerySupported(const ftl::StringView& params,
                             const ResponseCallback& callback);
+  // qfThreadInfo and qsThreadInfo
+  bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
   // QNonStop
   bool HandleSetNonStop(const ftl::StringView& params,
                         const ResponseCallback& callback);
-  // qfThreadInfo and qsThreadInfo
-  bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
 
   // v packets:
-  bool HandleVRun(const ftl::StringView& packet,
-                  const ResponseCallback& callback);
+  // vRun
+  bool Handle_vRun(const ftl::StringView& packet,
+                   const ResponseCallback& callback);
 
   // The root Server instance that owns us.
   Server* server_;  // weak

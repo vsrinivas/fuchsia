@@ -5,11 +5,18 @@
 group("test_apps") {
   deps = [
     ":crash_test",
+    ":loop_test",
   ]
 }
 
 executable("crash_test") {
   sources = [
     "crash_test.c",
+  ]
+}
+
+executable("loop_test") {
+  sources = [
+    "loop_test.c",
   ]
 }

@@ -19,6 +19,8 @@ namespace {
 // TODO(armansito): Update this as we add more features.
 const char kSupportedFeatures[] = "QNonStop+;";
 
+const char kAttached[] = "Attached";
+const char kCurrentThreadId[] = "C";
 const char kFirstThreadInfo[] = "fThreadInfo";
 const char kNonStop[] = "NonStop";
 const char kRun[] = "Run;";
@@ -201,12 +203,20 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
 bool CommandHandler::Handle_q(const ftl::StringView& prefix,
                               const ftl::StringView& params,
                               const ResponseCallback& callback) {
-  if (prefix == kSupported)
-    return HandleQuerySupported(params, callback);
+  if (prefix == kAttached)
+    return HandleQueryAttached(params, callback);
+
+  if (prefix == kCurrentThreadId)
+    return HandleQueryCurrentThreadId(params, callback);
+
   if (prefix == kFirstThreadInfo)
     return HandleQueryThreadInfo(true, callback);
+
   if (prefix == kSubsequentThreadInfo)
     return HandleQueryThreadInfo(false, callback);
+
+  if (prefix == kSupported)
+    return HandleQuerySupported(params, callback);
 
   return false;
 }
@@ -223,9 +233,63 @@ bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
 bool CommandHandler::Handle_v(const ftl::StringView& packet,
                               const ResponseCallback& callback) {
   if (StartsWith(packet, kRun))
-    return HandleVRun(packet.substr(std::strlen(kRun)), callback);
+    return Handle_vRun(packet.substr(std::strlen(kRun)), callback);
 
   return false;
+}
+
+bool CommandHandler::HandleQueryAttached(const ftl::StringView& params,
+                                         const ResponseCallback& callback) {
+  // We don't support multiprocessing yet, so make sure we received the version
+  // of qAttached that doesn't have a "pid" parameter.
+  if (!params.empty()) {
+    ReplyWithError(util::ErrorCode::INVAL, callback);
+    return true;
+  }
+
+  // The response is "1" if we attached to an existing process, or "0" if we
+  // created a new one. We currently don't support the former, so always send
+  // "0".
+  callback("0");
+  return true;
+}
+
+bool CommandHandler::HandleQueryCurrentThreadId(
+    const ftl::StringView& params,
+    const ResponseCallback& callback) {
+  // The "qC" packet has no parameters.
+  if (!params.empty()) {
+    ReplyWithError(util::ErrorCode::INVAL, callback);
+    return true;
+  }
+
+  Thread* current_thread = server_->current_thread();
+  if (!current_thread) {
+    // If there is a current process and it has been started, pick one thread
+    // and set that as the current one. This is our work around for lying to GDB
+    // about setting a current thread in response to an early Hg0 packet.
+    Process* current_process = server_->current_process();
+    if (!current_process || !current_process->started()) {
+      FTL_LOG(ERROR) << "qC: Current thread has not been set";
+      ReplyWithError(util::ErrorCode::PERM, callback);
+      return true;
+    }
+
+    FTL_VLOG(1) << "qC: Picking one arbitrary thread";
+    current_thread = current_process->PickOneThread();
+    if (!current_thread) {
+      FTL_VLOG(1) << "qC: Failed to pick a thread";
+      ReplyWithError(util::ErrorCode::PERM, callback);
+      return true;
+    }
+  }
+
+  std::string thread_id = ftl::NumberToString<mx_koid_t>(
+      current_thread->thread_id(), ftl::Base::k16);
+
+  std::string reply = "QC" + thread_id;
+  callback(reply);
+  return true;
 }
 
 bool CommandHandler::HandleQuerySupported(const ftl::StringView& params,
@@ -302,7 +366,8 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   std::deque<std::string> thread_ids;
   size_t buf_size = 0;
   current_process->ForEachThread([&thread_ids, &buf_size](Thread* thread) {
-    std::string thread_id = ftl::NumberToString<mx_koid_t>(thread->thread_id());
+    std::string thread_id =
+        ftl::NumberToString<mx_koid_t>(thread->thread_id(), ftl::Base::k16);
     buf_size += thread_id.length();
     thread_ids.push_back(thread_id);
   });
@@ -327,8 +392,8 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   return true;
 }
 
-bool CommandHandler::HandleVRun(const ftl::StringView& packet,
-                                const ResponseCallback& callback) {
+bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
+                                 const ResponseCallback& callback) {
   // TODO(armansito): We're keeping it simple for now always only run the
   // program that was passed to gdbserver in the command-line. Fix this later.
   if (!packet.empty()) {
