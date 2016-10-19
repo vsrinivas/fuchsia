@@ -7,7 +7,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "lib/ftl/logging.h"
@@ -77,8 +77,11 @@ class HelloApp : public mojo::ApplicationImplBase {
       x_ = 0.0;
 
     // Draw the contents of the scene to a surface.
-    mozart::SkiaSurfaceHolder surface_holder(framebuffer_size_);
-    SkCanvas* canvas = surface_holder.surface()->getCanvas();
+    mozart::ImagePtr image;
+    sk_sp<SkSurface> surface = mozart::MakeSkSurface(framebuffer_size_, &image);
+    FTL_CHECK(surface);
+
+    SkCanvas* canvas = surface->getCanvas();
     canvas->clear(SK_ColorBLUE);
     SkPaint paint;
     paint.setColor(0xFFFF00FF);
@@ -94,7 +97,7 @@ class HelloApp : public mojo::ApplicationImplBase {
 
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = surface_holder.TakeImage();
+    content_resource->get_image()->image = std::move(image);
     update->resources.insert(kContentImageResourceId, content_resource.Pass());
 
     auto root_node = mozart::Node::New();

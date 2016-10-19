@@ -4,7 +4,7 @@
 
 executable("hello_compositor") {
   deps = [
-    "//apps/mozart/lib/skia",
+    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/composition/interfaces",
     "//apps/mozart/services/composition/cpp",
     "//lib/ftl",

@@ -32,20 +32,9 @@ struct SceneResource {
 //
 // Binds a resource id to an image.
 //
-// TODO(jeffbrown): Associate a fence with the image to enable pipelining.
+// TODO(jeffbrown): Associate a fence with the image to enable pipelining
+// and reuse of images.
 struct ImageResource {
   // The image to associate with the resource.
   Image image;
-
-  // Callbacks for this image resource.
-  ImageResourceCallback? callback;
-};
-
-// Callback for ImageResources.
-interface ImageResourceCallback {
-  // This method is invoked some time after an image resource has been
-  // removed from the scene once the image is no longer needed by the renderer
-  // to indicate that it is now safe for the producer of the image to release
-  // or recycle the underlying image buffer.
-  OnImageReleased();
 };

@@ -18,7 +18,7 @@ executable("noodles") {
   ]
 
   deps = [
-    "//apps/mozart/lib/skia",
+    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/composition/interfaces",
     "//apps/mozart/services/views/interfaces",

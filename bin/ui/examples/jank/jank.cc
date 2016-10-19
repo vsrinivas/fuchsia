@@ -10,7 +10,7 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
-#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -100,11 +100,14 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
       bounds.width = size.width;
       bounds.height = size.height;
 
-      mozart::SkiaSurfaceHolder surface_holder(size);
-      DrawContent(surface_holder.surface()->getCanvas());
+      mozart::ImagePtr image;
+      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      FTL_CHECK(surface);
+      DrawContent(surface->getCanvas());
+
       auto content_resource = mozart::Resource::New();
       content_resource->set_image(mozart::ImageResource::New());
-      content_resource->get_image()->image = surface_holder.TakeImage();
+      content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
                                content_resource.Pass());
 

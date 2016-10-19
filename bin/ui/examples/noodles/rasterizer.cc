@@ -5,7 +5,7 @@
 #include "apps/mozart/examples/noodles/rasterizer.h"
 
 #include "apps/mozart/examples/noodles/frame.h"
-#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -32,11 +32,16 @@ void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
     bounds.width = frame->size().width;
     bounds.height = frame->size().height;
 
-    mozart::SkiaSurfaceHolder surface_holder(frame->size());
-    frame->Paint(surface_holder.surface()->getCanvas());
+    // Draw the contents of the scene to a surface.
+    mozart::ImagePtr image;
+    sk_sp<SkSurface> surface = mozart::MakeSkSurface(frame->size(), &image);
+    FTL_CHECK(surface);
+    frame->Paint(surface->getCanvas());
+
+    // Update the scene contents.
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
-    content_resource->get_image()->image = surface_holder.TakeImage();
+    content_resource->get_image()->image = std::move(image);
     update->resources.insert(kContentImageResourceId, content_resource.Pass());
 
     auto root_node = mozart::Node::New();
@@ -50,6 +55,7 @@ void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
     update->nodes.insert(kRootNodeId, root_node.Pass());
   }
 
+  // Publish the updated scene contents.
   scene_->Update(update.Pass());
   scene_->Publish(frame->TakeSceneMetadata());
 }

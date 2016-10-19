@@ -5,29 +5,37 @@
 #include "apps/mozart/lib/skia/skia_vmo_data.h"
 
 #include <magenta/syscalls.h>
-#include <limits>
+
+#include "lib/ftl/logging.h"
+
+static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
+              "Fuchsia should always be 64-bit");
 
 namespace mozart {
-
 namespace {
+
 void UnmapMemory(const void* buffer, void* context) {
-  mx_process_unmap_vm(mx_process_self(), reinterpret_cast<uintptr_t>(buffer),
-                      0);
+  mx_status_t status = mx_process_unmap_vm(
+      mx_process_self(), reinterpret_cast<uintptr_t>(buffer), 0u);
+  FTL_CHECK(status == NO_ERROR);
 }
-}
+
+}  // namespace
 
 sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo) {
-  uint64_t size = 0;
+  uint64_t size = 0u;
   mx_status_t status = mx_vmo_get_size(vmo, &size);
-  if (status != NO_ERROR || size > std::numeric_limits<mx_size_t>::max())
+  if (status != NO_ERROR)
     return nullptr;
-  uintptr_t buffer = 0;
-  status = mx_process_map_vm(mx_process_self(), vmo, 0, size, &buffer,
+
+  uintptr_t buffer = 0u;
+  status = mx_process_map_vm(mx_process_self(), vmo, 0u, size, &buffer,
                              MX_VM_FLAG_PERM_READ);
   if (status != NO_ERROR)
     return nullptr;
+
   return SkData::MakeWithProc(reinterpret_cast<void*>(buffer), size,
-                              UnmapMemory, nullptr);
+                              &UnmapMemory, nullptr);
 }
 
 }  // namespace mozart

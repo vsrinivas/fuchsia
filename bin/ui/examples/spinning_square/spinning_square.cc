@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -52,11 +52,16 @@ class SpinningSquareView : public mozart::BaseView {
       bounds.width = size.width;
       bounds.height = size.height;
 
-      mozart::SkiaSurfaceHolder surface_holder(size);
-      DrawContent(surface_holder.surface()->getCanvas(), size);
+      // Draw the contents of the scene to a surface.
+      mozart::ImagePtr image;
+      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      FTL_CHECK(surface);
+      DrawContent(surface->getCanvas(), size);
+
+      // Update the scene contents.
       auto content_resource = mozart::Resource::New();
       content_resource->set_image(mozart::ImageResource::New());
-      content_resource->get_image()->image = surface_holder.TakeImage();
+      content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
                                content_resource.Pass());
 
@@ -71,9 +76,11 @@ class SpinningSquareView : public mozart::BaseView {
       update->nodes.insert(kRootNodeId, root_node.Pass());
     }
 
+    // Publish the updated scene contents.
     scene()->Update(update.Pass());
     scene()->Publish(CreateSceneMetadata());
 
+    // Schedule the next frame of the animation.
     Invalidate();
   }
 

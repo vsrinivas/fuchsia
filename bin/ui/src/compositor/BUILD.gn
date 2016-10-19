@@ -52,6 +52,7 @@ source_set("common") {
   public_deps = [
     "//apps/mozart/glue/base",
     "//apps/mozart/lib/skia:type_converters",
+    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",

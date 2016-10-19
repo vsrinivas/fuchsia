@@ -10,6 +10,7 @@
 #include "apps/mozart/services/composition/interfaces/renderers.mojom.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "apps/mozart/src/compositor/renderer_state.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/binding_set.h"

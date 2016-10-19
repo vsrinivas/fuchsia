@@ -12,8 +12,9 @@
 
 namespace mozart {
 
-// Makes an |SkData| object backed by a virtual memory object.
-// Does not take ownership of the handle.
+// Makes an |SkData| object backed by a virtual memory object which is mapped
+// read only.  Does not take ownership of the handle.
+// Returns nullptr on failure.
 sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo);
 
 }  // namespace mozart

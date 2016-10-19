@@ -166,15 +166,8 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
     FTL_DCHECK(image_resource_decl->image);
 
     auto& image_decl = image_resource_decl->image;
-    ftl::RefPtr<RenderImage> image = RenderImage::CreateFromImage(
-        std::move(image_decl), mtl::MessageLoop::GetCurrent()->task_runner(),
-        ftl::MakeCopyable([callback = std::move(
-                               image_resource_decl->callback)]() mutable {
-          if (!callback)
-            return;
-          mozart::ImageResourceCallbackPtr::Create(std::move(callback))
-              ->OnImageReleased();
-        }));
+    ftl::RefPtr<RenderImage> image =
+        RenderImage::CreateFromImage(std::move(image_decl));
     if (!image) {
       err << "ImageResource is invalid: resource_id=" << resource_id
           << ", decl=" << image_decl;

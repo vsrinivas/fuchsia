@@ -2,19 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("skia") {
+source_set("fonts") {
   sources = [
     "skia_font_loader.cc",
     "skia_font_loader.h",
-    "skia_surface_holder.cc",
-    "skia_surface_holder.h",
-    "skia_vmo_data.cc",
-    "skia_vmo_data.h",
   ]
 
   deps = [
     ":type_converters",
-    "//apps/mozart/services/composition/interfaces",
+    ":vmo",
     "//lib/ftl",
     "//mojo/public/cpp/application",
     "//mojo/public/interfaces/application",
@@ -31,6 +27,24 @@ source_set("type_converters") {
 
   deps = [
     "//mojo/services/geometry/interfaces",
+    "//third_party/skia",
+  ]
+}
+
+source_set("vmo") {
+  sources = [
+    "skia_vmo_data.cc",
+    "skia_vmo_data.h",
+    "skia_vmo_image.cc",
+    "skia_vmo_image.h",
+    "skia_vmo_surface.cc",
+    "skia_vmo_surface.h",
+  ]
+
+  deps = [
+    "//apps/mozart/services/composition/interfaces",
+    "//lib/ftl",
+    "//lib/mtl",
     "//third_party/skia",
   ]
 }
