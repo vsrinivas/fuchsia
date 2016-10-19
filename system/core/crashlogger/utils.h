@@ -25,7 +25,7 @@ extern void do_print_mx_error(const char* file, int line, const char* what, mx_s
 
 #define print_error(fmt...) \
   do { \
-    do_print_error(__FILE__, __LINE__, __func__, fmt); \
+    do_print_error(__FILE__, __LINE__, fmt); \
   } while (0)
 
 #define print_mx_error(what, status) \
