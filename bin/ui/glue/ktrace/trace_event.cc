@@ -34,8 +34,7 @@ class ProbeTable {
 
     uint32_t probe_id =
         TraceAddProbe(ftl::StringPrintf("%s/%s", cat, name).c_str());
-    table_.emplace_hint(it,
-                        std::make_pair(std::make_pair(cat, name), probe_id));
+    table_.emplace(std::make_pair(std::make_pair(cat, name), probe_id));
     return probe_id;
   }
 
