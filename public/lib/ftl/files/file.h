@@ -5,7 +5,10 @@
 #ifndef LIB_FTL_FILES_FILE_H_
 #define LIB_FTL_FILES_FILE_H_
 
+#include <stdint.h>
+
 #include <string>
+#include <vector>
 
 namespace files {
 
@@ -17,6 +20,11 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size);
 // result. Returns true if the file was read successfully, otherwise returns
 // false. If this function returns false, |result| will be the empty string.
 bool ReadFileToString(const std::string& path, std::string* result);
+
+// Reads the contents of the file at the given path and stores the data in
+// result. Returns true if the file was read successfully, otherwise returns
+// false. If this function returns false, |result| will be the empty string.
+bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result);
 
 // Returns whether the given path is a file.
 bool IsFile(const std::string& path);

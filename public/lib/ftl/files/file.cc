@@ -15,15 +15,10 @@
 #include "lib/ftl/logging.h"
 
 namespace files {
+namespace {
 
-bool WriteFile(const std::string& path, const char* data, ssize_t size) {
-  ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), 0666)));
-  if (!fd.is_valid())
-    return false;
-  return ftl::WriteFileDescriptor(fd.get(), data, size);
-}
-
-bool ReadFileToString(const std::string& path, std::string* result) {
+template <typename T>
+bool ReadFile(const std::string& path, T* result) {
   FTL_DCHECK(result);
   result->clear();
 
@@ -47,6 +42,23 @@ bool ReadFileToString(const std::string& path, std::string* result) {
 
   result->resize(offset + bytes_read);
   return true;
+}
+
+}  // namespace
+
+bool WriteFile(const std::string& path, const char* data, ssize_t size) {
+  ftl::UniqueFD fd(HANDLE_EINTR(creat(path.c_str(), 0666)));
+  if (!fd.is_valid())
+    return false;
+  return ftl::WriteFileDescriptor(fd.get(), data, size);
+}
+
+bool ReadFileToString(const std::string& path, std::string* result) {
+  return ReadFile(path, result);
+}
+
+bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
+  return ReadFile(path, result);
 }
 
 bool IsFile(const std::string& path) {
