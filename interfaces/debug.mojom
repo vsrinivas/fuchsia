@@ -9,16 +9,3 @@ module maxwell;
 interface Debug {
   Kill();
 };
-
-// Interface allowing test dependencies to register their creation to be killed
-// after a test has been completed. This is useful for transitive dependencies
-// not directly spawned by the test harness.
-//
-// Test parents may be the test harness itself or another debuggable dependency.
-[ServiceName="maxwell.TestParent"]
-interface TestParent {
-  // Allows a dependency to transitively register other dependencies. A
-  // dependency need not register itself; it will automatically be registered
-  // when it connects to its parent's TestParent service.
-  RegisterChildDependency(string url);
-};

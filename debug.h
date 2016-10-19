@@ -4,7 +4,6 @@
 
 #include "apps/maxwell/interfaces/debug.mojom.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
 #include "mojo/public/cpp/utility/run_loop.h"
@@ -17,17 +16,11 @@ namespace maxwell {
 // implementation. For convenience, apps that do not themselves provide any
 // other services may instead inherit from DebuggableApp rather than
 // ApplicationImplBase.
-class DebugSupport : public Debug, public TestParent {
+class DebugSupport : public Debug {
  public:
   virtual ~DebugSupport() {}
 
   void Kill() override { mojo::RunLoop::current()->Quit(); }
-
-  // This implementation forwards child dependency registration to the parent
-  // that spawned this dependency.
-  void RegisterChildDependency(const mojo::String& url) override {
-    parent_->RegisterChildDependency(url);
-  }
 
   // This method is intended to be called from a Mojo OnAcceptConnection
   // implementation to add the Debug and TestParent instrumentation services to
@@ -42,35 +35,11 @@ class DebugSupport : public Debug, public TestParent {
             debug_bindings_.AddBinding(this, std::move(request));
           }
         });
-    service_provider_impl->AddService<TestParent>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<TestParent> request) {
-          test_parent_bindings_.AddBinding(this, std::move(request));
-
-          // Also register the requester as a new transitive dependency.
-          parent_->RegisterChildDependency(connection_context.remote_url);
-        });
-
-    // If the remote Mojo app calling ConnectToService on this Mojo app exposes
-    // a TestParent interface, then this Mojo app should register itself with
-    // the remote TestParent.
-    if (!registered_) {
-      ConnectToService(shell,
-                       service_provider_impl->connection_context().remote_url,
-                       GetProxy(&parent_));
-      registered_ = true;
-    }
   }
 
  private:
   static const char kTestApp[];
-
   mojo::BindingSet<Debug> debug_bindings_;
-  mojo::BindingSet<TestParent> test_parent_bindings_;
-  TestParentPtr parent_;
-
-  // TODO(rosswang): remove this if InterfacePtrSet becomes a real set
-  bool registered_;
 };
 
 const char DebugSupport::kTestApp[] = "mojo:maxwell_test";

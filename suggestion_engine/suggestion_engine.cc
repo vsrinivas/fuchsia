@@ -194,10 +194,9 @@ class SuggestionManagerImpl : public SuggestionManager {
  private:
   std::vector<SuggestionPtr> suggestions_;
   uint64_t id_ = 0;
-  maxwell::BoundSet<NextController,
-                    mojo::Binding<NextController>,
-                    std::unique_ptr<NextSubscriber>,
-                    NextSubscriber::GetBinding>
+  maxwell::BindingSet<NextController,
+                      std::unique_ptr<NextSubscriber>,
+                      NextSubscriber::GetBinding>
       next_subscribers_;
 };
 

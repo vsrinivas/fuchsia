@@ -4,8 +4,13 @@
 
 #pragma once
 
+#include <chrono>
+
 #include "apps/maxwell/interfaces/debug.mojom.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
+
+#include "mojo/public/cpp/application/application_test_base.h"
+#include "mojo/public/cpp/application/connect.h"
+#include "mojo/public/cpp/bindings/interface_ptr_set.h"
 
 typedef std::function<void(mojo::Shell*)> TestRoutine;
 
@@ -17,6 +22,7 @@ struct Test {
 
 void Yield();
 
+// Processes Mojo messages until the given predicate is true.
 template <typename Predicate>
 void WaitUntil(Predicate until) {
   do {
@@ -42,23 +48,31 @@ Predicate SideEffect(Closure side_effect) {
 }
 
 #define PREDICATE(condition) [&] { return condition; }
+// Convenience macro that wraps "condition" in a Predicate.
+#define WAIT_UNTIL(condition) WaitUntil(PREDICATE(condition))
 
-Predicate Deadline(unsigned int millis);
+using namespace std::chrono_literals;
 
-void StartComponent(mojo::Shell* shell, const std::string& url);
-void Sleep(unsigned int millis);
+template <class Rep, class Period>
+Predicate Deadline(const std::chrono::duration<Rep, Period>& duration) {
+  using std::chrono::steady_clock;
+  const auto deadline = steady_clock::now() + duration;
+  return [deadline] { return steady_clock::now() >= deadline; };
+}
 
-constexpr MojoTimeTicks kPauseIdleMs = 250;
-constexpr MojoTimeTicks kPauseMaxMs = 2000;
+// Sleeps for a time while processing Mojo messages.
+template <class Rep, class Period>
+void Sleep(const std::chrono::duration<Rep, Period>& duration) {
+  WaitUntil(Deadline(duration));
+}
 
-// Pauses the main thread to allow Mojo messages to propagate. It will wait
-// until no new debuggable have been launched for 500 ms, for a max of 2
-// seconds.
-void Pause();
+// Sleep for a default reasonable time for Mojo apps to start up.
+void Sleep();
 
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely
 // succeed tests that should fail. Flakiness should thus be considered failure.
-constexpr MojoTimeTicks kAsyncCheckSteadyMs = 100;
+constexpr auto kAsyncCheckSteady = 100ms;
+constexpr auto kAsyncCheckMax = 2s;
 
 // Does a weak stability check on an async condition by waiting until the given
 // condition is true (max 2s) and then ensuring that the condition remains true
@@ -69,7 +83,7 @@ constexpr MojoTimeTicks kAsyncCheckSteadyMs = 100;
 // is polling-based, the exact number of matches should not be relied upon.
 #define ASYNC_CHECK(condition)                                             \
   {                                                                        \
-    auto deadline = Deadline(kPauseMaxMs);                                 \
+    auto deadline = Deadline(kAsyncCheckMax);                              \
     auto check = PREDICATE(condition);                                     \
     do {                                                                   \
       WaitUntil(check ||                                                   \
@@ -77,7 +91,36 @@ constexpr MojoTimeTicks kAsyncCheckSteadyMs = 100;
                   MOJO_LOG(FATAL)                                          \
                       << "Deadline exceeded for async check: " #condition; \
                 }));                                                       \
-      auto steady = Deadline(kAsyncCheckSteadyMs);                         \
+      auto steady = Deadline(kAsyncCheckSteady);                           \
       WaitUntil(steady || !check);                                         \
     } while (!(condition));                                                \
   }
+
+class DebuggableAppTestBase : public mojo::test::ApplicationTestBase {
+ protected:
+  void StartComponent(const std::string& url) {
+    maxwell::DebugPtr debug;
+    mojo::ConnectToService(shell(), url, GetProxy(&debug));
+    dependencies_.AddInterfacePtr(std::move(debug));
+  }
+
+  template <typename Interface>
+  void ConnectToService(const std::string& url,
+                        mojo::InterfaceRequest<Interface> request) {
+    mojo::ServiceProviderPtr service_provider;
+    shell()->ConnectToApplication(url, GetProxy(&service_provider));
+    mojo::ConnectToService(service_provider.get(), std::move(request));
+    maxwell::DebugPtr debug;
+    mojo::ConnectToService(service_provider.get(), GetProxy(&debug));
+    dependencies_.AddInterfacePtr(std::move(debug));
+  }
+
+  void TearDown() override {
+    dependencies_.ForAllPtrs([](maxwell::Debug* debug) { debug->Kill(); });
+    WAIT_UNTIL(dependencies_.size() == 0);
+    ApplicationTestBase::TearDown();
+  }
+
+ private:
+  mojo::InterfacePtrSet<maxwell::Debug> dependencies_;
+};

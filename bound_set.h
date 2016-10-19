@@ -8,6 +8,7 @@
 
 #include <vector>
 
+#include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 
 namespace maxwell {
@@ -15,6 +16,11 @@ namespace maxwell {
 template <typename T>
 T Identity(T t) {
   return t;
+}
+
+template <typename T>
+T* Unwrap(std::unique_ptr<T>* p) {
+  return p->get();
 }
 
 // General implementation intended to cover Binding and StrongBinding.
@@ -97,11 +103,23 @@ class BoundSet {
 // Convenience alias of BoundSet to handle InterfacePtr containers. The default
 // template parameter ordering places MojoWrapper before T and, necessarily,
 // GetWrapper. This alias is a shorter way to leverage the covariant default of
-// Mojowrapper to InterfacePtr<Interface>, and bakes in the GetPtr defaulting.
+// MojoWrapper to InterfacePtr<Interface>, and bakes in the GetPtr defaulting.
 template <typename Interface,
           typename T = mojo::InterfacePtr<Interface>,
           mojo::InterfacePtr<Interface>* GetWrapper(T* element) = Identity>
 using BoundPtrSet =
     BoundSet<Interface, mojo::InterfacePtr<Interface>, T, GetWrapper>;
+
+// Convenience alias of BoundSet to handle Binding containers. The default
+// template parameter ordering places MojoWrapper before T and, necessarily,
+// GetWrapper. This alias is a shorter way to leverage the covariant default of
+// MojoWrapper to Binding<Interface>, and bakes in the GetPtr defaulting.
+//
+// Note that the default T here must be a unique_ptr rather than the Binding
+// itself since Bindings are not movable.
+template <typename Interface,
+          typename T = std::unique_ptr<mojo::Binding<Interface>>,
+          mojo::Binding<Interface>* GetWrapper(T* element) = Unwrap>
+using BindingSet = BoundSet<Interface, mojo::Binding<Interface>, T, GetWrapper>;
 
 }  // namespace maxwell
