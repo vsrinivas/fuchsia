@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <runtime/status.h>
+#include <magenta/status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
         if (errno)
             exit(ERR_INVALID_ARGS);
         int error = (int)error_long;
-        const char* mx_error = mx_strstatus((mx_status_t)error);
+        const char* mx_error = mx_status_get_string((mx_status_t)error);
         char* posix_error = strerror(error);
         printf("Int value: %d\n", error);
         printf("\tMagenta error: %s\n", mx_error);

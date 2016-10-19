@@ -8,7 +8,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
-#include <runtime/status.h>
+#include <magenta/status.h>
 
 #include "utils.h"
 
@@ -54,7 +54,7 @@ void do_print_error(const char* file, int line, const char* fmt, ...) {
 
 void do_print_mx_error(const char* file, int line, const char* what, mx_status_t status) {
     do_print_error(file, line, "%s: %d (%s)",
-                   what, status, mx_strstatus(status));
+                   what, status, mx_status_get_string(status));
 }
 
 // While this should never fail given a valid handle,

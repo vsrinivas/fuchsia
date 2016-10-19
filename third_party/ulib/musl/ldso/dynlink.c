@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <link.h>
 #include <magenta/dlfcn.h>
+#include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -30,7 +31,6 @@
 
 #include <runtime/message.h>
 #include <runtime/processargs.h>
-#include <runtime/status.h>
 #include <runtime/thread.h>
 
 static void error(const char*, ...);
@@ -1462,7 +1462,7 @@ dl_start_return_t __dls3(void* start_arg) {
     mx_status_t status = mxr_message_size(bootstrap, &nbytes, &nhandles);
     if (status != NO_ERROR) {
         error("mxr_message_size bootstrap handle %#x failed: %d (%s)",
-              bootstrap, status, mx_strstatus(status));
+              bootstrap, status, _mx_status_get_string(status));
         nbytes = nhandles = 0;
     }
 
@@ -1477,7 +1477,8 @@ dl_start_return_t __dls3(void* start_arg) {
     if (status != NO_ERROR) {
         error("bad message of %u bytes, %u handles"
               " from bootstrap handle %#x: %d (%s)",
-              nbytes, nhandles, bootstrap, status, mx_strstatus(status));
+              nbytes, nhandles, bootstrap, status,
+              _mx_status_get_string(status));
         nbytes = nhandles = 0;
     }
 
@@ -1843,7 +1844,7 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
                                            NULL, 0, 0);
     if (status != NO_ERROR) {
         error("mx_msgpipe_write of %u bytes to loader service: %d (%s)",
-              nbytes, status, mx_strstatus(status));
+              nbytes, status, _mx_status_get_string(status));
         handle = status;
         goto out;
     }
@@ -1852,7 +1853,7 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
                                  MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         error("mx_handle_wait_one for loader service reply: %d (%s)",
-              status, mx_strstatus(status));
+              status, _mx_status_get_string(status));
         handle = status;
         goto out;
     }
@@ -1863,7 +1864,7 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
                               &handle, &handle_count, 0);
     if (status != NO_ERROR) {
         error("mx_msgpipe_read of %u bytes for loader service reply: %d (%s)",
-              sizeof(msg.header), status, mx_strstatus(status));
+              sizeof(msg.header), status, _mx_status_get_string(status));
         handle = status;
         goto out;
     }

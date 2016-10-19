@@ -11,6 +11,9 @@ MODULE_TYPE := userlib
 # This library should not depend on libc.
 MODULE_COMPILEFLAGS := -ffreestanding
 
+MODULE_SRCS = \
+    $(LOCAL_DIR)/mx_status_get_string.c
+
 ifeq ($(ARCH),arm)
 MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S
 else ifeq ($(ARCH),arm64)

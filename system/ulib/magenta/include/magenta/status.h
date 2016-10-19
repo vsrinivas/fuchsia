@@ -10,12 +10,10 @@
 extern "C" {
 #endif
 
-#pragma GCC visibility push(hidden)
-
-// Return a human-readable description of status.
-const char* mx_strstatus(mx_status_t status);
-
-#pragma GCC visibility pop
+// Return the identifier (macro name in <magenta/fuchsia-types.h> without
+// "ERR_" prefix) for the status number.
+const char* _mx_status_get_string(mx_status_t status);
+const char* mx_status_get_string(mx_status_t status);
 
 #ifdef __cplusplus
 }

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
-#include <runtime/status.h>
+#include <magenta/status.h>
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -34,7 +34,7 @@ char* tu_strdup(const char* s)
 
 void tu_fatal(const char *what, mx_status_t status)
 {
-    const char* reason = mx_strstatus(status);
+    const char* reason = mx_status_get_string(status);
     unittest_printf_critical("%s failed, rc %d (%s)\n", what, status, reason);
     exit(TU_FAIL_ERRCODE);
 }
