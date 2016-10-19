@@ -321,10 +321,6 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
 
     xprintf("Created device %p\n", dev->magma_system_device);
 
-    // Temporary: wait for init batch to settle, then dump to check for errors and sequence number.
-    magma::msleep(10);
-    msd_device_dump_status(dev->magma_system_device->msd_dev());
-
 #if MAGMA_GLREADBACK_TEST
     xprintf("running magma glreadback tests\n");
     test_gpu_readback();
