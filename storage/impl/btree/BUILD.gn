@@ -15,6 +15,8 @@ group("btree") {
 
 source_set("lib") {
   sources = [
+    "btree_builder.cc",
+    "btree_builder.h",
     "btree_iterator.cc",
     "btree_iterator.h",
     "commit_contents_impl.cc",
@@ -38,6 +40,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "btree_builder_unittest.cc",
     "btree_iterator_unittest.cc",
     "diff_iterator_unittest.cc",
   ]

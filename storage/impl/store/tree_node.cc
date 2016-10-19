@@ -20,7 +20,9 @@ TreeNode::TreeNode(ObjectStore* store,
     : store_(store),
       id_(std::move(id)),
       entries_(entries),
-      children_(children) {}
+      children_(children) {
+  FTL_DCHECK(entries_.size() + 1 == children_.size());
+}
 
 TreeNode::~TreeNode() {}
 
@@ -50,6 +52,7 @@ Status TreeNode::FromEntries(ObjectStore* store,
                              const std::vector<Entry>& entries,
                              const std::vector<ObjectId>& children,
                              ObjectId* node_id) {
+  FTL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = storage::EncodeNode(entries, children);
   std::unique_ptr<const Object> object;
   Status s = store->AddObject(encoding, &object);
@@ -175,8 +178,10 @@ TreeNode::Mutation::~Mutation() {}
 TreeNode::Mutation& TreeNode::Mutation::AddEntry(const Entry& entry,
                                                  ObjectIdView left_id,
                                                  ObjectIdView right_id) {
-  FTL_DCHECK(!finished);
-  FTL_DCHECK(entries_.empty() || entries_.back().key < entry.key);
+  FTL_DCHECK(!finished) << "Mutation " << this << " already finished.";
+  FTL_DCHECK(entries_.empty() || entries_.back().key < entry.key)
+      << "Failed at entry.key " << entry.key << " entries_.size() "
+      << entries_.size();
   CopyUntil(entry.key);
 
   entries_.push_back(entry);
@@ -236,8 +241,7 @@ TreeNode::Mutation& TreeNode::Mutation::UpdateChildId(
   return *this;
 }
 
-Status TreeNode::Mutation::Finish(ObjectId* new_id) {
-  FTL_DCHECK(!finished);
+void TreeNode::Mutation::FinalizeEntriesChildren() {
   CopyUntil("");
 
   // If the last change was not an AddEntry, the right child of the last entry
@@ -248,7 +252,98 @@ Status TreeNode::Mutation::Finish(ObjectId* new_id) {
   }
 
   finished = true;
+}
+
+Status TreeNode::Mutation::Finish(ObjectId* new_id) {
+  FTL_DCHECK(!finished);
+  FinalizeEntriesChildren();
   return FromEntries(node_.store_, entries_, children_, new_id);
+}
+
+Status TreeNode::Mutation::Finish(size_t max_size,
+                                  Mutation* parent_mutation,
+                                  const std::string& max_key,
+                                  ObjectId* new_root_id) {
+  FinalizeEntriesChildren();
+  // If we want N nodes, each with S entries, separated by 1 entry, then the
+  // total number of entries E is E = N*S+(N-1), leading to N=(E+1)/(S+1). As
+  // integer division rounds down, we remove one to the dividand and add 1 to
+  // the result to get the rounded up number.
+  size_t new_node_count = 1 + entries_.size() / (max_size + 1);
+  if (new_node_count == 1) {
+    ObjectId result_id;
+    ObjectId new_id;
+    Status s = FromEntries(node_.store_, entries_, children_, &new_id);
+    if (s != Status::OK) {
+      return s;
+    }
+    if (parent_mutation) {
+      parent_mutation->UpdateChildId(max_key, new_id);
+    } else {
+      new_root_id->swap(new_id);
+    }
+    return Status::OK;
+  }
+
+  std::vector<Entry> new_entries;
+  std::vector<ObjectId> new_children;
+
+  size_t elements_per_node =
+      1 + (entries_.size() - new_node_count) / new_node_count;
+  for (size_t i = 0; i < new_node_count; ++i) {
+    int element_count = std::min(elements_per_node, entries_.size());
+    std::vector<Entry> entries;
+    std::vector<ObjectId> children;
+
+    // Select entries for the split node.
+    entries.insert(entries.end(), &entries_[0], &entries_[element_count]);
+    entries_.erase(entries_.begin(), entries_.begin() + (element_count));
+
+    // Select children for the split node. There is one more than the number of
+    // entries.
+    children.insert(children.end(), &children_[0],
+                    &children_[element_count + 1]);
+    children_.erase(children_.begin(), children_.begin() + (element_count + 1));
+
+    ObjectId new_id;
+    FromEntries(node_.store_, entries, children, &new_id);
+    new_children.push_back(new_id);
+
+    if (entries_.size() != 0) {
+      // Save the pivot that needs to be moved up one level in the tree.
+      new_entries.push_back(*entries_.begin());
+      entries_.erase(entries_.begin());
+    }
+  }
+
+  // All entries and children must have been allocated.
+  FTL_DCHECK(entries_.size() == 0) << "Entries left: " << entries_.size();
+  FTL_DCHECK(children_.size() == 0) << "Entries left: " << entries_.size();
+
+  if (parent_mutation) {
+    // Move the pivots to the parent node.
+    for (size_t i = 0; i < new_entries.size(); ++i) {
+      parent_mutation->AddEntry(new_entries[i], new_children[i],
+                                new_children[i + 1]);
+    }
+    return Status::OK;
+  }
+
+  // No parent node, create a new one.
+  std::unique_ptr<const TreeNode> new_node;
+  ObjectId tmp_node_id;
+  FTL_DCHECK(TreeNode::FromEntries(node_.store_, std::vector<Entry>(),
+                                   std::vector<ObjectId>{ObjectId()},
+                                   &tmp_node_id) == Status::OK);
+  FTL_DCHECK(TreeNode::FromId(node_.store_, tmp_node_id, &new_node) ==
+             Status::OK);
+  // new_entries could contain more than max_size elements, so we can't directly
+  // create the root using FromEntries. We use a mutation instead.
+  TreeNode::Mutation mutation = new_node->StartMutation();
+  for (size_t i = 0; i < new_entries.size(); ++i) {
+    mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
+  }
+  return mutation.Finish(max_size, parent_mutation, max_key, new_root_id);
 }
 
 void TreeNode::Mutation::CopyUntil(std::string key) {

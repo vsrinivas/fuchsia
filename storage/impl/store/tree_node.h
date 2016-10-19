@@ -63,11 +63,28 @@ class TreeNode {
     // methods on it will fail.
     Status Finish(ObjectId* new_id);
 
+    // Creates as many tree nodes as necessary given the |max_size| of entries a
+    // node can have. If this mutation is not on the root node the
+    // |parent_mutation| argument should be provided and is updated as
+    // necessary.
+    // If this mutation is on the root node, |parent_mutation| should be NULL
+    // and in that case, |new_root_id| is updated to hold the new root's id.
+    // After calling this method, this Mutation object is no longer valid and
+    // calling any methods on it will fail.
+    // TODO(nellyv): This method should not be necessary after updating the
+    // B-Tree node implementation.
+    Status Finish(size_t max_size,
+                  Mutation* parent_mutation,
+                  const std::string& max_key,
+                  ObjectId* new_root_id);
+
    private:
     // Copies the entries from the |node_| starting at |node_index_| and until
     // that entry's key is equal to or greater than the given |key|. If |key| is
     // empty, all entries until the end of the vector are copied.
     void CopyUntil(std::string key);
+
+    void FinalizeEntriesChildren();
 
     const TreeNode& node_;
     // The index of the next entry of the node to be added in the entries of
@@ -132,7 +149,8 @@ class TreeNode {
   Status GetEntry(int index, Entry* entry) const;
 
   // Finds the child node at position |index| and stores it in |child|. |index|
-  // has to be in [0, GetKeyCount()].
+  // has to be in [0, GetKeyCount()]. If the child at the given index is empty
+  // Status::NOT_FOUND is returned and the value of |child| is not updated.
   Status GetChild(int index, std::unique_ptr<const TreeNode>* child) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
