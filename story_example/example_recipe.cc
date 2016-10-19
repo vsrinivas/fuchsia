@@ -12,7 +12,7 @@
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"
-#include "apps/mozart/lib/skia/skia_surface_holder.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
@@ -215,11 +215,13 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
       mojo::RectF bounds;
       bounds.width = size.width;
       bounds.height = size.height;
-      mozart::SkiaSurfaceHolder surface_holder(size);
-      DrawContent(surface_holder.surface()->getCanvas(), size);
+      mozart::ImagePtr image;
+      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      FTL_CHECK(surface);
+      DrawContent(surface->getCanvas(), size);
       auto content_resource = mozart::Resource::New();
       content_resource->set_image(mozart::ImageResource::New());
-      content_resource->get_image()->image = surface_holder.TakeImage();
+      content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
                                content_resource.Pass());
       auto root_node = mozart::Node::New();

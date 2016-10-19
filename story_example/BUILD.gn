@@ -53,7 +53,7 @@ executable("example_recipe") {
     "//apps/document_store/interfaces",
     "//apps/modular/document_editor",
     "//apps/modular/mojo:single_service_view_app",
-    "//apps/mozart/lib/skia",
+    "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views/interfaces",
     "//apps/modular/story_runner:interfaces",
