@@ -21,6 +21,7 @@ const char kSupportedFeatures[] = "QNonStop+;";
 
 const char kFirstThreadInfo[] = "fThreadInfo";
 const char kNonStop[] = "NonStop";
+const char kRun[] = "Run;";
 const char kSubsequentThreadInfo[] = "sThreadInfo";
 const char kSupported[] = "Supported";
 
@@ -32,6 +33,11 @@ void ReplyWithError(util::ErrorCode error_code,
                     const CommandHandler::ResponseCallback& callback) {
   std::string error_rsp = util::BuildErrorPacket(error_code);
   callback(error_rsp);
+}
+
+// Returns true if |str| starts with |prefix|.
+bool StartsWith(const ftl::StringView& str, const ftl::StringView& prefix) {
+  return str.substr(0, prefix.size()) == prefix;
 }
 
 }  // namespace
@@ -67,6 +73,8 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
         return Handle_q(prefix, params, callback);
       return Handle_Q(prefix, params, callback);
     }
+    case 'v':
+      return Handle_v(packet.substr(1), callback);
     default:
       break;
   }
@@ -212,6 +220,14 @@ bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
   return false;
 }
 
+bool CommandHandler::Handle_v(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  if (StartsWith(packet, kRun))
+    return HandleVRun(packet.substr(std::strlen(kRun)), callback);
+
+  return false;
+}
+
 bool CommandHandler::HandleQuerySupported(const ftl::StringView& params,
                                           const ResponseCallback& callback) {
   // We ignore the parameters for qSupported. Respond with the supported
@@ -307,6 +323,48 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   util::JoinStrings(thread_ids, ',', buffer.get() + 1, buf_size - 1);
 
   callback(ftl::StringView(buffer.get(), buf_size));
+
+  return true;
+}
+
+bool CommandHandler::HandleVRun(const ftl::StringView& packet,
+                                const ResponseCallback& callback) {
+  // TODO(armansito): We're keeping it simple for now always only run the
+  // program that was passed to gdbserver in the command-line. Fix this later.
+  if (!packet.empty()) {
+    FTL_LOG(ERROR) << "vRun: Only running the default program is supported";
+    ReplyWithError(util::ErrorCode::INVAL, callback);
+    return true;
+  }
+
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "vRun: no current process to run!";
+    ReplyWithError(util::ErrorCode::PERM, callback);
+    return true;
+  }
+
+  if (!current_process->IsAttached() && !current_process->Attach()) {
+    FTL_LOG(ERROR) << "vRun: Failed to attach process!";
+    ReplyWithError(util::ErrorCode::PERM, callback);
+    return true;
+  }
+
+  // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
+  // magenta $pc isn't set until the call to launchpad_start (i.e.
+  // debugserver::Process::Start()), however we cannot call that here as a
+  // response to vRun since the program should be created in the "stopped
+  // state". We simply make sure that the process is attached and leave it at
+  // that.
+  //
+  // TODO(armansito|dje): Should this be changed in Magenta, so that $pc is set
+  // before calling launchpad_start?
+  FTL_DCHECK(current_process->IsAttached());
+
+  // In Remote Non-stop mode (which is the only mode we currently support), we
+  // just respond "OK" (see
+  // https://sourceware.org/gdb/current/onlinedocs/gdb/Stop-Reply-Packets.html)
+  ReplyOK(callback);
 
   return true;
 }

@@ -44,7 +44,10 @@ class CommandHandler final {
   bool Handle_Q(const ftl::StringView& prefix,
                 const ftl::StringView& params,
                 const ResponseCallback& callback);
+  bool Handle_v(const ftl::StringView& packet,
+                const ResponseCallback& callback);
 
+  // q/Q packets:
   // qSupported
   bool HandleQuerySupported(const ftl::StringView& params,
                             const ResponseCallback& callback);
@@ -53,6 +56,10 @@ class CommandHandler final {
                         const ResponseCallback& callback);
   // qfThreadInfo and qsThreadInfo
   bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
+
+  // v packets:
+  bool HandleVRun(const ftl::StringView& packet,
+                  const ResponseCallback& callback);
 
   // The root Server instance that owns us.
   Server* server_;  // weak

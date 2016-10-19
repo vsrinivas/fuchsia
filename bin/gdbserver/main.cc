@@ -82,20 +82,6 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  // TODO(armansito): Remove the following block. This is here only for testing
-  // process exceptions.
-  server.message_loop()->task_runner()->PostTask([inferior = inferior.get()] {
-    if (!inferior->Attach()) {
-      FTL_LOG(ERROR) << "Failed to attach to the inferior";
-      return;
-    }
-
-    if (!inferior->Start()) {
-      FTL_LOG(ERROR) << "Failed to start the inferior";
-      return;
-    }
-  });
-
   server.set_current_process(inferior.release());
 
   bool status = server.Run();
