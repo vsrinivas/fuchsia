@@ -1020,6 +1020,10 @@ struct dirent* readdir(DIR* dir) {
     return de;
 }
 
+int dirfd(DIR* dir) {
+    return dir->fd;
+}
+
 int isatty(int fd) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
