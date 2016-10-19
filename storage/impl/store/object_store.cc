@@ -9,28 +9,19 @@
 
 namespace storage {
 
-ObjectStore::ObjectStore() {}
+ObjectStore::ObjectStore(PageStorage* page_storage)
+    : page_storage_(page_storage) {}
+
 ObjectStore::~ObjectStore() {}
 
-Status ObjectStore::AddObject(std::unique_ptr<Object> object) {
-  map_[object->GetId()] = std::move(object);
-  return Status::OK;
+Status ObjectStore::AddObject(convert::ExtendedStringView data,
+                              std::unique_ptr<const Object>* object) {
+  return page_storage_->AddObjectSynchronous(data, object);
 }
 
 Status ObjectStore::GetObject(ObjectIdView id,
                               std::unique_ptr<const Object>* object) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status ObjectStore::GetTreeNode(ObjectIdView id,
-                                std::unique_ptr<const TreeNode>* tree_node) {
-  auto iterator = map_.find(id);
-  if (iterator == map_.end()) {
-    return Status::NOT_FOUND;
-  }
-  TreeNode* node = static_cast<TreeNode*>(iterator->second.get());
-  tree_node->reset(new TreeNode(*node));
-  return Status::OK;
+  return page_storage_->GetObjectSynchronous(id, object);
 }
 
 }  // namespace storage

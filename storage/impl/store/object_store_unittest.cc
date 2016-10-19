@@ -5,6 +5,8 @@
 #include "apps/ledger/storage/impl/store/object_store.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/fake/fake_page_storage.h"
+#include "apps/ledger/storage/impl/store/encoding.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
@@ -34,7 +36,7 @@ std::vector<Entry> GetEntries(int size) {
 
 class ObjectStoreTest : public ::testing::Test {
  public:
-  ObjectStoreTest() {}
+  ObjectStoreTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
 
   ~ObjectStoreTest() override {}
 
@@ -84,6 +86,7 @@ class ObjectStoreTest : public ::testing::Test {
     return foundChild->GetId();
   }
 
+  fake::FakePageStorage fake_storage_;
   ObjectStore store_;
 
  private:
@@ -91,12 +94,13 @@ class ObjectStoreTest : public ::testing::Test {
 };
 
 TEST_F(ObjectStoreTest, CreateGetTreeNode) {
-  std::unique_ptr<const Object> node = CreateEmptyNode();
+  std::unique_ptr<const TreeNode> node = CreateEmptyNode();
 
   std::unique_ptr<const TreeNode> foundNode;
-  EXPECT_EQ(Status::OK, store_.GetTreeNode(node->GetId(), &foundNode));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node->GetId(), &foundNode));
 
-  EXPECT_EQ(Status::NOT_FOUND, store_.GetTreeNode(RandomId(), &foundNode));
+  EXPECT_EQ(Status::NOT_FOUND,
+            TreeNode::FromId(&store_, RandomId(), &foundNode));
 }
 
 TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
@@ -323,6 +327,35 @@ TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
   for (int i = 0; i <= size; ++i) {
     EXPECT_EQ(GetChildId(node.get(), i), GetChildId(newNode.get(), i));
   }
+}
+
+TEST_F(ObjectStoreTest, Serialization) {
+  int size = 3;
+  std::vector<Entry> entries = GetEntries(size);
+  std::vector<ObjectId> children = CreateChildren(size + 1);
+  std::unique_ptr<const TreeNode> node = FromEntries(entries, children);
+
+  Status status;
+  std::unique_ptr<const Object> object;
+  // Fake storage is always synchronous.
+  fake_storage_.GetObject(
+      node->GetId(),
+      [this, &status, &object](Status returned_status,
+                               std::unique_ptr<const Object> returned_object) {
+        status = returned_status;
+        object = std::move(returned_object);
+      });
+  EXPECT_EQ(Status::OK, status);
+  std::unique_ptr<const TreeNode> retrieved_node;
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, object->GetId(), &node));
+
+  ftl::StringView data;
+  EXPECT_EQ(Status::OK, object->GetData(&data));
+  std::vector<Entry> parsed_entries;
+  std::vector<ObjectId> parsed_children;
+  EXPECT_TRUE(DecodeNode(data, &parsed_entries, &parsed_children));
+  EXPECT_EQ(entries, parsed_entries);
+  EXPECT_EQ(children, parsed_children);
 }
 
 }  // namespace

@@ -206,14 +206,15 @@ TEST_F(PageStorageTest, GetObject) {
   ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
 
   Status status;
-  std::unique_ptr<Object> object;
-  storage_->GetObject(object_id, [this, &status, &object](
-                                     Status returned_status,
-                                     std::unique_ptr<Object> returned_object) {
-    status = returned_status;
-    object = std::move(returned_object);
-    message_loop_.QuitNow();
-  });
+  std::unique_ptr<const Object> object;
+  storage_->GetObject(
+      object_id,
+      [this, &status, &object](Status returned_status,
+                               std::unique_ptr<const Object> returned_object) {
+        status = returned_status;
+        object = std::move(returned_object);
+        message_loop_.QuitNow();
+      });
   message_loop_.Run();
 
   EXPECT_EQ(Status::OK, status);
@@ -226,7 +227,7 @@ TEST_F(PageStorageTest, GetObject) {
 TEST_F(PageStorageTest, AddObjectSynchronous) {
   std::string content("Some data");
 
-  std::unique_ptr<Object> object;
+  std::unique_ptr<const Object> object;
   Status status = storage_->AddObjectSynchronous(content, &object);
   EXPECT_EQ(Status::OK, status);
   std::string hash = glue::SHA256Hash(content.data(), content.size());
@@ -244,7 +245,7 @@ TEST_F(PageStorageTest, GetObjectSynchronous) {
   std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
   ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
 
-  std::unique_ptr<Object> object;
+  std::unique_ptr<const Object> object;
   Status status = storage_->GetObjectSynchronous(object_id, &object);
 
   EXPECT_EQ(Status::OK, status);

@@ -22,7 +22,7 @@ class Object {
   virtual ObjectId GetId() const = 0;
 
   // Returns the data of this object.
-  virtual Status GetData(ftl::StringView* data) = 0;
+  virtual Status GetData(ftl::StringView* data) const = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Object);

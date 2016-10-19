@@ -23,7 +23,7 @@ class FakeObject : public Object {
       : id_(id.ToString()), content_(content.ToString()) {}
   ~FakeObject() {}
   ObjectId GetId() const override { return id_; }
-  Status GetData(ftl::StringView* data) override {
+  Status GetData(ftl::StringView* data) const override {
     *data = content_;
     return Status::OK;
   }
@@ -155,7 +155,8 @@ void FakePageStorage::AddObjectFromLocal(
 
 void FakePageStorage::GetObject(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<Object>)>& callback) {
+    const std::function<void(Status, std::unique_ptr<const Object>)>&
+        callback) {
   auto it = objects_.find(object_id);
   if (it == objects_.end()) {
     callback(Status::NOT_FOUND, nullptr);
@@ -165,8 +166,9 @@ void FakePageStorage::GetObject(
   callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
 }
 
-Status FakePageStorage::GetObjectSynchronous(ObjectIdView object_id,
-                                             std::unique_ptr<Object>* object) {
+Status FakePageStorage::GetObjectSynchronous(
+    ObjectIdView object_id,
+    std::unique_ptr<const Object>* object) {
   auto it = objects_.find(object_id);
   if (it == objects_.end()) {
     return Status::NOT_FOUND;
@@ -176,8 +178,9 @@ Status FakePageStorage::GetObjectSynchronous(ObjectIdView object_id,
   return Status::OK;
 }
 
-Status FakePageStorage::AddObjectSynchronous(convert::ExtendedStringView data,
-                                             std::unique_ptr<Object>* object) {
+Status FakePageStorage::AddObjectSynchronous(
+    convert::ExtendedStringView data,
+    std::unique_ptr<const Object>* object) {
   std::string object_id = RandomId();
   objects_[object_id] = data.ToString();
   return GetObjectSynchronous(object_id, object);

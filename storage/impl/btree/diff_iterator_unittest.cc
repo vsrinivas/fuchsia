@@ -5,6 +5,7 @@
 #include "apps/ledger/storage/impl/btree/diff_iterator.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
 #include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
@@ -26,7 +27,7 @@ ObjectId RandomId() {
 
 class DiffIteratorTest : public ::testing::Test {
  public:
-  DiffIteratorTest() {}
+  DiffIteratorTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
 
   ~DiffIteratorTest() override {}
 
@@ -37,6 +38,7 @@ class DiffIteratorTest : public ::testing::Test {
   }
 
  protected:
+  fake::FakePageStorage fake_storage_;
   ObjectStore store_;
 
  private:
@@ -55,9 +57,9 @@ TEST_F(DiffIteratorTest, IterateEmptyDiff) {
                 std::vector<ObjectId>(5), &node_id1));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, store_.GetTreeNode(node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, store_.GetTreeNode(node_id1, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &right));
 
   DiffIterator it(std::move(left), std::move(right));
   EXPECT_FALSE(it.Valid());
@@ -88,9 +90,9 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
                                   std::vector<ObjectId>(6), &node_id2));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, store_.GetTreeNode(node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, store_.GetTreeNode(node_id2, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id2, &right));
 
   DiffIterator it(std::move(left), std::move(right));
 

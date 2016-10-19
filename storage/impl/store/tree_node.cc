@@ -7,37 +7,18 @@
 #include <algorithm>
 
 #include "apps/ledger/convert/convert.h"
-#include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/impl/store/encoding.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/logging.h"
 
 namespace storage {
 
-namespace {
-
-storage::ObjectId RandomId() {
-  std::string result;
-  result.resize(kObjectIdSize);
-  glue::RandBytes(&result[0], kObjectIdSize);
-  return result;
-}
-
-}  // namespace
-
-TreeNode::TreeNode(const TreeNode& node)
-    : store_(node.store_),
-      id_(node.id_),
-      entries_(node.entries_),
-      children_(node.children_) {
-  FTL_DCHECK(entries_.size() + 1 == children_.size());
-}
-
 TreeNode::TreeNode(ObjectStore* store,
-                   ObjectIdView id,
-                   const std::vector<Entry>& entries,
-                   const std::vector<ObjectId>& children)
+                   std::string&& id,
+                   std::vector<Entry>&& entries,
+                   std::vector<ObjectId>&& children)
     : store_(store),
-      id_(id.ToString()),
+      id_(std::move(id)),
       entries_(entries),
       children_(children) {}
 
@@ -46,21 +27,36 @@ TreeNode::~TreeNode() {}
 Status TreeNode::FromId(ObjectStore* store,
                         ObjectIdView id,
                         std::unique_ptr<const TreeNode>* node) {
-  return store->GetTreeNode(id, node);
+  std::unique_ptr<const Object> object;
+  Status status = store->GetObject(id, &object);
+  if (status != Status::OK) {
+    return status;
+  }
+  ftl::StringView json;
+  status = object->GetData(&json);
+  if (status != Status::OK)
+    return status;
+  std::vector<Entry> entries;
+  std::vector<ObjectId> children;
+  if (!DecodeNode(json, &entries, &children)) {
+    return Status::FORMAT_ERROR;
+  }
+  node->reset(new TreeNode(store, object->GetId(), std::move(entries),
+                           std::move(children)));
+  return Status::OK;
 }
 
 Status TreeNode::FromEntries(ObjectStore* store,
                              const std::vector<Entry>& entries,
                              const std::vector<ObjectId>& children,
                              ObjectId* node_id) {
-  // TODO(nellyv): replace random id with the hash over the stored bytes.
-  ObjectId id = RandomId();
-  Status s = store->AddObject(
-      std::unique_ptr<Object>(new TreeNode(store, id, entries, children)));
+  std::string encoding = storage::EncodeNode(entries, children);
+  std::unique_ptr<const Object> object;
+  Status s = store->AddObject(encoding, &object);
   if (s != Status::OK) {
     return s;
   }
-  node_id->swap(id);
+  *node_id = object->GetId();
   return Status::OK;
 }
 
@@ -103,8 +99,7 @@ Status TreeNode::Split(int index,
     children.push_back(children_[i]);
   }
   children.push_back(left_rightmost_child.ToString());
-  // TODO(nellyv): replace random id with the hash over the stored bytes.
-  ObjectId leftId = RandomId();
+  ObjectId leftId;
   Status s = FromEntries(store_, entries, children, &leftId);
   if (s != Status::OK) {
     return s;
@@ -118,8 +113,7 @@ Status TreeNode::Split(int index,
     entries.push_back(entries_[i]);
     children.push_back(children_[i + 1]);
   }
-  // TODO(nellyv): replace random id with the hash over the stored bytes.
-  ObjectId rightId = RandomId();
+  ObjectId rightId;
   s = FromEntries(store_, entries, children, &rightId);
   if (s != Status::OK) {
     // TODO(nellyv): If this fails, remove the left  object from the object
@@ -148,7 +142,7 @@ Status TreeNode::GetChild(int index,
   if (children_[index].empty()) {
     return Status::NOT_FOUND;
   }
-  return store_->GetTreeNode(children_[index], child);
+  return FromId(store_, children_[index], child);
 }
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
@@ -171,10 +165,6 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
 
 ObjectId TreeNode::GetId() const {
   return id_;
-}
-
-Status TreeNode::GetData(ftl::StringView* data) {
-  return Status::NOT_IMPLEMENTED;
 }
 
 // TreeNode::Mutation

@@ -55,13 +55,14 @@ class FakePageStorage : public PageStorage {
       mojo::ScopedDataPipeConsumerHandle data,
       size_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
-  void GetObject(ObjectIdView object_id,
-                 const std::function<void(Status, std::unique_ptr<Object>)>&
-                     callback) override;
+  void GetObject(
+      ObjectIdView object_id,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) override;
   Status GetObjectSynchronous(ObjectIdView object_id,
-                              std::unique_ptr<Object>* object) override;
+                              std::unique_ptr<const Object>* object) override;
   Status AddObjectSynchronous(convert::ExtendedStringView data,
-                              std::unique_ptr<Object>* object) override;
+                              std::unique_ptr<const Object>* object) override;
 
   // For testing:
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

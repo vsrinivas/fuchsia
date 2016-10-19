@@ -5,6 +5,7 @@
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
 #include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
@@ -27,7 +28,7 @@ ObjectId RandomId() {
 
 class BTreeIteratorTest : public ::testing::Test {
  public:
-  BTreeIteratorTest() {}
+  BTreeIteratorTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
 
   ~BTreeIteratorTest() override {}
 
@@ -38,6 +39,7 @@ class BTreeIteratorTest : public ::testing::Test {
   }
 
  protected:
+  fake::FakePageStorage fake_storage_;
   ObjectStore store_;
 
  private:

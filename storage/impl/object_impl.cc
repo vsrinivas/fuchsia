@@ -24,7 +24,7 @@ ObjectId ObjectImpl::GetId() const {
   return id_;
 }
 
-Status ObjectImpl::GetData(ftl::StringView* data) {
+Status ObjectImpl::GetData(ftl::StringView* data) const {
   if (data_.empty()) {
     std::string res;
     // TODO(nellyv): Replace with mmap when supported.

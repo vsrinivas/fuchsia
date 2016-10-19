@@ -18,13 +18,13 @@ class ObjectImpl : public Object {
 
   // Object:
   ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) override;
+  Status GetData(ftl::StringView* data) const override;
 
  private:
   const ObjectId id_;
   const std::string file_path_;
 
-  std::string data_;
+  mutable std::string data_;
 };
 
 }  // namespace storage

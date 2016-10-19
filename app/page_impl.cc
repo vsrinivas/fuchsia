@@ -199,7 +199,7 @@ void PageImpl::GetReference(ReferencePtr reference,
   storage_->GetObject(
       reference->opaque_id,
       [callback](storage::Status status,
-                 std::unique_ptr<storage::Object> object) {
+                 std::unique_ptr<const storage::Object> object) {
         if (status != storage::Status::OK) {
           callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
                        nullptr);

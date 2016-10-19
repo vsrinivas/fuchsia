@@ -17,12 +17,9 @@
 namespace storage {
 
 // A node of the B-Tree holding the commit contents.
-class TreeNode : public Object {
+class TreeNode {
  public:
-  // TODO(nellyv): remove copy constructor when tree nodes are stored on disk.
-  explicit TreeNode(const TreeNode& node);
-
-  ~TreeNode() override;
+  ~TreeNode();
 
   // A TreeNode builder, based on an initial node and allowing to apply a set of
   // changes to it. Mutation calls should be sorted in a strictly increasing
@@ -144,18 +141,16 @@ class TreeNode : public Object {
   // might be found.
   Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
-  // Object:
-  ObjectId GetId() const override;
-  Status GetData(ftl::StringView* data) override;
+  ObjectId GetId() const;
 
  private:
   TreeNode(ObjectStore* store,
-           ObjectIdView id,
-           const std::vector<Entry>& entries,
-           const std::vector<ObjectId>& children);
+           std::string&& id,
+           std::vector<Entry>&& entries,
+           std::vector<ObjectId>&& children);
 
   ObjectStore* store_;
-  const ObjectId id_;
+  ObjectId id_;
   const std::vector<Entry> entries_;
   const std::vector<ObjectId> children_;
 };

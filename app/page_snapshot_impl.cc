@@ -91,8 +91,8 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
                               const GetAllCallback& getall_callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
-  ftl::RefPtr<Waiter<storage::Object>> waiter(
-      ftl::AdoptRef(new Waiter<storage::Object>()));
+  ftl::RefPtr<Waiter<const storage::Object>> waiter(
+      ftl::AdoptRef(new Waiter<const storage::Object>()));
   mojo::Array<EntryPtr> entries = mojo::Array<EntryPtr>::New(0);
 
   while (it->Valid() &&
@@ -103,20 +103,21 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
     entries.push_back(entry.Pass());
 
     page_storage_->GetObject(
-        (*it)->object_id, [object_callback = waiter->NewCallback()](
-                              storage::Status status,
-                              std::unique_ptr<storage::Object> object) mutable {
+        (*it)->object_id,
+        [object_callback = waiter->NewCallback()](
+            storage::Status status,
+            std::unique_ptr<const storage::Object> object) mutable {
           object_callback(status, std::move(object));
         });
     it->Next();
   }
 
   std::function<void(storage::Status,
-                     std::vector<std::unique_ptr<storage::Object>>)>
+                     std::vector<std::unique_ptr<const storage::Object>>)>
       result_callback = ftl::MakeCopyable([
         &getall_callback, entry_list = std::move(entries)
       ](storage::Status status,
-        std::vector<std::unique_ptr<storage::Object>> results) mutable {
+        std::vector<std::unique_ptr<const storage::Object>> results) mutable {
 
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "PageSnapshotImpl::GetAll error while reading.";

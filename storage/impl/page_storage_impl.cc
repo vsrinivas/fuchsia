@@ -370,7 +370,8 @@ void PageStorageImpl::AddObjectFromLocal(
 
 void PageStorageImpl::GetObject(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<Object>)>& callback) {
+    const std::function<void(Status, std::unique_ptr<const Object>)>&
+        callback) {
   std::string file_path = objects_dir_ + "/" + ToHex(object_id);
   if (!files::IsFile(file_path)) {
     // TODO(qsr): Request data from sync: LE-30
@@ -387,8 +388,9 @@ void PageStorageImpl::GetObject(
   });
 }
 
-Status PageStorageImpl::GetObjectSynchronous(ObjectIdView object_id,
-                                             std::unique_ptr<Object>* object) {
+Status PageStorageImpl::GetObjectSynchronous(
+    ObjectIdView object_id,
+    std::unique_ptr<const Object>* object) {
   std::string file_path = objects_dir_ + "/" + ToHex(object_id);
   if (!files::IsFile(file_path))
     return Status::NOT_FOUND;
@@ -398,8 +400,9 @@ Status PageStorageImpl::GetObjectSynchronous(ObjectIdView object_id,
   return Status::OK;
 }
 
-Status PageStorageImpl::AddObjectSynchronous(convert::ExtendedStringView data,
-                                             std::unique_ptr<Object>* object) {
+Status PageStorageImpl::AddObjectSynchronous(
+    convert::ExtendedStringView data,
+    std::unique_ptr<const Object>* object) {
   ObjectId object_id = glue::SHA256Hash(data.data(), data.size());
 
   // Using mkstemp to create an unique file. XXXXXX will be replaced.

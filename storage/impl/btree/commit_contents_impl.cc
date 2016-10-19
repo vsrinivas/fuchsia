@@ -38,7 +38,7 @@ std::unique_ptr<Iterator<const EntryChange>> CommitContentsImpl::diff(
 
 std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
   std::unique_ptr<const TreeNode> root;
-  FTL_CHECK(store_->GetTreeNode(root_id_, &root) == Status::OK);
+  FTL_CHECK(TreeNode::FromId(store_, root_id_, &root) == Status::OK);
   return std::unique_ptr<BTreeIterator>(new BTreeIterator(std::move(root)));
 }
 
