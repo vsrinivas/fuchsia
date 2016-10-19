@@ -12,6 +12,7 @@
 #include "apps/media/src/framework/formatting.h"
 #include "mojo/public/interfaces/network/http_header.mojom.h"
 #include "mojo/public/interfaces/network/network_error.mojom.h"
+#include "mojo/public/interfaces/network/url_body.mojom.h"
 #include "mojo/public/interfaces/network/url_request.mojom.h"
 #include "mojo/public/interfaces/network/url_response.mojom.h"
 
@@ -54,11 +55,19 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value);
 
 std::ostream& operator<<(std::ostream& os, const HttpHeaderPtr& value);
+std::ostream& operator<<(std::ostream& os, const URLBodyPtr& value);
 std::ostream& operator<<(std::ostream& os, const URLRequestPtr& value);
 std::ostream& operator<<(std::ostream& os, const URLResponsePtr& value);
 std::ostream& operator<<(std::ostream& os, const NetworkErrorPtr& value);
-std::ostream& operator<<(std::ostream& os,
-                         const ScopedDataPipeConsumerHandle& value);
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const ScopedHandleBase<T>& value) {
+  if (value.is_valid()) {
+    return os << "<valid>";
+  } else {
+    return os << "<not valid>";
+  }
+}
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const Array<T>& value) {

@@ -283,6 +283,22 @@ std::ostream& operator<<(std::ostream& os, const HttpHeaderPtr& value) {
   }
 }
 
+std::ostream& operator<<(std::ostream& os, const URLBodyPtr& value) {
+  if (!value) {
+    return os << "<nullptr>" << std::endl;
+  } else {
+    if (value->is_stream()) {
+      return os << "mojo::ScopedDataPipeConsumerHandle stream: "
+                << value->get_stream() << std::endl;
+    } else if (value->is_buffer()) {
+      return os << "mojo::ScopedSharedBufferHandle buffer: "
+                << value->get_buffer() << std::endl;
+    } else {
+      return os << "<unknown>" << std::endl;
+    }
+  }
+}
+
 std::ostream& operator<<(std::ostream& os, const URLRequestPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
@@ -294,8 +310,7 @@ std::ostream& operator<<(std::ostream& os, const URLRequestPtr& value) {
   os << begl << "mojo::String url: " << value->url << std::endl;
   os << begl << "mojo::String method: " << value->method << std::endl;
   os << begl << "mojo::Array<mojo::HttpHeaderPtr> headers: " << value->headers;
-  os << begl
-     << "mojo::Array<mojo::ScopedDataPipeConsumerHandle> body: " << value->body;
+  os << begl << "mojo::URLBody body: " << value->body;
   os << begl << "uint32_t response_body_buffer_size: "
      << value->response_body_buffer_size << std::endl;
   os << begl << "bool auto_follow_redirects: " << value->auto_follow_redirects
@@ -345,13 +360,10 @@ std::ostream& operator<<(std::ostream& os, const NetworkErrorPtr& value) {
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const ScopedDataPipeConsumerHandle& value) {
-  if (value.is_valid()) {
-    return os << "<valid>";
-  } else {
-    return os << "<not valid>";
-  }
-}
+                         const ScopedDataPipeConsumerHandle& value);
+
+std::ostream& operator<<(std::ostream& os,
+                         const ScopedSharedBufferHandle& value);
 
 const char* StringFromMediaTypeMedium(MediaTypeMedium value) {
   switch (value) {
