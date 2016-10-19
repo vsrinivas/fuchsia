@@ -11,10 +11,113 @@
 #include <limits.h> // PAGE_SIZE
 #include <magenta/syscalls.h>
 #include <map>
+#include <vector>
 
-struct PinnedPage {
-    uint64_t phys_addr;
-    uint32_t pin_count;
+class PinCountArray {
+public:
+    using pin_count_t = uint8_t;
+
+    static constexpr uint32_t kPinCounts = PAGE_SIZE / sizeof(pin_count_t);
+
+    PinCountArray() : count_(kPinCounts) {}
+
+    uint32_t pin_count(uint32_t index)
+    {
+        DASSERT(index < count_.size());
+        return count_[index];
+    }
+
+    void incr(uint32_t index)
+    {
+        DASSERT(index < count_.size());
+        total_count_++;
+        DASSERT(count_[index] < static_cast<pin_count_t>(~0));
+        ++count_[index];
+    }
+
+    // If pin count is positive, decrements the pin count and returns the new pin count.
+    // Otherwise returns -1.
+    int32_t decr(uint32_t index)
+    {
+        DASSERT(index < count_.size());
+        if (count_[index] == 0)
+            return -1;
+        DASSERT(total_count_ > 0);
+        --total_count_;
+        return --count_[index];
+    }
+
+    uint32_t total_count() { return total_count_; }
+
+private:
+    uint32_t total_count_{};
+    std::vector<pin_count_t> count_;
+};
+
+class PinCountSparseArray {
+public:
+    static std::unique_ptr<PinCountSparseArray> Create(uint32_t page_count)
+    {
+        uint32_t array_size = page_count / PinCountArray::kPinCounts;
+        if (page_count % PinCountArray::kPinCounts)
+            array_size++;
+        return std::unique_ptr<PinCountSparseArray>(new PinCountSparseArray(array_size));
+    }
+
+    uint32_t total_pin_count() { return total_pin_count_; }
+
+    uint32_t pin_count(uint32_t page_index)
+    {
+        uint32_t array_index = page_index / PinCountArray::kPinCounts;
+        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
+
+        auto& array = sparse_array_[array_index];
+        if (!array)
+            return 0;
+
+        return array->pin_count(array_offset);
+    }
+
+    void incr(uint32_t page_index) 
+    {
+        uint32_t array_index = page_index / PinCountArray::kPinCounts;
+        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
+
+        if (!sparse_array_[array_index]) {
+            sparse_array_[array_index] = std::unique_ptr<PinCountArray>(new PinCountArray());
+        }
+
+        sparse_array_[array_index]->incr(array_offset);
+
+        ++total_pin_count_;
+    }
+
+    int32_t decr(uint32_t page_index)
+    {
+        uint32_t array_index = page_index / PinCountArray::kPinCounts;
+        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
+
+        auto& array = sparse_array_[array_index];
+        if (!array)
+            return DRETF(false, "page not pinned");
+
+        int32_t ret = array->decr(array_offset);
+        if (ret < 0)
+            return DRET_MSG(ret, "page not pinned");
+
+        --total_pin_count_;
+
+        if (array->total_count() == 0)
+            array.reset();
+
+        return ret;
+    }
+
+private:
+    PinCountSparseArray(uint32_t array_size) : sparse_array_(array_size) {}
+
+    std::vector<std::unique_ptr<PinCountArray>> sparse_array_; 
+    uint32_t total_pin_count_{};
 };
 
 class MagentaPlatformBuffer : public msd_platform_buffer, public magma::Refcounted {
@@ -24,6 +127,9 @@ public:
     {
         DLOG("MagentaPlatformBuffer ctor size %lld handle 0x%x", size, handle_);
         magic_ = kMagic;
+
+        DASSERT(magma::is_page_aligned(size));
+        pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
     }
 
     ~MagentaPlatformBuffer()
@@ -65,7 +171,7 @@ private:
     mx_handle_t handle_;
     uint64_t size_;
     void* virt_addr_{};
-    std::map<uint32_t, PinnedPage> pinned_pages_;
+    std::unique_ptr<PinCountSparseArray> pin_count_array_;
     std::map<uint32_t, void*> mapped_pages_;
 };
 
@@ -110,21 +216,8 @@ int MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_cou
     if (status != NO_ERROR)
         return DRET_MSG(-ENOMEM, "failed to commit vmo");
 
-    mx_paddr_t paddr[page_count];
-
-    status = mx_vmo_op_range(handle_, MX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE, paddr, sizeof(paddr));
-    if (status != NO_ERROR)
-        return DRET_MSG(-ENOMEM, "failed to lookup vmo");
-
     for (uint32_t i = 0; i < page_count; i++) {
-        auto iter = pinned_pages_.find(start_page_index + i);
-        if (iter == pinned_pages_.end()) {
-            pinned_pages_[start_page_index + i] = PinnedPage{paddr[i], 1};
-        } else {
-            auto& page = iter->second;
-            DASSERT(page.phys_addr == paddr[i]);
-            page.pin_count++;
-        }
+        pin_count_array_->incr(start_page_index + i);
     }
 
     return 0;
@@ -140,15 +233,13 @@ int MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_c
 
     uint32_t pages_to_unpin = 0;
 
-    // Validate all pages in the range are pinned.
     for (uint32_t i = 0; i < page_count; i++) {
-        auto iter = pinned_pages_.find(start_page_index + i);
-        if (iter == pinned_pages_.end())
-            return DRET_MSG(-EINVAL, "page_index %d not pinned", start_page_index + i);
+        uint32_t pin_count = pin_count_array_->pin_count(start_page_index + i);
 
-        auto& page = iter->second;
-        DASSERT(page.pin_count > 0);
-        if (page.pin_count == 1)
+        if (pin_count == 0)
+            return DRET_MSG(-EINVAL, "page not pinned");
+
+        if (pin_count == 1)
             pages_to_unpin++;
     }
 
@@ -157,11 +248,11 @@ int MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_c
     int ret = 0;
 
     if (pages_to_unpin == page_count) {
-        // Unpin the entire range.
         for (uint32_t i = 0; i < page_count; i++) {
-            pinned_pages_.erase(start_page_index + i);
+            pin_count_array_->decr(start_page_index + i);
         }
 
+        // Decommit the entire range.
         mx_status_t status =
             mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE, nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
@@ -170,25 +261,15 @@ int MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_c
         }
 
     } else {
-        // Page by page
-        auto iter = pinned_pages_.find(start_page_index);
-
-        for (uint32_t i = 0; i < page_count; i++) {
-            DASSERT(iter != pinned_pages_.end());
-
-            auto& page = iter->second;
-            if (--page.pin_count == 0) {
+        // Decommit page by page
+        for (uint32_t page_index = start_page_index; page_index < start_page_index + page_count; page_index++) {
+            if (pin_count_array_->decr(page_index) == 0) {
                 mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT,
-                                                     (start_page_index + i) * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
+                                                     page_index * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
                 if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
-                    DLOG("failed to decommit page_index %d: %d", start_page_index + i, status);
+                    DLOG("failed to decommit page_index %u: %u", page_index + i, status);
                     ret = -EINVAL;
                 }
-                auto erase_iter = iter;
-                iter++;
-                pinned_pages_.erase(erase_iter);
-            } else {
-                iter++;
             }
         }
     }
@@ -198,8 +279,8 @@ int MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_c
 
 void MagentaPlatformBuffer::ReleasePages()
 {
-    if (pinned_pages_.size()) {
-        // Have some pinned pages, decommit full range.
+    if (pin_count_array_->total_pin_count()) {
+        // Still have some pinned pages, decommit full range to be sure everything is released.
         mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT, 0, size(), nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
             DLOG("failed to decommit pages: %d", status);
@@ -244,16 +325,18 @@ void MagentaPlatformBuffer::UnmapPageCpu(uint32_t page_index)
 
 uint64_t MagentaPlatformBuffer::MapPageBus(uint32_t page_index)
 {
-    auto iter = pinned_pages_.find(page_index);
-    if (iter == pinned_pages_.end()) {
+    if (pin_count_array_->pin_count(page_index) == 0) {
         DLOG("page_index %u not pinned", page_index);
         return 0;
     }
 
-    auto& page = iter->second;
-    DASSERT(page.pin_count > 0);
+    mx_paddr_t paddr[1];
 
-    return page.phys_addr;
+    mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_LOOKUP, page_index * PAGE_SIZE, PAGE_SIZE, paddr, sizeof(paddr));
+    if (status != NO_ERROR)
+        return DRET_MSG(-ENOMEM, "failed to lookup vmo");
+
+    return paddr[0];
 }
 
 //////////////////////////////////////////////////////////////////////////////
