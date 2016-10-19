@@ -5,7 +5,8 @@
 #ifndef APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_
 #define APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_
 
-#if defined(__Fuchsia__)
+#if 0
+// Stubs to disable tracing for certain development purposes.
 #define TRACE_EVENT0(a, b)
 #define TRACE_EVENT1(a, b, c, d) (void)d
 #define TRACE_EVENT2(a, b, c, d, e, f) (void)d, (void)f
@@ -24,7 +25,7 @@
 #define TRACE_EVENT_SCOPE_PROCESS
 #define TRACE_EVENT_SCOPE_THREAD
 #else
-#include "base/trace_event/trace_event.h"
-#endif  // defined(__Fuchsia__)
+#include "apps/mozart/glue/ktrace/trace_event.h"
+#endif
 
 #endif  // APPS_MOZART_GLUE_BASE_TRACE_EVENT_H_
