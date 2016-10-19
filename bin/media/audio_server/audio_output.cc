@@ -89,8 +89,6 @@ MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
 }
 
 void AudioOutput::ScheduleCallback(ftl::TimePoint when) {
-  ftl::MutexLocker locker(&mutex_);
-
   // If we are in the process of shutting down, then we are no longer permitted
   // to schedule callbacks.
   if (shutting_down_) {

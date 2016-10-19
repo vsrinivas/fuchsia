@@ -99,7 +99,8 @@ class AudioOutput {
   //
   // Schedule a processing callback at the specified absolute time on the local
   // clock.
-  void ScheduleCallback(ftl::TimePoint when);
+  void ScheduleCallback(ftl::TimePoint when)
+      FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // ShutdownSelf
   //
