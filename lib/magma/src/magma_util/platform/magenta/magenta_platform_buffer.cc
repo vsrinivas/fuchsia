@@ -364,6 +364,21 @@ int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint6
     return 0;
 }
 
+int32_t msd_platform_buffer_import(struct msd_platform_buffer** buffer_out, uint32_t handle)
+{
+    uint64_t size;
+    // presumably this will fail if handle is invalid or not a vmo handle, so we perform no
+    // additional error checking
+    auto status = mx_vmo_get_size(handle, &size);
+    if (status != NO_ERROR || !magma::is_page_aligned(size))
+        return DRET(-EINVAL);
+
+    auto buffer = new MagentaPlatformBuffer(handle, size);
+
+    *buffer_out = buffer;
+    return 0;
+}
+
 void msd_platform_buffer_incref(msd_platform_buffer* buffer)
 {
     MagentaPlatformBuffer::cast(buffer)->Incref();

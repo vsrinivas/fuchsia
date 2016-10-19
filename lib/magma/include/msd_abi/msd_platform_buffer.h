@@ -20,6 +20,8 @@ struct msd_platform_buffer {
 int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint64_t size,
                                   uint64_t* size_out, uint32_t* handle_out);
 
+int32_t msd_platform_buffer_import(struct msd_platform_buffer** buffer_out, uint32_t handle);
+
 void msd_platform_buffer_incref(struct msd_platform_buffer* buffer);
 
 void msd_platform_buffer_decref(struct msd_platform_buffer* buffer);

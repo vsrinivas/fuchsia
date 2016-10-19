@@ -13,10 +13,13 @@ namespace magma {
 
 class PlatformBuffer {
 public:
+    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
+    static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
+
+    // DEPRECATED (MA-99)
     // Returned token is owned by the returned unique_ptr and will become invalid when the
     // unique_ptr goes out of scope
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, msd_platform_buffer** token_out);
-    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
     static std::unique_ptr<PlatformBuffer> Create(msd_platform_buffer* token);
 
     ~PlatformBuffer();

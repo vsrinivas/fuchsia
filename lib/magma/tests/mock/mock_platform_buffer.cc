@@ -21,6 +21,11 @@ int32_t msd_platform_buffer_alloc(struct msd_platform_buffer** buffer_out, uint6
     return 0;
 }
 
+int32_t msd_platform_buffer_import(struct msd_platform_buffer** buffer_out, uint32_t handle)
+{
+    return 0;
+}
+
 void msd_platform_buffer_incref(struct msd_platform_buffer* buffer)
 {
     MockPlatformBuffer::cast(buffer)->Incref();

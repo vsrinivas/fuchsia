@@ -31,6 +31,19 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
     return Create(size, &dummy);
 }
 
+std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
+{
+    msd_platform_buffer* token;
+    if (msd_platform_buffer_import(&token, handle) != 0)
+        return DRETP(nullptr, "failed to import platform buffer");
+
+    uint64_t size;
+    if (msd_platform_buffer_get_size(token, &size))
+        return DRETP(nullptr, "failed to get platform buffer size");
+
+    return std::unique_ptr<PlatformBuffer>(new PlatformBuffer(token, size, handle));
+}
+
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(msd_platform_buffer* token)
 {
     uint64_t size;
