@@ -71,7 +71,6 @@ source_set("msd_abi") {
   sources = [
     "msd_abi/msd.h",
     "msd_abi/msd_defs.h",
-    "msd_abi/msd_platform_buffer.h",
   ]
 
   public_deps = [

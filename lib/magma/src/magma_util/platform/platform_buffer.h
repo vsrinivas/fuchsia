@@ -6,51 +6,45 @@
 #define PLATFORM_BUFFER_H
 
 #include "magma_util/dlog.h"
-#include "msd_platform_buffer.h"
 #include <memory>
 
 namespace magma {
 
-class PlatformBuffer {
+class OpaquePlatformBuffer {
+public:
+    virtual ~OpaquePlatformBuffer() {}
+
+    // returns the size of the buffer
+    virtual uint64_t size() = 0;
+
+    // returns a unique, immutable id for the underlying memory object
+    virtual uint64_t id() = 0;
+
+    // returns the value of the handle but does not transfer ownership
+    virtual uint32_t handle() = 0;
+
+    // on success, duplicate of the underlying handle which is owned by the caller
+    virtual bool duplicate_handle(uint32_t* handle_out) = 0;
+};
+
+class PlatformBuffer : public OpaquePlatformBuffer {
 public:
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
 
-    // DEPRECATED (MA-99)
-    // Returned token is owned by the returned unique_ptr and will become invalid when the
-    // unique_ptr goes out of scope
-    static std::unique_ptr<PlatformBuffer> Create(uint64_t size, msd_platform_buffer** token_out);
-    static std::unique_ptr<PlatformBuffer> Create(msd_platform_buffer* token);
+    virtual ~PlatformBuffer() override {}
 
-    ~PlatformBuffer();
+    virtual bool MapCpu(void** addr_out) = 0;
+    virtual bool UnmapCpu() = 0;
 
-    uint64_t size() { return size_; }
-    uint32_t handle() { return handle_; }
+    virtual bool PinPages(uint32_t start_page_index, uint32_t page_count) = 0;
+    virtual bool UnpinPages(uint32_t start_page_index, uint32_t page_count) = 0;
 
-    // The following are mostly wrappers around the c abi; see msd_platform_buffer.h
-    bool MapCpu(void** addr_out);
-    bool UnmapCpu();
+    virtual bool MapPageCpu(uint32_t page_index, void** addr_out) = 0;
+    virtual bool UnmapPageCpu(uint32_t page_index) = 0;
 
-    bool PinPages(uint32_t start_page_index, uint32_t page_count);
-    bool UnpinPages(uint32_t start_page_index, uint32_t page_count);
-
-    bool MapPageCpu(uint32_t page_index, void** addr_out);
-    bool UnmapPageCpu(uint32_t page_index);
-
-    bool MapPageBus(uint32_t page_index, uint64_t* addr_out);
-    bool UnmapPageBus(uint32_t page_index);
-
-    uint32_t GetRefCount();
-
-    PlatformBuffer(const PlatformBuffer&) = delete;
-    void operator=(const PlatformBuffer&) = delete;
-
-private:
-    PlatformBuffer(msd_platform_buffer* token, uint64_t size, uint32_t handle);
-
-    msd_platform_buffer* token_;
-    uint64_t size_;
-    uint32_t handle_;
+    virtual bool MapPageBus(uint32_t page_index, uint64_t* addr_out) = 0;
+    virtual bool UnmapPageBus(uint32_t page_index) = 0;
 };
 
 } // namespace magma

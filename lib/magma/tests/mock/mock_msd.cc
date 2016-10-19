@@ -56,11 +56,11 @@ int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct 
 
 void msd_context_destroy(msd_context* ctx) { delete MsdMockContext::cast(ctx); }
 
-msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
+msd_buffer* msd_buffer_import(uint32_t handle)
 {
     if (!g_bufmgr)
         g_bufmgr.reset(new MsdMockBufferManager());
-    return g_bufmgr->CreateBuffer(platform_buf);
+    return g_bufmgr->CreateBuffer(handle);
 }
 
 void msd_buffer_destroy(msd_buffer* buf)

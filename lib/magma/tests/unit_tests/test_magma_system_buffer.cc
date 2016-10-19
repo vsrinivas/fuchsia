@@ -11,10 +11,10 @@ class MsdMockBufferManager_Create : public MsdMockBufferManager {
 public:
     MsdMockBufferManager_Create() : has_created_buffer_(false), has_destroyed_buffer_(false) {}
 
-    MsdMockBuffer* CreateBuffer(struct msd_platform_buffer* platform_buf)
+    MsdMockBuffer* CreateBuffer(uint32_t handle)
     {
         has_created_buffer_ = true;
-        return MsdMockBufferManager::CreateBuffer(platform_buf);
+        return MsdMockBufferManager::CreateBuffer(handle);
     }
 
     void DestroyBuffer(MsdMockBuffer* buf)

@@ -8,16 +8,14 @@
 
 TEST(MsdBuffer, ImportAndDestroy)
 {
-    msd_platform_buffer* platform_buffer_token;
-
-    auto platform_buf = magma::PlatformBuffer::Create(4096, &platform_buffer_token);
+    auto platform_buf = magma::PlatformBuffer::Create(4096);
     ASSERT_NE(platform_buf, nullptr);
-    ASSERT_EQ(platform_buf->GetRefCount(), 1u);
 
-    auto msd_buffer = msd_buffer_import(platform_buffer_token);
+    uint32_t duplicate_handle;
+    ASSERT_TRUE(platform_buf->duplicate_handle(&duplicate_handle));
+
+    auto msd_buffer = msd_buffer_import(duplicate_handle);
     ASSERT_NE(msd_buffer, nullptr);
-    EXPECT_EQ(platform_buf->GetRefCount(), 2u);
 
     msd_buffer_destroy(msd_buffer);
-    EXPECT_EQ(platform_buf->GetRefCount(), 1u);
 }

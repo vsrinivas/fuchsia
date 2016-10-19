@@ -56,9 +56,12 @@ public:
         EXPECT_TRUE(buffer->MapPageBus(num_pages - 1, &bus_addr));
 
         EXPECT_TRUE(buffer->UnmapPageCpu(0));
-        EXPECT_TRUE(buffer->UnmapPageCpu(num_pages - 1));
         EXPECT_TRUE(buffer->UnmapPageBus(0));
-        EXPECT_TRUE(buffer->UnmapPageCpu(num_pages - 1));
+
+        if (size > PAGE_SIZE) {
+            EXPECT_TRUE(buffer->UnmapPageCpu(num_pages - 1));
+            EXPECT_TRUE(buffer->UnmapPageBus(num_pages - 1));
+        }
 
         // unpin last
         EXPECT_TRUE(buffer->UnpinPages(0, num_pages));
@@ -67,7 +70,7 @@ public:
     static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)
     {
         EXPECT_EQ(buf1->size(), buf->size());
-        EXPECT_EQ(buf1->handle(), buf->handle());
+        EXPECT_EQ(buf1->id(), buf->id());
 
         std::vector<void*> virt_addr(2);
         EXPECT_TRUE(buf1->MapCpu(&virt_addr[0]));
@@ -92,16 +95,26 @@ public:
 
     static void BufferPassing()
     {
-        std::vector<msd_platform_buffer*> token(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
 
-        buffer[0] = magma::PlatformBuffer::Create(1, &token[0]);
-        buffer[1] = magma::PlatformBuffer::Create(token[0]);
+        buffer[0] = magma::PlatformBuffer::Create(1);
+        ASSERT_NE(buffer[0], nullptr);
+        uint32_t duplicate_handle;
+        ASSERT_TRUE(buffer[0]->duplicate_handle(&duplicate_handle));
+        buffer[1] = magma::PlatformBuffer::Import(duplicate_handle);
+        ASSERT_NE(buffer[1], nullptr);
+
+        EXPECT_EQ(buffer[0]->size(), buffer[1]->size());
 
         test_buffer_passing(buffer[0].get(), buffer[1].get());
 
         buffer[0] = std::move(buffer[1]);
-        buffer[1] = magma::PlatformBuffer::Create(token[0]);
+        ASSERT_NE(buffer[0], nullptr);
+        ASSERT_TRUE(buffer[0]->duplicate_handle(&duplicate_handle));
+        buffer[1] = magma::PlatformBuffer::Import(duplicate_handle);
+        ASSERT_NE(buffer[1], nullptr);
+
+        EXPECT_EQ(buffer[0]->size(), buffer[1]->size());
 
         test_buffer_passing(buffer[0].get(), buffer[1].get());
     }

@@ -14,7 +14,8 @@ executable("magma_sys_unit_tests") {
   deps = [
     ":magma_system_tests",
     ":magma_util_tests",
-    "$magma_build_root/tests/mock:platform_buffer",
+    "$magma_build_root/src/magma_util/platform",
+    "$magma_build_root/src/magma_util/platform/magenta",
     "//third_party/gtest",
   ]
 }

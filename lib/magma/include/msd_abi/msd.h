@@ -6,7 +6,6 @@
 #define _MSD_H_
 
 #include "msd_defs.h"
-#include "msd_platform_buffer.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -63,10 +62,10 @@ int32_t msd_context_execute_command_buffer(struct msd_context* ctx,
                                            struct magma_system_command_buffer* cmd_buf,
                                            struct msd_buffer** exec_resources);
 
-// Creates a buffer that owns a reference to the provided platform buffer
+// Creates a buffer that owns the provided handle
 // The resulting msd_buffer is owned by the caller and must be destroyed
 // Returns NULL on failure.
-struct msd_buffer* msd_buffer_import(struct msd_platform_buffer* platform_buf);
+struct msd_buffer* msd_buffer_import(uint32_t handle);
 
 // Destroys |buf|
 // This releases buf's reference to the underlying platform buffer

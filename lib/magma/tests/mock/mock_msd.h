@@ -6,6 +6,7 @@
 #define _MOCK_MSD_H_
 
 #include "magma_util/macros.h"
+#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
 #include <memory>
 #include <vector>
@@ -16,7 +17,11 @@
 
 class MsdMockBuffer : public msd_buffer {
 public:
-    MsdMockBuffer(struct msd_platform_buffer* platform_buf) { magic_ = kMagic; }
+    MsdMockBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf)
+        : platform_buf_(std::move(platform_buf))
+    {
+        magic_ = kMagic;
+    }
     virtual ~MsdMockBuffer() {}
 
     static MsdMockBuffer* cast(msd_buffer* buf)
@@ -27,6 +32,7 @@ public:
     }
 
 private:
+    std::unique_ptr<magma::PlatformBuffer> platform_buf_;
     static const uint32_t kMagic = 0x6d6b6266; // "mkbf" (Mock Buffer)
 };
 
@@ -133,9 +139,10 @@ public:
     MsdMockBufferManager() {}
     virtual ~MsdMockBufferManager() {}
 
-    virtual MsdMockBuffer* CreateBuffer(struct msd_platform_buffer* platform_buf)
+    virtual MsdMockBuffer* CreateBuffer(uint32_t handle)
     {
-        return new MsdMockBuffer(platform_buf);
+        auto platform_buf = magma::PlatformBuffer::Import(handle);
+        return new MsdMockBuffer(std::move(platform_buf));
     }
 
     virtual void DestroyBuffer(MsdMockBuffer* buf) { delete buf; }

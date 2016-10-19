@@ -13,14 +13,16 @@ MagmaSystemBuffer::MagmaSystemBuffer(std::unique_ptr<magma::PlatformBuffer> plat
 
 std::unique_ptr<MagmaSystemBuffer> MagmaSystemBuffer::Create(uint64_t size)
 {
-    msd_platform_buffer* token;
 
-    std::unique_ptr<magma::PlatformBuffer> platform_buffer(
-        magma::PlatformBuffer::Create(size, &token));
+    std::unique_ptr<magma::PlatformBuffer> platform_buffer(magma::PlatformBuffer::Create(size));
     if (!platform_buffer)
         return DRETP(nullptr, "Failed to create PlatformBuffer");
 
-    msd_buffer_unique_ptr_t msd_buf = MsdBufferUniquePtr(msd_buffer_import(token));
+    uint32_t duplicate_handle;
+    if (!platform_buffer->duplicate_handle(&duplicate_handle))
+        return DRETP(nullptr, "failed to get duplicate_handle");
+
+    msd_buffer_unique_ptr_t msd_buf = MsdBufferUniquePtr(msd_buffer_import(duplicate_handle));
     if (!msd_buf)
         return DRETP(nullptr,
                      "Failed to import newly allocated buffer into the MSD Implementation");

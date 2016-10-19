@@ -21,5 +21,6 @@ source_set("magenta") {
   libs = [
     "ddk",
     "driver",
+    "magenta",
   ]
 }

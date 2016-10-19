@@ -82,6 +82,7 @@ private:
         {
             auto batch_buf = &abi_cmd_buf_->resources[0];
             auto buffer = connection_->AllocateBuffer(kBufferSize);
+            DASSERT(buffer);
             resources_.push_back(buffer.get());
             batch_buf->buffer_handle = buffer->handle();
             batch_buf->num_relocations = kNumResources - 1;
@@ -101,6 +102,7 @@ private:
         for (uint32_t i = 1; i < kNumResources; i++) {
             auto resource = &abi_cmd_buf_->resources[i];
             auto buffer = connection_->AllocateBuffer(kBufferSize);
+            DASSERT(buffer);
             resources_.push_back(buffer.get());
             resource->buffer_handle = buffer->handle();
             resource->num_relocations = 0;

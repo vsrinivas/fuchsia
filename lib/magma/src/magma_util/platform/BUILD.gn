@@ -8,7 +8,6 @@ source_set("platform") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
   sources = [
-    "platform_buffer.cc",
     "platform_buffer.h",
     "platform_device.h",
     "platform_futex.h",
