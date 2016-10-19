@@ -240,7 +240,7 @@ int JoinProcess(mx_handle_t proc) {
         mx_object_get_info(proc, MX_INFO_PROCESS, sizeof(proc_info.rec),
                            &proc_info, sizeof(proc_info));
     if (ret != sizeof(proc_info)) {
-        printf("handle_get_info failed? %ld\n", ret);
+        printf("handle_get_info failed? %zd\n", ret);
         return -1;
     }
 
