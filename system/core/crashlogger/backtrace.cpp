@@ -15,6 +15,7 @@
 #include <magenta/syscalls.h>
 
 #include "backtrace.h"
+#include "utils.h"
 
 extern struct r_debug* _dl_debug_addr;
 
@@ -59,19 +60,6 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name, uintptr_t base
 #define lmap_off_next offsetof(struct link_map, l_next)
 #define lmap_off_name offsetof(struct link_map, l_name)
 #define lmap_off_addr offsetof(struct link_map, l_addr)
-
-static inline mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {
-    mx_ssize_t bytes_read = mx_debug_read_memory(h, vaddr, len, ptr);
-    if (bytes_read < 0) {
-        printf("read_mem @%p FAILED %d\n", (void*) vaddr, (int) bytes_read);
-        return (mx_status_t) bytes_read;
-    }
-    if (bytes_read != (mx_ssize_t) len) {
-        printf("read_mem @%p FAILED, short read %ld\n", (void*) vaddr, (long) bytes_read);
-        return ERR_IO;
-    }
-    return NO_ERROR;
-}
 
 static mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max) {
     while (max > 1) {

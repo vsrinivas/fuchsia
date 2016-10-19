@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <magenta/types.h>
 
 extern const char* cl_basename(const char* file);
@@ -35,3 +36,5 @@ extern void do_print_mx_error(const char* file, int line, const char* what, mx_s
   } while (0)
 
 extern mx_koid_t get_koid(mx_handle_t handle);
+
+extern mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len);
