@@ -62,6 +62,8 @@ int Rename(const char* src, const char* dst) {
         break;
       if (!ftl::WriteFileDescriptor(dst_fd.get(), buffer, read))
         return 1;
+      if (fsync(dst_fd.get()) != 0)
+        return 1;
     }
   }
 
@@ -147,6 +149,11 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   }
 
   void OnDataComplete() override {
+    if (fsync(fd_.get()) != 0) {
+      FTL_LOG(ERROR) << "Unable to save to disk.";
+      callback_(Status::INTERNAL_IO_ERROR, "");
+      return;
+    }
     fd_.reset();
     if (size_ != expected_size_) {
       FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
