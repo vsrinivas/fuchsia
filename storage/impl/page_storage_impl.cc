@@ -410,6 +410,9 @@ Status PageStorageImpl::AddObjectSynchronous(
   ftl::UniqueFD fd(mkstemp(&staging_path[0]));
   if (!ftl::WriteFileDescriptor(fd.get(), data.data(), data.size()))
     return Status::INTERNAL_IO_ERROR;
+  if (fsync(fd.get()) != 0)
+    return Status::INTERNAL_IO_ERROR;
+  fd.reset();
   std::string file_path = objects_dir_ + "/" + ToHex(object_id);
   Status status = StagingToDestination(data.size(), staging_path, file_path);
   if (status != Status::OK)
