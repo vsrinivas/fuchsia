@@ -39,14 +39,15 @@
 #endif
 
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 0, void, exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(3, 3, 1, int, debug_read, mx_handle_t, void* buffer, uint32_t length)
-MAGENTA_SYSCALL_DEF(2, 2, 2, int, debug_write, const void* buffer, uint32_t length)
-MAGENTA_SYSCALL_DEF(1, 2, 3, mx_status_t, nanosleep, mx_time_t nanoseconds)
-MAGENTA_SYSCALL_DEF(0, 0, 4, mx_time_t, current_time, void)
-MAGENTA_SYSCALL_DEF(3, 3, 5, int, debug_send_command, mx_handle_t, const void* buffer, uint32_t length)
+MAGENTA_SYSCALL_DEF(0, 0, 1, mx_time_t, current_time, void)
+MAGENTA_SYSCALL_DEF(1, 2, 2, mx_status_t, nanosleep, mx_time_t nanoseconds)
+MAGENTA_SYSCALL_DEF(0, 0, 3, unsigned int, num_cpus, void)
 
-// Temporary system calls before pending calls to get system info are created.
-MAGENTA_SYSCALL_DEF(0, 0, 6, unsigned int, num_cpus, void)
+// Legacy LK debug syscalls.
+
+MAGENTA_SYSCALL_DEF(3, 3, 5, mx_status_t, debug_read, mx_handle_t, void* buffer, uint32_t length)
+MAGENTA_SYSCALL_DEF(2, 2, 6, mx_status_t, debug_write, const void* buffer, uint32_t length)
+MAGENTA_SYSCALL_DEF(3, 3, 7, mx_status_t, debug_send_command, mx_handle_t, const void* buffer, uint32_t length)
 
 // Temporary syscall to aid debuggers
 MAGENTA_SYSCALL_DEF(2, 2, 8, mx_handle_t, debug_transfer_handle, mx_handle_t proc, mx_handle_t handle)
@@ -55,9 +56,10 @@ MAGENTA_SYSCALL_DEF(4, 4, 9, mx_ssize_t, debug_read_memory, mx_handle_t proc, ui
 MAGENTA_SYSCALL_DEF(4, 4, 10, mx_ssize_t, debug_write_memory, mx_handle_t proc, uintptr_t vaddr,
                     mx_size_t len, USER_PTR(const void) buffer)
 
+// Tracing
 MAGENTA_SYSCALL_DEF(4, 4, 11, mx_ssize_t, ktrace_read, mx_handle_t handle, void* ptr, uint32_t off, uint32_t len)
 MAGENTA_SYSCALL_DEF(4, 4, 12, mx_status_t, ktrace_control, mx_handle_t handle, uint32_t action, uint32_t options, USER_PTR(void))
-MAGENTA_SYSCALL_DEF(4, 4, 13, void, ktrace_write, mx_handle_t handle, uint32_t id, uint32_t arg0, uint32_t arg1)
+MAGENTA_SYSCALL_DEF(4, 4, 13, mx_status_t, ktrace_write, mx_handle_t handle, uint32_t id, uint32_t arg0, uint32_t arg1)
 
 // Logging
 MAGENTA_SYSCALL_DEF(1, 1, 30, mx_handle_t, log_create, uint32_t flags)

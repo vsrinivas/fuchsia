@@ -46,7 +46,7 @@ constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 #include <lib/debuglog.h>
 #endif
 
-int sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
+mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
     LTRACEF("ptr %p\n", ptr);
 
     // TODO: finer grained validation
@@ -75,7 +75,7 @@ int sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
     return static_cast<int>(reinterpret_cast<char*>(uptr) - reinterpret_cast<char*>(ptr));
 }
 
-int sys_debug_write(const void* ptr, uint32_t len) {
+mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
     LTRACEF("ptr %p, len %u\n", ptr, len);
 
     if (len > kMaxDebugWriteSize)
@@ -91,7 +91,7 @@ int sys_debug_write(const void* ptr, uint32_t len) {
     return len;
 }
 
-int sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
+mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
     LTRACEF("ptr %p, len %u\n", ptr, len);
 
     // TODO: finer grained validation
@@ -241,24 +241,30 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
     }
 }
 
-void sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
+mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
     // TODO: finer grained validation
-    if (validate_resource_handle(handle) < 0) {
-        return;
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
     }
+
     if (event_id > 0x7FF) {
-        return;
+        return ERR_INVALID_ARGS;
     }
-    uint32_t* args = (uint32_t*) ktrace_open(TAG_PROBE_24(event_id));
-    if (args) {
-        args[0] = arg0;
-        args[1] = arg1;
+
+    uint32_t* args = static_cast<uint32_t*>(ktrace_open(TAG_PROBE_24(event_id)));
+    if (!args) {
+        //  There is not a single reason for failure. Assume it reached the end.
+        return ERR_UNAVAILABLE;
     }
+
+    args[0] = arg0;
+    args[1] = arg1;
+    return NO_ERROR;
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
-                                  user_ptr<void> _buffer_ptr, user_ptr<uint32_t> _buffer_len)
-{
+                                  user_ptr<void> _buffer_ptr, user_ptr<uint32_t> _buffer_len) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();

@@ -5,29 +5,29 @@
 syscall exit
     (retcode: int) noreturn;
 
-syscall debug_read
-    (handle: mx_handle_t, buffer: any[length] OUT, length: uint32_t)
-    returns (int);
-
-syscall debug_write
-    (buffer: any[length] IN, length: uint32_t)
-    returns (int);
+syscall current_time ()
+    returns (mx_time_t);
 
 syscall nanosleep
     (nanoseconds: mx_time_t)
     returns (mx_status_t);
 
-syscall current_time ()
-    returns (mx_time_t);
+syscall num_cpus ()
+    returns (uint32_t);
+
+# Legacy LK debug syscalls
+
+syscall debug_read
+    (handle: mx_handle_t, buffer: any[length] OUT, length: uint32_t)
+    returns (mx_status_t);
+
+syscall debug_write
+    (buffer: any[length] IN, length: uint32_t)
+    returns (mx_status_t);
 
 syscall debug_send_command
     (resource_handle: mx_handle_t, buffer: any[length] IN, length: uint32_t)
-    returns (int);
-
-# Temporary system calls before pending calls to get system info are created.
-
-syscall num_cpus ()
-    returns (uint32_t);
+    returns (mx_status_t);
 
 # Temporary syscall to aid debuggers
 
@@ -46,6 +46,8 @@ syscall debug_read_memory
 syscall debug_write_memory
     (proc: mx_handle_t, vaddr: uintptr_t, len: mx_size_t, buffer: any[len] IN)
     returns (mx_ssize_t);
+
+# Tracing
 
 syscall ktrace_read
     (handle: mx_handle_t, ptr: any[len] OUT, off: uint32_t, len: uint32_t)
