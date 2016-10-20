@@ -108,10 +108,8 @@ typedef enum {
 // be used in both C and C++. C++ <atomic> defines names which are equivalent
 // to those in <stdatomic.h>, but these are contained in the std namespace.
 //
-// The proper C++ version would be 'using mx_futex_t = std::atomic_int;' but
-// in the GCC Magenta build, we don't have a C++ <atomic> and hence cannot use
-// it; instead we use this workaround until we decide what the correct solution
-// should be.
+// In kernel, the only operation done is a user_copy (of sizeof(int)) inside a
+// lock; otherwise the futex address is treated as a key.
 typedef int mx_futex_t;
 #else
 typedef atomic_int mx_futex_t;

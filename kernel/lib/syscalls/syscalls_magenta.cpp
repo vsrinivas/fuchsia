@@ -383,20 +383,20 @@ mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of s
     return NO_ERROR;
 }
 
-mx_status_t sys_futex_wait(user_ptr<volatile mx_futex_t> value_ptr, int current_value, mx_time_t timeout) {
+mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t timeout) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        const_cast<int*>(value_ptr.get()), current_value, timeout);
+        value_ptr.get(), current_value, timeout);
 }
 
-mx_status_t sys_futex_wake(user_ptr<volatile mx_futex_t> value_ptr, uint32_t count) {
+mx_status_t sys_futex_wake(user_ptr<mx_futex_t> value_ptr, uint32_t count) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
-        const_cast<int*>(value_ptr.get()), count);
+        value_ptr.get(), count);
 }
 
-mx_status_t sys_futex_requeue(user_ptr<volatile mx_futex_t> wake_ptr, uint32_t wake_count, int current_value,
-                              user_ptr<volatile mx_futex_t> requeue_ptr, uint32_t requeue_count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
-        const_cast<int*>(wake_ptr.get()), wake_count, current_value, const_cast<int*>(requeue_ptr.get()), requeue_count);
+mx_status_t sys_futex_requeue(user_ptr<mx_futex_t> wake_ptr, uint32_t wake_count, int current_value,
+                              user_ptr<mx_futex_t> requeue_ptr, uint32_t requeue_count) {
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(wake_ptr.get(),
+        wake_count, current_value, requeue_ptr.get(), requeue_count);
 }
 
 int sys_log_create(uint32_t flags) {
