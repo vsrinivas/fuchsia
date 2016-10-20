@@ -19,51 +19,6 @@
 
 #define LOCAL_TRACE 0
 
-/* global interrupt controller */
-#define INTC_PEND0 (ARMCTRL_INTC_BASE + 0x0)
-#define INTC_PEND1 (ARMCTRL_INTC_BASE + 0x4)
-#define INTC_PEND2 (ARMCTRL_INTC_BASE + 0x8)
-#define INTC_FAST (ARMCTRL_INTC_BASE + 0xc)
-#define INTC_ENABLE1 (ARMCTRL_INTC_BASE + 0x10)
-#define INTC_ENABLE2 (ARMCTRL_INTC_BASE + 0x14)
-#define INTC_ENABLE3 (ARMCTRL_INTC_BASE + 0x18)
-#define INTC_DISABLE1 (ARMCTRL_INTC_BASE + 0x1c)
-#define INTC_DISABLE2 (ARMCTRL_INTC_BASE + 0x20)
-#define INTC_DISABLE3 (ARMCTRL_INTC_BASE + 0x24)
-
-/* per-cpu local interrupt controller bits.
- * each is repeated 4 times, one per cpu.
- */
-#define INTC_LOCAL_TIMER_INT_CONTROL0 (ARM_LOCAL_BASE + 0x40)
-#define INTC_LOCAL_TIMER_INT_CONTROL1 (ARM_LOCAL_BASE + 0x44)
-#define INTC_LOCAL_TIMER_INT_CONTROL2 (ARM_LOCAL_BASE + 0x48)
-#define INTC_LOCAL_TIMER_INT_CONTROL3 (ARM_LOCAL_BASE + 0x4c)
-
-#define INTC_LOCAL_MAILBOX_INT_CONTROL0 (ARM_LOCAL_BASE + 0x50)
-#define INTC_LOCAL_MAILBOX_INT_CONTROL1 (ARM_LOCAL_BASE + 0x54)
-#define INTC_LOCAL_MAILBOX_INT_CONTROL2 (ARM_LOCAL_BASE + 0x58)
-#define INTC_LOCAL_MAILBOX_INT_CONTROL3 (ARM_LOCAL_BASE + 0x5c)
-
-#define INTC_LOCAL_IRQ_PEND0 (ARM_LOCAL_BASE + 0x60)
-#define INTC_LOCAL_IRQ_PEND1 (ARM_LOCAL_BASE + 0x64)
-#define INTC_LOCAL_IRQ_PEND2 (ARM_LOCAL_BASE + 0x68)
-#define INTC_LOCAL_IRQ_PEND3 (ARM_LOCAL_BASE + 0x6c)
-
-#define INTC_LOCAL_FIQ_PEND0 (ARM_LOCAL_BASE + 0x70)
-#define INTC_LOCAL_FIQ_PEND1 (ARM_LOCAL_BASE + 0x74)
-#define INTC_LOCAL_FIQ_PEND2 (ARM_LOCAL_BASE + 0x78)
-#define INTC_LOCAL_FIQ_PEND3 (ARM_LOCAL_BASE + 0x7c)
-
-#define INTC_LOCAL_MAILBOX0_SET0 (ARM_LOCAL_BASE + 0x80)
-#define INTC_LOCAL_MAILBOX0_SET1 (ARM_LOCAL_BASE + 0x90)
-#define INTC_LOCAL_MAILBOX0_SET2 (ARM_LOCAL_BASE + 0xa0)
-#define INTC_LOCAL_MAILBOX0_SET3 (ARM_LOCAL_BASE + 0xb0)
-
-#define INTC_LOCAL_MAILBOX0_CLR0 (ARM_LOCAL_BASE + 0xc0)
-#define INTC_LOCAL_MAILBOX0_CLR1 (ARM_LOCAL_BASE + 0xd0)
-#define INTC_LOCAL_MAILBOX0_CLR2 (ARM_LOCAL_BASE + 0xe0)
-#define INTC_LOCAL_MAILBOX0_CLR3 (ARM_LOCAL_BASE + 0xf0)
-
 struct int_handler_struct {
     int_handler handler;
     void* arg;
@@ -96,6 +51,11 @@ status_t mask_interrupt(unsigned int vector) {
             reg = INTC_DISABLE1;
 
         *REG32(reg) = 1 << (vector % 32);
+    } else if ( vector >= INTERRUPT_ARM_LOCAL_MAILBOX0 && vector <= INTERRUPT_ARM_LOCAL_MAILBOX3) {
+        for (uint cpu = 0; cpu < 4; cpu++) {
+            uintptr_t reg = INTC_LOCAL_MAILBOX_INT_CONTROL0 + cpu * 4;
+            *REG32(reg) &= ~(1 << (vector - INTERRUPT_ARM_LOCAL_MAILBOX0));
+        }
     } else {
         PANIC_UNIMPLEMENTED;
     }
@@ -131,6 +91,11 @@ status_t unmask_interrupt(unsigned int vector) {
         //printf("irq1  pending = %08x\n", *(uint32_t *)0xffffffffc000b204);
         //printf("irq2  pending = %08x\n", *(uint32_t *)0xffffffffc000b208);
         *REG32(reg) = 1 << (vector % 32);
+    } else if ( vector >= INTERRUPT_ARM_LOCAL_MAILBOX0 && vector <= INTERRUPT_ARM_LOCAL_MAILBOX3) {
+        for (uint cpu = 0; cpu < 4; cpu++) {
+            uintptr_t reg = INTC_LOCAL_MAILBOX_INT_CONTROL0 + cpu * 4;
+            *REG32(reg) |= 1 << (vector - INTERRUPT_ARM_LOCAL_MAILBOX0);
+        }
     } else {
         PANIC_UNIMPLEMENTED;
     }
@@ -249,7 +214,7 @@ decoded:
         *REG32(INTC_LOCAL_MAILBOX0_CLR0 + 0x10 * cpu) = pend;
 
         if (pend & (1 << MP_IPI_GENERIC)) {
-            PANIC_UNIMPLEMENTED;
+            ret = mp_mbx_generic_irq();
         }
         if (pend & (1 << MP_IPI_RESCHEDULE)) {
             ret = mp_mbx_reschedule_irq();
