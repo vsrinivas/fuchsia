@@ -240,19 +240,19 @@ interface ConflictResolverFactory {
   NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
 };
 
-// The different type of conflict resolution.
+// Strategy to be used when resolving conflicts.
 enum ConflictResolutionPolicy {
-  // No conflict resolution. Conflicting remote commits are not merged.
+  // No conflict resolution. Conflicting commits are not merged.
   NONE,
   // Last one wins. When 2 commits are merged, the resulting commit contains:
-  // All keys/values that do not conflict.
-  // All key/values of the commit with the biggest timestamp (or biggest id, if
-  // the timestamps are the same).
+  //  - all keys/values that do not conflict
+  //  - all keys/values of the commit with the biggest timestamp (or biggest
+  //    id, if the timestamps are the same)
   LAST_ONE_WINS,
-  // Resolution is delegated to a user provided |ConflictResolver| that will be
-  // created calling |ConflictResolverFactory.NewConflictResolver|. A single
-  // |ConflictResolver| will exist per page. If the |ConflictResolver| is
-  // disconnected, a new one will be requested.
+  // Resolution is delegated to a user-provided |ConflictResolver| that is
+  // created by calling |ConflictResolverFactory.NewConflictResolver|. A single
+  // |ConflictResolver| is created for each page. When the |ConflictResolver|
+  // is disconnected, a new one is requested.
   CUSTOM,
 };
 
