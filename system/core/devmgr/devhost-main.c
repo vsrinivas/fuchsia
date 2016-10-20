@@ -175,9 +175,12 @@ void signal_devmgr_shutdown(void) {
     memset(&msg, 0, sizeof(msg));
     msg.op = DH_OP_SHUTDOWN;
 
-    mx_status_t status = mx_msgpipe_write(_dmctl_handle, &msg, sizeof(msg), 0, 0, 0);
-    if (status) {
-        printf("Unexpected error signalling shutdown: %d\n", status);
+    mx_status_t r;
+    if ((r = mx_msgpipe_write(_dmctl_handle, &msg, sizeof(msg), 0, 0, 0)) < 0) {
+        printf("Unexpected error signalling shutdown: %d\n", r);
+    } else if ((r = mx_handle_wait_one(_dmctl_handle, MX_SIGNAL_PEER_CLOSED,
+                                       30000000000, NULL)) < 0) {
+        printf("Unexpected error waiting for shutdown: %d\n", r);
     }
 }
 

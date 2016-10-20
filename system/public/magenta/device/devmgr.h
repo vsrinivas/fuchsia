@@ -10,6 +10,11 @@
 
 #define IOCTL_DEVMGR_MOUNT_FS \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 0)
+#define IOCTL_DEVMGR_UNMOUNT_FS \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 1)
 
 // ssize_t ioctl_devmgr_mount_fs(int fd, mx_handle_t* out);
 IOCTL_WRAPPER_OUT(ioctl_devmgr_mount_fs, IOCTL_DEVMGR_MOUNT_FS, mx_handle_t);
+
+// ssize_t ioctl_devmgr_unmount_fs(int fd);
+IOCTL_WRAPPER(ioctl_devmgr_unmount_fs, IOCTL_DEVMGR_UNMOUNT_FS);

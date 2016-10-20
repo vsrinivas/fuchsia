@@ -215,6 +215,7 @@ mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
         return 1;
     case DH_OP_SHUTDOWN:
         devmgr_vfs_exit();
+        mx_handle_close(h);
         return NO_ERROR;
     default:
         goto fail;

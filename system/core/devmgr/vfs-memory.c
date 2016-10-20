@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>
 
 #include <ddk/device.h>
@@ -521,12 +522,35 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
     return NO_ERROR;
 }
 
+static mx_status_t txn_unmount(mx_handle_t srv) {
+    mx_status_t r;
+    mx_handle_t rpipe[2];
+    if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+        return r;
+    }
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    msg.op = MXRIO_IOCTL;
+    msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
+    if ((r = mxrio_txn_handoff(srv, rpipe[0], &msg)) < 0) {
+        return r;
+    }
+    if ((r = mx_handle_wait_one(rpipe[1], MX_SIGNAL_PEER_CLOSED,
+                                       MX_TIME_INFINITE, NULL)) < 0) {
+        return r;
+    }
+    return NO_ERROR;
+}
+
 mx_status_t vfs_uninstall_all(void) {
     mount_node_t* mount_point;
     mount_node_t* tmp;
     mtx_lock(&vfs_lock);
     list_for_every_entry_safe (&remote_list, mount_point, tmp, mount_node_t, node) {
-        // TODO Send a more explicit 'unmount' signal on all remotes
+        mx_status_t status;
+        if ((status = txn_unmount(mount_point->vn->remote)) < 0) {
+            printf("Unexpected error unmounting filesystem: %d\n", status);
+        }
         mx_handle_close(mount_point->vn->remote);
         mount_point->vn->remote = 0;
         list_delete(&mount_point->node);
