@@ -40,7 +40,7 @@ build() {
   local sysroot="${destdir}/${target}-fuchsia"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
+    rm -rf -- "${sysroot}" "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
   fi
 
   case "${target}" in

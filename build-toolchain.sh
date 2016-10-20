@@ -43,7 +43,7 @@ build() {
   local toolchain="${destdir}/clang+llvm-${HOST_TRIPLE}"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64"
+    rm -rf -- "${toolchain}" "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64"
   fi
 
   mkdir -p -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}"
