@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <magenta/types.h>
 
+#define MAX_BUILDID_SIZE 64
+
 extern const char* cl_basename(const char* file);
 
 extern int debug_level;
@@ -38,3 +40,7 @@ extern void do_print_mx_error(const char* file, int line, const char* what, mx_s
 extern mx_koid_t get_koid(mx_handle_t handle);
 
 extern mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len);
+
+extern mx_status_t fetch_string(mx_handle_t h, mx_vaddr_t vaddr, char* ptr, size_t max);
+
+extern mx_status_t fetch_build_id(mx_handle_t h, mx_vaddr_t base, char* buf, size_t buf_size);
