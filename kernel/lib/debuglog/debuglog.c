@@ -195,11 +195,10 @@ static int debuglog_reader(void* arg) {
             } else {
                 rec->data[rec->datalen] = 0;
             }
-            n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %c %s\n",
+            n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
                          (int) (rec->timestamp / 1000000000ULL),
                          (int) ((rec->timestamp / 1000000ULL) % 1000ULL),
-                         (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U',
-                         rec->data);
+                         rec->pid, rec->tid, rec->data);
             if (n > (int)sizeof(tmp)) {
                 n = sizeof(tmp);
             }
