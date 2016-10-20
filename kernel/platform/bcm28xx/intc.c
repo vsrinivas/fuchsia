@@ -256,10 +256,4 @@ void intc_init(void) {
     *REG32(INTC_DISABLE2) = 0xffffffff;
     *REG32(INTC_DISABLE3) = 0xffffffff;
 
-#if WITH_SMP
-    // unable mailbox irqs on all cores
-    for (uint i = 0; i < 4; i++) {
-        *REG32(INTC_LOCAL_MAILBOX_INT_CONTROL0 + 0x4 * i) = 0x1;
-    }
-#endif
 }

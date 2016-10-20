@@ -136,7 +136,26 @@ void platform_early_init(void)
     /* reserve the first 64k of ram, which should be holding the fdt */
     struct list_node list = LIST_INITIAL_VALUE(list);
     pmm_alloc_range(MEMBASE, 0x80000 / PAGE_SIZE, &list);
+#if WITH_SMP
+#if BCM2837
+    uintptr_t sec_entry = (uintptr_t)(&arm_reset - KERNEL_ASPACE_BASE);
+    unsigned long long *spin_table = (void *)(KERNEL_ASPACE_BASE + 0xd8);
 
+    for (uint i = 1; i <= 3; i++) {
+        spin_table[i] = sec_entry;
+        __asm__ __volatile__ ("" : : : "memory");
+        arch_clean_cache_range(0xffff000000000000,256);     // clean out all the VC bootstrap area
+        __asm__ __volatile__("sev");                        //  where the entry vectors live.
+    }
+#else
+    /* start the other cpus */
+    uintptr_t sec_entry = (uintptr_t)&arm_reset;
+    sec_entry -= (KERNEL_BASE - MEMBASE);
+    for (uint i = 1; i <= 3; i++) {
+        *REG32(ARM_LOCAL_BASE + 0x8c + 0x10 * i) = sec_entry;
+    }
+#endif
+#endif
 }
 
 void platform_init(void)
