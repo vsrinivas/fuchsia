@@ -367,32 +367,3 @@ void platform_init(void)
     platform_init_smp();
 #endif
 }
-
-#if WITH_DEV_PCIE
-#include <dev/pcie_platform.h>
-extern status_t x86_alloc_msi_block(uint requested_irqs,
-                                    bool can_target_64bit,
-                                    bool is_msix,
-                                    pcie_msi_block_t* out_block);
-extern void x86_free_msi_block(pcie_msi_block_t* block);
-extern void x86_register_msi_handler(const pcie_msi_block_t* block,
-                                     uint                    msi_id,
-                                     int_handler             handler,
-                                     void*                   ctx);
-
-void platform_pcie_init_info(pcie_init_info_t *out)
-{
-    *out = (pcie_init_info_t){
-        .ecam_windows         = NULL,
-        .ecam_window_count    = 0,
-        .mmio_window_lo       = { .bus_addr = pcie_mem_lo_base, .size = pcie_mem_lo_size },
-        .mmio_window_hi       = { .bus_addr = 0,                .size = 0 },
-        .pio_window           = { .bus_addr = pcie_pio_base,    .size = pcie_pio_size },
-        .legacy_irq_swizzle   = NULL,
-        .alloc_msi_block      = x86_alloc_msi_block,
-        .free_msi_block       = x86_free_msi_block,
-        .register_msi_handler = x86_register_msi_handler,
-        .mask_unmask_msi      = NULL,
-    };
-}
-#endif  // WITH_DEV_PCIE

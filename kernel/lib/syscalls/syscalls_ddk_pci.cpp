@@ -45,6 +45,7 @@ static inline void shutdown_early_init_console() { }
 
 
 #if WITH_DEV_PCIE
+#include <dev/pcie_bus_driver.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 
@@ -91,6 +92,10 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
     if (len < sizeof(*arg) || len > MX_PCI_INIT_ARG_MAX_SIZE) {
         return ERR_INVALID_ARGS;
     }
+
+    auto pcie = PcieBusDriver::GetDriver();
+    if (pcie == nullptr)
+        return ERR_BAD_STATE;
 
     // we have to malloc instead of new since this is a variable-sized structure
     arg.reset(static_cast<mx_pci_init_arg_t*>(malloc(len)));
@@ -206,7 +211,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
         init_info.legacy_irq_swizzle = pcie_irq_swizzle_from_table;
     }
 
-    status_t ret = pcie_init(&init_info);
+    status_t ret = pcie->Start(&init_info);
     if (ret == NO_ERROR)
         shutdown_early_init_console();
     return ret;

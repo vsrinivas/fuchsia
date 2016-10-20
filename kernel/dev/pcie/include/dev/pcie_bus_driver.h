@@ -22,6 +22,8 @@ struct pcie_bridge_state_t;
 struct pcie_device_state_t;
 struct pcie_config_t;
 
+enum class PcieAddrSpace { MMIO, PIO };
+
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
     struct PlatformMethods {
@@ -52,6 +54,31 @@ public:
     mxtl::RefPtr<pcie_device_state_t> GetNthDevice(uint32_t index);
     uint MapPinToIrq(const pcie_device_state_t* dev, const pcie_bridge_state_t* upstream);
 
+    /* Address space (PIO and MMIO) allocation managment
+     *
+     * Note: Internally, regions held for MMIO address space allocation are
+     * tracked in two different allocators; one for <4GB allocations usable by
+     * 32-bit or 64-bit BARs, and one for >4GB allocations usable only by 64-bit
+     * BARs.
+     *
+     * Users of Add/SubtractBusRegion are permitted to supply regions
+     * which span the 4GB mark in the MMIO address space, but their operation
+     * will be internally split into two different operations executed against
+     * the two different allocators.  The low memory portion of the operation
+     * will be executed first.  In the case that the first of the split
+     * operations succeeds but the second fails, the first operation will not be
+     * rolled back.  If this behavior is unacceptable, users should be sure to
+     * submit only MMIO address space operations which target regions either
+     * entirely above or entirely below the 4GB mark.
+     */
+    status_t AddBusRegion(uint64_t base, uint64_t size, PcieAddrSpace aspace) {
+        return AddSubtractBusRegion(base, size, aspace, true);
+    }
+
+    status_t SubtractBusRegion(uint64_t base, uint64_t size, PcieAddrSpace aspace) {
+        return AddSubtractBusRegion(base, size, aspace, false);
+    }
+
     /* Topology related stuff */
     void LinkDeviceToUpstream(pcie_device_state_t& dev, pcie_bridge_state_t& bridge);
     void UnlinkDeviceFromUpstream(pcie_device_state_t& dev);
@@ -65,8 +92,8 @@ public:
     mxtl::RefPtr<SharedLegacyIrqHandler> FindLegacyIrqHandler(uint irq_id);
     // TODO(johngro) : end TODO section
 
-    // Disallow copying or assigning.
-    DELETE_ALL_COPY_AND_ASSIGN(PcieBusDriver);
+    // Disallow copying, assigning and moving.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBusDriver);
 
     static mxtl::RefPtr<PcieBusDriver> GetDriver() {
         AutoLock lock(driver_lock_);
@@ -96,6 +123,8 @@ private:
                                    uint                                     level,
                                    ForeachCallback                          cbk,
                                    void*                                    ctx);
+    status_t AddSubtractBusRegion(uint64_t base, uint64_t size,
+                                  PcieAddrSpace aspace, bool add_op);
 
     // IRQ support.  Implementation in pcie_irqs.cpp
     status_t InitIrqs(const pcie_init_info_t* init_info);

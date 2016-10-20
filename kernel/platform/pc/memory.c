@@ -5,10 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <trace.h>
+#include <err.h>
 #include <kernel/vm.h>
-#include "platform_p.h"
 #include <platform/multiboot.h>
+#include <trace.h>
+
+#include "platform_p.h"
 
 #define LOCAL_TRACE 0
 
@@ -29,16 +31,6 @@ struct addr_range {
  * that we can let the PCIe bus driver use for allocations */
 paddr_t pcie_mem_lo_base;
 size_t pcie_mem_lo_size;
-
-/* Store the PIO region for PCIe; make thes variables so we can easily
- * change them later */
-#define BASE_PMIO_ADDR 0x8000
-uint16_t pcie_pio_base = BASE_PMIO_ADDR;
-uint16_t pcie_pio_size = 0x10000 - BASE_PMIO_ADDR;
-
-/* Scratch space for storing discovered address ranges so we can sort them */
-#define MAX_ADDRESS_RANGES 32
-static struct addr_range address_ranges[MAX_ADDRESS_RANGES];
 
 #define DEFAULT_MEMEND (16*1024*1024)
 
@@ -334,75 +326,6 @@ static int addr_range_cmp(const void* p1, const void* p2)
     return 1;
 }
 
-/* Find the largest low-memory gap in the memory map provided by the
- * bootloader to assign to PCIe.
- */
-static void find_pcie_mmio_region(void)
-{
-    boot_addr_range_t range;
-
-    e820_range_seq_t e820_seq;
-    multiboot_range_seq_t multiboot_seq;
-    if (!e820_range_init(&range, &e820_seq)) {
-        if (!multiboot_range_init(&range, &multiboot_seq)) {
-            pcie_mem_lo_base = 0;
-            pcie_mem_lo_size = 0;
-        }
-    }
-
-    uint num_ranges = 0;
-    for (range.reset(&range), range.advance(&range);
-         !range.is_reset;
-         range.advance(&range)) {
-
-        /* TODO(teisenbe): We can probably just dynamically allocate an array
-         * here to avoid the too many address ranges case */
-        if (num_ranges == MAX_ADDRESS_RANGES) {
-            printf("WARNING: Too many address ranges, cannot allocate PCIe region\n");
-            pcie_mem_lo_base = 0;
-            pcie_mem_lo_size = 0;
-            return;
-        }
-        address_ranges[num_ranges].base = range.base;
-        address_ranges[num_ranges].size = range.size;
-        /* make sure we don't wrap the address space */
-        DEBUG_ASSERT(range.base <= range.base + range.size);
-        num_ranges++;
-    }
-    if (num_ranges == 0) {
-        return;
-    }
-    qsort(address_ranges, num_ranges, sizeof(address_ranges[0]), addr_range_cmp);
-
-    /* Assume the ranges are non-overlapping and search for the biggest gap */
-    for (uint i = 0; i < num_ranges - 1; ++i) {
-        DEBUG_ASSERT(address_ranges[i].base < address_ranges[i + 1].base);
-        uint64_t end = address_ranges[i].base + address_ranges[i].size;
-        if (end > HIGH_ADDRESS_LIMIT) {
-            break;
-        }
-        uint64_t next_start = address_ranges[i + 1].base;
-        if (next_start > HIGH_ADDRESS_LIMIT) {
-            next_start = HIGH_ADDRESS_LIMIT;
-        }
-        DEBUG_ASSERT(next_start >= end);
-        uint64_t size = next_start - end;
-        if (size > pcie_mem_lo_size) {
-            pcie_mem_lo_size = size;
-            pcie_mem_lo_base = end;
-        }
-    }
-
-    uint64_t end = address_ranges[num_ranges - 1].base + address_ranges[num_ranges - 1].size;
-    if (end < HIGH_ADDRESS_LIMIT) {
-        uint64_t size = HIGH_ADDRESS_LIMIT - end;
-        if (size > pcie_mem_lo_size) {
-            pcie_mem_lo_size = size;
-            pcie_mem_lo_base = end;
-        }
-    }
-}
-
 static int platform_mem_range_init(void)
 {
     boot_addr_range_t range;
@@ -429,6 +352,23 @@ static int platform_mem_range_init(void)
     return 1;
 }
 
+static size_t cached_e820_entry_count;
+static struct addr_range cached_e820_entries[64];
+
+status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
+    if (callback == NULL)
+        return ERR_INVALID_ARGS;
+
+    if(!cached_e820_entry_count)
+        return ERR_BAD_STATE;
+
+    DEBUG_ASSERT(cached_e820_entry_count <= countof(cached_e820_entries));
+    for (size_t i = 0; i < cached_e820_entry_count; ++i)
+        callback(cached_e820_entries[i].base, cached_e820_entries[i].size, ctx);
+
+    return NO_ERROR;
+}
+
 /* Discover the basic memory map */
 void platform_mem_init(void)
 {
@@ -436,5 +376,33 @@ void platform_mem_init(void)
     for (int i = 0; i < arena_count; i++)
         pmm_add_arena(&mem_arenas[i]);
 
-    find_pcie_mmio_region();
+    // Cache the e820 entries so that they will be available for enumeration
+    // later in the boot.
+    //
+    // TODO(teisenbe, johngro): do not hardcode a limit on the number of
+    // entries we may have.  Find some other way to make this information
+    // available at any point in time after we boot.
+    boot_addr_range_t range;
+    e820_range_seq_t e820_seq;
+    multiboot_range_seq_t multiboot_seq;
+
+    cached_e820_entry_count = 0;
+    if (e820_range_init(&range, &e820_seq) || multiboot_range_init(&range, &multiboot_seq)) {
+        for (range.reset(&range),
+             range.advance(&range);
+             !range.is_reset; range.advance(&range)) {
+            if (cached_e820_entry_count >= countof(cached_e820_entries)) {
+                TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
+                cached_e820_entry_count = 0;
+                break;
+            }
+
+            struct addr_range* entry = &cached_e820_entries[cached_e820_entry_count++];
+            entry->base = range.base;
+            entry->size = range.size;
+
+        }
+    } else {
+        TRACEF("ERROR - No e820 range entries found!  This is going to end badly for everyone.\n");
+    }
 }

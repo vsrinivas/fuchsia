@@ -164,30 +164,6 @@ typedef struct pcie_init_info {
     /** The number of elements in the ecam_windows array. */
     size_t ecam_window_count;
 
-    /**
-     * The low-memory region of MMIO space.  The physical addresses for the
-     * range must exist entirely below the 4GB mark on the system bus.  32-bit
-     * MMIO regions described by device BARs must be allocated from this window.
-     */
-    pcie_io_range_t mmio_window_lo;
-
-    /**
-     * The high-memory region of MMIO space.  This range is optional; set
-     * mmio_window_hi.size to zero if there is no high memory range on this
-     * system.  64-bit MMIO regions described by device BARs will be
-     * preferentally allocated from this window.
-     */
-    pcie_io_range_t mmio_window_hi;
-
-    /**
-     * The PIO space.  On x86/x64 systems, this will describe the regions of the
-     * 16-bit IO address space which are availavle to be allocated to PIO BARs
-     * for PCI devices.  On other systems, this describes the physical address
-     * space that the system reserves for producing PIO cycles on PCI.  Note;
-     * this region must exist in low memory (below the 4GB mark)
-     */
-    pcie_io_range_t pio_window;
-
     /** Platform-specific legacy IRQ remapping.  @see platform_legacy_irq_swizzle_t */
     platform_legacy_irq_swizzle_t legacy_irq_swizzle;
 
@@ -207,17 +183,6 @@ typedef struct pcie_init_info {
      */
     platform_mask_unmask_msi_t mask_unmask_msi;
 } pcie_init_info_t;
-
-/*
- * Init the PCIe subsystem
- *
- * @param init_info A pointer to the information describing the resources to be
- * used by the bus driver to access the PCIe subsystem on this platform.  See \p
- * struct pcie_init_info for more details.
- *
- * @return NO_ERROR if everything goes well.
- */
-status_t pcie_init(const pcie_init_info_t* init_info);
 
 /*
  * Shutdown the PCIe subsystem

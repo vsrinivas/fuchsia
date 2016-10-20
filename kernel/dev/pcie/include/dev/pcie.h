@@ -114,7 +114,8 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
     pcie_device_state_t(PcieBusDriver& bus_driver);
     virtual ~pcie_device_state_t();
 
-    DELETE_ALL_COPY_AND_ASSIGN(pcie_device_state_t);
+    // Disallow copying, assigning and moving.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(pcie_device_state_t);
 
     virtual void Unplug();
     mxtl::RefPtr<pcie_bridge_state_t> GetUpstream() { return bus_drv.GetUpstream(*this); }
@@ -209,7 +210,8 @@ struct pcie_bridge_state_t : public pcie_device_state_t {
     pcie_bridge_state_t(PcieBusDriver& bus_driver, uint mbus_id);
     virtual ~pcie_bridge_state_t();
 
-    DELETE_ALL_COPY_AND_ASSIGN(pcie_bridge_state_t);
+    // Disallow copying, assigning and moving.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(pcie_bridge_state_t);
 
     mxtl::RefPtr<pcie_device_state_t> GetDownstream(uint ndx) {
         return bus_drv.GetDownstream(*this, ndx);

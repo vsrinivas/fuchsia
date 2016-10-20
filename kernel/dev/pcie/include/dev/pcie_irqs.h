@@ -147,8 +147,8 @@ public:
 
     uint irq_id() const { return irq_id_; }
 
-    // Copy construction and assignement is disallowed.
-    DELETE_ALL_COPY_AND_ASSIGN(SharedLegacyIrqHandler);
+    // Disallow copying, assigning and moving.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(SharedLegacyIrqHandler);
 
 private:
     explicit SharedLegacyIrqHandler(uint irq_id);

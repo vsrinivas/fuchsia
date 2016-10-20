@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/memory.c \
     $(LOCAL_DIR)/pic.c \
     $(LOCAL_DIR)/platform.c \
+    $(LOCAL_DIR)/platform_pcie.cpp \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/timer.c \
     $(LOCAL_DIR)/watchdog.c \

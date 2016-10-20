@@ -149,55 +149,6 @@ status_t PcieBusDriver::Start(const pcie_init_info_t* init_info) {
         }
     }
 
-    /* The MMIO low memory region must be below the physical 4GB mark */
-    if (((init_info->mmio_window_lo.bus_addr + 0ull) >= 0x100000000ull) ||
-        ((init_info->mmio_window_lo.size     + 0ull) >= 0x100000000ull) ||
-         (init_info->mmio_window_lo.bus_addr > (0x100000000ull - init_info->mmio_window_lo.size))) {
-        TRACEF("Low mem MMIO region [%zx, %zx) does not exist entirely below 4GB mark.\n",
-                (size_t)init_info->mmio_window_lo.bus_addr,
-                (size_t)init_info->mmio_window_lo.bus_addr + init_info->mmio_window_lo.size);
-        goto bailout;
-    }
-
-    /* The PIO region must fit somewhere in the architecture's I/O bus region */
-    if (((init_info->pio_window.bus_addr + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
-        ((init_info->pio_window.size     + 0ull) >= PCIE_PIO_ADDR_SPACE_SIZE) ||
-         (init_info->pio_window.bus_addr > (PCIE_PIO_ADDR_SPACE_SIZE - init_info->pio_window.size)))
-    {
-        TRACEF("PIO region [%zx, %zx) too large for architecture's PIO address space size (%zx)\n",
-                (size_t)init_info->pio_window.bus_addr,
-                (size_t)init_info->pio_window.bus_addr + init_info->pio_window.size,
-                (size_t)PCIE_PIO_ADDR_SPACE_SIZE);
-        goto bailout;
-    }
-
-    /* Init parameters look good, go back to assuming NO_ERROR for now. */
-    status = NO_ERROR;
-
-    /* Configure the RegionAllocators for the root complex using the regions of
-     * the MMIO and PIO busses provided by platform to the allocators */
-    {
-        struct {
-            RegionAllocator& alloc;
-            const pcie_io_range_t& range;
-        } ALLOC_INIT[] = {
-            { .alloc = root_complex_->mmio_lo_regions, .range = init_info->mmio_window_lo },
-            { .alloc = root_complex_->mmio_hi_regions, .range = init_info->mmio_window_hi },
-            { .alloc = root_complex_->pio_regions,     .range = init_info->pio_window },
-        };
-        for (const auto& iter : ALLOC_INIT) {
-            if (iter.range.size) {
-                status = iter.alloc.AddRegion({ .base = iter.range.bus_addr,
-                                                .size = iter.range.size });
-                if (status != NO_ERROR) {
-                    TRACEF("Failed to initilaize region allocator (0x%#" PRIx64 ", size 0x%zx\n",
-                           iter.range.bus_addr, iter.range.size);
-                    goto bailout;
-                }
-            }
-        }
-    }
-
     /* Stash the ECAM window info and map the ECAM windows into the bus driver's
      * address space so we can access config space. */
     ecam_window_count_ = init_info->ecam_window_count;
@@ -597,6 +548,58 @@ bool PcieBusDriver::ForeachDeviceOnBridge(const mxtl::RefPtr<pcie_bridge_state_t
     return keep_going;
 }
 
+status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
+                                             uint64_t size,
+                                             PcieAddrSpace aspace,
+                                             bool add_op) {
+    // TODO(johngro) : we should not be storing the region allocation
+    // bookkeeping in a fake "bridge" which is the root complex.  Instead, root
+    // complexes should be modeled as their own thing, not bridges, and all root
+    // complexes in the system should share bus resources which should be
+    // managed in the bus driver singleton.
+    if (root_complex_ == nullptr)
+        return ERR_BAD_STATE;
+
+    if (!size)
+        return ERR_INVALID_ARGS;
+
+    uint64_t end = base + size - 1;
+    auto OpPtr = add_op ? &RegionAllocator::AddRegion : &RegionAllocator::SubtractRegion;
+
+    if (aspace == PcieAddrSpace::MMIO) {
+        // Figure out if this goes in the low region, the high region, or needs
+        // to be split into two regions.
+        constexpr uint64_t U32_MAX = mxtl::numeric_limits<uint32_t>::max();
+        auto& mmio_lo = root_complex_->mmio_lo_regions;
+        auto& mmio_hi = root_complex_->mmio_hi_regions;
+
+        if (end <= U32_MAX) {
+            return (mmio_lo.*OpPtr)({ .base = base, .size = size }, true);
+        } else
+        if (base > U32_MAX) {
+            return (mmio_hi.*OpPtr)({ .base = base, .size = size }, true);
+        } else {
+            uint64_t lo_base = base;
+            uint64_t hi_base = U32_MAX + 1;
+            uint64_t lo_size = hi_base - lo_base;
+            uint64_t hi_size = size - lo_size;
+            status_t res;
+
+            res = (mmio_lo.*OpPtr)({ .base = lo_base, .size = lo_size }, true);
+            if (res != NO_ERROR)
+                return res;
+
+            return (mmio_hi.*OpPtr)({ .base = hi_base, .size = hi_size }, true);
+        }
+    } else {
+        DEBUG_ASSERT(aspace == PcieAddrSpace::PIO);
+
+        if ((base | end) & ~PCIE_PIO_ADDR_SPACE_MASK)
+            return ERR_INVALID_ARGS;
+
+        return (root_complex_->pio_regions.*OpPtr)({ .base = base, .size = size }, true);
+    }
+}
 
 status_t PcieBusDriver::InitializeDriver() {
     AutoLock lock(driver_lock_);

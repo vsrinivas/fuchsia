@@ -9,7 +9,10 @@
 
 #if WITH_DEV_PCIE
 #include <dev/pcie_platform.h>
+#include <magenta/compiler.h>
 #include <sys/types.h>
+
+__BEGIN_CDECLS
 
 /**
  * Initialize the GICv2m management of MSI blocks.
@@ -48,4 +51,6 @@ void arm_gicv2m_mask_unmask_msi(const pcie_msi_block_t* block,
                                 uint                    msi_id,
                                 bool                    mask);
 
+__END_CDECLS
 #endif  // WITH_DEV_PCIE
+

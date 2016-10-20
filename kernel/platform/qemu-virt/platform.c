@@ -30,8 +30,6 @@
 
 static const paddr_t GICV2M_REG_FRAMES[] = { GICV2M_FRAME_PHYS };
 
-static void qemu_pcie_init(void);   // fwd decl
-
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
     /* all of memory */
@@ -199,7 +197,6 @@ void platform_early_init(void)
 void platform_init(void)
 {
     uart_init();
-    qemu_pcie_init();
 }
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
@@ -237,68 +234,3 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
 status_t display_get_info(struct display_info *info) {
     return ERR_NOT_FOUND;
 }
-
-#if WITH_DEV_PCIE
-#include <dev/pcie_platform.h>
-#include <dev/interrupt/arm_gicv2m_msi.h>
-
-static const pcie_ecam_range_t PCIE_ECAM_WINDOWS[] = {
-    {
-        .io_range  = { .bus_addr = PCIE_ECAM_BASE_PHYS, .size = PCIE_ECAM_SIZE },
-        .bus_start = 0x00,
-        .bus_end   = (uint8_t)(PCIE_ECAM_SIZE / PCIE_ECAM_BYTE_PER_BUS) - 1,
-    },
-};
-
-static status_t qemu_pcie_irq_swizzle(uint bus_id,
-                                      uint dev_id,
-                                      uint fund_id,
-                                      uint pin,
-                                      uint *irq)
-{
-    DEBUG_ASSERT(irq);
-    DEBUG_ASSERT(pin < PCIE_MAX_LEGACY_IRQ_PINS);
-
-    if (bus_id != 0)
-        return ERR_NOT_FOUND;
-
-    *irq = PCIE_INT_BASE + ((pin + dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
-    return NO_ERROR;
-}
-
-static pcie_init_info_t PCIE_INIT_INFO = {
-    .ecam_windows         = PCIE_ECAM_WINDOWS,
-    .ecam_window_count    = countof(PCIE_ECAM_WINDOWS),
-    .mmio_window_lo       = { .bus_addr = PCIE_MMIO_BASE_PHYS, .size = PCIE_MMIO_SIZE },
-    .mmio_window_hi       = { .bus_addr = 0,                   .size = 0 },
-    .pio_window           = { .bus_addr = PCIE_PIO_BASE_PHYS,  .size = PCIE_PIO_SIZE },
-    .legacy_irq_swizzle   = qemu_pcie_irq_swizzle,
-    .alloc_msi_block      = arm_gicv2m_alloc_msi_block,
-    .free_msi_block       = arm_gicv2m_free_msi_block,
-    .register_msi_handler = arm_gicv2m_register_msi_handler,
-    .mask_unmask_msi      = arm_gicv2m_mask_unmask_msi,
-};
-
-void platform_pcie_init_info(pcie_init_info_t *out)
-{
-    memcpy(out, &PCIE_INIT_INFO, sizeof(PCIE_INIT_INFO));
-}
-
-void qemu_pcie_init(void) {
-    /* Initialize the MSI allocator */
-    status_t ret = arm_gicv2m_msi_init();
-    if (ret != NO_ERROR) {
-        TRACEF("Failed to initialize MSI allocator (ret = %d).  PCI will be "
-               "restricted to legacy IRQ mode.\n", ret);
-        PCIE_INIT_INFO.alloc_msi_block = NULL;
-        PCIE_INIT_INFO.free_msi_block  = NULL;
-    }
-
-    /* Tell the PCIe subsystem where it can find its resources. */
-    status_t status = pcie_init(&PCIE_INIT_INFO);
-    if (status != NO_ERROR)
-        TRACEF("Failed to initialize PCIe bus driver! (status = %d)\n", status);
-}
-#else  // if WITH_DEV_PCIE
-void qemu_pcie_init(void) { }
-#endif  // if WITH_DEV_PCIE

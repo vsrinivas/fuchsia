@@ -25,6 +25,7 @@ LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 MODULE_SRCS += \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/platform.c \
+    $(LOCAL_DIR)/platform_pcie.cpp \
     $(LOCAL_DIR)/secondary_boot.S \
     $(LOCAL_DIR)/uart.c
 
