@@ -121,8 +121,7 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   size_t v_line_stride =
       layout_.line_stride_for_plane(VideoPacketLayout::kVPlaneIndex);
 
-  uint32_t* dest_line = reinterpret_cast<uint32_t*>(
-      rgba_buffer + dest_line_stride * (view_height - 1) * sizeof(uint32_t));
+  uint32_t* dest_line = reinterpret_cast<uint32_t*>(rgba_buffer);
   uint8_t* y_line =
       reinterpret_cast<uint8_t*>(payload) +
       layout_.plane_offset_for_plane(VideoPacketLayout::kYPlaneIndex);
@@ -136,7 +135,7 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   for (uint32_t line = 0; line < height; ++line) {
     ConvertLine(dest_line, y_line, u_line, v_line, width);
 
-    dest_line -= dest_line_stride;
+    dest_line += dest_line_stride;
     y_line += y_line_stride;
     // Notice we aren't updating u_line and v_line here.
 
@@ -147,7 +146,7 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
 
     ConvertLine(dest_line, y_line, u_line, v_line, width);
 
-    dest_line -= dest_line_stride;
+    dest_line += dest_line_stride;
     y_line += y_line_stride;
     // Here, we ARE updating u_line and v_line, because we've moved vertically
     // out of the 2x2 grid.
