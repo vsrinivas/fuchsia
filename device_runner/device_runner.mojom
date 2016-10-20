@@ -4,6 +4,8 @@
 
 module modular;
 
+import "apps/mozart/services/views/interfaces/view_token.mojom";
+
 /*
  * This file contains definitions of interfaces and data structures to access
  * Device Runner.
@@ -13,8 +15,9 @@ module modular;
 // Device runner. Device runner will close the pipe and stop the Device Shell
 // after the first call.
 interface DeviceRunner {
-  // Used for passing in the username from the lockscreen.
-  Login(string username);
+  // Used for passing in the username from the lockscreen. |view_owner|
+  // represents the view associated with UserShell.
+  Login(string username, mozart.ViewOwner& view_owner);
 };
 
 // This interface is meant to be implemented by a Device Shell so that

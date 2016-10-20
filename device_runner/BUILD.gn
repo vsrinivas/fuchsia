@@ -36,7 +36,8 @@ executable("dummy_device_shell") {
 
   deps = [
     ":interfaces",
-    "//apps/modular/mojo:single_service_application",
+    "//apps/modular/mojo:single_service_view_app",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
