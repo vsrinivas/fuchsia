@@ -28,8 +28,8 @@ class TimelineRate {
   // Zero as a TimelineRate.
   static const TimelineRate Zero;
 
-  // One billionth as a TimelineRate.
-  static const TimelineRate Nano;
+  // Nanoseconds (subject) per second (reference) as a TimelineRate.
+  static const TimelineRate NsPerSecond;
 
   // Reduces the ratio of *subject_delta and *reference_delta.
   static void Reduce(uint32_t* subject_delta, uint32_t* reference_delta);

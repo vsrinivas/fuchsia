@@ -146,7 +146,7 @@ uint64_t ScaleUInt64(uint64_t value,
 const TimelineRate TimelineRate::Zero = TimelineRate(0, 1);
 
 // static
-const TimelineRate TimelineRate::Nano = TimelineRate(1, 1000000000L);
+const TimelineRate TimelineRate::NsPerSecond = TimelineRate(1000000000L, 1);
 
 // static
 void TimelineRate::Reduce(uint32_t* subject_delta, uint32_t* reference_delta) {
@@ -175,7 +175,8 @@ void TimelineRate::Product(uint32_t a_subject_delta,
 
   if (subject_delta > std::numeric_limits<uint32_t>::max() ||
       reference_delta > std::numeric_limits<uint32_t>::max()) {
-    FTL_DCHECK(!exact);
+    FTL_DCHECK(!exact) << "subject_delta " << subject_delta
+                       << " reference_delta " << reference_delta;
 
     do {
       subject_delta >>= 1;

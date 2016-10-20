@@ -79,7 +79,7 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
   if (media_type->details->is_video()) {
     const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
     FTL_DCHECK(details);
-    pts_rate_ = TimelineRate::Nano;
+    pts_rate_ = TimelineRate::NsPerSecond;
   } else if (media_type->details->is_audio()) {
     const AudioMediaTypeDetailsPtr& details = media_type->details->get_audio();
     FTL_DCHECK(details);
