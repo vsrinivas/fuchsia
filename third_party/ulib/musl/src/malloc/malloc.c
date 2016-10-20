@@ -82,27 +82,20 @@ static int bin_index(size_t x) {
         return x;
     if (x > 0x1c00)
         return 63;
-    return ((union {
-                float v;
-                uint32_t r;
-            }){(int)x}
-                .r >>
-            21) -
-           496;
+    float v = (int)x;
+    uint32_t r;
+    memcpy(&r, &v, sizeof(v));
+    return (r >> 21) - 496;
 }
 
 static int bin_index_up(size_t x) {
     x = x / SIZE_ALIGN - 1;
     if (x <= 32)
         return x;
-    return ((union {
-                float v;
-                uint32_t r;
-            }){(int)x}
-                    .r +
-                0x1fffff >>
-            21) -
-           496;
+    float v = (int)x;
+    uint32_t r;
+    memcpy(&r, &v, sizeof(v));
+    return ((r + 0x1fffff) >> 21) - 496;
 }
 
 #if 0
