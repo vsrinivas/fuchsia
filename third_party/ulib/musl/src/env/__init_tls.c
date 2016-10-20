@@ -116,10 +116,6 @@ static void static_init_tls(mxr_thread_t* mxr_thread) {
     }
 
     __init_tp(__copy_tls(mem));
-
-    pthread_t self = mem;
-    self->mxr_thread = mxr_thread;
-    self->tsd = __pthread_tsd_main;
 }
 
 weak_alias(static_init_tls, __init_tls);

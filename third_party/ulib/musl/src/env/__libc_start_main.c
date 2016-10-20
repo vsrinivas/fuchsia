@@ -144,6 +144,10 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
 
     __environ = envp;
     __init_tls(mxr_thread);
+    pthread_t self = __pthread_self();
+    self->mxr_thread = mxr_thread;
+    self->tsd = __pthread_tsd_main;
+
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);
     __init_security();
