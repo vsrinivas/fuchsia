@@ -9,7 +9,6 @@ group("maxwell") {
     "acquirers",
     "agents",
     "context_engine",
-    "document_store",
     "integration",
     "suggestion_engine",
   ]
