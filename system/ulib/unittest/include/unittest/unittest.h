@@ -69,7 +69,8 @@ typedef void (*test_output_func)(const char* line, int len, void* arg);
  * Printf dedicated to the unittest library
  * the default output is the printf
  */
-void unittest_printf_critical(const char* format, ...);
+void unittest_printf_critical(const char* format, ...)
+    __attribute__((format (printf, 1, 2)));
 
 /*
  * Printf dedicated to the unittest library which output
@@ -183,8 +184,9 @@ int unittest_set_verbosity_level(int new_level);
             UNITTEST_TRACEF(                                          \
                 "%s:\n"                                               \
                 "        Comparison failed: %s %s %s is false\n"      \
-                "        Specifically, %ld %s %ld is false\n",        \
-                msg, lhs_str, #op, rhs_str, _lhs_val, #op, _rhs_val); \
+                "        Specifically, %lld %s %lld is false\n",      \
+                msg, lhs_str, #op, rhs_str, (long long int)_lhs_val,  \
+                #op, (long long int)_rhs_val);                        \
             current_test_info->all_ok = false;                        \
             ret;                                                      \
         }                                                             \

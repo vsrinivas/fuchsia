@@ -4,6 +4,7 @@
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,8 @@ static mtx_t mutex = MTX_INIT;
 
 static void xlog(const char* str) {
     uint64_t now = mx_current_time();
-    unittest_printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
+    unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
+                    now / 1000000000, now % 1000000000, str);
 }
 
 static int mutex_thread_1(void* arg) {

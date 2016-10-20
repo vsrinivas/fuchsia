@@ -7,6 +7,7 @@
 // system exception handler would be in the "core" tests.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,7 +164,8 @@ static bool test_received_exception(mx_handle_t eport,
         ASSERT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
     }
 
-    unittest_printf("exception received from %s handler: pid %llu, tid %llu\n",
+    unittest_printf("exception received from %s handler: pid %"
+                    PRIu64 ", tid %" PRIu64 "\n",
                     kind, report->context.pid, report->context.tid);
     *tid = report->context.tid;
     return true;

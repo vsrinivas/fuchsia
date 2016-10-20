@@ -132,7 +132,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
         mx_thread_exit();
     }
     *msg = (enum message)data;
-    unittest_printf("received message %d\n", msg);
+    unittest_printf("received message %d\n", *msg);
     return true;
 }
 

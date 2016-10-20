@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +78,9 @@ bool fpu_test(void) {
         void* v = &val[i];
         uint64_t int64_val = *(uint64_t*)v;
 
-        unittest_printf("float thread %u returns val %f 0x%llx, expected 0x%llx\n", i, val[i], int64_val, expected[i]);
+        unittest_printf("float thread %u returns val %f %#"
+                        PRIx64 ", expected %#" PRIx64 "\n",
+                        i, val[i], int64_val, expected[i]);
         EXPECT_EQ(int64_val, expected[i], "Value does not match as expected");
     }
 

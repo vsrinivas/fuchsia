@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
@@ -42,7 +43,9 @@ static bool test_futex_wait_timeout_elapsed() {
         ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should time out");
         mx_time_t elapsed = mx_current_time() - now;
         if (elapsed < kRelativeDeadline) {
-            unittest_printf("\nelapsed %llu < kRelativeDeadline: %llu\n", elapsed, kRelativeDeadline);
+            unittest_printf("\nelapsed %" PRIu64
+                            " < kRelativeDeadline: %" PRIu64 "\n",
+                            elapsed, kRelativeDeadline);
             EXPECT_TRUE(false, "wait returned early");
         }
     }
@@ -351,7 +354,8 @@ bool test_futex_requeue_unqueued_on_timeout() {
 
 static void log(const char* str) {
     uint64_t now = mx_current_time();
-    unittest_printf("[%08llu.%08llu]: %s", now / 1000000000, now % 1000000000, str);
+    unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
+                    now / 1000000000, now % 1000000000, str);
 }
 
 class Event {
