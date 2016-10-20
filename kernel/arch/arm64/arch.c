@@ -146,6 +146,7 @@ void arm64_secondary_entry(ulong asm_cpu_num)
     spin_lock(&arm_boot_cpu_lock);
     spin_unlock(&arm_boot_cpu_lock);
 
+    thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
     /* run early secondary cpu init routines up to the threading level */
     lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
 
@@ -158,7 +159,6 @@ void arm64_secondary_entry(ulong asm_cpu_num)
     atomic_add((int *)&arm_num_cpus, 1);
     __asm__ volatile("sev");
 
-    thread_secondary_cpu_init_early(&_init_thread[cpu - 1]);
     lk_secondary_cpu_entry();
 }
 #endif
