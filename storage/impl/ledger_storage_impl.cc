@@ -12,11 +12,15 @@
 
 namespace storage {
 
+namespace {
+const char kVersion[] = "0.0.1";
+}
+
 LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                      const std::string& base_storage_dir,
                                      const std::string& identity)
     : task_runner_(std::move(task_runner)) {
-  storage_dir_ = base_storage_dir + "/" + identity;
+  storage_dir_ = base_storage_dir + "/" + kVersion + "/" + identity;
 }
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
