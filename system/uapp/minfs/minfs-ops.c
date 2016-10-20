@@ -936,8 +936,7 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     } else if ((status = minfs_vnode_get(olddir->fs, &oldvn, args.ino)) < 0) {
         return status;
     } else if ((status = check_not_subdirectory(oldvn, newdir)) < 0) {
-        vn_release(oldvn);
-        return status;
+        goto done;
     }
 
     // if the entry for 'newname' exists, make sure it can be replaced by
@@ -951,8 +950,7 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
         // if 'newname' does not exist, create it
         args.reclen = SIZEOF_MINFS_DIRENT(newlen);
         if ((status = vn_dir_for_each(newdir, &args, cb_dir_append)) < 0) {
-            vn_release(oldvn);
-            return status;
+            goto done;
         }
         status = 0;
     } else if (status == 0) {
@@ -961,8 +959,7 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     }
 
     if (status != 0) {
-        vn_release(oldvn);
-        return status;
+        goto done;
     }
 
     // update the oldvn's entry for '..' if (1) it was a directory, and (2) it
@@ -970,17 +967,14 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     if ((args.type == MINFS_TYPE_DIR) && (olddir->ino != newdir->ino)) {
         vnode_t* vn;
         if ((status = fs_lookup(newdir, &vn, newname, newlen)) < 0) {
-            vn_release(oldvn);
-            vn_release(vn);
-            return status;
+            goto done;
         }
         args.name = "..";
         args.len = 2;
         args.ino = newdir->ino;
         if ((status = vn_dir_for_each(vn, &args, cb_dir_update_inode)) < 0) {
-            vn_release(oldvn);
             vn_release(vn);
-            return status;
+            goto done;
         }
         vn_release(vn);
     }
@@ -993,6 +987,7 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     args.name = oldname;
     args.len = oldlen;
     status = vn_dir_for_each(olddir, &args, cb_dir_force_unlink);
+done:
     vn_release(oldvn);
     return status;
 }
