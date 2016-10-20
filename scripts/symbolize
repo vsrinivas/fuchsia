@@ -123,13 +123,13 @@ def main():
             os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
         build_dirs.append(fuchsia_build_dir)
 
-    btre = re.compile("^.* U bt#(\d+):")
+    btre = re.compile("^.*> bt#(\d+):")
     bt_with_offsetre = re.compile(
-        "^.* U bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
-    bt_end = re.compile("^.* U bt#(\d+): end")
-    arch_re = re.compile("^.* U arch: ([\\S]+)$")
+        "^.*> bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
+    bt_end = re.compile("^.*> bt#(\d+): end")
+    arch_re = re.compile("^.*> arch: ([\\S]+)$")
     arch = "x86_64"
-    build_id_re = re.compile("^.* U dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=([\\S]+)$")
+    build_id_re = re.compile("^.*> dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=([\\S]+)$")
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
     name_to_buildid = {}
     processed_lines = []
@@ -137,7 +137,7 @@ def main():
         line = sys.stdin.readline()
         if not sys.stdin.isatty():
             sys.stdout.write(line)
-        if line.find(" U ") >= 0:
+        if line.find("> ") >= 0:
             m = arch_re.match(line)
             if m:
                 arch = m.group(1)
@@ -183,7 +183,7 @@ def main():
                             processed_lines.append(line + "\n")
                       continue
                 processed_lines.append("#%s: (unknown)\n" % frame_num)
-        if line.find(" U ") < 0 or bt_end.match(line):
+        if line.find("> ") < 0 or bt_end.match(line):
             if len(processed_lines) != 0:
                 print "start of symbolized stack:"
                 sys.stdout.writelines(processed_lines)
