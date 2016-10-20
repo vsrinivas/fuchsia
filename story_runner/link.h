@@ -19,7 +19,7 @@
 #ifndef MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 #define MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 
-#include "apps/maxwell/document_store/interfaces/document.mojom.h"
+#include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"

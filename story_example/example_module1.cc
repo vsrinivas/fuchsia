@@ -4,7 +4,7 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/maxwell/document_store/interfaces/document.mojom.h"
+#include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/story_runner/story_runner.mojom.h"

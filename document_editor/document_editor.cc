@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/document_store/interfaces/document.mojom.h"
+#include "apps/document_store/interfaces/document.mojom.h"
 
 #include "apps/modular/document_editor/document_editor.h"
 

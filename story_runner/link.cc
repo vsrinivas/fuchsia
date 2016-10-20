@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "apps/maxwell/document_store/interfaces/document.mojom.h"
+#include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/link.h"
 #include "apps/modular/story_runner/link.mojom.h"
