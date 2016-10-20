@@ -27,6 +27,8 @@
 #include <dirent.h>
 #include <dlfcn.h>
 
+#define DRIVER_NAME_LEN_MAX 64
+
 int devhost_init(void);
 int devhost_cmdline(int argc, char** argv);
 int devhost_start(void);
@@ -49,6 +51,13 @@ static void init_driver(mx_driver_t* drv, bool for_root) {
         }
 #endif
         driver_add(drv);
+}
+
+static bool is_driver_disabled(magenta_driver_info_t* di) {
+    // driver.<driver_name>.disable
+    char opt[16 + DRIVER_NAME_LEN_MAX];
+    snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", di->note->name);
+    return getenv(opt) != NULL;
 }
 
 static void init_from_driver_info(magenta_driver_info_t* di, bool for_root) {
@@ -82,6 +91,7 @@ static void init_loadable_drivers(bool for_root) {
         if (di == NULL) {
             printf("devhost: driver '%s' missing __magenta_driver__ symbol\n", libname);
         } else {
+            if (is_driver_disabled(di)) continue;
             if (di->note->version[0] == '!') {
                 // debugging / development hack
                 // prioritize drivers with version "!..." over others
@@ -107,6 +117,7 @@ extern magenta_driver_info_t __stop_magenta_drivers[] __WEAK;
 static void init_builtin_drivers(bool for_root) {
     magenta_driver_info_t* di;
     for (di = __start_magenta_drivers; di < __stop_magenta_drivers; di++) {
+        if (is_driver_disabled(di)) continue;
         init_from_driver_info(di, for_root);
     }
 }

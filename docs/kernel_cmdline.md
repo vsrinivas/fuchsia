@@ -18,6 +18,14 @@ those userspace processes, not the kernel itself.
 If this option is set, the crashlogger is not started. You should leave this
 option off unless you suspect the crashlogger is causing problems.
 
+## driver.<name>.disable
+
+Disables the driver with the given name. The driver name comes from the
+magenta\_driver\_info, and can be found as the second argument to the
+MAGENTA\_DRIVER\_BEGIN macro.
+
+Example: `driver.usb-audio.disable`
+
 ## kernel.watchdog=<bool>
 If this option is set (disabled by default), the system will attempt
 to detect hangs/crashes and reboot upon detection.

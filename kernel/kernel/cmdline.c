@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <kernel/cmdline.h>
@@ -20,10 +21,14 @@ void cmdline_init(const char* data) {
     unsigned i = 0;
     unsigned max = CMDLINE_MAX - 2;
 
+    bool found_equal = false;
     while (i < max) {
         unsigned c = *data++;
         if (c == 0) {
             break;
+        }
+        if (c == '=') {
+            found_equal = true;
         }
         if ((c < ' ') || (c > 127)) {
             if ((c == '\n') || (c == '\r') || (c == '\t')) {
@@ -37,12 +42,20 @@ void cmdline_init(const char* data) {
             if ((i == 0) || (__kernel_cmdline[i-1] == 0)) {
                 continue;
             } else {
+                if (!found_equal && i < max) {
+                    __kernel_cmdline[i++] = '=';
+                }
                 c = 0;
+                found_equal = false;
                 ++__kernel_cmdline_count;
             }
         }
         __kernel_cmdline[i++] = c;
     }
+    if (!found_equal && i > 0 && __kernel_cmdline[i-1] != '\0' && i < max) {
+        __kernel_cmdline[i++] = '=';
+    }
+
     // ensure a double-\0 terminator
     __kernel_cmdline[i++] = 0;
     __kernel_cmdline[i] = 0;
