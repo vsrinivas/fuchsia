@@ -11,7 +11,8 @@
 #include "apps/mozart/services/input/interfaces/input_events.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
-#include "apps/mozart/src/launcher/input/input_device.h"
+#include "apps/mozart/src/launcher/input/input_interpreter.h"
+#include "apps/mozart/src/launcher/input/input_reader.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -49,7 +50,8 @@ class LaunchInstance {
 
   std::unique_ptr<LauncherViewTree> view_tree_;
 
-  InputReader input_device_monitor_;
+  mozart::input::InputInterpreter input_interpreter_;
+  mozart::input::InputReader input_reader_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LaunchInstance);
 };

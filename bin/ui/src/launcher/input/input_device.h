@@ -6,125 +6,98 @@
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 
 #include <map>
-#include <thread>
-#include <vector>
+#include <string>
 
-#include <hid/hid.h>
+#include <hid/acer12.h>
 #include <magenta/device/input.h>
 #include <magenta/types.h>
 
-#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/ref_counted.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/tasks/message_loop_handler.h"
+#include "apps/mozart/src/launcher/input/input_descriptor.h"
+#include "apps/mozart/src/launcher/input/input_report.h"
+#include "mojo/public/c/include/mojo/system/handle.h"
 #include "mojo/public/cpp/system/handle.h"
 
-#define MOD_LSHIFT (1 << 0)
-#define MOD_RSHIFT (1 << 1)
-#define MOD_LALT (1 << 2)
-#define MOD_RALT (1 << 3)
-#define MOD_LCTRL (1 << 4)
-#define MOD_RCTRL (1 << 5)
+namespace mozart {
+namespace input {
 
-#define MOD_SHIFT (MOD_LSHIFT | MOD_RSHIFT)
-#define MOD_ALT (MOD_LALT | MOD_RALT)
-#define MOD_CTRL (MOD_LCTRL | MOD_RCTRL)
+struct InputReport;
+struct KeyboardReport;
+struct MouseReport;
+struct TouchReport;
+struct StylusReport;
 
-namespace launcher {
+using OnReportCallback = std::function<void(InputReport::ReportType type)>;
 
-using OnEventCallback = std::function<void(mozart::EventPtr event)>;
-
-struct InputDevice {
-  int fd_;
-  // TODO(jpoichet) use mojo::ScopedEventHandle once available
-  mojo::ScopedHandleBase<mojo::Handle> event_handle_;
-  char name_[128];
-  int protocol_;
-  size_t report_desc_len_;
-  uint8_t* report_desc_;
-  size_t num_reports_;
-  input_report_id_t* ids_;
-  input_report_size_t max_report_len_;
-  uint8_t* report_;
-
-  InputDevice();
-  virtual ~InputDevice();
-
-  bool Read(const OnEventCallback& callback);
-  virtual void Parse(const OnEventCallback& callback) = 0;
-
-  static InputDevice* BuildInputDevice(int fd, const char* name);
-};
-
-struct KeyboardInputDevice : InputDevice {
-  hid_keys_t key_state_[2];
-  hid_keys_t key_delta_;
-  int current_index_ = 0;
-  int previous_index_ = 1;
-  int modifiers_ = 0;
-  keychar_t* keymap_;
-
-  KeyboardInputDevice();
-  void Parse(const OnEventCallback& callback);
-};
-
-struct MouseInputDevice : InputDevice {
-  uint8_t buttons_ = 0;
-
-  void Parse(const OnEventCallback& callback);
-  void SendEvent(const OnEventCallback& callback,
-                 float rel_x,
-                 float rel_y,
-                 int64_t timestamp,
-                 mozart::EventType type,
-                 mozart::EventFlags flags);
-};
-
-struct Acer12InputDevice : InputDevice {
-  void Parse(const OnEventCallback& callback);
-
- private:
-  void ParseStylus(const OnEventCallback& callback);
-  void ParseTouchscreen(const OnEventCallback& callback);
-
-  std::vector<mozart::PointerData> pointers_;
-  bool stylus_down_ = false;
-  mozart::PointerData stylus_;
-};
-
-class InputReader : mtl::MessageLoopHandler {
+class InputDevice {
  public:
-  InputReader();
-  ~InputReader();
-  void Start(const OnEventCallback& callback);
+  static std::unique_ptr<InputDevice> Open(int dirfd, const char* filename);
+  ~InputDevice();
+
+  bool Initialize();
+  bool Read(const OnReportCallback& callback);
+
+  const std::string& name() const { return name_; }
+  MojoHandle handle() { return handle_.get().value(); }
+
+  bool has_keyboard() const { return has_keyboard_; }
+  bool has_mouse() const { return has_mouse_; }
+  bool has_stylus() const { return has_stylus_; }
+  bool has_touchscreen() const { return has_touchscreen_; }
+
+  const KeyboardDescriptor& keyboard_descriptor() const {
+    return keyboard_descriptor_;
+  }
+  const MouseDescriptor& mouse_descriptor() const { return mouse_descriptor_; }
+  const StylusDescriptor& stylus_descriptor() const {
+    return stylus_descriptor_;
+  }
+  const TouchscreenDescriptor& touchscreen_descriptor() const {
+    return touchscreen_descriptor_;
+  }
+
+  const KeyboardReport& keyboard_report() const { return keyboard_report_; }
+  const MouseReport& mouse_report() const { return mouse_report_; }
+  const StylusReport& stylus_report() const { return stylus_report_; }
+  const TouchReport& touch_report() const { return touch_report_; }
 
  private:
-  InputDevice* OpenDevice(int dirfd, const char* fn);
+  InputDevice(const char* name, int fd);
 
-  InputDevice* GetDevice(MojoHandle handle);
-  void DeviceAdded(InputDevice* device);
-  void DeviceRemoved(InputDevice* device);
+  mx_status_t GetProtocol(int* out_proto);
+  mx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);
+  mx_status_t GetReportDescription(uint8_t* out_buf,
+                                   size_t out_report_desc_len);
+  mx_status_t GetMaxReportLength(input_report_size_t* out_max_report_len);
 
-  void OnDirectoryHandleReady(MojoHandle handle);
-  void OnDeviceHandleReady(MojoHandle handle);
+  void ParseKeyboardReport(uint8_t* report, size_t len);
+  void ParseMouseReport(uint8_t* report, size_t len);
+  void ParseTouchscreenReport(uint8_t* report, size_t len);
+  void ParseStylusReport(uint8_t* r, size_t len);
 
-  // |mtl::MessageLoopHandler|:
-  void OnHandleReady(MojoHandle handle);
-  void OnHandleError(MojoHandle handle, MojoResult result);
+  const int fd_;
+  const std::string name_;
+  mojo::ScopedHandleBase<mojo::Handle> handle_;
+  std::vector<uint8_t> report_;
+  input_report_size_t max_report_len_ = 0;
 
-  mtl::MessageLoop* main_loop_;
-  mtl::MessageLoop::HandlerKey input_directory_key_;
-  int input_directory_fd_;
-  MojoHandle input_directory_handle_;
+  acer12_touch_t acer12_touch_reports_[2];
 
-  std::map<MojoHandle, std::pair<InputDevice*, mtl::MessageLoop::HandlerKey>>
-      devices_;
-  OnEventCallback callback_;
+  bool has_keyboard_ = false;
+  KeyboardDescriptor keyboard_descriptor_;
+  bool has_mouse_ = false;
+  MouseDescriptor mouse_descriptor_;
+  bool has_stylus_ = false;
+  StylusDescriptor stylus_descriptor_;
+  bool has_touchscreen_ = false;
+  TouchscreenDescriptor touchscreen_descriptor_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
+  KeyboardReport keyboard_report_;
+  MouseReport mouse_report_;
+  TouchReport touch_report_;
+  StylusReport stylus_report_;
 };
-}
+
+}  // namespace input
+}  // namespace mozart
 
 #endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_

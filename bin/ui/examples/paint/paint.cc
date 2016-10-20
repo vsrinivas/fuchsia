@@ -42,12 +42,14 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
  private:
   SkPath CurrentPath(uint32_t pointer_id) {
     SkPath path;
-    uint32_t count = 0;
-    for (auto point : points_.at(pointer_id)) {
-      if (count++ == 0) {
-        path.moveTo(point);
-      } else {
-        path.lineTo(point);
+    if (points_.count(pointer_id)) {
+      uint32_t count = 0;
+      for (auto point : points_.at(pointer_id)) {
+        if (count++ == 0) {
+          path.moveTo(point);
+        } else {
+          path.lineTo(point);
+        }
       }
     }
     return path;

@@ -24,7 +24,8 @@ LaunchInstance::LaunchInstance(
       framebuffer_info_(std::move(framebuffer_info)),
       framebuffer_size_(*framebuffer_info_->size),
       root_view_owner_(std::move(view_owner)),
-      shutdown_callback_(shutdown_callback) {
+      shutdown_callback_(shutdown_callback),
+      input_reader_(&input_interpreter_) {
   FTL_DCHECK(compositor_);
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(framebuffer_);
@@ -40,8 +41,7 @@ void LaunchInstance::Launch() {
       new LauncherViewTree(compositor_, view_manager_, std::move(framebuffer_),
                            std::move(framebuffer_info_),
                            std::move(root_view_owner_), shutdown_callback_));
-
-  input_device_monitor_.Start([this](mozart::EventPtr event) {
+  input_interpreter_.RegisterCallback([this](mozart::EventPtr event) {
     if (event->pointer_data) {
       // TODO(jpoichet) Move all this into an "input interpreter"
       if (event->pointer_data->kind == mozart::PointerKind::MOUSE) {
@@ -62,8 +62,10 @@ void LaunchInstance::Launch() {
       event->pointer_data->screen_x = event->pointer_data->x;
       event->pointer_data->screen_y = event->pointer_data->y;
     }
+    TRACE_EVENT0("input", "OnInputEvent");
     view_tree_->DispatchEvent(std::move(event));
   });
+  input_reader_.Start();
 }
 
 }  // namespace launcher

@@ -1,0 +1,29 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("input") {
+  sources = [
+    "input_descriptor.h",
+    "input_device.cc",
+    "input_device.h",
+    "input_interpreter.cc",
+    "input_interpreter.h",
+    "input_reader.cc",
+    "input_reader.h",
+    "input_report.h",
+    "input_state.cc",
+    "input_state.h",
+  ]
+
+  deps = [
+    "//apps/mozart/glue/base:base",
+    "//apps/mozart/services/input/interfaces",
+    "//lib/mtl",
+  ]
+
+  libs = [
+    "mxio",
+    "hid",
+  ]
+}
