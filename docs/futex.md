@@ -19,10 +19,23 @@ resources in the uncontested case.
     synchronization primitive, and performance measurements.
 
 - [Futexes Are Tricky](https://www.akkadia.org/drepper/futex.pdf), Ulrich Drepper
+
     This paper describes some gotchas and implementation details of
     futexes in Linux. It discusses the kernel implementation, and goes
     into more detail about correct and efficient userspace
     implementations of mutexes, condition variables, and so on.
+
+- [Mutexes and Condition Variables using Futexes](http://locklessinc.com/articles/mutex_cv_futex/)
+
+    Further commentary on "Futexes are tricky", outlining a simple
+    implementation that avoids the need for `FUTEX_CMP_REQUEUE`
+
+- [Locking in WebKit](https://webkit.org/blog/6161/locking-in-webkit/), Filip Pizlo
+
+    An in-depth tour of the locking primitives in WebKit, complete with
+    benchmarks and analysis. Contains a detailed explanation of the "parking
+    lot" concept, which allows very compact representation of user-space
+    mutexes.
 
 ## API
 
