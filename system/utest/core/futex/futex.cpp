@@ -36,7 +36,7 @@ static bool test_futex_wait_timeout() {
 static bool test_futex_wait_timeout_elapsed() {
     BEGIN_TEST;
     int futex_value = 0;
-    constexpr time_t kRelativeDeadline = 500 * 1000 * 1000;
+    constexpr mx_time_t kRelativeDeadline = 500 * 1000 * 1000;
     for (int i = 0; i < 5; ++i) {
         mx_time_t now = mx_current_time();
         mx_status_t rc = mx_futex_wait(&futex_value, 0, kRelativeDeadline);

@@ -69,7 +69,7 @@ static bool socket_signals(void) {
 
     const int kAllSize = 128 * 1024;
     char* big_buf =  (char*) malloc(kAllSize);
-    ASSERT_NEQ(big_buf, NULL, "");
+    ASSERT_NONNULL(big_buf, "");
 
     memset(big_buf, 0x66, kAllSize);
 

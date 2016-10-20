@@ -18,12 +18,12 @@ bool dlopen_vmo_test(void) {
     EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
 
     void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
-    EXPECT_NEQ(obj, NULL, "dlopen_vmo");
+    EXPECT_NONNULL(obj, "dlopen_vmo");
 
     mx_handle_close(vmo);
 
     void* sym = dlsym(obj, "launchpad_create");
-    EXPECT_NEQ(sym, NULL, "dlsym");
+    EXPECT_NONNULL(sym, "dlsym");
 
     int ok = dlclose(obj);
     EXPECT_EQ(ok, 0, "dlclose");
@@ -62,7 +62,7 @@ bool loader_service_test(void) {
 
     // Get a handle to an existing library with a known SONAME.
     void* by_name = dlopen(TEST_SONAME, RTLD_NOLOAD);
-    EXPECT_NEQ(by_name, NULL, "dlopen failed on " TEST_SONAME);
+    EXPECT_NONNULL(by_name, "dlopen failed on " TEST_SONAME);
     if (by_name == NULL)
         show_dlerror();
 
@@ -83,7 +83,7 @@ bool loader_service_test(void) {
     EXPECT_EQ(my_loader_service_calls, 1,
               "loader-service not called exactly once");
 
-    EXPECT_NEQ(via_service, NULL, "dlopen via service");
+    EXPECT_NONNULL(via_service, "dlopen via service");
     if (via_service == NULL)
         show_dlerror();
 
@@ -91,7 +91,7 @@ bool loader_service_test(void) {
 
     // It should not just have succeeded, but gotten the very
     // same handle as the by-name lookup.
-    EXPECT_EQ(via_service, by_name, "dlopen via service");
+    EXPECT_TRUE(via_service == by_name, "dlopen via service");
 
     int fail = dlclose(by_name);
     EXPECT_EQ(fail, 0, "dlclose on by-name");

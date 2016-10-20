@@ -194,7 +194,7 @@ static bool write_read(void) {
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     char* buffer = (char*) malloc(4 * 3000u);
-    ASSERT_NEQ(buffer, NULL, "failed to alloc");
+    ASSERT_NONNULL(buffer, "failed to alloc");
 
     uint32_t seed[5] = {7u, 0u, 0u, 0u, 0u};
     char* f = buffer;
