@@ -155,6 +155,14 @@ interface Page {
   // multiple times, and run parallel transactions on the same page using
   // separate connections. In this case, commiting each transaction creates
   // divergent commits, which are later subject to conflict resolution.
+  //
+  // When a transaction is in progress, the page content visible *on this page
+  // connection* is pinned to the state from when StartTransaction() was called.
+  // In particular, no watch notifications are delivered, and the conflict
+  // resolution is not invoked while the transaction is in progress. If
+  // conflicting changes are made or synced while the transaction is in
+  // progress, conflict resolution is invoked after the transaction is
+  // committed.
   StartTransaction() => (Status status);
   Commit() => (Status status);
   Rollback() => (Status status);
