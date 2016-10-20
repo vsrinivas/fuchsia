@@ -815,7 +815,7 @@ static status_t pcie_allocate_bar(const mxtl::RefPtr<pcie_device_state_t>& dev,
     if (info->is_64bit)
         pcie_write32(bar_reg + 1, static_cast<uint32_t>(info->bus_addr >> 32));
 
-    return true;
+    return NO_ERROR;
 }
 
 static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev);
