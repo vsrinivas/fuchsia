@@ -19,8 +19,9 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   context()->refcounted_frames = 1;
 
   std::unique_ptr<StreamType> stream_type = output_stream_type();
-  FTL_DCHECK(stream_type_->audio());
-  pts_rate_ = TimelineRate(stream_type_->audio()->frames_per_second(), 1);
+  FTL_DCHECK(stream_type);
+  FTL_DCHECK(stream_type->audio());
+  pts_rate_ = TimelineRate(stream_type->audio()->frames_per_second(), 1);
 
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
