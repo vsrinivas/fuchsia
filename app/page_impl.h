@@ -81,6 +81,10 @@ class PageImpl : public Page {
 
   void Rollback(const RollbackCallback& callback) override;
 
+  void GetReferenceInternal(
+      ReferencePtr reference,
+      std::function<void(Status, ftl::StringView)> callback);
+
   storage::PageStorage* storage_;
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;

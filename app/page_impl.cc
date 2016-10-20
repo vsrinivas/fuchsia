@@ -13,6 +13,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/shared_buffer/strings.h"
 
 namespace ledger {
 namespace {
@@ -31,6 +32,21 @@ Status ConvertStatus(storage::Status status,
     default:
       return Status::INTERNAL_ERROR;
   }
+}
+
+Status ToBuffer(convert::ExtendedStringView value,
+                int64_t offset,
+                int64_t max_size,
+                mojo::ScopedSharedBufferHandle* buffer) {
+  size_t start = value.size();
+  if (static_cast<size_t>(std::abs(offset)) < value.size()) {
+    start = offset < 0 ? value.size() + offset : offset;
+  }
+  size_t length = max_size < 0 ? value.size() : max_size;
+
+  bool result =
+      mtl::SharedBufferFromString(value.substr(start, length), buffer);
+  return result ? Status::OK : Status::UNKNOWN_ERROR;
 }
 
 }  // namespace
@@ -196,34 +212,29 @@ void PageImpl::CreateReference(int64_t size,
 // GetReference(Reference reference) => (Status status, Value? value);
 void PageImpl::GetReference(ReferencePtr reference,
                             const GetReferenceCallback& callback) {
-  storage_->GetObject(
-      reference->opaque_id,
-      [callback](storage::Status status,
-                 std::unique_ptr<const storage::Object> object) {
-        if (status != storage::Status::OK) {
-          callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-                       nullptr);
-          return;
-        }
-        ftl::StringView data;
-        status = object->GetData(&data);
-        if (status != storage::Status::OK) {
-          callback.Run(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-                       nullptr);
-          return;
-        }
-        if (data.size() <= kMaxInlineDataSize) {
-          ValuePtr value = Value::New();
-          value->set_bytes(convert::ToArray(data));
-          callback.Run(Status::OK, std::move(value));
-          return;
-        }
+  GetReferenceInternal(std::move(reference),
+                       [this, &callback](Status status, ftl::StringView data) {
+                         if (status != Status::OK) {
+                           callback.Run(status, nullptr);
+                           return;
+                         }
+                         if (data.size() <= kMaxInlineDataSize) {
+                           ValuePtr value = Value::New();
+                           value->set_bytes(convert::ToArray(data));
+                           callback.Run(Status::OK, std::move(value));
+                           return;
+                         }
 
-        // TODO(qsr) Implements streaming.
-        FTL_LOG(ERROR)
-            << "PageImpl::PageImpl::GetReference doesn't handle large values.";
-        callback.Run(Status::UNKNOWN_ERROR, nullptr);
-      });
+                         mojo::ScopedSharedBufferHandle buffer;
+                         Status mojo_status = ToBuffer(data, 0, -1, &buffer);
+                         if (mojo_status != Status::OK) {
+                           callback.Run(mojo_status, nullptr);
+                           return;
+                         }
+                         ValuePtr value = Value::New();
+                         value->set_buffer(std::move(buffer));
+                         callback.Run(Status::OK, std::move(value));
+                       });
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
@@ -233,8 +244,21 @@ void PageImpl::GetPartialReference(
     int64_t offset,
     int64_t max_size,
     const GetPartialReferenceCallback& callback) {
-  FTL_LOG(ERROR) << "PageImpl::GetPartialReference not implemented";
-  callback.Run(Status::UNKNOWN_ERROR, mojo::ScopedSharedBufferHandle());
+  GetReferenceInternal(
+      std::move(reference),
+      [this, offset, max_size, &callback](Status status, ftl::StringView data) {
+        if (status != Status::OK) {
+          callback.Run(status, mojo::ScopedSharedBufferHandle());
+          return;
+        }
+        mojo::ScopedSharedBufferHandle buffer;
+        Status mojo_status = ToBuffer(data, offset, max_size, &buffer);
+        if (mojo_status != Status::OK) {
+          callback.Run(mojo_status, mojo::ScopedSharedBufferHandle());
+          return;
+        }
+        callback.Run(Status::OK, std::move(buffer));
+      });
 }
 
 // StartTransaction() => (Status status);
@@ -273,6 +297,30 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
   journal_.reset();
   journal_parent_commit_.clear();
   callback.Run(ConvertStatus(status));
+}
+
+void PageImpl::GetReferenceInternal(
+    ReferencePtr reference,
+    std::function<void(Status, ftl::StringView)> callback) {
+  storage_->GetObject(
+      reference->opaque_id,
+      [callback](storage::Status status,
+                 std::unique_ptr<const storage::Object> object) {
+        if (status != storage::Status::OK) {
+          callback(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
+                   ftl::StringView());
+          return;
+        }
+        ftl::StringView data;
+        status = object->GetData(&data);
+        if (status != storage::Status::OK) {
+          callback(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
+                   ftl::StringView());
+          return;
+        }
+
+        callback(Status::OK, data);
+      });
 }
 
 }  // namespace ledger

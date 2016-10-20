@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/shared_buffer/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/callback.h"
@@ -359,6 +360,72 @@ TEST_F(PageImplTest, GetReference) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(value->is_bytes());
   EXPECT_EQ(value_string, convert::ToString(value->get_bytes()));
+}
+
+TEST_F(PageImplTest, GetLargeReference) {
+  std::string value_string(2049, 'a');
+  storage::Status storage_status;
+  storage::ObjectId object_id;
+  // FakeStorage is synchronous.
+  fake_storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
+      [&storage_status, &object_id](storage::Status returned_status,
+                                    storage::ObjectId returned_object_id) {
+        storage_status = returned_status;
+        object_id = std::move(returned_object_id);
+      });
+  ASSERT_EQ(storage::Status::OK, storage_status);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  Status status;
+  ValuePtr value;
+  page_ptr_->GetReference(
+      std::move(reference),
+      [this, &status, &value](Status received_status, ValuePtr received_value) {
+        status = received_status;
+        value = std::move(received_value);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(value->is_buffer());
+  std::string content;
+  EXPECT_TRUE(mtl::StringFromSharedBuffer(value->get_buffer(), &content));
+  EXPECT_EQ(value_string, content);
+}
+
+TEST_F(PageImplTest, GetPartialReference) {
+  std::string value_string("a small value");
+  storage::Status storage_status;
+  storage::ObjectId object_id;
+  // FakeStorage is synchronous.
+  fake_storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
+      [&storage_status, &object_id](storage::Status returned_status,
+                                    storage::ObjectId returned_object_id) {
+        storage_status = returned_status;
+        object_id = std::move(returned_object_id);
+      });
+  ASSERT_EQ(storage::Status::OK, storage_status);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  Status status;
+  mojo::ScopedSharedBufferHandle buffer;
+  page_ptr_->GetPartialReference(
+      std::move(reference), 2, 5,
+      [this, &status, &buffer](Status received_status,
+                               mojo::ScopedSharedBufferHandle received_buffer) {
+        status = received_status;
+        buffer = std::move(received_buffer);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_EQ(Status::OK, status);
+  std::string content;
+  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
+  EXPECT_EQ("small", content);
 }
 
 TEST_F(PageImplTest, GetUnknownReference) {
