@@ -55,7 +55,7 @@ void __libc_extensions_init(uint32_t handle_count,
 void* __libc_intercept_arg(void*) __attribute__((weak));
 
 _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
-                                 uintptr_t stack_end, void* arg) {
+                                 void* stack_end, void* arg) {
     if (&__libc_intercept_arg != NULL)
         arg = __libc_intercept_arg(arg);
 
@@ -103,6 +103,8 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
         argv = envp = NULL;
     }
 
+    size_t stack_size = 0;
+
     // Find the handles we're interested in among what we were given.
     for (uint32_t i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
@@ -127,10 +129,8 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // mapped.  Thus we know the bounds of our stack.
             uint64_t stack_vmo_size;
             status = _mx_vmo_get_size(handles[i], &stack_vmo_size);
-            if (status == NO_ERROR) {
-                libc.stack_size = stack_vmo_size;
-                libc.stack_base = stack_end - libc.stack_size;
-            }
+            if (status == NO_ERROR)
+                stack_size = stack_vmo_size;
             // TODO(mcgrathr): Perhaps we should stash this handle
             // somewhere, or close it?  For now we don't have anything
             // else we want it for but maybe there will be something.
@@ -147,6 +147,12 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     pthread_t self = __pthread_self();
     self->mxr_thread = mxr_thread;
     self->tsd = __pthread_tsd_main;
+
+    // Record the stack bounds for pthread_getattr_np to find.
+    if (stack_size != 0) {
+        self->stack = stack_end;
+        self->stack_size = stack_size;
+    }
 
     // TODO(kulakowski) Set up ssp once kernel randomness exists
     // __init_ssp((void*)aux[AT_RANDOM]);

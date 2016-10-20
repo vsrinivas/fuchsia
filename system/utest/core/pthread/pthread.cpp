@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -260,11 +261,92 @@ static bool pthread_big_provided_stack() {
     END_TEST;
 }
 
+static bool pthread_getstack_check() {
+    BEGIN_TEST;
+
+    pthread_attr_t attr;
+    int result = pthread_getattr_np(pthread_self(), &attr);
+    ASSERT_EQ(result, 0, "pthread_getattr_np failed");
+
+    void* stack_base;
+    size_t stack_size;
+    result = pthread_attr_getstack(&attr, &stack_base, &stack_size);
+    ASSERT_EQ(result, 0, "pthread_attr_getstack failed");
+
+    // Convert the reported bounds of the stack into something we can
+    // compare against.
+    uintptr_t low = reinterpret_cast<uintptr_t>(stack_base);
+    uintptr_t high = low + stack_size;
+
+    // This is just some arbitrary address known to be on our thread stack.
+    uintptr_t here = reinterpret_cast<uintptr_t>(&attr);
+
+    unittest_printf("pthread_attr_getstack reports [%#" PRIxPTR
+                    ", %#" PRIxPTR "); SP ~= %#" PRIxPTR "\n",
+                    low, high, here);
+
+    ASSERT_LT(low, here, "reported stack base not below actual SP");
+    ASSERT_GT(high, here, "reported stack end not above actual SP");
+
+    END_TEST;
+}
+
+static bool pthread_getstack_main_thread() {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(pthread_getstack_check(),
+                "pthread_attr_getstack on main thread");
+
+    END_TEST;
+}
+
+static void* getstack_thread(void*) {
+    bool ok = pthread_getstack_check();
+    return reinterpret_cast<void*>(static_cast<uintptr_t>(ok));
+}
+
+static bool pthread_getstack_on_new_thread(const pthread_attr_t* attr) {
+    BEGIN_TEST;
+
+    pthread_t thread;
+    int result = pthread_create(&thread, attr, &getstack_thread, nullptr);
+    ASSERT_EQ(result, 0, "pthread_create failed");
+    void* thread_result;
+    result = pthread_join(thread, &thread_result);
+    ASSERT_EQ(result, 0, "pthread_join failed");
+
+    bool ok = static_cast<bool>(reinterpret_cast<uintptr_t>(thread_result));
+    ASSERT_TRUE(ok, "pthread_attr_getstack on another thread");
+
+    END_TEST;
+}
+
+static bool pthread_getstack_other_thread() {
+    return pthread_getstack_on_new_thread(nullptr);
+}
+
+static bool pthread_getstack_other_thread_explicit_size() {
+    BEGIN_TEST;
+
+    pthread_attr_t attr;
+    int result = pthread_attr_init(&attr);
+    ASSERT_EQ(result, 0, "pthread_attr_init failed");
+    result = pthread_attr_setstacksize(&attr, 1 << 20);
+    ASSERT_EQ(result, 0, "pthread_attr_setstacksize failed");
+
+    ASSERT_TRUE(pthread_getstack_on_new_thread(&attr),
+                "pthread_attr_getstack on a thread with explicit stack size");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(pthread_tests)
 RUN_TEST(pthread_test)
 RUN_TEST(pthread_self_main_thread_test)
 RUN_TEST(pthread_big_stack_size)
 RUN_TEST(pthread_big_provided_stack)
+RUN_TEST(pthread_getstack_main_thread)
+RUN_TEST(pthread_getstack_other_thread)
 END_TEST_CASE(pthread_tests)
 
 #ifndef BUILD_COMBINED_TESTS
