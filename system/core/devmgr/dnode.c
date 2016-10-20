@@ -15,27 +15,39 @@
 
 // create a new dnode and attach it to a vnode
 mx_status_t dn_create(dnode_t** out, const char* name, size_t len, vnode_t* vn) {
-    dnode_t* dn;
+    mx_status_t status;
+    if ((status = dn_allocate(out, name, len)) < 0) {
+        return status;
+    }
+    dn_attach(*out, vn);
+    return NO_ERROR;
+}
 
-    //printf("dn_create: name='%.*s' vn=%p\n", (int)len, name, vn);
+mx_status_t dn_allocate(dnode_t** out, const char* name, size_t len) {
     if ((len > DN_NAME_MAX) || (len < 1)) {
         return ERR_INVALID_ARGS;
     }
 
-    if ((dn = calloc(1, sizeof(dnode_t) + len)) == NULL) {
+    dnode_t* dn;
+    if ((dn = calloc(1, sizeof(dnode_t) + len + 1)) == NULL) {
         return ERR_NO_MEMORY;
     }
     dn->flags = len;
+    memcpy(dn->name, name, len);
+    dn->name[len] = '\0';
+    list_initialize(&dn->children);
+    *out = dn;
+    return NO_ERROR;
+}
+
+// Attach a vnode to a dnode
+void dn_attach(dnode_t* dn, vnode_t* vn) {
     dn->vnode = vn;
     if (vn != NULL) {
         vn_acquire(vn);
         list_add_tail(&vn->dn_list, &dn->vn_entry);
         vn->dn_count++;
     }
-    list_initialize(&dn->children);
-    memcpy(dn->name, name, len);
-    *out = dn;
-    return NO_ERROR;
 }
 
 void dn_delete(dnode_t* dn) {
@@ -54,32 +66,6 @@ void dn_delete(dnode_t* dn) {
     }
 
     free(dn);
-}
-
-// Remove the child dn from its old parent, and add it to a new one
-mx_status_t dn_move_child(dnode_t* parent, dnode_t* child, const char* name, size_t len) {
-    if ((parent == NULL) || (child == NULL)) {
-        printf("dn_move_child(%p,%p) bad args\n", parent, child);
-        panic();
-    }
-    if ((len > DN_NAME_MAX) || (len < 1)) {
-        return ERR_INVALID_ARGS;
-    }
-
-    if (child->parent) {
-        // Remove child from old parent
-        list_delete(&child->dn_entry);
-        child->parent = NULL;
-    }
-
-    // Rename the child
-    memcpy(child->name, name, len);
-    child->name[len] = '\0';
-    child->flags = DN_TYPE(child->flags) | len;
-    // Add child to new parent
-    child->parent = parent;
-    list_add_tail(&parent->children, &child->dn_entry);
-    return NO_ERROR;
 }
 
 void dn_add_child(dnode_t* parent, dnode_t* child) {

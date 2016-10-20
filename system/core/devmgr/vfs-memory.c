@@ -180,7 +180,7 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
         return ERR_BAD_STATE;
 
-    dnode_t* olddn, *newdn;
+    dnode_t* olddn, *targetdn;
     mx_status_t r;
     // The source must exist
     if ((r = dn_lookup(olddir->dnode, &olddn, oldname, oldlen)) < 0) {
@@ -201,27 +201,54 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     }
 
     // The destination may or may not exist
-    r = dn_lookup(newdir->dnode, &newdn, newname, newlen);
-    if (r == NO_ERROR) {
+    r = dn_lookup(newdir->dnode, &targetdn, newname, newlen);
+    bool target_exists = (r == NO_ERROR);
+    if (target_exists) {
         // The target exists. Validate and unlink it.
-        if (olddn->vnode == newdn->vnode) {
+        if (olddn->vnode == targetdn->vnode) {
             // Cannot rename node to itself
             return ERR_INVALID_ARGS;
         }
-        bool dstIsFile = (newdn->vnode->dnode == NULL);
+        bool dstIsFile = (targetdn->vnode->dnode == NULL);
         if (srcIsFile != dstIsFile) {
             // Cannot rename files to directories (and vice versa)
             return ERR_INVALID_ARGS;
-        } else if ((r = mem_can_unlink(newdn)) < 0) {
+        } else if ((r = mem_can_unlink(targetdn)) < 0) {
             return r;
         }
-        dn_delete(newdn);
     } else if (r != ERR_NOT_FOUND) {
         return r;
     }
 
-    // Relocate olddn to newdir
-    dn_move_child(newdir->dnode, olddn, newname, newlen);
+    // Allocate the new dnode (not yet attached to anything)
+    dnode_t* newdn;
+    if ((r = dn_allocate(&newdn, newname, newlen)) < 0)
+        return r;
+
+    // NOTE:
+    //
+    // Validation ends here, and modifications begin. Rename should not fail
+    // beyond this point.
+
+    if (target_exists)
+        dn_delete(targetdn);
+    // Acquire the source vnode; we're going to delete the source dnode, and we
+    // need to make sure the source vnode still exists afterwards.
+    vnode_t* vn = olddn->vnode;
+    vn_acquire(vn); // Acquire +1
+    uint32_t oldtype = DN_TYPE(olddn->flags);
+
+    // Delete source dnode
+    dn_delete(olddn); // Acquire +0
+
+    // Bind the newdn and vn, and attach it to the destination's parent
+    dn_attach(newdn, vn); // Acquire +1
+    vn_release(vn); // Acquire +0. No change in refcount, no chance of deletion.
+    if (vn->dnode != NULL)
+        vn->dnode = newdn;
+    newdn->flags |= oldtype;
+    dn_add_child(newdir->dnode, newdn);
+
     return NO_ERROR;
 }
 

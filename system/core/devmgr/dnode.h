@@ -29,12 +29,19 @@ struct dnode {
     char name[];
 };
 
+// Shorthand for "dn_allocate" combined with "dn_attach"
 mx_status_t dn_create(dnode_t** dn, const char* name, size_t len, vnode_t* vn);
+
+// Allocates an empty dnode, not attached to a vnode
+mx_status_t dn_allocate(dnode_t** dn, const char* name, size_t len);
+
+// Attach a vnode to a dnode
+void dn_attach(dnode_t* dn, vnode_t* vn);
+
+// Detaches a dnode from it's parent / vnode and frees the dnode
 void dn_delete(dnode_t* dn);
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
-
-mx_status_t dn_move_child(dnode_t* parent, dnode_t* child, const char* name, size_t len);
 
 void dn_add_child(dnode_t* parent, dnode_t* child);
 
