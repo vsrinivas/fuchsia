@@ -117,8 +117,6 @@ KEEP_FRAME_POINTER_COMPILEFLAGS := -fno-omit-frame-pointer
 
 # User space compile flags
 USER_COMPILEFLAGS := -include $(USER_CONFIG_HEADER) -fPIC -D_ALL_SOURCE=1
-#TODO: remove once userspace backtracing is smarter
-USER_COMPILEFLAGS += -fno-omit-frame-pointer
 USER_CFLAGS :=
 USER_CPPFLAGS :=
 USER_ASMFLAGS :=
