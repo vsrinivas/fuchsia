@@ -100,7 +100,10 @@ GLOBAL_MODULE_LDFLAGS :=
 # Kernel compile flags
 KERNEL_INCLUDES := $(BUILDDIR) $(addsuffix /include,$(LKINC))
 KERNEL_COMPILEFLAGS := -fno-pic -ffreestanding -include $(KERNEL_CONFIG_HEADER)
-KERNEL_COMPILEFLAGS += -Wnull-dereference -Wformat=2 -Wformat-signedness
+KERNEL_COMPILEFLAGS += -Wnull-dereference -Wformat=2
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+KERNEL_COMPILEFLAGS += -Wformat-signedness
+endif
 KERNEL_CFLAGS := -Wmissing-prototypes
 KERNEL_CPPFLAGS :=
 KERNEL_ASMFLAGS :=
