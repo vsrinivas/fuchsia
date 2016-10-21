@@ -19,6 +19,9 @@ class TimeDelta {
   TimeDelta() = default;
 
   static constexpr TimeDelta Zero() { return TimeDelta(); }
+  static constexpr TimeDelta Min() {
+    return TimeDelta(std::numeric_limits<int64_t>::min());
+  }
   static constexpr TimeDelta Max() {
     return TimeDelta(std::numeric_limits<int64_t>::max());
   }
@@ -55,6 +58,18 @@ class TimeDelta {
 
   constexpr TimeDelta operator+(TimeDelta other) const {
     return TimeDelta::FromNanoseconds(delta_ + other.delta_);
+  }
+
+  constexpr int64_t operator/(TimeDelta other) const {
+    return delta_ / other.delta_;
+  }
+
+  constexpr TimeDelta operator*(int64_t multiplier) const {
+    return TimeDelta::FromNanoseconds(delta_ * multiplier);
+  }
+
+  constexpr TimeDelta operator%(TimeDelta other) const {
+    return TimeDelta::FromNanoseconds(delta_ % other.delta_);
   }
 
   bool operator==(TimeDelta other) const { return delta_ == other.delta_; }
