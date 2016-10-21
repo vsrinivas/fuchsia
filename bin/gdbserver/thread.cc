@@ -5,8 +5,11 @@
 #include "thread.h"
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/exception.h>
 
 #include "lib/ftl/logging.h"
+
+#include "util.h"
 
 namespace debugserver {
 
@@ -28,6 +31,16 @@ Thread::~Thread() {
 
 ftl::WeakPtr<Thread> Thread::AsWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
+}
+
+bool Thread::Resume() {
+  mx_status_t status = mx_task_resume(debug_handle_, MX_RESUME_EXCEPTION);
+  if (status < 0) {
+    util::LogErrorWithMxStatus("Failed to resume thread", status);
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace debugserver

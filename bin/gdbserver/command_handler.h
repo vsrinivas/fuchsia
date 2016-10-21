@@ -36,6 +36,8 @@ class CommandHandler final {
   // Command handlers for each "letter" packet. We use underscores in the method
   // names to clearly delineate lowercase letters.
   bool HandleQuestionMark(const ResponseCallback& callback);
+  bool Handle_c(const ftl::StringView& packet,
+                const ResponseCallback& callback);
   bool Handle_g(const ResponseCallback& callback);
   bool Handle_H(const ftl::StringView& packet,
                 const ResponseCallback& callback);

@@ -37,6 +37,10 @@ enum class Amd64Register {
   NUM_REGISTERS
 };
 
+// Returns the register number for the "Program Counter Register" on the current
+// platform. Returns -1, if this operation is not supported.
+int GetPCRegisterNumber();
+
 // Registers represents an architecture-dependent general register set.
 // This is an abstract, opaque interface that returns a register-value
 // representation that complies with the GDB Remote Protocol with
@@ -44,7 +48,7 @@ enum class Amd64Register {
 class Registers {
  public:
   // Factory method for obtaining a Registers instance on the current
-  // architecture.
+  // architecture for a particular thread with handle |thread_handle|.
   static std::unique_ptr<Registers> Create(const mx_handle_t thread_handle);
 
   virtual ~Registers() = default;
@@ -61,6 +65,13 @@ class Registers {
   //
   // Returns an empty string if there is an error while reading the registers.
   virtual std::string GetGeneralRegisters() = 0;
+
+  // Sets the value of the register numbered |register_number| to |value| of
+  // size |value_size| bytes. Returns false if |register_number| and
+  // |value_size| are invalid on the current architecture.
+  virtual bool SetRegisterValue(int register_number,
+                                void* value,
+                                size_t value_size) = 0;
 
   // Returns a string containing all 0s. This is used in our implementation to
   // return register values when there is a current inferior but no current

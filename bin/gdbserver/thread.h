@@ -35,6 +35,10 @@ class Thread final {
   // not be deleted by the caller.
   arch::Registers* registers() const { return registers_.get(); }
 
+  // Resumes the thread from a "stopped in exception" state. Returns true on
+  // success, false on failure.
+  bool Resume();
+
  private:
   // The owning process.
   Process* process_;  // weak

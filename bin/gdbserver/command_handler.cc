@@ -73,6 +73,8 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
       if (packet.size() > 1)
         break;
       return HandleQuestionMark(callback);
+    case 'c':  // Continue (at addr)
+      return Handle_c(packet.substr(1), callback);
     case 'g':  // Read general registers
       if (packet.size() > 1)
         break;
@@ -109,6 +111,72 @@ bool CommandHandler::HandleQuestionMark(const ResponseCallback& callback) {
   //
   //    3. If there is no inferior or the current inferior is not started, then
   //    reply "OK".
+  return ReplyOK(callback);
+}
+
+bool CommandHandler::Handle_c(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "g: No inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  Thread* current_thread = server_->current_thread();
+
+  // If the packet contains an address parameter, then try to set the program
+  // counter to then continue at that address. Otherwise, the PC register will
+  // remain untouched.
+  mx_vaddr_t addr;
+  if (!packet.empty()) {
+    if (!ftl::StringToNumberWithError<mx_vaddr_t>(packet, &addr,
+                                                  ftl::Base::k16)) {
+      FTL_LOG(ERROR) << "c: Malformed address given: " << packet;
+      return ReplyWithError(util::ErrorCode::INVAL, callback);
+    }
+
+    // If there is no current thread, then report error. This is a special case
+    // that means that the process hasn't started yet.
+    if (!current_thread) {
+      FTL_DCHECK(!current_process->started());
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+
+    if (!current_thread->registers()->SetRegisterValue(
+            arch::GetPCRegisterNumber(), &addr, sizeof(addr))) {
+      FTL_LOG(ERROR) << "c: Failed to set the PC register";
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+
+    // TODO(armansito): Restore the PC register to its original state in case of
+    // a failure condition below?
+  }
+
+  // If there is a current thread, then tell it to continue.
+  if (current_thread) {
+    if (!current_thread->Resume())
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+
+    return ReplyOK(callback);
+  }
+
+  // There is no current thread. This means that the process hasn't been started
+  // yet. We start it and set the current thread to the first one the kernel
+  // gives us.
+  FTL_DCHECK(!current_process->started());
+  if (!current_process->Start()) {
+    FTL_LOG(ERROR) << "Failed to run the current inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  // Try to set the current thread.
+  // TODO(armansito): Can this be racy?
+  current_thread = current_process->PickOneThread();
+  if (current_thread)
+    server_->SetCurrentThread(current_thread);
+
   return ReplyOK(callback);
 }
 
@@ -153,9 +221,7 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
     return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   switch (packet[0]) {
-    case 'c':
-      FTL_LOG(ERROR) << "Not handling deprecated H packet type";
-      return false;
+    case 'c':  // fall through
     case 'g': {
       int64_t pid, tid;
       bool has_pid;

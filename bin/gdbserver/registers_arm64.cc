@@ -6,6 +6,12 @@
 
 namespace debugserver {
 namespace arch {
+
+int GetPCRegisterNumber() {
+  // TODO(armansito): Implement
+  return -1;
+}
+
 namespace {
 
 class RegistersArm64 final : public Registers {
@@ -23,6 +29,13 @@ class RegistersArm64 final : public Registers {
   std::string GetGeneralRegisters() override {
     // TODO(armansito): Implement.
     return "";
+  }
+
+  bool SetRegisterValue(int register_number,
+                        void* value,
+                        size_t value_size) override {
+    // TODO(armansito): Implement.
+    return false;
   }
 };
 

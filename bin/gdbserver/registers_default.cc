@@ -6,6 +6,11 @@
 
 namespace debugserver {
 namespace arch {
+
+int GetPCRegisterNumber() {
+  return -1;
+}
+
 namespace {
 
 class RegistersDefault final : public Registers {
@@ -18,6 +23,12 @@ class RegistersDefault final : public Registers {
   bool IsSupported() override { return false; }
 
   std::string GetGeneralRegisters() override { return ""; }
+
+  bool SetRegisterValue(int register_number,
+                        void* value,
+                        size_t value_size) override {
+    return false;
+  }
 };
 
 }  // namespace
