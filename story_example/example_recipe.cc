@@ -146,15 +146,14 @@ class ModuleMonitor : public ModuleWatcher {
 
 // Module implementation that acts as a recipe. It implements both
 // Module and the LinkChanged observer of its own Link.
-class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
+class RecipeImpl : public Module, public mozart::BaseView {
  public:
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              InterfaceRequest<Module> module_request,
              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(app_connector.Pass(), view_owner_request.Pass(),
                  "Spinning Square"),
-        module_binding_(this, std::move(module_request)),
-        watcher_binding_(this) {
+        module_binding_(this, std::move(module_request)) {
     FTL_LOG(INFO) << "RecipeImpl";
   }
   ~RecipeImpl() override { FTL_LOG(INFO) << "~RecipeImpl"; }
@@ -170,10 +169,6 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
 
     session_.Bind(session.Pass());
     link_.Bind(link.Pass());
-
-    InterfaceHandle<LinkChanged> watcher;
-    watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
 
     session_->CreateLink(GetProxy(&module1_link_));
     session_->CreateLink(GetProxy(&module2_link_));
@@ -214,10 +209,6 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
     Array<DocumentPtr> array;
     array.push_back(editor.TakeDocument());
     module1_link_->SetAllDocuments(std::move(array));
-  }
-
-  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
-    FTL_LOG(INFO) << "RecipeImpl::Notify()";
   }
 
  private:
@@ -270,7 +261,6 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
   }
 
   StrongBinding<Module> module_binding_;
-  StrongBinding<LinkChanged> watcher_binding_;
 
   InterfacePtr<Link> link_;
   InterfacePtr<Session> session_;
