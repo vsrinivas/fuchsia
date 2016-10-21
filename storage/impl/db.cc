@@ -7,6 +7,7 @@
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/journal_db_impl.h"
+#include "apps/ledger/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
 
 namespace storage {
@@ -165,7 +166,10 @@ Status DB::Batch::Execute() {
   return callback_(true);
 }
 
-DB::DB(std::string db_path) : db_path_(db_path) {}
+DB::DB(PageStorageImpl* page_storage, std::string db_path)
+    : page_storage_(page_storage), db_path_(db_path) {
+  FTL_DCHECK(page_storage);
+}
 
 DB::~DB() {
   FTL_DCHECK(!batch_);
@@ -241,7 +245,7 @@ Status DB::CreateJournal(JournalType journal_type,
                          const CommitId& base,
                          std::unique_ptr<Journal>* journal) {
   JournalId id = NewJournalId(journal_type);
-  *journal = JournalDBImpl::Simple(this, id, base);
+  *journal = JournalDBImpl::Simple(page_storage_, this, id, base);
   if (journal_type == JournalType::IMPLICIT) {
     return Put(GetImplicitJournalMetaKeyFor(id), base);
   }
@@ -251,8 +255,8 @@ Status DB::CreateJournal(JournalType journal_type,
 Status DB::CreateMergeJournal(const CommitId& base,
                               const CommitId& other,
                               std::unique_ptr<Journal>* journal) {
-  *journal = JournalDBImpl::Merge(this, NewJournalId(JournalType::EXPLICIT),
-                                  base, other);
+  *journal = JournalDBImpl::Merge(
+      page_storage_, this, NewJournalId(JournalType::EXPLICIT), base, other);
   return Status::OK;
 }
 
@@ -267,7 +271,7 @@ Status DB::GetImplicitJournal(const JournalId& journal_id,
   CommitId base;
   Status s = Get(GetImplicitJournalMetaKeyFor(journal_id), &base);
   if (s == Status::OK) {
-    *journal = JournalDBImpl::Simple(this, journal_id, base);
+    *journal = JournalDBImpl::Simple(page_storage_, this, journal_id, base);
   }
   return s;
 }

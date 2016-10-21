@@ -46,7 +46,7 @@ Status StagingToDestination(size_t expected_size,
                             std::string source_path,
                             std::string destination_path) {
   // Check if file already exists.
-  size_t size;
+  size_t size = 0;
   if (files::GetFileSize(destination_path, &size)) {
     if (size != expected_size) {
       // If size is not the correct one, something is really wrong.
@@ -165,7 +165,7 @@ PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
     : task_runner_(task_runner),
       page_dir_(page_dir),
       page_id_(page_id.ToString()),
-      db_(page_dir_ + kLevelDbDir),
+      db_(this, page_dir_ + kLevelDbDir),
       store_(this),
       objects_dir_(page_dir_ + kObjectDir),
       staging_dir_(page_dir_ + kStagingDir) {}
@@ -219,13 +219,19 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 
 Status PageStorageImpl::GetCommit(const CommitId& commit_id,
                                   std::unique_ptr<Commit>* commit) {
+  static std::string first_commit_id =
+      std::string(kFirstPageCommitId, kCommitIdSize);
+  if (commit_id == first_commit_id) {
+    *commit = CommitImpl::Empty(&store_);
+    return Status::OK;
+  }
   std::string bytes;
   Status s = db_.GetCommitStorageBytes(commit_id, &bytes);
   if (s != Status::OK) {
     return s;
   }
   std::unique_ptr<Commit> c =
-      CommitImpl::FromStorageBytes(&store_, commit_id, bytes);
+      CommitImpl::FromStorageBytes(&store_, commit_id, std::move(bytes));
   if (!c) {
     return Status::FORMAT_ERROR;
   }
@@ -238,9 +244,9 @@ Status PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit) {
 }
 
 Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
-                                          const std::string& storage_bytes) {
+                                          std::string&& storage_bytes) {
   std::unique_ptr<Commit> commit =
-      CommitImpl::FromStorageBytes(&store_, id, storage_bytes);
+      CommitImpl::FromStorageBytes(&store_, id, std::move(storage_bytes));
   if (!commit) {
     return Status::FORMAT_ERROR;
   }

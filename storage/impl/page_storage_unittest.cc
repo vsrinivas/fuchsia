@@ -62,28 +62,67 @@ class PageStorageTest : public ::testing::Test {
     return ids[0];
   }
 
+  CommitId TryCommit(JournalType type, int keys) {
+    std::unique_ptr<Journal> journal;
+    EXPECT_EQ(Status::OK,
+              storage_->StartCommit(GetFirstHead(), type, &journal));
+    EXPECT_NE(nullptr, journal);
+
+    for (int i = 0; i < keys; ++i) {
+      EXPECT_EQ(Status::OK,
+                journal->Put("key" + std::to_string(i), RandomId(kObjectIdSize),
+                             KeyPriority::EAGER));
+    }
+    EXPECT_EQ(Status::OK, journal->Delete("key_does_not_exist"));
+
+    ObjectId commit_id;
+    journal->Commit([this, &commit_id](Status status, const CommitId& id) {
+      EXPECT_EQ(Status::OK, status);
+      commit_id = id;
+    });
+
+    // Commit and Rollback should fail after a successfull commit.
+    journal->Commit([this](Status status, const CommitId&) {
+      EXPECT_EQ(Status::ILLEGAL_STATE, status);
+    });
+    EXPECT_EQ(Status::ILLEGAL_STATE, journal->Rollback());
+
+    // Check the contents.
+    std::unique_ptr<Commit> commit;
+    EXPECT_EQ(Status::OK, storage_->GetCommit(commit_id, &commit));
+    std::unique_ptr<Iterator<const Entry>> contents =
+        commit->GetContents()->begin();
+    for (int i = 0; i < keys; ++i) {
+      EXPECT_TRUE(contents->Valid());
+      EXPECT_EQ("key" + std::to_string(i), (*contents)->key);
+      contents->Next();
+    }
+    EXPECT_FALSE(contents->Valid());
+
+    return commit_id;
+  }
+
   mtl::MessageLoop message_loop_;
   files::ScopedTempDir tmp_dir_;
 
- private:
  protected:
   std::unique_ptr<PageStorageImpl> storage_;
-  ObjectStore store_ = ObjectStore(storage_.get());
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
 };
 
 TEST_F(PageStorageTest, AddGetLocalCommits) {
-  CommitId id = RandomId(kCommitIdSize);
-
   // Search for a commit id that doesn't exist and see the error.
   std::unique_ptr<Commit> commit;
-  EXPECT_EQ(Status::NOT_FOUND, storage_->GetCommit(id, &commit));
+  EXPECT_EQ(Status::NOT_FOUND,
+            storage_->GetCommit(RandomId(kCommitIdSize), &commit));
   EXPECT_FALSE(commit);
 
-  commit.reset(new CommitImpl(&store_, id, 0, RandomId(kObjectIdSize),
-                              {GetFirstHead()}));
+  ObjectStore object_store(storage_.get());
+  commit = CommitImpl::FromContentAndParents(
+      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+  CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
   // Search for a commit that exist and check the content.
@@ -94,10 +133,10 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  CommitId id = RandomId(kCommitIdSize);
-
-  std::unique_ptr<Commit> commit(new CommitImpl(
-      &store_, id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
+  ObjectStore object_store(storage_.get());
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+  CommitId id = commit->GetId();
 
   EXPECT_EQ(Status::OK,
             storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
@@ -113,6 +152,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 }
 
 TEST_F(PageStorageTest, SyncCommits) {
+  ObjectStore object_store(storage_.get());
   std::vector<std::unique_ptr<Commit>> commits;
 
   // Initially there should be no unsynced commits.
@@ -120,9 +160,9 @@ TEST_F(PageStorageTest, SyncCommits) {
   EXPECT_TRUE(commits.empty());
 
   // After adding a commit it should marked as unsynced.
-  CommitId id = RandomId(kCommitIdSize);
-  std::unique_ptr<Commit> commit(new CommitImpl(
-      &store_, id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+  CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
@@ -137,6 +177,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 }
 
 TEST_F(PageStorageTest, HeadCommits) {
+  ObjectStore object_store(storage_.get());
   // Every page should have one initial head commit.
   std::vector<CommitId> heads;
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
@@ -144,9 +185,9 @@ TEST_F(PageStorageTest, HeadCommits) {
 
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
-  CommitId id = RandomId(kCommitIdSize);
-  std::unique_ptr<Commit> commit(
-      new CommitImpl(&store_, id, 0, RandomId(kObjectIdSize), {heads[0]}));
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+  CommitId id = commit->GetId();
 
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
@@ -155,24 +196,15 @@ TEST_F(PageStorageTest, HeadCommits) {
 }
 
 TEST_F(PageStorageTest, CreateJournals) {
-  std::unique_ptr<Journal> journal;
-
   // Explicit journal.
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
-                                              JournalType::EXPLICIT, &journal));
-  EXPECT_NE(nullptr, journal);
-  journal.reset();
-
-  // Implicit journal.
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
-                                              JournalType::IMPLICIT, &journal));
-  EXPECT_NE(nullptr, journal);
-  journal.reset();
+  CommitId left_id = TryCommit(JournalType::EXPLICIT, 5);
+  CommitId right_id = TryCommit(JournalType::IMPLICIT, 10);
 
   // Journal for merge commit.
+  std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK,
-            storage_->StartMergeCommit(RandomId(kCommitIdSize),
-                                       RandomId(kCommitIdSize), &journal));
+            storage_->StartMergeCommit(left_id, right_id, &journal));
+  EXPECT_EQ(Status::OK, journal->Rollback());
   EXPECT_NE(nullptr, journal);
 }
 

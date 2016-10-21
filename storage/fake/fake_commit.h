@@ -22,15 +22,17 @@ class FakeCommit : public Commit {
   ~FakeCommit() override;
 
   // Commit:
-  virtual CommitId GetId() const override;
+  CommitId GetId() const override;
 
-  virtual std::vector<CommitId> GetParentIds() const override;
+  std::vector<CommitId> GetParentIds() const override;
 
-  virtual int64_t GetTimestamp() const override;
+  int64_t GetTimestamp() const override;
 
-  virtual std::unique_ptr<CommitContents> GetContents() const override;
+  std::unique_ptr<CommitContents> GetContents() const override;
 
-  virtual std::string GetStorageBytes() const override;
+  ObjectId GetRootId() const override;
+
+  std::string GetStorageBytes() const override;
 
  private:
   FakeJournalDelegate* journal_;

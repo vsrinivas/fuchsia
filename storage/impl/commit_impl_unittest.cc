@@ -29,13 +29,13 @@ class CommitImplTest : public ::testing::Test {
 
   ~CommitImplTest() override {}
 
-  void CheckCommitStorageBytes(const CommitId& id, const Commit& commit) {
+  void CheckCommitStorageBytes(const std::unique_ptr<Commit>& commit) {
     std::unique_ptr<Commit> copy = CommitImpl::FromStorageBytes(
-        &object_store_, id, commit.GetStorageBytes());
-    EXPECT_EQ(commit.GetId(), copy->GetId());
-    EXPECT_EQ(commit.GetTimestamp(), copy->GetTimestamp());
-    EXPECT_EQ(commit.GetParentIds(), copy->GetParentIds());
-    // TODO(nellyv): Check that the root node is also correctly (de)serialized.
+        &object_store_, commit->GetId(), commit->GetStorageBytes());
+    EXPECT_EQ(commit->GetId(), copy->GetId());
+    EXPECT_EQ(commit->GetTimestamp(), copy->GetTimestamp());
+    EXPECT_EQ(commit->GetParentIds(), copy->GetParentIds());
+    EXPECT_EQ(commit->GetRootId(), copy->GetRootId());
   }
 
  protected:
@@ -47,21 +47,21 @@ class CommitImplTest : public ::testing::Test {
 };
 
 TEST_F(CommitImplTest, CommitStorageBytes) {
-  CommitId id = RandomId(kCommitIdSize);
-  int64_t timestamp = 1234;
   ObjectId root_node_id = RandomId(kObjectIdSize);
 
   std::vector<CommitId> parents;
   parents.push_back(RandomId(kCommitIdSize));
 
   // A commit with one parent.
-  CommitImpl commit(&object_store_, id, timestamp, root_node_id, parents);
-  CheckCommitStorageBytes(id, commit);
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      &object_store_, root_node_id, std::vector<CommitId>(parents));
+  CheckCommitStorageBytes(commit);
 
   // A commit with two parents.
   parents.push_back(RandomId(kCommitIdSize));
-  CommitImpl commit2(&object_store_, id, timestamp, root_node_id, parents);
-  CheckCommitStorageBytes(id, commit2);
+  std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
+      &object_store_, root_node_id, std::move(parents));
+  CheckCommitStorageBytes(commit2);
 }
 
 }  // namespace

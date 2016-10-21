@@ -114,6 +114,10 @@ std::unique_ptr<CommitContents> FakeCommit::GetContents() const {
   return contents;
 }
 
+ObjectId FakeCommit::FakeCommit::GetRootId() const {
+  return journal_->GetId();
+}
+
 std::string FakeCommit::GetStorageBytes() const {
   return std::string();
 }

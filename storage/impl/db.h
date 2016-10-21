@@ -19,6 +19,8 @@
 
 namespace storage {
 
+class PageStorageImpl;
+
 // |DB| manages all Ledger related data that are stored in LevelDB. This
 // includes commit objects, information on head commits, as well as metadata on
 // on which objects and commits are not yet synchronized to the cloud.
@@ -38,7 +40,7 @@ class DB {
     bool executed_;
   };
 
-  DB(std::string db_path);
+  DB(PageStorageImpl* page_storage, std::string db_path);
   ~DB();
 
   // Initializes LevelDB or returns an |IO_ERROR| on failure.
@@ -136,6 +138,7 @@ class DB {
   Status Put(convert::ExtendedStringView key, ftl::StringView value);
   Status Delete(convert::ExtendedStringView key);
 
+  PageStorageImpl* const page_storage_;
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;
 

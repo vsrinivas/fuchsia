@@ -4,6 +4,11 @@
 
 #include "apps/ledger/storage/impl/commit_impl.h"
 
+#include <algorithm>
+
+#include <sys/time.h>
+
+#include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/build_config.h"
@@ -38,14 +43,17 @@ CommitImpl::CommitImpl(ObjectStore* store,
                        const CommitId& id,
                        int64_t timestamp,
                        ObjectIdView root_node_id,
-                       const std::vector<CommitId>& parent_ids)
+                       const std::vector<CommitId>& parent_ids,
+                       std::string&& storage_bytes)
     : store_(store),
       id_(id),
       timestamp_(timestamp),
       root_node_id_(root_node_id.ToString()),
-      parent_ids_(parent_ids) {
+      parent_ids_(parent_ids),
+      storage_bytes_(std::move(storage_bytes)) {
   FTL_DCHECK(store_ != nullptr);
-  FTL_DCHECK(!parent_ids_.empty() && parent_ids_.size() <= 2);
+  FTL_DCHECK(id == kFirstPageCommitId ||
+             (!parent_ids_.empty() && parent_ids_.size() <= 2));
 }
 
 CommitImpl::~CommitImpl() {}
@@ -53,7 +61,7 @@ CommitImpl::~CommitImpl() {}
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     ObjectStore* store,
     const CommitId& id,
-    const std::string& storage_bytes) {
+    std::string&& storage_bytes) {
   int parent_count =
       (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
 
@@ -74,8 +82,44 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     parent_ids.push_back(storage_bytes.substr(
         kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
   }
+  return std::unique_ptr<Commit>(new CommitImpl(store, id, timestamp,
+                                                root_node_id, parent_ids,
+                                                std::move(storage_bytes)));
+}
+
+std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
+    ObjectStore* store,
+    ObjectIdView root_node_id,
+    std::vector<CommitId>&& parent_ids) {
+  // Sort commit ids for uniqueness.
+  std::sort(parent_ids.begin(), parent_ids.end());
+  // Compute timestamp.
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  int64_t timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
+                      static_cast<int64_t>(tv.tv_usec) * 1000L;
+
+  std::string storage_bytes;
+  storage_bytes.reserve(kTimestampSize + kObjectIdSize +
+                        parent_ids.size() * kCommitIdSize);
+  storage_bytes.append(TimestampToBytes(timestamp))
+      .append(root_node_id.data(), root_node_id.size())
+      .append(parent_ids[0]);
+  if (parent_ids.size() != 1)
+    storage_bytes.append(parent_ids[1]);
+  CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
+
   return std::unique_ptr<Commit>(
-      new CommitImpl(store, id, timestamp, root_node_id, parent_ids));
+      new CommitImpl(store, id, timestamp, root_node_id, std::move(parent_ids),
+                     std::move(storage_bytes)));
+}
+
+std::unique_ptr<Commit> CommitImpl::Empty(ObjectStore* store) {
+  ObjectId root_node_id;
+  TreeNode::FromEntries(store, std::vector<Entry>(), std::vector<ObjectId>(1),
+                        &root_node_id);
+  return std::unique_ptr<Commit>(new CommitImpl(
+      store, kFirstPageCommitId, 0, root_node_id, std::vector<CommitId>(), ""));
 }
 
 CommitId CommitImpl::GetId() const {
@@ -95,14 +139,12 @@ std::unique_ptr<CommitContents> CommitImpl::GetContents() const {
       new CommitContentsImpl(root_node_id_, store_));
 }
 
+ObjectId CommitImpl::CommitImpl::GetRootId() const {
+  return root_node_id_;
+}
+
 std::string CommitImpl::GetStorageBytes() const {
-  std::string result;
-  result.reserve(kTimestampSize + kObjectIdSize +
-                 parent_ids_.size() * kCommitIdSize);
-  result.append(TimestampToBytes(timestamp_))
-      .append(root_node_id_)
-      .append(parent_ids_[0]);
-  return (parent_ids_.size() == 1 ? result : result.append(parent_ids_[1]));
+  return storage_bytes_;
 }
 
 }  // namespace storage

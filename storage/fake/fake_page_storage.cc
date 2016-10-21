@@ -79,7 +79,7 @@ Status FakePageStorage::GetCommit(const CommitId& commit_id,
 }
 
 Status FakePageStorage::AddCommitFromSync(const CommitId& id,
-                                          const std::string& storage_bytes) {
+                                          std::string&& storage_bytes) {
   return Status::NOT_IMPLEMENTED;
 }
 

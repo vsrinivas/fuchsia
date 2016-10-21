@@ -11,6 +11,8 @@
 #include <string>
 
 #include "apps/ledger/storage/impl/db.h"
+#include "apps/ledger/storage/impl/page_storage_impl.h"
+#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -22,12 +24,14 @@ class JournalDBImpl : public Journal {
   ~JournalDBImpl() override;
 
   // Creates a new Journal for a simple commit.
-  static std::unique_ptr<Journal> Simple(DB* db,
+  static std::unique_ptr<Journal> Simple(PageStorageImpl* page_storage,
+                                         DB* db,
                                          const JournalId& id,
                                          const CommitId& base);
 
   // Creates a new Journal for a merge commit.
-  static std::unique_ptr<Journal> Merge(DB* db,
+  static std::unique_ptr<Journal> Merge(PageStorageImpl* page_storage,
+                                        DB* db,
                                         const JournalId& id,
                                         const CommitId& base,
                                         const CommitId& other);
@@ -44,11 +48,16 @@ class JournalDBImpl : public Journal {
   Status Rollback() override;
 
  private:
-  JournalDBImpl(DB* db, const JournalId& id, const CommitId& base);
+  JournalDBImpl(PageStorageImpl* page_storage,
+                DB* db,
+                const JournalId& id,
+                const CommitId& base);
 
-  DB* db_;
+  PageStorageImpl* const page_storage_;
+  DB* const db_;
   const JournalId id_;
   CommitId base_;
+  ObjectStore object_store_;
   std::unique_ptr<CommitId> other_;
   bool valid_;
 };

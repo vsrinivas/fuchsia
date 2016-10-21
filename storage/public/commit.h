@@ -32,6 +32,9 @@ class Commit {
   // Returns the contents of this commit.
   virtual std::unique_ptr<CommitContents> GetContents() const = 0;
 
+  // Returns the id of the root node of this commit.
+  virtual ObjectId GetRootId() const = 0;
+
   // Returns the byte representation of this |Commit| as they will be
   // synced to the cloud.
   virtual std::string GetStorageBytes() const = 0;
