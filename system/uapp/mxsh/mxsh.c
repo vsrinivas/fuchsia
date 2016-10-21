@@ -483,6 +483,11 @@ fail:
     return status;
 }
 
+static const char* path[] = {
+    "/system/bin",
+    "/boot/bin",
+};
+
 mx_status_t command(int argc, char** argv, bool runbg) {
     char tmp[LINE_MAX + 32];
     launchpad_t* lp;
@@ -544,18 +549,33 @@ mx_status_t command(int argc, char** argv, bool runbg) {
         goto done_no_lp;
     }
 
-    //TODO: some kind of PATH processing
+    int fd;
     if (argv[0][0] != '/' && argv[0][0] != '.') {
-        snprintf(tmp, sizeof(tmp), "%s%s", "/boot/bin/", argv[0]);
-        argv[0] = tmp;
+        for (unsigned n = 0; n < sizeof(path)/sizeof(path[0]); n++) {
+            snprintf(tmp, sizeof(tmp), "%s/%s", path[n], argv[0]);
+            if ((fd = open(tmp, O_RDONLY)) >= 0) {
+                argv[0] = tmp;
+                goto found;
+            }
+        }
+        fprintf(stderr, "could not load binary '%s'\n", argv[0]);
+        goto done_no_lp;
     }
 
+    if ((fd = open(argv[0], O_RDONLY)) < 0) {
+        fprintf(stderr, "could not open binary '%s'\n", argv[0]);
+        goto done_no_lp;
+    }
+
+found:
     if ((status = lp_setup(&lp, argc, (const char* const*) argv, envp)) < 0) {
         fprintf(stderr, "process setup failed (%d)\n", status);
         goto done_no_lp;
     }
 
-    if ((status = launchpad_elf_load(lp, launchpad_vmo_from_file(argv[0]))) < 0) {
+    status = launchpad_elf_load(lp, launchpad_vmo_from_fd(fd));
+    close(fd);
+    if (status < 0) {
         fprintf(stderr, "could not load binary '%s' (%d)\n", argv[0], status);
         goto done;
     }
