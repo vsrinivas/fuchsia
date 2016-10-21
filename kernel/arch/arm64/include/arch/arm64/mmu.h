@@ -328,7 +328,7 @@ __BEGIN_CDECLS
 
 #define ARM64_TLBI(op, val) \
 ({ \
-    __asm__ volatile("tlbi " #op ", %0" :: "r" (val)); \
+    __asm__ volatile("tlbi " #op ", %0" :: "r" ((uint64_t)(val))); \
     ISB; \
 })
 

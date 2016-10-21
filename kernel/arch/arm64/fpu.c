@@ -51,7 +51,9 @@ static void arm64_fpu_load_state(struct thread *t)
                      "ldp     q30, q31, [%0, #(15 * 32)]\n"
                      "msr     fpcr, %1\n"
                      "msr     fpsr, %2\n"
-                     :: "r"(fpstate->regs), "r"(fpstate->fpcr), "r"(fpstate->fpsr));
+                     :: "r"(fpstate->regs),
+                        "r"((uint64_t)fpstate->fpcr),
+                        "r"((uint64_t)fpstate->fpsr));
 }
 
 static void arm64_fpu_save_state(struct thread *t)
@@ -87,7 +89,7 @@ static void arm64_fpu_save_state(struct thread *t)
 /* save fpu state if the thread had dirtied it and disable the fpu */
 void arm64_fpu_context_switch(struct thread *oldthread, struct thread *newthread)
 {
-    uint32_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
+    uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
     if (is_fpu_enabled(cpacr)) {
         LTRACEF("saving state on thread %s\n", oldthread->name);
 
@@ -107,7 +109,7 @@ void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags)
     /* only valid to be called if exception came from lower level */
     DEBUG_ASSERT(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL);
 
-    uint32_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
+    uint64_t cpacr = ARM64_READ_SYSREG(cpacr_el1);
     DEBUG_ASSERT(!is_fpu_enabled(cpacr));
 
     /* enable the fpu */
@@ -119,4 +121,3 @@ void arm64_fpu_exception(struct arm64_iframe_long *iframe, uint exception_flags)
     if (likely(t))
         arm64_fpu_load_state(t);
 }
-

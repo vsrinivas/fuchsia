@@ -45,7 +45,7 @@
 
 #define READ_TIMER_REG32(reg) ARM64_READ_SYSREG(reg)
 #define READ_TIMER_REG64(reg) ARM64_READ_SYSREG(reg)
-#define WRITE_TIMER_REG32(reg, val) ARM64_WRITE_SYSREG(reg, val)
+#define WRITE_TIMER_REG32(reg, val) ARM64_WRITE_SYSREG(reg, (uint64_t)(val))
 #define WRITE_TIMER_REG64(reg, val) ARM64_WRITE_SYSREG(reg, val)
 
 #else
