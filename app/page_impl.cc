@@ -102,11 +102,13 @@ void PageImpl::Watch(mojo::InterfaceHandle<PageWatcher> watcher,
   callback.Run(Status::UNKNOWN_ERROR);
 }
 
-Status PageImpl::RunInTransaction(
-    std::function<Status(storage::Journal* journal)> callback) {
+void PageImpl::RunInTransaction(
+    std::function<Status(storage::Journal* journal)> runnable,
+    std::function<void(Status)> callback) {
   if (journal_) {
     // A transaction is in progress; add this change to it.
-    return callback(journal_.get());
+    callback(runnable(journal_.get()));
+    return;
   }
   // No transaction is in progress; create one just for this change.
   // TODO(etiennej): Add a change batching strategy for operations outside
@@ -117,15 +119,31 @@ Status PageImpl::RunInTransaction(
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::IMPLICIT, &journal);
   if (status != storage::Status::OK) {
-    return ConvertStatus(status);
+    callback(ConvertStatus(status));
+    return;
   }
-  Status ledger_status = callback(journal.get());
+  Status ledger_status = runnable(journal.get());
   if (ledger_status != Status::OK) {
-    return ledger_status;
+    callback(ledger_status);
   }
-  storage::CommitId new_commit_id;
-  status = journal->Commit(&new_commit_id);
-  return ConvertStatus(status);
+
+  CommitJournal(std::move(journal), callback);
+}
+
+void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
+                             std::function<void(Status)> callback) {
+  storage::Journal* journal_ptr = journal.get();
+  in_progress_journals_.push_back(std::move(journal));
+
+  journal_ptr->Commit([this, callback, journal_ptr](
+      storage::Status status, const storage::CommitId& commit_id) {
+    in_progress_journals_.erase(std::remove_if(
+        in_progress_journals_.begin(), in_progress_journals_.end(),
+        [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
+          return journal_ptr == journal.get();
+        }));
+    callback(ConvertStatus(status));
+  });
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
@@ -154,10 +172,10 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
           return;
         }
 
-        callback.Run(
-            PutInCommit(key, object_id, priority == Priority::EAGER
-                                            ? storage::KeyPriority::EAGER
-                                            : storage::KeyPriority::LAZY));
+        PutInCommit(key, object_id,
+                    priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                : storage::KeyPriority::LAZY,
+                    [callback](Status status) { callback.Run(status); });
       }));
 }
 
@@ -168,26 +186,31 @@ void PageImpl::PutReference(mojo::Array<uint8_t> key,
                             Priority priority,
                             const PutReferenceCallback& callback) {
   storage::ObjectIdView object_id(reference->opaque_id);
-  callback.Run(PutInCommit(key, object_id, priority == Priority::EAGER
-                                               ? storage::KeyPriority::EAGER
-                                               : storage::KeyPriority::LAZY));
+  PutInCommit(key, object_id,
+              priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                          : storage::KeyPriority::LAZY,
+              [callback](Status status) { callback.Run(status); });
 }
 
-Status PageImpl::PutInCommit(convert::ExtendedStringView key,
-                             storage::ObjectIdView object_id,
-                             storage::KeyPriority priority) {
-  return RunInTransaction(
+void PageImpl::PutInCommit(convert::ExtendedStringView key,
+                           storage::ObjectIdView object_id,
+                           storage::KeyPriority priority,
+                           std::function<void(Status)> callback) {
+  RunInTransaction(
       [&key, &object_id, &priority](storage::Journal* journal) {
         return ConvertStatus(journal->Put(key, object_id, priority));
-      });
+      },
+      callback);
 }
 
 // Delete(array<uint8> key) => (Status status);
 void PageImpl::Delete(mojo::Array<uint8_t> key,
                       const DeleteCallback& callback) {
-  callback.Run(RunInTransaction([&key](storage::Journal* journal) {
-    return ConvertStatus(journal->Delete(key), Status::KEY_NOT_FOUND);
-  }));
+  RunInTransaction(
+      [&key](storage::Journal* journal) {
+        return ConvertStatus(journal->Delete(key), Status::KEY_NOT_FOUND);
+      },
+      [callback](Status status) { callback.Run(status); });
 }
 
 // CreateReference(int64 size, handle<data_pipe_producer> data)
@@ -280,11 +303,9 @@ void PageImpl::Commit(const CommitCallback& callback) {
     callback.Run(Status::NO_TRANSACTION_IN_PROGRESS);
     return;
   }
-  storage::CommitId new_commit_id;
-  storage::Status status = journal_->Commit(&new_commit_id);
-  journal_.reset();
   journal_parent_commit_.clear();
-  callback.Run(ConvertStatus(status));
+  CommitJournal(std::move(journal_),
+                [callback](Status status) { callback.Run(status); });
 }
 
 // Rollback() => (Status status);

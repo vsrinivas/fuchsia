@@ -30,12 +30,20 @@ class PageImpl : public Page {
   // commit. If multiple heads match this criteria, returns one arbitrarily.
   storage::CommitId GetLocalBranchHeadCommit();
 
-  Status PutInCommit(convert::ExtendedStringView key,
-                     storage::ObjectIdView value,
-                     storage::KeyPriority priority);
+  void PutInCommit(convert::ExtendedStringView key,
+                   storage::ObjectIdView value,
+                   storage::KeyPriority priority,
+                   std::function<void(Status)> callback);
 
-  Status RunInTransaction(
-      std::function<Status(storage::Journal* journal)> callback);
+  // Run |runnable| in a transaction, and notifies |callback| of the result. If
+  // a transaction is currently in progress, reuses it, otherwise creates a new
+  // one and commit it before calling |callback|.
+  void RunInTransaction(
+      std::function<Status(storage::Journal* journal)> runnable,
+      std::function<void(Status)> callback);
+
+  void CommitJournal(std::unique_ptr<storage::Journal> journal,
+                     std::function<void(Status)> callback);
 
   // Page:
   void GetId(const GetIdCallback& callback) override;
@@ -88,6 +96,7 @@ class PageImpl : public Page {
   storage::PageStorage* storage_;
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
+  std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
   mojo::StrongBindingSet<PageSnapshot> page_snapshot_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);

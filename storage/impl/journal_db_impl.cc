@@ -51,8 +51,9 @@ Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   return db_->RemoveJournalEntry(id_, key);
 }
 
-Status JournalDBImpl::Commit(CommitId* commit_id) {
-  return Status::NOT_IMPLEMENTED;
+void JournalDBImpl::Commit(
+    std::function<void(Status, const CommitId&)> callback) {
+  callback(Status::NOT_IMPLEMENTED, "");
 }
 
 Status JournalDBImpl::Rollback() {

@@ -35,7 +35,7 @@ class FakeJournalDelegate {
                   KeyPriority priority);
   Status Delete(convert::ExtendedStringView key);
 
-  Status Commit();
+  void Commit(std::function<void(Status, const CommitId&)> callback);
   bool IsCommitted() const;
 
   Status Rollback();

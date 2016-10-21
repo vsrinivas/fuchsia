@@ -23,9 +23,9 @@ Status FakeJournal::Delete(convert::ExtendedStringView key) {
   return delegate_->Delete(key);
 }
 
-Status FakeJournal::Commit(CommitId* commit_id) {
-  *commit_id = delegate_->GetId();
-  return delegate_->Commit();
+void FakeJournal::Commit(
+    std::function<void(Status, const CommitId&)> callback) {
+  delegate_->Commit(callback);
 }
 
 Status FakeJournal::Rollback() {
