@@ -1051,15 +1051,27 @@ backtrace_destroy_target (struct backtrace_state *state,
                           backtrace_error_callback error_callback,
                           void *data)
 {
+  struct elf_syminfo_data *sdata = state->syminfo_data;
+
+  while (sdata != NULL)
+    {
+      struct elf_syminfo_data *next = sdata->next;
+      backtrace_free (state, sdata->symbols,
+                      sdata->count * sizeof (struct elf_symbol),
+                      error_callback, data);
+      backtrace_free (state, sdata, sizeof (*sdata), error_callback, data);
+      sdata = next;
+    }
+
   struct elf_state *elf = state->target_state;
 
   if (elf == NULL)
-      return;
+    return;
 
   if (elf->strtab_view_valid)
     backtrace_release_view (state, &elf->strtab_view, error_callback, data);
   if (elf->debug_view_valid)
     backtrace_release_view (state, &elf->debug_view, error_callback, data);
 
-  backtrace_free (state, elf, sizeof *elf, error_callback, data);
+  backtrace_free (state, elf, sizeof (*elf), error_callback, data);
 }
