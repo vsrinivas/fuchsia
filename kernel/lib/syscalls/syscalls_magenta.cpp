@@ -264,6 +264,16 @@ mx_status_t sys_process_create(user_ptr<const char> name, uint32_t name_len,
     return NO_ERROR;
 }
 
+// Note: This is used to start the main thread (as opposed to using
+// sys_thread_start for that) for a few reasons:
+// - less easily exploitable
+//   We want to make sure we can't generically transfer handles to a process.
+//   This has the nice property of restricting the evil (transferring handle
+//   to new process) to exactly one spot, and can be called exactly once per
+//   process, since it also pushes it into a new state.
+// - maintains the state machine invariant that 'started' processes have one
+//   thread running
+
 mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t pc, uintptr_t sp, mx_handle_t arg_handle_value, uintptr_t arg2) {
     LTRACEF("phandle %d, thandle %d, pc %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg_handle %d, arg2 %#" PRIxPTR "\n",
