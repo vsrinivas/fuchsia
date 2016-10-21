@@ -201,12 +201,24 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
         return;
     }
 
-    auto mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
+    std::shared_ptr<GpuMapping> mapping;
+
+    for (auto iter = display_mappings_.begin(); iter != display_mappings_.end(); iter++) {
+        if ((*iter)->buffer() == buffer.get()) {
+            mapping = *iter;
+            display_mappings_.erase(iter);
+            break;
+        }
+    }
+
     if (!mapping) {
-        DLOG("Couldn't map buffer to gtt");
-        if (callback)
-            (*callback)(-ENOMEM, data);
-        return;
+        mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
+        if (!mapping) {
+            DLOG("Couldn't map buffer to gtt");
+            if (callback)
+                (*callback)(-ENOMEM, data);
+            return;
+        }
     }
 
     gpu_addr_t gpu_addr_gtt = mapping->gpu_addr();
@@ -252,7 +264,11 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
         (*flip_callback_)(0, flip_data_);
     }
 
-    displayed_buffer_mapping_ = std::move(mapping);
+    if (display_mappings_.size() > 2)
+        display_mappings_.erase(display_mappings_.end());
+
+    display_mappings_.push_front(mapping);
+
     flip_callback_ = callback;
     flip_data_ = data;
 }

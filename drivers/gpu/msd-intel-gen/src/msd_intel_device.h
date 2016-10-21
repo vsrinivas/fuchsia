@@ -14,6 +14,7 @@
 #include "msd_intel_context.h"
 #include "register_io.h"
 #include "sequencer.h"
+#include <deque>
 
 class MsdIntelDevice : public msd_device,
                        public Gtt::Owner,
@@ -118,7 +119,7 @@ private:
     std::unique_ptr<Sequencer> sequencer_;
 
     // page flipping
-    std::shared_ptr<GpuMapping> displayed_buffer_mapping_;
+    std::deque<std::shared_ptr<GpuMapping>> display_mappings_;
     magma_system_pageflip_callback_t flip_callback_{};
     void* flip_data_{};
 
