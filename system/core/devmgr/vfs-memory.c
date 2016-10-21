@@ -33,7 +33,7 @@ mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t mem_can_unlink(dnode_t* dn);
 
 static void mem_release(vnode_t* vn) {
-    printf("memfs: vn %p destroyed\n", vn);
+    xprintf("memfs: vn %p destroyed\n", vn);
 
     mnode_t* mem = vn->pdata;
     for (int i = 0; i < MAXBLOCKS; i++) {
