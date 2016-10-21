@@ -109,7 +109,7 @@ KERNEL_ASMFLAGS :=
 # crashlogger, ngunwind, backtrace use this so that the simplisitic unwinder
 # will work with them. These are recorded here so that modules don't need
 # knowledge of the details. They just need to do:
-# GLOBAL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+# MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
 KEEP_FRAME_POINTER_COMPILEFLAGS := -fno-omit-frame-pointer
 
 # User space compile flags
