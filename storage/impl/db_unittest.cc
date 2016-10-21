@@ -5,8 +5,10 @@
 #include "apps/ledger/storage/impl/db.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
+#include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
 #include "apps/ledger/storage/impl/journal_db_impl.h"
+#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -52,7 +54,9 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 
 class DBTest : public ::testing::Test {
  public:
-  DBTest() {}
+  DBTest()
+      : page_storage_(ObjectId(kObjectIdSize, 'a')),
+        object_store_(&page_storage_) {}
 
   ~DBTest() override {}
 
@@ -65,6 +69,9 @@ class DBTest : public ::testing::Test {
     EXPECT_EQ(Status::OK, db->Init());
     return db;
   }
+
+  fake::FakePageStorage page_storage_;
+  ObjectStore object_store_;
 
  private:
   files::ScopedTempDir tmp_dir_;
@@ -98,8 +105,8 @@ TEST_F(DBTest, Commits) {
 
   std::unique_ptr<Commit> storedCommit;
   std::string storageBytes;
-  CommitImpl commit(RandomId(kCommitIdSize), 123, RandomId(kObjectIdSize),
-                    parents);
+  CommitImpl commit(&object_store_, RandomId(kCommitIdSize), 123,
+                    RandomId(kObjectIdSize), parents);
 
   EXPECT_EQ(Status::NOT_FOUND,
             db->GetCommitStorageBytes(commit.GetId(), &storageBytes));

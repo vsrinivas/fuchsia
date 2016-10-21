@@ -52,6 +52,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "commit_impl_unittest.cc",
     "db_unittest.cc",
     "ledger_storage_unittest.cc",
     "object_impl_unittest.cc",
@@ -62,6 +63,7 @@ executable("unittests") {
     ":lib",
     "//apps/ledger/glue",
     "//apps/ledger/storage/public",
+    "//apps/ledger/storage/fake:lib",
     "//apps/ledger/test",
     "//lib/ftl",
     "//lib/mtl",

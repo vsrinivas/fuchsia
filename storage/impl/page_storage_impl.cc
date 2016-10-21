@@ -224,7 +224,8 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
   if (s != Status::OK) {
     return s;
   }
-  std::unique_ptr<Commit> c = CommitImpl::FromStorageBytes(commit_id, bytes);
+  std::unique_ptr<Commit> c =
+      CommitImpl::FromStorageBytes(&store_, commit_id, bytes);
   if (!c) {
     return Status::FORMAT_ERROR;
   }
@@ -239,7 +240,7 @@ Status PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit) {
 Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
                                           const std::string& storage_bytes) {
   std::unique_ptr<Commit> commit =
-      CommitImpl::FromStorageBytes(id, storage_bytes);
+      CommitImpl::FromStorageBytes(&store_, id, storage_bytes);
   if (!commit) {
     return Status::FORMAT_ERROR;
   }

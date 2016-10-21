@@ -68,6 +68,7 @@ class PageStorageTest : public ::testing::Test {
  private:
  protected:
   std::unique_ptr<PageStorageImpl> storage_;
+  ObjectStore store_ = ObjectStore(storage_.get());
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
@@ -81,8 +82,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_EQ(Status::NOT_FOUND, storage_->GetCommit(id, &commit));
   EXPECT_FALSE(commit);
 
-  commit.reset(
-      new CommitImpl(id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
+  commit.reset(new CommitImpl(&store_, id, 0, RandomId(kObjectIdSize),
+                              {GetFirstHead()}));
   std::string storage_bytes = commit->GetStorageBytes();
 
   // Search for a commit that exist and check the content.
@@ -95,8 +96,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
   CommitId id = RandomId(kCommitIdSize);
 
-  std::unique_ptr<Commit> commit(
-      new CommitImpl(id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
+  std::unique_ptr<Commit> commit(new CommitImpl(
+      &store_, id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
 
   EXPECT_EQ(Status::OK,
             storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
@@ -120,8 +121,8 @@ TEST_F(PageStorageTest, SyncCommits) {
 
   // After adding a commit it should marked as unsynced.
   CommitId id = RandomId(kCommitIdSize);
-  std::unique_ptr<Commit> commit(
-      new CommitImpl(id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
+  std::unique_ptr<Commit> commit(new CommitImpl(
+      &store_, id, 0, RandomId(kObjectIdSize), {GetFirstHead()}));
   std::string storage_bytes = commit->GetStorageBytes();
 
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
@@ -145,7 +146,7 @@ TEST_F(PageStorageTest, HeadCommits) {
   // old head.
   CommitId id = RandomId(kCommitIdSize);
   std::unique_ptr<Commit> commit(
-      new CommitImpl(id, 0, RandomId(kObjectIdSize), {heads[0]}));
+      new CommitImpl(&store_, id, 0, RandomId(kObjectIdSize), {heads[0]}));
 
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));

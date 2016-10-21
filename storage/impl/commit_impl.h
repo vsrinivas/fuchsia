@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 #define APPS_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 
+#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit.h"
 
 namespace storage {
@@ -13,7 +14,8 @@ class CommitImpl : public Commit {
  public:
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
-  CommitImpl(const CommitId& id,
+  CommitImpl(ObjectStore* store,
+             const CommitId& id,
              int64_t timestamp,
              ObjectIdView root_node_id,
              const std::vector<CommitId>& parent_ids);
@@ -24,6 +26,7 @@ class CommitImpl : public Commit {
   // representation. If the format is incorrect, a NULL pointer will be
   // returned.
   static std::unique_ptr<Commit> FromStorageBytes(
+      ObjectStore* store,
       const CommitId& id,
       const std::string& storage_bytes);
 
@@ -35,6 +38,7 @@ class CommitImpl : public Commit {
   std::string GetStorageBytes() const override;
 
  private:
+  ObjectStore* store_;
   CommitId id_;
   int64_t timestamp_;
   ObjectId root_node_id_;

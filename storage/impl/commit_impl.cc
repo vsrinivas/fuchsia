@@ -4,6 +4,7 @@
 
 #include "apps/ledger/storage/impl/commit_impl.h"
 
+#include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
@@ -33,20 +34,24 @@ int64_t BytesToTimestamp(std::string bytes) {
 
 }  // namespace
 
-CommitImpl::CommitImpl(const CommitId& id,
+CommitImpl::CommitImpl(ObjectStore* store,
+                       const CommitId& id,
                        int64_t timestamp,
                        ObjectIdView root_node_id,
                        const std::vector<CommitId>& parent_ids)
-    : id_(id),
+    : store_(store),
+      id_(id),
       timestamp_(timestamp),
       root_node_id_(root_node_id.ToString()),
       parent_ids_(parent_ids) {
+  FTL_DCHECK(store_ != nullptr);
   FTL_DCHECK(!parent_ids_.empty() && parent_ids_.size() <= 2);
 }
 
 CommitImpl::~CommitImpl() {}
 
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
+    ObjectStore* store,
     const CommitId& id,
     const std::string& storage_bytes) {
   int parentCount = (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
@@ -69,7 +74,7 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
         kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
   }
   return std::unique_ptr<Commit>(
-      new CommitImpl(id, timestamp, rootNodeId, parentIds));
+      new CommitImpl(store, id, timestamp, rootNodeId, parentIds));
 }
 
 CommitId CommitImpl::GetId() const {
@@ -85,8 +90,8 @@ int64_t CommitImpl::GetTimestamp() const {
 }
 
 std::unique_ptr<CommitContents> CommitImpl::GetContents() const {
-  FTL_LOG(ERROR) << "Not implemented yet.";
-  return nullptr;
+  return std::unique_ptr<CommitContents>(
+      new CommitContentsImpl(root_node_id_, store_));
 }
 
 std::string CommitImpl::GetStorageBytes() const {
