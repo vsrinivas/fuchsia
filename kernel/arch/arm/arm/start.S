@@ -10,6 +10,8 @@
 #include <arch/arm/mmu.h>
 #include <kernel/vm.h>
 
+.syntax unified
+
 .section ".text.boot"
 .globl _start
 _start:

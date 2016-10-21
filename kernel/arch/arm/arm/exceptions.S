@@ -9,6 +9,9 @@
 #include <arch/asm.h>
 #include <arch/arm/cores.h>
 
+.syntax unified
+.text
+
 /* exception handling glue.
  * NOTE: only usable on armv6+ cores
  */

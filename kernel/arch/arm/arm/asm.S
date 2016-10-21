@@ -8,6 +8,9 @@
 #include <asm.h>
 #include <arch/arm/cores.h>
 
+.syntax unified
+.text
+
     /* context switch frame is as follows:
      * lr
      * r11

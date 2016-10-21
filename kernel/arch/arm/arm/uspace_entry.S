@@ -6,6 +6,9 @@
 
 #include <asm.h>
 
+.syntax unified
+.text
+
 // void arm_uspace_entry(uintptr_t arg1, uintptr_t arg2, uint32_t spsr, vaddr_t kstack, uintptr_t sp, uint32_t zero, uintptr_t pc) __NO_RETURN;
 // r0 = arg1
 // r1 = arg2

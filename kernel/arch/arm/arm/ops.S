@@ -8,6 +8,7 @@
 #include <asm.h>
 #include <arch/arm/cores.h>
 
+.syntax unified
 .text
 
 FUNCTION(arch_spin_trylock)
@@ -56,4 +57,3 @@ FUNCTION(arm_invalidate_tlb)
     mov     r0, #0
     mcr     p15, 0, r0, c8, c7, 0
     bx      lr
-

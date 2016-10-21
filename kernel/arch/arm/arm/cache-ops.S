@@ -9,6 +9,7 @@
 #include <arch/ops.h>
 #include <arch/defines.h>
 
+.syntax unified
 .text
 
 #if ARM_WITH_CACHE
