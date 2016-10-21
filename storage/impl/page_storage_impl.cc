@@ -42,35 +42,6 @@ std::string ToHex(convert::ExtendedStringView string) {
   return result;
 }
 
-// TODO(qsr): Use the rename libc function when MG-329 is fixed.
-int Rename(const char* src, const char* dst) {
-  {
-    ftl::UniqueFD src_fd(open(src, O_RDONLY));
-    if (!src_fd.is_valid())
-      return 1;
-    ftl::UniqueFD dst_fd(open(dst, O_WRONLY | O_CREAT | O_EXCL));
-    if (!dst_fd.is_valid())
-      return 1;
-
-    char buffer[4096];
-    for (;;) {
-      ssize_t read =
-          ftl::ReadFileDescriptor(src_fd.get(), buffer, arraysize(buffer));
-      if (read < 0)
-        return 1;
-      if (read == 0)
-        break;
-      if (!ftl::WriteFileDescriptor(dst_fd.get(), buffer, read))
-        return 1;
-      if (fsync(dst_fd.get()) != 0)
-        return 1;
-    }
-  }
-
-  unlink(src);
-  return 0;
-}
-
 Status StagingToDestination(size_t expected_size,
                             std::string source_path,
                             std::string destination_path) {
@@ -86,7 +57,7 @@ Status StagingToDestination(size_t expected_size,
       return Status::INTERNAL_IO_ERROR;
     }
   } else {
-    if (Rename(source_path.c_str(), destination_path.c_str()) != 0) {
+    if (rename(source_path.c_str(), destination_path.c_str()) != 0) {
       // If rename failed, the file might have been saved by another call.
       if (!files::GetFileSize(destination_path, &size) ||
           size != expected_size) {
