@@ -19,14 +19,14 @@ class FakeTaskRunner : public TaskRunner {
 
   void PostTask(Closure task) override {}
 
+  void PostTaskForTime(Closure task, TimePoint target_time) override {}
+
   void PostDelayedTask(Closure task, TimeDelta delay) override {
     tasks_.push(task);
     last_delay_ = delay;
   }
 
-  bool RunsTasksOnCurrentThread() override {
-    return true;
-  }
+  bool RunsTasksOnCurrentThread() override { return true; }
 
   void RunOneTask() {
     ASSERT_TRUE(has_tasks());

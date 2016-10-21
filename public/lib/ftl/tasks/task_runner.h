@@ -8,13 +8,23 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace ftl {
 
+// Posts tasks to a task queue.
 class TaskRunner : public RefCountedThreadSafe<TaskRunner> {
  public:
+  // Posts a task to run as soon as possible.
   virtual void PostTask(Closure task) = 0;
+
+  // Posts a task to run as soon as possible after the specified |target_time|.
+  virtual void PostTaskForTime(Closure task, TimePoint target_time) = 0;
+
+  // Posts a task to run as soon as possible after the specified |delay|.
   virtual void PostDelayedTask(Closure task, TimeDelta delay) = 0;
+
+  // Returns true if the task runner runs tasks on the current thread.
   virtual bool RunsTasksOnCurrentThread() = 0;
 
  protected:
