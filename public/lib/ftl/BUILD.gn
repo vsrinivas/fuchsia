@@ -102,6 +102,10 @@ static_library("ftl") {
     libs = [ "log" ]
   }
 
+  if (is_fuchsia) {
+    libs = [ "magenta" ]
+  }
+
   public_configs = [ ":thread_safety_warning" ]
 
   public_deps = [

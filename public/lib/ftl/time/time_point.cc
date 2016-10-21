@@ -9,6 +9,8 @@
 #if defined(OS_MACOSX) || defined(OS_IOS)
 #include <mach/kern_return.h>
 #include <mach/mach_time.h>
+#elif defined(OS_FUCHSIA)
+#include <magenta/syscalls.h>
 #else
 #include <time.h>
 #endif  // defined(OS_MACOSX) || defined(OS_IOS)
@@ -37,6 +39,13 @@ TimePoint TimePoint::Now() {
   static mach_timebase_info_data_t timebase_info = GetMachTimebaseInfo();
   return TimePoint(mach_absolute_time() * timebase_info.numer /
                    timebase_info.denom);
+}
+
+#elif defined(OS_FUCHSIA)
+
+// static
+TimePoint TimePoint::Now() {
+  return TimePoint(mx_current_time());
 }
 
 #else
