@@ -54,10 +54,11 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     ObjectStore* store,
     const CommitId& id,
     const std::string& storage_bytes) {
-  int parentCount = (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
+  int parent_count =
+      (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
 
   if ((storage_bytes.size() - kParentsStartIndex) % kCommitIdSize != 0 ||
-      parentCount < 1 || parentCount > 2) {
+      parent_count < 1 || parent_count > 2) {
     FTL_LOG(ERROR) << "Illegal format for commit storage bytes "
                    << storage_bytes;
     return nullptr;
@@ -65,16 +66,16 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
 
   int64_t timestamp = BytesToTimestamp(
       storage_bytes.substr(kTimestampStartIndex, kTimestampSize));
-  ObjectId rootNodeId =
+  ObjectId root_node_id =
       storage_bytes.substr(kRootNodeStartIndex, kObjectIdSize);
-  std::vector<CommitId> parentIds;
+  std::vector<CommitId> parent_ids;
 
-  for (int i = 0; i < parentCount; i++) {
-    parentIds.push_back(storage_bytes.substr(
+  for (int i = 0; i < parent_count; i++) {
+    parent_ids.push_back(storage_bytes.substr(
         kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
   }
   return std::unique_ptr<Commit>(
-      new CommitImpl(store, id, timestamp, rootNodeId, parentIds));
+      new CommitImpl(store, id, timestamp, root_node_id, parent_ids));
 }
 
 CommitId CommitImpl::GetId() const {

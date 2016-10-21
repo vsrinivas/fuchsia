@@ -63,10 +63,10 @@ TEST_F(ObjectTest, Object) {
 
   ObjectImpl object((std::string(object_id_)), std::string(object_file_path_));
   EXPECT_EQ(object_id_, object.GetId());
-  ftl::StringView foundData;
-  EXPECT_EQ(Status::OK, object.GetData(&foundData));
-  EXPECT_EQ(kFileSize, foundData.size());
-  EXPECT_EQ(0, memcmp(data.data(), foundData.data(), kFileSize));
+  ftl::StringView found_data;
+  EXPECT_EQ(Status::OK, object.GetData(&found_data));
+  EXPECT_EQ(kFileSize, found_data.size());
+  EXPECT_EQ(0, memcmp(data.data(), found_data.data(), kFileSize));
 }
 
 }  // namespace

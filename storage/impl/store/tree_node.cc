@@ -99,8 +99,8 @@ Status TreeNode::Split(int index,
     children.push_back(children_[i]);
   }
   children.push_back(left_rightmost_child.ToString());
-  ObjectId leftId;
-  Status s = FromEntries(store_, entries, children, &leftId);
+  ObjectId left_id;
+  Status s = FromEntries(store_, entries, children, &left_id);
   if (s != Status::OK) {
     return s;
   }
@@ -113,16 +113,16 @@ Status TreeNode::Split(int index,
     entries.push_back(entries_[i]);
     children.push_back(children_[i + 1]);
   }
-  ObjectId rightId;
-  s = FromEntries(store_, entries, children, &rightId);
+  ObjectId right_id;
+  s = FromEntries(store_, entries, children, &right_id);
   if (s != Status::OK) {
     // TODO(nellyv): If this fails, remove the left  object from the object
     // store.
     return s;
   }
 
-  left->swap(leftId);
-  right->swap(rightId);
+  left->swap(left_id);
+  right->swap(right_id);
   return Status::OK;
 }
 

@@ -38,18 +38,18 @@ class LedgerStorageTest : public ::testing::Test {
 };
 
 TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
-  PageId pageId = "1234";
-  storage_->GetPageStorage(pageId,
+  PageId page_id = "1234";
+  storage_->GetPageStorage(page_id,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_EQ(page_storage, nullptr);
                              message_loop_.QuitNow();
                            });
   message_loop_.Run();
 
-  std::unique_ptr<PageStorage> pageStorage;
-  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(pageId, &pageStorage));
-  ASSERT_EQ(pageId, pageStorage->GetId());
-  storage_->GetPageStorage(pageId,
+  std::unique_ptr<PageStorage> page_storage;
+  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(page_id, &page_storage));
+  ASSERT_EQ(page_id, page_storage->GetId());
+  storage_->GetPageStorage(page_id,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);
                              message_loop_.QuitNow();
@@ -58,19 +58,19 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
 }
 
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
-  PageId pageId = "1234";
-  std::unique_ptr<PageStorage> pageStorage;
-  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(pageId, &pageStorage));
-  ASSERT_EQ(pageId, pageStorage->GetId());
-  storage_->GetPageStorage(pageId,
+  PageId page_id = "1234";
+  std::unique_ptr<PageStorage> page_storage;
+  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(page_id, &page_storage));
+  ASSERT_EQ(page_id, page_storage->GetId());
+  storage_->GetPageStorage(page_id,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_NE(page_storage, nullptr);
                              message_loop_.QuitNow();
                            });
   message_loop_.Run();
 
-  EXPECT_TRUE(storage_->DeletePageStorage(pageId));
-  storage_->GetPageStorage(pageId,
+  EXPECT_TRUE(storage_->DeletePageStorage(page_id));
+  storage_->GetPageStorage(page_id,
                            [this](std::unique_ptr<PageStorage> page_storage) {
                              EXPECT_EQ(nullptr, page_storage);
                              message_loop_.QuitNow();

@@ -49,18 +49,18 @@ class CommitImplTest : public ::testing::Test {
 TEST_F(CommitImplTest, CommitStorageBytes) {
   CommitId id = RandomId(kCommitIdSize);
   int64_t timestamp = 1234;
-  ObjectId rootNodeId = RandomId(kObjectIdSize);
+  ObjectId root_node_id = RandomId(kObjectIdSize);
 
   std::vector<CommitId> parents;
   parents.push_back(RandomId(kCommitIdSize));
 
   // A commit with one parent.
-  CommitImpl commit(&object_store_, id, timestamp, rootNodeId, parents);
+  CommitImpl commit(&object_store_, id, timestamp, root_node_id, parents);
   CheckCommitStorageBytes(id, commit);
 
   // A commit with two parents.
   parents.push_back(RandomId(kCommitIdSize));
-  CommitImpl commit2(&object_store_, id, timestamp, rootNodeId, parents);
+  CommitImpl commit2(&object_store_, id, timestamp, root_node_id, parents);
   CheckCommitStorageBytes(id, commit2);
 }
 

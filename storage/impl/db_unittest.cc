@@ -24,7 +24,7 @@ std::string RandomId(size_t size) {
   return result;
 }
 
-EntryChange newEntryChange(std::string key,
+EntryChange NewEntryChange(std::string key,
                            std::string object_id,
                            KeyPriority priority) {
   EntryChange change;
@@ -35,7 +35,7 @@ EntryChange newEntryChange(std::string key,
   return change;
 }
 
-EntryChange newRemoveEntryChange(std::string key) {
+EntryChange NewRemoveEntryChange(std::string key) {
   EntryChange change;
   change.deleted = true;
   change.entry.key.swap(key);
@@ -103,80 +103,80 @@ TEST_F(DBTest, Commits) {
   std::vector<CommitId> parents;
   parents.push_back(RandomId(kCommitIdSize));
 
-  std::unique_ptr<Commit> storedCommit;
-  std::string storageBytes;
+  std::unique_ptr<Commit> stored_commit;
+  std::string storage_bytes;
   CommitImpl commit(&object_store_, RandomId(kCommitIdSize), 123,
                     RandomId(kObjectIdSize), parents);
 
   EXPECT_EQ(Status::NOT_FOUND,
-            db->GetCommitStorageBytes(commit.GetId(), &storageBytes));
+            db->GetCommitStorageBytes(commit.GetId(), &storage_bytes));
 
   EXPECT_EQ(Status::OK, db->AddCommitStorageBytes(commit.GetId(),
                                                   commit.GetStorageBytes()));
   EXPECT_EQ(Status::OK,
-            db->GetCommitStorageBytes(commit.GetId(), &storageBytes));
-  EXPECT_EQ(storageBytes, commit.GetStorageBytes());
+            db->GetCommitStorageBytes(commit.GetId(), &storage_bytes));
+  EXPECT_EQ(storage_bytes, commit.GetStorageBytes());
 
   EXPECT_EQ(Status::OK, db->RemoveCommit(commit.GetId()));
   EXPECT_EQ(Status::NOT_FOUND,
-            db->GetCommitStorageBytes(commit.GetId(), &storageBytes));
+            db->GetCommitStorageBytes(commit.GetId(), &storage_bytes));
 }
 
 TEST_F(DBTest, Journals) {
   std::unique_ptr<DB> db = GetDB();
-  CommitId commitId = RandomId(kCommitIdSize);
+  CommitId commit_id = RandomId(kCommitIdSize);
 
-  std::unique_ptr<Journal> implicitJournal;
-  std::unique_ptr<Journal> explicitJournal;
-  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commitId,
-                                          &implicitJournal));
-  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::EXPLICIT, commitId,
-                                          &explicitJournal));
+  std::unique_ptr<Journal> implicit_journal;
+  std::unique_ptr<Journal> explicit_journal;
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commit_id,
+                                          &implicit_journal));
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::EXPLICIT, commit_id,
+                                          &explicit_journal));
 
   EXPECT_EQ(Status::OK, db->RemoveExplicitJournals());
 
   // Removing explicit journals should not affect the implicit ones.
-  std::vector<JournalId> journalIds;
-  EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journalIds));
-  EXPECT_EQ(1u, journalIds.size());
+  std::vector<JournalId> journal_ids;
+  EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journal_ids));
+  EXPECT_EQ(1u, journal_ids.size());
 
-  std::unique_ptr<Journal> foundJournal;
-  EXPECT_EQ(Status::OK, db->GetImplicitJournal(journalIds[0], &foundJournal));
-  EXPECT_EQ(Status::OK, db->RemoveJournal(journalIds[0]));
+  std::unique_ptr<Journal> found_journal;
+  EXPECT_EQ(Status::OK, db->GetImplicitJournal(journal_ids[0], &found_journal));
+  EXPECT_EQ(Status::OK, db->RemoveJournal(journal_ids[0]));
   EXPECT_EQ(Status::NOT_FOUND,
-            db->GetImplicitJournal(journalIds[0], &foundJournal));
-  EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journalIds));
-  EXPECT_EQ(0u, journalIds.size());
+            db->GetImplicitJournal(journal_ids[0], &found_journal));
+  EXPECT_EQ(Status::OK, db->GetImplicitJournalIds(&journal_ids));
+  EXPECT_EQ(0u, journal_ids.size());
 }
 
 TEST_F(DBTest, JournalEntries) {
   std::unique_ptr<DB> db = GetDB();
-  CommitId commitId = RandomId(kCommitIdSize);
+  CommitId commit_id = RandomId(kCommitIdSize);
 
-  std::unique_ptr<Journal> implicitJournal;
-  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commitId,
-                                          &implicitJournal));
+  std::unique_ptr<Journal> implicit_journal;
+  EXPECT_EQ(Status::OK, db->CreateJournal(JournalType::IMPLICIT, commit_id,
+                                          &implicit_journal));
   EXPECT_EQ(Status::OK,
-            implicitJournal->Put("add-key-1", "value1", KeyPriority::LAZY));
+            implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
-            implicitJournal->Put("add-key-2", "value2", KeyPriority::EAGER));
+            implicit_journal->Put("add-key-2", "value2", KeyPriority::EAGER));
   EXPECT_EQ(Status::OK,
-            implicitJournal->Put("add-key-1", "value3", KeyPriority::LAZY));
-  EXPECT_EQ(Status::OK, implicitJournal->Delete("remove-key"));
+            implicit_journal->Put("add-key-1", "value3", KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK, implicit_journal->Delete("remove-key"));
 
-  EntryChange expectedChanges[] = {
-      newEntryChange("add-key-1", "value3", KeyPriority::LAZY),
-      newEntryChange("add-key-2", "value2", KeyPriority::EAGER),
-      newRemoveEntryChange("remove-key"),
+  EntryChange expected_changes[] = {
+      NewEntryChange("add-key-1", "value3", KeyPriority::LAZY),
+      NewEntryChange("add-key-2", "value2", KeyPriority::EAGER),
+      NewRemoveEntryChange("remove-key"),
   };
   std::unique_ptr<Iterator<const EntryChange>> entries;
   EXPECT_EQ(Status::OK,
             db->GetJournalEntries(
-                static_cast<JournalDBImpl*>(implicitJournal.get())->GetId(),
+                static_cast<JournalDBImpl*>(implicit_journal.get())->GetId(),
                 &entries));
   for (int i = 0; i < 3; ++i) {
     EXPECT_TRUE(entries->Valid());
-    ExpectChangesEqual(expectedChanges[i], **entries);
+    ExpectChangesEqual(expected_changes[i], **entries);
     entries->Next();
   }
   EXPECT_FALSE(entries->Valid());
@@ -186,24 +186,24 @@ TEST_F(DBTest, JournalEntries) {
 TEST_F(DBTest, UnsyncedCommits) {
   std::unique_ptr<DB> db = GetDB();
 
-  CommitId commitId = RandomId(kCommitIdSize);
-  std::vector<CommitId> commitIds;
-  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commitIds));
-  EXPECT_TRUE(commitIds.empty());
+  CommitId commit_id = RandomId(kCommitIdSize);
+  std::vector<CommitId> commit_ids;
+  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_TRUE(commit_ids.empty());
 
-  EXPECT_EQ(Status::OK, db->MarkCommitIdUnsynced(commitId));
-  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commitIds));
-  EXPECT_EQ(1u, commitIds.size());
-  EXPECT_EQ(commitId, commitIds[0]);
-  bool isSynced;
-  EXPECT_EQ(Status::OK, db->IsCommitSynced(commitId, &isSynced));
-  EXPECT_FALSE(isSynced);
+  EXPECT_EQ(Status::OK, db->MarkCommitIdUnsynced(commit_id));
+  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_EQ(1u, commit_ids.size());
+  EXPECT_EQ(commit_id, commit_ids[0]);
+  bool is_synced;
+  EXPECT_EQ(Status::OK, db->IsCommitSynced(commit_id, &is_synced));
+  EXPECT_FALSE(is_synced);
 
-  EXPECT_EQ(Status::OK, db->MarkCommitIdSynced(commitId));
-  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commitIds));
-  EXPECT_TRUE(commitIds.empty());
-  EXPECT_EQ(Status::OK, db->IsCommitSynced(commitId, &isSynced));
-  EXPECT_TRUE(isSynced);
+  EXPECT_EQ(Status::OK, db->MarkCommitIdSynced(commit_id));
+  EXPECT_EQ(Status::OK, db->GetUnsyncedCommitIds(&commit_ids));
+  EXPECT_TRUE(commit_ids.empty());
+  EXPECT_EQ(Status::OK, db->IsCommitSynced(commit_id, &is_synced));
+  EXPECT_TRUE(is_synced);
 }
 
 TEST_F(DBTest, UnsyncedObjects) {
@@ -218,15 +218,15 @@ TEST_F(DBTest, UnsyncedObjects) {
   EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_EQ(object_id, object_ids[0]);
-  bool isSynced;
-  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &isSynced));
-  EXPECT_FALSE(isSynced);
+  bool is_synced;
+  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &is_synced));
+  EXPECT_FALSE(is_synced);
 
   EXPECT_EQ(Status::OK, db->MarkObjectIdSynced(object_id));
   EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
   EXPECT_TRUE(object_ids.empty());
-  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &isSynced));
-  EXPECT_TRUE(isSynced);
+  EXPECT_EQ(Status::OK, db->IsObjectSynced(object_id, &is_synced));
+  EXPECT_TRUE(is_synced);
 }
 
 TEST_F(DBTest, Batch) {

@@ -63,9 +63,9 @@ class ObjectStoreTest : public ::testing::Test {
   }
 
   Entry GetEntry(const TreeNode* node, int index) {
-    Entry foundEntry;
-    EXPECT_EQ(Status::OK, node->GetEntry(index, &foundEntry));
-    return foundEntry;
+    Entry found_entry;
+    EXPECT_EQ(Status::OK, node->GetEntry(index, &found_entry));
+    return found_entry;
   }
 
   std::unique_ptr<const TreeNode> CreateEmptyNode() {
@@ -81,9 +81,9 @@ class ObjectStoreTest : public ::testing::Test {
   }
 
   ObjectId GetChildId(const TreeNode* node, int index) {
-    std::unique_ptr<const TreeNode> foundChild;
-    EXPECT_EQ(Status::OK, node->GetChild(index, &foundChild));
-    return foundChild->GetId();
+    std::unique_ptr<const TreeNode> found_child;
+    EXPECT_EQ(Status::OK, node->GetChild(index, &found_child));
+    return found_child->GetId();
   }
 
   fake::FakePageStorage fake_storage_;
@@ -96,11 +96,11 @@ class ObjectStoreTest : public ::testing::Test {
 TEST_F(ObjectStoreTest, CreateGetTreeNode) {
   std::unique_ptr<const TreeNode> node = CreateEmptyNode();
 
-  std::unique_ptr<const TreeNode> foundNode;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node->GetId(), &foundNode));
+  std::unique_ptr<const TreeNode> found_node;
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node->GetId(), &found_node));
 
   EXPECT_EQ(Status::NOT_FOUND,
-            TreeNode::FromId(&store_, RandomId(), &foundNode));
+            TreeNode::FromId(&store_, RandomId(), &found_node));
 }
 
 TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
@@ -125,31 +125,31 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(entries, std::vector<ObjectId>(size + 1));
 
-  int splitIndex = 3;
-  ObjectId leftId;
-  ObjectId rightId;
-  EXPECT_EQ(Status::OK, node->Split(splitIndex, "", "", &leftId, &rightId));
+  int split_index = 3;
+  ObjectId left_id;
+  ObjectId right_id;
+  EXPECT_EQ(Status::OK, node->Split(split_index, "", "", &left_id, &right_id));
 
-  std::unique_ptr<const TreeNode> leftNode = FromId(leftId);
-  EXPECT_EQ(splitIndex, leftNode->GetKeyCount());
-  for (int i = 0; i < splitIndex; ++i) {
-    EXPECT_EQ(entries[i], GetEntry(leftNode.get(), i));
+  std::unique_ptr<const TreeNode> left_node = FromId(left_id);
+  EXPECT_EQ(split_index, left_node->GetKeyCount());
+  for (int i = 0; i < split_index; ++i) {
+    EXPECT_EQ(entries[i], GetEntry(left_node.get(), i));
   }
 
-  std::unique_ptr<const TreeNode> rightNode = FromId(rightId);
-  EXPECT_EQ(size - splitIndex, rightNode->GetKeyCount());
-  for (int i = 0; i < size - splitIndex; ++i) {
-    EXPECT_EQ(entries[splitIndex + i], GetEntry(rightNode.get(), i));
+  std::unique_ptr<const TreeNode> right_node = FromId(right_id);
+  EXPECT_EQ(size - split_index, right_node->GetKeyCount());
+  for (int i = 0; i < size - split_index; ++i) {
+    EXPECT_EQ(entries[split_index + i], GetEntry(right_node.get(), i));
   }
 
   // Merge
-  ObjectId mergedId;
-  EXPECT_EQ(Status::OK, TreeNode::Merge(&store_, std::move(leftNode),
-                                        std::move(rightNode), "", &mergedId));
-  std::unique_ptr<const TreeNode> mergedNode = FromId(mergedId);
-  EXPECT_EQ(size, mergedNode->GetKeyCount());
+  ObjectId merged_id;
+  EXPECT_EQ(Status::OK, TreeNode::Merge(&store_, std::move(left_node),
+                                        std::move(right_node), "", &merged_id));
+  std::unique_ptr<const TreeNode> merged_node = FromId(merged_id);
+  EXPECT_EQ(size, merged_node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
-    EXPECT_EQ(entries[i], GetEntry(mergedNode.get(), i));
+    EXPECT_EQ(entries[i], GetEntry(merged_node.get(), i));
   }
 }
 
@@ -191,11 +191,11 @@ TEST_F(ObjectStoreTest, TreeNodeMutationAddEntry) {
   ObjectId left = CreateEmptyNode()->GetId();
   ObjectId right = CreateEmptyNode()->GetId();
 
-  ObjectId newNodeId;
+  ObjectId new_node_id;
   EXPECT_EQ(
       Status::OK,
-      node->StartMutation().AddEntry(entry, left, right).Finish(&newNodeId));
-  std::unique_ptr<const TreeNode> newNode = FromId(newNodeId);
+      node->StartMutation().AddEntry(entry, left, right).Finish(&new_node_id));
+  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
   //   [ a, b]
@@ -206,28 +206,28 @@ TEST_F(ObjectStoreTest, TreeNodeMutationAddEntry) {
   //   [ a, ab, b]
   //   /  |   |   \
   // 0  left right 2
-  EXPECT_EQ(size + 1, newNode->GetKeyCount());
+  EXPECT_EQ(size + 1, new_node->GetKeyCount());
 
-  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(newNode.get(), 0));
-  EXPECT_EQ(entry, GetEntry(newNode.get(), 1));
-  EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(newNode.get(), 2));
+  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
+  EXPECT_EQ(entry, GetEntry(new_node.get(), 1));
+  EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(new_node.get(), 2));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(newNode.get(), 0));
-  EXPECT_EQ(left, GetChildId(newNode.get(), 1));
-  EXPECT_EQ(right, GetChildId(newNode.get(), 2));
-  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(newNode.get(), 3));
+  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
+  EXPECT_EQ(left, GetChildId(new_node.get(), 1));
+  EXPECT_EQ(right, GetChildId(new_node.get(), 2));
+  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 3));
 }
 
 TEST_F(ObjectStoreTest, TreeNodeMutationUpdateEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
-  ObjectId newNodeId;
+  ObjectId new_node_id;
 
   Entry entry{"b", RandomId(), KeyPriority::EAGER};
   EXPECT_EQ(Status::OK,
-            node->StartMutation().UpdateEntry(entry).Finish(&newNodeId));
-  std::unique_ptr<const TreeNode> newNode = FromId(newNodeId);
+            node->StartMutation().UpdateEntry(entry).Finish(&new_node_id));
+  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
   //   [ a, b, c]
@@ -236,14 +236,14 @@ TEST_F(ObjectStoreTest, TreeNodeMutationUpdateEntry) {
   //
   // After updating entry b:
   // (same with different value for b)
-  EXPECT_EQ(size, newNode->GetKeyCount());
+  EXPECT_EQ(size, new_node->GetKeyCount());
 
-  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(newNode.get(), 0));
-  EXPECT_EQ(entry, GetEntry(newNode.get(), 1));
-  EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(newNode.get(), 2));
+  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
+  EXPECT_EQ(entry, GetEntry(new_node.get(), 1));
+  EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(new_node.get(), 2));
 
   for (int i = 0; i <= size; ++i) {
-    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(newNode.get(), i));
+    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(new_node.get(), i));
   }
 }
 
@@ -252,11 +252,11 @@ TEST_F(ObjectStoreTest, TreeNodeMutationRemoveEntry) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId newNodeId;
+  ObjectId new_node_id;
   ObjectId child = CreateEmptyNode()->GetId();
   EXPECT_EQ(Status::OK,
-            node->StartMutation().RemoveEntry("b", child).Finish(&newNodeId));
-  std::unique_ptr<const TreeNode> newNode = FromId(newNodeId);
+            node->StartMutation().RemoveEntry("b", child).Finish(&new_node_id));
+  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
   //   [ a, b, c]
@@ -267,14 +267,14 @@ TEST_F(ObjectStoreTest, TreeNodeMutationRemoveEntry) {
   //   [ a, c]
   //   /  |   \
   // 0  child  3
-  EXPECT_EQ(size - 1, newNode->GetKeyCount());
+  EXPECT_EQ(size - 1, new_node->GetKeyCount());
 
-  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(newNode.get(), 0));
-  EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(newNode.get(), 1));
+  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
+  EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(new_node.get(), 1));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(newNode.get(), 0));
-  EXPECT_EQ(child, GetChildId(newNode.get(), 1));
-  EXPECT_EQ(GetChildId(node.get(), 3), GetChildId(newNode.get(), 2));
+  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
+  EXPECT_EQ(child, GetChildId(new_node.get(), 1));
+  EXPECT_EQ(GetChildId(node.get(), 3), GetChildId(new_node.get(), 2));
 }
 
 TEST_F(ObjectStoreTest, TreeNodeMutationUpdateChildId) {
@@ -282,11 +282,12 @@ TEST_F(ObjectStoreTest, TreeNodeMutationUpdateChildId) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId newNodeId;
+  ObjectId new_node_id;
   ObjectId child = CreateEmptyNode()->GetId();
-  EXPECT_EQ(Status::OK,
-            node->StartMutation().UpdateChildId("b", child).Finish(&newNodeId));
-  std::unique_ptr<const TreeNode> newNode = FromId(newNodeId);
+  EXPECT_EQ(
+      Status::OK,
+      node->StartMutation().UpdateChildId("b", child).Finish(&new_node_id));
+  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
   //   [ a, b]
@@ -297,14 +298,14 @@ TEST_F(ObjectStoreTest, TreeNodeMutationUpdateChildId) {
   //   [ a, b]
   //   /  |   \
   // 0  child  2
-  EXPECT_EQ(size, newNode->GetKeyCount());
+  EXPECT_EQ(size, new_node->GetKeyCount());
 
-  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(newNode.get(), 0));
-  EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(newNode.get(), 1));
+  EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
+  EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(new_node.get(), 1));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(newNode.get(), 0));
-  EXPECT_EQ(child, GetChildId(newNode.get(), 1));
-  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(newNode.get(), 2));
+  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
+  EXPECT_EQ(child, GetChildId(new_node.get(), 1));
+  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 2));
 }
 
 TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
@@ -312,20 +313,20 @@ TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId newNodeId;
+  ObjectId new_node_id;
   // Note that creating an empty mutation is inefficient and should be avoided
   // when possible.
-  EXPECT_EQ(Status::OK, node->StartMutation().Finish(&newNodeId));
-  std::unique_ptr<const TreeNode> newNode = FromId(newNodeId);
+  EXPECT_EQ(Status::OK, node->StartMutation().Finish(&new_node_id));
+  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
   // TOOD(nellyv): check that the new id is equal to the original one when ids
   // are not randomly assigned.
 
   for (int i = 0; i < size; ++i) {
-    EXPECT_EQ(GetEntry(node.get(), i), GetEntry(newNode.get(), i));
+    EXPECT_EQ(GetEntry(node.get(), i), GetEntry(new_node.get(), i));
   }
 
   for (int i = 0; i <= size; ++i) {
-    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(newNode.get(), i));
+    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(new_node.get(), i));
   }
 }
 

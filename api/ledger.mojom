@@ -234,7 +234,7 @@ struct PageChange {
 // changes made by other clients or synced from other devices.
 interface PageWatcher {
   OnInitialState(PageSnapshot snapshot) => ();
-  OnChange(PageChange pageChange) => ();
+  OnChange(PageChange page_change) => ();
 };
 
 // This interface let clients control the conflict resolution policy of the

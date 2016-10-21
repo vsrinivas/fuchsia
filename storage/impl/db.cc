@@ -74,9 +74,9 @@ std::string GetJournalEntryKeyFor(const JournalId id, ftl::StringView key) {
 
 std::string GetJournalEntryValueFor(ftl::StringView value,
                                     KeyPriority priority) {
-  char priorityByte =
+  char priority_byte =
       (priority == KeyPriority::EAGER) ? kJournalEagerEntry : kJournalLazyEntry;
-  return Concatenate({{&kJournalEntryAdd, 1}, {&priorityByte, 1}, value});
+  return Concatenate({{&kJournalEntryAdd, 1}, {&priority_byte, 1}, value});
 }
 
 std::string NewJournalId(JournalType journal_type) {
@@ -123,10 +123,11 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
     }
     change_.reset(new EntryChange());
 
-    static int journalPrefixLength = kJournalPrefix.size() + kJournalIdSize + 1;
-    leveldb::Slice keySlice = it_->key();
-    keySlice.remove_prefix(journalPrefixLength);
-    change_->entry.key = keySlice.ToString();
+    static int journal_prefix_length =
+        kJournalPrefix.size() + kJournalIdSize + 1;
+    leveldb::Slice key_slice = it_->key();
+    key_slice.remove_prefix(journal_prefix_length);
+    change_->entry.key = key_slice.ToString();
 
     leveldb::Slice value = it_->value();
     if (value.data()[0] == kJournalEntryAdd) {
@@ -356,7 +357,7 @@ Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
 }
 
 Status DB::GetByPrefix(const leveldb::Slice& prefix,
-                       std::vector<std::string>* keySuffixes) {
+                       std::vector<std::string>* key_suffixes) {
   std::vector<std::string> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
   for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
@@ -368,7 +369,7 @@ Status DB::GetByPrefix(const leveldb::Slice& prefix,
   if (!it->status().ok()) {
     return Status::INTERNAL_IO_ERROR;
   }
-  keySuffixes->swap(result);
+  key_suffixes->swap(result);
   return Status::OK;
 }
 

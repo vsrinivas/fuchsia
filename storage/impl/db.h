@@ -130,7 +130,7 @@ class DB {
 
  private:
   Status GetByPrefix(const leveldb::Slice& prefix,
-                     std::vector<std::string>* keySuffixes);
+                     std::vector<std::string>* key_suffixes);
   Status DeleteByPrefix(const leveldb::Slice& prefix);
   Status Get(convert::ExtendedStringView key, std::string* value);
   Status Put(convert::ExtendedStringView key, ftl::StringView value);

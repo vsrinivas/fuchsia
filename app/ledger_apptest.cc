@@ -41,11 +41,11 @@ mojo::Array<uint8_t> RandomArray(int size) {
 }
 
 mojo::Array<uint8_t> GetPageId(PagePtr* page) {
-  mojo::Array<uint8_t> pageId;
+  mojo::Array<uint8_t> page_id;
   (*page)->GetId(
-      [&pageId](mojo::Array<uint8_t> id) { pageId = std::move(id); });
+      [&page_id](mojo::Array<uint8_t> id) { page_id = std::move(id); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
-  return pageId;
+  return page_id;
 }
 
 class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
@@ -57,7 +57,7 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
   // ApplicationTestBase:
   void SetUp() override {
     ApplicationTestBase::SetUp();
-    ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledgerFactory_));
+    ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledger_factory_));
     ledger_ = GetTestLedger();
     std::srand(0);
   }
@@ -73,10 +73,10 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
 
   LedgerPtr GetTestLedger();
   PagePtr GetTestPage();
-  PagePtr GetPage(const mojo::Array<uint8_t>& pageId, Status expected_status);
-  void DeletePage(const mojo::Array<uint8_t>& pageId, Status expected_status);
+  PagePtr GetPage(const mojo::Array<uint8_t>& page_id, Status expected_status);
+  void DeletePage(const mojo::Array<uint8_t>& page_id, Status expected_status);
 
-  LedgerFactoryPtr ledgerFactory_;
+  LedgerFactoryPtr ledger_factory_;
   LedgerPtr ledger_;
   std::vector<mojo::Array<uint8_t>> page_ids_;
 
@@ -89,13 +89,13 @@ LedgerPtr LedgerApplicationTest::GetTestLedger() {
   mojo::InterfaceHandle<Ledger> ledger;
   IdentityPtr identity = Identity::New();
   identity->user_id = RandomArray(1);
-  ledgerFactory_->GetLedger(
+  ledger_factory_->GetLedger(
       std::move(identity),
       [&status, &ledger](Status s, mojo::InterfaceHandle<Ledger> l) {
         status = s;
         ledger = std::move(l);
       });
-  EXPECT_TRUE(ledgerFactory_.WaitForIncomingResponse());
+  EXPECT_TRUE(ledger_factory_.WaitForIncomingResponse());
 
   EXPECT_EQ(Status::OK, status);
   return mojo::InterfacePtr<Ledger>::Create(std::move(ledger));
@@ -112,23 +112,23 @@ PagePtr LedgerApplicationTest::GetTestPage() {
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
-  PagePtr pagePtr = mojo::InterfacePtr<Page>::Create(std::move(page));
+  PagePtr page_ptr = mojo::InterfacePtr<Page>::Create(std::move(page));
 
-  mojo::Array<uint8_t> pageId;
-  pagePtr->GetId(
-      [&pageId](mojo::Array<uint8_t> id) { pageId = std::move(id); });
-  EXPECT_TRUE(pagePtr.WaitForIncomingResponse());
-  page_ids_.push_back(std::move(pageId));
+  mojo::Array<uint8_t> page_id;
+  page_ptr->GetId(
+      [&page_id](mojo::Array<uint8_t> id) { page_id = std::move(id); });
+  EXPECT_TRUE(page_ptr.WaitForIncomingResponse());
+  page_ids_.push_back(std::move(page_id));
 
-  return pagePtr;
+  return page_ptr;
 }
 
-PagePtr LedgerApplicationTest::GetPage(const mojo::Array<uint8_t>& pageId,
+PagePtr LedgerApplicationTest::GetPage(const mojo::Array<uint8_t>& page_id,
                                        Status expected_status) {
   mojo::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->GetPage(pageId.Clone(),
+  ledger_->GetPage(page_id.Clone(),
                    [&status, &page](Status s, mojo::InterfaceHandle<Page> p) {
                      status = s;
                      page = std::move(p);
@@ -136,25 +136,25 @@ PagePtr LedgerApplicationTest::GetPage(const mojo::Array<uint8_t>& pageId,
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
 
-  PagePtr pagePtr = mojo::InterfacePtr<Page>::Create(std::move(page));
-  EXPECT_EQ(expected_status == Status::OK, pagePtr.get() != nullptr);
+  PagePtr page_ptr = mojo::InterfacePtr<Page>::Create(std::move(page));
+  EXPECT_EQ(expected_status == Status::OK, page_ptr.get() != nullptr);
 
-  return pagePtr;
+  return page_ptr;
 }
 
-void LedgerApplicationTest::DeletePage(const mojo::Array<uint8_t>& pageId,
+void LedgerApplicationTest::DeletePage(const mojo::Array<uint8_t>& page_id,
                                        Status expected_status) {
   mojo::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->DeletePage(pageId.Clone(),
+  ledger_->DeletePage(page_id.Clone(),
                       [&status, &page](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
 
   page_ids_.erase(std::remove_if(page_ids_.begin(), page_ids_.end(),
-                                 [&pageId](const mojo::Array<uint8_t>& id) {
-                                   return id.Equals(pageId);
+                                 [&page_id](const mojo::Array<uint8_t>& id) {
+                                   return id.Equals(page_id);
                                  }),
                   page_ids_.end());
 }
@@ -188,8 +188,8 @@ TEST_F(LedgerApplicationTest, GetPage) {
   GetPage(id, Status::OK);
 
   // Search with a random id and expect a PAGE_NOT_FOUND result.
-  mojo::Array<uint8_t> testId = RandomArray(16);
-  GetPage(testId, Status::PAGE_NOT_FOUND);
+  mojo::Array<uint8_t> test_id = RandomArray(16);
+  GetPage(test_id, Status::PAGE_NOT_FOUND);
 }
 
 // Verifies that a page can be connected to twice.

@@ -269,16 +269,16 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
 
 Status PageStorageImpl::GetUnsyncedCommits(
     std::vector<std::unique_ptr<Commit>>* commits) {
-  std::vector<CommitId> resultIds;
-  Status s = db_.GetUnsyncedCommitIds(&resultIds);
+  std::vector<CommitId> result_ids;
+  Status s = db_.GetUnsyncedCommitIds(&result_ids);
   if (s != Status::OK) {
     return s;
   }
 
   std::vector<std::unique_ptr<Commit>> result;
-  for (size_t i = 0; i < resultIds.size(); ++i) {
+  for (size_t i = 0; i < result_ids.size(); ++i) {
     std::unique_ptr<Commit> commit;
-    Status s = GetCommit(resultIds[i], &commit);
+    Status s = GetCommit(result_ids[i], &commit);
     if (s != Status::OK) {
       return s;
     }
@@ -419,8 +419,8 @@ Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
   // TODO(nellyv): Here we assume that commits arrive in order. Change this to
   // support out of order commit arrivals.
   // Remove parents from head (if they are in heads).
-  for (const CommitId& parentId : commit->GetParentIds()) {
-    db_.RemoveHead(parentId);
+  for (const CommitId& parent_id : commit->GetParentIds()) {
+    db_.RemoveHead(parent_id);
   }
 
   return batch->Execute();
