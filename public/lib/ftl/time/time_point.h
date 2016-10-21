@@ -28,6 +28,12 @@ class TimePoint {
     return TimePoint(std::numeric_limits<int64_t>::max());
   }
 
+  static constexpr TimePoint FromEpochDelta(TimeDelta ticks) {
+    return TimePoint(ticks.ToNanoseconds());
+  }
+
+  TimeDelta ToEpochDelta() { return TimeDelta::FromNanoseconds(ticks_); }
+
   // Compute the difference between two time points.
   TimeDelta operator-(TimePoint other) const {
     return TimeDelta::FromNanoseconds(ticks_ - other.ticks_);

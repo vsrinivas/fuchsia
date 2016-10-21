@@ -56,7 +56,7 @@ TimePoint TimePoint::Now() {
   int res = clock_gettime(CLOCK_MONOTONIC, &ts);
   FTL_DCHECK(res == 0);
   (void)res;
-  return TimePoint() + TimeDelta::FromTimespec(ts);
+  return TimePoint::FromEpochDelta(TimeDelta::FromTimespec(ts));
 }
 
 #endif  // defined(OS_MACOSX) || defined(OS_IOS)
