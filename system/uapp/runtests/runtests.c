@@ -37,41 +37,27 @@ enum {
     FAILED_NONZERO_RETURN_CODE,
 };
 
-static int runtests(int argc, char** argv) {
-    list_node_t failures = LIST_INITIAL_VALUE(failures);
+static list_node_t failures = LIST_INITIAL_VALUE(failures);
 
-    int total_count = 0;
-    int failed_count = 0;
+static int total_count = 0;
+static int failed_count = 0;
 
-    const char* dirn = "/boot/test";
+// We want the default to be the same, whether the test is run by us
+// or run standalone. Do this by leaving the verbosity unspecified unless
+// provided by the user.
+static int verbosity = -1;
+
+static void run_tests(const char* dirn) {
     DIR* dir = opendir(dirn);
     if (dir == NULL) {
-        printf("error: cannot open '%s'\n", dirn);
-        return -1;
-    }
-
-    // We want the default to be the same, whether the test is run by us
-    // or run standalone. Do this by leaving the verbosity unspecified unless
-    // provided by the user.
-    int verbosity = -1;
-
-    if (argc > 1) {
-        if (strcmp(argv[1], "-q") == 0) {
-            verbosity = 0;
-        } else if (strcmp(argv[1], "-v") == 0) {
-            printf("verbose output. enjoy.\n");
-            verbosity = 1;
-        } else {
-            printf("unknown option. usage: %s [-q|-v]\n", argv[0]);
-            return -1;
-        }
+        return;
     }
 
     struct dirent* de;
     struct stat stat_buf;
     while ((de = readdir(dir)) != NULL) {
-        char name[11 + NAME_MAX + 1];
-        snprintf(name, sizeof(name), "/boot/test/%s", de->d_name);
+        char name[64 + NAME_MAX];
+        snprintf(name, sizeof(name), "%s/%s", dirn, de->d_name);
         if (stat(name, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
             continue;
         }
@@ -128,6 +114,23 @@ static int runtests(int argc, char** argv) {
     }
 
     closedir(dir);
+}
+
+int main(int argc, char** argv) {
+    if (argc > 1) {
+        if (strcmp(argv[1], "-q") == 0) {
+            verbosity = 0;
+        } else if (strcmp(argv[1], "-v") == 0) {
+            printf("verbose output. enjoy.\n");
+            verbosity = 1;
+        } else {
+            printf("unknown option. usage: %s [-q|-v]\n", argv[0]);
+            return -1;
+        }
+    }
+
+    run_tests("/boot/test");
+    run_tests("/system/test");
 
     printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
 
@@ -155,8 +158,4 @@ static int runtests(int argc, char** argv) {
     }
 
     return 0;
-}
-
-int main(int argc, char** argv) {
-    return runtests(argc, argv);
 }
