@@ -49,11 +49,15 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
         ehdr.e_ident[EI_VERSION] != EV_CURRENT ||
         ehdr.e_phentsize != sizeof(elf_phdr_t) ||
         ehdr.e_phnum == PN_XNUM ||
-        ehdr.e_machine != MY_MACHINE)
+        ehdr.e_machine != MY_MACHINE ||
+        // This code could easily support loading fixed-address ELF files
+        // (e_type == ET_EXEC).  But the system overall doesn't support
+        // them.  It's Fuchsia policy that all executables must be PIEs.
+        // So don't accept ET_EXEC files at all.
+        ehdr.e_type != ET_DYN)
         return ERR_ELF_BAD_FORMAT;
 
     // Cache the few other bits we need from the header, and we're good to go.
-    header->e_type = ehdr.e_type;
     header->e_phnum = ehdr.e_phnum;
     header->e_entry = ehdr.e_entry;
     *phoff = ehdr.e_phoff;
@@ -279,11 +283,8 @@ mx_status_t elf_load_map_segments(mx_handle_t proc_self, mx_handle_t proc,
                                   const elf_phdr_t phdrs[],
                                   mx_handle_t vmo,
                                   mx_vaddr_t* base, mx_vaddr_t* entry) {
-    mx_status_t status = NO_ERROR;
-
     uintptr_t bias = 0;
-    if (header->e_type == ET_DYN)
-        status = choose_load_bias(proc, header, phdrs, &bias);
+    mx_status_t status = choose_load_bias(proc, header, phdrs, &bias);
 
     for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)

@@ -30,7 +30,6 @@ typedef Elf32_Phdr elf_phdr_t;
 
 typedef struct {
     mx_vaddr_t e_entry;
-    uint_fast16_t e_type;
     uint_fast16_t e_phnum;
 } elf_load_header_t;
 
