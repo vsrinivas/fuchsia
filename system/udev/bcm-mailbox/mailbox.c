@@ -316,6 +316,8 @@ mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent) {
         return status;
     }
 
+    bcm_vc_poweron(bcm_dev_usb);
+
     return NO_ERROR;
 }
 
