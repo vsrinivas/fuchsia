@@ -95,8 +95,10 @@
 #  define expect(expr,value)    (expr)
 #endif
 
+#ifndef _KERNEL
 #define likely(expr)     expect((expr) != 0, 1)
 #define unlikely(expr)   expect((expr) != 0, 0)
+#endif
 
 
 /**************************************
@@ -702,6 +704,7 @@ int LZ4_compress_default(const char* source, char* dest, int inputSize, int maxO
 
 /* hidden debug function */
 /* strangely enough, gcc generates faster code when this function is uncommented, even if unused */
+#ifndef _KERNEL
 int LZ4_compress_fast_force(const char* source, char* dest, int inputSize, int maxOutputSize, int acceleration)
 {
     LZ4_stream_t ctx;
@@ -713,6 +716,7 @@ int LZ4_compress_fast_force(const char* source, char* dest, int inputSize, int m
     else
         return LZ4_compress_generic(&ctx, source, dest, inputSize, maxOutputSize, limitedOutput, LZ4_64bits() ? byU32 : byPtr, noDict, noDictIssue, acceleration);
 }
+#endif
 
 
 /********************************
@@ -1060,6 +1064,7 @@ int LZ4_compress_fast_continue (LZ4_stream_t* LZ4_stream, const char* source, ch
 
 
 /* Hidden debug function, to force external dictionary mode */
+#ifndef _KERNEL
 int LZ4_compress_forceExtDict (LZ4_stream_t* LZ4_dict, const char* source, char* dest, int inputSize)
 {
     LZ4_stream_t_internal* streamPtr = (LZ4_stream_t_internal*)LZ4_dict;
@@ -1078,6 +1083,7 @@ int LZ4_compress_forceExtDict (LZ4_stream_t* LZ4_dict, const char* source, char*
 
     return result;
 }
+#endif
 
 
 int LZ4_saveDict (LZ4_stream_t* LZ4_dict, char* safeBuffer, int dictSize)
@@ -1442,10 +1448,12 @@ int LZ4_decompress_fast_usingDict(const char* source, char* dest, int originalSi
 }
 
 /* debug function */
+#ifndef _KERNEL
 int LZ4_decompress_safe_forceExtDict(const char* source, char* dest, int compressedSize, int maxOutputSize, const char* dictStart, int dictSize)
 {
     return LZ4_decompress_generic(source, dest, compressedSize, maxOutputSize, endOnInputSize, full, 0, usingExtDict, (BYTE*)dest, (const BYTE*)dictStart, dictSize);
 }
+#endif
 
 
 /***************************************************
@@ -1465,8 +1473,10 @@ They are only provided here for compatibility with older user programs.
 - LZ4_uncompress is totally equivalent to LZ4_decompress_fast
 - LZ4_uncompress_unknownOutputSize is totally equivalent to LZ4_decompress_safe
 */
+#ifndef _KERNEL
 int LZ4_uncompress (const char* source, char* dest, int outputSize) { return LZ4_decompress_fast(source, dest, outputSize); }
 int LZ4_uncompress_unknownOutputSize (const char* source, char* dest, int isize, int maxOutputSize) { return LZ4_decompress_safe(source, dest, isize, maxOutputSize); }
+#endif
 
 
 /* Obsolete Streaming functions */
