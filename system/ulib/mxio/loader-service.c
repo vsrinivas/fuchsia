@@ -37,21 +37,31 @@ static void log_printf(mx_handle_t log, const char* fmt, ...) {
 
 // 8K is the max io size of the mxio layer right now
 
+static const char* libpaths[] = {
+    "/system/lib",
+    "/boot/lib",
+};
+
 static mx_handle_t default_load_object(void* ignored, const char* fn) {
     char buffer[8192];
     char path[PATH_MAX];
     mx_handle_t vmo = 0;
     mx_status_t err = ERR_IO;
 
-    snprintf(path, PATH_MAX, "/boot/lib/%s", fn);
-
-    int fd;
-    if ((fd = open(path, O_RDONLY)) < 0) {
-        fprintf(stderr, "dlsvc: could not open '%s'\n", path);
-        return ERR_NOT_FOUND;
-    }
-
     struct stat s;
+    int fd;
+
+    for (unsigned n = 0; n < sizeof(libpaths)/sizeof(libpaths[0]); n++) {
+        snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
+
+        if ((fd = open(path, O_RDONLY)) >= 0) {
+            goto found;
+        }
+    }
+    fprintf(stderr, "dlsvc: could not open '%s'\n", path);
+    return ERR_NOT_FOUND;
+
+found:
     if (fstat(fd, &s) < 0) {
         fprintf(stderr, "dlsvc: could not stat '%s'\n", path);
         goto fail;
