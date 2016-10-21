@@ -74,7 +74,7 @@ bool MsdIntelDevice::Init(void* device_handle)
     constexpr uint32_t kFirstSequenceNumber = 0x1000;
     sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
-    render_engine_cs_ = RenderEngineCommandStreamer::Create(this, gtt_.get(), device_id_);
+    render_engine_cs_ = RenderEngineCommandStreamer::Create(this);
 
     auto context = std::shared_ptr<GlobalContext>(new GlobalContext());
 
@@ -82,12 +82,16 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!render_engine_cs_->InitContext(context.get()))
         return DRETF(false, "render_engine_cs failed to init global context");
 
-    if (!context->Map(gtt_.get(), render_engine_cs_->id()))
+    if (!context->Map(gtt_, render_engine_cs_->id()))
         return DRETF(false, "global context init failed");
 
     render_engine_cs_->InitHardware(context->hardware_status_page(render_engine_cs_->id()));
 
-    if (!render_engine_cs_->RenderInit(context))
+    auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
+    if (!init_batch)
+        return DRETF(false, "failed to create render init batch");
+
+    if (!render_engine_cs_->RenderInit(context, std::move(init_batch), gtt_))
         return DRETF(false, "render_engine_cs failed RenderInit");
 
     global_context_ = std::move(context);
@@ -164,15 +168,27 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
         dump_out.append("No engine faults detected.");
     }
 }
+
 bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
 {
-    bool res = render_engine_cs_->WaitRendering(std::move(buf));
-    if (!res) {
+    if (!render_engine_cs_->WaitRendering(std::move(buf))) {
         std::string s;
         DumpToString(s);
         printf("WaitRendering timed out!\n\n%s\n", s.c_str());
+        return false;
     }
-    return res;
+    return true;
+}
+
+bool MsdIntelDevice::WaitIdle()
+{
+    if (!render_engine_cs_->WaitIdle()) {
+        std::string s;
+        DumpToString(s);
+        printf("WaitRendering timed out!\n\n%s\n", s.c_str());
+        return false;
+    }
+    return true;
 }
 
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
@@ -185,18 +201,15 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
         return;
     }
 
-    if (!buffer->IsMappedGpu(ADDRESS_SPACE_GTT)) {
-        if (!buffer->MapGpu(gtt_.get(), PAGE_SIZE)) {
-            DLOG("Couldn't map buffer to gtt");
-            if (callback)
-                (*callback)(-ENOMEM, data);
-            return;
-        }
+    auto mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
+    if (!mapping) {
+        DLOG("Couldn't map buffer to gtt");
+        if (callback)
+            (*callback)(-ENOMEM, data);
+        return;
     }
 
-    gpu_addr_t gpu_addr_gtt;
-    bool result = buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr_gtt);
-    DASSERT(result);
+    gpu_addr_t gpu_addr_gtt = mapping->gpu_addr();
 
     // Writing the plane surface address triggers an update on the next vertical blank.
     // A page flip event tells us when that has happened.
@@ -239,7 +252,7 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
         (*flip_callback_)(0, flip_data_);
     }
 
-    displayed_buffer_ = buffer;
+    displayed_buffer_mapping_ = std::move(mapping);
     flip_callback_ = callback;
     flip_data_ = data;
 }

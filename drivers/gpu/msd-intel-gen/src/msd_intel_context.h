@@ -24,15 +24,8 @@ public:
     void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
                         std::unique_ptr<Ringbuffer> ringbuffer);
 
-    virtual bool Map(AddressSpace* address_space, EngineCommandStreamerId id)
-    {
-        return MapGpu(address_space, id);
-    }
-
-    virtual bool Unmap(AddressSpace* address_space, EngineCommandStreamerId id)
-    {
-        return UnmapGpu(address_space, id);
-    }
+    virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
+    virtual bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id);
 
     // Gets the gpu address of the context buffer if mapped.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
@@ -57,20 +50,14 @@ public:
         return state_map_.find(id) != state_map_.end();
     }
 
-protected:
-    bool MapGpu(AddressSpace* address_space, EngineCommandStreamerId id);
-    bool UnmapGpu(AddressSpace* address_space, EngineCommandStreamerId id);
-
 private:
     struct PerEngineState {
-        std::unique_ptr<MsdIntelBuffer> context_buffer;
+        std::shared_ptr<MsdIntelBuffer> context_buffer;
+        std::unique_ptr<GpuMapping> context_mapping;
         std::unique_ptr<Ringbuffer> ringbuffer;
-        int32_t mapped_address_space_id;
     };
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;
-
-    static constexpr int32_t kNotMapped = -1;
 
     friend class TestContext;
 };
@@ -80,7 +67,7 @@ public:
     class Owner {
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
-        virtual AddressSpace* exec_address_space() = 0;
+        virtual std::shared_ptr<AddressSpace> exec_address_space() = 0;
         virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
     };
 
@@ -96,7 +83,7 @@ public:
         return owner_->hardware_status_page(id);
     }
 
-    AddressSpace* exec_address_space() { return owner_->exec_address_space(); }
+    std::shared_ptr<AddressSpace> exec_address_space() { return owner_->exec_address_space(); }
 
 private:
     Owner* owner_;

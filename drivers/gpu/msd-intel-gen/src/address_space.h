@@ -5,7 +5,8 @@
 #ifndef ADDRESS_SPACE_H
 #define ADDRESS_SPACE_H
 
-#include "magma_util/platform/platform_buffer.h"
+#include "gpu_mapping.h"
+#include "msd_intel_buffer.h"
 #include "pagetable.h"
 
 // Base class for various address spaces.
@@ -31,6 +32,14 @@ public:
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.
     virtual bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) = 0;
+
+    static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
+                                                    std::shared_ptr<MsdIntelBuffer> buffer,
+                                                    uint32_t alignment);
+
+    static std::shared_ptr<GpuMapping>
+    GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
+                        std::shared_ptr<MsdIntelBuffer> buffer, uint32_t alignment);
 
 private:
     AddressSpaceId id_;

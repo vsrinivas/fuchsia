@@ -16,9 +16,10 @@ public:
     TestInstructions()
     {
         ringbuffer_ = std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE)));
-        address_space_ = std::unique_ptr<MockAddressSpace>(new MockAddressSpace(0x10000, ringbuffer_->size()));   
+        address_space_ =
+            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0x10000, ringbuffer_->size()));
 
-        EXPECT_TRUE(ringbuffer_->Map(address_space_.get()));
+        EXPECT_TRUE(ringbuffer_->Map(address_space_));
     }
 
     void Noop()
@@ -89,8 +90,9 @@ public:
     }
 
 private:
+    // order of destruction important so gpu mappings can access the address space
+    std::shared_ptr<AddressSpace> address_space_;
     std::unique_ptr<Ringbuffer> ringbuffer_;
-    std::unique_ptr<AddressSpace> address_space_;
 };
 
 TEST(Instructions, Noop)

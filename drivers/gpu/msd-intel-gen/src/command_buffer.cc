@@ -11,7 +11,8 @@ CommandBuffer::~CommandBuffer()
     if (!prepared_to_execute_)
         return;
 
-    UnmapResourcesGpu(locked_context_->exec_address_space());
+    UnmapResourcesGpu();
+
     if (sequence_number_ != Sequencer::kInvalidSequenceNumber) {
         for (auto buf : exec_resources_) {
             // only want to reset seq num on buffers that arent referenced
@@ -58,13 +59,7 @@ bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* g
     return true;
 }
 
-void CommandBuffer::UnmapResourcesGpu(AddressSpace* address_space)
-{
-    for (auto buffer : exec_resources_) {
-        bool ret = buffer->UnmapGpu(address_space);
-        DASSERT(ret);
-    }
-}
+void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
 
 bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
 {
@@ -84,15 +79,17 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
     if (!locked_context_->Map(address_space, engine->id()))
         return DRETF(false, "failed to map context");
 
-    std::vector<gpu_addr_t> resource_gpu_addresses;
-    resource_gpu_addresses.reserve(cmd_buf_->num_resources);
-    if (!MapResourcesGpu(address_space, resource_gpu_addresses))
+    exec_resource_mappings_.clear();
+    exec_resource_mappings_.reserve(exec_resources_.size());
+
+    if (!MapResourcesGpu(address_space, exec_resource_mappings_))
         return DRETF(false, "failed to map execution resources");
 
-    if (!PatchRelocations(resource_gpu_addresses))
+    if (!PatchRelocations(exec_resource_mappings_))
         return DRETF(false, "failed to patch relocations");
 
-    batch_buffer_gpu_addr_ = resource_gpu_addresses[cmd_buf_->batch_buffer_resource_index];
+    batch_buffer_gpu_addr_ =
+        exec_resource_mappings_[cmd_buf_->batch_buffer_resource_index]->gpu_addr();
 
     prepared_to_execute_ = true;
     engine_id_ = engine->id();
@@ -100,20 +97,15 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
     return true;
 }
 
-bool CommandBuffer::MapResourcesGpu(AddressSpace* address_space,
-                                    std::vector<gpu_addr_t>& resource_gpu_addresses_out)
+bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
+                                    std::vector<std::shared_ptr<GpuMapping>>& mappings)
 {
     for (auto buffer : exec_resources_) {
-        if (!buffer->IsMappedGpu(address_space->id())) {
-            // TODO(MA-68) alignment should be part of exec resource, use page size for now
-            if (!buffer->MapGpu(address_space, PAGE_SIZE))
-                return DRETF(false, "failed to map resource into GPU address space");
-        }
-        gpu_addr_t addr = kInvalidGpuAddr;
-        if (!buffer->GetGpuAddress(address_space->id(), &addr))
-            return DRETF(false, "failed to get GPU address for resource");
-
-        resource_gpu_addresses_out.push_back(addr);
+        std::shared_ptr<GpuMapping> mapping =
+            AddressSpace::GetSharedGpuMapping(address_space, buffer, PAGE_SIZE);
+        if (!mapping)
+            return DRETF(false, "failed to map resource into GPU address space");
+        mappings.push_back(mapping);
     }
     return true;
 }
@@ -149,17 +141,16 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
     return true;
 }
 
-bool CommandBuffer::PatchRelocations(std::vector<gpu_addr_t>& resource_gpu_addresses)
+bool CommandBuffer::PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings)
 {
-    DASSERT(resource_gpu_addresses.size() == cmd_buf_->num_resources);
+    DASSERT(mappings.size() == cmd_buf_->num_resources);
 
     for (uint32_t res_index = 0; res_index < cmd_buf_->num_resources; res_index++) {
         auto resource = &cmd_buf_->resources[res_index];
         for (uint32_t reloc_index = 0; reloc_index < resource->num_relocations; reloc_index++) {
+            auto& mapping = mappings[resource->relocations[reloc_index].target_resource_index];
             if (!PatchRelocation(&resource->relocations[reloc_index],
-                                 exec_resources_[res_index].get(),
-                                 resource_gpu_addresses[resource->relocations[reloc_index]
-                                                            .target_resource_index]))
+                                 exec_resources_[res_index].get(), mapping->gpu_addr()))
                 return DRETF(false, "failed to patch relocation");
         }
     }

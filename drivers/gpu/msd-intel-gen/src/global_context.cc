@@ -4,11 +4,11 @@
 
 #include "global_context.h"
 
-bool GlobalContext::Map(AddressSpace* address_space, EngineCommandStreamerId id)
+bool GlobalContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id)
 {
     DLOG("Map for engine %d", id);
 
-    if (!MapGpu(address_space, id))
+    if (!MsdIntelContext::Map(address_space, id))
         return DRETF(false, "failed to map");
 
     // Address space check is ok; if we're already mapped then we're done.
@@ -29,7 +29,7 @@ bool GlobalContext::Map(AddressSpace* address_space, EngineCommandStreamerId id)
     return true;
 }
 
-bool GlobalContext::Unmap(AddressSpace* address_space, EngineCommandStreamerId id)
+bool GlobalContext::Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id)
 {
     DLOG("Unmap for engine %d", id);
 
@@ -37,7 +37,7 @@ bool GlobalContext::Unmap(AddressSpace* address_space, EngineCommandStreamerId i
     if (iter == status_page_map_.end())
         return DRETF(false, "not mapped");
 
-    if (!UnmapGpu(address_space, id))
+    if (!MsdIntelContext::Unmap(address_space_id, id))
         return DRETF(false, "failed to unmap gpu address");
 
     if (!get_context_buffer(id)->platform_buffer()->UnmapCpu())

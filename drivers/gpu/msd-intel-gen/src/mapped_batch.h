@@ -5,8 +5,8 @@
 #ifndef MAPPED_BATCH_H
 #define MAPPED_BATCH_H
 
+#include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
-//#include "msd_intel_context.h"
 
 class MsdIntelContext;
 
@@ -21,33 +21,36 @@ public:
 class SimpleMappedBatch : public MappedBatch {
 public:
     SimpleMappedBatch(std::shared_ptr<MsdIntelContext> context,
-                      std::shared_ptr<MsdIntelBuffer> batch_buffer)
-        : context_(context), batch_buffer_(batch_buffer)
+                      std::unique_ptr<GpuMapping> batch_buffer_mapping)
+        : context_(context), batch_buffer_mapping_(std::move(batch_buffer_mapping))
     {
     }
 
     ~SimpleMappedBatch()
     {
-        if (batch_buffer_->sequence_number() == sequence_number_)
-            batch_buffer_->SetSequenceNumber(Sequencer::kInvalidSequenceNumber);
+        if (batch_buffer_mapping_->buffer()->sequence_number() == sequence_number_)
+            batch_buffer_mapping_->buffer()->SetSequenceNumber(Sequencer::kInvalidSequenceNumber);
     }
 
     MsdIntelContext* GetContext() override { return context_.get(); }
 
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override
     {
-        return batch_buffer_->GetGpuAddress(address_space_id, gpu_addr_out);
+        if (batch_buffer_mapping_->address_space_id() != address_space_id)
+            return DRETF(false, "invalid address_space_id");
+        *gpu_addr_out = batch_buffer_mapping_->gpu_addr();
+        return true;
     }
 
     void SetSequenceNumber(uint32_t sequence_number) override
     {
         sequence_number_ = sequence_number;
-        batch_buffer_->SetSequenceNumber(sequence_number);
+        batch_buffer_mapping_->buffer()->SetSequenceNumber(sequence_number);
     }
 
 private:
     std::shared_ptr<MsdIntelContext> context_;
-    std::shared_ptr<MsdIntelBuffer> batch_buffer_;
+    std::unique_ptr<GpuMapping> batch_buffer_mapping_;
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
 };
 

@@ -8,7 +8,7 @@
 
 class TestMsdIntelBuffer {
 public:
-    void CreateAndDestroy()
+    static void CreateAndDestroy()
     {
         std::unique_ptr<MsdIntelBuffer> buffer;
         uint64_t size;
@@ -25,63 +25,112 @@ public:
         EXPECT_GE(buffer->platform_buffer()->size(), size);
     }
 
-    void MapGpu(uint32_t alignment)
+    static void MapGpu(uint32_t alignment)
     {
         uint64_t base = PAGE_SIZE;
         uint64_t size = PAGE_SIZE * 10;
 
-        std::unique_ptr<MockAddressSpace> address_space(new MockAddressSpace(base, size));
+        std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(base, size));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
         ASSERT_NE(buffer, nullptr);
 
-        EXPECT_TRUE(buffer->MapGpu(address_space.get(), alignment));
+        auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer), alignment);
+        ASSERT_NE(mapping, nullptr);
 
-        gpu_addr_t gpu_addr;
-        EXPECT_TRUE(buffer->GetGpuAddress(address_space->id(), &gpu_addr));
+        gpu_addr_t gpu_addr = mapping->gpu_addr();
         if (alignment)
             EXPECT_TRUE((gpu_addr % alignment) == 0);
 
         EXPECT_TRUE(address_space->is_allocated(gpu_addr));
         EXPECT_FALSE(address_space->is_clear(gpu_addr));
 
-        EXPECT_TRUE(buffer->UnmapGpu(address_space.get()));
+        mapping.reset();
 
         EXPECT_FALSE(address_space->is_allocated(gpu_addr));
         EXPECT_TRUE(address_space->is_clear(gpu_addr));
+    }
+
+    static void SharedMapping()
+    {
+        std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(0, PAGE_SIZE * 5));
+        ASSERT_EQ(address_space->id(), ADDRESS_SPACE_GTT);
+
+        std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
+        ASSERT_NE(buffer, nullptr);
+
+        std::unique_ptr<GpuMapping> unique_mapping =
+            AddressSpace::MapBufferGpu(address_space, buffer, 0);
+        ASSERT_NE(unique_mapping, nullptr);
+
+        EXPECT_EQ(buffer->shared_mapping_count(), 0u);
+
+        std::shared_ptr<GpuMapping> shared_mapping = buffer->FindBufferMapping(ADDRESS_SPACE_PPGTT);
+        EXPECT_EQ(shared_mapping, nullptr);
+
+        shared_mapping = buffer->FindBufferMapping(ADDRESS_SPACE_GTT);
+        EXPECT_EQ(shared_mapping, nullptr);
+
+        shared_mapping = buffer->ShareBufferMapping(std::move(unique_mapping));
+        EXPECT_NE(shared_mapping, nullptr);
+
+        EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+
+        {
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(ADDRESS_SPACE_GTT);
+            ASSERT_NE(copy, nullptr);
+            EXPECT_EQ(copy.get(), shared_mapping.get());
+        }
+
+        {
+            std::shared_ptr<GpuMapping> copy =
+                AddressSpace::GetSharedGpuMapping(address_space, buffer, 0);
+            ASSERT_NE(copy, nullptr);
+            EXPECT_EQ(copy.get(), shared_mapping.get());
+        }
+
+        shared_mapping.reset();
+
+        EXPECT_EQ(buffer->shared_mapping_count(), 0u);
+
+        {
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(ADDRESS_SPACE_GTT);
+            EXPECT_EQ(copy, nullptr);
+        }
+
+        shared_mapping = AddressSpace::GetSharedGpuMapping(address_space, buffer, 0);
+        ASSERT_NE(shared_mapping, nullptr);
+
+        EXPECT_EQ(buffer->shared_mapping_count(), 1u);
+
+        {
+            std::shared_ptr<GpuMapping> copy = buffer->FindBufferMapping(ADDRESS_SPACE_GTT);
+            ASSERT_NE(copy, nullptr);
+            EXPECT_EQ(copy.get(), shared_mapping.get());
+        }
+
+        {
+            std::shared_ptr<GpuMapping> copy =
+                AddressSpace::GetSharedGpuMapping(address_space, buffer, 0);
+            ASSERT_NE(copy, nullptr);
+            EXPECT_EQ(copy.get(), shared_mapping.get());
+        }
     }
 };
 
 TEST(MsdIntelBuffer, CreateAndDestroy)
 {
-    TestMsdIntelBuffer test;
-    test.CreateAndDestroy();
+    TestMsdIntelBuffer::CreateAndDestroy();
 }
 
 TEST(MsdIntelBuffer, MapGpu)
 {
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(0);
-    }
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(8);
-    }
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(16);
-    }
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(64);
-    }
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(4096);
-    }
-    {
-        TestMsdIntelBuffer test;
-        test.MapGpu(8192);
-    }
+    TestMsdIntelBuffer::MapGpu(0);
+    TestMsdIntelBuffer::MapGpu(8);
+    TestMsdIntelBuffer::MapGpu(16);
+    TestMsdIntelBuffer::MapGpu(64);
+    TestMsdIntelBuffer::MapGpu(4096);
+    TestMsdIntelBuffer::MapGpu(8192);
 }
+
+TEST(MsdIntelBuffer, SharedMapping) { TestMsdIntelBuffer::SharedMapping(); }

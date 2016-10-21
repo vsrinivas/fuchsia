@@ -79,7 +79,7 @@ private:
         return global_context_->hardware_status_page(id);
     }
 
-    AddressSpace* gtt() override { return gtt_.get(); }
+    std::shared_ptr<AddressSpace> gtt() override { return gtt_; }
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
     {
@@ -88,6 +88,7 @@ private:
     }
 
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
+    bool WaitIdle();
 
     bool ReadGttSize(unsigned int* gtt_size);
 
@@ -107,13 +108,13 @@ private:
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
-    std::unique_ptr<Gtt> gtt_;
+    std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<MsdIntelContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
 
     // page flipping
-    std::shared_ptr<MsdIntelBuffer> displayed_buffer_;
+    std::shared_ptr<GpuMapping> displayed_buffer_mapping_;
     magma_system_pageflip_callback_t flip_callback_{};
     void* flip_data_{};
 

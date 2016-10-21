@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "ringbuffer.h"
+#include "address_space.h"
 
 Ringbuffer::Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer) : buffer_(std::move(buffer))
 {
@@ -23,22 +24,20 @@ bool Ringbuffer::HasSpace(uint32_t bytes)
     if (space <= 0)
         space += size_;
     bool ret = static_cast<uint32_t>(space) >= bytes;
-    if (!ret)
-        DLOG("HasSpace: bytes 0x%x space 0x%x", bytes, space);
-    return DRETF(ret, "insufficient space");
+    return DRETF(ret, "insufficient space: bytes 0x%x space 0x%x", bytes, space);
 }
 
-bool Ringbuffer::Map(AddressSpace* address_space)
+bool Ringbuffer::Map(std::shared_ptr<AddressSpace> address_space)
 {
     DASSERT(!vaddr_);
 
-    if (!buffer()->MapGpu(address_space, PAGE_SIZE))
+    gpu_mapping_ = AddressSpace::MapBufferGpu(address_space, buffer_, PAGE_SIZE);
+    if (!gpu_mapping_)
         return DRETF(false, "failed to pin");
 
     void* addr;
-    if (!buffer()->platform_buffer()->MapCpu(&addr)) {
-        if (!buffer()->UnmapGpu(address_space))
-            DLOG("failed to unpin");
+    if (!buffer_->platform_buffer()->MapCpu(&addr)) {
+        gpu_mapping_ = nullptr;
         return DRETF(false, "failed to map");
     }
 
@@ -46,26 +45,26 @@ bool Ringbuffer::Map(AddressSpace* address_space)
     return true;
 }
 
-bool Ringbuffer::Unmap(AddressSpace* address_space)
+bool Ringbuffer::Unmap()
 {
     DASSERT(vaddr_);
 
-    bool ret = true;
+    if (!buffer_->platform_buffer()->UnmapCpu())
+        return DRETF(false, "failed to unmap");
 
-    if (!buffer()->UnmapGpu(address_space)) {
-        DLOG("failed to unpin");
-        ret = false;
-    }
+    gpu_mapping_.reset();
 
-    if (!buffer()->platform_buffer()->UnmapCpu()) {
-        DLOG("failed to unmap");
-        ret = false;
-    }
-
-    return DRETF(ret, "error");
+    return true;
 }
 
 bool Ringbuffer::GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out)
 {
-    return buffer()->GetGpuAddress(id, addr_out);
+    if (!gpu_mapping_)
+        return DRETF(false, "not mapped");
+
+    if (gpu_mapping_->address_space_id() != id)
+        return DRETF(false, "invalid address space id");
+
+    *addr_out = gpu_mapping_->gpu_addr();
+    return true;
 }

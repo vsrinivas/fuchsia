@@ -40,6 +40,7 @@ public:
     virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
 
     virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
+    virtual bool WaitIdle() = 0;
 
 protected:
     bool SubmitContext(MsdIntelContext* context);
@@ -70,23 +71,24 @@ private:
 
 class RenderEngineCommandStreamer : public EngineCommandStreamer {
 public:
-    // |address_space| used to map the render init batch.
-    static std::unique_ptr<RenderEngineCommandStreamer>
-    Create(EngineCommandStreamer::Owner* owner, AddressSpace* address_space, uint32_t device_id);
+    static std::unique_ptr<RenderEngineCommandStreamer> Create(EngineCommandStreamer::Owner* owner);
 
-    bool RenderInit(std::shared_ptr<MsdIntelContext> context);
+    static std::unique_ptr<RenderInitBatch> CreateRenderInitBatch(uint32_t device_id);
+
+    // |address_space| used to map the render init batch.
+    bool RenderInit(std::shared_ptr<MsdIntelContext> context,
+                    std::unique_ptr<RenderInitBatch> init_batch,
+                    std::shared_ptr<AddressSpace> address_space);
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
 
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
+    bool WaitIdle() override;
 
 private:
-    RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
-                                std::unique_ptr<RenderInitBatch> init_batch);
+    RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner);
 
     bool WaitRendering(uint32_t sequence_number);
-
-    RenderInitBatch* init_batch() { return init_batch_.get(); }
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
@@ -96,8 +98,6 @@ private:
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceId address_space_id);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
-
-    std::unique_ptr<RenderInitBatch> init_batch_;
 
     class InflightCommandSequence {
     public:
@@ -113,6 +113,8 @@ private:
         uint32_t ringbuffer_offset() { return ringbuffer_offset_; }
 
         MsdIntelContext* GetContext() { return mapped_batch_->GetContext(); }
+
+        MappedBatch* mapped_batch() { return mapped_batch_.get(); }
 
     private:
         uint32_t sequence_number_;

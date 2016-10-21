@@ -19,23 +19,26 @@ public:
 
     void TestMapUnmapResourcesGpu()
     {
-
         auto addr_space =
-            std::unique_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
+            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
-        std::vector<gpu_addr_t> addresses;
-        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
+        std::vector<std::shared_ptr<GpuMapping>> mappings;
+        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space, mappings));
 
         uint32_t i = 0;
-        for (auto addr : addresses) {
+        gpu_addr_t addr;
+        for (auto& map : mappings) {
+            addr = map->gpu_addr();
             EXPECT_TRUE(addr_space->is_allocated(addr));
             EXPECT_FALSE(addr_space->is_clear(addr));
             EXPECT_GE(addr_space->allocated_size(addr), helper_->resources()[i++]->size());
         }
 
-        cmd_buf_->UnmapResourcesGpu(addr_space.get());
+        cmd_buf_->UnmapResourcesGpu();
 
-        for (auto addr : addresses) {
+        for (auto& map : mappings) {
+            addr = map->gpu_addr();
+            map.reset();
             EXPECT_FALSE(addr_space->is_allocated(addr));
         }
     }
@@ -43,7 +46,7 @@ public:
     void TestPatchRelocations()
     {
         auto addr_space =
-            std::unique_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
+            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
         auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index; // dont judge
         auto batch_buf = cmd_buf_->exec_resources_[batch_buf_index];
@@ -63,16 +66,15 @@ public:
         }
 
         // do the relocation foo
-        std::vector<gpu_addr_t> addresses;
-        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
-        ASSERT_TRUE(cmd_buf_->PatchRelocations(addresses));
+        std::vector<std::shared_ptr<GpuMapping>> mappings;
+        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space, mappings));
+        ASSERT_TRUE(cmd_buf_->PatchRelocations(mappings));
 
         // check that we foo'd it correctly
         for (uint32_t i = 0; i < batch_buf_resource->num_relocations; i++) {
             auto relocation = &batch_buf_resource->relocations[i];
-            auto target_gpu_address = addresses[relocation->target_resource_index];
+            gpu_addr_t target_gpu_address = mappings[relocation->target_resource_index]->gpu_addr();
             auto expected_gpu_addr = target_gpu_address + relocation->target_offset;
-
             uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
             EXPECT_EQ(magma::lower_32_bits(expected_gpu_addr), batch_buf_data[dword_offset]);
             dword_offset++;
@@ -108,18 +110,17 @@ public:
 
     void TestExecute()
     {
-        auto target_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
-        ASSERT_NE(target_buffer, nullptr);
-
-        void* target_cpu_addr;
-        gpu_addr_t target_gpu_addr;
-
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
         auto addr_space = context->exec_address_space();
 
-        ASSERT_TRUE(target_buffer->platform_buffer()->MapCpu(&target_cpu_addr));
-        ASSERT_TRUE(target_buffer->MapGpu(addr_space, PAGE_SIZE));
-        ASSERT_TRUE(target_buffer->GetGpuAddress(addr_space->id(), &target_gpu_addr));
+        auto target_buffer_mapping =
+            AddressSpace::MapBufferGpu(addr_space, MsdIntelBuffer::Create(PAGE_SIZE), PAGE_SIZE);
+        ASSERT_NE(target_buffer_mapping, nullptr);
+
+        void* target_cpu_addr;
+        ASSERT_TRUE(target_buffer_mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
+
+        gpu_addr_t target_gpu_addr = target_buffer_mapping->gpu_addr();
         *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
         auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index;

@@ -6,6 +6,7 @@
 #define RENDER_INIT_BATCH_H
 
 #include "address_space.h"
+#include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
 #include <memory>
 #include <stdint.h>
@@ -21,12 +22,10 @@ public:
 
     uint32_t size() { return batch_size_; }
 
-    std::shared_ptr<MsdIntelBuffer> buffer() { return buffer_; }
-
-    bool Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace* address_space);
+    std::unique_ptr<GpuMapping> Init(std::unique_ptr<MsdIntelBuffer> buffer,
+                                     std::shared_ptr<AddressSpace> address_space);
 
 private:
-    std::shared_ptr<MsdIntelBuffer> buffer_;
     AddressSpaceId address_space_id_;
 
     const uint32_t batch_size_;

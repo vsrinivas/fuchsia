@@ -12,9 +12,10 @@
 #include <memory>
 #include <vector>
 
-class MsdIntelContext;
+class AddressSpace;
 class ClientContext;
 class EngineCommandStreamer;
+class MsdIntelContext;
 
 class CommandBuffer : public MappedBatch {
 public:
@@ -48,15 +49,15 @@ private:
     // maps all execution resources into the given |address_space|.
     // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
     // exec_resources_
-    bool MapResourcesGpu(AddressSpace* address_space,
-                         std::vector<gpu_addr_t>& resource_gpu_addresses_out);
+    bool MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
+                         std::vector<std::shared_ptr<GpuMapping>>& mappings);
 
-    void UnmapResourcesGpu(AddressSpace* address_space);
+    void UnmapResourcesGpu();
 
     // given the virtual addresses of all of the exec_resources_, walks the relocations data
     // structure in
     // cmd_buf_ and patches the correct virtual addresses into the corresponding buffers
-    bool PatchRelocations(std::vector<gpu_addr_t>& resource_gpu_addresses);
+    bool PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings);
 
     // utility function used by PatchRelocations to perform the actual relocation for a single entry
     static bool PatchRelocation(magma_system_relocation_entry* relocation, MsdIntelBuffer* resource,
@@ -65,6 +66,7 @@ private:
     // TODO (MA-70) cmd_buf should be uniquely owned here
     magma_system_command_buffer* cmd_buf_;
     std::vector<std::shared_ptr<MsdIntelBuffer>> exec_resources_;
+    std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;
     std::weak_ptr<ClientContext> context_;
 
     bool prepared_to_execute_;

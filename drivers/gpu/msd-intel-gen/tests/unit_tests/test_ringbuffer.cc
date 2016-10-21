@@ -27,8 +27,8 @@ public:
         EXPECT_FALSE(ringbuffer->HasSpace(size));
         EXPECT_TRUE(ringbuffer->HasSpace(size - 4));
 
-        auto address_space = std::unique_ptr<AddressSpace>(new MockAddressSpace(0x10000, size));
-        EXPECT_TRUE(ringbuffer->Map(address_space.get()));
+        auto address_space = std::shared_ptr<AddressSpace>(new MockAddressSpace(0x10000, size));
+        EXPECT_TRUE(ringbuffer->Map(address_space));
 
         uint32_t* vaddr = ringbuffer->vaddr();
         ASSERT_NE(vaddr, nullptr);
@@ -52,7 +52,7 @@ public:
             EXPECT_EQ(vaddr[(start_index + i) % size_dwords], i);
         }
 
-        EXPECT_TRUE(ringbuffer->Unmap(address_space.get()));
+        EXPECT_TRUE(ringbuffer->Unmap());
     }
 };
 

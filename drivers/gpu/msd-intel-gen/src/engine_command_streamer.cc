@@ -9,6 +9,7 @@
 #include "magma_util/sleep.h"
 #include "msd_intel_buffer.h"
 #include "registers.h"
+#include "render_init_batch.h"
 #include "ringbuffer.h"
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
@@ -361,44 +362,49 @@ uint64_t EngineCommandStreamer::GetActiveHeadPointer()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<RenderEngineCommandStreamer>
-RenderEngineCommandStreamer::Create(EngineCommandStreamer::Owner* owner,
-                                    AddressSpace* address_space, uint32_t device_id)
+std::unique_ptr<RenderInitBatch>
+RenderEngineCommandStreamer::CreateRenderInitBatch(uint32_t device_id)
 {
     std::unique_ptr<RenderInitBatch> batch;
     if (DeviceId::is_gen8(device_id)) {
-        batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
+        return std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
     } else if (DeviceId::is_gen9(device_id)) {
-        batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
-    } else {
-        return DRETP(nullptr, "unhandled device id");
+        return std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
     }
+    return DRETP(nullptr, "unhandled device id");
+}
 
-    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(batch->size()));
+std::unique_ptr<RenderEngineCommandStreamer>
+RenderEngineCommandStreamer::Create(EngineCommandStreamer::Owner* owner)
+{
+    return std::unique_ptr<RenderEngineCommandStreamer>(new RenderEngineCommandStreamer(owner));
+}
+
+RenderEngineCommandStreamer::RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner)
+    : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase)
+{
+}
+
+bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> context,
+                                             std::unique_ptr<RenderInitBatch> init_batch,
+                                             std::shared_ptr<AddressSpace> address_space)
+{
+    DASSERT(context);
+    DASSERT(init_batch);
+    DASSERT(address_space);
+
+    auto buffer = std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(init_batch->size()));
     if (!buffer)
-        return DRETP(nullptr, "failed to allocate render init buffer");
+        return DRETF(false, "failed to allocate render init buffer");
 
-    if (!batch->Init(std::move(buffer), address_space))
-        return DRETP(nullptr, "batch init failed");
+    auto mapping = init_batch->Init(std::move(buffer), address_space);
+    if (!mapping)
+        return DRETF(false, "batch init failed");
 
-    return std::unique_ptr<RenderEngineCommandStreamer>(
-        new RenderEngineCommandStreamer(owner, std::move(batch)));
-}
-
-RenderEngineCommandStreamer::RenderEngineCommandStreamer(
-    EngineCommandStreamer::Owner* owner, std::unique_ptr<RenderInitBatch> init_batch)
-    : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase),
-      init_batch_(std::move(init_batch))
-{
-    DASSERT(init_batch_);
-}
-
-bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> context)
-{
-    DASSERT(init_batch_);
     uint32_t sequence_number;
     std::unique_ptr<SimpleMappedBatch> mapped_batch(
-        new SimpleMappedBatch(context, init_batch_->buffer()));
+        new SimpleMappedBatch(context, std::move(mapping)));
+
     return ExecBatch(std::move(mapped_batch), 0, &sequence_number);
 }
 
@@ -464,6 +470,13 @@ bool RenderEngineCommandStreamer::WaitRendering(std::shared_ptr<MsdIntelBuffer> 
     if (buf->sequence_number() == Sequencer::kInvalidSequenceNumber)
         return true;
     return WaitRendering(buf->sequence_number());
+}
+
+bool RenderEngineCommandStreamer::WaitIdle()
+{
+    if (inflight_command_sequences_.empty())
+        return true;
+    return WaitRendering(inflight_command_sequences_.back().sequence_number());
 }
 
 bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)

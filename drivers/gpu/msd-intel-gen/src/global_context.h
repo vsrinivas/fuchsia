@@ -10,8 +10,8 @@
 // GlobalContext, provides the global (per engine) hardware status page for all client contexts.
 class GlobalContext : public MsdIntelContext, public HardwareStatusPage::Owner {
 public:
-    bool Map(AddressSpace* address_space, EngineCommandStreamerId id) override;
-    bool Unmap(AddressSpace* address_space, EngineCommandStreamerId id) override;
+    bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id) override;
+    bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id) override;
 
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {
@@ -33,7 +33,6 @@ private:
     {
         auto iter = status_page_map_.find(id);
         DASSERT(iter != status_page_map_.end());
-        DASSERT(iter->second.gpu_addr);
         return iter->second.gpu_addr;
     }
 

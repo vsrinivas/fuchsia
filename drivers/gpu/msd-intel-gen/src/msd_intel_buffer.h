@@ -5,14 +5,15 @@
 #ifndef MSD_INTEL_BUFFER_H
 #define MSD_INTEL_BUFFER_H
 
-#include "address_space.h"
 #include "magma_util/macros.h"
 #include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
 #include "sequencer.h"
 #include "types.h"
-#include <map>
+#include <list>
 #include <memory>
+
+class GpuMapping;
 
 class MsdIntelBuffer {
 public:
@@ -29,33 +30,23 @@ public:
 
     uint32_t write_domain() { return write_domain_bitfield_; }
 
-    bool MapGpu(AddressSpace* address_space, uint32_t alignment);
-    bool UnmapGpu(AddressSpace* address_space);
-
-    bool IsMappedGpu(AddressSpaceId address_space_id)
-    {
-        // TODO(MA-71) handle multiple address spaces
-        return mapping_ != nullptr && mapping_->address_space_id == address_space_id;
-    }
-
-    bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* addr_out);
-
     void SetSequenceNumber(uint32_t sequence_number) { sequence_number_ = sequence_number; }
 
     uint32_t sequence_number() { return sequence_number_; }
 
+    CachingType caching_type() { return caching_type_; }
+
+    std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
+    std::shared_ptr<GpuMapping> FindBufferMapping(AddressSpaceId id);
+
+    void RemoveExpiredMappings();
+
+    uint32_t shared_mapping_count() { return mapping_list_.size(); }
+
 private:
     MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_buf);
 
-    CachingType caching_type() { return caching_type_; }
-
-    struct GpuMapping {
-        AddressSpaceId address_space_id;
-        gpu_addr_t addr;
-    };
-
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
-    std::unique_ptr<GpuMapping> mapping_;
 
     CachingType caching_type_ = CACHING_LLC;
 
@@ -63,6 +54,8 @@ private:
     uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
 
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
+
+    std::list<std::weak_ptr<GpuMapping>> mapping_list_;
 };
 
 class MsdIntelAbiBuffer : public msd_buffer {

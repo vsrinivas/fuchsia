@@ -9,12 +9,15 @@ source_set("src") {
 
   sources = [
     "address_space.h",
+    "address_space.cc",
     "command_buffer.cc",
     "command_buffer.h",
     "engine_command_streamer.cc",
     "engine_command_streamer.h",
     "global_context.cc",
     "global_context.h",
+    "gpu_mapping.cc",
+    "gpu_mapping.h",
     "gtt.cc",
     "gtt.h",
     "msd_intel_buffer.cc",

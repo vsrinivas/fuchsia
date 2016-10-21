@@ -54,9 +54,9 @@ public:
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
-        address_space_ = std::unique_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE * 100));
+        address_space_ = std::shared_ptr<AddressSpace>(new MockAddressSpace(0, PAGE_SIZE * 100));
 
-        engine_cs_ = RenderEngineCommandStreamer::Create(this, address_space_.get(), device_id);
+        engine_cs_ = RenderEngineCommandStreamer::Create(this);
 
         sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
@@ -159,6 +159,8 @@ public:
 
         auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
 
+        auto init_batch = render_cs->CreateRenderInitBatch(device_id_);
+
         {
             std::unique_ptr<RenderInitBatch> expected_batch;
             if (DeviceId::is_gen9(device_id_))
@@ -166,12 +168,12 @@ public:
             if (DeviceId::is_gen8(device_id_))
                 expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen8());
             ASSERT_NE(expected_batch, nullptr);
-            EXPECT_EQ(render_cs->init_batch()->size(), expected_batch->size());
+            EXPECT_EQ(init_batch->size(), expected_batch->size());
         }
 
         InitContext();
 
-        EXPECT_TRUE(context_->Map(address_space_.get(), engine_cs_->id()));
+        EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
 
         auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
         ASSERT_NE(ringbuffer, nullptr);
@@ -180,14 +182,17 @@ public:
 
         register_io_->enable_trace(true);
 
-        EXPECT_TRUE(render_cs->RenderInit(context_));
+        EXPECT_TRUE(render_cs->RenderInit(context_, std::move(init_batch), address_space_));
 
         EXPECT_EQ(ringbuffer->tail() - tail_start, 9u * 4);
 
         auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 
         // batch buffer start
-        gpu_addr_t init_batch_addr = 0; // first thing to be mapped
+        gpu_addr_t init_batch_addr;
+        EXPECT_TRUE(render_cs->inflight_command_sequences_.back().mapped_batch()->GetGpuAddress(
+            address_space_->id(), &init_batch_addr));
+
         int i = tail_start / 4;
         EXPECT_EQ(ringbuffer_content[i++], MiBatchBufferStart::kCommandType | (3 - 2));
         EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(init_batch_addr));
@@ -240,7 +245,7 @@ public:
         }
         EXPECT_EQ(write, submitport_writes.size());
 
-        EXPECT_TRUE(context_->Unmap(address_space_.get(), engine_cs_->id()));
+        EXPECT_TRUE(context_->Unmap(address_space_->id(), engine_cs_->id()));
     }
 
 private:
@@ -256,7 +261,7 @@ private:
         return hw_status_page_.get();
     }
 
-    AddressSpace* exec_address_space() override
+    std::shared_ptr<AddressSpace> exec_address_space() override
     {
         DASSERT(false);
         return nullptr;
@@ -282,7 +287,7 @@ private:
 
     uint32_t device_id_;
     std::unique_ptr<RegisterIo> register_io_;
-    std::unique_ptr<AddressSpace> address_space_;
+    std::shared_ptr<AddressSpace> address_space_;
     std::shared_ptr<MsdIntelContext> context_;
     std::unique_ptr<MockStatusPageBuffer> mock_status_page_;
     std::unique_ptr<EngineCommandStreamer> engine_cs_;

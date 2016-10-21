@@ -19,44 +19,41 @@ static inline void write_dst(uint32_t val, void* dest, uint32_t offset, uint32_t
     reinterpret_cast<uint32_t*>(dest)[offset >> 2] = val;
 }
 
-bool RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer, AddressSpace* address_space)
+std::unique_ptr<GpuMapping> RenderInitBatch::Init(std::unique_ptr<MsdIntelBuffer> buffer,
+                                                  std::shared_ptr<AddressSpace> address_space)
 {
     DASSERT((batch_size_ & 0x3) == 0);
 
     DLOG("RenderInitBatch size 0x%x", batch_size_);
 
-    if (buffer->platform_buffer()->size() < batch_size_)
-        return DRETF(false, "buffer too small");
+    auto platform_buffer = buffer->platform_buffer();
 
-    if (!buffer->MapGpu(address_space, PAGE_SIZE))
-        return DRETF(false, "failed to pin buffer");
+    if (platform_buffer->size() < batch_size_)
+        return DRETP(nullptr, "buffer too small");
 
-    uint64_t gpu_addr;
-    if (!buffer->GetGpuAddress(address_space->id(), &gpu_addr))
-        return DRETF(false, "failed to get gpu address");
+    auto mapping = AddressSpace::MapBufferGpu(address_space, std::move(buffer), PAGE_SIZE);
+    if (!mapping)
+        return DRETP(nullptr, "failed to pin buffer");
 
-    DASSERT(buffer->write_domain() == MEMORY_DOMAIN_CPU);
+    DASSERT(mapping->buffer()->write_domain() == MEMORY_DOMAIN_CPU);
 
     void* dst;
-    if (!buffer->platform_buffer()->MapCpu(&dst))
-        return DRETF(false, "failed to map buffer");
+    if (!platform_buffer->MapCpu(&dst))
+        return DRETP(nullptr, "failed to map buffer");
 
     memcpy(dst, batch_, batch_size_);
 
     for (unsigned int i = 0; i < relocation_count_; i++) {
         uint32_t offset = relocs_[i];
         uint32_t val = read_src(batch_, offset, batch_size_);
-        uint64_t reloc = val + gpu_addr;
+        uint64_t reloc = val + mapping->gpu_addr();
         DLOG("writing reloc 0x%llx offset 0x%x", reloc, offset);
-        write_dst(magma::lower_32_bits(reloc), dst, offset, buffer->platform_buffer()->size());
-        write_dst(magma::upper_32_bits(reloc), dst, offset + 4, buffer->platform_buffer()->size());
+        write_dst(magma::lower_32_bits(reloc), dst, offset, platform_buffer->size());
+        write_dst(magma::upper_32_bits(reloc), dst, offset + 4, platform_buffer->size());
     }
 
-    if (!buffer->platform_buffer()->UnmapCpu())
+    if (!platform_buffer->UnmapCpu())
         DLOG("failed to unmap buffer");
 
-    // Assume ownership.
-    buffer_ = std::shared_ptr<MsdIntelBuffer>(std::move(buffer));
-
-    return true;
+    return mapping;
 }

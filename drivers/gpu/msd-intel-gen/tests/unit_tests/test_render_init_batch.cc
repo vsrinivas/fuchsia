@@ -11,30 +11,26 @@ public:
     void Init(std::unique_ptr<RenderInitBatch> batch)
     {
         uint64_t base = 0x10000;
-        std::unique_ptr<MockAddressSpace> address_space(
+        std::shared_ptr<MockAddressSpace> address_space(
             new MockAddressSpace(base, magma::round_up(batch->size(), PAGE_SIZE)));
 
-        {
-            std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size()));
-            ASSERT_TRUE(buffer);
-
-            void* addr;
-            ASSERT_TRUE(buffer->platform_buffer()->MapCpu(&addr));
-
-            // Set buffer to a known pattern
-            memset(addr, 0xFF, buffer->platform_buffer()->size());
-
-            EXPECT_TRUE(buffer->platform_buffer()->UnmapCpu());
-
-            // Hand off the buffer
-            EXPECT_TRUE(batch->Init(std::move(buffer), address_space.get()));
-        }
-
-        gpu_addr_t gpu_addr;
-        EXPECT_TRUE(batch->buffer()->GetGpuAddress(address_space->id(), &gpu_addr));
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size()));
+        ASSERT_NE(buffer, nullptr);
 
         void* addr;
-        ASSERT_TRUE(batch->buffer()->platform_buffer()->MapCpu(&addr));
+        ASSERT_TRUE(buffer->platform_buffer()->MapCpu(&addr));
+
+        // Set buffer to a known pattern
+        memset(addr, 0xFF, buffer->platform_buffer()->size());
+
+        EXPECT_TRUE(buffer->platform_buffer()->UnmapCpu());
+
+        auto mapping = batch->Init(std::move(buffer), address_space);
+        ASSERT_NE(mapping, nullptr);
+
+        gpu_addr_t gpu_addr = mapping->gpu_addr();
+
+        ASSERT_TRUE(mapping->buffer()->platform_buffer()->MapCpu(&addr));
 
         auto entry = reinterpret_cast<uint32_t*>(addr);
 
@@ -52,7 +48,7 @@ public:
         // Check everything else
         EXPECT_EQ(memcmp(addr, batch->batch_, batch->size()), 0);
 
-        EXPECT_TRUE(batch->buffer()->platform_buffer()->UnmapCpu());
+        EXPECT_TRUE(mapping->buffer()->platform_buffer()->UnmapCpu());
     }
 };
 

@@ -16,11 +16,9 @@ public:
     {
         EXPECT_TRUE(engine->ExecBatch(std::move(mapped_batch), 0, sequence_number_out));
     }
-
-    static void WaitInitFinished(RenderEngineCommandStreamer* engine)
+    static bool WaitRendering(RenderEngineCommandStreamer* engine, uint32_t sequence_number)
     {
-        bool result = engine->WaitRendering(engine->init_batch()->buffer());
-        DASSERT(result);
+        return engine->WaitRendering(sequence_number);
     }
 };
 
@@ -39,7 +37,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
+        EXPECT_TRUE(device->WaitIdle());
 
         // check that the render init batch succeeded.
         EXPECT_EQ(device->global_context()
@@ -63,7 +61,7 @@ public:
             driver_->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
+        EXPECT_TRUE(device->WaitIdle());
 
         MsdIntelDevice::DumpState dump_state;
         device->Dump(&dump_state);
@@ -116,26 +114,22 @@ public:
             driver->CreateDevice(platform_device->GetDeviceHandle()));
         EXPECT_NE(device, nullptr);
 
-        TestEngineCommandStreamer::WaitInitFinished(device->render_engine_cs());
+        EXPECT_TRUE(device->WaitIdle());
 
-        auto target_buffer = MsdIntelBuffer::Create(PAGE_SIZE);
-        ASSERT_NE(target_buffer, nullptr);
+        auto mapping =
+            AddressSpace::MapBufferGpu(device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE), PAGE_SIZE);
+        ASSERT_NE(mapping, nullptr);
+
+        gpu_addr_t target_gpu_addr = mapping->gpu_addr();
 
         void* target_cpu_addr;
-        gpu_addr_t target_gpu_addr;
-
-        EXPECT_TRUE(target_buffer->platform_buffer()->MapCpu(&target_cpu_addr));
-        EXPECT_TRUE(target_buffer->MapGpu(device->gtt(), PAGE_SIZE));
-        EXPECT_TRUE(target_buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &target_gpu_addr));
+        EXPECT_TRUE(mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
 
         auto batch_buffer = std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE));
         ASSERT_NE(batch_buffer, nullptr);
 
         void* batch_cpu_addr;
-        gpu_addr_t batch_gpu_addr;
         EXPECT_TRUE(batch_buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
-        EXPECT_TRUE(batch_buffer->MapGpu(device->gtt(), PAGE_SIZE));
-        EXPECT_TRUE(batch_buffer->GetGpuAddress(ADDRESS_SPACE_GTT, &batch_gpu_addr));
 
         static constexpr uint32_t kDwordCount = 4;
         static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
@@ -157,6 +151,9 @@ public:
         uint32_t num_iterations = 1;
 
         for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
+            auto batch_mapping = AddressSpace::MapBufferGpu(device->gtt(), batch_buffer, PAGE_SIZE);
+            ASSERT_NE(batch_mapping, nullptr);
+
             // Initialize the target
             *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0xdeadbeef;
 
@@ -172,11 +169,12 @@ public:
             TestEngineCommandStreamer::ExecBatch(
                 device->render_engine_cs(),
                 std::unique_ptr<SimpleMappedBatch>(
-                    new SimpleMappedBatch(device->global_context(), batch_buffer)),
+                    new SimpleMappedBatch(device->global_context(), std::move(batch_mapping))),
                 &sequence_number);
 
             EXPECT_NE(sequence_number, 0u);
-            EXPECT_TRUE(device->render_engine_cs()->WaitRendering(batch_buffer));
+            EXPECT_TRUE(TestEngineCommandStreamer::WaitRendering(device->render_engine_cs(),
+                                                                 sequence_number));
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 

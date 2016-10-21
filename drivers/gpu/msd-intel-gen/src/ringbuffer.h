@@ -9,6 +9,8 @@
 #include "msd_intel_buffer.h"
 #include <memory>
 
+class AddressSpace;
+
 class Ringbuffer {
 public:
     Ringbuffer(std::unique_ptr<MsdIntelBuffer> buffer);
@@ -42,17 +44,16 @@ public:
     bool HasSpace(uint32_t bytes);
 
     // Maps to both cpu and gpu.
-    bool Map(AddressSpace* address_space);
-    bool Unmap(AddressSpace* address_space);
+    bool Map(std::shared_ptr<AddressSpace> address_space);
+    bool Unmap();
 
     bool GetGpuAddress(AddressSpaceId id, gpu_addr_t* addr_out);
 
 private:
-    MsdIntelBuffer* buffer() { return buffer_.get(); }
-
     uint32_t* vaddr() { return vaddr_; }
 
-    std::unique_ptr<MsdIntelBuffer> buffer_;
+    std::shared_ptr<MsdIntelBuffer> buffer_;
+    std::unique_ptr<GpuMapping> gpu_mapping_;
     uint64_t size_;
     uint32_t head_;
     uint32_t tail_;
