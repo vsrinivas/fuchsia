@@ -64,6 +64,7 @@ is_usb() {
 SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
 PATH="${SCRIPT_DIR}/../buildtools/toolchain/:${PATH}"
 VB_DIR="${SCRIPT_DIR}/../third_party/vboot_reference"
+DC_DIR="${SCRIPT_DIR}/../third_party/depthcharge"
 MX_DIR="${SCRIPT_DIR}/../magenta"
 
 # Grab some arguments, do some basic validation.
@@ -87,6 +88,10 @@ fi
 sgdisk --zap-all "${BLOCK_DEVICE}"
 
 make -C "${VB_DIR}" cgpt futil
+
+PATH="${PATH}:${VB_DIR}/build/futility" \
+    BUILD_IMAGE_PATH="${VB_DIR}/tests/devkeys" \
+    VB_SOURCE="${VB_DIR}" make -j8 -C "${DC_DIR}" uefi
 
 "${VB_DIR}"/build/futility/futility vbutil_kernel \
 	--pack "${KERNEL_IMAGE}"  \
@@ -133,7 +138,19 @@ chown -R root:root "${MOUNT_POINT}"/*
 # Unmount the root partition (might as well reuse the mount point).
 umount_retry "${MOUNT_POINT}"
 
-# Copy data to the data partition (and just let the trap unmount us).
+# Copy data to the data partition.
 mount "${BLOCK_DEVICE}3" "${MOUNT_POINT}"
 cp -a "${ROOT_DIR}"/* "${MOUNT_POINT}"
 chown -R root:root "${MOUNT_POINT}"/*
+umount_retry "${MOUNT_POINT}"
+
+# Copy depthcharge to the EFI partition (and just let the trap unmount us).
+mount "${BLOCK_DEVICE}4" "${MOUNT_POINT}"
+mkdir -p "${MOUNT_POINT}"/efi/boot
+mkdir -p "${MOUNT_POINT}"/depthcharge
+cp "${DC_DIR}"/build/uefi/image/uefi_dev.efi \
+    "${MOUNT_POINT}"/efi/boot/bootx64.efi
+cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwa.bin \
+    "${MOUNT_POINT}"/depthcharge/rwa
+cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwb.bin \
+    "${MOUNT_POINT}"/depthcharge/rwb
