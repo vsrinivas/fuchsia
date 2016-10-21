@@ -9,7 +9,9 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
+#include "registers.h"
 #include "server.h"
+#include "thread.h"
 #include "util.h"
 
 namespace debugserver {
@@ -27,14 +29,20 @@ const char kRun[] = "Run;";
 const char kSubsequentThreadInfo[] = "sThreadInfo";
 const char kSupported[] = "Supported";
 
-void ReplyOK(const CommandHandler::ResponseCallback& callback) {
+// This always returns true so that command handlers can simple call "return
+// ReplyOK()" rather than "ReplyOK(); return true;
+bool ReplyOK(const CommandHandler::ResponseCallback& callback) {
   callback("OK");
+  return true;
 }
 
-void ReplyWithError(util::ErrorCode error_code,
+// This always returns true so that command handlers can simple call "return
+// ReplyWithError()" rather than "ReplyWithError(); return true;
+bool ReplyWithError(util::ErrorCode error_code,
                     const CommandHandler::ResponseCallback& callback) {
   std::string error_rsp = util::BuildErrorPacket(error_code);
   callback(error_rsp);
+  return true;
 }
 
 // Returns true if |str| starts with |prefix|.
@@ -62,7 +70,13 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
 
   switch (packet[0]) {
     case '?':  // Indicate the reason the target halted
+      if (packet.size() > 1)
+        break;
       return HandleQuestionMark(callback);
+    case 'g':  // Read general registers
+      if (packet.size() > 1)
+        break;
+      return Handle_g(callback);
     case 'H':  // Set a thread for subsequent operations
       return Handle_H(packet.substr(1), callback);
     case 'q':  // General query packet
@@ -95,7 +109,34 @@ bool CommandHandler::HandleQuestionMark(const ResponseCallback& callback) {
   //
   //    3. If there is no inferior or the current inferior is not started, then
   //    reply "OK".
-  ReplyOK(callback);
+  return ReplyOK(callback);
+}
+
+bool CommandHandler::Handle_g(const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "g: No inferior";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  // If there is no current thread, then we reply with "0"s for all registers.
+  std::string result;
+  if (!server_->current_thread()) {
+    result = arch::Registers::GetUninitializedGeneralRegisters();
+  } else {
+    arch::Registers* regs = server_->current_thread()->registers();
+    FTL_DCHECK(regs);
+    result = regs->GetGeneralRegisters();
+  }
+
+  if (result.empty()) {
+    FTL_LOG(ERROR) << "g: Failed to read register values";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  callback(result);
   return true;
 }
 
@@ -108,10 +149,8 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
 
   // Packet should at least contain 'c' or 'g' and some characters for the
   // thread id.
-  if (packet.size() < 2) {
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-    return true;
-  }
+  if (packet.size() < 2)
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   switch (packet[0]) {
     case 'c':
@@ -120,10 +159,8 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
     case 'g': {
       int64_t pid, tid;
       bool has_pid;
-      if (!util::ParseThreadId(packet.substr(1), &has_pid, &pid, &tid)) {
-        ReplyWithError(util::ErrorCode::INVAL, callback);
-        return true;
-      }
+      if (!util::ParseThreadId(packet.substr(1), &has_pid, &pid, &tid))
+        return ReplyWithError(util::ErrorCode::INVAL, callback);
 
       // We currently support debugging only one process.
       // TODO(armansito): What to do with a process ID? Replying with an empty
@@ -138,8 +175,7 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
       // Setting the current thread to "all threads" doesn't make much sense.
       if (tid < 0) {
         FTL_LOG(WARNING) << "Cannot set the current thread to all threads";
-        ReplyWithError(util::ErrorCode::INVAL, callback);
-        return true;
+        return ReplyWithError(util::ErrorCode::INVAL, callback);
       }
 
       if (!server_->current_process()) {
@@ -150,15 +186,13 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
         // then report error?
         if (!tid) {
           FTL_LOG(ERROR) << "Cannot set a current thread with no inferior";
-          ReplyWithError(util::ErrorCode::PERM, callback);
-          return true;
+          return ReplyWithError(util::ErrorCode::PERM, callback);
         }
 
         FTL_LOG(WARNING) << "Setting current thread to NULL for tid=0";
 
         server_->SetCurrentThread(nullptr);
-        ReplyOK(callback);
-        return true;
+        return ReplyOK(callback);
       }
 
       // If the process hasn't started yet it will have no threads. Since "Hg0"
@@ -170,8 +204,7 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
         FTL_LOG(INFO) << "Current process has no threads yet but we pretend to "
                       << "set one";
         server_->SetCurrentThread(nullptr);
-        ReplyOK(callback);
-        return true;
+        return ReplyOK(callback);
       }
 
       Thread* thread = nullptr;
@@ -184,14 +217,11 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
 
       if (!thread) {
         FTL_LOG(ERROR) << "Failed to set the current thread";
-        ReplyWithError(util::ErrorCode::PERM, callback);
-        return true;
+        return ReplyWithError(util::ErrorCode::PERM, callback);
       }
 
       server_->SetCurrentThread(thread);
-      ReplyOK(callback);
-
-      return true;
+      return ReplyOK(callback);
     }
     default:
       break;
@@ -242,10 +272,8 @@ bool CommandHandler::HandleQueryAttached(const ftl::StringView& params,
                                          const ResponseCallback& callback) {
   // We don't support multiprocessing yet, so make sure we received the version
   // of qAttached that doesn't have a "pid" parameter.
-  if (!params.empty()) {
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-    return true;
-  }
+  if (!params.empty())
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   // The response is "1" if we attached to an existing process, or "0" if we
   // created a new one. We currently don't support the former, so always send
@@ -258,10 +286,8 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     const ftl::StringView& params,
     const ResponseCallback& callback) {
   // The "qC" packet has no parameters.
-  if (!params.empty()) {
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-    return true;
-  }
+  if (!params.empty())
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   Thread* current_thread = server_->current_thread();
   if (!current_thread) {
@@ -271,16 +297,14 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     Process* current_process = server_->current_process();
     if (!current_process || !current_process->started()) {
       FTL_LOG(ERROR) << "qC: Current thread has not been set";
-      ReplyWithError(util::ErrorCode::PERM, callback);
-      return true;
+      return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
     FTL_VLOG(1) << "qC: Picking one arbitrary thread";
     current_thread = current_process->PickOneThread();
     if (!current_thread) {
       FTL_VLOG(1) << "qC: Failed to pick a thread";
-      ReplyWithError(util::ErrorCode::PERM, callback);
-      return true;
+      return ReplyWithError(util::ErrorCode::PERM, callback);
     }
   }
 
@@ -303,24 +327,19 @@ bool CommandHandler::HandleQuerySupported(const ftl::StringView& params,
 bool CommandHandler::HandleSetNonStop(const ftl::StringView& params,
                                       const ResponseCallback& callback) {
   // The only values we accept are "1" and "0".
-  if (params.size() != 1) {
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-    return true;
-  }
+  if (params.size() != 1)
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
 
   // We currently only support non-stop mode.
   char value = params[0];
-  if (value == '1') {
-    ReplyOK(callback);
-  } else if (value == '0') {
-    ReplyWithError(util::ErrorCode::PERM, callback);
-  } else {
-    FTL_LOG(ERROR) << "QNonStop received with invalid value: "
-                   << (unsigned)value;
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-  }
+  if (value == '1')
+    return ReplyOK(callback);
 
-  return true;
+  if (value == '0')
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+
+  FTL_LOG(ERROR) << "QNonStop received with invalid value: " << (unsigned)value;
+  return ReplyWithError(util::ErrorCode::INVAL, callback);
 }
 
 bool CommandHandler::HandleQueryThreadInfo(bool is_first,
@@ -330,8 +349,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   Process* current_process = server_->current_process();
   if (!current_process) {
     FTL_LOG(ERROR) << "Current process is not set";
-    ReplyWithError(util::ErrorCode::PERM, callback);
-    return true;
+    return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
   // For the "first" thread info query we reply with the complete list of
@@ -346,8 +364,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
     if (!in_thread_info_sequence_) {
       FTL_LOG(ERROR) << "qsThreadInfo received without first receiving "
                      << "qfThreadInfo";
-      ReplyWithError(util::ErrorCode::PERM, callback);
-      return true;
+      return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
     in_thread_info_sequence_ = false;
@@ -359,8 +376,7 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
   if (in_thread_info_sequence_) {
     FTL_LOG(ERROR) << "qfThreadInfo received while already in an active "
                    << "sequence";
-    ReplyWithError(util::ErrorCode::PERM, callback);
-    return true;
+    return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
   std::deque<std::string> thread_ids;
@@ -398,21 +414,18 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
   // program that was passed to gdbserver in the command-line. Fix this later.
   if (!packet.empty()) {
     FTL_LOG(ERROR) << "vRun: Only running the default program is supported";
-    ReplyWithError(util::ErrorCode::INVAL, callback);
-    return true;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
 
   Process* current_process = server_->current_process();
   if (!current_process) {
     FTL_LOG(ERROR) << "vRun: no current process to run!";
-    ReplyWithError(util::ErrorCode::PERM, callback);
-    return true;
+    return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
   if (!current_process->IsAttached() && !current_process->Attach()) {
     FTL_LOG(ERROR) << "vRun: Failed to attach process!";
-    ReplyWithError(util::ErrorCode::PERM, callback);
-    return true;
+    return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
@@ -429,9 +442,7 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
   // In Remote Non-stop mode (which is the only mode we currently support), we
   // just respond "OK" (see
   // https://sourceware.org/gdb/current/onlinedocs/gdb/Stop-Reply-Packets.html)
-  ReplyOK(callback);
-
-  return true;
+  return ReplyOK(callback);
 }
 
 }  // namespace debugserver

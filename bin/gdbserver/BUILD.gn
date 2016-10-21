@@ -20,6 +20,8 @@ executable("bin") {
     "command_handler.h",
     "exception_port.cc",
     "exception_port.h",
+    "registers.cc",
+    "registers.h",
     "io_loop.cc",
     "io_loop.h",
     "main.cc",
@@ -32,6 +34,14 @@ executable("bin") {
     "util.cc",
     "util.h",
   ]
+
+  if (current_cpu == "x64") {
+    sources += [ "registers_amd64.cc" ]
+  } else if (current_cpu == "arm64") {
+    sources += [ "registers_arm64.cc" ]
+  } else {
+    sources += [ "registers_default.cc" ]
+  }
 
   deps = [
     "//lib/ftl",
