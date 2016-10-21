@@ -222,5 +222,23 @@ TEST_F(DBTest, UnsyncedObjects) {
   EXPECT_TRUE(isSynced);
 }
 
+TEST_F(DBTest, Batch) {
+  std::unique_ptr<DB> db = GetDB();
+  std::unique_ptr<DB::Batch> batch = db->StartBatch();
+
+  ObjectId object_id = RandomId(kObjectIdSize);
+  EXPECT_EQ(Status::OK, db->MarkObjectIdUnsynced(object_id));
+
+  std::vector<ObjectId> object_ids;
+  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
+  EXPECT_TRUE(object_ids.empty());
+
+  EXPECT_EQ(Status::OK, batch->Execute());
+
+  EXPECT_EQ(Status::OK, db->GetUnsyncedObjectIds(&object_ids));
+  EXPECT_EQ(1u, object_ids.size());
+  EXPECT_EQ(object_id, object_ids[0]);
+}
+
 }  // namespace
 }  // namespace storage

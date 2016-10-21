@@ -422,8 +422,8 @@ Status PageStorageImpl::AddObjectSynchronous(
 
 Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
                                   ChangeSource source) {
-  // TODO(nellyv): Update code to use a single transaction to do all the
-  // following updates in the DB.
+  // Apply all changes atomically.
+  std::unique_ptr<DB::Batch> batch = db_.StartBatch();
   Status s =
       db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
   if (s != Status::OK) {
@@ -449,7 +449,8 @@ Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
   for (const CommitId& parentId : commit->GetParentIds()) {
     db_.RemoveHead(parentId);
   }
-  return Status::OK;
+
+  return batch->Execute();
 }
 
 }  // namespace storage

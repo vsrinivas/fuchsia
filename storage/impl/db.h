@@ -13,6 +13,7 @@
 #include "apps/ledger/storage/public/journal.h"
 #include "apps/ledger/storage/public/types.h"
 #include "leveldb/db.h"
+#include "leveldb/write_batch.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -23,11 +24,30 @@ namespace storage {
 // on which objects and commits are not yet synchronized to the cloud.
 class DB {
  public:
+  class Batch {
+   public:
+    ~Batch();
+    Status Execute();
+
+   private:
+    friend DB;
+
+    Batch(std::function<Status(bool)> callback);
+
+    std::function<Status(bool)> callback_;
+    bool executed_;
+  };
+
   DB(std::string db_path);
   ~DB();
 
   // Initializes LevelDB or returns an |IO_ERROR| on failure.
   Status Init();
+
+  // Starts a LevelDB batch. Only one batch can be active at a time. The batch
+  // will be written when the Execute is called on the returned object. The DB
+  // object must outlive the batch object.
+  std::unique_ptr<Batch> StartBatch();
 
   // Finds all head commits and replaces the contents of |heads| with their ids.
   // Returns |OK| on success or |IO_ERROR| in case of an error reading the
@@ -121,6 +141,8 @@ class DB {
 
   const leveldb::WriteOptions write_options_;
   const leveldb::ReadOptions read_options_;
+
+  std::unique_ptr<leveldb::WriteBatch> batch_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DB);
 };

@@ -150,9 +150,25 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
 
 }  // namespace
 
+DB::Batch::Batch(std::function<Status(bool)> callback)
+    : callback_(callback), executed_(false) {}
+
+DB::Batch::~Batch() {
+  if (!executed_)
+    callback_(false);
+}
+
+Status DB::Batch::Execute() {
+  FTL_DCHECK(!executed_);
+  executed_ = true;
+  return callback_(true);
+}
+
 DB::DB(std::string db_path) : db_path_(db_path) {}
 
-DB::~DB() {}
+DB::~DB() {
+  FTL_DCHECK(!batch_);
+}
 
 Status DB::Init() {
   if (!files::CreateDirectory(db_path_)) {
@@ -170,6 +186,23 @@ Status DB::Init() {
   }
   db_.reset(db);
   return Status::OK;
+}
+
+std::unique_ptr<DB::Batch> DB::StartBatch() {
+  FTL_DCHECK(!batch_);
+  batch_.reset(new leveldb::WriteBatch());
+  return std::unique_ptr<Batch>(new Batch([this](bool execute) {
+    std::unique_ptr<leveldb::WriteBatch> batch = std::move(batch_);
+    if (execute) {
+      leveldb::Status status = db_->Write(write_options_, batch.get());
+      if (!status.ok()) {
+        FTL_LOG(ERROR) << "Fail to execute batch with status: "
+                       << status.ToString();
+        return Status::INTERNAL_IO_ERROR;
+      }
+    }
+    return Status::OK;
+  }));
 }
 
 Status DB::GetHeads(std::vector<CommitId>* heads) {
@@ -343,7 +376,7 @@ Status DB::DeleteByPrefix(const leveldb::Slice& prefix) {
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
   for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
        it->Next()) {
-    db_->Delete(write_options_, it->key());
+    Delete(it->key());
   }
   return it->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
@@ -360,11 +393,19 @@ Status DB::Get(convert::ExtendedStringView key, std::string* value) {
 }
 
 Status DB::Put(convert::ExtendedStringView key, ftl::StringView value) {
+  if (batch_) {
+    batch_->Put(key, convert::ToSlice(value));
+    return Status::OK;
+  }
   leveldb::Status s = db_->Put(write_options_, key, convert::ToSlice(value));
   return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
 Status DB::Delete(convert::ExtendedStringView key) {
+  if (batch_) {
+    batch_->Delete(key);
+    return Status::OK;
+  }
   leveldb::Status s = db_->Delete(write_options_, key);
   return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
