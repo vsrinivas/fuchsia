@@ -6,6 +6,9 @@
 #include <string.h>
 #include <threads.h>
 
+//TODO(kulakowski): remove when timezone lookup works
+#define TEMP_DISABLE_TIMEZONE_LOOKUP
+
 long __timezone = 0;
 int __daylight = 0;
 char* __tzname[2] = {0, 0};
@@ -22,11 +25,13 @@ static int dst_off;
 static int r0[5], r1[5];
 
 static const unsigned char *zi, *trans, *idx, *types, *abbrevs, *abbrevs_end;
+#ifndef TEMP_DISABLE_TIMEZONE_LOOKUP
 static size_t map_size;
 
 static char old_tz_buf[32];
 static char* old_tz = old_tz_buf;
 static size_t old_tz_size = sizeof old_tz_buf;
+#endif
 
 static mtx_t lock;
 
@@ -117,6 +122,9 @@ static size_t zi_dotprod(const unsigned char* z, const unsigned char* v, size_t 
 int __munmap(void*, size_t);
 
 static void do_tzset(void) {
+#ifdef TEMP_DISABLE_TIMEZONE_LOOKUP
+    const char* s = NULL;
+#else
     char buf[NAME_MAX + 25], *pathname = buf + 24;
     const char* try
         , *s, *p;
@@ -230,6 +238,7 @@ static void do_tzset(void) {
         }
     }
 
+#endif
     if (!s)
         s = __gmt;
     getname(std_name, &s);
