@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-#include <runtime/status.h>
+#include <magenta/status.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -67,8 +67,8 @@ void LogErrorWithErrno(const std::string& message) {
 }
 
 void LogErrorWithMxStatus(const std::string& message, mx_status_t status) {
-  FTL_LOG(ERROR) << message << ": " << mx_strstatus(status) << " (" << status
-                 << ")";
+  FTL_LOG(ERROR) << message << ": " << mx_status_get_string(status)
+                 << " (" << status << ")";
 }
 
 std::string BuildErrorPacket(ErrorCode error_code) {
