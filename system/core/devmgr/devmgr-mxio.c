@@ -34,12 +34,13 @@ struct callback_data {
     uint8_t* bootfs;
     mx_handle_t vmo;
     unsigned int file_count;
+    mx_status_t (*add_file)(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
 };
 
 static void callback(void* arg, const char* path, size_t off, size_t len) {
     struct callback_data* cd = arg;
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    bootfs_add_file(path, cd->vmo, off, cd->bootfs + off, len);
+    cd->add_file(path, cd->vmo, off, cd->bootfs + off, len);
     ++cd->file_count;
 }
 
@@ -129,6 +130,7 @@ static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     struct callback_data cd = {
         .bootfs = (void*)addr,
         .vmo = vmo,
+        .add_file = (n > 0) ? systemfs_add_file : bootfs_add_file,
     };
     bootfs_parse(cd.bootfs, size, &callback, &cd);
     return cd.file_count;

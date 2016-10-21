@@ -91,7 +91,7 @@ static void launch_fat(const char* device_name) {
     snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s", efi ? "true" : "false");
 
     const char* argv[] = {
-        "/boot/bin/thinfs",
+        "/system/bin/thinfs",
         device_path_arg,
         mount_path_arg,
         readonly_arg,
@@ -136,7 +136,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
 static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
 static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
-static const char* argv_appmgr[] = { "/boot/bin/application_manager" };
+static const char* argv_appmgr[] = { "/system/bin/application_manager" };
 
 void create_mojo_launcher_handles(void) {
     mx_channel_create(0, &mojo_launcher, &mojo_launcher_child);

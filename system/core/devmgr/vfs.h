@@ -75,6 +75,10 @@ mx_status_t devfs_remove(vnode_t* vn);
 vnode_t* bootfs_get_root(void);
 mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
 
+// system fs
+vnode_t* systemfs_get_root(void);
+mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
+
 // memory fs
 vnode_t* memfs_get_root(void);
 

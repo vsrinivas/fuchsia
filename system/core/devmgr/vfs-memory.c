@@ -488,6 +488,7 @@ vnode_t* vfs_create_global_root(void) {
         dn_add_child(&vfs_root_dn, devfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
+        dn_add_child(&vfs_root_dn, systemfs_get_root()->dnode);
         _mem_create(&vfs_root.vn, &vn_data, "data", 4, true);
         _mem_create(&vfs_root.vn, &vn_volume, "volume", 6, true);
         _mem_create(devfs_get_root(), &vn_socket, "socket", 6, true);

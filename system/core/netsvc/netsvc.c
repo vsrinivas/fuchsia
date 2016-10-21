@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
 
     mx_handle_t h[2] = { 0, 0 };
     if (mx_channel_create(0, &h[0], &h[1]) == NO_ERROR) {
-        run_server("/boot/bin/netstack", h[1]);
+        run_server("/system/bin/netstack", h[1]);
         ipc_handle = h[0];
         thrd_t t;
         if (thrd_create(&t, ipc_thread, h) != thrd_success) {

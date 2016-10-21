@@ -95,20 +95,37 @@ static vnode_ops_t vn_boot_ops = {
     .rename = memfs_rename_none,
 };
 
-static dnode_t vnb_root_dn = {
+static dnode_t bootfs_root_dn = {
     .name = "boot",
     .flags = 4,
-    .children = LIST_INITIAL_VALUE(vnb_root_dn.children),
+    .children = LIST_INITIAL_VALUE(bootfs_root_dn.children),
 };
 
-static vnboot_t vnb_root = {
+static vnboot_t bootfs_root = {
     .vn = {
         .ops = &vn_boot_ops,
         .refcount = 1,
-        .pdata = &vnb_root,
-        .dnode = &vnb_root_dn,
-        .dn_list = LIST_INITIAL_VALUE(vnb_root.vn.dn_list),
-        .watch_list = LIST_INITIAL_VALUE(vnb_root.vn.watch_list),
+        .pdata = &bootfs_root,
+        .dnode = &bootfs_root_dn,
+        .dn_list = LIST_INITIAL_VALUE(bootfs_root.vn.dn_list),
+        .watch_list = LIST_INITIAL_VALUE(bootfs_root.vn.watch_list),
+    },
+};
+
+static dnode_t systemfs_root_dn = {
+    .name = "system",
+    .flags = 6,
+    .children = LIST_INITIAL_VALUE(systemfs_root_dn.children),
+};
+
+static vnboot_t systemfs_root = {
+    .vn = {
+        .ops = &vn_boot_ops,
+        .refcount = 1,
+        .pdata = &systemfs_root,
+        .dnode = &systemfs_root_dn,
+        .dn_list = LIST_INITIAL_VALUE(systemfs_root.vn.dn_list),
+        .watch_list = LIST_INITIAL_VALUE(systemfs_root.vn.watch_list),
     },
 };
 
@@ -186,8 +203,8 @@ static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name
     return _vnb_create(parent, out, name, namelen, 0, 0, NULL, 0);
 }
 
-mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len) {
-    vnboot_t* vnb = &vnb_root;
+static mx_status_t _add_file(vnboot_t* vnb, const char* path, mx_handle_t vmo,
+                             mx_off_t off, void* data, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
         return ERR_INVALID_ARGS;
@@ -208,7 +225,20 @@ mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, voi
     }
 }
 
+mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len) {
+    return _add_file(&bootfs_root, path, vmo, off, data, len);
+}
+
+mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len) {
+    return _add_file(&systemfs_root, path, vmo, off, data, len);
+}
+
 vnode_t* bootfs_get_root(void) {
-    vnb_root_dn.vnode = &vnb_root.vn;
-    return &vnb_root.vn;
+    bootfs_root_dn.vnode = &bootfs_root.vn;
+    return &bootfs_root.vn;
+}
+
+vnode_t* systemfs_get_root(void) {
+    systemfs_root_dn.vnode = &systemfs_root.vn;
+    return &systemfs_root.vn;
 }
