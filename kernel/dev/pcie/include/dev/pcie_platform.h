@@ -11,43 +11,10 @@
 #include <dev/interrupt.h>
 #include <dev/pcie_constants.h>
 #include <magenta/compiler.h>
+#include <magenta/errors.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
-
-/**
- * A struct used to describe a sub-range of the address space of one of the
- * system buses.  Typically, this is a range of the main system bus, but it
- * might also be the I/O space bus on an architecture like x86/x64
- *
- * @param bus_addr The base address of the I/O range on the appropriate bus.
- * For MMIO or memory mapped config, this will be an address on the main system
- * bus.  For PIO regions, this may also be a an address on the main system bus
- * for architectures which do not have a sepearate I/O bus (ARM, MIPS, etc..).
- * For systems which do have a separate I/O bus (x86/x64) this should be the
- * base address in I/O space.
- *
- * @param size The size of the range in bytes.
- */
-typedef struct pcie_io_range {
-    uint64_t bus_addr;
-    size_t size;
-} pcie_io_range_t;
-
-/**
- * A struct used to describe a range of the Extended Configuration Access
- * Mechanism (ECAM) region.
- *
- * @param io_range The MMIO range which describes the region of the main system
- * bus where this slice of the ECAM resides.
- * @param bus_start The ID of the first bus covered by this slice of ECAM.
- * @param bus_end The ID of the last bus covered by this slice of ECAM.
- */
-typedef struct pcie_ecam_range {
-    pcie_io_range_t io_range;
-    uint8_t bus_start;
-    uint8_t bus_end;
-} pcie_ecam_range_t;
 
 /**
  * A structure which holds the state of a block of IRQs allocated by the
@@ -68,129 +35,157 @@ typedef struct pcie_msi_block {
     uint32_t tgt_data;
 } pcie_msi_block_t;
 
-/**
- * Callback definition used for platform-specific legacy IRQ remapping.
- *
- * @param bus_id  The bus ID of the pcie device/bridge to swizzle for.
- * @param dev_id  The device ID of the pcie device/bridge to swizzle for.
- * @param func_id The function ID of the pcie device/bridge to swizzle for.
- * @param pin     The pin we want to swizzle
- * @param irq     An output pointer for what IRQ this pin goes to
- *
- * @return NO_ERROR if we successfully swizzled
- * @return ERR_NOT_FOUND if we did not know how to swizzle this pin
- */
-typedef status_t (*platform_legacy_irq_swizzle_t)(uint bus_id,
-                                                  uint dev_id,
-                                                  uint func_id,
-                                                  uint pin,
-                                                  uint *irq);
-
-/**
- * Callback definition used for platform allocation of blocks of MSI and MSI-X
- * compatible IRQ targets.
- *
- * @param requested_irqs The total number of irqs being requested.
- * @param can_target_64bit True if the target address of the MSI block can
- *        be located past the 4GB boundary.  False if the target address must be
- *        in low memory.
- * @param is_msix True if this request is for an MSI-X compatible block.  False
- *        for plain old MSI.
- * @param out_block A pointer to the allocation bookkeeping to be filled out
- *        upon successful allocation of the reqested block of IRQs.
- *
- * @return A status code indicating the success or failure of the operation.
- */
-typedef status_t (*platform_alloc_msi_block_t)(uint requested_irqs,
-                                               bool can_target_64bit,
-                                               bool is_msix,
-                                               pcie_msi_block_t* out_block);
-
-/**
- * Callback definition used by the bus driver to return a block of MSI IRQs
- * previously allocated with a call to a platform_alloc_msi_block_t
- * implementation to the platform pool.
- *
- * @param block A pointer to the block to be returned.
- */
-typedef void (*platform_free_msi_block_t)(pcie_msi_block_t* block);
-
-/**
- * Callback definition used for platform registration of MSI handlers.
- *
- * @param block A pointer to a block of MSIs allocated using a platform supplied
- *        platform_alloc_msi_block_t callback.
- * @param msi_id The ID (indexed from 0) with the block of MSIs to register a
- *        handler for.
- * @param handler A pointer to the handler to register, or NULL to unregister.
- * @param ctx A context pointer to be supplied when the handler is invoked.
- */
-typedef void (*platform_register_msi_handler_t)(const pcie_msi_block_t* block,
-                                                uint                    msi_id,
-                                                int_handler             handler,
-                                                void*                   ctx);
-
-/**
- * Callback definition used for platform masking/unmaskingof MSI handlers.
- *
- * @param block A pointer to a block of MSIs allocated using a platform supplied
- *        platform_alloc_msi_block_t callback.
- * @param msi_id The ID (indexed from 0) with the block of MSIs to mask or
- *        unmask.
- * @param mask If true, mask the handler.  Otherwise, unmask it.
- */
-typedef void (*platform_mask_unmask_msi_t)(const pcie_msi_block_t* block,
-                                           uint                    msi_id,
-                                           bool                    mask);
-
-
-/**
- * A struct used to describe the resources to be used by the PCIe subsystem for
- * discovering and configuring PCIe controllers, bridges and devices.
- */
-typedef struct pcie_init_info {
-    /**
-     * A pointer to an array of pcie_ecam_range_t structures which describe the
-     * ECAM regions available to the subsytem.  The windows must...
-     * -# Be listed in ascending bus_start order.
-     * -# Contain a range which describes Bus #0
-     * -# Consist of non-overlapping [bus_start, bus_end] ranges.
-     * -# Have a sufficiently sized IO range to contain the configuration
-     *    structures for the given bus range.  Each bus requries 4KB * 8
-     *    functions * 32 devices worth of config space.
-     */
-    const pcie_ecam_range_t* ecam_windows;
-
-    /** The number of elements in the ecam_windows array. */
-    size_t ecam_window_count;
-
-    /** Platform-specific legacy IRQ remapping.  @see platform_legacy_irq_swizzle_t */
-    platform_legacy_irq_swizzle_t legacy_irq_swizzle;
-
-    /**
-     * Routines for allocating and freeing blocks of IRQs for use with MSI or
-     * MSI-X, and for registering handlers for IRQs within blocks.  May be NULL
-     * if the platform's interrupts controller is not compatible with MSI.
-     * @note Either all of these routines must be provided, or none of them.
-     */
-    platform_alloc_msi_block_t      alloc_msi_block;
-    platform_free_msi_block_t       free_msi_block;
-    platform_register_msi_handler_t register_msi_handler;
-
-    /**
-     * Routine for masking/unmasking MSI IRQ handlers.  May be NULL if the
-     * platform is incapable of masking individual MSI handlers.
-     */
-    platform_mask_unmask_msi_t mask_unmask_msi;
-} pcie_init_info_t;
-
 /*
  * Shutdown the PCIe subsystem
  */
 void pcie_shutdown(void);
 
-/* Returns a pointer to reference init information for the platform.
- * Any NULL fields may be overriden. */
-void platform_pcie_init_info(pcie_init_info_t *out);
-
 __END_CDECLS
+
+#ifdef __cplusplus
+
+#include <mxtl/ref_counted.h>
+
+class PciePlatformInterface {
+public:
+    using SwizzleMapEntry = uint32_t[PCIE_MAX_LEGACY_IRQ_PINS];
+
+    virtual ~PciePlatformInterface() { }
+
+    /**
+     * Methods used to determine if a platform supports MSI or not, and if so,
+     * whether or not the platform can mask individual MSI vectors at the
+     * platform level.
+     *
+     * If the platform supports MSI, it must supply valid implementations of
+     * Alloc/FreeMsiBlock, and RegisterMsiHandler.
+     *
+     * If the platform supports MSI masking, it must supply a valid
+     * implementation of MaskUnmaskMsi.
+     */
+    bool supports_msi() const { return supports_msi_; }
+    bool supports_msi_masking() const { return supports_msi_masking_; }
+
+    /**
+     * Implemented by platforms which can have dynamic swizzle maps.
+     *
+     * TODO(johngro) : Get rid of this, it really does not belong in the
+     * platform interface.  Legacy swizzling can happen any time an interrupt comes
+     * in through a root complex (or root controller in the case of PCI).
+     * Swizzling behavior should be a property of these roots (not a global
+     * property of the platform) and should be supplied by the platform at the
+     * time it adds a root to the bus driver.
+     */
+    virtual status_t AddLegacySwizzle(uint bus_id,
+                                      uint dev_id,
+                                      uint func_id,
+                                      const SwizzleMapEntry& map_entry) {
+        return ERR_NOT_SUPPORTED;
+    }
+
+    /**
+     * Method used for platform-specific legacy IRQ remapping.  All platforms
+     * must implement this.
+     *
+     * @param bus_id  The bus ID of the pcie device/bridge to swizzle for.
+     * @param dev_id  The device ID of the pcie device/bridge to swizzle for.
+     * @param func_id The function ID of the pcie device/bridge to swizzle for.
+     * @param pin     The pin we want to swizzle
+     * @param irq     An output pointer for what IRQ this pin goes to
+     *
+     * @return NO_ERROR if we successfully swizzled
+     * @return ERR_NOT_FOUND if we did not know how to swizzle this pin
+     */
+    virtual status_t LegacyIrqSwizzle(uint bus_id,
+                                      uint dev_id,
+                                      uint func_id,
+                                      uint pin,
+                                      uint *irq) = 0;
+
+    /**
+     * Method used for platform allocation of blocks of MSI and MSI-X compatible
+     * IRQ targets.
+     *
+     * @param requested_irqs The total number of irqs being requested.
+     * @param can_target_64bit True if the target address of the MSI block can
+     *        be located past the 4GB boundary.  False if the target address must be
+     *        in low memory.
+     * @param is_msix True if this request is for an MSI-X compatible block.  False
+     *        for plain old MSI.
+     * @param out_block A pointer to the allocation bookkeeping to be filled out
+     *        upon successful allocation of the reqested block of IRQs.
+     *
+     * @return A status code indicating the success or failure of the operation.
+     */
+    virtual status_t AllocMsiBlock(uint requested_irqs,
+                                   bool can_target_64bit,
+                                   bool is_msix,
+                                   pcie_msi_block_t* out_block) {
+        // Bus driver code should not be calling this if the platform does not
+        // indicate support for MSI.
+        DEBUG_ASSERT(false);
+        return ERR_NOT_SUPPORTED;
+    }
+
+    /**
+     * Method used by the bus driver to return a block of MSI IRQs previously
+     * allocated with a call to a AllocMsiBlock implementation to the platform
+     * pool.
+     *
+     * @param block A pointer to the block to be returned.
+     */
+    virtual void FreeMsiBlock(pcie_msi_block_t* block) {
+        // Bus driver code should not be calling this if the platform does not
+        // indicate support for MSI.
+        DEBUG_ASSERT(false);
+    }
+
+    /**
+     * Method used for registration of MSI handlers with the platform.
+     *
+     * @param block A pointer to a block of MSIs allocated using a platform supplied
+     *        platform_alloc_msi_block_t callback.
+     * @param msi_id The ID (indexed from 0) with the block of MSIs to register a
+     *        handler for.
+     * @param handler A pointer to the handler to register, or NULL to unregister.
+     * @param ctx A context pointer to be supplied when the handler is invoked.
+     */
+    virtual void RegisterMsiHandler(const pcie_msi_block_t* block,
+                                    uint                    msi_id,
+                                    int_handler             handler,
+                                    void*                   ctx) {
+        // Bus driver code should not be calling this if the platform does not
+        // indicate support for MSI.
+        DEBUG_ASSERT(false);
+    }
+
+    /**
+     * Method used for masking/unmaskingof MSI handlers at the platform level.
+     *
+     * @param block A pointer to a block of MSIs allocated using a platform supplied
+     *        platform_alloc_msi_block_t callback.
+     * @param msi_id The ID (indexed from 0) with the block of MSIs to mask or
+     *        unmask.
+     * @param mask If true, mask the handler.  Otherwise, unmask it.
+     */
+    virtual void MaskUnmaskMsi(const pcie_msi_block_t* block,
+                               uint                    msi_id,
+                               bool                    mask) {
+        // Bus driver code should not be calling this if the platform does not
+        // indicate support for MSI masking.
+        DEBUG_ASSERT(false);
+    }
+
+protected:
+    enum class MsiSupportLevel { NONE, MSI, MSI_WITH_MASKING };
+    explicit PciePlatformInterface(MsiSupportLevel msi_support)
+        : supports_msi_((msi_support == MsiSupportLevel::MSI) ||
+                        (msi_support == MsiSupportLevel::MSI_WITH_MASKING)),
+          supports_msi_masking_(msi_support == MsiSupportLevel::MSI_WITH_MASKING) { }
+
+private:
+    const bool supports_msi_;
+    const bool supports_msi_masking_;
+};
+
+#endif  // __cplusplus

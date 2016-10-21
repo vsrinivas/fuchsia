@@ -385,10 +385,10 @@ static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* 
     LSPCI_PRINTF("Bridge Control    : 0x%04x\n", pcie_read16(&bcfg->bridge_control));
 }
 
-static void dump_pcie_raw_config(uint amt, void* kvaddr, uint64_t phys)
+static void dump_pcie_raw_config(uint amt, void* kvaddr, paddr_t phys)
 {
     printf("%u bytes of raw config (kvaddr %p; phys %#" PRIx64 ")\n",
-           amt, kvaddr, phys);
+           amt, kvaddr, static_cast<uint64_t>(phys));
     hexdump8(kvaddr, amt);
 }
 
@@ -564,9 +564,9 @@ static int cmd_lspci(int argc, const cmd_args *argv)
         (params.dev_id  != WILDCARD_ID) &&
         (params.func_id != WILDCARD_ID)) {
         pcie_config_t* cfg;
-        uint64_t cfg_phys;
+        paddr_t cfg_phys;
 
-        cfg = bus_drv->GetConfig(&cfg_phys, params.bus_id, params.dev_id, params.func_id);
+        cfg = bus_drv->GetConfig(params.bus_id, params.dev_id, params.func_id, &cfg_phys);
         if (!cfg) {
             printf("Config space for %02x:%02x.%01x not mapped by bus driver!\n",
                    params.bus_id, params.dev_id, params.func_id);

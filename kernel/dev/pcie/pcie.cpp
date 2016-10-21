@@ -361,13 +361,10 @@ static status_t pcie_scan_init_device(const mxtl::RefPtr<pcie_device_state_t>& d
     do {
         AutoLock dev_lock(dev->dev_lock);
 
-        uint64_t cfg_phys;
-        pcie_config_t* cfg = dev->bus_drv.GetConfig(&cfg_phys, bus_id, dev_id, func_id);
+        pcie_config_t* cfg = dev->bus_drv.GetConfig(bus_id, dev_id, func_id, &dev->cfg_phys);
         DEBUG_ASSERT(cfg);
-        DEBUG_ASSERT(cfg_phys <= mxtl::numeric_limits<paddr_t>::max());
 
         dev->cfg        = cfg;
-        dev->cfg_phys   = static_cast<paddr_t>(cfg_phys);
         dev->vendor_id  = pcie_read16(&cfg->base.vendor_id);
         dev->device_id  = pcie_read16(&cfg->base.device_id);
         dev->class_id   = pcie_read8(&cfg->base.base_class);
@@ -421,7 +418,6 @@ static status_t pcie_scan_init_device(const mxtl::RefPtr<pcie_device_state_t>& d
 
 static void pcie_scan_function(const mxtl::RefPtr<pcie_bridge_state_t>& upstream_bridge,
                                pcie_config_t*                           cfg,
-                               uint64_t                                 cfg_phys,
                                uint                                     dev_id,
                                uint                                     func_id) {
     DEBUG_ASSERT(upstream_bridge && cfg);
@@ -520,9 +516,7 @@ void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
         for (uint func_id = 0; func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE; ++func_id) {
             /* If we can find the config, and it has a valid vendor ID, go ahead
              * and scan it looking for a valid function. */
-            uint64_t cfg_phys;
-            pcie_config_t* cfg = bridge->bus_drv.GetConfig(&cfg_phys,
-                                                           bridge->managed_bus_id,
+            pcie_config_t* cfg = bridge->bus_drv.GetConfig(bridge->managed_bus_id,
                                                            dev_id,
                                                            func_id);
             bool good_device = cfg && (pcie_read16(&cfg->base.vendor_id) != PCIE_INVALID_VENDOR_ID);
@@ -535,7 +529,7 @@ void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge) {
 
                 auto downstream = bridge->GetDownstream(ndx);
                 if (!downstream) {
-                    pcie_scan_function(bridge, cfg, cfg_phys, dev_id, func_id);
+                    pcie_scan_function(bridge, cfg, dev_id, func_id);
                 } else {
                     auto downstream_bridge = downstream->DowncastToBridge();
                     if (downstream_bridge)
@@ -992,14 +986,6 @@ status_t pcie_claim_and_start_device(const mxtl::RefPtr<pcie_device_state_t>& de
     /* No special actions need to be taken if we fail to start the device.  It
      * will automatically have been unclaimed for us. */
     return pcie_start_device(dev);
-}
-
-status_t pcie_init(const pcie_init_info_t* init_info) {
-    auto bus_drv = PcieBusDriver::GetDriver();
-    if (bus_drv == nullptr)
-        return ERR_BAD_STATE;
-
-    return bus_drv->Start(init_info);
 }
 
 /*

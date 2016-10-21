@@ -298,7 +298,9 @@ static inline bool pcie_mask_unmask_msi_irq_locked(pcie_device_state_t& dev,
 
     /* Internal code should not be calling this function if they want to mask
      * the interrupt, but it is not possible to do so. */
-    DEBUG_ASSERT(!mask || dev.bus_drv.platform().mask_unmask_msi || dev.irq.msi.pvm_mask_reg);
+    DEBUG_ASSERT(!mask ||
+                 dev.bus_drv.platform().supports_msi_masking() ||
+                 dev.irq.msi.pvm_mask_reg);
 
     /* If we can mask at the PCI device level, do so. */
     if (dev.irq.msi.pvm_mask_reg) {
@@ -313,8 +315,8 @@ static inline bool pcie_mask_unmask_msi_irq_locked(pcie_device_state_t& dev,
     /* If we can mask at the platform interrupt controller level, do so. */
     DEBUG_ASSERT(dev.irq.msi.irq_block.allocated);
     DEBUG_ASSERT(irq_id < dev.irq.msi.irq_block.num_irq);
-    if (dev.bus_drv.platform().mask_unmask_msi)
-        dev.bus_drv.platform().mask_unmask_msi(&dev.irq.msi.irq_block, irq_id, mask);
+    if (dev.bus_drv.platform().supports_msi_masking())
+        dev.bus_drv.platform().MaskUnmaskMsi(&dev.irq.msi.irq_block, irq_id, mask);
 
     bool ret = hstate->masked;
     hstate->masked = mask;
@@ -332,7 +334,7 @@ static inline status_t pcie_mask_unmask_msi_irq(const mxtl::RefPtr<pcie_device_s
     /* If a mask is being requested, and we cannot mask at either the platform
      * interrupt controller or the PCI device level, tell the caller that the
      * operation is unsupported. */
-    if (mask && !dev->bus_drv.platform().mask_unmask_msi && !dev->irq.msi.pvm_mask_reg)
+    if (mask && !dev->bus_drv.platform().supports_msi_masking() && !dev->irq.msi.pvm_mask_reg)
         return ERR_NOT_SUPPORTED;
 
     DEBUG_ASSERT(dev->irq.handlers);
@@ -396,7 +398,7 @@ static enum handler_return pcie_msi_irq_handler(void *arg) {
 
     /* Mask our IRQ if we can. */
     bool was_masked;
-    if (dev->bus_drv.platform().mask_unmask_msi || dev->irq.msi.pvm_mask_reg) {
+    if (dev->bus_drv.platform().supports_msi_masking() || dev->irq.msi.pvm_mask_reg) {
         was_masked = pcie_mask_unmask_msi_irq_locked(*dev, hstate->pci_irq_id, true);
     } else {
         DEBUG_ASSERT(!hstate->masked);
@@ -427,23 +429,19 @@ static void pcie_free_msi_block(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     if (!dev->irq.msi.irq_block.allocated)
         return;
 
-    DEBUG_ASSERT(bus_drv.platform().register_msi_handler);
-    DEBUG_ASSERT(bus_drv.platform().free_msi_block);
+    DEBUG_ASSERT(bus_drv.platform().supports_msi());
 
     /* Mask the IRQ at the platform interrupt controller level if we can, and
      * unregister any registered handler. */
     const pcie_msi_block_t* b = &dev->irq.msi.irq_block;
     for (uint i = 0; i < b->num_irq; i++) {
-        if (bus_drv.platform().mask_unmask_msi)
-            bus_drv.platform().mask_unmask_msi(b, i, true);
-
-        bus_drv.platform().register_msi_handler(b, i, NULL, NULL);
+        if (bus_drv.platform().supports_msi_masking())
+            bus_drv.platform().MaskUnmaskMsi(b, i, true);
+        bus_drv.platform().RegisterMsiHandler(b, i, NULL, NULL);
     }
 
-    DEBUG_ASSERT(bus_drv.platform().free_msi_block);
-
     /* Give the block of IRQs back to the plaform */
-    bus_drv.platform().free_msi_block(&dev->irq.msi.irq_block);
+    bus_drv.platform().FreeMsiBlock(&dev->irq.msi.irq_block);
     DEBUG_ASSERT(!dev->irq.msi.irq_block.allocated);
 }
 
@@ -489,19 +487,16 @@ static status_t pcie_enter_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>&
     /* We cannot go into MSI mode if we don't support MSI at all, or we
      * don't support the number of IRQs requested */
     if (!dev->irq.msi.cfg                         ||
-        !dev->bus_drv.platform().alloc_msi_block  ||
+        !dev->bus_drv.platform().supports_msi()    ||
         (requested_irqs > dev->irq.msi.max_irqs))
         return ERR_NOT_SUPPORTED;
 
-    DEBUG_ASSERT(dev->bus_drv.platform().free_msi_block &&
-                 dev->bus_drv.platform().register_msi_handler);
-
     /* Ask the platform for a chunk of MSI compatible IRQs */
     DEBUG_ASSERT(!dev->irq.msi.irq_block.allocated);
-    res = dev->bus_drv.platform().alloc_msi_block(requested_irqs,
-                                                  dev->irq.msi.is64bit,
-                                                  false,  /* is_msix == false */
-                                                  &dev->irq.msi.irq_block);
+    res = dev->bus_drv.platform().AllocMsiBlock(requested_irqs,
+                                                dev->irq.msi.is64bit,
+                                                false,  /* is_msix == false */
+                                                &dev->irq.msi.irq_block);
     if (res != NO_ERROR) {
         LTRACEF("Failed to allocate a block of %u MSI IRQs for device "
                 "%02x:%02x.%01x (res %d)\n",
@@ -535,10 +530,10 @@ static status_t pcie_enter_msi_irq_mode(const mxtl::RefPtr<pcie_device_state_t>&
     /* Register each IRQ with the dispatcher */
     DEBUG_ASSERT(dev->irq.handler_count <= dev->irq.msi.irq_block.num_irq);
     for (uint i = 0; i < dev->irq.handler_count; ++i) {
-        dev->bus_drv.platform().register_msi_handler(&dev->irq.msi.irq_block,
-                                                     i,
-                                                     pcie_msi_irq_handler,
-                                                     dev->irq.handlers + i);
+        dev->bus_drv.platform().RegisterMsiHandler(&dev->irq.msi.irq_block,
+                                                   i,
+                                                   pcie_msi_irq_handler,
+                                                   dev->irq.handlers + i);
     }
 
     /* Enable MSI at the top level */
@@ -576,9 +571,9 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t& de
         break;
 
     case PCIE_IRQ_MODE_MSI:
-        /* If the platorm cannot allocate MSI blocks, then we don't support MSI,
+        /* If the platform does not support MSI, then we don't support MSI,
          * even if the device does. */
-        if (!bus_drv.platform().alloc_msi_block)
+        if (!bus_drv.platform().supports_msi())
             return ERR_NOT_SUPPORTED;
 
         /* If the device supports MSI, it will have a pointer to the control
@@ -591,13 +586,13 @@ status_t pcie_query_irq_mode_capabilities_internal(const pcie_device_state_t& de
          * allocation. */
         out_caps->max_irqs = dev.irq.msi.max_irqs;
         out_caps->per_vector_masking_supported = (dev.irq.msi.pvm_mask_reg != NULL)
-                                               || (bus_drv.platform().mask_unmask_msi != NULL);
+                                               || (bus_drv.platform().supports_msi_masking());
         break;
 
     case PCIE_IRQ_MODE_MSI_X:
-        /* If the platorm cannot allocate MSI blocks, then we don't support
-         * MSI-X, even if the device does. */
-        if (!bus_drv.platform().alloc_msi_block)
+        /* If the platform does not support MSI, then we don't support MSI,
+         * even if the device does. */
+        if (!bus_drv.platform().supports_msi())
             return ERR_NOT_SUPPORTED;
 
         /* TODO(johngro) : finish MSI-X implementation. */
@@ -864,38 +859,6 @@ status_t pcie_init_device_irq_state(const mxtl::RefPtr<pcie_device_state_t>& dev
             return ERR_NO_RESOURCES;
         }
     }
-
-    return NO_ERROR;
-}
-
-status_t PcieBusDriver::InitIrqs(const pcie_init_info_t* init_info) {
-    DEBUG_ASSERT(init_info);
-
-    if (platform_.legacy_irq_swizzle) {
-        TRACEF("Failed to initialize PCIe IRQs; IRQs already initialized\n");
-        return ERR_BAD_STATE;
-    }
-
-    if (!init_info->legacy_irq_swizzle) {
-        TRACEF("No platform specific legacy IRQ swizzle supplied!\n");
-        return ERR_INVALID_ARGS;
-    }
-
-    if (((init_info->alloc_msi_block == NULL) != (init_info->free_msi_block == NULL)) ||
-        ((init_info->alloc_msi_block == NULL) != (init_info->register_msi_handler == NULL))) {
-        TRACEF("Must provide all of the alloc/free/register msi callbacks, or none of them.  "
-               "(alloc == %p, free == %p, register == %p)\n",
-               init_info->alloc_msi_block,
-               init_info->free_msi_block,
-               init_info->register_msi_handler);
-        return ERR_INVALID_ARGS;
-    }
-
-    platform_.legacy_irq_swizzle   = init_info->legacy_irq_swizzle;
-    platform_.alloc_msi_block      = init_info->alloc_msi_block;
-    platform_.free_msi_block       = init_info->free_msi_block;
-    platform_.register_msi_handler = init_info->register_msi_handler;
-    platform_.mask_unmask_msi      = init_info->mask_unmask_msi;
 
     return NO_ERROR;
 }

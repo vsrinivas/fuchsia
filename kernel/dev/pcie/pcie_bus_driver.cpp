@@ -38,9 +38,7 @@ constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 mxtl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
 Mutex PcieBusDriver::driver_lock_;
 
-PcieBusDriver::PcieBusDriver() {
-}
-
+PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
     /* Force shutdown any devices which happen to still be running. */
     ForeachDevice([](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) -> bool {
@@ -61,27 +59,27 @@ PcieBusDriver::~PcieBusDriver() {
     // Release the region bookkeeping memory.
     region_bookkeeping_.reset();
 
-    // Free the ECAM window bookkeeping memory, unmapping anything we have
-    // mapped into kernel VM as we go.
-    if (ecam_windows_) {
-        DEBUG_ASSERT(aspace_);
-
-        for (size_t i = 0; i < ecam_window_count_; ++i) {
-            auto& window = ecam_windows_[i];
-            if (window.vaddr)
-                vmm_free_region(aspace_, (vaddr_t)window.vaddr);
-        }
-
-        ecam_windows_ = nullptr;
+    // Unmap and free all of our mapped ECAM regions.
+    {
+        AutoLock ecam_region_lock(ecam_region_lock_);
+        ecam_regions_.clear();
     }
 }
 
-status_t PcieBusDriver::Start(const pcie_init_info_t* init_info) {
-    status_t status = NO_ERROR;
-    AllocChecker ac;
-
-    if (!init_info) {
-        TRACEF("Failed to start PCIe bus driver; no init info provided");
+status_t PcieBusDriver::AddRoot(uint bus_id) {
+    // TODO(johngro): Right now this is just an interface placeholder.  We
+    // currently assume that there is only one root for the system ever, and
+    // that this single root will always manage bus ID #0.
+    //
+    // Internally, roots need to be refactored so that they are no longer
+    // modeled as bridge devices, and so that there can be more than one of
+    // them.  Once this has happened, we should be able to add multiple roots to
+    // the system and remove the singleton root_complex_ member of the
+    // PcieBusDriver class.  At that point, this method can check for a
+    // bus ID conflict, then instantiate a new root, add it to the collection of
+    // roots, and finally trigger the scanning process for it.
+    if (bus_id != 0) {
+        TRACEF("PCIe bus driver currently only supports adding bus ID #0 as the root bus\n");
         return ERR_INVALID_ARGS;
     }
 
@@ -90,176 +88,10 @@ status_t PcieBusDriver::Start(const pcie_init_info_t* init_info) {
         return ERR_BAD_STATE;
     }
 
-    /* Initialize our state */
-    status = InitIrqs(init_info);
-    if (status != NO_ERROR) {
-        goto bailout;
-    }
-
-    /* Sanity check the init info provided by the platform.  If anything goes
-     * wrong in this section, the error will be INVALID_ARGS, so just set the
-     * status to that for now to save typing. */
-    status = ERR_INVALID_ARGS;
-
-    /* Start by checking the ECAM window requirements */
-    if (!init_info->ecam_windows) {
-        TRACEF("Invalid ecam_windows pointer (%p)!\n", init_info->ecam_windows);
-        goto bailout;
-    }
-
-    if (!init_info->ecam_window_count) {
-        TRACEF("Invalid ecam_window_count (%zu)!\n", init_info->ecam_window_count);
-        goto bailout;
-    }
-
-    if (!init_info->ecam_windows[0].bus_start == 0) {
-        TRACEF("First ECAM window provided by platform does not include bus 0 (bus_start = %u)\n",
-                init_info->ecam_windows[0].bus_start);
-        goto bailout;
-    }
-
-    for (size_t i = 0; i < init_info->ecam_window_count; ++i) {
-        const pcie_ecam_range_t* window = init_info->ecam_windows + i;
-        if (window->bus_start > window->bus_end) {
-            TRACEF("First ECAM window[%zu]'s bus_start exceeds bus_end (%u > %u)\n",
-                    i, window->bus_start, window->bus_end);
-            goto bailout;
-        }
-
-        if (window->io_range.size < ((window->bus_end - window->bus_start + 1u) *
-                                     PCIE_ECAM_BYTE_PER_BUS)) {
-            TRACEF("ECAM window[%zu]'s size is too small to manage %u buses (%zu < %zu)\n",
-                    i,
-                    (window->bus_end - window->bus_start + 1u),
-                    (size_t)(window->io_range.size),
-                    (size_t)((window->bus_end - window->bus_start + 1u) * PCIE_ECAM_BYTE_PER_BUS));
-            goto bailout;
-        }
-
-        if (i) {
-            const pcie_ecam_range_t* prev = init_info->ecam_windows + i - 1;
-
-            if (window->bus_start <= prev->bus_end) {
-                TRACEF("ECAM windows not in strictly monotonically increasing "
-                       "bus region order.  (window[%zu].start <= window[%zu].end; %u <= %u)\n",
-                        i, i - 1,
-                        window->bus_start, prev->bus_end);
-                goto bailout;
-            }
-        }
-    }
-
-    /* Stash the ECAM window info and map the ECAM windows into the bus driver's
-     * address space so we can access config space. */
-    ecam_window_count_ = init_info->ecam_window_count;
-    ecam_windows_.reset(new (&ac) KmapEcamRange[ecam_window_count_]);
-    if (!ac.check()) {
-        TRACEF("Failed to initialize PCIe bus driver; could not allocate %zu "
-               "bytes for ECAM window state\n",
-               ecam_window_count_ * sizeof(ecam_windows_[0]));
-        status = ERR_NO_MEMORY;
-        goto bailout;
-    }
-
-    /* TODO(johngro) : Don't grab a reference to the kernel's address space.
-     * What we want is a reference to our current address space (The one that
-     * the bus driver will run in). */
-    DEBUG_ASSERT(!aspace_);
-    aspace_ = vmm_get_kernel_aspace();
-    if (aspace_ == NULL) {
-        TRACEF("Failed to initialize PCIe bus driver; could not obtain handle "
-               "to kernel address space\n");
-        status = ERR_INTERNAL;
-        goto bailout;
-    }
-
-    for (size_t i = 0; i < ecam_window_count_; ++i) {
-        auto& window = ecam_windows_[i];
-        auto& ecam   = window.ecam;
-        char name_buf[32];
-
-        ecam = init_info->ecam_windows[i];
-
-        if ((ecam.io_range.size     & ((size_t)PAGE_SIZE   - 1)) ||
-            (ecam.io_range.bus_addr & ((uint64_t)PAGE_SIZE - 1))) {
-            TRACEF("Failed to initialize PCIe bus driver; Invalid ECAM window "
-                   "%#zx @ %#" PRIx64 ").  Windows must be page aligned and a "
-                   "multiple of pages in length.\n",
-                   ecam.io_range.size, ecam.io_range.bus_addr);
-            status = ERR_INVALID_ARGS;
-            goto bailout;
-        }
-
-        snprintf(name_buf, sizeof(name_buf), "pcie_cfg%zu", i);
-        name_buf[sizeof(name_buf) - 1] = 0;
-
-        DEBUG_ASSERT(ecam.io_range.bus_addr <= mxtl::numeric_limits<paddr_t>::max());
-
-        status = vmm_alloc_physical(
-                aspace_,
-                name_buf,
-                ecam.io_range.size,
-                &window.vaddr,
-                PAGE_SIZE_SHIFT,
-                0 /* min alloc gap */,
-                static_cast<paddr_t>(ecam.io_range.bus_addr),
-                0 /* vmm flags */,
-                ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
-                    ARCH_MMU_FLAG_PERM_WRITE);
-        if (status != NO_ERROR) {
-            TRACEF("Failed to initialize PCIe bus driver; Failed to map ECAM window "
-                   "(%#zx @ %#" PRIx64 ").  Status = %d.\n",
-                   ecam.io_range.size, ecam.io_range.bus_addr, status);
-            goto bailout;
-        }
-    }
-
     /* Scan the bus and start up any drivers who claim devices we discover */
     ScanAndStartDevices();
     started_ = true;
-
-bailout:
-    if (status != NO_ERROR)
-        PcieBusDriver::ShutdownDriver();
-
-    return status;
-}
-
-pcie_config_t* PcieBusDriver::GetConfig(uint64_t* cfg_phys,
-                                        uint bus_id,
-                                        uint dev_id,
-                                        uint func_id) const {
-    DEBUG_ASSERT(bus_id  < PCIE_MAX_BUSSES);
-    DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
-    DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
-
-    for (size_t i = 0; i < ecam_window_count_; ++i) {
-        const auto& window = ecam_windows_[i];
-        const auto& ecam   = window.ecam;
-
-        if ((bus_id >= ecam.bus_start) && (bus_id <= ecam.bus_end)) {
-            size_t offset;
-
-            bus_id -= ecam.bus_start;
-            offset = (((size_t)bus_id)  << 20) |
-                     (((size_t)dev_id)  << 15) |
-                     (((size_t)func_id) << 12);
-
-            DEBUG_ASSERT(window.vaddr);
-            DEBUG_ASSERT(ecam.io_range.size >= PCIE_EXTENDED_CONFIG_SIZE);
-            DEBUG_ASSERT(offset <= (ecam.io_range.size - PCIE_EXTENDED_CONFIG_SIZE));
-
-            if (cfg_phys)
-                *cfg_phys = window.ecam.io_range.bus_addr + offset;
-
-            return reinterpret_cast<pcie_config_t*>(static_cast<uint8_t*>(window.vaddr) + offset);
-        }
-    }
-
-    if (cfg_phys)
-        *cfg_phys = 0;
-
-    return nullptr;
+    return NO_ERROR;
 }
 
 mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetNthDevice(uint32_t index) {
@@ -365,8 +197,7 @@ uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
 
     uint irq;
     __UNUSED status_t status;
-    DEBUG_ASSERT(platform_.legacy_irq_swizzle);
-    status = platform_.legacy_irq_swizzle(dev->bus_id, dev->dev_id, dev->func_id, pin, &irq);
+    status = platform_.LegacyIrqSwizzle(dev->bus_id, dev->dev_id, dev->func_id, pin, &irq);
     DEBUG_ASSERT(status == NO_ERROR);
 
     return irq;
@@ -601,7 +432,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
     }
 }
 
-status_t PcieBusDriver::InitializeDriver() {
+status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
     AutoLock lock(driver_lock_);
 
     if (driver_ != nullptr) {
@@ -610,7 +441,7 @@ status_t PcieBusDriver::InitializeDriver() {
     }
 
     AllocChecker ac;
-    driver_ = mxtl::AdoptRef(new (&ac) PcieBusDriver());
+    driver_ = mxtl::AdoptRef(new (&ac) PcieBusDriver(platform));
     if (!ac.check()) {
         TRACEF("Failed to allocate PCIe bus driver\n");
         return ERR_NO_MEMORY;
@@ -634,10 +465,125 @@ void PcieBusDriver::ShutdownDriver() {
     driver.reset();
 }
 
-static void pcie_driver_init_hook(uint level) {
-    status_t res = PcieBusDriver::InitializeDriver();
-    if (res != NO_ERROR)
-        TRACEF("Failed to initialize PCIe bus driver module! (res = %d)\n", res);
+/*******************************************************************************
+ *
+ *  ECAM support
+ *
+ ******************************************************************************/
+pcie_config_t* PcieBusDriver::GetConfig(uint bus_id,
+                                        uint dev_id,
+                                        uint func_id,
+                                        paddr_t* out_cfg_phys) const {
+    DEBUG_ASSERT(bus_id  < PCIE_MAX_BUSSES);
+    DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
+    DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
+
+    if (out_cfg_phys)
+        *out_cfg_phys = 0;
+
+    // Find the region which would contain this bus_id, if any.
+    // add does not overlap with any already defined regions.
+    AutoLock ecam_region_lock(ecam_region_lock_);
+    auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
+    --iter;
+
+    if (!iter.IsValid())
+        return nullptr;
+
+    if ((bus_id < iter->ecam().bus_start) ||
+        (bus_id > iter->ecam().bus_end))
+        return nullptr;
+
+    bus_id -= iter->ecam().bus_start;
+    size_t offset = (static_cast<size_t>(bus_id)  << 20) |
+                    (static_cast<size_t>(dev_id)  << 15) |
+                    (static_cast<size_t>(func_id) << 12);
+
+    if (out_cfg_phys)
+        *out_cfg_phys = iter->ecam().phys_base + offset;
+
+    return reinterpret_cast<pcie_config_t*>(static_cast<uint8_t*>(iter->vaddr()) + offset);
 }
 
-LK_INIT_HOOK(pcie_driver_init, pcie_driver_init_hook, LK_INIT_LEVEL_PLATFORM - 1);
+status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
+    // Sanity check the region first.
+    if (ecam.bus_start > ecam.bus_end)
+        return ERR_INVALID_ARGS;
+
+    size_t bus_count = static_cast<size_t>(ecam.bus_end) - ecam.bus_start + 1u;
+    if (ecam.size != (PCIE_ECAM_BYTE_PER_BUS * bus_count))
+        return ERR_INVALID_ARGS;
+
+    // Grab the ECAM lock and make certain that the region we have been asked to
+    // add does not overlap with any already defined regions.
+    AutoLock ecam_region_lock(ecam_region_lock_);
+    auto iter = ecam_regions_.upper_bound(ecam.bus_start);
+    --iter;
+
+    // If iter is valid, it now points to the region with the largest bus_start
+    // which is <= ecam.bus_start.  If any region overlaps with the region we
+    // are attempting to add, it will be this one.
+    if (iter.IsValid()) {
+        uint8_t iter_start = iter->ecam().bus_start;
+        uint8_t iter_end   = iter->ecam().bus_end;
+        if (((iter_start >= ecam.bus_start) && (iter_start <= ecam.bus_end)) ||
+            ((ecam.bus_start >= iter_start) && (ecam.bus_start <= iter_end)))
+            return ERR_BAD_STATE;
+    }
+
+    // Looks good.  Attempt to allocate and map this ECAM region.
+    AllocChecker ac;
+    mxtl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
+    if (!ac.check()) {
+        TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",
+               ecam.bus_start, ecam.bus_end);
+        return ERR_NO_MEMORY;
+    }
+
+    status_t res = region->MapEcam();
+    if (res != NO_ERROR) {
+        TRACEF("Failed to map ECAM region for bus range [0x%02x, 0x%02x]\n",
+               ecam.bus_start, ecam.bus_end);
+        return res;
+    }
+
+    // Everything checks out.  Add the new region to our set of regions and we are done.
+    ecam_regions_.insert(mxtl::move(region));
+    return NO_ERROR;
+}
+
+PcieBusDriver::MappedEcamRegion::~MappedEcamRegion() {
+    if (vaddr_ != nullptr) {
+        auto kernel_aspace = vmm_get_kernel_aspace();
+        DEBUG_ASSERT(kernel_aspace != nullptr);
+        vmm_free_region(kernel_aspace, (vaddr_t)vaddr_);
+    }
+}
+
+status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
+    DEBUG_ASSERT(ecam_.bus_start <= ecam_.bus_end);
+    DEBUG_ASSERT((ecam_.size % PCIE_ECAM_BYTE_PER_BUS) == 0);
+    DEBUG_ASSERT((ecam_.size / PCIE_ECAM_BYTE_PER_BUS) ==
+                 (static_cast<size_t>(ecam_.bus_end) - ecam_.bus_start + 1u));
+
+    if (vaddr_ != nullptr)
+        return ERR_BAD_STATE;
+
+    auto kernel_aspace = vmm_get_kernel_aspace();
+    DEBUG_ASSERT(kernel_aspace != nullptr);
+
+    char name_buf[32];
+    snprintf(name_buf, sizeof(name_buf), "pcie_cfg_%02x_%02x", ecam_.bus_start, ecam_.bus_end);
+
+    return vmm_alloc_physical(kernel_aspace,
+                              name_buf,
+                              ecam_.size,
+                              &vaddr_,
+                              PAGE_SIZE_SHIFT,
+                              0 /* min alloc gap */,
+                              ecam_.phys_base,
+                              0 /* vmm flags */,
+                              ARCH_MMU_FLAG_UNCACHED_DEVICE |
+                              ARCH_MMU_FLAG_PERM_READ |
+                              ARCH_MMU_FLAG_PERM_WRITE);
+}

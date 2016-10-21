@@ -11,27 +11,75 @@
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
+#include <kernel/mutex.h>
 #include <lk/init.h>
+#include <magenta/syscalls/pci.h>
+#include <string.h>
 #include <trace.h>
 
 #include "platform_p.h"
 
-extern "C" {
+class X86PciePlatformSupport : public PciePlatformInterface {
+public:
+    X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) {
+        for (size_t dev = 0; dev < countof(swizzle_map_); ++dev)
+            for (size_t func = 0; func < countof(swizzle_map_[dev]); ++func)
+                for (size_t pin = 0; pin < countof(swizzle_map_[dev][func]); ++pin)
+                    swizzle_map_[dev][func][pin] = MX_PCI_NO_IRQ_MAPPING;
+    }
 
-void platform_pcie_init_info(pcie_init_info_t *out)
-{
-    *out = (pcie_init_info_t){
-        .ecam_windows         = NULL,
-        .ecam_window_count    = 0,
-        .legacy_irq_swizzle   = NULL,
-        .alloc_msi_block      = x86_alloc_msi_block,
-        .free_msi_block       = x86_free_msi_block,
-        .register_msi_handler = x86_register_msi_handler,
-        .mask_unmask_msi      = NULL,
-    };
-}
+    status_t AddLegacySwizzle(uint bus_id,
+                              uint dev_id,
+                              uint func_id,
+                              const SwizzleMapEntry& map_entry) override {
+        if ((bus_id != 0) ||
+            (dev_id >= countof(swizzle_map_)) ||
+            (func_id >= countof(swizzle_map_[0])))
+            return ERR_INVALID_ARGS;
 
-}  // extern "C"
+        AutoLock swizzle_lock(swizzle_lock_);
+        static_assert(sizeof(swizzle_map_[dev_id][func_id]) == sizeof(map_entry));
+        memcpy(&swizzle_map_[dev_id][func_id], &map_entry, sizeof(map_entry));
+        return NO_ERROR;
+    }
+
+    status_t LegacyIrqSwizzle(uint bus_id, uint dev_id, uint func_id,
+                              uint pin, uint *irq) override {
+        if ((bus_id  != 0) ||
+            (dev_id  >= countof(swizzle_map_)) ||
+            (func_id >= countof(swizzle_map_[dev_id])) ||
+            (pin     >= countof(swizzle_map_[dev_id][func_id])))
+            return ERR_INVALID_ARGS;
+
+        AutoLock swizzle_lock(swizzle_lock_);
+        *irq = swizzle_map_[dev_id][func_id][pin];
+        return (*irq == MX_PCI_NO_IRQ_MAPPING) ? ERR_NOT_FOUND : NO_ERROR;
+    }
+
+    status_t AllocMsiBlock(uint requested_irqs,
+                           bool can_target_64bit,
+                           bool is_msix,
+                           pcie_msi_block_t* out_block) override {
+        return x86_alloc_msi_block(requested_irqs, can_target_64bit, is_msix, out_block);
+    }
+
+    void FreeMsiBlock(pcie_msi_block_t* block) override {
+        x86_free_msi_block(block);
+    }
+
+    void RegisterMsiHandler(const pcie_msi_block_t* block,
+                            uint                    msi_id,
+                            int_handler             handler,
+                            void*                   ctx) override {
+        x86_register_msi_handler(block, msi_id, handler, ctx);
+    }
+
+private:
+    Mutex swizzle_lock_;
+    SwizzleMapEntry swizzle_map_[PCIE_MAX_DEVICES_PER_BUS][PCIE_MAX_FUNCTIONS_PER_DEVICE];
+};
+
+X86PciePlatformSupport platform_pcie_support;
 
 static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     // If we get to this point, something has gone Extremely Wrong.  Attempt to
@@ -46,16 +94,21 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     ASSERT(res == NO_ERROR);
 }
 
-static void x86_pcie_bus_region_init_hook(uint level) {
-    // Compute the initial set of PIO/MMIO bus regions which PCIe is allowed to
-    // allocate to devices for BAR windows.
-    status_t res;
-    auto pcie = PcieBusDriver::GetDriver();
-    if (pcie == nullptr) {
-        TRACEF("WARNING - No PCIe bus driver present during bus region initialization!\n");
+static void x86_pcie_init_hook(uint level) {
+    // Initialize the bus driver
+    status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
+    if (res != NO_ERROR) {
+        TRACEF("Failed to initialize PCI bus driver (res = %d).  "
+               "PCI will be non-functional.\n", res);
         return;
     }
 
+    auto pcie = PcieBusDriver::GetDriver();
+    DEBUG_ASSERT(pcie != nullptr);
+
+    // Compute the initial set of PIO/MMIO bus regions which PCIe is allowed to
+    // allocate to devices for BAR windows.
+    //
     // TODO(johngro) : do a better job of computing the valid initial PIO
     // regions we are permitted to use.  Right now, we just hardcode it.
     constexpr uint64_t pcie_pio_base = 0x8000;
@@ -117,6 +170,6 @@ static void x86_pcie_bus_region_init_hook(uint level) {
     }
 }
 
-LK_INIT_HOOK(x86_pcie_bus_region_init, x86_pcie_bus_region_init_hook, LK_INIT_LEVEL_PLATFORM);
+LK_INIT_HOOK(x86_pcie_init, x86_pcie_init_hook, LK_INIT_LEVEL_PLATFORM);
 
 #endif  // WITH_DEV_PCIE

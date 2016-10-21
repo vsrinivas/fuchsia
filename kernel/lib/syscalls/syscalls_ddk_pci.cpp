@@ -24,6 +24,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
+#include <mxtl/limits.h>
 
 #include "syscalls_priv.h"
 
@@ -48,35 +49,6 @@ static inline void shutdown_early_init_console() { }
 #include <dev/pcie_bus_driver.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
-
-// Lookup routine for IRQ routing for PCIe
-static uint32_t pcie_root_irq_map[PCIE_MAX_DEVICES_PER_BUS][PCIE_MAX_FUNCTIONS_PER_DEVICE][PCIE_MAX_LEGACY_IRQ_PINS];
-static status_t pcie_irq_swizzle_from_table(uint bus_id,
-                                            uint dev_id,
-                                            uint func_id,
-                                            uint pin,
-                                            uint *irq)
-{
-    DEBUG_ASSERT(pin < 4);
-
-    if (bus_id != 0) {
-        return ERR_NOT_FOUND;
-    }
-
-    if ((bus_id  >= PCIE_MAX_BUSSES) ||
-        (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||
-        (func_id >= PCIE_MAX_FUNCTIONS_PER_DEVICE)) {
-        return ERR_INVALID_ARGS;
-    }
-
-    uint32_t val = pcie_root_irq_map[dev_id][func_id][pin];
-    if (val == MX_PCI_NO_IRQ_MAPPING) {
-        return ERR_NOT_FOUND;
-    }
-
-    *irq = val;
-    return NO_ERROR;
-}
 
 mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
 
@@ -136,6 +108,23 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
         }
     }
 
+    // Populate the platform swizzle map.
+    // TODO(johngro) : Kill this.  See the comment in PciePlatformInterface::AddLegacySwizzle;
+    // Legacy swizzling should be a property of a PCIe/PCI root, not the platform.
+    for (uint dev = 0; dev < countof(arg->dev_pin_to_global_irq); ++dev) {
+        for (uint func = 0; func < countof(arg->dev_pin_to_global_irq[dev]); ++func) {
+            constexpr uint bus = 0;
+            const auto& swiz_map_entry = arg->dev_pin_to_global_irq[dev][func];
+            status_t res = pcie->platform().AddLegacySwizzle(bus, dev, func, swiz_map_entry);
+
+            if (res != NO_ERROR) {
+                TRACEF("Failed to add PCIe legacy swizzle map entry for %02x:%02x.%01x (res %d)\n",
+                        bus, dev, func, res);
+                return res;
+            }
+        }
+    }
+
     // TODO(teisenbe): For now assume there is only one ECAM
     if (win_count != 1) {
         return ERR_INVALID_ARGS;
@@ -143,9 +132,6 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
     if (arg->ecam_windows[0].bus_start != 0) {
         return ERR_INVALID_ARGS;
     }
-
-    static_assert(sizeof(pcie_root_irq_map) == sizeof(arg->dev_pin_to_global_irq));
-    memcpy(&pcie_root_irq_map, &arg->dev_pin_to_global_irq, sizeof(pcie_root_irq_map));
 
     if (arg->ecam_windows[0].bus_start > arg->ecam_windows[0].bus_end) {
         return ERR_INVALID_ARGS;
@@ -185,36 +171,36 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_bu
         return ERR_INVALID_ARGS;
     }
 
+    // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
+    ASSERT(arg->ecam_windows[0].base < mxtl::numeric_limits<paddr_t>::max());
+
     // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
     // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
     // ranges.
-    const pcie_ecam_range_t ecam_windows[] = {
-        {
-            .io_range  = {
-                .bus_addr = arg->ecam_windows[0].base,
-                .size = arg->ecam_windows[0].size
-            },
-            .bus_start = 0x00,
-            .bus_end   = static_cast<uint8_t>((arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
-        },
+    status_t ret;
+    const PcieBusDriver::EcamRegion ecam {
+        .phys_base = static_cast<paddr_t>(arg->ecam_windows[0].base),
+        .size      = arg->ecam_windows[0].size,
+        .bus_start = 0x00,
+        .bus_end   = static_cast<uint8_t>((arg->ecam_windows[0].size / PCIE_ECAM_BYTE_PER_BUS) - 1),
     };
 
-    pcie_init_info_t init_info;
-    platform_pcie_init_info(&init_info);
-
-    // Only override fields if they're NULL
-    if (!init_info.ecam_windows) {
-        init_info.ecam_windows = ecam_windows;
-        init_info.ecam_window_count = countof(ecam_windows);
-    }
-    if (!init_info.legacy_irq_swizzle) {
-        init_info.legacy_irq_swizzle = pcie_irq_swizzle_from_table;
+    ret = pcie->AddEcamRegion(ecam);
+    if (ret != NO_ERROR) {
+        TRACEF("Failed to add ECAM region to PCIe bus driver!\n");
+        return ret;
     }
 
-    status_t ret = pcie->Start(&init_info);
-    if (ret == NO_ERROR)
-        shutdown_early_init_console();
-    return ret;
+    // TODO(johngro): Relax this assumption when the bus driver supports
+    // multiple roots.
+    ret = pcie->AddRoot(0u);
+    if (ret != NO_ERROR) {
+        TRACEF("Failed to add root complex to PCIe bus driver!\n");
+        return ret;
+    }
+
+    shutdown_early_init_console();
+    return NO_ERROR;
 }
 
 mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_get_nth_info_t* out_info) {

@@ -11,6 +11,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <mxtl/intrusive_single_list.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -26,35 +27,33 @@ enum class PcieAddrSpace { MMIO, PIO };
 
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
-    struct PlatformMethods {
-        platform_legacy_irq_swizzle_t   legacy_irq_swizzle   = nullptr;
-        platform_alloc_msi_block_t      alloc_msi_block      = nullptr;
-        platform_free_msi_block_t       free_msi_block       = nullptr;
-        platform_register_msi_handler_t register_msi_handler = nullptr;
-        platform_mask_unmask_msi_t      mask_unmask_msi      = nullptr;
-    };
-
     using ForeachCallback = bool (*)(const mxtl::RefPtr<pcie_device_state_t>& dev,
                                      void* ctx, uint level);
 
-     PcieBusDriver();
+    struct EcamRegion {
+        paddr_t phys_base;  // Physical address of the memory mapped config region.
+        size_t  size;       // Size (in bytes) of the memory mapped config region.
+        uint8_t bus_start;  // Inclusive ID of the first bus controlled by this region.
+        uint8_t bus_end;    // Inclusive ID of the last bus controlled by this region.
+    };
+
     ~PcieBusDriver();
 
     const RegionAllocator::RegionPool::RefPtr& region_bookkeeping() const {
         return region_bookkeeping_;
     }
 
-    const PlatformMethods& platform() const { return platform_; }
+    PciePlatformInterface& platform() const { return platform_; }
 
-    status_t Start(const pcie_init_info_t* init_info);
-    pcie_config_t* GetConfig(uint64_t* cfg_phys,
-                             uint bus_id,
+    // Add a section of memory mapped PCI config space to the bus driver,
+    // provided that it does not overlap with any existing ecam regions.
+    status_t AddEcamRegion(const EcamRegion& ecam);
+    pcie_config_t* GetConfig(uint bus_id,
                              uint dev_id,
-                             uint func_id) const;
-    mxtl::RefPtr<pcie_device_state_t> GetNthDevice(uint32_t index);
-    uint MapPinToIrq(const pcie_device_state_t* dev, const pcie_bridge_state_t* upstream);
+                             uint func_id,
+                             paddr_t* out_cfg_phys = nullptr) const;
 
-    /* Address space (PIO and MMIO) allocation managment
+    /* Address space (PIO and MMIO) allocation management
      *
      * Note: Internally, regions held for MMIO address space allocation are
      * tracked in two different allocators; one for <4GB allocations usable by
@@ -79,6 +78,12 @@ public:
         return AddSubtractBusRegion(base, size, aspace, false);
     }
 
+    /* Add a root bus to the driver and attempt to scan it for devices. */
+    status_t AddRoot(uint bus_id);
+
+    mxtl::RefPtr<pcie_device_state_t> GetNthDevice(uint32_t index);
+    uint MapPinToIrq(const pcie_device_state_t* dev, const pcie_bridge_state_t* upstream);
+
     /* Topology related stuff */
     void LinkDeviceToUpstream(pcie_device_state_t& dev, pcie_bridge_state_t& bridge);
     void UnlinkDeviceFromUpstream(pcie_device_state_t& dev);
@@ -100,20 +105,34 @@ public:
         return driver_;
     }
 
-    static status_t InitializeDriver();
+    static status_t InitializeDriver(PciePlatformInterface& platform);
     static void     ShutdownDriver();
 
 private:
     friend struct pcie_bridge_state_t;
     friend struct pcie_device_state_t;
 
-    struct KmapEcamRange {
-        pcie_ecam_range_t ecam;
-        void*             vaddr = nullptr;
-    };
-
     static constexpr size_t REGION_BOOKKEEPING_SLAB_SIZE = 16  << 10;
     static constexpr size_t REGION_BOOKKEEPING_MAX_MEM   = 128 << 10;
+
+    class MappedEcamRegion : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<MappedEcamRegion>> {
+    public:
+        explicit MappedEcamRegion(const EcamRegion& ecam) : ecam_(ecam) { }
+        ~MappedEcamRegion();
+
+        const EcamRegion& ecam() const { return ecam_; }
+        void* vaddr() const { return vaddr_; }
+        status_t MapEcam();
+
+        // WAVLTree properties
+        uint8_t GetKey() const { return ecam_.bus_start; }
+
+    private:
+        EcamRegion ecam_;
+        void*      vaddr_ = nullptr;
+    };
+
+    explicit PcieBusDriver(PciePlatformInterface& platform);
 
     static mxtl::RefPtr<PcieBusDriver> driver_;
     static Mutex driver_lock_;
@@ -127,21 +146,20 @@ private:
                                   PcieAddrSpace aspace, bool add_op);
 
     // IRQ support.  Implementation in pcie_irqs.cpp
-    status_t InitIrqs(const pcie_init_info_t* init_info);
-    void     ShutdownIrqs();
+    void ShutdownIrqs();
 
     bool                                started_ = false;
     Mutex                               bus_topology_lock_;
     Mutex                               bus_rescan_lock_;
     mxtl::RefPtr<pcie_bridge_state_t>   root_complex_;
 
-    vmm_aspace_t*                       aspace_ = nullptr;
-    mxtl::unique_ptr<KmapEcamRange[]>   ecam_windows_;
-    size_t                              ecam_window_count_ = 0;
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
+
+    mutable Mutex                       ecam_region_lock_;
+    mxtl::WAVLTree<uint8_t, mxtl::unique_ptr<MappedEcamRegion>> ecam_regions_;
 
     Mutex                               legacy_irq_list_lock_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;
-    PlatformMethods                     platform_;
+    PciePlatformInterface&              platform_;
 };
 
