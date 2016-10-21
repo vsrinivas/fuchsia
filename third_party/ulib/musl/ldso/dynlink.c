@@ -565,7 +565,12 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     eh = buf;
     if (l < 0)
         return 0;
-    if (l < sizeof *eh || (eh->e_type != ET_DYN && eh->e_type != ET_EXEC))
+    // We cannot support ET_EXEC in the general case, because its fixed
+    // addresses might conflict with where the dynamic linker has already
+    // been loaded.  It's also policy in Fuchsia that all executables are
+    // PIEs to maximize ASLR security benefits.  So don't even try to
+    // handle loading ET_EXEC.
+    if (l < sizeof *eh || eh->e_type != ET_DYN)
         goto noexec;
     phsize = eh->e_phentsize * eh->e_phnum;
     if (phsize > sizeof buf - sizeof *eh) {
@@ -623,12 +628,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         goto error;
     dso->map = map;
     dso->map_len = map_len;
-    /* If the loaded file is not relocatable and the requested address is
-     * not available, then the load operation must fail. */
-    if (eh->e_type != ET_DYN && addr_min && map != (void*)addr_min) {
-        errno = EBUSY;
-        goto error;
-    }
     base = map - addr_min;
     dso->phdr = 0;
     dso->phnum = 0;
