@@ -34,6 +34,7 @@ class IncomingTaskQueue : public ftl::TaskRunner {
 
   // |TaskRunner| implementation:
   void PostTask(ftl::Closure task) override;
+  void PostTaskForTime(ftl::Closure task, ftl::TimePoint target_time) override;
   void PostDelayedTask(ftl::Closure task, ftl::TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() override;
 
@@ -43,7 +44,7 @@ class IncomingTaskQueue : public ftl::TaskRunner {
   void ClearDelegate();
 
  private:
-  void AddTask(ftl::Closure task, ftl::TimeDelta delay);
+  void AddTask(ftl::Closure task, ftl::TimePoint target_time);
 
   ftl::Mutex mutex_;
   TaskQueue incoming_queue_ FTL_GUARDED_BY(mutex_);

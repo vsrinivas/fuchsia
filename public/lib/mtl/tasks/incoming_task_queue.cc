@@ -8,16 +8,6 @@
 
 namespace mtl {
 namespace internal {
-namespace {
-
-ftl::TimePoint GetTargetTime(ftl::TimeDelta delay) {
-  if (delay > ftl::TimeDelta::Zero())
-    return ftl::TimePoint::Now() + delay;
-  FTL_DCHECK(delay == ftl::TimeDelta::Zero());
-  return ftl::TimePoint();
-}
-
-}  // namespace
 
 TaskQueueDelegate::~TaskQueueDelegate() {}
 
@@ -26,17 +16,22 @@ IncomingTaskQueue::IncomingTaskQueue() {}
 IncomingTaskQueue::~IncomingTaskQueue() {}
 
 void IncomingTaskQueue::PostTask(ftl::Closure task) {
-  AddTask(std::move(task), ftl::TimeDelta::Zero());
+  AddTask(std::move(task), ftl::TimePoint());
+}
+
+void IncomingTaskQueue::PostTaskForTime(ftl::Closure task,
+                                        ftl::TimePoint target_time) {
+  AddTask(std::move(task), target_time);
 }
 
 void IncomingTaskQueue::PostDelayedTask(ftl::Closure task,
                                         ftl::TimeDelta delay) {
-  AddTask(std::move(task), delay);
+  AddTask(std::move(task), delay > ftl::TimeDelta::Zero()
+                               ? ftl::TimePoint::Now() + delay
+                               : ftl::TimePoint());
 }
 
-void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimeDelta delay) {
-  ftl::TimePoint target_time = GetTargetTime(delay);
-
+void IncomingTaskQueue::AddTask(ftl::Closure task, ftl::TimePoint target_time) {
   ftl::MutexLocker locker(&mutex_);
 
   if (drop_incoming_tasks_)
