@@ -23,4 +23,8 @@ MODULE_LIBS := \
     ulib/magenta \
     ulib/musl
 
+# Compile this with frame pointers so that if we crash
+# the simplistic unwinder will work.
+GLOBAL_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+
 include make/module.mk
