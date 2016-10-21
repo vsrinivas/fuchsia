@@ -37,6 +37,8 @@ typedef struct device_ctx {
 } device_ctx_t;
 
 
+static mx_handle_t devhost_job_handle;
+
 #define PNMAX 16
 static const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
@@ -229,12 +231,17 @@ fail:
     return ERR_IO;
 }
 
-void devmgr_init(void) {
+void devmgr_init(mx_handle_t root_job) {
     printf("devmgr: init\n");
 
     vnroot = devfs_get_root();
     devfs_add_node(&vnclass, vnroot, "class", 0);
     prepopulate_protocol_dirs();
+
+    mx_status_t status = mx_job_create(root_job, 0u, &devhost_job_handle);
+    if (status < 0) {
+        printf("unable to create devhost job\n");
+    }
 
     mxio_dispatcher_create(&devhost_devhost_dispatcher, devhost_handler);
 }
@@ -249,7 +256,7 @@ void devmgr_handle_messages(void) {
     }
     root->vnode = vnroot;
     const char* args[2] = { "/boot/bin/devhost", "root" };
-    devmgr_launch_devhost("devhost:root", 2, (char**)args, hdevice, hrpc);
+    devmgr_launch_devhost(devhost_job_handle, "devhost:root", 2, (char**)args, hdevice, hrpc);
 
     printf("devmgr: root ctx %p\n", root);
     mxio_dispatcher_run(devhost_devhost_dispatcher);

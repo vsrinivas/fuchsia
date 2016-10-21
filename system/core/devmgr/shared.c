@@ -39,7 +39,8 @@ void devmgr_io_init(void) {
 
 extern mx_handle_t mojo_launcher;
 
-void devmgr_launch_devhost(const char* name, int argc, char** argv,
+void devmgr_launch_devhost(mx_handle_t job,
+                           const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc) {
     mx_handle_t hnd[7];
     uint32_t ids[7];
@@ -79,10 +80,16 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
         }
     }
 #endif
+    mx_handle_t job_copy = MX_HANDLE_INVALID;
+    mx_status_t status = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
+    if (status < 0) {
+        printf("devmgr: no job, launch failed: %d\n", job_copy);
+        return;
+    }
 
     printf("devmgr: launch: %s %s %s\n", name, argv[0], argv[1]);
-    mx_handle_t proc = launchpad_launch(name, argc, (const char* const*)argv,
-                                        (const char* const*)environ, hcount, hnd, ids);
+    mx_handle_t proc = launchpad_launch_with_job(job_copy, name, argc, (const char* const*)argv,
+                                                 (const char* const*)environ, hcount, hnd, ids);
     if (proc < 0) {
         printf("devmgr: launch failed: %d\n", proc);
     } else {

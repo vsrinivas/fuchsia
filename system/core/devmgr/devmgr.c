@@ -25,6 +25,7 @@
 
 static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
+static mx_handle_t svcs_job_handle;
 
 static mx_handle_t mojo_launcher_child;
 mx_handle_t mojo_launcher;
@@ -54,7 +55,7 @@ static void launch_minfs(const char* device_name) {
     snprintf(device_path, sizeof(device_path), "/dev/class/block/%s", device_name);
     const char* argv[] = { "/boot/bin/minfs", device_path, "mount", "/data" };
     printf("devmgr: /dev/class/block/%s: minfs?\n", device_name);
-    devmgr_launch("minfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "minfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
 }
 
 static void launch_fat(const char* device_name) {
@@ -97,7 +98,7 @@ static void launch_fat(const char* device_name) {
         "mount",
     };
     printf("devmgr: /dev/class/block/%s: fatfs?\n", device_name);
-    devmgr_launch("fatfs:/volume", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "fatfs:/volume", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
 }
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
@@ -144,13 +145,13 @@ void create_mojo_launcher_handles(void) {
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        devmgr_launch("netsvc", 1, argv_netsvc, -1, 0, 0);
+        devmgr_launch(svcs_job_handle, "netsvc", 1, argv_netsvc, -1, 0, 0);
     }
 
-    devmgr_launch("mxsh:autorun", 2, argv_mxsh_autorun, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "mxsh:autorun", 2, argv_mxsh_autorun, -1, 0, 0);
 
     if (mojo_launcher_child) {
-        devmgr_launch("mojo-app-manager", 2, argv_appmgr, -1,
+        devmgr_launch(svcs_job_handle, "mojo-app-manager", 2, argv_appmgr, -1,
                       mojo_launcher_child,
                       MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0));
         mojo_launcher_child = 0;
@@ -171,7 +172,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch("mxsh:console", 1, argv_mxsh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "mxsh:console", 1, argv_mxsh, fd, 0, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -201,7 +202,7 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
             if (i == 0 && switch_to_first_vc()) {
                 ioctl_console_set_active_vc(fd);
             }
-            devmgr_launch("mxsh:vc", 1, argv_mxsh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "mxsh:vc", 1, argv_mxsh, fd, 0, 0);
         }
     }
 
@@ -231,24 +232,24 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
-    devmgr_init();
+    devmgr_init(root_job_handle);
     devmgr_vfs_init();
+
+    mx_status_t status = mx_job_create(root_job_handle, 0u, &svcs_job_handle);
+    if (status < 0) {
+        printf("unable to create service job\n");
+    }
 
 #if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
-        devmgr_launch("crashlogger", 1, argv_crashlogger, -1, 0, 0);
+        devmgr_launch(svcs_job_handle, "crashlogger", 1, argv_crashlogger, -1, 0, 0);
     }
 #else
     // Until crashlogging exists, ensure we see load info
     // from the linker in the log
     putenv(strdup("LD_DEBUG=1"));
 #endif
-
-    mx_handle_t job = MX_HANDLE_INVALID;
-    if (mx_job_create(root_job_handle, 0u, &job) < 0) {
-        printf("unable to create child jobs\n");
-    }
 
     start_console_shell();
 

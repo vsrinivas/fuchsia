@@ -51,7 +51,8 @@ static const char* env[] = {
     NULL,
 };
 
-void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd,
+void devmgr_launch(mx_handle_t job,
+                   const char* name, int argc, const char** argv, int stdiofd,
                    mx_handle_t handle, uint32_t type) {
     mx_handle_t hnd[1 + 2 * VFS_MAX_HANDLES];
     uint32_t ids[1 + 2 * VFS_MAX_HANDLES];
@@ -90,7 +91,13 @@ void devmgr_launch(const char* name, int argc, const char** argv, int stdiofd,
         n++;
     }
     printf("devmgr: launch %s (%s)\n", argv[0], name);
-    mx_handle_t proc = launchpad_launch(name, argc, argv, env, n, hnd, ids);
+
+    mx_handle_t job_copy;
+    r = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
+    if (r < 0)
+        goto fail;
+
+    mx_handle_t proc = launchpad_launch_with_job(job_copy, name, argc, argv, env, n, hnd, ids);
     if (proc < 0) {
         printf("devmgr: launchpad_launch failed: %d\n", proc);
     } else {

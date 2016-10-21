@@ -5,6 +5,7 @@
 #include "launch.h"
 #include <launchpad/vmo.h>
 
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
 #include <mxio/util.h>
@@ -65,7 +66,12 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_status_t status = launchpad_create(name, &lp);
+    mx_handle_t job_to_child = MX_HANDLE_INVALID;
+    mx_handle_t job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    if (job > 0)
+        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
+
+    mx_status_t status = launchpad_create(job_to_child, name, &lp);
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
         if (status == NO_ERROR)

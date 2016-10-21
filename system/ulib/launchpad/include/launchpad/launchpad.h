@@ -16,8 +16,11 @@ __BEGIN_CDECLS
 // Use of this object is not thread-safe.
 typedef struct launchpad launchpad_t;
 
-// Create a new process and a launchpad that will set it up.
-mx_status_t launchpad_create(const char* name, launchpad_t** lp);
+// Create a new process and a launchpad that will set it up. The
+// job handle is consumed regardless of the result.
+// TODO(cpu): Temporarily we allow |job| to be 0.
+mx_status_t launchpad_create(mx_handle_t job, const char* name,
+                             launchpad_t** lp);
 
 // Create a new launchpad for a given existing process handle.
 // On success, the launchpad takes ownership of the process handle.
@@ -208,6 +211,9 @@ mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
 // launchpad_arguments, launchpad_environ, launchpad_add_handles,
 // launchpad_start, launchpad_destroy.
 //
+// The job used for these calls is fetched from the startup handles
+// via mxio_get_startup_handle() with MX_HND_TYPE_JOB and duplicated.
+//
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.  In all cases, the handles are consumed.
 mx_handle_t launchpad_launch(const char* name,
@@ -216,6 +222,15 @@ mx_handle_t launchpad_launch(const char* name,
                              size_t hnds_count, mx_handle_t* handles,
                              uint32_t* ids);
 
+// Same as launchpad_launch but allows to specify the job to use when
+// creating the process. The job handle is consumed regardless of the result.
+mx_handle_t launchpad_launch_with_job(mx_status_t job,
+                                      const char* name,
+                                      int argc, const char* const* argv,
+                                      const char* const* envp,
+                                      size_t hnds_count, mx_handle_t* handles,
+                                      uint32_t* ids);
+
 // Convenience interface for launching a process in one call with
 // details inherited from the calling process (environment
 // variables, mxio root, and mxio file descriptors).  This just
@@ -223,6 +238,9 @@ mx_handle_t launchpad_launch(const char* name,
 // launchpad_load_vdso, launchpad_add_vdso_vmo, launchpad_arguments,
 // launchpad_environ, launchpad_clone_mxio_root, launchpad_clone_fd,
 // launchpad_start, launchpad_destroy.
+//
+// The job used for these calls is fetched from the startup handles
+// via mxio_get_startup_handle() with MX_HND_TYPE_JOB and duplicated.
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.

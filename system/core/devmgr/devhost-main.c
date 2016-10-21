@@ -29,6 +29,8 @@
 
 #define DRIVER_NAME_LEN_MAX 64
 
+static mx_handle_t job_handle;
+
 int devhost_init(void);
 int devhost_cmdline(int argc, char** argv);
 int devhost_start(void);
@@ -139,6 +141,8 @@ int main(int argc, char** argv) {
         return r;
     }
 
+    job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+
     if ((argc > 1) && (!strcmp(argv[1], "root"))) {
         as_root = true;
 
@@ -172,7 +176,8 @@ void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t prot
     if (devhost_add_internal(parent, name, protocol_id, &hdevice, &hrpc) < 0) {
         return;
     }
-    devmgr_launch_devhost(procname, argc, argv, hdevice, hrpc);
+
+    devmgr_launch_devhost(job_handle, procname, argc, argv, hdevice, hrpc);
 }
 
 void signal_devmgr_shutdown(void) {

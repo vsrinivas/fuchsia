@@ -29,6 +29,7 @@ static _Noreturn void usage(const char* progname, bool error) {
     option_usage(out, "-f FILE", "execute FILE but pass PROGRAM as argv[0]");
     option_usage(out, "-F FD", "execute FD");
     option_usage(out, "-h", "display this usage message and exit");
+    option_usage(out, "-j", "start process in a new job");
     option_usage(out, "-l",
                  "pass mxio_loader_service handle in main bootstrap message");
     option_usage(out, "-L", "force initial loader bootstrap message");
@@ -61,11 +62,12 @@ int main(int argc, char** argv) {
     size_t nfds = 0;
     bool send_loader_message = false;
     bool pass_loader_handle = false;
+    bool new_job = false;
     const char* exec_vmo_file = NULL;
     int exec_vmo_fd = -1;
     size_t stack_size = -1;
 
-    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hlLrsS:v:")) != -1;) {
+    for (int opt; (opt = getopt(argc, argv, "bd:e:f:F:hjlLrsS:v:")) != -1;) {
         switch (opt) {
         case 'b':
             basic = true;
@@ -108,6 +110,9 @@ int main(int argc, char** argv) {
             break;
         case 'h':
             usage(argv[0], false);
+            break;
+        case 'j':
+            new_job = true;
             break;
         case 'L':
             send_loader_message = true;
@@ -165,8 +170,22 @@ int main(int argc, char** argv) {
         check("launchpad_vmo_from_file", vmo);
     }
 
+    mx_handle_t job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    if (new_job) {
+        if (job == MX_HANDLE_INVALID) {
+            fprintf(stderr, "no mxio job handle found\n");
+            return 2;
+        }
+        check("launchpad job", job);
+        mx_handle_t child_job;
+        mx_status_t status = mx_job_create(job, 0u, &child_job);
+        check("launchpad child job", status);
+        mx_handle_close(job);
+        job = child_job;
+    }
+
     launchpad_t* lp;
-    mx_status_t status = launchpad_create(program, &lp);
+    mx_status_t status = launchpad_create(job, program, &lp);
     check("launchpad_create", status);
 
     status = launchpad_arguments(lp, argc - optind,
@@ -271,6 +290,9 @@ int main(int argc, char** argv) {
                 (size_t)n, sizeof(info));
         exit(2);
     }
+
+    if (job)
+        mx_handle_close(job);
 
     printf("Process finished with return code %d\n", info.rec.return_code);
     return info.rec.return_code;

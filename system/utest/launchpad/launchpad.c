@@ -28,7 +28,7 @@ static bool launchpad_test(void)
 
     launchpad_t* lp = NULL;
 
-    mx_status_t status = launchpad_create(test_inferior_child_name, &lp);
+    mx_status_t status = launchpad_create(0u, test_inferior_child_name, &lp);
     ASSERT_EQ(status, NO_ERROR, "launchpad_create");
 
     status = launchpad_elf_load(lp, launchpad_vmo_from_file(program_path));

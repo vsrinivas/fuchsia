@@ -170,7 +170,7 @@ launchpad_t* tu_launch_mxio_init(const char* name,
     if (name == NULL)
         name = filename;
 
-    mx_status_t status = launchpad_create(name, &lp);
+    mx_status_t status = launchpad_create(0u, name, &lp);
     if (status == NO_ERROR) {
         status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
         if (status == NO_ERROR)

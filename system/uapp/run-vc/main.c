@@ -37,7 +37,7 @@ int main(int argc, const char* const* argv, const char* const* envp) {
     }
 
     launchpad_t* lp;
-    mx_status_t status = launchpad_create(pname, &lp);
+    mx_status_t status = launchpad_create(0u, pname, &lp);
     if (status != NO_ERROR) {
         printf("Error %d in launchpad_create\n", status);
         return status;

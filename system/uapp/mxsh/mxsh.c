@@ -25,6 +25,7 @@
 
 #include <mxio/debug.h>
 #include <mxio/remoteio.h>
+#include <mxio/util.h>
 
 #include <magenta/listnode.h>
 
@@ -33,6 +34,7 @@
 #define LINE_MAX 1024
 
 static bool interactive = false;
+static mx_handle_t job_handle;
 
 void cputc(uint8_t ch) {
     write(1, &ch, 1);
@@ -454,11 +456,17 @@ void* joiner(void* arg) {
 }
 
 mx_status_t lp_setup(launchpad_t** lp_out,
+                     mx_handle_t job,
                      int argc, const char* const* argv,
                      const char* const* envp) {
     launchpad_t* lp;
-    mx_status_t status;
-    if ((status = launchpad_create(argv[0], &lp)) < 0) {
+
+    mx_handle_t job_copy = MX_HANDLE_INVALID;
+    mx_status_t status = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
+    if (status < 0)
+        return status;
+
+    if ((status = launchpad_create(job_copy, argv[0], &lp)) < 0) {
         return status;
     }
     if ((status = launchpad_arguments(lp, argc, argv)) < 0) {
@@ -566,7 +574,7 @@ mx_status_t command(int argc, char** argv, bool runbg) {
     }
 
 found:
-    if ((status = lp_setup(&lp, argc, (const char* const*) argv, envp)) < 0) {
+    if ((status = lp_setup(&lp, job_handle, argc, (const char* const*) argv, envp)) < 0) {
         fprintf(stderr, "process setup failed (%d)\n", status);
         goto done_no_lp;
     }
@@ -731,6 +739,10 @@ void console(void) {
 }
 
 int main(int argc, char** argv) {
+    job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    if (job_handle <= 0)
+        printf("<> no job %d\n", job_handle);
+
     if ((argc == 3) && (strcmp(argv[1], "-c") == 0)) {
         execline(argv[2]);
         return 0;

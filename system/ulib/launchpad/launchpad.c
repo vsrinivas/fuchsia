@@ -86,34 +86,36 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
     return status;
 }
 
-mx_status_t launchpad_create(const char* name, launchpad_t** result) {
+// Create a new process and a launchpad that will set it up.
+mx_status_t launchpad_create(mx_handle_t job,
+                             const char* name, launchpad_t** result) {
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
+
+    // TODO:cpu. use the process creation syscall that takes a job.
     mx_handle_t proc;
     mx_status_t status = mx_process_create(name, name_len, 0, &proc);
     if (status < 0)
         return status;
 
-//TODO(cpu): chase down the bad handle usage in various tests, etc
-//      and then re-enable once sorted out.
-#if 0
-    uint32_t handle_policy = MX_POLICY_BAD_HANDLE_EXIT;
-    mx_status_t status = mx_object_set_property(proc, MX_PROP_BAD_HANDLE_POLICY,
-                                                &handle_policy, sizeof(handle_policy));
-    if (status != NO_ERROR) {
-        mx_handle_close(proc);
-        return status;
-    }
-#endif
-
     launchpad_t* lp;
     status = launchpad_create_with_process(proc, &lp);
-    if (status == NO_ERROR) {
-        *result = lp;
-    } else {
-        mx_handle_close(proc);
-        launchpad_destroy(lp);
+    if (status != NO_ERROR)
+        goto cleanup;
+
+    if (job > 0) {
+        status = launchpad_add_handle(lp, job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+        if (status != NO_ERROR)
+            goto cleanup;
     }
 
+    *result = lp;
+    return status;
+
+cleanup:
+    if (job > 0)
+        mx_handle_close(job);
+    mx_handle_close(proc);
+    launchpad_destroy(lp);
     return status;
 }
 
