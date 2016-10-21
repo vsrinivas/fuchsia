@@ -103,6 +103,8 @@ struct mx_proc_args {
 // Handle types used by the mojo application model
 #define MX_HND_TYPE_APPLICATION_REQUEST 0x100
 #define MX_HND_TYPE_APPLICATION_LAUNCHER 0x101
+#define MX_HND_TYPE_INCOMING_SERVICES 0x102
+#define MX_HND_TYPE_OUTGOING_SERVICES 0x103
 
 // Message pipe for dynamic loader service
 #define MX_HND_TYPE_LOADER_SVC 0x200
