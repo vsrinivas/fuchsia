@@ -76,6 +76,8 @@ unw_is_signal_frame (unw_cursor_t *cursor)
     return 2;
 
   return 0;
+#elif defined (__Fuchsia__)
+  return 0;
 #else
   return -UNW_ENOINFO;
 #endif

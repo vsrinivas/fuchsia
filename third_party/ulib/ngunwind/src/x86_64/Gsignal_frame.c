@@ -33,6 +33,8 @@ unw_is_signal_frame (unw_cursor_t *cursor)
 #ifdef __linux__
   struct cursor *c = (struct cursor *) cursor;
   return c->sigcontext_format != X86_64_SCF_NONE;
+#elif defined (__Fuchsia__)
+  return 0;
 #else
   return -UNW_ENOINFO;
 #endif
