@@ -15,5 +15,6 @@ source_set("document_editor") {
 
   deps = [
     "//apps/document_store/interfaces",
+    "//lib/ftl",
   ]
 }

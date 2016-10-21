@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
+#define MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
+
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "lib/ftl/macros.h"
 
@@ -21,12 +24,13 @@ class DocumentEditor {
   DocumentEditor(const std::string& docid);
 
   // Take ownership of the given document.
-  DocumentEditor(document_store::DocumentPtr doc) {
-    doc_ = std::move(doc);
-  }
+  DocumentEditor(document_store::DocumentPtr doc) { doc_ = std::move(doc); }
 
-  // Return the given document, which should always exist.
-  document_store::Document* get() { return doc_.get(); }
+  // Return the given document, or null if there isn't one.
+  document_store::Document* get() { return doc_ ? doc_.get() : nullptr; }
+
+  bool TakeFromArray(const std::string& docid,
+                     mojo::Array<document_store::DocumentPtr>* array);
 
   document_store::DocumentPtr TakeDocument();
 
@@ -37,11 +41,20 @@ class DocumentEditor {
   // Add the given property to the Document. Duplicates are currently not
   // ignored. Multiple properties of the same property name are theoretically
   // allowed, but are not currently handled.
-  void AddProperty(document_store::PropertyPtr property) {
-    doc_->properties.push_back(std::move(property));
-  }
+  void SetProperty(document_store::PropertyPtr property);
 
-  void AddProperty(const std::string& property_val, mojo::StructPtr<document_store::Value> value);
+  void SetProperty(const std::string& property_label,
+                   mojo::StructPtr<document_store::Value> value);
+
+  // Remove the given label/value from the Document. Both the property name
+  // and the value must be matched, otherwise do nothing.
+  // The Document may have no properties when this function completes.
+  void RemoveProperty(const document_store::Property& property);
+
+  // Remove all instances of the given property from the Document.
+  // Do nothing if there property is not found.
+  // The Document may have no properties when this function completes.
+  void RemoveProperty(const std::string& property_label);
 
   // Create a new ValuePtr for an int64_t.
   static document_store::ValuePtr NewIntValue(int64_t int_val);
@@ -64,10 +77,17 @@ class DocumentEditor {
   FTL_DISALLOW_COPY_AND_ASSIGN(DocumentEditor);
 };
 
+std::ostream& operator<<(std::ostream& os,
+                         const mojo::Array<document_store::DocumentPtr>& docs);
+std::ostream& operator<<(std::ostream& os, document_store::Document* doc);
+std::ostream& operator<<(std::ostream& os,
+                         const document_store::DocumentPtr& doc);
+std::ostream& operator<<(std::ostream& os, document_store::Value* v);
+
 // Create a StatementPtr based on the given triple.
 mojo::StructPtr<document_store::Statement> NewStatement(
-    const std::string& docid,
-    const std::string& property,
+    const std::string& docid, const std::string& property,
     mojo::StructPtr<document_store::Value> value);
-
 }
+
+#endif  // MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__

@@ -12,9 +12,12 @@ import "apps/document_store/interfaces/document.mojom";
 // This interface is implemented by the story runner. The Session
 // service instance acts as a factory for it.
 //
-// An instance of Link holds a document, expressed as an instance of
-// document_store.Document. The document is structured, however right now the
-// document is only set and read as a whole, but deltas will be supported soon.
+// An instance of Link holds documents, expressed as an array of
+// document_store.Document. The document has individual properties that can
+// be incrementally updated with AddDocuments() or overwritten in toto with
+// SetAllDocuments().
+// TODO(jimbe) Expand support for incremental operations (remove properties).
+// TODO(jimbe) Add support for multivalued properties (sets and arrays).
 //
 // Each module receives a handle to one instance of Link at startup.
 // This instance is shared with the module that requested the start of
@@ -23,12 +26,13 @@ import "apps/document_store/interfaces/document.mojom";
 // do that? For example to share the Link instance with modules it
 // requests to start in turn.
 //
-// A client of Link can set the Document stored in the instance and
+// A client of Link can set the Documents stored in the instance and
 // register a handler (an implementation of the LinkChanged interface)
-// to be notified of changes to the Value. A client is not notified of
-// changes it itself makes to the Link document. More specifically, a
-// watcher registered on one handle to a Link instance is not notified
-// of changes made *through the same handle*.
+// to be notified of changes to Documents in the Link. A client may or may not
+// notified of changes it itself makes to the Link document, depending on
+// whether it registers with WatchAll() or Watch(), respectively. If the client
+// registers with Watch(), then it will not be notified of changes made
+// *through the same handle*.
 //
 // A client may obtain another handle to the same Link instance using
 // the Dup() method. The primary purpose of this is to be able to
@@ -42,22 +46,30 @@ import "apps/document_store/interfaces/document.mojom";
 // changes.
 //
 // No service name: created by Session.
+//
 interface Link {
-  // In the current simplified implementation, the Link contains a single
-  // Document, which is null when the Link is created. This AddDocument()
-  // function overwrites the document with the given Document. Watchers
-  // will be notified.  It's not currently possible to reset the Document
-  // back to null.
-  AddDocument(document_store.Document value);
+  // The Link contains a collection of Documents, which is empty when the Link
+  // is created. AddDocuments() incrementally adds the given values to
+  // the Link. Watchers will be notified if any statements actually changed.
+  // In the case of duplicate document ids, the properties will be merged,
+  // with a last-one-wins rule for handling duplicates.
+  AddDocuments(array<document_store.Document> docs);
 
-  // Obtains the current document. If AddDocument() was not yet called, the
-  // value returned is null.
-  Query() => (document_store.Document? value);
+  // The Link contains a collection of Documents, which is empty when the Link
+  // is created. SetAllDocuments() rewrites the Link to the given values.
+  // Watchers will be notified if any statements actually changed. In the
+  // case of duplicate docids, only the last document will be kept.
+  // All properties in earlier Documents with that docid will be discarded.
+  SetAllDocuments(array<document_store.Document> docs);
 
-  // Registers a watcher, which is notified whenever the document
-  // changes. If the value is not null at the time the watcher is
-  // registered, the Notify() callback method is invoked with the
-  // current document.
+  // Obtains all documents. If either SetAllDocument() or AddDocuments() were
+  // not yet called, the array returned is empty.
+  Query() => (array<document_store.Document> docs);
+
+  // Registers a watcher, which is notified whenever the document changes. This
+  // watcher will not be invoked for changes caused by calls made on this
+  // handle. The Notify() callback method will be immediately invoked with
+  // all documents in the Link, even if it's empty.
   Watch(LinkChanged watcher);
 
   // Like Watch(), but the watcher is notified also of changes made
@@ -72,11 +84,11 @@ interface Link {
 
 // This interface is meant to be implemented by a client of Link.
 //
-// The Value() method is invoked whenever the value changes. If the
-// value is not null at the time the watcher is registered, Value() is
-// called with the current value immediately.
+// The Notify() method is invoked whenever the Link changes. All documents
+// in the Link will be sent. In other words, this isn't an incremental
+// notification.
 //
 // No service name: created by Module.
 interface LinkChanged {
-  Notify(document_store.Document document);
+  Notify(array<document_store.Document> docs);
 };

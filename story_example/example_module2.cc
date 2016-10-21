@@ -20,24 +20,32 @@
 
 namespace {
 
-constexpr char kValueLabel[] = "value";
-constexpr char kSenderLabel[] = "sender";
+// Subjects
+constexpr char kDocId[] =
+    "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
+
+// Property labels
+constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
+constexpr char kSenderLabel[] = "http://schema.org/sender";
 
 using document_store::Document;
+using document_store::DocumentPtr;
+using document_store::Value;
 
 using mojo::ApplicationConnector;
+using mojo::Array;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 using mojo::StrongBinding;
 using mojo::String;
-using mojo::StructPtr;
 
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
 using modular::DocumentEditor;
 using modular::Session;
+using modular::operator<<;
 
 // Module implementation that acts as a leaf module. It implements
 // both Module and the LinkChanged observer of its own Link.
@@ -71,18 +79,32 @@ class Module2Impl : public Module, public LinkChanged {
   // through one link handle is not notified of changes requested
   // through the same handle. It's really the handle identity that
   // decides.
-  void Notify(StructPtr<Document> doc) override {
-    FTL_LOG(INFO) << "\nModule2Impl::Notify() " << (int64_t)this
-                  << DocumentEditor::ToString(doc);
-    DocumentEditor editor(std::move(doc));
-    auto v = editor.GetValue(kSenderLabel);
-    FTL_DCHECK(v != nullptr);
-    v->set_string_value("Module2Impl");
+  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
+    FTL_LOG(INFO) << "Module2Impl::Notify() " << (int64_t)this << docs;
 
-    v = editor.GetValue(kValueLabel);
-    FTL_DCHECK(v != nullptr);
-    v->set_int_value(v->get_int_value() + 1);
-    link_->AddDocument(editor.TakeDocument());
+    DocumentEditor editor;
+    if (!editor.TakeFromArray(kDocId, &docs)) return;
+
+    Value* sender = editor.GetValue(kSenderLabel);
+    Value* counter = editor.GetValue(kCounterLabel);
+
+    FTL_DCHECK(sender != nullptr);
+    FTL_DCHECK(counter != nullptr);
+
+    sender->set_string_value("Module2Impl");
+
+    int n = counter->get_int_value() + 1;
+    counter->set_int_value(n);
+
+    // For the last value, remove the sender property to prove that property
+    // removal works.
+    if (n == 11) {
+      editor.RemoveProperty(kSenderLabel);
+    }
+
+    Array<DocumentPtr> array;
+    array.push_back(editor.TakeDocument());
+    link_->SetAllDocuments(std::move(array));
   }
 
  private:

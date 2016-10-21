@@ -39,12 +39,24 @@ namespace {
 constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr float kSpeed = 0.25f;
-constexpr char kValueLabel[] = "value";
-constexpr char kSenderLabel[] = "sender";
+
+// Subjects
+constexpr char kDocId[] =
+    "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
+
+// Property labels
+constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
+constexpr char kSenderLabel[] = "http://schema.org/sender";
+constexpr char kIsALabel[] = "isA";
+
+// Predefined Values
+constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
 
 using document_store::Document;
+using document_store::DocumentPtr;
 
 using mojo::ApplicationImplBase;
+using mojo::Array;
 using mojo::Binding;
 using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
@@ -54,7 +66,6 @@ using mojo::Map;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
-using mojo::StrongBindingSet;
 using mojo::String;
 using mojo::StructPtr;
 
@@ -65,6 +76,7 @@ using modular::ModuleClient;
 using modular::ModuleWatcher;
 using modular::DocumentEditor;
 using modular::Session;
+using modular::operator<<;
 
 // Implementation of the LinkChanged service that forwards each document
 // changed in one Link instance to a second Link instance.
@@ -77,10 +89,11 @@ class LinkConnection : public LinkChanged {
     src_->Watch(std::move(watcher));
   }
 
-  void Notify(StructPtr<Document> doc) override {
-    FTL_LOG(INFO) << "LinkConnection::Notify() "
-                  << DocumentEditor::ToString(doc);
-    dst_->AddDocument(std::move(doc));
+  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
+    FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
+    if (docs.size() > 0) {
+      dst_->SetAllDocuments(std::move(docs));
+    }
   }
 
  private:
@@ -102,7 +115,7 @@ class LinkMonitor : public LinkChanged {
     link->WatchAll(std::move(watcher));
   }
 
-  void Notify(StructPtr<Document> doc) override {
+  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
     FTL_LOG(INFO) << "LinkMonitor::Notify()";
   }
 
@@ -138,8 +151,7 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              InterfaceRequest<Module> module_request,
              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(app_connector.Pass(),
-                 view_owner_request.Pass(),
+      : BaseView(app_connector.Pass(), view_owner_request.Pass(),
                  "Spinning Square"),
         module_binding_(this, std::move(module_request)),
         watcher_binding_(this) {
@@ -193,13 +205,18 @@ class RecipeImpl : public Module, public LinkChanged, public mozart::BaseView {
 
     // This must come last, otherwise we get a notification of our own
     // write because of the "send initial values" code.
-    DocumentEditor doc("http://domokit.org/doc/1");
-    doc.AddProperty(kValueLabel, DocumentEditor::NewIntValue(1));
-    doc.AddProperty(kSenderLabel, DocumentEditor::NewStringValue("RecipeImpl"));
-    module1_link_->AddDocument(doc.TakeDocument());
+    DocumentEditor editor(kDocId);
+    editor.SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue));
+    editor.SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1));
+    editor.SetProperty(kSenderLabel,
+                       DocumentEditor::NewStringValue("RecipeImpl"));
+
+    Array<DocumentPtr> array;
+    array.push_back(editor.TakeDocument());
+    module1_link_->SetAllDocuments(std::move(array));
   }
 
-  void Notify(StructPtr<Document> doc) override {
+  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
     FTL_LOG(INFO) << "RecipeImpl::Notify()";
   }
 

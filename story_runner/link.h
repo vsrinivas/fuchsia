@@ -19,6 +19,8 @@
 #ifndef MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 #define MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 
+#include <unordered_map>
+
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/macros.h"
@@ -38,7 +40,10 @@ class LinkImpl : public Link {
   ~LinkImpl() override;
 
   // Implements Link interface.
-  void AddDocument(mojo::StructPtr<document_store::Document> doc) override;
+  void AddDocuments(
+      mojo::Array<document_store::DocumentPtr> docs) override;
+  void SetAllDocuments(
+      mojo::Array<document_store::DocumentPtr> docs) override;
   void Query(const QueryCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
@@ -57,9 +62,9 @@ class LinkImpl : public Link {
   void RemoveImpl(LinkImpl* client);
 
   void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self_notify);
-  void NotifyWatchers(const mojo::StructPtr<document_store::Document>& doc,
+  void NotifyWatchers(const mojo::Array<document_store::DocumentPtr>& docs,
                       bool self_notify);
-  void DatabaseChanged(mojo::StructPtr<document_store::Document>& doc);
+  void DatabaseChanged(const mojo::Array<document_store::DocumentPtr>& docs);
 
   // |shared_| is owned by the LinkImpl that called "new SharedLinkImplData()".
   SharedLinkImplData* const shared_;
