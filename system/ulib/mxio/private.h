@@ -41,6 +41,7 @@ typedef struct mxio_ops {
 // mxio_t flags
 #define MXIO_FLAG_CLOEXEC ((int32_t)1 << 0)
 #define MXIO_FLAG_SOCKET ((int32_t)1 << 1)
+#define MXIO_FLAG_EPOLL ((int32_t)1 << 2)
 
 // The subset of mxio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
