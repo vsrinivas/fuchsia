@@ -32,15 +32,16 @@
 
 #ifndef __clang__
 #define __OPTIMIZE(x) __attribute__((optimize(x)))
+#define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
 #else
 #define __OPTIMIZE(x)
+#define __EXTERNALLY_VISIBLE
 #endif
 
 #define __ALWAYS_INLINE __attribute__((always_inline))
 #define __MAY_ALIAS __attribute__((may_alias))
 #define __NONNULL(x) __attribute((nonnull x))
 #define __WARN_UNUSED_RESULT __attribute((warn_unused_result))
-#define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
 #define __UNREACHABLE __builtin_unreachable()
 #define __WEAK_ALIAS(x) __attribute__((weak, alias(x)))
 #define __ALIAS(x) __attribute__((alias(x)))
