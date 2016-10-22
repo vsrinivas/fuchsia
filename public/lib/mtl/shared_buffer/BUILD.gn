@@ -4,8 +4,9 @@
 
 source_set("shared_buffer") {
   sources = [
-    "strings.cc",
+    "shared_buffer.cc",
     "strings.h",
+    "vector.h",
   ]
 
   public_deps = [
