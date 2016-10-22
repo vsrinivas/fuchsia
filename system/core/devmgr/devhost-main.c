@@ -75,8 +75,11 @@ static void init_from_driver_info(magenta_driver_info_t* di, bool for_root) {
 
 static list_node_t driver_list = LIST_INITIAL_VALUE(driver_list);
 
-static void init_loadable_drivers(bool for_root) {
-    DIR* dir = opendir("/boot/lib/driver");
+static void load_loadable_drivers(const char* path) {
+    DIR* dir = opendir(path);
+    if (dir == NULL) {
+        return;
+    }
     struct dirent* de;
     while ((de = readdir(dir)) != NULL) {
         char libname[256 + 32];
@@ -107,7 +110,9 @@ static void init_loadable_drivers(bool for_root) {
         }
     }
     closedir(dir);
+}
 
+static void init_loaded_drivers(bool for_root) {
     // We have to dlopen() all drivers before init'ing them, because
     // drivers can start threads that map memory which can interfere
     // with further dlopen() operations.
@@ -166,7 +171,9 @@ int main(int argc, char** argv) {
         driver_add(&_driver_acpi);
     }
     init_builtin_drivers(as_root);
-    init_loadable_drivers(as_root);
+    load_loadable_drivers("/system/lib/driver");
+    load_loadable_drivers("/boot/lib/driver");
+    init_loaded_drivers(as_root);
     return devhost_start();
 }
 
