@@ -55,6 +55,14 @@ ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     return ERR_NOT_SUPPORTED;
 }
 
+void mxio_default_wait_begin(mxio_t* io, uint32_t events,
+                             mx_handle_t* handle, mx_signals_t* _signals) {
+    *handle = MX_HANDLE_INVALID;
+}
+
+void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
+}
+
 static mxio_ops_t mx_null_ops = {
     .read = mxio_default_read,
     .write = mxio_default_write,
@@ -65,6 +73,8 @@ static mxio_ops_t mx_null_ops = {
     .clone = mxio_default_clone,
     .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
+    .wait_begin = mxio_default_wait_begin,
+    .wait_end = mxio_default_wait_end,
 };
 
 mxio_t* mxio_null_create(void) {

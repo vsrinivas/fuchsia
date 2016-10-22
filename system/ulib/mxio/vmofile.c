@@ -112,6 +112,8 @@ static mxio_ops_t vmofile_ops = {
     .clone = mxio_default_clone,
     .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
+    .wait_begin = mxio_default_wait_begin,
+    .wait_end = mxio_default_wait_end,
 };
 
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {

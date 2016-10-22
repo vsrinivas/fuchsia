@@ -124,6 +124,30 @@ static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t _events, uint32_t* _pending
     return NO_ERROR;
 }
 
+static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
+    mx_pipe_t* p = (void*)io;
+    *handle = p->h;
+    mx_signals_t signals = 0;
+    if (events & MXIO_EVT_READABLE) {
+        signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    }
+    if (events & MXIO_EVT_WRITABLE) {
+        signals |= MX_SIGNAL_WRITABLE;
+    }
+    *_signals = signals;
+}
+
+static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
+    uint32_t events = 0;
+    if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
+        events |= MXIO_EVT_READABLE;
+    }
+    if (signals & MX_SIGNAL_WRITABLE) {
+        events |= MXIO_EVT_WRITABLE;
+    }
+    *_events = events;
+}
+
 static mx_status_t mx_pipe_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mx_pipe_t* p = (void*)io;
     handles[0] = mx_handle_duplicate(p->h, MX_RIGHT_SAME_RIGHTS);
@@ -144,6 +168,8 @@ static mxio_ops_t mx_pipe_ops = {
     .clone = mx_pipe_clone,
     .wait = mx_pipe_wait,
     .ioctl = mxio_default_ioctl,
+    .wait_begin = mx_pipe_wait_begin,
+    .wait_end = mx_pipe_wait_end,
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
