@@ -236,14 +236,24 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
         di->height = height;
         di->stride = stride;
     } else {
-        di->format = MX_PIXEL_FORMAT_RGB_565;
+        di->format = MX_PIXEL_FORMAT_ARGB_8888;
         di->width = 2560 / 2;
         di->height = 1700 / 2;
         di->stride = 2560 / 2;
     }
 
     if (device->framebuffer_handle == MX_HANDLE_INVALID) {
-        device->framebuffer_size = di->stride * di->height * 2;
+        switch (di->format) {
+        case MX_PIXEL_FORMAT_RGB_565:
+            device->framebuffer_size = di->stride * di->height * sizeof(uint16_t);
+            break;
+        default:
+            xprintf("unrecognized format 0x%x, defaulting to 32bpp", di->format);
+        case MX_PIXEL_FORMAT_ARGB_8888:
+        case MX_PIXEL_FORMAT_RGB_x888:
+            device->framebuffer_size = di->stride * di->height * sizeof(uint32_t);
+            break;
+        }
         device->framebuffer = malloc(device->framebuffer_size);
     } else {
         di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
