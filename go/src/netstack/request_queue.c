@@ -10,6 +10,15 @@
 #include "apps/netstack/request_queue.h"
 #include "apps/netstack/trace.h"
 
+static const char* s_mxrio_opnames[] = MXRIO_OPNAMES;
+static const char* s_io_opnames[] = IO_OPNAMES;
+
+const char* getopname(int op) {
+  if (op >= 0 && op < MXRIO_NUM_OPS) return s_mxrio_opnames[op];
+  if (op >= 0 && op < NUM_OPS) return s_io_opnames[op - MXRIO_NUM_OPS];
+  return "unknown";
+}
+
 request_t* request_pack(int op, mx_handle_t rh, mxrio_msg_t* msg,
                         iostate_t* ios) {
   request_t* rq = calloc(1, sizeof(request_t));

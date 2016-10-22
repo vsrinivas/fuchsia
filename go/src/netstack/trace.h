@@ -59,6 +59,4 @@ void set_trace_level(uint32_t facility, uint32_t level);
 #define debug_rw(fmt...) trace(TRACE_FACIL_RW, TRACE_LEVEL_DEBUG, fmt)
 #define debug_port(fmt...) trace(TRACE_FACIL_PORT, TRACE_LEVEL_DEBUG, fmt)
 
-const char* getopname(int op);
-
 #endif  // APPS_NETSTACK_TRACE_H_

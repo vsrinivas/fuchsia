@@ -36,6 +36,12 @@ void handle_close(iostate_t* ios, mx_signals_t signals) {
   handle_request(request_pack(MXRIO_CLOSE, 0, NULL, ios), EVENT_NONE, signals);
 }
 
+static void schedule_sigconn(iostate_t* ios) {
+  debug("schedule_sigconn\n");
+  fd_event_set(ios->sockfd, EVENT_READ);
+  wait_queue_put(WAIT_NET, ios->sockfd, request_pack(IO_SIGCONN, 0, NULL, ios));
+}
+
 static void schedule_rw(iostate_t* ios) {
   debug("schedule_rw\n");
   fd_event_set(ios->sockfd, EVENT_READ);
@@ -357,7 +363,7 @@ mx_status_t do_bind(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_listen(mxrio_msg_t* msg, iostate_t* ios, int events,
                       mx_signals_t signals) {
   int backlog = *(int*)msg->data;
-  vdebug("do_listen: backlog=%zd\n", backlog);
+  debug("do_listen: backlog=%zd\n", backlog);
 
   int ret = net_listen(ios->sockfd, backlog);
   int errno_ = (ret < 0) ? errno : 0;
@@ -365,8 +371,17 @@ mx_status_t do_listen(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
+  schedule_sigconn(ios);
   msg->datalen = 0;
   msg->arg2.off = 0;
+  return NO_ERROR;
+}
+
+mx_status_t do_sigconn(mxrio_msg_t* msg, iostate_t* ios, int events,
+                       mx_signals_t signals) {
+  debug_net("do_sigconn: events=0x%x\n", events);
+  mx_status_t r = mx_object_signal(ios->s, 0u, MX_SIGNAL_SIGNAL0);
+  debug_always("mx_object_signal(set) => %d\n", r);
   return NO_ERROR;
 }
 
@@ -385,6 +400,10 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
+  mx_status_t r = mx_object_signal(ios->s, MX_SIGNAL_SIGNAL0, 0u);
+  debug_always("mx_object_signal(clear) => %d\n", r);
+  schedule_sigconn(ios);
+
   // TODO: share this code with socket()
   iostate_t* ios_new = iostate_alloc();
   ios_new->sockfd = ret;
@@ -399,7 +418,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
   mx_handle_t peer_h, peer_s;
-  mx_status_t r = create_handles(ios_new, &peer_h, &peer_s);
+  r = create_handles(ios_new, &peer_h, &peer_s);
   if (r < 0) {
     iostate_release(ios_new);
     return r;
@@ -671,6 +690,7 @@ static do_func_t do_funcs[] = {
         [MXRIO_WRITE] = do_write,
         [MXRIO_READ] = do_read,
         [MXRIO_CLOSE] = do_close,
+        [IO_SIGCONN] = do_sigconn,
 };
 
 static bool is_message_valid(mxrio_msg_t* msg) {
@@ -719,7 +739,7 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
   request_unpack(rq, &op, &rh, &msg, &ios);
 
   debug_alloc("handle_request: rq %p\n", rq);
-  if (op >= MXRIO_NUM_OPS) {
+  if (op >= NUM_OPS) {
     error("handle_request: unknown op (%d)\n", op);
     goto err;
   }
@@ -745,6 +765,7 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
       case MXRIO_READ:
       case MXRIO_WRITE:
       case MXRIO_CLOSE:
+      case IO_SIGCONN:
         // Don't call send_status()
         break;
       default:
@@ -757,8 +778,10 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
     return;
   }
 err:
-  msg->arg = ERR_INVALID_ARGS;
-  send_status(msg, rh);
+  if (op < MXRIO_NUM_OPS) {
+    msg->arg = ERR_INVALID_ARGS;
+    send_status(msg, rh);
+  }
   debug_alloc("handle_request: request_free rq %p\n", rq);
   request_free(rq);
 }

@@ -12,6 +12,14 @@
 
 #define NSOCKETS 64
 
+#define IO_SIGCONN (MXRIO_NUM_OPS + 0)
+#define NUM_OPS (MXRIO_NUM_OPS + 1)
+
+#define IO_OPNAMES \
+  { "sigconn" }
+
+const char* getopname(int op);
+
 typedef struct request {
   struct request* next;
   int op;
