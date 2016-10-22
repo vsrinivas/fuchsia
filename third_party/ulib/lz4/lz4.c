@@ -936,6 +936,7 @@ int LZ4_compress_destSize(const char* src, char* dst, int* srcSizePtr, int targe
 *  Streaming functions
 ********************************/
 
+#ifndef WITH_LZ4_NOALLOC
 LZ4_stream_t* LZ4_createStream(void)
 {
     LZ4_stream_t* lz4s = (LZ4_stream_t*)ALLOCATOR(8, LZ4_STREAMSIZE_U64);
@@ -943,17 +944,20 @@ LZ4_stream_t* LZ4_createStream(void)
     LZ4_resetStream(lz4s);
     return lz4s;
 }
+#endif
 
 void LZ4_resetStream (LZ4_stream_t* LZ4_stream)
 {
     MEM_INIT(LZ4_stream, 0, sizeof(LZ4_stream_t));
 }
 
+#ifndef WITH_LZ4_NOALLOC
 int LZ4_freeStream (LZ4_stream_t* LZ4_stream)
 {
     FREEMEM(LZ4_stream);
     return (0);
 }
+#endif
 
 
 #define HASH_UNIT sizeof(size_t)
@@ -1101,7 +1105,6 @@ int LZ4_saveDict (LZ4_stream_t* LZ4_dict, char* safeBuffer, int dictSize)
 
     return dictSize;
 }
-
 
 
 /*******************************
@@ -1309,6 +1312,7 @@ int LZ4_decompress_fast(const char* source, char* dest, int originalSize)
 
 /* streaming decompression functions */
 
+#ifndef WITH_LZ4_NOALLOC
 typedef struct
 {
     const BYTE* externalDict;
@@ -1415,6 +1419,7 @@ int LZ4_decompress_fast_continue (LZ4_streamDecode_t* LZ4_streamDecode, const ch
 
     return result;
 }
+#endif  // WITH_LZ4_NOALLOC
 
 
 /*
@@ -1496,12 +1501,14 @@ int LZ4_resetStreamState(void* state, char* inputBuffer)
     return 0;
 }
 
+#ifndef WITH_LZ4_NOALLOC
 void* LZ4_create (char* inputBuffer)
 {
     void* lz4ds = ALLOCATOR(8, LZ4_STREAMSIZE_U64);
     LZ4_init ((LZ4_stream_t_internal*)lz4ds, (BYTE*)inputBuffer);
     return lz4ds;
 }
+#endif
 
 char* LZ4_slideInputBuffer (void* LZ4_Data)
 {
