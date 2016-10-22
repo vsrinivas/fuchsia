@@ -7,10 +7,6 @@ source_set("common") {
     "backend/framebuffer_output.cc",
     "backend/framebuffer_output.h",
     "backend/output.h",
-    "backend/scheduler.cc",
-    "backend/scheduler.h",
-    "backend/vsync_scheduler.cc",
-    "backend/vsync_scheduler.h",
     "compositor_app.cc",
     "compositor_app.h",
     "compositor_engine.cc",
@@ -19,6 +15,7 @@ source_set("common") {
     "compositor_impl.h",
     "frame_dispatcher.cc",
     "frame_dispatcher.h",
+    "frame_info.h",
     "graph/nodes.cc",
     "graph/nodes.h",
     "graph/resources.cc",
@@ -47,6 +44,8 @@ source_set("common") {
     "scene_impl.h",
     "scene_state.cc",
     "scene_state.h",
+    "scheduler.cc",
+    "scheduler.h",
   ]
 
   public_deps = [

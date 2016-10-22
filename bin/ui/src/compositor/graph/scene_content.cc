@@ -13,7 +13,7 @@ namespace compositor {
 
 SceneContent::SceneContent(const SceneLabel& label,
                            uint32_t version,
-                           int64_t presentation_time,
+                           ftl::TimePoint presentation_time,
                            size_t max_resources,
                            size_t max_nodes)
     : label_(label),
@@ -81,7 +81,7 @@ const Node* SceneContent::GetRootNodeIfExists() const {
 
 SceneContentBuilder::SceneContentBuilder(const SceneLabel& label,
                                          uint32_t version,
-                                         int64_t presentation_time,
+                                         ftl::TimePoint presentation_time,
                                          size_t max_resources,
                                          size_t max_nodes,
                                          std::ostream& err)

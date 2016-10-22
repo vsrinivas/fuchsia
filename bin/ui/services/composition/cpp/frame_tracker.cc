@@ -15,70 +15,75 @@ FrameTracker::~FrameTracker() {}
 void FrameTracker::Clear() {
   frame_count_ = 0u;
   frame_info_ = FrameInfo();
-  frame_time_delta_ = ftl::TimeDelta::Zero();
+  presentation_time_delta_ = ftl::TimeDelta::Zero();
 }
 
-void FrameTracker::Update(const FrameInfo& raw_frame_info, MojoTimeTicks now) {
-  const int64_t old_frame_time = frame_info_.frame_time;
+void FrameTracker::Update(const FrameInfo& raw_frame_info, ftl::TimePoint now) {
+  const int64_t now_ticks = now.ToEpochDelta().ToNanoseconds();
+  const int64_t old_base_time = frame_info_.base_time;
   const int64_t old_presentation_time = frame_info_.presentation_time;
   frame_info_ = raw_frame_info;
 
   // Ensure frame info is sane since it comes from another service.
-  if (frame_info_.frame_time > now) {
-    FTL_LOG(WARNING) << "Frame time is in the future: frame_time="
-                     << frame_info_.frame_time << ", now=" << now;
-    frame_info_.frame_time = now;
+  if (frame_info_.base_time > now_ticks) {
+    FTL_LOG(WARNING) << "Frame time is in the future: base_time="
+                     << frame_info_.base_time << ", now=" << now_ticks;
+    frame_info_.base_time = now_ticks;
   }
-  if (frame_info_.frame_deadline < frame_info_.frame_time) {
+  if (frame_info_.publish_deadline < frame_info_.base_time) {
     FTL_LOG(WARNING)
-        << "Frame deadline is earlier than frame time: frame_deadline="
-        << frame_info_.frame_deadline
-        << ", frame_time=" << frame_info_.frame_time << ", now=" << now;
-    frame_info_.frame_deadline = frame_info_.frame_time;
+        << "Publish deadline is earlier than base time: publish_deadline="
+        << frame_info_.publish_deadline
+        << ", base_time=" << frame_info_.base_time << ", now=" << now_ticks;
+    frame_info_.publish_deadline = frame_info_.base_time;
   }
-  if (frame_info_.presentation_time < frame_info_.frame_deadline) {
-    FTL_LOG(WARNING) << "Presentation time is earlier than frame deadline: "
+  if (frame_info_.presentation_time < frame_info_.publish_deadline) {
+    FTL_LOG(WARNING) << "Presentation time is earlier than publish deadline: "
                         "presentation_time="
                      << frame_info_.presentation_time
-                     << ", frame_deadline=" << frame_info_.frame_deadline
-                     << ", now=" << now;
-    frame_info_.presentation_time = frame_info_.frame_deadline;
+                     << ", publish_deadline=" << frame_info_.publish_deadline
+                     << ", now=" << now_ticks;
+    frame_info_.presentation_time = frame_info_.publish_deadline;
   }
 
-  // Compensate for significant lag by adjusting the frame time if needed
+  // Compensate for significant lag by adjusting the base time if needed
   // to step past skipped frames.
-  uint64_t lag = now - frame_info_.frame_time;
-  if (frame_info_.frame_interval > 0u && lag >= frame_info_.frame_interval) {
-    uint64_t offset = lag % frame_info_.frame_interval;
-    uint64_t adjustment = now - offset - frame_info_.frame_time;
-    frame_info_.frame_time = now - offset;
-    frame_info_.frame_deadline += adjustment;
+  uint64_t lag = now_ticks - frame_info_.base_time;
+  if (frame_info_.presentation_interval > 0u &&
+      lag >= frame_info_.presentation_interval) {
+    uint64_t offset = lag % frame_info_.presentation_interval;
+    uint64_t adjustment = now_ticks - offset - frame_info_.base_time;
+    frame_info_.base_time = now_ticks - offset;
+    frame_info_.publish_deadline += adjustment;
     frame_info_.presentation_time += adjustment;
 
     // Jank warning.
     // TODO(jeffbrown): Suppress this once we're happy with things.
-    FTL_LOG(WARNING) << "Missed " << frame_info_.frame_interval
-                     << " us frame deadline by " << lag << " us, skipping "
-                     << (lag / frame_info_.frame_interval) << " frames";
+    FTL_LOG(WARNING) << "Missed "
+                     << (frame_info_.presentation_interval * 0.000001f)
+                     << " ms publish deadline by " << (lag * 0.000001f)
+                     << " ms, skipping "
+                     << (lag / frame_info_.presentation_interval) << " frames";
   }
 
   // Ensure monotonicity.
   if (frame_count_++ == 0u)
     return;
-  if (frame_info_.frame_time < old_frame_time) {
+  if (frame_info_.base_time < old_base_time) {
     FTL_LOG(WARNING) << "Frame time is going backwards: new="
-                     << frame_info_.frame_time << ", old=" << old_frame_time
-                     << ", now=" << now;
-    frame_info_.frame_time = old_frame_time;
+                     << frame_info_.base_time << ", old=" << old_base_time
+                     << ", now=" << now_ticks;
+    frame_info_.base_time = old_base_time;
   }
   if (frame_info_.presentation_time < old_presentation_time) {
     FTL_LOG(WARNING) << "Presentation time is going backwards: new="
                      << frame_info_.presentation_time
-                     << ", old=" << old_presentation_time << ", now=" << now;
+                     << ", old=" << old_presentation_time
+                     << ", now=" << now_ticks;
     frame_info_.presentation_time = old_presentation_time;
   }
-  frame_time_delta_ =
-      ftl::TimeDelta::FromMicroseconds(frame_info_.frame_time - old_frame_time);
+  presentation_time_delta_ =
+      ftl::TimeDelta::FromNanoseconds(frame_info_.base_time - old_base_time);
 }
 
 }  // namespace mozart

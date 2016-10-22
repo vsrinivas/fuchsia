@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "lib/ftl/time/time_point.h"
+
 namespace compositor {
 
 // Convenience class for formatting descriptive labels for diagnostics.
@@ -25,9 +27,9 @@ class SceneLabel {
   // Gets a descriptive label including optional version and node information.
   std::string FormattedLabel() const;
   std::string FormattedLabelForVersion(uint32_t version,
-                                       int64_t presentation_time) const;
+                                       ftl::TimePoint presentation_time) const;
   std::string FormattedLabelForNode(uint32_t version,
-                                    int64_t presentation_time,
+                                    ftl::TimePoint presentation_time,
                                     uint32_t node_id) const;
 
  private:

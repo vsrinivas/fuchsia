@@ -25,23 +25,25 @@ std::string SceneLabel::FormattedLabel() const {
 
 std::string SceneLabel::FormattedLabelForVersion(
     uint32_t version,
-    int64_t presentation_time) const {
+    ftl::TimePoint presentation_time) const {
   return label_.empty()
-             ? ftl::StringPrintf("<S%d/v%d@%" PRId64 ">", token_, version,
-                                 presentation_time)
-             : ftl::StringPrintf("<S%d:%s/v%d@%" PRId64 ">", token_,
-                                 label_.c_str(), version, presentation_time);
+             ? ftl::StringPrintf("<S%d/v%d@%f>", token_, version,
+                                 presentation_time.ToEpochDelta().ToSecondsF())
+             : ftl::StringPrintf("<S%d:%s/v%d@%f>", token_, label_.c_str(),
+                                 version,
+                                 presentation_time.ToEpochDelta().ToSecondsF());
 }
 
 std::string SceneLabel::FormattedLabelForNode(uint32_t version,
-                                              int64_t presentation_time,
+                                              ftl::TimePoint presentation_time,
                                               uint32_t node_id) const {
   return label_.empty()
-             ? ftl::StringPrintf("<S%d/v%d@%" PRId64 ">[#%d]", token_, version,
-                                 presentation_time, node_id)
-             : ftl::StringPrintf("<S%d:%s/v%d@%" PRId64 ">[#%d]", token_,
-                                 label_.c_str(), version, presentation_time,
-                                 node_id);
+             ? ftl::StringPrintf("<S%d/v%d@%f>[#%d]", token_, version,
+                                 presentation_time.ToEpochDelta().ToSecondsF(),
+                                 node_id)
+             : ftl::StringPrintf(
+                   "<S%d:%s/v%d@%f>[#%d]", token_, label_.c_str(), version,
+                   presentation_time.ToEpochDelta().ToSecondsF(), node_id);
 }
 
 }  // namespace compositor

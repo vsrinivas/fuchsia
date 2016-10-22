@@ -6,6 +6,7 @@
 
 #include "apps/mozart/glue/base/trace_event.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_point.h"
 #include "mojo/public/cpp/application/connect.h"
 
 namespace mozart {
@@ -79,7 +80,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
   TRACE_EVENT0("ui", "OnInvalidation");
 
   invalidated_ = false;
-  frame_tracker_.Update(*invalidation->frame_info, MojoGetTimeTicksNow());
+  frame_tracker_.Update(*invalidation->frame_info, ftl::TimePoint::Now());
   scene_version_ = invalidation->scene_version;
 
   if (invalidation->properties) {

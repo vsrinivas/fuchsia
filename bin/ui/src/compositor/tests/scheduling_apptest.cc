@@ -56,16 +56,16 @@ class SchedulingTest : public mojo::test::ApplicationTestBase {
     ASSERT_TRUE(scheduler->ScheduleFrame(&frame_info2));
     AssertValidFrameInfo(frame_info2.get());
 
-    EXPECT_GT(frame_info2->frame_time, frame_info1->frame_time);
+    EXPECT_GT(frame_info2->base_time, frame_info1->base_time);
     EXPECT_GT(frame_info2->presentation_time, frame_info1->presentation_time);
   }
 
   void AssertValidFrameInfo(FrameInfo* frame_info) {
     ASSERT_NE(nullptr, frame_info);
-    EXPECT_LT(frame_info->frame_time, MojoGetTimeTicksNow());
-    EXPECT_GT(frame_info->frame_interval, 0u);
-    EXPECT_GT(frame_info->frame_deadline, frame_info->frame_time);
-    EXPECT_GT(frame_info->presentation_time, frame_info->frame_deadline);
+    EXPECT_LT(frame_info->base_time, MojoGetTimeTicksNow());
+    EXPECT_GT(frame_info->presentation_interval, 0u);
+    EXPECT_GT(frame_info->publish_deadline, frame_info->base_time);
+    EXPECT_GT(frame_info->presentation_time, frame_info->publish_deadline);
   }
 
   mojo::NativeViewportPtr viewport_;

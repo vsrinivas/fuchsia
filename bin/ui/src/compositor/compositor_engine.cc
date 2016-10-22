@@ -32,7 +32,9 @@ std::string SanitizeLabel(const mojo::String& label) {
 }
 }  // namespace
 
-CompositorEngine::CompositorEngine() : weak_factory_(this) {}
+CompositorEngine::CompositorEngine()
+    : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      weak_factory_(this) {}
 
 CompositorEngine::~CompositorEngine() {}
 
@@ -117,40 +119,40 @@ void CompositorEngine::CreateRenderer(
   FTL_CHECK(renderer_id);
 
   // Create the state and bind implementation to it.
-  RendererState* renderer_state =
-      new RendererState(renderer_id, SanitizeLabel(label));
+  RendererState* renderer_state = new RendererState(
+      renderer_id, SanitizeLabel(label), std::make_unique<FramebufferOutput>());
   RendererImpl* renderer_impl =
       new RendererImpl(this, renderer_state, renderer_request.Pass());
   renderer_state->set_renderer_impl(renderer_impl);
   renderer_impl->set_connection_error_handler(
       [this, renderer_state] { OnRendererConnectionError(renderer_state); });
 
-  // Create the renderer.
-  SchedulerCallbacks scheduler_callbacks(
+  // Bind scheduler callbacks.
+  renderer_state->scheduler()->SetCallbacks(
       [
         weak = weak_factory_.GetWeakPtr(),
         renderer_state_weak = renderer_state->GetWeakPtr()
-      ](const mozart::FrameInfo& frame_info) {
+      ](const FrameInfo& frame_info) {
         if (weak)
           weak->OnOutputUpdateRequest(renderer_state_weak, frame_info);
       },
       [
         weak = weak_factory_.GetWeakPtr(),
         renderer_state_weak = renderer_state->GetWeakPtr()
-      ](const mozart::FrameInfo& frame_info) {
+      ](const FrameInfo& frame_info) {
         if (weak)
           weak->OnOutputSnapshotRequest(renderer_state_weak, frame_info);
       });
-  std::unique_ptr<Output> output(
-      new FramebufferOutput(std::move(framebuffer), std::move(framebuffer_info),
-                            scheduler_callbacks, [
-                              weak = weak_factory_.GetWeakPtr(),
-                              renderer_state_weak = renderer_state->GetWeakPtr()
-                            ] {
-                              if (weak)
-                                weak->OnOutputError(renderer_state_weak);
-                            }));
-  renderer_state->set_output(std::move(output));
+
+  // Initialize the output.
+  static_cast<FramebufferOutput*>(renderer_state->output())
+      ->Initialize(std::move(framebuffer), std::move(framebuffer_info), [
+        weak = weak_factory_.GetWeakPtr(),
+        renderer_state_weak = renderer_state->GetWeakPtr()
+      ] {
+        if (weak)
+          weak->OnOutputError(renderer_state_weak);
+      });
 
   // Add to registry.
   renderers_.push_back(renderer_state);
@@ -198,7 +200,8 @@ void CompositorEngine::Publish(SceneState* scene_state,
 
   if (!metadata)
     metadata = mozart::SceneMetadata::New();
-  int64_t presentation_time = metadata->presentation_time;
+  ftl::TimePoint presentation_time = ftl::TimePoint::FromEpochDelta(
+      ftl::TimeDelta::FromNanoseconds(metadata->presentation_time));
   scene_state->scene_def()->EnqueuePublish(metadata.Pass());
 
   // Implicitly schedule fresh snapshots.
@@ -213,14 +216,13 @@ void CompositorEngine::Publish(SceneState* scene_state,
   // not visible to ensure that we will still apply pending updates which
   // might have side-effects on the client's state (such as closing the
   // connection due to an error or releasing resources).
-  MojoTimeTicks now = MojoGetTimeTicksNow();
-  FTL_DCHECK(now >= 0);
+  ftl::TimePoint now = ftl::TimePoint::Now();
   if (presentation_time <= now) {
     SceneDef::Disposition disposition = PresentScene(scene_state, now);
     if (disposition == SceneDef::Disposition::kFailed)
       DestroyScene(scene_state);
   } else {
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    task_runner_->PostTaskForTime(
         [
           weak = weak_factory_.GetWeakPtr(),
           scene_state_weak = scene_state->GetWeakPtr(), presentation_time
@@ -228,7 +230,7 @@ void CompositorEngine::Publish(SceneState* scene_state,
           if (weak)
             weak->OnPresentScene(scene_state_weak, presentation_time);
         },
-        ftl::TimeDelta::FromMicroseconds(presentation_time - now));
+        presentation_time);
   }
 }
 
@@ -245,7 +247,7 @@ void CompositorEngine::ScheduleFrame(SceneState* scene_state,
   // conflicting timing signals coming from multiple renderers.
   for (auto& renderer : renderers_) {
     ScheduleFrameForRenderer(renderer,
-                             Scheduler::SchedulingMode::kUpdateAndSnapshot);
+                             Scheduler::SchedulingMode::kUpdateThenSnapshot);
   }
 }
 
@@ -305,7 +307,7 @@ void CompositorEngine::ScheduleFrame(RendererState* renderer_state,
     return;
 
   ScheduleFrameForRenderer(renderer_state,
-                           Scheduler::SchedulingMode::kUpdateAndSnapshot);
+                           Scheduler::SchedulingMode::kUpdateThenSnapshot);
 }
 
 void CompositorEngine::HitTest(
@@ -362,7 +364,7 @@ void CompositorEngine::InvalidateScene(SceneState* scene_state) {
 
 SceneDef::Disposition CompositorEngine::PresentScene(
     SceneState* scene_state,
-    int64_t presentation_time) {
+    ftl::TimePoint presentation_time) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(2) << "PresentScene: scene=" << scene_state;
 
@@ -385,21 +387,21 @@ SceneDef::Disposition CompositorEngine::PresentScene(
 }
 
 void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
-                                       const mozart::FrameInfo& frame_info) {
+                                       const FrameInfo& frame_info) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   DVLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
   TRACE_EVENT1("gfx", "CompositorEngine::ComposeRenderer", "renderer",
                renderer_state->FormattedLabel());
 
-  int64_t composition_time = MojoGetTimeTicksNow();
+  ftl::TimePoint composition_time = ftl::TimePoint();
   PresentRenderer(renderer_state, frame_info.presentation_time);
   SnapshotRenderer(renderer_state);
   PaintRenderer(renderer_state, frame_info, composition_time);
 }
 
 void CompositorEngine::PresentRenderer(RendererState* renderer_state,
-                                       int64_t presentation_time) {
+                                       ftl::TimePoint presentation_time) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   DVLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
 
@@ -460,8 +462,8 @@ void CompositorEngine::SnapshotRendererInner(RendererState* renderer_state,
 }
 
 void CompositorEngine::PaintRenderer(RendererState* renderer_state,
-                                     const mozart::FrameInfo& frame_info,
-                                     int64_t composition_time) {
+                                     const FrameInfo& frame_info,
+                                     ftl::TimePoint composition_time) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   DVLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
@@ -490,7 +492,7 @@ void CompositorEngine::ScheduleFrameForRenderer(
     RendererState* renderer_state,
     Scheduler::SchedulingMode scheduling_mode) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  renderer_state->output()->GetScheduler()->ScheduleFrame(scheduling_mode);
+  renderer_state->scheduler()->ScheduleFrame(scheduling_mode);
 }
 
 void CompositorEngine::OnOutputError(
@@ -508,24 +510,34 @@ void CompositorEngine::OnOutputError(
 
 void CompositorEngine::OnOutputUpdateRequest(
     const ftl::WeakPtr<RendererState>& renderer_state_weak,
-    const mozart::FrameInfo& frame_info) {
+    const FrameInfo& frame_info) {
   RendererState* renderer_state = renderer_state_weak.get();
   if (!renderer_state)
     return;
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
 
-  renderer_state->frame_dispatcher().DispatchCallbacks(frame_info);
+  mozart::FrameInfo dispatched_frame_info;
+  dispatched_frame_info.presentation_time =
+      frame_info.presentation_time.ToEpochDelta().ToNanoseconds();
+  dispatched_frame_info.presentation_interval =
+      frame_info.presentation_interval.ToNanoseconds();
+  dispatched_frame_info.publish_deadline =
+      frame_info.publish_deadline.ToEpochDelta().ToNanoseconds();
+  dispatched_frame_info.base_time =
+      frame_info.base_time.ToEpochDelta().ToNanoseconds();
+
+  renderer_state->frame_dispatcher().DispatchCallbacks(dispatched_frame_info);
 
   // TODO(jeffbrown): Be more selective and do this work only for scenes
   // associated with the renderer.
   for (auto& pair : scenes_by_token_) {
-    pair.second->frame_dispatcher().DispatchCallbacks(frame_info);
+    pair.second->frame_dispatcher().DispatchCallbacks(dispatched_frame_info);
   }
 }
 
 void CompositorEngine::OnOutputSnapshotRequest(
     const ftl::WeakPtr<RendererState>& renderer_state_weak,
-    const mozart::FrameInfo& frame_info) {
+    const FrameInfo& frame_info) {
   RendererState* renderer_state = renderer_state_weak.get();
   if (!renderer_state)
     return;
@@ -536,7 +548,7 @@ void CompositorEngine::OnOutputSnapshotRequest(
 
 void CompositorEngine::OnPresentScene(
     const ftl::WeakPtr<SceneState>& scene_state_weak,
-    int64_t presentation_time) {
+    ftl::TimePoint presentation_time) {
   SceneState* scene_state = scene_state_weak.get();
   if (!scene_state)
     return;

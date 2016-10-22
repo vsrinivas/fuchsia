@@ -193,9 +193,9 @@ std::ostream& operator<<(std::ostream& os, const Blend& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const FrameInfo& value) {
-  return os << "{frame_time=" << value.frame_time
-            << ", frame_interval=" << value.frame_interval
-            << ", frame_deadline=" << value.frame_deadline << "}";
+  return os << "{base_time=" << value.base_time
+            << ", presentation_interval=" << value.presentation_interval
+            << ", publish_deadline=" << value.publish_deadline << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const HitTestBehavior& value) {

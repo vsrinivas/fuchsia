@@ -88,7 +88,9 @@ class SpinningSquareView : public mozart::BaseView {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
     float t =
-        fmod(frame_tracker().frame_info().frame_time * 0.000001f * kSpeed, 1.f);
+        fmod(frame_tracker().presentation_time().ToEpochDelta().ToSecondsF() *
+                 kSpeed,
+             1.f);
     canvas->rotate(360.f * t);
     SkPaint paint;
     paint.setColor(0xFFFF00FF);

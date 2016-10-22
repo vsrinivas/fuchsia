@@ -5,13 +5,15 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
 #define APPS_MOZART_SRC_COMPOSITOR_BACKEND_FRAMEBUFFER_OUTPUT_H_
 
+#include <thread>
+
 #include "apps/mozart/src/compositor/backend/output.h"
-#include "apps/mozart/src/compositor/backend/vsync_scheduler.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 #include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
-#include "third_party/skia/include/core/SkSurface.h"
 
 namespace compositor {
 
@@ -19,26 +21,44 @@ namespace compositor {
 // TODO(jeffbrown): This renderer doesn't do any pipelining.
 class FramebufferOutput : public Output {
  public:
-  FramebufferOutput(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                    mojo::FramebufferInfoPtr framebuffer_info,
-                    const SchedulerCallbacks& scheduler_callbacks,
-                    const ftl::Closure& error_callback);
+  FramebufferOutput();
   ~FramebufferOutput() override;
 
-  Scheduler* GetScheduler() override;
-  void SubmitFrame(const ftl::RefPtr<RenderFrame>& frame) override;
+  void Initialize(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
+                  mojo::FramebufferInfoPtr framebuffer_info,
+                  ftl::Closure error_callback);
+
+  // |Output|:
+  void ScheduleFrame(FrameCallback callback) override;
+  void SubmitFrame(ftl::RefPtr<RenderFrame> frame) override;
 
  private:
-  void PostErrorCallback();
+  class Rasterizer;
 
-  mojo::FramebufferPtr framebuffer_;
-  mojo::FramebufferInfoPtr framebuffer_info_;
-  uintptr_t framebuffer_data_ = 0u;
-  sk_sp<SkSurface> framebuffer_surface_;
+  void PostErrorCallback();
+  void PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame);
+  void PostFrameFinishedFromRasterizer(uint32_t frame_number,
+                                       ftl::TimePoint submit_time,
+                                       ftl::TimePoint draw_time,
+                                       ftl::TimePoint finish_time);
+  void RunScheduledFrameCallback();
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;
-  ftl::RefPtr<VsyncScheduler> vsync_scheduler_;
   ftl::Closure error_callback_;
+
+  std::unique_ptr<Rasterizer> rasterizer_;
+  std::thread rasterizer_thread_;
+  ftl::RefPtr<ftl::TaskRunner> rasterizer_task_runner_;
+
+  FrameCallback scheduled_frame_callback_;
+
+  uint32_t frame_number_ = 0u;
+  bool frame_in_progress_ = false;
+  ftl::RefPtr<RenderFrame> next_frame_;
+
+  ftl::TimePoint last_submit_time_;
+  ftl::TimePoint last_presentation_time_;
+  ftl::TimeDelta presentation_latency_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutput);
 };

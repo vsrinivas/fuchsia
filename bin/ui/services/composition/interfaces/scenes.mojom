@@ -215,7 +215,7 @@ struct SceneMetadata {
   // scene are to be shown on the display output assuming everything is
   // fully rendered and submitted by the appropriate deadline.
   //
-  // Expressed in microseconds in the |MojoTimeTicks| timebase.
+  // Expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
   //
   // A value of 0 means "as soon as possible".
   //

@@ -21,21 +21,8 @@ interface FrameScheduler {
   // scene scheduling to one of the renderers.
   //
   // The returned |frame_info| provides information about the frame to
-  // be drawn.  This information should be passed to a
-  // |mozart::FrameTracker| to apply compensation for
-  // skipped frames before using it.
-  //
-  // TODO(jeffbrown): Consider whether we should have the callback be invoked
-  // immediately rather than on schedule, letting the client set its own
-  // timers.  Advantage may be a reduction in latency due to the elimination
-  // of an IPC on a timing critical path.  Disadvantage may be an increase
-  // in the number of context switches and some extra client side bookkeeping.
-  // Note that although clients could predict future frame times based on the
-  // reported information, it's still better for them to schedule each frame
-  // individually so they stay in sync with one another and quickly catch
-  // up to any changes in timing.  This also gives the compositor more
-  // opportunity to plan for the upcoming frame, perhaps even boost clocks
-  // in anticipation.
+  // be drawn.  This information should be passed to a |mozart::FrameTracker|
+  // to apply compensation for skipped frames before using it.
   ScheduleFrame() => (FrameInfo frame_info);
 };
 
@@ -48,49 +35,51 @@ interface FrameScheduler {
 //
 // See |mozart::FrameTracker|.
 struct FrameInfo {
-  // A timestamp indicating when the work of updating the frame was scheduled
-  // to begin which may be used to coordinate animations that require a
-  // monotonic timing reference for synchronization, even across scenes.
-  //
-  // It essentially represents the time when the work of producing a new
-  // frame began.
+  // A timestamp indicating approximately when the contents of the frame
+  // will be presented on the display (pixels will light up) assuming
+  // the scene update is published in advance of the deadline and everything
+  // goes according to plan.
   //
   // This value monotonically increases with each frame, never repeats, and
-  // is guaranteed to represent a time in the recent past.  It will always be
-  // less than or equal to the value returned by |MojoGetTimeTicksNow()| when
-  // the frame info is received as part of a |ScheduleFrame()| callback.
+  // is always greater than |publish_deadline|.
   //
-  // Expressed in microseconds in the |MojoTimeTicks| timebase.
-  // TODO(jeffbrown): Time ticks may need finer resolution guarantees.
-  int64 frame_time;
+  // This is a good value to use for synchronizing visual effects with other
+  // outputs such as audio rendering.  It may also be used to drive animations.
+  //
+  // Expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+  int64 presentation_time;
 
-  // The anticipated time interval between the currently scheduled frame
-  // and the next one.
+  // The anticipated time interval between when the currently scheduled frame
+  // and the following one will be presented.
   //
   // The interval is approximate and may change at any time.  There is no
   // guarantee that the next frame will occur precisely on the specified
   // interval although that is what is expected to happen in steady state.
   //
-  // Expressed in microseconds.
-  uint64 frame_interval;
+  // Expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+  uint64 presentation_interval;
 
-  // A timestamp indicating when scene updates must be published and ready
-  // to be composited in order for the changes to be reflected in this frame.
-  //
-  // This value is guaranteed to be no less than |frame_time| but it is
-  // not necessarily monotonic; it may briefly go backwards if the frame
-  // interval or pipeline depth changes between frames.
-  //
-  // Expressed in microseconds in the |MojoTimeTicks| timebase.
-  int64 frame_deadline;
-
-  // A timestamp indicating approximately when the contents of the frame
-  // will be shown on the display output assuming everything is fully rendered
-  // and submitted by the indicated |frame_deadline|.
+  // A timestamp indicating a deadline before which scene updates must be
+  // published (by calling |Scene.Publish()| to ensure that they will
+  // be presented in this frame.
   //
   // This value monotonically increases with each frame, never repeats, and
-  // is guaranteed to be no less than |frame_deadline|.
+  // is always greater than |base_time|.
   //
-  // Expressed in microseconds in the |MojoTimeTicks| timebase.
-  int64 presentation_time;
+  // Expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+  int64 publish_deadline;
+
+  // A timestamp indicating when the compositor started working on the frame
+  // and began delivering scheduled frame callbacks to applications.
+  //
+  // This value monotonically increases with each frame, never repeats, and
+  // always represents a time in the recent past (since processing begins
+  // before the callback is delivered).
+  //
+  // This value serves as an anchor for when processing of a new frame begins.
+  // User inputs observed after this time might not be reflected in the state
+  // of the scene.
+  //
+  // Expressed in nanoseconds in the |CLOCK_MONOTONIC| timebase.
+  int64 base_time;
 };

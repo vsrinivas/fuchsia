@@ -35,7 +35,7 @@ void SceneDef::EnqueuePublish(mozart::SceneMetadataPtr metadata) {
 }
 
 SceneDef::Disposition SceneDef::Present(
-    int64_t presentation_time,
+    ftl::TimePoint presentation_time,
     Universe* universe,
     const SceneResolver& resolver,
     const SceneUnavailableSender& unavailable_sender,
@@ -260,7 +260,7 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(uint32_t node_id,
 
 SceneDef::Collector::Collector(const SceneDef* scene,
                                uint32_t version,
-                               int64_t presentation_time,
+                               ftl::TimePoint presentation_time,
                                std::ostream& err)
     : SceneContentBuilder(scene->label_,
                           version,

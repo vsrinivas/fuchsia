@@ -66,7 +66,7 @@ class SceneDef {
   // Returns a value which indicates whether the updates succeeded.
   // If the result is |kFailed|, the scene graph was left in an unusable
   // and inconsistent state and must be destroyed.
-  Disposition Present(int64_t presentation_time,
+  Disposition Present(ftl::TimePoint presentation_time,
                       Universe* universe,
                       const SceneResolver& resolver,
                       const SceneUnavailableSender& unavailable_sender,
@@ -83,7 +83,7 @@ class SceneDef {
    public:
     Collector(const SceneDef* scene,
               uint32_t version,
-              int64_t presentation_time,
+              ftl::TimePoint presentation_time,
               std::ostream& err);
     ~Collector() override;
 
@@ -101,8 +101,9 @@ class SceneDef {
     Publication(mozart::SceneMetadataPtr metadata);
     ~Publication();
 
-    bool is_due(int64_t presentation_time) const {
-      return metadata->presentation_time <= presentation_time;
+    bool is_due(ftl::TimePoint presentation_time) const {
+      return ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromNanoseconds(
+                 metadata->presentation_time)) <= presentation_time;
     }
 
     mozart::SceneMetadataPtr metadata;

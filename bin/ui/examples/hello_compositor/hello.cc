@@ -11,6 +11,7 @@
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_point.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
@@ -63,7 +64,7 @@ class HelloApp : public mojo::ApplicationImplBase {
 
   void ScheduleDraw() {
     frame_scheduler_->ScheduleFrame([this](mozart::FrameInfoPtr frame_info) {
-      frame_tracker_.Update(*frame_info, MojoGetTimeTicksNow());
+      frame_tracker_.Update(*frame_info, ftl::TimePoint::Now());
       Draw();
     });
   }
@@ -71,8 +72,8 @@ class HelloApp : public mojo::ApplicationImplBase {
   void Draw() {
     FTL_DCHECK(scene_);
 
-    // Update position of circle using frame time to drive the animation.
-    x_ += 40.0f * frame_tracker_.frame_time_delta().ToSecondsF();
+    // Animate the position of the circle.
+    x_ += 40.0f * frame_tracker_.presentation_time_delta().ToSecondsF();
     if (x_ >= framebuffer_size_.width)
       x_ = 0.0;
 

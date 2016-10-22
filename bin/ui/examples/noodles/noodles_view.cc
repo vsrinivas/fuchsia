@@ -72,7 +72,7 @@ void NoodlesView::OnDraw() {
   const mojo::Size& size = *properties()->view_layout->size;
 
   // Update the animation.
-  alpha_ += frame_tracker().frame_time_delta().ToSecondsF();
+  alpha_ += frame_tracker().presentation_time_delta().ToSecondsF();
 
   // Create and post a new frame to the renderer.
   std::unique_ptr<Frame> frame(

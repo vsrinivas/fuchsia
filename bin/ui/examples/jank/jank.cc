@@ -14,6 +14,8 @@
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -128,14 +130,15 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
 
     Invalidate();
 
-    if (MojoGetTimeTicksNow() < stutter_end_time_)
+    if (stutter_end_time_ > ftl::TimePoint::Now())
       sleep(2);
   }
 
   void DrawContent(SkCanvas* canvas) {
-    SkScalar hsv[3] = {static_cast<SkScalar>(
-                           fmod(MojoGetTimeTicksNow() * 0.000001 * 60, 360.)),
-                       1, 1};
+    SkScalar hsv[3] = {
+        static_cast<SkScalar>(
+            fmod(ftl::TimePoint::Now().ToEpochDelta().ToSecondsF() * 60, 360.)),
+        1, 1};
     canvas->clear(SkHSVToColor(hsv));
 
     SkScalar x = kMargin;
@@ -178,7 +181,8 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
       }
 
       case Action::kStutter30: {
-        stutter_end_time_ = MojoGetTimeTicksNow() + 30 * 1000000;
+        stutter_end_time_ =
+            ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(30);
         break;
       }
 
@@ -192,7 +196,7 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
   mozart::InputHandler input_handler_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> typeface_;
-  int64_t stutter_end_time_ = 0u;
+  ftl::TimePoint stutter_end_time_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(JankView);
 };

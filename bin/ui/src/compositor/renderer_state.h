@@ -14,6 +14,7 @@
 #include "apps/mozart/src/compositor/frame_dispatcher.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "apps/mozart/src/compositor/scene_state.h"
+#include "apps/mozart/src/compositor/scheduler.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -23,7 +24,9 @@ namespace compositor {
 // This object is owned by the CompositorEngine that created it.
 class RendererState {
  public:
-  RendererState(uint32_t id, const std::string& label);
+  RendererState(uint32_t id,
+                const std::string& label,
+                std::unique_ptr<Output> output);
   ~RendererState();
 
   ftl::WeakPtr<RendererState> GetWeakPtr() {
@@ -34,10 +37,10 @@ class RendererState {
   void set_renderer_impl(mozart::Renderer* impl) { renderer_impl_.reset(impl); }
 
   // The underlying backend output.
-  void set_output(std::unique_ptr<Output> output) {
-    output_ = std::move(output);
-  }
   Output* output() { return output_.get(); }
+
+  // The underlying scheduler.
+  Scheduler* scheduler() { return &scheduler_; }
 
   // Gets the root scene, may be null if none set yet.
   SceneState* root_scene() { return root_scene_; }
@@ -76,10 +79,11 @@ class RendererState {
   std::string FormattedLabel();
 
  private:
-  std::unique_ptr<Output> output_;
   const uint32_t id_;
   const std::string label_;
   std::string formatted_label_cache_;
+  std::unique_ptr<Output> output_;
+  Scheduler scheduler_;
 
   FrameDispatcher frame_dispatcher_;  // must be before renderer_impl_
   std::unique_ptr<mozart::Renderer> renderer_impl_;

@@ -54,7 +54,7 @@ class SceneContent : public ftl::RefCountedThreadSafe<SceneContent> {
   uint32_t version() const { return version_; }
 
   // Gets the time when this scene was presented.
-  int64_t presentation_time() const { return presentation_time_; }
+  ftl::TimePoint presentation_time() const { return presentation_time_; }
 
   // Returns true if this content satisfies a request for the specified version.
   bool MatchesVersion(uint32_t requested_version) const;
@@ -90,14 +90,14 @@ class SceneContent : public ftl::RefCountedThreadSafe<SceneContent> {
 
   SceneContent(const SceneLabel& label,
                uint32_t version,
-               int64_t presentation_time,
+               ftl::TimePoint presentation_time,
                size_t max_resources,
                size_t max_nodes);
   ~SceneContent();
 
   const SceneLabel label_;
   const uint32_t version_;
-  const int64_t presentation_time_;
+  const ftl::TimePoint presentation_time_;
   std::unordered_map<uint32_t, ftl::RefPtr<const Resource>> resources_;
   std::unordered_map<uint32_t, ftl::RefPtr<const Node>> nodes_;
 
@@ -110,7 +110,7 @@ class SceneContentBuilder {
  public:
   SceneContentBuilder(const SceneLabel& label,
                       uint32_t version,
-                      int64_t presentation_time,
+                      ftl::TimePoint presentation_time,
                       size_t max_resources,
                       size_t max_nodes,
                       std::ostream& err);

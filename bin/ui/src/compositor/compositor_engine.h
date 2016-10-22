@@ -9,12 +9,16 @@
 #include <vector>
 
 #include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/src/compositor/backend/scheduler.h"
+#include "apps/mozart/src/compositor/frame_info.h"
 #include "apps/mozart/src/compositor/graph/universe.h"
 #include "apps/mozart/src/compositor/renderer_state.h"
 #include "apps/mozart/src/compositor/scene_state.h"
+#include "apps/mozart/src/compositor/scheduler.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace compositor {
 
@@ -85,17 +89,17 @@ class CompositorEngine {
 
   void InvalidateScene(SceneState* scene_state);
   SceneDef::Disposition PresentScene(SceneState* scene_state,
-                                     int64_t presentation_time);
+                                     ftl::TimePoint presentation_time);
 
   // Starts the process of composing the contents of the renderer to
   // produce a new frame.
   void ComposeRenderer(RendererState* renderer_state,
-                       const mozart::FrameInfo& frame_info);
+                       const FrameInfo& frame_info);
 
   // Applies and validates scene updates from all scenes which are included
   // in the renderer's scene graph.
   void PresentRenderer(RendererState* renderer_state,
-                       int64_t presentation_time);
+                       ftl::TimePoint presentation_time);
 
   // Resolves scene dependencies and captures a snapshot of the current
   // state of the renderer's scene graph.
@@ -106,8 +110,8 @@ class CompositorEngine {
   // Paints the renderer's current snapshot and submits a frame of content
   // to the output for display.
   void PaintRenderer(RendererState* renderer_state,
-                     const mozart::FrameInfo& frame_info,
-                     int64_t composition_time);
+                     const FrameInfo& frame_info,
+                     ftl::TimePoint composition_time);
 
   // Schedules the next frame to be rendered, if needed.
   void ScheduleFrameForRenderer(RendererState* renderer_state,
@@ -116,12 +120,12 @@ class CompositorEngine {
   void OnOutputError(const ftl::WeakPtr<RendererState>& renderer_state_weak);
   void OnOutputUpdateRequest(
       const ftl::WeakPtr<RendererState>& renderer_state_weak,
-      const mozart::FrameInfo& frame_info);
+      const FrameInfo& frame_info);
   void OnOutputSnapshotRequest(
       const ftl::WeakPtr<RendererState>& renderer_state_weak,
-      const mozart::FrameInfo& frame_info);
+      const FrameInfo& frame_info);
   void OnPresentScene(const ftl::WeakPtr<SceneState>& scene_state_weak,
-                      int64_t presentation_time);
+                      ftl::TimePoint presentation_time);
 
   bool ResolveSceneReference(const mozart::SceneToken& scene_token);
   void SendResourceUnavailable(SceneState* scene_state, uint32_t resource_id);
@@ -143,6 +147,8 @@ class CompositorEngine {
   uint32_t next_renderer_id_ = 1u;
   std::unordered_map<uint32_t, SceneState*> scenes_by_token_;
   std::vector<RendererState*> renderers_;
+
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   Universe universe_;
 

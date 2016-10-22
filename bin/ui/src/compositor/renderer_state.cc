@@ -9,8 +9,16 @@
 
 namespace compositor {
 
-RendererState::RendererState(uint32_t id, const std::string& label)
-    : id_(id), label_(label), weak_factory_(this) {}
+RendererState::RendererState(uint32_t id,
+                             const std::string& label,
+                             std::unique_ptr<Output> output)
+    : id_(id),
+      label_(label),
+      output_(std::move(output)),
+      scheduler_(output_.get()),
+      weak_factory_(this) {
+  FTL_DCHECK(output_);
+}
 
 RendererState::~RendererState() {}
 

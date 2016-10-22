@@ -83,10 +83,10 @@ import "mojo/public/interfaces/application/service_provider.mojom";
 // For best performance, a view should take care to do as little work as
 // possible to apply and flush changes to its children before proceeding
 // with its own drawing.  For example, if we consider a nominal 16.7 ms
-// frame interval then spending 4 ms doing layout before flushing children
-// means that the children will have 25% less time to do their own work
-// for that frame and possibly to update their own children which may end
-// up using old properties for that frame as a result.
+// presentation interval then spending 4 ms doing layout before flushing
+// children means that the children will have much less time to do their own
+// work for that frame and possibly to update their own children which may
+// end up using old properties for that frame as a result.
 //
 // See |ViewListener.OnInvalidation()| for more information.
 //

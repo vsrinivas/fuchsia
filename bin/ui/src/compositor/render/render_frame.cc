@@ -36,8 +36,8 @@ void RenderFrame::Draw(SkCanvas* canvas) const {
     canvas->drawPicture(picture_.get());
 }
 
-RenderFrame::Metadata::Metadata(const mozart::FrameInfo& frame_info,
-                                int64_t composition_time)
+RenderFrame::Metadata::Metadata(const FrameInfo& frame_info,
+                                ftl::TimePoint composition_time)
     : frame_info_(frame_info), composition_time_(composition_time) {}
 
 RenderFrame::Metadata::~Metadata() {}

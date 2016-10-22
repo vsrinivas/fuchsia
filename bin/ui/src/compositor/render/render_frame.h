@@ -5,9 +5,10 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_FRAME_H_
 #define APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_FRAME_H_
 
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/src/compositor/frame_info.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
+#include "lib/ftl/time/time_point.h"
 #include "third_party/skia/include/core/SkRect.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 
@@ -26,15 +27,15 @@ class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
   // and statistics.
   class Metadata {
    public:
-    Metadata(const mozart::FrameInfo& frame_info, int64_t composition_time);
+    Metadata(const FrameInfo& frame_info, ftl::TimePoint composition_time);
     ~Metadata();
 
-    const mozart::FrameInfo& frame_info() const { return frame_info_; }
-    int64_t composition_time() const { return composition_time_; }
+    const FrameInfo& frame_info() const { return frame_info_; }
+    ftl::TimePoint composition_time() const { return composition_time_; }
 
    private:
-    mozart::FrameInfo frame_info_;
-    int64_t composition_time_;
+    FrameInfo frame_info_;
+    ftl::TimePoint composition_time_;
   };
 
   // Creates an empty render frame with no content.
