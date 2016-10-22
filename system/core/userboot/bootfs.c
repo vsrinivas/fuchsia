@@ -7,6 +7,7 @@
 
 #pragma GCC visibility push(hidden)
 
+#include <magenta/bootdata.h>
 #include <magenta/syscalls.h>
 #include <string.h>
 
@@ -28,6 +29,10 @@ void bootfs_unmount(mx_handle_t proc_self, mx_handle_t log, struct bootfs *fs) {
     check(log, status, "mx_process_unmap_vm failed\n");
 }
 
+struct bootfs_magic {
+    bootdata_t boothdr;
+    char fsmagic[16];
+};
 
 struct bootfs_file {
     uint32_t size, offset;
@@ -42,11 +47,16 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
                                         struct bootfs *fs,
                                         const char* filename) {
     static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
-    if (fs->len < sizeof(FSMAGIC))
+    if (fs->len < sizeof(struct bootfs_magic))
         fail(log, ERR_INVALID_ARGS, "bootfs image too small!\n");
-    if (memcmp(fs->contents, FSMAGIC, sizeof(FSMAGIC)))
+    struct bootfs_magic* magic = (struct bootfs_magic*)fs->contents;
+    if (magic->boothdr.magic != BOOTDATA_MAGIC)
+        fail(log, ERR_INVALID_ARGS, "bootdata has bad magic number!\n");
+    if (magic->boothdr.type != BOOTDATA_TYPE_BOOTFS)
+        fail(log, ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
+    if (memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC)))
         fail(log, ERR_INVALID_ARGS, "bootfs has bad magic number!\n");
-    const uint8_t* p = &fs->contents[sizeof(FSMAGIC)];
+    const uint8_t* p = &fs->contents[sizeof(struct bootfs_magic)];
 
     size_t filename_len = strlen(filename) + 1;
 

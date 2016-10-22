@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <magenta/bootdata.h>
 #include <magenta/types.h>
 
 #define BOOTFS_MAX_NAME_LEN 256
@@ -34,6 +35,11 @@ void bootfs_parse(void* _data, size_t len,
     uint8_t* end = data + len;
     char name[BOOTFS_MAX_NAME_LEN];
     uint32_t header[3];
+
+    if (*(uint64_t*)data != BOOTDATA_MAGIC) {
+        return;
+    }
+    data += sizeof(bootdata_t);
 
     if (memcmp(data, FSMAGIC, sizeof(FSMAGIC))) {
         return;

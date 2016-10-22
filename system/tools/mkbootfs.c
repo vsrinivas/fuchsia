@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <magenta/bootdata.h>
+
 int verbose = 0;
 
 char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
@@ -269,6 +271,10 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz) {
         return -1;
     }
 
+    bootdata_t boothdr;
+    memset(&boothdr, 0, sizeof(boothdr));
+    if (write(fd, &boothdr, sizeof(boothdr)) != sizeof(boothdr)) goto ioerr;
+
     if (write(fd, FSMAGIC, sizeof(FSMAGIC)) != sizeof(FSMAGIC)) goto ioerr;
 
     for (e = fs->first; e != NULL; e = e->next) {
@@ -301,6 +307,17 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz) {
             if (write(fd, fill, n) != n) goto ioerr;
         }
     }
+
+    off_t sz = lseek(fd, 0, SEEK_CUR);
+    if (sz < 0) goto ioerr;
+
+    lseek(fd, 0, SEEK_SET);
+    boothdr.magic = BOOTDATA_MAGIC;
+    boothdr.type = BOOTDATA_TYPE_BOOTFS;
+    boothdr.insize = (uint32_t)sz;
+    boothdr.outsize = (uint32_t)sz;
+    if (write(fd, &boothdr, sizeof(boothdr)) != sizeof(boothdr)) goto ioerr;
+
     close(fd);
     return 0;
 ioerr:
@@ -363,6 +380,9 @@ int main(int argc, char **argv) {
             return -1;
         }
     }
+
+    // account for bootdata
+    hsz += sizeof(bootdata_t);
 
     // account for the magic
     hsz += sizeof(FSMAGIC);
