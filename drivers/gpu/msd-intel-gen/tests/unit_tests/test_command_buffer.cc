@@ -24,7 +24,7 @@ public:
             std::unique_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
         std::vector<gpu_addr_t> addresses;
-        EXPECT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
+        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
 
         uint32_t i = 0;
         for (auto addr : addresses) {
@@ -64,8 +64,8 @@ public:
 
         // do the relocation foo
         std::vector<gpu_addr_t> addresses;
-        EXPECT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
-        EXPECT_TRUE(cmd_buf_->PatchRelocations(addresses));
+        ASSERT_TRUE(cmd_buf_->MapResourcesGpu(addr_space.get(), addresses));
+        ASSERT_TRUE(cmd_buf_->PatchRelocations(addresses));
 
         // check that we foo'd it correctly
         for (uint32_t i = 0; i < batch_buf_resource->num_relocations; i++) {
@@ -84,7 +84,7 @@ public:
     {
 
         auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
-        EXPECT_TRUE(cmd_buf_->PrepareForExecution(engine));
+        ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine));
 
         ClientContext* ctx = static_cast<ClientContext*>(cmd_buf_->GetContext());
         ASSERT_NE(ctx, nullptr);

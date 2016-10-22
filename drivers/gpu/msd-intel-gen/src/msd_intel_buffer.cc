@@ -10,9 +10,9 @@ MsdIntelBuffer::MsdIntelBuffer(std::unique_ptr<magma::PlatformBuffer> platform_b
 {
 }
 
-std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Create(msd_platform_buffer* platform_buffer_token)
+std::unique_ptr<MsdIntelBuffer> MsdIntelBuffer::Import(uint32_t handle)
 {
-    auto platform_buf = magma::PlatformBuffer::Create(platform_buffer_token);
+    auto platform_buf = magma::PlatformBuffer::Import(handle);
     if (!platform_buf)
         return DRETP(nullptr,
                      "MsdIntelBuffer::Create: Could not create platform buffer from token");
@@ -45,7 +45,7 @@ bool MsdIntelBuffer::MapGpu(AddressSpace* address_space, uint32_t alignment)
 
     uint64_t size = platform_buffer()->size();
     if (size > address_space->Size())
-        return DRETF(false, "buffer size greater than address space size");
+        return DRETF(false, "buffer size (%lx) greater than address space size (%lx)", platform_buffer()->size(), address_space->Size());
 
     DASSERT(magma::is_page_aligned(size));
 
@@ -111,9 +111,9 @@ bool MsdIntelBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* 
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_buffer* msd_buffer_import(msd_platform_buffer* platform_buf)
+msd_buffer* msd_buffer_import(uint32_t handle)
 {
-    auto buffer = MsdIntelBuffer::Create(platform_buf);
+    auto buffer = MsdIntelBuffer::Import(handle);
     if (!buffer)
         return DRETP(nullptr, "MsdIntelBuffer::Create failed");
     return new MsdIntelAbiBuffer(std::move(buffer));

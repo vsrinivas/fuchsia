@@ -16,7 +16,7 @@
 
 class MsdIntelBuffer {
 public:
-    static std::unique_ptr<MsdIntelBuffer> Create(msd_platform_buffer* platform_buffer_token);
+    static std::unique_ptr<MsdIntelBuffer> Import(uint32_t handle);
     static std::unique_ptr<MsdIntelBuffer> Create(uint64_t size);
 
     magma::PlatformBuffer* platform_buffer()
