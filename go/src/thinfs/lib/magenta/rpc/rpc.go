@@ -374,6 +374,13 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		err := dir.Rename(paths[0], paths[1])
 		msg.Datalen = 0
 		return errorToRIO(err)
+	case rio.OpIoctl:
+		switch msg.IoctlOp() {
+		case mxio.IoctlDevmgrUnmountFS:
+			return errorToRIO(vfs.fs.Close())
+		default:
+			return mx.ErrNotSupported
+		}
 	default:
 		println("ThinFS DIR UNKNOWN OP")
 		return mx.ErrNotSupported
