@@ -401,6 +401,6 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
         xhci_handle_events(xhci, interruptor);
     }
     if (status & USBSTS_PCD) {
-        xhci_handle_root_hub_change(xhci, false);
+        xhci_handle_root_hub_change(xhci);
     }
 }

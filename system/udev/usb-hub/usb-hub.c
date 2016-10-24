@@ -9,6 +9,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb-bus.h>
 #include <magenta/hw/usb-hub.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,26 +63,28 @@ inline void usb_hub_set_port_enabled(usb_hub_t* hub, int port, bool enabled) {
 static mx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, usb_port_status_t* status) {
     mx_status_t result = usb_get_status(hub->usb_device, USB_RECIP_PORT, port, status, sizeof(*status));
     if (result == sizeof(*status)) {
+        xprintf("usb_hub_get_port_status port %d ", port);
         if (status->wPortChange & USB_PORT_CONNECTION) {
-            xprintf("USB_PORT_CONNECTION\n");
+            xprintf("USB_PORT_CONNECTION ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port);
         }
         if (status->wPortChange & USB_PORT_ENABLE) {
-            xprintf("USB_PORT_ENABLE\n");
+            xprintf("USB_PORT_ENABLE ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_ENABLE, port);
         }
         if (status->wPortChange & USB_PORT_SUSPEND) {
-            xprintf("USB_PORT_SUSPEND\n");
+            xprintf("USB_PORT_SUSPEND ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_SUSPEND, port);
         }
         if (status->wPortChange & USB_PORT_OVER_CURRENT) {
-            xprintf("USB_PORT_OVER_CURRENT\n");
+            xprintf("USB_PORT_OVER_CURRENT ");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_OVER_CURRENT, port);
         }
         if (status->wPortChange & USB_PORT_RESET) {
-            xprintf("USB_PORT_RESET\n");
+            xprintf("USB_PORT_RESET");
             usb_clear_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_C_PORT_RESET, port);
         }
+        xprintf("\n");
 
         return NO_ERROR;
     } else {
@@ -120,7 +123,7 @@ static mx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, usb_port_stat
 }
 
 static void usb_hub_interrupt_complete(iotxn_t* txn, void* cookie) {
-    xprintf("usb_hub_interrupt_complete got %d %lld\n", txn->status, txn->actual);
+    xprintf("usb_hub_interrupt_complete got %d %" PRIu64 "\n", txn->status, txn->actual);
     usb_hub_t* hub = (usb_hub_t*)cookie;
     completion_signal(&hub->completion);
 }
@@ -130,22 +133,15 @@ static void usb_hub_enable_port(usb_hub_t* hub, int port) {
     usleep(hub->power_on_delay);
 }
 
-static void usb_hub_port_connected(usb_hub_t* hub, int port) {
+static void usb_hub_port_enabled(usb_hub_t* hub, int port) {
     usb_port_status_t status;
 
-    xprintf("port %d usb_hub_port_connected\n", port);
-
-    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
-    if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
-                              100 * 1000) != NO_ERROR) {
-        printf("usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
-        return;
-    }
-
-    usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port);
+    xprintf("port %d usb_hub_port_enabled\n", port);
 
     // USB 2.0 spec section 9.1.2 recommends 100ms delay before enumerating
-    if (usb_hub_wait_for_port(hub, port, &status, 0, USB_PORT_RESET, 100 * 1000) != NO_ERROR) {
+    // wait for USB_PORT_ENABLE == 1 and USB_PORT_RESET == 0
+    if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_ENABLE, USB_PORT_ENABLE | USB_PORT_RESET,
+                              100 * 1000) != NO_ERROR) {
         printf("usb_hub_wait_for_port USB_PORT_RESET failed for USB hub, port %d\n", port);
         return;
     }
@@ -166,6 +162,22 @@ static void usb_hub_port_connected(usb_hub_t* hub, int port) {
     usb_hub_set_port_enabled(hub, port, true);
 }
 
+static void usb_hub_port_connected(usb_hub_t* hub, int port) {
+    usb_port_status_t status;
+
+    xprintf("port %d usb_hub_port_connected\n", port);
+
+    // USB 2.0 spec section 7.1.7.3 recommends 100ms between connect and reset
+    if (usb_hub_wait_for_port(hub, port, &status, USB_PORT_CONNECTION, USB_PORT_CONNECTION,
+                              100 * 1000) != NO_ERROR) {
+        printf("usb_hub_wait_for_port USB_PORT_CONNECTION failed for USB hub, port %d\n", port);
+        return;
+    }
+
+    usb_set_feature(hub->usb_device, USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port);
+    usb_hub_port_enabled(hub, port);
+}
+
 static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
     xprintf("port %d usb_hub_port_disconnected\n", port);
     hub->bus_protocol->hub_device_removed(hub->bus_device, hub->usb_device, port);
@@ -181,6 +193,10 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
             usb_hub_port_connected(hub, port);
         } else {
             usb_hub_port_disconnected(hub, port);
+        }
+    } else if (status->wPortChange & USB_PORT_ENABLE) {
+        if (status->wPortStatus & USB_PORT_ENABLE) {
+            usb_hub_port_enabled(hub, port);
         }
     }
 }
