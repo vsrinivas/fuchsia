@@ -12,6 +12,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
+    $(LOCAL_DIR)/decompress.c \
     $(LOCAL_DIR)/userboot-elf.c \
     $(LOCAL_DIR)/option.c \
     $(LOCAL_DIR)/start.c \
@@ -27,9 +28,12 @@ MODULE_SO_INSTALL_NAME := -
 # Directly compile in the few functions we need from libc.
 # This doesn't get arch-specific optimized versions, but
 # such optimization isn't very important for userboot.
-userboot-string-functions := memcmp memcpy memset strlen strncmp
+userboot-string-functions := memcmp memcpy memset strlen strncmp memmove
 MODULE_SRCS += \
     $(userboot-string-functions:%=third_party/ulib/musl/src/string/%.c)
+
+MODULE_SRCS += third_party/ulib/lz4/lz4.c
+MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 
 # Make sure there are never any PLT entries generated.
 MODULE_COMPILEFLAGS += -fvisibility=hidden

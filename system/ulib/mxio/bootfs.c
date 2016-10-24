@@ -41,10 +41,10 @@ void bootfs_parse(void* _data, size_t len,
     }
     data += sizeof(bootdata_t);
 
-    if (memcmp(data, FSMAGIC, sizeof(FSMAGIC))) {
-        return;
+    // This field is obsolete, so skip if it doesn't match
+    if (!memcmp(data, FSMAGIC, sizeof(FSMAGIC))) {
+        data += sizeof(FSMAGIC);
     }
-    data += sizeof(FSMAGIC);
 
     while ((end - data) > (int)sizeof(header)) {
         memcpy(header, data, sizeof(header));

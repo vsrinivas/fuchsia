@@ -13,6 +13,9 @@
 // include the bootfs archive containing a user file system
 DATA(user_bootfs)
 .incbin USER_BOOTFS_FILENAME
+// The kernel needs this to contain whole pages. But mkbootfs, in the compressed
+// case, does not pad the file size to a multiple of page size.
+.balign 4096
 END(user_bootfs)
 
 .Luser_bootfs_end:

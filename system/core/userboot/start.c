@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "bootfs.h"
+#include "decompress.h"
 #include "userboot-elf.h"
 #include "option.h"
 #include "util.h"
@@ -143,6 +144,16 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS);
     if (root_resource_handle < 0)
         fail(log, root_resource_handle, "mx_handle_duplicate failed\n");
+
+    // Decompress any bootfs VMOs if necessary
+    for (uint32_t i = 0; i < nhandles; ++i) {
+        if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_BOOTFS_VMO) {
+            handles[i] = decompress_vmo(log, proc_self, handles[i]);
+            if (MX_HND_INFO_ARG(handle_info[i]) == 0) {
+                bootfs_vmo = handles[i];
+            }
+        }
+    }
 
     // Make the channel for the bootstrap message.
     mx_handle_t pipeh[2];

@@ -47,6 +47,7 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
                                         struct bootfs *fs,
                                         const char* filename) {
     static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
+    size_t magic_size = sizeof(bootdata_t);
     if (fs->len < sizeof(struct bootfs_magic))
         fail(log, ERR_INVALID_ARGS, "bootfs image too small!\n");
     struct bootfs_magic* magic = (struct bootfs_magic*)fs->contents;
@@ -54,9 +55,11 @@ static struct bootfs_file bootfs_search(mx_handle_t log,
         fail(log, ERR_INVALID_ARGS, "bootdata has bad magic number!\n");
     if (magic->boothdr.type != BOOTDATA_TYPE_BOOTFS)
         fail(log, ERR_INVALID_ARGS, "bootdata is not a bootfs!\n");
-    if (memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC)))
-        fail(log, ERR_INVALID_ARGS, "bootfs has bad magic number!\n");
-    const uint8_t* p = &fs->contents[sizeof(struct bootfs_magic)];
+    // This field is obsolete, so we can skip it if it doesn't exist.
+    if (!memcmp(magic->fsmagic, FSMAGIC, sizeof(FSMAGIC))) {
+        magic_size = sizeof(struct bootfs_magic);
+    }
+    const uint8_t* p = &fs->contents[magic_size];
 
     size_t filename_len = strlen(filename) + 1;
 
