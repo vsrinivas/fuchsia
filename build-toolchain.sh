@@ -4,6 +4,8 @@
 # found in the LICENSE file.
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# N.B. This must be an absolute path.
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 readonly HOST_ARCH=$(uname -m)
@@ -114,6 +116,18 @@ while getopts "cd:o:" opt; do
     *) usage;;
   esac
 done
+
+absolute_path() {
+  local -r path="$1"
+  case "$path" in
+    /*) echo "$path" ;;
+    *) echo "$(pwd)/$path" ;;
+  esac
+}
+
+# These must be absolute paths.
+OUTDIR=$(absolute_path "${OUTDIR}")
+DESTDIR=$(absolute_path "${DESTDIR}")
 
 readonly CLEAN OUTDIR DESTDIR
 
