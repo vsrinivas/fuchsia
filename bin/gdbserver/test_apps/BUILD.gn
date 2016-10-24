@@ -9,6 +9,12 @@ group("test_apps") {
   ]
 }
 
+executable("exit_test") {
+  sources = [
+    "exit_test.c",
+  ]
+}
+
 executable("crash_test") {
   sources = [
     "crash_test.c",

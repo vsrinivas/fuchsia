@@ -27,9 +27,31 @@ class Server;
 // Represents an inferior process that the stub is currently attached to.
 class Process final {
  public:
+  // Delegate interface for listening to Process life-time events.
+  class Delegate {
+   public:
+    virtual ~Delegate() = default;
+
+    // Called when either |process| or one of its threads has exited. If
+    // |context.tid| is zero, then the process is gone. Otherwise the thread
+    // with that specific thread ID is gone.
+    virtual void OnProcessOrThreadExited(
+        Process* process,
+        const mx_excp_type_t type,
+        const mx_exception_context_t& context) = 0;
+
+    // Called when the kernel reports an architectural exception.
+    virtual void OnArchitecturalException(
+        Process* process,
+        const mx_excp_type_t type,
+        const mx_exception_context_t& context) = 0;
+  };
+
   // TODO(armansito): Add a different constructor later for attaching to an
   // already running process.
-  explicit Process(Server* server, const std::vector<std::string>& argv);
+  explicit Process(Server* server,
+                   Delegate* delegate,
+                   const std::vector<std::string>& argv);
   ~Process();
 
   // Creates and initializes the inferior process but does not start it. Returns
@@ -57,6 +79,9 @@ class Process final {
   // Returns the process handle. This handle is owned and managed by this
   // Process instance, thus the caller should not close the handle.
   mx_handle_t handle() const { return debug_handle_.get(); }
+
+  // Returns the process ID.
+  mx_koid_t id() const { return process_id_; }
 
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
@@ -90,6 +115,9 @@ class Process final {
   // The server that owns us.
   Server* server_;  // weak
 
+  // The delegate that we send life-cycle notifications to.
+  Delegate* delegate_;  // weak
+
   // The argv that this process was initialized with.
   std::vector<std::string> argv_;
 
@@ -99,6 +127,9 @@ class Process final {
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
   mtl::UniqueHandle debug_handle_;
+
+  // The process ID.
+  mx_koid_t process_id_;
 
   // The key we receive after binding an exception port.
   ExceptionPort::Key eport_key_;

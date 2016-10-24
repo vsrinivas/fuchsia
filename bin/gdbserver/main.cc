@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
   auto inferior =
-      std::make_unique<debugserver::Process>(&server, inferior_argv);
+      std::make_unique<debugserver::Process>(&server, &server, inferior_argv);
   if (!inferior->Initialize()) {
     FTL_LOG(ERROR) << "Failed to set up inferior";
     return EXIT_FAILURE;

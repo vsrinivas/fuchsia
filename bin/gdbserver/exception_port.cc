@@ -54,7 +54,7 @@ std::string ExceptionTypeToString(const mx_excp_type_t type) {
       break;
   }
 #undef CASE_TO_STR
-  return "(unknown)";
+  return "(other)";
 }
 
 }  // namespace
@@ -200,7 +200,10 @@ void ExceptionPort::Worker() {
 
     FTL_VLOG(1) << "Exception received: "
                 << ExceptionTypeToString(static_cast<const mx_excp_type_t>(
-                       packet.report.header.type));
+                       packet.report.header.type))
+                << " (" << packet.report.header.type
+                << "), pid: " << packet.report.context.pid
+                << ", tid: " << packet.report.context.tid;
 
     // Handle the exception on the main thread.
     origin_task_runner_->PostTask([packet, this] {

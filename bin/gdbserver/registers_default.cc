@@ -4,10 +4,28 @@
 
 #include "registers.h"
 
+#include "lib/ftl/logging.h"
+
 namespace debugserver {
 namespace arch {
 
 int GetPCRegisterNumber() {
+  FTL_NOTIMPLEMENTED();
+  return -1;
+}
+
+int GetFPRegisterNumber() {
+  FTL_NOTIMPLEMENTED();
+  return -1;
+}
+
+int GetSPRegisterNumber() {
+  FTL_NOTIMPLEMENTED();
+  return -1;
+}
+
+int ComputeGdbSignal(const mx_exception_context_t& exception_context) {
+  FTL_NOTIMPLEMENTED();
   return -1;
 }
 
@@ -22,11 +40,25 @@ class RegistersDefault final : public Registers {
 
   bool IsSupported() override { return false; }
 
-  std::string GetGeneralRegisters() override { return ""; }
+  bool RefreshGeneralRegisters() override {
+    FTL_NOTIMPLEMENTED();
+    return false;
+  }
+
+  std::string GetGeneralRegisters() override {
+    FTL_NOTIMPLEMENTED();
+    return "";
+  }
+
+  std::string GetRegisterValue(unsigned int register_number) override {
+    FTL_NOTIMPLEMENTED();
+    return "";
+  }
 
   bool SetRegisterValue(int register_number,
                         void* value,
                         size_t value_size) override {
+    FTL_NOTIMPLEMENTED();
     return false;
   }
 };
@@ -40,7 +72,14 @@ std::unique_ptr<Registers> Registers::Create(const mx_handle_t thread_handle) {
 
 // static
 std::string Registers::GetUninitializedGeneralRegisters() {
+  FTL_NOTIMPLEMENTED();
   return "";
+}
+
+// static
+size_t Registers::GetRegisterSize() {
+  FTL_NOTIMPLEMENTED();
+  return 0;
 }
 
 }  // namespace arch

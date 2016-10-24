@@ -77,7 +77,7 @@ bool LoadBinary(launchpad_t* lp, const string& binary_path) {
   return true;
 }
 
-mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
+mx_koid_t GetProcessId(launchpad_t* lp) {
   FTL_DCHECK(lp);
 
   // We use the mx_object_get_child syscall to obtain a debug-capable handle
@@ -101,8 +101,12 @@ mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
 
   FTL_DCHECK(info.rec.type == MX_OBJ_TYPE_PROCESS);
 
-  mx_handle_t debug_handle = mx_object_get_child(
-      MX_HANDLE_INVALID, info.rec.koid, MX_RIGHT_SAME_RIGHTS);
+  return info.rec.koid;
+}
+
+mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
+  mx_handle_t debug_handle =
+      mx_object_get_child(MX_HANDLE_INVALID, pid, MX_RIGHT_SAME_RIGHTS);
   if (debug_handle < 0) {
     util::LogErrorWithMxStatus("mx_object_get_child failed", debug_handle);
     return MX_HANDLE_INVALID;
@@ -119,13 +123,16 @@ mx_handle_t GetProcessDebugHandle(launchpad_t* lp) {
 
 }  // namespace
 
-Process::Process(Server* server, const vector<string>& argv)
+Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
     : server_(server),
+      delegate_(delegate),
       argv_(argv),
       launchpad_(nullptr),
+      process_id_(MX_KOID_INVALID),
       eport_key_(0),
       started_(false) {
   FTL_DCHECK(server_);
+  FTL_DCHECK(delegate_);
   FTL_DCHECK(argv_.size() > 0);
 }
 
@@ -155,8 +162,12 @@ bool Process::Initialize() {
 
   FTL_LOG(INFO) << "Binary loaded";
 
+  // Initialize the PID.
+  process_id_ = GetProcessId(launchpad_);
+  FTL_DCHECK(process_id_ != MX_KOID_INVALID);
+
   // Now we need a debug-capable handle of the process.
-  debug_handle_.reset(GetProcessDebugHandle(launchpad_));
+  debug_handle_.reset(GetProcessDebugHandle(process_id_));
   if (!debug_handle_.is_valid())
     goto fail;
 
@@ -340,7 +351,30 @@ void Process::OnException(const mx_excp_type_t type,
                           const mx_exception_context_t& context) {
   FTL_LOG(INFO) << "Process exception received";
 
-  // TODO(armansito): Implement.
+  // TODO(armansito): Call RefreshAllThreads() here?
+
+  // |type| could either map to an architectural exception or Magenta-defined
+  // synthetic exceptions.
+  if (MX_EXCP_IS_ARCH(type)) {
+    delegate_->OnArchitecturalException(this, type, context);
+    return;
+  }
+
+  // TODO(armansito): In my testing I've never had this code path execute when
+  // an inferior exits, most likely because it's not fully implemented in
+  // Magenta yet? Test this flow once it's supported.
+  switch (type) {
+    case MX_EXCP_START:
+      // TODO(armansito): Use this as a trigger for creating new Thread objects?
+      FTL_VLOG(1) << "Ignoring MX_EXCP_START exception";
+      return;
+    case MX_EXCP_GONE:
+      delegate_->OnProcessOrThreadExited(this, type, context);
+      return;
+    default:
+      FTL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
+      break;
+  }
 }
 
 }  // namespace debugserver

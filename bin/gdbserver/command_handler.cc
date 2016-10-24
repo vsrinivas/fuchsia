@@ -19,7 +19,7 @@ namespace debugserver {
 namespace {
 
 // TODO(armansito): Update this as we add more features.
-const char kSupportedFeatures[] = "QNonStop+;";
+const char kSupportedFeatures[] = "QNonStop+;QThreadEvents+";
 
 const char kAttached[] = "Attached";
 const char kCurrentThreadId[] = "C";

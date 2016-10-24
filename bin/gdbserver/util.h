@@ -8,6 +8,7 @@
 #include <deque>
 #include <string>
 
+#include <magenta/syscalls/types.h>
 #include <magenta/types.h>
 
 #include "lib/ftl/strings/string_view.h"
@@ -84,6 +85,13 @@ bool ParseThreadId(const ftl::StringView& bytes,
                    bool* out_has_pid,
                    int64_t* out_pid,
                    int64_t* out_tid);
+
+// Encodes the given thread and process IDs using the GDB remote protocol thread
+// ID syntax
+// (See
+// https://sourceware.org/gdb/current/onlinedocs/gdb/Packets.html#thread%2did%20syntax
+// for reference).
+std::string EncodeThreadId(mx_koid_t pid, mx_koid_t tid);
 
 // Encodes the given thread ID |thread_id|
 

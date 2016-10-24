@@ -9,6 +9,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
 
+#include "lib/ftl/logging.h"
+
 #include "util.h"
 
 namespace debugserver {
@@ -16,6 +18,87 @@ namespace arch {
 
 int GetPCRegisterNumber() {
   return static_cast<int>(Amd64Register::RIP);
+}
+
+int GetFPRegisterNumber() {
+  return static_cast<int>(Amd64Register::RBP);
+}
+
+int GetSPRegisterNumber() {
+  return static_cast<int>(Amd64Register::RSP);
+}
+
+int ComputeGdbSignal(const mx_exception_context_t& exception_context) {
+  int sigval;
+  uint64_t arch_exception = exception_context.arch.u.x86_64.vector;
+
+  switch (arch_exception) {
+    case 0:  // Divide Error (division by zero)
+      sigval = 8;
+      break;
+    case 1:  // Debug Exceptions
+      sigval = 5;
+      break;
+    case 2:  // NMI
+      sigval = 29;
+      break;
+    case 3:  // Breakpoint
+      sigval = 5;
+      break;
+    case 4:  // Overflow
+      sigval = 8;
+      break;
+    case 5:  // Bound Range Exceeded
+      sigval = 11;
+      break;
+    case 6:  // Invalid Opcode
+      sigval = 4;
+      break;
+    case 7:  // Coprocessor Not Available
+      sigval = 8;
+      break;
+    case 8:  // Double Fault
+      sigval = 7;
+      break;
+    case 9:   // Coprocessor Segment Overrun (i386 or earlier only)
+    case 10:  // Invalid Task State Segment
+    case 11:  // Segment Not Present
+    case 12:  // Stack Fault
+    case 13:  // General Protection Fault
+    case 14:  // Page Fault
+      sigval = 11;
+      break;
+    case 15:  // Reserved (-> SIGUSR1)
+      sigval = 10;
+      break;
+    case 16:  // Math Fault
+    case 17:  // Aligment Check
+      sigval = 7;
+      break;
+    case 18:  // Machine check (-> SIGURG)
+      sigval = 23;
+      break;
+    case 19:  // SIMD Floating-Point Exception
+      sigval = 8;
+      break;
+    case 20:  // Virtualization Exception (-> SIGVTALRM)
+      sigval = 26;
+      break;
+    case 21:  // Control Protection Exception
+      sigval = 11;
+      break;
+    case 22 ... 31:
+      sigval = 10;  // reserved (-> SIGUSR1 for now)
+      break;
+    default:
+      sigval = 12;  // "software generated" (-> SIGUSR2 for now)
+      break;
+  }
+
+  FTL_VLOG(1) << "x86 (AMD64) exception (" << arch_exception
+              << ") mapped to: " << sigval;
+
+  return sigval;
 }
 
 namespace {
@@ -39,30 +122,60 @@ bool GetGeneralRegistersHelper(const mx_handle_t thread_handle,
   return true;
 }
 
+// Includes all registers if |register_number| is -1.
+std::string GetRegisterValueAsString(const mx_x86_64_general_regs_t& gregs,
+                                     int register_number) {
+  FTL_DCHECK(register_number > 0 &&
+             register_number < static_cast<int>(Amd64Register::NUM_REGISTERS));
+
+  // Based on the value of |register_number|, we either need to fit in all
+  // registers or just a single one.
+  const size_t kResultSize =
+      register_number < 0 ? sizeof(gregs) * 2 : sizeof(uint64_t) * 2;
+
+  // We use std::string as the buffer container.
+  std::string result(kResultSize, '0');
+  const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&gregs);
+  greg_bytes += register_number < 0 ? 0 : register_number * sizeof(uint64_t);
+
+  for (size_t i = 0; i < kResultSize; i += 2) {
+    util::EncodeByteString(*greg_bytes, const_cast<char*>(result.data() + i));
+    ++greg_bytes;
+  }
+
+  return result;
+}
+
 class RegistersAmd64 final : public Registers {
  public:
-  RegistersAmd64(const mx_handle_t thread_handle) : Registers(thread_handle) {}
+  RegistersAmd64(const mx_handle_t thread_handle) : Registers(thread_handle) {
+    memset(&gregs_, 0, sizeof(gregs_));
+  }
 
   ~RegistersAmd64() = default;
 
   bool IsSupported() override { return true; }
 
-  std::string GetGeneralRegisters() override {
-    mx_x86_64_general_regs_t gregs;
+  bool RefreshGeneralRegisters() override {
     uint32_t gregs_size;
-    if (!GetGeneralRegistersHelper(thread_handle(), &gregs, &gregs_size))
+    return GetGeneralRegistersHelper(thread_handle(), &gregs_, &gregs_size);
+  }
+
+  std::string GetGeneralRegisters() override {
+    if (!RefreshGeneralRegisters())
       return "";
 
-    const size_t kResultSize = gregs_size * 2;
-    std::unique_ptr<char[]> result(new char[kResultSize]);
-    const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&gregs);
+    return GetRegisterValueAsString(gregs_, -1);
+  }
 
-    for (size_t i = 0; i < kResultSize; i += 2) {
-      util::EncodeByteString(*greg_bytes, result.get() + i);
-      ++greg_bytes;
+  std::string GetRegisterValue(unsigned int register_number) override {
+    if (register_number >=
+        static_cast<unsigned int>(Amd64Register::NUM_REGISTERS)) {
+      FTL_LOG(ERROR) << "Bad register_number: " << register_number;
+      return "";
     }
 
-    return std::string(result.release(), kResultSize);
+    return GetRegisterValueAsString(gregs_, register_number);
   }
 
   bool SetRegisterValue(int register_number,
@@ -95,6 +208,9 @@ class RegistersAmd64 final : public Registers {
 
     return true;
   }
+
+ private:
+  mx_x86_64_general_regs_t gregs_;
 };
 
 }  // namespace
@@ -107,6 +223,11 @@ std::unique_ptr<Registers> Registers::Create(const mx_handle_t thread_handle) {
 // static
 std::string Registers::GetUninitializedGeneralRegisters() {
   return std::string(sizeof(mx_x86_64_general_regs_t) * 2, '0');
+}
+
+// static
+size_t Registers::GetRegisterSize() {
+  return sizeof(uint64_t);
 }
 
 }  // namespace arch

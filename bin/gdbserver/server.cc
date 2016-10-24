@@ -7,11 +7,14 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include <array>
 #include <cstdlib>
+#include <limits>
 #include <string>
 #include <vector>
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_number_conversions.h"
 
 #include "util.h"
 
@@ -90,6 +93,9 @@ void Server::SendNotification(
   // The GDB Remote protocol defines only the "Stop" notification
   FTL_DCHECK(name == kStopNotification);
   std::string bytes = name.ToString() + ":" + event.ToString();
+
+  FTL_VLOG(1) << "Preparing notification: " << bytes;
+
   notify_queue_.push(std::make_unique<PendingNotification>(
       bytes, timeout, retry_count));
   TryPostNextNotification();
@@ -181,9 +187,9 @@ void Server::PostNotificationWriteTask(const ftl::StringView& data) {
   PostWriteTask(true, data);
 }
 
-void Server::TryPostNextNotification() {
+bool Server::TryPostNextNotification() {
   if (pending_notification_ || notify_queue_.empty())
-    return;
+    return false;
 
   pending_notification_ = std::move(notify_queue_.front());
   notify_queue_.pop();
@@ -215,10 +221,13 @@ void Server::TryPostNextNotification() {
 
         // The retry count has reached 0. Remove the pending notification and
         // queue up the next one.
+        FTL_LOG(WARNING) << "Pending notifification timed out";
         pending_notification_.reset();
         TryPostNextNotification();
       },
       pending_notification_->timeout);
+
+  return true;
 }
 
 void Server::QuitMessageLoop(bool status) {
@@ -227,16 +236,6 @@ void Server::QuitMessageLoop(bool status) {
 }
 
 void Server::OnBytesRead(const ftl::StringView& bytes_read) {
-  // Before anything else, check to see if this is an acknowledgment in
-  // response to a notification. The GDB Remote protocol defines only the
-  // "Stop" notification, so we specially handle its acknowledgment here.
-  if (bytes_read == kStopAck && pending_notification_) {
-    FTL_LOG(INFO) << "Notification acknowledged";
-    pending_notification_.reset();
-    TryPostNextNotification();
-    return;
-  }
-
   // If this is a packet acknowledgment then ignore it and read again.
   // TODO(armansito): Re-send previous packet if we got "-".
   if (bytes_read == "+")
@@ -251,6 +250,22 @@ void Server::OnBytesRead(const ftl::StringView& bytes_read) {
   // Wait for the next command if we requested retransmission
   if (!verified)
     return;
+
+  // Before anything else, check to see if this is an acknowledgment in
+  // response to a notification. The GDB Remote protocol defines only the
+  // "Stop" notification, so we specially handle its acknowledgment here.
+  if (packet_data == kStopAck && pending_notification_) {
+    FTL_LOG(INFO) << "Notification acknowledged";
+    pending_notification_.reset();
+
+    // Try to post the next notification. If there are no queued events report,
+    // reply with OK.
+    if (!TryPostNextNotification()) {
+      FTL_DCHECK(notify_queue_.empty());
+      PostPacketWriteTask("OK");
+    }
+    return;
+  }
 
   // Route the packet data to the command handler.
   auto callback = [this](const ftl::StringView& rsp) {
@@ -278,6 +293,111 @@ void Server::OnDisconnected() {
 void Server::OnIOError() {
   FTL_LOG(ERROR) << "An I/O error has occurred. Exiting the main loop";
   QuitMessageLoop(false);
+}
+
+void Server::OnProcessOrThreadExited(Process* process,
+                                     const mx_excp_type_t type,
+                                     const mx_exception_context_t& context) {
+  // TODO(armansito): Implement
+  FTL_LOG(INFO) << (context.tid ? "Thread" : "Process") << " exited";
+}
+
+void Server::OnArchitecturalException(Process* process,
+                                      const mx_excp_type_t type,
+                                      const mx_exception_context_t& context) {
+  FTL_DCHECK(process);
+  FTL_LOG(INFO) << "Architectural Exception";
+
+  // TODO(armansito): Fine-tune this check if we ever support multi-processing.
+  FTL_DCHECK(process == current_process());
+
+  int sigval = arch::ComputeGdbSignal(context);
+  if (sigval < 0) {
+    FTL_LOG(ERROR) << "Exception reporting not supported on current "
+                   << "architecture!";
+    return;
+  }
+
+  FTL_DCHECK(sigval < std::numeric_limits<uint8_t>::max());
+
+  // TODO(armansito): Implement the "hwbreak" and "swbreak" stop reasons once
+  // we support them.
+
+  // Send a "T" Stop-Reply ("The program received signal"). We use this over
+  // "S", and include some of the important register values in the packet.
+  // We are sending:
+  //    - 1 byte for "T"
+  //    - 2 bytes for the two-digit hexadecimal signal number
+  //    - For the PC, FP, and SP registers each, we add:
+  //        a. 2 bytes for the two-digit register number (we assume that these
+  //           will fit inside one byte).
+  //        b. 1 byte for the pair delimiter ':'
+  //        c. 2 times the register on the current platform
+  //    - For the thread-id of the stopped thread we allocate at least
+  //        a. strlen("thread")
+  //        b. 1 byte for the pair delimiter ':'
+  //        c. thread_id.length()
+  //    - Semi-colons (';') for each parameter (thread_id + 3 registers)  => 4
+  //
+  // => 1 + 2 + 3 * (2 + 1 + (variable) * 2) + 6 + 1 + (variable)
+  std::string thread_id = util::EncodeThreadId(process->id(), context.tid);
+  const size_t kReplySize =
+      14 + 3 * (3 + arch::Registers::GetRegisterSize() * 2) + thread_id.size();
+
+  char buffer[kReplySize];
+  char* ptr = buffer;
+
+  // T
+  *ptr++ = 'T';
+
+  // sigval
+  util::EncodeByteString(static_cast<uint8_t>(sigval), ptr);
+  ptr += 2;
+
+  // Registers.
+  process->RefreshAllThreads();
+  Thread* thread = process->FindThreadById(context.tid);
+  if (thread && thread->registers()->RefreshGeneralRegisters()) {
+    std::array<int, 3> regnos{{arch::GetFPRegisterNumber(),
+                               arch::GetSPRegisterNumber(),
+                               arch::GetPCRegisterNumber()}};
+
+    for (int regno : regnos) {
+      FTL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
+      std::string regval = thread->registers()->GetRegisterValue(regno);
+
+      // Register number
+      util::EncodeByteString(static_cast<uint8_t>(regno), ptr);
+      ptr += 2;
+
+      // Pair delimiter
+      *ptr++ = ':';
+
+      // Register value
+      std::memcpy(ptr, regval.data(), regval.size());
+      ptr += regval.size();
+
+      // Param delimiter
+      *ptr++ = ';';
+    }
+  } else {
+    FTL_LOG(WARNING)
+        << "Couldn't read thread registers while handling exception";
+  }
+
+  // thread_id
+  std::strcpy(ptr, "thread:");
+  ptr += std::strlen(ptr);
+  std::memcpy(ptr, thread_id.data(), thread_id.size());
+  ptr += thread_id.size();
+
+  // Param delimiter
+  *ptr++ = ';';
+
+  FTL_DCHECK(ptr > buffer);
+  size_t reply_size = ptr - buffer;
+
+  SendNotification("Stop", ftl::StringView(buffer, reply_size));
 }
 
 }  // namespace debugserver

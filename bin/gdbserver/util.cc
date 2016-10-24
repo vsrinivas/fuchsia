@@ -8,6 +8,7 @@
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace debugserver {
 namespace util {
@@ -121,6 +122,13 @@ bool ParseThreadId(const ftl::StringView& bytes,
 
   return ftl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid,
                                                ftl::Base::k16);
+}
+
+std::string EncodeThreadId(mx_koid_t pid, mx_koid_t tid) {
+  std::string pid_string = ftl::NumberToString<mx_koid_t>(pid, ftl::Base::k16);
+  std::string tid_string = ftl::NumberToString<mx_koid_t>(tid, ftl::Base::k16);
+
+  return ftl::StringPrintf("p%s.%s", pid_string.c_str(), tid_string.c_str());
 }
 
 // We take |packet| by copying since we modify it internally while processing

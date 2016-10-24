@@ -27,7 +27,7 @@ namespace debugserver {
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_thread(), SetCurrentThread(), and
 // SendNotification() which modify the internal state of a Server instance.
-class Server final : public IOLoop::Delegate {
+class Server final : public IOLoop::Delegate, public Process::Delegate {
  public:
   // The default timeout interval used by SendNotification().
   constexpr static int64_t kDefaultTimeoutSeconds = 30;
@@ -128,7 +128,11 @@ class Server final : public IOLoop::Delegate {
   // If |pending_notification_| is NULL, this pops the next lined-up
   // notification from |notify_queue_| and assigns it as the new pending
   // notification and sends it to the remote device.
-  void TryPostNextNotification();
+  //
+  // Returns true, if the next notification was posted. Returns false if the
+  // next notification was not posted because either there is still a pending
+  // unacknowledged notification or the notification queue is empty.
+  bool TryPostNextNotification();
 
   // Sets the run status and quits the main message loop.
   void QuitMessageLoop(bool status);
@@ -137,6 +141,14 @@ class Server final : public IOLoop::Delegate {
   void OnBytesRead(const ftl::StringView& bytes) override;
   void OnDisconnected() override;
   void OnIOError() override;
+
+  // Process::Delegate overrides.
+  void OnProcessOrThreadExited(Process* process,
+                               const mx_excp_type_t type,
+                               const mx_exception_context_t& context) override;
+  void OnArchitecturalException(Process* process,
+                                const mx_excp_type_t type,
+                                const mx_exception_context_t& context) override;
 
   // TCP port number that we will listen on.
   uint16_t port_;
