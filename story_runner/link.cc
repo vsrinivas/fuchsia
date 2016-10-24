@@ -83,7 +83,7 @@ Array<DocumentPtr> CloneDocumentsToArray(const DocIdToDocMap& docs) {
 }
 }  // namespace
 
-LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* shared)
+LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* const shared)
     : shared_(shared ? shared : new SharedLinkImplData()),
       binding_(this, std::move(req)) {
   FTL_LOG(INFO) << "LinkImpl()" << (shared == nullptr ? " primary" : "")
@@ -128,7 +128,7 @@ void LinkImpl::WatchAll(InterfaceHandle<LinkChanged> watcher) {
 }
 
 void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
-                          bool self_notify) {
+                          const bool self_notify) {
   InterfacePtr<LinkChanged> watcher_ptr;
   watcher_ptr.Bind(watcher.Pass());
 
@@ -143,13 +143,14 @@ void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
 }
 
 void LinkImpl::NotifyWatchers(
-    const mojo::Array<document_store::DocumentPtr>& docs, bool self_notify) {
+    const mojo::Array<document_store::DocumentPtr>& docs,
+    const bool self_notify) {
   if (self_notify) {
-    watchers_.ForAllPtrs([&docs](LinkChanged* link_changed) {
+    watchers_.ForAllPtrs([&docs](LinkChanged* const link_changed) {
       link_changed->Notify(docs.Clone());
     });
   }
-  all_watchers_.ForAllPtrs([&docs](LinkChanged* link_changed) {
+  all_watchers_.ForAllPtrs([&docs](LinkChanged* const link_changed) {
     link_changed->Notify(docs.Clone());
   });
 }
@@ -165,7 +166,7 @@ void LinkImpl::Dup(InterfaceRequest<Link> dup) {
   new LinkImpl(std::move(dup), shared_);
 }
 
-void LinkImpl::RemoveImpl(LinkImpl* impl) {
+void LinkImpl::RemoveImpl(LinkImpl* const impl) {
   auto it = std::remove_if(
       shared_->impls.begin(), shared_->impls.end(),
       [impl](const std::unique_ptr<LinkImpl>& p) { return (p.get() == impl); });
@@ -193,7 +194,7 @@ void LinkImpl::AddDocuments(Array<DocumentPtr> new_docs) {
       // Docid does exist. Add or update the individual properties.
       DocumentEditor editor(std::move(it->second));
       for (auto& p : add_doc->properties) {
-        Value* v = editor.GetValue(p->property);
+        Value* const v = editor.GetValue(p->property);
         if (!v || !v->Equals(*p->value)) {
           dirty = true;
           editor.SetProperty(std::move(p));

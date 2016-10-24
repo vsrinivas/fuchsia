@@ -9,8 +9,8 @@
 #include "apps/modular/story_runner/resolver.mojom.h"
 #include "apps/modular/story_runner/session.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
-#include "lib/ftl/logging.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
@@ -20,31 +20,30 @@
 
 namespace modular {
 
-ModuleClientImpl::ModuleClientImpl(
-    SessionHost* session,
-    mojo::InterfacePtr<Module> module,
-    mojo::InterfaceRequest<ModuleClient> module_client)
+ModuleControllerImpl::ModuleControllerImpl(
+    SessionHost* const session, mojo::InterfacePtr<Module> module,
+    mojo::InterfaceRequest<ModuleController> module_controller)
     : session_(session),
-      binding_(this, std::move(module_client)),
+      binding_(this, std::move(module_controller)),
       module_(std::move(module)) {
   session_->Add(this);
-  FTL_LOG(INFO) << "ModuleClientImpl";
+  FTL_LOG(INFO) << "ModuleControllerImpl";
 }
 
-ModuleClientImpl::~ModuleClientImpl() {
-  FTL_LOG(INFO) << "~ModuleClientImpl " << this;
+ModuleControllerImpl::~ModuleControllerImpl() {
+  FTL_LOG(INFO) << "~ModuleControllerImpl " << this;
   session_->Remove(this);
 }
 
-void ModuleClientImpl::Done() {
-  FTL_LOG(INFO) << "ModuleClientImpl::Done()";
+void ModuleControllerImpl::Done() {
+  FTL_LOG(INFO) << "ModuleControllerImpl::Done()";
   module_.reset();
   for (auto& watcher : watchers_) {
     watcher->Done();
   }
 }
 
-void ModuleClientImpl::Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) {
+void ModuleControllerImpl::Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) {
   watchers_.push_back(
       mojo::InterfacePtr<ModuleWatcher>::Create(watcher.Pass()));
 }
@@ -53,33 +52,35 @@ SessionHost::SessionHost(SessionImpl* const impl,
                          mojo::InterfaceRequest<Session> session)
     : impl_(impl),
       binding_(this, std::move(session)),
-      module_client_(nullptr),
+      module_controller_(nullptr),
       primary_(true) {
   FTL_LOG(INFO) << "SessionHost() primary";
   impl_->Add(this);
 }
 
-SessionHost::SessionHost(SessionImpl* const impl,
-                         mojo::InterfaceRequest<Session> session,
-                         mojo::InterfacePtr<Module> module,
-                         mojo::InterfaceRequest<ModuleClient> module_client)
+SessionHost::SessionHost(
+    SessionImpl* const impl, mojo::InterfaceRequest<Session> session,
+    mojo::InterfacePtr<Module> module,
+    mojo::InterfaceRequest<ModuleController> module_controller)
     : impl_(impl),
       binding_(this, std::move(session)),
-      module_client_(nullptr),
+      module_controller_(nullptr),
       primary_(false) {
   FTL_LOG(INFO) << "SessionHost()";
   impl_->Add(this);
 
   // Calls Add().
-  new ModuleClientImpl(this, std::move(module), std::move(module_client));
+  new ModuleControllerImpl(this, std::move(module),
+                           std::move(module_controller));
 }
 
 SessionHost::~SessionHost() {
   FTL_LOG(INFO) << "~SessionHost() " << this;
 
-  if (module_client_) {
-    FTL_LOG(INFO) << "~SessionHost() delete module_client " << module_client_;
-    delete module_client_;
+  if (module_controller_) {
+    FTL_LOG(INFO) << "~SessionHost() delete module_controller "
+                  << module_controller_;
+    delete module_controller_;
   }
 
   impl_->Remove(this);
@@ -98,33 +99,32 @@ SessionHost::~SessionHost() {
 }
 
 void SessionHost::CreateLink(mojo::InterfaceRequest<Link> link) {
-  FTL_LOG(INFO) << "story-runner create link";
+  FTL_LOG(INFO) << "SessionHost::CreateLink()";
   LinkImpl::New(std::move(link));
 }
 
 void SessionHost::StartModule(
-    const mojo::String& query,
-    mojo::InterfaceHandle<Link> link,
-    mojo::InterfaceRequest<ModuleClient> module_client,
+    const mojo::String& query, mojo::InterfaceHandle<Link> link,
+    mojo::InterfaceRequest<ModuleController> module_controller,
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionHost::StartModule()";
-  impl_->StartModule(query, std::move(link), std::move(module_client),
+  impl_->StartModule(query, std::move(link), std::move(module_controller),
                      std::move(view_owner));
 }
 
 void SessionHost::Done() {
   FTL_LOG(INFO) << "SessionHost::Done()";
-  if (module_client_) {
-    module_client_->Done();
+  if (module_controller_) {
+    module_controller_->Done();
   }
 }
 
-void SessionHost::Add(ModuleClientImpl* const module_client) {
-  module_client_ = module_client;
+void SessionHost::Add(ModuleControllerImpl* const module_controller) {
+  module_controller_ = module_controller;
 }
 
-void SessionHost::Remove(ModuleClientImpl* const module_client) {
-  module_client_ = nullptr;
+void SessionHost::Remove(ModuleControllerImpl* const module_controller) {
+  module_controller_ = nullptr;
 }
 
 SessionImpl::SessionImpl(mojo::Shell* const shell,
@@ -155,9 +155,7 @@ SessionImpl::~SessionImpl() {
   }
 }
 
-void SessionImpl::Add(SessionHost* const client) {
-  clients_.push_back(client);
-}
+void SessionImpl::Add(SessionHost* const client) { clients_.push_back(client); }
 
 void SessionImpl::Remove(SessionHost* const client) {
   auto f = std::find(clients_.begin(), clients_.end(), client);
@@ -166,24 +164,22 @@ void SessionImpl::Remove(SessionHost* const client) {
 }
 
 void SessionImpl::StartModule(
-    const mojo::String& query,
-    mojo::InterfaceHandle<Link> link,
-    mojo::InterfaceRequest<ModuleClient> module_client,
+    const mojo::String& query, mojo::InterfaceHandle<Link> link,
+    mojo::InterfaceRequest<ModuleController> module_controller,
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionImpl::StartModule()";
-  const int request_id = new_request_id_();
-  link_map_[request_id] = link.Pass();
-  module_client_map_[request_id] = module_client.Pass();
-
   resolver_->Resolve(
       query, ftl::MakeCopyable([
-        this, request_id, view_owner = std::move(view_owner)
+        this, link = std::move(link),
+        module_controller = std::move(module_controller),
+        view_owner = std::move(view_owner)
       ](mojo::String module_url) mutable {
         FTL_LOG(INFO) << "SessionImpl::StartModule() resolver callback";
 
         mojo::InterfacePtr<mozart::ViewProvider> view_provider;
         mojo::ConnectToService(shell_, module_url,
                                mojo::GetProxy(&view_provider));
+
         mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
         view_provider->CreateView(std::move(view_owner),
                                   mojo::GetProxy(&service_provider));
@@ -195,13 +191,10 @@ void SessionImpl::StartModule(
         mojo::InterfaceHandle<Session> self;
         mojo::InterfaceRequest<Session> self_req = GetProxy(&self);
 
-        module->Initialize(std::move(self), link_map_[request_id].Pass());
+        module->Initialize(std::move(self), std::move(link));
 
         new SessionHost(this, std::move(self_req), std::move(module),
-                        module_client_map_[request_id].Pass());
-
-        link_map_.erase(request_id);
-        module_client_map_.erase(request_id);
+                        std::move(module_controller));
       }));
 }
 

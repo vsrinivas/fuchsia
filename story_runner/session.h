@@ -31,18 +31,18 @@ namespace modular {
 class SessionHost;
 class SessionImpl;
 
-// Implements the ModuleClient interface, which is passed back to the
-// client that requested a module to be started this SessionHost is
-// passed to on Initialize(). One instance of ModuleClientImpl is
+// Implements the ModuleController interface, which is passed back to
+// the client that requested a module to be started this SessionHost
+// is passed to on Initialize(). One instance of ModuleControllerImpl is
 // associated with each SessionHost instance.
-class ModuleClientImpl : public ModuleClient {
+class ModuleControllerImpl : public ModuleController {
  public:
-  ModuleClientImpl(SessionHost* session,
-                   mojo::InterfacePtr<Module> module,
-                   mojo::InterfaceRequest<ModuleClient> module_client);
-  ~ModuleClientImpl();
+  ModuleControllerImpl(
+      SessionHost* session, mojo::InterfacePtr<Module> module,
+      mojo::InterfaceRequest<ModuleController> module_controller);
+  ~ModuleControllerImpl();
 
-  // Implements ModuleClient.
+  // Implements ModuleController.
   void Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) override;
 
   // Called by SessionHost. Closes the module handle and notifies
@@ -51,10 +51,10 @@ class ModuleClientImpl : public ModuleClient {
 
  private:
   SessionHost* const session_;
-  mojo::StrongBinding<ModuleClient> binding_;
+  mojo::StrongBinding<ModuleController> binding_;
   mojo::InterfacePtr<Module> module_;
   std::vector<mojo::InterfacePtr<ModuleWatcher>> watchers_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleClientImpl);
+  MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };
 
 // SessionHost keeps a single connection from a client (i.e., a module
@@ -69,31 +69,29 @@ class SessionHost : public Session {
   SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> session);
 
   // Non-primary session host created for the module started by StartModule().
-  SessionHost(SessionImpl* impl,
-              mojo::InterfaceRequest<Session> session,
+  SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> session,
               mojo::InterfacePtr<Module> module,
-              mojo::InterfaceRequest<ModuleClient> module_client);
-  ~SessionHost();
+              mojo::InterfaceRequest<ModuleController> module_controller);
+  ~SessionHost() override;
 
   // Implements Session interface. Forwards to SessionImpl.
   void CreateLink(mojo::InterfaceRequest<Link> link) override;
   void StartModule(
-      const mojo::String& query,
-      mojo::InterfaceHandle<Link> link,
-      mojo::InterfaceRequest<ModuleClient> module_client,
+      const mojo::String& query, mojo::InterfaceHandle<Link> link,
+      mojo::InterfaceRequest<ModuleController> module_controller,
       mojo::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void Done() override;
 
-  // Called by ModuleClientImpl.
-  void Add(ModuleClientImpl* module_client);
-  void Remove(ModuleClientImpl* module_client);
+  // Called by ModuleControllerImpl.
+  void Add(ModuleControllerImpl* module_controller);
+  void Remove(ModuleControllerImpl* module_controller);
 
  private:
   // TODO(mesch): Actually record link instances created through this
   // binding here.
   SessionImpl* const impl_;
   mojo::StrongBinding<Session> binding_;
-  ModuleClientImpl* module_client_;
+  ModuleControllerImpl* module_controller_;
   const bool primary_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionHost);
 };
@@ -102,8 +100,7 @@ class SessionHost : public Session {
 // SessionHost above.
 class SessionImpl {
  public:
-  SessionImpl(mojo::Shell* shell,
-              mojo::InterfaceHandle<Resolver> resolver,
+  SessionImpl(mojo::Shell* shell, mojo::InterfaceHandle<Resolver> resolver,
               mojo::InterfaceHandle<ledger::Page> session_page,
               mojo::InterfaceRequest<Session> req);
   ~SessionImpl();
@@ -111,18 +108,11 @@ class SessionImpl {
   // These methods are called by SessionHost.
   void Add(SessionHost* client);
   void Remove(SessionHost* client);
-  void StartModule(const mojo::String& query,
-                   mojo::InterfaceHandle<Link> link,
-                   mojo::InterfaceRequest<ModuleClient> module_client,
+  void StartModule(const mojo::String& query, mojo::InterfaceHandle<Link> link,
+                   mojo::InterfaceRequest<ModuleController> module_controller,
                    mojo::InterfaceRequest<mozart::ViewOwner> view_owner);
 
  private:
-  // Used to pass handles into callback lambdas.
-  int new_request_id_() { return request_id_++; }
-  int request_id_ = 0;
-  std::map<int, mojo::InterfaceHandle<Link>> link_map_;
-  std::map<int, mojo::InterfaceRequest<ModuleClient>> module_client_map_;
-
   mojo::Shell* const shell_;
   mojo::InterfacePtr<Resolver> resolver_;
   mojo::InterfacePtr<ledger::Page> session_page_;

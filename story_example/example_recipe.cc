@@ -72,7 +72,7 @@ using mojo::StructPtr;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
-using modular::ModuleClient;
+using modular::ModuleController;
 using modular::ModuleWatcher;
 using modular::DocumentEditor;
 using modular::Session;
@@ -128,7 +128,7 @@ class LinkMonitor : public LinkChanged {
 
 class ModuleMonitor : public ModuleWatcher {
  public:
-  ModuleMonitor(InterfacePtr<ModuleClient>& module_client,
+  ModuleMonitor(InterfacePtr<ModuleController>& module_client,
                 InterfacePtr<Session>& session)
       : binding_(this), session_(session) {
     InterfaceHandle<ModuleWatcher> watcher;
@@ -246,7 +246,8 @@ class RecipeImpl : public Module, public mozart::BaseView {
     scene()->Publish(CreateSceneMetadata());
     Invalidate();
   }
-  void DrawContent(SkCanvas* canvas, const mojo::Size& size) {
+
+  void DrawContent(SkCanvas* const canvas, const mojo::Size& size) {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
     float t =
@@ -265,10 +266,10 @@ class RecipeImpl : public Module, public mozart::BaseView {
   InterfacePtr<Link> link_;
   InterfacePtr<Session> session_;
 
-  InterfacePtr<ModuleClient> module1_;
+  InterfacePtr<ModuleController> module1_;
   InterfacePtr<Link> module1_link_;
 
-  InterfacePtr<ModuleClient> module2_;
+  InterfacePtr<ModuleController> module2_;
   InterfacePtr<Link> module2_link_;
 
   std::vector<std::unique_ptr<LinkConnection>> connections_;

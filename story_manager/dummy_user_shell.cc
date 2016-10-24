@@ -8,8 +8,8 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/story_manager/story_manager.mojom.h"
 #include "apps/modular/mojo/single_service_view_app.h"
+#include "apps/modular/story_manager/story_manager.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"

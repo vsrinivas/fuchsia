@@ -40,10 +40,8 @@ class LinkImpl : public Link {
   ~LinkImpl() override;
 
   // Implements Link interface.
-  void AddDocuments(
-      mojo::Array<document_store::DocumentPtr> docs) override;
-  void SetAllDocuments(
-      mojo::Array<document_store::DocumentPtr> docs) override;
+  void AddDocuments(mojo::Array<document_store::DocumentPtr> docs) override;
+  void SetAllDocuments(mojo::Array<document_store::DocumentPtr> docs) override;
   void Query(const QueryCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;

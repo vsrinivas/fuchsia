@@ -12,8 +12,8 @@
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
 #include "mojo/public/interfaces/application/application_connector.mojom.h"
+#include "mojo/public/interfaces/application/shell.mojom.h"
 
 namespace modular {
 class StoryProviderState;
@@ -56,7 +56,7 @@ class StoryState : public Story, public ModuleWatcher {
 
   mojo::InterfacePtr<StoryRunner> runner_;
   mojo::InterfacePtr<Session> session_;
-  mojo::InterfacePtr<ModuleClient> module_;
+  mojo::InterfacePtr<ModuleController> module_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryState);
 };
