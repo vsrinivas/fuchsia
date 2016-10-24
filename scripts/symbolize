@@ -137,6 +137,10 @@ def main():
         line = sys.stdin.readline()
         if not sys.stdin.isatty():
             sys.stdout.write(line)
+        end_of_file = (line == '')
+        # Strip any trailing carriage return character ("\r"), since
+        # these appear in the serial console output from QEMU.
+        line = line.rstrip()
         if line.find("> ") >= 0:
             m = arch_re.match(line)
             if m:
@@ -190,7 +194,7 @@ def main():
                 print "end of symbolized stack"
                 processed_lines = []
                 name_to_buildid = {}
-            if line == "":
+            if end_of_file:
                 break
 
 if __name__ == '__main__':
