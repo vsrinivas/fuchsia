@@ -48,6 +48,9 @@ interface MediaService {
   // Creates a network reader.
   CreateNetworkReader(string url, SeekingReader& reader);
 
+  // Creates a file reader.
+  CreateFileReader(string path, SeekingReader& reader);
+
   // Creates a timeline controller reader.
   CreateTimelineController(MediaTimelineController& timeline_controller);
 };

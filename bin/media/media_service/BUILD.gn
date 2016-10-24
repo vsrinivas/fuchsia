@@ -8,6 +8,8 @@ executable("media_service") {
   sources = [
     "conversion_pipeline_builder.cc",
     "conversion_pipeline_builder.h",
+    "file_reader_impl.cc",
+    "file_reader_impl.h",
     "main.cc",
     "media_decoder_impl.cc",
     "media_decoder_impl.h",

@@ -5,6 +5,7 @@
 #include "apps/media/src/media_service/media_service_impl.h"
 
 #include "apps/media/cpp/flog.h"
+#include "apps/media/src/media_service/file_reader_impl.h"
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
 #include "apps/media/src/media_service/media_player_impl.h"
@@ -78,6 +79,12 @@ void MediaServiceImpl::CreateNetworkReader(
     InterfaceRequest<SeekingReader> reader) {
   FTL_DCHECK(false) << "CreateNetworkReader not implemented";
   // AddProduct(NetworkReaderImpl::Create(url, reader.Pass(), this));
+}
+
+void MediaServiceImpl::CreateFileReader(
+    const String& path,
+    InterfaceRequest<SeekingReader> reader) {
+  AddProduct(FileReaderImpl::Create(path, reader.Pass(), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(

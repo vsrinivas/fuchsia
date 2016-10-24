@@ -45,6 +45,9 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
   void CreateNetworkReader(const String& url,
                            InterfaceRequest<SeekingReader> reader) override;
 
+  void CreateFileReader(const String& path,
+                        InterfaceRequest<SeekingReader> reader) override;
+
   void CreateTimelineController(
       InterfaceRequest<MediaTimelineController> timeline_controller) override;
 
