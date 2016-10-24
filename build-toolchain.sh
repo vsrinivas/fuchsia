@@ -13,7 +13,7 @@ readonly HOST_OS=$(uname | sed 'y/LINUXDARWIN/linuxdarwin/')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
 if [[ "x${HOST_OS}" == "xlinux" ]]; then
-  readonly JOBS=$(grep ^processor /proc/cpuinfo | wc -l)
+  readonly DEFAULT_JOBS=$(grep ^processor /proc/cpuinfo | wc -l)
   readonly CMAKE_HOST_TOOLS="\
     -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
     -DCMAKE_C_COMPILER=${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang \
@@ -26,7 +26,7 @@ if [[ "x${HOST_OS}" == "xlinux" ]]; then
     -DCMAKE_STRIP=false"
   readonly LLVM_CONFIG_OPTS="-DLLVM_ENABLE_LLD=ON"
 elif [[ "x${HOST_OS}" == "xdarwin" ]]; then
-  readonly JOBS=$(sysctl -n hw.ncpu)
+  readonly DEFAULT_JOBS=$(sysctl -n hw.ncpu)
   readonly CMAKE_HOST_TOOLS="\
     -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja"
 else
@@ -37,11 +37,11 @@ fi
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-o outdir] [-d destdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-o outdir] [-d destdir] [-j jobs]\n' "$0" && exit 1
 }
 
 build() {
-  local outdir="$1" destdir="$2" clean="$3"
+  local outdir="$1" destdir="$2" clean="$3" jobs="$4"
   local toolchain="${destdir}/clang+llvm-${HOST_TRIPLE}"
 
   if [[ "${clean}" = "true" ]]; then
@@ -59,7 +59,7 @@ build() {
     --enable-deterministic-archives \
     --disable-werror \
     --disable-nls
-  make -j ${JOBS} all-binutils
+  make -j "${jobs}" all-binutils
   mkdir -p -- "${toolchain}/bin"
   cp -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/objcopy" "${toolchain}/bin/objcopy"
   cp -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}/binutils/strip-new" "${toolchain}/bin/strip"
@@ -79,7 +79,7 @@ build() {
     -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
     -DLLVM_TOOLCHAIN_TOOLS='llvm-ar;llvm-cxxfilt;llvm-ranlib;llvm-dwarfdump;llvm-objdump;llvm-readobj;llvm-nm;llvm-size;llvm-symbolizer' \
     ${ROOT_DIR}/third_party/llvm
-  env LD_LIBRARY_PATH="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib" DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja install
+  env LD_LIBRARY_PATH="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib" DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja -j "${jobs}" install
   popd
 
   mkdir -p -- "${outdir}/build-compiler-rt-aarch64+x86_64"
@@ -97,7 +97,7 @@ build() {
     -DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/third_party/llvm/cmake/platforms/Fuchsia.cmake \
     -DLLVM_CONFIG_PATH=${outdir}/build-clang+llvm-${HOST_TRIPLE}/bin/llvm-config \
     ${ROOT_DIR}/third_party/llvm/runtimes/compiler-rt/lib/builtins
-  env DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja install
+  env DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja -j "${jobs}" install
   popd
 
   local stamp="$(LC_ALL=POSIX cat $(find "${toolchain}" -type f | sort) | shasum -a1  | awk '{print $1}')"
@@ -107,11 +107,13 @@ build() {
 declare CLEAN="${CLEAN:-false}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare DESTDIR="${DESTDIR:-${OUTDIR}/toolchain}"
+declare JOBS="${DEFAULT_JOBS}"
 
-while getopts "cd:o:" opt; do
+while getopts "cd:j:o:" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
     d) DESTDIR="${OPTARG}" ;;
+    j) JOBS="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     *) usage;;
   esac
@@ -129,6 +131,6 @@ absolute_path() {
 OUTDIR=$(absolute_path "${OUTDIR}")
 DESTDIR=$(absolute_path "${DESTDIR}")
 
-readonly CLEAN OUTDIR DESTDIR
+readonly CLEAN OUTDIR DESTDIR JOBS
 
-build "${OUTDIR}" "${DESTDIR}" "${CLEAN}"
+build "${OUTDIR}" "${DESTDIR}" "${CLEAN}" "${JOBS}"
