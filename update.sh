@@ -72,17 +72,26 @@ function download_tarball() {
   fi
 }
 
-# build_magenta_tool <name>
-function build_magenta_tool() {
+function build_magenta_tools() {
+  if [[ "${has_arguments}" = "false" ]]; then
+      echo "Building magenta tools..."
+      make -C "${SCRIPT_ROOT}/../magenta" tools >/dev/null
+      has_arguments="true"
+  fi
+}
+
+# copy_magenta_tool <name>
+function copy_magenta_tool() {
+  build_magenta_tools
   local name="${1}"
   local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
   local stamp_path="${tool_path}.stamp"
-  local tool_source="${SCRIPT_ROOT}/../magenta/system/tools/${name}.c"
+  local tool_bin="${SCRIPT_ROOT}/../magenta/build-magenta-pc-x86-64/tools/${name}"
   local tool_hash="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
   if [[ ! -f "${tool_path}" || ! -f "${stamp_path}" || "${tool_hash}" != "$(cat ${stamp_path})" ]]; then
-      echo "Building ${name}..."
+      echo "Copying ${name}..."
       rm -f "${tool_path}"
-      gcc "${tool_source}" -I "${SCRIPT_ROOT}/../magenta/system/public" -o "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
+      cp "${tool_bin}" "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
   fi
 }
 
@@ -112,15 +121,15 @@ function download_go() {
 }
 
 function download_bootserver() {
-  build_magenta_tool bootserver
+  copy_magenta_tool bootserver
 }
 
 function download_loglistener() {
-  build_magenta_tool loglistener
+  copy_magenta_tool loglistener
 }
 
 function download_mkbootfs() {
-  build_magenta_tool mkbootfs
+  copy_magenta_tool mkbootfs
 }
 
 function download_all() {
@@ -139,6 +148,7 @@ function echo_error() {
 }
 
 declare has_arguments="false"
+declare built_magenta_tools="false"
 
 for i in "$@"; do
 case ${i} in
