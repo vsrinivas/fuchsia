@@ -6,13 +6,19 @@
 
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
+
+#include <lz4frame.h>
 
 #include <magenta/bootdata.h>
 
@@ -225,103 +231,258 @@ fail:
     return -1;
 }
 
-int copydata(int fd, const char *fn, size_t len) {
+typedef struct {
+    ssize_t (*copy_setup)(void* dst, void** cookie);
+    ssize_t (*copy_data)(void* dst, const void* src, size_t len, void* cookie);
+    ssize_t (*copy_file)(void* dst, const char* fn, size_t len, void* cookie);
+    ssize_t (*copy_finish)(void* dst, void* cookie);
+} copy_ops;
+
+ssize_t copydata(void* dst, const void* src, size_t len, void* cookie) {
+    memcpy(dst, src, len);
+    return len;
+}
+
+ssize_t copyfile(void* dst, const char *fn, size_t len, void* cookie) {
     char buf[4*1024*1024];
     int r, fdi;
     if ((fdi = open(fn, O_RDONLY)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
-    while (len > 0) {
+    size_t remaining = len;
+    while (remaining > 0) {
         r = read(fdi, buf, sizeof(buf));
         if (r < 0) {
             fprintf(stderr, "error: failed reading '%s'\n", fn);
             goto oops;
         }
-        if ((r == 0) || (r > len)) {
+        if ((r == 0) || (r > remaining)) {
             fprintf(stderr, "error: file '%s' changed size!\n", fn);
             goto oops;
         }
-        if (write(fd, buf, r) != r) {
-            fprintf(stderr, "error: failed writing '%s'\n", fn);
-            goto oops;
-        }
-        len -= r;
+        memcpy(dst, buf, r);
+        dst += r;
+        remaining -= r;
     }
     close(fdi);
-    return 0;
+    return len;
 oops:
     close(fdi);
     return -1;
 }
+
+static const copy_ops copy_passthrough = {
+    .copy_data = copydata,
+    .copy_file = copyfile,
+};
+
+static LZ4F_preferences_t lz4_prefs = {
+    .frameInfo = {
+        .blockSizeID = LZ4F_max64KB,
+        .blockMode = LZ4F_blockIndependent,
+    },
+    // LZ4 compression levels 1-3 are for "fast" compression, and 4-16 are for
+    // higher compression. The additional compression going from 4 to 16 is not
+    // worth the extra time needed during compression.
+    .compressionLevel = 4,
+};
+
+static bool check_and_log_lz4_error(LZ4F_errorCode_t code, const char* msg) {
+    if (LZ4F_isError(code)) {
+        fprintf(stderr, "%s: %s\n", msg, LZ4F_getErrorName(code));
+        return true;
+    }
+    return false;
+}
+
+ssize_t compress_setup(void* dst, void** cookie) {
+    LZ4F_compressionContext_t cctx;
+    LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx, LZ4F_VERSION);
+    if (check_and_log_lz4_error(errc, "could not initialize compression context")) {
+        return -1;
+    }
+    size_t wrote = LZ4F_compressBegin(cctx, dst, 16, &lz4_prefs);
+    if (check_and_log_lz4_error(wrote, "could not begin compression")) {
+        return wrote;
+    }
+    // Note: LZ4F_compressionContext_t is a typedef to a pointer, so this is
+    // "safe".
+    *cookie = (void*)cctx;
+    return wrote;
+}
+
+ssize_t compress_data(void* dst, const void* src, size_t len, void* cookie) {
+    // Since we're compressing to an mmap'd file, we don't have to worry about
+    // the max write size. But LZ4 still requires a valid size, so we just pass
+    // in the size that it's looking for.
+    size_t maxWrite = LZ4F_compressBound(len, &lz4_prefs);
+    size_t wrote = LZ4F_compressUpdate((LZ4F_compressionContext_t)cookie, dst, maxWrite,
+            src, len, NULL);
+    check_and_log_lz4_error(wrote, "could not compress data");
+    return wrote;
+}
+
+ssize_t compress_file(void* dst, const char* fn, size_t len, void* cookie) {
+    int fdi;
+    if ((fdi = open(fn, O_RDONLY)) < 0) {
+        fprintf(stderr, "error: cannot open '%s'\n", fn);
+        return -1;
+    }
+    void* src = mmap(NULL, len, PROT_READ, MAP_SHARED, fdi, 0);
+    if (src == MAP_FAILED) {
+        fprintf(stderr, "error cannot map '%s'\n", fn);
+        close(fdi);
+        return -1;
+    }
+    ssize_t ret = compress_data(dst, src, len, cookie);
+    munmap(src, len);
+    close(fdi);
+    return ret;
+}
+
+ssize_t compress_finish(void* dst, void* cookie) {
+    // Max write is one block (64kB uncompressed) plus 8 bytes of footer.
+    size_t maxWrite = LZ4F_compressBound(65536, &lz4_prefs) + 8;
+    size_t wrote = LZ4F_compressEnd((LZ4F_compressionContext_t)cookie, dst, maxWrite, NULL);
+    check_and_log_lz4_error(wrote, "could not finish compression");
+
+    LZ4F_errorCode_t errc = LZ4F_freeCompressionContext((LZ4F_compressionContext_t)cookie);
+    check_and_log_lz4_error(errc, "could not free compression context");
+    return wrote;
+}
+
+static const copy_ops copy_compress = {
+    .copy_setup = compress_setup,
+    .copy_data = compress_data,
+    .copy_file = compress_file,
+    .copy_finish = compress_finish,
+};
 
 #define PAGEALIGN(n) (((n) + 4095) & (~4095))
 #define PAGEFILL(n) (PAGEALIGN(n) - (n))
 
 char fill[4096];
 
-int export_userfs(const char *fn, fs *fs, unsigned hsz) {
+#define CHECK_WRITE(w) if ((w) < 0) goto fail
+
+int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool compressed) {
     uint32_t n;
     fsentry *e;
     int fd;
+    const copy_ops* op = compressed ? &copy_compress : &copy_passthrough;
 
-    fd = open(fn, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    fd = open(fn, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0) {
         fprintf(stderr, "error: cannot create '%s'\n", fn);
         return -1;
     }
 
-    bootdata_t boothdr;
-    memset(&boothdr, 0, sizeof(boothdr));
-    if (write(fd, &boothdr, sizeof(boothdr)) != sizeof(boothdr)) goto ioerr;
+    size_t dstsize = outsize;
+    if (compressed) {
+        // Update the LZ4 content size to be original size without the bootdata
+        // header which isn't being compressed.
+        lz4_prefs.frameInfo.contentSize = outsize - sizeof(bootdata_t);
+        // Get an upperbound on the resulting compressed file size.
+        dstsize = LZ4F_compressBound(outsize, &lz4_prefs);
+    }
+    ftruncate(fd, dstsize);
 
-    if (write(fd, FSMAGIC, sizeof(FSMAGIC)) != sizeof(FSMAGIC)) goto ioerr;
+    void* dst_start = mmap(NULL, dstsize, PROT_WRITE, MAP_SHARED, fd, 0);
+    if (dst_start == MAP_FAILED) {
+        fprintf(stderr, "error: cannot map '%s' (err=%d)\n", fn, errno);
+        goto fail2;
+    }
+    uint8_t* dst = dst_start;
+    // Increment past the bootdata header which will be filled out later.
+    ssize_t wrote = sizeof(bootdata_t);
+    dst += wrote;
+
+    void* cookie = NULL;
+    if (op->copy_setup) {
+        CHECK_WRITE(wrote = op->copy_setup(dst, &cookie));
+        dst += wrote;
+    }
+
+    CHECK_WRITE(wrote = op->copy_data(dst, FSMAGIC, sizeof(FSMAGIC), cookie));
+    dst += wrote;
 
     for (e = fs->first; e != NULL; e = e->next) {
         uint32_t hdr[3];
         hdr[0] = e->namelen;
         hdr[1] = e->length;
         hdr[2] = e->offset;
-        if (write(fd, hdr, sizeof(hdr)) != sizeof(hdr)) goto ioerr;
-        if (write(fd, e->name, e->namelen) != e->namelen) goto ioerr;
+        CHECK_WRITE(wrote = op->copy_data(dst, hdr, sizeof(hdr), cookie));
+        dst += wrote;
+        CHECK_WRITE(wrote = op->copy_data(dst, e->name, e->namelen, cookie));
+        dst += wrote;
     }
 
     // null terminator record
-    if (write(fd, fill, 12) != 12) goto ioerr;
+    CHECK_WRITE(wrote = op->copy_data(dst, fill, 12, cookie));
+    dst += wrote;
 
     n = PAGEFILL(hsz);
     if (n) {
-        if (write(fd, fill, n) != n) goto ioerr;
+        CHECK_WRITE(wrote = op->copy_data(dst, fill, n, cookie));
+        dst += wrote;
     }
 
     for (e = fs->first; e != NULL; e = e->next) {
         if (verbose) {
             fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
         }
-        if (copydata(fd, e->srcpath, e->length)) {
-            close(fd);
-            return -1;
-        }
+        CHECK_WRITE(wrote = op->copy_file(dst, e->srcpath, e->length, cookie));
+        dst += wrote;
         n = PAGEFILL(e->length);
         if (n) {
-            if (write(fd, fill, n) != n) goto ioerr;
+            CHECK_WRITE(wrote = op->copy_data(dst, fill, n, cookie));
+            dst += wrote;
         }
     }
 
-    off_t sz = lseek(fd, 0, SEEK_CUR);
-    if (sz < 0) goto ioerr;
+    if (op->copy_finish) {
+        CHECK_WRITE(wrote = op->copy_finish(dst, cookie));
+        dst += wrote;
+    }
 
-    lseek(fd, 0, SEEK_SET);
-    boothdr.magic = BOOTDATA_MAGIC;
-    boothdr.type = BOOTDATA_TYPE_BOOTFS;
-    boothdr.insize = (uint32_t)sz;
-    boothdr.outsize = (uint32_t)sz;
-    if (write(fd, &boothdr, sizeof(boothdr)) != sizeof(boothdr)) goto ioerr;
+    // Find the final output size
+    wrote = dst - (uint8_t*)dst_start;
+    if (wrote > dstsize) {
+        fprintf(stderr, "INTERNAL ERROR!! wrote %zd bytes > %zu bytes!\n",
+                wrote, dstsize);
+        goto fail;
+    }
 
+    // Write the bootheader
+    dst = dst_start;
+    bootdata_t boothdr = {
+        .magic = BOOTDATA_MAGIC,
+        .type = BOOTDATA_TYPE_BOOTFS,
+        .insize = wrote,
+        .outsize = compressed ? outsize : wrote,
+        .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
+    };
+    // Note: this is a memcpy rather than an op->copy_data, since it's written
+    // outside the area that's potentially compressed.
+    memcpy(dst, &boothdr, sizeof(boothdr));
+
+    // Cleanup and set the output file to the final size.
+    if (munmap(dst_start, dstsize) < 0) {
+        fprintf(stderr, "error: failed to unmap '%s' (err=%d)\n", fn, errno);
+        goto fail2;
+    }
+    if (ftruncate(fd, wrote) < 0) {
+        fprintf(stderr, "error: could not resize '%s' (err=%d)\n", fn, errno);
+        goto fail2;
+    }
     close(fd);
     return 0;
-ioerr:
+
+fail:
     fprintf(stderr, "error: failed writing '%s'\n", fn);
+    munmap(dst_start, dstsize);
+fail2:
     close(fd);
     return -1;
 }
@@ -333,6 +494,7 @@ int main(int argc, char **argv) {
     int i;
     unsigned hsz = 0;
     uint64_t off;
+    bool compressed = false;
 
     argc--;
     argv++;
@@ -353,6 +515,8 @@ int main(int argc, char **argv) {
         } else if (!strcmp(cmd,"-h")) {
             fprintf(stderr, "usage: mkbootfs [-v] [-o <fsimage>] <manifests>...\n");
             return 0;
+        } else if (!strcmp(cmd,"-c")) {
+            compressed = true;
         } else {
             fprintf(stderr, "unknown option: %s\n", cmd);
             return -1;
@@ -399,5 +563,5 @@ int main(int argc, char **argv) {
             return -1;
         }
     }
-    return export_userfs(output_file, &fs, hsz);
+    return export_userfs(output_file, &fs, hsz, off, compressed);
 }
