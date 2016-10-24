@@ -198,6 +198,9 @@ interface PageSnapshot {
   // |key|.
   GetAll(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
 
+  // Returns the keys of all entries in the page that match the given key
+  // prefix. If |key_prefix| is NULL, all keys are returned. The returned keys
+  // are sorted.
   GetKeys(array<uint8>? key_prefix)
       => (Status status, array<array<uint8>>? keys);
 
