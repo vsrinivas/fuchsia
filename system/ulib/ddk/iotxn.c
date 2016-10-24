@@ -22,6 +22,7 @@
 #endif
 
 #define IOTXN_FLAG_CLONE (1 << 0)
+#define IOTXN_FLAG_FREE  (1 << 1)   // for double-free checking
 
 typedef struct iotxn_priv iotxn_priv_t;
 
@@ -104,6 +105,7 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     // found one that fits, skip allocation
     if (found) {
         list_delete(&clone->node);
+        priv->flags &= ~IOTXN_FLAG_FREE;
         if (cpriv->buffer_size) memset(cpriv + sizeof(iotxn_priv_t), 0, cpriv->buffer_size);
         mtx_unlock(&clone_list_mutex);
         goto out;
@@ -138,13 +140,20 @@ out:
 static void iotxn_release(iotxn_t* txn) {
     xprintf("iotxn_release: txn=%p\n", txn);
     iotxn_priv_t* priv = get_priv(txn);
+    if (priv->flags & IOTXN_FLAG_FREE) {
+        printf("double free in iotxn_release\n");
+        abort();
+    }
+
     if (priv->flags & IOTXN_FLAG_CLONE) {
         mtx_lock(&clone_list_mutex);
         list_add_tail(&clone_list, &txn->node);
+        priv->flags |= IOTXN_FLAG_FREE;
         mtx_unlock(&clone_list_mutex);
     } else {
         mtx_lock(&free_list_mutex);
         list_add_tail(&free_list, &txn->node);
+        priv->flags |= IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
     }
 }
@@ -178,6 +187,7 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     if (found) {
         list_delete(&txn->node);
         memset(&txn, 0, sizeof(iotxn_t) + priv->buffer_size);
+        priv->flags &= ~IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
         goto out;
     }
