@@ -55,6 +55,8 @@ class DeviceRunnerImpl : public DeviceRunner {
     ConnectToService(shell_, "mojo:story_manager", GetProxy(&story_manager_));
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
+    // |app_id| is populated by |story_manager| so leaving it empty here.
+    identity->app_id = Array<uint8_t>::New(0);
     story_manager_->Launch(
         std::move(identity), std::move(view_owner_request),
         [](bool success) { FTL_DLOG(INFO) << "story-manager launched."; });
