@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "epolltest",
+            "bootfs_path": "bin/epolltest"
+        },
+        {
             "binary": "netstack",
             "bootfs_path": "bin/netstack"
         },
