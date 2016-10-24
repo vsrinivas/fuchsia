@@ -20,6 +20,8 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 
+#include <magenta/syscalls/datapipe.h>
+
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"

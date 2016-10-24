@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/datapipe.h>
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 

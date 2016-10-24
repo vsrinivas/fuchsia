@@ -24,19 +24,6 @@ typedef uint64_t mx_koid_t;
 #define MX_VMO_OP_LOOKUP                5u
 #define MX_VMO_OP_CACHE_SYNC            6u
 
-// Defines for mx_datapipe_*():
-#define MX_DATAPIPE_WRITE_FLAG_ALL_OR_NONE  1u
-// Mask for all the valid MX_DATAPIPE_WRITE_FLAG_... flags:
-#define MX_DATAPIPE_WRITE_FLAG_MASK         1u
-
-// DISCARD, QUERY, and PEEK are mutually exclusive.
-#define MX_DATAPIPE_READ_FLAG_ALL_OR_NONE   1u
-#define MX_DATAPIPE_READ_FLAG_DISCARD       2u
-#define MX_DATAPIPE_READ_FLAG_QUERY         4u
-#define MX_DATAPIPE_READ_FLAG_PEEK          8u
-// Mask for all the valid MX_DATAPIPE_READ_FLAG_... flags:
-#define MX_DATAPIPE_READ_FLAG_MASK          15u
-
 // Buffer size limits on the cprng syscalls
 #define MX_CPRNG_DRAW_MAX_LEN        256
 #define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
