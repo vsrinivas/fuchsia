@@ -13,18 +13,8 @@ semantic goals are satisfied and what services are employed.
 
 **Setup, build and run** instructions for Fuchsia are
 [here](https://fuchsia.googlesource.com/manifest/+/master/README.md). Once setup
-is done, you can refer to the following cheatsheet for Modular:
+and build is done, you can start the TQ Framework flow by doing:
 
 ```sh
-export ROOT_DIR=/path/to/fuchsia/root
-
-# Generate ninja files with modular autorun in bootfs. Modular autorun will
-# launch story-manager.
-$ROOT_DIR/packages/gn/gen.py -m modular-autorun
-```
-
-Alternatively, you can run the following bash script:
-
-```sh
-./apps/modular/fuchsia-scripts/build-and-run.sh
+mojo:device_runner
 ```
