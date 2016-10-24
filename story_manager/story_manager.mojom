@@ -57,9 +57,8 @@ interface Story {
 // If |StoryProvider| is closed, all associated |Story| objects will have an
 // undefined behavior.
 interface StoryProvider {
-  // Creates a new story by running the module at |url|. Returns an interface to
-  // |Story| if the story could be successfully created else return NULL.
-  CreateStory(string url) => (Story? story);
+  // Creates a new story by running the module at |url|.
+  CreateStory(string url, Story& story);
 
   // Returns interfaces to all the previously run stories for the user.
   // HACK(alhaad): Return only one of the previous stories until

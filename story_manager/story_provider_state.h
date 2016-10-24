@@ -47,7 +47,7 @@ class StoryProviderState : public StoryProvider {
  private:
   // |StoryProvider| override.
   void CreateStory(const mojo::String& url,
-                   const CreateStoryCallback& callback) override;
+                   mojo::InterfaceRequest<Story> request) override;
 
   // |StoryProvider| override.
   void PreviousStories(const PreviousStoriesCallback& callback) override;

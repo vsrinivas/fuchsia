@@ -31,6 +31,7 @@ constexpr char kExampleRecipeUrl[] = "mojo:example_recipe";
 
 using mojo::ApplicationImplBase;
 using mojo::ConnectionContext;
+using mojo::GetProxy;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -60,18 +61,13 @@ class DummyUserShellImpl : public UserShell {
     });
 
     // Start a new story.
-    story_provider_->CreateStory(
-        kExampleRecipeUrl, [this](InterfaceHandle<Story> story) {
-          FTL_LOG(INFO) << "Received modular::Story from provider.";
-          story_ptr_.Bind(story.Pass());
-          story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
-            FTL_LOG(INFO) << "modular::Story received with url: "
-                          << story_info->url
-                          << " is_running: " << story_info->is_running;
+    story_provider_->CreateStory(kExampleRecipeUrl, GetProxy(&story_ptr_));
+    story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
+      FTL_LOG(INFO) << "modular::Story received with url: " << story_info->url
+                    << " is_running: " << story_info->is_running;
 
-            story_ptr_->Start(std::move(view_owner_request_));
-          });
-        });
+      story_ptr_->Start(std::move(view_owner_request_));
+    });
   }
 
  private:

@@ -81,33 +81,33 @@ void StoryProviderState::RemoveStoryState(StoryState* story_state) {
 }
 
 void StoryProviderState::CreateStory(const mojo::String& url,
-                                     const CreateStoryCallback& callback) {
+                                     mojo::InterfaceRequest<Story> request) {
   // TODO(alhaad): Creating multiple stories can only work after
   // https://fuchsia-review.googlesource.com/#/c/8941/ has landed.
   FTL_LOG(INFO) << "StoryProviderState::StartNewStory " << url;
-  ledger_->NewPage([this, callback, url](
-      ledger::Status status, mojo::InterfaceHandle<ledger::Page> session_page) {
-    auto story_id = GenerateNewStoryId(10);
-    session_page_map_[story_id].Bind(std::move(session_page));
-    session_page_map_[story_id]->GetId(
-        [this, callback, url, story_id](mojo::Array<uint8_t> id) {
+  ledger_->NewPage(
+      ftl::MakeCopyable([ this, request = std::move(request), url ](
+          ledger::Status status,
+          mojo::InterfaceHandle<ledger::Page> session_page) mutable {
+        auto story_id = GenerateNewStoryId(10);
+        session_page_map_[story_id].Bind(std::move(session_page));
+        session_page_map_[story_id]->GetId(ftl::MakeCopyable([
+          this, request = std::move(request), url, story_id
+        ](mojo::Array<uint8_t> id) mutable {
           mojo::StructPtr<StoryInfo> info = StoryInfo::New();
           info->url = url;
           info->session_page_id = std::move(id);
           info->is_running = false;
 
-          mojo::InterfaceHandle<Story> story;
           StoryState* story_state = new StoryState(
               std::move(info), this,
               mojo::DuplicateApplicationConnector(app_connector_.get()),
-              GetProxy(&story));
+              std::move(request));
           story_ids_.insert(story_id);
           story_state_to_id_.emplace(story_state, story_id);
           story_id_to_state_.emplace(story_id, story_state);
-
-          callback.Run(story.Pass());
-        });
-  });
+        }));
+      }));
 }
 
 void StoryProviderState::PreviousStories(
