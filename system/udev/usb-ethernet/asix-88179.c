@@ -264,7 +264,7 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
 
 static void ax88179_interrupt_complete(iotxn_t* request, void* cookie) {
     if (request->status == ERR_REMOTE_CLOSED) {
-        request->ops->release(request);
+        // request will be released in ax88179_release()
         return;
     }
 
