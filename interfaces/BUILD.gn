@@ -12,3 +12,13 @@ mojom("interfaces") {
     "suggestion_manager.mojom",
   ]
 }
+
+source_set("formatting") {
+  sources = [
+    "formatting.cc",
+  ]
+
+  deps = [
+    "//mojo/public/cpp/environment",
+  ]
+}

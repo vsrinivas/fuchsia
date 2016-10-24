@@ -16,6 +16,8 @@ using namespace maxwell::acquirers;
 using namespace maxwell::suggestion_engine;
 using namespace mojo;
 
+namespace {
+
 class TestListener : public SuggestionListener {
  public:
   void OnAdd(mojo::Array<SuggestionPtr> suggestions) override {
@@ -61,7 +63,7 @@ class ResultCountTest : public DebuggableAppTestBase {
     listener_binding_.Bind(GetProxy(&lp));
     suggestion_manager_->SubscribeToNext(lp.PassInterfaceHandle(),
                                          GetProxy(&ctl_));
-    Sleep(); // Give transitive links a chance to form before publishing.
+    Sleep();  // Give transitive links a chance to form before publishing.
   }
 
   void SetResultCount(int count) { ctl_->SetResultCount(count); }
@@ -83,6 +85,8 @@ class ResultCountTest : public DebuggableAppTestBase {
   Binding<SuggestionListener> listener_binding_;
   NextControllerPtr ctl_;
 };
+
+}  // namespace
 
 // Macro rather than method to capture the expectation in the assertion message.
 #define CHECK_RESULT_COUNT(expected) ASYNC_CHECK(suggestion_count() == expected)

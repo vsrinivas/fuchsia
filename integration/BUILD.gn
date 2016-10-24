@@ -18,10 +18,11 @@ mojo_native_application("integration") {
   deps = [
     "//apps/maxwell/acquirers/mock",
     "//apps/maxwell/interfaces",
+    "//apps/maxwell/interfaces:formatting",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/application:test_support_standalone",
     "//mojo/public/cpp/bindings:utility",
-    "//mojo/public/cpp/utility:utility",
+    "//mojo/public/cpp/utility",
     "//mojo/system",
     "//third_party/gtest",
   ]

@@ -6,8 +6,7 @@
 
 #include <chrono>
 
-#include "apps/maxwell/interfaces/debug.mojom.h"
-
+#include "apps/maxwell/debug.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/interface_ptr_set.h"
@@ -69,10 +68,13 @@ void Sleep(const std::chrono::duration<Rep, Period>& duration) {
 // Sleep for a default reasonable time for Mojo apps to start up.
 void Sleep();
 
+// 2s Mojo timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
+constexpr MojoDeadline kMojoDeadline = 2 * 1000 * 1000;
+
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely
 // succeed tests that should fail. Flakiness should thus be considered failure.
 constexpr auto kAsyncCheckSteady = 100ms;
-constexpr auto kAsyncCheckMax = 2s;
+constexpr auto kAsyncCheckMax = 5s;
 
 // Does a weak stability check on an async condition by waiting until the given
 // condition is true (max 2s) and then ensuring that the condition remains true
@@ -107,17 +109,17 @@ class DebuggableAppTestBase : public mojo::test::ApplicationTestBase {
   template <typename Interface>
   void ConnectToService(const std::string& url,
                         mojo::InterfaceRequest<Interface> request) {
-    mojo::ServiceProviderPtr service_provider;
-    shell()->ConnectToApplication(url, GetProxy(&service_provider));
-    mojo::ConnectToService(service_provider.get(), std::move(request));
-    maxwell::DebugPtr debug;
-    mojo::ConnectToService(service_provider.get(), GetProxy(&debug));
-    dependencies_.AddInterfacePtr(std::move(debug));
+    dependencies_.AddInterfacePtr(
+        maxwell::ConnectToDebuggableService(shell(), url, std::move(request)));
+  }
+
+  virtual void KillAllDependencies() {
+    dependencies_.ForAllPtrs([](maxwell::Debug* debug) { debug->Kill(); });
+    WAIT_UNTIL(dependencies_.size() == 0);
   }
 
   void TearDown() override {
-    dependencies_.ForAllPtrs([](maxwell::Debug* debug) { debug->Kill(); });
-    WAIT_UNTIL(dependencies_.size() == 0);
+    KillAllDependencies();
     ApplicationTestBase::TearDown();
   }
 

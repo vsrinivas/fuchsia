@@ -13,3 +13,13 @@ group("maxwell") {
     "suggestion_engine",
   ]
 }
+
+source_set("debug") {
+  sources = [
+    "debug.cc",
+  ]
+
+  deps = [
+    "//mojo/public/cpp/environment",
+  ]
+}

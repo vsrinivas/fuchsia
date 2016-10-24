@@ -30,5 +30,13 @@ void MockGps::Publish(float latitude, float longitude) {
   out_->Update(json.str());
 }
 
+void MockGps::OnHasSubscribers() {
+  has_subscribers_ = true;
+}
+
+void MockGps::OnNoSubscribers() {
+  has_subscribers_ = false;
+}
+
 }  // namespace acquirers
 }  // namespace maxwell

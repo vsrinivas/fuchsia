@@ -18,15 +18,15 @@ class MockGps : public GpsAcquirer,
  public:
   MockGps(mojo::Shell* shell);
   void Publish(float latitude, float longitude);
+  void OnHasSubscribers() override;
+  void OnNoSubscribers() override;
 
-  // Test harnesses may override this as appropriate.
-  void OnHasSubscribers() override {}
-  // Test harnesses may override this as appropriate.
-  void OnNoSubscribers() override {}
+  bool has_subscribers() const { return has_subscribers_; }
 
  private:
   mojo::Binding<context_engine::ContextPublisherController> ctl_;
   context_engine::ContextPublisherLinkPtr out_;
+  bool has_subscribers_ = false;
 };
 
 }  // namespace acquirers
