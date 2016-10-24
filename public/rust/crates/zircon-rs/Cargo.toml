@@ -1,0 +1,10 @@
+[package]
+name = "magenta"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Raph Levien <raph@google.com>"]
+description = "Rust bindings for the Magenta kernel"
+repository = "https://fuchsia.googlesource.com/magenta-rs/"
+
+[dependencies.magenta-sys]
+path = "magenta-sys"
