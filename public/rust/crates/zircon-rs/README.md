@@ -1,5 +1,6 @@
-Fuchsia Open Source Template Repository
-=======================================
+Rust bindings for Magenta kernel
+================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains Rust language bindings for Magenta kernel syscalls. The
+main crate contains type-safe wrappers, while the inner "sys" crate contains the
+raw types and FFI declarations.
