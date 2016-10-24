@@ -82,13 +82,13 @@ function build_magenta_tools() {
 
 # copy_magenta_tool <name>
 function copy_magenta_tool() {
-  build_magenta_tools
   local name="${1}"
   local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
   local stamp_path="${tool_path}.stamp"
   local tool_bin="${SCRIPT_ROOT}/../magenta/build-magenta-pc-x86-64/tools/${name}"
   local tool_hash="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
   if [[ ! -f "${tool_path}" || ! -f "${stamp_path}" || "${tool_hash}" != "$(cat ${stamp_path})" ]]; then
+      build_magenta_tools
       echo "Copying ${name}..."
       rm -f "${tool_path}"
       cp "${tool_bin}" "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
