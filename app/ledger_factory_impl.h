@@ -31,21 +31,19 @@ class LedgerFactoryImpl : public LedgerFactory {
   void GetLedger(IdentityPtr identity,
                  const GetLedgerCallback& callback) override;
 
-  std::string GetIdentityString(const IdentityPtr& identity);
-
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const std::string base_storage_dir_;
 
   struct ArrayHash {
-    size_t operator()(const mojo::Array<uint8_t>& array) const;
+    size_t operator()(const IdentityPtr& identity) const;
   };
 
   struct ArrayEquals {
-    size_t operator()(const mojo::Array<uint8_t>& array1,
-                      const mojo::Array<uint8_t>& array2) const;
+    size_t operator()(const IdentityPtr& identity1,
+                      const IdentityPtr& identity2) const;
   };
 
-  std::unordered_map<mojo::Array<uint8_t>,
+  std::unordered_map<IdentityPtr,
                      std::unique_ptr<LedgerManager>,
                      ArrayHash,
                      ArrayEquals>

@@ -293,6 +293,7 @@ LedgerPtr LedgerApplicationTest::GetTestLedger() {
   mojo::InterfaceHandle<Ledger> ledger;
   IdentityPtr identity = Identity::New();
   identity->user_id = RandomArray(1);
+  identity->app_id = RandomArray(1);
   ledgerFactory->GetLedger(
       std::move(identity),
       [&status, &ledger](Status s, mojo::InterfaceHandle<Ledger> l) {

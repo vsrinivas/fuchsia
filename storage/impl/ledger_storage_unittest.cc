@@ -22,8 +22,9 @@ class LedgerStorageTest : public ::testing::Test {
 
   // Test:
   void SetUp() override {
-    storage_.reset(new LedgerStorageImpl(message_loop_.task_runner(),
-                                         tmp_dir_.path(), "test_identity"));
+    storage_.reset(new LedgerStorageImpl(
+        message_loop_.task_runner(), tmp_dir_.path(),
+        LedgerStorageImpl::Identity{"test_user", "test_app"}));
     std::srand(0);
   }
 

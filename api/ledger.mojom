@@ -25,11 +25,15 @@ enum Status {
   // TODO(qsr) Add more.
 };
 
-// For v0/v1 this is just a user identifier to be able to distinguish
-// data per user. Later on, this might contain the cryptographic keys
-// of the user.
+// Identity of the Ledger client. This is currently declarative with no
+// guarantee of authenticity. Once we have tokens for user and component access
+// scopes, we will use them instead.
 struct Identity {
+  // Identifies the user.
   array<uint8> user_id;
+
+  // Identifies the client app.
+  array<uint8> app_id;
 };
 
 [ServiceName="ledger::LedgerFactory"]

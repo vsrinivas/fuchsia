@@ -4,6 +4,9 @@
 
 #include "apps/ledger/storage/impl/ledger_storage_impl.h"
 
+#include <algorithm>
+#include <iterator>
+
 #include "apps/ledger/glue/crypto/base64.h"
 #include "apps/ledger/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
@@ -14,13 +17,25 @@ namespace storage {
 
 namespace {
 const char kVersion[] = "0.0.1";
+
+// Encodes opaque bytes in a way that is usable as a directory name.
+std::string GetDirectoryName(ftl::StringView bytes) {
+  // TODO(ppi): switch to a method that needs only one pass.
+  std::string encoded;
+  glue::Base64Encode(bytes, &encoded);
+  std::replace(std::begin(encoded), std::end(encoded), '/', '_');
+  std::replace(std::begin(encoded), std::end(encoded), '+', '.');
+  return encoded;
+}
 }
 
 LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                      const std::string& base_storage_dir,
-                                     const std::string& identity)
+                                     const Identity& identity)
     : task_runner_(std::move(task_runner)) {
-  storage_dir_ = base_storage_dir + "/" + kVersion + "/" + identity;
+  storage_dir_ = base_storage_dir + "/" + kVersion + "/" +
+                 GetDirectoryName(identity.user_id) + "/" +
+                 GetDirectoryName(identity.app_id);
 }
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
