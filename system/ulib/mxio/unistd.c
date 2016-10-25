@@ -403,8 +403,8 @@ int mxio_status_to_errno(mx_status_t status) {
     case ERR_BAD_HANDLE: return EBADF;
     case ERR_ACCESS_DENIED: return EACCES;
 
-    // no translation
-    default: return 999;
+    // No specific translation, so return a generic errno value.
+    default: return EIO;
     }
 }
 
