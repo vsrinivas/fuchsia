@@ -10,6 +10,7 @@
 
 #include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -28,6 +29,10 @@
 namespace modular {
 
 constexpr char kExampleRecipeUrl[] = "mojo:example_recipe";
+constexpr char kFlutterModuleUrl[] = "mojo:example_module3.flx";
+
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr uint32_t kViewResourceIdBase = 100;
 
 using mojo::ApplicationImplBase;
 using mojo::ConnectionContext;
@@ -41,16 +46,21 @@ using mojo::StrongBindingSet;
 using mojo::StrongBinding;
 using mojo::StructPtr;
 
-class DummyUserShellImpl : public UserShell {
+class DummyUserShellImpl : public UserShell, public mozart::BaseView {
  public:
   explicit DummyUserShellImpl(
       mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
       InterfaceRequest<UserShell> user_shell_request,
       InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : binding_(this, std::move(user_shell_request)),
-        view_owner_request_(std::move(view_owner_request)) {}
+      : BaseView(std::move(app_connector),
+                 std::move(view_owner_request),
+                 "DummyUserShellImpl"),
+        binding_(this, std::move(user_shell_request)),
+        child_view_key_(0) {}
   ~DummyUserShellImpl() override{};
 
+ private:
+  // |UserShell| override.
   void SetStoryProvider(
       InterfaceHandle<StoryProvider> story_provider) override {
     story_provider_.Bind(story_provider.Pass());
@@ -60,21 +70,75 @@ class DummyUserShellImpl : public UserShell {
       FTL_DCHECK(!story.is_valid());
     });
 
-    // Start a new story.
-    story_provider_->CreateStory(kExampleRecipeUrl, GetProxy(&story_ptr_));
-    story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
-      FTL_LOG(INFO) << "modular::Story received with url: " << story_info->url
-                    << " is_running: " << story_info->is_running;
-
-      story_ptr_->Start(std::move(view_owner_request_));
+    StartAndEmbedStory(kExampleRecipeUrl);
+    story_ptr_.set_connection_error_handler([this] {
+      child_view_key_++;
+      StartAndEmbedStory(kFlutterModuleUrl);
     });
   }
 
- private:
+  void StartAndEmbedStory(const std::string& url) {
+    story_provider_->CreateStory(url, GetProxy(&story_ptr_));
+    story_ptr_->GetInfo([this](StructPtr<StoryInfo> story_info) {
+      FTL_LOG(INFO) << "modular::StoryInfo received with url: "
+                    << story_info->url
+                    << " is_running: " << story_info->is_running;
+    });
+
+    InterfaceHandle<mozart::ViewOwner> story_view;
+    story_ptr_->Start(GetProxy(&story_view));
+
+    // Embed the new story.
+    GetViewContainer()->AddChild(child_view_key_, story_view.Pass());
+  }
+
+  // |mozart::BaseView| override.
+  void OnChildAttached(uint32_t child_key,
+                       StructPtr<mozart::ViewInfo> child_view_info) override {
+    view_info_ = std::move(child_view_info);
+    auto view_properties = mozart::ViewProperties::New();
+    GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
+                                           view_properties.Pass());
+    Invalidate();
+  }
+
+  // |mozart::BaseView| override.
+  void OnChildUnavailable(uint32_t child_key) override {
+    view_info_.reset();
+    GetViewContainer()->RemoveChild(child_key, nullptr);
+    Invalidate();
+  }
+
+  // |mozart::BaseView| override.
+  void OnDraw() override {
+    FTL_DCHECK(properties());
+
+    auto update = mozart::SceneUpdate::New();
+    auto root_node = mozart::Node::New();
+
+    if (view_info_) {
+      const uint32_t scene_resource_id = kViewResourceIdBase + child_view_key_;
+      auto scene_resource = mozart::Resource::New();
+      scene_resource->set_scene(mozart::SceneResource::New());
+      scene_resource->get_scene()->scene_token =
+          view_info_->scene_token.Clone();
+      update->resources.insert(scene_resource_id, scene_resource.Pass());
+      root_node->op = mozart::NodeOp::New();
+      root_node->op->set_scene(mozart::SceneNodeOp::New());
+      root_node->op->get_scene()->scene_resource_id = scene_resource_id;
+    }
+
+    update->nodes.insert(kRootNodeId, root_node.Pass());
+    scene()->Update(update.Pass());
+    scene()->Publish(CreateSceneMetadata());
+  }
+
   StrongBinding<UserShell> binding_;
   InterfacePtr<StoryProvider> story_provider_;
   InterfacePtr<Story> story_ptr_;
-  InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+
+  StructPtr<mozart::ViewInfo> view_info_;
+  uint32_t child_view_key_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellImpl);
 };

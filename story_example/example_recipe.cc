@@ -151,8 +151,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              InterfaceRequest<Module> module_request,
              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(app_connector.Pass(), view_owner_request.Pass(),
-                 "Spinning Square"),
+      : BaseView(app_connector.Pass(), view_owner_request.Pass(), "RecipeImpl"),
         module_binding_(this, std::move(module_request)) {
     FTL_LOG(INFO) << "RecipeImpl";
   }

@@ -45,6 +45,7 @@ executable("dummy_user_shell") {
   deps = [
     ":interfaces",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",

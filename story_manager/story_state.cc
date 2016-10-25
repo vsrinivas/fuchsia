@@ -59,6 +59,10 @@ void StoryState::RunStory(
 void StoryState::Done() {
   FTL_LOG(INFO) << "StoryState::Done()";
   Stop();
+
+  // Deleting |this| causes |Story| interface to be closed which is an
+  // indication for UserShell that this story has terminated.
+  delete this;
 }
 
 void StoryState::GetInfo(const GetInfoCallback& callback) {

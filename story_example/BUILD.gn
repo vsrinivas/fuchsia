@@ -2,10 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//flutter/build/flutter_app.gni")
+
 group("all") {
   deps = [
     ":example_module1",
     ":example_module2",
+    ":example_module3",
     ":example_recipe",
   ]
 }
@@ -66,5 +69,12 @@ executable("example_recipe") {
     "//mojo/public/cpp/utility",
     "//mojo/system",
     "//third_party/skia",
+  ]
+}
+
+flutter_app("example_module3") {
+  main_dart = "example_module3.dart"
+  deps = [
+    "//lib/flutter/packages/flutter",
   ]
 }
