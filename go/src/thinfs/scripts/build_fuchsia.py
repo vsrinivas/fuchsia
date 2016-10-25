@@ -18,6 +18,8 @@ def main():
                         required=True)
     parser.add_argument('--go-binary', help='Path to go binary which can compile Fuchsia programs',
                         required=True)
+    parser.add_argument('--go-bin-directory', help='Path to GOBIN',
+                        required=True)
     args = parser.parse_args()
 
     scripts_dir = os.path.dirname(os.path.realpath(__file__))
@@ -28,9 +30,9 @@ def main():
     os.environ['MAGENTA'] = os.path.join(args.fuchsia_root, 'magenta')
     os.environ['CC'] = os.path.join(args.fuchsia_root, 'third_party/go/misc/fuchsia/gccwrap.sh')
     os.environ['GOOS'] = 'fuchsia'
-    output = 'thinfs'
-    target = os.path.join(scripts_dir, '../magenta/main.go')
-    return call([args.go_binary, 'build', '-o', output, target], env=os.environ)
+    os.environ['GOBIN'] = args.go_bin_directory
+    target = os.path.join(scripts_dir, '../magenta/thinfs.go')
+    return call([args.go_binary, 'install', target], env=os.environ)
 
 
 if __name__ == '__main__':
