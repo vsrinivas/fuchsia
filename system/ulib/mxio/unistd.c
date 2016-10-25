@@ -473,9 +473,16 @@ ssize_t read(int fd, void* buf, size_t count) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    ssize_t r = STATUS(io->ops->read(io, buf, count));
+    mx_status_t status;
+    for (;;) {
+        status = io->ops->read(io, buf, count);
+        if (status != ERR_SHOULD_WAIT) {
+            break;
+        }
+        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+    }
     mxio_release(io);
-    return r;
+    return STATUS(status);
 }
 
 ssize_t write(int fd, const void* buf, size_t count) {

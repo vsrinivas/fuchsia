@@ -71,7 +71,8 @@ static ssize_t console_read(mx_device_t* dev, void* buf, size_t count, mx_off_t 
         device_state_clr(dev, DEV_STATE_READABLE);
     }
     mtx_unlock(&fifo.lock);
-    return data - (uint8_t*)buf;
+    ssize_t actual = data - (uint8_t*)buf;
+    return actual ? actual : (ssize_t)ERR_SHOULD_WAIT;
 }
 
 static ssize_t console_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {

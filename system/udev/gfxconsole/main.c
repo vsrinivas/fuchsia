@@ -624,7 +624,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
     }
     vc->key_idx = cur_idx;
     mtx_unlock(&vc->fifo.lock);
-    return r;
+    return r ? r : (ssize_t)ERR_SHOULD_WAIT;
 }
 
 static ssize_t vc_device_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
