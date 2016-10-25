@@ -11,22 +11,29 @@ config("werror") {
 }
 
 config("compiler") {
-  cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+  cflags = []
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++14" ]
-  ldflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   configs = [
-    ":compiler_cpu",
+    ":compiler_sysroot",
+    ":compiler_target",
     ":werror",
   ]
   asmflags = cflags + cflags_c
-  defines = [ "SYSROOT_VERSION=$sysroot_version" ]
 }
 
-config("compiler_cpu") {
+config("compiler_sysroot") {
+  # The sole purpose of SYSROOT_VERSION is to change the command line on every
+  # sysroot update so as to force rebuilds.
+  defines = [ "SYSROOT_VERSION=$sysroot_version" ]
+  cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+  ldflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+  asmflags = cflags
+}
+
+config("compiler_target") {
   cflags = []
   ldflags = []
-
   if (current_cpu == "arm64") {
     cflags += [ "--target=aarch64-fuchsia" ]
     ldflags += [ "--target=aarch64-fuchsia" ]
