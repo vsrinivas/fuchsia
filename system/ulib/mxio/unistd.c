@@ -381,6 +381,8 @@ int mxio_stat(mxio_t* io, struct stat* s) {
     s->st_mode = attr.mode;
     s->st_size = attr.size;
     s->st_ino = attr.inode;
+    s->st_ctime = attr.create_time;
+    s->st_mtime = attr.modify_time;
     return 0;
 }
 

@@ -107,6 +107,8 @@ struct vnattr {
     uint32_t reserved;
     uint64_t inode;
     uint64_t size;
+    uint64_t create_time;  // posix time (seconds since epoch)
+    uint64_t modify_time;  // posix time
 };
 
 // bits compatible with POSIX stat
