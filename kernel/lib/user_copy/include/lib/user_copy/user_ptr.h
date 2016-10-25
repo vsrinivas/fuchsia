@@ -70,6 +70,14 @@ public:
         return copy_from_user_unsafe(dst, ptr_, count * internal::type_size<T>());
     }
 
+    // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
+    // |void|.
+    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
+    // overflow).
+    status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count, size_t offset) const {
+        return copy_from_user_unsafe(dst, ptr_ + (offset * internal::type_size<T>()), count * internal::type_size<T>());
+    }
+
 private:
     // It is very important that this class only wrap the pointer type itself
     // and not include any other members so as not to break the ABI between
