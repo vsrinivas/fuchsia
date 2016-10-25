@@ -5,6 +5,7 @@
 group("test_apps") {
   deps = [
     ":crash_test",
+    ":exit_test",
     ":loop_test",
   ]
 }
