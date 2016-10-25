@@ -6,6 +6,7 @@
 #define LIB_MTL_TASKS_MESSAGE_LOOP_H_
 
 #include <mojo/system/wait.h>
+#include <mx/event.h>
 
 #include <map>
 #include <memory>
@@ -119,7 +120,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   bool should_quit_ = false;
   bool is_running_ = false;
   std::priority_queue<internal::PendingTask> queue_;
-  UniqueHandle event_;
+  mx::event event_;
 
   // An ever increasing value assigned to each HandlerData::id. Used to detect
   // uniqueness while notifying. That is, while notifying expired timers we

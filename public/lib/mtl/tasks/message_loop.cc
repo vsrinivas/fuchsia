@@ -28,8 +28,7 @@ MessageLoop::MessageLoop(
     ftl::RefPtr<internal::IncomingTaskQueue> incoming_tasks)
     : task_runner_(std::move(incoming_tasks)) {
   FTL_DCHECK(!g_current) << "At most one message loop per thread.";
-  event_.reset(mx_event_create(0));
-  FTL_CHECK(event_.get() > MX_HANDLE_INVALID);
+  FTL_CHECK(mx::event::create(&event_, 0) == NO_ERROR);
   MessageLoop::incoming_tasks()->InitDelegate(this);
   g_current = this;
 }
@@ -172,8 +171,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
 
   if (result_index == 0) {
     FTL_DCHECK(wait_result == MOJO_RESULT_OK);
-    mx_status_t event_status =
-        mx_object_signal(event_.get(), MX_SIGNAL_SIGNALED, 0u);
+    mx_status_t event_status = event_.signal(MX_SIGNAL_SIGNALED, 0u);
     FTL_DCHECK(event_status == NO_ERROR);
     return now;
   }
@@ -221,7 +219,7 @@ void MessageLoop::PostQuitTask() {
 }
 
 void MessageLoop::ScheduleDrainIncomingTasks() {
-  mx_status_t status = mx_object_signal(event_.get(), 0u, MX_SIGNAL_SIGNALED);
+  mx_status_t status = event_.signal(0u, MX_SIGNAL_SIGNALED);
   FTL_DCHECK(status == NO_ERROR);
 }
 
