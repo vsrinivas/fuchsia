@@ -36,15 +36,9 @@ void VideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
   MaybeApplyPendingTimelineChange(reference_time);
   MaybePublishEndOfStream();
 
-  int64_t presentation_time = current_timeline_function_(reference_time);
+  pts_ = current_timeline_function_(reference_time);
 
-  // Discard empty and old packets. We keep one packet around even if it's old,
-  // so we can show an old frame instead of no frame when we starve.
-  while (packet_queue_.size() > 1 &&
-         packet_queue_.front()->packet()->pts < presentation_time) {
-    // TODO(dalesat): Add hysteresis.
-    packet_queue_.pop();
-  }
+  DiscardOldPackets();
 
   // TODO(dalesat): Detect starvation.
 
@@ -114,12 +108,17 @@ void VideoRenderer::OnPacketSupplied(
   }
 
   packet_queue_.push(std::move(supplied_packet));
+
+  // Discard old packets now in case our frame rate is so low that we have to
+  // skip more packets than we demand when GetRgbaFrame is called.
+  DiscardOldPackets();
 }
 
 void VideoRenderer::OnFlushRequested(const FlushCallback& callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }
+  MaybeClearEndOfStream();
   callback.Run();
 }
 
@@ -155,6 +154,7 @@ void VideoRenderer::GetTimelineConsumer(
 }
 
 void VideoRenderer::Prime(const PrimeCallback& callback) {
+  pts_ = kUnspecifiedTime;
   SetDemand(2);
   callback.Run();  // TODO(dalesat): Wait until we get packets.
 }
@@ -165,10 +165,8 @@ void VideoRenderer::SetTimelineTransform(
   FTL_DCHECK(timeline_transform);
   FTL_DCHECK(timeline_transform->reference_delta != 0);
 
-  if (timeline_transform->subject_time != kUnspecifiedTime &&
-      end_of_stream_pts_ != kUnspecifiedTime) {
-    end_of_stream_pts_ = kUnspecifiedTime;
-    end_of_stream_published_ = false;
+  if (timeline_transform->subject_time != kUnspecifiedTime) {
+    MaybeClearEndOfStream();
   }
 
   int64_t reference_time =
@@ -188,6 +186,16 @@ void VideoRenderer::SetTimelineTransform(
       timeline_transform->subject_delta);
 
   set_timeline_transform_callback_ = callback;
+}
+
+void VideoRenderer::DiscardOldPackets() {
+  // We keep at least one packet around even if it's old, so we can show an
+  // old frame rather than no frame when we starve.
+  while (packet_queue_.size() > 1 &&
+         packet_queue_.front()->packet()->pts < pts_) {
+    // TODO(dalesat): Add hysteresis.
+    packet_queue_.pop();
+  }
 }
 
 void VideoRenderer::ClearPendingTimelineFunction(bool completed) {
@@ -215,6 +223,14 @@ void VideoRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
   }
 
   SendStatusUpdates();
+}
+
+void VideoRenderer::MaybeClearEndOfStream() {
+  if (end_of_stream_pts_ != kUnspecifiedTime) {
+    end_of_stream_pts_ = kUnspecifiedTime;
+    end_of_stream_published_ = false;
+    SendStatusUpdates();
+  }
 }
 
 void VideoRenderer::MaybePublishEndOfStream() {

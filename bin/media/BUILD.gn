@@ -6,8 +6,9 @@ group("media") {
   testonly = true
 
   deps = [
-    ":services",
     ":apptests",
+    ":examples",
+    ":services",
   ]
 }
 
@@ -17,6 +18,12 @@ group("services") {
     "//apps/media/src/flog_service:flog_service",
     "//apps/media/src/media_service:media_service",
     "//apps/media/tools/flog_viewer:flog_viewer",
+  ]
+}
+
+group("examples") {
+  deps = [
+    "//apps/media/examples/video_player",
   ]
 }
 

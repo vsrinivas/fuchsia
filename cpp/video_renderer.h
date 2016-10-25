@@ -74,12 +74,18 @@ class VideoRenderer : public MediaPacketConsumerBase,
       TimelineTransformPtr timeline_transform,
       const SetTimelineTransformCallback& callback) override;
 
+  // Discards packets that are older than pts_.
+  void DiscardOldPackets();
+
   // Clears the pending timeline function and calls its associated callback
   // with the indicated completed status.
   void ClearPendingTimelineFunction(bool completed);
 
   // Apply a pending timeline change if there is one an it's due.
   void MaybeApplyPendingTimelineChange(int64_t reference_time);
+
+  // Clears end-of-stream if it's set.
+  void MaybeClearEndOfStream();
 
   // Publishes end-of-stream as needed.
   void MaybePublishEndOfStream();
@@ -97,6 +103,7 @@ class VideoRenderer : public MediaPacketConsumerBase,
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;
   SetTimelineTransformCallback set_timeline_transform_callback_;
+  int64_t pts_ = kUnspecifiedTime;
   int64_t end_of_stream_pts_ = kUnspecifiedTime;
   bool end_of_stream_published_ = false;
   uint64_t status_version_ = 1u;
