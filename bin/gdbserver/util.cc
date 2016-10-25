@@ -62,6 +62,21 @@ void EncodeByteString(const uint8_t byte, char out_hex[2]) {
   out_hex[1] = HalfByteToHexChar(byte & 0x0f);
 }
 
+std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
+  const size_t kResultSize = num_bytes * 2;
+  if (!kResultSize)
+    return "";
+
+  std::string result;
+  result.resize(kResultSize);
+  for (size_t i = 0; i < kResultSize; i += 2) {
+    util::EncodeByteString(*bytes, const_cast<char*>(result.data() + i));
+    ++bytes;
+  }
+
+  return result;
+}
+
 void LogErrorWithErrno(const std::string& message) {
   FTL_LOG(ERROR) << message << " (errno = " << errno << ", \""
                  << strerror(errno) << "\")";

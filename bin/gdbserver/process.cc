@@ -4,11 +4,14 @@
 
 #include "process.h"
 
+#include <cinttypes>
+
 #include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
 #include "server.h"
 #include "util.h"
@@ -345,6 +348,30 @@ bool Process::RefreshAllThreads() {
 void Process::ForEachThread(const ThreadCallback& callback) {
   for (const auto& iter : threads_)
     callback(iter.second.get());
+}
+
+bool Process::ReadMemory(uintptr_t address,
+                         size_t length,
+                         void* out_buffer,
+                         size_t* out_bytes_read) {
+  if (!started()) {
+    FTL_LOG(ERROR) << "Cannot read memory: process not started";
+    return false;
+  }
+
+  FTL_DCHECK(out_buffer);
+  mx_ssize_t result_size =
+      mx_debug_read_memory(debug_handle_.get(), address, length, out_buffer);
+  if (result_size < 0) {
+    util::LogErrorWithMxStatus(
+        ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
+        result_size);
+    return false;
+  }
+
+  *out_bytes_read = result_size;
+
+  return true;
 }
 
 void Process::OnException(const mx_excp_type_t type,

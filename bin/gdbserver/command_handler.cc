@@ -7,7 +7,9 @@
 #include <string>
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_printf.h"
 
 #include "registers.h"
 #include "server.h"
@@ -81,6 +83,8 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
       return Handle_g(callback);
     case 'H':  // Set a thread for subsequent operations
       return Handle_H(packet.substr(1), callback);
+    case 'm':
+      return Handle_m(packet.substr(1), callback);
     case 'q':  // General query packet
     case 'Q':  // General set packet
     {
@@ -186,7 +190,7 @@ bool CommandHandler::Handle_g(const ResponseCallback& callback) {
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
     FTL_LOG(ERROR) << "g: No inferior";
-    return ReplyWithError(util::ErrorCode::INVAL, callback);
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
   }
 
   // If there is no current thread, then we reply with "0"s for all registers.
@@ -294,6 +298,47 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
   }
 
   return false;
+}
+
+bool CommandHandler::Handle_m(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "m: No inferior";
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  // The "m" packet should have two arguments for addr and length, separated by
+  // a single comma.
+  auto params = ftl::SplitString(packet, ",", ftl::kKeepWhitespace,
+                                 ftl::kSplitWantNonEmpty);
+  if (params.size() != 2) {
+    FTL_LOG(ERROR) << "m: Malformed packet: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  uintptr_t addr;
+  size_t length;
+  if (!ftl::StringToNumberWithError<uintptr_t>(params[0], &addr,
+                                               ftl::Base::k16) ||
+      !ftl::StringToNumberWithError<size_t>(params[1], &length,
+                                            ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "m: Malformed params: " << packet;
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[length]);
+  size_t bytes_read;
+  if (!current_process->ReadMemory(addr, length, buffer.get(), &bytes_read)) {
+    FTL_LOG(ERROR) << "m: Failed to read memory";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  std::string result = util::EncodeByteArrayString(buffer.get(), bytes_read);
+  callback(result);
+  return true;
 }
 
 bool CommandHandler::Handle_q(const ftl::StringView& prefix,
@@ -505,10 +550,17 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
   // before calling launchpad_start?
   FTL_DCHECK(current_process->IsAttached());
 
-  // In Remote Non-stop mode (which is the only mode we currently support), we
-  // just respond "OK" (see
-  // https://sourceware.org/gdb/current/onlinedocs/gdb/Stop-Reply-Packets.html)
-  return ReplyOK(callback);
+  // We need to respond with a Stop-Reply packet, however there is no thread to
+  // report at the moment (see the TODO above). So we send a fake stop-reply
+  // with an unspecified stop reason, setting the signal value to "05", the trap
+  // signal. Here we are reporting 0 for the thread ID but GDB seems to be OK
+  // with it as long as the process ID is also included.
+  //
+  // Note: The point of this is to make GDB aware of the process ID, since it
+  // seems to rely on stop-reply packets to obtain it.
+  std::string thread_id = util::EncodeThreadId(current_process->id(), 0);
+  callback(ftl::StringPrintf("T05thread:%s", thread_id.c_str()));
+  return true;
 }
 
 }  // namespace debugserver

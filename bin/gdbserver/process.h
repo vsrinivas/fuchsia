@@ -105,6 +105,14 @@ class Process final {
   using ThreadCallback = std::function<void(Thread*)>;
   void ForEachThread(const ThreadCallback& callback);
 
+  // Reads the block of memory of length |length| starting at address |address|
+  // into |out_buffer|. |out_buffer| must be at least as large as |length|.
+  // Returns true on success or false on failure.
+  bool ReadMemory(uintptr_t address,
+                  size_t length,
+                  void* out_buffer,
+                  size_t* out_bytes_read);
+
  private:
   Process() = default;
 

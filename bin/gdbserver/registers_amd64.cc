@@ -125,25 +125,22 @@ bool GetGeneralRegistersHelper(const mx_handle_t thread_handle,
 // Includes all registers if |register_number| is -1.
 std::string GetRegisterValueAsString(const mx_x86_64_general_regs_t& gregs,
                                      int register_number) {
-  FTL_DCHECK(register_number > 0 &&
-             register_number < static_cast<int>(Amd64Register::NUM_REGISTERS));
+  FTL_DCHECK(register_number < static_cast<int>(Amd64Register::NUM_REGISTERS));
 
   // Based on the value of |register_number|, we either need to fit in all
   // registers or just a single one.
-  const size_t kResultSize =
-      register_number < 0 ? sizeof(gregs) * 2 : sizeof(uint64_t) * 2;
-
-  // We use std::string as the buffer container.
-  std::string result(kResultSize, '0');
+  const size_t kDataSize =
+      register_number < 0 ? sizeof(gregs) : sizeof(uint64_t);
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&gregs);
+
+  // TODO(armansito): Not all x86-64 registers store 64-bit values; the main
+  // ones all do but lower-bits of all the "r*" registers can be interpreted as
+  // 32-bit, 16-bit, or 8-bit registers (e.g. rax vs eax, ax, al, etc). So using
+  // |register_number| here to index into |gregs| isn't really a good idea. But
+  // we're doing it for now.
   greg_bytes += register_number < 0 ? 0 : register_number * sizeof(uint64_t);
 
-  for (size_t i = 0; i < kResultSize; i += 2) {
-    util::EncodeByteString(*greg_bytes, const_cast<char*>(result.data() + i));
-    ++greg_bytes;
-  }
-
-  return result;
+  return util::EncodeByteArrayString(greg_bytes, kDataSize);
 }
 
 class RegistersAmd64 final : public Registers {

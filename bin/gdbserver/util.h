@@ -27,6 +27,10 @@ bool DecodeByteString(const char hex[2], uint8_t* out_byte);
 // |out_hex|.
 void EncodeByteString(const uint8_t byte, char out_hex[2]);
 
+// Encodes the array of bytes into hexadecimal ASCII digits and returns the
+// result in a string.
+std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes);
+
 // Logs the given |message| using the global errno variable, including the
 // result of strerror in a nicely formatted way.
 void LogErrorWithErrno(const std::string& message);
