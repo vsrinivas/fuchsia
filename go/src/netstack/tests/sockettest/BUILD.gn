@@ -27,3 +27,16 @@ executable("epolltest") {
     "magenta",
   ]
 }
+
+executable("polltest") {
+  testonly = true
+
+  sources = [
+    "polltest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+}
