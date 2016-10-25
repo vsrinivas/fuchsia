@@ -445,7 +445,7 @@ TEST_F(PageImplTest, GetUnknownReference) {
   EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
 }
 
-TEST_F(PageImplTest, PutGetSnapshotGetAll) {
+TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   std::string key("some_key");
   std::string value("a small value");
   PageSnapshotPtr snapshot;
@@ -469,13 +469,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetAll) {
   message_loop_.Run();
 
   mojo::Array<EntryPtr> actual_entries;
-  auto callback_getall = [this, &actual_entries](
+  auto callback_getentries = [this, &actual_entries](
       Status status, mojo::Array<EntryPtr> entries) {
     EXPECT_EQ(Status::OK, status);
     actual_entries = std::move(entries);
     message_loop_.QuitNow();
   };
-  snapshot->GetAll(nullptr, callback_getall);
+  snapshot->GetEntries(nullptr, callback_getentries);
   message_loop_.Run();
 
   EXPECT_EQ(1u, actual_entries.size());

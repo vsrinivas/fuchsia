@@ -27,8 +27,8 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetAll(mojo::Array<uint8_t> key_prefix,
-              const GetAllCallback& callback) override;
+  void GetEntries(mojo::Array<uint8_t> key_prefix,
+                  const GetEntriesCallback& callback) override;
 
   void GetKeys(mojo::Array<uint8_t> key_prefix,
                const GetKeysCallback& callback) override;

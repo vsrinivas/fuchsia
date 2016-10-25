@@ -87,8 +87,8 @@ PageSnapshotImpl::PageSnapshotImpl(
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
-                              const GetAllCallback& getall_callback) {
+void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
+                                  const GetEntriesCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
   ftl::RefPtr<Waiter<const storage::Object>> waiter(
@@ -115,13 +115,13 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
   std::function<void(storage::Status,
                      std::vector<std::unique_ptr<const storage::Object>>)>
       result_callback = ftl::MakeCopyable([
-        &getall_callback, entry_list = std::move(entries)
+        &callback, entry_list = std::move(entries)
       ](storage::Status status,
         std::vector<std::unique_ptr<const storage::Object>> results) mutable {
 
         if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "PageSnapshotImpl::GetAll error while reading.";
-          getall_callback.Run(Status::IO_ERROR, nullptr);
+          FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
+          callback.Run(Status::IO_ERROR, nullptr);
           return;
         }
 
@@ -130,13 +130,13 @@ void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
 
           storage::Status read_status = results[i]->GetData(&object_contents);
           if (read_status != storage::Status::OK) {
-            getall_callback.Run(Status::IO_ERROR, nullptr);
+            callback.Run(Status::IO_ERROR, nullptr);
             return;
           }
 
           entry_list[i]->value = convert::ToArray(object_contents);
         }
-        getall_callback.Run(Status::OK, std::move(entry_list));
+        callback.Run(Status::OK, std::move(entry_list));
       });
   waiter->Finalize(result_callback);
 }

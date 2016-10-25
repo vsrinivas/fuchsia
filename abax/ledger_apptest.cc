@@ -195,10 +195,11 @@ class PageWatcherTest : public PageWatcher {
     PageSnapshotPtr ptr =
         mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot));
     Status status;
-    ptr->GetAll(nullptr, [&status, this](Status s, mojo::Array<EntryPtr> e) {
-      status = s;
-      initial_entries_ = std::move(e);
-    });
+    ptr->GetEntries(nullptr,
+                    [&status, this](Status s, mojo::Array<EntryPtr> e) {
+                      status = s;
+                      initial_entries_ = std::move(e);
+                    });
     EXPECT_TRUE(ptr.WaitForIncomingResponse());
     EXPECT_EQ(status, Status::OK);
     callback.Run();
@@ -550,7 +551,7 @@ TEST_F(LedgerApplicationTest, PagePutGet) {
   Get(&snapshot, std::move(key3), Status::KEY_NOT_FOUND, nullptr);
 }
 
-TEST_F(LedgerApplicationTest, PageSnapshotGetAll) {
+TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   PagePtr page = GetTestPage();
 
   // Put three values and get them all with no prefix, or 2 of them with their
@@ -569,11 +570,11 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetAll) {
   PageSnapshotPtr snapshot = GetSnapshot(&page);
   Status status;
   mojo::Array<EntryPtr> entries;
-  snapshot->GetAll(mojo::Array<uint8_t>(),
-                   [&status, &entries](Status s, mojo::Array<EntryPtr> e) {
-                     status = s;
-                     entries = std::move(e);
-                   });
+  snapshot->GetEntries(mojo::Array<uint8_t>(),
+                       [&status, &entries](Status s, mojo::Array<EntryPtr> e) {
+                         status = s;
+                         entries = std::move(e);
+                       });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
   EXPECT_EQ(status, Status::OK);
   ExpectEqual(entries, expectedKeys, expectedValues, 3);
@@ -586,11 +587,11 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetAll) {
   mojo::Array<uint8_t> expectedValues2[] = {
       std::move(expectedValues[0]), std::move(expectedValues[1]),
   };
-  snapshot->GetAll(mojo::Array<uint8_t>::From(prefix),
-                   [&status, &entries](Status s, mojo::Array<EntryPtr> e) {
-                     status = s;
-                     entries = std::move(e);
-                   });
+  snapshot->GetEntries(mojo::Array<uint8_t>::From(prefix),
+                       [&status, &entries](Status s, mojo::Array<EntryPtr> e) {
+                         status = s;
+                         entries = std::move(e);
+                       });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
   EXPECT_EQ(status, Status::OK);
   ExpectEqual(entries, expectedKeys2, expectedValues2, 2);

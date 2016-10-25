@@ -193,10 +193,10 @@ struct Entry {
 // The content of a page at a given time. Closing the connection to a |Page|
 // interface closes all |PageSnapshot| interfaces it created.
 interface PageSnapshot {
-  // Returns all the entries in the database sharing the given key prefix. If
+  // Returns the entries in the page with keys matching the given prefix. If
   // |key_prefix| is NULL, all entries are returned. |entries| are sorted by
   // |key|.
-  GetAll(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
+  GetEntries(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
 
   // Returns the keys of all entries in the page that match the given key
   // prefix. If |key_prefix| is NULL, all keys are returned. The returned keys

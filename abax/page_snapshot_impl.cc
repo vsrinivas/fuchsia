@@ -25,9 +25,10 @@ PageSnapshotImpl::PageSnapshotImpl(mojo::InterfaceRequest<PageSnapshot> request,
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-// GetAll(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
-void PageSnapshotImpl::GetAll(mojo::Array<uint8_t> key_prefix,
-                              const GetAllCallback& callback) {
+// GetEntries(array<uint8>? key_prefix)
+//     => (Status status, array<Entry>? entries);
+void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
+                                  const GetEntriesCallback& callback) {
   mojo::Array<EntryPtr> array = mojo::Array<EntryPtr>::New(0);
   std::string prefix =
       serialization_->GetReferenceRowKey(std::move(key_prefix));
