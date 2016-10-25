@@ -198,7 +198,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
             r = ERR_NOT_FOUND;
             goto end;
         }
-        if ((r = mx_waitset_remove(epio->h, (uint64_t)cookie)) < 0) {
+        if ((r = mx_waitset_remove(epio->h, (uint64_t)(uintptr_t)cookie)) < 0) {
             mxio_epoll_cookie_add(epio, cookie);
             goto end;
         }
@@ -230,7 +230,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         }
 
         cookie->ep_event = *ep_event;
-        if ((r = mx_waitset_add(epio->h, h, signals, (uint64_t)cookie)) < 0) {
+        if ((r = mx_waitset_add(epio->h, h, signals, (uint64_t)(uintptr_t)cookie)) < 0) {
             mxio_release(cookie->io);
             free(cookie);
             goto end;
@@ -277,7 +277,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
     }
 
     for (uint32_t i = 0; i < num_results; i++) {
-        mxio_epoll_cookie_t* cookie = (mxio_epoll_cookie_t*)results[i].cookie;
+        mxio_epoll_cookie_t* cookie = (mxio_epoll_cookie_t*)(uintptr_t)results[i].cookie;
         mxio_t* io = cookie->io;
         uint32_t events;
 
