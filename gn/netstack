@@ -12,6 +12,10 @@
             "bootfs_path": "bin/netstack"
         },
         {
+            "binary": "polltest",
+            "bootfs_path": "bin/polltest"
+        },
+        {
             "binary": "sockettest",
             "bootfs_path": "bin/sockettest"
         }
