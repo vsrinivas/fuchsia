@@ -50,7 +50,7 @@ mojo::Array<uint8_t> GetPageId(PagePtr* page) {
 
 class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
  public:
-  LedgerApplicationTest() : ApplicationTestBase() {}
+  LedgerApplicationTest() {}
   ~LedgerApplicationTest() override {}
 
  protected:
@@ -64,8 +64,10 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
 
   void TearDown() override {
     // Delete all pages used in the test.
-    for (int i = page_ids_.size() - 1; i >= 0; --i) {
-      DeletePage(page_ids_[i], Status::OK);
+    for (auto& page_id : page_ids_) {
+      ledger_->DeletePage(std::move(page_id),
+                          [](Status status) { EXPECT_EQ(Status::OK, status); });
+      EXPECT_TRUE(ledger_.WaitForIncomingResponse());
     }
 
     ApplicationTestBase::TearDown();
@@ -78,9 +80,15 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
 
   LedgerFactoryPtr ledger_factory_;
   LedgerPtr ledger_;
-  std::vector<mojo::Array<uint8_t>> page_ids_;
 
  private:
+  // Record ids of pages created for testing, so that we can delete them in
+  // TearDown() in a somewhat desperate attempt to clean up the files created
+  // for the test.
+  // TODO(ppi): Configure ledger.mojo so that it knows to write to TempScopedDir
+  // when run for testing and remove this accounting.
+  std::vector<mojo::Array<uint8_t>> page_ids_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApplicationTest);
 };
 
