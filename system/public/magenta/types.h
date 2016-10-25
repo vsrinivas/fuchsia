@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <magenta/fuchsia-types.h>
+#include <magenta/errors.h>
 #include <stdint.h>
 #ifndef __cplusplus
 #include <stdatomic.h>
