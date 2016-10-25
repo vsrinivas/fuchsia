@@ -7,5 +7,6 @@ group("tests") {
 
   deps = [
     "//apps/netstack/tests/sockettest",
+    "//apps/netstack/tests/sockettest:epolltest",
   ]
 }
