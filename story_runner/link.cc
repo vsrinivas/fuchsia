@@ -130,7 +130,7 @@ void LinkImpl::WatchAll(InterfaceHandle<LinkChanged> watcher) {
 void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
                           const bool self_notify) {
   InterfacePtr<LinkChanged> watcher_ptr;
-  watcher_ptr.Bind(watcher.Pass());
+  watcher_ptr.Bind(std::move(watcher));
 
   // TODO(jimbe) We need to send an initial notification of state until
   // there is snapshot information that can be used by clients to query the

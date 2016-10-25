@@ -24,7 +24,7 @@ using mojo::String;
 class ResolverImpl : public Resolver {
  public:
   explicit ResolverImpl(InterfaceRequest<Resolver> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {}
 
   ~ResolverImpl() override {}
 
@@ -41,13 +41,13 @@ class ResolverFactoryImpl : public ResolverFactory {
  public:
   ResolverFactoryImpl(InterfaceHandle<ApplicationConnector> app_connector,
                       InterfaceRequest<ResolverFactory> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {}
 
   ~ResolverFactoryImpl() override {}
 
  private:
   void GetResolver(InterfaceRequest<Resolver> request) override {
-    new ResolverImpl(request.Pass());
+    new ResolverImpl(std::move(request));
   }
 
   StrongBinding<ResolverFactory> binding_;

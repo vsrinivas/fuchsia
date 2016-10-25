@@ -23,7 +23,7 @@ class SingleServiceApplication : public mojo::ApplicationImplBase {
     s->AddService<Service>([this](const mojo::ConnectionContext& ctx,
                                   mojo::InterfaceRequest<Service> request) {
       service_impls_.emplace_back(std::unique_ptr<ServiceImpl>(new ServiceImpl(
-          mojo::CreateApplicationConnector(shell()), request.Pass())));
+          mojo::CreateApplicationConnector(shell()), std::move(request))));
     });
     return true;
   }

@@ -45,7 +45,7 @@ void ModuleControllerImpl::Done() {
 
 void ModuleControllerImpl::Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) {
   watchers_.push_back(
-      mojo::InterfacePtr<ModuleWatcher>::Create(watcher.Pass()));
+      mojo::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
 }
 
 SessionHost::SessionHost(SessionImpl* const impl,
@@ -133,8 +133,8 @@ SessionImpl::SessionImpl(mojo::Shell* const shell,
                          mojo::InterfaceRequest<Session> req)
     : shell_(shell) {
   FTL_LOG(INFO) << "SessionImpl()";
-  resolver_.Bind(resolver.Pass());
-  session_page_.Bind(session_page.Pass());
+  resolver_.Bind(std::move(resolver));
+  session_page_.Bind(std::move(session_page));
   session_page_->GetId([](mojo::Array<uint8_t> id) {
     std::string string_id;
     for (uint8_t val : id) {

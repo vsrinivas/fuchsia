@@ -35,7 +35,7 @@ class SingleServiceViewApp : public mojo::ApplicationImplBase,
     s->AddService<mozart::ViewProvider>(
         [this](const mojo::ConnectionContext& ctx,
                mojo::InterfaceRequest<mozart::ViewProvider> request) {
-          bindings_.AddBinding(this, request.Pass());
+          bindings_.AddBinding(this, std::move(request));
         });
     return true;
   }

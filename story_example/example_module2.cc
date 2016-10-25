@@ -65,8 +65,8 @@ class Module2Impl : public Module, public LinkChanged {
                   InterfaceHandle<Link> link) override {
     FTL_LOG(INFO) << "module2 init";
 
-    session_.Bind(session.Pass());
-    link_.Bind(link.Pass());
+    session_.Bind(std::move(session));
+    link_.Bind(std::move(link));
 
     InterfaceHandle<LinkChanged> watcher;
     watcher_binding_.Bind(&watcher);

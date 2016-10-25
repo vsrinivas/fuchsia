@@ -63,7 +63,7 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
   // |UserShell| override.
   void SetStoryProvider(
       InterfaceHandle<StoryProvider> story_provider) override {
-    story_provider_.Bind(story_provider.Pass());
+    story_provider_.Bind(std::move(story_provider));
 
     // Check for previous stories.
     story_provider_->PreviousStories([this](InterfaceHandle<Story> story) {
@@ -89,7 +89,7 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
     story_ptr_->Start(GetProxy(&story_view));
 
     // Embed the new story.
-    GetViewContainer()->AddChild(child_view_key_, story_view.Pass());
+    GetViewContainer()->AddChild(child_view_key_, std::move(story_view));
   }
 
   // |mozart::BaseView| override.
@@ -98,7 +98,7 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
     view_info_ = std::move(child_view_info);
     auto view_properties = mozart::ViewProperties::New();
     GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
-                                           view_properties.Pass());
+                                           std::move(view_properties));
     Invalidate();
   }
 
@@ -122,14 +122,14 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
       scene_resource->set_scene(mozart::SceneResource::New());
       scene_resource->get_scene()->scene_token =
           view_info_->scene_token.Clone();
-      update->resources.insert(scene_resource_id, scene_resource.Pass());
+      update->resources.insert(scene_resource_id, std::move(scene_resource));
       root_node->op = mozart::NodeOp::New();
       root_node->op->set_scene(mozart::SceneNodeOp::New());
       root_node->op->get_scene()->scene_resource_id = scene_resource_id;
     }
 
-    update->nodes.insert(kRootNodeId, root_node.Pass());
-    scene()->Update(update.Pass());
+    update->nodes.insert(kRootNodeId, std::move(root_node));
+    scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
   }
 

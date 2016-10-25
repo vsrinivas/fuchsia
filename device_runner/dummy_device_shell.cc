@@ -43,7 +43,7 @@ class DummyDeviceShellImpl : public DeviceShell {
   ~DummyDeviceShellImpl() override{};
 
   void SetDeviceRunner(InterfaceHandle<DeviceRunner> device_runner) override {
-    device_runner_ = InterfacePtr<DeviceRunner>::Create(device_runner.Pass());
+    device_runner_ = InterfacePtr<DeviceRunner>::Create(std::move(device_runner));
     device_runner_->Login(kDummyUserName, std::move(view_owner_request_));
   }
 

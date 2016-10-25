@@ -151,7 +151,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              InterfaceRequest<Module> module_request,
              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(app_connector.Pass(), view_owner_request.Pass(), "RecipeImpl"),
+      : BaseView(std::move(app_connector), std::move(view_owner_request), "RecipeImpl"),
         module_binding_(this, std::move(module_request)) {
     FTL_LOG(INFO) << "RecipeImpl";
   }
@@ -166,8 +166,8 @@ class RecipeImpl : public Module, public mozart::BaseView {
     // Session is not new, but already contains existing Modules and
     // Links from the previous execution that is continued here?
 
-    session_.Bind(session.Pass());
-    link_.Bind(link.Pass());
+    session_.Bind(std::move(session));
+    link_.Bind(std::move(link));
 
     session_->CreateLink(GetProxy(&module1_link_));
     session_->CreateLink(GetProxy(&module2_link_));
@@ -230,18 +230,18 @@ class RecipeImpl : public Module, public mozart::BaseView {
       content_resource->set_image(mozart::ImageResource::New());
       content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
-                               content_resource.Pass());
+                               std::move(content_resource));
       auto root_node = mozart::Node::New();
       root_node->op = mozart::NodeOp::New();
       root_node->op->set_image(mozart::ImageNodeOp::New());
       root_node->op->get_image()->content_rect = bounds.Clone();
       root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     } else {
       auto root_node = mozart::Node::New();
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     }
-    scene()->Update(update.Pass());
+    scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
     Invalidate();
   }

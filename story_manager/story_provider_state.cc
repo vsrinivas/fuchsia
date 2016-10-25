@@ -40,7 +40,7 @@ StoryProviderState::StoryProviderState(
       FTL_NOTREACHED() << "Ledger did not return root page. Unhandled error";
       return;
     }
-    root_page_.Bind(root_page.Pass());
+    root_page_.Bind(std::move(root_page));
   });
 }
 

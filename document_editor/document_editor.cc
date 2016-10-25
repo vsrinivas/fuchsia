@@ -39,7 +39,7 @@ DocumentEditor::DocumentEditor(const std::string& docid) : DocumentEditor() {
 }
 
 document_store::DocumentPtr DocumentEditor::TakeDocument() {
-  return doc_.Pass();
+  return std::move(doc_);
 }
 
 Value* DocumentEditor::GetValue(std::string property) {
