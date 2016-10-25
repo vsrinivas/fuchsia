@@ -7,6 +7,10 @@
         {
             "binary": "armadillo_user_shell.flx",
             "bootfs_path": "apps/armadillo_user_shell"
+        },
+        {
+            "binary": "modules_gallery.flx",
+            "bootfs_path": "apps/modules_gallery"
         }
     ]
 }
