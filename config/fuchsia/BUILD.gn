@@ -10,13 +10,21 @@ config("werror") {
   cflags = [ "-Werror" ]
 }
 
+config("icf") {
+  # This changes C/C++ semantics and might be incompatible with third-party
+  # code that relies on function pointers comparison.
+  ldflags = [ "-Wl,--icf=all" ]
+}
+
 config("compiler") {
   cflags = []
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++14" ]
+  ldflags = []
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
+    ":icf",
     ":werror",
   ]
   asmflags = cflags + cflags_c
