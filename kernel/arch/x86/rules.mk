@@ -77,7 +77,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/idt.c \
 	$(LOCAL_DIR)/ioapic.c \
-	$(LOCAL_DIR)/ioport.c \
+	$(LOCAL_DIR)/ioport.cpp \
 	$(LOCAL_DIR)/lapic.c \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/mmu_mem_types.c \
