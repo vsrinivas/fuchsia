@@ -12,6 +12,10 @@
             "bootfs_path": "test/gdbserver_unittests"
         },
         {
+            "binary": "exit_test",
+            "bootfs_path": "test/gdbserver/exit_test"
+        },
+        {
             "binary": "crash_test",
             "bootfs_path": "test/gdbserver/crash_test"
         },
