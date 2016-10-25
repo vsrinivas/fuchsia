@@ -72,29 +72,6 @@ function download_tarball() {
   fi
 }
 
-function build_magenta_tools() {
-  if [[ "${has_arguments}" = "false" ]]; then
-      echo "Building magenta tools..."
-      make -C "${SCRIPT_ROOT}/../magenta" tools >/dev/null
-      has_arguments="true"
-  fi
-}
-
-# copy_magenta_tool <name>
-function copy_magenta_tool() {
-  local name="${1}"
-  local tool_path="${SCRIPT_ROOT}/${HOST_PLATFORM}/${name}"
-  local stamp_path="${tool_path}.stamp"
-  local tool_bin="${SCRIPT_ROOT}/../magenta/build-magenta-pc-x86-64/tools/${name}"
-  local tool_hash="$(cd ${SCRIPT_ROOT}/../magenta && git rev-parse HEAD)"
-  if [[ ! -f "${tool_path}" || ! -f "${stamp_path}" || "${tool_hash}" != "$(cat ${stamp_path})" ]]; then
-      build_magenta_tools
-      echo "Copying ${name}..."
-      rm -f "${tool_path}"
-      cp "${tool_bin}" "${tool_path}" && echo "${tool_hash}" > "${stamp_path}"
-  fi
-}
-
 function download_ninja() {
   download_tool ninja "${FUCHSIA_URL_BASE}/ninja/${HOST_PLATFORM}"
 }
@@ -120,27 +97,12 @@ function download_go() {
   download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 }
 
-function download_bootserver() {
-  copy_magenta_tool bootserver
-}
-
-function download_loglistener() {
-  copy_magenta_tool loglistener
-}
-
-function download_mkbootfs() {
-  copy_magenta_tool mkbootfs
-}
-
 function download_all() {
   download_ninja
   download_gn
   download_cmake
   download_toolchain
   download_go
-  download_bootserver
-  download_loglistener
-  download_mkbootfs
 }
 
 function echo_error() {
@@ -148,7 +110,6 @@ function echo_error() {
 }
 
 declare has_arguments="false"
-declare built_magenta_tools="false"
 
 for i in "$@"; do
 case ${i} in
@@ -174,21 +135,6 @@ case ${i} in
     ;;
   --go)
     download_go
-    has_arguments="true"
-    shift
-    ;;
-  --bootserver)
-    download_bootserver
-    has_arguments="true"
-    shift
-    ;;
-  --loglistener)
-    download_loglistener
-    has_arguments="true"
-    shift
-    ;;
-  --mkbootfs)
-    download_mkbootfs
     has_arguments="true"
     shift
     ;;
