@@ -34,6 +34,9 @@ class CommitContents {
   virtual std::unique_ptr<Iterator<const EntryChange>> diff(
       const CommitContents& other) const = 0;
 
+  // Returns the id of the root node.
+  virtual ObjectId GetBaseObjectId() const = 0;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitContents);
 };

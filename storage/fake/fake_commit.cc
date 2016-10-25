@@ -84,6 +84,11 @@ class FakeCommitContents : public CommitContents {
     return nullptr;
   }
 
+  ObjectId GetBaseObjectId() const override {
+    FTL_NOTIMPLEMENTED();
+    return nullptr;
+  }
+
  private:
   FakeJournalDelegate* journal_;
 };

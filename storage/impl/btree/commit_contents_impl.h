@@ -31,6 +31,8 @@ class CommitContentsImpl : public CommitContents {
   std::unique_ptr<Iterator<const EntryChange>> diff(
       const CommitContents& other) const override;
 
+  ObjectId GetBaseObjectId() const override;
+
  private:
   std::unique_ptr<BTreeIterator> NewIterator() const;
 

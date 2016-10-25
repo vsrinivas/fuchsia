@@ -9,6 +9,7 @@
 
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
+#include "apps/ledger/storage/impl/btree/diff_iterator.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "lib/ftl/logging.h"
 
@@ -32,12 +33,25 @@ std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::find(
 
 std::unique_ptr<Iterator<const EntryChange>> CommitContentsImpl::diff(
     const CommitContents& other) const {
-  FTL_NOTIMPLEMENTED();
-  return nullptr;
+  std::unique_ptr<const TreeNode> root;
+  // TODO(nellyv): Update API to return error Status. LE-39
+  FTL_CHECK(TreeNode::FromId(store_, root_id_, &root) == Status::OK);
+
+  std::unique_ptr<const TreeNode> right;
+  FTL_CHECK(TreeNode::FromId(store_, other.GetBaseObjectId(), &right) ==
+            Status::OK);
+
+  return std::unique_ptr<DiffIterator>(
+      new DiffIterator(std::move(root), std::move(right)));
+}
+
+ObjectId CommitContentsImpl::GetBaseObjectId() const {
+  return root_id_;
 }
 
 std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
   std::unique_ptr<const TreeNode> root;
+  // TODO(nellyv): Update API to return error Status. LE-39
   FTL_CHECK(TreeNode::FromId(store_, root_id_, &root) == Status::OK);
   return std::unique_ptr<BTreeIterator>(new BTreeIterator(std::move(root)));
 }
