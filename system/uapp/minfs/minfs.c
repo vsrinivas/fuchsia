@@ -43,6 +43,14 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
     return 0;
 }
 
+static uint64_t minfs_current_utc_time(void) {
+    // placeholder to provide changing values for file time (in unix epoch time)
+    // TODO(orr) replace with syscall when RTC info is available
+    static uint64_t timestamp = 0xdeadbeef;
+
+    return timestamp++;
+}
+
 void minfs_sync_vnode(vnode_t* vn) {
     block_t* blk;
     void* bdata;
@@ -56,6 +64,9 @@ void minfs_sync_vnode(vnode_t* vn) {
 
     memcpy(bdata + off_of_ino, &vn->inode, MINFS_INODE_SIZE);
     bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
+
+    // update modify time
+    vn->inode.modify_time = minfs_current_utc_time();
 }
 
 mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino) {
@@ -137,6 +148,8 @@ mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
         return ERR_NO_MEMORY;
     }
     vn->inode.magic = MINFS_MAGIC(type);
+    // TODO(orr) update when mx_current_time() works with unix epoch time
+    vn->inode.create_time = vn->inode.modify_time = minfs_current_utc_time();
     vn->inode.link_count = 1;
     vn->refcount = 1;
     vn->ops = &minfs_ops;

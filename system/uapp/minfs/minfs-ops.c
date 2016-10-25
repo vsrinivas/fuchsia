@@ -674,6 +674,8 @@ static mx_status_t fs_getattr(vnode_t* vn, vnattr_t* a) {
     a->inode = vn->ino;
     a->size = vn->inode.size;
     a->mode = DTYPE_TO_VTYPE(MINFS_MAGIC_TYPE(vn->inode.magic));
+    a->create_time = vn->inode.create_time;
+    a->modify_time = vn->inode.modify_time;
     return NO_ERROR;
 }
 
