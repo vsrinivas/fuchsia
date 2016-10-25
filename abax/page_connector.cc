@@ -79,27 +79,6 @@ void PageConnector::CreateReference(int64_t size,
                          });
 }
 
-// GetReference(Reference reference) => (Status status, Value? value);
-void PageConnector::GetReference(ReferencePtr reference,
-                                 const GetReferenceCallback& callback) {
-  ValuePtr value;
-  Status status = page_->GetReference(std::move(reference), &value);
-  callback.Run(status, std::move(value));
-}
-
-// GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, handle<shared_buffer>? buffer);
-void PageConnector::GetPartialReference(
-    ReferencePtr reference,
-    int64_t offset,
-    int64_t max_size,
-    const GetPartialReferenceCallback& callback) {
-  mojo::ScopedSharedBufferHandle buffer;
-  Status status = page_->GetPartialReference(std::move(reference), offset,
-                                             max_size, &buffer);
-  callback.Run(status, std::move(buffer));
-}
-
 // StartTransaction() => (Status status);
 void PageConnector::StartTransaction(const StartTransactionCallback& callback) {
   FTL_LOG(ERROR) << "PageConnector::StartTransaction not implemented.";

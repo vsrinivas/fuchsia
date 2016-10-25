@@ -8,7 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/app/constants.h"
 #include "apps/ledger/app/page_snapshot_impl.h"
+#include "apps/ledger/app/page_utils.h"
 #include "apps/ledger/convert/convert.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -16,40 +18,6 @@
 #include "lib/mtl/shared_buffer/strings.h"
 
 namespace ledger {
-namespace {
-// Maximal size of data that will be returned inline.
-const size_t kMaxInlineDataSize = 2048;
-
-Status ConvertStatus(storage::Status status,
-                     Status not_found_status = Status::INTERNAL_ERROR) {
-  switch (status) {
-    case storage::Status::OK:
-      return Status::OK;
-    case storage::Status::IO_ERROR:
-      return Status::IO_ERROR;
-    case storage::Status::NOT_FOUND:
-      return not_found_status;
-    default:
-      return Status::INTERNAL_ERROR;
-  }
-}
-
-Status ToBuffer(convert::ExtendedStringView value,
-                int64_t offset,
-                int64_t max_size,
-                mojo::ScopedSharedBufferHandle* buffer) {
-  size_t start = value.size();
-  if (static_cast<size_t>(std::abs(offset)) < value.size()) {
-    start = offset < 0 ? value.size() + offset : offset;
-  }
-  size_t length = max_size < 0 ? value.size() : max_size;
-
-  bool result =
-      mtl::SharedBufferFromString(value.substr(start, length), buffer);
-  return result ? Status::OK : Status::UNKNOWN_ERROR;
-}
-
-}  // namespace
 
 PageImpl::PageImpl(storage::PageStorage* storage) : storage_(storage) {}
 
@@ -85,7 +53,7 @@ void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
   std::unique_ptr<storage::Commit> commit;
   storage::Status status = storage_->GetCommit(commit_id, &commit);
   if (status != storage::Status::OK) {
-    callback.Run(ConvertStatus(status), nullptr);
+    callback.Run(PageUtils::ConvertStatus(status), nullptr);
     return;
   }
   PageSnapshotPtr snapshot_ptr;
@@ -119,7 +87,7 @@ void PageImpl::RunInTransaction(
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::IMPLICIT, &journal);
   if (status != storage::Status::OK) {
-    callback(ConvertStatus(status));
+    callback(PageUtils::ConvertStatus(status));
     return;
   }
   Status ledger_status = runnable(journal.get());
@@ -143,7 +111,7 @@ void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
         [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
           return journal_ptr == journal.get();
         }));
-    callback(ConvertStatus(status));
+    callback(PageUtils::ConvertStatus(status));
   });
 }
 
@@ -169,7 +137,7 @@ void PageImpl::PutWithPriority(mojo::Array<uint8_t> key,
       ftl::MakeCopyable([ this, key = std::move(key), priority, callback ](
           storage::Status status, storage::ObjectId object_id) {
         if (status != storage::Status::OK) {
-          callback.Run(ConvertStatus(status));
+          callback.Run(PageUtils::ConvertStatus(status));
           return;
         }
 
@@ -199,7 +167,7 @@ void PageImpl::PutInCommit(convert::ExtendedStringView key,
                            std::function<void(Status)> callback) {
   RunInTransaction(
       [&key, &object_id, &priority](storage::Journal* journal) {
-        return ConvertStatus(journal->Put(key, object_id, priority));
+        return PageUtils::ConvertStatus(journal->Put(key, object_id, priority));
       },
       callback);
 }
@@ -209,7 +177,8 @@ void PageImpl::Delete(mojo::Array<uint8_t> key,
                       const DeleteCallback& callback) {
   RunInTransaction(
       [&key](storage::Journal* journal) {
-        return ConvertStatus(journal->Delete(key), Status::KEY_NOT_FOUND);
+        return PageUtils::ConvertStatus(journal->Delete(key),
+                                        Status::KEY_NOT_FOUND);
       },
       [callback](Status status) { callback.Run(status); });
 }
@@ -223,65 +192,13 @@ void PageImpl::CreateReference(int64_t size,
       std::move(data), size,
       [callback](storage::Status status, storage::ObjectId object_id) {
         if (status != storage::Status::OK) {
-          callback.Run(ConvertStatus(status), nullptr);
+          callback.Run(PageUtils::ConvertStatus(status), nullptr);
           return;
         }
 
         ReferencePtr reference = Reference::New();
         reference->opaque_id = convert::ToArray(object_id);
         callback.Run(Status::OK, std::move(reference));
-      });
-}
-
-// GetReference(Reference reference) => (Status status, Value? value);
-void PageImpl::GetReference(ReferencePtr reference,
-                            const GetReferenceCallback& callback) {
-  GetReferenceInternal(std::move(reference),
-                       [this, &callback](Status status, ftl::StringView data) {
-                         if (status != Status::OK) {
-                           callback.Run(status, nullptr);
-                           return;
-                         }
-                         if (data.size() <= kMaxInlineDataSize) {
-                           ValuePtr value = Value::New();
-                           value->set_bytes(convert::ToArray(data));
-                           callback.Run(Status::OK, std::move(value));
-                           return;
-                         }
-
-                         mojo::ScopedSharedBufferHandle buffer;
-                         Status mojo_status = ToBuffer(data, 0, -1, &buffer);
-                         if (mojo_status != Status::OK) {
-                           callback.Run(mojo_status, nullptr);
-                           return;
-                         }
-                         ValuePtr value = Value::New();
-                         value->set_buffer(std::move(buffer));
-                         callback.Run(Status::OK, std::move(value));
-                       });
-}
-
-// GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, handle<shared_buffer>? buffer);
-void PageImpl::GetPartialReference(
-    ReferencePtr reference,
-    int64_t offset,
-    int64_t max_size,
-    const GetPartialReferenceCallback& callback) {
-  GetReferenceInternal(
-      std::move(reference),
-      [this, offset, max_size, &callback](Status status, ftl::StringView data) {
-        if (status != Status::OK) {
-          callback.Run(status, mojo::ScopedSharedBufferHandle());
-          return;
-        }
-        mojo::ScopedSharedBufferHandle buffer;
-        Status mojo_status = ToBuffer(data, offset, max_size, &buffer);
-        if (mojo_status != Status::OK) {
-          callback.Run(mojo_status, mojo::ScopedSharedBufferHandle());
-          return;
-        }
-        callback.Run(Status::OK, std::move(buffer));
       });
 }
 
@@ -295,7 +212,7 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::EXPLICIT, &journal_);
   journal_parent_commit_ = commit_id;
-  callback.Run(ConvertStatus(status));
+  callback.Run(PageUtils::ConvertStatus(status));
 }
 
 // Commit() => (Status status);
@@ -318,31 +235,7 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
   storage::Status status = journal_->Rollback();
   journal_.reset();
   journal_parent_commit_.clear();
-  callback.Run(ConvertStatus(status));
-}
-
-void PageImpl::GetReferenceInternal(
-    ReferencePtr reference,
-    std::function<void(Status, ftl::StringView)> callback) {
-  storage_->GetObject(
-      reference->opaque_id,
-      [callback](storage::Status status,
-                 std::unique_ptr<const storage::Object> object) {
-        if (status != storage::Status::OK) {
-          callback(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-                   ftl::StringView());
-          return;
-        }
-        ftl::StringView data;
-        status = object->GetData(&data);
-        if (status != storage::Status::OK) {
-          callback(ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-                   ftl::StringView());
-          return;
-        }
-
-        callback(Status::OK, data);
-      });
+  callback.Run(PageUtils::ConvertStatus(status));
 }
 
 }  // namespace ledger

@@ -13,6 +13,9 @@ namespace ledger {
 // The size of a page id array.
 constexpr size_t kPageIdSize = 16;
 
+// Maximal size of data that will be returned inline.
+constexpr size_t kMaxInlineDataSize = 2048;
+
 // The root id. The array size must be equal to kPageIdSize.
 extern const ftl::StringView kRootPageId;
 

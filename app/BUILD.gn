@@ -26,6 +26,8 @@ source_set("lib") {
     "ledger_manager.h",
     "page_impl.cc",
     "page_impl.h",
+    "page_utils.cc",
+    "page_utils.h",
     "page_manager.cc",
     "page_manager.h",
     "page_snapshot_impl.cc",

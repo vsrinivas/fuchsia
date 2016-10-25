@@ -75,16 +75,13 @@ union Value {
   handle<shared_buffer> buffer;
 };
 
-// A reference to a value. The value can be retrieved using |GetReference| or
-// |GetPartialReference|.
+// A reference to a value.
 struct Reference {
   array<uint8> opaque_id;
 };
 
 // A value that is either small enough to be directly embedded in |bytes| or
-// that is referenced in |reference|. The value of the reference can be
-// retrieved by using |Page.GetReference(...)| or
-// |Page.GetPartialReference(...)|. References are immutable.
+// that is referenced in |reference|. References are immutable.
 union BytesOrReference {
   array<uint8> bytes;
   Reference reference;
@@ -134,16 +131,6 @@ interface Page {
   // |size| is negative, no validation is done.
   CreateReference(int64 size, handle<data_pipe_consumer> data)
       => (Status status, Reference? reference);
-  // Returns the value of the given reference.
-  GetReference(Reference reference) => (Status status, Value? value);
-  // Returns a shared handle to a part of the value of a given reference.
-  //
-  // Start at the position that is specified by |offset|. If |offset| is less
-  // than 0, starts at |-offset| from the end of the value.
-  // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
-  // everything.
-  GetPartialReference(Reference reference, int64 offset, int64 max_size)
-      => (Status status, handle<shared_buffer>? buffer);
 
   // Transactions.
   //

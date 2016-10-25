@@ -331,120 +331,6 @@ TEST_F(PageImplTest, CreateReference) {
   ASSERT_EQ(value, it->second);
 }
 
-TEST_F(PageImplTest, GetReference) {
-  std::string value_string("a small value");
-  storage::Status storage_status;
-  storage::ObjectId object_id;
-  // FakeStorage is synchronous.
-  fake_storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
-      [&storage_status, &object_id](storage::Status returned_status,
-                                    storage::ObjectId returned_object_id) {
-        storage_status = returned_status;
-        object_id = std::move(returned_object_id);
-      });
-  ASSERT_EQ(storage::Status::OK, storage_status);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  Status status;
-  ValuePtr value;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &status, &value](Status received_status, ValuePtr received_value) {
-        status = received_status;
-        value = std::move(received_value);
-        message_loop_.QuitNow();
-      });
-  message_loop_.Run();
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_EQ(value_string, convert::ToString(value->get_bytes()));
-}
-
-TEST_F(PageImplTest, GetLargeReference) {
-  std::string value_string(2049, 'a');
-  storage::Status storage_status;
-  storage::ObjectId object_id;
-  // FakeStorage is synchronous.
-  fake_storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
-      [&storage_status, &object_id](storage::Status returned_status,
-                                    storage::ObjectId returned_object_id) {
-        storage_status = returned_status;
-        object_id = std::move(returned_object_id);
-      });
-  ASSERT_EQ(storage::Status::OK, storage_status);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  Status status;
-  ValuePtr value;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &status, &value](Status received_status, ValuePtr received_value) {
-        status = received_status;
-        value = std::move(received_value);
-        message_loop_.QuitNow();
-      });
-  message_loop_.Run();
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(value->is_buffer());
-  std::string content;
-  EXPECT_TRUE(mtl::StringFromSharedBuffer(value->get_buffer(), &content));
-  EXPECT_EQ(value_string, content);
-}
-
-TEST_F(PageImplTest, GetPartialReference) {
-  std::string value_string("a small value");
-  storage::Status storage_status;
-  storage::ObjectId object_id;
-  // FakeStorage is synchronous.
-  fake_storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
-      [&storage_status, &object_id](storage::Status returned_status,
-                                    storage::ObjectId returned_object_id) {
-        storage_status = returned_status;
-        object_id = std::move(returned_object_id);
-      });
-  ASSERT_EQ(storage::Status::OK, storage_status);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  Status status;
-  mojo::ScopedSharedBufferHandle buffer;
-  page_ptr_->GetPartialReference(
-      std::move(reference), 2, 5,
-      [this, &status, &buffer](Status received_status,
-                               mojo::ScopedSharedBufferHandle received_buffer) {
-        status = received_status;
-        buffer = std::move(received_buffer);
-        message_loop_.QuitNow();
-      });
-  message_loop_.Run();
-  EXPECT_EQ(Status::OK, status);
-  std::string content;
-  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
-  EXPECT_EQ("small", content);
-}
-
-TEST_F(PageImplTest, GetUnknownReference) {
-  storage::ObjectId object_id("unknown reference");
-
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  Status status;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &status](Status received_status, ValuePtr received_value) {
-        status = received_status;
-        message_loop_.QuitNow();
-      });
-  message_loop_.Run();
-  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
-}
-
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   std::string key("some_key");
   std::string value("a small value");
@@ -531,5 +417,131 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
 }
 
+TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
+  std::string key("some_key");
+  std::string value("a small value");
+  PageSnapshotPtr snapshot;
+
+  auto callback_put = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this, &snapshot](
+      Status status,
+      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(callback_getsnapshot);
+  message_loop_.Run();
+
+  ValuePtr actual_value;
+  auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
+    EXPECT_EQ(Status::OK, status);
+    actual_value = std::move(value);
+    message_loop_.QuitNow();
+  };
+  snapshot->Get(convert::ToArray(key), callback_get);
+  message_loop_.Run();
+
+  EXPECT_TRUE(actual_value->is_bytes());
+  EXPECT_EQ(value, convert::ExtendedStringView(actual_value->get_bytes()));
+}
+
+TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
+  std::string value_string(kMaxInlineDataSize + 1, 'a');
+  ReferencePtr reference;
+  page_ptr_->CreateReference(
+      value_string.size(), mtl::WriteStringToConsumerHandle(value_string),
+      [this, &reference](Status status, ReferencePtr received_reference) {
+        EXPECT_EQ(Status::OK, status);
+        reference = std::move(received_reference);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+
+  std::string key("some_key");
+  PageSnapshotPtr snapshot;
+
+  auto callback_put = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+                          Priority::EAGER, callback_put);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this, &snapshot](
+      Status status,
+      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(callback_getsnapshot);
+  message_loop_.Run();
+
+  ValuePtr actual_value;
+  auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
+    EXPECT_EQ(Status::OK, status);
+    actual_value = std::move(value);
+    message_loop_.QuitNow();
+  };
+  snapshot->Get(convert::ExtendedStringView(key).ToArray(), callback_get);
+  message_loop_.Run();
+
+  EXPECT_FALSE(actual_value->is_bytes());
+  EXPECT_TRUE(actual_value->is_buffer());
+  std::string content;
+  EXPECT_TRUE(
+      mtl::StringFromSharedBuffer(actual_value->get_buffer(), &content));
+  EXPECT_EQ(value_string, content);
+}
+
+TEST_F(PageImplTest, SnapshotGetPartial) {
+  std::string key("some_key");
+  std::string value("a small value");
+  PageSnapshotPtr snapshot;
+
+  auto callback_put = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this, &snapshot](
+      Status status,
+      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(callback_getsnapshot);
+  message_loop_.Run();
+
+  Status status;
+  mojo::ScopedSharedBufferHandle buffer;
+  snapshot->GetPartial(
+      convert::ToArray(key), 2, 5,
+      [this, &status, &buffer](Status received_status,
+                               mojo::ScopedSharedBufferHandle received_buffer) {
+        status = received_status;
+        buffer = std::move(received_buffer);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_EQ(Status::OK, status);
+  std::string content;
+  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
+  EXPECT_EQ("small", content);
+}
 }  // namespace
 }  // namespace ledger
