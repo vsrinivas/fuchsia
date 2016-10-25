@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <ddk/protocol/device.h>
+#include <magenta/device/block.h>
 #include <magenta/device/console.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -59,6 +60,13 @@ static void launch_minfs(const char* device_name) {
 static void launch_fat(const char* device_name) {
     char device_path_arg[MXIO_MAX_FILENAME + 64];
     snprintf(device_path_arg, sizeof(device_path_arg),
+             "/dev/class/block/%s", device_name);
+    int fd = open(device_path_arg, O_RDONLY);
+    if (fd < 0) {
+        printf("Could not open block device: %s\n", device_path_arg);
+        return;
+    }
+    snprintf(device_path_arg, sizeof(device_path_arg),
              "-devicepath=/dev/class/block/%s", device_name);
 
     static int fat_counter = 0;
@@ -69,11 +77,23 @@ static void launch_fat(const char* device_name) {
     char mount_path_arg[MXIO_MAX_FILENAME + 64];
     snprintf(mount_path_arg, sizeof(mount_path_arg), "-mountpath=%s", mount_path);
 
+    // Use the GUID to avoid auto-mounting the EFI partition as writable
+    char guid[40];
+    ioctl_block_get_guid(fd, guid, sizeof(guid));
+    bool efi = false;
+    if (!strcmp("C12A7328-F81F-11D2-BA4B-00A0C93EC93B", guid)) {
+        efi = true;
+    }
+    close(fd);
+
+    char readonly_arg[64];
+    snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s", efi ? "true" : "false");
+
     const char* argv[] = {
         "/boot/bin/thinfs",
         device_path_arg,
         mount_path_arg,
-        "-readonly=true",
+        readonly_arg,
         "mount",
     };
     printf("devmgr: /dev/class/block/%s: fatfs?\n", device_name);
