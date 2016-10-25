@@ -28,7 +28,6 @@ First, make sure that the TCP stack is running and has acquired an IP address:
 > ethernetif_init: opened an ethernet device
 ip4_addr: 192.168.3.53 netmask: 255.255.255.0 gw: 192.168.3.1
 ip6_addr[0]: FE80::5054::FF:FE12:3456
-
 ```
 
 `192.168.3.53` is the address that we will use to connect from the host gdb
@@ -41,7 +40,6 @@ running process is currently not supported):
 
 ```
 debugserver 7000 /path/to/program
-
 ```
 
 The stub has a `--debug=<debug-level>` option that can be used to increase log
@@ -50,7 +48,6 @@ is currently accepted):
 
 ```
 debugserver --debug=2 7000 /path/to/program
-
 ```
 
 ### On the host machine
@@ -71,7 +68,6 @@ GNU gdb (GDB) <version>
 The target architecture is assumed to be i386:x86-64
 (gdb) target extended-remote 192.168.3.53:7000
 Remote debugging using 192.168.3.53:7000
-
 ```
 From here we can use gdb as usual:
 
