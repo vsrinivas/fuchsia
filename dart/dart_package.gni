@@ -45,10 +45,8 @@ template("dart_package") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   } else if (defined(invoker.infer_package_name) && invoker.infer_package_name) {
-    target_label = get_label_info(":$target_name", "label_no_toolchain")
-    package_name = exec_script("//build/dart/label_to_package_name.py",
-                               [ target_label ],
-                               "trim string")
+    target_dir = get_label_info(target_name, "dir")
+    package_label = target_dir
   } else {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
@@ -87,12 +85,17 @@ template("dart_package") {
              rebase_path(root_build_dir),
              "--root-gen-dir",
              rebase_path(root_gen_dir),
-             "--package-name",
-             package_name,
              "--depfile",
              rebase_path(depfile),
              "--deps",
            ] + dart_deps
+    if (defined(package_name)) {
+      args += ["--package-name",
+               package_name]
+    } else {
+      args += ["--package-label",
+               package_label]
+    }
   }
 
   if (!defined(invoker.disable_analysis) || !invoker.disable_analysis) {
@@ -139,11 +142,20 @@ template("dart_package") {
                rebase_path(analyzer_main),
                "--dart",
                rebase_path(dart_binary),
-               "--package-name",
-               package_name,
                "--dart-sdk",
                rebase_path("//dart/sdk")
       ]
+      if (defined(package_name)) {
+        args += [
+               "--package-name",
+               package_name,
+        ]
+      } else {
+        args += [
+               "--package-label",
+               package_label,
+        ]
+}
 
       if (defined(invoker.analysis_options)) {
         args += [

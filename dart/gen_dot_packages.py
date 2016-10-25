@@ -38,7 +38,9 @@ def main():
   parser.add_argument("--root-gen-dir",
                       help="Path to root of the gen directory", required=True)
   parser.add_argument("--package-name", help="Name of this package",
-                      required=True)
+                      required=False)
+  parser.add_argument("--package-label", help="Label of this package",
+                      required=False)
   parser.add_argument("--source-dir", help="Path to package source",
                       required=True)
   parser.add_argument(
@@ -51,10 +53,18 @@ def main():
   if not os.path.exists(dot_packages_path):
     os.makedirs(dot_packages_path)
 
+  if args.package_name:
+      package_name = args.package_name
+  else:
+      if not args.package_label:
+          print "Error, must specify package name or package label"
+          return 1
+      package_name = ".".join(args.package_label[2:].split("/")[:-1])
+
   dependent_files = []
 
   package_deps = {}
-  package_deps[args.package_name] = args.source_dir
+  package_deps[package_name] = args.source_dir
   for dep in args.deps:
     if not dep.startswith("//"):
       print "Error, expected dependency label to start with //"
