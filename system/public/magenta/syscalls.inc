@@ -194,7 +194,7 @@ MAGENTA_SYSCALL_DEF(4, 6, 223, mx_status_t, port_bind, mx_handle_t handle, uint6
 
 // Data Pipe
 MAGENTA_SYSCALL_DEF(4, 4, 230, mx_handle_t, datapipe_create, uint32_t options, mx_size_t element_size,
-                    mx_size_t capacity, USER_PTR(mx_handle_t) handle)
+                    mx_size_t capacity, USER_PTR(mx_handle_t) consumer_handle)
 MAGENTA_SYSCALL_DEF(4, 4, 231, mx_ssize_t, datapipe_write, mx_handle_t handle, uint32_t flags,
                     mx_size_t requested, USER_PTR(const void) buffer)
 MAGENTA_SYSCALL_DEF(4, 4, 232, mx_ssize_t, datapipe_read, mx_handle_t handle, uint32_t flags,

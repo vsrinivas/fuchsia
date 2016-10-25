@@ -1,0 +1,45 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("mx_config") {
+  include_dirs = [
+    "include",
+  ]
+}
+
+static_library("mx") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "event.cc",
+    "eventpair.cc",
+    "include/mx/datapipe.h",
+    "include/mx/event.h",
+    "include/mx/eventpair.h",
+    "include/mx/handle.h",
+    "include/mx/handle_traits.h",
+    "include/mx/log.h",
+    "include/mx/msgpipe.h",
+    "include/mx/port.h",
+    "include/mx/process.h",
+    "include/mx/socket.h",
+    "include/mx/task.h",
+    "include/mx/thread.h",
+    "include/mx/vmo.h",
+    "include/mx/waitset.h",
+    "log.cc",
+    "msgpipe.cc",
+    "port.cc",
+    "process.cc",
+    "socket.cc",
+    "thread.cc",
+    "vmo.cc",
+    "waitset.cc",
+  ]
+
+  public_configs = [
+    ":mx_config",
+  ]
+
+  libs = [ "magenta" ]
+}
