@@ -26,7 +26,6 @@
 #include <mxio/util.h>
 
 static void devhost_io_init(void) {
-    // setup stdout
     mx_handle_t h;
     if ((h = mx_log_create(MX_LOG_FLAG_DEVICE)) < 0) {
         return;
@@ -35,8 +34,10 @@ static void devhost_io_init(void) {
     if ((logger = mxio_logger_create(h)) == NULL) {
         return;
     }
-    close(1);
-    mxio_bind_to_fd(logger, 1, 0);
+    close(STDOUT_FILENO);
+    mxio_bind_to_fd(logger, STDOUT_FILENO, 0);
+    close(STDERR_FILENO);
+    dup2(STDOUT_FILENO, STDERR_FILENO);
 }
 
 // shared with rpc-device.c
