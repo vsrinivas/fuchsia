@@ -6,6 +6,21 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+"""
+
+This tool will symbolize a crash from Magenta's crash logger, adding
+function names and, if available, source code locations (filenames and
+line numbers from debug info).
+
+Example usage #1:
+  ./scripts/run-magenta -a x86-64 | ./scripts/symbolize devmgr.elf --build-dir=build-magenta-pc-x86-64
+
+Example usage #2:
+  ./scripts/symbolize devmgr.elf --build-dir=build-magenta-pc-x86-64
+  <copy and paste output from Magenta>
+
+"""
+
 import argparse
 import os
 import re
@@ -105,7 +120,8 @@ def run_tool(arch, tool, *args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Symbolize a crash from Magenta's crash logger")
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--build-dir", "-b", nargs="*",
                         help="List of additional build directories to search")
     parser.add_argument("--disassemble", "-d", action="store_true",
