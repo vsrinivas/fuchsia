@@ -62,7 +62,10 @@ build() {
 
   pushd "${ROOT_DIR}/magenta"
   rm -rf -- "${ROOT_DIR}/${magenta_buildroot}/build-${magenta_target}/sysroot"
+  # build the sysroot for the target architecture
   make -j ${JOBS} BUILDROOT=${ROOT_DIR}/${magenta_buildroot} ${magenta_target}
+  # build host tools
+  make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   popd
 
   cp -r -- \
