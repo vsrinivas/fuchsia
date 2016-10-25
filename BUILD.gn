@@ -9,7 +9,7 @@ group("all") {
 group("modular") {
   deps = [
     "device_runner:all",
-    "story_example:all",
+    "examples:all",
     "story_manager:all",
     "story_runner:all",
   ]
