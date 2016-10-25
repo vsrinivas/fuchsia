@@ -24,6 +24,7 @@ def main():
 
     scripts_dir = os.path.dirname(os.path.realpath(__file__))
     os.environ['CGO_ENABLED'] = '1'
+    os.environ['GOROOT'] = os.path.join(args.fuchsia_root, 'third_party/go')
     os.environ['GOPATH'] = os.path.join(args.fuchsia_root, 'go')
     # TODO(smklein): Remove this usage of gccwrap once we've converted to building
     # the go runtime with clangwrap.
