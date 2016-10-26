@@ -43,7 +43,7 @@ mojo::Array<uint8_t> RandomArray(int size) {
   return RandomArray(size, std::vector<uint8_t>());
 }
 
-mojo::Array<uint8_t> GetPageId(PagePtr* page) {
+mojo::Array<uint8_t> PageGetId(PagePtr* page) {
   mojo::Array<uint8_t> page_id;
   (*page)->GetId(
       [&page_id](mojo::Array<uint8_t> id) { page_id = std::move(id); });
@@ -51,7 +51,7 @@ mojo::Array<uint8_t> GetPageId(PagePtr* page) {
   return page_id;
 }
 
-PageSnapshotPtr GetSnapshot(PagePtr* page) {
+PageSnapshotPtr PageGetSnapshot(PagePtr* page) {
   PageSnapshotPtr snapshot;
   (*page)->GetSnapshot([&snapshot](
       Status status, mojo::InterfaceHandle<PageSnapshot> snapshot_handle) {
@@ -63,7 +63,7 @@ PageSnapshotPtr GetSnapshot(PagePtr* page) {
   return snapshot;
 }
 
-mojo::Array<mojo::Array<uint8_t>> GetSnapshotKeys(PageSnapshotPtr* snapshot,
+mojo::Array<mojo::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   mojo::Array<uint8_t> prefix) {
   mojo::Array<mojo::Array<uint8_t>> result;
   (*snapshot)->GetKeys(
@@ -76,7 +76,7 @@ mojo::Array<mojo::Array<uint8_t>> GetSnapshotKeys(PageSnapshotPtr* snapshot,
   return result;
 }
 
-mojo::Array<EntryPtr> GetSnapshotEntries(PageSnapshotPtr* snapshot,
+mojo::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          mojo::Array<uint8_t> prefix) {
   mojo::Array<EntryPtr> result;
   (*snapshot)->GetEntries(
@@ -224,9 +224,9 @@ TEST_F(LedgerApplicationTest, GetRootPage) {
 TEST_F(LedgerApplicationTest, NewPage) {
   // Get two pages and check that their ids are different.
   PagePtr page1 = GetTestPage();
-  mojo::Array<uint8_t> id1 = GetPageId(&page1);
+  mojo::Array<uint8_t> id1 = PageGetId(&page1);
   PagePtr page2 = GetTestPage();
-  mojo::Array<uint8_t> id2 = GetPageId(&page2);
+  mojo::Array<uint8_t> id2 = PageGetId(&page2);
 
   EXPECT_TRUE(!id1.Equals(id2));
 }
@@ -234,7 +234,7 @@ TEST_F(LedgerApplicationTest, NewPage) {
 TEST_F(LedgerApplicationTest, GetPage) {
   // Create a page and expect to find it by its id.
   PagePtr page = GetTestPage();
-  mojo::Array<uint8_t> id = GetPageId(&page);
+  mojo::Array<uint8_t> id = PageGetId(&page);
   GetPage(id, Status::OK);
 
   // Search with a random id and expect a PAGE_NOT_FOUND result.
@@ -246,18 +246,18 @@ TEST_F(LedgerApplicationTest, GetPage) {
 TEST_F(LedgerApplicationTest, MultiplePageConnections) {
   // Create a new page and find its id.
   PagePtr page1 = GetTestPage();
-  mojo::Array<uint8_t> page_id_1 = GetPageId(&page1);
+  mojo::Array<uint8_t> page_id_1 = PageGetId(&page1);
 
   // Connect to the same page again.
   PagePtr page2 = GetPage(page_id_1, Status::OK);
-  mojo::Array<uint8_t> page_id_2 = GetPageId(&page2);
+  mojo::Array<uint8_t> page_id_2 = PageGetId(&page2);
   EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
 }
 
 TEST_F(LedgerApplicationTest, DeletePage) {
   // Create a new page and find its id.
   PagePtr page = GetTestPage();
-  mojo::Array<uint8_t> id = GetPageId(&page);
+  mojo::Array<uint8_t> id = PageGetId(&page);
 
   // Delete the page.
   bool page_closed = false;
@@ -293,7 +293,7 @@ TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
 
   // Delete this page on the second connection and verify that the operation
   // succeeds.
-  mojo::Array<uint8_t> id = GetPageId(&page);
+  mojo::Array<uint8_t> id = PageGetId(&page);
   ledger_connection_2->DeletePage(std::move(id),
                                   [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
@@ -305,9 +305,9 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
 
   // Grab a snapshot before adding any entries and verify that GetKeys()
   // returns empty results.
-  PageSnapshotPtr snapshot = GetSnapshot(&page);
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   mojo::Array<mojo::Array<uint8_t>> result =
-      GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+      SnapshotGetKeys(&snapshot, mojo::Array<uint8_t>());
   EXPECT_EQ(0u, result.size());
 
   // Add entries and grab a new snapshot.
@@ -321,17 +321,17 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
               [](Status status) { EXPECT_EQ(status, Status::OK); });
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
-  snapshot = GetSnapshot(&page);
+  snapshot = PageGetSnapshot(&page);
 
   // Get all keys.
-  result = GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+  result = SnapshotGetKeys(&snapshot, mojo::Array<uint8_t>());
   EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(result[i]));
   }
 
   // Get keys matching the prefix "0".
-  result = GetSnapshotKeys(&snapshot,
+  result = SnapshotGetKeys(&snapshot,
                            mojo::Array<uint8_t>::From(std::vector<uint8_t>{0}));
   EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
@@ -339,7 +339,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "00".
-  result = GetSnapshotKeys(
+  result = SnapshotGetKeys(
       &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
   EXPECT_EQ(2u, result.size());
   for (size_t i = 0; i < 2u; ++i) {
@@ -347,13 +347,13 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "010".
-  result = GetSnapshotKeys(
+  result = SnapshotGetKeys(
       &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(1u, result.size());
   EXPECT_TRUE(keys[2].Equals(result[0]));
 
   // Get keys matching the prefix "5".
-  result = GetSnapshotKeys(&snapshot,
+  result = SnapshotGetKeys(&snapshot,
                            mojo::Array<uint8_t>::From(std::vector<uint8_t>{5}));
   EXPECT_EQ(0u, result.size());
 }
@@ -363,9 +363,9 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
 
   // Grab a snapshot before adding any entries and verify that GetEntries()
   // returns empty results.
-  PageSnapshotPtr snapshot = GetSnapshot(&page);
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   mojo::Array<EntryPtr> entries =
-      GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+      SnapshotGetEntries(&snapshot, mojo::Array<uint8_t>());
   EXPECT_EQ(0u, entries.size());
 
   // Add entries and grab a new snapshot.
@@ -382,10 +382,10 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
               [](Status status) { EXPECT_EQ(status, Status::OK); });
     EXPECT_TRUE(page.WaitForIncomingResponse());
   }
-  snapshot = GetSnapshot(&page);
+  snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+  entries = SnapshotGetEntries(&snapshot, mojo::Array<uint8_t>());
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
@@ -393,7 +393,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "0".
-  entries = GetSnapshotEntries(
+  entries = SnapshotGetEntries(
       &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0}));
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -402,7 +402,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "00".
-  entries = GetSnapshotEntries(
+  entries = SnapshotGetEntries(
       &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
   EXPECT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
@@ -411,7 +411,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   }
 
   // Get keys matching the prefix "010".
-  entries = GetSnapshotEntries(
+  entries = SnapshotGetEntries(
       &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(1u, entries.size());
   EXPECT_TRUE(keys[2].Equals(entries[0]->key));
@@ -445,11 +445,11 @@ TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
   }
 
   // Get a snapshot.
-  PageSnapshotPtr snapshot = GetSnapshot(&page);
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
   // Verify that GetKeys() results are sorted.
   mojo::Array<mojo::Array<uint8_t>> result =
-      GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+      SnapshotGetKeys(&snapshot, mojo::Array<uint8_t>());
   EXPECT_TRUE(keys[3].Equals(result[0]));
   EXPECT_TRUE(keys[0].Equals(result[1]));
   EXPECT_TRUE(keys[2].Equals(result[2]));
@@ -457,7 +457,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
 
   // Verify that GetEntries() results are sorted.
   mojo::Array<EntryPtr> entries =
-      GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+      SnapshotGetEntries(&snapshot, mojo::Array<uint8_t>());
   EXPECT_TRUE(keys[3].Equals(entries[0]->key));
   EXPECT_TRUE(values[3].Equals(entries[0]->value));
   EXPECT_TRUE(keys[0].Equals(entries[1]->key));
