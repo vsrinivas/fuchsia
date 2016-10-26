@@ -8,7 +8,16 @@
 #include <magenta/errors.h>
 #include <stdint.h>
 #ifndef __cplusplus
+#ifndef _KERNEL
+// We don't want to include <stdatomic.h> from the kernel code because the
+// kernel definitions of atomic operations are incompatible with those defined
+// in <stdatomic.h>.
+//
+// A better solution would be to use <stdatomic.h> and C11 atomic operation
+// even in the kernel, but that would require modifying all the code that uses
+// the existing homegrown atomics.
 #include <stdatomic.h>
+#endif
 #endif
 
 __BEGIN_CDECLS
@@ -116,7 +125,11 @@ typedef enum {
 // lock; otherwise the futex address is treated as a key.
 typedef int mx_futex_t;
 #else
+#ifdef _KERNEL
+typedef int mx_futex_t;
+#else
 typedef atomic_int mx_futex_t;
+#endif
 #endif
 
 __END_CDECLS
