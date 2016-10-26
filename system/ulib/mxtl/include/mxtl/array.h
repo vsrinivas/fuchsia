@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/assert.h>
+#include <mxtl/macros.h>
 #include <mxtl/unique_ptr.h>
 
 namespace mxtl {
@@ -35,8 +36,8 @@ public:
         return *this;
     }
 
-    Array(const Array& o) = delete;
-    Array& operator=(const Array& o) = delete;
+    // move semantics only
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Array);
 
     T* release() {
         T* t = ptr_;

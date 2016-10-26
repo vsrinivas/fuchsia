@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include <magenta/assert.h>
+#include <mxtl/macros.h>
 
 // TODO(vtl): Rectify this difference.
 #ifdef _KERNEL
@@ -51,10 +52,7 @@ public:
     }
 
     InlineArray() = delete;
-    InlineArray(const InlineArray& o) = delete;
-    InlineArray(InlineArray&& o) = delete;
-    InlineArray& operator=(const InlineArray& o) = delete;
-    InlineArray& operator=(InlineArray&& o) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(InlineArray);
 
     size_t size() const {
         return count_;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <mxtl/macros.h>
 #include <mxtl/type_support.h>
 
 // RAII class to automatically call a function-like thing as it goes out of
@@ -44,8 +45,7 @@ public:
     }
 
     // no copy
-    AutoCall(const AutoCall& c) = delete;
-    AutoCall& operator=(const AutoCall& c) = delete;
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AutoCall);
 
     // cancel the eventual call
     void cancel() {

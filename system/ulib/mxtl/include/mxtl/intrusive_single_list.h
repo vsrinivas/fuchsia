@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <mxtl/intrusive_pointer_traits.h>
+#include <mxtl/macros.h>
 
 // Usage Notes:
 //
@@ -499,9 +500,8 @@ private:
     // The test framework's 'checker' class is our friend.
     friend CheckerType;
 
-    // Copy construction and Lvalue assignment are disallowed
-    SinglyLinkedList(const SinglyLinkedList&) = delete;
-    SinglyLinkedList& operator=(const SinglyLinkedList&) = delete;
+    // move semantics only
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(SinglyLinkedList);
 
     constexpr RawPtrType sentinel() const {
         return reinterpret_cast<RawPtrType>(internal::kContainerSentinelBit);

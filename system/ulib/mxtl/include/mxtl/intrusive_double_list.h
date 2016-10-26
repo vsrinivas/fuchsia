@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <mxtl/intrusive_pointer_traits.h>
+#include <mxtl/macros.h>
 
 // Usage and Implementation Notes:
 //
@@ -404,9 +405,8 @@ private:
     // The test framework's 'checker' class is our friend.
     friend CheckerType;
 
-    // Copy construction and Lvalue assignment are disallowed
-    DoublyLinkedList(const DoublyLinkedList&) = delete;
-    DoublyLinkedList& operator=(const DoublyLinkedList&) = delete;
+    // move semantics only
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(DoublyLinkedList);
 
     constexpr RawPtrType sentinel() const {
         return reinterpret_cast<RawPtrType>(

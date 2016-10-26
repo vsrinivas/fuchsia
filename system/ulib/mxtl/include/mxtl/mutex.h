@@ -6,6 +6,8 @@
 
 #ifdef __cplusplus
 
+#include <mxtl/macros.h>
+
 // Notes about class Mutex
 //
 // Mutex is a C++ helper class intended to wrap a mutex-style synchronization
@@ -42,10 +44,8 @@ public:
     }
 
     // suppress default constructors
-    Mutex(const Mutex& am) = delete;
-    Mutex& operator=(const Mutex& am) = delete;
-    Mutex(Mutex&& c) = delete;
-    Mutex& operator=(Mutex&& c) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
+
 private:
     mutex_t mutex_;
 };
@@ -81,10 +81,8 @@ public:
     }
 
     // suppress default constructors
-    Mutex(const Mutex& am) = delete;
-    Mutex& operator=(const Mutex& am) = delete;
-    Mutex(Mutex&& c) = delete;
-    Mutex& operator=(Mutex&& c) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
+
 private:
     mtx_t mutex_;
 };

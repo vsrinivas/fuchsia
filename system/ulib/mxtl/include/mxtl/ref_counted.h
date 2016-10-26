@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/assert.h>
+#include <mxtl/macros.h>
 #include <mxtl/ref_counted_internal.h>
 
 namespace mxtl {
@@ -32,9 +33,8 @@ public:
     using internal::RefCountedBase::Adopt;
 #endif
 
-private:
-    RefCounted(const RefCounted&) = delete;
-    RefCounted& operator=(const RefCounted&) = delete;
+    // RefCounted<> instances may not be copied, assigned or moved.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCounted);
 };
 
 }  // namespace mxtl

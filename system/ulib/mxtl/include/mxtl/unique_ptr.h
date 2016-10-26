@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <mxtl/macros.h>
 #include <mxtl/type_support.h>
 
 namespace mxtl {
@@ -87,8 +88,8 @@ public:
     bool operator> (const unique_ptr& o) const { return ptr_ >  o.ptr_; }
     bool operator>=(const unique_ptr& o) const { return ptr_ >= o.ptr_; }
 
-    unique_ptr(const unique_ptr& o) = delete;
-    unique_ptr& operator=(const unique_ptr& o) = delete;
+    // move semantics only
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(unique_ptr);
 
     T* release() {
         T* t = ptr_;

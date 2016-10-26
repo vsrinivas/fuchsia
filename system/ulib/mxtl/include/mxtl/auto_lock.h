@@ -5,6 +5,7 @@
 #pragma once
 #ifdef __cplusplus
 
+#include <mxtl/macros.h>
 #include <mxtl/mutex.h>
 
 // Introduce preprocessor definitions for the underlying mutex data type and the
@@ -52,10 +53,7 @@ public:
     }
 
     // suppress default constructors
-    AutoLock(const AutoLock& am) = delete;
-    AutoLock& operator=(const AutoLock& am) = delete;
-    AutoLock(AutoLock&& c) = delete;
-    AutoLock& operator=(AutoLock&& c) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
 
 private:
     mxtl_mutex_t* mutex_;

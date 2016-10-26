@@ -8,6 +8,7 @@
 #include <mxtl/intrusive_container_utils.h>
 #include <mxtl/intrusive_pointer_traits.h>
 #include <mxtl/intrusive_single_list.h>
+#include <mxtl/macros.h>
 
 namespace mxtl {
 
@@ -465,8 +466,8 @@ private:
     friend iterator;
     friend const_iterator;
 
-    HashTable(const HashTable&) = delete;
-    HashTable& operator=(const HashTable&) = delete;
+    // Hash tables may not currently be copied, assigned or moved.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(HashTable);
 
     BucketType& GetBucket(const KeyType& key) { return buckets_[GetHash(key)]; }
     BucketType& GetBucket(const ValueType& obj) { return GetBucket(KeyTraits::GetKey(obj)); }

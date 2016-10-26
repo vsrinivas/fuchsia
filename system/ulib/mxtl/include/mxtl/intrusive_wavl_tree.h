@@ -8,6 +8,7 @@
 #include <mxtl/intrusive_container_utils.h>
 #include <mxtl/intrusive_pointer_traits.h>
 #include <mxtl/intrusive_wavl_tree_internal.h>
+#include <mxtl/macros.h>
 
 // Implementation Notes:
 //
@@ -620,9 +621,8 @@ private:
     // The test framework's 'checker' class is our friend.
     friend CheckerType;
 
-    // Copy construction and Lvalue assignment are disallowed
-    WAVLTree(const WAVLTree&) = delete;
-    WAVLTree& operator=(const WAVLTree&) = delete;
+    // move semantics only
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(WAVLTree);
 
     void internal_insert(PtrType&& ptr, RawPtrType* collision = nullptr) {
         DEBUG_ASSERT(ptr != nullptr);
