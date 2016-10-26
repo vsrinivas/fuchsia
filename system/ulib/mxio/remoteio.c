@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <threads.h>
 
 #include <magenta/device/ioctl.h>
@@ -626,11 +627,28 @@ static mx_status_t mxrio_wait(mxio_t* io, uint32_t events, uint32_t* _pending, m
 static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    *_signals = events & MXIO_EVT_ALL;
+    mx_signals_t signals = MX_SIGNAL_SIGNAL2; // EPOLLERR is always detected
+    if (events & EPOLLIN) {
+        signals |= MX_SIGNAL_SIGNAL0 | MX_SIGNAL_PEER_CLOSED;
+    }
+    if (events & EPOLLOUT) {
+        signals |= MX_SIGNAL_SIGNAL1;
+    }
+    *_signals = signals;
 }
 
 static void mxrio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
-    *_events = signals & MXIO_EVT_ALL;
+    uint32_t events = 0;
+    if (signals & (MX_SIGNAL_SIGNAL0 | MX_SIGNAL_PEER_CLOSED)) {
+        events |= EPOLLIN;
+    }
+    if (signals & MX_SIGNAL_SIGNAL1) {
+        events |= EPOLLOUT;
+    }
+    if (signals & MX_SIGNAL_SIGNAL2) {
+        events |= EPOLLERR;
+    }
+    *_events = events;
 }
 
 static mxio_ops_t mx_remote_ops = {
@@ -761,11 +779,12 @@ static mx_status_t mxsio_wait(mxio_t* io, uint32_t _events, uint32_t* _pending, 
 static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    mx_signals_t signals = 0;
-    if (events & MXIO_EVT_READABLE) {
+    mx_signals_t signals = MX_SIGNAL_SIGNAL2; // EPOLLERR is always detected
+    if (events & EPOLLIN) {
+        // MX_SIGNAL_SIGNAL0 is signaled if a network socket gets a connection
         signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNAL0;
     }
-    if (events & MXIO_EVT_WRITABLE) {
+    if (events & EPOLLOUT) {
         signals |= MX_SIGNAL_WRITABLE;
     }
     *_signals = signals;
@@ -774,10 +793,13 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
     if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNAL0)) {
-        events |= MXIO_EVT_READABLE;
+        events |= EPOLLIN;
     }
     if (signals & MX_SIGNAL_WRITABLE) {
-        events |= MXIO_EVT_WRITABLE;
+        events |= EPOLLOUT;
+    }
+    if (signals & MX_SIGNAL_SIGNAL2) {
+        events |= EPOLLERR;
     }
     *_events = events;
 }

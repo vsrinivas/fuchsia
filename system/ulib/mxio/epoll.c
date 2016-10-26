@@ -214,15 +214,9 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         free(cookie);
     } else {
         // or add a new epoll event and put the cookie into the list
-        uint32_t events = 0;
-        if (ep_event->events & EPOLLIN)
-            events |= MXIO_EVT_READABLE;
-        if (ep_event->events & EPOLLOUT)
-            events |= MXIO_EVT_WRITABLE;
-
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_signals_t signals = 0;
-        io->ops->wait_begin(io, events, &h, &signals);
+        io->ops->wait_begin(io, ep_event->events, &h, &signals);
         if (h == MX_HANDLE_INVALID) {
             // wait operation is not applicable to the handle
             r = ERR_INVALID_ARGS;
@@ -282,14 +276,8 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
         uint32_t events;
 
         io->ops->wait_end(io, results[i].signals_state.satisfied, &events);
-
-        ep_events[i].events = 0;
-        if (events & MXIO_EVT_READABLE)
-            ep_events[i].events |= EPOLLIN;
-        if (events & MXIO_EVT_WRITABLE)
-            ep_events[i].events |= EPOLLOUT;
         // report the requested events only
-        ep_events[i].events &= cookie->ep_event.events;
+        ep_events[i].events = events & cookie->ep_event.events;
 
         ep_events[i].data = cookie->ep_event.data;
     }

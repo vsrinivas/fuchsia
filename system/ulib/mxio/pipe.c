@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -128,10 +129,10 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
     mx_pipe_t* p = (void*)io;
     *handle = p->h;
     mx_signals_t signals = 0;
-    if (events & MXIO_EVT_READABLE) {
+    if (events & EPOLLIN) {
         signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     }
-    if (events & MXIO_EVT_WRITABLE) {
+    if (events & EPOLLOUT) {
         signals |= MX_SIGNAL_WRITABLE;
     }
     *_signals = signals;
@@ -140,10 +141,10 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
 static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
     if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
-        events |= MXIO_EVT_READABLE;
+        events |= EPOLLIN;
     }
     if (signals & MX_SIGNAL_WRITABLE) {
-        events |= MXIO_EVT_WRITABLE;
+        events |= EPOLLOUT;
     }
     *_events = events;
 }
