@@ -608,7 +608,10 @@ off_t lseek(int fd, off_t offset, int whence) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    off_t r = STATUS(io->ops->seek(io, offset, whence));
+    off_t r = io->ops->seek(io, offset, whence);
+    if (r < 0) {
+        r = ERROR(r);
+    }
     mxio_release(io);
     return r;
 }
