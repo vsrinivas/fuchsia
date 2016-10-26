@@ -125,6 +125,7 @@ void PageImpl::RunInTransaction(
   Status ledger_status = runnable(journal.get());
   if (ledger_status != Status::OK) {
     callback(ledger_status);
+    return;
   }
 
   CommitJournal(std::move(journal), callback);
