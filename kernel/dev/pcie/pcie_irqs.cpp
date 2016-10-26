@@ -148,12 +148,10 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                     if (irq_ret & PCIE_IRQRET_RESCHED)
                         need_resched = true;
                 } else {
-                    TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x (driver "
-                           "\"%s\"), but no irq handler has been registered by the driver.  Force "
-                           "disabling the interrupt.\n",
-                           irq_id_,
-                           dev->bus_id, dev->dev_id, dev->func_id,
-                           pcie_driver_name(dev->driver));
+                    TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x, but no irq "
+                           "handler has been registered by the driver.  Force disabling the "
+                           "interrupt.\n",
+                           irq_id_, dev->bus_id, dev->dev_id, dev->func_id);
                 }
 
                 if (irq_ret & PCIE_IRQRET_MASK) {
@@ -165,12 +163,9 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                     }
                 }
             } else {
-                TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x (driver "
-                       "\"%s\"), but no irq handlers have been allocated!  Force "
-                       "disabling the interrupt.\n",
-                       irq_id_,
-                       dev->bus_id, dev->dev_id, dev->func_id,
-                       pcie_driver_name(dev->driver));
+                TRACEF("Received legacy PCI INT (system IRQ %u) for %02x:%02x.%02x , but no irq "
+                       "handlers have been allocated!  Force disabling the interrupt.\n",
+                       irq_id_, dev->bus_id, dev->dev_id, dev->func_id);
 
                 {
                     AutoSpinLock(dev->cmd_reg_lock);

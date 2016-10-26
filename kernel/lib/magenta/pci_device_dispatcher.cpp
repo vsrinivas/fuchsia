@@ -21,17 +21,6 @@
 constexpr mx_rights_t kDefaultPciDeviceRights =
     MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
 
-static const pcie_driver_fn_table_t PCIE_FN_TABLE = {
-    .pcie_probe_fn    = nullptr,
-    .pcie_startup_fn  = nullptr,
-    .pcie_shutdown_fn = nullptr,
-    .pcie_release_fn  = nullptr,
-};
-
-static const pcie_driver_registration_t PCIE_DRIVER_REGISTRATION = {
-    .name = "userspace PCI driver", .fn_table = &PCIE_FN_TABLE,
-};
-
 status_t PciDeviceDispatcher::Create(uint32_t                   index,
                                      mx_pcie_get_nth_info_t*    out_info,
                                      mxtl::RefPtr<Dispatcher>* out_dispatcher,
@@ -233,7 +222,7 @@ PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(
 
 PciDeviceDispatcher::PciDeviceWrapper::~PciDeviceWrapper() {
     DEBUG_ASSERT(device_);
-    pcie_shutdown_device(device_);
+    pcie_unclaim_device(device_);
     device_ = nullptr;
 }
 
@@ -241,7 +230,7 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
     if (claimed_)
         return ERR_ALREADY_BOUND;
 
-    status_t result = pcie_claim_and_start_device(device_, &PCIE_DRIVER_REGISTRATION, NULL);
+    status_t result = pcie_claim_device(device_);
     if (result != NO_ERROR)
         return result;
 

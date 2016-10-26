@@ -40,10 +40,15 @@ Mutex PcieBusDriver::driver_lock_;
 
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
-    /* Force shutdown any devices which happen to still be running. */
+    /* TODO(johngro): For now, if the bus driver is shutting down and unloading,
+     * ASSERT that there are no currently claimed devices out there.  In the the
+     * long run, we need to gracefully handle disconnecting from all user mode
+     * drivers (probably using a simulated hot-unplug) if we unload the bus
+     * driver.
+     */
     ForeachDevice([](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) -> bool {
                       DEBUG_ASSERT(dev);
-                      pcie_shutdown_device(dev);
+                      DEBUG_ASSERT(!dev->claimed);
                       return true;
                   }, nullptr);
 
@@ -89,7 +94,7 @@ status_t PcieBusDriver::AddRoot(uint bus_id) {
     }
 
     /* Scan the bus and start up any drivers who claim devices we discover */
-    ScanAndStartDevices();
+    ScanDevices();
     started_ = true;
     return NO_ERROR;
 }
@@ -322,7 +327,7 @@ status_t PcieBusDriver::AllocBookkeeping() {
     return NO_ERROR;
 }
 
-void PcieBusDriver::ScanAndStartDevices() {
+void PcieBusDriver::ScanDevices() {
     AutoLock lock(bus_rescan_lock_);
 
     /* Scan the root complex looking for for devices and other bridges. */
@@ -331,23 +336,6 @@ void PcieBusDriver::ScanAndStartDevices() {
 
     /* Attempt to allocate any unallocated BARs */
     pcie_allocate_downstream_bars(root_complex_);
-
-    /* Go over our tree and look for drivers who might want to take ownership of
-     * devices. */
-    ForeachDevice(pcie_claim_devices_helper, nullptr);
-
-    /* Give the devices claimed by drivers a chance to start */
-    ForeachDevice(
-            [](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) {
-                DEBUG_ASSERT(dev);
-
-                /* Don't let the started/claimed status of the device change for the
-                 * duration of this operaion */
-                AutoLock start_claim_lock(dev->start_claim_lock);
-                pcie_start_device(dev);
-
-                return true;
-            }, nullptr);
 }
 
 bool PcieBusDriver::ForeachDeviceOnBridge(const mxtl::RefPtr<pcie_bridge_state_t>& bridge,

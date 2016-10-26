@@ -93,7 +93,7 @@ public:
 
     // TODO(johngro) : Make these private when we can.
     void ForeachDevice(ForeachCallback cbk, void* ctx);
-    void ScanAndStartDevices();
+    void ScanDevices();
     mxtl::RefPtr<SharedLegacyIrqHandler> FindLegacyIrqHandler(uint irq_id);
     // TODO(johngro) : end TODO section
 

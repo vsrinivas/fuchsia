@@ -32,9 +32,7 @@ struct pcie_config_t {
 } __PACKED;
 
 /* Fwd decls */
-struct pcie_driver_registration;
 struct pcie_legacy_irq_handler_state;
-
 struct pcie_bridge_state_t;
 struct pcie_device_state_t;
 
@@ -50,58 +48,6 @@ struct pcie_bar_info_t {
     uint     first_bar_reg;
     RegionAllocator::Region::UPtr allocation;
 };
-
-/* Function table registered by a device driver.  Method requirements and device
- * lifecycle are described below.
- *
- * + pcie_probe_fn
- *   Called by the bus driver during bus scanning/probing to determine which
- *   registered driver (if any) wishes to claim and manage a device.  Drivers
- *   who wish to claim a device must return a non-NULL void* context pointer
- *   which will be made available as the driver_ctx member of the
- *   pcie_device_state_t structure and provided to subsequent callbacks via
- *   the pci_device member.
- *
- * + startup_hook
- *   Called by the bus driver in order to start a device after it has been
- *   claimed.  All MMIO/PIO registers will be allocated, but un-mapped in at the
- *   time the startup hook is invoked, and the device IRQ will be masked.
- *   Devices should not enable their IRQ during startup.  Device IRQs will be
- *   automatically enabled at the PCI level following a successful startup if a
- *   device has registered an IRQ hook.
- *
- * + shutdown_hook
- *   Called by the bus driver on a successfully started device when it is time
- *   to shut down.  Device registers are guaranteed to be mapped when shutdown
- *   is called.  Shutdown will not be called for devices who fail to start-up,
- *   so devices which encounter problems during start-up should take care to
- *   leave their device in a quiescent state before returning their error code
- *   to the bus driver.  Devices may use pcie_enable_irq to mask their IRQ and
- *   synchronize with the bus's IRQ dispatcher at the appropriate point in their
- *   shutdown sequence.
- *
- * + release_hook
- *   Called on a non-started device when it is time to release any resources
- *   which may have been allocated during its life cycle.  At a minimum, drivers
- *   who dynamically allocate context during pcie_probe_fn should register a
- *   release_hook in order to clean up their dynamically allocated resources.  A
- *   driver's release hook will always be called if the driver attempted to
- *   claim a device during probe.  Note that it is possible that the device was
- *   never started, or possibly never even claimed (due to hotplug or
- *   multithreaded races).  Drivers should use the only as a chance to free any
- *   internal state associated with an attempt to claim a device.
- */
-typedef struct pcie_driver_fn_table {
-    void*               (*pcie_probe_fn)   (const mxtl::RefPtr<pcie_device_state_t>& pci_device);
-    status_t            (*pcie_startup_fn) (const mxtl::RefPtr<pcie_device_state_t>& pci_device);
-    void                (*pcie_shutdown_fn)(const mxtl::RefPtr<pcie_device_state_t>& pci_device);
-    void                (*pcie_release_fn) (void* ctx);
-} pcie_driver_fn_table_t;
-
-typedef struct pcie_driver_registration {
-    const char*                   name;
-    const pcie_driver_fn_table_t* fn_table;
-} pcie_driver_registration_t;
 
 /*
  * Struct used to manage the relationship between a PCIe device/function and its
@@ -138,14 +84,9 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
 
     /* State related to lifetime management */
     mutable Mutex                     dev_lock;
-    mutable Mutex                     start_claim_lock;
     bool                              plugged_in;
     bool                              disabled;
-
-    /* State tracking for this device's driver (if this device has been claimed by a driver) */
-    const pcie_driver_registration_t* driver;
-    void*                             driver_ctx;
-    bool                              started;
+    bool                              claimed;
 
     /* Info about the BARs computed and cached during the initial setup/probe,
      * indexed by starting BAR register index */
@@ -284,15 +225,12 @@ mxtl::RefPtr<pcie_device_state_t> pcie_get_nth_device(uint32_t index);
  * Attaches a driver to a PCI device. Returns ERR_ALREADY_BOUND if the device has already been
  * claimed by another driver.
  */
-status_t pcie_claim_and_start_device(const mxtl::RefPtr<pcie_device_state_t>& device,
-                                     const pcie_driver_registration_t* driver,
-                                     void* driver_ctx);
+status_t pcie_claim_device(const mxtl::RefPtr<pcie_device_state_t>& device);
 
 /*
- * Shutdown and unclaim a device had been successfully claimed with
- * pcie_claim_and_start_device()
+ * Unclaim a device had been successfully claimed with pcie_claim_device().
  */
-void pcie_shutdown_device(const mxtl::RefPtr<pcie_device_state_t>& device);
+void pcie_unclaim_device(const mxtl::RefPtr<pcie_device_state_t>& device);
 
 /*
  * Trigger a function level reset (if possible)
@@ -385,30 +323,3 @@ static inline status_t pcie_enable_mmio(const mxtl::RefPtr<pcie_device_state_t>&
                            enabled ? 0 : PCI_COMMAND_MEM_EN,
                            enabled ? PCI_COMMAND_MEM_EN : 0);
 }
-
-/*
- * Simple inline helper which fetches a device driver's name, or substitutes
- * "<unknown>" if the driver didn't supply a name, or for some mysterious
- * reason, is NULL.
- */
-static inline const char* pcie_driver_name(const pcie_driver_registration_t* driver) {
-    return (driver && driver->name) ? driver->name : "<unknown>";
-}
-
-#if WITH_DEV_PCIE
-#define STATIC_PCIE_DRIVER(var_name, drv_name, drv_fn_table)           \
-    extern const pcie_driver_registration_t __pcie_drv_reg_##var_name; \
-    const pcie_driver_registration_t __pcie_drv_reg_##var_name         \
-    __ALIGNED(sizeof(void *)) __SECTION("pcie_builtin_drivers") =     \
-    {                                                                  \
-        .name           = drv_name,                                    \
-        .fn_table       = &drv_fn_table,                               \
-    };
-#else  // WITH_DEV_PCIE
-#define STATIC_PCIE_DRIVER(var_name, drv_name, drv_fn_table)
-#endif  // WITH_DEV_PCIE
-
-/**
- * Temporary hack; do not use!
- */
-void pcie_rescan_bus(void);

@@ -122,14 +122,6 @@
  *     the bus_rescan_lock or the device's start/claim lock may be held when the
  *     dev_lock is acquired.
  *
- *  ## start_claim_lock
- *     A device's start_claim_lock is a mutex which protects the started and
- *     claimed status of the device/driver relationship.  In order to claim,
- *     unclaim, start or shutdown a device, the start_claim_lock must first be
- *     held.  The start_claim_lock is almost a top level lock in the system; the
- *     bus level rescan lock is the only lock in the system which may be held
- *     when acquiring a device's start_claim_lock.
- *
  * -------------------------------------------
  * ---===== Device Ref-Counting Rules =====---
  * -------------------------------------------
@@ -186,9 +178,6 @@
  ******************************************************************************/
 void pcie_allocate_downstream_bars(const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
 void pcie_scan_bus(const mxtl::RefPtr<pcie_bridge_state_t>& bridge);
-status_t pcie_start_device(const mxtl::RefPtr<pcie_device_state_t>& dev);
-bool pcie_claim_devices_helper(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                               void* ctx, uint level);
 void pcie_modify_cmd_internal(const mxtl::RefPtr<pcie_device_state_t>& dev,
                               uint16_t clr_bits, uint16_t set_bits);
 

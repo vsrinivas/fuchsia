@@ -277,8 +277,8 @@ static void dump_pcie_hdr(const pcie_device_state_t& dev, lspci_params_t* params
     if (dev.disabled)
         printf(" [DISABLED]");
 
-    if (dev.driver)
-        printf(" [driver = \"%s\"]", pcie_driver_name(dev.driver));
+    if (dev.claimed)
+        printf(" [CLAIMED]");
 
     printf("\n");
 }
@@ -612,9 +612,8 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
     } else {
-        printf("Shutting down and unplugging PCI device %02x:%02x.%x (%s)...\n",
-                bus_id, dev_id, func_id, pcie_driver_name(dev->driver));
-        pcie_shutdown_device(dev);
+        printf("Unplugging PCI device %02x:%02x.%x...\n",
+                bus_id, dev_id, func_id);
         dev->Unplug();
         dev = nullptr;
         printf("done\n");
@@ -673,7 +672,7 @@ static int cmd_pcirescan(int argc, const cmd_args *argv)
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    bus_drv->ScanAndStartDevices();
+    bus_drv->ScanDevices();
 
     return NO_ERROR;
 }
@@ -683,7 +682,7 @@ STATIC_COMMAND("lspci",
                "Enumerate the devices detected in PCIe ECAM space",
                &cmd_lspci)
 STATIC_COMMAND("pciunplug",
-               "Unplug the specified PCIe device (shutting down the driver if needed)",
+               "Force \"unplug\" the specified PCIe device",
                &cmd_pciunplug)
 STATIC_COMMAND("pcireset",
                "Initiate a Function Level Reset of the specified device.",

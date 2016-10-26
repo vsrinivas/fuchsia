@@ -33,10 +33,6 @@
 #define EXPORT_TO_DEBUG_CONSOLE static
 #endif
 
-// External references to the device driver registration tables.
-extern pcie_driver_registration_t __start_pcie_builtin_drivers[] __WEAK;
-extern pcie_driver_registration_t __stop_pcie_builtin_drivers[] __WEAK;
-
 pcie_device_state_t::pcie_device_state_t(PcieBusDriver& bus_driver)
     : bus_drv(bus_driver) {
     memset(&pcie_caps, 0, sizeof(pcie_caps));
@@ -49,9 +45,7 @@ pcie_device_state_t::pcie_device_state_t(PcieBusDriver& bus_driver)
     is_bridge  = false;
     plugged_in = false;
 
-    driver     = nullptr;
-    driver_ctx = nullptr;
-    started    = false;
+    claimed    = false;
     disabled   = false;
 
     bar_count  = 0;
@@ -62,11 +56,8 @@ pcie_device_state_t::~pcie_device_state_t() {
     DEBUG_ASSERT(!upstream);
     DEBUG_ASSERT(!plugged_in);
 
-    /* Any driver we have been associated with should be long gone at this
-     * point */
-    DEBUG_ASSERT(!started);
-    DEBUG_ASSERT(!driver);
-    DEBUG_ASSERT(!driver_ctx);
+    /* By the time we destruct, we had better not be claimed anymore */
+    DEBUG_ASSERT(!claimed);
 
     /* TODO(johngro) : ASSERT that this device no longer participating in any of
      * the bus driver's shared IRQ dispatching. */
@@ -102,7 +93,7 @@ static void pcie_disable_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
      * forwarding windows, in the case of a bridge).  Flag the device as
      * disabled from here on out.
      */
-    DEBUG_ASSERT((dev != nullptr) && !dev->started && !dev->driver);
+    DEBUG_ASSERT((dev != nullptr) && !dev->claimed);
     TRACEF("WARNING - Disabling device %02x:%02x.%01x due to unsatisfiable configuration\n",
             dev->bus_id, dev->dev_id, dev->func_id);
 
@@ -559,11 +550,10 @@ void pcie_device_state_t::Unplug() {
      * because our caller is holding a reference to us. */
     AutoLock lock(dev_lock);
 
-    /* ASSERT that any driver which may have been associated with this
-     * device has been properly shutdown already. */
-    DEBUG_ASSERT(!driver);
-    DEBUG_ASSERT(!driver_ctx);
-    DEBUG_ASSERT(!started);
+    /* For now ASSERT that we are not claimed.  Moving forward, we need to
+     * inform our owner that we have been suddenly hot-unplugged.
+     */
+    DEBUG_ASSERT(!claimed);
 
     if (plugged_in) {
         /* Remove all access this device has to the PCI bus */
@@ -758,7 +748,7 @@ static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev)
 
     /* If this has been claimed by a driver, do not make any changes
      * to the BAR allocation. */
-    if (dev->driver)
+    if (dev->claimed)
         return NO_ERROR;
 
     /* Are we configuring a bridge?  If so, we need to be able to allocate the
@@ -823,136 +813,22 @@ static status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev)
     return NO_ERROR;
 }
 
-static status_t pcie_claim_device(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                                  const pcie_driver_registration_t* driver,
-                                  void* driver_ctx) {
+status_t pcie_claim_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(driver && driver->fn_table);
-    DEBUG_ASSERT(dev->start_claim_lock.IsHeld());
-
-    if (dev->driver)
-        return ERR_ALREADY_BOUND;
-
     AutoLock dev_lock(dev->dev_lock);
 
-    /* Has the device been unplugged? */
-    if (!dev->plugged_in)
+    /* Has the device already been claimed? */
+    if (dev->claimed)
+        return ERR_ALREADY_BOUND;
+
+    /* Has the device been unplugged or disabled? */
+    if (!dev->plugged_in || dev->disabled)
         return ERR_UNAVAILABLE;
 
-    /* Looks good!  Claim the device in the name of the driver. */
-    dev->driver     = driver;
-    dev->driver_ctx = driver_ctx;
+    /* Looks good!  Claim the device. */
+    dev->claimed = true;
+
     return NO_ERROR;
-}
-
-bool pcie_claim_devices_helper(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                               void* ctx, uint level) {
-    DEBUG_ASSERT(dev);
-
-    void* driver_ctx;
-    const pcie_driver_registration_t* driver;
-    status_t res;
-
-    /* Our device is currently ref'ed, so we know it will not disappear out from
-     * under us.  While holding the device's start/claim lock, iterate over our
-     * list of built-in kernel drivers and see if any of them want to claim this
-     * device.  Do not hold the device's API lock while calling the driver's
-     * probe method.  The driver is going to interact with the device using the
-     * public facing API, which will need to obtain the API lock for pretty much
-     * every operation.
-     */
-    AutoLock start_claim_lock(dev->start_claim_lock);
-
-    /* If we have already been claimed, just move on to the next device */
-    if (dev->driver)
-        return true;
-
-    /* Go over our list of builtin drivers and see if any are interested in this
-     * device. */
-    driver_ctx = NULL;
-
-    for (driver = __start_pcie_builtin_drivers; driver < __stop_pcie_builtin_drivers; ++driver) {
-        const pcie_driver_fn_table_t* fn_table = driver->fn_table;
-        DEBUG_ASSERT(fn_table->pcie_probe_fn);
-        driver_ctx = fn_table->pcie_probe_fn(dev);
-
-        if (driver_ctx)
-            break;
-    }
-
-    /* If no one wanted the device, just move on to the next one. */
-    if (!driver_ctx)
-        return true;
-
-    /* Looks like we found a driver who is interested in the device.  Attempt to
-     * claim it in the name of the driver.  This might fail because the device
-     * may have become unplugged.  If so, give the device context back to the
-     * driver using its release method (if it has one).
-     */
-    res = pcie_claim_device(dev, driver, driver_ctx);
-    if (res != NO_ERROR) {
-        if (driver->fn_table->pcie_release_fn)
-            driver->fn_table->pcie_release_fn(driver_ctx);
-    }
-
-    /* Move on to the next device */
-    return true;
-}
-
-status_t pcie_start_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->start_claim_lock.IsHeld());
-
-    /* Note: We do not obtain the dev_lock during this method.  We are going to
-     * be calling back through the start hook of the driver, and we cannot be
-     * holding the device lock when we do this (since the driver needs to
-     * interact with the PCIe API in order to start).  If the device is
-     * spontaneously unplugged during this startup process, the driver should
-     * fail at some point while interacting with the API and fail the startup
-     * process.
-     *
-     * TODO(johngro): At some point, when we have the infrastructure in place,
-     * the unplug operation needs to notify the device driver that it has become
-     * spontaneously unplugged.  For sanity's sake, this operation will need to
-     * be synchronized with the start/claim process.
-     */
-
-    /* Was the device was already un-claimed */
-    if (!dev->driver)
-        return ERR_BAD_STATE;
-
-    /* Was the device was already started?  If so, great.  Just declare success */
-    if (dev->started)
-        return NO_ERROR;
-
-    /* Attempt to start the device */
-    status_t ret = NO_ERROR;
-    const pcie_driver_fn_table_t* fn_table = dev->driver->fn_table;
-    if (fn_table->pcie_startup_fn && ((ret = fn_table->pcie_startup_fn(dev)) != NO_ERROR)) {
-        /* Device failed to start.*/
-        TRACEF("Failed to start %04hx:%04hx at %02x:%02x.%01x claimed by driver "
-               "\"%s\" (result %d)\n",
-               pcie_read16(&dev->cfg->base.vendor_id),
-               pcie_read16(&dev->cfg->base.device_id),
-               dev->bus_id,
-               dev->dev_id,
-               dev->func_id,
-               pcie_driver_name(dev->driver),
-               ret);
-
-        /* Call the driver release method (if any) */
-        if (fn_table->pcie_release_fn)
-            fn_table->pcie_release_fn(dev->driver_ctx);
-
-        /* Clear out any internal driver related bookkeeping */
-        dev->driver     = NULL;
-        dev->driver_ctx = NULL;
-        DEBUG_ASSERT(!dev->started);
-    } else {
-        dev->started = true;
-    }
-
-    return ret;
 }
 
 /*
@@ -968,46 +844,18 @@ mxtl::RefPtr<pcie_device_state_t> pcie_get_nth_device(uint32_t index) {
 }
 
 /*
- * Attaches a driver to a PCI device. Returns ERR_ALREADY_BOUND if the device has already been
- * claimed by another driver.
+ * Unclaim a device had been successfully claimed with pcie_claim_device().
  */
-status_t pcie_claim_and_start_device(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                                     const pcie_driver_registration_t* driver,
-                                     void* driver_ctx) {
-    status_t result;
-
-    /* Don't allow the claimed/started state to chage during this operation */
-    AutoLock start_claim_lock(dev->start_claim_lock);
-
-    result = pcie_claim_device(dev, driver, driver_ctx);
-    if (result != NO_ERROR)
-        return result;
-
-    /* No special actions need to be taken if we fail to start the device.  It
-     * will automatically have been unclaimed for us. */
-    return pcie_start_device(dev);
-}
-
-/*
- * Shutdown and unclaim a device had been successfully claimed with
- * pcie_claim_and_start_device()
- */
-void pcie_shutdown_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
+void pcie_unclaim_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     DEBUG_ASSERT(dev);
-    const pcie_driver_fn_table_t* fn = (dev->driver != nullptr) ? dev->driver->fn_table : nullptr;
+    AutoLock dev_lock(dev->dev_lock);
 
-    AutoLock start_claim_lock(dev->start_claim_lock);
+    // Nothing to do if we are not claimed.
+    if (!dev->claimed)
+        return;
 
-    /* If we have a driver, shut it down now if it had been started. */
-    if (fn) {
-        if (dev->started && fn->pcie_shutdown_fn)
-            fn->pcie_shutdown_fn(dev);
-        dev->started = false;
-    }
-
-    LTRACEF("Shutting down PCI device %02x:%02x.%x (%s)...\n",
-            dev->bus_id, dev->dev_id, dev->func_id,
-            pcie_driver_name(dev->driver));
+    LTRACEF("Unclaiming PCI device %02x:%02x.%x...\n",
+            dev->bus_id, dev->dev_id, dev->func_id);
 
     /* Make sure that all IRQs are shutdown and all handlers released for this device */
     pcie_set_irq_mode_disabled(dev);
@@ -1018,15 +866,8 @@ void pcie_shutdown_device(const mxtl::RefPtr<pcie_device_state_t>& dev) {
     if (!dev->is_bridge)
         pcie_write16(&dev->cfg->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 
-    /* If the device has a release hook, call it in order to allow it to free
-     * any dynamically allocated resources. */
-    if (fn && fn->pcie_release_fn)
-        fn->pcie_release_fn(dev->driver_ctx);
-
-    /* Unclaim the device. */
-    dev->driver     = NULL;
-    dev->driver_ctx = NULL;
-
+    /* Device is now unclaimed */
+    dev->claimed = false;
 }
 
 status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& dev) {
@@ -1201,5 +1042,5 @@ status_t pcie_modify_cmd(const mxtl::RefPtr<pcie_device_state_t>& dev, uint16_t 
 void pcie_rescan_bus(void) {
     auto driver = PcieBusDriver::GetDriver();
     if (driver)
-        driver->ScanAndStartDevices();
+        driver->ScanDevices();
 }
