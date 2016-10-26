@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
+#include <lib/user_copy/user_ptr.h>
 #include <magenta/futex_context.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
@@ -22,10 +23,10 @@ FutexContext::~FutexContext() {
     LTRACE_ENTRY;
 }
 
-status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t timeout) {
+status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t timeout) {
     LTRACE_ENTRY;
 
-    uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr);
+    uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
     FutexNode* node;
 
     // FutexWait() checks that the address value_ptr still contains
@@ -41,7 +42,7 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
         return ERR_BAD_STATE;
 
     int value;
-    status_t result = magenta_copy_from_user(value_ptr, &value, sizeof(value));
+    status_t result = value_ptr.copy_from_user(&value);
     if (result != NO_ERROR) return result;
     if (value != current_value) return ERR_BAD_STATE;
 
@@ -103,12 +104,12 @@ void FutexContext::WakeKilledThread(FutexNode* node) {
         node->WakeKilledThread();
 }
 
-status_t FutexContext::FutexWake(int* value_ptr, uint32_t count) {
+status_t FutexContext::FutexWake(user_ptr<int> value_ptr, uint32_t count) {
     LTRACE_ENTRY;
 
     if (count == 0) return NO_ERROR;
 
-    uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr);
+    uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
 
     {
         AutoLock lock(lock_);
@@ -139,22 +140,22 @@ status_t FutexContext::FutexWake(int* value_ptr, uint32_t count) {
     return NO_ERROR;
 }
 
-status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int current_value,
-                                    int* requeue_ptr, uint32_t requeue_count) {
+status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
+                                    user_ptr<int> requeue_ptr, uint32_t requeue_count) {
     LTRACE_ENTRY;
 
-    if ((requeue_ptr == nullptr) && requeue_count)
+    if ((requeue_ptr.get() == nullptr) && requeue_count)
         return ERR_INVALID_ARGS;
 
     AutoLock lock(lock_);
 
     int value;
-    status_t result = magenta_copy_from_user(wake_ptr, &value, sizeof(value));
+    status_t result = wake_ptr.copy_from_user(&value);
     if (result != NO_ERROR) return result;
     if (value != current_value) return ERR_BAD_STATE;
 
-    uintptr_t wake_key = reinterpret_cast<uintptr_t>(wake_ptr);
-    uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr);
+    uintptr_t wake_key = reinterpret_cast<uintptr_t>(wake_ptr.get());
+    uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr.get());
     if (wake_key == requeue_key) return ERR_INVALID_ARGS;
 
     // This must happen before RemoveFromHead() calls set_hash_key() on

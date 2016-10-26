@@ -409,18 +409,17 @@ mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of s
 
 mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t timeout) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        value_ptr.get(), current_value, timeout);
+        value_ptr, current_value, timeout);
 }
 
 mx_status_t sys_futex_wake(user_ptr<mx_futex_t> value_ptr, uint32_t count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
-        value_ptr.get(), count);
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(value_ptr, count);
 }
 
 mx_status_t sys_futex_requeue(user_ptr<mx_futex_t> wake_ptr, uint32_t wake_count, int current_value,
                               user_ptr<mx_futex_t> requeue_ptr, uint32_t requeue_count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(wake_ptr.get(),
-        wake_count, current_value, requeue_ptr.get(), requeue_count);
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
+        wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
 }
 
 int sys_log_create(uint32_t flags) {
