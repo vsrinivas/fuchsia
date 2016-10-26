@@ -115,7 +115,7 @@ void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
   std::function<void(storage::Status,
                      std::vector<std::unique_ptr<const storage::Object>>)>
       result_callback = ftl::MakeCopyable([
-        &callback, entry_list = std::move(entries)
+        callback, entry_list = std::move(entries)
       ](storage::Status status,
         std::vector<std::unique_ptr<const storage::Object>> results) mutable {
 
