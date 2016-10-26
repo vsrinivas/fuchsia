@@ -214,7 +214,7 @@ void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,
   }
   GetReferenceAsStringView(
       page_storage_, (*it)->object_id,
-      [this, &callback](Status status, ftl::StringView data) {
+      [this, callback](Status status, ftl::StringView data) {
         if (status != Status::OK) {
           callback.Run(status, nullptr);
           return;
@@ -252,7 +252,7 @@ void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
   }
   GetReferenceAsStringView(
       page_storage_, (*it)->object_id,
-      [this, offset, max_size, &callback](Status status, ftl::StringView data) {
+      [this, offset, max_size, callback](Status status, ftl::StringView data) {
         if (status != Status::OK) {
           callback.Run(status, mojo::ScopedSharedBufferHandle());
           return;
