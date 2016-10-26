@@ -4,7 +4,9 @@
 
 group("all") {
   deps = [
+    "application",
     "device",
+    "story",
     "user",
   ]
 }

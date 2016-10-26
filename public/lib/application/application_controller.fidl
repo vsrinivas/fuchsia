@@ -1,0 +1,27 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// An interface for controlling applications.
+//
+// Closing this interface implicitly kills the controlled application unless
+// the |Detach| method has been called.
+//
+// If the application exits, this interface will be closed.
+//
+// Typically obtained via |ApplicationLauncher.CreateApplication|.
+interface ApplicationController {
+  // Terminates the application.
+  //
+  // Depending on how the application is implemented, the application might be
+  // given a chance to shut down gracefully before being forcibly killed.
+  Kill() => ();
+
+  // Decouples the lifetime of the application from this controller.
+  //
+  // After calling |Detach|, the application will not be implicitly killed when
+  // this interface is closed.
+  Detach();
+};

@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/fidl/fidl.gni")
+
+fidl("application") {
+  sources = [
+    "application_controller.fidl",
+    "application_environment_controller.fidl",
+    "application_environment_host.fidl",
+    "application_environment.fidl",
+    "application_launcher.fidl",
+    "application_runner.fidl",
+    "service_provider.fidl",
+  ]
+}

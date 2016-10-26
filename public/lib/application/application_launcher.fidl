@@ -1,0 +1,32 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/application/application_controller.fidl";
+import "apps/modular/services/application/service_provider.fidl";
+
+// An interface for creating applications.
+//
+// Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
+[ServiceName="modular.ApplicationLauncher"]
+interface ApplicationLauncher {
+  // Creates a new instance of the application identified by |url|.
+  //
+  // The application is created in the |ApplicationEnvironment| associated with
+  // this |ApplicationLauncher|. When creating the application, the environment
+  // requests the environment services for this application from its
+  // |ApplicationEnvironmentHost|.
+  //
+  // The interface request for |services| is passed through to the application
+  // and arrives in the application as its |outgoing_services| interface
+  // request.
+  //
+  // The |controller| can be used to control the lifecycle of the created
+  // application. If an |ApplicationController|'s interface is request, the
+  // application will be killed when the interface is closed.
+  CreateApplication(string url,
+                    ServiceProvider&? services,
+                    ApplicationController&? controller);
+};

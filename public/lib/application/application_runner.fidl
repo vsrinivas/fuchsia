@@ -1,0 +1,70 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/application/application_controller.fidl";
+import "apps/modular/services/application/service_provider.fidl";
+
+// Information given to applications at startup.
+//
+// For ELF binaries, this information is provided in the initialization message
+// given to libc by launchpad.
+struct ApplicationStartupInfo {
+  // The services associated with the |ApplicationEnvironment| in which this
+  // application was created.
+  //
+  // Typically contains an implementation of the |ApplicationEnvironment|
+  // interface.
+  ServiceProvider environment_services;
+
+  // The services provided by this application.
+  //
+  // This interface request typically originates from the
+  // |ApplicationLauncher.CreateApplication| message that caused this
+  // application to be created.
+  ServiceProvider&? outgoing_services;
+
+  // The from which this application was retrieved.
+  //
+  // This field will probably be replaced with a stronger notion of identity,
+  // such as an unforgeable token. This field is included in this iteration to
+  // easy the transition from the previous application interfaces.
+  string url;
+
+  // TODO(abarth): Add more fields to this struct relating to application and
+  // environment identity.
+};
+
+// A binary representation of an application.
+//
+// Typically provided to |ApplicationRunner.StartApplication| when starting an
+// application.
+struct ApplicationPackage {
+  // A read-only binary representation of the application. For example, if the
+  // application is intended to run in the Dart virtual machine, this data might
+  // contain a dartx package.
+  handle<shared_buffer> data;
+};
+
+// An interface for running applications.
+//
+// Typically exposed by applications that provide execution environments for
+// particular classes of programs. For example, the Dart virtual machine exposes
+// this interface to run Dart programs.
+[ServiceName="modular.ApplicationRunner"]
+interface ApplicationRunner {
+  // Execute the given application.
+  //
+  // Upon startup, the application is to be given the information in
+  // |startup_info|, but the mechanism by which the application receives that
+  // information is up to the application runner.
+  //
+  // The |controller| interface request typically originates from the
+  // |ApplicationLauncher.CreateApplication| message that caused this
+  // application to be started.
+  StartApplication(ApplicationPackage application,
+                   ApplicationStartupInfo startup_info,
+                   ApplicationController& controller);
+};

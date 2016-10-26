@@ -1,0 +1,44 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/application/application_launcher.fidl";
+import "apps/modular/services/application/application_environment_controller.fidl";
+import "apps/modular/services/application/application_environment_host.fidl";
+
+// An interface for managing a set of applications.
+//
+// Applications run inside environments, which provide ambient services and
+// support for their lifecycle.
+[ServiceName="modular.ApplicationEnvironment"]
+interface ApplicationEnvironment {
+  // Creates a new environment nested inside this environment.
+  //
+  // When applications are created inside the nested environment using the
+  // environment's |ApplicationLauncher|, the environment requests the
+  // environment services from |host| before passing those services to
+  // the newly created application in its |ApplicationStartupInfo|.
+  //
+  // Typically the |host| will make the newly created |environment| available in
+  // the environment services, giving child applications to launch other
+  // applications in the environment and to create nested environments.
+  //
+  // The |controller| can be used to control the lifecycle of the created
+  // environment. If an |ApplicationEnvironmentController|'s interface is
+  // request, the environment will be killed when the interface is closed.
+  CreateNestedEnvironment(ApplicationEnvironmentHost host,
+                          ApplicationEnvironment& environment,
+                          ApplicationEnvironmentController&? controller);
+
+  // Gets the ApplicationLauncher associated with this environment.
+  //
+  // Applications created using this application launcher will be given the
+  // environment services provided by this environment's
+  // |ApplicationEnvironmentHost|.
+  GetApplicationLauncher(ApplicationLauncher& launcher);
+
+  // Creates another interface to this environment.
+  Duplicate(ApplicationEnvironment& environment);
+};
