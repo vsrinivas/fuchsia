@@ -46,22 +46,25 @@ source_set("test_driver") {
 
   defines = []
 
+  # We want to always build gl, for now.
+  deps += [ "$magma_build_root/tests/gpureadback" ]
+
   if (unit_test) {
+    defines += [ "MAGMA_UNIT_TESTS=1" ]
     deps += [
       "$magma_build_root/tests/unit_tests:magma_platform_tests",
       "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
       "//third_party/gtest",
     ]
-    defines += [ "MAGMA_UNIT_TESTS=1" ]
-  }
-
-  if (vkreadback_test) {
-    deps += [ "$magma_build_root/tests/vkreadback" ]
-    defines += [ "MAGMA_VKREADBACK_TEST=1" ]
   }
   if (glreadback_test) {
-    deps += [ "$magma_build_root/tests/gpureadback" ]
     defines += [ "MAGMA_GLREADBACK_TEST=1" ]
+  }
+  if (vkreadback_test) {
+    # Vulkan and gl collide linkerwise.
+    deps -= [ "$magma_build_root/tests/gpureadback" ]
+    deps += [ "$magma_build_root/tests/vkreadback" ]
+    defines += [ "MAGMA_VKREADBACK_TEST=1" ]
   }
   if (spinning_cube_test) {
     deps += [ "$magma_build_root/tests/spinning_cube" ]
