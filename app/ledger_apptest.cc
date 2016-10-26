@@ -11,6 +11,7 @@
 #include "apps/ledger/convert/convert.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/mtl/shared_buffer/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
@@ -84,6 +85,21 @@ mojo::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
       [&result](Status status, mojo::Array<EntryPtr> entries) {
         EXPECT_EQ(Status::OK, status);
         result = std::move(entries);
+      });
+  EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+  return result;
+}
+
+std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
+                               mojo::Array<uint8_t> key,
+                               int64_t offset,
+                               int64_t max_size) {
+  std::string result;
+  (*snapshot)->GetPartial(
+      std::move(key), offset, max_size,
+      [&result](Status status, mojo::ScopedSharedBufferHandle buffer) {
+        EXPECT_EQ(status, Status::OK);
+        EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &result));
       });
   EXPECT_TRUE(snapshot->WaitForIncomingResponse());
   return result;
@@ -298,6 +314,65 @@ TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
                                   [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
+}
+
+TEST_F(LedgerApplicationTest, PageSnapshotGet) {
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  ValuePtr value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+    EXPECT_EQ(status, Status::OK);
+    value = std::move(v);
+  });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+  EXPECT_TRUE(value->is_bytes());
+  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
+
+  // Attempt to get an entry that is not in the page.
+  snapshot->Get(convert::ToArray("favorite book"),
+                [](Status status, ValuePtr v) {
+                  // People don't read much these days.
+                  EXPECT_EQ(status, Status::KEY_NOT_FOUND);
+                });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+}
+
+TEST_F(LedgerApplicationTest, PageSnapshotGetPartial) {
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  EXPECT_EQ("Alice",
+            SnapshotGetPartial(&snapshot, convert::ToArray("name"), 0, -1));
+  EXPECT_EQ("e",
+            SnapshotGetPartial(&snapshot, convert::ToArray("name"), 4, -1));
+  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 5, -1));
+  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 6, -1));
+  EXPECT_EQ("i", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 2, 1));
+  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), 2, 0));
+
+  // Negative offsets.
+  EXPECT_EQ("Alice",
+            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -5, -1));
+  EXPECT_EQ("e",
+            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -1, -1));
+  EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), -5, 0));
+  EXPECT_EQ("i", SnapshotGetPartial(&snapshot, convert::ToArray("name"), -3, 1));
+
+  // Attempt to get an entry that is not in the page.
+  snapshot->GetPartial(
+      convert::ToArray("favorite book"), 0, -1,
+      [](Status status, mojo::ScopedSharedBufferHandle received_buffer) {
+        // People don't read much these days.
+        EXPECT_EQ(status, Status::KEY_NOT_FOUND);
+      });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
 }
 
 TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
