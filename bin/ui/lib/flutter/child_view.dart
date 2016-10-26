@@ -18,7 +18,7 @@ import 'package:flutter/widgets.dart';
 import 'package:mojo.services.geometry.interfaces/geometry.mojom.dart' as mojom;
 import 'package:mojo/application.dart';
 import 'package:mojo/core.dart' as core;
-import 'pakcage:mojo.public.interfaces.application/service_provider.mojom.dart' as mojom;
+import 'package:mojo.public.interfaces.application/service_provider.mojom.dart' as mojom;
 
 mojom.ViewProxy _initViewProxy() {
   int viewHandle = ui.MojoServices.takeView();

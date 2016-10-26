@@ -9,7 +9,7 @@ dart_package("flutter") {
 
   deps = [
     "//apps/mozart/services/composition/interfaces:interfaces_dart",
-    "//apps/mozart/services/view/interfaces:interfaces_dart",
+    "//apps/mozart/services/views/interfaces:interfaces_dart",
     "//lib/flutter/packages/flutter",
     "//mojo/dart/packages/mojo",
     "//mojo/public/interfaces/application:application_dart",
