@@ -196,6 +196,14 @@ TEST(StringView, Compare) {
   sw2 = "aa";
   EXPECT_EQ(-1, sw1.compare(sw2));
   EXPECT_EQ(1, sw2.compare(sw1));
+
+  std::string str1("a\0a", 3);
+  std::string str2("a\0b", 3);
+  sw1 = str1;
+  sw2 = str2;
+
+  EXPECT_EQ(-1, sw1.compare(sw2));
+  EXPECT_EQ(1, sw2.compare(sw1));
 }
 
 TEST(StringView, ComparaisonFunctions) {

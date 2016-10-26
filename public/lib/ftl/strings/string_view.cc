@@ -35,7 +35,7 @@ inline void BuildLookupTable(StringView characters_wanted, bool* table) {
 
 int StringView::compare(StringView other) {
   size_t len = std::min(size_, other.size_);
-  int retval = strncmp(data_, other.data_, len);
+  int retval = memcmp(data_, other.data_, len);
   if (retval == 0) {
     if (size_ == other.size_) {
       return 0;
