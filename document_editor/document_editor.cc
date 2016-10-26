@@ -22,7 +22,6 @@ using document_store::StatementPtr;
 using document_store::Value;
 using document_store::ValuePtr;
 
-using mojo::Array;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
@@ -30,44 +29,41 @@ using mojo::String;
 using mojo::StructPtr;
 
 DocumentEditor::DocumentEditor() {
-  doc_ = Document::New();
-  doc_->properties = Array<PropertyPtr>::New(0);
 }
 
-DocumentEditor::DocumentEditor(const std::string& docid) : DocumentEditor() {
+DocumentEditor::DocumentEditor(const std::string& docid) {
+  doc_ = Document::New();
+  doc_->properties = MojoPropertyArray::New(0);
   doc_->docid = docid;
 }
 
-document_store::DocumentPtr DocumentEditor::TakeDocument() {
-  return std::move(doc_);
-}
-
-Value* DocumentEditor::GetValue(std::string property) {
+Value* DocumentEditor::GetValue(const std::string& property) {
   for (auto& p : doc_->properties) {
     if (p->property == property) return p->value.get();
   }
   return nullptr;
 }
 
-bool DocumentEditor::TakeFromArray(const std::string& docid,
-                                   Array<DocumentPtr>* array) {
-  if (!*array) return false;
+bool DocumentEditor::Edit(
+    const std::string& docid, MojoDocMap* docs) {
+  if (!*docs) return false;
 
-  std::vector<DocumentPtr> docs;
-  array->Swap(&docs);
-  auto it = std::remove_if(
-      docs.begin(), docs.end(),
-      [docid](const DocumentPtr& doc) { return doc->docid == docid; });
+  auto it = docs->find(docid);
+  if (it == docs->end()) return false;
 
-  bool result = false;
-  if (it != docs.end()) {
-    FTL_DCHECK(std::distance(it, docs.end()) == 1);
-    doc_ = std::move(*it);
-    docs.pop_back();
-    result = true;
-  }
-  array->Swap(&docs);
-  return result;
+  doc_ = std::move(it.GetValue());
+
+  DocMap doc_map;
+  docs->Swap(&doc_map);
+  doc_map.erase(docid);
+  docs->Swap(&doc_map);
+
+  return true;
+}
+
+void DocumentEditor::Keep(MojoDocMap* docs) {
+  FTL_DCHECK(docs != nullptr);
+  (*docs)[doc_->docid] = std::move(doc_);
 }
 
 void DocumentEditor::SetProperty(PropertyPtr new_property) {
@@ -135,17 +131,11 @@ ValuePtr DocumentEditor::NewIriValue(const std::string& iri) {
   return value;
 }
 
-std::ostream& operator<<(std::ostream& os, const DocumentPtr& doc) {
-  if (doc.is_null())
-    return os << std::endl
-              << "  nullptr Document - possible zombie from std::move()";
-  os << std::endl << "  @id: " << doc->docid;
-  if (doc->properties.size() == 0) os << std::endl << "  (No properties)";
-  return os << std::dec << doc.get();
-}
-
-std::ostream& operator<<(std::ostream& os, Document* doc) {
-  for (const auto& prop : doc->properties) {
+std::ostream& operator<<(std::ostream& os, const MojoPropertyArray& props) {
+  if (props.size() == 0) os << std::endl << "  (No properties)";
+  // Cast away const because there's no "const" member function of begin() for
+  // the range-based for loop, nor is there a cbegin().
+  for (const auto& prop : const_cast<MojoPropertyArray&>(props)) {
     Value* v = prop->value.get();
     os << std::endl << "  " << prop->property << ": " << v;
   }
@@ -176,14 +166,15 @@ std::ostream& operator<<(std::ostream& os, Value* v) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Array<DocumentPtr>& docs) {
-  // Can't use range-based for because there is no const version of begin().
+std::ostream& operator<<(std::ostream& os, const MojoDocMap& docs) {
   if (docs.size() == 0) os << " NO DOCUMENTS";
-  for (size_t i = 0; i < docs.size(); ++i) {
-    if (i) {
+  for (auto it = docs.cbegin(); it != docs.cend(); ++it) {
+    if (it != docs.cbegin()) {
       os << std::endl << "--------";
     }
-    os << docs[i];
+    os << std::endl << "  @id: " << it.GetKey();
+    if (it.GetValue()->properties.size() == 0) os << std::endl << "  (No properties)";
+    return os << std::dec << it.GetValue()->properties;
   }
   return os;
 }

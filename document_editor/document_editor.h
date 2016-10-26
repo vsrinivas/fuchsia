@@ -5,10 +5,17 @@
 #ifndef MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
 #define MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
 
+#include <map>
+
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
+
+using MojoDocMap =
+    mojo::Map<mojo::String, document_store::DocumentPtr>;
+using DocMap = std::map<mojo::String, document_store::DocumentPtr>;
+using MojoPropertyArray = mojo::Array<document_store::PropertyPtr>;
 
 // Wrapper class to make it easier to work with Document objects and all
 // of the nested StructPtr's. This class will evolve to support:
@@ -17,26 +24,30 @@ namespace modular {
 //   - more functions to support Link objects, such as diff.
 class DocumentEditor {
  public:
-  // Construct a new, empty document.
+  // Construct a new, empty document. This constructor should be used with the
+  // Edit() function.
   DocumentEditor();
 
   // Construct a new document with the given document id, but no properties.
   DocumentEditor(const std::string& docid);
 
-  // Take ownership of the given document.
-  DocumentEditor(document_store::DocumentPtr doc) { doc_ = std::move(doc); }
+  const mojo::String& docid() { return this->doc_->docid; }
+
+  void TakeDocument(document_store::DocumentPtr* ptr) {
+    *ptr = std::move(doc_);
+  }
 
   // Return the given document, or null if there isn't one.
-  document_store::Document* get() { return doc_ ? doc_.get() : nullptr; }
+  // Remove the given document from the map and prepare to edit it.
+  bool Edit(const std::string& docid, MojoDocMap* docs);
 
-  bool TakeFromArray(const std::string& docid,
-                     mojo::Array<document_store::DocumentPtr>* array);
-
-  document_store::DocumentPtr TakeDocument();
+  // Return the current document to the document map. Inverse of the Edit()
+  // function.
+  void Keep(MojoDocMap* docs);
 
   // Return the value for the given property, or nullptr if not found.
   // The result points directly into the property array and may be modified.
-  document_store::Value* GetValue(std::string property);
+  document_store::Value* GetValue(const std::string& property);
 
   // Add the given property to the Document. Duplicates are currently not
   // ignored. Multiple properties of the same property name are theoretically
@@ -44,7 +55,7 @@ class DocumentEditor {
   void SetProperty(document_store::PropertyPtr property);
 
   void SetProperty(const std::string& property_label,
-                   mojo::StructPtr<document_store::Value> value);
+                   document_store::ValuePtr value);
 
   // Remove the given label/value from the Document. Both the property name
   // and the value must be matched, otherwise do nothing.
@@ -77,9 +88,7 @@ class DocumentEditor {
   FTL_DISALLOW_COPY_AND_ASSIGN(DocumentEditor);
 };
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::Array<document_store::DocumentPtr>& docs);
-std::ostream& operator<<(std::ostream& os, document_store::Document* doc);
+std::ostream& operator<<(std::ostream& os, const MojoDocMap& docs);
 std::ostream& operator<<(std::ostream& os,
                          const document_store::DocumentPtr& doc);
 std::ostream& operator<<(std::ostream& os, document_store::Value* v);

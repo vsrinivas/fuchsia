@@ -12,7 +12,7 @@ import "apps/document_store/interfaces/document.mojom";
 // This interface is implemented by the story runner. The Session
 // service instance acts as a factory for it.
 //
-// An instance of Link holds documents, expressed as an array of
+// An instance of Link holds documents, expressed as an map of string to
 // document_store.Document. The document has individual properties that can
 // be incrementally updated with AddDocuments() or overwritten in toto with
 // SetAllDocuments().
@@ -53,18 +53,18 @@ interface Link {
   // the Link. Watchers will be notified if any statements actually changed.
   // In the case of duplicate document ids, the properties will be merged,
   // with a last-one-wins rule for handling duplicates.
-  AddDocuments(array<document_store.Document> docs);
+  AddDocuments(map<string, document_store.Document> docs);
 
   // The Link contains a collection of Documents, which is empty when the Link
   // is created. SetAllDocuments() rewrites the Link to the given values.
   // Watchers will be notified if any statements actually changed. In the
   // case of duplicate docids, only the last document will be kept.
   // All properties in earlier Documents with that docid will be discarded.
-  SetAllDocuments(array<document_store.Document> docs);
+  SetAllDocuments(map<string, document_store.Document> docs);
 
   // Obtains all documents. If either SetAllDocument() or AddDocuments() were
-  // not yet called, the array returned is empty.
-  Query() => (array<document_store.Document> docs);
+  // not yet called, the map returned is empty.
+  Query() => (map<string, document_store.Document> docs);
 
   // Registers a watcher, which is notified whenever the document changes. This
   // watcher will not be invoked for changes caused by calls made on this
@@ -79,7 +79,7 @@ interface Link {
   // Obtains another handle for the same Link instance. Can be used to
   // keep a reference to a Link instance and pass it as an argument to
   // another service.
-  Dup(Link& dup);
+  Dup(Link & dup);
 };
 
 // This interface is meant to be implemented by a client of Link.
@@ -90,5 +90,5 @@ interface Link {
 //
 // No service name: created by Module.
 interface LinkChanged {
-  Notify(array<document_store.Document> docs);
+  Notify(map<string, document_store.Document> docs);
 };

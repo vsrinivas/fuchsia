@@ -6,7 +6,6 @@
 // creates other Modules in the session.
 
 #include <mojo/system/main.h>
-#include <vector>
 
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
@@ -28,7 +27,6 @@
 #include "mojo/public/cpp/bindings/map.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/system/macros.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -62,19 +60,17 @@ using mojo::ConnectionContext;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
-using mojo::Map;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
-using mojo::String;
-using mojo::StructPtr;
 
+using modular::DocumentEditor;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
 using modular::ModuleController;
 using modular::ModuleWatcher;
-using modular::DocumentEditor;
+using modular::MojoDocMap;
 using modular::Session;
 using modular::operator<<;
 
@@ -89,7 +85,7 @@ class LinkConnection : public LinkChanged {
     src_->Watch(std::move(watcher));
   }
 
-  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
+  void Notify(MojoDocMap docs) override {
     FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
     if (docs.size() > 0) {
       dst_->SetAllDocuments(std::move(docs));
@@ -115,7 +111,7 @@ class LinkMonitor : public LinkChanged {
     link->WatchAll(std::move(watcher));
   }
 
-  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
+  void Notify(MojoDocMap docs) override {
     FTL_LOG(INFO) << "LinkMonitor::Notify()";
   }
 
@@ -144,8 +140,7 @@ class ModuleMonitor : public ModuleWatcher {
   MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
-// Module implementation that acts as a recipe. It implements both
-// Module and the LinkChanged observer of its own Link.
+// Module implementation that acts as a recipe.
 class RecipeImpl : public Module, public mozart::BaseView {
  public:
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
@@ -205,9 +200,9 @@ class RecipeImpl : public Module, public mozart::BaseView {
     editor.SetProperty(kSenderLabel,
                        DocumentEditor::NewStringValue("RecipeImpl"));
 
-    Array<DocumentPtr> array;
-    array.push_back(editor.TakeDocument());
-    module1_link_->SetAllDocuments(std::move(array));
+    MojoDocMap docs;
+    editor.TakeDocument(&docs[editor.docid()]);
+    module1_link_->SetAllDocuments(std::move(docs));
   }
 
  private:

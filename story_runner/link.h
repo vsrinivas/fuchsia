@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 #include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/link.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -40,8 +41,8 @@ class LinkImpl : public Link {
   ~LinkImpl() override;
 
   // Implements Link interface.
-  void AddDocuments(mojo::Array<document_store::DocumentPtr> docs) override;
-  void SetAllDocuments(mojo::Array<document_store::DocumentPtr> docs) override;
+  void AddDocuments(MojoDocMap docs) override;
+  void SetAllDocuments(MojoDocMap docs) override;
   void Query(const QueryCallback& callback) override;
   void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
@@ -59,10 +60,10 @@ class LinkImpl : public Link {
   // For use by the destructor only
   void RemoveImpl(LinkImpl* client);
 
-  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher, bool self_notify);
-  void NotifyWatchers(const mojo::Array<document_store::DocumentPtr>& docs,
-                      bool self_notify);
-  void DatabaseChanged(const mojo::Array<document_store::DocumentPtr>& docs);
+  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
+                  const bool self_notify);
+  void NotifyWatchers(const MojoDocMap& docs, const bool self_notify);
+  void DatabaseChanged(const MojoDocMap& docs);
 
   // |shared_| is owned by the LinkImpl that called "new SharedLinkImplData()".
   SharedLinkImplData* const shared_;

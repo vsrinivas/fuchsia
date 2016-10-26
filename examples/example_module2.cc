@@ -14,7 +14,6 @@
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/public/cpp/system/macros.h"
 
@@ -29,7 +28,6 @@ constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
 constexpr char kSenderLabel[] = "http://schema.org/sender";
 
 using document_store::Document;
-using document_store::DocumentPtr;
 using document_store::Value;
 
 using mojo::ApplicationConnector;
@@ -37,13 +35,15 @@ using mojo::Array;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
+using mojo::Map;
 using mojo::StrongBinding;
 using mojo::String;
 
+using modular::DocumentEditor;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
-using modular::DocumentEditor;
+using modular::MojoDocMap;
 using modular::Session;
 using modular::operator<<;
 
@@ -63,8 +63,6 @@ class Module2Impl : public Module, public LinkChanged {
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
-    FTL_LOG(INFO) << "module2 init";
-
     session_.Bind(std::move(session));
     link_.Bind(std::move(link));
 
@@ -79,11 +77,12 @@ class Module2Impl : public Module, public LinkChanged {
   // through one link handle is not notified of changes requested
   // through the same handle. It's really the handle identity that
   // decides.
-  void Notify(mojo::Array<document_store::DocumentPtr> docs) override {
+  void Notify(MojoDocMap docs) override {
     FTL_LOG(INFO) << "Module2Impl::Notify() " << (int64_t)this << docs;
 
     DocumentEditor editor;
-    if (!editor.TakeFromArray(kDocId, &docs)) return;
+    if (!editor.Edit(kDocId, &docs))
+      return;
 
     Value* sender = editor.GetValue(kSenderLabel);
     Value* counter = editor.GetValue(kCounterLabel);
@@ -102,9 +101,8 @@ class Module2Impl : public Module, public LinkChanged {
       editor.RemoveProperty(kSenderLabel);
     }
 
-    Array<DocumentPtr> array;
-    array.push_back(editor.TakeDocument());
-    link_->SetAllDocuments(std::move(array));
+    editor.Keep(&docs);
+    link_->SetAllDocuments(std::move(docs));
   }
 
  private:

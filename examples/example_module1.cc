@@ -16,7 +16,6 @@
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
 #include "mojo/public/cpp/environment/logging.h"
 
 namespace {
@@ -30,7 +29,6 @@ constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
 constexpr char kSenderLabel[] = "http://schema.org/sender";
 
 using document_store::Document;
-using document_store::DocumentPtr;
 using document_store::Property;
 using document_store::Value;
 
@@ -39,14 +37,16 @@ using mojo::Array;
 using mojo::InterfaceHandle;
 using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
+using mojo::Map;
 using mojo::StrongBinding;
 using mojo::String;
 using mojo::StructPtr;
 
+using modular::DocumentEditor;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
-using modular::DocumentEditor;
+using modular::MojoDocMap;
 using modular::Session;
 using modular::operator<<;
 
@@ -66,8 +66,6 @@ class Module1Impl : public Module, public LinkChanged {
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
-    FTL_LOG(INFO) << "module1 init";
-
     session_.Bind(std::move(session));
     link_.Bind(std::move(link));
 
@@ -77,11 +75,12 @@ class Module1Impl : public Module, public LinkChanged {
   }
 
   // See comments on Module2Impl in example-module2.cc.
-  void Notify(Array<DocumentPtr> docs) override {
+  void Notify(MojoDocMap docs) override {
     FTL_LOG(INFO) << "Module1Impl::Notify() " << (int64_t)this << docs;
 
     DocumentEditor editor;
-    if (!editor.TakeFromArray(kDocId, &docs)) return;
+    if (!editor.Edit(kDocId, &docs))
+      return;
 
     Value* sender = editor.GetValue(kSenderLabel);
     Value* value = editor.GetValue(kCounterLabel);
@@ -97,7 +96,7 @@ class Module1Impl : public Module, public LinkChanged {
       value->set_int_value(counter + 1);
       sender->set_string_value("Module1Impl");
 
-      docs.push_back(editor.TakeDocument());
+      editor.Keep(&docs);
       link_->SetAllDocuments(std::move(docs));
     }
   }
