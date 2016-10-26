@@ -164,8 +164,8 @@ class RecipeImpl : public Module, public mozart::BaseView {
     session_.Bind(std::move(session));
     link_.Bind(std::move(link));
 
-    session_->CreateLink(GetProxy(&module1_link_));
-    session_->CreateLink(GetProxy(&module2_link_));
+    session_->CreateLink("module1", GetProxy(&module1_link_));
+    session_->CreateLink("module2", GetProxy(&module2_link_));
 
     InterfaceHandle<Link> module1_link_handle;  // To pass to StartModule().
     module1_link_->Dup(GetProxy(&module1_link_handle));

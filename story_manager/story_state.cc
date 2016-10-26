@@ -46,7 +46,7 @@ void StoryState::RunStory(
   runner_->Initialize(std::move(resolver_factory));
   runner_->StartStory(session_page.PassInterfaceHandle(), GetProxy(&session_));
   mojo::InterfaceHandle<Link> link;
-  session_->CreateLink(GetProxy(&link));
+  session_->CreateLink("root", GetProxy(&link));
   session_->StartModule(story_info_->url, std::move(link), GetProxy(&module_),
                         std::move(view_owner_request));
   story_info_->is_running = true;

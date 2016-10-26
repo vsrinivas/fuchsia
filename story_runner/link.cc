@@ -7,6 +7,7 @@
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/story_runner/link.mojom.h"
+#include "apps/modular/story_runner/session.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
@@ -30,14 +31,34 @@ using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 
 struct SharedLinkImplData {
+  SharedLinkImplData(std::shared_ptr<SessionPage> p,
+                     const mojo::String& n)
+      : name(n), page_(p) {
+    // The document map is always valid, even when empty.
+    docs_map.mark_non_null();
+
+    FTL_LOG(INFO) << "SharedLinkImplData() " << name;
+    page_->MaybeReadLink(name, &docs_map);
+  }
+
+  ~SharedLinkImplData() {
+    FTL_LOG(INFO) << "~SharedLinkImplData() " << name;
+    page_->WriteLink(name, docs_map);
+  }
+
   MojoDocMap docs_map;
   std::vector<std::unique_ptr<LinkImpl>> impls;
+  const mojo::String name;
+
+ private:
+  std::shared_ptr<SessionPage> page_;
+
+  MOJO_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
 };
 
 namespace {
 
-using DocIndex =
-    std::map<std::pair<const std::string&, const std::string&>, Value*>;
+using DocIndex = std::map<std::pair<const std::string&, const std::string&>, Value*>;
 
 DocIndex IndexDocIdToDocMap(const MojoDocMap& docs_map) {
   DocIndex index;
@@ -67,41 +88,44 @@ bool Equal(const MojoDocMap& docs_map1, const MojoDocMap& docs_map2) {
         return p1.first == p2.first && p1.second->Equals(*p2.second);
       });
 }
+
 }  // namespace
 
-LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* const shared)
-    : shared_(shared ? shared : new SharedLinkImplData()),
+LinkImpl::LinkImpl(std::shared_ptr<SessionPage> page,
+                   const mojo::String& name,
+                   InterfaceRequest<Link> req)
+    : shared_(new SharedLinkImplData(page, name)),
       binding_(this, std::move(req)) {
-  FTL_LOG(INFO) << "LinkImpl()" << (shared == nullptr ? " primary" : "")
-                << std::hex << (int64_t)this;
-
-  // The document map is always valid, even when empty.
-  shared_->docs_map.mark_non_null();
+  FTL_LOG(INFO) << "LinkImpl() " << name << " (primary) ";
 
   shared_->impls.emplace_back(this);
-  bool primary = shared == nullptr;
 
-  binding_.set_connection_error_handler([primary, this]() {
-    // If a "primary" (currently that's the first) connection goes down,
-    // the whole implementation is deleted, taking down all remaining
-    // connections. This corresponds to a strong binding on the first
-    // connection, and regular bindings on all later ones. This is just
-    // how it is and may be revised in the future.
-    // "shared" is nullptr for all copies of LinkImpl created by Dup().
-    if (primary) {
-      delete shared_;
-    } else {
-      RemoveImpl(this);
-    }
+  // If the primary connection goes down, the whole implementation is
+  // deleted, taking down all remaining connections. This corresponds
+  // to a strong binding on the first connection, and regular bindings
+  // on all later ones. This is just how it is and may be revised in
+  // the future.
+  binding_.set_connection_error_handler([this]() {
+    delete shared_;
   });
 }
 
-LinkImpl::~LinkImpl() {
-  FTL_LOG(INFO) << "~LinkImpl() " << std::hex << (int64_t)this;
+LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* const shared)
+    : shared_(shared),
+      binding_(this, std::move(req)) {
+  FTL_LOG(INFO) << "LinkImpl() " << shared->name;
+
+  shared_->impls.emplace_back(this);
+  binding_.set_connection_error_handler([this]() { RemoveImpl(); });
 }
 
-void LinkImpl::New(InterfaceRequest<Link> req) {
-  new LinkImpl(std::move(req), nullptr);
+LinkImpl::~LinkImpl() {
+  FTL_LOG(INFO) << "~LinkImpl() " << shared_->name;
+}
+
+void LinkImpl::New(std::shared_ptr<SessionPage> page,
+                   const mojo::String& name, InterfaceRequest<Link> req) {
+  new LinkImpl(page, name, std::move(req));
 }
 
 void LinkImpl::Query(const LinkImpl::QueryCallback& callback) {
@@ -153,10 +177,10 @@ void LinkImpl::Dup(InterfaceRequest<Link> dup) {
   new LinkImpl(std::move(dup), shared_);
 }
 
-void LinkImpl::RemoveImpl(LinkImpl* const impl) {
+void LinkImpl::RemoveImpl() {
   auto it = std::remove_if(
       shared_->impls.begin(), shared_->impls.end(),
-      [impl](const std::unique_ptr<LinkImpl>& p) { return (p.get() == impl); });
+      [this](const std::unique_ptr<LinkImpl>& p) { return (p.get() == this); });
   FTL_DCHECK(it != shared_->impls.end());
   shared_->impls.erase(it, shared_->impls.end());
 }
@@ -168,7 +192,8 @@ void LinkImpl::RemoveImpl(LinkImpl* const impl) {
 // TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
 // the call to SetAllDocument(). Need to find a way to improve this.
 void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
-  FTL_LOG(INFO) << "LinkImpl::AddDocuments() " << std::hex << (int64_t)shared_
+  FTL_LOG(INFO) << "LinkImpl::AddDocuments() "
+                << shared_->name << " "
                 << mojo_add_docs;
   DocMap add_docs;
   mojo_add_docs.Swap(&add_docs);
@@ -201,8 +226,9 @@ void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
 }
 
 void LinkImpl::SetAllDocuments(MojoDocMap new_docs) {
-  FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() " << std::hex
-                << (int64_t)shared_ << std::dec << new_docs;
+  FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() "
+                << shared_->name << " "
+                << new_docs;
 
   bool dirty = !Equal(new_docs, shared_->docs_map);
   if (dirty) {
@@ -212,5 +238,5 @@ void LinkImpl::SetAllDocuments(MojoDocMap new_docs) {
     FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() Skipped notify, not dirty";
   }
 }
-}
-// modular
+
+}  // namespace modular

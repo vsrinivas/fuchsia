@@ -11,8 +11,12 @@
 #define MOJO_APPS_MODULAR_STORY_RUNNER_SESSION_H__
 
 #include <map>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/modular/story_runner/resolver.mojom.h"
 #include "apps/modular/story_runner/session.mojom.h"
@@ -30,6 +34,7 @@ namespace modular {
 
 class SessionHost;
 class SessionImpl;
+class SessionPage;
 
 // Implements the ModuleController interface, which is passed back to
 // the client that requested a module to be started this SessionHost
@@ -75,7 +80,8 @@ class SessionHost : public Session {
   ~SessionHost() override;
 
   // Implements Session interface. Forwards to SessionImpl.
-  void CreateLink(mojo::InterfaceRequest<Link> link) override;
+  void CreateLink(const mojo::String& name,
+                  mojo::InterfaceRequest<Link> link) override;
   void StartModule(
       const mojo::String& query, mojo::InterfaceHandle<Link> link,
       mojo::InterfaceRequest<ModuleController> module_controller,
@@ -87,8 +93,6 @@ class SessionHost : public Session {
   void Remove(ModuleControllerImpl* module_controller);
 
  private:
-  // TODO(mesch): Actually record link instances created through this
-  // binding here.
   SessionImpl* const impl_;
   mojo::StrongBinding<Session> binding_;
   ModuleControllerImpl* module_controller_;
@@ -108,6 +112,7 @@ class SessionImpl {
   // These methods are called by SessionHost.
   void Add(SessionHost* client);
   void Remove(SessionHost* client);
+  void CreateLink(const mojo::String& name, mojo::InterfaceRequest<Link> link);
   void StartModule(const mojo::String& query, mojo::InterfaceHandle<Link> link,
                    mojo::InterfaceRequest<ModuleController> module_controller,
                    mojo::InterfaceRequest<mozart::ViewOwner> view_owner);
@@ -115,9 +120,32 @@ class SessionImpl {
  private:
   mojo::Shell* const shell_;
   mojo::InterfacePtr<Resolver> resolver_;
-  mojo::InterfacePtr<ledger::Page> session_page_;
+  std::shared_ptr<SessionPage> page_;
   std::vector<SessionHost*> clients_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
+};
+
+
+// Shared owner of the connection to the ledger page. Shared between
+// the SessionImpl, and all LinkImpls, so the connection is around
+// until all Links are closed when the session shuts down.
+class SessionPage {
+ public:
+  SessionPage(mojo::InterfaceHandle<ledger::Page> session_page);
+  ~SessionPage();
+
+  void Init(std::function<void()> done);
+
+  // These methods are called by LinkImpl.
+  void MaybeReadLink(const mojo::String& name, MojoDocMap* data) const;
+  void WriteLink(const mojo::String& name, const MojoDocMap& data);
+
+ private:
+  mojo::InterfacePtr<ledger::Page> session_page_;
+  mojo::InterfacePtr<ledger::PageSnapshot> session_page_snapshot_;
+  mojo::StructPtr<SessionData> data_;
+
+  MOJO_DISALLOW_COPY_AND_ASSIGN(SessionPage);
 };
 
 }  // namespace modular

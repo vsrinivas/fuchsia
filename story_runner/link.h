@@ -2,20 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// A Link is a mutable and observable value shared between modules.
-// When a module requests to run more modules using
-// Session::StartModule(), a Link instance is associated with each
-// such request, i.e. a Link instance is shared between at least two
-// modules. The same Link instance can be used in multiple
-// StartModule() requests, so it can be shared between more than two
-// modules. The Dup() method allows to obtain more handles of the same
-// Link instance.
-//
-// If a watcher is registered through one handle, it only receives
-// notifications for changes by requests through other handles. To
-// make this possible, each connection is associated with a separate
-// implementation instance, called a host.
-
 #ifndef MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 #define MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
 
@@ -35,7 +21,32 @@
 namespace modular {
 
 struct SharedLinkImplData;
+class SessionPage;
 
+// A Link is a mutable and observable value shared between modules.
+// When a module requests to run more modules using
+// Session::StartModule(), a Link instance is associated with each
+// such request, i.e. a Link instance is shared between at least two
+// modules. The same Link instance can be used in multiple
+// StartModule() requests, so it can be shared between more than two
+// modules. The Dup() method allows to obtain more handles of the same
+// Link instance.
+//
+// If a watcher is registered through one handle, it only receives
+// notifications for changes by requests through other handles. To
+// make this possible, each connection is associated with a separate
+// implementation instance. All implementation instances share a
+// common internal data object that holds the data
+// (SharedLinkImplData).
+//
+// The first such instance is created by SessionImpl::CreateLink()
+// using the New() method. Subsequent such instances associated with
+// the same shared data are created by LinkImpl::Dup(). The first
+// instance is called the primary instance. If the pipe to this
+// instance is closed, all other connections are closed too. If a pipe
+// to a non-primary instance is closed, only that instance is removed
+// from the set of owners of the shared data. This is how it is now,
+// it may change in the future.
 class LinkImpl : public Link {
  public:
   ~LinkImpl() override;
@@ -51,21 +62,31 @@ class LinkImpl : public Link {
   // Connect a new LinkImpl object on the heap. It manages its own lifetime.
   // If this pipe is closed, then everything will be torn down. In comparison,
   // handles created by Dup() do not affect other handles.
-  static void New(mojo::InterfaceRequest<Link> req);
+  static void New(std::shared_ptr<SessionPage> page,
+                  const mojo::String& name,
+                  mojo::InterfaceRequest<Link> req);
 
  private:
-  // LinkImpl may not be constructed on the stack.
+  // LinkImpl may not be constructed on the stack, so the constructors
+  // are private.
+
+  // Called from New() by outside clients.
+  LinkImpl(std::shared_ptr<SessionPage> page, const mojo::String& name,
+           mojo::InterfaceRequest<Link> req);
+
+  // Called from Dup().
   LinkImpl(mojo::InterfaceRequest<Link> req, SharedLinkImplData* shared);
 
-  // For use by the destructor only
-  void RemoveImpl(LinkImpl* client);
+  // For use by the binding error handler.
+  void RemoveImpl();
 
   void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
                   const bool self_notify);
   void NotifyWatchers(const MojoDocMap& docs, const bool self_notify);
   void DatabaseChanged(const MojoDocMap& docs);
 
-  // |shared_| is owned by the LinkImpl that called "new SharedLinkImplData()".
+  // |shared_| is owned (and eventually deleted) by the LinkImpl
+  // instance that created it, aka the primary instance.
   SharedLinkImplData* const shared_;
   mojo::Binding<Link> binding_;
 

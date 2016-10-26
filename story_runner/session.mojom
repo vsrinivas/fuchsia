@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/document_store/interfaces/document.mojom";
 import "apps/modular/story_runner/link.mojom";
 import "apps/mozart/services/views/interfaces/view_token.mojom";
 
@@ -56,7 +57,21 @@ interface Session {
   // a newly created Module by passing it to StartModule(). In order
   // to also retain a reference to the same Link instance, a duplicate
   // must be created using the Dup() method of Link.
-  CreateLink(Link& link);
+  //
+  // The link instance has a name so that it can be recognized when
+  // the session is restored. Right now it's up to the module to
+  // ensure the name is unique within the scope of the session.
+  //
+  // TODO(mesch): We can scope it to the module, or the Link instance
+  // the module was initialized with, or both, but two things are
+  // tricky when done naively:
+  //
+  //   1. the initial Link might not be unique to this module instance,
+  //
+  //   2. obtaining the name of a parent link would be asynchronous.
+  //
+  // For now, the name is scoped to the session.
+  CreateLink(string name, Link& link);
 
   // Starts a new module. The query identifies the module in some way.
   // Currently, it's just the URL of the mojo executable, but in the
@@ -75,4 +90,15 @@ interface Session {
   // started. This causes Done() to be called on all the module
   // watchers registered on this Module's ModuleController.
   Done();
+};
+
+
+// Internal state of the session, used for storage in Ledger.
+// TODO(mesch/jimbe): Use document store instead of ledger?
+struct SessionData {
+  map<string, LinkData> links;
+};
+
+struct LinkData {
+  array<document_store.Document> docs;
 };
