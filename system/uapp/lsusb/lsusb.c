@@ -28,13 +28,13 @@ static void get_string_desc(int fd, int index, char* buf, int buflen) {
 
 static const char* usb_speeds[] = {
     "<unknown>",
-    "FULL ",
-    "LOW  ",
-    "HIGH ",
+    "FULL",
+    "LOW",
+    "HIGH",
     "SUPER",
 };
 
-static int do_list_device(int fd, bool verbose, const char* devname) {
+static int do_list_device(int fd, bool verbose, const char* devname, int depth, int max_depth) {
     usb_device_descriptor_t device_desc;
     char manufacturer[256];
     char product[256];
@@ -45,7 +45,7 @@ static int do_list_device(int fd, bool verbose, const char* devname) {
     int device_type;
     ret = ioctl_usb_get_device_type(fd, &device_type);
     if (ret != sizeof(device_type)) {
-        printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s\n", devname);
+        printf("IOCTL_USB_GET_DEVICE_TYPE failed for %s/%s\n", DEV_USB, devname);
         return ret;
     }
     if (device_type != USB_DEVICE_TYPE_DEVICE) {
@@ -54,21 +54,23 @@ static int do_list_device(int fd, bool verbose, const char* devname) {
 
     ret = ioctl_usb_get_device_desc(fd, &device_desc);
     if (ret != sizeof(device_desc)) {
-        printf("IOCTL_USB_GET_DEVICE_DESC failed for %s\n", devname);
+        printf("IOCTL_USB_GET_DEVICE_DESC failed for %s/%s\n", DEV_USB, devname);
         return ret;
     }
 
     int speed;
     ret = ioctl_usb_get_device_speed(fd, &speed);
     if (ret != sizeof(speed) || speed < 0 || (size_t)speed >= countof(usb_speeds)) {
-        printf("IOCTL_USB_GET_DEVICE_SPEED failed for %s\n", devname);
+        printf("IOCTL_USB_GET_DEVICE_SPEED failed for %s/%s\n", DEV_USB, devname);
         return ret;
     }
 
     get_string_desc(fd, device_desc.iManufacturer, manufacturer, sizeof(manufacturer));
     get_string_desc(fd, device_desc.iProduct, product, sizeof(product));
 
-    printf("%s %04X:%04X speed: %s %s %s\n", devname,
+    int left_pad = depth * 4;
+    int right_pad = (max_depth - depth) * 4;
+    printf("%*s%3s  %*s%04X:%04X  %-5s  %s %s\n", left_pad, "", devname, right_pad, "",
            le16toh(device_desc.idVendor), le16toh(device_desc.idProduct), usb_speeds[speed],
            manufacturer, product);
 
@@ -98,7 +100,7 @@ static int do_list_device(int fd, bool verbose, const char* devname) {
         int desc_size;
         ret = ioctl_usb_get_config_desc_size(fd, &desc_size);
         if (ret != sizeof(desc_size)) {
-            printf("IOCTL_USB_GET_CONFIG_DESC_SIZE failed for %s\n", devname);
+            printf("IOCTL_USB_GET_CONFIG_DESC_SIZE failed for %s/%s\n", DEV_USB, devname);
             return ret;
         }
 
@@ -109,7 +111,7 @@ static int do_list_device(int fd, bool verbose, const char* devname) {
         }
         ret = ioctl_usb_get_config_desc(fd, desc, desc_size);
         if (ret != desc_size) {
-            printf("IOCTL_USB_GET_CONFIG_DESC failed for %s\n", devname);
+            printf("IOCTL_USB_GET_CONFIG_DESC failed for %s/%s\n", DEV_USB, devname);
             goto free_out;
         }
 
@@ -214,7 +216,7 @@ static int list_device(const char* device_id, bool verbose) {
         return fd;
     }
 
-    int ret = do_list_device(fd, verbose, devname);
+    int ret = do_list_device(fd, verbose, device_id, 0, 0);
     close(fd);
     return ret;
 }
@@ -236,21 +238,34 @@ static int list_devices(bool verbose) {
 }
 struct device_node {
     int fd;
-    char devname[30];
+    char devname[4];
     uint64_t device_id;
     uint64_t hub_id;
     struct device_node* next;
+    int depth;  // depth in tree, or -1 if not computed yet
 };
 
-static void do_list_tree(struct device_node* devices, uint64_t hub_id, int indent) {
+static int get_node_depth(struct device_node* node, struct device_node* devices) {
+    if (node->depth >= 0) return node->depth;
+    if (node->hub_id == 0) return 0;
+
+    struct device_node* test_node = devices;
+    while (test_node) {
+        if (node->hub_id == test_node->device_id) {
+            return get_node_depth(test_node, devices) + 1;
+        }
+        test_node = test_node->next;
+    }
+    // shouldn't get here
+    return -1;
+}
+
+static void do_list_tree(struct device_node* devices, uint64_t hub_id, int max_depth) {
     struct device_node* node = devices;
     while (node) {
         if (node->hub_id == hub_id) {
-            for (int i = 0; i < indent; i++) {
-                printf(" ");
-            }
-            do_list_device(node->fd, false, node->devname);
-            do_list_tree(devices, node->device_id, indent + 4);
+            do_list_device(node->fd, false, node->devname, node->depth, max_depth);
+            do_list_tree(devices, node->device_id, max_depth);
         }
         node = node->next;
     }
@@ -288,20 +303,21 @@ static int list_tree(void) {
 
         int ret = ioctl_usb_get_device_id(fd, &node->device_id);
         if (ret < 0) {
-            printf("ioctl_usb_get_device_id failed for %s/%s\n", DEV_USB, de->d_name);
+            printf("ioctl_usb_get_device_id failed for %s\n", devname);
             free(node);
             close(fd);
             continue;
         }
         ret = ioctl_usb_get_device_hub_id(fd, &node->hub_id);
         if (ret < 0) {
-            printf("ioctl_usb_get_device_hub_id failed for %s/%s\n", DEV_USB, de->d_name);
+            printf("ioctl_usb_get_device_hub_id failed for %s\n", devname);
             free(node);
             close(fd);
             continue;
         }
         node->fd = fd;
-        strlcpy(node->devname, devname, sizeof(node->devname));
+        node->depth = -1;
+        strlcpy(node->devname, de->d_name, sizeof(node->devname));
         if (devices == NULL) {
             devices = node;
         } else {
@@ -312,10 +328,27 @@ static int list_tree(void) {
     }
     closedir(dir);
 
-    // print device tree recursively
-    do_list_tree(devices, 0, 0);
-
+    int max_depth = 0;
+    // compute depths for all device_nodes and compute maximum depth
     struct device_node* node = devices;
+    while (node) {
+        int depth = get_node_depth(node, devices);
+        if (depth > max_depth) max_depth = depth;
+        node->depth = depth;
+        node = node->next;
+    }
+
+    // print header
+    printf("ID   ");
+    for (int i = 0; i < max_depth; i++) {
+        printf("    ");
+    }
+    printf(" VID:PID   SPEED  MANUFACTURER PRODUCT\n");
+
+    // print device tree recursively
+    do_list_tree(devices, 0, max_depth);
+
+     node = devices;
     while (node) {
         struct device_node* next = node->next;
         close(node->fd);
@@ -354,10 +387,13 @@ int main(int argc, const char** argv) {
 
     if (tree) {
         return list_tree();
-    } else if (device_id) {
-        return list_device(device_id, verbose);
     } else {
-        return list_devices(verbose);
+        printf("ID    VID:PID   SPEED  MANUFACTURER PRODUCT\n");
+        if (device_id) {
+            return list_device(device_id, verbose);
+        } else {
+            return list_devices(verbose);
+        }
     }
 
 usage:
