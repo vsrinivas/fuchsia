@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/maxwell/agents/ideas.h"
+
 #include <mojo/system/main.h>
 #include <rapidjson/document.h>
 
@@ -11,6 +13,10 @@
 #include "mojo/public/cpp/application/run_application.h"
 
 #include "apps/maxwell/debug.h"
+
+using maxwell::agents::IdeasAgent;
+
+constexpr char IdeasAgent::kIdeaId[];
 
 namespace {
 
@@ -22,11 +28,11 @@ using namespace maxwell::context_engine;
 using namespace maxwell::suggestion_engine;
 using namespace rapidjson;
 
-constexpr char kIdeaId[] = "";
-
-class Ideas : public maxwell::DebuggableApp, public ContextSubscriberLink {
+class IdeasAgentImpl : public IdeasAgent,
+                       public maxwell::DebuggableApp,
+                       public ContextSubscriberLink {
  public:
-  Ideas() : in_(this) {}
+  IdeasAgentImpl() : in_(this) {}
 
   void OnInitialize() override {
     ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx_));
@@ -87,6 +93,6 @@ class Ideas : public maxwell::DebuggableApp, public ContextSubscriberLink {
 }  // namespace
 
 MojoResult MojoMain(MojoHandle request) {
-  Ideas app;
+  IdeasAgentImpl app;
   return mojo::RunApplication(request, &app);
 }

@@ -40,7 +40,7 @@ Predicate operator!(const Predicate& a);
 // fataling on a deadline.
 template <typename Closure>
 Predicate SideEffect(Closure side_effect) {
-  return [&side_effect] {
+  return [side_effect] {
     side_effect();
     return true;
   };
@@ -83,20 +83,29 @@ constexpr auto kAsyncCheckMax = 5s;
 // If the condition becomes true briefly but not over a 100 ms polling period,
 // this check continues waiting until the deadline. Since the transient check
 // is polling-based, the exact number of matches should not be relied upon.
-#define ASYNC_CHECK(condition)                                             \
-  {                                                                        \
-    auto deadline = Deadline(kAsyncCheckMax);                              \
-    auto check = PREDICATE(condition);                                     \
-    do {                                                                   \
-      WaitUntil(check ||                                                   \
-                deadline && SideEffect([] {                                \
-                  MOJO_LOG(FATAL)                                          \
-                      << "Deadline exceeded for async check: " #condition; \
-                }));                                                       \
-      auto steady = Deadline(kAsyncCheckSteady);                           \
-      WaitUntil(steady || !check);                                         \
-    } while (!(condition));                                                \
+//
+// This is a macro rather than a function to preserve the file and line number
+// of the failed assertion.
+#define ASYNC_CHECK_DIAG(condition, diagnostic)                         \
+  {                                                                     \
+    auto deadline = Deadline(kAsyncCheckMax);                           \
+    auto check = PREDICATE(condition);                                  \
+    do {                                                                \
+      WaitUntil(check || deadline && SideEffect([&] {                   \
+                           MOJO_LOG(FATAL)                              \
+                               << "Deadline exceeded for async check: " \
+                               << diagnostic;                           \
+                         }));                                           \
+      auto steady = Deadline(kAsyncCheckSteady);                        \
+      WaitUntil(steady || !check);                                      \
+    } while (!(condition));                                             \
   }
+
+#define ASYNC_CHECK(condition) ASYNC_CHECK_DIAG(condition, #condition)
+#define ASYNC_EQ(expected, actual) \
+  ASYNC_CHECK_DIAG(                \
+      (expected) == (actual),      \
+      #actual " == " #expected "; last known value: " << (actual))
 
 class DebuggableAppTestBase : public mojo::test::ApplicationTestBase {
  protected:

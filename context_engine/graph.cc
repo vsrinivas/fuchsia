@@ -11,7 +11,7 @@ void DataNode::SubscriberSet::OnConnectionError(
     ContextSubscriberLink* interface_ptr) {
   MOJO_LOG(VERBOSE) << "Subscription to " << node_->label << " lost";
 
-  BoundSet<ContextSubscriberLink>::OnConnectionError(interface_ptr);
+  BoundPtrSet<ContextSubscriberLink>::OnConnectionError(interface_ptr);
 
   // Notify if this was the last subscriber.
   if (node_->subscribers_.empty() && node_->publisher_controller_) {

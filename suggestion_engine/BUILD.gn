@@ -4,6 +4,8 @@
 
 executable("suggestion_engine") {
   sources = [
+    "next_subscriber.cc",
+    "next_subscriber.h",
     "suggestion_engine.cc",
   ]
 
