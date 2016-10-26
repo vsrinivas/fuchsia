@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+#include <vector>
+
 #include <mojo/system/main.h>
 
 #include "apps/ledger/api/ledger.mojom.h"
@@ -46,6 +49,44 @@ mojo::Array<uint8_t> GetPageId(PagePtr* page) {
       [&page_id](mojo::Array<uint8_t> id) { page_id = std::move(id); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   return page_id;
+}
+
+PageSnapshotPtr GetSnapshot(PagePtr* page) {
+  PageSnapshotPtr snapshot;
+  (*page)->GetSnapshot([&snapshot](
+      Status status, mojo::InterfaceHandle<PageSnapshot> snapshot_handle) {
+    EXPECT_EQ(Status::OK, status);
+    snapshot =
+        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
+  });
+  EXPECT_TRUE(page->WaitForIncomingResponse());
+  return snapshot;
+}
+
+mojo::Array<mojo::Array<uint8_t>> GetSnapshotKeys(PageSnapshotPtr* snapshot,
+                                                  mojo::Array<uint8_t> prefix) {
+  mojo::Array<mojo::Array<uint8_t>> result;
+  (*snapshot)->GetKeys(
+      std::move(prefix),
+      [&result](Status status, mojo::Array<mojo::Array<uint8_t>> keys) {
+        EXPECT_EQ(Status::OK, status);
+        result = std::move(keys);
+      });
+  EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+  return result;
+}
+
+mojo::Array<EntryPtr> GetSnapshotEntries(PageSnapshotPtr* snapshot,
+                                         mojo::Array<uint8_t> prefix) {
+  mojo::Array<EntryPtr> result;
+  (*snapshot)->GetEntries(
+      std::move(prefix),
+      [&result](Status status, mojo::Array<EntryPtr> entries) {
+        EXPECT_EQ(Status::OK, status);
+        result = std::move(entries);
+      });
+  EXPECT_TRUE(snapshot->WaitForIncomingResponse());
+  return result;
 }
 
 class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
@@ -257,6 +298,174 @@ TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
                                   [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
+}
+
+TEST_F(LedgerApplicationTest, PageSnapshotGetKeys) {
+  PagePtr page = GetTestPage();
+
+  // Grab a snapshot before adding any entries and verify that GetKeys()
+  // returns empty results.
+  PageSnapshotPtr snapshot = GetSnapshot(&page);
+  mojo::Array<mojo::Array<uint8_t>> result =
+      GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_EQ(0u, result.size());
+
+  // Add entries and grab a new snapshot.
+  const size_t N = 4;
+  mojo::Array<uint8_t> keys[N] = {
+      RandomArray(20, {0, 0, 0}), RandomArray(20, {0, 0, 1}),
+      RandomArray(20, {0, 1, 0}), RandomArray(20, {0, 1, 1}),
+  };
+  for (size_t i = 0; i < N; ++i) {
+    page->Put(keys[i].Clone(), RandomArray(50),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+  }
+  snapshot = GetSnapshot(&page);
+
+  // Get all keys.
+  result = GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_EQ(N, result.size());
+  for (size_t i = 0; i < N; ++i) {
+    EXPECT_TRUE(keys[i].Equals(result[i]));
+  }
+
+  // Get keys matching the prefix "0".
+  result = GetSnapshotKeys(&snapshot,
+                           mojo::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  EXPECT_EQ(N, result.size());
+  for (size_t i = 0; i < N; ++i) {
+    EXPECT_TRUE(keys[i].Equals(result[i]));
+  }
+
+  // Get keys matching the prefix "00".
+  result = GetSnapshotKeys(
+      &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  EXPECT_EQ(2u, result.size());
+  for (size_t i = 0; i < 2u; ++i) {
+    EXPECT_TRUE(keys[i].Equals(result[i]));
+  }
+
+  // Get keys matching the prefix "010".
+  result = GetSnapshotKeys(
+      &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  EXPECT_EQ(1u, result.size());
+  EXPECT_TRUE(keys[2].Equals(result[0]));
+
+  // Get keys matching the prefix "5".
+  result = GetSnapshotKeys(&snapshot,
+                           mojo::Array<uint8_t>::From(std::vector<uint8_t>{5}));
+  EXPECT_EQ(0u, result.size());
+}
+
+TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
+  PagePtr page = GetTestPage();
+
+  // Grab a snapshot before adding any entries and verify that GetEntries()
+  // returns empty results.
+  PageSnapshotPtr snapshot = GetSnapshot(&page);
+  mojo::Array<EntryPtr> entries =
+      GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_EQ(0u, entries.size());
+
+  // Add entries and grab a new snapshot.
+  const size_t N = 4;
+  mojo::Array<uint8_t> keys[N] = {
+      RandomArray(20, {0, 0, 0}), RandomArray(20, {0, 0, 1}),
+      RandomArray(20, {0, 1, 0}), RandomArray(20, {0, 1, 1}),
+  };
+  mojo::Array<uint8_t> values[N] = {
+      RandomArray(50), RandomArray(50), RandomArray(50), RandomArray(50),
+  };
+  for (size_t i = 0; i < N; ++i) {
+    page->Put(keys[i].Clone(), values[i].Clone(),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+  }
+  snapshot = GetSnapshot(&page);
+
+  // Get all entries.
+  entries = GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_EQ(N, entries.size());
+  for (size_t i = 0; i < N; ++i) {
+    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+  }
+
+  // Get entries matching the prefix "0".
+  entries = GetSnapshotEntries(
+      &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0}));
+  EXPECT_EQ(N, entries.size());
+  for (size_t i = 0; i < N; ++i) {
+    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+  }
+
+  // Get entries matching the prefix "00".
+  entries = GetSnapshotEntries(
+      &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
+  EXPECT_EQ(2u, entries.size());
+  for (size_t i = 0; i < 2; ++i) {
+    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+  }
+
+  // Get keys matching the prefix "010".
+  entries = GetSnapshotEntries(
+      &snapshot, mojo::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
+  EXPECT_EQ(1u, entries.size());
+  EXPECT_TRUE(keys[2].Equals(entries[0]->key));
+  EXPECT_TRUE(values[2].Equals(entries[0]->value));
+
+  // Get keys matching the prefix "5".
+  snapshot->GetEntries(mojo::Array<uint8_t>::From(std::vector<uint8_t>{5}),
+                       [&entries](Status status, mojo::Array<EntryPtr> e) {
+                         EXPECT_EQ(Status::OK, status);
+                         entries = std::move(e);
+                       });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+  EXPECT_EQ(0u, entries.size());
+}
+
+TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
+  PagePtr page = GetTestPage();
+
+  const size_t N = 4;
+  mojo::Array<uint8_t> keys[N] = {
+      RandomArray(20, {2}), RandomArray(20, {5}), RandomArray(20, {3}),
+      RandomArray(20, {0}),
+  };
+  mojo::Array<uint8_t> values[N] = {
+      RandomArray(20), RandomArray(20), RandomArray(20), RandomArray(20),
+  };
+  for (size_t i = 0; i < N; ++i) {
+    page->Put(keys[i].Clone(), values[i].Clone(),
+              [](Status status) { EXPECT_EQ(status, Status::OK); });
+    EXPECT_TRUE(page.WaitForIncomingResponse());
+  }
+
+  // Get a snapshot.
+  PageSnapshotPtr snapshot = GetSnapshot(&page);
+
+  // Verify that GetKeys() results are sorted.
+  mojo::Array<mojo::Array<uint8_t>> result =
+      GetSnapshotKeys(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_TRUE(keys[3].Equals(result[0]));
+  EXPECT_TRUE(keys[0].Equals(result[1]));
+  EXPECT_TRUE(keys[2].Equals(result[2]));
+  EXPECT_TRUE(keys[1].Equals(result[3]));
+
+  // Verify that GetEntries() results are sorted.
+  mojo::Array<EntryPtr> entries =
+      GetSnapshotEntries(&snapshot, mojo::Array<uint8_t>());
+  EXPECT_TRUE(keys[3].Equals(entries[0]->key));
+  EXPECT_TRUE(values[3].Equals(entries[0]->value));
+  EXPECT_TRUE(keys[0].Equals(entries[1]->key));
+  EXPECT_TRUE(values[0].Equals(entries[1]->value));
+  EXPECT_TRUE(keys[2].Equals(entries[2]->key));
+  EXPECT_TRUE(values[2].Equals(entries[2]->value));
+  EXPECT_TRUE(keys[1].Equals(entries[3]->key));
+  EXPECT_TRUE(values[1].Equals(entries[3]->value));
 }
 
 }  // namespace
