@@ -4,25 +4,106 @@
 
 extern crate core;
 extern crate magenta_sys;
+extern crate conv;
 
 use std::marker::PhantomData;
+
+use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
 use magenta_sys as sys;
 
 type Time = sys::mx_time_t;
-pub const TIME_INFINITE: Time = sys::MX_TIME_INFINITE;
+pub use magenta_sys::MX_TIME_INFINITE;
 
-// Might it be more Rust-like to call this Error?
 #[derive(Debug)]
-pub struct Status(sys::mx_status_t);
+#[repr(i32)]
+// Auto-generated using tools/gen_status.py
+pub enum Status {
+    NoErr = 0,
+    Internal = -1,
+    NotSupported = -2,
+    NoResources = -5,
+    NoMemory = -4,
+    InvalidArgs = -10,
+    WrongType = -54,
+    BadSyscall = -11,
+    BadHandle = -12,
+    OutOfRange = -13,
+    BufferTooSmall = -14,
+    BadState = -20,
+    NotFound = -3,
+    AlreadyExists = -15,
+    AlreadyBound = -16,
+    TimedOut = -23,
+    HandleClosed = -24,
+    RemoteClosed = -25,
+    ShouldWait = -27,
+    AccessDenied = -30,
+    Io = -40,
+    IoRefused = -41,
+    IoDataIntegrity = -42,
+    IoDataLoss = -43,
+    BadPath = -50,
+    NotDir = -51,
+    NotFile = -52,
+    RecurseTooDeep = -53,
+    UserBase = -16384,
 
-// TODO: proper bitfield type
+    /// Any mx_status_t not in the set above will map to the following:
+    UnknownOther = -32768,
+}
+
+impl Status {
+    // should these conversions be public?
+    fn from_raw(raw: sys::mx_status_t) -> Self {
+        match raw {
+            // Auto-generated using tools/gen_status.py
+            sys::NO_ERR => Status::NoErr,
+            sys::ERR_INTERNAL => Status::Internal,
+            sys::ERR_NOT_SUPPORTED => Status::NotSupported,
+            sys::ERR_NO_RESOURCES => Status::NoResources,
+            sys::ERR_NO_MEMORY => Status::NoMemory,
+            sys::ERR_INVALID_ARGS => Status::InvalidArgs,
+            sys::ERR_WRONG_TYPE => Status::WrongType,
+            sys::ERR_BAD_SYSCALL => Status::BadSyscall,
+            sys::ERR_BAD_HANDLE => Status::BadHandle,
+            sys::ERR_OUT_OF_RANGE => Status::OutOfRange,
+            sys::ERR_BUFFER_TOO_SMALL => Status::BufferTooSmall,
+            sys::ERR_BAD_STATE => Status::BadState,
+            sys::ERR_NOT_FOUND => Status::NotFound,
+            sys::ERR_ALREADY_EXISTS => Status::AlreadyExists,
+            sys::ERR_ALREADY_BOUND => Status::AlreadyBound,
+            sys::ERR_TIMED_OUT => Status::TimedOut,
+            sys::ERR_HANDLE_CLOSED => Status::HandleClosed,
+            sys::ERR_REMOTE_CLOSED => Status::RemoteClosed,
+            sys::ERR_SHOULD_WAIT => Status::ShouldWait,
+            sys::ERR_ACCESS_DENIED => Status::AccessDenied,
+            sys::ERR_IO => Status::Io,
+            sys::ERR_IO_REFUSED => Status::IoRefused,
+            sys::ERR_IO_DATA_INTEGRITY => Status::IoDataIntegrity,
+            sys::ERR_IO_DATA_LOSS => Status::IoDataLoss,
+            sys::ERR_BAD_PATH => Status::BadPath,
+            sys::ERR_NOT_DIR => Status::NotDir,
+            sys::ERR_NOT_FILE => Status::NotFile,
+            sys::ERR_RECURSE_TOO_DEEP => Status::RecurseTooDeep,
+            sys::ERR_USER_BASE => Status::UserBase,
+            _ => Status::UnknownOther,
+        }
+    }
+
+    // Note: no to_raw, even though it's easy to implement, partly because
+    // handling of UnknownOther would be tricky.
+}
+
 type Rights = sys::mx_rights_t;
 
-// TODO: proper bitfield type
 type Signals = sys::mx_signals_t;
 
-pub use magenta_sys::MX_FLAG_REPLY_PIPE;
+#[repr(u32)]
+pub enum MessagePipeOpts {
+    Normal = 0,
+    ReplyPipe = sys::MX_FLAG_REPLY_PIPE,
+}
 
 pub struct SignalsState(sys::mx_signals_state_t);
 
@@ -51,7 +132,7 @@ fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
     if status >= 0 {
         Ok(f())
     } else {
-        Err(Status(status))
+        Err(Status::from_raw(status))
     }
 }
 
@@ -67,7 +148,7 @@ impl<'a> HandleRef<'a> {
         let handle = self.handle;
         let result = unsafe { sys::mx_handle_duplicate(handle, rights) };
         if result < 0 {
-            Err(Status(result))
+            Err(Status::from_raw(result))
         } else {
             Ok(Handle(result))
         }
@@ -75,7 +156,10 @@ impl<'a> HandleRef<'a> {
 
     fn wait(&self, signals: Signals, timeout: Time) -> Result<SignalsState, Status> {
         let handle = self.handle;
-        let mut state = sys::mx_signals_state_t { satisfied: 0, satisfiable: 0 };
+        let mut state = sys::mx_signals_state_t {
+            satisfied: sys::mx_signals_t::empty(),
+            satisfiable: sys::mx_signals_t::empty(),
+        };
         let status = unsafe {
             sys::mx_handle_wait_one(handle, signals, timeout, &mut state)
         };
@@ -113,6 +197,30 @@ fn handle_drop(handle: sys::mx_handle_t) {
     let _ = unsafe { sys::mx_handle_close(handle) };
 }
 
+/// Wait on multiple handles. The three arrays given must all be the same size.
+/// The success return values is the index of the first handle that satisfied the
+/// wait, and a bool that is true when the handle was closed.
+///
+/// See: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_many.md
+pub fn handle_wait_many(handles: &[HandleRef], signals: &[Signals], timeout: Time,
+    result: &mut [SignalsState]) -> Result<(usize, bool), Status>
+{
+    if handles.len() != signals.len() || handles.len() != result.len() {
+        return Err(Status::InvalidArgs);
+    }
+    let len = try!(handles.len().value_into().map_err(|_| Status::OutOfRange));
+    let mut result_index = 0;
+    let status = unsafe { sys::mx_handle_wait_many(len,
+        handles.as_ptr() as *const sys::mx_handle_t,
+        signals.as_ptr() as *const sys::mx_signals_t,
+        timeout, &mut result_index,
+        result.as_mut_ptr() as *mut sys::mx_signals_state_t) };
+    if status == sys::ERR_HANDLE_CLOSED {
+        return Ok((result_index as usize, true))
+    }
+    into_result(status, || (result_index as usize, false))
+}
+
 // An untyped handle
 
 pub struct Handle(sys::mx_handle_t);
@@ -148,10 +256,10 @@ impl HandleBase for MessagePipe {
 }
 
 impl MessagePipe {
-    pub fn create(flags: u32) -> Result<(MessagePipe, MessagePipe), Status> {
+    pub fn create(opts: MessagePipeOpts) -> Result<(MessagePipe, MessagePipe), Status> {
         unsafe {
             let mut handles = [0, 0];
-            let status = sys::mx_msgpipe_create(handles.as_mut_ptr(), flags);
+            let status = sys::mx_msgpipe_create(handles.as_mut_ptr(), opts as u32);
             into_result(status, ||
                 (Self::from_handle(Handle(handles[0])),
                     Self::from_handle(Handle(handles[1]))))
@@ -185,19 +293,14 @@ impl MessagePipe {
             flags: u32) -> Result<(), Status>
     {
         unsafe {
-            if bytes.len() > core::u32::MAX as usize || handles.len() > core::u32::MAX as usize {
-                return Err(Status(sys::ERR_OUT_OF_RANGE));
-            }
-            let n_bytes = bytes.len() as u32;
-            let n_handles = handles.len() as u32;
+            let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::OutOfRange));
+            let n_handles = try!(handles.len().value_into().map_err(|_| Status::OutOfRange));
             let status = sys::mx_msgpipe_write(handle, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::mx_handle_t, n_handles, flags);
-            if status != sys::NO_ERROR {
-                return Err(Status(status));
-            }
-            // Handles were successfully transferred, forget them on sender side
-            handles.set_len(0);
-            Ok(())
+            into_result(status, || {
+                // Handles were successfully transferred, forget them on sender side
+                handles.set_len(0);
+            })
         }
     }
 
@@ -282,7 +385,7 @@ impl<'a> Iterator for HandleIter<'a> {
 }
 
 fn size_to_u32_sat(size: usize) -> u32 {
-    std::cmp::min(size, core::u32::MAX as usize) as u32
+    u32::value_from(size).unwrap_or_saturate()
 }
 
 fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
@@ -341,9 +444,9 @@ impl WaitSet {
                 &mut num_results,
                 results.as_mut_ptr() as *mut sys::mx_waitset_result_t,
                 &mut max_results);
-            if status != sys::NO_ERROR {
+            if status != sys::NO_ERR {
                 results.clear();
-                return Err(Status(status));
+                return Err(Status::from_raw(status));
             }
             results.set_len(num_results as usize);
             Ok(max_results as usize)
@@ -359,7 +462,7 @@ impl WaitSetResult {
     }
 
     pub fn wait_result(&self) -> Status {
-        Status(self.0.wait_result)
+        Status::from_raw(self.0.wait_result)
     }
 
     pub fn signals_state(&self) -> SignalsState {
@@ -393,7 +496,7 @@ impl Vmo {
             let ssize = sys::mx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
                 offset, data.len());
             if ssize < 0 {
-                Err(Status(ssize as sys::mx_status_t))
+                Err(Status::from_raw(ssize as sys::mx_status_t))
             } else {
                 Ok(ssize as usize)
             }
@@ -405,7 +508,7 @@ impl Vmo {
             let ssize = sys::mx_vmo_write(self.raw_handle(), data.as_ptr(),
                 offset, data.len());
             if ssize < 0 {
-                Err(Status(ssize as sys::mx_status_t))
+                Err(Status::from_raw(ssize as sys::mx_status_t))
             } else {
                 Ok(ssize as usize)
             }
@@ -467,7 +570,7 @@ mod tests {
 
     #[test]
     fn message_pipe_reply_basic() {
-        let (p1, p2) = MessagePipe::create(0).unwrap();
+        let (p1, p2) = MessagePipe::create(MessagePipeOpts::Normal).unwrap();
 
         // Don't need to test trying to include self-handle, ownership forbids it
         let mut empty = vec![];
@@ -476,7 +579,7 @@ mod tests {
         let (p2, _status) = p2.write_reply(b"hello", &mut empty, 0).err().unwrap();
         assert!(p2.write(b"hello", &mut empty, 0).is_ok());
 
-        let (p1, p2) = MessagePipe::create(MX_FLAG_REPLY_PIPE).unwrap();
+        let (p1, p2) = MessagePipe::create(MessagePipeOpts::ReplyPipe).unwrap();
         let (p1, _status) = p1.write_reply(b"hello", &mut empty, 0).err().unwrap();
         assert!(p1.write(b"hello", &mut empty, 0).is_ok());
         assert!(p2.write(b"hello", &mut empty, 0).is_err());

@@ -7,3 +7,4 @@ description = "Low-level Rust bindings for the Magenta kernel"
 repository = "https://fuchsia.googlesource.com/magenta-rs/"
 
 [dependencies]
+bitflags = "0.7.0"
