@@ -48,6 +48,8 @@ public:
     bool DestroyContext(uint32_t context_id) override;
     MagmaSystemContext* LookupContext(uint32_t context_id);
 
+    bool WaitRendering(uint64_t buffer_id) override;
+
     uint32_t GetDeviceId() { return owner_->GetDeviceId(); }
 
     msd_connection* msd_connection() { return msd_connection_.get(); }

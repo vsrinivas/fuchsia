@@ -40,6 +40,10 @@ public:
     virtual void ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
                                       uint32_t context_id) = 0;
 
+    // Blocks until all gpu work currently queued that references the buffer
+    // with |id| has completed.
+    virtual void WaitRendering(uint64_t buffer_id) = 0;
+
     static PlatformIpcConnection* cast(magma_system_connection* connection)
     {
         DASSERT(connection);
@@ -65,6 +69,8 @@ public:
         virtual bool DestroyContext(uint32_t context_id) = 0;
         virtual bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
                                           uint32_t context_id) = 0;
+
+        virtual bool WaitRendering(uint64_t id) = 0;
     };
 
     static std::unique_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);

@@ -110,6 +110,11 @@ public:
         }
     }
 
+    void WaitRendering(uint64_t buffer_id) override
+    {
+        connection_->delegate()->WaitRendering(buffer_id);
+    }
+
 private:
     MagentaPlatformConnection* connection_;
     std::map<uint64_t, std::unique_ptr<PlatformBuffer>> buffer_map_;

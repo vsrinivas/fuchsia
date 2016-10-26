@@ -168,7 +168,13 @@ void magma_system_submit_command_buffer(struct magma_system_connection* connecti
 
 void magma_system_wait_rendering(magma_system_connection* connection, uint32_t handle)
 {
-    DLOG("magma_system_wait_rendering unimplemented");
+    uint64_t id;
+    if (!magma::PlatformBuffer::IdFromHandle(handle, &id)) {
+        DLOG("IdFromHandle failed: 0x%x", handle);
+        return;
+    }
+
+    magma::PlatformIpcConnection::cast(connection)->WaitRendering(id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

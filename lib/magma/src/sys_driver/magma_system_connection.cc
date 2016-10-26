@@ -61,3 +61,16 @@ bool MagmaSystemConnection::ExecuteCommandBuffer(magma_system_command_buffer* co
 
     return true;
 }
+
+bool MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
+{
+    std::shared_ptr<MagmaSystemBuffer> system_buffer = LookupBuffer(buffer_id);
+    if (!system_buffer)
+        return DRETF(false, "Couldn't find system buffer for id 0x%lx", buffer_id);
+
+    int32_t result = msd_connection_wait_rendering(msd_connection(), system_buffer->msd_buf());
+    if (result != 0)
+        return DRETF(false, "msd_connection_wait_rendering failed: %d", result);
+
+    return true;
+}
