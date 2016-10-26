@@ -36,7 +36,6 @@ static void devhost_io_init(void) {
     }
     close(STDOUT_FILENO);
     mxio_bind_to_fd(logger, STDOUT_FILENO, 0);
-    close(STDERR_FILENO);
     dup2(STDOUT_FILENO, STDERR_FILENO);
 }
 
