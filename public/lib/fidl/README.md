@@ -1,5 +1,9 @@
-Fuchsia Open Source Template Repository
-=======================================
+# FIDL: Fuchsia Interface Description Language
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+FIDL (formerly known as mojom) is an IDL and encoding format used to describe
+*interfaces* to be used on top of magenta message pipes. They are the standard
+way applications talk to each other in Fuchsia.
+
+FIDL includes libraries and tools for generating bindings from `.fidl` for
+supported languages. Currently, the supported languages include C, C++, Dart and
+Go.
