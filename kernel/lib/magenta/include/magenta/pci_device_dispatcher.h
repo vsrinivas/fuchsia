@@ -7,8 +7,8 @@
 #pragma once
 #if WITH_DEV_PCIE
 
-#include <dev/pcie.h>
 #include <dev/pcie_constants.h>
+#include <dev/pcie_device.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm/vm_aspace.h>
 #include <magenta/dispatcher.h>
@@ -21,7 +21,7 @@ class PciInterruptDispatcher;
 
 class PciDeviceDispatcher final : public Dispatcher {
 public:
-    // TODO(johngro) : merge this into pcie_device_state_t (or whatever it ends up being called)
+    // TODO(johngro) : merge this into PcieDevice (or whatever it ends up being called)
     // when the PCIe bus driver finishes converting to C++
     class PciDeviceWrapper final : public mxtl::RefCounted<PciDeviceWrapper> {
       public:
@@ -33,7 +33,7 @@ public:
         status_t AddBarCachePolicyRef(uint bar_num, uint32_t cache_policy);
         void ReleaseBarCachePolicyRef(uint bar_num);
 
-        const mxtl::RefPtr<pcie_device_state_t>& device() const { return device_; }
+        const mxtl::RefPtr<PcieDevice>& device() const { return device_; }
         bool claimed() const { return claimed_; }
 
       private:
@@ -44,7 +44,7 @@ public:
             uint32_t cache_policy;
         };
 
-        explicit PciDeviceWrapper(mxtl::RefPtr<pcie_device_state_t>&& device);
+        explicit PciDeviceWrapper(mxtl::RefPtr<PcieDevice>&& device);
         PciDeviceWrapper(const PciDeviceWrapper &) = delete;
         PciDeviceWrapper& operator=(const PciDeviceWrapper &) = delete;
         ~PciDeviceWrapper();
@@ -52,7 +52,7 @@ public:
         Mutex                             cp_ref_lock_;
         CachePolicyRef                    cp_refs_[PCIE_MAX_BAR_REGS];
         bool                              claimed_ = false;
-        mxtl::RefPtr<pcie_device_state_t> device_;
+        mxtl::RefPtr<PcieDevice> device_;
     };
 
     static status_t Create(uint32_t                   index,

@@ -5,16 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/pcie.h>
+#include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
+#include <dev/pcie_device.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <lk/init.h>
 #include <mxtl/limits.h>
 #include <new.h>
 #include <trace.h>
-
-#include "pcie_priv.h"
 
 /* TODO(johngro) : figure this out someday.
  *
@@ -46,9 +45,9 @@ PcieBusDriver::~PcieBusDriver() {
      * drivers (probably using a simulated hot-unplug) if we unload the bus
      * driver.
      */
-    ForeachDevice([](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) -> bool {
+    ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                       DEBUG_ASSERT(dev);
-                      DEBUG_ASSERT(!dev->claimed);
+                      DEBUG_ASSERT(!dev->claimed());
                       return true;
                   }, nullptr);
 
@@ -99,16 +98,16 @@ status_t PcieBusDriver::AddRoot(uint bus_id) {
     return NO_ERROR;
 }
 
-mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetNthDevice(uint32_t index) {
+mxtl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
     struct GetNthDeviceState {
         uint32_t index;
-        mxtl::RefPtr<pcie_device_state_t> ret;
+        mxtl::RefPtr<PcieDevice> ret;
     } state;
 
     state.index = index;
 
     ForeachDevice(
-        [](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) -> bool {
+        [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
             DEBUG_ASSERT(dev && ctx);
 
             auto state = reinterpret_cast<GetNthDeviceState*>(ctx);
@@ -136,12 +135,14 @@ mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetNthDevice(uint32_t index) {
  * Platform dependent remapping is an exercise for the reader.  FWIW: PC
  * architectures use the _PRT tables in ACPI to perform the remapping.
  */
-uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
-                                const pcie_bridge_state_t* upstream) {
-    DEBUG_ASSERT(dev->cfg);
-    DEBUG_ASSERT(dev->irq.legacy.pin <= PCIE_MAX_LEGACY_IRQ_PINS);
-    DEBUG_ASSERT(dev->irq.legacy.pin);
-    uint pin = dev->irq.legacy.pin - 1;  // Change to 0s indexing
+uint PcieBusDriver::MapPinToIrq(const PcieDevice& _dev,
+                                const PcieBridge& _upstream) {
+    const PcieDevice* dev      = &_dev;
+    const PcieBridge* upstream = &_upstream;
+
+    DEBUG_ASSERT(dev->legacy_irq_pin() <= PCIE_MAX_LEGACY_IRQ_PINS);
+    DEBUG_ASSERT(dev->legacy_irq_pin());
+    uint pin = dev->legacy_irq_pin() - 1;  // Change to 0s indexing
 
     /* Hold the bus topology lock while we do this, so we don't need to worry
      * about stuff disappearing as we walk the tree up */
@@ -152,8 +153,7 @@ uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
          * when we reach the device which is hanging off of the root bus/root
          * complex.  At this point, platform specific swizzling takes over.
          */
-        DEBUG_ASSERT(upstream);  // We should not be mapping IRQs for the "host bridge" special case
-        while (upstream->upstream) {
+        while (upstream->upstream_) {
             /* We need to swizzle every time we pass through...
              * 1) A PCI-to-PCI bridge (real or virtual)
              * 2) A PCIe-to-PCI bridge
@@ -177,7 +177,7 @@ uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
              * integrated endpoint or root port, is left to the system and does not
              * pass through this code.
              */
-            switch (upstream->pcie_caps.devtype) {
+            switch (upstream->pcie_device_type()) {
                 /* UNKNOWN devices are devices which did not have a PCI Express
                  * Capabilities structure in their capabilities list.  Since every
                  * device we pass through on the way up the tree should be a device
@@ -187,7 +187,7 @@ uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
                 case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
                 case PCIE_DEVTYPE_PCIE_TO_PCI_BRIDGE:
                 case PCIE_DEVTYPE_PCI_TO_PCIE_BRIDGE:
-                    pin = (pin + dev->dev_id) % PCIE_MAX_LEGACY_IRQ_PINS;
+                    pin = (pin + dev->dev_id()) % PCIE_MAX_LEGACY_IRQ_PINS;
                     break;
 
                 default:
@@ -195,71 +195,71 @@ uint PcieBusDriver::MapPinToIrq(const pcie_device_state_t* dev,
             }
 
             /* Climb one branch higher up the tree */
-            dev = static_cast<const pcie_device_state_t*>(upstream);
-            upstream = upstream->upstream.get();
+            dev = static_cast<const PcieDevice*>(upstream);
+            upstream = upstream->upstream_.get();
         }
     }   // Leave bus_topology_lock_
 
     uint irq;
     __UNUSED status_t status;
-    status = platform_.LegacyIrqSwizzle(dev->bus_id, dev->dev_id, dev->func_id, pin, &irq);
+    status = platform_.LegacyIrqSwizzle(dev->bus_id(), dev->dev_id(), dev->func_id(), pin, &irq);
     DEBUG_ASSERT(status == NO_ERROR);
 
     return irq;
 }
 
-void PcieBusDriver::LinkDeviceToUpstream(pcie_device_state_t& dev, pcie_bridge_state_t& bridge) {
+void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieBridge& bridge) {
     AutoLock lock(bus_topology_lock_);
 
     /* Have the device hold a reference to its upstream bridge. */
-    DEBUG_ASSERT(dev.upstream == nullptr);
-    dev.upstream = mxtl::WrapRefPtr(&bridge);
+    DEBUG_ASSERT(dev.upstream_ == nullptr);
+    dev.upstream_ = mxtl::WrapRefPtr(&bridge);
 
     /* Have the bridge hold a reference to the device */
-    uint ndx = (dev.dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id;
-    DEBUG_ASSERT(ndx < countof(bridge.downstream));
-    DEBUG_ASSERT(bridge.downstream[ndx] == nullptr);
-    bridge.downstream[ndx] = mxtl::WrapRefPtr(&dev);
+    uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
+    DEBUG_ASSERT(ndx < countof(bridge.downstream_));
+    DEBUG_ASSERT(bridge.downstream_[ndx] == nullptr);
+    bridge.downstream_[ndx] = mxtl::WrapRefPtr(&dev);
 }
 
-void PcieBusDriver::UnlinkDeviceFromUpstream(pcie_device_state_t& dev) {
+void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
     AutoLock lock(bus_topology_lock_);
 
-    if (dev.upstream != nullptr) {
-        uint ndx = (dev.dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id;
-        DEBUG_ASSERT(ndx < countof(dev.upstream->downstream));
-        DEBUG_ASSERT(&dev == dev.upstream->downstream[ndx].get());
+    if (dev.upstream_ != nullptr) {
+        uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
+        DEBUG_ASSERT(ndx < countof(dev.upstream_->downstream_));
+        DEBUG_ASSERT(&dev == dev.upstream_->downstream_[ndx].get());
 
         /* Let go of the upstream's reference to the device */
-        dev.upstream->downstream[ndx] = nullptr;
+        dev.upstream_->downstream_[ndx] = nullptr;
 
         /* Let go of the device's reference to its upstream */
-        dev.upstream = nullptr;
+        dev.upstream_ = nullptr;
     }
 }
 
-mxtl::RefPtr<pcie_bridge_state_t> PcieBusDriver::GetUpstream(pcie_device_state_t& dev) {
+mxtl::RefPtr<PcieBridge> PcieBusDriver::GetUpstream(PcieDevice& dev) {
     AutoLock lock(bus_topology_lock_);
-    auto ret = dev.upstream;
+    auto ret = dev.upstream_;
     return ret;
 }
 
-mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetDownstream(pcie_bridge_state_t& bridge,
-                                                               uint ndx) {
-    DEBUG_ASSERT(ndx <= countof(bridge.downstream));
+mxtl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieBridge& bridge,
+                                                      uint ndx) {
+    DEBUG_ASSERT(ndx <= countof(bridge.downstream_));
     AutoLock lock(bus_topology_lock_);
-    auto ret = bridge.downstream[ndx];
+    auto ret = bridge.downstream_[ndx];
     return ret;
 }
 
-mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetRefedDevice(uint bus_id,
-                                                                uint dev_id,
-                                                                uint func_id) {
+mxtl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
+                                                       uint dev_id,
+                                                       uint func_id) {
     struct GetRefedDeviceState {
         uint bus_id;
         uint dev_id;
         uint func_id;
-        mxtl::RefPtr<pcie_device_state_t> ret;
+        mxtl::RefPtr<PcieDevice> ret;
     } state;
 
     state.bus_id  = bus_id,
@@ -267,13 +267,13 @@ mxtl::RefPtr<pcie_device_state_t> PcieBusDriver::GetRefedDevice(uint bus_id,
     state.func_id = func_id,
 
     ForeachDevice(
-            [](const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level) -> bool {
+            [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                 DEBUG_ASSERT(dev && ctx);
                 auto state = reinterpret_cast<GetRefedDeviceState*>(ctx);
 
-                if ((state->bus_id  == dev->bus_id) &&
-                    (state->dev_id  == dev->dev_id) &&
-                    (state->func_id == dev->func_id)) {
+                if ((state->bus_id  == dev->bus_id()) &&
+                    (state->dev_id  == dev->dev_id()) &&
+                    (state->func_id == dev->func_id())) {
                     state->ret = dev;
                     return false;
                 }
@@ -317,12 +317,9 @@ status_t PcieBusDriver::AllocBookkeeping() {
      * nor devices.  They do not have BDF address, base address registers,
      * configuration space, etc...
      */
-    AllocChecker ac;
-    root_complex_ = mxtl::AdoptRef(new (&ac) pcie_bridge_state_t(*this, 0));
-    if (!ac.check()) {
-        TRACEF("Failed to allocate root complex\n");
+    root_complex_ = PcieBridge::CreateRoot(*this, 0);
+    if (root_complex_ == nullptr)
         return ERR_NO_MEMORY;
-    }
 
     return NO_ERROR;
 }
@@ -332,22 +329,22 @@ void PcieBusDriver::ScanDevices() {
 
     /* Scan the root complex looking for for devices and other bridges. */
     DEBUG_ASSERT(root_complex_ != nullptr);
-    pcie_scan_bus(root_complex_);
+    root_complex_->ScanDownstream();
 
     /* Attempt to allocate any unallocated BARs */
-    pcie_allocate_downstream_bars(root_complex_);
+    root_complex_->AllocateDownstreamBars();
 }
 
-bool PcieBusDriver::ForeachDeviceOnBridge(const mxtl::RefPtr<pcie_bridge_state_t>& bridge,
-                                          uint                                     level,
-                                          ForeachCallback                          cbk,
-                                          void*                                    ctx) {
+bool PcieBusDriver::ForeachDeviceOnBridge(const mxtl::RefPtr<PcieBridge>& bridge,
+                                          uint                            level,
+                                          ForeachCallback                 cbk,
+                                          void*                           ctx) {
     DEBUG_ASSERT(bridge && cbk);
     bool keep_going = true;
 
-    for (size_t i = 0; keep_going && (i < countof(bridge->downstream)); ++i) {
+    for (size_t i = 0; keep_going && (i < countof(bridge->downstream_)); ++i) {
         AutoLock lock(bus_topology_lock_);
-        auto dev = bridge->downstream[i];
+        auto dev = bridge->downstream_[i];
         lock.release();
 
         if (!dev)
@@ -358,9 +355,11 @@ bool PcieBusDriver::ForeachDeviceOnBridge(const mxtl::RefPtr<pcie_bridge_state_t
         /* It should be impossible to have a bridge topology such that we could
          * recurse more than 256 times. */
         if (keep_going && (level < 256)) {
-            auto downstream_bridge = dev->DowncastToBridge();
-            if (downstream_bridge)
+            if (dev->is_bridge()) {
+                // TODO(johngro): eliminate the need to hold this extra ref.
+                mxtl::RefPtr<PcieBridge> downstream_bridge(static_cast<PcieBridge*>(dev.get()));
                 keep_going = ForeachDeviceOnBridge(downstream_bridge, level + 1, cbk, ctx);
+            }
         }
     }
 
@@ -389,8 +388,8 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
         // Figure out if this goes in the low region, the high region, or needs
         // to be split into two regions.
         constexpr uint64_t U32_MAX = mxtl::numeric_limits<uint32_t>::max();
-        auto& mmio_lo = root_complex_->mmio_lo_regions;
-        auto& mmio_hi = root_complex_->mmio_hi_regions;
+        auto& mmio_lo = root_complex_->mmio_lo_regions_;
+        auto& mmio_hi = root_complex_->mmio_hi_regions_;
 
         if (end <= U32_MAX) {
             return (mmio_lo.*OpPtr)({ .base = base, .size = size }, true);
@@ -416,7 +415,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
         if ((base | end) & ~PCIE_PIO_ADDR_SPACE_MASK)
             return ERR_INVALID_ARGS;
 
-        return (root_complex_->pio_regions.*OpPtr)({ .base = base, .size = size }, true);
+        return (root_complex_->pio_regions_.*OpPtr)({ .base = base, .size = size }, true);
     }
 }
 

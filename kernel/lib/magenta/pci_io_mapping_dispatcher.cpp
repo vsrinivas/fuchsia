@@ -33,9 +33,9 @@ status_t PciIoMappingDispatcher::Create(
 
     // Create a debug name for the mapping.
     char name[32];
-    const pcie_device_state_t& dev = *device->device();
+    const PcieDevice& dev = *device->device();
     snprintf(name, sizeof(name), "usr_pci_%s_%02x_%02x_%x",
-             dbg_tag, dev.bus_id, dev.dev_id, dev.func_id);
+             dbg_tag, dev.bus_id(), dev.dev_id(), dev.func_id());
 
     // Initialize the mapping
     mxtl::RefPtr<Dispatcher> disp = mxtl::AdoptRef<Dispatcher>(pim_disp);
@@ -66,9 +66,8 @@ status_t PciIoMappingDispatcher::CreateBarMapping(
         return ERR_BAD_STATE;
 
     // Fetch our BAR info.
-    const pcie_bar_info_t* info = pcie_get_bar_info(*device->device(), bar_num);
+    const pcie_bar_info_t* info = device->device()->GetBarInfo(bar_num);
     if (!info) return ERR_INVALID_ARGS;
-    DEBUG_ASSERT(bar_num < PCIE_MAX_BAR_REGS);
 
     // Fail if this is a PIO windows instead of an MMIO window.  For the time
     // being, PIO accesses need to go through the specialized PIO API.

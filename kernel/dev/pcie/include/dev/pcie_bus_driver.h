@@ -19,15 +19,15 @@
 
 class SharedLegacyIrqHandler;
 
-struct pcie_bridge_state_t;
-struct pcie_device_state_t;
+class  PcieBridge;
+class  PcieDevice;
 struct pcie_config_t;
 
 enum class PcieAddrSpace { MMIO, PIO };
 
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
-    using ForeachCallback = bool (*)(const mxtl::RefPtr<pcie_device_state_t>& dev,
+    using ForeachCallback = bool (*)(const mxtl::RefPtr<PcieDevice>& dev,
                                      void* ctx, uint level);
 
     struct EcamRegion {
@@ -81,15 +81,15 @@ public:
     /* Add a root bus to the driver and attempt to scan it for devices. */
     status_t AddRoot(uint bus_id);
 
-    mxtl::RefPtr<pcie_device_state_t> GetNthDevice(uint32_t index);
-    uint MapPinToIrq(const pcie_device_state_t* dev, const pcie_bridge_state_t* upstream);
+    mxtl::RefPtr<PcieDevice> GetNthDevice(uint32_t index);
+    uint MapPinToIrq(const PcieDevice& dev, const PcieBridge& upstream);
 
     /* Topology related stuff */
-    void LinkDeviceToUpstream(pcie_device_state_t& dev, pcie_bridge_state_t& bridge);
-    void UnlinkDeviceFromUpstream(pcie_device_state_t& dev);
-    mxtl::RefPtr<pcie_bridge_state_t> GetUpstream(pcie_device_state_t& dev);
-    mxtl::RefPtr<pcie_device_state_t> GetDownstream(pcie_bridge_state_t& bridge, uint ndx);
-    mxtl::RefPtr<pcie_device_state_t> GetRefedDevice(uint bus_id, uint dev_id, uint func_id);
+    void LinkDeviceToUpstream(PcieDevice& dev, PcieBridge& bridge);
+    void UnlinkDeviceFromUpstream(PcieDevice& dev);
+    mxtl::RefPtr<PcieBridge> GetUpstream(PcieDevice& dev);
+    mxtl::RefPtr<PcieDevice> GetDownstream(PcieBridge& bridge, uint ndx);
+    mxtl::RefPtr<PcieDevice> GetRefedDevice(uint bus_id, uint dev_id, uint func_id);
 
     // TODO(johngro) : Make these private when we can.
     void ForeachDevice(ForeachCallback cbk, void* ctx);
@@ -108,9 +108,13 @@ public:
     static status_t InitializeDriver(PciePlatformInterface& platform);
     static void     ShutdownDriver();
 
+    // Debug/ASSERT routine, used by devices and bridges to assert that the
+    // rescan lock is currently being held.
+    bool RescanLockIsHeld() const { return bus_rescan_lock_.IsHeld(); };
+
 private:
-    friend struct pcie_bridge_state_t;
-    friend struct pcie_device_state_t;
+    friend class PcieBridge;
+    friend class PcieDevice;
 
     static constexpr size_t REGION_BOOKKEEPING_SLAB_SIZE = 16  << 10;
     static constexpr size_t REGION_BOOKKEEPING_MAX_MEM   = 128 << 10;
@@ -138,10 +142,10 @@ private:
     static Mutex driver_lock_;
 
     status_t AllocBookkeeping();
-    bool     ForeachDeviceOnBridge(const mxtl::RefPtr<pcie_bridge_state_t>& bridge,
-                                   uint                                     level,
-                                   ForeachCallback                          cbk,
-                                   void*                                    ctx);
+    bool     ForeachDeviceOnBridge(const mxtl::RefPtr<PcieBridge>& bridge,
+                                   uint                            level,
+                                   ForeachCallback                 cbk,
+                                   void*                           ctx);
     status_t AddSubtractBusRegion(uint64_t base, uint64_t size,
                                   PcieAddrSpace aspace, bool add_op);
 
@@ -151,7 +155,7 @@ private:
     bool                                started_ = false;
     Mutex                               bus_topology_lock_;
     Mutex                               bus_rescan_lock_;
-    mxtl::RefPtr<pcie_bridge_state_t>   root_complex_;
+    mxtl::RefPtr<PcieBridge>            root_complex_;
 
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
 

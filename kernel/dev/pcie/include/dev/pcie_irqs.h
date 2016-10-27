@@ -21,7 +21,7 @@
 #include <sys/types.h>
 
 /* Fwd decls */
-struct pcie_device_state_t;
+class PcieDevice;
 
 /**
  * Enumeration which defines the IRQ modes a PCIe device may be operating in.
@@ -118,24 +118,25 @@ typedef struct pcie_irq_mode_info {
  * @param ctx The context pointer registered when registering the handler.
  */
 typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(
-        const pcie_device_state_t& dev,
+        const PcieDevice& dev,
         uint irq_id,
         void* ctx);
 
 /**
  * Structure used internally to hold the state of a registered handler.
  */
-typedef struct pcie_irq_handler_state {
+struct pcie_irq_handler_state_t {
     SpinLock              lock;
     pcie_irq_handler_fn_t handler = nullptr;
     void*                 ctx = nullptr;
-    pcie_device_state_t*  dev = nullptr;
+    PcieDevice*           dev = nullptr;
     uint                  pci_irq_id;
     bool                  masked;
-} pcie_irq_handler_state_t;
+};
 
 /**
  * Class for managing shared legacy IRQ handlers.
+ * TODO(johngro): Make this an inner class of PcieDevice
  */
 class SharedLegacyIrqHandler
     : public mxtl::SinglyLinkedListable<mxtl::RefPtr<SharedLegacyIrqHandler>>,
@@ -144,8 +145,8 @@ public:
     static mxtl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
     ~SharedLegacyIrqHandler();
 
-    void AddDevice(const mxtl::RefPtr<pcie_device_state_t>& dev);
-    void RemoveDevice(const mxtl::RefPtr<pcie_device_state_t>& dev);
+    void AddDevice(PcieDevice& dev);
+    void RemoveDevice(PcieDevice& dev);
 
     uint irq_id() const { return irq_id_; }
 
@@ -167,156 +168,3 @@ private:
     const uint        irq_id_;
 };
 
-/**
- * Query the number of IRQs which are supported for a given IRQ mode by a given
- * device.
- *
- * @param dev A pointer to the pci device to query.
- * @param mode The IRQ mode to query capabilities for.
- * @param out_caps A pointer to structure which, upon success, will hold the
- * capabilities of the selected IRQ mode.
- *
- * @return A status_t indicating the success or failure of the operation.
- */
-status_t pcie_query_irq_mode_capabilities(const pcie_device_state_t& dev,
-                                          pcie_irq_mode_t mode,
-                                          pcie_irq_mode_caps_t* out_caps);
-
-/**
- * Fetch details about the currently configured IRQ mode.
- *
- * @param dev A pointer to the pci device to configure.
- * @param out_info A pointer to the structure which (upon success) will hold
- * info about the currently configured IRQ mode.  @see pcie_irq_mode_info_t for
- * more details.
- *
- * @return A status_t indicating the success or failure of the operation.
- * Status codes may include (but are not limited to)...
- *
- * ++ ERR_UNAVAILABLE
- *    The device has become unplugged and is waiting to be released.
- */
-status_t pcie_get_irq_mode(const pcie_device_state_t& dev,
-                           pcie_irq_mode_info_t* out_info);
-
-/**
- * Configure the base IRQ mode, requesting a specific number of vectors and
- * sharing mode in the process.
- *
- * Devices are not permitted to transition from an active mode (anything but
- * DISABLED) to a different active mode.  They must first transition to
- * DISABLED, then request the new mode.
- *
- * Transitions to the DISABLED state will automatically mask and un-register all
- * IRQ handlers, and return all allocated resources to the system pool.  IRQ
- * dispatch may continue to occur for unmasked IRQs during a transition to
- * DISABLED, but is guaranteed not to occur after the call to pcie_set_irq_mode
- * has completed.
- *
- * @param dev A pointer to the pci device to configure.
- * @param mode The requested mode.
- * @param requested_irqs The number of individual IRQ vectors the device would
- * like to use.
- *
- * @return A status_t indicating the success or failure of the operation.
- * Status codes may include (but are not limited to)...
- *
- * ++ ERR_UNAVAILABLE
- *    The device has become unplugged and is waiting to be released.
- * ++ ERR_BAD_STATE
- *    The device cannot transition into the selected mode at this point in time
- *    due to the mode it is currently in.
- * ++ ERR_NOT_SUPPORTED
- *    ++ The chosen mode is not supported by the device
- *    ++ The device supports the chosen mode, but does not support the number of
- *       IRQs requested.
- * ++ ERR_NO_RESOURCES
- *    The system is unable to allocate sufficient system IRQs to satisfy the
- *    number of IRQs and exclusivity mode requested the device driver.
- */
-status_t pcie_set_irq_mode(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                           pcie_irq_mode_t                          mode,
-                           uint                                     requested_irqs);
-
-/**
- * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
- *
- * Convenience function.  @see pcie_set_irq_mode for details.
- */
-static inline void pcie_set_irq_mode_disabled(const mxtl::RefPtr<pcie_device_state_t>& dev) {
-    /* It should be impossible to fail a transition to the DISABLED state,
-     * regardless of the state of the system.  ASSERT this in debug builds */
-    __UNUSED status_t result;
-
-    result = pcie_set_irq_mode(dev, PCIE_IRQ_MODE_DISABLED, 0);
-
-    DEBUG_ASSERT(result == NO_ERROR);
-}
-
-/**
- * Register an IRQ handler for the specified IRQ ID.
- *
- * @param dev A pointer to the pci device to configure.
- * @param irq_id The ID of the IRQ to register.
- * @param handler A pointer to the handler function to call when the IRQ is
- * received.  Pass NULL to automatically mask the IRQ and unregister the
- * handler.
- * @param ctx A user supplied context pointer to pass to a registered handler.
- *
- * @return A status_t indicating the success or failure of the operation.
- * Status codes may include (but are not limited to)...
- *
- * ++ ERR_UNAVAILABLE
- *    The device has become unplugged and is waiting to be released.
- * ++ ERR_BAD_STATE
- *    The device is in DISABLED IRQ mode.
- * ++ ERR_INVALID_ARGS
- *    The irq_id parameter is out of range for the currently configured mode.
- */
-status_t pcie_register_irq_handler(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                                   uint                                     irq_id,
-                                   pcie_irq_handler_fn_t                    handler,
-                                   void*                                    ctx);
-
-/**
- * Mask or unmask the specified IRQ for the given device.
- *
- * @param dev A pointer to the pci device to configure.
- * @param irq_id The ID of the IRQ to mask or unmask.
- * @param mask If true, mask (disable) the IRQ.  Otherwise, unmask it.
- *
- * @return A status_t indicating the success or failure of the operation.
- * Status codes may include (but are not limited to)...
- *
- * ++ ERR_UNAVAILABLE
- *    The device has become unplugged and is waiting to be released.
- * ++ ERR_BAD_STATE
- *    Attempting to mask or unmask an IRQ while in the DISABLED mode or with no
- *    handler registered.
- * ++ ERR_INVALID_ARGS
- *    The irq_id parameter is out of range for the currently configured mode.
- * ++ ERR_NOT_SUPPORTED
- *    The device is operating in MSI mode, but neither the PCI device nor the
- *    platform interrupt controller support masking the MSI vector.
- */
-status_t pcie_mask_unmask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                              uint                                     irq_id,
-                              bool                                     mask);
-
-/**
- * Mask the specified IRQ for the given device.
- *
- * Convenience function.  @see pcie_mask_unmask_irq for details.
- */
-static inline status_t pcie_mask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev, uint irq_id) {
-    return pcie_mask_unmask_irq(dev, irq_id, true);
-}
-
-/**
- * Unmask the specified IRQ for the given device.
- *
- * Convenience function.  @see pcie_mask_unmask_irq for details.
- */
-static inline status_t pcie_unmask_irq(const mxtl::RefPtr<pcie_device_state_t>& dev, uint irq_id) {
-    return pcie_mask_unmask_irq(dev, irq_id, false);
-}

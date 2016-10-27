@@ -15,6 +15,7 @@
 #include <dev/pcie_caps.h>
 #include <dev/pcie_constants.h>
 #include <dev/pcie_irqs.h>
+#include <dev/pcie_regs.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <mxtl/macros.h>
@@ -23,8 +24,8 @@
 #include <sys/types.h>
 
 /* Fwd decls */
-class PcieBusDriver;
-struct pcie_bridge_state_t;
+class  PcieBusDriver;
+class  PcieBridge;
 struct pcie_config_t;
 
 /*
@@ -47,47 +48,362 @@ struct pcie_bar_info_t {
  * driver may claim a device by returning a pointer to a driver-managed
  * pcie_device_state struct, with the driver owned fields filled out.
  */
-struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
-    pcie_device_state_t(PcieBusDriver& bus_driver);
-    virtual ~pcie_device_state_t();
+class PcieDevice : public mxtl::RefCounted<PcieDevice> {
+public:
+    static mxtl::RefPtr<PcieDevice> Create(PcieBridge& upstream, uint dev_id, uint func_id);
+    virtual ~PcieDevice();
 
     // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(pcie_device_state_t);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PcieDevice);
 
+    mxtl::RefPtr<PcieBridge> GetUpstream();
+
+    status_t     Claim();
+    void         Unclaim();
     virtual void Unplug();
-    mxtl::RefPtr<pcie_bridge_state_t> GetUpstream() { return bus_drv.GetUpstream(*this); }
-    mxtl::RefPtr<pcie_bridge_state_t> DowncastToBridge();
 
-    PcieBusDriver&                    bus_drv;   // Reference to our bus driver state.
-    pcie_config_t*                    cfg;       // Pointer to the memory mapped ECAM (kernel vaddr)
-    paddr_t                           cfg_phys;  // The physical address of the device's ECAM
-    mxtl::RefPtr<pcie_bridge_state_t> upstream;  // The upstream bridge, or NULL if we are root
-    bool                              is_bridge; // True if this device is also a bridge
-    uint16_t                          vendor_id; // The device's vendor ID, as read from config
-    uint16_t                          device_id; // The device's device ID, as read from config
-    uint8_t                           class_id;  // The device's class ID, as read from config.
-    uint8_t                           subclass;  // The device's subclass, as read from config.
-    uint8_t                           prog_if;   // The device's programming interface (from cfg)
-    uint                              bus_id;    // The bus ID this bridge/device exists on
-    uint                              dev_id;    // The device ID of this bridge/device
-    uint                              func_id;   // The function ID of this bridge/device
-    SpinLock                          cmd_reg_lock;
+    /*
+     * Trigger a function level reset (if possible)
+     */
+    status_t DoFunctionLevelReset();
+
+    /*
+     * Modify bits in the device's command register (in the device config space),
+     * clearing the bits specified by clr_bits and setting the bits specified by set
+     * bits.  Specifically, the operation will be applied as...
+     *
+     * WR(cmd, (RD(cmd) & ~clr) | set)
+     *
+     * @param clr_bits The mask of bits to be cleared.
+     * @param clr_bits The mask of bits to be set.
+     * @return A status_t indicating success or failure of the operation.
+     */
+    status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits);
+
+    /*
+     * Enable or disable bus mastering in a device's configuration.
+     *
+     * @param enable If true, allow the device to access main system memory as a bus
+     * master.
+     * @return A status_t indicating success or failure of the operation.
+     */
+    inline status_t EnableBusMaster(bool enabled) {
+        if (enabled && disabled_)
+            return ERR_BAD_STATE;
+
+        return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
+                         enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+    }
+
+    /*
+     * Enable or disable PIO access in a device's configuration.
+     *
+     * @param enable If true, allow the device to access its PIO mapped registers.
+     * @return A status_t indicating success or failure of the operation.
+     */
+    inline status_t EnablePio(bool enabled) {
+        if (enabled && disabled_)
+            return ERR_BAD_STATE;
+
+        return ModifyCmd(enabled ? 0 : PCI_COMMAND_IO_EN,
+                         enabled ? PCI_COMMAND_IO_EN : 0);
+    }
+
+    /*
+     * Enable or disable MMIO access in a device's configuration.
+     *
+     * @param enable If true, allow the device to access its MMIO mapped registers.
+     * @return A status_t indicating success or failure of the operation.
+     */
+    inline status_t EnableMmio(bool enabled) {
+        if (enabled && disabled_)
+            return ERR_BAD_STATE;
+
+        return ModifyCmd(enabled ? 0 : PCI_COMMAND_MEM_EN,
+                         enabled ? PCI_COMMAND_MEM_EN : 0);
+    }
+
+
+    /*
+     * Return information about the requested base address register, if it has been
+     * allocated.  Otherwise, return NULL.
+     *
+     * @param bar_ndx The index of the BAR register to fetch info for.
+     *
+     * @return A pointer to the BAR info, including where in the bus address space
+     * the BAR window has been mapped, or NULL if the BAR window does not exist or
+     * has not been allocated.
+     */
+    const pcie_bar_info_t* GetBarInfo(uint bar_ndx) const {
+        if (bar_ndx >= bar_count_)
+            return nullptr;
+
+        DEBUG_ASSERT(bar_ndx < countof(bars_));
+
+        const pcie_bar_info_t* ret = &bars_[bar_ndx];
+        return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;
+    }
+
+    /**
+     * Query the number of IRQs which are supported for a given IRQ mode by a given
+     * device.
+     *
+     * @param mode The IRQ mode to query capabilities for.
+     * @param out_caps A pointer to structure which, upon success, will hold the
+     * capabilities of the selected IRQ mode.
+     *
+     * @return A status_t indicating the success or failure of the operation.
+     */
+    status_t QueryIrqModeCapabilities(pcie_irq_mode_t mode,
+                                      pcie_irq_mode_caps_t* out_caps) const;
+
+    /**
+     * Fetch details about the currently configured IRQ mode.
+     *
+     * @param out_info A pointer to the structure which (upon success) will hold
+     * info about the currently configured IRQ mode.  @see pcie_irq_mode_info_t for
+     * more details.
+     *
+     * @return A status_t indicating the success or failure of the operation.
+     * Status codes may include (but are not limited to)...
+     *
+     * ++ ERR_UNAVAILABLE
+     *    The device has become unplugged and is waiting to be released.
+     */
+    status_t GetIrqMode(pcie_irq_mode_info_t* out_info) const;
+
+    /**
+     * Configure the base IRQ mode, requesting a specific number of vectors and
+     * sharing mode in the process.
+     *
+     * Devices are not permitted to transition from an active mode (anything but
+     * DISABLED) to a different active mode.  They must first transition to
+     * DISABLED, then request the new mode.
+     *
+     * Transitions to the DISABLED state will automatically mask and un-register all
+     * IRQ handlers, and return all allocated resources to the system pool.  IRQ
+     * dispatch may continue to occur for unmasked IRQs during a transition to
+     * DISABLED, but is guaranteed not to occur after the call to pcie_set_irq_mode
+     * has completed.
+     *
+     * @param mode The requested mode.
+     * @param requested_irqs The number of individual IRQ vectors the device would
+     * like to use.
+     *
+     * @return A status_t indicating the success or failure of the operation.
+     * Status codes may include (but are not limited to)...
+     *
+     * ++ ERR_UNAVAILABLE
+     *    The device has become unplugged and is waiting to be released.
+     * ++ ERR_BAD_STATE
+     *    The device cannot transition into the selected mode at this point in time
+     *    due to the mode it is currently in.
+     * ++ ERR_NOT_SUPPORTED
+     *    ++ The chosen mode is not supported by the device
+     *    ++ The device supports the chosen mode, but does not support the number of
+     *       IRQs requested.
+     * ++ ERR_NO_RESOURCES
+     *    The system is unable to allocate sufficient system IRQs to satisfy the
+     *    number of IRQs and exclusivity mode requested the device driver.
+     */
+    status_t SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs);
+
+    /**
+     * Set the current IRQ mode to PCIE_IRQ_MODE_DISABLED
+     *
+     * Convenience function.  @see SetIrqMode for details.
+     */
+    void SetIrqModeDisabled() {
+        /* It should be impossible to fail a transition to the DISABLED state,
+         * regardless of the state of the system.  ASSERT this in debug builds */
+        __UNUSED status_t result;
+
+        result = SetIrqMode(PCIE_IRQ_MODE_DISABLED, 0);
+
+        DEBUG_ASSERT(result == NO_ERROR);
+    }
+
+    /**
+     * Register an IRQ handler for the specified IRQ ID.
+     *
+     * @param irq_id The ID of the IRQ to register.
+     * @param handler A pointer to the handler function to call when the IRQ is
+     * received.  Pass NULL to automatically mask the IRQ and unregister the
+     * handler.
+     * @param ctx A user supplied context pointer to pass to a registered handler.
+     *
+     * @return A status_t indicating the success or failure of the operation.
+     * Status codes may include (but are not limited to)...
+     *
+     * ++ ERR_UNAVAILABLE
+     *    The device has become unplugged and is waiting to be released.
+     * ++ ERR_BAD_STATE
+     *    The device is in DISABLED IRQ mode.
+     * ++ ERR_INVALID_ARGS
+     *    The irq_id parameter is out of range for the currently configured mode.
+     */
+    status_t RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
+
+    /**
+     * Mask or unmask the specified IRQ for the given device.
+     *
+     * @param irq_id The ID of the IRQ to mask or unmask.
+     * @param mask If true, mask (disable) the IRQ.  Otherwise, unmask it.
+     *
+     * @return A status_t indicating the success or failure of the operation.
+     * Status codes may include (but are not limited to)...
+     *
+     * ++ ERR_UNAVAILABLE
+     *    The device has become unplugged and is waiting to be released.
+     * ++ ERR_BAD_STATE
+     *    Attempting to mask or unmask an IRQ while in the DISABLED mode or with no
+     *    handler registered.
+     * ++ ERR_INVALID_ARGS
+     *    The irq_id parameter is out of range for the currently configured mode.
+     * ++ ERR_NOT_SUPPORTED
+     *    The device is operating in MSI mode, but neither the PCI device nor the
+     *    platform interrupt controller support masking the MSI vector.
+     */
+    status_t MaskUnmaskIrq(uint irq_id, bool mask);
+
+    // Capability parsing
+    //
+    // TODO(johngro): these needs to be refactored to use non-static methods,
+    // and to be private.
+    static status_t ParseMsiCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
+    static status_t ParsePciExpressCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
+    static status_t ParsePciAdvFeatures(PcieDevice* dev, void* hdr, uint version, uint space_left);
+
+    /**
+     * Convenience functions.  @see MaskUnmaskIrq for details.
+     */
+    status_t MaskIrq(uint irq_id)   { return MaskUnmaskIrq(irq_id, true); }
+    status_t UnmaskIrq(uint irq_id) { return MaskUnmaskIrq(irq_id, false); }
+
+    const pcie_config_t* config()      const { return cfg_; }
+    paddr_t              config_phys() const { return cfg_phys_; }
+
+    bool     plugged_in()     const { return plugged_in_; }
+    bool     disabled()       const { return disabled_; }
+    bool     claimed()        const { return claimed_; }
+
+    bool     is_bridge()      const { return is_bridge_; }
+    uint16_t vendor_id()      const { return vendor_id_; }
+    uint16_t device_id()      const { return device_id_; }
+    uint8_t  class_id()       const { return class_id_; }
+    uint8_t  subclass()       const { return subclass_; }
+    uint8_t  prog_if()        const { return prog_if_; }
+    uint8_t  rev_id()         const { return rev_id_; }
+    uint     bus_id()         const { return bus_id_; }
+    uint     dev_id()         const { return dev_id_; }
+    uint     func_id()        const { return func_id_; }
+    uint     bar_count()      const { return bar_count_; }
+    uint8_t  legacy_irq_pin() const { return irq_.legacy.pin; }
+    pcie_device_type_t pcie_device_type() const { return pcie_caps_.devtype; }
+
+    // TODO(johngro) : make these protected.  They are currently only visibile
+    // because of debug code.
+    Mutex& dev_lock() { return dev_lock_; }
+
+protected:
+    friend class PcieBusDriver;  // TODO(johngro): remove this.  Currently used for IRQ swizzle.
+    friend class PcieBridge;
+    PcieDevice(PcieBusDriver& bus_drv,
+               uint bus_id, uint dev_id, uint func_id, bool is_bridge = false);
+    explicit PcieDevice(PcieBusDriver& bus_drv);
+
+    void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits);
+    void AssignCmdLocked(uint16_t value) { ModifyCmdLocked(0xFFFF, value); }
+
+    // Initialization and probing.
+    status_t Init(PcieBridge& upstream);
+    status_t InitLocked(PcieBridge& upstream);
+    status_t ProbeBarsLocked();
+    status_t ProbeBarLocked(uint bar_id);
+    status_t ParseCapabilitiesLocked();
+    status_t InitLegacyIrqStateLocked(PcieBridge& upstream);
+
+    // BAR allocation
+    status_t         AllocateBars();
+    virtual status_t AllocateBarsLocked(PcieBridge& upstream);
+    status_t         AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& info);
+
+    // Disable a device, and anything downstream of it.  The device will
+    // continue to enumerate, but users will only be able to access config (and
+    // only in a read only fashion).  BAR windows, bus mastering, and interrupts
+    // will all be disabled.
+    virtual void DisableLocked();
+
+    PcieBusDriver&           bus_drv_;        // Reference to our bus driver state.
+    pcie_config_t*           cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
+    paddr_t                  cfg_phys_ = 0;   // The physical address of the device's ECAM
+    mxtl::RefPtr<PcieBridge> upstream_;       // The upstream bridge, or NULL if we are root
+    const bool               is_bridge_;      // True if this device is also a bridge
+    const uint               bus_id_;         // The bus ID this bridge/device exists on
+    const uint               dev_id_;         // The device ID of this bridge/device
+    const uint               func_id_;        // The function ID of this bridge/device
+    uint16_t                 vendor_id_;      // The device's vendor ID, as read from config
+    uint16_t                 device_id_;      // The device's device ID, as read from config
+    uint8_t                  class_id_;       // The device's class ID, as read from config.
+    uint8_t                  subclass_;       // The device's subclass, as read from config.
+    uint8_t                  prog_if_;        // The device's programming interface (from cfg)
+    uint8_t                  rev_id_;         // The device's revision ID (from cfg)
+    SpinLock                 cmd_reg_lock_;
 
     /* State related to lifetime management */
-    mutable Mutex                     dev_lock;
-    bool                              plugged_in;
-    bool                              disabled;
-    bool                              claimed;
+    mutable Mutex dev_lock_;
+    bool          plugged_in_ = false;
+    bool          disabled_   = false;
+    bool          claimed_    = false;
 
     /* Info about the BARs computed and cached during the initial setup/probe,
      * indexed by starting BAR register index */
-    pcie_bar_info_t bars[PCIE_MAX_BAR_REGS];
-    uint bar_count;
+    pcie_bar_info_t bars_[PCIE_MAX_BAR_REGS];
+    const uint bar_count_;
+
+private:
+    friend class SharedLegacyIrqHandler;
+
+    // Top level internal IRQ support.
+    status_t QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
+                                            pcie_irq_mode_caps_t* out_caps) const;
+    status_t GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const;
+    status_t SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs);
+    status_t RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx);
+    status_t MaskUnmaskIrqLocked(uint irq_id, bool mask);
+
+    // Internal Legacy IRQ support.
+    status_t MaskUnmaskLegacyIrq(bool mask);
+    status_t EnterLegacyIrqMode(uint requested_irqs);
+    void     LeaveLegacyIrqMode();
+
+    // Internal MSI IRQ support.
+    void SetMsiEnb(bool enb) {
+        DEBUG_ASSERT(irq_.msi.cfg);
+        volatile uint16_t* ctrl_reg = &irq_.msi.cfg->ctrl;
+        pcie_write16(ctrl_reg, PCIE_CAP_MSI_CTRL_SET_ENB(enb, pcie_read16(ctrl_reg)));
+    }
+
+    bool     MaskUnmaskMsiIrqLocked(uint irq_id, bool mask);
+    status_t MaskUnmaskMsiIrq(uint irq_id, bool mask);
+    void     MaskAllMsiVectors();
+    void     SetMsiTarget(uint64_t tgt_addr, uint32_t tgt_data);
+    void     FreeMsiBlock();
+    void     SetMsiMultiMessageEnb(uint requested_irqs);
+    void     LeaveMsiIrqMode();
+    status_t EnterMsiIrqMode(uint requested_irqs);
+
+    enum handler_return        MsiIrqHandler(pcie_irq_handler_state_t& hstate);
+    static enum handler_return MsiIrqHandlerThunk(void *arg);
+
+    // Common Internal IRQ support.
+    void     ResetCommonIrqBookkeeping();
+    status_t AllocIrqHandlers(uint requested_irqs, bool is_masked);
 
     /* PCI Express Capabilities (Standard Capability 0x10) if present */
     struct {
         uint               version;  // version of the caps structure.
-        pcie_device_type_t devtype;  // device type parts from pcie_caps
+        pcie_device_type_t devtype = PCIE_DEVTYPE_UNKNOWN;
         bool               has_flr;  // true if device supports function level reset
         pcie_caps_hdr_t*   ecam;     // pointer to the caps structure header in ECAM
 
@@ -97,15 +413,15 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
          * device type) in a v1 structure. */
         pcie_caps_chunk_t*      chunks[PCS_CAPS_CHUNK_COUNT];
         pcie_caps_root_chunk_t* root;
-    } pcie_caps;
+    } pcie_caps_;
 
     /* PCI Advanced Capabilities (Standard Capability 0x13) if present */
     struct {
         pcie_cap_adv_caps_t* ecam;     // pointer to the adv caps structure in ECAM
         bool                 has_flr;  // true if device supports function level reset
-    } pcie_adv_caps;
+    } pcie_adv_caps_;
 
-    /* IRQ configuration and handling state */
+    // IRQ configuration and handling state
     struct {
         /* Shared state */
         pcie_irq_mode_t           mode = PCIE_IRQ_MODE_DISABLED;
@@ -134,120 +450,15 @@ struct pcie_device_state_t : public mxtl::RefCounted<pcie_device_state_t> {
 
         /* TODO(johngro) : Add MSI-X state */
         struct { } msi_x;
-    } irq;
-
+    } irq_;
 };
-
-/*
- * Attaches a driver to a PCI device. Returns ERR_ALREADY_BOUND if the device has already been
- * claimed by another driver.
- */
-status_t pcie_claim_device(const mxtl::RefPtr<pcie_device_state_t>& device);
-
-/*
- * Unclaim a device had been successfully claimed with pcie_claim_device().
- */
-void pcie_unclaim_device(const mxtl::RefPtr<pcie_device_state_t>& device);
-
-/*
- * Trigger a function level reset (if possible)
- */
-status_t pcie_do_function_level_reset(const mxtl::RefPtr<pcie_device_state_t>& dev);
 
 /*
  * temporary hack.
  * Previously static functions which are about to migrate into the device class.
  */
-status_t pcie_allocate_bars(const mxtl::RefPtr<pcie_device_state_t>& dev);
-status_t pcie_scan_init_device(const mxtl::RefPtr<pcie_device_state_t>& dev,
-                               const mxtl::RefPtr<pcie_bridge_state_t>& upstream_bridge,
-                               uint                                     bus_id,
-                               uint                                     dev_id,
-                               uint                                     func_id);
-
-/*
- * Return information about the requested base address register, if it has been
- * allocated.  Otherwise, return NULL.
- *
- * @param dev A pointer to the pcie device/bridge node to fetch BAR info for.
- * @param bar_ndx The index of the BAR register to fetch info for.
- *
- * @return A pointer to the BAR info, including where in the bus address space
- * the BAR window has been mapped, or NULL if the BAR window does not exist or
- * has not been allocated.
- */
-static inline const pcie_bar_info_t* pcie_get_bar_info(
-        const pcie_device_state_t& dev,
-        uint bar_ndx) {
-    DEBUG_ASSERT(bar_ndx < countof(dev.bars));
-    const pcie_bar_info_t* ret = &dev.bars[bar_ndx];
-    return (!dev.disabled && (ret->allocation != nullptr)) ? ret : NULL;
-}
-
-/*
- * Modify bits in the device's command register (in the device config space),
- * clearing the bits specified by clr_bits and setting the bits specified by set
- * bits.  Specifically, the operation will be applied as...
- *
- * WR(cmd, (RD(cmd) & ~clr) | set)
- *
- * @param device A pointer to the device whose command register is to be
- * modified.
- * @param clr_bits The mask of bits to be cleared.
- * @param clr_bits The mask of bits to be set.
- * @return A status_t indicating success or failure of the operation.
- */
-status_t pcie_modify_cmd(const mxtl::RefPtr<pcie_device_state_t>& device,
-                         uint16_t clr_bits, uint16_t set_bits);
-
-/*
- * Enable or disable bus mastering in a device's configuration.
- *
- * @param device A pointer to the target device.
- * @param enable If true, allow the device to access main system memory as a bus
- * master.
- * @return A status_t indicating success or failure of the operation.
- */
-static inline status_t pcie_enable_bus_master(const mxtl::RefPtr<pcie_device_state_t>& device,
-                                              bool enabled) {
-    if (enabled && device->disabled)
-        return ERR_BAD_STATE;
-
-    return pcie_modify_cmd(device,
-                           enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
-                           enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
-}
-
-/*
- * Enable or disable PIO access in a device's configuration.
- *
- * @param device A pointer to the target device.
- * @param enable If true, allow the device to access its PIO mapped registers.
- * @return A status_t indicating success or failure of the operation.
- */
-static inline status_t pcie_enable_pio(const mxtl::RefPtr<pcie_device_state_t>& device,
-                                       bool enabled) {
-    if (enabled && device->disabled)
-        return ERR_BAD_STATE;
-
-    return pcie_modify_cmd(device,
-                           enabled ? 0 : PCI_COMMAND_IO_EN,
-                           enabled ? PCI_COMMAND_IO_EN : 0);
-}
-
-/*
- * Enable or disable MMIO access in a device's configuration.
- *
- * @param device A pointer to the target device.
- * @param enable If true, allow the device to access its MMIO mapped registers.
- * @return A status_t indicating success or failure of the operation.
- */
-static inline status_t pcie_enable_mmio(const mxtl::RefPtr<pcie_device_state_t>& device,
-                                        bool enabled) {
-    if (enabled && device->disabled)
-        return ERR_BAD_STATE;
-
-    return pcie_modify_cmd(device,
-                           enabled ? 0 : PCI_COMMAND_MEM_EN,
-                           enabled ? PCI_COMMAND_MEM_EN : 0);
-}
+status_t pcie_scan_init_device(const mxtl::RefPtr<PcieDevice>& dev,
+                               const mxtl::RefPtr<PcieBridge>& upstream_bridge,
+                               uint                            bus_id,
+                               uint                            dev_id,
+                               uint                            func_id);

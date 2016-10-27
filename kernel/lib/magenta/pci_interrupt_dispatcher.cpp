@@ -20,7 +20,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
         // Unregister our handler.
         __UNUSED status_t ret;
-        ret = pcie_register_irq_handler(device_->device(), irq_id_, NULL, NULL);
+        ret = device_->device()->RegisterIrqHandler(irq_id_, NULL, NULL);
         DEBUG_ASSERT(ret == NO_ERROR);  // This should never fail.
 
         // Release our reference to our device.
@@ -28,7 +28,7 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     }
 }
 
-pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const pcie_device_state_t& dev,
+pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
                                                            uint irq_id,
                                                            void* ctx) {
     DEBUG_ASSERT(ctx);
@@ -62,10 +62,9 @@ status_t PciInterruptDispatcher::Create(
     // created, then attempt to register our dispatcher with the bus driver.
     DEBUG_ASSERT(device->device());
     interrupt_dispatcher->device_ = device;
-    status_t result = pcie_register_irq_handler(device->device(),
-                                                irq_id,
-                                                IrqThunk,
-                                                interrupt_dispatcher);
+    status_t result = device->device()->RegisterIrqHandler(irq_id,
+                                                           IrqThunk,
+                                                           interrupt_dispatcher);
     if (result != NO_ERROR) {
         interrupt_dispatcher->device_ = nullptr;
         return result;
@@ -74,8 +73,9 @@ status_t PciInterruptDispatcher::Create(
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
     // (if it is maskable) then transfer our dispatcher refererence to the
     // caller.
-    if (maskable)
-        pcie_unmask_irq(device->device(), irq_id);
+    if (maskable) {
+        device->device()->UnmaskIrq(irq_id);
+    }
     *out_interrupt = mxtl::move(dispatcher);
     *out_rights    = kDefaultPciInterruptRights;
     return NO_ERROR;
@@ -86,7 +86,7 @@ status_t PciInterruptDispatcher::InterruptComplete() {
     state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
 
     if (maskable_)
-        pcie_unmask_irq(device_->device(), irq_id_);
+        device_->device()->UnmaskIrq(irq_id_);
 
     return NO_ERROR;
 }

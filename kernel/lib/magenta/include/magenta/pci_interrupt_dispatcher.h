@@ -7,7 +7,7 @@
 #pragma once
 #if WITH_DEV_PCIE
 
-#include <dev/pcie.h>
+#include <dev/pcie_irqs.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <sys/types.h>
@@ -26,7 +26,7 @@ public:
     status_t InterruptComplete() final;
 
 private:
-    static pcie_irq_handler_retval_t IrqThunk(const pcie_device_state_t& dev,
+    static pcie_irq_handler_retval_t IrqThunk(const PcieDevice& dev,
                                               uint irq_id,
                                               void* ctx);
     PciInterruptDispatcher(uint32_t irq_id, bool maskable)

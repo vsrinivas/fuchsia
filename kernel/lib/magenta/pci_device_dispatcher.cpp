@@ -47,19 +47,17 @@ status_t PciDeviceDispatcher::Create(uint32_t                   index,
 PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PciDeviceWrapper> device,
                                          mx_pcie_get_nth_info_t* out_info)
     : device_(device) {
-    const pcie_device_state_t& dev = *device_->device();
-    const pcie_config_t* cfg = dev.cfg;
-    DEBUG_ASSERT(cfg);
+    const PcieDevice& dev = *device_->device();
 
-    out_info->vendor_id         = pcie_read16(&cfg->base.vendor_id);
-    out_info->device_id         = pcie_read16(&cfg->base.device_id);
-    out_info->base_class        = pcie_read8 (&cfg->base.base_class);
-    out_info->sub_class         = pcie_read8 (&cfg->base.sub_class);
-    out_info->program_interface = pcie_read8 (&cfg->base.program_interface);
-    out_info->revision_id       = pcie_read8 (&cfg->base.revision_id_0);
-    out_info->bus_id            = static_cast<uint8_t>(dev.bus_id);
-    out_info->dev_id            = static_cast<uint8_t>(dev.dev_id);
-    out_info->func_id           = static_cast<uint8_t>(dev.func_id);
+    out_info->vendor_id         = dev.vendor_id();
+    out_info->device_id         = dev.device_id();
+    out_info->base_class        = dev.class_id();
+    out_info->sub_class         = dev.subclass();
+    out_info->program_interface = dev.prog_if();
+    out_info->revision_id       = dev.rev_id();
+    out_info->bus_id            = static_cast<uint8_t>(dev.bus_id());
+    out_info->dev_id            = static_cast<uint8_t>(dev.dev_id());
+    out_info->func_id           = static_cast<uint8_t>(dev.func_id());
 }
 
 PciDeviceDispatcher::~PciDeviceDispatcher() {
@@ -92,7 +90,7 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
 
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
-    pcie_enable_bus_master(device_->device(), enable);
+    device_->device()->EnableBusMaster(enable);
 
     return NO_ERROR;
 }
@@ -103,7 +101,7 @@ status_t PciDeviceDispatcher::ResetDevice() {
 
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
-    return pcie_do_function_level_reset(device_->device());
+    return device_->device()->DoFunctionLevelReset();
 }
 
 status_t PciDeviceDispatcher::MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
@@ -111,11 +109,11 @@ status_t PciDeviceDispatcher::MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
     AutoLock lock(&lock_);
     return PciIoMappingDispatcher::Create(device_,
                                          "cfg",
-                                          device_->device()->cfg_phys,
+                                          device_->device()->config_phys(),
                                           PCIE_EXTENDED_CONFIG_SIZE,
                                           0 /* vmm flags */,
                                           ARCH_MMU_FLAG_UNCACHED_DEVICE |
-                                          ARCH_MMU_FLAG_PERM_READ        |
+                                          ARCH_MMU_FLAG_PERM_READ       |
                                           ARCH_MMU_FLAG_PERM_USER,
                                           out_mapping,
                                           out_rights);
@@ -140,7 +138,7 @@ status_t PciDeviceDispatcher::MapMmio(uint32_t bar_num,
 
     // If things went well, make sure that mmio is turned on
     if (status == NO_ERROR)
-        pcie_enable_mmio(device_->device(), true);
+        device_->device()->EnableMmio(true);
 
     return status;
 }
@@ -181,9 +179,8 @@ status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t*
     DEBUG_ASSERT(device_ && device_->device());
 
     pcie_irq_mode_caps_t caps;
-    status_t ret = pcie_query_irq_mode_capabilities(*device_->device(),
-                                                    static_cast<pcie_irq_mode_t>(mode),
-                                                    &caps);
+    status_t ret = device_->device()->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
+                                                               &caps);
 
     *out_max_irqs = (ret == NO_ERROR) ? caps.max_irqs : 0;
     return ret;
@@ -196,15 +193,13 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
 
     status_t ret;
-    ret = pcie_set_irq_mode(device_->device(),
-                            static_cast<pcie_irq_mode_t>(mode),
-                            requested_irq_count);
+    ret = device_->device()->SetIrqMode(static_cast<pcie_irq_mode_t>(mode),
+                                        requested_irq_count);
     if (ret == NO_ERROR) {
         pcie_irq_mode_caps_t caps;
         __UNUSED status_t tmp;
-        tmp = pcie_query_irq_mode_capabilities(*device_->device(),
-                                               static_cast<pcie_irq_mode_t>(mode),
-                                               &caps);
+        tmp = device_->device()->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
+                                                          &caps);
         DEBUG_ASSERT(tmp == NO_ERROR);
         irqs_supported_ = caps.max_irqs;
         irqs_maskable_  = caps.per_vector_masking_supported;
@@ -214,7 +209,7 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
 }
 
 PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(
-        mxtl::RefPtr<pcie_device_state_t>&& device)
+        mxtl::RefPtr<PcieDevice>&& device)
     : device_(mxtl::move(device)) {
     DEBUG_ASSERT(device_);
     memset(&cp_refs_, 0, sizeof(cp_refs_));
@@ -222,7 +217,7 @@ PciDeviceDispatcher::PciDeviceWrapper::PciDeviceWrapper(
 
 PciDeviceDispatcher::PciDeviceWrapper::~PciDeviceWrapper() {
     DEBUG_ASSERT(device_);
-    pcie_unclaim_device(device_);
+    device_->Unclaim();
     device_ = nullptr;
 }
 
@@ -230,7 +225,7 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Claim() {
     if (claimed_)
         return ERR_ALREADY_BOUND;
 
-    status_t result = pcie_claim_device(device_);
+    status_t result = device_->Claim();
     if (result != NO_ERROR)
         return result;
 
@@ -245,8 +240,12 @@ status_t PciDeviceDispatcher::PciDeviceWrapper::Create(
     if (!out_device)
         return ERR_INVALID_ARGS;
 
-    mxtl::RefPtr<pcie_device_state_t> device = pcie_get_nth_device(index);
-    if (!device)
+    auto bus_drv = PcieBusDriver::GetDriver();
+    if (bus_drv == nullptr)
+        return ERR_BAD_STATE;
+
+    auto device = bus_drv->GetNthDevice(index);
+    if (device == nullptr)
         return ERR_OUT_OF_RANGE;
 
     AllocChecker ac;

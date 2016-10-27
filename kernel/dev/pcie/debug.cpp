@@ -8,13 +8,14 @@
 #ifdef WITH_LIB_CONSOLE
 
 #include <debug.h>
-#include <dev/pcie.h>
 #include <err.h>
 #include <inttypes.h>
 #include <lib/console.h>
 #include <string.h>
 
-#include "pcie_priv.h"
+#include <dev/pcie_bridge.h>
+#include <dev/pcie_bus_driver.h>
+#include <dev/pcie_device.h>
 
 /* Class code/Subclass code definitions taken from
  * http://wiki.osdev.org/Pci#Class_Codes */
@@ -226,7 +227,7 @@ static const char* pci_class_code_to_string(uint8_t class_code)
     }
 }
 
-static const char* pci_device_type(const pcie_device_state_t& dev)
+static const char* pci_device_type(const PcieDevice& dev)
 {
     // TODO(johngro): It might be a good idea, some day, to make this something
     // better than an O(n) search.
@@ -234,7 +235,7 @@ static const char* pci_device_type(const pcie_device_state_t& dev)
     // If this is a PCIe style bridge with a specific device type spelled out in
     // its PCI Express Capabilities structure, use that to provide the type
     // string.
-    switch (dev.pcie_caps.devtype) {
+    switch (dev.pcie_device_type()) {
         case PCIE_DEVTYPE_RC_ROOT_PORT:           return "PCIe Root Port";
         case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:   return "PCIe Upstream Switch Port";
         case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT: return "PCIe Downstream Switch Port";
@@ -246,14 +247,14 @@ static const char* pci_device_type(const pcie_device_state_t& dev)
     for (size_t i = 0; i < countof(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
-        if ((dev.class_id == entry->class_code)    &&
-            (dev.subclass == entry->subclass)      &&
-            (dev.prog_if  >= entry->prof_if_start) &&
-            (dev.prog_if  <= entry->prof_if_end))
+        if ((dev.class_id() == entry->class_code)    &&
+            (dev.subclass() == entry->subclass)      &&
+            (dev.prog_if()  >= entry->prof_if_start) &&
+            (dev.prog_if()  <= entry->prof_if_end))
             return entry->desc;
     }
 
-    return pci_class_code_to_string(dev.class_id);
+    return pci_class_code_to_string(dev.class_id());
 }
 
 static void do_lspci_indent(uint level) {
@@ -266,52 +267,51 @@ static void do_lspci_indent(uint level) {
         printf(_fmt, ##__VA_ARGS__);           \
     } while (0)
 
-static void dump_pcie_hdr(const pcie_device_state_t& dev, lspci_params_t* params)
+static void dump_pcie_hdr(const PcieDevice& dev, lspci_params_t* params)
 {
     DEBUG_ASSERT(params);
     LSPCI_PRINTF("[%02x:%02x.%01x] - VID 0x%04x DID 0x%04x :: %s",
-                 dev.bus_id, dev.dev_id, dev.func_id,
-                 dev.vendor_id, dev.device_id,
+                 dev.bus_id(), dev.dev_id(), dev.func_id(),
+                 dev.vendor_id(), dev.device_id(),
                  pci_device_type(dev));
 
-    if (dev.disabled)
+    if (dev.disabled())
         printf(" [DISABLED]");
 
-    if (dev.claimed)
+    if (dev.claimed())
         printf(" [CLAIMED]");
 
     printf("\n");
 }
 
-static void dump_pcie_bars(const pcie_device_state_t& dev,
+static void dump_pcie_bars(const PcieDevice& dev,
                            lspci_params_t* params)
 {
-    pci_config_t* cfg = &dev.cfg->base;
+    auto cfg = &dev.config()->base;
 
-    DEBUG_ASSERT(dev.bar_count <= countof(cfg->base_addresses));
-    DEBUG_ASSERT(dev.bar_count <= countof(dev.bars));
-    for (uint i = 0; i < dev.bar_count; ++i) {
+    DEBUG_ASSERT(dev.bar_count() <= countof(cfg->base_addresses));
+    for (uint i = 0; i < dev.bar_count(); ++i) {
         LSPCI_PRINTF("Base Addr[%u]      : 0x%08x", i, pcie_read32(&cfg->base_addresses[i]));
 
-        const pcie_bar_info_t& info = dev.bars[i];
-        if (!info.size) {
+        const pcie_bar_info_t* info = dev.GetBarInfo(i);
+        if (info == nullptr) {
             printf("\n");
             continue;
         }
 
         printf(" :: paddr %#" PRIx64 " size %#" PRIx64 "%s%s %s%s\n",
-                info.bus_addr,
-                info.size,
-                info.is_prefetchable ? " prefetchable" : "",
-                info.is_mmio ? (info.is_64bit ? " 64-bit" : " 32-bit") : "",
-                info.is_mmio ? "MMIO" : "PIO",
-                info.allocation == nullptr ? "" : " (allocated)");
+                info->bus_addr,
+                info->size,
+                info->is_prefetchable ? " prefetchable" : "",
+                info->is_mmio ? (info->is_64bit ? " 64-bit" : " 32-bit") : "",
+                info->is_mmio ? "MMIO" : "PIO",
+                info->allocation == nullptr ? "" : " (allocated)");
     }
 }
 
-static void dump_pcie_common(const pcie_device_state_t& dev, lspci_params_t* params)
+static void dump_pcie_common(const PcieDevice& dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &dev.cfg->base;
+    auto cfg = &dev.config()->base;
     uint8_t base_class = pcie_read8(&cfg->base_class);
 
     LSPCI_PRINTF("Command           : 0x%04x\n",    pcie_read16(&cfg->command));
@@ -327,9 +327,9 @@ static void dump_pcie_common(const pcie_device_state_t& dev, lspci_params_t* par
     LSPCI_PRINTF("BIST              : 0x%02x\n",    pcie_read8(&cfg->bist));
 }
 
-static void dump_pcie_standard(const pcie_device_state_t& dev, lspci_params_t* params)
+static void dump_pcie_standard(const PcieDevice& dev, lspci_params_t* params)
 {
-    pci_config_t* cfg = &dev.cfg->base;
+    auto cfg = &dev.config()->base;
     LSPCI_PRINTF("Cardbus CIS       : 0x%08x\n", pcie_read32(&cfg->cardbus_cis_ptr));
     LSPCI_PRINTF("Subsystem VID     : 0x%04x\n", pcie_read16(&cfg->subsystem_vendor_id));
     LSPCI_PRINTF("Subsystem ID      : 0x%04x\n", pcie_read16(&cfg->subsystem_id));
@@ -341,9 +341,9 @@ static void dump_pcie_standard(const pcie_device_state_t& dev, lspci_params_t* p
     LSPCI_PRINTF("Max Latency       : 0x%02x\n", pcie_read8(&cfg->max_latency));
 }
 
-static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* params)
+static void dump_pcie_bridge(const PcieBridge& bridge, lspci_params_t* params)
 {
-    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&bridge.cfg->base);
+    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&bridge.config()->base);
 
     LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", pcie_read8(&bcfg->primary_bus_id));
     LSPCI_PRINTF("S. Bus Range      : [0x%02x, 0x%02x]\n",
@@ -354,16 +354,16 @@ static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* 
     LSPCI_PRINTF("IO Base Upper     : 0x%04x\n", pcie_read16(&bcfg->io_base_upper));
     LSPCI_PRINTF("IO Limit          : 0x%02x\n", pcie_read8(&bcfg->io_limit));
     LSPCI_PRINTF("IO Limit Upper    : 0x%04x",   pcie_read16(&bcfg->io_limit_upper));
-    if (bridge.io_base < bridge.io_limit) {
-        printf(" :: [0x%08x, 0x%08x]\n", bridge.io_base, bridge.io_limit);
+    if (bridge.io_base() < bridge.io_limit()) {
+        printf(" :: [0x%08x, 0x%08x]\n", bridge.io_base(), bridge.io_limit());
     } else {
         printf("\n");
     }
     LSPCI_PRINTF("Secondary Status  : 0x%04x\n", pcie_read16(&bcfg->secondary_status));
     LSPCI_PRINTF("Memory Limit      : 0x%04x\n", pcie_read16(&bcfg->memory_limit));
     LSPCI_PRINTF("Memory Base       : 0x%04x", pcie_read16(&bcfg->memory_base));
-    if (bridge.mem_base < bridge.mem_limit) {
-        printf(" :: [0x%08x, 0x%08x]\n", bridge.mem_base, bridge.mem_limit);
+    if (bridge.mem_base() < bridge.mem_limit()) {
+        printf(" :: [0x%08x, 0x%08x]\n", bridge.mem_base(), bridge.mem_limit());
     } else {
         printf("\n");
     }
@@ -371,9 +371,9 @@ static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* 
     LSPCI_PRINTF("PFMem Base Upper  : 0x%08x\n", pcie_read32(&bcfg->prefetchable_memory_base_upper));
     LSPCI_PRINTF("PFMem Limit       : 0x%04x\n", pcie_read16(&bcfg->prefetchable_memory_limit));
     LSPCI_PRINTF("PFMem Limit Upper : 0x%08x", pcie_read32(&bcfg->prefetchable_memory_limit_upper));
-    if (bridge.pf_mem_base < bridge.pf_mem_limit) {
+    if (bridge.pf_mem_base() < bridge.pf_mem_limit()) {
         printf(" :: [0x%016" PRIx64 ", 0x%016" PRIx64"]\n",
-                bridge.pf_mem_base, bridge.pf_mem_limit);
+                bridge.pf_mem_base(), bridge.pf_mem_limit());
     } else {
         printf("\n");
     }
@@ -385,14 +385,14 @@ static void dump_pcie_bridge(const pcie_bridge_state_t& bridge, lspci_params_t* 
     LSPCI_PRINTF("Bridge Control    : 0x%04x\n", pcie_read16(&bcfg->bridge_control));
 }
 
-static void dump_pcie_raw_config(uint amt, void* kvaddr, paddr_t phys)
+static void dump_pcie_raw_config(uint amt, const void* kvaddr, paddr_t phys)
 {
     printf("%u bytes of raw config (kvaddr %p; phys %#" PRIx64 ")\n",
            amt, kvaddr, static_cast<uint64_t>(phys));
     hexdump8(kvaddr, amt);
 }
 
-static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void* ctx, uint level)
+static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level)
 {
     DEBUG_ASSERT(dev && ctx);
     lspci_params_t* params = (lspci_params_t*)ctx;
@@ -400,15 +400,15 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
-    AutoLock lock(dev->dev_lock);
+    AutoLock lock(dev->dev_lock());
 
     /* If the device has already been unplugged, just skip it */
-    if (!dev->plugged_in)
+    if (!dev->plugged_in())
         return true;
 
-    match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id)) &&
-             ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id)) &&
-             ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id)));
+    match = (((params->bus_id  == WILDCARD_ID) || (params->bus_id  == dev->bus_id())) &&
+             ((params->dev_id  == WILDCARD_ID) || (params->dev_id  == dev->dev_id())) &&
+             ((params->func_id == WILDCARD_ID) || (params->func_id == dev->func_id())));
     if (!match)
         return true;
 
@@ -434,16 +434,15 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
         dump_pcie_common(*dev, params);
         dump_pcie_bars(*dev, params);
 
-        uint8_t header_type = pcie_read8(&dev->cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
+        uint8_t header_type = pcie_read8(&dev->config()->base.header_type) & PCI_HEADER_TYPE_MASK;
         switch (header_type) {
         case PCI_HEADER_TYPE_STANDARD:
             dump_pcie_standard(*dev, params);
             break;
 
         case PCI_HEADER_TYPE_PCI_BRIDGE: {
-            auto bridge = dev->DowncastToBridge();
-            if (bridge != nullptr) {
-                dump_pcie_bridge(*bridge, params);
+            if (dev->is_bridge()) {
+                dump_pcie_bridge(*static_cast<PcieBridge*>(dev.get()), params);
             } else {
                 printf("ERROR! Type 1 header detected for non-bridge device!\n");
             }
@@ -462,7 +461,9 @@ static bool dump_pcie_device(const mxtl::RefPtr<pcie_device_state_t>& dev, void*
     }
 
     if (params->cfg_dump_amt)
-        dump_pcie_raw_config(params->cfg_dump_amt, dev->cfg, (uint64_t)dev->cfg_phys);
+        dump_pcie_raw_config(params->cfg_dump_amt,
+                             dev->config(),
+                             static_cast<uint64_t>(dev->config_phys()));
 
     return true;
 }
@@ -607,7 +608,7 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    mxtl::RefPtr<pcie_device_state_t> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
+    mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
@@ -649,13 +650,13 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    mxtl::RefPtr<pcie_device_state_t> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
+    mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
     } else {
         printf("Attempting reset of device %02x:%02x.%01x...\n", bus_id, dev_id, func_id);
-        status_t res = pcie_do_function_level_reset(dev);
+        status_t res = dev->DoFunctionLevelReset();
         dev = nullptr;
         if (res != NO_ERROR)
             printf("Reset attempt failed (res = %d).\n", res);

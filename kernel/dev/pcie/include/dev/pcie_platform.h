@@ -35,11 +35,6 @@ typedef struct pcie_msi_block {
     uint32_t tgt_data;
 } pcie_msi_block_t;
 
-/*
- * Shutdown the PCIe subsystem
- */
-void pcie_shutdown(void);
-
 __END_CDECLS
 
 #ifdef __cplusplus
