@@ -2,22 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(vardhan): Targets for each language bindings depend on a central
-# generator target which generates bindings for /every/ language. Create
+# TODO(vardhan): Currently, targets for each language bindings depend on a
+# central generator target which generates bindings for /every/ language. Create
 # separate generator targets for each language.
+# TODO(vardhan): Currently, the compiler generates type info and calls the
+# generators. Sever this, and have generators consume compiled output from an
+# intermediate file.
 
-import("../../mojo_sdk.gni")
-import("../../../mojo_public_args.gni")
+import("build/fidl_source_set.gni")
+import("//build/dart/dart_package.gni")
 
-if (is_fuchsia) {
-  import("//build/dart/dart_package.gni")
-}
-
-# Generate C++/JavaScript/Java/Python/Dart/Go source files from mojom files. The
+# Generate C++/JavaScript/Java/Python/Dart/Go source files from fidl files. The
 # output files will go under the generated file directory tree with the same
 # path as each input file.
 #
-# If a mojom target is intended for use in a client repo where the location of
+# If a fidl target is intended for use in a client repo where the location of
 # the Mojo SDK will be different than its location in the Mojo repo,
 # dependencies on the SDK should be specified relative to the parent directory
 # of the Mojo public SDK in |mojo_sdk_deps| rather than via absolute paths in
@@ -26,10 +25,10 @@ if (is_fuchsia) {
 # Parameters:
 #
 #   sources (optional if one of the deps sets listed below is present)
-#       List of source .mojom files to compile.
+#       List of source .fidl files to compile.
 #
 #   deps (optional)
-#       Note: this can contain only other mojom targets.
+#       Note: this can contain only other fidl targets.
 #
 #   mojo_sdk_deps (optional)
 #       List of deps specified relative to the parent directory of the Mojo
@@ -37,7 +36,7 @@ if (is_fuchsia) {
 #       current directory.
 #
 #   public_deps (optional)
-#       Note: this can contain only other mojom targets.
+#       Note: this can contain only other fidl targets.
 #
 #   mojo_sdk_public_deps (optional)
 #       List of public deps specified relative to the parent directory of the
@@ -50,7 +49,7 @@ if (is_fuchsia) {
 #   testonly (optional)
 #
 #   visibility (optional)
-template("mojom") {
+template("fidl") {
   assert(
       defined(invoker.sources) || defined(invoker.deps) ||
           defined(invoker.public_deps) || defined(invoker.mojo_sdk_deps) ||
@@ -62,19 +61,14 @@ template("mojom") {
   cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
-    generator_root = rebase_path("mojo/public/tools/bindings", ".", mojo_root)
-    mojom_tool = "$generator_root/mojom_tool.py"
+    generator_root = rebase_path("lib/fidl/compiler/legacy_generators", ".", fidl_root)
+    legacy_gen_path = rebase_path("$generator_root/legacy")
+    fidl_tool = rebase_path("${root_out_dir}/fidl")
 
-    # The |generator_host_platform| string is used to determine the subdirectory
-    # where our mojom and generator binaries live.
-    generator_host_platform = host_os
-    if (host_cpu == "x64") {
-      generator_host_platform += "64"
-    } else if (host_cpu == "x86") {
-      generator_host_platform += "32"
-    }
+    # The following list of files will trigger a rebuild if any of them change.
+    # TODO(vardhan): This should be split up to be per-language.
     generator_sources = [
-      mojom_tool,
+      fidl_tool,
       "$generator_root/run_code_generators.py",
       "$generator_root/generators/cpp_templates/enum_macros.tmpl",
       "$generator_root/generators/cpp_templates/interface_declaration.tmpl",
@@ -144,9 +138,6 @@ template("mojom") {
       "$generator_root/generators/mojom_js_generator.py",
       "$generator_root/generators/mojom_java_generator.py",
       "$generator_root/generators/mojom_python_generator.py",
-      "$generator_root/mojom_tool/bin/${generator_host_platform}/mojom",
-      "$generator_root/mojom_tool/bin/${generator_host_platform}/generators/c",
-      "$generator_root/mojom_tool/bin/${generator_host_platform}/generators/go",
       "$generator_root/pylib/mojom/__init__.py",
       "$generator_root/pylib/mojom/error.py",
       "$generator_root/pylib/mojom/generate/__init__.py",
@@ -176,8 +167,11 @@ template("mojom") {
     generator_dart_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
     generator_go_outputs = [ "${root_gen_dir}/go/src/{{source_dir}}/{{source_name_part}}/{{source_file_part}}.go" ]
+    # TODO(vardhan): We can't have both .mojom and .fidl coexist because of
+    # this hardcoded '_fidl' suffix. Has to do with python imports not handling
+    # '.fidl/.mojom' in names. Investigate putting in a package instead.
     generator_python_outputs =
-        [ "{{source_gen_dir}}/{{source_name_part}}_mojom.py" ]
+        [ "{{source_gen_dir}}/{{source_name_part}}_fidl.py" ]
     generator_java_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.srcjar" ]
   }
@@ -188,7 +182,7 @@ template("mojom") {
     foreach(sdk_dep, invoker.mojo_sdk_public_deps) {
       # Check that the SDK dep was not mistakenly given as an absolute path.
       assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      rebased_mojo_sdk_public_deps += [ rebase_path(sdk_dep, ".", mojo_root) ]
+      rebased_mojo_sdk_public_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
     }
   }
 
@@ -197,18 +191,21 @@ template("mojom") {
     foreach(sdk_dep, invoker.mojo_sdk_deps) {
       # Check that the SDK dep was not mistakenly given as an absolute path.
       assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      rebased_mojo_sdk_deps += [ rebase_path(sdk_dep, ".", mojo_root) ]
+      rebased_mojo_sdk_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
     }
   }
 
   if (defined(invoker.sources)) {
     generator_target_name = target_name + "__generator"
     action_foreach(generator_target_name) {
-      script = mojom_tool
+      script = "/usr/bin/env"
       inputs = generator_sources
+      deps = [
+        rebase_path("lib/fidl/compiler:fidl", ".", fidl_root),
+      ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
-        deps = [
-          rebase_path("mojo/public/interfaces/bindings", ".", mojo_root),
+        deps += [
+          rebase_path("lib/fidl/compiler/interfaces:interfaces", ".", fidl_root),
         ]
       }
       sources = invoker.sources
@@ -217,18 +214,19 @@ template("mojom") {
           generator_go_outputs + generator_java_outputs + generator_js_outputs +
           generator_python_outputs + generator_c_outputs
       args = [
+        fidl_tool,
         "gen",
         "--src-root-path",
         rebase_path("//", root_build_dir),
         "-I",
         rebase_path("//", root_build_dir),
         "-I",
-        rebase_path(mojo_root, root_build_dir),
+        rebase_path(fidl_root, root_build_dir),
         "--output-dir",
         rebase_path(root_gen_dir),
         "--no-gen-imports",
         "--generators",
-        "legacy,c,go",
+        "${legacy_gen_path}",
       ]
 
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
@@ -274,7 +272,7 @@ template("mojom") {
     foreach(sdk_dep, invoker.mojo_sdk_deps) {
       # Check that the SDK dep was not mistakenly given as an absolute path.
       assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      cpp_deps += [ rebase_path(sdk_dep, ".", mojo_root) ]
+      cpp_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
     }
   }
 
@@ -287,10 +285,10 @@ template("mojom") {
     }
 
     public_configs =
-        rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
 
     public_deps =
-        rebase_path([ "mojo/public/cpp/bindings:core" ], ".", mojo_root)
+        rebase_path([ "lib/fidl/cpp/bindings" ], ".", fidl_root)
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
@@ -300,83 +298,8 @@ template("mojom") {
     deps = cpp_deps
   }
 
-  # This target is used to generate and build the C mojom bindings.
-  source_set("${target_name}_c") {
-    if (defined(invoker.visibility)) {
-      visibility = invoker.visibility
-    }
-    if (defined(invoker.testonly)) {
-      testonly = invoker.testonly
-    }
-
-    public_configs =
-        rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
-
-    public_deps = rebase_path([ "mojo/public/c:bindings" ], ".", mojo_root)
-    deps = []
-    c_public_deps = []
-    c_deps = []
-
-    # Bring in |invoker.public_deps| and |invoker.deps|.
-    if (defined(invoker.public_deps)) {
-      c_public_deps += invoker.public_deps
-    }
-    if (defined(invoker.deps)) {
-      c_deps += invoker.deps
-    }
-
-    foreach(d, c_public_deps + rebased_mojo_sdk_public_deps) {
-      # Resolve the name, so that a target //mojo/something becomes
-      # //mojo/something:something and we can append "_c" to get the C
-      # dependency name.
-      full_name = get_label_info(d, "label_no_toolchain")
-      public_deps += [ "${full_name}_c" ]
-    }
-    foreach(d, c_deps + rebased_mojo_sdk_deps) {
-      full_name = get_label_info(d, "label_no_toolchain")
-      deps += [ "${full_name}_c" ]
-    }
-
-    if (defined(invoker.sources)) {
-      deps += [ ":$generator_target_name" ]
-      sources = process_file_template(
-              invoker.sources,
-              [
-                "{{source_gen_dir}}/{{source_file_part}}-c.c",
-                "{{source_gen_dir}}/{{source_file_part}}-c.h",
-              ])
-    }
-  }
-
-  if (is_fuchsia) {
-    # This target is used to generate Dart package information
-    dart_package("${target_name}_dart") {
-      infer_package_name = true
-      source_dir = target_gen_dir
-
-      deps = []
-      mojom_deps = []
-      if (defined(invoker.deps)) {
-        mojom_deps += invoker.deps
-      }
-      if (defined(invoker.public_deps)) {
-        mojom_deps += invoker.public_deps
-      }
-
-      # Depend on the generated Dart package for all of our mojom dependencies.
-      foreach(d, mojom_deps) {
-        dep_label = get_label_info(d, "label_no_toolchain")
-        deps += [ "${dep_label}_dart" ]
-      }
-
-      non_dart_deps = []
-      if (defined(invoker.sources)) {
-        non_dart_deps +=
-            [ get_label_info(":$generator_target_name", "label_no_toolchain") ]
-      }
-    }
-  }
-
+  # This target provides C++ synchronous bindings support. The dependent may
+  # also depend on the non-sync C++ bindings target.
   source_set("${target_name}_sync") {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
@@ -386,9 +309,9 @@ template("mojom") {
     }
 
     public_configs =
-        rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
 
-    public_deps = rebase_path([ "mojo/public/cpp/bindings" ], ".", mojo_root)
+    public_deps = rebase_path([ "lib/fidl/cpp/bindings" ], ".", fidl_root)
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sync_sources_target_name}" ]
@@ -398,6 +321,8 @@ template("mojom") {
     deps = cpp_deps
   }
 
+  # This target provides C++ support for serialization without requiring any
+  # support from the OS. (The other C++ bindings assume message pipes, etc.)
   source_set("${target_name}_data_only") {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
@@ -407,11 +332,11 @@ template("mojom") {
     }
 
     public_configs =
-        rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
 
-    public_deps = rebase_path([ "mojo/public/cpp/bindings:serialization" ],
+    public_deps = rebase_path([ "lib/fidl/cpp/bindings:serialization" ],
                               ".",
-                              mojo_root)
+                              fidl_root)
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
@@ -428,22 +353,22 @@ template("mojom") {
     all_deps += invoker.public_deps
   }
 
-  group("${target_name}__is_mojom") {
+  group("${target_name}__is_fidl") {
   }
 
   # Explicitly ensure that all dependencies (invoker.deps and
   # invoker.public_deps) are mojom targets themselves.
-  group("${target_name}__check_deps_are_all_mojom") {
+  group("${target_name}__check_deps_are_all_fidl") {
     deps = []
     foreach(d, all_deps) {
       name = get_label_info(d, "label_no_toolchain")
       toolchain = get_label_info(d, "toolchain")
-      deps += [ "${name}__is_mojom(${toolchain})" ]
+      deps += [ "${name}__is_fidl(${toolchain})" ]
     }
   }
 
   action("${target_name}_python") {
-    script = rebase_path("mojo/public/tools/gn/zip.py", ".", mojo_root)
+    script = rebase_path("lib/fidl/build/zip.py", ".", fidl_root)
 
     deps = []
     zip_inputs = []
@@ -487,12 +412,11 @@ template("mojom") {
 
   if (defined(invoker.sources)) {
     # The generated C++ source files. The main reason to introduce this target
-    # is so that mojo/public/cpp/bindings can depend on mojom interfaces without
+    # is so that lib/fidl/cpp/bindings can depend on mojom interfaces without
     # circular dependencies. It means that the target is missing the dependency
-    # on mojo/public/cpp/bindings. No external targets should depend directly on
-    # this target *except* mojo/public/cpp/bindings and other *_cpp_sources
+    # on lib/fidl/cpp/bindings. No external targets should depend directly on
+    # this target *except* lib/fidl/cpp/bindings and other *_cpp_sources
     # targets.
-
     source_set(cpp_sources_target_name + "__common") {
       if (defined(invoker.testonly)) {
         testonly = invoker.testonly
@@ -505,12 +429,12 @@ template("mojom") {
                 "{{source_gen_dir}}/{{source_file_part}}-internal.h",
               ])
       public_configs =
-          rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
-        rebase_path("mojo/public/interfaces/bindings:bindings__generator",
+        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
                     ".",
-                    mojo_root),
+                    fidl_root),
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -532,13 +456,13 @@ template("mojom") {
                 "{{source_gen_dir}}/{{source_file_part}}.cc",
               ])
       public_configs =
-          rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        rebase_path("mojo/public/interfaces/bindings:bindings__generator",
+        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
                     ".",
-                    mojo_root),
+                    fidl_root),
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -560,13 +484,13 @@ template("mojom") {
                 "{{source_gen_dir}}/{{source_file_part}}-sync.h",
               ])
       public_configs =
-          rebase_path([ "mojo/public/build/config:mojo_sdk" ], ".", mojo_root)
+          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        rebase_path("mojo/public/interfaces/bindings:bindings__generator",
+        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
                     ".",
-                    mojo_root),
+                    fidl_root),
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -578,46 +502,30 @@ template("mojom") {
     }
   }
 
-  if (is_android) {
-    import("//build/config/android/rules.gni")
+  # This target is used to generate Dart package information
+  dart_package("${target_name}_dart") {
+    infer_package_name = true
+    source_dir = target_gen_dir
 
-    java_srcjar_target_name = target_name + "_java_sources"
-    action(java_srcjar_target_name) {
-      script = rebase_path("mojo/public/tools/gn/zip.py", ".", mojo_root)
-      inputs = process_file_template(invoker.sources, generator_java_outputs)
-      output = "$target_gen_dir/$target_name.srcjar"
-      outputs = [
-        output,
-      ]
-      rebase_inputs = rebase_path(inputs, root_build_dir)
-      rebase_output = rebase_path(output, root_build_dir)
-      args = [
-        "--zip-inputs=$rebase_inputs",
-        "--output=$rebase_output",
-      ]
-      deps = [
-        ":$generator_target_name",
-      ]
+    deps = []
+    mojom_deps = []
+    if (defined(invoker.deps)) {
+      mojom_deps += invoker.deps
+    }
+    if (defined(invoker.public_deps)) {
+      mojom_deps += invoker.public_deps
     }
 
-    java_target_name = target_name + "_java"
-    android_library(java_target_name) {
-      deps = rebase_path([
-                           "mojo/public/java:bindings",
-                           "mojo/public/java:system",
-                         ],
-                         ".",
-                         mojo_root)
+    # Depend on the generated Dart package for all of our mojom dependencies.
+    foreach(d, mojom_deps) {
+      dep_label = get_label_info(d, "label_no_toolchain")
+      deps += [ "${dep_label}_dart" ]
+    }
 
-      foreach(d, all_deps) {
-        # Resolve the name, so that a target //mojo/something becomes
-        # //mojo/something:something and we can append "_java" to get the java
-        # dependency name.
-        full_name = get_label_info(d, "label_no_toolchain")
-        deps += [ "${full_name}_java" ]
-      }
-
-      srcjar_deps = [ ":$java_srcjar_target_name" ]
+    non_dart_deps = []
+    if (defined(invoker.sources)) {
+      non_dart_deps +=
+          [ get_label_info(":$generator_target_name", "label_no_toolchain") ]
     }
   }
 }

@@ -16,12 +16,14 @@ import sys
 try:
   imp.find_module("jinja2")
 except ImportError:
-  # Assume this file is in tools/pylib/bindings/mojom/generate.
+  # Assume this file is in
+  # //lib/fidl/compiler/legacy_generators/pylib/mojom/generate.
+  # Assume jinja2 and markupsafe are in //third_party.
   sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                os.pardir, os.pardir, os.pardir, os.pardir,
-                               os.pardir, "third_party"))
-import jinja2
+                               os.pardir, os.pardir, os.pardir, "third_party"))
 
+import jinja2
 
 def ApplyTemplate(mojo_generator, base_dir, path_to_template, params,
                   filters=None, **kwargs):

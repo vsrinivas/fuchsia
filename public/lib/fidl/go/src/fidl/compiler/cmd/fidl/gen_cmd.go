@@ -79,8 +79,8 @@ func genCmd(args []string) {
 	noGenImports := flagSet.Bool("no-gen-imports", false,
 		"Generate code only for the files that are specified on the command line. "+
 			"By default, code is generated for all specified files and their imports recursively.")
-	var generatorNames CommaSeparatedList
-	flagSet.Var(&generatorNames, "generators", "Comma-separated list of generators")
+	var generatorPaths CommaSeparatedList
+	flagSet.Var(&generatorPaths, "generators", "Comma-separated list of paths to generators")
 	flagSet.SetOutput(ioutil.Discard)
 	var generatorArgs RepeatedStringArg
 	flagSet.Var(&generatorArgs, "gen-arg",
@@ -91,7 +91,7 @@ func genCmd(args []string) {
 		fmt.Fprintf(os.Stderr, "Usage: %s gen [-I <include_dirs>] "+
 			"[--output-dir <path_to_dir>] "+
 			"[--src-root-path <path_to_src_root>] "+
-			"[--generators <generator_list>] "+
+			"[--generators <generator_path_list>] "+
 			"[--no-gen-imports] "+
 			"[--gen-arg <generator_argument>[=<value>]] "+
 			"<mojom_file>\n\n", filepath.Base(args[0]))
@@ -112,14 +112,13 @@ func genCmd(args []string) {
 		printUsage()
 		os.Exit(1)
 	}
-	generatorPaths := findGeneratorPaths(mojomGenPaths(), generatorNames)
 
 	fileNames := flagSet.Args()
 
 	mojomBytes := parse(fileNames, importPaths, printUsage, false, false)
 
 	for _, generatorPath := range generatorPaths {
-		// Consider running the generators in parallel.
+		// TODO(vardhan): Consider running the generators in parallel.
 		runGenerator(generatorPath, mojomBytes, *noGenImports, *srcRootPath, *outputDir, generatorArgs)
 	}
 }
@@ -207,30 +206,4 @@ func mojomGenPaths() []string {
 		}
 	}
 	return genPaths
-}
-
-// findGeneratorPaths searches through the directories listed in |paths| files
-// named after |generator| and returns the path to those files.
-func findGeneratorPaths(paths []string, generators []string) (generatorPaths []string) {
-	for _, generator := range generators {
-		generatorPath := findGeneratorPath(paths, generator)
-		if generatorPath != "" {
-			generatorPaths = append(generatorPaths, generatorPath)
-		}
-	}
-
-	return
-}
-
-// findGeneratorPath searches through the directories listed in |paths| for a
-// file named |generatorName| and returns the path to that file. If no such file
-// is found, the empty string is returned.
-func findGeneratorPath(paths []string, generatorName string) string {
-	for _, path := range paths {
-		genPath := filepath.Join(path, generatorName)
-		if fileInfo, err := os.Stat(genPath); err == nil && !fileInfo.IsDir() {
-			return genPath
-		}
-	}
-	return ""
 }
