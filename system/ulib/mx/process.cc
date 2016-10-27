@@ -10,8 +10,8 @@
 
 namespace mx {
 
-mx_status_t process::create(process* result, const char* name,
-                            uint32_t name_len, uint32_t flags) {
+mx_status_t process::create(const char* name, uint32_t name_len,
+                            uint32_t flags, process* result) {
     mx_handle_t h = mx_process_create(name, name_len, flags);
     if (h < 0) {
         result->reset(MX_HANDLE_INVALID);
