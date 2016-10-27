@@ -87,7 +87,9 @@ Status ToBuffer(convert::ExtendedStringView value,
                 int64_t max_size,
                 mojo::ScopedSharedBufferHandle* buffer) {
   size_t start = value.size();
-  if (static_cast<size_t>(std::abs(offset)) < value.size()) {
+  // Valid indices are between -N and N-1.
+  if (offset >= -static_cast<int64_t>(value.size()) &&
+      offset < static_cast<int64_t>(value.size())) {
     start = offset < 0 ? value.size() + offset : offset;
   }
   size_t length = max_size < 0 ? value.size() : max_size;
