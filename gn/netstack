@@ -16,6 +16,10 @@
             "bootfs_path": "bin/polltest"
         },
         {
+            "binary": "selecttest",
+            "bootfs_path": "bin/selecttest"
+        },
+        {
             "binary": "sockettest",
             "bootfs_path": "bin/sockettest"
         }
