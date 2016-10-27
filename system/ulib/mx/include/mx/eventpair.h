@@ -21,8 +21,7 @@ public:
         return *this;
     }
 
-    static mx_status_t create(eventpair* endpoint0, eventpair* endpoint1,
-                              uint32_t flags);
+    static mx_status_t create(uint32_t options, eventpair* endpoint0, eventpair* endpoint1);
 };
 
 } // namespace mx

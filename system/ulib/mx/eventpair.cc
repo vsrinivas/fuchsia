@@ -8,8 +8,7 @@
 
 namespace mx {
 
-mx_status_t eventpair::create(eventpair* endpoint0, eventpair* endpoint1,
-                              uint32_t flags) {
+mx_status_t eventpair::create(uint32_t flags, eventpair* endpoint0, eventpair* endpoint1) {
     mx_handle_t h[2];
     mx_status_t result = mx_eventpair_create(h, flags);
     endpoint0->reset(h[0]);
