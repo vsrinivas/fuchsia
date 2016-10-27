@@ -91,7 +91,7 @@ static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_h,
   if ((r = mx_msgpipe_create(h, 0)) < 0) goto fail_msgpipe_create;
 
   mx_handle_t s[2];
-  if ((r = mx_socket_create(s, 0)) < 0) goto fail_socket_create;
+  if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
 
   ios->s = s[0];
 
@@ -456,7 +456,12 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
     connection_closed:
       // connection is closed
       info("do_read: net_read: connection closed\n");
-      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, 0u, NULL);
+      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, NULL, 0u,
+                                      NULL);
+      if (r < 0) {
+        error("do_read: MX_SOCKET_HALF_CLOSE failed\n");
+        return r;
+      }
       info("half_close(ios->s 0x%x) => %d (ios=%p)\n", ios->s, r, ios);
       return NO_ERROR;
     } else if (errno_ == EWOULDBLOCK) {
@@ -474,10 +479,11 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
   while (ios->roff < ios->rlen) {
-    mx_status_t r = mx_socket_write(ios->s, 0u, ios->rlen - ios->roff,
-                                    ios->rbuf->data + ios->roff);
-    debug_socket("mx_socket_write(%p, %d) => %d\n", ios->rbuf->data + ios->roff,
-                 ios->rlen - ios->roff, r);
+    mx_size_t nwritten;
+    mx_status_t r = mx_socket_write(ios->s, 0u, ios->rbuf->data + ios->roff,
+                                    ios->rlen - ios->roff, &nwritten);
+    debug_socket("mx_socket_write(%p, %d) => %lu\n",
+                 ios->rbuf->data + ios->roff, ios->rlen - ios->roff, nwritten);
     if (r < 0) {
       if (r == ERR_SHOULD_WAIT) {
         socket_signals_set(ios, MX_SIGNAL_WRITABLE);
@@ -487,8 +493,8 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
       // TODO: send the error to the client
       return r;
     }
-    ios->roff += r;
-    ios->read_socket_write += r;
+    ios->roff += nwritten;
+    ios->read_socket_write += nwritten;
   }
   ios->rlen = 0;
   ios->roff = 0;
@@ -508,8 +514,10 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
       debug_alloc("do_write: get wbuf %p\n", ios->wbuf);
       assert(ios->wbuf);
     }
-    mx_status_t r = mx_socket_read(ios->s, 0u, RWBUF_SIZE, ios->wbuf->data);
-    debug_socket("mx_socket_read => %d\n", r);
+    mx_size_t nread;
+    mx_status_t r = mx_socket_read(ios->s, 0u, ios->wbuf->data, RWBUF_SIZE,
+                                   &nread);
+    debug_socket("mx_socket_read => %d (%lu)\n", r, nread);
     if (r == ERR_SHOULD_WAIT) {
       if (signals & MX_SIGNAL_PEER_CLOSED) {
         debug_socket("do_write: handle_close (socket is closed)\n");
@@ -525,11 +533,12 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
       error("do_write: mx_socket_read failed (%d)\n", r);
       // half-close the socket to notify the error
       // TODO: use user signal
-      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, 0u, NULL);
+      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, NULL, 0u,
+                                      NULL);
       info("mx_socket_write(half_close) => %d\n", r);
       return r;
     }
-    ios->wlen = r;
+    ios->wlen = nread;
     ios->woff = 0;
     ios->write_socket_read += ios->wlen;
   }
