@@ -1,0 +1,87 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("compiler") {
+  deps = [
+    ":fidl",
+  ]
+}
+
+# Template for building Go binaries. Doesn't have all the features ever yet.
+# Arguments:
+#   package: (required) the package to pass to "go build"
+#   gopath: (optional) the GOPATH variable to set
+#   output: (optional) the file to generate
+template("go_binary") {
+  # TODO(ianloic): make this general and reusable and move it under //build
+  assert(defined(invoker.package), "package not defined for $target_name")
+
+  if (defined(invoker.gopath)) {
+    gopath = invoker.gopath
+  } else {
+    gopath = [ "//go" ]
+  }
+  gopath_str = ""
+  target_sources = []
+  foreach(path, rebase_path(gopath)) {
+    if (gopath_str != "") {
+      gopath_str += ":"
+    }
+    gopath_str += path
+
+    # TODO(ianloic): work out how to use go list to list the sources the target actually uses.
+    target_sources += exec_script("/usr/bin/find",
+                                  [
+                                    path,
+                                    "-type",
+                                    "f",
+                                    "-name",
+                                    "*.go",
+                                    "-print",
+                                  ],
+                                  "list lines")
+  }
+
+  go_runtime_target = "//third_party/go:go_runtime"
+  target_deps = [ go_runtime_target ]
+  if (defined(invoker.deps)) {
+    target_deps += invoker.deps
+  }
+  go_binary = get_label_info(go_runtime_target, "target_gen_dir") + "/bin/go"
+
+  if (defined(invoker.output)) {
+    output_path = "${root_out_dir}/${invoker.output}"
+  } else {
+    output_path = "${root_out_dir}/${target_name}"
+  }
+
+  action(target_name) {
+    script = "/usr/bin/env"
+
+    # TODO(ianloic): support cross-compilation
+    # TODO(ianloic): use 'go install' instead of 'go build' to avoid recompiling more than is needed.
+    args = [
+      "GOPATH=${gopath_str}",
+      rebase_path(go_binary),
+      "build",
+      "-o",
+      rebase_path(output_path),
+      invoker.package,
+    ]
+    sources = target_sources
+    outputs = [
+      output_path,
+    ]
+    deps = target_deps
+  }
+}
+
+# Build the fidl compiler
+go_binary("fidl") {
+  gopath = [
+    "//lib/fidl/compiler",
+    "//mojo/public/go",
+  ]
+  package = "mojom/mojom_tool"
+}
