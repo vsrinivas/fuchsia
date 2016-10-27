@@ -1,0 +1,19 @@
+Name: Go
+URL: https://golang.org/src
+Version: 1.5.1
+License: BSD-style
+License File: LICENSE
+
+Description:
+The src subdirectory contains a small number of Go source files
+downloaded from https://golang.org/src and modified by the Mojo authors as
+described below.
+
+Local Changes:
+- The fmt package has been modified with regards to how it uses reflection
+to deep print Go structures:
+  * Instead of only following pointers for one level we now follow pointers for
+    50 levels.
+  * Instead of printing the address of a string pointer we print the string.
+  * Instead of printing maps in an unspecified order we sort the keys of
+    the map if they are of numeric or string type.
