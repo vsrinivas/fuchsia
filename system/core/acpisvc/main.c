@@ -49,6 +49,11 @@ int main(int argc, char** argv) {
         printf("Failed to install powerbtn handler\n");
     }
 
+    mx_status = pci_report_current_resources(root_resource_handle);
+    if (mx_status != NO_ERROR) {
+        printf("WARNING: ACPI failed to report all current resources!\n");
+    }
+
     return begin_processing(acpi_root);
 }
 

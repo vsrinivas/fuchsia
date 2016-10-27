@@ -10,6 +10,8 @@
 
 #include <acpica/acpi.h>
 
+#include "resources.h"
+
 #define MXDEBUG 0
 
 #define PCIE_MAX_LEGACY_IRQ_PINS 4
@@ -337,4 +339,143 @@ mx_status_t get_pci_init_arg(mx_pci_init_arg_t** arg, uint32_t* size) {
 fail:
     free(res);
     return status;
+}
+
+struct report_current_resources_ctx {
+    mx_handle_t pci_handle;
+    bool device_is_root_bridge;
+};
+
+static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void* _ctx) {
+    struct report_current_resources_ctx* ctx = _ctx;
+
+    bool is_mmio = false;
+    uint64_t base = 0;
+    uint64_t len = 0;
+    bool add_range = false;
+
+    if (resource_is_memory(res)) {
+        resource_memory_t mem;
+        mx_status_t status = resource_parse_memory(res, &mem);
+        if (status != NO_ERROR || mem.minimum != mem.maximum) {
+            return AE_ERROR;
+        }
+
+        is_mmio = true;
+        base = mem.minimum;
+        len = mem.address_length;
+    } else if (resource_is_address(res)) {
+        resource_address_t addr;
+        mx_status_t status = resource_parse_address(res, &addr);
+        if (status != NO_ERROR) {
+            return AE_ERROR;
+        }
+
+        if (addr.resource_type == RESOURCE_ADDRESS_MEMORY) {
+            is_mmio = true;
+        } else if (addr.resource_type == RESOURCE_ADDRESS_IO) {
+            is_mmio = false;
+        } else {
+            return AE_OK;
+        }
+
+        if (!addr.min_address_fixed || !addr.max_address_fixed || addr.maximum < addr.minimum) {
+            printf("WARNING: ACPI found bad _CRS entry\n");
+            return AE_OK;
+        }
+
+        // We compute len from maximum rather than address_length, since some
+        // implementations don't set address_length...
+        base = addr.minimum;
+        len = addr.maximum - base + 1;
+
+        if (ctx->device_is_root_bridge && !addr.consumed_only) {
+            add_range = true;
+        }
+    } else if (resource_is_io(res)) {
+        resource_io_t io;
+        mx_status_t status = resource_parse_io(res, &io);
+        if (status != NO_ERROR || io.minimum != io.maximum) {
+            return AE_ERROR;
+        }
+
+        is_mmio = false;
+        base = io.minimum;
+        len = io.address_length;
+    } else {
+        return AE_OK;
+    }
+
+    // Ignore empty regions that are reported, and don't try adding regions.
+    // Skipping adds is a conservative choice to protect against regions that
+    // are under PCIe, but are fixed reservations for other things (e.g. the low
+    // memory graphics window that is decoded by ISA).
+    //
+    // If we decide to process adds in the future, it should be done in two
+    // passes.  First adding in adds we find, then subtracting out things that
+    // are being consumed elsewhere.  This will force an ordering on the
+    // operations, and be a conservative protection against inconsistent
+    // information in the _CRS tables.
+    if (len == 0 || add_range == true) {
+        return AE_OK;
+    }
+
+    xprintf("ACPI range modification: %sing %s %016lx %016lx\n",
+            add_range ? "add" : "subtract", is_mmio ? "MMIO" : "PIO", base, len);
+
+    mx_status_t status = mx_pci_add_subtract_io_range(
+            ctx->pci_handle, is_mmio, base, len, add_range);
+    if (status != NO_ERROR) {
+        // If we are subtracting a range and fail, abort.  This is bad.
+        return AE_ERROR;
+    }
+    return AE_OK;
+}
+
+static ACPI_STATUS report_current_resources_device_cb(
+        ACPI_HANDLE object, uint32_t nesting_level, void* _ctx, void** ret) {
+
+    ACPI_DEVICE_INFO* info = NULL;
+    ACPI_STATUS status = AcpiGetObjectInfo(object, &info);
+    if (status != AE_OK) {
+        return status;
+    }
+
+    struct report_current_resources_ctx* ctx = _ctx;
+    ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
+
+    ACPI_FREE(info);
+
+
+    status = AcpiWalkResources(object, (char*)"_CRS", report_current_resources_resource_cb, ctx);
+    if (status == AE_NOT_FOUND || status == AE_OK) {
+        return AE_OK;
+    }
+    return status;
+}
+
+/* @brief Report current resources to the kernel PCI driver
+ *
+ * Walks the ACPI namespace and use the reported current resources to inform
+   the kernel PCI interface about what memory it shouldn't use.
+ *
+ * @param root_resource_handle The handle to pass to the kernel when talking
+ * to the PCI driver.
+ *
+ * @return NO_ERROR on success
+ */
+mx_status_t pci_report_current_resources(mx_handle_t root_resource_handle) {
+    struct report_current_resources_ctx ctx = {
+        .pci_handle = root_resource_handle,
+        .device_is_root_bridge = false,
+    };
+
+    // Walk the device tree and integrate found resources into the PCIe IO
+    // ranges (in particular, removing ones found to be in use).
+    ACPI_STATUS status = AcpiGetDevices(NULL, report_current_resources_device_cb, &ctx, NULL);
+    if (status != AE_OK) {
+        return ERR_INTERNAL;
+    }
+
+    return NO_ERROR;
 }
