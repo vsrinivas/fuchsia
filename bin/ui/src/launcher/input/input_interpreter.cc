@@ -28,6 +28,10 @@ void InputInterpreter::UnregisterDevice(const InputDevice* device) {
   devices_.erase(device);
 }
 
+void InputInterpreter::RegisterDisplay(mojo::Size dimension) {
+  display_size_ = dimension;
+}
+
 void InputInterpreter::OnReport(const InputDevice* device,
                                 InputReport::ReportType type) {
   auto it = devices_.find(device);
@@ -50,15 +54,16 @@ void InputInterpreter::OnReport(const InputDevice* device,
       break;
     case InputReport::ReportType::kMouse:
       state.mouse.Update(device->mouse_report(), device->mouse_descriptor(),
-                         on_update);
+                         display_size_, on_update);
       break;
     case InputReport::ReportType::kStylus:
       state.stylus.Update(device->stylus_report(), device->stylus_descriptor(),
-                          on_update);
+                          display_size_, on_update);
       break;
     case InputReport::ReportType::kTouchscreen:
       state.touchscreen.Update(device->touch_report(),
-                               device->touchscreen_descriptor(), on_update);
+                               device->touchscreen_descriptor(), display_size_,
+                               on_update);
       break;
   }
 }

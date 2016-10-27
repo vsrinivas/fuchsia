@@ -184,46 +184,51 @@ void MouseState::SendEvent(float rel_x,
 
 void MouseState::Update(const MouseReport& report,
                         const MouseDescriptor& descriptor,
+                        mojo::Size display_size,
                         OnEventCallback callback) {
   uint64_t now = InputEventTimestampNow();
   uint8_t pressed = (report.buttons ^ buttons_) & report.buttons;
   uint8_t released = (report.buttons ^ buttons_) & buttons_;
 
+  position_.x =
+      std::max(0.0f, std::min(position_.x + report.rel_x,
+                              static_cast<float>(display_size.width)));
+  position_.y =
+      std::max(0.0f, std::min(position_.y - report.rel_y,
+                              static_cast<float>(display_size.height)));
+
   if (!pressed && !released) {
-    SendEvent(report.rel_x, report.rel_y, now, mozart::EventType::POINTER_MOVE,
+    SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
               mozart::EventFlags::NONE, callback);
   } else {
     if (pressed) {
       if (pressed & kMouseLeftButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
+        SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
       }
       if (pressed & kMouseRightButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
+        SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
       }
       if (pressed & kMouseMiddleButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
+        SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
                   mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
       }
     }
     if (released) {
       if (released & kMouseLeftButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
-                  mozart::EventType::POINTER_UP,
+        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
                   mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
       }
       if (released & kMouseRightButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
-                  mozart::EventType::POINTER_UP,
+        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
                   mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
       }
       if (released & kMouseMiddleButtonMask) {
-        SendEvent(report.rel_x, report.rel_y, now,
-                  mozart::EventType::POINTER_UP,
+        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
                   mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
       }
     }
@@ -235,6 +240,7 @@ void MouseState::Update(const MouseReport& report,
 
 void StylusState::Update(const StylusReport& report,
                          const StylusDescriptor& descriptor,
+                         mojo::Size display_size,
                          OnEventCallback callback) {
   const bool previous_stylus_down = stylus_down_;
   stylus_down_ = report.is_down;
@@ -260,10 +266,12 @@ void StylusState::Update(const StylusReport& report,
     ev->pointer_data = stylus_.Clone();
   } else {
     float x =
-        static_cast<float>(report.x - descriptor.x.range.min) /
+        static_cast<float>(display_size.width *
+                           (report.x - descriptor.x.range.min)) /
         static_cast<float>(descriptor.x.range.max - descriptor.x.range.min);
     float y =
-        static_cast<float>(report.y - descriptor.y.range.min) /
+        static_cast<float>(display_size.height *
+                           (report.y - descriptor.y.range.min)) /
         static_cast<float>(descriptor.y.range.max - descriptor.y.range.min);
 
     ev->pointer_data = mozart::PointerData::New();
@@ -288,6 +296,7 @@ void StylusState::Update(const StylusReport& report,
 
 void TouchscreenState::Update(const TouchReport& report,
                               const TouchscreenDescriptor& descriptor,
+                              mojo::Size display_size,
                               OnEventCallback callback) {
   std::vector<mozart::PointerData> old_pointers = pointers_;
   pointers_.clear();
@@ -312,10 +321,12 @@ void TouchscreenState::Update(const TouchReport& report,
     ev->pointer_data->kind = mozart::PointerKind::TOUCH;
 
     float x =
-        static_cast<float>(touch.x - descriptor.x.range.min) /
+        static_cast<float>(display_size.width *
+                           (touch.x - descriptor.x.range.min)) /
         static_cast<float>(descriptor.x.range.max - descriptor.x.range.min);
     float y =
-        static_cast<float>(touch.y - descriptor.y.range.min) /
+        static_cast<float>(display_size.height *
+                           (touch.y - descriptor.y.range.min)) /
         static_cast<float>(descriptor.y.range.max - descriptor.y.range.min);
 
     uint32_t width = 2 * touch.width;

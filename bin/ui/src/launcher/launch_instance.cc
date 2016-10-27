@@ -41,27 +41,8 @@ void LaunchInstance::Launch() {
       new LauncherViewTree(compositor_, view_manager_, std::move(framebuffer_),
                            std::move(framebuffer_info_),
                            std::move(root_view_owner_), shutdown_callback_));
+  input_interpreter_.RegisterDisplay(framebuffer_size_);
   input_interpreter_.RegisterCallback([this](mozart::EventPtr event) {
-    if (event->pointer_data) {
-      // TODO(jpoichet) Move all this into an "input interpreter"
-      if (event->pointer_data->kind == mozart::PointerKind::MOUSE) {
-        mouse_coordinates_.x = std::max(
-            0.0f, std::min(mouse_coordinates_.x + event->pointer_data->x,
-                           static_cast<float>(framebuffer_size_.width)));
-        mouse_coordinates_.y = std::max(
-            0.0f, std::min(mouse_coordinates_.y - event->pointer_data->y,
-                           static_cast<float>(framebuffer_size_.height)));
-        event->pointer_data->x = mouse_coordinates_.x;
-        event->pointer_data->y = mouse_coordinates_.y;
-      } else {
-        event->pointer_data->x =
-            event->pointer_data->x * framebuffer_size_.width;
-        event->pointer_data->y =
-            event->pointer_data->y * framebuffer_size_.height;
-      }
-      event->pointer_data->screen_x = event->pointer_data->x;
-      event->pointer_data->screen_y = event->pointer_data->y;
-    }
     TRACE_EVENT0("input", "OnInputEvent");
     view_tree_->DispatchEvent(std::move(event));
   });

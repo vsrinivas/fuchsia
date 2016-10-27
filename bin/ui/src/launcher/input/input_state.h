@@ -37,6 +37,7 @@ class MouseState {
  public:
   void Update(const MouseReport& report,
               const MouseDescriptor& descriptor,
+              mojo::Size display_size,
               OnEventCallback callback);
 
  private:
@@ -48,12 +49,14 @@ class MouseState {
                  OnEventCallback callback);
 
   uint8_t buttons_ = 0;
+  mojo::PointF position_;
 };
 
 class StylusState {
  public:
   void Update(const StylusReport& report,
               const StylusDescriptor& descriptor,
+              mojo::Size display_size,
               OnEventCallback callback);
 
  private:
@@ -65,6 +68,7 @@ class TouchscreenState {
  public:
   void Update(const TouchReport& report,
               const TouchscreenDescriptor& descriptor,
+              mojo::Size display_size,
               OnEventCallback callback);
 
  private:
