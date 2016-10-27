@@ -184,7 +184,7 @@ MAGENTA_SYSCALL_DEF(4, 5, 211, mx_status_t, object_bind_exception_port,
                     mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
 
 // IO Ports
-MAGENTA_SYSCALL_DEF(1, 1, 220, mx_handle_t, port_create, uint32_t options)
+MAGENTA_SYSCALL_DEF(2, 2, 220, mx_status_t, port_create, uint32_t options, USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(3, 3, 221, mx_status_t, port_queue, mx_handle_t handle,
                     USER_PTR(const void) packet, mx_size_t size)
 MAGENTA_SYSCALL_DEF(3, 3, 222, mx_status_t, port_wait, mx_handle_t handle,

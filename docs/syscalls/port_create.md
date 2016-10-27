@@ -9,7 +9,7 @@ port_create - create an IO port
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_port_create(uint32_t options);
+mx_status_t mx_port_create(uint32_t options, mx_handle_t* out);
 
 ```
 
@@ -23,11 +23,12 @@ to another process via message pipe write), MX_RIGHT_WRITE (allowing
 packets to be queued), MX_RIGHT_READ (allowing packets to be read) and
 MX_RIGHT_DUPLICATE (allowing them to be duplicated).
 
+*options* must be zero.
+
 ## RETURN VALUE
 
-**port_create**() returns a valid IO port handle (positive) on success.
-In the event of failure, a negative error value is returned. Zero (the
-"invalid handle") is never returned.
+**port_create**() returns NO_ERROR and a valid IO port handle via *out* on
+success. In the event of failure, an error value is returned.
 
 ## ERRORS
 

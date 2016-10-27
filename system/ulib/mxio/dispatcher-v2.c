@@ -111,9 +111,10 @@ mx_status_t mxio_dispatcher_create(mxio_dispatcher_t** out, mxio_dispatcher_cb_t
     xprintf("mxio_dispatcher_create: %p\n", md);
     list_initialize(&md->list);
     mtx_init(&md->lock, mtx_plain);
-    if ((md->ioport = mx_port_create(0u)) < 0) {
+    mx_status_t status;
+    if ((status = mx_port_create(0u, &md->ioport)) < 0) {
         free(md);
-        return md->ioport;
+        return status;
     }
     md->cb = cb;
     *out = md;

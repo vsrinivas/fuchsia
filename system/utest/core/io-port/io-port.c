@@ -55,8 +55,9 @@ static bool basic_test(void)
     BEGIN_TEST;
     mx_status_t status;
 
-    mx_handle_t io_port = mx_port_create(0u);
-    EXPECT_GT(io_port, 0, "could not create ioport");
+    mx_handle_t io_port;
+    status = mx_port_create(0u, &io_port);
+    EXPECT_EQ(status, 0, "could not create ioport");
 
     typedef struct {
         mx_packet_header_t hdr;
@@ -92,8 +93,9 @@ static bool queue_and_close_test(void)
     BEGIN_TEST;
     mx_status_t status;
 
-    mx_handle_t io_port = mx_port_create(0u);
-    EXPECT_GT(io_port, 0, "could not create ioport");
+    mx_handle_t io_port;
+    status = mx_port_create(0u, &io_port);
+    EXPECT_EQ(status, 0, "could not create ioport");
 
     typedef struct {
         mx_packet_header_t hdr;
@@ -118,8 +120,8 @@ static bool thread_pool_test(void)
 
     t_info_t tinfo = {0u, 0, {0}};
 
-    tinfo.io_port = mx_port_create(0u);
-    EXPECT_GT(tinfo.io_port, 0, "could not create ioport");
+    status = mx_port_create(0u, &tinfo.io_port);
+    EXPECT_EQ(status, 0, "could not create ioport");
 
     thrd_t threads[NUM_IO_THREADS];
     for (size_t ix = 0; ix != NUM_IO_THREADS; ++ix) {
@@ -161,15 +163,17 @@ static bool bind_basic_test(void)
     BEGIN_TEST;
     mx_status_t status;
 
-    mx_handle_t ioport = mx_port_create(0u);
-    EXPECT_GT(ioport, 0, "could not create io port");
+    mx_handle_t ioport;
+    status = mx_port_create(0u, &ioport);
+    EXPECT_EQ(status, 0, "could not create io port");
 
     mx_handle_t pipe[2];
     status = mx_msgpipe_create(pipe, 0u);
     EXPECT_EQ(status, NO_ERROR, "could not create pipe");
 
-    mx_handle_t event = mx_port_create(0u);
-    EXPECT_GT(event, 0, "could not create io port");
+    mx_handle_t event;
+    status = mx_port_create(0u, &event);
+    EXPECT_EQ(status, 0, "could not create io port");
 
     status = mx_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
     EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
@@ -244,8 +248,8 @@ static bool bind_pipes_test(void)
     mx_status_t status;
     io_info_t info = {0};
 
-    info.io_port = mx_port_create(0u);
-    EXPECT_GT(info.io_port, 0, "could not create ioport");
+    status = mx_port_create(0u, &info.io_port);
+    EXPECT_EQ(status, 0, "could not create ioport");
 
     mx_handle_t h[2];
     status = mx_msgpipe_create(h, 0);
@@ -328,8 +332,9 @@ static bool bind_sockets_test(void)
     mx_status_t status;
     mx_ssize_t sz;
 
-    mx_handle_t io_port = mx_port_create(0u);
-    EXPECT_GT(io_port, 0, "");
+    mx_handle_t io_port;
+    status = mx_port_create(0u, &io_port);
+    EXPECT_EQ(status, 0, "");
 
     mx_handle_t socket[2];
     status = mx_socket_create(socket, 0u);
@@ -395,8 +400,8 @@ static bool bind_pipes_playback(void)
     mx_handle_t port;
     mx_handle_t h[2];
 
-    port = mx_port_create(0u);
-    EXPECT_GT(port, 0, "");
+    status = mx_port_create(0u, &port);
+    EXPECT_EQ(status, 0, "");
 
     status = mx_msgpipe_create(h, 0);
     EXPECT_EQ(status, NO_ERROR, "");

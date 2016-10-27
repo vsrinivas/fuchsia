@@ -310,9 +310,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_handle_t self_dump_port = mx_port_create(0u);
-    if (self_dump_port < 0) {
-        print_mx_error("mx_port_create failed", self_dump_port);
+    mx_handle_t self_dump_port;
+    if ((status = mx_port_create(0u, &self_dump_port)) < 0) {
+        print_mx_error("mx_port_create failed", status);
         return 1;
     }
 
@@ -339,9 +339,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mx_handle_t ex_port = mx_port_create(0u);
-    if (ex_port < 0) {
-        print_mx_error("mx_port_create failed", ex_port);
+    mx_handle_t ex_port;
+    if ((status = mx_port_create(0u, &ex_port)) < 0) {
+        print_mx_error("mx_port_create failed", status);
         return 1;
     }
 

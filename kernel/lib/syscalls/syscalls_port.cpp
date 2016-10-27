@@ -20,7 +20,7 @@
 
 #define LOCAL_TRACE 0
 
-mx_handle_t sys_port_create(uint32_t options) {
+mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("options %u\n", options);
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -38,10 +38,13 @@ mx_handle_t sys_port_create(uint32_t options) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
+
+    if (out.copy_to_user(hv) != NO_ERROR)
+        return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_size_t size) {

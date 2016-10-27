@@ -343,7 +343,7 @@ syscall object_bind_exception_port
 # IO Ports
 
 syscall port_create
-    (options: uint32_t)
+    (options: uint32_t, out: mx_handle_t[1] OUT)
     returns (mx_handle_t);
 
 syscall port_queue
