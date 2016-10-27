@@ -742,3 +742,13 @@ void DumpAllAspaces() {
     for (const auto& a : aspaces)
         a.Dump();
 }
+
+size_t VmAspace::AllocatedPages() const {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    AutoLock a(lock_);
+    size_t result = 0;
+    for (const auto& r : regions_) {
+        result += r.AllocatedPages();
+    }
+    return result;
+}

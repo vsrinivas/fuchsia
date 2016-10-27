@@ -17,6 +17,7 @@ void DumpProcessListKeyMap() {
     printf("id  : process id number\n");
     printf("-s  : state: R = running D = dead\n");
     printf("#t  : number of threads\n");
+    printf("#pg : number of allocated pages\n");
     printf("#h  : total number of handles\n");
     printf("#jb : number of job handles\n");
     printf("#pr : number of process handles\n");
@@ -86,6 +87,10 @@ uint32_t ProcessDispatcher::ThreadCount() const {
     return static_cast<uint32_t>(thread_list_.size_slow());
 }
 
+size_t ProcessDispatcher::PageCount() const {
+    return aspace_->AllocatedPages();
+}
+
 char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
 
@@ -110,13 +115,14 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #h:  #jb #pr #th #vm #mp #ev #ip #dp [name]\n", "id");
+    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #mp #ev #ip #dp [name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
-        printf("%8" PRIu64 "-%c %3u %s  [%s]\n",
+        printf("%8" PRIu64 "-%c %3u %4zu %s  [%s]\n",
                process.get_koid(),
                StateChar(process),
                process.ThreadCount(),
+               process.PageCount(),
                DumpHandleTypeCount_NoLock(process),
                process.name().data());
     }

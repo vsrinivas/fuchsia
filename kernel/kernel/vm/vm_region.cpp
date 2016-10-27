@@ -66,6 +66,15 @@ void VmRegion::Dump() const {
     }
 }
 
+size_t VmRegion::AllocatedPages() const {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    if (object_.get()) {
+        return object_.get()->AllocatedPages();
+    } else {
+        return 0;
+    }
+}
+
 status_t VmRegion::Protect(uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     arch_mmu_flags_ = arch_mmu_flags;

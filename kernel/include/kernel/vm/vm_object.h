@@ -61,6 +61,8 @@ public:
 
     void Dump(bool page_dump = false);
 
+    size_t AllocatedPages() const;
+
 private:
     // kill copy constructors
     VmObject(const VmObject& o) = delete;
@@ -99,7 +101,7 @@ private:
     // members
     uint64_t size_ = 0;
     uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
-    Mutex lock_;
+    mutable Mutex lock_;
 
     // a tree of pages
     VmPageList page_list_;

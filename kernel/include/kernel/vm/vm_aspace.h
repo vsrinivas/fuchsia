@@ -87,6 +87,8 @@ public:
 
     void Dump() const;
 
+    size_t AllocatedPages() const;
+
 private:
     using RegionTree = mxtl::WAVLTree<vaddr_t, mxtl::RefPtr<VmRegion>>;
 

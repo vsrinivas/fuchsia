@@ -34,6 +34,8 @@ public:
 
     void Dump() const;
 
+    size_t AllocatedPages() const;
+
     // set the object that this region backs
     status_t SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset);
 

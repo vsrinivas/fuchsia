@@ -105,6 +105,14 @@ void VmObject::Dump(bool page_dump) {
     }
 }
 
+size_t VmObject::AllocatedPages() const {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    AutoLock a(lock_);
+    size_t count = 0;
+    page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
+    return count;
+}
+
 status_t VmObject::Resize(uint64_t s) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
