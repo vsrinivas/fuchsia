@@ -50,6 +50,28 @@ static inline void shutdown_early_init_console() { }
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 
+mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
+    // TODO: finer grained validation
+    // TODO(security): Add additional access checks
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
+
+    auto pcie = PcieBusDriver::GetDriver();
+    if (pcie == nullptr) {
+        return ERR_BAD_STATE;
+    }
+
+    PcieAddrSpace addr_space = mmio ? PcieAddrSpace::MMIO : PcieAddrSpace::PIO;
+
+    if (add) {
+        return pcie->AddBusRegion(base, len, addr_space);
+    } else {
+        return pcie->SubtractBusRegion(base, len, addr_space);
+    }
+}
+
 mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<mx_pci_init_arg_t> init_buf, uint32_t len) {
 
     // TODO: finer grained validation
