@@ -47,7 +47,7 @@ public:
 
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
                          mx_signals_state_t* signals_state) const {
-        return mx_wait_one(value_, signals, timeout, signals_state);
+        return mx_handle_wait_one(value_, signals, timeout, signals_state);
     }
 
     mx_status_t replace(handle<T>* result, mx_rights_t rights) const {
