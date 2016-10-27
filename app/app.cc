@@ -11,7 +11,8 @@
 #include "apps/ledger/api/ledger.mojom.h"
 #include "apps/ledger/app/ledger_factory_impl.h"
 #include "apps/network/interfaces/network_service.mojom.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -24,8 +25,10 @@ namespace ledger {
 
 namespace {
 
-const char kStorageArg[] = "--storage_path=";
-const size_t kStorageArgLength = sizeof(kStorageArg) - 1;
+const char kStoragePathArg[] = "--storage-path=";
+const size_t kStoragePathArgLength = sizeof(kStoragePathArg) - 1;
+
+const char kDefaultStoragePath[] = "/data/ledger";
 
 }  // namespace
 
@@ -42,19 +45,21 @@ class App : public mojo::ApplicationImplBase {
 
  private:
   void OnInitialize() override {
-    bool storage_path_given = false;
+    storage_path_ = kDefaultStoragePath;
+
     for (const std::string& arg : args()) {
-      if (arg.size() > kStorageArgLength &&
-          arg.substr(0, kStorageArgLength) == kStorageArg) {
-        std::string storage_path = arg.substr(kStorageArgLength);
-        storage_path_ = storage_path;
-        storage_path_given = true;
+      if (arg.size() > kStoragePathArgLength &&
+          arg.substr(0, kStoragePathArgLength) == kStoragePathArg) {
+        storage_path_ = arg.substr(kStoragePathArgLength);
         break;
       }
     }
-    if (!storage_path_given) {
-      temp_storage_.reset(new files::ScopedTempDir());
-      storage_path_ = temp_storage_->path();
+
+    if (!files::IsDirectory(storage_path_) &&
+        !files::CreateDirectory(storage_path_)) {
+      FTL_LOG(ERROR) << "Unable to access " << storage_path_;
+      Terminate(MOJO_RESULT_PERMISSION_DENIED);
+      return;
     }
 
     factory_impl_.reset(new LedgerFactoryImpl(
@@ -73,7 +78,6 @@ class App : public mojo::ApplicationImplBase {
   }
 
   std::string storage_path_;
-  std::unique_ptr<files::ScopedTempDir> temp_storage_;
   std::unique_ptr<LedgerFactoryImpl> factory_impl_;
   mojo::BindingSet<LedgerFactory> factory_bindings_;
 

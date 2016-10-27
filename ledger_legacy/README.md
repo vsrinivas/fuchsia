@@ -17,7 +17,7 @@ Ledger is a distributed storage system for Fuchsia.
 
 ## Development
 
-For development workflow, see [workflow.md](docs/workflow.md).
+For development workflow, see [Developer Workflow](docs/workflow.md).
 
 ## Directory contents
 
