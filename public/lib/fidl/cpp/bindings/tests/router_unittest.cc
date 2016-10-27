@@ -1,0 +1,460 @@
+// Copyright 2014 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/internal/message_builder.h"
+#include "lib/fidl/cpp/bindings/internal/router.h"
+#include "lib/fidl/cpp/bindings/tests/message_queue.h"
+#include "lib/ftl/macros.h"
+#include "mojo/public/cpp/utility/run_loop.h"
+
+namespace fidl {
+namespace test {
+namespace {
+
+void AllocRequestMessage(uint32_t name, const char* text, Message* message) {
+  size_t payload_size = strlen(text) + 1;  // Plus null terminator.
+  RequestMessageBuilder builder(name, payload_size);
+  memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
+
+  builder.message()->MoveTo(message);
+}
+
+void AllocResponseMessage(uint32_t name,
+                          const char* text,
+                          uint64_t request_id,
+                          Message* message) {
+  size_t payload_size = strlen(text) + 1;  // Plus null terminator.
+  ResponseMessageBuilder builder(name, payload_size, request_id);
+  memcpy(builder.buffer()->Allocate(payload_size), text, payload_size);
+
+  builder.message()->MoveTo(message);
+}
+
+class MessageAccumulator : public MessageReceiver {
+ public:
+  explicit MessageAccumulator(MessageQueue* queue) : queue_(queue) {}
+
+  bool Accept(Message* message) override {
+    queue_->Push(message);
+    return true;
+  }
+
+ private:
+  MessageQueue* queue_;
+};
+
+class ResponseGenerator : public MessageReceiverWithResponderStatus {
+ public:
+  ResponseGenerator() {}
+
+  bool Accept(Message* message) override { return false; }
+
+  bool AcceptWithResponder(Message* message,
+                           MessageReceiverWithStatus* responder) override {
+    EXPECT_TRUE(message->has_flag(internal::kMessageExpectsResponse));
+
+    bool result = SendResponse(
+        message->name(), message->request_id(),
+        reinterpret_cast<const char*>(message->payload()), responder);
+    EXPECT_TRUE(responder->IsValid());
+    delete responder;
+    return result;
+  }
+
+  bool SendResponse(uint32_t name,
+                    uint64_t request_id,
+                    const char* request_string,
+                    MessageReceiver* responder) {
+    Message response;
+    std::string response_string(request_string);
+    response_string += " world!";
+    AllocResponseMessage(name, response_string.c_str(), request_id, &response);
+
+    return responder->Accept(&response);
+  }
+};
+
+class LazyResponseGenerator : public ResponseGenerator {
+ public:
+  LazyResponseGenerator() : responder_(nullptr), name_(0), request_id_(0) {}
+
+  ~LazyResponseGenerator() override { delete responder_; }
+
+  bool AcceptWithResponder(Message* message,
+                           MessageReceiverWithStatus* responder) override {
+    name_ = message->name();
+    request_id_ = message->request_id();
+    request_string_ =
+        std::string(reinterpret_cast<const char*>(message->payload()));
+    responder_ = responder;
+    return true;
+  }
+
+  bool has_responder() const { return !!responder_; }
+
+  bool responder_is_valid() const { return responder_->IsValid(); }
+
+  // Send the response and delete the responder.
+  void CompleteWithResponse() { Complete(true); }
+
+  // Delete the responder without sending a response.
+  void CompleteWithoutResponse() { Complete(false); }
+
+ private:
+  // Completes the request handling by deleting responder_. Optionally
+  // also sends a response.
+  void Complete(bool send_response) {
+    if (send_response) {
+      SendResponse(name_, request_id_, request_string_.c_str(), responder_);
+    }
+    delete responder_;
+    responder_ = nullptr;
+  }
+
+  MessageReceiverWithStatus* responder_;
+  uint32_t name_;
+  uint64_t request_id_;
+  std::string request_string_;
+};
+
+class RouterTest : public testing::Test {
+ public:
+  RouterTest() {}
+
+  void SetUp() override { CreateMessagePipe(nullptr, &handle0_, &handle1_); }
+
+  void TearDown() override {}
+
+  void PumpMessages() { loop_.RunUntilIdle(); }
+
+ protected:
+  mx::msgpipe handle0_;
+  mx::msgpipe handle1_;
+
+ private:
+  RunLoop loop_;
+};
+
+TEST_F(RouterTest, BasicRequestResponse) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  ResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+
+  PumpMessages();
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  Message response;
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+
+  // Send a second message on the pipe.
+  Message request2;
+  AllocRequestMessage(1, "hello again", &request2);
+
+  router0.AcceptWithResponder(&request2,
+                              new MessageAccumulator(&message_queue));
+
+  PumpMessages();
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello again world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+}
+
+TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  ResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+
+  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  Message response;
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+
+  // Send a second message on the pipe.
+  Message request2;
+  AllocRequestMessage(1, "hello again", &request2);
+
+  router0.AcceptWithResponder(&request2,
+                              new MessageAccumulator(&message_queue));
+
+  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello again world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+}
+
+TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  ResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  EXPECT_FALSE(router1.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router0.encountered_error());
+  EXPECT_FALSE(router1.encountered_error());
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+
+  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  EXPECT_FALSE(router1.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router0.encountered_error());
+  EXPECT_FALSE(router1.encountered_error());
+
+  Message response;
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+
+  // Send a second message on the pipe.
+  Message request2;
+  AllocRequestMessage(1, "hello again", &request2);
+
+  router0.AcceptWithResponder(&request2,
+                              new MessageAccumulator(&message_queue));
+
+  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+
+  EXPECT_FALSE(message_queue.IsEmpty());
+
+  message_queue.Pop(&response);
+
+  EXPECT_EQ(std::string("hello again world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+}
+
+TEST_F(RouterTest, RequestWithNoReceiver) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  // Without an incoming receiver set on router1, we expect router0 to observe
+  // an error as a result of sending a message.
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+
+  PumpMessages();
+
+  EXPECT_TRUE(router0.encountered_error());
+  EXPECT_TRUE(router1.encountered_error());
+  EXPECT_TRUE(message_queue.IsEmpty());
+}
+
+// Tests Router using the LazyResponseGenerator. The responses will not be
+// sent until after the requests have been accepted.
+TEST_F(RouterTest, LazyResponses) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  LazyResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+  PumpMessages();
+
+  // The request has been received but the response has not been sent yet.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  // Send the response.
+  EXPECT_TRUE(generator.responder_is_valid());
+  generator.CompleteWithResponse();
+  PumpMessages();
+
+  // Check the response.
+  EXPECT_FALSE(message_queue.IsEmpty());
+  Message response;
+  message_queue.Pop(&response);
+  EXPECT_EQ(std::string("hello world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+
+  // Send a second message on the pipe.
+  Message request2;
+  AllocRequestMessage(1, "hello again", &request2);
+
+  router0.AcceptWithResponder(&request2,
+                              new MessageAccumulator(&message_queue));
+  PumpMessages();
+
+  // The request has been received but the response has not been sent yet.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  // Send the second response.
+  EXPECT_TRUE(generator.responder_is_valid());
+  generator.CompleteWithResponse();
+  PumpMessages();
+
+  // Check the second response.
+  EXPECT_FALSE(message_queue.IsEmpty());
+  message_queue.Pop(&response);
+  EXPECT_EQ(std::string("hello again world!"),
+            std::string(reinterpret_cast<const char*>(response.payload())));
+}
+
+// Tests that if the receiving application destroys the responder_ without
+// sending a response, then we close the Pipe as a way of signaling an error
+// condition to the caller.
+TEST_F(RouterTest, MissingResponses) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  LazyResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+  PumpMessages();
+
+  // The request has been received but no response has been sent.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  // Destroy the responder MessagerReceiver but don't send any response.
+  // This should close the pipe.
+  generator.CompleteWithoutResponse();
+  PumpMessages();
+
+  // Check that no response was received.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  // There is no direct way to test whether or not the pipe has been closed.
+  // The only thing we can do is try to send a second message on the pipe
+  // and observe that an error occurs.
+  Message request2;
+  AllocRequestMessage(1, "hello again", &request2);
+  router0.AcceptWithResponder(&request2,
+                              new MessageAccumulator(&message_queue));
+  PumpMessages();
+
+  // Make sure there was an error.
+  EXPECT_TRUE(router0.encountered_error());
+}
+
+// Tests that if the receiving application destroys the responder_ without
+// sending a response, then we close the Pipe as a way of signaling an error
+// condition to the caller.
+// Tests that timeout-0 calls still work and signal an error.
+TEST_F(RouterTest, MissingResponses_Timeout) {
+  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+  LazyResponseGenerator generator;
+  router1.set_incoming_receiver(&generator);
+
+  Message request;
+  AllocRequestMessage(1, "hello", &request);
+
+  MessageQueue message_queue;
+  router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
+  PumpMessages();
+
+  // The request has been received but no response has been sent.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  // Destroy the responder MessagerReceiver but don't send any response.
+  // This should close the pipe.
+  generator.CompleteWithoutResponse();
+  PumpMessages();
+
+  // Check that no response was received.
+  EXPECT_TRUE(message_queue.IsEmpty());
+
+  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_TRUE(router0.encountered_error());
+
+  PumpMessages();
+
+  // Make sure there was an error.
+  EXPECT_TRUE(router0.encountered_error());
+}
+
+TEST_F(RouterTest, LateResponse) {
+  // Test that things won't blow up if we try to send a message to a
+  // MessageReceiver, which was given to us via AcceptWithResponder,
+  // after the router has gone away.
+
+  LazyResponseGenerator generator;
+  {
+    internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
+    internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+
+    router1.set_incoming_receiver(&generator);
+
+    Message request;
+    AllocRequestMessage(1, "hello", &request);
+
+    MessageQueue message_queue;
+    router0.AcceptWithResponder(&request,
+                                new MessageAccumulator(&message_queue));
+
+    PumpMessages();
+
+    EXPECT_TRUE(generator.has_responder());
+  }
+
+  EXPECT_FALSE(generator.responder_is_valid());
+  generator.CompleteWithResponse();  // This should end up doing nothing.
+}
+
+}  // namespace
+}  // namespace test
+}  // namespace fidl

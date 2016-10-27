@@ -1,0 +1,162 @@
+# Copyright 2014 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "array_unittest.cc",
+    "binding_callback_unittest.cc",
+    "binding_set_unittest.cc",
+    "binding_unittest.cc",
+    "bounds_checker_unittest.cc",
+    "buffer_unittest.cc",
+    "callback_unittest.cc",
+    "connector_unittest.cc",
+    "constant_unittest.cc",
+    "container_test_util.cc",
+    "equals_unittest.cc",
+    "formatting_unittest.cc",
+    "handle_passing_unittest.cc",
+    "interface_ptr_set_unittest.cc",
+    "interface_ptr_unittest.cc",
+    "interface_unittest.cc",
+    "iterator_test_util.h",
+    "iterator_util_unittest.cc",
+    "map_unittest.cc",
+    "message_builder_unittest.cc",
+    "message_queue.cc",
+    "message_queue.h",
+    "request_response_unittest.cc",
+    "router_unittest.cc",
+    "sample_service_unittest.cc",
+    "serialization_api_unittest.cc",
+    "serialization_warning_unittest.cc",
+    "string_unittest.cc",
+    "strong_binding_set_unittest.cc",
+    "struct_unittest.cc",
+    "synchronous_connector_unittest.cc",
+    "synchronous_interface_ptr_unittest.cc",
+    "type_conversion_unittest.cc",
+    "union_unittest.cc",
+    "validation_unittest.cc",
+  ]
+
+  deps = [
+    ":mojo_public_bindings_test_utils",
+    ":validation_util",
+  ]
+
+  deps = [
+    "mojo/public:gtest",
+    "lib/fidl/cpp/bindings",
+    "lib/fidl/cpp/bindings:callback",
+    "mojo/public/cpp/environment:standalone",
+    "mojo/public/cpp/system",
+    "mojo/public/cpp/test_support",
+    "mojo/public/cpp/test_support:test_utils",
+    "mojo/public/cpp/utility",
+    "mojo/public/interfaces/bindings/tests:test_interfaces",
+    "mojo/public/interfaces/bindings/tests:test_interfaces_sync",
+  ]
+}
+
+source_set("perftests") {
+  testonly = true
+
+  sources = [
+    "bindings_perftest.cc",
+  ]
+
+  deps = [
+    "mojo/public:gtest",
+    "lib/fidl/cpp/bindings",
+    "lib/fidl/cpp/bindings:callback",
+    "mojo/public/cpp/environment:standalone",
+    "mojo/public/cpp/system",
+    "mojo/public/cpp/test_support",
+    "mojo/public/cpp/utility",
+    "mojo/public/interfaces/bindings/tests:test_interfaces",
+  ]
+}
+
+# TODO(vardhan): This should be testonly, but for that to happen, its
+# dependents (cython etc.) need also be testonly.
+source_set("mojo_public_bindings_test_utils") {
+  sources = [
+    "validation_test_input_parser.cc",
+    "validation_test_input_parser.h",
+  ]
+}
+
+# TODO(vardhan): Merge with mojo_public_bindings_test_utils.
+source_set("validation_util") {
+  testonly = true
+
+  sources = [
+    "validation_util.cc",
+    "validation_util.h",
+  ]
+
+  deps = [
+    ":mojo_public_bindings_test_utils",
+  ]
+
+  deps = [
+    "mojo/public:gtest",
+    "mojo/public/cpp/test_support",
+  ]
+}
+
+executable("versioning_test_service") {
+  testonly = true
+
+  deps = [
+    ":versioning_test_service_source_set",
+  ]
+}
+
+source_set("versioning_test_service_source_set") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "versioning_test_service.cc",
+  ]
+
+  deps = [
+    "mojo/public/cpp/application:standalone",
+    "lib/fidl/cpp/bindings",
+    "mojo/public/cpp/system",
+    "mojo/public/interfaces/bindings/tests:versioning_test_service_interfaces",
+  ]
+}
+
+executable("versioning_apptests") {
+  testonly = true
+
+  deps = [
+    ":versioning_apptest_source_set",
+  ]
+  data_deps = [
+    ":versioning_test_service",
+  ]
+}
+
+source_set("versioning_apptest_source_set") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "versioning_apptest.cc",
+  ]
+
+  deps = [
+    "mojo/public/cpp/application:standalone",
+    "mojo/public/cpp/application:test_support_standalone",
+    "lib/fidl/cpp/bindings",
+    "mojo/public/cpp/system",
+    "mojo/public/interfaces/bindings/tests:versioning_test_client_interfaces",
+  ]
+}

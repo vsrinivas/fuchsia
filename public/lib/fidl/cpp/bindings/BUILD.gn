@@ -1,0 +1,85 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target provides source files and dependencies required for serializing
+# fidl types.
+source_set("serialization") {
+  sources = [
+    "array.h",
+    "formatting.h",
+    "internal/array_internal.cc",
+    "internal/array_internal.h",
+    "internal/array_serialization.h",
+    "internal/bindings_internal.h",
+    "internal/bindings_serialization.cc",
+    "internal/bindings_serialization.h",
+    "internal/bounds_checker.cc",
+    "internal/bounds_checker.h",
+    "internal/buffer.h",
+    "internal/fixed_buffer.cc",
+    "internal/fixed_buffer.h",
+    "internal/iterator_util.h",
+    "internal/map_data_internal.h",
+    "internal/map_internal.h",
+    "internal/map_serialization.h",
+    "internal/string_serialization.cc",
+    "internal/string_serialization.h",
+    "internal/template_util.h",
+    "internal/union_accessor.h",
+    "internal/validate_params.h",
+    "internal/validation_errors.cc",
+    "internal/validation_errors.h",
+    "internal/validation_util.cc",
+    "internal/validation_util.h",
+    "macros.h",
+    "map.h",
+    "string.h",
+    "struct_ptr.h",
+    "type_converter.h",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
+    "//lib/fidl/cpp/waiter",
+    "//magenta/system/ulib/mx",
+  ]
+}
+
+source_set("bindings") {
+  sources = [
+    "binding.h",
+    "binding_set.h",
+    "interface_handle.h",
+    "interface_ptr.h",
+    "interface_ptr_set.h",
+    "interface_request.h",
+    "internal/connector.cc",
+    "internal/connector.h",
+    "internal/interface_ptr_internal.h",
+    "internal/message.cc",
+    "internal/message_builder.cc",
+    "internal/message_builder.h",
+    "internal/message_header_validator.cc",
+    "internal/message_header_validator.h",
+    "internal/message_internal.h",
+    "internal/message_validation.cc",
+    "internal/message_validation.h",
+    "internal/message_validator.cc",
+    "internal/no_interface.cc",
+    "internal/router.cc",
+    "internal/router.h",
+    "internal/shared_data.h",
+    "internal/synchronous_connector.cc",
+    "internal/synchronous_connector.h",
+    "internal/template_util.h",
+    "message.h",
+    "message_validator.h",
+    "no_interface.h",
+    "synchronous_interface_ptr.h",
+  ]
+
+  public_deps = [
+    ":serialization",
+  ]
+}
