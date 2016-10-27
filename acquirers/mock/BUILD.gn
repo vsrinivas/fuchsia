@@ -8,6 +8,7 @@ source_set("mock") {
   ]
 
   deps = [
+    "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
   ]
 }

@@ -19,6 +19,7 @@ source_set("formatting") {
   ]
 
   deps = [
+    ":interfaces",
     "//mojo/public/cpp/environment",
   ]
 }
