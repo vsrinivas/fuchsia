@@ -209,7 +209,7 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent;
-  os << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS" << std::endl;
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -223,7 +223,7 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent;
-  os << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS" << std::endl;
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -238,7 +238,7 @@ std::ostream& operator<<(
   }
 
   os << indent;
-  os << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS" << std::endl;
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -253,7 +253,7 @@ std::ostream& operator<<(
   }
 
   os << indent;
-  os << "NO MEMBERS" << std::endl;
+  os << begl << "NO MEMBERS" << std::endl;
   // TODO(dalesat): Print members here when we define some.
   return os << outdent;
 }
@@ -278,8 +278,6 @@ std::ostream& operator<<(std::ostream& os,
                          const mojo::media::MediaPacketPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
   }
 
   return os << *value;

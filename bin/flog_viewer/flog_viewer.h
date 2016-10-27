@@ -74,7 +74,8 @@ class FlogViewer {
                         const FlogChannelDeletionEntryDetailsPtr& details);
 
  private:
-  static const uint32_t kGetEntriesMaxCount = 1024;
+  // TODO(dalesat): This was reduced from 1024 as a workaround. Change back.
+  static const uint32_t kGetEntriesMaxCount = 64;
 
   std::unordered_set<uint32_t> channels_;
   std::string format_ = kFormatTerse;
