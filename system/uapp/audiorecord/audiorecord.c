@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/device/audio.h>
-#include <mxio/io.h>
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -76,7 +76,6 @@ int main(int argc, char **argv) {
 
     while (1) {
         uint16_t buffer[500];
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int length = read(fd, buffer, sizeof(buffer));
         printf("read %d\n", length);
         if (length < 0) break;

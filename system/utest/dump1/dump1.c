@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <mxio/io.h>
-
 int main(int argc, char** argv) {
     unsigned char x;
     int fd = 0;
@@ -19,7 +17,6 @@ int main(int argc, char** argv) {
         }
     }
     for (;;) {
-        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(fd, &x, 1);
         if (r == 0) {
             continue;

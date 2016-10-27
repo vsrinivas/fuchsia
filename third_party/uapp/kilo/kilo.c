@@ -54,7 +54,6 @@
 #include <fcntl.h>
 
 #ifdef __Fuchsia__
-#include <mxio/io.h>
 #include <magenta/device/console.h>
 
 static time_t time(void* arg) {
@@ -72,17 +71,6 @@ static int getConsoleSize(int *rows, int *cols) {
     return 0;
 }
 
-#define MX_TIME_MS(n) (((mx_time_t)n) * 1000000ULL)
-
-static int __read(int fd, void* buf, size_t len) {
-    if (fd != 0) {
-        return read(fd, buf, len);
-    }
-    mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_MS(100));
-    return read(0, buf, len);
-}
-
-#define read __read
 #endif
 
 /* Syntax highlight types */

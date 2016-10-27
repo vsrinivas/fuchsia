@@ -19,7 +19,6 @@
 #include <magenta/types.h>
 #include <magenta/device/input.h>
 
-#include <mxio/io.h>
 #include <mxio/watcher.h>
 
 #define DEV_INPUT "/dev/class/input"
@@ -190,7 +189,6 @@ static int hid_input_thread(void* arg) {
     if (!report) return ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < args->num_reads; i++) {
-        mxio_wait_fd(args->fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(args->fd, report, max_report_len);
         mtx_lock(&print_lock);
         printf("read returned %d\n", r);

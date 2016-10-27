@@ -126,38 +126,6 @@
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
 #define LINENOISE_MAX_LINE 4096
 
-/* Pass-through version that just calls into the platform's read
- * implementation.
- */
-static int readNative(int fd, void* buf, size_t len) {
-    return read(fd, buf, len);
-}
-
-#ifdef __Fuchsia__
-
-/* On Fuchsia the native read implementation doesn't block yet. We provide a
- * version here that both blocks AND does not return until at least some
- * characters have been read from the fd.
- */
-static int __read(int fd, void* buf, size_t len) {
-    int nread;
-
-    if (len == 0) return 0;
-
-    for (;;) {
-      mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
-      if ((nread = read(fd, buf, len))) {
-          return nread;
-      }
-    }
-
-    return nread;
-}
-
-#define read __read
-
-#endif
-
 static const char *unsupported_term[] = {"dumb","cons25","emacs",NULL};
 static linenoiseCompletionCallback *completionCallback = NULL;
 static linenoiseHintsCallback *hintsCallback = NULL;
@@ -321,7 +289,7 @@ static int getCursorPosition(int ifd, int ofd) {
 
     /* Read the response: ESC [ rows ; cols R */
     while (i < sizeof(buf)-1) {
-        if (readNative(ifd,buf+i,1) != 1) break;
+        if (read(ifd,buf+i,1) != 1) break;
         if (buf[i] == 'R') break;
         i++;
     }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <magenta/device/midi.h>
-#include <mxio/io.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -86,7 +85,6 @@ int main(int argc, char **argv)
     while (1) {
         uint8_t buffer[3];
 
-        mxio_wait_fd(src_fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int length = read(src_fd, buffer, sizeof(buffer));
         if (length < 0) break;
         printf("MIDI event:");

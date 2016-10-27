@@ -24,7 +24,6 @@
 #include <magenta/syscalls/object.h>
 
 #include <mxio/debug.h>
-#include <mxio/io.h>
 #include <mxio/remoteio.h>
 
 #include <magenta/listnode.h>
@@ -46,7 +45,6 @@ void cputs(const char* s, size_t len) {
 int cgetc(void) {
     uint8_t ch;
     for (;;) {
-        mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(0, &ch, 1);
         if (r < 0) {
             return r;

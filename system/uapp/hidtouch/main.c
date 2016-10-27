@@ -20,7 +20,6 @@
 #include <magenta/device/display.h>
 #include <magenta/device/input.h>
 #include <magenta/syscalls.h>
-#include <mxio/io.h>
 
 #define DEV_INPUT       "/dev/class/input"
 #define VIRTUAL_CONSOLE "/dev/class/console/vc"
@@ -291,7 +290,6 @@ int main(int argc, char* argv[]) {
 
     clear_screen((void*)fbo, &fb);
     while (1) {
-        mxio_wait_fd(touchfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         ssize_t r = read(touchfd, buf, max_rpt_sz);
         if (r < 0) {
             printf("touchscreen read error: %zd\n", r);

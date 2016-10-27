@@ -5,7 +5,6 @@
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h> // for mx_cprng_draw
-#include <mxio/io.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +17,6 @@
 static int cgetc(void) {
     uint8_t ch;
     for (;;) {
-        mxio_wait_fd(0, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int r = read(0, &ch, 1);
         if (r < 0) return r;
         if (r == 1) return ch;
