@@ -1,0 +1,16 @@
+[DartPackage="_fidl_for_test_only"]
+module fidl.test;
+
+enum TestEnum {
+  TEST = 0,
+  V = 1,
+  FOO = 2,
+  BAR = 3,
+};
+
+enum TestEnum2 {
+  TEST,
+  V = 1,
+  FOO = 2,
+  BAR = 3,
+};

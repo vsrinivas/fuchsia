@@ -1,0 +1,66 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module fidl.test;
+
+interface TestInterface {
+  Foo();
+};
+
+struct StructWithInterface {
+  TestInterface iptr;
+};
+
+struct StructWithInterfaceArray {
+  array<TestInterface> iface_array;
+  array<TestInterface?> nullable_iface_array;
+  array<TestInterface&> req_iface_array;
+  array<TestInterface&?> req_nullable_iface_array;
+  array<StructWithInterface> structs_array;
+  array<StructWithInterface>? structs_nullable_array;
+  array<StructWithInterface?> nullable_structs_array;
+  array<StructWithInterface?>? nullable_structs_nullable_array;
+};
+
+struct StructWithDataPipeConsumers {
+  array<handle<data_pipe_consumer>> handles_array;
+  array<handle<data_pipe_consumer>>? handles_nullable_array;
+  array<handle<data_pipe_consumer>?> nullable_handles_array;
+  array<handle<data_pipe_consumer>?>? nullable_handles_nullable_array;
+};
+
+struct StructWithDataPipeProducers {
+  array<handle<data_pipe_producer>> handles_array;
+  array<handle<data_pipe_producer>>? handles_nullable_array;
+  array<handle<data_pipe_producer>?> nullable_handles_array;
+  array<handle<data_pipe_producer>?>? nullable_handles_nullable_array;
+};
+
+struct StructWithSharedBuffers {
+  array<handle<shared_buffer>> handles_array;
+  array<handle<shared_buffer>>? handles_nullable_array;
+  array<handle<shared_buffer>?> nullable_handles_array;
+  array<handle<shared_buffer>?>? nullable_handles_nullable_array;
+};
+
+struct StructWithMessagePipes {
+  array<handle<message_pipe>> handles_array;
+  array<handle<message_pipe>>? handles_nullable_array;
+  array<handle<message_pipe>?> nullable_handles_array;
+  array<handle<message_pipe>?>? nullable_handles_nullable_array;
+};
+
+struct StructWithHandles {
+  array<handle> handles_array;
+  array<handle>? handles_nullable_array;
+  array<handle?> nullable_handles_array;
+  array<handle?>? nullable_handles_nullable_array;
+};
+
+struct StructWithInterfaceRequests {
+  array<TestInterface&> req_array;
+  array<TestInterface&>? req_nullable_array;
+  array<TestInterface&?> nullable_req_array;
+  array<TestInterface&?>? nullable_req_nullable_array;
+};

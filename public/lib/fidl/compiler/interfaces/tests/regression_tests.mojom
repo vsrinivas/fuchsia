@@ -1,0 +1,116 @@
+// Copyright 2014 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Module containing entities for regression tests of the generator. Entities
+// must never be modified, instead new entity must be added to add new tests.
+[DartPackage="_fidl_for_test_only",
+ JavaPackage="org.chromium.fidl.bindings.test.fidl.regression_tests"]
+module regression_tests;
+
+interface CheckMethodWithEmptyResponse {
+  WithoutParameterAndEmptyResponse() => ();
+  WithParameterAndEmptyResponse(bool b) => ();
+};
+
+interface CheckNameCollision {
+  WithNameCollision(bool message, bool response)
+      => (bool message, bool response);
+};
+
+enum EnumWithReference {
+  k_STEREO_AND_KEYBOARD_MIC = 30,
+  k_MAX = k_STEREO_AND_KEYBOARD_MIC,
+};
+
+enum EnumWithLowercase {
+  PlanarF16,
+  PlanarF32,
+};
+
+enum EnumWithNumbers {
+  k_2_1 = 4,
+};
+
+enum EnumWithK {
+  K = 0,
+};
+
+struct Edge {
+  Vertex? v;
+};
+
+struct Vertex {
+  EmptyStruct? e;
+};
+
+struct EmptyStruct {};
+
+struct A {
+  B? b;
+};
+
+struct B {
+  A? a;
+};
+
+enum EnumWithINTERNALAllCaps {
+  STANDARD,
+  FULLSCREEN,
+  IMMERSIVE,
+};
+
+interface CheckEnumCaps {
+  SetEnumWithINTERNALAllCaps(EnumWithINTERNALAllCaps e);
+};
+
+struct StructWithHandleCalledHandles {
+  handle handles;
+};
+
+struct StructWithArrayOfHandlesCalledHandles {
+  array<handle> handles;
+};
+
+interface TestInterface {
+  SomeMessage();
+};
+
+struct StructWithInterfaceCalledHandles {
+  TestInterface handles;
+};
+
+enum NormalEnum {
+  FIRST,
+  SECOND,
+};
+
+struct ContainsArrayOfEnum {
+  array<NormalEnum> array_of_enums;
+};
+
+struct ContainsNullableArrayOfEnum {
+  array<NormalEnum>? array_of_enums;
+};
+
+interface Regression551 {
+  Get(array<string> key_prefixes) => (int32 result);
+};
+
+interface ServiceName {
+  serviceName() => (string serviceName);
+};
+
+enum CamelCaseTestEnum {
+  BOOL_THING,
+  DOUBLE_THING,
+  FLOAT_THING,
+  INT8_THING,
+  INT16THING,
+  INT32_TH1NG,
+  INT64_Th1ng,
+  UINT8T_h1ng,
+  UINT16t_h1NG,
+  UINT32_TH1ng,
+  UINT64_TH1NG,
+};

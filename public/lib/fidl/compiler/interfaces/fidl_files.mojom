@@ -1,0 +1,109 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="fidl",
+ JavaPackage="org.chromium.fidl.bindings.types"]
+module fidl.bindings.types;
+
+import "fidl_types.mojom";
+
+/*
+ * The structures in this file are intended to be used by the Fidl compiler
+ * and code generators. The front end of the compiler takes as input a
+ * .fidl file (or a list of .fidl files) and produces a FidlFileGraph struct.
+ *
+ * The backend of the compiler consumes a FidlFileGraph and invokes each of the
+ * code generators passing them data derived from the FidlFileGraph.
+ *
+ * A FidlFile represents the data parsed from a single .fidl file. Fidl
+ * files form a directed acyclic graph via the "imports" relation.
+ * That is, if file A imports file B then there is a directed edge in the
+ * graph from A to B. A FidlFileGraph represents the whole Graph.
+
+ * The Fidl structures represented here have been fully resolved, meaning that
+ * the type references have been associated with their corresponding type
+ * definitions. This resolved type data is contained in the resolved_types data
+ * in FidlFileGraph.
+ */
+
+// A FidlFile represents the data defined by a single .fidl file, when
+// all of the type references to types declared in imported .fidl files
+// have been resolved.
+struct FidlFile {
+  // |file_name| is (derived from) the file name of the corresponding
+  // .fidl file. It is the unique identifier for this module within the
+  // FidlFileGraph
+  string file_name;
+
+  // |specified_file_name| is used to record information about the request that
+  // triggered the construction of the |FidlFileGraph| of which this
+  // |FidlFile| is a part. This field is populated by some producers (such
+  // as the Fidl compiler) but not necessarily all producers of this structure.
+  // If this field is null it means it is not supported by the producer.
+  //
+  // If this field is non-null but empty it means that this |FidlFile|
+  // was not explicitly requested but rather is included in the |FidlFileGraph|
+  // because it is referenced in the |imports| field of another |FidlFile|
+  // in the graph. If this field is non-empty it means that the corresponding
+  // .fidl file was explicitly requested, using |specified_file_name|. Note
+  // that in this case it is still possible that this file is also referenced
+  // in the |imports| field of another |FidlFile|.
+  string? specified_file_name;
+
+  // The namespace is the identifier declared via the "module" declaration
+  // in the .fidl file.
+  string? module_namespace;
+
+  // Attributes declared in the Fidl file at the module level.
+  array<Attribute>? attributes;
+
+  // The list of other FidlFiles imported by this one. The elements
+  // of the array are the |file_name|s and the associated module may
+  // be retrieved from the  FidlFileGraph.
+  array<string>? imports;
+
+  // resolved_types and resolved_values in FidlFileGraph contain
+  // respectively the types and constants declared in the union of all modules
+  // in the graph. This KeysByType selects the keys of the types and constants
+  // defined in this module
+  KeysByType declared_fidl_objects;
+
+  // The bytes encoding a |RuntimeTypeInfo| struct for this Fidl file,
+  // using Fidl message serialization. Some implementations may not include
+  // this. This string contains the base64 encoding of the gzip-compressed
+  // bytes.
+  string? serialized_runtime_type_info;
+
+  // Comments attached to the file.
+  Comments? comments;
+};
+
+// Represents a directed acyclic graph of FidlFiles.
+struct FidlFileGraph {
+  // All the files in this graph. The keys are |file_name|s.
+  map<string, FidlFile> files;
+
+  // All the resolved user-defined types in all the files in the graph. The keys are
+  // the |type_key|s.
+  map<string, UserDefinedType> resolved_types;
+
+  // All the resolved DeclaredConstants in all the files in the graph. The keys are
+  // the |constant_key|s.
+  map<string, DeclaredConstant> resolved_constants;
+};
+
+// A KeysByType struct organizes by type the keys of all types and consants in
+// a FidlFile
+struct KeysByType {
+  // The type keys of the types in the FidlFile.
+  array<string>? interfaces;
+  array<string>? structs;
+  array<string>? unions;
+  array<string>? top_level_enums;
+  array<string>? embedded_enums;
+
+  // The constant keys of the constants in the FidlFile.
+  array<string>? top_level_constants;
+  array<string>? embedded_constants;
+};

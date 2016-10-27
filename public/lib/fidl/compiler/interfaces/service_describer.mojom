@@ -1,0 +1,58 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="fidl",
+ JavaPackage="org.chromium.fidl.bindings"]
+// TODO(rudominer) Move this file into the module fidl.bindings when
+// https://github.com/domokit/fidl/issues/435 is fixed.
+module fidl.bindings.types;
+
+import "fidl_types.mojom";
+
+// This is a companion interface to ServiceProvider. An implementation of
+// ServiceProvider may optionally offer descriptions of the services it
+// provides by making this interface available. A client obtains access
+// to a ServiceDescriber service by invoking
+// ServiceProvider.ConnectToService(SERVICE_DESCRIBER_INTERFACE_NAME, pipe).
+[ServiceName="fidl::bindings::types::ServiceDescriber"]
+interface ServiceDescriber {
+  // Requests access to a ServiceDescription for the service with the
+  // given name. The |interface_name| is the same string that would be passed
+  // to ServiceProvider.ConnectToService() in order to request the service
+  // with the given name. If the host is not willing or able to describe the
+  // service with the given name it will close the |description_request| pipe.
+  DescribeService(string interface_name,
+                  ServiceDescription& description_request);
+};
+
+// A ServiceDescription allows a client to request information about the Fidl
+// types used to implement a particular Fidl service.
+//
+// A Fuchsia service has a *top-level* interface: the interface that is bound to
+// the message pipe |pipe| as a result of calling
+// ServiceProvider.ConnectToService().
+//
+// The *complete type set* of a Fuchsia service is the closure of this top-level
+// interface under type reference. That is, the complete type set includes all
+// of the types referenced directly in the definition of the top-level interface
+// and the types referenced by those types etc. The complete type set of a Fuchsia
+// service may include other interfaces besides the top-level interface.
+//
+// An implementation of ServiceDescription contains information about all
+// of the types in the complete type set of the service.
+interface ServiceDescription {
+  // Returns a FidlInterface for the top-level interface of this service.
+  GetTopLevelInterface() => (FidlInterface fidlInterface);
+
+  // Returns the |UserDefinedType| for the given |type_key|. Valid keys are
+  // those that are embedded in the structures returned from earlier queries
+  // of this ServiceDescription. If the key is invalid then |type| will be null.
+  GetTypeDefinition(string type_key)
+      => (fidl.bindings.types.UserDefinedType? type);
+
+  // Returns all the data queryable via GetTypeDefinition in a single
+  // structure, or null if the implementation is not willing or not able to
+  // provide all of the data at once.
+  GetAllTypeDefinitions() => (map<string, UserDefinedType>? definitions);
+};

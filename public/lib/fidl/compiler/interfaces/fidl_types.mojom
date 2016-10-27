@@ -1,0 +1,537 @@
+// Copyright 2015 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="fidl",
+ JavaPackage="org.chromium.fidl.bindings.types"]
+module fidl.bindings.types;
+
+/*
+ * This file contains definitions of data structures used to represent
+ * Fidl types and values.
+ *
+ * As described in the Fidl Language Specification, Fidl types are defined
+ * recursively and consequently a |Type| object may recursively contain
+ * other |Type| objects. For example a |Type| object representing an
+ * array<int32> will contain a |Type| object representing an int32.
+ *
+ * A Fidl type declaration may contain an identifier that resolves  to a
+ * user-defined type: a struct, union, enum or interface. We use |TypeReference|
+ * to represent an occurrence of such an identifier. A |TypeReference| may be
+ * resolved or not. Resolved means that the user-defined type to which the
+ * identifier refers has been found and associated with the |TypeReference|.
+ * A |Type| object is fully-resolved if it, and recursively all of its
+ * sub-components, do not contain any unresolved TypeReferences.
+ *
+ * A resolved |TypeReference| does not literally contain a structure
+ * representing the user-defined type that it represents but rather refers to
+ * its target type indirectly via a string called a |type_key|. The type_key may
+ * be used to lookup the user-defined type to which it refers.
+ *
+ * The mapping from |type_keys| to user-defined types is not
+ * represented by any structures in this file and instead must be maintained
+ * by a higher layer context in which this file is used. For example the
+ * |ServiceDescription| interface defined in service_describer.fidl includes
+ * the method:
+ *     GetTypeDefinition(string type_key) => UserDefinedType? type);
+ * for this purpose.
+ * We refer to this higher-layer context as the *owning context.*
+ *
+ * In addition to types, Fidl values are also representd by structures in this
+ * file. A |Value| may be a LiteralValue, a ConstantReference,
+ * an EnumValueReference or a BuiltinConstantValue. Similarly to the situation
+ * with TypeReferences, ConstantReferences and EnumValueReferences contain a
+ * key which may be used to lookup user-defined value (an EnumValue or a
+ * DeclaredConstant) in the owning context.
+ */
+
+// The different kinds of types. We divide the types into five categories:
+// simple, string, compound, handle, and user-defined.
+union Type {
+  SimpleType simple_type;
+
+  StringType string_type;
+
+  // The compound types. These are built from simpler types.
+  ArrayType array_type;
+  MapType map_type;
+
+  HandleType handle_type;
+
+  // This represents an occurrence of a user-defined type identifier that
+  // refers to an enum, struct, union, interface or interface request.
+  TypeReference type_reference;
+};
+
+// The set of simple types.
+enum SimpleType {
+  BOOL,
+  DOUBLE,
+  FLOAT,
+  INT8,
+  INT16,
+  INT32,
+  INT64,
+  UINT8,
+  UINT16,
+  UINT32,
+  UINT64,
+};
+
+struct StringType {
+  bool nullable;
+};
+
+struct HandleType {
+  enum Kind {
+    UNSPECIFIED,
+    MESSAGE_PIPE,
+    DATA_PIPE_CONSUMER,
+    DATA_PIPE_PRODUCER,
+    SHARED_BUFFER,
+  };
+
+  bool nullable;
+  Kind kind = UNSPECIFIED;
+};
+
+struct ArrayType {
+  bool nullable;
+  // If fixed_length < 0 then the array does not have a fixed length;
+  int32 fixed_length = -1;
+
+  Type element_type;
+};
+
+struct MapType {
+  bool nullable;
+  // The key_type must be a non-reference type or a string.
+  Type key_type;
+  Type value_type;
+};
+
+// Represents an occurence of a user-defined type identifier that should
+// resolve to an enum, struct, union, interface or interface request. This type
+// reference may be either resolved or unresolved. If the reference has been
+// resolved then the |type_key| field is populated.
+struct TypeReference {
+  // Was this occurrence marked as nullable?
+  bool nullable;
+
+  // Was this occurrence marked as being an interface request? If so then
+  // this reference must (eventually) resolve to an interface type.
+  bool is_interface_request;
+
+  // The identifier, as it appears in the occurrence. Note that this may be
+  // a short name, a fully-qualified identifier, or a partially qualified
+  // identifier. Either this field or type_key must be non-null. Some
+  // implementations will keep this field even after the reference has been
+  // resolved.
+  // Note(rudominer) Consider requiring this to be the fully-qualified
+  // identifier which would imply that some name resolution must always occur
+  // before a TypeReference structure is created. Otherwise consider adding
+  // a Scope field to TypeReference so that resolution may occur later.
+  string? identifier;
+
+  // This field is non-null if this reference has been resolved.
+  string? type_key;
+};
+
+////////////////////////////////////////////////////////////////////////////
+// The data structures below represent user-defined types or type
+// declarations. Instances of these are not literally contained in a
+// |Type| object. Instead the owning context is used to lookup a UserDefinedType
+// given a type_key.
+////////////////////////////////////////////////////////////////////////////
+
+// Represents a user-defined type referenced
+// via its identifier from another Fidl object.
+union UserDefinedType {
+  FidlEnum enum_type;
+  FidlStruct struct_type;
+  FidlUnion union_type;
+  FidlInterface interface_type;
+};
+
+// A field of a struct. These structures are contained in the |fields| field
+// of the |FidlStruct| struct.
+struct StructField {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  Type type;
+
+  DefaultFieldValue? default_value;
+
+  // The offset in bytes from the start of the serialized struct, not including
+  // the eight-byte header, of the first byte of this field. In the case of
+  // boolean fields, this refers to the byte in which the field's bit is
+  // located but not which bit corresponds to the field.
+  uint32 offset;
+
+  // In the case of a boolean field, this value gives the zero-based
+  // index of the bit within the field's byte within the serialized struct.
+  // Otherwise this value is -1.
+  int8 bit;
+
+  // The minimum version of the containing struct that includes this field.
+  // The earliest version is version 0.
+  uint32 min_version;
+};
+
+union DefaultFieldValue {
+  Value value;
+  DefaultKeyword default_keyword;
+};
+
+// A built-in pseudo-value, indicated by the keyword "default", that
+// specifies that the default value of a user-defined type should be used.
+struct DefaultKeyword {};
+
+struct StructVersion {
+  uint32 version_number;
+
+  // The number of fields included in this version of the struct. The fields
+  // will be an initial segment of those in the |fields| field of FidlStruct.
+  uint32 num_fields;
+
+  // The total payload size for this version of the struct, including
+  // the eight-byte header.
+  uint32 num_bytes;
+};
+
+struct FidlStruct {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  // The fields are in ordinal order. Note that this may be different than
+  // the order in which the fields are declared in the .fidl file.
+  array<StructField> fields;
+
+  // Information about the different declared versions of this FidlStruct.
+  // Versions are implicitly declared in a .fidl file by use of the
+  // "MinVersion" attribute on the fields. If |version_info| is not null then
+  // it contains at least one element for version 0 and its elements are
+  // in increasing |version_number| order. Note that version numbers may
+  // not be consecutive.
+  array<StructVersion>? version_info;
+};
+
+// A field of a union. These structures are contained in the |fields| field
+// of the |FidlUnion| struct.
+struct UnionField {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  Type type;
+  uint32 tag;
+};
+
+struct FidlUnion {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  // The fields are in tag order. Note that this may be different than
+  // the order in which the fields are declared in the .fidl file.
+  array<UnionField> fields;
+};
+
+struct EnumValue {
+  DeclarationData? decl_data;
+
+  // This is the value specified in the right-hand-side of the optional
+  // initializer of an enum value declaration. The value must be a literal value
+  // of integer type or an EnumValueReference that resolves to a different
+  // EnumValue from the same FidlEnum that was defined earlier lexically,
+  // or a ConstantReference that resolves to
+  // a DeclaredConstant whose |resolved_concrete_value| is one of those.
+  Value? initializer_value;
+
+  // The resolved concrete integer value corresponding to this enum value.
+  // This number is computed based on the |specified_value|s of all of the
+  // EnumValues in a FidlEnum.
+  int32 int_value;
+};
+
+struct FidlEnum {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  // The enum values in declaration order.
+  array<EnumValue> values;
+};
+
+struct FidlMethod {
+  DeclarationData? decl_data;  // Some implementations may not provide this.
+
+  FidlStruct parameters;
+
+  // Note that there is a difference between response_params being null and
+  // it containing zero fields. The former means that the method does
+  // not have a return message. The latter means that it does have a
+  // zero-argument return message.
+  FidlStruct? response_params;
+
+  uint32 ordinal;
+
+  // The minimum version of the containing interface that includes this method.
+  // The earliest version is version 0.
+  uint32 min_version;
+};
+
+struct FidlInterface {
+  DeclarationData? decl_data;
+
+  // If the declaration of this interface has been annotated with the
+  // "ServiceName=" attribute then this field contains the value of that
+  // attribute, otherwise this is null. The presence of this field indicates
+  // that this is the top-level interface for the named service: When
+  // the method ConnectToService(service_name) from the ServiceProvider
+  // interface is invoked, an implementation of ServiceProvider will, by
+  // default, return the interface that has been annotated with the
+  // given service_name if there is a unique such interface.
+  string? service_name;
+
+  // All the methods in the interface. The keys are the method ordinals.
+  map<uint32, FidlMethod> methods;
+
+  // This value is the least integer that is at least as great as all of the
+  // |min_version| fields in all of the methods and parameters in this
+  // interface. In more detail it is the maximum of the |min_version| fields of
+  // each FidlMethod  in this interface, and the |min_version| fields of each
+  // StructField of each FidlStruct in the |params| and |response_params|
+  // fields of each FidlMethod in this interface.
+  uint32 current_version;
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Fidl values
+////////////////////////////////////////////////////////////////////////////
+
+// A value may occur as the default value of a struct field, as the
+// right-hand-side of a constant declaration, or as the right-hand-side
+// of an enum value specifier.
+union Value {
+  // A literal number, boolean or string
+  LiteralValue literal_value;
+
+  // A reference to a DeclaredConstant.
+  ConstantReference constant_reference;
+
+  // A reference to an EnumValue
+  EnumValueReference enum_value_reference;
+
+  // A built-in numeric constant.
+  BuiltinConstantValue builtin_value;
+};
+
+union LiteralValue {
+  bool bool_value;
+  double double_value;
+  float float_value;
+  int8 int8_value;
+  int16 int16_value;
+  int32 int32_value;
+  int64 int64_value;
+  string string_value;
+  uint8 uint8_value;
+  uint16 uint16_value;
+  uint32 uint32_value;
+  uint64 uint64_value;
+};
+
+// Represents the built-in floating-point constants.
+enum BuiltinConstantValue {
+  DOUBLE_INFINITY,
+  DOUBLE_NEGATIVE_INFINITY,
+  DOUBLE_NAN,
+  FLOAT_INFINITY,
+  FLOAT_NEGATIVE_INFINITY,
+  FLOAT_NAN,
+};
+
+// A reference to a DeclaredConstant.
+struct ConstantReference {
+  // The identifier, as it appears at the reference site.
+  string identifier;
+
+  // The DeclaredConstant to which this reference has resolved can be looked up
+  // using this key in the appropriate map in the owning context.
+  string constant_key;
+};
+
+// A reference to an EnumValue
+struct EnumValueReference {
+  // The identifier, as it appears at the reference site.
+  string identifier;
+
+  // The type key of the FidlEnum containing the EnumValue to which this
+  // reference has resolved. The FidlEnum can be looked up using this key in
+  // the appropriate map in the owning context.
+  string enum_type_key;
+
+  // The 0-based index into the |values| array within the FidlEnum specified
+  // by |enum_type_key| of the EnumValue to which this reference has resolved.
+  uint32 enum_value_index;
+};
+
+// This represents a Fidl constant declaration.
+struct DeclaredConstant {
+  DeclarationData decl_data;
+
+  // The type must be a StringType, BOOL, a numeric type or a TypeReference
+  // whose resolved type is a FidlEnum.
+  Type type;
+
+  // This is the value specified in the right-hand-side of the constant
+  // declaration. The value must be one of the following:
+  // (a) a LiteralValue or a BuiltinConstantValue of the same type as |type|
+  // (b) an EnumValueReference that resolves to an EnumValue of the same
+  // enum type as |type|, or
+  // (c) a ConstantReference that resolves to a different
+  // DeclaredConstant whose |resolved_concrete_value| is one of (a) or (b)
+  Value value;
+
+
+  // The resolved concrete value. This must be a LiteralValue, a
+  // BuiltinConstantValue, or an EnumValueReference. It may not be a
+  // ConstantReference.
+  //
+  // The resolved concrete value is defined as follows:
+  // If |value| is a LiteralValue, a BuiltinConstantValue or an
+  // EnunValueReference then the resolved
+  // concrete value is conceptually equal to |value| and this will
+  // be indicated by setting the |resolved_concrete_value| field to null.
+  //
+  // Otherwise |value| is a ConstantReference that refers to a different
+  // DeclaredConstant and in this case |resolved_concrete_value| will be
+  // non-null. It will be set to the conceptual resolved concrete value of that
+  // other DeclaredConstant (even if that other declared constant has its own
+  // |resolved_concrete_value| field set to null.) This chain of references
+  // must terminate in well-formed Fidl.
+  //
+  // In the case that |resolved_concrete_value| is set to an EnumValueReference
+  // only the |enum_type_key| and |enum_value_index| fields of the
+  // EnumValueReference are meaningful. The other fields should be ignored.
+  Value? resolved_concrete_value;
+};
+
+////////////////////////////////////////////////////////////////////////////
+// Declaration Data
+////////////////////////////////////////////////////////////////////////////
+
+struct Attribute {
+  string key;
+
+  // TODO(rudominer) The grammar allows an attribute value to be a name but the
+  // parser currently converts the name into a string literal. Do we want to
+  // maintain the distinction between a name and a string literal for attribute
+  // values?
+  LiteralValue value;
+};
+
+// This structure contains additional data that may be present in
+// a Fidl declaration. Some owning contexts may
+// provide some of this data.
+struct DeclarationData {
+  array<Attribute>? attributes;
+
+  string? short_name;  // Some implementations may not provide names.
+
+  // The fully-qualified identifier is the concatenation of the names of the
+  // containing scopes, starting from the module name, with a period ('.')
+  //  between components and with the |short_name| at the end.
+  string? full_identifier;
+
+  // The serialization ordinal of this element as declared in the
+  // .fidl file using the "@" notation.
+  int32 declared_ordinal = -1;  // Negative value means unset.
+
+  // The zero-based ordinal position of this element within its containing
+  // scope as it appears in the Fidl declaration. This is not the serialization
+  // ordinal.
+  int32 declaration_order = -1;
+
+  SourceFileInfo? source_file_info;
+
+  // Some types (namely structs and interfaces) act as namespaces in which
+  // enums and constants may be declared. Some implementations may populate
+  // this field in order to describe that containment.
+  ContainedDeclarations? contained_declarations;
+
+  // If this DeclarationData is for an enum or a constant that is contained
+  // in a struct or interface, then this field, if populated, is the type_key
+  // that refers to the containing struct or interface. This field plays a
+  // role inverse to that of |contained_declarations|.
+  string? container_type_key;
+
+  // Comments that are attached to the declared object.
+  Comments? comments;
+};
+
+struct Comments {
+  // Comments attached to the attributes attached to the declared object.
+  Comments? for_attributes;
+
+  // Comments above the declared object.
+  array<string> above;
+
+  // Comments to the left of the declared object.
+  array<string> left;
+
+  // Comments to the right of the declared object.
+  array<string> right;
+
+  // Comments that are in the body of the declared object but not attached to
+  // any contained declared objects. These comments are generally found at the
+  // bottom of the declared object's body.
+  array<string> at_bottom;
+};
+
+struct SourceFileInfo {
+  string file_name;
+
+  // The 1-based line and column number. A value of zero means unset.
+  uint32 line_number;
+  uint32 column_number;
+};
+
+// Some types (namely structs and interfaces) act as namespaces in which
+// enums and constants may be declared.
+struct ContainedDeclarations {
+  // The type keys of enums declared in this namespace.
+  array<string>? enums;
+
+  // The the constant keys of constants declared in this namespace.
+  array<string>? constants;
+};
+
+///////////////// Runtime Type Information //////////////////////
+
+// This structure contains the information necessary for an implementation of
+// |ServiceDescription| (see service_describer.fidl), but restricted to a
+// single .fidl file and not restricted to a single service.
+//
+// Note that this structure is not literally a component of a FidlFileGraph.
+// Instead, at compile time an instance of this structure is created and
+// serialized to an array of bytes that is stored in the
+// |serialized_runtime_type_info| field of each |FidlFile|. Then at code
+// generation time this array of bytes is written into the generated source
+// code as a literal array of bytes. Then at runtime this array of bytes
+// is deserialized into an instance of RuntimeTypeInfo that may be used by
+// an implementation of |ServiceDescription|.
+struct RuntimeTypeInfo {
+  // Maps a service name to the type key of the associated interface for all of
+  // the services contained in a single .fidl file. A "service" is an
+  // interface that has been annoted with the "ServiceName" annotation.
+  // This indicates that it can be returned from
+  // ServiceProvider.ProvideService() and its description can be returned
+  // from ServiceDescriber.DescribeService().
+  map<string, string> services;
+
+  // All of the resolved user-defined-types contained in a single .fidl File.
+  // The keys are the |type_key|s. Note that the complete set of types
+  // referenced (recursively) from a single Fidl service is not necessarily
+  // restricted to a single .fidl file. Thus this map does not necessarily
+  // contain all of the types necessary to completely describe a service listed
+  // in the |services| map above.  At runtime an implementation of
+  // |ServiceDescription| needs to merge the |RuntimeTypeInfo|
+  // from all of the generated modules in the file graph and then filter on only
+  // those types in the complete type set of a single service.
+  map<string, UserDefinedType> type_map;
+};
