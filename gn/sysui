@@ -1,7 +1,7 @@
 {
     "labels": [
-        "//modules",
-        "//sysui"
+        "//apps/modules",
+        "//apps/sysui"
     ],
     "binaries": [
         {
