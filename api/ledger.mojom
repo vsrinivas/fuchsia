@@ -22,7 +22,6 @@ enum Status {
   NO_TRANSACTION_IN_PROGRESS,
   INTERNAL_ERROR,
   UNKNOWN_ERROR = -1,
-  // TODO(qsr) Add more.
 };
 
 // Identity of the Ledger client. This is currently declarative with no
@@ -58,7 +57,7 @@ interface Ledger {
   // Deletes the page with the given id.
   DeletePage(array<uint8, 16> id) => (Status status);
 
-  // Set the |ConflictResolverFactory| to use for resolving conflicts on pages.
+  // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
   // policy will be used. If a factory is set and later on disconnected without
   // calling this method again, no conflict resolution will be done until this
@@ -75,16 +74,16 @@ union Value {
   handle<shared_buffer> buffer;
 };
 
-// A reference to a value. The value can be retrieved using |GetReference| or
-// |GetPartialReference|.
+// A reference to a value. The value can be retrieved using
+// |Page.GetReference()| or |Page.GetPartialReference()|.
 struct Reference {
   array<uint8> opaque_id;
 };
 
 // A value that is either small enough to be directly embedded in |bytes| or
 // that is referenced in |reference|. The value of the reference can be
-// retrieved by using |Page.GetReference(...)| or
-// |Page.GetPartialReference(...)|. References are immutable.
+// retrieved using |Page.GetReference()| or |Page.GetPartialReference()|.
+// References are immutable.
 union BytesOrReference {
   array<uint8> bytes;
   Reference reference;
@@ -95,7 +94,7 @@ interface Page {
   // Returns the identifier for the page.
   GetId() => (array<uint8, 16> id);
 
-  // Returns a snapshot of the page. All read operations must be done on a
+  // Returns a snapshot of the page. Read operations can only be performed on a
   // snapshot.
   GetSnapshot() => (Status status, PageSnapshot? snapshot);
 
@@ -109,16 +108,16 @@ interface Page {
   // with the following rules:
   // - A call to either |GetSnapshot()|, |Watch()| or |StartTransaction()| will
   //   commit any pending mutations.
-  // - All pending mutations will regularly be bundled together and commited.
+  // - All pending mutations will regularly be bundled together and committed.
   //   They are guaranteed to be persisted as soon as the client receives a
   //   successful status.
-  // |Put| and |PutWithPriority| can be used for small values that fit inside a
-  // mojo message. If the value is bigger, a reference must be first created
-  // using |CreateReference| and then |PutReference| can be used.
-  // |PutWithPriority| and |PutReference| have an additional |priority|
-  // parameter managing the synchronization policy for this value. |Put| uses a
-  // default priority of |Priority.EAGER|. For the list of available priorities
-  // and their definition, see |Priority|.
+  // |Put()| and |PutWithPriority()| can be used for small values that fit
+  // inside a mojo message. If the value is bigger, a reference must be first
+  // created using |CreateReference()| and then |PutReference()| can be used.
+  // |PutWithPriority()| and |PutReference()| have an additional |priority|
+  // parameter managing the synchronization policy for this value. |Put()| uses
+  // a default priority of |Priority.EAGER|. For the list of available
+  // priorities and their definition, see |Priority|.
   Put(array<uint8> key, array<uint8> value) => (Status status);
   PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
       => (Status status);
@@ -127,8 +126,8 @@ interface Page {
   Delete(array<uint8> key) => (Status status);
 
   // References.
-  // Create a new reference. The object is not part of any commit. It must be
-  // associated with a key using |PutReference|. The content of the reference
+  // Creates a new reference. The object is not part of any commit. It must be
+  // associated with a key using |PutReference()|. The content of the reference
   // will be the content of the data pipe. If |size| is not negative, the
   // content size must be equal to |size|, otherwise the call will fail. If
   // |size| is negative, no validation is done.
@@ -136,11 +135,10 @@ interface Page {
       => (Status status, Reference? reference);
   // Returns the value of the given reference.
   GetReference(Reference reference) => (Status status, Value? value);
-  // Returns a shared handle to a part of the value of a given reference.
-  //
-  // Start at the position that is specified by |offset|. If |offset| is less
+  // Returns a shared handle to a part of the value of a given reference,
+  // starting at the position that is specified by |offset|. If |offset| is less
   // than 0, starts at |-offset| from the end of the value.
-  // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
+  // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
   GetPartialReference(Reference reference, int64 offset, int64 max_size)
       => (Status status, handle<shared_buffer>? buffer);
@@ -154,16 +152,16 @@ interface Page {
   // is called and all changes are discarded.
   //
   // Parallel transactions on the same *page connection* are not allowed, and
-  // calling StartTransaction() when a transaction is already in progress
+  // calling |StartTransaction()| when a transaction is already in progress
   // returns an error. However, a client is free to connect to the same page
   // multiple times, and run parallel transactions on the same page using
   // separate connections. In this case, commiting each transaction creates
   // divergent commits, which are later subject to conflict resolution.
   //
   // When a transaction is in progress, the page content visible *on this page
-  // connection* is pinned to the state from when StartTransaction() was called.
-  // In particular, no watch notifications are delivered, and the conflict
-  // resolution is not invoked while the transaction is in progress. If
+  // connection* is pinned to the state from when |StartTransaction()| was
+  // called. In particular, no watch notifications are delivered, and the
+  // conflict resolution is not invoked while the transaction is in progress. If
   // conflicting changes are made or synced while the transaction is in
   // progress, conflict resolution is invoked after the transaction is
   // committed.
@@ -177,14 +175,14 @@ enum Priority {
   // EAGER values will be downloaded with the commit and have the same
   // availability.
   EAGER = 0,
-  // LAZY values will not be downloaded with their commit but only on demand.
+  // LAZY values will not be downloaded with their commit, but only on demand.
   // A LAZY value thus may not be available when requested, for example if the
   // device has no internet connection at request time.
   LAZY
 };
 
 // A pair of key and value. The |value| will be NULL if it is too big and
-// should be retrieved through a direct call to |PageSnapshot.Get|.
+// should be retrieved through a direct call to |PageSnapshot.Get()|.
 struct Entry {
   array<uint8> key;
   array<uint8>? value;
@@ -207,11 +205,10 @@ interface PageSnapshot {
   // Returns the value of a given key.
   Get(array<uint8> key) => (Status status, Value? value);
 
-  // Returns a shared handle of a part of the value of a given key.
-  //
-  // Start at the position that is specified by |offset|. If |offset| is less
-  // than 0, starts at |-offset| from the end of the value.
-  // Returns at most |max_size| bytes, If |max_size| is less than 0, returns
+  // Returns a shared handle of a part of the value of a given key, starting at
+  // the position that is specified by |offset|. If |offset| is less than 0,
+  // starts at |-offset| from the end of the value.
+  // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
   GetPartial(array<uint8> key, int64 offset, int64 max_size)
       => (Status status, handle<shared_buffer>? buffer);
@@ -236,15 +233,15 @@ struct PageChange {
   array<EntryChange> changes;
 };
 
-// Interface to watch changes to a page. The initial state is sent
-// immediately when the watcher is registered. The client will then receive
-// changes made by other clients or synced from other devices.
+// Interface to watch changes to a page. The initial state is sent immediately
+// when the watcher is registered. The client will then receive changes made by
+// other clients or synced from other devices.
 interface PageWatcher {
   OnInitialState(PageSnapshot snapshot) => ();
   OnChange(PageChange page_change) => ();
 };
 
-// This interface let clients control the conflict resolution policy of the
+// This interface lets clients control the conflict resolution policy of the
 // ledger. It allows them to either use pre-defined policies, or provide their
 // own implementation. This can be decided on a page-by-page basis.
 interface ConflictResolverFactory {
@@ -272,10 +269,10 @@ enum ConflictResolutionPolicy {
 };
 
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
-// |ConflictResolverFactory.GetPolicy| returns |CUSTOM| when called for a given
-// page, the |NewConflictResolver| method will be called and will provide a
-// |ConflictResolver|. Each time a conflict is detected, the method
-// |ConflictResolver.Resolve| will be called, and the client will resolve the
+// |ConflictResolverFactory.GetPolicy()| returns |CUSTOM| when called for a
+// given page, the |NewConflictResolver| method will be called and will provide
+// a |ConflictResolver|. Each time a conflict is detected, the method
+// |ConflictResolver.Resolve()| will be called, and the client will resolve the
 // conflict by returning the final value for all conflicting keys as well as
 // values for any other key that the client wants to change.
 interface ConflictResolver {
