@@ -8,7 +8,7 @@
 
 namespace mx {
 
-mx_status_t vmo::create(vmo* result, uint64_t size) {
+mx_status_t vmo::create(uint64_t size, uint32_t options, vmo* result) {
     mx_handle_t h = mx_vmo_create(size);
     if (h < 0) {
         result->reset(MX_HANDLE_INVALID);
