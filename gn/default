@@ -24,6 +24,7 @@
         "mtl",
         "netstack",
         "re2",
+        "sysui",
         "thinfs",
         "url",
         "wpa_supplicant"
