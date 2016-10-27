@@ -20,10 +20,10 @@ public:
 
     datapipe(datapipe&& other) : handle<T>(other.release()) {}
 
-    static mx_status_t create(datapipe_producer* producer,
-                              datapipe_consumer* consumer, uint32_t options,
-                              mx_size_t element_size,
-                              mx_size_t capacity) const {
+    static mx_status_t create(mx_size_t element_size,
+                              mx_size_t capacity, uint32_t options,
+                              datapipe_producer* producer,
+                              datapipe_consumer* consumer) const {
         mx_handle_t consumer_handle = MX_HANDLE_INVALID;
         mx_handle_t h = mx_datapipe_create(options, mx_size_t element_size,
                                            capacity, &consumer_handle);
@@ -53,13 +53,25 @@ public:
         return *this;
     }
 
-    mx_ssize_t write(uint32_t flags, mx_size_t requested,
-                     const void* buffer) const {
-        return mx_datapipe_write(get(), flags, requested, buffer);
+    mx_status_t write(uint32_t flags, const void* buffer,
+                      mx_size_t len, mx_size_t* actual) const {
+        mx_ssize_t result = mx_datapipe_write(get(), flags, len, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *actual = result;
+            return NO_ERROR;
+        }
     }
 
-    mx_ssize_t begin_write(uint32_t flags, uintptr_t* buffer) const {
-        return mx_datapipe_begin_write(get(), flags, buffer);
+    mx_status_t begin_write(uint32_t flags, uintptr_t* buffer, mx_size_t* available) const {
+        mx_ssize_t result = mx_datapipe_begin_write(get(), flags, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *available = result;
+            return NO_ERROR;
+        }
     }
 
     mx_status_t end_write(mx_size_t written) const {
@@ -82,12 +94,25 @@ public:
         return *this;
     }
 
-    mx_ssize_t read(uint32_t flags, mx_size_t requested, void* buffer) const {
-        return mx_datapipe_read(get(), flags, requested, buffer);
+    mx_status_t read(uint32_t flags, void* buffer,
+                    mx_size_t len, mx_size_t* actual) const {
+        mx_ssize_t result = mx_datapipe_read(get(), flags, requested, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *actual = result;
+            return NO_ERROR;
+        }
     }
 
-    mx_ssize_t begin_read(uint32_t flags, uintptr_t* buffer) const {
-        return mx_datapipe_begin_read(get(), flags, buffer);
+    mx_status_t begin_read(uint32_t flags, uintptr_t* buffer, mx_size_t* available) const {
+        mx_ssize_t result = mx_datapipe_begin_read(get(), flags, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *available = result;
+            return NO_ERROR;
+        }
     }
 
     mx_status_t end_read(mx_size_t read) const {
