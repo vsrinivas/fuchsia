@@ -11,6 +11,7 @@
 #include "apps/ledger/convert/convert.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/shared_buffer/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_test_base.h"
@@ -363,7 +364,8 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetPartial) {
   EXPECT_EQ("e",
             SnapshotGetPartial(&snapshot, convert::ToArray("name"), -1, -1));
   EXPECT_EQ("", SnapshotGetPartial(&snapshot, convert::ToArray("name"), -5, 0));
-  EXPECT_EQ("i", SnapshotGetPartial(&snapshot, convert::ToArray("name"), -3, 1));
+  EXPECT_EQ("i",
+            SnapshotGetPartial(&snapshot, convert::ToArray("name"), -3, 1));
 
   // Attempt to get an entry that is not in the page.
   snapshot->GetPartial(
@@ -541,6 +543,45 @@ TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[2].Equals(entries[2]->value));
   EXPECT_TRUE(keys[1].Equals(entries[3]->key));
   EXPECT_TRUE(values[1].Equals(entries[3]->value));
+}
+
+TEST_F(LedgerApplicationTest, PageCreatePutLargeReference) {
+  const std::string big_data(1'000'000, 'a');
+
+  PagePtr page = GetTestPage();
+
+  // Stream the data into the reference.
+  ReferencePtr reference;
+  page->CreateReference(big_data.size(),
+                        mtl::WriteStringToConsumerHandle(big_data),
+                        [this, &reference](Status status, ReferencePtr ref) {
+                          EXPECT_EQ(Status::OK, status);
+                          reference = std::move(ref);
+                        });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+
+  // Set the reference uder a key.
+  page->PutReference(convert::ToArray("big data"), std::move(reference),
+                     Priority::EAGER,
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+
+  // Get a snapshot and read the value.
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  ValuePtr value;
+  snapshot->Get(convert::ToArray("big data"),
+                [&value](Status status, ValuePtr v) {
+                  EXPECT_EQ(status, Status::OK);
+                  value = std::move(v);
+                });
+  ASSERT_TRUE(snapshot.WaitForIncomingResponse());
+
+  EXPECT_FALSE(value->is_bytes());
+  EXPECT_TRUE(value->is_buffer());
+  std::string retrieved_data;
+  EXPECT_TRUE(
+      mtl::StringFromSharedBuffer(value->get_buffer(), &retrieved_data));
+  EXPECT_EQ(big_data, retrieved_data);
 }
 
 }  // namespace
