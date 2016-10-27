@@ -127,11 +127,21 @@ bool VkReadbackTest::InitVulkan()
 
     VkDeviceQueueCreateInfo queue_create_info = {.sType =
                                                      VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                                                     .pNext = nullptr,
+                                                     .flags = 0,
+                                                     .queueFamilyIndex = 0,
                                                  .queueCount = 1,
                                                  .pQueuePriorities = queue_priorities};
     VkDeviceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                                     .pNext = nullptr,
+                                     .flags = 0,
                                      .queueCreateInfoCount = 1,
-                                     .pQueueCreateInfos = &queue_create_info};
+                                     .pQueueCreateInfos = &queue_create_info,
+                                     .enabledLayerCount = 0,
+                                     .ppEnabledLayerNames = nullptr,
+                                     .enabledExtensionCount = 0,
+                                     .ppEnabledExtensionNames = nullptr,
+                                     .pEnabledFeatures = nullptr};
     VkDevice vkdevice;
 
     if ((result = vkCreateDevice(physical_devices[0], &createInfo,
@@ -153,13 +163,13 @@ bool VkReadbackTest::InitImage()
         .pNext = nullptr,
         .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UINT,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
         .extent = VkExtent3D{kWidth, kHeight, 1},
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 0,     // not used since not sharing
         .pQueueFamilyIndices = nullptr, // not used since not sharing
@@ -216,48 +226,6 @@ bool VkReadbackTest::InitImage()
 
     printf("Bound memory to image\n");
 
-    VkImageView image_view;
-    VkImageViewCreateInfo image_view_create_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .image = vk_image_,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_UNORM,
-        .components = {.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                       .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                       .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                       .a = VK_COMPONENT_SWIZZLE_IDENTITY},
-        .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                             .baseMipLevel = 0,
-                             .levelCount = VK_REMAINING_MIP_LEVELS,
-                             .baseArrayLayer = 0,
-                             .layerCount = VK_REMAINING_ARRAY_LAYERS},
-    };
-    if ((result = vkCreateImageView(vk_device_, &image_view_create_info, nullptr, &image_view)) !=
-        VK_SUCCESS)
-        return DRETF(false, "vkCreateImageView failed: %d", result);
-
-    printf("Created image view\n");
-
-    VkFramebuffer framebuffer;
-    VkFramebufferCreateInfo framebuffer_create_info = {
-        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .renderPass = 0, // render_pass,
-        .attachmentCount = 1,
-        .pAttachments = &image_view,
-        .width = kWidth,
-        .height = kHeight,
-        .layers = 1,
-    };
-    if ((result = vkCreateFramebuffer(vk_device_, &framebuffer_create_info, nullptr,
-                                      &framebuffer)) != VK_SUCCESS)
-        return DRETF(false, "vkCreateFramebuffer failed");
-
-    printf("Created framebuffer\n");
-
     VkCommandPoolCreateInfo command_pool_create_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = nullptr,
@@ -293,7 +261,7 @@ bool VkReadbackTest::InitImage()
 
     printf("Command buffer begin\n");
 
-    VkClearColorValue color_value = {.float32 = {1, 0, 0.5, 0.75}};
+    VkClearColorValue color_value = {.float32 = {1.0f, 0.0f, 0.5f, 0.75f}};
 
     VkImageSubresourceRange image_subres_range = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
