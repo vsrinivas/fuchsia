@@ -42,7 +42,7 @@ public:
     handle<T> duplicate(mx_rights_t rights) const {
         static_assert(handle_traits<T>::supports_duplication,
                       "Receiver must support duplication.");
-        return handle<T>(mx_handle_duplicate(value_), rights);
+        return handle<T>(mx_handle_duplicate(value_, rights));
     }
 
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
