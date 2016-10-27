@@ -1,0 +1,27 @@
+{
+    "imports": [
+        "boringssl"
+    ],
+    "labels": [
+        "//magma:magma_service_driver_test",
+        "//magma:magma_tests"
+    ],
+    "binaries": [
+        {
+            "binary": "x64-shared/libmsd-intel-gen.so",
+            "bootfs_path": "lib/driver/msd-intel-gen.so"
+        },
+        {
+            "binary": "x64-shared/libmsd-intel-gen-test.so",
+            "bootfs_path": "lib/driver/msd-intel-gen-test.so"
+        },
+        {
+            "binary": "magma_app_unit_tests",
+            "bootfs_path": "bin/magma_app_unit_tests"
+        },
+        {
+            "binary": "magma_sys_unit_tests",
+            "bootfs_path": "bin/magma_sys_unit_tests"
+        }
+    ]
+}
