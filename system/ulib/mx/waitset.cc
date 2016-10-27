@@ -8,7 +8,7 @@
 
 namespace mx {
 
-mx_status_t waitset::create(waitset* result) {
+mx_status_t waitset::create(uint32_t options, waitset* result) {
     mx_handle_t h = mx_waitset_create();
     if (h < 0) {
         result->reset(MX_HANDLE_INVALID);

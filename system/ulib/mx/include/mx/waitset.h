@@ -21,10 +21,10 @@ public:
         return *this;
     }
 
-    static mx_status_t create(waitset* result);
+    static mx_status_t create(uint32_t options, waitset* result);
 
-    mx_status_t add(const handle& handle, mx_signals_t signals,
-                    uint64_t cookie) const {
+    mx_status_t add(const handle& handle, uint64_t cookie,
+                    mx_signals_t signals) const {
         return mx_waitset_add(get(), handle.get(), signals, cookie);
     }
 
@@ -32,11 +32,9 @@ public:
         return mx_waitset_remove(get(), cookie);
     }
 
-    mx_status_t wait(mx_time_t timeout, uint32_t* num_results,
-                     mx_waitset_result_t* results,
-                     uint32_t* max_results) const {
-        return mx_waitset_wait(get(), timeout, num_results, results,
-                               max_results);
+    mx_status_t wait(mx_time_t timeout, mx_waitset_result_t* results,
+                     uint32_t* num_results) const {
+        return mx_waitset_wait(get(), timeout, num_results, results, nullptr);
     }
 };
 
