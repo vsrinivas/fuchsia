@@ -108,6 +108,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
             goto cleanup;
         }
         context->root_node = true;
+        context->ns_node = ctx->ns_node;
         if ((status = mxio_dispatcher_add(dispatcher, cmd_handle, context, NULL)) < 0) {
             free(context);
             goto cleanup;
