@@ -1061,3 +1061,14 @@ mode_t umask(mode_t mask) {
     mtx_unlock(&mxio_lock);
     return oldmask;
 }
+
+int mxio_handle_fd(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out,
+                   bool shared_handle) {
+    mxio_t* io = mxio_waitable_create(h, signals_in, signals_out, shared_handle);
+    int fd = mxio_bind_to_fd(io, -1, 0);
+    if (fd < 0) {
+        mxio_close(io);
+        mxio_release(io);
+    }
+    return fd;
+}

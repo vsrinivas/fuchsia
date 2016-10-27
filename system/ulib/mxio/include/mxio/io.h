@@ -4,8 +4,8 @@
 
 #pragma once
 
-// for ssize_t
-#include <unistd.h>
+#include <stdbool.h>
+#include <unistd.h> // for ssize_t
 
 #include <magenta/types.h>
 #include <magenta/compiler.h>
@@ -49,12 +49,17 @@ __BEGIN_CDECLS
 // wait until one or more events are pending
 mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout);
 
+// create a fd that works with wait APIs (epoll, select, etc.) from a handle
+// and expected signals (signals_in/signals_out correspond to EPOLLIN/EPOLLOUT
+// events respectively). the handle will be closed when the fd is closed, unless
+// shared_handle is true.
+int mxio_handle_fd(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
+
 // invoke a raw mxio ioctl
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 
 // create a pipe, installing one half in a fd, returning the other
 // for transport to another process
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type);
-
 
 __END_CDECLS

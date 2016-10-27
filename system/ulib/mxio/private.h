@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <stdatomic.h>
@@ -42,6 +43,7 @@ typedef struct mxio_ops {
 #define MXIO_FLAG_CLOEXEC ((int32_t)1 << 0)
 #define MXIO_FLAG_SOCKET ((int32_t)1 << 1)
 #define MXIO_FLAG_EPOLL ((int32_t)1 << 2)
+#define MXIO_FLAG_WAITABLE ((int32_t)1 << 3)
 
 // The subset of mxio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
@@ -130,6 +132,9 @@ static inline void mxio_release(mxio_t* io) {
         mxio_free(io);
     }
 }
+
+// wraps an arbitrary handle with a mxio_t that works with wait hooks
+mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
 
 // unsupported / do-nothing hooks shared by implementations
 ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
