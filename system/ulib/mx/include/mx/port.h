@@ -21,7 +21,7 @@ public:
         return *this;
     }
 
-    static mx_status_t create(port* result, uint32_t options);
+    static mx_status_t create(uint32_t options, port* result);
 
     mx_status_t queue(const void* packet, mx_size_t size) const {
         return mx_port_queue(get(), packet, size);
