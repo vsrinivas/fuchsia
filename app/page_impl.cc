@@ -88,11 +88,13 @@ void PageImpl::RunInTransaction(
       commit_id, storage::JournalType::IMPLICIT, &journal);
   if (status != storage::Status::OK) {
     callback(PageUtils::ConvertStatus(status));
+    journal->Rollback();
     return;
   }
   Status ledger_status = runnable(journal.get());
   if (ledger_status != Status::OK) {
     callback(ledger_status);
+    journal->Rollback();
     return;
   }
 
