@@ -171,8 +171,12 @@ func (n *node) ReadAt(buf []byte, off int64) (int, error) {
 // len(buf).
 func (n *node) readAt(buf []byte, off int64) (int, error) {
 	// Short-circuit the cases where offset is reading out of bounds
-	if off < 0 || n.size <= off {
+	if off < 0 {
 		return 0, ErrBadArgument
+	} else if n.size <= off {
+		// From the IEEE Std 1003.1, 2004 Edition POSIX specification for "read":
+		// If the starting position is at or after the end-of-file, 0 shall be returned.
+		return 0, fs.ErrEOF
 	}
 	clusterSize := int64(n.metadata.Br.ClusterSize())
 	bytesRead := 0

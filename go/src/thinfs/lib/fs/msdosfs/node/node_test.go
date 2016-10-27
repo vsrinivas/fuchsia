@@ -222,11 +222,11 @@ func TestSingleNodeReadWrite(t *testing.T) {
 
 		// TEST: Edge cases of reading / writing
 
-		// A large read should fail with ErrBadArguments; it's out of bounds
+		// A large read should return zero bytes; it's out of bounds
 		readbuf := make([]byte, 10)
 		largeOffset := int64(len(bufCombined) + 10)
-		if l, err := n.readAt(readbuf, largeOffset); err != ErrBadArgument {
-			t.Fatal("Expected a bad argument error")
+		if l, err := n.readAt(readbuf, largeOffset); err != fs.ErrEOF {
+			t.Fatal("Expected an EOF error")
 		} else if l != 0 {
 			t.Fatalf("Unexpected read length: %d (expected %d)", l, 0)
 		}

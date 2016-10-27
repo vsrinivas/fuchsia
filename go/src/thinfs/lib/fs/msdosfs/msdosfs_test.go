@@ -509,6 +509,17 @@ func TestFilePositionInvalid(t *testing.T) {
 			t.Fatalf("Unexpected seek position: %d", n)
 		}
 
+		tryEmptyRead := func(off int64, whence int) {
+			n, err := f.Read(readBuf, off, whence)
+			if n != 0 || err != fs.ErrEOF {
+				t.Fatalf("Expected empty read, saw: %d bytes, err: %s", n, err)
+			}
+		}
+		tryEmptyRead(0, fs.WhenceFromCurrent)             // Read from current position (end of file)
+		tryEmptyRead(0, fs.WhenceFromEnd)                 // Read from end of file
+		tryEmptyRead(5, fs.WhenceFromEnd)                 // Read from end of file + five bytes
+		tryEmptyRead(int64(len(buf)), fs.WhenceFromStart) // Read from start + size of file
+
 		tryBadRead := func(off int64, whence int) {
 			n, err := f.Read(readBuf, off, whence)
 			if n != 0 || err != node.ErrBadArgument {
@@ -516,13 +527,9 @@ func TestFilePositionInvalid(t *testing.T) {
 			}
 		}
 
-		tryBadRead(0, fs.WhenceFromCurrent)                  // Read from current position (end of file)
-		tryBadRead(0, fs.WhenceFromEnd)                      // Read from end of file
-		tryBadRead(5, fs.WhenceFromEnd)                      // Read from end of file + five bytes
-		tryBadRead(int64(len(buf)), fs.WhenceFromStart)      // Read from start + size of file
+		tryBadRead(-1, fs.WhenceFromStart)                   // Read from start of file - 1
 		tryBadRead(-int64(len(buf)+1), fs.WhenceFromEnd)     // Read from end - (size of file + 1)
 		tryBadRead(-int64(len(buf)+1), fs.WhenceFromCurrent) // Read from current (end) - (size of file + 1)
-		tryBadRead(-1, fs.WhenceFromStart)                   // Read from start of file - 1
 
 		tryBadWrite := func(off int64, whence int) {
 			n, err := f.Write([]byte{'a'}, off, whence)
