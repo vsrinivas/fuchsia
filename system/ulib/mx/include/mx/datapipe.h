@@ -59,7 +59,8 @@ public:
         if (result < 0) {
             return static_cast<mx_status_t>(result);
         } else {
-            *actual = result;
+            if (actual)
+                *actual = result;
             return NO_ERROR;
         }
     }

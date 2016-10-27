@@ -29,8 +29,10 @@ public:
         uint32_t nb = num_bytes;
         uint32_t nh = num_handles;
         mx_status_t result = mx_msgpipe_read(get(), bytes, &nb, handles, &nh, flags);
-        *actual_bytes = nb;
-        *actual_handles = nh;
+        if (actual_bytes)
+            *actual_bytes = nb;
+        if (actual_handles)
+            *actual_handles = nh;
         return result;
     }
 
