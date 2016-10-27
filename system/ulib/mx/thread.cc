@@ -10,9 +10,9 @@
 
 namespace mx {
 
-mx_status_t thread::create(thread* result, const process& process,
+mx_status_t thread::create(const process& process,
                            const char* name, uint32_t name_len,
-                           uint32_t flags) {
+                           uint32_t flags, thread* result) {
     mx_handle_t h = mx_thread_create(process.get(), name, name_len, flags);
     if (h < 0) {
         result->reset(MX_HANDLE_INVALID);
