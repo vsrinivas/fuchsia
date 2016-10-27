@@ -684,8 +684,8 @@ static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
 
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_read(rio->h2, 0, len, (void*)data)) >= 0) {
-            return r;
+        if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == NO_ERROR) {
+            return (ssize_t) len;
         }
         if (r == ERR_REMOTE_CLOSED) {
             return 0;
@@ -717,8 +717,8 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
 
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_write(rio->h2, 0, len, data)) >= 0) {
-            return r;
+        if ((r = mx_socket_write(rio->h2, 0, data, len, &len)) == NO_ERROR) {
+            return (ssize_t) len;
         }
         if (r == ERR_SHOULD_WAIT) {
             // TODO: follow socket blocking/nonblocking state

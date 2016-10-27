@@ -431,15 +431,15 @@ syscall acpi_cache_flush
 # Sockets
 
 syscall socket_create
-    (out_handles: mx_handle_t[2] OUT, flags: uint32_t)
+    (options: uint32_t, out0: mx_handle_t[1] OUT, out1: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 syscall socket_write
-    (handle: mx_handle_t, flags: uint32_t, size: mx_size_t, buffer: any[size] IN)
-    returns (mx_ssize_t);
+    (handle: mx_handle_t, flags: uint32_t, buffer: any[size] IN, size: mx_size_t, actual: mx_size_t[1] OUT)
+    returns (mx_status_t);
 
-syscall socket_read (handle: mx_handle_t, flags: uint32_t, size: mx_size_t, buffer: any[size] OUT)
-    returns (mx_ssize_t);
+syscall socket_read (handle: mx_handle_t, flags: uint32_t, buffer: any[size] OUT, size: mx_size_t, actual: mx_size_t[1] OUT)
+    returns (mx_status_t);
 
 # Debugger calls
 

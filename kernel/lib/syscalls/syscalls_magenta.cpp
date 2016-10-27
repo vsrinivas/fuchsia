@@ -617,11 +617,8 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     return result;
 }
 
-mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
-    LTRACEF("entry out_handle[] %p\n", out_handle);
-
-    if (!out_handle)
-        return ERR_INVALID_ARGS;
+mx_status_t sys_socket_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
+    LTRACEF("entry out_handles %p, %p\n", out0.get(), out1.get());
 
     if (flags != 0u)
         return ERR_INVALID_ARGS;
@@ -641,9 +638,11 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
 
-    if (user_ptr<mx_handle_t>(out_handle).copy_array_to_user(hv, 2) != NO_ERROR)
+    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -652,8 +651,9 @@ mx_status_t sys_socket_create(mx_handle_t out_handle[2], uint32_t flags) {
     return NO_ERROR;
 }
 
-mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
-                            mx_size_t size, user_ptr<const void> _buffer) {
+mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
+                             user_ptr<const void> _buffer, mx_size_t size,
+                             user_ptr<mx_size_t> actual) {
     LTRACEF("handle %d\n", handle);
 
     if ((size > 0u) && !_buffer)
@@ -667,23 +667,35 @@ mx_ssize_t sys_socket_write(mx_handle_t handle, uint32_t flags,
         return status;
 
     switch (flags) {
-    case 0:
-        return socket->Write(_buffer.get(), size, true);
-    case MX_SOCKET_CONTROL:
-        return socket->OOB_Write(_buffer.get(), size, true);
+    case 0: {
+        mx_ssize_t result = socket->Write(_buffer.get(), size, true);
+
+        if (result < 0)
+            return static_cast<mx_status_t>(result);
+
+        // caller may ignore results if desired
+        if (actual) {
+            if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+        }
+
+        return NO_ERROR;
+    }
     case MX_SOCKET_HALF_CLOSE:
         if (size == 0)
             return socket->HalfClose();
     // fall thru if size != 0.
-    default: return ERR_INVALID_ARGS;
+    default:
+        return ERR_INVALID_ARGS;
     }
 }
 
-mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
-                           mx_size_t size, user_ptr<void> _buffer) {
+mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
+                            user_ptr<void> _buffer, mx_size_t size,
+                            user_ptr<mx_size_t> actual) {
     LTRACEF("handle %d\n", handle);
 
-    if (!_buffer)
+    if (!_buffer || !actual || flags)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -693,9 +705,15 @@ mx_ssize_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    return flags == MX_SOCKET_CONTROL?
-        socket->OOB_Read(_buffer.get(), size, true) :
-        socket->Read(_buffer.get(), size, true);
+    mx_ssize_t result = socket->Read(_buffer.get(), size, true);
+
+    if (result < 0)
+        return static_cast<mx_status_t>(result);
+
+    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }
 
 mx_handle_t sys_job_create(mx_handle_t parent_job, uint32_t flags) {

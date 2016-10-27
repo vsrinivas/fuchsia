@@ -226,11 +226,11 @@ MAGENTA_SYSCALL_DEF(1, 1, 260, uint32_t, acpi_uefi_rsdp, mx_handle_t handle)
 MAGENTA_SYSCALL_DEF(1, 1, 261, mx_status_t, acpi_cache_flush, mx_handle_t handle)
 
 // Sockets
-MAGENTA_SYSCALL_DEF(2, 2, 280, mx_status_t, socket_create, mx_handle_t out_handles[2], uint32_t flags)
-MAGENTA_SYSCALL_DEF(4, 4, 281, mx_ssize_t, socket_write, mx_handle_t handle, uint32_t flags,
-                    mx_size_t size, USER_PTR(const void) buffer)
-MAGENTA_SYSCALL_DEF(4, 4, 282, mx_ssize_t, socket_read, mx_handle_t handle, uint32_t flags,
-                    mx_size_t size, USER_PTR(void) buffer)
+MAGENTA_SYSCALL_DEF(3, 3, 280, mx_status_t, socket_create, uint32_t options, USER_PTR(mx_handle_t) out0, USER_PTR(mx_handle_t) out1)
+MAGENTA_SYSCALL_DEF(5, 5, 281, mx_status_t, socket_write, mx_handle_t handle, uint32_t flags,
+                    USER_PTR(const void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
+MAGENTA_SYSCALL_DEF(5, 5, 282, mx_status_t, socket_read, mx_handle_t handle, uint32_t flags,
+                    USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
 
 // Debugger calls
 MAGENTA_SYSCALL_DEF(4, 4, 290, mx_status_t, thread_read_state, mx_handle_t handle, uint32_t kind, USER_PTR(void) buffer, USER_PTR(uint32_t) buffer_len)

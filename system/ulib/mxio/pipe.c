@@ -23,8 +23,8 @@ typedef struct mx_pipe {
 static ssize_t _blocking_read(mx_handle_t h, void* data, size_t len) {
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_read(h, 0, len, data)) >= 0) {
-            return r;
+        if ((r = mx_socket_read(h, 0, data, len, &len)) == NO_ERROR) {
+            return (ssize_t) len;
         }
         if (r == ERR_SHOULD_WAIT) {
             mx_signals_state_t pending;
@@ -49,8 +49,8 @@ static ssize_t _blocking_read(mx_handle_t h, void* data, size_t len) {
 static ssize_t _blocking_write(mx_handle_t h, const void* data, size_t len) {
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_write(h, 0, len, data)) >= 0) {
-            return r;
+        if ((r = mx_socket_write(h, 0, data, len, &len)) == NO_ERROR) {
+            return (ssize_t)len;
         }
         if (r == ERR_SHOULD_WAIT) {
             mx_signals_state_t pending;
@@ -185,20 +185,20 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
 }
 
 int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
-    mx_handle_t h[2];
+    mx_handle_t h0, h1;
     mxio_t *a, *b;
     mx_status_t r;
-    if ((r = mx_socket_create(h, 0)) < 0) {
+    if ((r = mx_socket_create(0, &h0, &h1)) < 0) {
         return r;
     }
-    if ((a = mxio_pipe_create(h[0])) == NULL) {
-        mx_handle_close(h[0]);
-        mx_handle_close(h[1]);
+    if ((a = mxio_pipe_create(h0)) == NULL) {
+        mx_handle_close(h0);
+        mx_handle_close(h1);
         return ERR_NO_MEMORY;
     }
-    if ((b = mxio_pipe_create(h[1])) == NULL) {
+    if ((b = mxio_pipe_create(h1)) == NULL) {
         mx_pipe_close(a);
-        mx_handle_close(h[1]);
+        mx_handle_close(h1);
         return ERR_NO_MEMORY;
     }
     *_a = a;
@@ -208,7 +208,7 @@ int mxio_pipe_pair(mxio_t** _a, mxio_t** _b) {
 
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
     mx_status_t r;
-    if ((r = mx_socket_create(handles, 0)) < 0) {
+    if ((r = mx_socket_create(0, handles, handles + 1)) < 0) {
         return r;
     }
     types[0] = MX_HND_TYPE_MXIO_PIPE;
@@ -217,14 +217,14 @@ mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types) {
 }
 
 mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
-    mx_handle_t h[2];
+    mx_handle_t h0, h1;
     mx_status_t r;
     mxio_t* io;
     int fd;
-    if ((r = mx_socket_create(h, 0)) < 0) {
+    if ((r = mx_socket_create(0, &h0, &h1)) < 0) {
         return r;
     }
-    if ((io = mxio_pipe_create(h[0])) == NULL) {
+    if ((io = mxio_pipe_create(h0)) == NULL) {
         r = ERR_NO_MEMORY;
         goto fail;
     }
@@ -233,12 +233,12 @@ mx_status_t mxio_pipe_half(mx_handle_t* handle, uint32_t* type) {
         r = ERR_NO_RESOURCES;
         goto fail;
     }
-    *handle = h[1];
+    *handle = h1;
     *type = MX_HND_TYPE_MXIO_PIPE;
     return fd;
 
 fail:
-    mx_handle_close(h[0]);
-    mx_handle_close(h[1]);
+    mx_handle_close(h0);
+    mx_handle_close(h1);
     return r;
 }
