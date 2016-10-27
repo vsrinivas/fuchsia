@@ -21,15 +21,26 @@ public:
         return *this;
     }
 
-    static mx_status_t create(socket* endpoint0, socket* endpoint1,
-                              uint32_t flags);
+    static mx_status_t create(uint32_t flags, socket* endpoint0, socket* endpoint1);
 
-    mx_ssize_t write(uint32_t flags, mx_size_t size, const void* buffer) const {
-        return mx_socket_write(get(), flags, size, buffer);
+    mx_status_t write(uint32_t flags, const void* buffer, mx_size_t len, mx_size_t* actual) const {
+        mx_ssize_t result = mx_socket_write(get(), flags, len, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *actual = result;
+            return NO_ERROR;
+        }
     }
 
-    mx_ssize_t read(uint32_t flags, mx_size_t size, void* buffer) const {
-        return mx_socket_read(get(), flags, size, buffer);
+    mx_status_t read(uint32_t flags, void* buffer, mx_size_t len, mx_size_t* actual) const {
+        mx_ssize_t result = mx_socket_read(get(), flags, len, buffer);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *actual = result;
+            return NO_ERROR;
+        }
     }
 };
 

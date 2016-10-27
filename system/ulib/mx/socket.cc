@@ -8,8 +8,7 @@
 
 namespace mx {
 
-mx_status_t socket::create(socket* endpoint0, socket* endpoint1,
-                           uint32_t flags) {
+mx_status_t socket::create(uint32_t flags, socket* endpoint0, socket* endpoint1) {
     mx_handle_t h[2];
     mx_status_t result = mx_socket_create(h, flags);
     endpoint0->reset(h[0]);
