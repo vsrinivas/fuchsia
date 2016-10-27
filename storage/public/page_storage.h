@@ -78,12 +78,14 @@ class PageStorage {
   // adds them in the given |objects| vector. This includes all objects present
   // in the storage tree of the commit that were not in storage tree of its
   // parent(s).
-  virtual Status GetDeltaObjects(const CommitId& commit_id,
-                                 std::vector<Object>* objects) = 0;
+  virtual Status GetDeltaObjects(
+      const CommitId& commit_id,
+      std::vector<std::unique_ptr<const Object>>* objects) = 0;
   // Finds all objects in the storage tree of the commit with the given
   // |commit_id| that are not yet synced and adds them in the |objectus| vector.
-  virtual Status GetUnsyncedObjects(const CommitId& commit_id,
-                                    std::vector<Object>* objects) = 0;
+  virtual Status GetUnsyncedObjects(
+      const CommitId& commit_id,
+      std::vector<std::unique_ptr<const Object>>* objects) = 0;
   // Marks the object with the given |object_id| as synced.
   virtual Status MarkObjectSynced(ObjectIdView object_id) = 0;
   // Stores the given synced object. \object_id\ will be validated against the
