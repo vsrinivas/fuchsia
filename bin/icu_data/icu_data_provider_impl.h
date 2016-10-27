@@ -5,15 +5,15 @@
 #ifndef APPS_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 #define APPS_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 
-#include "mojo/services/icu_data/interfaces/icu_data.mojom.h"
+#include <mx/vmo.h>
 
-#include "lib/mtl/handles/unique_handle.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
+#include "mojo/services/icu_data/interfaces/icu_data.mojom.h"
 
 namespace icu_data {
 
 class ICUDataProviderImpl : public mojo::ICUDataProvider {
-public:
+ public:
   ICUDataProviderImpl();
   ~ICUDataProviderImpl() override;
 
@@ -22,18 +22,18 @@ public:
 
   void AddBinding(mojo::InterfaceRequest<mojo::ICUDataProvider> request);
 
-private:
+ private:
   // |ICUData| implementation:
-  void ICUDataWithSha1(const mojo::String &request,
-                       const ICUDataWithSha1Callback &callback) override;
+  void ICUDataWithSha1(const mojo::String& request,
+                       const ICUDataWithSha1Callback& callback) override;
 
   mojo::BindingSet<mojo::ICUDataProvider> bindings_;
 
-  mtl::UniqueHandle icu_data_vmo_;
+  mx::vmo icu_data_vmo_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
 };
 
-} // namespace icu_data
+}  // namespace icu_data
 
-#endif // APPS_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
+#endif  // APPS_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_

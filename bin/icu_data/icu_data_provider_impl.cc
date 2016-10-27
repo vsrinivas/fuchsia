@@ -18,7 +18,7 @@ constexpr char kICUDataPath[] = "/boot/data/icu_data/icudtl.dat";
 constexpr mx_rights_t kICUDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
 
-} // namespace
+}  // namespace
 
 ICUDataProviderImpl::ICUDataProviderImpl() = default;
 
@@ -34,17 +34,16 @@ bool ICUDataProviderImpl::LoadData() {
     return false;
   }
 
-  icu_data_vmo_.reset(mx_vmo_create(data.size()));
-  if (icu_data_vmo_.get() < 0) {
+  mx_status_t rv = mx::vmo::create(data.size(), 0, &icu_data_vmo_);
+  if (rv < 0) {
     FTL_LOG(ERROR)
         << "Loading ICU data failed: Failed to create VMO for ICU data.";
     icu_data_vmo_.reset();
     return false;
   }
 
-  mx_ssize_t result =
-      mx_vmo_write(icu_data_vmo_.get(), data.data(), 0, data.size());
-  if (result < 0) {
+  rv = icu_data_vmo_.write(data.data(), 0, data.size(), nullptr);
+  if (rv < 0) {
     FTL_LOG(ERROR)
         << "Loading ICU data failed: Failed to write ICU data to VMO.";
     icu_data_vmo_.reset();
@@ -60,8 +59,9 @@ void ICUDataProviderImpl::AddBinding(
 }
 
 void ICUDataProviderImpl::ICUDataWithSha1(
-    const mojo::String &sha1hash, const ICUDataWithSha1Callback &callback) {
-  if (!icu_data_vmo_.is_valid()) {
+    const mojo::String& sha1hash,
+    const ICUDataWithSha1Callback& callback) {
+  if (!icu_data_vmo_) {
     callback.Run(nullptr);
     return;
   }
@@ -71,15 +71,15 @@ void ICUDataProviderImpl::ICUDataWithSha1(
     return;
   }
 
-  mx_handle_t vmo = mx_handle_duplicate(icu_data_vmo_.get(), kICUDataRights);
-  if (vmo < 0) {
+  mx::vmo vmo;
+  if (icu_data_vmo_.duplicate(kICUDataRights, &vmo) < 0) {
     callback.Run(nullptr);
     return;
   }
 
   auto data = mojo::ICUData::New();
-  data->vmo.reset(mojo::Handle(vmo));
+  data->vmo.reset(mojo::Handle(vmo.release()));
   callback.Run(std::move(data));
 }
 
-} // namespace icu_data
+}  // namespace icu_data
