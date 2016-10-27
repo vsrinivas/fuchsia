@@ -21,7 +21,7 @@ public:
         return *this;
     }
 
-    static mx_status_t create(event* result, uint32_t options);
+    static mx_status_t create(uint32_t options, event* result);
 };
 
 } // namespace mx

@@ -8,7 +8,7 @@
 
 namespace mx {
 
-mx_status_t event::create(event* result, uint32_t options) {
+mx_status_t event::create(uint32_t options, event* result) {
     mx_handle_t h = mx_event_create(options);
     if (h < 0) {
         result->reset(MX_HANDLE_INVALID);
