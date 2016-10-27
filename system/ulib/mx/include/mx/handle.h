@@ -39,10 +39,17 @@ public:
         other.value_ = tmp;
     }
 
-    handle<T> duplicate(mx_rights_t rights) const {
+    mx_status_t duplicate(mx_rights_t rights, handle<T>* result) const {
         static_assert(handle_traits<T>::supports_duplication,
                       "Receiver must support duplication.");
-        return handle<T>(mx_handle_duplicate(value_, rights));
+        mx_handle_t h = mx_handle_duplicate(value_, rights);
+        if (h < 0) {
+            result->reset(MX_HANDLE_INVALID);
+            return h;
+        } else {
+            result->reset(h);
+            return NO_ERROR;
+        }
     }
 
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
@@ -50,7 +57,7 @@ public:
         return mx_handle_wait_one(value_, signals, timeout, signals_state);
     }
 
-    mx_status_t replace(handle<T>* result, mx_rights_t rights) const {
+    mx_status_t replace(mx_rights_t rights, handle<T>* result) const {
         mx_handle_t h = mx_handle_replace(value_, rights);
         if (h < 0) {
             result->reset(MX_HANDLE_INVALID);
@@ -69,13 +76,27 @@ public:
         return mx_object_signal(get(), clear_mask, set_mask);
     }
 
-    mx_ssize_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
-                        mx_size_t buffer_size) const {
-        return mx_object_get_info(get(), topic, topic_size, buffer,
-                                  buffer_size);
+    mx_status_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
+                        mx_size_t buffer_size, mx_size_t* return_size) const {
+        mx_ssize_t result = mx_object_get_info(get(), topic, topic_size, buffer, buffer_size);
+        if (result < 0) {
+            return static_cast<mx_status_t>(result);
+        } else {
+            *return_size = result;
+            return NO_ERROR;
+        }
     }
 
-    // TODO(abarth): mx_object_get_child
+    mx_status_t get_child(uint64_t koid, mx_rights_t rights, handle<T>* result) const {
+        mx_handle_t h = mx_object_get_child(value_, koid, rights);
+        if (h < 0) {
+            result->reset(MX_HANDLE_INVALID);
+            return h;
+        } else {
+            result->reset(h);
+            return NO_ERROR;
+        }
+    }
     // TODO(abarth): mx_object_bind_exception_port
 
     mx_status_t get_property(uint32_t property, void* value,
