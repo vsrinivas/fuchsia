@@ -10,10 +10,10 @@ MODULE_TYPE := userlib
 
 # Don't forget to update BUILD.gn as well for the Fuchsia build.
 MODULE_SRCS += \
+    $(LOCAL_DIR)/channel.cc \
     $(LOCAL_DIR)/event.cc \
     $(LOCAL_DIR)/eventpair.cc \
     $(LOCAL_DIR)/log.cc \
-    $(LOCAL_DIR)/msgpipe.cc \
     $(LOCAL_DIR)/port.cc \
     $(LOCAL_DIR)/process.cc \
     $(LOCAL_DIR)/socket.cc \
