@@ -62,7 +62,7 @@ class PageStorageImpl : public PageStorage {
                          const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
       mojo::ScopedDataPipeConsumerHandle data,
-      size_t size,
+      int64_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
       ObjectIdView object_id,

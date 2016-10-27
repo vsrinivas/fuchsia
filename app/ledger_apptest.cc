@@ -545,6 +545,30 @@ TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[1].Equals(entries[3]->value));
 }
 
+TEST_F(LedgerApplicationTest, PageCreateReferenceNegativeSize) {
+  const std::string big_data(1'000'000, 'a');
+
+  PagePtr page = GetTestPage();
+
+  page->CreateReference(-1, mtl::WriteStringToConsumerHandle(big_data),
+                        [this](Status status, ReferencePtr ref) {
+                          EXPECT_EQ(Status::OK, status);
+                        });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+}
+
+TEST_F(LedgerApplicationTest, PageCreateReferenceWrongSize) {
+  const std::string big_data(1'000'000, 'a');
+
+  PagePtr page = GetTestPage();
+
+  page->CreateReference(123, mtl::WriteStringToConsumerHandle(big_data),
+                        [this](Status status, ReferencePtr ref) {
+                          EXPECT_EQ(Status::IO_ERROR, status);
+                        });
+  ASSERT_TRUE(page.WaitForIncomingResponse());
+}
+
 TEST_F(LedgerApplicationTest, PageCreatePutLargeReference) {
   const std::string big_data(1'000'000, 'a');
 

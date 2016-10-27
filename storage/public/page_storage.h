@@ -88,19 +88,21 @@ class PageStorage {
       std::vector<std::unique_ptr<const Object>>* objects) = 0;
   // Marks the object with the given |object_id| as synced.
   virtual Status MarkObjectSynced(ObjectIdView object_id) = 0;
-  // Stores the given synced object. \object_id\ will be validated against the
-  // expected one based on the \data\ and an |OBJECT_ID_MISSMATCH| error will be
+  // Adds the given synced object. |object_id| will be validated against the
+  // expected one based on the |data| and an |OBJECT_ID_MISSMATCH| error will be
   // returned in case of missmatch.
   virtual void AddObjectFromSync(
       ObjectIdView object_id,
       mojo::ScopedDataPipeConsumerHandle data,
       size_t size,
       const std::function<void(Status)>& callback) = 0;
-  // Stores the given local object and stores the new object's id in the
-  // |object_id| parameter.
+  // Adds the given local object and passes the new object's id to the callback.
+  // If |size| is not negative, the content size must be equal to |size|,
+  // otherwise the call will fail and return |IO_ERROR| in the callback. If
+  // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
       mojo::ScopedDataPipeConsumerHandle data,
-      size_t size,
+      int64_t size,
       const std::function<void(Status, ObjectId)>& callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an
   // an error will be returned through the given |callback|.

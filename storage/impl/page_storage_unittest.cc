@@ -211,18 +211,16 @@ TEST_F(PageStorageTest, CreateJournals) {
 TEST_F(PageStorageTest, AddObjectFromLocal) {
   std::string content("Some data");
 
-  Status status;
   ObjectId object_id;
   storage_->AddObjectFromLocal(
       mtl::WriteStringToConsumerHandle(content), content.size(),
-      [this, &status, &object_id](Status returned_status,
-                                  ObjectId returned_object_id) {
-        status = returned_status;
+      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
+        EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
         message_loop_.QuitNow();
       });
   message_loop_.Run();
-  EXPECT_EQ(Status::OK, status);
+
   std::string hash = glue::SHA256Hash(content.data(), content.size());
   EXPECT_EQ(hash, object_id);
 
@@ -230,6 +228,29 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(content, file_content);
+}
+
+TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
+  std::string content("Some data");
+  storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(content), -1,
+      [this](Status returned_status, ObjectId returned_object_id) {
+        EXPECT_EQ(Status::OK, returned_status);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+}
+
+TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
+  std::string content("Some data");
+
+  storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(content), 123,
+      [this](Status returned_status, ObjectId returned_object_id) {
+        EXPECT_EQ(Status::IO_ERROR, returned_status);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
 }
 
 TEST_F(PageStorageTest, GetObject) {

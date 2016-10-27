@@ -82,7 +82,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
       : staging_dir_(staging_dir),
         object_dir_(object_dir),
         drainer_(this),
-        expected_size_(0u),
+        expected_size_(0),
         size_(0u) {}
 
   ~FileWriter() override {
@@ -94,7 +94,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   }
 
   void Start(mojo::ScopedDataPipeConsumerHandle source,
-             uint64_t expected_size,
+             int64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     expected_size_ = expected_size;
     callback_ = std::move(callback);
@@ -128,7 +128,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
       return;
     }
     fd_.reset();
-    if (size_ != expected_size_) {
+    if (expected_size_ >= 0 && size_ != static_cast<size_t>(expected_size_)) {
       FTL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
                      << expected_size_ << ", but received: " << size_;
       callback_(Status::IO_ERROR, "");
@@ -140,7 +140,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
 
     std::string final_path = object_dir_ + "/" + ToHex(object_id);
     Status status =
-        StagingToDestination(expected_size_, file_path_, std::move(final_path));
+        StagingToDestination(size_, file_path_, std::move(final_path));
     if (status != Status::OK) {
       callback_(Status::INTERNAL_IO_ERROR, "");
       return;
@@ -157,7 +157,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   std::string file_path_;
   ftl::UniqueFD fd_;
   glue::SHA256StreamingHash hash_;
-  uint64_t expected_size_;
+  int64_t expected_size_;
   uint64_t size_;
 };
 
@@ -350,7 +350,7 @@ void PageStorageImpl::AddObjectFromSync(
 
 void PageStorageImpl::AddObjectFromLocal(
     mojo::ScopedDataPipeConsumerHandle data,
-    size_t size,
+    int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);
   FileWriter* file_writer_ptr = file_writer.get();
