@@ -9,16 +9,10 @@
 
 namespace storage {
 
-namespace {
-
-// TODO: Have a configurable node size for TreeNodes (LE-35)
-const int kMaxNodeSize = 4;
-
-}  // namespace
-
 void BTreeBuilder::ApplyChanges(
     ObjectStore* store,
     ObjectIdView root_id,
+    size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectId)> callback) {
   std::unique_ptr<const TreeNode> root;
@@ -45,13 +39,14 @@ void BTreeBuilder::ApplyChanges(
   }
 
   ObjectId new_id;
-  Status status = BTreeBuilder::ApplyChanges(store, std::move(root), "",
-                                             changes.get(), nullptr, &new_id);
+  Status status = BTreeBuilder::ApplyChanges(
+      store, std::move(root), node_size, "", changes.get(), nullptr, &new_id);
   callback(status, new_id);
 }
 
 Status BTreeBuilder::ApplyChanges(ObjectStore* store,
                                   std::unique_ptr<const TreeNode> node,
+                                  size_t node_size,
                                   const std::string& max_key,
                                   Iterator<const EntryChange>* changes,
                                   TreeNode::Mutation* parent_mutation,
@@ -104,9 +99,9 @@ Status BTreeBuilder::ApplyChanges(ObjectStore* store,
           next_key = entry.key;
         }
         ObjectId new_child_id;
-        Status status =
-            BTreeBuilder::ApplyChanges(store, std::move(child), next_key,
-                                       changes, &mutation, &new_child_id);
+        Status status = BTreeBuilder::ApplyChanges(store, std::move(child),
+                                                   node_size, next_key, changes,
+                                                   &mutation, &new_child_id);
         if (status != Status::OK) {
           return status;
         }
@@ -134,7 +129,7 @@ Status BTreeBuilder::ApplyChanges(ObjectStore* store,
   }
   FTL_DCHECK(parent_mutation || !changes->Valid());
 
-  return mutation.Finish(kMaxNodeSize, parent_mutation, max_key, new_id);
+  return mutation.Finish(node_size, parent_mutation, max_key, new_id);
 }
 
 Status BTreeBuilder::Merge(ObjectStore* store,

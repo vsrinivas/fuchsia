@@ -32,6 +32,8 @@ const char kJournalEagerEntry = 'E';
 constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
 constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
 
+constexpr ftl::StringView kNodeSizeKey = "node-size";
+
 std::string Concatenate(std::initializer_list<ftl::StringView> l) {
   std::string result;
   size_t result_size = 0;
@@ -357,6 +359,21 @@ Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
     return s;
   }
   *is_synced = (s == Status::NOT_FOUND);
+  return Status::OK;
+}
+
+Status DB::SetNodeSize(size_t node_size) {
+  ftl::StringView value(reinterpret_cast<char*>(&node_size), sizeof(int));
+  return Put(kNodeSizeKey, value);
+}
+
+Status DB::GetNodeSize(size_t* node_size) {
+  std::string value;
+  Status s = Get(kNodeSizeKey, &value);
+  if (s != Status::OK) {
+    return s;
+  }
+  *node_size = *reinterpret_cast<const size_t*>(value.data());
   return Status::OK;
 }
 

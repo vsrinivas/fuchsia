@@ -78,7 +78,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesFromEmpty) {
       EntryChange{entry3, false}, EntryChange{entry4, false}};
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id,
+      &store_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {
@@ -133,7 +133,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
   };
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id,
+      &store_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {
@@ -158,7 +158,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
 
   ObjectId new_root_id2;
   BTreeBuilder::ApplyChanges(
-      &store_, new_root_id,
+      &store_, new_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(new_change.begin(), new_change.end())),
       [&new_root_id2](Status status, ObjectId obj_id) {
@@ -211,7 +211,7 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
 
   ObjectId tmp_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id,
+      &store_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&tmp_root_id](Status status, ObjectId obj_id) {
@@ -227,7 +227,7 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
   FTL_DCHECK(delete_changes.size() == entries_to_delete.size());
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, tmp_root_id,
+      &store_, tmp_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(new EntryChangeIterator(
           delete_changes.begin(), delete_changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {

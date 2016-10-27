@@ -16,6 +16,7 @@ class BTreeBuilder {
   // |changes| must provide |EntryChange| objects sorted by their key.
   static void ApplyChanges(ObjectStore* store,
                            ObjectIdView root_id,
+                           size_t node_size,
                            std::unique_ptr<Iterator<const EntryChange>> changes,
                            std::function<void(Status, ObjectId)> callback);
 
@@ -23,6 +24,7 @@ class BTreeBuilder {
   // Recursively applies the changes starting from the given |node|.
   static Status ApplyChanges(ObjectStore* store,
                              std::unique_ptr<const TreeNode> node,
+                             size_t node_size,
                              const std::string& max_key,
                              Iterator<const EntryChange>* changes,
                              TreeNode::Mutation* parent_mutation,

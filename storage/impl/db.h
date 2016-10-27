@@ -130,6 +130,12 @@ class DB {
   // Checks if the object with the given |object_id| is synced.
   Status IsObjectSynced(ObjectIdView object_id, bool* is_synced);
 
+  // Sets the node size of this page.
+  Status SetNodeSize(size_t node_size);
+  // Finds the defined node size for this page and returns |OK| on success or
+  // |NOT_FOUND| if the node_size is not defined, yet.
+  Status GetNodeSize(size_t* node_size);
+
  private:
   Status GetByPrefix(const leveldb::Slice& prefix,
                      std::vector<std::string>* key_suffixes);

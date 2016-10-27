@@ -245,5 +245,14 @@ TEST_F(DBTest, Batch) {
   EXPECT_EQ(object_id, object_ids[0]);
 }
 
+TEST_F(DBTest, NodeSize) {
+  size_t node_size;
+  EXPECT_EQ(Status::NOT_FOUND, db_->GetNodeSize(&node_size));
+
+  EXPECT_EQ(Status::OK, db_->SetNodeSize(1024));
+  EXPECT_EQ(Status::OK, db_->GetNodeSize(&node_size));
+  EXPECT_EQ(1024u, node_size);
+}
+
 }  // namespace
 }  // namespace storage

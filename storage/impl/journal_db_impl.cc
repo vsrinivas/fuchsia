@@ -89,8 +89,15 @@ void JournalDBImpl::Commit(
     return;
   }
 
+  size_t node_size;
+  status = db_->GetNodeSize(&node_size);
+  if (status != Status::OK) {
+    callback(status, "");
+    return;
+  }
+
   BTreeBuilder::ApplyChanges(
-      &object_store_, base_commit->GetRootId(), std::move(entries),
+      &object_store_, base_commit->GetRootId(), node_size, std::move(entries),
       [this, callback](Status status, ObjectId object_id) {
         if (status != Status::OK) {
           callback(status, "");

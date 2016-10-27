@@ -32,6 +32,8 @@ const char kStagingDir[] = "/staging";
 
 const char kHexDigits[] = "0123456789ABCDEF";
 
+const size_t kDefaultNodeSize = 1024u;
+
 std::string ToHex(convert::ExtendedStringView string) {
   std::string result;
   result.reserve(string.size() * 2);
@@ -198,6 +200,9 @@ Status PageStorageImpl::Init() {
       return s;
     }
   }
+
+  // TODO(nellyv): The pages node size should be shared across devices.
+  db_.SetNodeSize(kDefaultNodeSize);
 
   // Remove uncommited explicit journals.
   db_.RemoveExplicitJournals();
