@@ -716,7 +716,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     return NO_ERROR;
 }
 
-mx_handle_t sys_job_create(mx_handle_t parent_job, uint32_t flags) {
+mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, user_ptr<mx_handle_t> out) {
     LTRACEF("parent: %d\n", parent_job);
 
     if (flags != 0u)
@@ -736,7 +736,9 @@ mx_handle_t sys_job_create(mx_handle_t parent_job, uint32_t flags) {
         return status;
 
     HandleUniquePtr job_handle(MakeHandle(mxtl::move(job), rights));
-    mx_handle_t hv = up->MapHandleToValue(job_handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(job_handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
     up->AddHandle(mxtl::move(job_handle));
-    return hv;
+    return NO_ERROR;
 }

@@ -229,8 +229,8 @@ int main(int argc, char** argv) {
     putenv(strdup("LD_DEBUG=1"));
 #endif
 
-    mx_handle_t job = mx_job_create(root_job_handle, 0u);
-    if (job < 0) {
+    mx_handle_t job = MX_HANDLE_INVALID;
+    if (mx_job_create(root_job_handle, 0u, &job) < 0) {
         printf("unable to create child jobs\n");
     }
 

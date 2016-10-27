@@ -455,8 +455,8 @@ syscall thread_write_state
 # Jobs
 
 syscall job_create
-    (parent_job: mx_handle_t, flags: uint32_t)
-    returns (mx_handle_t);
+    (parent_job: mx_handle_t, flags: uint32_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 
 # Test syscalls (keep at the end)

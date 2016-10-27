@@ -237,7 +237,7 @@ MAGENTA_SYSCALL_DEF(4, 4, 290, mx_status_t, thread_read_state, mx_handle_t handl
 MAGENTA_SYSCALL_DEF(4, 4, 291, mx_status_t, thread_write_state, mx_handle_t handle, uint32_t kind, USER_PTR(const void) buffer, uint32_t buffer_len)
 
 // Jobs
-MAGENTA_SYSCALL_DEF(2, 2, 300, mx_handle_t, job_create, mx_handle_t parent_job, uint32_t flags)
+MAGENTA_SYSCALL_DEF(3, 3, 300, mx_status_t, job_create, mx_handle_t parent_job, uint32_t flags, USER_PTR(mx_handle_t) out)
 
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)
