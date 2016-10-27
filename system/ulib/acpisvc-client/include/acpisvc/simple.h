@@ -35,7 +35,7 @@ static void acpi_handle_close(acpi_handle_t* h) {
 
 // Obtain an additional acpi service handle
 //
-mx_status_t acpi_clone_handle(acpi_handle_t* h);
+mx_handle_t acpi_clone_handle(acpi_handle_t* h);
 
 // List the children of the ACPI node.
 //

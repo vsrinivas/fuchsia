@@ -64,6 +64,7 @@ MODULE_DEFINES := MAGENTA_BUILTIN_DRIVERS=1
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/acpi.c \
+    $(LOCAL_DIR)/acpi-device.c \
     $(LOCAL_DIR)/dmctl.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/devhost-main.c \

@@ -40,6 +40,9 @@ mx_status_t devhost_add_internal(mx_device_t* parent,
 extern mx_driver_t _driver_dmctl;
 extern mx_handle_t _dmctl_handle;
 
+// FIXME(yky,teisenbe): remove when real acpi bus driver goes in
+extern mx_driver_t _driver_acpi;
+
 static void init_driver(mx_driver_t* drv, bool for_root) {
         if ((drv->binding_size == 0) && (!for_root)) {
             // only load root-level drivers in the root devhost
@@ -155,6 +158,8 @@ int main(int argc, char** argv) {
     }
     if (as_root) {
         driver_add(&_driver_dmctl);
+        // FIXME(yky,teisenbe): remove when real acpi bus driver goes in
+        driver_add(&_driver_acpi);
     }
     init_builtin_drivers(as_root);
     init_loadable_drivers(as_root);
