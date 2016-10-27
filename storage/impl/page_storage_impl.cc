@@ -201,7 +201,27 @@ Status PageStorageImpl::Init() {
 
   // Remove uncommited explicit journals.
   db_.RemoveExplicitJournals();
-  // TODO(nellyv): Commit uncommited implicit journals.
+
+  // Commit uncommited implicit journals.
+  std::vector<JournalId> journal_ids;
+  s = db_.GetImplicitJournalIds(&journal_ids);
+  if (s != Status::OK) {
+    return s;
+  }
+  for (JournalId& id : journal_ids) {
+    std::unique_ptr<Journal> journal;
+    db_.GetImplicitJournal(id, &journal);
+    bool async_test = false;
+    journal->Commit([&s, &async_test](Status status, const CommitId&) {
+      s = status;
+      async_test = true;
+    });
+    FTL_DCHECK(async_test);
+    if (s != Status::OK) {
+      journal->Rollback();
+      return s;
+    }
+  }
 
   return Status::OK;
 }
