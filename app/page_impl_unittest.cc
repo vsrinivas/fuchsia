@@ -47,12 +47,28 @@ class PageImplTest : public ::testing::Test {
 
   mtl::MessageLoop message_loop_;
 
+  storage::ObjectId AddObjectToStorage(const std::string& value_string);
+
  private:
   std::unique_ptr<PageImpl> page_impl_;
   std::unique_ptr<mojo::Binding<Page>> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
+
+storage::ObjectId PageImplTest::AddObjectToStorage(
+    const std::string& value_string) {
+  storage::ObjectId object_id;
+  // FakeStorage is synchronous.
+  fake_storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
+      [&object_id](storage::Status status,
+                   storage::ObjectId returned_object_id) {
+        EXPECT_EQ(storage::Status::OK, status);
+        object_id = std::move(returned_object_id);
+      });
+  return object_id;
+}
 
 TEST_F(PageImplTest, GetId) {
   page_ptr_->GetId([this](mojo::Array<uint8_t> page_id) {
@@ -331,6 +347,84 @@ TEST_F(PageImplTest, CreateReference) {
   ASSERT_EQ(value, it->second);
 }
 
+TEST_F(PageImplTest, GetReference) {
+  std::string value_string("a small value");
+  storage::ObjectId object_id = AddObjectToStorage(value_string);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  ValuePtr value;
+  page_ptr_->GetReference(
+      std::move(reference),
+      [this, &value](Status status, ValuePtr received_value) {
+        EXPECT_EQ(Status::OK, status);
+        value = std::move(received_value);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_TRUE(value->is_bytes());
+  EXPECT_EQ(value_string, convert::ToString(value->get_bytes()));
+}
+
+TEST_F(PageImplTest, GetLargeReference) {
+  std::string value_string(kMaxInlineDataSize + 1, 'a');
+  storage::ObjectId object_id = AddObjectToStorage(value_string);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  ValuePtr value;
+  page_ptr_->GetReference(
+      std::move(reference),
+      [this, &value](Status status, ValuePtr received_value) {
+        EXPECT_EQ(Status::OK, status);
+        value = std::move(received_value);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_TRUE(value->is_buffer());
+  std::string content;
+  EXPECT_TRUE(mtl::StringFromSharedBuffer(value->get_buffer(), &content));
+  EXPECT_EQ(value_string, content);
+}
+
+TEST_F(PageImplTest, GetPartialReference) {
+  std::string value_string("a small value");
+  storage::ObjectId object_id = AddObjectToStorage(value_string);
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  mojo::ScopedSharedBufferHandle buffer;
+  page_ptr_->GetPartialReference(
+      std::move(reference), 2, 5,
+      [this, &buffer](Status status,
+                      mojo::ScopedSharedBufferHandle received_buffer) {
+        EXPECT_EQ(Status::OK, status);
+        buffer = std::move(received_buffer);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  std::string content;
+  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
+  EXPECT_EQ("small", content);
+}
+
+TEST_F(PageImplTest, GetUnknownReference) {
+  storage::ObjectId object_id("unknown reference");
+
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  Status status;
+  page_ptr_->GetReference(
+      std::move(reference),
+      [this, &status](Status received_status, ValuePtr received_value) {
+        status = received_status;
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
+}
+
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   std::string key("some_key");
   std::string value("a small value");
@@ -455,18 +549,12 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
 
 TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   std::string value_string(kMaxInlineDataSize + 1, 'a');
-  ReferencePtr reference;
-  page_ptr_->CreateReference(
-      value_string.size(), mtl::WriteStringToConsumerHandle(value_string),
-      [this, &reference](Status status, ReferencePtr received_reference) {
-        EXPECT_EQ(Status::OK, status);
-        reference = std::move(received_reference);
-        message_loop_.QuitNow();
-      });
-  message_loop_.Run();
+  storage::ObjectId object_id = AddObjectToStorage(value_string);
 
   std::string key("some_key");
   PageSnapshotPtr snapshot;
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);

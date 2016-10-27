@@ -260,6 +260,16 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
                                const std::string& value,
                                int64_t size,
                                Status expected_status);
+  void GetReference(PagePtr* page,
+                    ReferencePtr reference,
+                    Status expected_status,
+                    const mojo::Array<uint8_t>& expected_value);
+  void GetPartialReference(PagePtr* page,
+                           ReferencePtr reference,
+                           int64_t offset,
+                           int64_t max_size,
+                           Status expected_status,
+                           const mojo::Array<uint8_t>& expected_value);
   void Get(PageSnapshotPtr* snapshot,
            mojo::Array<uint8_t> key,
            Status expected_status,
@@ -410,6 +420,46 @@ ReferencePtr LedgerApplicationTest::CreateReference(PagePtr* page,
   EXPECT_TRUE(page->WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
   return reference;
+}
+
+void LedgerApplicationTest::GetReference(
+    PagePtr* page,
+    ReferencePtr reference,
+    Status expected_status,
+    const mojo::Array<uint8_t>& expected_value) {
+  Status status;
+  ValuePtr value;
+  (*page)->GetReference(std::move(reference),
+                        [&status, &value](Status s, ValuePtr v) {
+                          status = s;
+                          value = std::move(v);
+                        });
+  EXPECT_TRUE(page->WaitForIncomingResponse());
+  EXPECT_EQ(expected_status, status);
+  EXPECT_TRUE(IsValueEqual(expected_value, value));
+}
+
+void LedgerApplicationTest::GetPartialReference(
+    PagePtr* page,
+    ReferencePtr reference,
+    int64_t offset,
+    int64_t max_size,
+    Status expected_status,
+    const mojo::Array<uint8_t>& expected_value) {
+  Status status;
+  ValuePtr value;
+  (*page)->GetPartialReference(
+      std::move(reference), offset, max_size,
+      [&status, &value](Status s, mojo::ScopedSharedBufferHandle buffer) {
+        status = s;
+        if (status == Status::OK) {
+          value = Value::New();
+          value->set_buffer(std::move(buffer));
+        }
+      });
+  EXPECT_TRUE(page->WaitForIncomingResponse());
+  EXPECT_EQ(expected_status, status);
+  EXPECT_TRUE(IsValueEqual(expected_value, value));
 }
 
 void LedgerApplicationTest::Get(PageSnapshotPtr* snapshot,
@@ -638,6 +688,35 @@ TEST_F(LedgerApplicationTest, Reference) {
   ReferencePtr reference =
       CreateReference(&page, ToString(value), value.size(), Status::OK);
 
+  // Get it back.
+  GetReference(&page, reference.Clone(), Status::OK, value);
+
+  // Get full value with partial value.
+  GetPartialReference(&page, reference.Clone(), 0, value.size(), Status::OK,
+                      value);
+  GetPartialReference(&page, reference.Clone(), 0, -1, Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), 0, value.size() + 1, Status::OK,
+                      value);
+
+  // Get partial values.
+  mojo::Array<uint8_t> partial_value;
+  partial_value.resize(5);
+
+  memcpy(partial_value.data(), value.data() + 5, 5);
+  GetPartialReference(&page, reference.Clone(), 5, 5, Status::OK,
+                      partial_value);
+
+  memcpy(partial_value.data(), value.data() + (value.size() - 5), 5);
+  GetPartialReference(&page, reference.Clone(), -5, 5, Status::OK,
+                      partial_value);
+
+  // Get partial values with out of bounds parameters.
+  partial_value.resize(0);
+  GetPartialReference(&page, reference.Clone(), value.size() + 1, 5, Status::OK,
+                      partial_value);
+  GetPartialReference(&page, reference.Clone(), -(value.size() + 1), 5,
+                      Status::OK, partial_value);
+
   // Associate the reference with a key.
   mojo::Array<uint8_t> key = RandomArray(20);
   PutReference(&page, key.Clone(), reference.Clone(), Priority::EAGER,
@@ -656,6 +735,14 @@ TEST_F(LedgerApplicationTest, EmptyReference) {
   // Create a reference.
   ReferencePtr reference =
       CreateReference(&page, ToString(value), value.size(), Status::OK);
+
+  // Get it back.
+  GetReference(&page, reference.Clone(), Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), 0, 0, Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), 0, -1, Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), 0, 1, Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), 5, 5, Status::OK, value);
+  GetPartialReference(&page, reference.Clone(), -5, 5, Status::OK, value);
 
   // Associate the reference with a key.
   mojo::Array<uint8_t> key = RandomArray(20);
@@ -680,6 +767,9 @@ TEST_F(LedgerApplicationTest, ReferenceFailures) {
   // Fail retrieval due to unknown reference.
   ReferencePtr reference = Reference::New();
   reference->opaque_id = key.Clone();
+  GetReference(&page, reference.Clone(), Status::REFERENCE_NOT_FOUND, nullptr);
+  GetPartialReference(&page, reference.Clone(), 0, -1,
+                      Status::REFERENCE_NOT_FOUND, nullptr);
 
   // Fail association due to unknown reference.
   PutReference(&page, key.Clone(), reference.Clone(), Priority::EAGER,

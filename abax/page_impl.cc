@@ -69,6 +69,21 @@ PageChangePtr NewSingleReferencePageChange(mojo::Array<uint8_t> key,
       NewReferenceEntryChange(std::move(key), std::move(reference)));
 }
 
+Status ToBuffer(convert::ExtendedStringView value,
+                int64_t offset,
+                int64_t max_size,
+                mojo::ScopedSharedBufferHandle* buffer) {
+  size_t start = value.size();
+  if (static_cast<size_t>(std::abs(offset)) < value.size()) {
+    start = offset < 0 ? value.size() + offset : offset;
+  }
+  size_t length = max_size < 0 ? value.size() : max_size;
+
+  bool result =
+      mtl::SharedBufferFromString(value.substr(start, length), buffer);
+  return result ? Status::OK : Status::UNKNOWN_ERROR;
+}
+
 }  // namespace
 
 class PageImpl::DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
@@ -251,6 +266,25 @@ Status PageImpl::GetReferenceById(convert::ExtendedStringView id,
   *value = Value::New();
   (*value)->set_bytes(convert::ToArray(data->second));
   return Status::OK;
+}
+
+Status PageImpl::GetReference(ReferencePtr reference, ValuePtr* value) {
+  return GetReferenceById(std::move(reference->opaque_id), value);
+}
+
+Status PageImpl::GetPartialReference(ReferencePtr reference,
+                                     int64_t offset,
+                                     int64_t max_size,
+                                     mojo::ScopedSharedBufferHandle* buffer) {
+  ValuePtr value;
+  Status status = GetReference(std::move(reference), &value);
+
+  if (status != Status::OK) {
+    return status;
+  }
+
+  FTL_DCHECK(!value->is_buffer());
+  return ToBuffer(value->get_bytes(), offset, max_size, buffer);
 }
 
 void PageImpl::UpdateWatchers(const PageChangePtr& change) {

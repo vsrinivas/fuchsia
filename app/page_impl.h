@@ -74,6 +74,15 @@ class PageImpl : public Page {
                        mojo::ScopedDataPipeConsumerHandle data,
                        const CreateReferenceCallback& callback) override;
 
+  void GetReference(ReferencePtr reference,
+                    const GetReferenceCallback& callback) override;
+
+  void GetPartialReference(
+      ReferencePtr reference,
+      int64_t offset,
+      int64_t max_size,
+      const GetPartialReferenceCallback& callback) override;
+
   void StartTransaction(const StartTransactionCallback& callback) override;
 
   void Commit(const CommitCallback& callback) override;

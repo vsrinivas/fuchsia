@@ -14,9 +14,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "lib/mtl/shared_buffer/strings.h"
 
 namespace ledger {
 namespace {
@@ -81,49 +79,6 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<T>> {
   std::function<void(storage::Status, std::vector<std::unique_ptr<T>>)>
       result_callback_;
 };
-
-Status ToBuffer(convert::ExtendedStringView value,
-                int64_t offset,
-                int64_t max_size,
-                mojo::ScopedSharedBufferHandle* buffer) {
-  size_t start = value.size();
-  // Valid indices are between -N and N-1.
-  if (offset >= -static_cast<int64_t>(value.size()) &&
-      offset < static_cast<int64_t>(value.size())) {
-    start = offset < 0 ? value.size() + offset : offset;
-  }
-  size_t length = max_size < 0 ? value.size() : max_size;
-
-  bool result =
-      mtl::SharedBufferFromString(value.substr(start, length), buffer);
-  return result ? Status::OK : Status::UNKNOWN_ERROR;
-}
-
-void GetReferenceAsStringView(
-    storage::PageStorage* storage,
-    convert::ExtendedStringView opaque_id,
-    std::function<void(Status, ftl::StringView)> callback) {
-  storage->GetObject(
-      opaque_id, [callback](storage::Status status,
-                            std::unique_ptr<const storage::Object> object) {
-        if (status != storage::Status::OK) {
-          callback(
-              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-              ftl::StringView());
-          return;
-        }
-        ftl::StringView data;
-        status = object->GetData(&data);
-        if (status != storage::Status::OK) {
-          callback(
-              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND),
-              ftl::StringView());
-          return;
-        }
-
-        callback(Status::OK, data);
-      });
-}
 
 }  // namespace
 
@@ -214,30 +169,10 @@ void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,
     callback.Run(Status::KEY_NOT_FOUND, nullptr);
     return;
   }
-  GetReferenceAsStringView(
-      page_storage_, (*it)->object_id,
-      [this, callback](Status status, ftl::StringView data) {
-        if (status != Status::OK) {
-          callback.Run(status, nullptr);
-          return;
-        }
-        if (data.size() <= kMaxInlineDataSize) {
-          ValuePtr value = Value::New();
-          value->set_bytes(convert::ToArray(data));
-          callback.Run(Status::OK, std::move(value));
-          return;
-        }
-
-        mojo::ScopedSharedBufferHandle buffer;
-        Status mojo_status = ToBuffer(data, 0, -1, &buffer);
-        if (mojo_status != Status::OK) {
-          callback.Run(mojo_status, nullptr);
-          return;
-        }
-        ValuePtr value = Value::New();
-        value->set_buffer(std::move(buffer));
-        callback.Run(Status::OK, std::move(value));
-      });
+  PageUtils::GetReferenceAsValuePtr(page_storage_, (*it)->object_id,
+                                    [callback](Status status, ValuePtr value) {
+                                      callback.Run(status, std::move(value));
+                                    });
 }
 
 void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
@@ -252,20 +187,10 @@ void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
     callback.Run(Status::KEY_NOT_FOUND, mojo::ScopedSharedBufferHandle());
     return;
   }
-  GetReferenceAsStringView(
-      page_storage_, (*it)->object_id,
-      [this, offset, max_size, callback](Status status, ftl::StringView data) {
-        if (status != Status::OK) {
-          callback.Run(status, mojo::ScopedSharedBufferHandle());
-          return;
-        }
-        mojo::ScopedSharedBufferHandle buffer;
-        Status mojo_status = ToBuffer(data, offset, max_size, &buffer);
-        if (mojo_status != Status::OK) {
-          callback.Run(mojo_status, mojo::ScopedSharedBufferHandle());
-          return;
-        }
-        callback.Run(Status::OK, std::move(buffer));
+  PageUtils::GetPartialReferenceAsBuffer(
+      page_storage_, (*it)->object_id, offset, max_size,
+      [callback](ledger::Status status, mojo::ScopedSharedBufferHandle handle) {
+        callback.Run(status, std::move(handle));
       });
 }
 

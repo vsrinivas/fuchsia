@@ -78,6 +78,13 @@ class PageImpl {
 
   Status GetReferenceById(convert::ExtendedStringView id, ValuePtr* value);
 
+  Status GetReference(ReferencePtr reference, ValuePtr* value);
+
+  Status GetPartialReference(ReferencePtr reference,
+                             int64_t offset,
+                             int64_t max_size,
+                             mojo::ScopedSharedBufferHandle* buffer);
+
  private:
   class DataPipeDrainerClient;
 

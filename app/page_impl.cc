@@ -204,6 +204,29 @@ void PageImpl::CreateReference(int64_t size,
       });
 }
 
+// GetReference(Reference reference) => (Status status, Value? value);
+void PageImpl::GetReference(ReferencePtr reference,
+                            const GetReferenceCallback& callback) {
+  PageUtils::GetReferenceAsValuePtr(storage_, reference->opaque_id,
+                                    [callback](Status status, ValuePtr value) {
+                                      callback.Run(status, std::move(value));
+                                    });
+}
+
+// GetPartialReference(Reference reference, int64 offset, int64 max_size)
+//   => (Status status, handle<shared_buffer>? buffer);
+void PageImpl::GetPartialReference(
+    ReferencePtr reference,
+    int64_t offset,
+    int64_t max_size,
+    const GetPartialReferenceCallback& callback) {
+  PageUtils::GetPartialReferenceAsBuffer(
+      storage_, reference->opaque_id, offset, max_size,
+      [callback](Status status, mojo::ScopedSharedBufferHandle buffer) {
+        callback.Run(status, std::move(buffer));
+      });
+}
+
 // StartTransaction() => (Status status);
 void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
   if (journal_) {
