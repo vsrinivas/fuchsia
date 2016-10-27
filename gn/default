@@ -3,7 +3,6 @@
         "apps",
         "asio",
         "boringssl",
-        "boringssl-tests",
         "cmdutils",
         "component_manager",
         "dart",
