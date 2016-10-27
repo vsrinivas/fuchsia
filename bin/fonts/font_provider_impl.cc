@@ -32,16 +32,15 @@ bool FontProviderImpl::LoadFonts() {
     return false;
   }
 
-  roboto_regular_vmo_.reset(mx_vmo_create(data.size()));
-  if (roboto_regular_vmo_.get() < 0) {
-    FTL_LOG(ERROR) << "Failed to create VMO for Roboto.";
+  mx_status_t rv = mx::vmo::create(data.size(), 0, &roboto_regular_vmo_);
+  if (rv < 0) {
     roboto_regular_vmo_.reset();
+    FTL_LOG(ERROR) << "Failed to create VMO for Roboto.";
     return false;
   }
 
-  mx_ssize_t result =
-      mx_vmo_write(roboto_regular_vmo_.get(), data.data(), 0, data.size());
-  if (result < 0) {
+  rv = roboto_regular_vmo_.write(data.data(), 0, data.size(), nullptr);
+  if (rv < 0) {
     FTL_LOG(ERROR) << "Failed to write data to VMO for Roboto.";
     roboto_regular_vmo_.reset();
     return false;
@@ -57,22 +56,21 @@ void FontProviderImpl::AddBinding(
 
 void FontProviderImpl::GetFont(mojo::FontRequestPtr request,
                                const GetFontCallback& callback) {
-  if (!roboto_regular_vmo_.is_valid()) {
+  if (!roboto_regular_vmo_) {
     callback.Run(nullptr);
     return;
   }
 
   // TODO(abarth): Use the data from |request| to select a font instead of
   // spamming Roboto-Regular.
-  mx_handle_t vmo =
-      mx_handle_duplicate(roboto_regular_vmo_.get(), kFontDataRights);
-  if (vmo < 0) {
+  mx::vmo vmo;
+  if (roboto_regular_vmo_.duplicate(kFontDataRights, &vmo) < 0) {
     callback.Run(nullptr);
     return;
   }
 
   auto data = mojo::FontData::New();
-  data->vmo.reset(mojo::Handle(vmo));
+  data->vmo.reset(mojo::Handle(vmo.release()));
   auto response = mojo::FontResponse::New();
   response->data = std::move(data);
   callback.Run(std::move(response));

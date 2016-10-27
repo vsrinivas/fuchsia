@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/services/ui/fonts/interfaces/font_provider.mojom.h"
+#include <mx/vmo.h>
 
-#include "lib/mtl/handles/unique_handle.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
+#include "mojo/services/ui/fonts/interfaces/font_provider.mojom.h"
 
 namespace fonts {
 
@@ -28,7 +28,7 @@ class FontProviderImpl : public mojo::FontProvider {
   mojo::BindingSet<mojo::FontProvider> bindings_;
 
   // TODO(abarth): We should support more than one font.
-  mtl::UniqueHandle roboto_regular_vmo_;
+  mx::vmo roboto_regular_vmo_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
 };
