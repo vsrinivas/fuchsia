@@ -3,23 +3,22 @@
 # found in the LICENSE file.
 
 config("mx_config") {
-  include_dirs = [
-    "include",
-  ]
+  include_dirs = [ "include" ]
 }
 
 static_library("mx") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
+    "channel.cc",
     "event.cc",
     "eventpair.cc",
+    "include/mx/channel.h",
     "include/mx/datapipe.h",
     "include/mx/event.h",
     "include/mx/eventpair.h",
     "include/mx/handle.h",
     "include/mx/handle_traits.h",
     "include/mx/log.h",
-    "include/mx/msgpipe.h",
     "include/mx/port.h",
     "include/mx/process.h",
     "include/mx/socket.h",
@@ -28,7 +27,6 @@ static_library("mx") {
     "include/mx/vmo.h",
     "include/mx/waitset.h",
     "log.cc",
-    "msgpipe.cc",
     "port.cc",
     "process.cc",
     "socket.cc",
@@ -37,9 +35,7 @@ static_library("mx") {
     "waitset.cc",
   ]
 
-  public_configs = [
-    ":mx_config",
-  ]
+  public_configs = [ ":mx_config" ]
 
   libs = [ "magenta" ]
 }
