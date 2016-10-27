@@ -24,10 +24,10 @@ import (
 
 var (
 	// ErrHardIO indicates there was an unrecoverable error.
-	ErrHardIO = errors.New("FAT: Hard Error I/O bit set. Run a disk repair utility")
+	ErrHardIO = errors.New("FAT: Hard Error I/O bit set. Run a fsck.fat on the partition containing this filesystem")
 
 	// ErrDirtyFAT indicates the FAT was not unmounted properly.
-	ErrDirtyFAT = errors.New("FAT: Dirty volume bit set. Run a disk repair utility")
+	ErrDirtyFAT = errors.New("FAT: Dirty volume bit set. Run a fsck.fat on the partition containing this filesystem")
 
 	// ErrNotOpen indicates the FAT cannot be accessed because it is not open.
 	ErrNotOpen = errors.New("FAT: FAT not open")
@@ -189,19 +189,21 @@ func (f *FAT) IsFree(e uint32) bool {
 
 // setDirty marks that the volume has been mounted and may be in a modified state.
 func (f *FAT) setDirty(m bool) error {
-	// Dirty Bit exists in FAT[1].
-	offset := f.br.ClusterLocationFATPrimary(1)
-	v, err := f.getRawEntry(offset)
+	offset := f.dirtyByteOffset()
+	var buf [1]byte
+	_, err := f.device.ReadAt(buf[:], offset)
 	if err != nil {
 		return err
 	}
 	if m {
-		// Clearing the bit marks the volume as dirty.
-		v &^= f.dirtyBit()
+		// Setting Dirty
+		buf[0] |= 0x01
 	} else {
-		v |= f.dirtyBit()
+		// Setting Clean
+		buf[0] &^= 0x01
 	}
-	return f.setRawEntry(v, offset)
+	_, err = f.device.WriteAt(buf[:], offset)
+	return err
 }
 
 // SetHardError marks that the volume has encountered a disk I/O error.
@@ -452,20 +454,30 @@ func (f *FAT) isBad(e uint32) bool {
 	}
 }
 
+func (f *FAT) dirtyByteOffset() int64 {
+	// NOTE: An undocumented 'dirty bit' exists in the bottom bit of either:
+	// 1) Byte 0x41 (FAT32), or
+	// 2) Byte 0x25 (FAT16) of the bootsector.
+	if f.br.Type() == bootrecord.FAT32 {
+		return 0x41
+	}
+	return 0x25
+}
+
 // isDirty returns true if the volume is dirty (i.e., it was not dismounted properly).
 func (f *FAT) isDirty() bool {
 	if f.br.Type() == bootrecord.FAT12 {
 		return false
 	}
 
-	// Dirty Bit exists in FAT[1].
-	offset := f.br.ClusterLocationFATPrimary(1)
-	v, err := f.getRawEntry(offset)
+	offset := f.dirtyByteOffset()
+	var buf [1]byte
+	_, err := f.device.ReadAt(buf[:], offset)
 	if err != nil {
 		// If we can't identify the dirty bit, assume the volume is dirty.
 		return true
 	}
-	return (v & f.dirtyBit()) == 0
+	return (buf[0] & 0x01) != 0
 }
 
 // isHardError returns true if a disk I/O error occurred the last time the volume was mounted.
