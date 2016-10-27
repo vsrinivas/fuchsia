@@ -1,0 +1,101 @@
+{#--- Begin #}
+{%- import "encoding_macros.tmpl" as encoding_macros %}
+{%- macro struct_def(struct, typepkg, package) %}
+{#--- Enums #}
+{%- from "enum_definition.tmpl" import enum_def %}
+{%-  for enum in struct.enums %}
+{{enum_def(enum, typepkg, package)}}
+{%-  endfor %}
+
+class {{struct|name}} extends bindings.Struct {
+  static const List<bindings.StructDataHeader> kVersions = const [
+{%- for version in struct.versions %}
+    const bindings.StructDataHeader({{version.num_bytes}}, {{version.version}}){% if not loop.last %},{% endif %}
+{%- endfor %}
+  ];
+
+{#--- Constants #}
+{%-  for constant in struct.constants %}
+  static const {{constant.kind|dart_type}} {{constant|name}} = {{constant.resolved_value}};
+{%-  endfor %}
+
+{#--- initDefaults() #}
+{%- for packed_field in struct.packed.packed_fields %}
+  {{packed_field.field.kind|dart_type}} {{packed_field.field|name}} = {{packed_field.field|default_value}};
+{%- endfor %}
+
+  {{struct|name}}() : super(kVersions.last.size);
+
+  {{struct|name}}.init(
+{%- for packed_field in struct.packed.packed_fields %}
+    {{packed_field.field.kind|dart_type}} this.{{packed_field.field|name}}{% if not loop.last %}, {% endif %}
+{%- endfor %}
+  ) : super(kVersions.last.size);
+
+  static {{struct|name}} deserialize(bindings.Message message) =>
+      bindings.Struct.deserialize(decode, message);
+
+  static {{struct|name}} decode(bindings.Decoder decoder0) {
+    if (decoder0 == null) {
+      return null;
+    }
+    {{struct|name}} result = new {{struct|name}}();
+
+{%- if struct.bytes %}
+    var mainDataHeader = bindings.Struct.checkVersion(decoder0, kVersions);
+{%- else %}
+    bindings.Struct.checkVersion(decoder0, kVersions);
+{%- endif %}
+{%- for byte in struct.bytes %}
+{%-   for packed_field in byte.packed_fields %}
+    if (mainDataHeader.version >= {{packed_field.min_version}}) {
+      {{encoding_macros.decode('result.' ~ packed_field.field|name, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(6)}}
+    }
+{%-   endfor %}
+{%- endfor %}
+    return result;
+  }
+
+  void encode(bindings.Encoder encoder) {
+{%- if not struct.bytes %}
+    encoder.getStructEncoderAtOffset(kVersions.last);
+{%- else %}
+    var encoder0 = encoder.getStructEncoderAtOffset(kVersions.last);
+{%- endif %}
+    const String structName = "{{struct|name}}";
+    String fieldName;
+    try {
+{%- for byte in struct.bytes %}
+{%-   for packed_field in byte.packed_fields %}
+      fieldName = "{{packed_field.field|name}}";
+      {{encoding_macros.encode(packed_field.field|name, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(6)}}
+{%-   endfor %}
+{%- endfor %}
+    } on bindings.MojoCodecError catch(e) {
+      bindings.Struct.fixErrorMessage(e, fieldName, structName);
+      rethrow;
+    }
+  }
+
+  String toString() {
+    return "{{struct|name}}("
+{%- for packed_field in struct.packed.packed_fields %}
+           "{{packed_field.field|name}}: ${{packed_field.field|name}}" {% if not loop.last %}", "{% endif %}
+{%- endfor %}")";
+  }
+
+  Map toJson() {
+    {%- if struct|is_cloneable_kind %}
+    Map map = new Map();
+    {%- for packed_field in struct.packed.packed_fields %}
+    map["{{packed_field.field|name}}"] = {{packed_field.field|name}};
+    {%- endfor %}
+    return map;
+    {%- else %}
+    throw new bindings.MojoCodecError(
+        'Object containing handles cannot be encoded to JSON.');
+    {%- endif %}
+  }
+}
+
+{%- endmacro %}

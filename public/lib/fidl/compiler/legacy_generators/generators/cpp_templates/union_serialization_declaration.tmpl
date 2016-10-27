@@ -1,0 +1,7 @@
+size_t GetSerializedSize_(const {{union.name}}Ptr& input);
+mojo::internal::ValidationError SerializeUnion_(
+    {{union.name}}* input,
+    mojo::internal::Buffer* buffer,
+    internal::{{union.name}}_Data** output);
+void Deserialize_(internal::{{union.name}}_Data* input,
+                  {{union.name}}* output);

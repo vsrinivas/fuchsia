@@ -1,0 +1,60 @@
+{#--- Constants #}
+{%-  for constant in module.constants %}
+const {{constant.kind|dart_type}} {{constant|name}} = {{constant.resolved_value}};
+{%- endfor %}
+
+{#--- Enums #}
+{%- from "enum_definition.tmpl" import enum_def %}
+{%- for enum in enums %}
+{{ enum_def(enum, typepkg, package) }}
+{%-  endfor %}
+
+{#--- Struct definitions #}
+{%- from "struct_definition.tmpl" import struct_def %}
+{%  for struct in structs %}
+{{ struct_def(struct, typepkg, package) }}
+{%- endfor -%}
+
+{#--- Union definitions #}
+{%- from "union_definition.tmpl" import union_def %}
+{%  for union in unions %}
+{{ union_def(union, typepkg, package) }}
+{%- endfor -%}
+
+{#--- Interface definitions #}
+{%- for interface in interfaces -%}
+{%-   include "interface_definition.tmpl" %}
+{%- endfor %}
+
+{% if should_gen_mojom_types -%}
+{{typepkg}}RuntimeTypeInfo getRuntimeTypeInfo() => _runtimeTypeInfo ??
+    _initRuntimeTypeInfo();
+
+Map<String, {{typepkg}}UserDefinedType> getAllMojomTypeDefinitions() {
+  return getRuntimeTypeInfo().typeMap;
+}
+
+var _runtimeTypeInfo;
+{{typepkg}}RuntimeTypeInfo  _initRuntimeTypeInfo() {
+  // serializedRuntimeTypeInfo contains the bytes of the Mojo serialization of
+  // a mojom_types.RuntimeTypeInfo struct describing the Mojom types in this
+  // file. The string contains the base64 encoding of the gzip-compressed bytes.
+  var serializedRuntimeTypeInfo = "{{module.serialized_runtime_type_info}}";
+
+  // Deserialize RuntimeTypeInfo
+  var bytes = BASE64.decode(serializedRuntimeTypeInfo);
+  var unzippedBytes = new ZLibDecoder().convert(bytes);
+  var bdata = new ByteData.view(unzippedBytes.buffer);
+  var message = new bindings.Message(bdata, null, unzippedBytes.length, 0);
+  _runtimeTypeInfo = {{typepkg}}RuntimeTypeInfo.deserialize(message);
+
+{%- for import in imports %}
+  {{import.unique_name}}.getAllMojomTypeDefinitions()
+      .forEach((String s, {{typepkg}}UserDefinedType udt) {
+          _runtimeTypeInfo.typeMap[s] = udt;
+      });
+{% endfor %}
+  return _runtimeTypeInfo;
+}
+
+{%- endif %}

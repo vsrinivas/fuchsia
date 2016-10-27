@@ -1,0 +1,6 @@
+class {{interface.name}}ResponseValidator
+    : public mojo::internal::MessageValidator {
+ public:
+  mojo::internal::ValidationError Validate(const mojo::Message* message,
+                                           std::string* err) override;
+};

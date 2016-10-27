@@ -1,0 +1,57 @@
+{%- macro enum_def(enum, typepkg, package) %}
+class {{enum|name}} extends bindings.MojoEnum {
+{%- for field in enum.fields %}
+  static const {{enum|name}} {{field|name}} = const {{enum|name}}._({{field.resolved_value}});
+{%- endfor %}
+
+  const {{enum|name}}._(int v) : super(v);
+
+  static const Map<String, {{enum|name}}> valuesMap = const {
+{%- for field in enum.fields %}
+    "{{field|name}}": {{field|name}},
+{%- endfor %}
+  };
+  static const List<{{enum|name}}> values = const [
+{%- for field in enum.fields %}
+    {{field|name}},
+{%- endfor %}
+  ];
+
+  static {{enum|name}} valueOf(String name) => valuesMap[name];
+
+  factory {{enum|name}}(int v) {
+    switch (v) {
+{%- for field in enum.fields %}
+      case {{field.resolved_value}}:
+        return {{enum|name}}.{{field|name}};
+{%- endfor %}
+      default:
+        return null;
+    }
+  }
+
+  static {{enum|name}} decode(bindings.Decoder decoder0, int offset) {
+    int v = decoder0.decodeUint32(offset);
+    {{enum|name}} result = new {{enum|name}}(v);
+    if (result == null) {
+      throw new bindings.MojoCodecError(
+          'Bad value $v for enum {{enum|name}}.');
+    }
+    return result;
+  }
+
+  String toString() {
+    switch(this) {
+{%- for field in enum.fields %}
+      case {{field|name}}:
+        return '{{enum|name}}.{{field|name}}';
+{%- endfor %}
+      default:
+        return null;
+    }
+  }
+
+  int toJson() => mojoEnumValue;
+}
+
+{%- endmacro %}

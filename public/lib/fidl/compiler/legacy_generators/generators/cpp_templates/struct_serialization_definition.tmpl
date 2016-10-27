@@ -1,0 +1,99 @@
+{%- import "struct_macros.tmpl" as struct_macros %}
+
+size_t {{struct.name}}::GetSerializedSize() const {
+  return GetSerializedSize_(*this);
+}
+
+bool {{struct.name}}::Serialize(void* buf,
+                                size_t buf_size,
+                                size_t* bytes_written) {
+  MOJO_DCHECK(buf);
+
+  mojo::internal::FixedBuffer overlay_buf;
+  overlay_buf.Initialize(buf, buf_size);
+
+  internal::{{struct.name}}_Data* output_ptr;
+  auto err = Serialize_(this, &overlay_buf, &output_ptr);
+  if (err != mojo::internal::ValidationError::NONE) {
+    // TODO(vardhan): Once Serialize_() outputs handles that it serialized
+    // (even partially, if there are failures), we should CHECK fail here if
+    // handles are non-empty.
+    MOJO_DLOG(ERROR) << "Could not serialize: " <<
+        mojo::internal::ValidationErrorToString(err);
+
+    if (bytes_written)
+      *bytes_written = overlay_buf.BytesUsed();
+    return false;
+  }
+
+  std::vector<mojo::Handle> handles;
+  output_ptr->EncodePointersAndHandles(&handles);
+  MOJO_CHECK(handles.empty()) << "Serialize() does not support handles.";
+
+  if (bytes_written)
+    *bytes_written = overlay_buf.BytesUsed();
+  return true;
+}
+
+bool {{struct.name}}::Deserialize(void* buf, size_t buf_size) {
+  MOJO_DCHECK(buf);
+
+  mojo::internal::BoundsChecker checker(buf, buf_size, 0);
+
+  std::string* err_str = nullptr;
+#if !defined(NDEBUG)
+  std::string err_str2;
+  err_str = &err_str2;
+#endif
+
+  mojo::internal::ValidationError err =
+      internal::{{struct.name}}_Data::Validate(buf, &checker, err_str);
+  if (err != mojo::internal::ValidationError::NONE) {
+    MOJO_DLOG(ERROR) << "Deserialization error "
+                     << mojo::internal::ValidationErrorToString(err)
+                     << ": " << *err_str;
+    return false;
+  }
+
+  DeserializeWithoutValidation(buf);
+  return true;
+}
+
+// TODO(vardhan): Make this |buf| a |const void*| once deserialization becomes
+// immutable.
+void {{struct.name}}::DeserializeWithoutValidation(void* buf) {
+  MOJO_DCHECK(buf);
+
+  internal::{{struct.name}}_Data* input =
+      static_cast<internal::{{struct.name}}_Data*>(buf);
+  std::vector<mojo::Handle> handles;
+  input->DecodePointersAndHandles(&handles);
+  MOJO_CHECK(handles.empty()) << "Deserialization does not support handles.";
+
+  Deserialize_(input, this);
+}
+
+size_t GetSerializedSize_(const {{struct.name}}& input) {
+  {{struct_macros.get_serialized_size(struct, "input.%s")}}
+  return size;
+}
+
+mojo::internal::ValidationError Serialize_(
+    {{struct.name}}* input,
+    mojo::internal::Buffer* buf,
+    internal::{{struct.name}}_Data** output) {
+  if (input) {
+    {{struct_macros.serialize(struct, struct.name ~ " struct", "input->%s", "result", "buf", true)|indent(2)}}
+    *output = result;
+  } else {
+    *output = nullptr;
+  }
+  return mojo::internal::ValidationError::NONE;
+}
+
+void Deserialize_(internal::{{struct.name}}_Data* input,
+                  {{struct.name}}* result) {
+  if (input) {
+    {{struct_macros.deserialize(struct, "input", "result->%s")|indent(2)}}
+  }
+}

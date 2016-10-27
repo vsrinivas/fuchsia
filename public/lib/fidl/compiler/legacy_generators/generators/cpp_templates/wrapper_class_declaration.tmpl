@@ -1,0 +1,77 @@
+{% from "enum_macros.tmpl" import enum_decl -%}
+class {{struct.name}} {
+ public:
+  using Data_ = internal::{{struct.name}}_Data;
+
+{#--- Enums #}
+{%- for enum in struct.enums -%}
+  {{enum_decl(enum, is_static=true)|indent(2)}}
+{%- endfor %}
+
+{#--- Constants #}
+{%- for constant in struct.constants %}
+{%-   if constant.kind|is_integral_kind %}
+  static const {{constant.kind|cpp_pod_type}} {{constant.name}} = {{constant|constant_value}};
+{%-   else %}
+  static const {{constant.kind|cpp_pod_type}} {{constant.name}};
+{%-   endif %}
+{%- endfor %}
+
+  static {{struct.name}}Ptr New();
+
+  template <typename U>
+  static {{struct.name}}Ptr From(const U& u) {
+    return mojo::TypeConverter<{{struct.name}}Ptr, U>::Convert(u);
+  }
+
+  template <typename U>
+  U To() const {
+    return mojo::TypeConverter<U, {{struct.name}}>::Convert(*this);
+  }
+
+  {{struct.name}}();
+  ~{{struct.name}}();
+  
+  // Returns the number of bytes it would take to serialize this struct's data.
+  size_t GetSerializedSize() const;
+
+  // Returns true on successful serialization. On failure, part of the data may
+  // be serialized, until the point of failure. This API does not support
+  // serializing handles. If not null, |bytes_written| is set to the number of
+  // bytes written to |buf|, even if this function return false. 
+  //
+  // TODO(vardhan): For now, we return true for success. Should we define a
+  // public error type for serialization? Should we open up
+  // internal::ValidationError?
+  bool Serialize(void* buf, size_t buf_size, size_t* bytes_written = nullptr);
+
+  // Deserializes the given |buf| of size |buf_size| representing a serialized
+  // version of this struct. The buffer is validated before it is deserialized.
+  // Returns true on successful deserialization.
+  // TODO(vardhan): Recover the validation error if there is one?
+  bool Deserialize(void* buf, size_t buf_size);
+
+  // Deserializes the given |buf| representing a serialized version of this
+  // struct. The buffer is NOT validated before it is deserialized, so the user
+  // must be confident of its validity and that |buf| points to enough data to
+  // finish deserializing.
+  void DeserializeWithoutValidation(void* buf);
+
+{%  if struct|is_cloneable_kind %}
+  {{struct.name}}Ptr Clone() const;
+{%- endif %}
+  bool Equals(const {{struct.name}}& other) const;
+
+{#--- Struct members #}
+{%  for field in struct.fields %}
+{%-   set type = field.kind|cpp_wrapper_type %}
+{%-   set name = field.name %}
+  {{type}} {{name}};
+{%- endfor %}
+};
+
+{#--- Enum Operators #}
+{% from "enum_macros.tmpl" import global_enum_operators_decl -%}
+{%- for enum in struct.enums %}
+  {{global_enum_operators_decl(enum, class_name=struct.name)}}
+{%- endfor %}

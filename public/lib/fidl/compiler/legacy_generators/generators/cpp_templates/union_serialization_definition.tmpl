@@ -1,0 +1,172 @@
+{% import 'struct_macros.tmpl' as struct_macros without context %}
+{# Assumes |input| is an InlinedStruct. #}
+size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
+   size_t size = sizeof(internal::{{union.name}}_Data);
+   if (!input)
+    return size;  
+  
+  mojo::internal::UnionAccessor<{{union.name}}> input_acc(input.get());
+  switch (input->which()) {
+{%  for field in union.fields %}
+{%    if field.kind|is_object_kind %}
+    case {{union.name}}::Tag::{{field.name|upper}}:
+{%      if field.kind|is_union_kind %}
+      if ((input_acc.data()->{{field.name}})) {
+        //size += sizeof(mojo::internal::UnionPointer<{{field.kind|get_name_for_kind}}::Data_>);
+        size += GetSerializedSize_(*(input_acc.data()->{{field.name}}));
+      }
+{%      elif field.kind|is_struct_kind %}
+      size += GetSerializedSize_(*(input_acc.data()->{{field.name}}->get()));
+{%      else %}
+      size += GetSerializedSize_(*(input_acc.data()->{{field.name}}));
+{%      endif %}
+      break;
+{%-   endif %}
+{%- endfor %}
+    default:
+      break;
+  }
+  return size;
+}
+
+{#
+  |input|: Could be mutated if it contains handles.
+  |buf|: Used to allocate memory, should we need it.
+  |output|: Serialize into *output; it is expected that *output points to a
+            memory we can serialize into without allocating from |buf|. However,
+            if this union contains another union, we will use |buf| to allocate
+            memory and serialize out-of-line.
+#}
+mojo::internal::ValidationError SerializeUnion_(
+    {{union.name}}* input,
+    mojo::internal::Buffer* buf,
+    internal::{{union.name}}_Data** output) {
+  internal::{{union.name}}_Data* result = *output;
+  if (input) {
+    mojo::internal::UnionAccessor<{{union.name}}> input_acc(input);
+    // TODO(azani): Handle unknown and objects.
+    // Set the not-null flag.
+    result->size = 16;
+    result->tag = input->which();
+    switch (input->which()) {
+{%  for field in union.fields %}
+      case {{union.name}}::Tag::{{field.name|upper}}: {
+{%    if field.kind|is_object_kind %}
+{%      if field.kind|is_string_kind %}
+        SerializeString_(
+            *input_acc.data()->{{field.name}},
+            buf, &result->data.f_{{field.name}}.ptr);
+{%      elif field.kind|is_struct_kind %}
+          {{struct_macros.call_serialize_struct(
+              input = "input_acc.data()->%s->get()"|format(field.name),
+              buffer = "buf",
+              output = "&result->data.f_%s.ptr"|format(field.name),
+              should_return_errors = true)|indent(6)}}
+{%      elif field.kind|is_union_kind %}
+          // Point *output to newly allocated memory
+          // SerializeUnion_ into newly allocated memory.
+          if (!{{"input_acc.data()->%s->get()"|format(field.name)}}) {
+            {{"result->data.f_%s.ptr"|format(field.name)}} = nullptr;
+          } else {
+            {{"result->data.f_%s.ptr"|format(field.name)}} =
+              {{field.kind|get_name_for_kind}}::Data_::New(buf);
+            {{struct_macros.call_serialize_union(
+                input = "input_acc.data()->%s->get()"|format(field.name),
+                buffer = "buf",
+                output = "&result->data.f_%s.ptr"|format(field.name),
+                should_return_errors = true)|indent(8)}}
+          }
+{%      elif field.kind|is_array_kind %}
+          {{struct_macros.call_serialize_array(
+              name = field.name,
+              kind = field.kind,
+              input = "input_acc.data()->%s"|format(field.name),
+              buffer = "buf",
+              output = "&result->data.f_%s.ptr"|format(field.name),
+              should_return_errors = true,
+              indent_size = 16)|indent(6)}}
+{%      elif field.kind|is_map_kind %}
+          {{struct_macros.call_serialize_map(
+              name = field.name,
+              kind = field.kind,
+              input = "input_acc.data()->%s"|format(field.name),
+              buffer = "buf",
+              output = "&result->data.f_%s.ptr"|format(field.name),
+              should_return_errors = true,
+              indent_size = 16)|indent(6)}}
+{%-     endif %}
+{%    elif field.kind|is_any_handle_kind %}
+        result->data.f_{{field.name}} =
+            input_acc.data()->{{field.name}}->release().value();
+{%    elif field.kind|is_interface_kind %}
+        mojo::internal::Interface_Data* {{field.name}} =
+            reinterpret_cast<mojo::internal::Interface_Data*>(
+                &result->data.f_{{field.name}});
+        mojo::internal::InterfaceHandleToData(
+            input_acc.data()->{{field.name}}->Pass(), {{field.name}});
+{%    elif field.kind|is_enum_kind %}
+        result->data.f_{{field.name}} = 
+          static_cast<int32_t>(input_acc.data()->{{field.name}});
+{%    else %}
+        result->data.f_{{field.name}} = input_acc.data()->{{field.name}};
+{%-   endif %}
+        break;
+      }
+{%- endfor %}
+      default:
+        // TODO(vardhan): Should this return an error code instead?
+        MOJO_CHECK(false) << "No sane way to serialize a union with an unknown tag.";
+        break;
+    }
+  } else {
+    result->set_null();
+  }
+  return mojo::internal::ValidationError::NONE;
+}
+
+void Deserialize_(internal::{{union.name}}_Data* input,
+                  {{union.name}}* output) {
+  if (input && !input->is_null()) {
+    mojo::internal::UnionAccessor<{{union.name}}> result_acc(output);
+    switch (input->tag) {
+{#- TODO(vardhan):  There is a lot of overlap with struct_macros.deserialize()
+    here, is it possible to merge? (currently looks very hairy) #}
+{%  for field in union.fields %}
+      case {{union.name}}::Tag::{{field.name|upper}}: {
+{%    if field.kind|is_object_kind %}
+        result_acc.SwitchActive({{union.name}}::Tag::{{field.name|upper}});
+{%      if field.kind|is_struct_kind or field.kind|is_union_kind %}
+        *result_acc.data()->{{field.name}} =
+            {{field.kind|get_name_for_kind}}::New();
+        Deserialize_(input->data.f_{{field.name}}.ptr,
+            result_acc.data()->{{field.name}}->get());
+{%      else %}
+        Deserialize_(input->data.f_{{field.name}}.ptr, result_acc.data()->{{field.name}});
+{%      endif %}
+{%    elif field.kind|is_any_handle_kind %}
+        {{field.kind|cpp_wrapper_type}}* {{field.name}} =
+            reinterpret_cast<{{field.kind|cpp_wrapper_type}}*>(&input->data.f_{{field.name}});
+        output->set_{{field.name}}({{field.name}}->Pass());
+{%    elif field.kind|is_interface_kind %}
+        {{field.kind|cpp_wrapper_type}} {{field.name}}_out;
+        mojo::internal::Interface_Data* {{field.name}}_in =
+            reinterpret_cast<mojo::internal::Interface_Data*>(
+                &input->data.f_{{field.name}});
+        mojo::internal::InterfaceDataToHandle(
+            {{field.name}}_in, &{{field.name}}_out);
+        output->set_{{field.name}}({{field.name}}_out.Pass());
+{%    elif field.kind|is_enum_kind %}
+        output->set_{{field.name}}(static_cast<{{field.kind|cpp_wrapper_type}}>(input->data.f_{{field.name}}));
+{%    else %}
+        output->set_{{field.name}}(input->data.f_{{field.name}});
+{%-   endif %}
+        break;
+      }
+{%- endfor %}
+      default:
+        MOJO_LOG(WARNING) << "Deserializing {{union.name}} with unknown tag!";
+        // No way to deserialize the data when we encounter an unknown tag.
+        break;
+    }
+  }
+}

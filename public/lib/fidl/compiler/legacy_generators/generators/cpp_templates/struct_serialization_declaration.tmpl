@@ -1,0 +1,7 @@
+size_t GetSerializedSize_(const {{struct.name}}& input);
+mojo::internal::ValidationError Serialize_(
+    {{struct.name}}* input,
+    mojo::internal::Buffer* buffer,
+    internal::{{struct.name}}_Data** output);
+void Deserialize_(internal::{{struct.name}}_Data* input,
+                  {{struct.name}}* output);

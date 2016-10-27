@@ -1,0 +1,58 @@
+{% import "struct_macros.tmpl" as struct_macros %}
+
+{%- macro declare_params_as_args(prefix, parameters) %}
+{%-   for param in parameters -%}
+{{param.kind|cpp_const_wrapper_type}} {{prefix}}{{param.name}}
+{%- if not loop.last %}, {% endif %}
+{%-   endfor %}
+{%- endmacro %}
+
+{# This declares mojo structs for the request and response parameters for each
+   interface method, along with forward declarations of any dependencies. #}
+{%- macro declare_param_structs_for_interface(interface) %}
+{%-    for method in interface.methods %}
+{# Request params #}
+{%-      if method.parameters != None %}
+{%-        set struct = method.param_struct %}
+{{ struct_macros.structptr_forward_decl(struct) }}
+{%        include "struct_serialization_declaration.tmpl" %}
+{%        include "wrapper_class_declaration.tmpl" %}
+{%-      endif %}
+{# Response params #}
+{%-      if method.response_parameters != None %}
+{%-        set struct = method.response_param_struct %}
+{{ struct_macros.structptr_forward_decl(struct) }}
+{%        include "struct_serialization_declaration.tmpl" %}
+{%        include "wrapper_class_declaration.tmpl" %}
+{%-      endif %}
+{%-    endfor %}
+{%- endmacro %}
+
+{%- macro declare_callback(method) -%}
+mojo::Callback<void(
+{%-   for param in method.response_parameters -%}
+{{param.kind|cpp_result_type}}
+{%- if not loop.last %}, {% endif %}
+{%-   endfor -%}
+)>
+{%- endmacro -%}
+
+{%- macro declare_request_params(prefix, method) -%}
+{{declare_params_as_args(prefix, method.parameters)}}
+{%-   if method.response_parameters != None -%}
+{%- if method.parameters %}, {% endif -%}
+const {{method.name}}Callback& callback
+{%-   endif -%}
+{%- endmacro -%}
+
+{%- macro declare_sync_request_params(method) -%}
+{{declare_params_as_args("in_", method.parameters)}}
+{#- You could have a response message without any fields! -#}
+{%-   if method.response_parameters != None and method.response_parameters|length > 0 -%}
+{%-     if method.parameters %}, {% endif -%}
+{%-     for param in method.response_parameters -%}
+{{param.kind|cpp_result_type}}* out_{{param.name}}
+{%-       if not loop.last %}, {% endif -%}
+{%-     endfor -%}
+{%-   endif -%}
+{%- endmacro -%}
