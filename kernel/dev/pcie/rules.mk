@@ -11,7 +11,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/debug.cpp \
 	$(LOCAL_DIR)/pcie.cpp \
+	$(LOCAL_DIR)/pcie_bridge.cpp \
 	$(LOCAL_DIR)/pcie_bus_driver.cpp \
+	$(LOCAL_DIR)/pcie_device.cpp \
 	$(LOCAL_DIR)/pcie_caps.cpp \
 	$(LOCAL_DIR)/pcie_irqs.cpp
 

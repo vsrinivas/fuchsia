@@ -13,9 +13,11 @@
 #include <dev/pcie_platform.h>
 #include <err.h>
 #include <kernel/spinlock.h>
+#include <mxtl/intrusive_single_list.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <region-alloc/region-alloc.h>
 #include <sys/types.h>
 
 /* Fwd decls */
