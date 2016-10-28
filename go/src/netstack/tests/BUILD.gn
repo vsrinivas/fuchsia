@@ -9,5 +9,6 @@ group("tests") {
     "//apps/netstack/tests/sockettest",
     "//apps/netstack/tests/sockettest:epolltest",
     "//apps/netstack/tests/sockettest:polltest",
+    "//apps/netstack/tests/sockettest:selecttest",
   ]
 }

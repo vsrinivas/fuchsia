@@ -40,3 +40,16 @@ executable("polltest") {
     "magenta",
   ]
 }
+
+executable("selecttest") {
+  testonly = true
+
+  sources = [
+    "selecttest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+}
