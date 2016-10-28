@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <link.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -95,4 +96,11 @@ dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc) {
     }
 
     return nullptr;
+}
+
+void dso_print_list(dsoinfo_t* dso_list) {
+    for (dsoinfo_t* dso = dso_list; dso != nullptr; dso = dso->next) {
+        printf("dso: id=%s base=%p name=%s\n",
+               dso->buildid, (void*) dso->base, dso->name);
+    }
 }

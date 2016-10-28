@@ -30,10 +30,7 @@ void backtrace(mx_handle_t h, uintptr_t pc, uintptr_t fp) {
     dsoinfo_t* list = dso_fetch_list(h, "app");
     int n = 1;
 
-    for (dsoinfo_t* dso = list; dso != nullptr; dso = dso->next) {
-        printf("dso: id=%s base=%p name=%s\n",
-               dso->buildid, (void*)dso->base, dso->name);
-    }
+    dso_print_list(list);
 
     // N.B. This unwinder assumes code is compiled with -fno-omit-frame-pointer
     // and -mno-omit-leaf-frame-pointer on arm64.

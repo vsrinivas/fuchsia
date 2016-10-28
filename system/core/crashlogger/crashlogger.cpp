@@ -20,6 +20,7 @@
 #include <mxio/util.h>
 
 #include "backtrace.h"
+#include "dso-list.h"
 #include "utils.h"
 
 const char* excp_type_to_str(uint32_t type) {
@@ -291,6 +292,16 @@ int main(int argc, char** argv) {
             usage();
             return 1;
         }
+    }
+
+    // At debugging level 1 print our dso list (in case we crash in a way
+    // that prevents printing it later).
+    if (debug_level >= 1) {
+        mx_handle_t self = mx_process_self();
+        dsoinfo_t* dso_list = dso_fetch_list(self, "app");
+        printf("Crashlogger dso list:\n");
+        dso_print_list(dso_list);
+        dso_free_list(dso_list);
     }
 
     // If asked, undo any previously installed exception port.
