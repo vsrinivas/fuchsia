@@ -20,6 +20,7 @@ source_set("input") {
     "//apps/mozart/glue/base:base",
     "//apps/mozart/services/input/interfaces",
     "//lib/mtl",
+    "//magenta/system/ulib/mx",
   ]
 
   libs = [

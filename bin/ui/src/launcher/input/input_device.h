@@ -11,6 +11,7 @@
 #include <hid/acer12.h>
 #include <magenta/device/input.h>
 #include <magenta/types.h>
+#include <mx/event.h>
 
 #include "apps/mozart/src/launcher/input/input_descriptor.h"
 #include "apps/mozart/src/launcher/input/input_report.h"
@@ -37,7 +38,7 @@ class InputDevice {
   bool Read(const OnReportCallback& callback);
 
   const std::string& name() const { return name_; }
-  MojoHandle handle() { return handle_.get().value(); }
+  MojoHandle handle() { return MojoHandle(event_.get()); }
 
   bool has_keyboard() const { return has_keyboard_; }
   bool has_mouse() const { return has_mouse_; }
@@ -76,7 +77,7 @@ class InputDevice {
 
   const int fd_;
   const std::string name_;
-  mojo::ScopedHandleBase<mojo::Handle> handle_;
+  mx::event event_;
   std::vector<uint8_t> report_;
   input_report_size_t max_report_len_ = 0;
 

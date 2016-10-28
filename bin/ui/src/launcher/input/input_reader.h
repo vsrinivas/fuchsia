@@ -5,6 +5,8 @@
 #ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_READER_H_
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_READER_H_
 
+#include <mx/channel.h>
+
 #include <map>
 #include <utility>
 
@@ -40,7 +42,7 @@ class InputReader : mtl::MessageLoopHandler {
   mtl::MessageLoop* main_loop_;
   mtl::MessageLoop::HandlerKey input_directory_key_;
   int input_directory_fd_;
-  MojoHandle input_directory_handle_;
+  mx::channel input_directory_channel_;
 
   std::map<
       MojoHandle,

@@ -108,7 +108,7 @@ bool InputDevice::Initialize() {
     return false;
   }
 
-  handle_ = mojo::ScopedHandleBase<mojo::Handle>(mojo::Handle(handle));
+  event_.reset(handle);
 
   if (!GetMaxReportLength(&max_report_len_)) {
     FTL_LOG(ERROR) << "Failed to retrieve maximum HID report length for "

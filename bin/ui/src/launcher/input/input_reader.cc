@@ -36,9 +36,6 @@ InputReader::~InputReader() {
   if (input_directory_fd_) {
     close(input_directory_fd_);
   }
-  if (input_directory_handle_) {
-    close(input_directory_handle_);
-  }
   while (!devices_.empty()) {
     DeviceRemoved(devices_.begin()->second.second);
   }
@@ -87,11 +84,12 @@ void InputReader::MonitorDirectory() {
   if (r < 0) {
     return;
   }
-  input_directory_handle_ = static_cast<MojoHandle>(handle);
+  input_directory_channel_.reset(handle);
 
   MojoHandleSignals signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-  input_directory_key_ = main_loop_->AddHandler(this, input_directory_handle_,
-                                                signals, ftl::TimeDelta::Max());
+  input_directory_key_ =
+      main_loop_->AddHandler(this, MojoHandle(input_directory_channel_.get()),
+                             signals, ftl::TimeDelta::Max());
 }
 
 void InputReader::Start() {
@@ -123,8 +121,8 @@ void InputReader::OnDirectoryHandleReady(MojoHandle handle) {
   mx_status_t status;
   uint32_t sz = MXIO_MAX_FILENAME;
   char name[MXIO_MAX_FILENAME + 1];
-  if ((status = mx_msgpipe_read(input_directory_handle_, name, &sz, NULL, NULL,
-                                0)) < 0) {
+  if ((status = input_directory_channel_.read(0, name, sz, &sz, nullptr, 0,
+                                              nullptr)) < 0) {
     FTL_LOG(ERROR) << "Failed to read from " << DEV_INPUT;
     return;
   }
@@ -150,7 +148,7 @@ void InputReader::OnDeviceHandleReady(MojoHandle handle) {
 // |mtl::MessageLoopHandler|:
 
 void InputReader::OnHandleReady(MojoHandle handle) {
-  if (input_directory_handle_ == handle) {
+  if (MojoHandle(input_directory_channel_.get()) == handle) {
     OnDirectoryHandleReady(handle);
   } else if (devices_.count(handle)) {
     OnDeviceHandleReady(handle);
