@@ -125,13 +125,14 @@ endif
 GLOBAL_COMPILEFLAGS += --target=$(ARCH_arm64_CLANG_TARGET)
 endif
 
+# figure out which libgcc we need based on our compile flags
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) -print-libgcc-file-name)
+else
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) -print-libgcc-file-name)
+endif
 ifeq ($(LIBGCC),)
 $(error cannot find runtime library, please set LIBGCC)
-endif
-else
-# figure out which libgcc we need based on our compile flags
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) -print-libgcc-file-name)
 endif
 
 # make sure some bits were set up

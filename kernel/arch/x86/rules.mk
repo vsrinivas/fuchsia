@@ -130,14 +130,6 @@ endif # SUBARCH x86-64
 #$(warning ARCH_x86_64_TOOLCHAIN_PREFIX = $(ARCH_x86_64_TOOLCHAIN_PREFIX))
 #$(warning TOOLCHAIN_PREFIX = $(TOOLCHAIN_PREFIX))
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-ifeq ($(LIBGCC),)
-$(error cannot find runtime library, please set LIBGCC)
-endif
-else
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
-endif
-
 cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`"; \
 	then echo "$(2)"; else echo "$(3)"; fi ;)
 
@@ -188,6 +180,15 @@ endif
 # -fno-exceptions and -fno-asynchronous-unwind-tables.
 GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
 endif # SUBARCH x86-64
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
+else
+LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
+endif
+ifeq ($(LIBGCC),)
+$(error cannot find runtime library, please set LIBGCC)
+endif
 
 ARCH_OPTFLAGS := -O2
 
