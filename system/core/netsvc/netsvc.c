@@ -180,7 +180,7 @@ static int ipc_thread(void* arg) {
     for (;;) {
         mx_status_t status;
         uint32_t n = sizeof(data);
-        if ((status = mx_msgpipe_read(ipc_handle, data, &n, NULL, NULL, 0)) < 0) {
+        if ((status = mx_channel_read(ipc_handle, 0, data, n, &n, NULL, 0, NULL)) < 0) {
             if (status == ERR_SHOULD_WAIT) {
                 mx_handle_wait_one(ipc_handle, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
                 continue;
@@ -211,7 +211,7 @@ void netifc_recv(void* data, size_t len) {
             return;
         }
 #endif
-        mx_msgpipe_write(ipc_handle, data, len, NULL, 0, 0);
+        mx_channel_write(ipc_handle, 0, data, len, NULL, 0);
     }
 }
 
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
     printf("netsvc: main()\n");
 
     mx_handle_t h[2] = { 0, 0 };
-    if (mx_msgpipe_create(h, 0) == NO_ERROR) {
+    if (mx_channel_create(0, &h[0], &h[1]) == NO_ERROR) {
         run_server("/boot/bin/netstack", h[1]);
         ipc_handle = h[0];
         thrd_t t;
@@ -243,7 +243,7 @@ int main(int argc, char** argv) {
         if (ipc_handle) {
             uint8_t info[8];
             netifc_get_info(info, (uint16_t*) (info + 6));
-            mx_msgpipe_write(ipc_handle, info, 8, NULL, 0, 0);
+            mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
         }
 
         printf("netsvc: start\n");
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
 
         if (ipc_handle) {
             uint8_t info[8] = { 0, };
-            mx_msgpipe_write(ipc_handle, info, 8, NULL, 0, 0);
+            mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
         }
     }
 
