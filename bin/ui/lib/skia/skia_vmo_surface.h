@@ -6,6 +6,7 @@
 #define APPS_MOZART_LIB_SKIA_SKIA_VMO_SURFACE_H_
 
 #include <magenta/types.h>
+#include <mx/vmo.h>
 
 #include "apps/mozart/services/composition/interfaces/image.mojom.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
@@ -31,7 +32,7 @@ sk_sp<SkSurface> MakeSkSurface(const mojo::Size& size, ImagePtr* out_image);
 // Makes an |SkSurface| object backed by a virtual memory object which is
 // mapped read/write.  Does not take ownership of the handle.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurfaceFromVMO(mx_handle_t vmo,
+sk_sp<SkSurface> MakeSkSurfaceFromVMO(const mx::vmo& vmo,
                                       const SkImageInfo& info,
                                       size_t row_bytes);
 

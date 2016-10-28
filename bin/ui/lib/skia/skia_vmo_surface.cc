@@ -5,10 +5,10 @@
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 
 #include <magenta/syscalls.h>
+#include <mx/vmo.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/handles/unique_handle.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
               "Fuchsia should always be 64-bit");
@@ -22,7 +22,7 @@ void UnmapMemory(void* pixels, void* context) {
   FTL_CHECK(status == NO_ERROR);
 }
 
-sk_sp<SkSurface> MakeSkSurfaceFromVMOWithSize(mx_handle_t vmo,
+sk_sp<SkSurface> MakeSkSurfaceFromVMOWithSize(const mx::vmo& vmo,
                                               const SkImageInfo& info,
                                               size_t row_bytes,
                                               size_t total_bytes) {
@@ -34,7 +34,7 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMOWithSize(mx_handle_t vmo,
 
   uintptr_t buffer = 0u;
   mx_status_t status =
-      mx_process_map_vm(mx_process_self(), vmo, 0u, needed_bytes, &buffer,
+      mx_process_map_vm(mx_process_self(), vmo.get(), 0u, needed_bytes, &buffer,
                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx_process_map_vm failed: status=" << status;
@@ -94,23 +94,24 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
     return nullptr;
   }
 
-  mtl::UniqueHandle vmo(mx_vmo_create(total_bytes));
-  if (!vmo.is_valid()) {
+  mx::vmo vmo;
+  if (mx::vmo::create(0, total_bytes, &vmo) < 0) {
     FTL_LOG(ERROR) << "mx_vmo_create failed";
     return nullptr;
   }
 
   // Optimization: We will be writing to every page of the buffer, so
   // allocate physical memory for it eagerly.
-  mx_status_t status = mx_vmo_op_range(vmo.get(), MX_VMO_OP_COMMIT, 0u,
-                                       total_bytes, nullptr, 0u);
+  mx_status_t status =
+      vmo.op_range(MX_VMO_OP_COMMIT, 0u, total_bytes, nullptr, 0u);
+
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx_vmo_op_range failed: status=" << status;
     return nullptr;
   }
 
   sk_sp<SkSurface> surface =
-      MakeSkSurfaceFromVMOWithSize(vmo.get(), info, row_bytes, total_bytes);
+      MakeSkSurfaceFromVMOWithSize(vmo, info, row_bytes, total_bytes);
   if (!surface)
     return nullptr;
 
@@ -139,11 +140,11 @@ sk_sp<SkSurface> MakeSkSurface(const mojo::Size& size, ImagePtr* out_image) {
   return MakeSkSurface(SkISize::Make(size.width, size.height), out_image);
 }
 
-sk_sp<SkSurface> MakeSkSurfaceFromVMO(mx_handle_t vmo,
+sk_sp<SkSurface> MakeSkSurfaceFromVMO(const mx::vmo& vmo,
                                       const SkImageInfo& info,
                                       size_t row_bytes) {
   uint64_t total_bytes = 0u;
-  mx_status_t status = mx_vmo_get_size(vmo, &total_bytes);
+  mx_status_t status = vmo.get_size(&total_bytes);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx_vmo_get_size failed: status=" << status;
     return nullptr;
