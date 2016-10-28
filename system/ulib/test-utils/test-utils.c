@@ -87,10 +87,13 @@ static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signa
     return result;
 }
 
-void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
-{
+void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1) {
+    tu_channel_create(handle0, handle1);
+}
+
+void tu_channel_create(mx_handle_t* handle0, mx_handle_t* handle1) {
     mx_handle_t handles[2];
-    mx_status_t status = mx_msgpipe_create(handles, 0);
+    mx_status_t status = mx_channel_create(0, &handles[0], &handles[1]);
     if (status < 0)
         tu_fatal(__func__, status);
     *handle0 = handles[0];
@@ -98,17 +101,26 @@ void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1)
 }
 
 void tu_message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
-                      const mx_handle_t* handles, uint32_t num_handles, uint32_t flags)
-{
-    mx_status_t status = mx_msgpipe_write(handle, bytes, num_bytes, handles, num_handles, flags);
+                      const mx_handle_t* handles, uint32_t num_handles, uint32_t flags) {
+    tu_channel_write(handle, flags, bytes, num_bytes, handles, num_handles);
+}
+
+void tu_channel_write(mx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
+                      const mx_handle_t* handles, uint32_t num_handles) {
+    mx_status_t status = mx_channel_write(handle, flags, bytes, num_bytes, handles, num_handles);
     if (status < 0)
         tu_fatal(__func__, status);
 }
 
 void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                     mx_handle_t* handles, uint32_t* num_handles, uint32_t flags)
-{
-    mx_status_t status = mx_msgpipe_read(handle, bytes, num_bytes, handles, num_handles, flags);
+                     mx_handle_t* handles, uint32_t* num_handles, uint32_t flags) {
+    tu_channel_read(handle, flags, bytes, num_bytes, handles, num_handles);
+}
+
+void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
+                     mx_handle_t* handles, uint32_t* num_handles) {
+    mx_status_t status = mx_channel_read(handle, flags, bytes, *num_bytes, num_bytes,
+                                         handles, *num_handles, num_handles);
     if (status < 0)
         tu_fatal(__func__, status);
 }
