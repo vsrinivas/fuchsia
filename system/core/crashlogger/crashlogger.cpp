@@ -106,7 +106,6 @@ void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     } else if (len != 0) {
         hexdump(buf, len);
     }
-    free(buf);
 }
 
 void resume_crashed_thread(mx_handle_t thread) {
