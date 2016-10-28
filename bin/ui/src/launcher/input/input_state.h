@@ -5,12 +5,11 @@
 #ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_STATE_H_
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_STATE_H_
 
+#include <hid/hid.h>
+#include <hid/usages.h>
 #include <stdint.h>
 
 #include <vector>
-
-#include <hid/hid.h>
-#include <hid/usages.h>
 
 #include "apps/mozart/services/input/interfaces/input_events.mojom.h"
 #include "apps/mozart/src/launcher/input/input_report.h"

@@ -7,7 +7,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-
 #include <magenta/device/console.h>
 #include <magenta/device/device.h>
 #include <magenta/device/input.h>

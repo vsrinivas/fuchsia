@@ -5,13 +5,13 @@
 #ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
 
-#include <map>
-#include <string>
-
 #include <hid/acer12.h>
 #include <magenta/device/input.h>
 #include <magenta/types.h>
 #include <mx/event.h>
+
+#include <map>
+#include <string>
 
 #include "apps/mozart/src/launcher/input/input_descriptor.h"
 #include "apps/mozart/src/launcher/input/input_report.h"

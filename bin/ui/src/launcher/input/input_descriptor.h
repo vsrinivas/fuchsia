@@ -6,6 +6,7 @@
 #define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DESCRIPTOR_H_
 
 #include <stdint.h>
+
 #include <map>
 #include <utility>
 #include <vector>

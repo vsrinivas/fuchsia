@@ -5,16 +5,15 @@
 #include "apps/mozart/src/launcher/input/input_device.h"
 
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
-
 #include <hid/acer12.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 #include <magenta/device/device.h>
 #include <magenta/device/input.h>
 #include <magenta/types.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
 #include "apps/mozart/glue/base/trace_event.h"
 #include "apps/mozart/src/launcher/input/input_report.h"
