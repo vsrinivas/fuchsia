@@ -7,10 +7,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <poll.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <threads.h>
@@ -1076,4 +1079,211 @@ int mxio_handle_fd(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_
         mxio_release(io);
     }
     return fd;
+}
+
+// TODO: getrlimit(RLIMIT_NOFILE, ...)
+#define MAX_POLL_NFDS 1024
+
+int poll(struct pollfd* fds, nfds_t n, int timeout) {
+    if (n > MAX_POLL_NFDS) {
+        return ERRNO(EINVAL);
+    }
+
+    mxio_t* ios[n];
+    int ios_used_max = -1;
+
+    mx_status_t r = NO_ERROR;
+    nfds_t nvalid = 0;
+
+    mx_handle_t handles[n];
+    mx_signals_t signals[n];
+
+    for (nfds_t i = 0; i < n; i++) {
+        struct pollfd* pfd = &fds[i];
+        pfd->revents = 0; // initialize to zero
+
+        ios[i] = NULL;
+        if (pfd->fd < 0) {
+            // if fd is negative, the entry is invalid
+            continue;
+        }
+        mxio_t* io;
+        if ((io = fd_to_io(pfd->fd)) == NULL) {
+            // fd is not opened
+            pfd->revents = POLLNVAL;
+            continue;
+        }
+        ios[i] = io;
+        ios_used_max = i;
+
+        mx_handle_t h;
+        mx_signals_t sigs;
+        io->ops->wait_begin(io, pfd->events, &h, &sigs);
+        if (h == MX_HANDLE_INVALID) {
+            // wait operation is not applicable to the handle
+            r = ERR_INVALID_ARGS;
+            break;
+        }
+        handles[nvalid] = h;
+        signals[nvalid] = sigs;
+        nvalid++;
+    }
+
+    int nfds = 0;
+    if (r == NO_ERROR && nvalid > 0) {
+        uint32_t result_index = 0;
+        mx_signals_state_t signals_states[nvalid];
+        mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
+
+        if ((r = mx_handle_wait_many(nvalid, handles, signals, tmo, &result_index,
+                                     signals_states)) == NO_ERROR) {
+            nfds_t j = 0; // j counts up on a valid entry
+
+            for (nfds_t i = 0; i < n; i++) {
+                struct pollfd* pfd = &fds[i];
+                mxio_t* io = ios[i];
+
+                if (io == NULL) {
+                    // skip an invalid entry
+                    continue;
+                }
+                if (j >= result_index && j < nvalid) {
+                    uint32_t events = 0;
+                    io->ops->wait_end(io, signals_states[j].satisfied, &events);
+                    pfd->revents = events & pfd->events;
+                    // TODO: error events should be reported here
+                    // (after masked with pfd->events)
+                    if (pfd->revents != 0) {
+                        nfds++;
+                    }
+                }
+                j++;
+            }
+        }
+    }
+
+    for (int i = 0; i <= ios_used_max; i++) {
+        if (ios[i]) {
+            mxio_release(ios[i]);
+        }
+    }
+
+    return (r == NO_ERROR) ? nfds : (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
+}
+
+int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
+           struct timeval* restrict tv) {
+    if (n > FD_SETSIZE || n < 1) {
+        return ERRNO(EINVAL);
+    }
+
+    mxio_t* ios[n];
+    int ios_used_max = -1;
+
+    mx_status_t r = NO_ERROR;
+    int nvalid = 0;
+
+    mx_handle_t handles[n];
+    mx_signals_t signals[n];
+
+    for (int fd = 0; fd < n; fd++) {
+        ios[fd] = NULL;
+
+        uint32_t events = 0;
+        if (rfds && FD_ISSET(fd, rfds))
+            events |= EPOLLIN;
+        if (wfds && FD_ISSET(fd, wfds))
+            events |= EPOLLOUT;
+        if (efds && FD_ISSET(fd, efds))
+            events |= EPOLLERR;
+        if (events == 0) {
+            continue;
+        }
+
+        mxio_t* io;
+        if ((io = fd_to_io(fd)) == NULL) {
+            r = ERR_BAD_HANDLE;
+            break;
+        }
+        ios[fd] = io;
+        ios_used_max = fd;
+
+        mx_handle_t h;
+        mx_signals_t sigs;
+        io->ops->wait_begin(io, events, &h, &sigs);
+        if (h == MX_HANDLE_INVALID) {
+            r = ERR_INVALID_ARGS;
+            break;
+        }
+        handles[nvalid] = h;
+        signals[nvalid] = sigs;
+        nvalid++;
+    }
+
+    int nfds = 0;
+    if (r == NO_ERROR && nvalid > 0) {
+        uint32_t result_index = 0;
+        mx_signals_state_t signals_states[nvalid];
+
+        mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
+            MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec);
+
+        if ((r = mx_handle_wait_many(nvalid, handles, signals, tmo, &result_index,
+                                     signals_states)) == NO_ERROR) {
+            int j = 0; // j counts up on a valid entry
+
+            for (int fd = 0; fd < n; fd++) {
+                mxio_t* io = ios[fd];
+                if (io == NULL) {
+                    // skip an invalid entry
+                    continue;
+                }
+                if ((uint32_t)j >= result_index && j < nvalid) {
+                    uint32_t events = 0;
+                    io->ops->wait_end(io, signals_states[j].satisfied, &events);
+
+                    if (rfds && FD_ISSET(fd, rfds)) {
+                        if (events & EPOLLIN) {
+                            nfds++;
+                        } else {
+                            FD_CLR(fd, rfds);
+                        }
+                    }
+                    if (wfds && FD_ISSET(fd, wfds)) {
+                        if (events & EPOLLOUT) {
+                            nfds++;
+                        } else {
+                            FD_CLR(fd, wfds);
+                        }
+                    }
+                    if (efds && FD_ISSET(fd, efds)) {
+                        if (events & EPOLLERR) {
+                            nfds++;
+                        } else {
+                            FD_CLR(fd, efds);
+                        }
+                    }
+                } else {
+                    if (rfds) {
+                        FD_CLR(fd, rfds);
+                    }
+                    if (wfds) {
+                        FD_CLR(fd, wfds);
+                    }
+                    if (efds) {
+                        FD_CLR(fd, efds);
+                    }
+                }
+                j++;
+            }
+        }
+    }
+
+    for (int i = 0; i <= ios_used_max; i++) {
+        if (ios[i]) {
+            mxio_release(ios[i]);
+        }
+    }
+
+    return (r == NO_ERROR) ? nfds : (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
 }

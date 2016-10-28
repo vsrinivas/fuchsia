@@ -685,9 +685,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/sched/sched_setparam.c \
     $(LOCAL_DIR)/src/sched/sched_setscheduler.c \
     $(LOCAL_DIR)/src/sched/sched_yield.c \
-    $(LOCAL_DIR)/src/select/poll.c \
-    $(LOCAL_DIR)/src/select/pselect.c \
-    $(LOCAL_DIR)/src/select/select.c \
     $(LOCAL_DIR)/src/setjmp/longjmp.c \
     $(LOCAL_DIR)/src/setjmp/setjmp.c \
     $(LOCAL_DIR)/src/signal/block.c \

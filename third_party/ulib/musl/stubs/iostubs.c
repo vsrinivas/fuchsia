@@ -1,5 +1,7 @@
 #include <dirent.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -312,3 +314,30 @@ static mode_t stub_umask(mode_t mask) {
     return -1;
 }
 weak_alias(stub_umask, umask);
+
+int stub_select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
+                struct timeval* restrict tv) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_select, select);
+
+int stub_pselect(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
+                 const struct timespec* restrict ts, const sigset_t* restrict mask) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_pselect, pselect);
+
+static int stub_poll(struct pollfd* fds, nfds_t n, int timeout) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_poll, poll);
+
+static int stub_ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
+                      const sigset_t* sigmask) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_ppoll, ppoll);
