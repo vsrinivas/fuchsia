@@ -27,7 +27,6 @@ import (
 //	<command>_cmd.go for example "parse_cmd.go" and "fmt_cmd.go".
 func main() {
 	log.SetFlags(0)
-	checkVersion(os.Args)
 	commands := NewCommandSet()
 	commands.AddCommand("fmt", fmtCmd, "Formats a mojom file.")
 	commands.AddCommand("gen", genCmd, "Generates bindings from mojom files.")
