@@ -17,6 +17,7 @@ MODULE_DEPS := \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls.cpp \
+    $(LOCAL_DIR)/syscalls_channel.cpp \
     $(LOCAL_DIR)/syscalls_datapipe.cpp \
     $(LOCAL_DIR)/syscalls_debug.cpp \
     $(LOCAL_DIR)/syscalls_ddk.cpp \
@@ -25,7 +26,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_handle_wait.cpp \
     $(LOCAL_DIR)/syscalls_exceptions.cpp \
     $(LOCAL_DIR)/syscalls_magenta.cpp \
-    $(LOCAL_DIR)/syscalls_msgpipe.cpp \
     $(LOCAL_DIR)/syscalls_object.cpp \
     $(LOCAL_DIR)/syscalls_port.cpp \
     $(LOCAL_DIR)/syscalls_test.cpp \

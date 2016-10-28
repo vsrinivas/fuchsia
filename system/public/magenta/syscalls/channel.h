@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Types/macros for mx_msgpipe_*().
+// Types/macros for mx_channel_*().
 
 #pragma once
 
 #include <magenta/syscalls/types.h>
 
 #define MX_CHANNEL_READ_MAY_DISCARD         1u
-#define MX_MSGPIPE_READ_FLAG_MAY_DISCARD    1u
-// Mask for all the valid MX_CHANNEL_READ_... flags:
 
+// Mask for all the valid MX_CHANNEL_READ_... flags:
 #define MX_CHANNEL_READ_MASK                1u

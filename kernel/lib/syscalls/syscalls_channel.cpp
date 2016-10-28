@@ -19,7 +19,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
-#include <magenta/syscalls/msgpipe.h>
+#include <magenta/syscalls/channel.h>
 
 #include <mxtl/algorithm.h>
 #include <mxtl/inline_array.h>
@@ -32,8 +32,8 @@
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 1024u;
 
-constexpr size_t kMsgpipeReadHandlesChunkCount = 16u;
-constexpr size_t kMsgpipeWriteHandlesInlineCount = 8u;
+constexpr size_t kChannelReadHandlesChunkCount = 16u;
+constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
 mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
     LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
@@ -96,7 +96,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         return result;
 
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
-    // unconsumed, unless |flags| has MX_MSGPIPE_READ_FLAG_MAY_DISCARD set).
+    // unconsumed, unless |flags| has MX_CHANNEL_READ_MAY_DISCARD set).
     if (_num_bytes) {
         if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
@@ -118,11 +118,11 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         msg->set_owns_handles(false);
 
         // Copy the handle values out in chunks.
-        mx_handle_t hvs[kMsgpipeReadHandlesChunkCount];
+        mx_handle_t hvs[kChannelReadHandlesChunkCount];
         size_t num_copied = 0;
         do {
             size_t this_chunk_size = mxtl::min(num_handles - num_copied,
-                                               kMsgpipeReadHandlesChunkCount);
+                                               kChannelReadHandlesChunkCount);
             for (size_t i = 0; i < this_chunk_size; i++)
                 hvs[i] = up->MapHandleToValue(handle_list[num_copied + i]);
             _handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
@@ -177,7 +177,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     }
 
     AllocChecker ac;
-    mxtl::InlineArray<mx_handle_t, kMsgpipeWriteHandlesInlineCount> handles(&ac, num_handles);
+    mxtl::InlineArray<mx_handle_t, kChannelWriteHandlesInlineCount> handles(&ac, num_handles);
     if (!ac.check())
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
