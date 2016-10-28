@@ -9,7 +9,8 @@ process_create - create a new process
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_process_create(const char* name, uint32_t name_len, uint32_t flags);
+mx_status_t mx_process_create(const char* name, uint32_t name_len,
+                              uint32_t flags, mx_handle_t* out);
 
 ```
 
@@ -27,8 +28,9 @@ Process handles may be waited on and will assert the signal
 
 ## RETURN VALUE
 
-**process_create**() returns a handle to the new process on succes.
-In the event of failure, a negative error value is returned.
+**process_create**() returns NO_ERROR and a handle to the new process
+(via *out*) on success.  In the event of failure, a negative error value
+is returned.
 
 ## ERRORS
 

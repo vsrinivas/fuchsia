@@ -87,9 +87,10 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 
 mx_status_t launchpad_create(const char* name, launchpad_t** result) {
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
-    mx_handle_t proc = mx_process_create(name, name_len, 0);
-    if (proc < 0)
-        return proc;
+    mx_handle_t proc;
+    mx_status_t status = mx_process_create(name, name_len, 0, &proc);
+    if (status < 0)
+        return status;
 
 //TODO(cpu): chase down the bad handle usage in various tests, etc
 //      and then re-enable once sorted out.
@@ -104,7 +105,7 @@ mx_status_t launchpad_create(const char* name, launchpad_t** result) {
 #endif
 
     launchpad_t* lp;
-    mx_status_t status = launchpad_create_with_process(proc, &lp);
+    status = launchpad_create_with_process(proc, &lp);
     if (status == NO_ERROR) {
         *result = lp;
     } else {

@@ -218,7 +218,8 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
     return NO_ERROR;
 }
 
-mx_handle_t sys_process_create(user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
+mx_status_t sys_process_create(user_ptr<const char> name, uint32_t name_len,
+                               uint32_t flags, user_ptr<mx_handle_t> out) {
     LTRACEF("name %p, flags 0x%x\n", name.get(), flags);
 
     // copy out the name
@@ -249,10 +250,12 @@ mx_handle_t sys_process_create(user_ptr<const char> name, uint32_t name_len, uin
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
     up->AddHandle(mxtl::move(handle));
 
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle, uintptr_t pc, uintptr_t sp, mx_handle_t arg_handle_value, uintptr_t arg2) {

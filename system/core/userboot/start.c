@@ -152,9 +152,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t child_start_handle = pipeh[1];
 
     const char* filename = o.value[OPTION_FILENAME];
-    mx_handle_t proc = mx_process_create(filename, strlen(filename), 0);
-    if (proc < 0)
-        fail(log, proc, "mx_process_create failed\n");
+    mx_handle_t proc;
+    status = mx_process_create(filename, strlen(filename), 0, &proc);
+    if (status < 0)
+        fail(log, status, "mx_process_create failed\n");
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;

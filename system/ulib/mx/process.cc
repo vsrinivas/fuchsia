@@ -12,14 +12,14 @@ namespace mx {
 
 mx_status_t process::create(const char* name, uint32_t name_len,
                             uint32_t flags, process* result) {
-    mx_handle_t h = mx_process_create(name, name_len, flags);
-    if (h < 0) {
+    mx_handle_t h;
+    mx_status_t status = mx_process_create(name, name_len, flags, &h);
+    if (status < 0) {
         result->reset(MX_HANDLE_INVALID);
-        return h;
     } else {
         result->reset(h);
-        return NO_ERROR;
     }
+    return status;
 }
 
 mx_status_t process::start(const thread& thread_handle, uintptr_t entry,
