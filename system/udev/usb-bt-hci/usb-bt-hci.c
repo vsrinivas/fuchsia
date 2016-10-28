@@ -75,8 +75,8 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         // simple case - packet fits in received data
         if (hci->event_buffer_offset == 0 && length >= 2) {
             if (packet_size == length) {
-                mx_status_t status = mx_msgpipe_write(hci->control_pipe[0], buffer, length,
-                                                            NULL, 0, 0);
+                mx_status_t status = mx_channel_write(hci->control_pipe[0], 0, buffer, length,
+                                                      NULL, 0);
                 if (status < 0) {
                     printf("hci_interrupt failed to write\n");
                 }
@@ -101,8 +101,8 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
 
         // check to see if we have a full packet
         if (packet_size <= hci->event_buffer_offset) {
-            mx_status_t status = mx_msgpipe_write(hci->control_pipe[0], hci->event_buffer,
-                                                        packet_size, NULL, 0, 0);
+            mx_status_t status = mx_channel_write(hci->control_pipe[0], 0, hci->event_buffer,
+                                                  packet_size, NULL, 0);
             if (status < 0) {
                 printf("hci_interrupt failed to write\n");
             }
@@ -126,7 +126,7 @@ static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
     if (txn->status == NO_ERROR) {
         void* buffer;
         txn->ops->mmap(txn, &buffer);
-        mx_status_t status = mx_msgpipe_write(hci->acl_pipe[0], buffer, txn->actual, NULL, 0, 0);
+        mx_status_t status = mx_channel_write(hci->acl_pipe[0], 0, buffer, txn->actual, NULL, 0);
         if (status < 0) {
             printf("hci_acl_read_complete failed to write\n");
         }
@@ -169,7 +169,7 @@ static int hci_read_thread(void* arg) {
         if (signals_state[0].satisfied & MX_SIGNAL_READABLE) {
             uint8_t buf[256];
             uint32_t length = sizeof(buf);
-            status = mx_msgpipe_read(handles[0], buf, &length, NULL, 0, 0);
+            status = mx_channel_read(handles[0], 0, buf, length, &length, NULL, 0, NULL);
             if (status >= 0) {
                 status = usb_control(hci->usb_device,
                                      USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
@@ -185,7 +185,7 @@ static int hci_read_thread(void* arg) {
         if (signals_state[1].satisfied & MX_SIGNAL_READABLE) {
             uint8_t buf[ACL_BUF_SIZE];
             uint32_t length = sizeof(buf);
-            status = mx_msgpipe_read(handles[1], buf, &length, NULL, 0, 0);
+            status = mx_channel_read(handles[1], 0, buf, length, &length, NULL, 0, NULL);
             if (status >= 0) {
                 mtx_lock(&hci->mutex);
 
@@ -305,11 +305,11 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    mx_status_t status = mx_msgpipe_create(hci->control_pipe, 0);
+    mx_status_t status = mx_channel_create(0, &hci->control_pipe[0], &hci->control_pipe[1]);
     if (status < 0) {
         goto fail;
     }
-    status = mx_msgpipe_create(hci->acl_pipe, 0);
+    status = mx_channel_create(0, &hci->acl_pipe[0], &hci->acl_pipe[1]);
     if (status < 0) {
         goto fail;
     }
