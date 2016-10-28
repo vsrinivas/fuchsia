@@ -167,9 +167,9 @@ static bool bind_basic_test(void)
     status = mx_port_create(0u, &ioport);
     EXPECT_EQ(status, 0, "could not create io port");
 
-    mx_handle_t pipe[2];
-    status = mx_msgpipe_create(pipe, 0u);
-    EXPECT_EQ(status, NO_ERROR, "could not create pipe");
+    mx_handle_t channel[2];
+    status = mx_channel_create(0u, channel, channel + 1);
+    EXPECT_EQ(status, NO_ERROR, "could not create channel");
 
     mx_handle_t event;
     status = mx_port_create(0u, &event);
@@ -178,20 +178,20 @@ static bool bind_basic_test(void)
     status = mx_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
     EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
 
-    status = mx_port_bind(ioport, -1, pipe[0], MX_SIGNAL_READABLE);
-    EXPECT_EQ(status, NO_ERROR, "failed to bind pipe");
+    status = mx_port_bind(ioport, -1, channel[0], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "failed to bind channel");
 
-    status = mx_port_bind(ioport, -2, pipe[1], MX_SIGNAL_READABLE);
-    EXPECT_EQ(status, NO_ERROR, "failed to bind pipe");
+    status = mx_port_bind(ioport, -2, channel[1], MX_SIGNAL_READABLE);
+    EXPECT_EQ(status, NO_ERROR, "failed to bind channel");
 
     status = mx_handle_close(ioport);
     EXPECT_EQ(status, NO_ERROR, "failed to close io port");
 
-    status = mx_handle_close(pipe[0]);
-    EXPECT_EQ(status, NO_ERROR, "failed to close pipe");
+    status = mx_handle_close(channel[0]);
+    EXPECT_EQ(status, NO_ERROR, "failed to close channel");
 
-    status = mx_handle_close(pipe[1]);
-    EXPECT_EQ(status, NO_ERROR, "failed to close pipe");
+    status = mx_handle_close(channel[1]);
+    EXPECT_EQ(status, NO_ERROR, "failed to close channel");
 
     status = mx_handle_close(event);
     EXPECT_EQ(status, NO_ERROR, "failed to close event");
@@ -203,7 +203,7 @@ typedef struct io_info {
     int count;
     volatile mx_status_t error;
     mx_handle_t io_port;
-    mx_handle_t reply_pipe;
+    mx_handle_t reply_channel;
 } io_info_t;
 
 typedef struct report {
@@ -222,7 +222,7 @@ static int io_reply_thread(void* arg)
     mx_status_t status;
 
     // Wait for the other thread to poke at the events and send each key/signal back to
-    // the thread via a message pipe.
+    // the thread via a channel.
     for (int ix = 0; ix != info->count; ++ix) {
         status = mx_port_wait(info->io_port, &io_pkt, sizeof(io_pkt));
 
@@ -232,7 +232,7 @@ static int io_reply_thread(void* arg)
         }
 
         report_t report = { io_pkt.hdr.key, io_pkt.hdr.type, io_pkt.bytes, io_pkt.signals };
-        status = mx_msgpipe_write(info->reply_pipe, &report, sizeof(report), NULL, 0, 0u);
+        status = mx_channel_write(info->reply_channel, 0u, &report, sizeof(report), NULL, 0);
         if (status != NO_ERROR) {
             info->error = status;
             break;
@@ -242,7 +242,7 @@ static int io_reply_thread(void* arg)
     return 0;
 }
 
-static bool bind_pipes_test(void)
+static bool bind_channels_test(void)
 {
     BEGIN_TEST;
     mx_status_t status;
@@ -252,22 +252,22 @@ static bool bind_pipes_test(void)
     EXPECT_EQ(status, 0, "could not create ioport");
 
     mx_handle_t h[2];
-    status = mx_msgpipe_create(h, 0);
-    EXPECT_EQ(status, 0, "could not create pipes");
+    status = mx_channel_create(0, h, h + 1);
+    EXPECT_EQ(status, 0, "could not create channels");
 
-    mx_handle_t recv_pipe = h[0];
-    info.reply_pipe = h[1];
+    mx_handle_t recv_channel = h[0];
+    info.reply_channel = h[1];
 
-    // Poke at the pipes in some order. Note that we bound the even pipes so we
+    // Poke at the channels in some order. Note that we bound the even channels so we
     // write to the odd ones.
     int order[] = {1, 3, 3, 1, 5, 7, 1, 5, 3, 3, 3, 9};
     info.count = countof(order);
 
-    mx_handle_t pipes[10];
-    for (int ix = 0; ix != countof(pipes) / 2; ++ix) {
-        status = mx_msgpipe_create(&pipes[ix * 2], 0u);
-        EXPECT_EQ(status, NO_ERROR, "failed to create pipe");
-        status = mx_port_bind(info.io_port, (ix * 2) + 1, pipes[ix * 2], MX_SIGNAL_READABLE);
+    mx_handle_t channels[10];
+    for (int ix = 0; ix != countof(channels) / 2; ++ix) {
+        status = mx_channel_create(0u, &channels[ix * 2], &channels[ix * 2 + 1]);
+        EXPECT_EQ(status, NO_ERROR, "failed to create channel");
+        status = mx_port_bind(info.io_port, (ix * 2) + 1, channels[ix * 2], MX_SIGNAL_READABLE);
         EXPECT_EQ(status, NO_ERROR, "failed to bind event to ioport");
     }
 
@@ -282,7 +282,7 @@ static bool bind_pipes_test(void)
 
     for (int ix = 0; ix != countof(order); ++ix) {
         msg[4] = (char)ix;
-        status = mx_msgpipe_write(pipes[order[ix]], msg, sizeof(msg), NULL, 0, 0u);
+        status = mx_channel_write(channels[order[ix]], 0u, msg, sizeof(msg), NULL, 0);
         EXPECT_EQ(status, NO_ERROR, "could not signal");
         ++arrivals[order[ix]].expected;
     }
@@ -292,9 +292,9 @@ static bool bind_pipes_test(void)
 
     // Check the received packets are reasonable.
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_handle_wait_one(recv_pipe, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
-        EXPECT_EQ(status, NO_ERROR, "failed to wait for pipe");
-        status = mx_msgpipe_read(recv_pipe, &report, &bytes, NULL, NULL, 0u);
+        status = mx_handle_wait_one(recv_channel, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+        EXPECT_EQ(status, NO_ERROR, "failed to wait for channel");
+        status = mx_channel_read(recv_channel, 0u, &report, bytes, &bytes, NULL, 0, NULL);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");
         EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "invalid signal");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "invalid type");
@@ -311,17 +311,17 @@ static bool bind_pipes_test(void)
     EXPECT_EQ(ret, thrd_success, "could not wait for thread");
 
     // Test cleanup.
-    for (int ix = 0; ix != countof(pipes); ++ix) {
-        status = mx_handle_close(pipes[ix]);
+    for (int ix = 0; ix != countof(channels); ++ix) {
+        status = mx_handle_close(channels[ix]);
         EXPECT_EQ(status, NO_ERROR, "failed closing events");
     }
 
     status = mx_handle_close(info.io_port);
     EXPECT_EQ(status, NO_ERROR, "failed to close ioport");
-    status = mx_handle_close(info.reply_pipe);
-    EXPECT_EQ(status, NO_ERROR, "failed to close pipe 0");
-    status = mx_handle_close(recv_pipe);
-    EXPECT_EQ(status, NO_ERROR, "failed to close pipe 1");
+    status = mx_handle_close(info.reply_channel);
+    EXPECT_EQ(status, NO_ERROR, "failed to close channel 0");
+    status = mx_handle_close(recv_channel);
+    EXPECT_EQ(status, NO_ERROR, "failed to close channel 1");
 
     END_TEST;
 }
@@ -350,11 +350,11 @@ static bool bind_sockets_test(void)
     EXPECT_EQ(status, NO_ERROR, "");
     EXPECT_EQ(sz, 2u, "");
 
-    mx_handle_t pipe[2];
-    status = mx_msgpipe_create(pipe, 0u);
+    mx_handle_t channel[2];
+    status = mx_channel_create(0u, channel, channel + 1);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    io_info_t info = {2, 0, io_port, pipe[1]};
+    io_info_t info = {2, 0, io_port, channel[1]};
 
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, io_reply_thread, &info, "reply2");
@@ -364,9 +364,9 @@ static bool bind_sockets_test(void)
     uint32_t bytes = sizeof(report);
 
     for (int ix = 0; ix != 2; ++ix) {
-        status = mx_handle_wait_one(pipe[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+        status = mx_handle_wait_one(channel[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
-        status = mx_msgpipe_read(pipe[0], &report, &bytes, NULL, NULL, 0u);
+        status = mx_channel_read(channel[0], 0u, &report, bytes, &bytes, NULL, 0, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
         EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "");
@@ -395,7 +395,7 @@ static bool bind_sockets_test(void)
     END_TEST;
 }
 
-static bool bind_pipes_playback(void)
+static bool bind_channels_playback(void)
 {
     BEGIN_TEST;
     mx_status_t status;
@@ -405,13 +405,13 @@ static bool bind_pipes_playback(void)
     status = mx_port_create(0u, &port);
     EXPECT_EQ(status, 0, "");
 
-    status = mx_msgpipe_create(h, 0);
+    status = mx_channel_create(0, h, h + 1);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_msgpipe_write(h[0], "abcd", 4, NULL, 0, 0u);
+    status = mx_channel_write(h[0], 0u, "abcd", 4, NULL, 0);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_msgpipe_write(h[0], "def", 3, NULL, 0, 0u);
+    status = mx_channel_write(h[0], 0u, "def", 3, NULL, 0);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_port_bind(port, 3ull, h[1], MX_SIGNAL_READABLE);
@@ -441,9 +441,9 @@ RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
 RUN_TEST(thread_pool_test)
 RUN_TEST(bind_basic_test)
-RUN_TEST(bind_pipes_test)
+RUN_TEST(bind_channels_test)
 RUN_TEST(bind_sockets_test)
-RUN_TEST(bind_pipes_playback)
+RUN_TEST(bind_channels_playback)
 END_TEST_CASE(io_port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

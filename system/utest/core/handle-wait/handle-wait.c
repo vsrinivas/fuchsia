@@ -39,13 +39,13 @@ enum wait_result {
 
 typedef struct thread_data {
     int thread_num;
-    mx_handle_t pipe;
+    mx_handle_t channel;
 } thread_data_t;
 
 // [0] is used by main thread
 // [1] is used by worker thread
-static mx_handle_t thread1_pipe[2];
-static mx_handle_t thread2_pipe[2];
+static mx_handle_t thread1_channel[2];
+static mx_handle_t thread2_channel[2];
 
 static mx_handle_t event_handle;
 
@@ -88,19 +88,15 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     return true;
 }
 
-static mx_status_t message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1) {
-    mx_handle_t h[2];
-    mx_status_t status = mx_msgpipe_create(h, 0);
-    *handle0 = h[0];
-    *handle1 = h[1];
-    return status;
+static mx_status_t channel_create(mx_handle_t* handle0, mx_handle_t* handle1) {
+    return mx_channel_create(0, handle0, handle1);
 }
 
 static bool send_msg(mx_handle_t handle, enum message msg) {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
     mx_status_t status =
-        mx_msgpipe_write(handle, &data, sizeof(data), NULL, 0, 0);
+        mx_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
     ASSERT_GE(status, 0, "message write failed");
     return true;
 }
@@ -125,7 +121,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
 
     uint32_t num_bytes = sizeof(data);
 
-    ASSERT_GE(mx_msgpipe_read(handle, &data, &num_bytes, NULL, 0, 0), 0,
+    ASSERT_GE(mx_channel_read(handle, 0, &data, num_bytes, &num_bytes, NULL, 0, NULL), 0,
               "Error while reading message");
     EXPECT_EQ(num_bytes, sizeof(data), "unexpected message size");
     if (num_bytes != sizeof(data)) {
@@ -136,27 +132,27 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
     return true;
 }
 
-static bool msg_loop(mx_handle_t pipe) {
+static bool msg_loop(mx_handle_t channel) {
     bool my_done_tests = false;
     while (!my_done_tests) {
         enum message msg;
         enum wait_result result;
-        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while receiving msg");
+        ASSERT_TRUE(recv_msg(channel, &msg), "Error while receiving msg");
         switch (msg) {
         case MSG_EXIT:
             my_done_tests = true;
             break;
         case MSG_PING:
-            send_msg(pipe, MSG_PONG);
+            send_msg(channel, MSG_PONG);
             break;
         case MSG_WAIT_EVENT:
             ASSERT_TRUE(wait_signaled(event_handle, &result), "Error during wait signal call");
             switch (result) {
             case WAIT_SIGNALED:
-                send_msg(pipe, MSG_WAIT_EVENT_SIGNALED);
+                send_msg(channel, MSG_WAIT_EVENT_SIGNALED);
                 break;
             case WAIT_CANCELLED:
-                send_msg(pipe, MSG_WAIT_EVENT_CANCELLED);
+                send_msg(channel, MSG_WAIT_EVENT_CANCELLED);
                 break;
             default:
                 ASSERT_TRUE(false, "Invalid wait signal");
@@ -172,20 +168,20 @@ static bool msg_loop(mx_handle_t pipe) {
 
 static int worker_thread_func(void* arg) {
     thread_data_t* data = arg;
-    msg_loop(data->pipe);
+    msg_loop(data->channel);
     unittest_printf("thread %d exiting\n", data->thread_num);
-    send_msg(data->pipe, MSG_EXITED);
+    send_msg(data->channel, MSG_EXITED);
     return 0;
 }
 
 bool handle_wait_test(void) {
     BEGIN_TEST;
 
-    ASSERT_GE(message_pipe_create(&thread1_pipe[0], &thread1_pipe[1]), 0, "pipe creation failed");
-    ASSERT_GE(message_pipe_create(&thread2_pipe[0], &thread2_pipe[1]), 0, "pipe creation failed");
+    ASSERT_GE(channel_create(&thread1_channel[0], &thread1_channel[1]), 0, "channel creation failed");
+    ASSERT_GE(channel_create(&thread2_channel[0], &thread2_channel[1]), 0, "channel creation failed");
 
-    thread_data_t thread1_data = {1, thread1_pipe[1]};
-    thread_data_t thread2_data = {2, thread2_pipe[1]};
+    thread_data_t thread1_data = {1, thread1_channel[1]};
+    thread_data_t thread2_data = {2, thread2_channel[1]};
 
     thrd_t thread1;
     ASSERT_EQ(thrd_create(&thread1, worker_thread_func, &thread1_data), thrd_success,
@@ -199,14 +195,14 @@ bool handle_wait_test(void) {
     ASSERT_GT(event_handle, 0, "event creation failed");
 
     enum message msg;
-    send_msg(thread1_pipe[0], MSG_PING);
-    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while receiving msg");
+    send_msg(thread1_channel[0], MSG_PING);
+    ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");
     EXPECT_EQ(msg, (enum message)MSG_PONG, "unexpected reply to ping1");
 
-    send_msg(thread1_pipe[0], MSG_WAIT_EVENT);
+    send_msg(thread1_channel[0], MSG_WAIT_EVENT);
 
-    send_msg(thread2_pipe[0], MSG_PING);
-    ASSERT_TRUE(recv_msg(thread2_pipe[0], &msg), "Error while receiving msg");
+    send_msg(thread2_channel[0], MSG_PING);
+    ASSERT_TRUE(recv_msg(thread2_channel[0], &msg), "Error while receiving msg");
     EXPECT_EQ(msg, (enum message)MSG_PONG, "unexpected reply to ping2");
 
     // Verify thread 1 is woken up when we close the handle it's waiting on
@@ -219,12 +215,12 @@ bool handle_wait_test(void) {
     ASSERT_GE(event_handle_dup, 0, "handle duplication failed");
     ASSERT_EQ(mx_handle_close(event_handle), NO_ERROR, "handle close failed");
 
-    ASSERT_TRUE(recv_msg(thread1_pipe[0], &msg), "Error while receiving msg");
+    ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");
     ASSERT_EQ(msg, (enum message)MSG_WAIT_EVENT_CANCELLED,
               "unexpected reply from thread1 (wait for event)");
 
-    send_msg(thread1_pipe[0], MSG_EXIT);
-    send_msg(thread2_pipe[0], MSG_EXIT);
+    send_msg(thread1_channel[0], MSG_EXIT);
+    send_msg(thread2_channel[0], MSG_EXIT);
     EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
     EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
     EXPECT_EQ(mx_handle_close(event_handle_dup), NO_ERROR, "handle close failed");

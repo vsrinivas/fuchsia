@@ -12,15 +12,15 @@ int bad_syscall_test(void) {
     BEGIN_TEST;
     void* unmapped_addr = (void*)4096;
     mx_handle_t h[2];
-    EXPECT_EQ(mx_msgpipe_create(h, 0),
-              0, "Error: message pipe create failed");
-    EXPECT_LT(mx_msgpipe_write(h[0], unmapped_addr, 1, NULL, 0, 0),
+    EXPECT_EQ(mx_channel_create(0, h, h + 1),
+              0, "Error: channel create failed");
+    EXPECT_LT(mx_channel_write(0, h[0], unmapped_addr, 1, NULL, 0),
               0, "Error: reading unmapped addr");
-    EXPECT_LT(mx_msgpipe_write(h[0], (void*)KERNEL_ASPACE_BASE - 1, 5, NULL, 0, 0),
+    EXPECT_LT(mx_channel_write(h[0], 0, (void*)KERNEL_ASPACE_BASE - 1, 5, NULL, 0),
               0, "Error: read crossing kernel boundary");
-    EXPECT_LT(mx_msgpipe_write(h[0], (void*)KERNEL_ASPACE_BASE, 1, NULL, 0, 0),
+    EXPECT_LT(mx_channel_write(h[0], 0, (void*)KERNEL_ASPACE_BASE, 1, NULL, 0),
               0, "Error: read into kernel space");
-    EXPECT_EQ(mx_msgpipe_write(h[0], (void*)&unmapped_addr, sizeof(void*), NULL, 0, 0),
+    EXPECT_EQ(mx_channel_write(h[0], 0, (void*)&unmapped_addr, sizeof(void*), NULL, 0),
               0, "Good syscall failed");
     END_TEST;
 }
