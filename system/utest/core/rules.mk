@@ -11,6 +11,7 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(wildcard $(LOCAL_DIR)/*/*.c) \
     $(wildcard $(LOCAL_DIR)/*/*.cpp) \
+    $(LOCAL_DIR)/posix-bits.c \
     $(LOCAL_DIR)/main.c \
 
 MODULE_NAME := core-tests
