@@ -116,14 +116,14 @@ int eth_add_mcast_filter(const mac_addr_t* addr) {
 static volatile uint64_t net_timer = 0;
 
 void netifc_set_timer(uint32_t ms) {
-    net_timer = mx_current_time() + MX_MSEC(ms);
+    net_timer = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(ms);
 }
 
 int netifc_timer_expired(void) {
     if (net_timer == 0) {
         return 0;
     }
-    if (mx_current_time() > net_timer) {
+    if (mx_time_get(MX_CLOCK_MONOTONIC) > net_timer) {
         return 1;
     }
     return 0;
@@ -201,7 +201,7 @@ int netifc_poll(void) {
             return -1;
         }
         if (net_timer) {
-            mx_time_t now = mx_current_time();
+            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
             if (now > net_timer) {
                 break;
             }

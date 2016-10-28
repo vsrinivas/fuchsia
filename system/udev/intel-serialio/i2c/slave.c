@@ -23,15 +23,15 @@ static const uint64_t timeout_ns = 2 * 1000 * 1000 * 1000;
 //the plumbing isn't all there for that apparently.
 #define DO_UNTIL(condition, action)                                           \
     ({                                                                        \
-        const uint64_t _wait_for_base_time = mx_current_time();         \
+        const uint64_t _wait_for_base_time = mx_time_get(MX_CLOCK_MONOTONIC); \
         uint64_t _wait_for_last_time = _wait_for_base_time;                   \
         int _wait_for_condition_value = !!(condition);                        \
         while (!_wait_for_condition_value) {                                  \
                _wait_for_condition_value = !!(condition);                     \
                if (_wait_for_last_time - _wait_for_base_time > timeout_ns)    \
                    break;                                                     \
-               _wait_for_last_time = mx_current_time();                 \
-               {action;}                                                       \
+               _wait_for_last_time = mx_time_get(MX_CLOCK_MONOTONIC);         \
+               {action;}                                                      \
         }                                                                     \
         _wait_for_condition_value;                                            \
     })

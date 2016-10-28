@@ -16,9 +16,9 @@
 
 template <typename T>
 inline mx_time_t time_it(T func) {
-    mx_time_t t = mx_current_time();
+    mx_time_t t = mx_time_get(MX_CLOCK_MONOTONIC);
     func();
-    return mx_current_time() - t;
+    return mx_time_get(MX_CLOCK_MONOTONIC) - t;
 }
 
 int vmo_run_benchmark() {

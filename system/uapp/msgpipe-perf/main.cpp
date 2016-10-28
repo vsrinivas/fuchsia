@@ -71,7 +71,7 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
 
     static constexpr uint32_t big_it_size = 10000;
     uint64_t big_its = 0;
-    uint64_t start_ns = mx_current_time();
+    uint64_t start_ns = mx_time_get(MX_CLOCK_MONOTONIC);
     uint64_t end_ns;
     for (;;) {
         big_its++;
@@ -88,7 +88,7 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
             assert(r_handles == test_args.handles);
         }
 
-        end_ns = mx_current_time();
+        end_ns = mx_time_get(MX_CLOCK_MONOTONIC);
         if ((end_ns - start_ns) >= duration_ns)
             break;
     }

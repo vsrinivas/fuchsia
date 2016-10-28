@@ -327,7 +327,7 @@ static void xhci_handle_command_complete_event(xhci_t* xhci, xhci_trb_t* event_t
 static void xhci_handle_mfindex_wrap(xhci_t* xhci) {
     mtx_lock(&xhci->mfindex_mutex);
     xhci->mfindex_wrap_count++;
-    xhci->last_mfindex_wrap = mx_current_time();
+    xhci->last_mfindex_wrap = mx_time_get(MX_CLOCK_MONOTONIC);
     mtx_unlock(&xhci->mfindex_mutex);
 }
 
@@ -338,7 +338,7 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
     uint64_t wrap_count = xhci->mfindex_wrap_count;
     // try to detect race condition where mfindex has wrapped but we haven't processed wrap event yet
     if (mfindex < 500) {
-        if (mx_current_time() - xhci->last_mfindex_wrap > MX_MSEC(1000)) {
+        if (mx_time_get(MX_CLOCK_MONOTONIC) - xhci->last_mfindex_wrap > MX_MSEC(1000)) {
             xprintf("woah, mfindex wrapped before we got the event!\n");
             wrap_count++;
         }

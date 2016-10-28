@@ -15,7 +15,7 @@
 static mxr_mutex_t mutex = MXR_MUTEX_INIT;
 
 static void xlog(const char* str) {
-    uint64_t now = mx_current_time();
+    uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }

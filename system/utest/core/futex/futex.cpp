@@ -38,10 +38,10 @@ static bool test_futex_wait_timeout_elapsed() {
     int futex_value = 0;
     constexpr mx_time_t kRelativeDeadline = 500 * 1000 * 1000;
     for (int i = 0; i < 5; ++i) {
-        mx_time_t now = mx_current_time();
+        mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
         mx_status_t rc = mx_futex_wait(&futex_value, 0, kRelativeDeadline);
         ASSERT_EQ(rc, ERR_TIMED_OUT, "wait should time out");
-        mx_time_t elapsed = mx_current_time() - now;
+        mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
         if (elapsed < kRelativeDeadline) {
             unittest_printf("\nelapsed %" PRIu64
                             " < kRelativeDeadline: %" PRIu64 "\n",
@@ -353,7 +353,7 @@ bool test_futex_requeue_unqueued_on_timeout() {
 }
 
 static void log(const char* str) {
-    uint64_t now = mx_current_time();
+    uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }

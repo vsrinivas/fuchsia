@@ -17,7 +17,8 @@ static int thread_func(void* arg) {
     uint64_t val = atomic_fetch_add(&count, 1);
     val++;
     if (val % 1000 == 0) {
-        printf("Created %" PRId64 " threads, time %" PRId64 " us\n", val, mx_current_time() / 1000000);
+        printf("Created %" PRId64 " threads, time %" PRId64 " us\n", val,
+               mx_time_get(MX_CLOCK_MONOTONIC) / 1000000);
     }
 
     thrd_t thread;
@@ -31,7 +32,8 @@ static int thread_func(void* arg) {
         val = atomic_fetch_sub(&count, 1);
         val--;
         if (val % 1000 == 0)
-            printf("Joined %" PRId64 " threads, time %" PRId64 " us\n", val, mx_current_time() / 1000000);
+            printf("Joined %" PRId64 " threads, time %" PRId64 " us\n", val,
+                   mx_time_get(MX_CLOCK_MONOTONIC) / 1000000);
     }
 
     return 0;

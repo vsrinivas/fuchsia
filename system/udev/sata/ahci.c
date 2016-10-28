@@ -101,23 +101,23 @@ typedef struct ahci_device {
 
 static inline mx_status_t ahci_wait_for_clear(const volatile uint32_t* reg, uint32_t mask, mx_time_t timeout) {
     int i = 0;
-    mx_time_t start_time = mx_current_time();
+    mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
     do {
         if (!(ahci_read(reg) & mask)) return NO_ERROR;
         usleep(10 * 1000);
         i++;
-    } while (mx_current_time() - start_time < timeout);
+    } while (mx_time_get(MX_CLOCK_MONOTONIC) - start_time < timeout);
     return ERR_TIMED_OUT;
 }
 
 static inline mx_status_t ahci_wait_for_set(const volatile uint32_t* reg, uint32_t mask, mx_time_t timeout) {
     int i = 0;
-    mx_time_t start_time = mx_current_time();
+    mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
     do {
         if (ahci_read(reg) & mask) return NO_ERROR;
         usleep(10 * 1000);
         i++;
-    } while (mx_current_time() - start_time < timeout);
+    } while (mx_time_get(MX_CLOCK_MONOTONIC) - start_time < timeout);
     return ERR_TIMED_OUT;
 }
 
@@ -280,7 +280,7 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     // set the watchdog
     // TODO: general timeout mechanism
-    pdata->timeout = mx_current_time() + 1000 * 1000 * 1000; // 1 second
+    pdata->timeout = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
     completion_signal(&dev->watchdog_completion);
     return NO_ERROR;
 }
@@ -487,7 +487,7 @@ static int ahci_watchdog_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     for (;;) {
         bool idle = true;
-        mx_time_t now = mx_current_time();
+        mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
         for (int i = 0; i < AHCI_MAX_PORTS; i++) {
             ahci_port_t* port = &dev->ports[i];
             if (!(port->flags & (AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT))) {

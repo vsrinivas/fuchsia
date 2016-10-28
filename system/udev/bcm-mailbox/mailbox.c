@@ -85,9 +85,9 @@ static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) 
     value = value | ch;
 
     // Wait for there to be space in the FIFO.
-    mx_time_t deadline = mx_current_time() + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
+    mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
     while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_FULL) {
-        if (mx_current_time() > deadline)
+        if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
             return ERR_TIMED_OUT;
     }
 
@@ -103,9 +103,9 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
     uint32_t attempts = 0;
 
     do {
-        mx_time_t deadline = mx_current_time() + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
+        mx_time_t deadline = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(MAILBOX_IO_DEADLINE_MS);
         while (mailbox_regs[MAILBOX_STATUS] & MAILBOX_EMPTY) {
-            if (mx_current_time() > deadline)
+            if (mx_time_get(MX_CLOCK_MONOTONIC) > deadline)
                 return ERR_TIMED_OUT;
         }
 
