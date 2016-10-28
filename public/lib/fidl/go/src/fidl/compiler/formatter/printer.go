@@ -6,9 +6,9 @@ package formatter
 
 import (
 	"bytes"
-	"fmt"
-	"fidl/compiler/lexer"
 	"fidl/compiler/core"
+	"fidl/compiler/lexer"
+	"fmt"
 	"sort"
 	"strings"
 )

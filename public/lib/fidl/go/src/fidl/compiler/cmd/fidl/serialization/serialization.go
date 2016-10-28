@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
-	"fmt"
-	"mojo/public/go/bindings"
+	"fidl/bindings"
+	myfmt "fidl/compiler/cmd/fidl/third_party/golang/src/fmt"
+	"fidl/compiler/core"
 	"fidl/compiler/generated/fidl_files"
 	"fidl/compiler/generated/fidl_types"
-	"fidl/compiler/core"
-	myfmt "fidl/compiler/cmd/fidl/third_party/golang/src/fmt"
+	"fmt"
 )
 
 //////////////////////////////////////////////////

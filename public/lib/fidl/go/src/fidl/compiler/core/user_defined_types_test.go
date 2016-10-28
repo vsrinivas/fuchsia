@@ -5,8 +5,8 @@
 package core
 
 import (
-	"fmt"
 	"fidl/compiler/lexer"
+	"fmt"
 	"testing"
 )
 

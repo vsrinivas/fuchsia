@@ -30,8 +30,8 @@ package main
 
 import (
 	"bufio"
-	"fidl/compiler/core"
 	"fidl/compiler/cmd/fidl/serialization"
+	"fidl/compiler/core"
 	"fidl/compiler/parser"
 	"flag"
 	"fmt"

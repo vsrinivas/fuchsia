@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	"mojo/public/go/bindings"
+	"fidl/bindings"
 	"mojom/generated/mojom_files"
 	"mojom/generated/mojom_types"
 )

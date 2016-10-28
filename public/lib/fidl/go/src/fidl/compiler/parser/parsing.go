@@ -1,10 +1,10 @@
 package parser
 
 import (
+	"fidl/compiler/core"
+	"fidl/compiler/lexer"
 	"fmt"
 	"math"
-	"fidl/compiler/lexer"
-	"fidl/compiler/core"
 	"strconv"
 )
 

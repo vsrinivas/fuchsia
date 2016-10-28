@@ -80,7 +80,6 @@ template("go_binary") {
 # Build the fidl compiler
 go_binary("fidl") {
   gopath = [
-    "//mojo/public/go",
     "//lib/fidl/go",
   ]
   package = "fidl/compiler/cmd/fidl"

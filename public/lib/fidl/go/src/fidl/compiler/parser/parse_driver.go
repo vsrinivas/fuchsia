@@ -5,9 +5,9 @@
 package parser
 
 import (
+	"fidl/compiler/core"
 	"fmt"
 	"io/ioutil"
-	"fidl/compiler/core"
 	"os"
 	"path/filepath"
 )

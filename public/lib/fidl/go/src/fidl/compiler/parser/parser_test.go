@@ -5,9 +5,9 @@
 package parser
 
 import (
-	"fmt"
-	"fidl/compiler/lexer"
 	"fidl/compiler/core"
+	"fidl/compiler/lexer"
+	"fmt"
 	"strings"
 	"testing"
 )

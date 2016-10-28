@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"fidl/compiler/lexer"
-	"fidl/compiler/core"
 	"fidl/compiler/cmd/fidl/parser"
+	"fidl/compiler/core"
+	"fidl/compiler/lexer"
 	"testing"
 )
 

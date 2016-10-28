@@ -66,7 +66,7 @@ func (t *translator) translateStringType(mojomType mojom_types.StringType) (goTy
 }
 
 func (t *translator) translateHandleType(mojomType mojom_types.HandleType) (goType string) {
-	t.imports["system"] = "mojo/public/go/system"
+	t.imports["system"] = "fidl/system"
 	switch mojomType.Kind {
 	default:
 		panic("Unknown handle type. This should never happen.")

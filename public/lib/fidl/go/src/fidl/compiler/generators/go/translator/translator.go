@@ -119,17 +119,17 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 	tmplFile.MojomImports = []string{}
 
 	for pkgName, pkgPath := range t.imports {
-		if pkgName != "service_describer" && pkgName != "mojom_types" && pkgPath != "mojo/public/go/system" {
+		if pkgName != "service_describer" && pkgName != "mojom_types" && pkgPath != "fidl/system" {
 			tmplFile.MojomImports = append(tmplFile.MojomImports, pkgName)
 		}
 	}
 
 	if len(tmplFile.Structs) > 0 || len(tmplFile.Unions) > 0 || len(tmplFile.Interfaces) > 0 {
 		t.imports["fmt"] = "fmt"
-		t.imports["bindings"] = "mojo/public/go/bindings"
+		t.imports["bindings"] = "fidl/bindings"
 	}
 	if len(tmplFile.Interfaces) > 0 {
-		t.imports["system"] = "mojo/public/go/system"
+		t.imports["system"] = "fidl/system"
 		if tmplFile.PackageName != "service_describer" {
 			t.imports["service_describer"] = "mojo/public/interfaces/bindings/service_describer"
 		}
@@ -142,7 +142,7 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 	}
 
 	if t.Config.GenTypeInfo() {
-		t.imports["bindings"] = "mojo/public/go/bindings"
+		t.imports["bindings"] = "fidl/bindings"
 		t.imports["fmt"] = "fmt"
 		t.imports["base64"] = "encoding/base64"
 		t.imports["gzip"] = "compress/gzip"

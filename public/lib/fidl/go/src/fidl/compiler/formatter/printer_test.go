@@ -5,8 +5,8 @@
 package formatter
 
 import (
-	"fidl/compiler/lexer"
 	"fidl/compiler/core"
+	"fidl/compiler/lexer"
 	"testing"
 )
 

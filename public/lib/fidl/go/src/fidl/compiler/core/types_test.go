@@ -5,8 +5,8 @@
 package core
 
 import (
-	"math"
 	"fidl/compiler/lexer"
+	"math"
 	"testing"
 )
 

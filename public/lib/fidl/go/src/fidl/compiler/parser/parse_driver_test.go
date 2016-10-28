@@ -5,8 +5,8 @@
 package parser
 
 import (
-	"fmt"
 	"fidl/compiler/core"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"

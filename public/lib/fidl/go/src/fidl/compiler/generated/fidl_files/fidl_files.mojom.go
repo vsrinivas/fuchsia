@@ -1,9 +1,9 @@
 package fidl_files
 
 import (
-	fmt "fmt"
-	bindings "mojo/public/go/bindings"
+	bindings "fidl/bindings"
 	fidl_types "fidl/compiler/generated/fidl_types"
+	fmt "fmt"
 	sort "sort"
 )
 

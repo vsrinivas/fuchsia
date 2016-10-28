@@ -15,7 +15,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"mojo/public/go/bindings"
+	"fidl/bindings"
 	"mojom/generated/mojom_files"
 )
 

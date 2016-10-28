@@ -257,7 +257,7 @@ def AddImport(imports, mojom_imports, module, element):
     AddImport(imports, mojom_imports, module, element.value_kind)
     return
   if mojom.IsAnyHandleKind(element):
-    imports['mojo/public/go/system'] = 'system'
+    imports['fidl/system'] = 'system'
     return
 
   if not hasattr(element, 'imported_from') or not element.imported_from:
@@ -372,9 +372,9 @@ class Generator(generator.Generator):
     if (len(all_structs) > 0 or len(self.module.interfaces) > 0
         or len(self.module.unions) > 0):
       imports['fmt'] = 'fmt'
-      imports['mojo/public/go/bindings'] = 'bindings'
+      imports['fidl/bindings'] = 'bindings'
     if len(self.module.interfaces) > 0:
-      imports['mojo/public/go/system'] = 'system'
+      imports['fidl/system'] = 'system'
     if len(all_structs) > 0:
       imports['sort'] = 'sort'
 
@@ -405,7 +405,7 @@ class Generator(generator.Generator):
       imports['encoding/base64'] = 'base64'
       imports['fmt'] = 'fmt'
       imports['io/ioutil'] = 'ioutil'
-      imports['mojo/public/go/bindings'] = 'bindings'
+      imports['fidl/bindings'] = 'bindings'
 
     if GetPackageName(self.module) != _mojom_types_pkg_short:
       if defInterface:
