@@ -67,7 +67,7 @@ mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_
     up->AddHandle(mxtl::move(h0));
     up->AddHandle(mxtl::move(h1));
 
-    ktrace(TAG_MSGPIPE_CREATE, (uint32_t)id0, (uint32_t)id1, flags, 0);
+    ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, flags, 0);
     return NO_ERROR;
 }
 
@@ -137,7 +137,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         }
     }
 
-    ktrace(TAG_MSGPIPE_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
+    ktrace(TAG_CHANNEL_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
 
@@ -252,6 +252,6 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         }
     }
 
-    ktrace(TAG_MSGPIPE_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
+    ktrace(TAG_CHANNEL_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
