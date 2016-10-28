@@ -71,8 +71,6 @@ static void send_msg(mx_handle_t handle, enum message msg)
     tu_message_write(handle, &data, sizeof(data), NULL, 0, 0);
 }
 
-// This returns "bool" because it uses ASSERT_*.
-
 static bool recv_msg(mx_handle_t handle, enum message* msg)
 {
     uint64_t data;
@@ -80,10 +78,17 @@ static bool recv_msg(mx_handle_t handle, enum message* msg)
 
     unittest_printf("waiting for message on handle %u\n", handle);
 
-    ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
+    if (!tu_wait_readable(handle)) {
+        unittest_printf("peer closed while trying to read message\n");
+        return false;
+    }
 
     tu_message_read(handle, &data, &num_bytes, NULL, 0, 0);
-    ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
+    if (num_bytes != sizeof(data)) {
+        unittest_printf("recv_msg: unexpected message size, %u != %zu\n",
+                        num_bytes, sizeof(data));
+        return false;
+    }
 
     *msg = data;
     unittest_printf("received message %d\n", *msg);
@@ -116,12 +121,12 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 
 // "resume" here means "tell the kernel we're done"
 // This test assumes no presence of the "debugger API" and therefore we can't
-// do tests like causing a segfault and then resuming from it. Such a test is
-// for the debugger API anyway.
+// resume from a segfault. Such a test is for the debugger API anyway.
 
 static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
 {
     mx_handle_t thread = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS);
+    // TODO: Really want to just kill the process here.
     mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
@@ -171,9 +176,7 @@ static bool test_received_exception(mx_handle_t eport,
     return true;
 }
 
-// This returns "bool" because it uses ASSERT_*.
-
-static bool msg_loop(mx_handle_t pipe)
+static void msg_loop(mx_handle_t pipe)
 {
     bool my_done_tests = false;
     mx_handle_t pipe_to_thread = MX_HANDLE_INVALID;
@@ -181,7 +184,10 @@ static bool msg_loop(mx_handle_t pipe)
     while (!done_tests && !my_done_tests)
     {
         enum message msg;
-        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while receiving msg");
+        if (!recv_msg(pipe, &msg)) {
+            unittest_printf("Error while receiving msg\n");
+            return;
+        }
         switch (msg)
         {
         case MSG_DONE:
@@ -196,7 +202,10 @@ static bool msg_loop(mx_handle_t pipe)
         case MSG_CREATE_AUX_THREAD:
             // Spin up a thread that we can talk to.
             {
-                ASSERT_EQ(pipe_to_thread, MX_HANDLE_INVALID, "previous thread connection not shutdown");
+                if (pipe_to_thread != MX_HANDLE_INVALID) {
+                    unittest_printf("previous thread connection not shutdown");
+                    return;
+                }
                 mx_handle_t pipe_from_thread;
                 tu_message_pipe_create(&pipe_to_thread, &pipe_from_thread);
                 thrd_t thread;
@@ -219,7 +228,6 @@ static bool msg_loop(mx_handle_t pipe)
             break;
         }
     }
-    return true;
 }
 
 static int thread_func(void* arg)
