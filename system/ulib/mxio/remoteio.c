@@ -87,7 +87,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
 
     msg.hcount = MXIO_MAX_HANDLES + 1;
     uint32_t dsz = sizeof(msg);
-    if ((r = mx_msgpipe_read(h, &msg, &dsz, msg.handle, &msg.hcount, 0)) < 0) {
+    if ((r = mx_channel_read(h, 0, &msg, dsz, &dsz, msg.handle, msg.hcount, &msg.hcount)) < 0) {
         if (r == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }
@@ -141,7 +141,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 
     msg.op = MXRIO_STATUS;
-    if ((r = mx_msgpipe_write(rh, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount, 0)) < 0) {
+    if ((r = mx_channel_write(rh, 0, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount)) < 0) {
         discard_handles(msg.handle, msg.hcount);
     }
     if (is_close) {
@@ -164,7 +164,7 @@ mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg)
 
     mx_status_t r;
     uint32_t dsize = MXRIO_HDR_SZ + msg->datalen;
-    if ((r = mx_msgpipe_write(srv, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+    if ((r = mx_channel_write(srv, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
         return r;
     }
     return 0;
@@ -188,7 +188,7 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
         if ((rpipe = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
             return ERR_NO_MEMORY;
         }
-        if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+        if ((r = mx_channel_create(MX_FLAG_REPLY_PIPE, &rpipe[0], &rpipe[1])) < 0) {
             free(rpipe);
             rpipe = NULL;
             return r;
@@ -197,7 +197,7 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     msg->op |= MXRIO_REPLY_PIPE;
     msg->handle[msg->hcount++] = rpipe[1];
 
-    if ((r = mx_msgpipe_write(rio->h, msg, dsize, msg->handle, msg->hcount, 0)) < 0) {
+    if ((r = mx_channel_write(rio->h, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
         msg->hcount--;
         goto fail_discard_handles;
     }
@@ -215,7 +215,8 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = mx_msgpipe_read(rpipe[0], msg, &dsize, msg->handle, &msg->hcount, 0)) < 0) {
+    if ((r = mx_channel_read(rpipe[0], 0, msg, dsize, &dsize,
+                             msg->handle, msg->hcount, &msg->hcount)) < 0) {
         goto fail_close_reply_pipe;
     }
 
@@ -249,7 +250,7 @@ fail_close_reply_pipe:
     // If that fails, free rpipe and let the next
     // txn try again.
     mx_handle_close(rpipe[0]);
-    if (mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE) < 0) {
+    if (mx_channel_create(MX_FLAG_REPLY_PIPE, &rpipe[0], &rpipe[1]) < 0) {
         free(rpipe);
         rpipe = NULL;
     }

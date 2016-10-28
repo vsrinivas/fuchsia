@@ -110,7 +110,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     mx_loader_svc_msg_t* msg = (void*) data;
     uint32_t sz = sizeof(data);
     mx_status_t r;
-    if ((r = mx_msgpipe_read(h, msg, &sz, NULL, NULL, 0)) < 0) {
+    if ((r = mx_channel_read(h, 0, msg, sz, &sz, NULL, 0, NULL)) < 0) {
         // This is the normal error for the other end going away,
         // which happens when the process dies.
         if (r != ERR_REMOTE_CLOSED)
@@ -146,8 +146,8 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
     msg->opcode = LOADER_SVC_OP_STATUS;
     msg->reserved0 = 0;
     msg->reserved1 = 0;
-    if ((r = mx_msgpipe_write(h, msg, sizeof(mx_loader_svc_msg_t),
-                              &handle, handle > 0 ? 1 : 0, 0)) < 0) {
+    if ((r = mx_channel_write(h, 0, msg, sizeof(mx_loader_svc_msg_t),
+                              &handle, handle > 0 ? 1 : 0)) < 0) {
         fprintf(stderr, "dlsvc: msg write error: %d\n", r);
         return r;
     }
@@ -213,15 +213,15 @@ static mx_handle_t mxio_multiloader(void) {
             dispatcher_log = MX_HANDLE_INVALID;
         }
     }
-    mx_handle_t h[2];
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+    mx_handle_t h0, h1;
+    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
         goto done;
     }
-    if ((r = mxio_dispatcher_add(dispatcher, h[1], NULL, NULL)) < 0) {
-        mx_handle_close(h[0]);
-        mx_handle_close(h[1]);
+    if ((r = mxio_dispatcher_add(dispatcher, h1, NULL, NULL)) < 0) {
+        mx_handle_close(h0);
+        mx_handle_close(h1);
     } else {
-        r = h[0];
+        r = h0;
     }
 
 done:
@@ -239,10 +239,10 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     if (startup == NULL)
         return ERR_NO_MEMORY;
 
-    mx_handle_t h[2];
+    mx_handle_t h;
     mx_status_t r;
 
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+    if ((r = mx_channel_create(0, &h, &startup->pipe_handle)) < 0) {
         free(startup);
         return r;
     }
@@ -251,7 +251,6 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     if (sys_log <= 0)
         fprintf(stderr, "dlsvc: log creation failed: error %d\n", sys_log);
 
-    startup->pipe_handle = h[1];
     startup->loader = loader;
     startup->loader_arg = loader_arg;
     startup->syslog_handle = sys_log;
@@ -259,12 +258,12 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
     thrd_t t;
     int ret = thrd_create_with_name(&t, loader_service_thread, startup, "loader-service");
     if (ret != thrd_success) {
-        mx_handle_close(h[0]);
-        mx_handle_close(h[1]);
+        mx_handle_close(h);
+        mx_handle_close(startup->pipe_handle);
         free(startup);
         return ret;
     }
 
     thrd_detach(t);
-    return h[0];
+    return h;
 }
