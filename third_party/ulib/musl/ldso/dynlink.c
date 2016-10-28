@@ -1839,10 +1839,10 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
     msg.data[len] = 0;
 
     uint32_t nbytes = sizeof msg.header + len + 1;
-    mx_status_t status = _mx_msgpipe_write(loader_svc, &msg, nbytes,
-                                           NULL, 0, 0);
+    mx_status_t status = _mx_channel_write(loader_svc, 0, &msg, nbytes,
+                                           NULL, 0);
     if (status != NO_ERROR) {
-        error("mx_msgpipe_write of %u bytes to loader service: %d (%s)",
+        error("_mx_channel_write of %u bytes to loader service: %d (%s)",
               nbytes, status, _mx_status_get_string(status));
         handle = status;
         goto out;
@@ -1859,10 +1859,10 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
 
     uint32_t reply_size = sizeof(msg.header);
     uint32_t handle_count = 1;
-    status = _mx_msgpipe_read(loader_svc, &msg, &reply_size,
-                              &handle, &handle_count, 0);
+    status = _mx_channel_read(loader_svc, 0, &msg, reply_size, &reply_size,
+                              &handle, handle_count, &handle_count);
     if (status != NO_ERROR) {
-        error("mx_msgpipe_read of %u bytes for loader service reply: %d (%s)",
+        error("_mx_channel_read of %u bytes for loader service reply: %d (%s)",
               sizeof(msg.header), status, _mx_status_get_string(status));
         handle = status;
         goto out;
