@@ -738,8 +738,8 @@ struct drm_i915_gem_exec_object2 {
 #define __EXEC_OBJECT_UNKNOWN_FLAGS -(EXEC_OBJECT_PINNED << 1)
     __u64 flags;
 
-    __u64 rsvd1;
-    __u64 rsvd2;
+    __u64 rsvd1; // anvil: start offset of the used portion of the buffer
+    __u64 rsvd2; // anvil: size of the used portion of the buffer
 };
 
 struct drm_i915_gem_execbuffer2 {

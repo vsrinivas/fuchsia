@@ -27,6 +27,8 @@ struct magma_system_relocation_entry {
 struct magma_system_exec_resource {
     uint32_t buffer_handle;
     uint32_t num_relocations;
+    uint64_t offset;
+    uint64_t length;
     struct magma_system_relocation_entry* relocations;
 };
 

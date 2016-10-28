@@ -92,6 +92,8 @@ void MagmaBuffer::GetAbiExecResource(std::set<MagmaBuffer*>& resources,
                                      magma_system_relocation_entry* relocations_out)
 {
     abi_res_out->buffer_handle = handle;
+    abi_res_out->offset = 0;
+    abi_res_out->length = size;
 
     abi_res_out->num_relocations = relocations_.size();
     abi_res_out->relocations = relocations_out;

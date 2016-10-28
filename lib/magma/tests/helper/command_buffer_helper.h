@@ -94,6 +94,8 @@ private:
             resources_.push_back(connection_->LookupBuffer(id).get());
             DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
             batch_buf->buffer_handle = duplicate_handle;
+            batch_buf->offset = 0;
+            batch_buf->length = buffer->platform_buffer()->size();
             batch_buf->num_relocations = kNumResources - 1;
             batch_buf->relocations = new magma_system_relocation_entry[batch_buf->num_relocations];
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
@@ -119,6 +121,8 @@ private:
             resources_.push_back(connection_->LookupBuffer(id).get());
             DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
             resource->buffer_handle = duplicate_handle;
+            resource->offset = 0;
+            resource->length = buffer->platform_buffer()->size();
             resource->num_relocations = 0;
             resource->relocations = nullptr;
         }
