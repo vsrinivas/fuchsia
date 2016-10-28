@@ -50,5 +50,5 @@ void print(mx_handle_t log, const char* s, ...) {
 
 void fail(mx_handle_t log, mx_status_t status, const char* msg) {
     print(log, msg, NULL);
-    mx_exit(status);
+    mx_process_exit(status);
 }

@@ -4,6 +4,6 @@
 
 _Noreturn void _Exit(int ec) {
     for (;;) {
-        _mx_exit(ec);
+        _mx_process_exit(ec);
     }
 }

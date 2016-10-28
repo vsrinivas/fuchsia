@@ -233,7 +233,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     print(log, o.value[OPTION_FILENAME], " started.  userboot exiting.\n",
           NULL);
-    mx_exit(0);
+    mx_process_exit(0);
 }
 
 // This is the entry point for the whole show, the very first bit of code
