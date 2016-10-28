@@ -19,10 +19,10 @@
 class PortClient;
 class MessagePacket;
 
-class MessagePipe : public mxtl::RefCounted<MessagePipe> {
+class Channel : public mxtl::RefCounted<Channel> {
 public:
-    MessagePipe();
-    ~MessagePipe();
+    Channel();
+    ~Channel();
 
     void OnDispatcherDestruction(size_t side);
 

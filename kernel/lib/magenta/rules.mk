@@ -10,6 +10,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/channel_dispatcher.cpp \
+    $(LOCAL_DIR)/channel.cpp \
     $(LOCAL_DIR)/data_pipe.cpp \
     $(LOCAL_DIR)/data_pipe_producer_dispatcher.cpp \
     $(LOCAL_DIR)/data_pipe_consumer_dispatcher.cpp \
@@ -28,8 +30,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/log_dispatcher.cpp \
     $(LOCAL_DIR)/magenta.cpp \
     $(LOCAL_DIR)/message_packet.cpp \
-    $(LOCAL_DIR)/message_pipe_dispatcher.cpp \
-    $(LOCAL_DIR)/message_pipe.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \

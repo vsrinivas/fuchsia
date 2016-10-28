@@ -21,10 +21,10 @@
 #include <lib/console.h>
 #include <lk/init.h>
 
+#include <magenta/channel_dispatcher.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
-#include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
 #include <magenta/resource_dispatcher.h>
@@ -147,28 +147,28 @@ static mx_status_t map_dso_image(const char* name,
     return status;
 }
 
-// Create a message pipe and write the bootstrap message down one side of
+// Create a channel and write the bootstrap message down one side of
 // it, returning the handle to the other side.
-static HandleUniquePtr make_bootstrap_pipe(
+static HandleUniquePtr make_bootstrap_channel(
     const void* bytes, uint32_t num_bytes,
     HandleUniquePtr handles[], uint32_t num_handles) {
-    HandleUniquePtr user_pipe_handle;
-    mxtl::RefPtr<MessagePipeDispatcher> kernel_pipe;
+    HandleUniquePtr user_channel_handle;
+    mxtl::RefPtr<ChannelDispatcher> kernel_channel;
     {
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
-        status_t status = MessagePipeDispatcher::Create(
+        status_t status = ChannelDispatcher::Create(
             0, &mpd0, &mpd1, &rights);
         if (status != NO_ERROR)
             return nullptr;
-        user_pipe_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
-        kernel_pipe.reset(mpd1->get_specific<MessagePipeDispatcher>());
+        user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
+        kernel_channel.reset(mpd1->get_specific<ChannelDispatcher>());
     }
-    if (!user_pipe_handle)
+    if (!user_channel_handle)
         return nullptr;
-    ASSERT(kernel_pipe);
+    ASSERT(kernel_channel);
 
-    // Now pack up the bytes and handles to write down the pipe.
+    // Now pack up the bytes and handles to write down the channel.
     AllocChecker ac;
     mxtl::unique_ptr<MessagePacket> msg;
     if (MessagePacket::Create(num_bytes, num_handles, &msg) != NO_ERROR)
@@ -181,10 +181,10 @@ static HandleUniquePtr make_bootstrap_pipe(
         handle_list[i] = handles[i].release();
 
     // Here it goes!
-    if (kernel_pipe->Write(mxtl::move(msg)) != NO_ERROR)
+    if (kernel_channel->Write(mxtl::move(msg)) != NO_ERROR)
         return nullptr;
 
-    return user_pipe_handle;
+    return user_channel_handle;
 }
 
 enum bootstrap_handle_index {
@@ -366,7 +366,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
             return ERR_NO_MEMORY;
 
         uint32_t msg_size = prepare_bootstrap_msg(msg.get());
-        auto handle = make_bootstrap_pipe(
+        auto handle = make_bootstrap_channel(
             msg.get(), msg_size,
             handles, static_cast<uint32_t>(BOOTSTRAP_HANDLES));
         if (!handle)

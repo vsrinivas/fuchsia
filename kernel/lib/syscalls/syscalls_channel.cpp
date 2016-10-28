@@ -13,9 +13,9 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
+#include <magenta/channel_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
-#include <magenta/message_pipe_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
 
@@ -43,7 +43,7 @@ mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
-    status_t result = MessagePipeDispatcher::Create(flags, &mpd0, &mpd1, &rights);
+    status_t result = ChannelDispatcher::Create(flags, &mpd0, &mpd1, &rights);
     if (result != NO_ERROR)
         return result;
 
@@ -81,8 +81,8 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    mx_status_t result = up->GetDispatcher(handle_value, &msg_pipe, MX_RIGHT_READ);
+    mxtl::RefPtr<ChannelDispatcher> channel;
+    mx_status_t result = up->GetDispatcher(handle_value, &channel, MX_RIGHT_READ);
     if (result != NO_ERROR)
         return result;
 
@@ -90,8 +90,8 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         return ERR_NOT_SUPPORTED;
 
     mxtl::unique_ptr<MessagePacket> msg;
-    result = msg_pipe->Read(&num_bytes, &num_handles, &msg,
-                            flags & MX_CHANNEL_READ_MAY_DISCARD);
+    result = channel->Read(&num_bytes, &num_handles, &msg,
+                           flags & MX_CHANNEL_READ_MAY_DISCARD);
     if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
@@ -137,7 +137,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         }
     }
 
-    ktrace(TAG_MSGPIPE_READ, (uint32_t)msg_pipe->get_koid(), num_bytes, num_handles, 0);
+    ktrace(TAG_MSGPIPE_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
 }
 
@@ -149,12 +149,12 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<MessagePipeDispatcher> msg_pipe;
-    mx_status_t result = up->GetDispatcher(handle_value, &msg_pipe, MX_RIGHT_WRITE);
+    mxtl::RefPtr<ChannelDispatcher> channel;
+    mx_status_t result = up->GetDispatcher(handle_value, &channel, MX_RIGHT_WRITE);
     if (result != NO_ERROR)
         return result;
 
-    bool is_reply_pipe = msg_pipe->is_reply_pipe();
+    bool is_reply_pipe = channel->is_reply_pipe();
 
     if (num_bytes > 0u && !_bytes)
         return ERR_INVALID_ARGS;
@@ -196,7 +196,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
                 if (!handle)
                     return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
-                if (handle->dispatcher().get() == static_cast<Dispatcher*>(msg_pipe.get())) {
+                if (handle->dispatcher().get() == static_cast<Dispatcher*>(channel.get())) {
                     // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
                     if (!is_reply_pipe) {
                         return ERR_NOT_SUPPORTED;
@@ -240,7 +240,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
             return ERR_BAD_STATE;
     }
 
-    result = msg_pipe->Write(mxtl::move(msg));
+    result = channel->Write(mxtl::move(msg));
     if (result != NO_ERROR) {
         // Write failed, put back the handles into this process.
         AutoLock lock(up->handle_table_lock());
@@ -249,6 +249,6 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         }
     }
 
-    ktrace(TAG_MSGPIPE_WRITE, (uint32_t)msg_pipe->get_koid(), num_bytes, num_handles, 0);
+    ktrace(TAG_MSGPIPE_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
     return result;
 }

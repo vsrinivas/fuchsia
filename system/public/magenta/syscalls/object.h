@@ -26,7 +26,7 @@ typedef enum {
     MX_OBJ_TYPE_PROCESS             = 1,
     MX_OBJ_TYPE_THREAD              = 2,
     MX_OBJ_TYPE_VMEM                = 3,
-    MX_OBJ_TYPE_MESSAGE_PIPE        = 4,
+    MX_OBJ_TYPE_CHANNEL             = 4,
     MX_OBJ_TYPE_EVENT               = 5,
     MX_OBJ_TYPE_IOPORT              = 6,
     MX_OBJ_TYPE_DATA_PIPE_PRODUCER  = 7,
@@ -109,4 +109,3 @@ typedef struct mx_info_process_threads {
 #define MX_POLICY_BAD_HANDLE_EXIT           2u
 
 __END_CDECLS
-

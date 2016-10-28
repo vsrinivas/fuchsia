@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/message_pipe.h>
+#include <magenta/channel.h>
 
 #include <err.h>
 #include <new.h>
@@ -26,7 +26,7 @@ size_t other_side(size_t side) {
 
 }  // namespace
 
-MessagePipe::MessagePipe()
+Channel::Channel()
     : dispatcher_alive_{true, true} {
     state_tracker_[0].set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE,
@@ -36,13 +36,13 @@ MessagePipe::MessagePipe()
                                MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
 }
 
-MessagePipe::~MessagePipe() {
+Channel::~Channel() {
     // No need to lock. We are single threaded and will not have new requests.
     DEBUG_ASSERT(messages_[0].is_empty());
     DEBUG_ASSERT(messages_[1].is_empty());
 }
 
-void MessagePipe::OnDispatcherDestruction(size_t side) {
+void Channel::OnDispatcherDestruction(size_t side) {
     auto other = other_side(side);
 
     MessageList messages_to_destroy;
@@ -65,11 +65,11 @@ void MessagePipe::OnDispatcherDestruction(size_t side) {
     messages_to_destroy.clear();
 }
 
-status_t MessagePipe::Read(size_t side,
-                           uint32_t* msg_size,
-                           uint32_t* msg_handle_count,
-                           mxtl::unique_ptr<MessagePacket>* msg,
-                           bool may_discard) {
+status_t Channel::Read(size_t side,
+                       uint32_t* msg_size,
+                       uint32_t* msg_handle_count,
+                       mxtl::unique_ptr<MessagePacket>* msg,
+                       bool may_discard) {
     auto max_size = *msg_size;
     auto max_handle_count = *msg_handle_count;
     auto other = other_side(side);
@@ -100,7 +100,7 @@ status_t MessagePipe::Read(size_t side,
     return rv;
 }
 
-status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
+status_t Channel::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
     auto other = other_side(side);
 
     AutoLock lock(&lock_);
@@ -121,11 +121,11 @@ status_t MessagePipe::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
     return NO_ERROR;
 }
 
-StateTracker* MessagePipe::GetStateTracker(size_t side) {
+StateTracker* Channel::GetStateTracker(size_t side) {
     return &state_tracker_[side];
 }
 
-status_t MessagePipe::SetIOPort(size_t side, mxtl::unique_ptr<PortClient> client) {
+status_t Channel::SetIOPort(size_t side, mxtl::unique_ptr<PortClient> client) {
     AutoLock lock(&lock_);
     if (iopc_[side])
         return ERR_BAD_STATE;

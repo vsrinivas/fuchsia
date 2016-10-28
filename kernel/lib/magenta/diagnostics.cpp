@@ -50,7 +50,7 @@ const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_PROCESS: return "process";
         case MX_OBJ_TYPE_THREAD: return "thread";
         case MX_OBJ_TYPE_VMEM: return "vmo";
-        case MX_OBJ_TYPE_MESSAGE_PIPE: return "msg-pipe";
+        case MX_OBJ_TYPE_CHANNEL: return "channel";
         case MX_OBJ_TYPE_EVENT: return "event";
         case MX_OBJ_TYPE_IOPORT: return "io-port";
         case MX_OBJ_TYPE_DATA_PIPE_PRODUCER: return "data-pipe-con";
@@ -103,7 +103,7 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
              types[MX_OBJ_TYPE_PROCESS],
              types[MX_OBJ_TYPE_THREAD],
              types[MX_OBJ_TYPE_VMEM],
-             types[MX_OBJ_TYPE_MESSAGE_PIPE],
+             types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
              types[MX_OBJ_TYPE_IOPORT],

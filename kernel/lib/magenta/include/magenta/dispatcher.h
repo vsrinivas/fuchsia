@@ -32,7 +32,7 @@ template <> struct DispatchTag<T> {         \
 DECLARE_DISPTAG(ProcessDispatcher, MX_OBJ_TYPE_PROCESS)
 DECLARE_DISPTAG(ThreadDispatcher, MX_OBJ_TYPE_THREAD)
 DECLARE_DISPTAG(VmObjectDispatcher, MX_OBJ_TYPE_VMEM)
-DECLARE_DISPTAG(MessagePipeDispatcher, MX_OBJ_TYPE_MESSAGE_PIPE)
+DECLARE_DISPTAG(ChannelDispatcher, MX_OBJ_TYPE_CHANNEL)
 DECLARE_DISPTAG(EventDispatcher, MX_OBJ_TYPE_EVENT)
 DECLARE_DISPTAG(PortDispatcher, MX_OBJ_TYPE_IOPORT)
 DECLARE_DISPTAG(DataPipeProducerDispatcher, MX_OBJ_TYPE_DATA_PIPE_PRODUCER)
@@ -100,4 +100,3 @@ mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>&& disp) {
     auto ptr = disp.leak_ref()->get_specific<T>();
     return mxtl::internal::MakeRefPtrNoAdopt(ptr);
 }
-
