@@ -283,6 +283,50 @@ mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len) {
     return NO_ERROR;
 }
 
+mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response) {
+    acpi_cmd_bst_t cmd = {
+        .hdr = {
+            .version = 0,
+            .cmd = ACPI_CMD_BST,
+            .len = sizeof(cmd),
+        },
+    };
+
+    acpi_rsp_bst_t* rsp;
+    size_t rsp_len;
+
+    mx_status_t status =
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    *response = rsp;
+    return NO_ERROR;
+}
+
+mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response) {
+    acpi_cmd_bst_t cmd = {
+        .hdr = {
+            .version = 0,
+            .cmd = ACPI_CMD_BIF,
+            .len = sizeof(cmd),
+        },
+    };
+
+    acpi_rsp_bif_t* rsp;
+    size_t rsp_len;
+
+    mx_status_t status =
+        run_txn(h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, 0, NULL, 0);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    *response = rsp;
+    return NO_ERROR;
+}
+
 mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
     acpi_cmd_hdr_t cmd = {
         .version = 0,

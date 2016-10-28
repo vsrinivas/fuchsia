@@ -33,6 +33,8 @@ static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, v
 static mx_status_t cmd_get_pci_init_arg(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_s_state_transition(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_ps0(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
+static mx_status_t cmd_bst(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
+static mx_status_t cmd_bif(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_new_connection(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 
 typedef mx_status_t (*cmd_handler_t)(mx_handle_t, acpi_handle_ctx_t*, void*);
@@ -42,6 +44,8 @@ static const cmd_handler_t cmd_table[] = {
         [ACPI_CMD_GET_PCI_INIT_ARG] = cmd_get_pci_init_arg,
         [ACPI_CMD_S_STATE_TRANSITION] = cmd_s_state_transition,
         [ACPI_CMD_PS0] = cmd_ps0,
+        [ACPI_CMD_BST] = cmd_bst,
+        [ACPI_CMD_BIF] = cmd_bif,
         [ACPI_CMD_NEW_CONNECTION] = cmd_new_connection,
 };
 
@@ -486,6 +490,115 @@ static mx_status_t cmd_ps0(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
             .request_id = cmd->hdr.request_id,
         },
     };
+
+    return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
+}
+
+static mx_status_t cmd_bst(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
+    acpi_cmd_bst_t* cmd = _cmd;
+    if (cmd->hdr.len != sizeof(*cmd)) {
+        return send_error(h, cmd->hdr.request_id, ERR_INVALID_ARGS);
+    }
+
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = NULL,
+    };
+    mx_status_t status = AcpiEvaluateObject(ctx->ns_node, (char*)"_BST", NULL, &buffer);
+    if (status != AE_OK) {
+        printf("Failed to find object's BST method\n");
+        return send_error(h, cmd->hdr.request_id, ERR_NOT_FOUND);
+    }
+
+    ACPI_OBJECT* obj = (ACPI_OBJECT*)buffer.Pointer;
+    if (obj->Type != ACPI_TYPE_PACKAGE || obj->Package.Count != 4) {
+        ACPI_FREE(obj);
+        return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
+    }
+    ACPI_OBJECT* elem = obj->Package.Elements;
+    for (int i = 0; i < 4; i++) {
+        if (elem[i].Type != ACPI_TYPE_INTEGER) {
+            ACPI_FREE(obj);
+            return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
+        }
+    }
+
+    acpi_rsp_bst_t rsp = {
+        .hdr = {
+            .status = NO_ERROR,
+            .len = sizeof(rsp),
+            .request_id = cmd->hdr.request_id,
+        },
+        .state = elem[0].Integer.Value,
+        .rate_present = elem[1].Integer.Value,
+        .capacity_remaining = elem[2].Integer.Value,
+        .voltage_present = elem[3].Integer.Value,
+    };
+    ACPI_FREE(obj);
+
+    return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
+}
+
+static mx_status_t cmd_bif(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
+    acpi_cmd_bif_t* cmd = _cmd;
+    if (cmd->hdr.len != sizeof(*cmd)) {
+        return send_error(h, cmd->hdr.request_id, ERR_INVALID_ARGS);
+    }
+
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = NULL,
+    };
+    mx_status_t status = AcpiEvaluateObject(ctx->ns_node, (char*)"_BIF", NULL, &buffer);
+    if (status != AE_OK) {
+        printf("Failed to find object's BIF method\n");
+        return send_error(h, cmd->hdr.request_id, ERR_NOT_FOUND);
+    }
+
+    ACPI_OBJECT* obj = (ACPI_OBJECT*)buffer.Pointer;
+    if (obj->Type != ACPI_TYPE_PACKAGE || obj->Package.Count != 13) {
+        ACPI_FREE(obj);
+        return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
+    }
+    ACPI_OBJECT* elem = obj->Package.Elements;
+    for (int i = 0; i < 9; i++) {
+        if (elem[i].Type != ACPI_TYPE_INTEGER) {
+            ACPI_FREE(obj);
+            return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
+        }
+    }
+    for (int i = 9; i < 13; i++) {
+        if (elem[i].Type != ACPI_TYPE_STRING) {
+            ACPI_FREE(obj);
+            return send_error(h, cmd->hdr.request_id, ERR_INTERNAL);
+        }
+    }
+
+    acpi_rsp_bif_t rsp = {
+        .hdr = {
+            .status = NO_ERROR,
+            .len = sizeof(rsp),
+            .request_id = cmd->hdr.request_id,
+        },
+        .power_unit = elem[0].Integer.Value,
+        .capacity_design = elem[1].Integer.Value,
+        .capacity_full = elem[2].Integer.Value,
+        .technology = elem[3].Integer.Value,
+        .voltage_design = elem[4].Integer.Value,
+        .capacity_warning = elem[5].Integer.Value,
+        .capacity_low = elem[6].Integer.Value,
+        .capacity_granularity = elem[7].Integer.Value,
+        .capacity_granularity2 = elem[8].Integer.Value,
+    };
+    strncpy(rsp.model, elem[9].String.Pointer, sizeof(rsp.model));
+    strncpy(rsp.serial, elem[10].String.Pointer, sizeof(rsp.serial));
+    strncpy(rsp.type, elem[11].String.Pointer, sizeof(rsp.type));
+    strncpy(rsp.oem, elem[12].String.Pointer, sizeof(rsp.oem));
+    rsp.model[sizeof(rsp.model)-1] = '\0';
+    rsp.serial[sizeof(rsp.serial)-1] = '\0';
+    rsp.type[sizeof(rsp.type)-1] = '\0';
+    rsp.oem[sizeof(rsp.oem)-1] = '\0';
+    ACPI_FREE(obj);
 
     return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
 }

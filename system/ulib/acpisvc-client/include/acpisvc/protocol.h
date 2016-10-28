@@ -17,6 +17,8 @@ enum {
     ACPI_CMD_GET_PCI_INIT_ARG = 3,
     ACPI_CMD_S_STATE_TRANSITION = 4,
     ACPI_CMD_PS0 = 5,
+    ACPI_CMD_BST = 6,
+    ACPI_CMD_BIF = 7,
 };
 
 typedef struct {
@@ -99,3 +101,36 @@ typedef struct {
 typedef struct {
     acpi_rsp_hdr_t hdr;
 } __PACKED acpi_rsp_ps0_t;
+
+typedef struct {
+    acpi_cmd_hdr_t hdr;
+} __PACKED acpi_cmd_bst_t;
+typedef struct {
+    acpi_rsp_hdr_t hdr;
+
+    uint32_t state;
+    uint32_t rate_present;
+    uint32_t capacity_remaining;
+    uint32_t voltage_present;
+} __PACKED acpi_rsp_bst_t;
+
+typedef struct {
+    acpi_cmd_hdr_t hdr;
+} __PACKED acpi_cmd_bif_t;
+typedef struct {
+    acpi_rsp_hdr_t hdr;
+
+    uint32_t power_unit;
+    uint32_t capacity_design;
+    uint32_t capacity_full;
+    uint32_t technology;
+    uint32_t voltage_design;
+    uint32_t capacity_warning;
+    uint32_t capacity_low;
+    uint32_t capacity_granularity;
+    uint32_t capacity_granularity2;
+    char model[32];
+    char serial[32];
+    char type[32];
+    char oem[32];
+} __PACKED acpi_rsp_bif_t;

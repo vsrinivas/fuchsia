@@ -75,4 +75,14 @@ mx_status_t acpi_s_state_transition(acpi_handle_t* h, uint8_t target_state);
 // NOTE: this is a temporary interface that will be removed soon.
 mx_status_t acpi_ps0(acpi_handle_t* h, char* path, size_t len);
 
+// Execute BST for an ACPI node
+//
+// NOTE: this is a temporary interface that will be removed soon.
+mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response);
+
+// Execute BIF for an ACPI node
+//
+// NOTE: this is a temporary interface that will be removed soon.
+mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response);
+
 __END_CDECLS
