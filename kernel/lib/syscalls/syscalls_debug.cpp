@@ -150,10 +150,6 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     if (status != NO_ERROR)
         return status;
 
-    // Disallow this call on self.
-    if (process.get() == up)
-        return ERR_INVALID_ARGS;
-
     auto aspace = process->aspace();
     if (!aspace)
         return ERR_BAD_STATE;
