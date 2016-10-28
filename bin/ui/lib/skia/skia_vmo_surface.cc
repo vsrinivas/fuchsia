@@ -95,7 +95,7 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
   }
 
   mx::vmo vmo;
-  if (mx::vmo::create(0, total_bytes, &vmo) < 0) {
+  if (mx::vmo::create(total_bytes, 0, &vmo) < 0) {
     FTL_LOG(ERROR) << "mx_vmo_create failed";
     return nullptr;
   }
