@@ -102,11 +102,11 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
         [BOOTSTRAP_PROC] = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS),
     };
 
-    mx_status_t status = mx_msgpipe_write(
-        to_child, &msg, sizeof(msg),
-        handles, sizeof(handles) / sizeof(handles[0]), 0);
+    mx_status_t status = mx_channel_write(
+        to_child, 0, &msg, sizeof(msg),
+        handles, sizeof(handles) / sizeof(handles[0]));
     check(log, status,
-          "mx_msgpipe_write of loader bootstrap message failed\n");
+          "mx_channel_write of loader bootstrap message failed\n");
 }
 
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t proc_self,

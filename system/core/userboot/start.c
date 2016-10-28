@@ -144,10 +144,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (root_resource_handle < 0)
         fail(log, root_resource_handle, "mx_handle_duplicate failed\n");
 
-    // Make the message pipe for the bootstrap message.
+    // Make the channel for the bootstrap message.
     mx_handle_t pipeh[2];
-    status = mx_msgpipe_create(pipeh, 0);
-    check(log, status, "mx_msgpipe_create failed\n");
+    status = mx_channel_create(0, &pipeh[0], &pipeh[1]);
+    check(log, status, "mx_channel_create failed\n");
     mx_handle_t to_child = pipeh[0];
     mx_handle_t child_start_handle = pipeh[1];
 
@@ -205,8 +205,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Now send the bootstrap message, consuming both our VMO handles. We also
     // send the job handle, which in the future means that we can't create more
     // processes from here on.
-    status = mx_msgpipe_write(to_child, buffer, nbytes, handles, nhandles, 0);
-    check(log, status, "mx_msgpipe_write to child failed\n");
+    status = mx_channel_write(to_child, 0, buffer, nbytes, handles, nhandles);
+    check(log, status, "mx_channel_write to child failed\n");
     status = mx_handle_close(to_child);
     check(log, status, "mx_handle_close failed on message pipe handle\n");
 
