@@ -17,17 +17,17 @@ int thread_injection_test(void) {
 
     char msg[128];
 
-    // Create a message pipe to communicate with the injector.  This
-    // pipe will serve two purposes.  First, we'll use it to give the
+    // Create a channel to communicate with the injector.  This channel
+    // will serve two purposes.  First, we'll use it to give the
     // injector some important bits and our process handle.  Second,
-    // it will serve as the bootstrap pipe for the injected program.
+    // it will serve as the bootstrap channel for the injected program.
     // There is no facility for the injector to inject a handle into
     // another process, so it relies on us (the injectee) having
-    // created the pipe beforehand and told the injector its handle
+    // created the channel beforehand and told the injector its handle
     // number in this process.
-    mx_handle_t pipeh[2];
-    mx_status_t status = mx_msgpipe_create(pipeh, 0);
-    snprintf(msg, sizeof(msg), "mx_msgpipe_create failed: %d", status);
+    mx_handle_t channelh[2];
+    mx_status_t status = mx_channel_create(0, channelh, channelh + 1);
+    snprintf(msg, sizeof(msg), "mx_channel_create failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
     // Start the injector program, which will inject a third program
@@ -35,7 +35,7 @@ int thread_injection_test(void) {
     const char* argv[] = { "/boot/bin/thread-injection-injector" };
     uint32_t id = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
     mx_handle_t proc = launchpad_launch_mxio_etc(argv[0], 1, argv, NULL,
-                                                 1, &pipeh[1], &id);
+                                                 1, &channelh[1], &id);
     snprintf(msg, sizeof(msg), "launchpad_launch_mxio_etc failed: %d", proc);
     ASSERT_GT(proc, 0, msg);
     mx_handle_close(proc);
@@ -45,15 +45,15 @@ int thread_injection_test(void) {
     atomic_int my_futex = ATOMIC_VAR_INIT(0);
     struct helper_data data = {
         .futex_addr = &my_futex,
-        .bootstrap = pipeh[0],
+        .bootstrap = channelh[0],
     };
     proc = mx_handle_duplicate(mx_process_self(), MX_RIGHT_SAME_RIGHTS);
     snprintf(msg, sizeof(msg), "mx_handle_duplicate failed on %#x: %d",
              mx_process_self(), status);
     ASSERT_GT(proc, 0, msg);
 
-    status = mx_msgpipe_write(pipeh[0], &data, sizeof(data), &proc, 1, 0);
-    snprintf(msg, sizeof(msg), "mx_msgpipe_write failed: %d", status);
+    status = mx_channel_write(channelh[0], 0, &data, sizeof(data), &proc, 1);
+    snprintf(msg, sizeof(msg), "mx_channel_write failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
     // Now the injector will inject the "injected" program into this process.

@@ -10,7 +10,7 @@
 int main(void) {
     char data[128];
     mx_handle_t h0, h1;
-    uint32_t dsz, hsz;
+    uint32_t hsz;
     mx_status_t r;
 
     puts("helper: start");
@@ -21,9 +21,8 @@ int main(void) {
         return -1;
     }
 
-    dsz = sizeof(data);
     hsz = 1;
-    if ((r = mx_msgpipe_read(h0, data, &dsz, &h1, &hsz, 0)) < 0) {
+    if ((r = mx_channel_read(h0, 0, data, sizeof(data), NULL, &h1, hsz, &hsz)) < 0) {
         printf("helper: failed to read message %d\n", r);
         return -1;
     }
@@ -31,9 +30,9 @@ int main(void) {
         printf("no handle received\n");
         return -1;
     }
-    if ((r = mx_msgpipe_write(h1, "okay", 5, &h1, 1, 0)) < 0) {
+    if ((r = mx_channel_write(h1, 0, "okay", 5, &h1, 1)) < 0) {
         printf("helper: failed to write message %d\n", r);
-        mx_msgpipe_write(h1, "fail", 5, NULL, 0, 0);
+        mx_channel_write(h1, 0, "fail", 5, NULL, 0);
         return -1;
     }
     puts("helper: done");

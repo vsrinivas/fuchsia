@@ -96,8 +96,8 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
         // Create another handler server, responsible for dealing with the file.
         mx_handle_t file_handle_client;
         mx_handle_t file_handle_server;
-        file_handle_client = mx_msgpipe_create(&file_handle_server);
-        EXPECT_GT(file_handle_client, 0, "Invalid file handle client");
+        mx_status_t status = mx_channel_create(0, &file_handle_client, &file_handle_server);
+        EXPECT_GT(status, NO_ERROR, "Failed to create channel");
         EXPECT_EQ(NO_ERROR, mxio_handler_create(file_handle_server,
                                                 callback_file_access,
                                                 (void*)file_cookie_gold),
@@ -117,11 +117,11 @@ mx_status_t callback_directory_access(mx_rio_msg_t* msg, void* cookie) {
 
 bool remoteio_test(void) {
     BEGIN_TEST;
-    // First, initialize the message pipes we'll be passing around later.
+    // First, initialize the channels we'll be passing around later.
     mx_handle_t dir_handle_client;
     mx_handle_t dir_handle_server;
-    dir_handle_client = mx_msgpipe_create(&dir_handle_server);
-    EXPECT_GT(dir_handle_client, 0, "Invalid dir handle client");
+    mx_status_t status = mx_channel_create(0, &dir_handle_client, &dir_handle_server);
+    EXPECT_EQ(status, NO_ERROR, "Failed to create channel");
 
     // Next, initialize the directory server.
     EXPECT_EQ(NO_ERROR, mxio_handler_create(dir_handle_server,

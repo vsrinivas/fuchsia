@@ -31,10 +31,10 @@ bool cleanup_test(void) {
     thrd_detach(thread);
 
     // TEST1
-    // Create a pipe, close one end, try to wait on the other.
+    // Create a channel, close one end, try to wait on the other.
     test_state = 1;
-    r = mx_msgpipe_create(p1, 0);
-    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
+    r = mx_channel_create(0, p1, p1 + 1);
+    ASSERT_EQ(r, 0, "cleanup-test: channel create 1 failed");
 
     mx_handle_close(p1[1]);
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
@@ -48,21 +48,21 @@ bool cleanup_test(void) {
     mx_handle_close(p1[1]);
 
     // TEST2
-    // Create a pipe, close one end. Then create an event and write a
-    // message on the pipe sending the event along. The event normally
+    // Create a channel, close one end. Then create an event and write a
+    // message on the channel sending the event along. The event normally
     // dissapears from this process handle table but since the message_write
     // fails (because the other end is closed) The event should still
     // be usable from this process.
     test_state = 2;
-    r = mx_msgpipe_create(p1, 0);
-    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
+    r = mx_channel_create(0, p1, p1 + 1);
+    ASSERT_EQ(r, 0, "cleanup-test: channel create 1 failed");
     mx_handle_close(p1[1]);
 
     mx_handle_t event;
     r = mx_event_create(0u, &event);
     ASSERT_EQ(r, 0, "");
     ASSERT_GE(event, 0, "cleanup-test: event create failed");
-    r = mx_msgpipe_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
+    r = mx_channel_write(p1[0], 0, &msg, sizeof(msg), &event, 1);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
     r = mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED);
@@ -73,23 +73,23 @@ bool cleanup_test(void) {
     mx_handle_close(p1[0]);
 
     // TEST3
-    // Simulates the case where we prepare a message pipe with a
-    // message+pipehandle already in it and the far end closed,
+    // Simulates the case where we prepare a message channel with a
+    // message+channelhandle already in it and the far end closed,
     // like we pass to newly created processes, but then (say
     // process creation fails), we delete the other end of the
-    // pipe we were going to send.  At this point we expect
-    // that the pipe handle bundled with the message should
+    // channel we were going to send.  At this point we expect
+    // that the channel handle bundled with the message should
     // be closed and waiting on the opposing handle should
     // signal PEER_CLOSED.
     test_state = 3;
-    r = mx_msgpipe_create(p0, 0);
-    ASSERT_EQ(r, 0, "cleanup-test: pipe create 0 failed");
+    r = mx_channel_create(0, p0, p0 + 1);
+    ASSERT_EQ(r, 0, "cleanup-test: channel create 0 failed");
 
-    r = mx_msgpipe_create(p1, 0);
-    ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
+    r = mx_channel_create(0, p1, p1 + 1);
+    ASSERT_EQ(r, 0, "cleanup-test: channel create 1 failed");
 
-    r = mx_msgpipe_write(p0[0], &msg, sizeof(msg), &p1[1], 1, 0);
-    ASSERT_GE(r, 0, "cleanup-test: pipe write failed");
+    r = mx_channel_write(p0[0], 0, &msg, sizeof(msg), &p1[1], 1);
+    ASSERT_GE(r, 0, "cleanup-test: channel write failed");
 
     mx_handle_close(p0[0]);
     mx_handle_close(p0[1]);

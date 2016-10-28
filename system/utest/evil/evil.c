@@ -186,15 +186,15 @@ int writespam(int opt) {
     mx_status_t r;
     uint64_t count = 0;
 
-    if ((r = mx_msgpipe_create(p, 0)) < 0) {
-        printf("cleanup-test: pipe create 0 failed: %d\n", r);
+    if ((r = mx_channel_create(0, p, p + 1)) < 0) {
+        printf("cleanup-test: channel create 0 failed: %d\n", r);
         return -1;
     }
 
-    printf("evil-tests: about to spam data into a pipe\n");
+    printf("evil-tests: about to spam data into a channel\n");
     for (;;) {
         count++;
-        if ((r = mx_msgpipe_write(p[0], data, sizeof(data), NULL, 0, 0)) < 0) {
+        if ((r = mx_channel_write(p[0], 0, data, sizeof(data), NULL, 0)) < 0) {
             printf("evil-tests: SUCCESS, writespammer error %d after only %" PRIu64 " writes\n", r, count);
             return 0;
         }
@@ -203,11 +203,11 @@ int writespam(int opt) {
         }
     }
     if (opt == 0) {
-        printf("evil-tests: closing the pipe (full of messages)\n");
+        printf("evil-tests: closing the channel (full of messages)\n");
         mx_handle_close(p[0]);
         mx_handle_close(p[1]);
     } else {
-        printf("evil-tests: leaving the pipe open (full of messages)\n");
+        printf("evil-tests: leaving the channel open (full of messages)\n");
     }
     return 0;
 }
@@ -219,13 +219,13 @@ int handlespam(void) {
     printf("evil-tests: about to create all the handles\n");
     for (;;) {
         mx_status_t status;
-        if ((status = mx_msgpipe_create(p, 0)) < 0) {
-            printf("evil-tests: SUCCESS, pipe create failed %d after %" PRIu64 " created\n", status, count);
+        if ((status = mx_channel_create(0, p, p + 1)) < 0) {
+            printf("evil-tests: SUCCESS, channel create failed %d after %" PRIu64 " created\n", status, count);
             return 0;
         }
         count++;
         if ((count % 1000) == 0) {
-            printf("evil-tests: created %" PRIu64 " message pipes\n", count);
+            printf("evil-tests: created %" PRIu64 " channels\n", count);
         }
     }
     return 0;
@@ -234,8 +234,8 @@ int handlespam(void) {
 int main(int argc, char** argv) {
     if (argc < 2) {
         printf(
-            "usage: evil-tests spam1        spam writes into pipe\n"
-            "       evil-tests spam2        spam writes, don't close pipe after\n"
+            "usage: evil-tests spam1        spam writes into channel\n"
+            "       evil-tests spam2        spam writes, don't close channel after\n"
             "       evil-tests spam3        spam handle creation\n"
             "       evil-tests heap1 <n>    heap stress test, locking\n"
             "       evil-tests heap2 <n>    heap stress test, no locking\n");
