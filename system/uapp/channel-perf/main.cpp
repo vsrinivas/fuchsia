@@ -41,7 +41,7 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
 
     // We'll write to mp[0] (and read from mp[1]).
     mx_handle_t mp[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    status = mx_msgpipe_create(mp, 0u);
+    status = mx_channel_create(0u, &mp[0], &mp[1]);
     assert(status == NO_ERROR);
 
     // We'll send/receive duplicates of this handle.
@@ -62,8 +62,8 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
     // Pre-queue |test_args.queue| messages (there'll always be this many messages in the queue).
     for (uint32_t i = 0; i < test_args.queue; i++) {
         duplicate_handles(test_args.handles, event, handles.get());
-        status = mx_msgpipe_write(mp[0], data.get(), test_args.size, handles.get(),
-                                  test_args.handles, 0u);
+        status = mx_channel_write(mp[0], 0u, data.get(), test_args.size,
+                                  handles.get(), test_args.handles);
         assert(status == NO_ERROR);
     }
 
@@ -76,13 +76,14 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
     for (;;) {
         big_its++;
         for (uint32_t i = 0; i < big_it_size; i++) {
-            status = mx_msgpipe_write(mp[0], data.get(), test_args.size, handles.get(),
-                                      test_args.handles, 0u);
+            status = mx_channel_write(mp[0], 0, data.get(), test_args.size,
+                                      handles.get(), test_args.handles);
             assert(status == NO_ERROR);
 
             uint32_t r_size = test_args.size;
             uint32_t r_handles = test_args.handles;
-            status = mx_msgpipe_read(mp[1], data.get(), &r_size, handles.get(), &r_handles, 0u);
+            status = mx_channel_read(mp[1], 0u, data.get(), r_size, &r_size,
+                                     handles.get(), r_handles, &r_handles);
             assert(status == NO_ERROR);
             assert(r_size == test_args.size);
             assert(r_handles == test_args.handles);

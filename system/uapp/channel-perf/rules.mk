@@ -11,8 +11,6 @@ MODULE_TYPE := userapp
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
 
-MODULE_NAME := msgpipe-perf
-
 MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl ulib/mxcpp ulib/mxtl
 
 include make/module.mk
