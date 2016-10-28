@@ -9,9 +9,8 @@
 
 mx_status_t mxr_message_size(mx_handle_t msg_pipe,
                              uint32_t* nbytes, uint32_t* nhandles) {
-    *nbytes = *nhandles = 0;
-    mx_status_t status = _mx_msgpipe_read(
-        msg_pipe, NULL, nbytes, NULL, nhandles, 0);
+    mx_status_t status = _mx_channel_read(
+        msg_pipe, 0, NULL, 0, nbytes, NULL, 0, nhandles);
     if (status == ERR_BUFFER_TOO_SMALL)
         status = NO_ERROR;
     return status;

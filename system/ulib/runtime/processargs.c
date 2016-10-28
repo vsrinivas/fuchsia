@@ -21,10 +21,10 @@ mx_status_t mxr_processargs_read(mx_handle_t bootstrap,
     if ((uintptr_t)buffer % alignof(mx_proc_args_t) != 0)
         return ERR_INVALID_ARGS;
 
-    uint32_t got_bytes = nbytes;
-    uint32_t got_handles = nhandles;
-    mx_status_t status = _mx_msgpipe_read(bootstrap, buffer, &got_bytes,
-                                          handles, &got_handles, 0);
+    uint32_t got_bytes = 0;
+    uint32_t got_handles = 0;
+    mx_status_t status = _mx_channel_read(bootstrap, 0, buffer, nbytes, &got_bytes,
+                                          handles, nhandles, &got_handles);
     if (status != NO_ERROR)
         return status;
     if (got_bytes != nbytes || got_handles != nhandles)
