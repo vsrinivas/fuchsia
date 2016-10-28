@@ -37,7 +37,12 @@ fi
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-o outdir] [-d destdir] [-j jobs]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-o outdir] [-d destdir] [-j jobs]\n' "$0"
+  echo >&2 "-c:         clean the build directories first"
+  echo >&2 "-o outdir:  build the tools here"
+  echo >&2 "-d destdir: install the tools here"
+  echo >&2 "-j jobs:    passed to make/ninja"
+  exit 1
 }
 
 build() {
