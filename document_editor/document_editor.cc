@@ -162,6 +162,9 @@ std::ostream& operator<<(std::ostream& os, Value* v) {
     case Value::Tag::__UNKNOWN__:
       os << "(unknown)";
       break;
+    default:
+      os << "(unimplemented value type)";
+      break;
   }
   return os;
 }
