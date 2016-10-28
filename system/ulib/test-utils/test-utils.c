@@ -119,8 +119,9 @@ void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
 
 void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
                      mx_handle_t* handles, uint32_t* num_handles) {
-    mx_status_t status = mx_channel_read(handle, flags, bytes, *num_bytes, num_bytes,
-                                         handles, *num_handles, num_handles);
+    mx_status_t status = mx_channel_read(handle, flags,
+                                         bytes, num_bytes ? *num_bytes : 0, num_bytes,
+                                         handles, num_handles ? *num_handles : 0, num_handles);
     if (status < 0)
         tu_fatal(__func__, status);
 }
