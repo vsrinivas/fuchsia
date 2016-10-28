@@ -12,11 +12,11 @@
 
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
+#include <mx/port.h>
 
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "lib/mtl/handles/unique_handle.h"
 
 namespace debugserver {
 
@@ -92,7 +92,7 @@ class ExceptionPort final {
   // Worker() even runs on the |io_thread_| which is extremely unlikely. But we
   // play safe anyway.
   std::mutex eport_mutex_;
-  mtl::UniqueHandle eport_handle_;
+  mx::port eport_handle_;
 
   // The thread on which we wait on the exception port.
   std::thread io_thread_;

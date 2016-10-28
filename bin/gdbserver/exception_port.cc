@@ -68,24 +68,22 @@ ExceptionPort::ExceptionPort() : keep_running_(false) {
 }
 
 ExceptionPort::~ExceptionPort() {
-  if (eport_handle_.is_valid())
+  if (eport_handle_)
     Quit();
 }
 
 bool ExceptionPort::Run() {
-  FTL_DCHECK(!eport_handle_.is_valid());
+  FTL_DCHECK(!eport_handle_);
   FTL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  mx_handle_t eport_handle;
-  mx_status_t status = mx_port_create(0u, &eport_handle);
+  mx_status_t status = mx::port::create(0u, &eport_handle_);
   if (status < 0) {
     util::LogErrorWithMxStatus("Failed to create the exception port", status);
     return false;
   }
 
-  eport_handle_.reset(eport_handle);
-  FTL_DCHECK(eport_handle_.is_valid());
+  FTL_DCHECK(eport_handle_);
 
   keep_running_ = true;
   io_thread_ = std::thread(std::bind(&ExceptionPort::Worker, this));
@@ -94,7 +92,7 @@ bool ExceptionPort::Run() {
 }
 
 void ExceptionPort::Quit() {
-  FTL_DCHECK(eport_handle_.is_valid());
+  FTL_DCHECK(eport_handle_);
   FTL_DCHECK(keep_running_);
 
   FTL_LOG(INFO) << "Quitting exception port I/O loop";
@@ -110,7 +108,7 @@ void ExceptionPort::Quit() {
     mx_packet_header_t packet;
     memset(&packet, 0, sizeof(packet));
     packet.type = MX_PORT_PKT_TYPE_USER;
-    mx_port_queue(eport_handle_.get(), &packet, sizeof(packet));
+    eport_handle_.queue(&packet, sizeof(packet));
   }
 
   io_thread_.join();
@@ -120,7 +118,7 @@ void ExceptionPort::Quit() {
 
 ExceptionPort::Key ExceptionPort::Bind(const Process& process,
                                        const Callback& callback) {
-  FTL_DCHECK(eport_handle_.is_valid());
+  FTL_DCHECK(eport_handle_);
 
   mx_handle_t process_handle = process.handle();
   if (process_handle == MX_HANDLE_INVALID) {
@@ -177,7 +175,7 @@ bool ExceptionPort::Unbind(const Key key) {
 }
 
 void ExceptionPort::Worker() {
-  FTL_DCHECK(eport_handle_.is_valid());
+  FTL_DCHECK(eport_handle_);
   FTL_VLOG(1) << "ExceptionPort I/O thread started";
 
   mx_handle_t eport;

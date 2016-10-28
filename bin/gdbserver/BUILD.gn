@@ -46,6 +46,7 @@ executable("bin") {
   deps = [
     "//lib/ftl",
     "//lib/mtl",
+    "//magenta/system/ulib/mx",
   ]
 
   libs = [
