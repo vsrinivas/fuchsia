@@ -5,6 +5,8 @@
 declare_args() {
   # list of modules
   modules = "default"
+  # if true, mkbootfs will compress the user.bootfs
+  compress_bootfs = true
 }
 
 group("default") {
@@ -53,4 +55,8 @@ action("mkbootfs") {
     "--manifest",
     rebase_path(manifest_file),
   ]
+
+  if (compress_bootfs) {
+    args += [ "--compress" ]
+  }
 }
