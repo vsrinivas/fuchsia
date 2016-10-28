@@ -24,13 +24,6 @@
  */
 
 
-#include <sys/cdefs.h>
-#ifndef lint
-__RCSID("$NetBSD: main.c,v 1.10 1997/10/01 02:18:14 enami Exp $");
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -38,7 +31,6 @@ static const char rcsid[] =
 #include <errno.h>
 #include <stdarg.h>
 
-#include "fsutil.h"
 #include "ext.h"
 
 int alwaysno;		/* assume "no" for all questions */
@@ -47,10 +39,7 @@ int preen;		/* set when preening */
 int rdonly;		/* device is opened read only (supersedes above) */
 int skipclean;		/* skip clean file systems if preening */
 
-static void usage(void) __dead2;
-
-static void
-usage(void)
+static void usage(void)
 {
 
 	fprintf(stderr, "%s\n%s\n",
@@ -109,7 +98,6 @@ main(int argc, char **argv)
 		usage();
 
 	while (--argc >= 0) {
-		setcdevname(*argv, preen);
 		erg = checkfilesys(*argv++);
 		if (erg > ret)
 			ret = erg;

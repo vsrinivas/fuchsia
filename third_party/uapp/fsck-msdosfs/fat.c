@@ -24,13 +24,6 @@
  */
 
 
-#include <sys/cdefs.h>
-#ifndef lint
-__RCSID("$NetBSD: fat.c,v 1.18 2006/06/05 16:51:18 christos Exp $");
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -38,7 +31,6 @@ static const char rcsid[] =
 #include <unistd.h>
 
 #include "ext.h"
-#include "fsutil.h"
 
 static int checkclnum(struct bootblock *, u_int, cl_t, cl_t *);
 static int clustdiffer(cl_t, cl_t *, cl_t *, u_int);

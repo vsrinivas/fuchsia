@@ -24,13 +24,6 @@
  */
 
 
-#include <sys/cdefs.h>
-#ifndef lint
-__RCSID("$NetBSD: check.c,v 1.14 2006/06/05 16:51:18 christos Exp $");
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -38,7 +31,6 @@ static const char rcsid[] =
 #include <fcntl.h>
 
 #include "ext.h"
-#include "fsutil.h"
 
 int
 checkfilesys(const char *fname)

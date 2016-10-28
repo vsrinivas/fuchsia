@@ -32,6 +32,10 @@
 
 #include "dosfs.h"
 
+#define perr(...) printf(__VA_ARGS__)
+#define pfatal(...) printf(__VA_ARGS__)
+#define pwarn(...) printf(__VA_ARGS__)
+
 #define	LOSTDIR	"LOST.DIR"
 
 /*
