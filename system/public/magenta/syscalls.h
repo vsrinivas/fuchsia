@@ -22,6 +22,8 @@ __BEGIN_CDECLS
 
 // Compatibility Wrappers
 
+#ifndef WITHOUT_COMPAT_SYSCALLS
+
 #define mx_msgpipe_create _mx_msgpipe_create
 static inline mx_status_t _mx_msgpipe_create(mx_handle_t* out, uint32_t flags) {
     return mx_channel_create(flags, &out[0], &out[1]);
@@ -76,5 +78,7 @@ static inline mx_ssize_t _mx_debug_write_memory(mx_handle_t proc, uintptr_t vadd
         return len;
     }
 }
+
+#endif
 
 __END_CDECLS
