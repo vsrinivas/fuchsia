@@ -43,7 +43,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags) {
     ios->vn = vn;
     ios->io_flags = flags;
 
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+    if ((r = mx_channel_create(0, &h[0], &h[1])) < 0) {
         free(ios);
         return r;
     }
