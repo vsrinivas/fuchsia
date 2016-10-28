@@ -195,7 +195,7 @@ bool handle_wait_test(void) {
               "thread creation failed");
     unittest_printf("threads started\n");
 
-    event_handle = mx_event_create(0u);
+    ASSERT_EQ(mx_event_create(0u, &event_handle), 0, "");
     ASSERT_GT(event_handle, 0, "event creation failed");
 
     enum message msg;

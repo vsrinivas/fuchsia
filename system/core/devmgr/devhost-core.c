@@ -326,10 +326,11 @@ mx_status_t devhost_device_add(mx_device_t* dev, mx_device_t* parent) {
 #endif
 
     // Don't create an event handle if we alredy have one
-    if (dev->event == MX_HANDLE_INVALID && (dev->event = mx_event_create(0)) < 0) {
+    if ((dev->event == MX_HANDLE_INVALID) &&
+        ((status = mx_event_create(0, &dev->event)) < 0)) {
         printf("device add: %p(%s): cannot create event: %d\n",
-               dev, dev->name, dev->event);
-       return dev->event;
+               dev, dev->name, status);
+       return status;
     }
 
     dev->flags |= DEV_FLAG_BUSY;

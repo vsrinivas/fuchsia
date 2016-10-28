@@ -92,9 +92,9 @@ static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE, ACPI_HANDLE*, UINT32*);
 static ACPI_STATUS get_ec_ports(ACPI_HANDLE, uint16_t*, uint16_t*);
 
 void ec_init(void) {
-    pending_sci_evt = mx_event_create(0);
-    if (pending_sci_evt <= 0) {
-        xprintf("Failed to create event: %d\n", pending_sci_evt);
+    mx_status_t err = mx_event_create(0, &pending_sci_evt);
+    if (err < 0) {
+        xprintf("Failed to create event: %d\n", err);
         return;
     }
 

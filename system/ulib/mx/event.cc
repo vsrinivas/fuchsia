@@ -9,14 +9,14 @@
 namespace mx {
 
 mx_status_t event::create(uint32_t options, event* result) {
-    mx_handle_t h = mx_event_create(options);
-    if (h < 0) {
+    mx_handle_t h;
+    mx_status_t status = mx_event_create(options, &h);
+    if (status < 0) {
         result->reset(MX_HANDLE_INVALID);
-        return h;
     } else {
         result->reset(h);
-        return NO_ERROR;
     }
+    return status;
 }
 
 } // namespace mx

@@ -9,7 +9,7 @@ event_create - create an event
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_event_create(uint32_t options);
+mx_status_t mx_event_create(uint32_t options, mx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -25,9 +25,8 @@ Note: *options* is currently ignored.
 
 ## RETURN VALUE
 
-**event_create**() returns a valid event handle (strictly positive) on success.
-On failure, a (strictly) negative error value is returned. Zero (the "invalid
-handle") is never returned.
+**event_create**() returns NO_ERROR and a valid event handle (via *out*) on success.
+On failure, an error value is returned.
 
 ## ERRORS
 

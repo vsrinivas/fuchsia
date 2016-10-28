@@ -118,7 +118,7 @@ MAGENTA_SYSCALL_DEF(2, 2, 86, mx_status_t, task_resume, mx_handle_t task_handle,
 MAGENTA_SYSCALL_DEF(1, 1, 87, mx_status_t, task_kill, mx_handle_t task_handle);
 
 // Synchronization
-MAGENTA_SYSCALL_DEF(1, 1, 90, mx_handle_t, event_create, uint32_t options)
+MAGENTA_SYSCALL_DEF(2, 2, 90, mx_status_t, event_create, uint32_t options, USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(2, 2, 91, mx_status_t, eventpair_create, USER_PTR(mx_handle_t) out_handles /* [2] */,
                     uint32_t flags)
 MAGENTA_SYSCALL_DEF(3, 4, 93, mx_status_t, futex_wait, USER_PTR(mx_futex_t) value_ptr, int current_value, mx_time_t timeout)

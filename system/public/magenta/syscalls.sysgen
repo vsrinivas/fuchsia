@@ -194,8 +194,8 @@ syscall task_kill
 # Synchronization
 
 syscall event_create
-    (options: uint32_t)
-    returns (mx_handle_t);
+    (options: uint32_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall eventpair_create
     (out_handles: mx_handle_t[2] OUT, flags: uint32_t)

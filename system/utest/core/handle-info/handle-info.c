@@ -12,7 +12,8 @@
 bool handle_info_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t event = mx_event_create(0u);
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), 0, "");
     mx_handle_t duped = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
 
     ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u), NO_ERROR,
@@ -45,7 +46,8 @@ bool handle_info_test(void) {
 bool handle_rights_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t event = mx_event_create(0u);
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), 0, "");
     mx_handle_t duped_ro = mx_handle_duplicate(event, MX_RIGHT_READ);
 
     mx_info_handle_basic_t info = {0};

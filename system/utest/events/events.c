@@ -63,12 +63,9 @@ static bool basic_test(void) {
     BEGIN_TEST;
 
     mx_handle_t events[3];
-    events[0] = mx_event_create(0U);
-    ASSERT_GE(events[0], 0, "Error during event create");
-    events[1] = mx_event_create(1U);
-    ASSERT_GE(events[1], 0, "Error during event create");
-    events[2] = mx_event_create(2U);
-    ASSERT_GE(events[2], 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0u, &events[0]), 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0u, &events[1]), 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0u, &events[2]), 0, "Error during event create");
 
     thrd_t threads[4];
     int ret = thrd_create_with_name(&threads[3], thread_fn_1, events, "master");
@@ -118,12 +115,9 @@ static bool user_signals_test(void) {
     BEGIN_TEST;
 
     mx_handle_t events[3];
-    events[0] = mx_event_create(0U);
-    ASSERT_GE(events[0], 0, "Error during event create");
-    events[1] = mx_event_create(1U);
-    ASSERT_GE(events[1], 0, "Error during event create");
-    events[2] = mx_event_create(2U);
-    ASSERT_GE(events[2], 0, "Error during event create");
+    ASSERT_GE(mx_event_create(0U, &events[0]), 0, "Error during event create");
+    ASSERT_GE(mx_event_create(0U, &events[1]), 0, "Error during event create");
+    ASSERT_GE(mx_event_create(0U, &events[2]), 0, "Error during event create");
 
     thrd_t threads[4];
     int ret = thrd_create_with_name(&threads[3], thread_fn_3, events, "master");
@@ -160,12 +154,9 @@ static bool wait_signals_test(void) {
     BEGIN_TEST;
 
     mx_handle_t events[3];
-    events[0] = mx_event_create(0U);
-    ASSERT_GE(events[0], 0, "Error during event create");
-    events[1] = mx_event_create(1U);
-    ASSERT_GE(events[1], 0, "Error during event create");
-    events[2] = mx_event_create(2U);
-    ASSERT_GE(events[2], 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0U, &events[0]), 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0U, &events[1]), 0, "Error during event create");
+    ASSERT_EQ(mx_event_create(0U, &events[2]), 0, "Error during event create");
 
     mx_status_t status;
     mx_signals_state_t states[3] = {0};
@@ -229,8 +220,8 @@ static bool wait_signals_test(void) {
 
 static bool reset_test(void) {
     BEGIN_TEST;
-    mx_handle_t event = mx_event_create(0U);
-    ASSERT_GE(event, 0, "Error during event creation");
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0U, &event), 0, "Error during event creation");
     ASSERT_GE(mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");
     ASSERT_GE(mx_object_signal(event, MX_SIGNAL_SIGNALED, 0u), 0, "Error during event reset");
 
@@ -249,8 +240,8 @@ static bool wait_many_failures_test(void) {
     ASSERT_EQ(mx_handle_wait_many(0u, NULL, NULL, 1u, NULL, NULL),
               ERR_TIMED_OUT, "wait_many on zero handles should have timed out");
 
-    mx_handle_t handles[2] = {mx_event_create(0u), MX_HANDLE_INVALID};
-    ASSERT_GT(handles[0], MX_HANDLE_INVALID, "Error during event creation");
+    mx_handle_t handles[2] = { MX_HANDLE_INVALID, MX_HANDLE_INVALID};
+    ASSERT_EQ(mx_event_create(0u, &handles[0]), 0, "Error during event creation");
 
     mx_signals_t signals[2] = {MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
 

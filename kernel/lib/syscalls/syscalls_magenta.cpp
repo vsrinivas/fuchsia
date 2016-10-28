@@ -335,7 +335,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     }
 }
 
-mx_handle_t sys_event_create(uint32_t options) {
+mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("options 0x%x\n", options);
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -351,9 +351,11 @@ mx_handle_t sys_event_create(uint32_t options) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
     up->AddHandle(mxtl::move(handle));
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of size 2 */,

@@ -31,10 +31,10 @@ bool wait_set_create_test(void) {
 bool wait_set_add_remove_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ev[3] = {mx_event_create(0u), mx_event_create(0u), mx_event_create(0u)};
-    ASSERT_GT(ev[0], 0, "mx_event_create() failed");
-    ASSERT_GT(ev[1], 0, "mx_event_create() failed");
-    ASSERT_GT(ev[2], 0, "mx_event_create() failed");
+    mx_handle_t ev[3];
+    ASSERT_EQ(mx_event_create(0u, &ev[0]), 0, "mx_event_create() failed");
+    ASSERT_EQ(mx_event_create(0u, &ev[1]), 0, "mx_event_create() failed");
+    ASSERT_EQ(mx_event_create(0u, &ev[2]), 0, "mx_event_create() failed");
 
     mx_handle_t ws = mx_waitset_create();
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
@@ -77,8 +77,8 @@ bool wait_set_add_remove_test(void) {
 bool wait_set_bad_add_remove_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ev = mx_event_create(0u);
-    ASSERT_GT(ev, 0, "mx_event_create() failed");
+    mx_handle_t ev;
+    ASSERT_EQ(mx_event_create(0u, &ev), 0, "mx_event_create() failed");
 
     mx_handle_t ws = mx_waitset_create();
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
@@ -149,10 +149,10 @@ static bool check_results(uint32_t num_results,
 bool wait_set_wait_single_thread_1_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ev[3] = {mx_event_create(0u), mx_event_create(0u), mx_event_create(0u)};
-    ASSERT_GT(ev[0], 0, "mx_event_create() failed");
-    ASSERT_GT(ev[1], 0, "mx_event_create() failed");
-    ASSERT_GT(ev[2], 0, "mx_event_create() failed");
+    mx_handle_t ev[3];
+    ASSERT_EQ(mx_event_create(0u, &ev[0]), 0, "mx_event_create() failed");
+    ASSERT_EQ(mx_event_create(0u, &ev[1]), 0, "mx_event_create() failed");
+    ASSERT_EQ(mx_event_create(0u, &ev[2]), 0, "mx_event_create() failed");
 
     mx_handle_t ws = mx_waitset_create();
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
@@ -337,8 +337,8 @@ static int closer_thread_fn(void* arg) {
 bool wait_set_wait_threaded_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ev = mx_event_create(0u);
-    ASSERT_GT(ev, 0, "mx_event_create() failed");
+    mx_handle_t ev;
+    ASSERT_EQ(mx_event_create(0u, &ev), 0, "mx_event_create() failed");
 
     mx_handle_t ws = mx_waitset_create();
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
@@ -379,8 +379,8 @@ bool wait_set_wait_threaded_test(void) {
 bool wait_set_wait_cancelled_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t ev = mx_event_create(0u);
-    ASSERT_GT(ev, 0, "mx_event_create() failed");
+    mx_handle_t ev;
+    ASSERT_EQ(mx_event_create(0u, &ev), 0, "mx_event_create() failed");
 
     mx_handle_t ws = mx_waitset_create();
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");

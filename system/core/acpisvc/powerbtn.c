@@ -81,9 +81,10 @@ static int power_button_thread(void* arg) {
 mx_status_t install_powerbtn_handlers(void) {
     // Hacks to make the power button power off the machine
 
-    mx_handle_t power_button_event = mx_event_create(0);
-    if (power_button_event < 0) {
-        return power_button_event;
+    mx_handle_t power_button_event;
+    mx_status_t err = mx_event_create(0, &power_button_event);
+    if (err < 0) {
+        return err;
     }
 
     ACPI_STATUS status = AcpiInstallFixedEventHandler(ACPI_EVENT_POWER_BUTTON,

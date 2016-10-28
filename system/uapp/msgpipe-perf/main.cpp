@@ -45,8 +45,8 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
     assert(status == NO_ERROR);
 
     // We'll send/receive duplicates of this handle.
-    mx_handle_t event = mx_event_create(0u);
-    assert(event > 0);
+    mx_handle_t event;
+    assert(mx_event_create(0u, &event) == NO_ERROR);
 
     // Storage space for our messages' stuff.
     mxtl::unique_ptr<uint8_t[]> data;

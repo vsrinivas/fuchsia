@@ -58,8 +58,9 @@ bool cleanup_test(void) {
     ASSERT_EQ(r, 0, "cleanup-test: pipe create 1 failed");
     mx_handle_close(p1[1]);
 
-    mx_handle_t event = mx_event_create(0u);
-
+    mx_handle_t event;
+    r = mx_event_create(0u, &event);
+    ASSERT_EQ(r, 0, "");
     ASSERT_GE(event, 0, "cleanup-test: event create failed");
     r = mx_msgpipe_write(p1[0], &msg, sizeof(msg), &event, 1, 0);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");

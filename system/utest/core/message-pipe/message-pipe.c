@@ -235,8 +235,8 @@ static bool message_pipe_non_transferable(void) {
 
     mx_handle_t pipe[2];
     ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
-    mx_handle_t event = mx_event_create(0u);
-    ASSERT_GT(event, 0, "failed to create event");
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
     mx_info_handle_basic_t event_handle_info;
     mx_ssize_t get_info_result = mx_object_get_info(event, MX_INFO_HANDLE_BASIC,
             sizeof(event_handle_info.rec), &event_handle_info, sizeof(event_handle_info));
@@ -260,8 +260,8 @@ static bool message_pipe_duplicate_handles(void) {
     mx_handle_t pipe[2];
     ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
 
-    mx_handle_t event = mx_event_create(0u);
-    ASSERT_GT(event, 0, "failed to create event");
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
 
     mx_handle_t dup_handles[2] = { event, event };
     mx_status_t write_result = mx_msgpipe_write(pipe[0], NULL, 0, dup_handles, 2u, 0u);
@@ -393,8 +393,8 @@ static bool message_pipe_may_discard(void) {
     mx_handle_t pipe[2];
     ASSERT_EQ(mx_msgpipe_create(pipe, 0), NO_ERROR, "");
 
-    mx_handle_t event = mx_event_create(0u);
-    ASSERT_GT(event, 0, "failed to create event");
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), 0, "failed to create event");
 
     EXPECT_EQ(mx_handle_wait_one(pipe[1], MX_SIGNAL_READABLE, 0u, NULL), ERR_TIMED_OUT, "");
 
