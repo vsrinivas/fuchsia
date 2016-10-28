@@ -110,7 +110,6 @@ static mxio_ops_t vmofile_ops = {
     .close = vmofile_close,
     .open = mxio_default_open,
     .clone = mxio_default_clone,
-    .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,

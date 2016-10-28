@@ -73,7 +73,6 @@ static mxio_ops_t mxio_waitable_ops = {
     .close = mxwio_close,
     .open = mxio_default_open,
     .clone = mxio_default_clone,
-    .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxwio_wait_begin,
     .wait_end = mxwio_wait_end,

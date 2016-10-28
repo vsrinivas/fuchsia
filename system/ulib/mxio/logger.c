@@ -86,8 +86,9 @@ static mxio_ops_t log_io_ops = {
     .close = log_close,
     .open = mxio_default_open,
     .clone = log_clone,
-    .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
+    .wait_begin = mxio_default_wait_begin,
+    .wait_end = mxio_default_wait_end,
 };
 
 mxio_t* mxio_logger_create(mx_handle_t handle) {

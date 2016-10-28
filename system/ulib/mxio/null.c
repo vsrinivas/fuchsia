@@ -42,10 +42,6 @@ mx_handle_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t mxio_default_wait(mxio_t* io, uint32_t events, uint32_t* pending, mx_time_t timeout) {
-    return ERR_NOT_SUPPORTED;
-}
-
 mx_status_t mxio_default_close(mxio_t* io) {
     return NO_ERROR;
 }
@@ -71,7 +67,6 @@ static mxio_ops_t mx_null_ops = {
     .close = mxio_default_close,
     .open = mxio_default_open,
     .clone = mxio_default_clone,
-    .wait = mxio_default_wait,
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,

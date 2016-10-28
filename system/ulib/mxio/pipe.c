@@ -97,34 +97,6 @@ static void mx_pipe_release(mxio_t* io) {
     free(io);
 }
 
-static mx_status_t mx_pipe_wait(mxio_t* io, uint32_t _events, uint32_t* _pending, mx_time_t timeout) {
-    mx_pipe_t* p = (void*)io;
-    uint32_t events = 0;
-    mx_status_t r;
-    mx_signals_state_t pending;
-
-    if (_events & MXIO_EVT_READABLE) {
-        events |= MX_SIGNAL_READABLE;
-    }
-    if (_events & MXIO_EVT_WRITABLE) {
-        events |= MX_SIGNAL_WRITABLE;
-    }
-    if ((r = mx_handle_wait_one(p->h, events, timeout, &pending)) < 0) {
-        return r;
-    }
-    if (_pending) {
-        uint32_t out = 0;
-        if (pending.satisfied & MX_SIGNAL_READABLE) {
-            out |= MXIO_EVT_READABLE;
-        }
-        if (pending.satisfied & MX_SIGNAL_WRITABLE) {
-            out |= MXIO_EVT_WRITABLE;
-        }
-        *_pending = out;
-    }
-    return NO_ERROR;
-}
-
 static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mx_pipe_t* p = (void*)io;
     *handle = p->h;
@@ -167,7 +139,6 @@ static mxio_ops_t mx_pipe_ops = {
     .close = mx_pipe_close,
     .open = mxio_default_open,
     .clone = mx_pipe_clone,
-    .wait = mx_pipe_wait,
     .ioctl = mxio_default_ioctl,
     .wait_begin = mx_pipe_wait_begin,
     .wait_end = mx_pipe_wait_end,

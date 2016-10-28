@@ -361,12 +361,51 @@ ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
     return r;
 }
 
-mx_status_t mxio_wait_fd(int fd, uint32_t events, uint32_t* pending, mx_time_t timeout) {
+mx_status_t mxio_wait_fd(int fd, uint32_t _events, uint32_t* _pending, mx_time_t timeout) {
+    mx_status_t r = NO_ERROR;
     mxio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
         return ERR_BAD_HANDLE;
     }
-    mx_status_t r = io->ops->wait(io, events, pending, timeout);
+    uint32_t events = 0;
+    if (_events & MXIO_EVT_READABLE) {
+        events |= EPOLLIN;
+    }
+    if (_events & MXIO_EVT_WRITABLE) {
+        events |= EPOLLOUT;
+    }
+    if (_events & MXIO_EVT_ERROR) {
+        events |= EPOLLERR;
+    }
+
+    mx_handle_t h = MX_HANDLE_INVALID;
+    mx_signals_t signals = 0;
+    io->ops->wait_begin(io, events, &h, &signals);
+    if (h == MX_HANDLE_INVALID) {
+        // wait operation is not applicable to the handle
+        r = ERR_INVALID_ARGS;
+        goto end;
+    }
+    mx_signals_state_t pending;
+    if ((r = mx_handle_wait_one(h, signals, timeout, &pending)) < 0) {
+        goto end;
+    }
+    io->ops->wait_end(io, pending.satisfied, &events);
+
+    if (_pending) {
+        uint32_t out = 0;
+        if (events & EPOLLIN) {
+            out |= MXIO_EVT_READABLE;
+        }
+        if (events & EPOLLOUT) {
+            out |= MXIO_EVT_WRITABLE;
+        }
+        if (events & EPOLLERR) {
+            out |= MXIO_EVT_ERROR;
+        }
+        *_pending = out;
+    }
+ end:
     mxio_release(io);
     return r;
 }
