@@ -57,7 +57,7 @@ is invalid for the specified operation.
   An argument is invalid.
 
 **WRONG\_TYPE**
-  The subject of the operation is the wrong type to perform the operation.  
+  The subject of the operation is the wrong type to perform the operation.
   Example: Attempting a message\_read on a thread handle.
 
 **BAD\_SYSCALL**
@@ -67,7 +67,7 @@ is invalid for the specified operation.
   A specified handle value does not refer to a handle.
 
 **OUT\_OF\_RANGE**
-  An argument is outside the valid range for this operation.  
+  An argument is outside the valid range for this operation.
    Note: This is used when the argument may be valid if the system changes state, unlike
     INVALID\_ARGUMENT which is used when the argument will never be valid.
 
@@ -80,7 +80,7 @@ These indicate that the operation could not succeed because the preconditions fo
 not satisfied or the system is unable to complete the operation in its current state.
 
 **BAD\_STATE**
-  The system is unable to perform the operation in its current state.  
+  The system is unable to perform the operation in its current state.
    Note: FAILED\_PRECONDITION is a reserved alias for this error
 
 **NOT\_FOUND**
@@ -90,7 +90,7 @@ not satisfied or the system is unable to complete the operation in its current s
   The time limit for the operation elapsed before the operation completed.
 
 **ALREADY\_EXISTS**
-  An object with the specified identifier already exists.  
+  An object with the specified identifier already exists.
   Example: Attempting to create a file when a file already exists with that name.
 
 **ALREADY\_BOUND**
@@ -104,15 +104,15 @@ not satisfied or the system is unable to complete the operation in its current s
   The operation failed because the remote end of the subject of the operation was closed.
 
 **UNAVAILABLE**
-  The subject of the operation is currently unable to perform the operation.  
+  The subject of the operation is currently unable to perform the operation.
   Note: This is used when there's no direct way for the caller to observe when the subject will be
   able to perform the operation and should thus retry.
 
 **SHOULD\_WAIT**
   The operation cannot be performed currently but potentially could succeed if the caller waits for
-  a prerequisite to be satisfied, for example waiting for a handle to be readable or writable.  
-  Example: Attempting to read from a message pipe that has no messages waiting but has an open
-  remote will return **SHOULD\_WAIT**. Attempting to read from a message pipe that has no messages
+  a prerequisite to be satisfied, for example waiting for a handle to be readable or writable.
+  Example: Attempting to read from a channel that has no messages waiting but has an open
+  remote will return **SHOULD\_WAIT**. Attempting to read from a channel that has no messages
   waiting and has a closed remote end will return **REMOTE\_CLOSED**.
 
 ### Permission errors
@@ -126,15 +126,15 @@ not satisfied or the system is unable to complete the operation in its current s
   Otherwise unspecified error occurred during I/O.
 
 **IO\_REFUSED**
-  The entity the I/O operation is being performed on rejected the operation.  
+  The entity the I/O operation is being performed on rejected the operation.
   Example: an I2C device NAK'ing a transaction or a disk controller rejecting an invalid command.
 
 **IO\_DATA\_INTEGRITY**
-  The data in the operation failed an integrity check and is possibly corrupted.  
+  The data in the operation failed an integrity check and is possibly corrupted.
   Example: CRC or Parity error.
 
 **IO\_DATA\_LOSS**
-  The data in the operation is currently unavailable and may be permanently lost.  
+  The data in the operation is currently unavailable and may be permanently lost.
   Example: A disk block is irrecoverably damaged.
 
 ## Values

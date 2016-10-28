@@ -19,7 +19,7 @@ mx_status_t mx_port_create(uint32_t options, mx_handle_t* out);
 can be used to read IO packets queued by kernel or by user-mode.
 
 The returned handle will have MX_RIGHT_TRANSFER (allowing them to be sent
-to another process via message pipe write), MX_RIGHT_WRITE (allowing
+to another process via channel write), MX_RIGHT_WRITE (allowing
 packets to be queued), MX_RIGHT_READ (allowing packets to be read) and
 MX_RIGHT_DUPLICATE (allowing them to be duplicated).
 

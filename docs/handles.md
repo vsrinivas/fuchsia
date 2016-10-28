@@ -70,7 +70,7 @@ The pair of channel syscalls above are used to transfer a handle
 from one process to another. The gist is that it is possible
 to connect two processes with a channel. To transfer a handle
 the source process calls `mx_channel_write` and then the
-destination process calls `mx_channel_read` on the same pipe.
+destination process calls `mx_channel_read` on the same channel.
 
 Finally, there is a single syscall that gives a new process its
 boostrapping handle, that is, the handle that it can use to
@@ -78,7 +78,7 @@ request other handles:
 + `mx_process_start`
 
 It is natural that the bootstrapping handle points to one end of a
-message pipe.
+channel.
 
 ## Garbage Collection
 If a handle is valid, the kernel object it points to is guaranteed
@@ -96,7 +96,7 @@ the kernel marks the object for garbage collection; the object will be
 destroyed when the current set of operations on it are completed.
 
 ## Special Cases
-+ When a handle is in-transit and the message pipe it was written to
++ When a handle is in-transit and the channel it was written to
 is destroyed, the handle is closed.
 + Debugging sessions (and debuggers) might have special syscalls to
 get access to handles.

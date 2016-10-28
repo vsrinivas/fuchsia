@@ -34,7 +34,7 @@ behaves like a regular channel except for **mx_channel_write**()
 which must include itself as the last handle being transfered.
 
 When *flags* is *MX_FLAG_REPLY_PIPE*, only *handles[1]* is a reply
-pipe. *handles[0]* is a regular pipe.
+pipe. *handles[0]* is a regular channel.
 
 
 ## RETURN VALUE

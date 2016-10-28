@@ -34,4 +34,3 @@ TODO(vtl)
 [datapipe_begin_read](datapipe_begin_read.md),
 [datapipe_end_read](datapipe_end_read.md),
 [handle_close](handle_close.md).
-

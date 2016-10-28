@@ -22,7 +22,7 @@ with OS resources via object handles which map kernel objects to processes.
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the
-Thread object wraps one `thread_t`. However the Message Pipe does not wrap
+Thread object wraps one `thread_t`. However the Channel does not wrap
 any LK-level objects.
 
 ## Kernel object lifetime
