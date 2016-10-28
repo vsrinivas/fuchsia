@@ -9,9 +9,9 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/message-pipe.c \
+    $(LOCAL_DIR)/channel.c \
 
-MODULE_NAME := message-pipe-test
+MODULE_NAME := channel-test
 
 MODULE_LIBS := \
     ulib/unittest ulib/mxio ulib/magenta ulib/musl ulib/test-utils
