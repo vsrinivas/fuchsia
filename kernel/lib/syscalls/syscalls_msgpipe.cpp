@@ -35,12 +35,8 @@ constexpr uint32_t kMaxMessageHandles = 1024u;
 constexpr size_t kMsgpipeReadHandlesChunkCount = 16u;
 constexpr size_t kMsgpipeWriteHandlesInlineCount = 8u;
 
-mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size 2 */,
-                               uint32_t flags) {
-    LTRACEF("entry out_handle[] %p\n", out_handle.get());
-
-    if (!out_handle)
-        return ERR_INVALID_ARGS;
+mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
+    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
 
     if ((flags != 0u) && (flags != MX_FLAG_REPLY_PIPE))
         return ERR_INVALID_ARGS;
@@ -63,9 +59,9 @@ mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
-
-    if (out_handle.copy_array_to_user(hv, 2) != NO_ERROR)
+    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -75,12 +71,11 @@ mx_status_t sys_msgpipe_create(user_ptr<mx_handle_t> out_handle /* array of size
     return NO_ERROR;
 }
 
-mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
+mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
                              user_ptr<void> _bytes,
-                             user_ptr<uint32_t> _num_bytes,
+                             uint32_t num_bytes, user_ptr<uint32_t> _num_bytes,
                              user_ptr<mx_handle_t> _handles,
-                             user_ptr<uint32_t> _num_handles,
-                             uint32_t flags) {
+                             uint32_t num_handles, user_ptr<uint32_t> _num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p",
             handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get());
 
@@ -91,30 +86,12 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     if (result != NO_ERROR)
         return result;
 
-    uint32_t num_bytes = 0;
-    uint32_t num_handles = 0;
-
-    if (_num_bytes) {
-        if (_num_bytes.copy_from_user(&num_bytes) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    }
-
-    if (_num_handles) {
-        if (_num_handles.copy_from_user(&num_handles) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    }
-
-    if (_bytes && !_num_bytes)
-        return ERR_INVALID_ARGS;
-    if (_handles && !_num_handles)
-        return ERR_INVALID_ARGS;
-
-    if (flags & ~MX_MSGPIPE_READ_FLAG_MASK)
+    if (flags & ~MX_CHANNEL_READ_MASK)
         return ERR_NOT_SUPPORTED;
 
     mxtl::unique_ptr<MessagePacket> msg;
     result = msg_pipe->Read(&num_bytes, &num_handles, &msg,
-                            flags & MX_MSGPIPE_READ_FLAG_MAY_DISCARD);
+                            flags & MX_CHANNEL_READ_MAY_DISCARD);
     if (result != NO_ERROR && result != ERR_BUFFER_TOO_SMALL)
         return result;
 
@@ -164,10 +141,9 @@ mx_status_t sys_msgpipe_read(mx_handle_t handle_value,
     return result;
 }
 
-mx_status_t sys_msgpipe_write(mx_handle_t handle_value,
+mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
                               user_ptr<const void> _bytes, uint32_t num_bytes,
-                              user_ptr<const mx_handle_t> _handles, uint32_t num_handles,
-                              uint32_t flags) {
+                              user_ptr<const mx_handle_t> _handles, uint32_t num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
             handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, flags);
 

@@ -10,7 +10,7 @@ with OS resources via object handles which map kernel objects to processes.
 + [Process](objects/process.md)
 + [Thread](objects/thread.md)
 + [Event](objects/event.md)
-+ [Message pipe](objects/message_pipe.md)
++ [Channel](objects/channel.md)
 + [Interrupt request](objects/interrupt_request.md)
 + [VMObject](objects/vm_object.md)
 

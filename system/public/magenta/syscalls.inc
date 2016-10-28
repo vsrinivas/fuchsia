@@ -91,13 +91,16 @@ MAGENTA_SYSCALL_DEF(5, 5, 51, mx_status_t, thread_start, mx_handle_t handle, uin
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(0, 0, 52, void, thread_exit, (noreturn), void)
 MAGENTA_SYSCALL_DEF(3, 3, 53, mx_status_t, thread_arch_prctl, mx_handle_t handle, uint32_t op, USER_PTR(uintptr_t) value_ptr)
 
-// Messages
-MAGENTA_SYSCALL_DEF(2, 2, 60, mx_status_t, msgpipe_create, USER_PTR(mx_handle_t) out_handles /* [2] */, uint32_t flags)
-MAGENTA_SYSCALL_DEF(6, 6, 61, mx_status_t, msgpipe_read, mx_handle_t handle, USER_PTR(void) bytes,
-                    USER_PTR(uint32_t) num_bytes, USER_PTR(mx_handle_t) handles, USER_PTR(uint32_t) num_handles,
-                    uint32_t flags)
-MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, msgpipe_write, mx_handle_t handle, USER_PTR(const void) bytes,
-                    uint32_t num_bytes, USER_PTR(const mx_handle_t) handles, uint32_t num_handles, uint32_t flags)
+// Channels
+MAGENTA_SYSCALL_DEF(3, 3, 60, mx_status_t, channel_create, uint32_t options,
+                    USER_PTR(mx_handle_t) out0, USER_PTR(mx_handle_t) out1)
+
+MAGENTA_SYSCALL_DEF(8, 8, 61, mx_status_t, channel_read, mx_handle_t handle, uint32_t options,
+                    USER_PTR(void) bytes, uint32_t num_bytes, USER_PTR(uint32_t) actual_bytes,
+                    USER_PTR(mx_handle_t) handles, uint32_t num_handles, USER_PTR(uint32_t) actual_handles)
+MAGENTA_SYSCALL_DEF(6, 6, 62, mx_status_t, channel_write, mx_handle_t handle, uint32_t options,
+                    USER_PTR(const void) bytes, uint32_t num_bytes,
+                    USER_PTR(const mx_handle_t) handles, uint32_t num_handles)
 
 // Drivers
 MAGENTA_SYSCALL_DEF(3, 3, 70, mx_handle_t, interrupt_create, mx_handle_t handle, uint32_t vector, uint32_t flags)

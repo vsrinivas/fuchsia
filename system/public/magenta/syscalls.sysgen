@@ -131,19 +131,23 @@ syscall thread_arch_prctl
 
 # Messages
 
-syscall msgpipe_create
-    (out_handles: mx_handle_t[2] OUT, flags: uint32_t)
+syscall channel_create
+    (flags: uint32_t, out0: mx_handle_t OUT, out1: mx_handle_t OUT)
     returns (mx_status_t);
 
-syscall msgpipe_read
-    (handle: mx_handle_t, bytes: any[num_bytes] OUT, num_bytes: uint32_t[1] INOUT,
-        handles: mx_handle_t[num_handles] OUT, num_handles: uint32_t[1] INOUT, flags: uint32_t)
+syscall channel_read
+    (handle: mx_handle_t, flags: uint32_t,
+        bytes: any[num_bytes] OUT,
+        num_bytes: uint32_t, actual_bytes: uint32_t[1] OUT,
+        handles: mx_handle_t[num_handles] OUT,
+        num_handles: uint32_t, actual_handles: uint32_t[1] OUT)
     returns (mx_status_t);
 
-syscall msgpipe_write
-    (handle: mx_handle_t, bytes: any[num_bytes] IN, num_bytes: uint32_t,
+syscall channel_write
+    (handle: mx_handle_t, flags: uint32_t,
+        bytes: any[num_bytes] IN, num_bytes: uint32_t,
         handles: mx_handle_t[num_handles] IN, num_handles: uint32_t,
-        flags: uint32_t)
+        )
     returns (mx_status_t);
 
 # Drivers

@@ -8,7 +8,7 @@ either the associated handle or the object associated with the handle.
 | Right | Conferred Privileges |
 | ----- | -------------------- |
 | **MX_RIGHT_DUPLICATE** | Allows handle duplication via [*mx_handle_duplicate*](syscalls/handle_duplicate.md) |
-| **MX_RIGHT_TRANSFER** | Allows handle transfer via [*mx_msgpipe_write*](syscalls/message_write.md) |
+| **MX_RIGHT_TRANSFER** | Allows handle transfer via [*mx_channel_write*](syscalls/message_write.md) |
 | **MX_RIGHT_READ** | Allows inspection of object state |
 |                   | Allows reading of data from containers (pipes, VM objects, etc) |
 | **MX_RIGHT_WRITE** | Allows modification of object state |

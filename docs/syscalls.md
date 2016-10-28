@@ -24,10 +24,10 @@
 + [process_start](syscalls/process_start.md)
 + [process_unmap_vm](syscalls/process_unmap_vm.md)
 
-## Message Pipes
-+ [msgpipe_create](syscalls/msgpipe_create.md)
-+ [msgpipe_read](syscalls/msgpipe_read.md)
-+ [msgpipe_write](syscalls/msgpipe_write.md)
+## Channels
++ [channel_create](syscalls/channel_create.md)
++ [channel_read](syscalls/channel_read.md)
++ [channel_write](syscalls/channel_write.md)
 
 ## Data Pipes
 + [datapipe_create](syscalls/datapipe_create.md)
