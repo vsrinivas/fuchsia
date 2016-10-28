@@ -154,9 +154,9 @@ int GatherReports(char* test_bin, mxtl::Array<ReportInfo>* reports) {
     const size_t count = reports->size();
     for (unsigned int run = 0; run < count; ++run) {
         mx_handle_t handles[2];
-        mx_status_t status = mx_msgpipe_create(handles, 0);
+        mx_status_t status = mx_channel_create(0, &handles[0], &handles[1]);
         if (status != NO_ERROR) {
-            printf("Failed to create message pipe for test run\n");
+            printf("Failed to create channel for test run\n");
             return -1;
         }
 
@@ -180,7 +180,7 @@ int GatherReports(char* test_bin, mxtl::Array<ReportInfo>* reports) {
         ReportInfo* report = &(*reports)[run];
 
         uint32_t len = sizeof(*report);
-        status = mx_msgpipe_read(handles[0], report, &len, NULL, 0, 0);
+        status = mx_channel_read(handles[0], 0, report, len, &len, NULL, 0, NULL);
         if (status != 0 || len != sizeof(*report)) {
             printf("Failed to read report: status %d, len %u\n", status, len);
             mx_handle_close(handles[0]);
@@ -204,10 +204,10 @@ int TestRunMain(int argc, char** argv) {
     report.first_stack = (uintptr_t)&report_pipe;
     report.first_heap_alloc = (uintptr_t)malloc(1);
     report.libc = (uintptr_t)&memcpy;
-    report.vdso = (uintptr_t)&mx_msgpipe_write;
+    report.vdso = (uintptr_t)&mx_channel_write;
 
     mx_status_t status =
-        mx_msgpipe_write(report_pipe, &report, sizeof(report), NULL, 0, 0);
+        mx_channel_write(report_pipe, 0, &report, sizeof(report), NULL, 0);
     if (status != NO_ERROR) {
         return status;
     }
