@@ -31,7 +31,6 @@ public:
         std::chrono::duration<double, std::milli> elapsed = end - start;
 
         EXPECT_GT(elapsed.count(), (uint32_t)timeout_ms);
-        EXPECT_LT(elapsed.count(), (uint32_t)timeout_ms + 10);
 
         uint32_t starting_value = value;
 
