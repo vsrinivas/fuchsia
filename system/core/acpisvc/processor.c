@@ -59,7 +59,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
-    mx_status_t status = mx_msgpipe_read(h, NULL, &num_bytes, NULL, &num_handles, 0);
+    mx_status_t status = mx_channel_read(h, 0, NULL, 0, &num_bytes, NULL, 0, &num_handles);
     if (status == ERR_BAD_STATE) {
         return ERR_DISPATCHER_NO_WORK;
     } else if (status != ERR_BUFFER_TOO_SMALL ||
@@ -71,7 +71,8 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     mx_handle_t cmd_handle = 0;
     uint8_t buf[ACPI_MAX_REQUEST_SIZE];
-    status = mx_msgpipe_read(h, buf, &num_bytes, &cmd_handle, &num_handles, 0);
+    status = mx_channel_read(h, 0, buf, num_bytes, &num_bytes, &cmd_handle,
+            num_handles, &num_handles);
     if (status != NO_ERROR) {
         goto cleanup;
     }
@@ -117,7 +118,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
         rsp.status = NO_ERROR;
         rsp.len = sizeof(rsp);
         rsp.request_id = hdr->request_id;
-        return mx_msgpipe_write(h, &rsp, sizeof(rsp), NULL, 0, 0);
+        return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
     }
     status = cmd_table[hdr->cmd](h, ctx, buf);
 
@@ -203,7 +204,7 @@ static mx_status_t send_error(mx_handle_t h, uint32_t req_id, mx_status_t status
         .request_id = req_id,
     };
 
-    return mx_msgpipe_write(h, &rsp, sizeof(rsp), NULL, 0, 0);
+    return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
 }
 
 static mx_status_t cmd_list_children(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
@@ -312,7 +313,7 @@ static mx_status_t cmd_list_children(mx_handle_t h, acpi_handle_ctx_t* ctx, void
         goto cleanup;
     }
 
-    status = mx_msgpipe_write(h, rsp, rsp_size, NULL, 0, 0);
+    status = mx_channel_write(h, 0, rsp, rsp_size, NULL, 0);
 
 cleanup:
     free(rsp);
@@ -345,7 +346,7 @@ static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, v
     child_ctx->root_node = false;
 
     mx_handle_t msg_pipe[2];
-    status = mx_msgpipe_create(msg_pipe, 0);
+    status = mx_channel_create(0, &msg_pipe[0], &msg_pipe[1]);
     if (status != NO_ERROR) {
         free(child_ctx);
         return send_error(h, cmd->hdr.request_id, status);
@@ -365,7 +366,7 @@ static mx_status_t cmd_get_child_handle(mx_handle_t h, acpi_handle_ctx_t* ctx, v
         },
     };
 
-    status = mx_msgpipe_write(h, &rsp, sizeof(rsp), msg_pipe, 1, 0);
+    status = mx_channel_write(h, 0, &rsp, sizeof(rsp), msg_pipe, 1);
     if (status != NO_ERROR) {
         goto cleanup;
     }
@@ -422,7 +423,7 @@ static mx_status_t cmd_get_pci_init_arg(mx_handle_t h, acpi_handle_ctx_t* ctx, v
     rsp->hdr.request_id = cmd->hdr.request_id,
     memcpy(&rsp->arg, arg, arg_size);
 
-    status = mx_msgpipe_write(h, rsp, len, NULL, 0, 0);
+    status = mx_channel_write(h, 0, rsp, len, NULL, 0);
 
 cleanup:
     free(arg);
@@ -486,7 +487,7 @@ static mx_status_t cmd_ps0(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
         },
     };
 
-    return mx_msgpipe_write(h, &rsp, sizeof(rsp), NULL, 0, 0);
+    return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
 }
 
 static mx_status_t cmd_new_connection(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
