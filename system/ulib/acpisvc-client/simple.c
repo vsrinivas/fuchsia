@@ -34,7 +34,8 @@ static mx_status_t wait_for_message(
 
     uint32_t rsp_len = 0;
     uint32_t num_handles_returned = 0;
-    status = mx_msgpipe_read(h, NULL, &rsp_len, NULL, &num_handles_returned, 0);
+    status = mx_channel_read(h, 0, NULL, rsp_len, &rsp_len,
+            NULL, num_handles_returned, &num_handles_returned);
     if (status != ERR_BUFFER_TOO_SMALL) {
         return status;
     }
@@ -51,7 +52,8 @@ static mx_status_t wait_for_message(
     }
 
     mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
-    status = mx_msgpipe_read(h, rsp, &rsp_len, handles_returned, &num_handles_returned, 0);
+    status = mx_channel_read(h, 0, rsp, rsp_len, &rsp_len,
+            handles_returned, num_handles_returned, &num_handles_returned);
     if (status != NO_ERROR) {
         free(rsp);
         return status;
@@ -110,7 +112,7 @@ static mx_status_t run_txn(
     acpi_cmd_hdr_t* cmd_hdr = cmd;
     cmd_hdr->request_id = req_id;
 
-    mx_status_t status = mx_msgpipe_write(h->pipe, cmd, cmd_len, &cmd_handle, (cmd_handle > 0) ? 1 : 0, 0);
+    mx_status_t status = mx_channel_write(h->pipe, 0, cmd, cmd_len, &cmd_handle, (cmd_handle > 0) ? 1 : 0);
     if (status != NO_ERROR) {
         if (cmd_handle) {
             mx_handle_close(cmd_handle);
@@ -290,7 +292,7 @@ mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
 
     mx_handle_t h[2];
     mx_status_t status;
-    if ((status = mx_msgpipe_create(h, 0)) < 0) {
+    if ((status = mx_channel_create(0, &h[0], &h[1])) < 0) {
         return status;
     }
 
