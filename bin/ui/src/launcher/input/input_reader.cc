@@ -36,7 +36,7 @@ InputReader::~InputReader() {
     close(input_directory_fd_);
   }
   while (!devices_.empty()) {
-    DeviceRemoved(devices_.begin()->second.second);
+    DeviceRemoved(devices_.begin()->first);
   }
 }
 
