@@ -88,7 +88,7 @@ static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_h,
   mx_handle_t h[2];
   mx_status_t r;
 
-  if ((r = mx_channel_create(0u, &h[0], &h[1])) < 0) goto fail_msgpipe_create;
+  if ((r = mx_channel_create(0u, &h[0], &h[1])) < 0) goto fail_channel_create;
 
   mx_handle_t s[2];
   if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
@@ -116,7 +116,7 @@ fail_socket_create:
   mx_handle_close(h[0]);
   mx_handle_close(h[1]);
 
-fail_msgpipe_create:
+fail_channel_create:
   return r;
 }
 

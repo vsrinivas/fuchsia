@@ -244,7 +244,7 @@ mx_status_t handle_watcher_init(int* readfd_) {
   mx_status_t r;
   if ((r = mx_channel_create(0, &s_ctrl[0], &s_ctrl[1])) < 0) {
     error("mx_channel_create failed (%d)\n", r);
-    goto fail_msgpipe_create;
+    goto fail_channel_create;
   }
   if ((s_waitset = mx_waitset_create()) < 0) {
     error("mx_waitset_create failed (%d)\n", r);
@@ -281,6 +281,6 @@ fail_waitset_create:
   mx_handle_close(s_ctrl[0]);
   mx_handle_close(s_ctrl[1]);
 
-fail_msgpipe_create:
+fail_channel_create:
   return r;
 }
