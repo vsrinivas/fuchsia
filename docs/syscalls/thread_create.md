@@ -9,8 +9,8 @@ thread_create - create a thread
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_thread_create(mx_handle_t process, const char* name,
-                             uint32_t name_len, uint32_t flags);
+mx_status_t mx_thread_create(mx_handle_t process, const char* name,
+                             uint32_t name_len, uint32_t flags, mx_handle_t* out);
 
 ```
 
@@ -29,8 +29,8 @@ Thread handles may be waited on and will assert the signal
 
 ## RETURN VALUE
 
-**thread_create**() returns a handle to the new thread on succes.
-In the event of failure, a negative error value is returned.
+**thread_create**() returns NO_ERROR and a handle (via *out*) to the new
+thread on succes. In the event of failure, a negative error value is returned.
 
 ## ERRORS
 

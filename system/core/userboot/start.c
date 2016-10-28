@@ -187,9 +187,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
              "mx_handle_duplicate failed on child process handle\n");
 
     // Create the initial thread in the new process
-    mx_handle_t thread = mx_thread_create(proc, filename, strlen(filename), 0);
-    if (thread < 0)
-        fail(log, thread, "mx_thread_create failed\n");
+    mx_handle_t thread;
+    status = mx_thread_create(proc, filename, strlen(filename), 0, &thread);
+    if (status < 0)
+        fail(log, status, "mx_thread_create failed\n");
 
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.

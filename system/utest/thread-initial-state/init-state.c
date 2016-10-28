@@ -24,15 +24,18 @@ mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg
     // preallocated stack to satisfy the thread we create
     static uint8_t stack[1024] __ALIGNED(16);
 
-    mx_handle_t handle = mx_thread_create(mx_process_self(), "", 0, 0);
-    if (handle < 0)
-        return handle;
-
-    mx_status_t status = mx_thread_start(handle, (uintptr_t)thread_entry,
-                                         (uintptr_t)stack + sizeof(stack),
-                                         arg, 0);
+    mx_handle_t handle;
+    mx_status_t status = mx_thread_create(mx_process_self(), "", 0, 0, &handle);
     if (status < 0)
         return status;
+
+    status = mx_thread_start(handle, (uintptr_t)thread_entry,
+                             (uintptr_t)stack + sizeof(stack),
+                             arg, 0);
+    if (status < 0) {
+        mx_handle_close(handle);
+        return status;
+    }
 
     return handle;
 }

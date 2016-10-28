@@ -691,10 +691,10 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         }
     }
 
-    *thread = mx_thread_create(lp_proc(lp), thread_name,
-                               strlen(thread_name), 0);
-    if (*thread < 0) {
-        return *thread;
+    mx_status_t status = mx_thread_create(lp_proc(lp), thread_name,
+                                          strlen(thread_name), 0, thread);
+    if (status < 0) {
+        return status;
     } else {
         // Pass the thread handle down to the child.  The handle we pass
         // will be consumed by message_write.  So we need a duplicate to
@@ -705,8 +705,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             mx_handle_close(*thread);
             return thread_copy;
         }
-        mx_status_t status = launchpad_add_handle(lp, thread_copy,
-                                                  MX_HND_TYPE_THREAD_SELF);
+        status = launchpad_add_handle(lp, thread_copy,
+                                      MX_HND_TYPE_THREAD_SELF);
         if (status != NO_ERROR) {
             mx_handle_close(thread_copy);
             mx_handle_close(*thread);
@@ -715,7 +715,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     }
 
     if (lp->loader_message) {
-        mx_status_t status = send_loader_message(lp, to_child);
+        status = send_loader_message(lp, to_child);
         if (status != NO_ERROR) {
             mx_handle_close(*thread);
             return status;
@@ -740,8 +740,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         return ERR_BUFFER_TOO_SMALL;
     }
 
-    mx_status_t status = mx_msgpipe_write(to_child, msg, size,
-                                          lp->handles, lp->handle_count, 0);
+    status = mx_msgpipe_write(to_child, msg, size,
+                              lp->handles, lp->handle_count, 0);
     free(msg);
     if (status == NO_ERROR) {
         // message_write consumed all the handles.

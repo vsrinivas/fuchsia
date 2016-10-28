@@ -131,10 +131,11 @@ mx_status_t mxr_thread_create(const char* name, mxr_thread_t** thread_out) {
     if (name == NULL)
         name = "";
     size_t name_length = local_strlen(name) + 1;
-    mx_handle_t handle = _mx_thread_create(mx_process_self(), name, name_length, 0);
-    if (handle < 0) {
+    mx_handle_t handle;
+    status = _mx_thread_create(mx_process_self(), name, name_length, 0, &handle);
+    if (status < 0) {
         deallocate_thread_page(thread);
-        return (mx_status_t)handle;
+        return status;
     }
 
     thread->handle = handle;

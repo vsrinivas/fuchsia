@@ -115,8 +115,8 @@ syscall object_get_info
 
 syscall thread_create
     (process: mx_handle_t, name: char[name_len] IN, name_len: uint32_t,
-        flags: uint32_t)
-    returns (mx_handle_t);
+        flags: uint32_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall thread_start
     (handle: mx_handle_t, thread_entry: uintptr_t,

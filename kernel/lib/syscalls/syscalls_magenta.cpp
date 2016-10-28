@@ -78,7 +78,9 @@ uint64_t sys_current_time() {
     return current_time_hires();
 }
 
-mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> name, uint32_t name_len, uint32_t flags) {
+mx_status_t sys_thread_create(mx_handle_t process_handle,
+                              user_ptr<const char> name, uint32_t name_len,
+                              uint32_t flags, user_ptr<mx_handle_t> out) {
     LTRACEF("process handle %d, flags %#x\n", process_handle, flags);
 
     // copy the name to a local buffer
@@ -122,10 +124,11 @@ mx_handle_t sys_thread_create(mx_handle_t process_handle, user_ptr<const char> n
     if (!handle)
         return ERR_NO_MEMORY;
 
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
