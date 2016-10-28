@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../../../mojo/public/tools/bindings/mojom.gni")
+import("../../fidl.gni")
 
-mojom("interfaces") {
+fidl("interfaces") {
   sources = [
-    "interface_control_messages.mojom",
-    "fidl_files.mojom",
-    "fidl_types.mojom",
-    "service_describer.mojom",
+    "interface_control_messages.fidl",
+    "fidl_files.fidl",
+    "fidl_types.fidl",
+    "service_describer.fidl",
   ]
 }

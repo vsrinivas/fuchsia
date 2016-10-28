@@ -6,8 +6,6 @@ import("fidl.gni")
 
 group("fidl") {
   deps = [
-    # Uncomment the following to build the compilers; They depend on the
-    # Go toolchain to build, however.
-    # "compiler",
+    # "compiler/interfaces",
   ]
 }

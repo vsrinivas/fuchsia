@@ -1,5 +1,5 @@
 {% import "struct_macros.tmpl" as struct_macros -%}
-{%  import "interface_macros.tmpl" as interface_macros -%}
+{% import "interface_macros.tmpl" as interface_macros -%}
 {%- set header_guard = "%s_SYNC_H_"|
         format(module.path|upper|replace("/","_")|replace(".","_")|replace("-","_")) -%}
 
@@ -9,15 +9,14 @@
 
 #include <stdint.h>
 
-#include "mojo/public/cpp/bindings/array.h"
-#include "mojo/public/cpp/bindings/callback.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/map.h"
-#include "mojo/public/cpp/bindings/message_validator.h"
-#include "mojo/public/cpp/bindings/string.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
-#include "mojo/public/cpp/bindings/lib/synchronous_connector.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/map.h"
+#include "lib/fidl/cpp/bindings/message_validator.h"
+#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 #include "{{module.path}}-internal.h"
 #include "{{module.path}}-common.h"
 
@@ -51,8 +50,8 @@ class {{interface.name}}_SynchronousProxy
     : public {{interface.name}}_Synchronous {
  public:
   explicit {{interface.name}}_SynchronousProxy(
-      mojo::internal::SynchronousConnector* connector,
-      mojo::internal::MessageValidatorList&& validators);
+      fidl::internal::SynchronousConnector* connector,
+      fidl::internal::MessageValidatorList&& validators);
 
 {%-   for method in interface.methods %}
   bool {{method.name}}({{interface_macros.declare_sync_request_params(method)}})
@@ -61,8 +60,8 @@ class {{interface.name}}_SynchronousProxy
 
  private:
   // |connector_| is passed to us, and is not owned by us.
-  mojo::internal::SynchronousConnector* const connector_;
-  mojo::internal::MessageValidatorList const validators_;
+  fidl::internal::SynchronousConnector* const connector_;
+  fidl::internal::MessageValidatorList const validators_;
 };
 {% endfor %}
 

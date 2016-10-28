@@ -11,7 +11,6 @@
 #include <functional>
 
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/internal/control_message_proxy.h"
 #include "lib/fidl/cpp/bindings/internal/message_header_validator.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
 #include "lib/ftl/functional/closure.h"
@@ -58,7 +57,7 @@ class InterfacePtrState {
   void Bind(InterfaceHandle<Interface> info, const FidlAsyncWaiter* waiter) {
     FTL_DCHECK(!proxy_);
     FTL_DCHECK(!router_);
-    FTL_DCHECK(!handle_.is_valid());
+    FTL_DCHECK(!(bool)handle_);
     FTL_DCHECK(!waiter_);
     FTL_DCHECK(version_ == 0u);
     FTL_DCHECK(info.is_valid());
@@ -82,7 +81,7 @@ class InterfacePtrState {
         router_ ? router_->PassMessagePipe() : std::move(handle_), version_);
   }
 
-  bool is_bound() const { return handle_.is_valid() || router_; }
+  bool is_bound() const { return (bool)handle_ || router_; }
 
   bool encountered_error() const {
     return router_ ? router_->encountered_error() : false;
@@ -111,7 +110,7 @@ class InterfacePtrState {
     }
     // The object hasn't been bound.
     if (!waiter_) {
-      FTL_DCHECK(!handle_.is_valid());
+      FTL_DCHECK(!(bool)handle_);
       return;
     }
 

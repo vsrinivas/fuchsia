@@ -10,18 +10,15 @@
 #include <stdint.h>
 #include <iosfwd>
 
-#include "mojo/public/cpp/bindings/array.h"
-#include "mojo/public/cpp/bindings/callback.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/map.h"
-#include "mojo/public/cpp/bindings/message_validator.h"
-#include "mojo/public/cpp/bindings/string.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
-#include "mojo/public/cpp/system/buffer.h"
-#include "mojo/public/cpp/system/data_pipe.h"
-#include "mojo/public/cpp/system/handle.h"
-#include "mojo/public/cpp/system/message_pipe.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/map.h"
+#include "lib/fidl/cpp/bindings/message_validator.h"
+#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/bindings/struct_ptr.h"
+// TODO(ianloic): should this even be here?
+#include "lib/fidl/cpp/bindings/internal/union_accessor.h"
 #include "{{module.path}}-internal.h"
 
 {%- for import in imports %}
@@ -51,9 +48,9 @@ class {{interface.name}}_Synchronous;
 {%- for union in unions %}
 class {{union.name}};
 {%-   if union|should_inline_union %}
-typedef mojo::InlinedStructPtr<{{union.name}}> {{union.name}}Ptr;
+typedef fidl::InlinedStructPtr<{{union.name}}> {{union.name}}Ptr;
 {%-   else %}
-typedef mojo::StructPtr<{{union.name}}> {{union.name}}Ptr;
+typedef fidl::StructPtr<{{union.name}}> {{union.name}}Ptr;
 {%-   endif %}
 {%- endfor %}
 
@@ -90,7 +87,7 @@ class {{interface.name}}_Base {
 {%- if interface|has_callbacks %}
   using ResponseValidator_ = {{interface.name}}ResponseValidator;
 {%- else %}
-  using ResponseValidator_ = mojo::internal::PassThroughValidator;
+  using ResponseValidator_ = fidl::internal::PassThroughValidator;
   {%- endif %}
   using Synchronous_ = {{interface.name}}_Synchronous;
 
@@ -133,7 +130,7 @@ class {{interface.name}}_Base {
 
 // --- Internal Template Specializations ---
 
-namespace mojo {
+namespace fidl {
 namespace internal {
 
 {%- for struct in structs %}
@@ -146,7 +143,7 @@ struct WrapperTraits<{{namespace}}::{{struct_name}}Ptr, true, false> {
 {%- endfor %}
 
 }  // internal
-}  // mojo
+}  // fidl
 
 {#---------------- #}
 {#--- Declarations #}

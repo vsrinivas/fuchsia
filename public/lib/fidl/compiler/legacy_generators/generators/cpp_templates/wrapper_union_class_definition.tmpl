@@ -1,7 +1,7 @@
 // static
 {{union.name}}Ptr {{union.name}}::New() {
   {{union.name}}Ptr rv;
-  mojo::internal::StructHelper<{{union.name}}>::Initialize(&rv);
+  fidl::internal::StructHelper<{{union.name}}>::Initialize(&rv);
   return rv;
 }
 
@@ -46,9 +46,9 @@ bool {{union.name}}::Equals(const {{union.name}}& other) const {
     case Tag::{{field.name|upper}}:
 {%    if field.kind|is_object_kind or field.kind|is_any_handle_kind
           or field.kind|is_interface_kind %}
-      return mojo::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(*(data_.{{field.name}}), *(other.data_.{{field.name}}));
+      return fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(*(data_.{{field.name}}), *(other.data_.{{field.name}}));
 {%-   else %}
-      return mojo::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(data_.{{field.name}}, other.data_.{{field.name}});
+      return fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(data_.{{field.name}}, other.data_.{{field.name}});
 {%-   endif %}
 {%- endfor %}
     case Tag::__UNKNOWN__:
@@ -64,7 +64,7 @@ bool {{union.name}}::is_{{field.name}}() const {
 }
 
 {{field.kind|cpp_union_getter_return_type}} {{union.name}}::get_{{field.name}}() const {
-  MOJO_DCHECK(tag_ == Tag::{{field.name|upper}});
+  FTL_DCHECK(tag_ == Tag::{{field.name|upper}});
 {%    if field.kind|is_object_kind or field.kind|is_any_handle_kind
           or field.kind|is_interface_kind %}
   return *(data_.{{field.name}});
@@ -78,7 +78,7 @@ void {{union.name}}::set_{{field.name}}({{field.kind|cpp_const_wrapper_type}} {{
 {%    if field.kind|is_string_kind %}
   *(data_.{{field.name}}) = {{field.name}};
 {%    elif field.kind|is_object_kind or field.kind|is_interface_kind %}
-  *(data_.{{field.name}}) = {{field.name}}.Pass();
+  *(data_.{{field.name}}) = std::move({{field.name}});
 {%    elif field.kind|is_any_handle_kind %}
   data_.{{field.name}}->reset({{field.name}}.release());
 {%-   else %}
@@ -111,7 +111,7 @@ void {{union.name}}::SetActive(Tag new_active) {
       break;
 {%- endfor %}
     case Tag::__UNKNOWN__:
-      MOJO_DCHECK(false) << "Do not set a union tag to unknown.";
+      FTL_DCHECK(false) << "Do not set a union tag to unknown.";
       break;
   }
 

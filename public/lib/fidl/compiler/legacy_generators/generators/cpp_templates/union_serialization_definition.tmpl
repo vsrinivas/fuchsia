@@ -5,14 +5,14 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
    if (!input)
     return size;  
   
-  mojo::internal::UnionAccessor<{{union.name}}> input_acc(input.get());
+  fidl::internal::UnionAccessor<{{union.name}}> input_acc(input.get());
   switch (input->which()) {
 {%  for field in union.fields %}
 {%    if field.kind|is_object_kind %}
     case {{union.name}}::Tag::{{field.name|upper}}:
 {%      if field.kind|is_union_kind %}
       if ((input_acc.data()->{{field.name}})) {
-        //size += sizeof(mojo::internal::UnionPointer<{{field.kind|get_name_for_kind}}::Data_>);
+        //size += sizeof(fidl::internal::UnionPointer<{{field.kind|get_name_for_kind}}::Data_>);
         size += GetSerializedSize_(*(input_acc.data()->{{field.name}}));
       }
 {%      elif field.kind|is_struct_kind %}
@@ -37,13 +37,13 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
             if this union contains another union, we will use |buf| to allocate
             memory and serialize out-of-line.
 #}
-mojo::internal::ValidationError SerializeUnion_(
+fidl::internal::ValidationError SerializeUnion_(
     {{union.name}}* input,
-    mojo::internal::Buffer* buf,
+    fidl::internal::Buffer* buf,
     internal::{{union.name}}_Data** output) {
   internal::{{union.name}}_Data* result = *output;
   if (input) {
-    mojo::internal::UnionAccessor<{{union.name}}> input_acc(input);
+    fidl::internal::UnionAccessor<{{union.name}}> input_acc(input);
     // TODO(azani): Handle unknown and objects.
     // Set the not-null flag.
     result->size = 16;
@@ -99,10 +99,10 @@ mojo::internal::ValidationError SerializeUnion_(
         result->data.f_{{field.name}} =
             input_acc.data()->{{field.name}}->release().value();
 {%    elif field.kind|is_interface_kind %}
-        mojo::internal::Interface_Data* {{field.name}} =
-            reinterpret_cast<mojo::internal::Interface_Data*>(
+        fidl::internal::Interface_Data* {{field.name}} =
+            reinterpret_cast<fidl::internal::Interface_Data*>(
                 &result->data.f_{{field.name}});
-        mojo::internal::InterfaceHandleToData(
+        fidl::internal::InterfaceHandleToData(
             input_acc.data()->{{field.name}}->Pass(), {{field.name}});
 {%    elif field.kind|is_enum_kind %}
         result->data.f_{{field.name}} = 
@@ -115,19 +115,19 @@ mojo::internal::ValidationError SerializeUnion_(
 {%- endfor %}
       default:
         // TODO(vardhan): Should this return an error code instead?
-        MOJO_CHECK(false) << "No sane way to serialize a union with an unknown tag.";
+        FTL_CHECK(false) << "No sane way to serialize a union with an unknown tag.";
         break;
     }
   } else {
     result->set_null();
   }
-  return mojo::internal::ValidationError::NONE;
+  return fidl::internal::ValidationError::NONE;
 }
 
 void Deserialize_(internal::{{union.name}}_Data* input,
                   {{union.name}}* output) {
   if (input && !input->is_null()) {
-    mojo::internal::UnionAccessor<{{union.name}}> result_acc(output);
+    fidl::internal::UnionAccessor<{{union.name}}> result_acc(output);
     switch (input->tag) {
 {#- TODO(vardhan):  There is a lot of overlap with struct_macros.deserialize()
     here, is it possible to merge? (currently looks very hairy) #}
@@ -149,12 +149,12 @@ void Deserialize_(internal::{{union.name}}_Data* input,
         output->set_{{field.name}}({{field.name}}->Pass());
 {%    elif field.kind|is_interface_kind %}
         {{field.kind|cpp_wrapper_type}} {{field.name}}_out;
-        mojo::internal::Interface_Data* {{field.name}}_in =
-            reinterpret_cast<mojo::internal::Interface_Data*>(
+        fidl::internal::Interface_Data* {{field.name}}_in =
+            reinterpret_cast<fidl::internal::Interface_Data*>(
                 &input->data.f_{{field.name}});
-        mojo::internal::InterfaceDataToHandle(
+        fidl::internal::InterfaceDataToHandle(
             {{field.name}}_in, &{{field.name}}_out);
-        output->set_{{field.name}}({{field.name}}_out.Pass());
+        output->set_{{field.name}}(std::move({{field.name}}_out));
 {%    elif field.kind|is_enum_kind %}
         output->set_{{field.name}}(static_cast<{{field.kind|cpp_wrapper_type}}>(input->data.f_{{field.name}}));
 {%    else %}
@@ -164,7 +164,7 @@ void Deserialize_(internal::{{union.name}}_Data* input,
       }
 {%- endfor %}
       default:
-        MOJO_LOG(WARNING) << "Deserializing {{union.name}} with unknown tag!";
+        FTL_LOG(WARNING) << "Deserializing {{union.name}} with unknown tag!";
         // No way to deserialize the data when we encounter an unknown tag.
         break;
     }

@@ -1,6 +1,6 @@
 class {{interface.name}}RequestValidator
-    : public mojo::internal::MessageValidator {
+    : public fidl::internal::MessageValidator {
  public:
-  mojo::internal::ValidationError Validate(const mojo::Message* message,
+  fidl::internal::ValidationError Validate(const fidl::Message* message,
                                            std::string* err) override;
 };

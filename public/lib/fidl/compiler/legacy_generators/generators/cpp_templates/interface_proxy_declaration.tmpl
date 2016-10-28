@@ -1,13 +1,20 @@
 {%- import "interface_macros.tmpl" as interface_macros %}
 class {{interface.name}}Proxy
-    : public {{interface.name}},
-      public mojo::internal::ControlMessageProxy {
+    : public {{interface.name}} {
  public:
-  explicit {{interface.name}}Proxy(mojo::MessageReceiverWithResponder* receiver);
+  explicit {{interface.name}}Proxy(fidl::MessageReceiverWithResponder* receiver);
 
 {%- for method in interface.methods %}
   void {{method.name}}(
       {{interface_macros.declare_request_params("", method)}}
   ) override;
 {%- endfor %}
+
+ private:
+  {#- TODO(vardhan): Consider moving this common-generated code into a class that
+  generated Proxy classes inherit #}
+  // Not owned.
+  MessageReceiverWithResponder* receiver_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN({{interface.name}}Proxy);
 };

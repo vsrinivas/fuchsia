@@ -19,16 +19,16 @@ _kind_to_cpp_type = {
   mojom.INT32:                 "int32_t",
   mojom.UINT32:                "uint32_t",
   mojom.FLOAT:                 "float",
-  mojom.HANDLE:                "mojo::Handle",
-  mojom.DCPIPE:                "mojo::DataPipeConsumerHandle",
-  mojom.DPPIPE:                "mojo::DataPipeProducerHandle",
-  mojom.MSGPIPE:               "mojo::MessagePipeHandle",
-  mojom.SHAREDBUFFER:          "mojo::SharedBufferHandle",
-  mojom.NULLABLE_HANDLE:       "mojo::Handle",
-  mojom.NULLABLE_DCPIPE:       "mojo::DataPipeConsumerHandle",
-  mojom.NULLABLE_DPPIPE:       "mojo::DataPipeProducerHandle",
-  mojom.NULLABLE_MSGPIPE:      "mojo::MessagePipeHandle",
-  mojom.NULLABLE_SHAREDBUFFER: "mojo::SharedBufferHandle",
+  mojom.HANDLE:                "fidl::Handle",
+  mojom.DCPIPE:                "fidl::DataPipeConsumerHandle",
+  mojom.DPPIPE:                "fidl::DataPipeProducerHandle",
+  mojom.MSGPIPE:               "mx::channel",
+  mojom.SHAREDBUFFER:          "fidl::SharedBufferHandle",
+  mojom.NULLABLE_HANDLE:       "fidl::Handle",
+  mojom.NULLABLE_DCPIPE:       "fidl::DataPipeConsumerHandle",
+  mojom.NULLABLE_DPPIPE:       "fidl::DataPipeProducerHandle",
+  mojom.NULLABLE_MSGPIPE:      "mx::channel",
+  mojom.NULLABLE_SHAREDBUFFER: "fidl::SharedBufferHandle",
   mojom.INT64:                 "int64_t",
   mojom.UINT64:                "uint64_t",
   mojom.DOUBLE:                "double",
@@ -81,22 +81,22 @@ def GetCppTypeForKind(kind):
 
 def GetCppType(kind):
   if mojom.IsArrayKind(kind):
-    return "mojo::internal::Array_Data<%s>*" % GetCppType(kind.kind)
+    return "fidl::internal::Array_Data<%s>*" % GetCppType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "mojo::internal::Map_Data<%s, %s>*" % (
+    return "fidl::internal::Map_Data<%s, %s>*" % (
       GetCppType(kind.key_kind), GetCppType(kind.value_kind))
   if mojom.IsStructKind(kind):
     return "%s_Data*" % GetNameForKind(kind, internal=True)
   if mojom.IsUnionKind(kind):
     return "%s_Data" % GetNameForKind(kind, internal=True)
   if mojom.IsInterfaceKind(kind):
-    return "mojo::internal::Interface_Data"
+    return "fidl::internal::Interface_Data"
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::MessagePipeHandle"
+    return "mx::channel"
   if mojom.IsEnumKind(kind):
     return "int32_t"
   if mojom.IsStringKind(kind):
-    return "mojo::internal::String_Data*"
+    return "fidl::internal::String_Data*"
   return GetCppTypeForKind(kind)
 
 def GetCppPodType(kind):
@@ -110,26 +110,26 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "mojo::Array<%s> " % GetCppArrayArgWrapperType(kind.kind)
+    return "fidl::Array<%s> " % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "mojo::Map<%s, %s> " % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "fidl::Map<%s, %s> " % (GetCppArrayArgWrapperType(kind.key_kind),
                                    GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "mojo::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "mojo::String"
+    return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mojo::ScopedHandle"
+    return "fidl::ScopedHandle"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "mojo::ScopedDataPipeConsumerHandle"
+    return "fidl::ScopedDataPipeConsumerHandle"
   if mojom.IsDataPipeProducerKind(kind):
-    return "mojo::ScopedDataPipeProducerHandle"
+    return "fidl::ScopedDataPipeProducerHandle"
   if mojom.IsMessagePipeKind(kind):
-    return "mojo::ScopedMessagePipeHandle"
+    return "fidl::ScopedMessagePipeHandle"
   if mojom.IsSharedBufferKind(kind):
-    return "mojo::ScopedSharedBufferHandle"
+    return "fidl::ScopedSharedBufferHandle"
   return GetCppTypeForKind(kind)
 
 def GetCppResultWrapperType(kind):
@@ -138,26 +138,26 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "mojo::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "mojo::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "mojo::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "mojo::String"
+    return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mojo::ScopedHandle"
+    return "fidl::ScopedHandle"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "mojo::ScopedDataPipeConsumerHandle"
+    return "fidl::ScopedDataPipeConsumerHandle"
   if mojom.IsDataPipeProducerKind(kind):
-    return "mojo::ScopedDataPipeProducerHandle"
+    return "fidl::ScopedDataPipeProducerHandle"
   if mojom.IsMessagePipeKind(kind):
-    return "mojo::ScopedMessagePipeHandle"
+    return "fidl::ScopedMessagePipeHandle"
   if mojom.IsSharedBufferKind(kind):
-    return "mojo::ScopedSharedBufferHandle"
+    return "fidl::ScopedSharedBufferHandle"
   return GetCppTypeForKind(kind)
 
 def GetCppWrapperType(kind):
@@ -166,88 +166,88 @@ def GetCppWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "mojo::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "mojo::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "mojo::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "mojo::String"
+    return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mojo::ScopedHandle"
+    return "fidl::ScopedHandle"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "mojo::ScopedDataPipeConsumerHandle"
+    return "fidl::ScopedDataPipeConsumerHandle"
   if mojom.IsDataPipeProducerKind(kind):
-    return "mojo::ScopedDataPipeProducerHandle"
+    return "fidl::ScopedDataPipeProducerHandle"
   if mojom.IsMessagePipeKind(kind):
-    return "mojo::ScopedMessagePipeHandle"
+    return "fidl::ScopedMessagePipeHandle"
   if mojom.IsSharedBufferKind(kind):
-    return "mojo::ScopedSharedBufferHandle"
+    return "fidl::ScopedSharedBufferHandle"
   return GetCppTypeForKind(kind)
 
 def GetCppConstWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "mojo::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "fidl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
-    return "mojo::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
+    return "fidl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
   if mojom.IsInterfaceKind(kind):
-    return "mojo::InterfaceHandle<%s>" % GetNameForKind(kind)
+    return "fidl::InterfaceHandle<%s>" % GetNameForKind(kind)
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
+    return "fidl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsEnumKind(kind):
     return GetNameForKind(kind)
   if mojom.IsStringKind(kind):
-    return "const mojo::String&"
+    return "const fidl::String&"
   if mojom.IsGenericHandleKind(kind):
-    return "mojo::ScopedHandle"
+    return "fidl::ScopedHandle"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "mojo::ScopedDataPipeConsumerHandle"
+    return "fidl::ScopedDataPipeConsumerHandle"
   if mojom.IsDataPipeProducerKind(kind):
-    return "mojo::ScopedDataPipeProducerHandle"
+    return "fidl::ScopedDataPipeProducerHandle"
   if mojom.IsMessagePipeKind(kind):
-    return "mojo::ScopedMessagePipeHandle"
+    return "fidl::ScopedMessagePipeHandle"
   if mojom.IsSharedBufferKind(kind):
-    return "mojo::ScopedSharedBufferHandle"
+    return "fidl::ScopedSharedBufferHandle"
   if not kind in _kind_to_cpp_type:
     print "missing:", kind.spec
   return GetCppTypeForKind(kind)
 
 def GetCppFieldType(kind):
   if mojom.IsStructKind(kind):
-    return ("mojo::internal::StructPointer<%s_Data>" %
+    return ("fidl::internal::StructPointer<%s_Data>" %
         GetNameForKind(kind, internal=True))
   if mojom.IsUnionKind(kind):
     return "%s_Data" % GetNameForKind(kind, internal=True)
   if mojom.IsArrayKind(kind):
-    return "mojo::internal::ArrayPointer<%s>" % GetCppType(kind.kind)
+    return "fidl::internal::ArrayPointer<%s>" % GetCppType(kind.kind)
   if mojom.IsMapKind(kind):
-    return ("mojo::internal::StructPointer<mojo::internal::Map_Data<%s, %s>>" %
+    return ("fidl::internal::StructPointer<fidl::internal::Map_Data<%s, %s>>" %
             (GetCppType(kind.key_kind), GetCppType(kind.value_kind)))
   if mojom.IsInterfaceKind(kind):
-    return "mojo::internal::Interface_Data"
+    return "fidl::internal::Interface_Data"
   if mojom.IsInterfaceRequestKind(kind):
-    return "mojo::MessagePipeHandle"
+    return "fidl::internal::WrappedHandle"
   if mojom.IsEnumKind(kind):
     return GetNameForKind(kind)
   if mojom.IsStringKind(kind):
-    return "mojo::internal::StringPointer"
+    return "fidl::internal::StringPointer"
   return GetCppTypeForKind(kind)
 
 def GetCppUnionFieldType(kind):
   if mojom.IsAnyHandleKind(kind):
-    return "MojoHandle"
+    return "mx_handle_t"
   if mojom.IsInterfaceKind(kind):
     return "uint64_t"
   if mojom.IsEnumKind(kind):
     return "int32_t"
   if mojom.IsUnionKind(kind):
-    return ("mojo::internal::UnionPointer<%s_Data>" %
+    return ("fidl::internal::UnionPointer<%s_Data>" %
         GetNameForKind(kind, internal=True))
   return GetCppFieldType(kind)
 
@@ -368,7 +368,7 @@ def GetNewArrayValidateParams(kind):
       not mojom.IsStringKind(kind)):
     return "nullptr"
 
-  return "new mojo::internal::ArrayValidateParams(%s)" % (
+  return "new fidl::internal::ArrayValidateParams(%s)" % (
       GetArrayValidateParamsCtorArgs(kind))
 
 def GetMapValidateParamsCtorArgs(value_kind):

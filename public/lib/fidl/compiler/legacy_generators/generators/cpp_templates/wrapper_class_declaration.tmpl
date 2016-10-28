@@ -21,12 +21,12 @@ class {{struct.name}} {
 
   template <typename U>
   static {{struct.name}}Ptr From(const U& u) {
-    return mojo::TypeConverter<{{struct.name}}Ptr, U>::Convert(u);
+    return fidl::TypeConverter<{{struct.name}}Ptr, U>::Convert(u);
   }
 
   template <typename U>
   U To() const {
-    return mojo::TypeConverter<U, {{struct.name}}>::Convert(*this);
+    return fidl::TypeConverter<U, {{struct.name}}>::Convert(*this);
   }
 
   {{struct.name}}();

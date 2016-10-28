@@ -17,7 +17,7 @@
 {%- macro pass_params(parameters) %}
 {%-   for param in parameters %}
 {%-     if param.kind|is_move_only_kind -%}
-p_{{param.name}}.Pass()
+std::move(p_{{param.name}})
 {%-     else -%}
 p_{{param.name}}
 {%-     endif -%}
@@ -34,34 +34,32 @@ p_{{param.name}}
 {%- for method in interface.methods -%}
 {%-   if method.response_parameters != None %}
 class {{class_name}}_{{method.name}}_ForwardToCallback
-    : public mojo::MessageReceiver {
+    : public fidl::MessageReceiver {
  public:
   {{class_name}}_{{method.name}}_ForwardToCallback(
       const {{class_name}}::{{method.name}}Callback& callback)
       : callback_(callback) {
   }
-  bool Accept(mojo::Message* message) override;
+  bool Accept(fidl::Message* message) override;
  private:
   {{class_name}}::{{method.name}}Callback callback_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ForwardToCallback);
+  FTL_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ForwardToCallback);
 };
 bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
-    mojo::Message* message) {
+    fidl::Message* message) {
   internal::{{class_name}}_{{method.name}}_ResponseParams_Data* params =
       reinterpret_cast<internal::{{class_name}}_{{method.name}}_ResponseParams_Data*>(
           message->mutable_payload());
 
   params->DecodePointersAndHandles(message->mutable_handles());
   {{alloc_params(method.response_param_struct)}}
-  callback_.Run({{pass_params(method.response_parameters)}});
+  callback_({{pass_params(method.response_parameters)}});
   return true;
 }
 {%-   endif %}
 {%- endfor %}
 
-{{proxy_name}}::{{proxy_name}}(mojo::MessageReceiverWithResponder* receiver)
-    : ControlMessageProxy(receiver) {
-}
+{{proxy_name}}::{{proxy_name}}(fidl::MessageReceiverWithResponder* receiver) { }
 
 {#--- Proxy definitions #}
 
@@ -76,17 +74,17 @@ void {{proxy_name}}::{{method.name}}(
   {{struct_macros.get_serialized_size(params_struct, "in_%s")}}
 
 {%- if method.response_parameters != None %}
-  mojo::RequestMessageBuilder builder(
+  fidl::RequestMessageBuilder builder(
       static_cast<uint32_t>({{message_name}}), size);
 {%- else %}
-  mojo::MessageBuilder builder(
+  fidl::MessageBuilder builder(
     static_cast<uint32_t>({{message_name}}), size);
 {%- endif %}
 
   {{build_message(params_struct, params_description)}}
 
 {%- if method.response_parameters != None %}
-  mojo::MessageReceiver* responder =
+  fidl::MessageReceiver* responder =
       new {{class_name}}_{{method.name}}_ForwardToCallback(callback);
   if (!receiver_->AcceptWithResponder(builder.message(), responder))
     delete responder;
@@ -94,7 +92,7 @@ void {{proxy_name}}::{{method.name}}(
   bool ok = receiver_->Accept(builder.message());
   // This return value may be ignored as !ok implies the Connector has
   // encountered an error, which will be visible through other means.
-  MOJO_ALLOW_UNUSED_LOCAL(ok);
+  FTL_ALLOW_UNUSED_LOCAL(ok);
 {%- endif %}
 }
 {%- endfor %}
@@ -110,44 +108,55 @@ void {{proxy_name}}::{{method.name}}(
 // This class implements a method's response callback: it serializes the
 // response args into a mojo message and passes it to the MessageReceiver it
 // was created with.
-class {{class_name}}_{{method.name}}_ProxyToResponder
-    : public {{class_name}}::{{method.name}}Callback::Runnable {
+{# TODO(vardhan): Consider making a fidl::internal::Callback wrapper instead of
+   generating something movable? #}
+class {{class_name}}_{{method.name}}_ProxyToResponder {
  public:
-  ~{{class_name}}_{{method.name}}_ProxyToResponder() override {
+  {{class_name}}_{{method.name}}_ProxyToResponder(
+      {{class_name}}_{{method.name}}_ProxyToResponder&& other) {
+    responder_ = other.responder_;
+    request_id_ = other.request_id_;
+    other.responder_ = nullptr;
+  }
+  ~{{class_name}}_{{method.name}}_ProxyToResponder() {
     // Is the Mojo application destroying the callback without running it
     // and without first closing the pipe?
     bool callback_was_dropped = responder_ && responder_->IsValid();
     // If the Callback was dropped then deleting the responder will close
     // the pipe so the calling application knows to stop waiting for a reply.
-    delete responder_;
-    MOJO_DCHECK(!callback_was_dropped)  << "The callback passed to "
-        "{{class_name}}::{{method.name}}({%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback) "
-        "was never run.";
+    if (callback_was_dropped) {
+      delete responder_;
+      FTL_DCHECK(true)  << "The callback passed to "
+          "{{class_name}}::{{method.name}}({%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback) "
+          "was never run.";
+    }
   }
 
   {{class_name}}_{{method.name}}_ProxyToResponder(
       uint64_t request_id,
-      mojo::MessageReceiverWithStatus* responder)
+      fidl::MessageReceiverWithStatus* responder)
       : request_id_(request_id),
         responder_(responder) {
   }
 
-  void Run({{interface_macros.declare_params_as_args("in_", method.response_parameters)}}) const override;
+  void operator()({{interface_macros.declare_params_as_args("in_",
+    method.response_parameters)}}) const;
 
  private:
   uint64_t request_id_;
-  mutable mojo::MessageReceiverWithStatus* responder_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ProxyToResponder);
+  mutable fidl::MessageReceiverWithStatus* responder_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN({{class_name}}_{{method.name}}_ProxyToResponder);
 };
 
-void {{class_name}}_{{method.name}}_ProxyToResponder::Run(
+void {{class_name}}_{{method.name}}_ProxyToResponder::operator()(
     {{interface_macros.declare_params_as_args("in_", method.response_parameters)}}) const {
   {{struct_macros.get_serialized_size(response_params_struct, "in_%s")}}
-  mojo::ResponseMessageBuilder builder(
+  fidl::ResponseMessageBuilder builder(
       static_cast<uint32_t>({{message_name}}), size, request_id_);
   {{build_message(response_params_struct, params_description)}}
   bool ok = responder_->Accept(builder.message());
-  MOJO_ALLOW_UNUSED_LOCAL(ok);
+  FTL_ALLOW_UNUSED_LOCAL(ok);
   // TODO(darin): !ok returned here indicates a malformed message, and that may
   // be good reason to close the connection. However, we don't have a way to do
   // that from here. We should add a way.
@@ -158,17 +167,14 @@ void {{class_name}}_{{method.name}}_ProxyToResponder::Run(
 {%- endfor %}
 
 {{class_name}}Stub::{{class_name}}Stub()
-    : sink_(nullptr),
-      control_message_handler_({{interface.name}}::Version_) {
+    : sink_(nullptr) {
 }
 
 {{class_name}}Stub::~{{interface.name}}Stub() {}
 
 {#--- Stub definition #}
 
-bool {{class_name}}Stub::Accept(mojo::Message* message) {
-  if (mojo::internal::ControlMessageHandler::IsControlMessage(message))
-    return control_message_handler_.Accept(message);
+bool {{class_name}}Stub::Accept(fidl::Message* message) {
 {%- if interface.methods %}
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
@@ -183,7 +189,7 @@ bool {{class_name}}Stub::Accept(mojo::Message* message) {
       params->DecodePointersAndHandles(message->mutable_handles());
       {{alloc_params(method.param_struct)|indent(4)}}
       // A null |sink_| means no implementation was bound.
-      assert(sink_);
+      FTL_DCHECK(sink_);
       sink_->{{method.name}}({{pass_params(method.parameters)}});
       return true;
 {%-     else %}
@@ -197,9 +203,7 @@ bool {{class_name}}Stub::Accept(mojo::Message* message) {
 }
 
 bool {{class_name}}Stub::AcceptWithResponder(
-    mojo::Message* message, mojo::MessageReceiverWithStatus* responder) {
-  if (mojo::internal::ControlMessageHandler::IsControlMessage(message))
-    return control_message_handler_.AcceptWithResponder(message, responder);
+    fidl::Message* message, fidl::MessageReceiverWithStatus* responder) {
 {%- if interface.methods %}
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
@@ -212,13 +216,12 @@ bool {{class_name}}Stub::AcceptWithResponder(
               message->mutable_payload());
 
       params->DecodePointersAndHandles(message->mutable_handles());
-      {{class_name}}::{{method.name}}Callback::Runnable* runnable =
-          new {{class_name}}_{{method.name}}_ProxyToResponder(
-              message->request_id(), responder);
-      {{class_name}}::{{method.name}}Callback callback(runnable);
+      {{class_name}}::{{method.name}}Callback callback =
+          ftl::MakeCopyable({{class_name}}_{{method.name}}_ProxyToResponder(
+              message->request_id(), responder));
       {{alloc_params(method.param_struct)|indent(4)}}
       // A null |sink_| means no implementation was bound.
-      assert(sink_);
+      FTL_DCHECK(sink_);
       sink_->{{method.name}}(
 {%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback);
       return true;

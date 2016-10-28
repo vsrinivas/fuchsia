@@ -4,19 +4,18 @@
 #include <math.h>
 #include <ostream>
 
-#include "mojo/public/cpp/bindings/lib/array_serialization.h"
-#include "mojo/public/cpp/bindings/lib/bindings_serialization.h"
-#include "mojo/public/cpp/bindings/lib/bounds_checker.h"
-#include "mojo/public/cpp/bindings/lib/map_data_internal.h"
-#include "mojo/public/cpp/bindings/lib/map_serialization.h"
-#include "mojo/public/cpp/bindings/lib/message_builder.h"
-#include "mojo/public/cpp/bindings/lib/message_validation.h"
-#include "mojo/public/cpp/bindings/lib/string_serialization.h"
-#include "mojo/public/cpp/bindings/lib/validate_params.h"
-#include "mojo/public/cpp/bindings/lib/validation_errors.h"
-#include "mojo/public/cpp/bindings/lib/validation_util.h"
-#include "mojo/public/cpp/environment/logging.h"
-#include "mojo/public/interfaces/bindings/interface_control_messages.mojom.h"
+#include "lib/fidl/cpp/bindings/internal/array_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
+#include "lib/fidl/cpp/bindings/internal/map_data_internal.h"
+#include "lib/fidl/cpp/bindings/internal/map_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/message_builder.h"
+#include "lib/fidl/cpp/bindings/internal/message_validation.h"
+#include "lib/fidl/cpp/bindings/internal/string_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/validate_params.h"
+#include "lib/fidl/cpp/bindings/internal/validation_errors.h"
+#include "lib/fidl/cpp/bindings/internal/validation_util.h"
+#include "lib/ftl/logging.h"
 
 {%- for namespace in namespaces_as_array %}
 namespace {{namespace}} {
@@ -59,22 +58,10 @@ namespace internal {
 // --- Request and response validator definitions for interfaces ---
 {%- for interface in interfaces %}
 {%-   set base_name = "internal::%s_Base"|format(interface.name) %}
-mojo::internal::ValidationError {{interface.name}}RequestValidator::Validate(
-    const mojo::Message* message,
+fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
+    const fidl::Message* message,
     std::string* err) {
-  mojo::internal::ValidationError retval;
-  if (mojo::internal::ControlMessageHandler::IsControlMessage(message)) {
-    retval = mojo::internal::ValidateControlRequest(message, err);
-    if (retval != mojo::internal::ValidationError::NONE) {
-      MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
-        << "request validation error for interface '{{interface.name}}', "
-           "message name '" << message->header()->name << "': " <<
-           (err ? *err : "");
-      ReportValidationError(retval, err);
-      return retval;
-    }
-    return mojo::internal::ValidationError::NONE;
-  }
+  fidl::internal::ValidationError retval;
 
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
@@ -83,10 +70,10 @@ mojo::internal::ValidationError {{interface.name}}RequestValidator::Validate(
     case {{base_name}}::MessageOrdinals::{{method.name}}: {
 {%-     if method.response_parameters != None %}
       retval =
-          mojo::internal::ValidateMessageIsRequestExpectingResponse(message,
+          fidl::internal::ValidateMessageIsRequestExpectingResponse(message,
                                                                     err);
-      if (retval != mojo::internal::ValidationError::NONE) {
-        MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
+      if (retval != fidl::internal::ValidationError::NONE) {
+        FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "
              "message name '" << message->header()->name << "': " <<
              (err ? *err : "");
@@ -94,10 +81,10 @@ mojo::internal::ValidationError {{interface.name}}RequestValidator::Validate(
         return retval;
       }
 {%-     else %}
-      retval = mojo::internal::ValidateMessageIsRequestWithoutResponse(message,
+      retval = fidl::internal::ValidateMessageIsRequestWithoutResponse(message,
                                                                        err);
-      if (retval != mojo::internal::ValidationError::NONE) {
-        MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
+      if (retval != fidl::internal::ValidationError::NONE) {
+        FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "
              "message name '" << message->header()->name << "': " <<
              (err ? *err : "");
@@ -105,18 +92,18 @@ mojo::internal::ValidationError {{interface.name}}RequestValidator::Validate(
         return retval;
       }
 {%-     endif %}
-      retval = mojo::internal::ValidateMessagePayload<
+      retval = fidl::internal::ValidateMessagePayload<
                  internal::{{interface.name}}_{{method.name}}_Params_Data>(
                     message, err); 
-      if (retval != mojo::internal::ValidationError::NONE) {
-         MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
+      if (retval != fidl::internal::ValidationError::NONE) {
+         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "request validation error for interface '{{interface.name}}', "
                "message name '" << message->header()->name << "': " <<
                (err ? *err : "");
         ReportValidationError(retval, err);
         return retval;
       }
-      return mojo::internal::ValidationError::NONE;
+      return fidl::internal::ValidationError::NONE;
     }
 {%-   endfor %}
     default:
@@ -124,37 +111,25 @@ mojo::internal::ValidationError {{interface.name}}RequestValidator::Validate(
   }
 
   // Unrecognized message.
-  MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "unknown request message name '"
+  FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "unknown request message name '"
                                          << message->header()->name
                                          << "' for interface "
                                             "'{{interface.name}}'";
   ReportValidationError(
-      mojo::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
-  return mojo::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
+      fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
+  return fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
 }
 
 {#--- Response validator definitions #}
 {%-   if interface|has_callbacks %}
-mojo::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
-    const mojo::Message* message,
+fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
+    const fidl::Message* message,
     std::string* err) {
-  mojo::internal::ValidationError retval;
-  if (mojo::internal::ControlMessageHandler::IsControlMessage(message)) {
-    retval = mojo::internal::ValidateControlResponse(message, err);
-    if (retval != mojo::internal::ValidationError::NONE) {
-      MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
-        << "response validation error for interface '{{interface.name}}', "
-           "message name '" << message->header()->name << "': " <<
-           (err ? *err : "");
-      ReportValidationError(retval, err);
-      return retval;
-    }
-    return mojo::internal::ValidationError::NONE;
-  }
+  fidl::internal::ValidationError retval;
 
-  retval = mojo::internal::ValidateMessageIsResponse(message, err);
-  if (retval != mojo::internal::ValidationError::NONE) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
+  retval = fidl::internal::ValidateMessageIsResponse(message, err);
+  if (retval != fidl::internal::ValidationError::NONE) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "response validation error for interface '{{interface.name}}', "
                "message name '" << message->header()->name << "': " <<
                (err ? *err : "");
@@ -167,18 +142,18 @@ mojo::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
   switch (method_ordinal) {
 {%-    for method in interface.methods if method.response_parameters != None %}
     case {{base_name}}::MessageOrdinals::{{method.name}}: {
-      retval = mojo::internal::ValidateMessagePayload<
+      retval = fidl::internal::ValidateMessagePayload<
                   internal::{{interface.name}}_{{method.name}}_ResponseParams_Data>(
                       message, err);
-      if (retval != mojo::internal::ValidationError::NONE) {
-        MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err)
+      if (retval != fidl::internal::ValidationError::NONE) {
+        FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "response validation error for interface '{{interface.name}}',"
                " message name '" << message->header()->name << "': " <<
                (err ? *err : "");
         ReportValidationError(retval, err);
         return retval;
       }
-      return mojo::internal::ValidationError::NONE;
+      return fidl::internal::ValidationError::NONE;
     }
 {%-    endfor %}
     default:
@@ -186,13 +161,13 @@ mojo::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
   }
 
   // Unrecognized message.
-  MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "unknown response message name '"
+  FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "unknown response message name '"
                                           << message->header()->name
                                           << "' for interface "
                                              "'{{interface.name}}'";
   ReportValidationError(
-      mojo::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
-  return mojo::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
+      fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
+  return fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
 }
 {%-   endif -%}
 

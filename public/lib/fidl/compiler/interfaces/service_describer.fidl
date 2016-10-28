@@ -8,7 +8,7 @@
 // https://github.com/domokit/fidl/issues/435 is fixed.
 module fidl.bindings.types;
 
-import "fidl_types.mojom";
+import "fidl_types.fidl";
 
 // This is a companion interface to ServiceProvider. An implementation of
 // ServiceProvider may optionally offer descriptions of the services it

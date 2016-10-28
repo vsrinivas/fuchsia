@@ -3,39 +3,39 @@
 {%- set enum_name = union.name ~ "_Tag" -%}
 
 // static
-{{class_name}}* {{class_name}}::New(mojo::internal::Buffer* buf) {
+{{class_name}}* {{class_name}}::New(fidl::internal::Buffer* buf) {
   return new (buf->Allocate(sizeof({{class_name}}))) {{class_name}}();
 }
 
 {# TODO(vardhan): Set error messages here for the remaining validation
    errors. #}
 // static
-mojo::internal::ValidationError {{class_name}}::Validate(
+fidl::internal::ValidationError {{class_name}}::Validate(
     const void* data,
-    mojo::internal::BoundsChecker* bounds_checker,
+    fidl::internal::BoundsChecker* bounds_checker,
     bool inlined,
     std::string* err) {
   if (!data)
-    return mojo::internal::ValidationError::NONE;
+    return fidl::internal::ValidationError::NONE;
 
-  if (!mojo::internal::IsAligned(data)) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return mojo::internal::ValidationError::MISALIGNED_OBJECT;
+  if (!fidl::internal::IsAligned(data)) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+    return fidl::internal::ValidationError::MISALIGNED_OBJECT;
   }
 
   // If the union is inlined in another structure its memory was already claimed.
   // This ONLY applies to the union itself, NOT anything which the union points
   // to.
   if (!inlined && !bounds_checker->ClaimMemory(data, sizeof({{class_name}}))) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return mojo::internal::ValidationError::ILLEGAL_MEMORY_RANGE;
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+    return fidl::internal::ValidationError::ILLEGAL_MEMORY_RANGE;
   }
 
   const {{class_name}}* object = static_cast<const {{class_name}}*>(data);
-  MOJO_ALLOW_UNUSED_LOCAL(object);
+  FTL_ALLOW_UNUSED_LOCAL(object);
 
   if (object->is_null())
-    return mojo::internal::ValidationError::NONE;
+    return fidl::internal::ValidationError::NONE;
 
   switch (object->tag) {
 {%  for field in union.fields %}
@@ -47,7 +47,7 @@ mojo::internal::ValidationError {{class_name}}::Validate(
       // Unknown tags should not cause validation to fail.
       break;
   }
-  return mojo::internal::ValidationError::NONE;
+  return fidl::internal::ValidationError::NONE;
 }
 
 void {{class_name}}::set_null() {
@@ -60,41 +60,41 @@ void {{class_name}}::set_null() {
 }
 
 void {{class_name}}::EncodePointersAndHandles(
-    std::vector<mojo::Handle>* handles) {
+    std::vector<mx_handle_t>* handles) {
   switch (tag) {
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {
 {%-   if field.kind|is_object_kind %}
-      mojo::internal::Encode(&data.f_{{field.name}}, handles);
+      fidl::internal::Encode(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_any_handle_kind %}
-      mojo::internal::EncodeHandle(&data.f_{{field.name}}, handles);
+      fidl::internal::EncodeHandle(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_interface_kind %}
-      mojo::internal::EncodeHandle(
-          reinterpret_cast<mojo::internal::Interface_Data*>(
+      fidl::internal::EncodeHandle(
+          reinterpret_cast<fidl::internal::Interface_Data*>(
               &data.f_{{field.name}}), handles);
 {%-   endif %}
       return;
     }
 {%- endfor %}
     case {{enum_name}}::__UNKNOWN__: {
-      MOJO_DCHECK(false) << "No sane way to serialize a union with an unknown tag.";
+      FTL_DCHECK(false) << "No sane way to serialize a union with an unknown tag.";
       break;
     }
   }
 }
 
 void {{class_name}}::DecodePointersAndHandles(
-    std::vector<mojo::Handle>* handles) {
+    std::vector<mx_handle_t>* handles) {
   switch (tag) {
 {%- for field in union.fields %}
     case {{enum_name}}::{{field.name|upper}}: {
 {%-   if field.kind|is_object_kind %}
-      mojo::internal::Decode(&data.f_{{field.name}}, handles);
+      fidl::internal::Decode(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_any_handle_kind %}
-      mojo::internal::DecodeHandle(&data.f_{{field.name}}, handles);
+      fidl::internal::DecodeHandle(&data.f_{{field.name}}, handles);
 {%-   elif field.kind|is_interface_kind %}
-      mojo::internal::DecodeHandle(
-          reinterpret_cast<mojo::internal::Interface_Data*>(
+      fidl::internal::DecodeHandle(
+          reinterpret_cast<fidl::internal::Interface_Data*>(
               &data.f_{{field.name}}), handles);
 {%-   endif %}
       return;

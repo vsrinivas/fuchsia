@@ -165,11 +165,11 @@ template("fidl") {
     action_foreach(generator_target_name) {
       script = "/usr/bin/env"
       inputs = generator_sources
-      deps = [
+      public_deps = [
         rebase_path("lib/fidl/compiler:fidl", ".", fidl_root),
       ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
-        deps += [
+        deps = [
           rebase_path("lib/fidl/compiler/interfaces:interfaces", ".", fidl_root),
         ]
       }
@@ -390,6 +390,7 @@ template("fidl") {
           rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
+        rebase_path( "lib/fidl/cpp/bindings" , ".", fidl_root),
         rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
                     ".",
                     fidl_root),
@@ -414,7 +415,7 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}.cc",
               ])
       public_configs =
-          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+          rebase_path([ "lib/fidl/cpp/bindings:bindings_config", "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
@@ -442,7 +443,7 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-sync.h",
               ])
       public_configs =
-          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+          rebase_path([ "lib/fidl/cpp/bindings:bindings_config", "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",

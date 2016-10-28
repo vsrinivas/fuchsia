@@ -171,7 +171,8 @@ struct ArraySerializer<mx::handle<H>, WrappedHandle, false> {
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the handle.
       output->at(i) = it->release();
-      if (!validate_params->element_is_nullable && !output->at(i).is_valid()) {
+      if (!validate_params->element_is_nullable
+          && output->at(i).value != MX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
@@ -214,8 +215,8 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the WrappedHandle.
       output->at(i) = it->PassMessagePipe().release();
-      if (!validate_params->element_is_nullable &&
-          output->at(i) != MX_HANDLE_INVALID) {
+      if (!validate_params->element_is_nullable
+          && output->at(i).value != MX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
@@ -260,8 +261,8 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the handle.
       internal::InterfaceHandleToData(std::move(*it), &output->at(i));
-      if (!validate_params->element_is_nullable &&
-          !output->at(i).handle.is_valid()) {
+      if (!validate_params->element_is_nullable
+          && output->at(i).handle.value != MX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(

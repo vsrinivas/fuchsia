@@ -10,7 +10,7 @@
 // static
 {{struct.name}}Ptr {{struct.name}}::New() {
   {{struct.name}}Ptr rv;
-  mojo::internal::StructHelper<{{struct.name}}>::Initialize(&rv);
+  fidl::internal::StructHelper<{{struct.name}}>::Initialize(&rv);
   return rv;
 }
 
@@ -39,7 +39,7 @@
 
 bool {{struct.name}}::Equals(const {{struct.name}}& other) const {
 {%-  for field in struct.fields %}
-  if (!mojo::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(this->{{field.name}}, other.{{field.name}}))
+  if (!fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(this->{{field.name}}, other.{{field.name}}))
     return false;
 {%-  endfor %}
   return true;

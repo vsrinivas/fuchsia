@@ -16,47 +16,47 @@
 {%-     else %}
   if (!object->{{name}}.offset) {
 {%-     endif %}
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) <<
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) <<
         "null {{name}} field in {{struct.name}} struct";
-    return mojo::internal::ValidationError::UNEXPECTED_NULL_POINTER;
+    return fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER;
   }
 {%-   endif %}
 {%-   if not kind|is_union_kind %}
-  if (!mojo::internal::ValidateEncodedPointer(&object->{{name}}.offset)) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
-    return mojo::internal::ValidationError::ILLEGAL_POINTER;
+  if (!fidl::internal::ValidateEncodedPointer(&object->{{name}}.offset)) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
+    return fidl::internal::ValidationError::ILLEGAL_POINTER;
   }
 {%-   endif %}
 
 {%-   if kind|is_array_kind or kind|is_string_kind %}
-  const mojo::internal::ArrayValidateParams {{name}}_validate_params(
+  const fidl::internal::ArrayValidateParams {{name}}_validate_params(
       {{kind|get_array_validate_params_ctor_args|indent(6)}});
   auto validate_retval =
       {{wrapper_type}}::Data_::Validate(
-          mojo::internal::DecodePointerRaw(&object->{{name}}.offset),
+          fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, &{{name}}_validate_params, {{err_string}});
-  if (validate_retval != mojo::internal::ValidationError::NONE) {
+  if (validate_retval != fidl::internal::ValidationError::NONE) {
 {%-   elif kind|is_map_kind %}
-  const mojo::internal::ArrayValidateParams {{name}}_validate_params(
+  const fidl::internal::ArrayValidateParams {{name}}_validate_params(
       {{kind.value_kind|get_map_validate_params_ctor_args|indent(6)}});
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
-              mojo::internal::DecodePointerRaw(&object->{{name}}.offset),
+              fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
               bounds_checker, &{{name}}_validate_params, {{err_string}}); 
-  if (validate_retval != mojo::internal::ValidationError::NONE) {
+  if (validate_retval != fidl::internal::ValidationError::NONE) {
 {%-   elif kind|is_struct_kind %}
   auto validate_retval = {{kind|get_name_for_kind}}::Data_::Validate(
-          mojo::internal::DecodePointerRaw(&object->{{name}}.offset),
+          fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, {{err_string}});
-  if (validate_retval != mojo::internal::ValidationError::NONE) {
+  if (validate_retval != fidl::internal::ValidationError::NONE) {
 {%-   elif kind|is_union_kind %}
   auto validate_retval = {{kind|get_name_for_kind}}::Data_::Validate(
           &object->{{name}}, bounds_checker, true, {{err_string}});
-  if (validate_retval != mojo::internal::ValidationError::NONE) {
+  if (validate_retval != fidl::internal::ValidationError::NONE) {
 {%-   else %}
   auto validate_retval = {{wrapper_type}}::Data_::Validate(
-          mojo::internal::DecodePointerRaw(&object->{{name}}.offset),
+          fidl::internal::DecodePointerRaw(&object->{{name}}.offset),
           bounds_checker, {{err_string}}); 
-  if (validate_retval != mojo::internal::ValidationError::NONE) {
+  if (validate_retval != fidl::internal::ValidationError::NONE) {
 {%-   endif %}
     return validate_retval;
   }
@@ -69,71 +69,72 @@
 {%-   set name = packed_field.field.name %}
 {%-   set kind = packed_field.field.kind %}
 {%-   if kind|is_interface_kind %}
-  const mojo::Handle {{name}}_handle = object->{{name}}.handle;
+  const fidl::internal::WrappedHandle {{name}}_handle
+    = object->{{name}}.handle;
 {%-   else %}
-  const mojo::Handle {{name}}_handle = object->{{name}};
+  const fidl::internal::WrappedHandle {{name}}_handle = object->{{name}};
 {%-   endif %}
 {%-   if not kind|is_nullable_kind %}
-  if ({{name}}_handle.value() == mojo::internal::kEncodedInvalidHandleValue) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}})
+  if ({{name}}_handle.value == fidl::internal::kEncodedInvalidHandleValue) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}})
         << "invalid {{name}} field in {{struct.name}} struct";
-    return mojo::internal::ValidationError::UNEXPECTED_INVALID_HANDLE;
+    return fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE;
   }
 {%-   endif %}
   if (!bounds_checker->ClaimHandle({{name}}_handle)) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
-    return mojo::internal::ValidationError::ILLEGAL_HANDLE;
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG({{err_string}}) << "";
+    return fidl::internal::ValidationError::ILLEGAL_HANDLE;
   }
 {%- endmacro %}
 
 // static
-{{class_name}}* {{class_name}}::New(mojo::internal::Buffer* buf) {
+{{class_name}}* {{class_name}}::New(fidl::internal::Buffer* buf) {
   return new (buf->Allocate(sizeof({{class_name}}))) {{class_name}}();
 }
 
 // static
-mojo::internal::ValidationError {{class_name}}::Validate(
+fidl::internal::ValidationError {{class_name}}::Validate(
     const void* data,
-    mojo::internal::BoundsChecker* bounds_checker,
+    fidl::internal::BoundsChecker* bounds_checker,
     std::string* err) {
-  mojo::internal::ValidationError retval;
+  fidl::internal::ValidationError retval;
   
   if (!data)
-    return mojo::internal::ValidationError::NONE;
+    return fidl::internal::ValidationError::NONE;
 
   retval = ValidateStructHeaderAndClaimMemory(data, bounds_checker, err);
-  if (retval != mojo::internal::ValidationError::NONE)
+  if (retval != fidl::internal::ValidationError::NONE)
     return retval;
 
   // NOTE: The memory backing |object| may be smaller than |sizeof(*object)| if
   // the message comes from an older version.
   const {{class_name}}* object = static_cast<const {{class_name}}*>(data);
-
+  {%- set num_versions = struct.versions | length -%}
+  {%- set latest_version = num_versions - 1 -%}
   static const struct {
     uint32_t version;
     uint32_t num_bytes;
-  } kVersionSizes[] = {
+  } kVersionSizes[{{ num_versions }}] = {
 {%- for version in struct.versions -%}
     { {{version.version}}, {{version.num_bytes}} }{% if not loop.last %}, {% endif -%}
 {%- endfor -%}
   };
-
   if (object->header_.version <=
-          kVersionSizes[MOJO_ARRAYSIZE(kVersionSizes) - 1].version) {
+          kVersionSizes[{{ latest_version }}].version) {
     // Scan in reverse order to optimize for more recent versions.
-    for (int i = MOJO_ARRAYSIZE(kVersionSizes) - 1; i >= 0; --i) {
+    for (int i = {{ latest_version }}; i >= 0; --i) {
       if (object->header_.version >= kVersionSizes[i].version) {
         if (object->header_.num_bytes == kVersionSizes[i].num_bytes)
           break;
 
-        MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-        return mojo::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
+        FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+        return fidl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
       }
     }
   } else if (object->header_.num_bytes <
-                 kVersionSizes[MOJO_ARRAYSIZE(kVersionSizes) - 1].num_bytes) {
-    MOJO_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
-    return mojo::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
+                kVersionSizes[{{ latest_version }}].num_bytes) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+    return fidl::internal::ValidationError::UNEXPECTED_STRUCT_HEADER;
   }
 
 {#- Before validating fields introduced at a certain version, we need to add
@@ -147,7 +148,7 @@ mojo::internal::ValidationError {{class_name}}::Validate(
 {%-     if packed_field.min_version > last_checked_version %}
 {%-       set last_checked_version = packed_field.min_version %}
   if (object->header_.version < {{packed_field.min_version}})
-    return mojo::internal::ValidationError::NONE;
+    return fidl::internal::ValidationError::NONE;
 {%-     endif %}
 {%-     if kind|is_object_kind %}
   {
@@ -161,25 +162,25 @@ mojo::internal::ValidationError {{class_name}}::Validate(
 {%-   endif %}
 {%- endfor %}
 
-  return mojo::internal::ValidationError::NONE;
+  return fidl::internal::ValidationError::NONE;
 }
 
 void {{class_name}}::EncodePointersAndHandles(
-    std::vector<mojo::Handle>* handles) {
-  MOJO_CHECK(header_.version == {{struct.versions[-1].version}});
+    std::vector<mx_handle_t>* handles) {
+  FTL_CHECK(header_.version == {{struct.versions[-1].version}});
 {%- for pf in struct.packed.packed_fields_in_ordinal_order %}
 {%-   if pf.field.kind|is_union_kind %}
   {{pf.field.name}}.EncodePointersAndHandles(handles);
 {%-   elif pf.field.kind|is_object_kind %}
-  mojo::internal::Encode(&this->{{pf.field.name}}, handles);
+  fidl::internal::Encode(&this->{{pf.field.name}}, handles);
 {%-   elif pf.field.kind|is_any_handle_kind or pf.field.kind|is_interface_kind %}
-  mojo::internal::EncodeHandle(&this->{{pf.field.name}}, handles);
+  fidl::internal::EncodeHandle(&this->{{pf.field.name}}, handles);
 {%-   endif %}
 {%- endfor %}
 }
 
 void {{class_name}}::DecodePointersAndHandles(
-    std::vector<mojo::Handle>* handles) {
+    std::vector<mx_handle_t>* handles) {
   // NOTE: The memory backing |this| may has be smaller than |sizeof(*this)|, if
   // the message comes from an older version.
 {#- Before decoding fields introduced at a certain version, we need to add
@@ -199,9 +200,9 @@ void {{class_name}}::DecodePointersAndHandles(
 {%-     if kind|is_union_kind %}
   {{name}}.DecodePointersAndHandles(handles);
 {%-     elif kind|is_object_kind %}
-  mojo::internal::Decode(&this->{{name}}, handles);
+  fidl::internal::Decode(&this->{{name}}, handles);
 {%-     else %}
-  mojo::internal::DecodeHandle(&this->{{name}}, handles);
+  fidl::internal::DecodeHandle(&this->{{name}}, handles);
 {%-     endif %}
 {%-   endif %}
 {%- endfor %}

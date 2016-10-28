@@ -6,7 +6,7 @@
  JavaPackage="org.chromium.fidl.bindings.types"]
 module fidl.bindings.types;
 
-import "fidl_types.mojom";
+import "fidl_types.fidl";
 
 /*
  * The structures in this file are intended to be used by the Fidl compiler

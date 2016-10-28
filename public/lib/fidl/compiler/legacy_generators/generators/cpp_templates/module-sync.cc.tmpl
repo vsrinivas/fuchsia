@@ -14,22 +14,21 @@
 #include <string>
 #include <utility>
 
-#include "mojo/public/cpp/bindings/lib/array_serialization.h"
-#include "mojo/public/cpp/bindings/lib/bindings_serialization.h"
-#include "mojo/public/cpp/bindings/lib/bounds_checker.h"
-#include "mojo/public/cpp/bindings/lib/map_data_internal.h"
-#include "mojo/public/cpp/bindings/lib/map_serialization.h"
-#include "mojo/public/cpp/bindings/lib/message_builder.h"
-#include "mojo/public/cpp/bindings/lib/message_validation.h"
-#include "mojo/public/cpp/bindings/lib/string_serialization.h"
-#include "mojo/public/cpp/bindings/lib/synchronous_connector.h"
-#include "mojo/public/cpp/bindings/lib/validate_params.h"
-#include "mojo/public/cpp/bindings/lib/validation_errors.h"
-#include "mojo/public/cpp/bindings/lib/validation_util.h"
-#include "mojo/public/cpp/bindings/message.h"
-#include "mojo/public/cpp/bindings/message_validator.h"
-#include "mojo/public/cpp/environment/logging.h"
-#include "mojo/public/interfaces/bindings/interface_control_messages.mojom.h"
+#include "lib/fidl/cpp/bindings/internal/array_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
+#include "lib/fidl/cpp/bindings/internal/map_data_internal.h"
+#include "lib/fidl/cpp/bindings/internal/map_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/message_builder.h"
+#include "lib/fidl/cpp/bindings/internal/message_validation.h"
+#include "lib/fidl/cpp/bindings/internal/string_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
+#include "lib/fidl/cpp/bindings/internal/validate_params.h"
+#include "lib/fidl/cpp/bindings/internal/validation_errors.h"
+#include "lib/fidl/cpp/bindings/internal/validation_util.h"
+#include "lib/fidl/cpp/bindings/message.h"
+#include "lib/fidl/cpp/bindings/message_validator.h"
+#include "lib/ftl/logging.h"
 #include "{{module.path}}-internal.h"
 #include "{{module.path}}-common.h"
 
@@ -41,8 +40,8 @@ namespace {{namespace}} {
 {% for interface in interfaces %}
 {%- set base_name = "internal::%s_Base"|format(interface.name) -%}
 {{interface.name}}_SynchronousProxy::{{interface.name}}_SynchronousProxy(
-      mojo::internal::SynchronousConnector* connector,
-      mojo::internal::MessageValidatorList&& validators)
+      fidl::internal::SynchronousConnector* connector,
+      fidl::internal::MessageValidatorList&& validators)
           : connector_(connector), validators_(std::move(validators)) {
 }
 
@@ -59,9 +58,9 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
 
   auto msg_name = static_cast<uint32_t>({{message_name}});
 {%-   if method.response_parameters != None %}
-  mojo::RequestMessageBuilder builder(msg_name, size);
+  fidl::RequestMessageBuilder builder(msg_name, size);
 {%-   else %}
-  mojo::MessageBuilder builder(msg_name, size);
+  fidl::MessageBuilder builder(msg_name, size);
 {%-   endif %}
 
   {{struct_macros.serialize(params_struct,
@@ -73,27 +72,22 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
     return false;
   
 {%-   if method.response_parameters != None %}
-  mojo::Message response_msg;
+  fidl::Message response_msg;
   if (!connector_->BlockingRead(&response_msg))
     return false; 
   
   // Validate the incoming message.
   std::string response_err;
-  if (mojo::internal::RunValidatorsOnMessage(validators_, &response_msg,
+  if (fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
                                              &response_err)
-        != mojo::internal::ValidationError::NONE) {
-    MOJO_LOG(WARNING) << response_err;
+        != fidl::internal::ValidationError::NONE) {
+    FTL_LOG(WARNING) << response_err;
     return false;
   }
   
 {#- TODO(vardhan): Add support for synchronous control messages. #} 
-  if (mojo::internal::ControlMessageHandler::IsControlMessage(&response_msg)) {
-    MOJO_LOG(ERROR) << "Synchronous interface bindings currently don't support "
-                       "interface control messages.";
-    return false;
-  }
   if (response_msg.name() != msg_name) {
-    MOJO_LOG(ERROR) << "Expecting response for message = " << msg_name <<
+    FTL_LOG(ERROR) << "Expecting response for message = " << msg_name <<
                        ", but received message = " << response_msg.name();
     return false;
   }

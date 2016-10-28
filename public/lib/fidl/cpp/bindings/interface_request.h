@@ -60,7 +60,7 @@ class InterfaceRequest {
   void Bind(mx::channel handle) { handle_ = std::move(handle); }
 
   // Indicates whether the request currently contains a valid message pipe.
-  bool is_pending() const { return handle_.is_valid(); }
+  bool is_pending() const { return !!handle_; }
 
   // Removes the message pipe from the request and returns it.
   mx::channel PassMessagePipe() { return std::move(handle_); }
@@ -83,7 +83,7 @@ template <typename Interface>
 InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
   mx::channel endpoint0;
   mx::channel endpoint1;
-  mx::channel::create(&endpoint0, &endpoint1, 0);
+  mx::channel::create(0, &endpoint0, &endpoint1);
   *handle = InterfaceHandle<Interface>(std::move(endpoint0), 0u);
   return InterfaceRequest<Interface>(std::move(endpoint1));
 }

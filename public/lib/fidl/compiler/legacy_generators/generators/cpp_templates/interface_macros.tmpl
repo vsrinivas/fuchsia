@@ -29,7 +29,7 @@
 {%- endmacro %}
 
 {%- macro declare_callback(method) -%}
-mojo::Callback<void(
+std::function<void(
 {%-   for param in method.response_parameters -%}
 {{param.kind|cpp_result_type}}
 {%- if not loop.last %}, {% endif %}

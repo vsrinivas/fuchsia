@@ -7,12 +7,12 @@ class {{union.name}} {
 
   template <typename U>
   static {{union.name}}Ptr From(const U& u) {
-    return mojo::TypeConverter<{{union.name}}Ptr, U>::Convert(u);
+    return fidl::TypeConverter<{{union.name}}Ptr, U>::Convert(u);
   }
 
   template <typename U>
   U To() const {
-    return mojo::TypeConverter<U, {{union.name}}>::Convert(*this);
+    return fidl::TypeConverter<U, {{union.name}}>::Convert(*this);
   }
 
   {{union.name}}();
@@ -35,7 +35,7 @@ class {{union.name}} {
   bool has_unknown_tag() const;
 
  private:
-  friend class mojo::internal::UnionAccessor<{{union.name}}>;
+  friend class fidl::internal::UnionAccessor<{{union.name}}>;
   union Union_ {
     Union_() {}
     ~Union_() {}

@@ -2,6 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("bindings_config") {
+  configs = [
+    "//magenta/system/ulib/mx:mx_config"
+  ]
+}
+
 # This target provides source files and dependencies required for serializing
 # fidl types.
 source_set("serialization") {
@@ -44,6 +50,8 @@ source_set("serialization") {
     "//lib/fidl/cpp/waiter",
     "//magenta/system/ulib/mx",
   ]
+
+  public_configs = [":bindings_config"]
 }
 
 source_set("bindings") {
