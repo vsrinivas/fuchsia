@@ -31,29 +31,6 @@ static inline mx_handle_t _mx_process_self(void) {
 
 #ifndef WITHOUT_COMPAT_SYSCALLS
 
-#define mx_msgpipe_create _mx_msgpipe_create
-static inline mx_status_t _mx_msgpipe_create(mx_handle_t* out, uint32_t flags) {
-    return mx_channel_create(flags, &out[0], &out[1]);
-}
-
-#define mx_msgpipe_read _mx_msgpipe_read
-static inline mx_status_t _mx_msgpipe_read(mx_handle_t handle,
-                                           void* bytes, uint32_t* num_bytes,
-                                           mx_handle_t* handles, uint32_t* num_handles,
-                                           uint32_t flags) {
-    uint32_t nb = num_bytes ? *num_bytes : 0;
-    uint32_t nh = num_handles ? *num_handles : 0;
-    return mx_channel_read(handle, flags, bytes, nb, num_bytes, handles, nh, num_handles);
-}
-
-#define mx_msgpipe_write _mx_msgpipe_write
-static inline mx_status_t _mx_msgpipe_write(mx_handle_t handle,
-                                            const void* bytes, uint32_t num_bytes,
-                                            const mx_handle_t* handles, uint32_t num_handles,
-                                            uint32_t flags) {
-    return mx_channel_write(handle, flags, bytes, num_bytes, handles, num_handles);
-}
-
 #define mx_exit _mx_exit
 __attribute__((noreturn)) static inline void _mx_exit(int rc) {
     mx_process_exit(rc);
