@@ -62,24 +62,17 @@ void tu_thread_create_c11(thrd_t* thread, thrd_start_t entry, void* arg,
                           const char* name);
 
 // A wrapper on mx_channel_create.
-// For callers that have separate variables for each side of the pipe, this takes two pointers
-// instead of an array of two handles that the syscall has.
 
-void tu_message_pipe_create(mx_handle_t* handle0, mx_handle_t* handle1);
 void tu_channel_create(mx_handle_t* handle0, mx_handle_t* handle1);
 
 
 // A wrapper on mx_channel_write.
 
-void tu_message_write(mx_handle_t handle, const void* bytes, uint32_t num_bytes,
-                      const mx_handle_t* handles, uint32_t num_handles, uint32_t flags);
 void tu_channel_write(mx_handle_t handle, uint32_t flags, const void* bytes, uint32_t num_bytes,
                       const mx_handle_t* handles, uint32_t num_handles);
 
 // A wrapper on mx_channel_read.
 
-void tu_message_read(mx_handle_t handle, void* bytes, uint32_t* num_bytes,
-                     mx_handle_t* handles, uint32_t* num_handles, uint32_t flags);
 void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
                      mx_handle_t* handles, uint32_t* num_handles);
 

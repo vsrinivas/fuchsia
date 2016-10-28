@@ -61,14 +61,14 @@ static void send_msg_new_thread_handle(mx_handle_t handle, mx_handle_t thread)
     // Note: The handle is transferred to the receiver.
     uint64_t data = MSG_AUX_THREAD_HANDLE;
     unittest_printf("sending new thread %d message on handle %u\n", thread, handle);
-    tu_message_write(handle, &data, sizeof(data), &thread, 1, 0);
+    tu_channel_write(handle, 0, &data, sizeof(data), &thread, 1);
 }
 
 static void send_msg(mx_handle_t handle, enum message msg)
 {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
-    tu_message_write(handle, &data, sizeof(data), NULL, 0, 0);
+    tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
 }
 
 static bool recv_msg(mx_handle_t handle, enum message* msg)
@@ -83,7 +83,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg)
         return false;
     }
 
-    tu_message_read(handle, &data, &num_bytes, NULL, 0, 0);
+    tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
     if (num_bytes != sizeof(data)) {
         unittest_printf("recv_msg: unexpected message size, %u != %zu\n",
                         num_bytes, sizeof(data));
@@ -107,7 +107,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
     ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
 
     uint32_t num_handles = 1;
-    tu_message_read(handle, &data, &num_bytes, thread, &num_handles, 0);
+    tu_channel_read(handle, 0, &data, &num_bytes, thread, &num_handles);
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
     ASSERT_EQ(num_handles, 1u, "expected one returned handle");
 
@@ -176,15 +176,15 @@ static bool test_received_exception(mx_handle_t eport,
     return true;
 }
 
-static void msg_loop(mx_handle_t pipe)
+static void msg_loop(mx_handle_t channel)
 {
     bool my_done_tests = false;
-    mx_handle_t pipe_to_thread = MX_HANDLE_INVALID;
+    mx_handle_t channel_to_thread = MX_HANDLE_INVALID;
 
     while (!done_tests && !my_done_tests)
     {
         enum message msg;
-        if (!recv_msg(pipe, &msg)) {
+        if (!recv_msg(channel, &msg)) {
             unittest_printf("Error while receiving msg\n");
             return;
         }
@@ -197,31 +197,31 @@ static void msg_loop(mx_handle_t pipe)
             crash_me();
             break;
         case MSG_PING:
-            send_msg(pipe, MSG_PONG);
+            send_msg(channel, MSG_PONG);
             break;
         case MSG_CREATE_AUX_THREAD:
             // Spin up a thread that we can talk to.
             {
-                if (pipe_to_thread != MX_HANDLE_INVALID) {
+                if (channel_to_thread != MX_HANDLE_INVALID) {
                     unittest_printf("previous thread connection not shutdown");
                     return;
                 }
-                mx_handle_t pipe_from_thread;
-                tu_message_pipe_create(&pipe_to_thread, &pipe_from_thread);
+                mx_handle_t channel_from_thread;
+                tu_channel_create(&channel_to_thread, &channel_from_thread);
                 thrd_t thread;
-                tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) pipe_from_thread, "msg-loop-subthread");
+                tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) channel_from_thread, "msg-loop-subthread");
                 mx_handle_t thread_handle = thrd_get_mx_handle(thread);
                 mx_handle_t copy = mx_handle_duplicate(thread_handle, MX_RIGHT_SAME_RIGHTS);
-                send_msg_new_thread_handle(pipe, copy);
+                send_msg_new_thread_handle(channel, copy);
             }
             break;
         case MSG_CRASH_AUX_THREAD:
-            send_msg(pipe_to_thread, MSG_CRASH);
+            send_msg(channel_to_thread, MSG_CRASH);
             break;
         case MSG_SHUTDOWN_AUX_THREAD:
-            send_msg(pipe_to_thread, MSG_DONE);
-            mx_handle_close(pipe_to_thread);
-            pipe_to_thread = MX_HANDLE_INVALID;
+            send_msg(channel_to_thread, MSG_DONE);
+            mx_handle_close(channel_to_thread);
+            channel_to_thread = MX_HANDLE_INVALID;
             break;
         default:
             unittest_printf("unknown message received: %d\n", msg);
@@ -233,10 +233,10 @@ static void msg_loop(mx_handle_t pipe)
 static int thread_func(void* arg)
 {
     unittest_printf("test thread starting\n");
-    mx_handle_t msg_pipe = (mx_handle_t) (uintptr_t) arg;
-    msg_loop(msg_pipe);
+    mx_handle_t msg_channel = (mx_handle_t) (uintptr_t) arg;
+    msg_loop(msg_channel);
     unittest_printf("test thread exiting\n");
-    tu_handle_close(msg_pipe);
+    tu_handle_close(msg_channel);
     return 0;
 }
 
@@ -244,29 +244,29 @@ static void test_child(void) __NO_RETURN;
 static void test_child(void)
 {
     unittest_printf("Test child starting.\n");
-    mx_handle_t pipe = mxio_get_startup_handle(MX_HND_TYPE_USER0);
-    if (pipe == MX_HANDLE_INVALID)
+    mx_handle_t channel = mxio_get_startup_handle(MX_HND_TYPE_USER0);
+    if (channel == MX_HANDLE_INVALID)
         tu_fatal("mxio_get_startup_handle", ERR_BAD_HANDLE - 1000);
-    msg_loop(pipe);
+    msg_loop(channel);
     unittest_printf("Test child exiting.\n");
     exit(0);
 }
 
-static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_pipe)
+static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_channel)
 {
     unittest_printf("Starting test child.\n");
-    mx_handle_t our_pipe, their_pipe;
-    tu_message_pipe_create(&our_pipe, &their_pipe);
+    mx_handle_t our_channel, their_channel;
+    tu_channel_create(&our_channel, &their_channel);
     const char* test_child_path = program_path;
     const char* const argv[2] = {
         test_child_path,
         test_child_name
     };
-    mx_handle_t handles[1] = { their_pipe };
+    mx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
     mx_handle_t child = tu_launch_mxio_etc(test_child_name, 2, argv, NULL, 1, handles, handle_ids);
     *out_child = child;
-    *out_pipe = our_pipe;
+    *out_channel = our_channel;
     unittest_printf("Test child started.\n");
 }
 
@@ -342,23 +342,23 @@ static bool process_set_close_set_test(void)
 static bool thread_set_close_set_test(void)
 {
     BEGIN_TEST;
-    mx_handle_t our_pipe, their_pipe;
-    tu_message_pipe_create(&our_pipe, &their_pipe);
+    mx_handle_t our_channel, their_channel;
+    tu_channel_create(&our_channel, &their_channel);
     thrd_t thread;
-    tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_pipe, "thread-set-close-set");
+    tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_channel, "thread-set-close-set");
     mx_handle_t thread_handle = thrd_get_mx_handle(thread);
     test_set_close_set("thread", thread_handle);
-    send_msg(our_pipe, MSG_DONE);
+    send_msg(our_channel, MSG_DONE);
     // thrd_join doesn't provide a timeout, but we have the watchdog for that.
     thrd_join(thread, NULL);
     END_TEST;
 }
 
 static void finish_basic_test(const char* kind, mx_handle_t child,
-                              mx_handle_t eport, mx_handle_t our_pipe,
+                              mx_handle_t eport, mx_handle_t our_channel,
                               enum message crash_msg)
 {
-    send_msg(our_pipe, crash_msg);
+    send_msg(our_channel, crash_msg);
     mx_koid_t tid;
     test_received_exception(eport, kind, child, false, &tid);
     resume_thread_from_exception(child, tid);
@@ -366,7 +366,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
 
     tu_handle_close(child);
     tu_handle_close(eport);
-    tu_handle_close(our_pipe);
+    tu_handle_close(our_channel);
 }
 
 static bool process_handler_test(void)
@@ -374,12 +374,12 @@ static bool process_handler_test(void)
     BEGIN_TEST;
     unittest_printf("process exception handler basic test\n");
 
-    mx_handle_t child, our_pipe;
-    start_test_child(&child, &our_pipe);
+    mx_handle_t child, our_channel;
+    start_test_child(&child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, 0);
 
-    finish_basic_test("process", child, eport, our_pipe, MSG_CRASH);
+    finish_basic_test("process", child, eport, our_channel, MSG_CRASH);
     END_TEST;
 }
 
@@ -388,15 +388,15 @@ static bool thread_handler_test(void)
     BEGIN_TEST;
     unittest_printf("thread exception handler basic test\n");
 
-    mx_handle_t child, our_pipe;
-    start_test_child(&child, &our_pipe);
+    mx_handle_t child, our_channel;
+    start_test_child(&child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
-    send_msg(our_pipe, MSG_CREATE_AUX_THREAD);
+    send_msg(our_channel, MSG_CREATE_AUX_THREAD);
     mx_handle_t thread;
-    recv_msg_new_thread_handle(our_pipe, &thread);
+    recv_msg_new_thread_handle(our_channel, &thread);
     tu_set_exception_port(thread, eport, 0, 0);
 
-    finish_basic_test("thread", child, eport, our_pipe, MSG_CRASH_AUX_THREAD);
+    finish_basic_test("thread", child, eport, our_channel, MSG_CRASH_AUX_THREAD);
 
     tu_handle_close(thread);
     END_TEST;
@@ -407,12 +407,12 @@ static bool debugger_handler_test(void)
     BEGIN_TEST;
     unittest_printf("debugger exception handler basic test\n");
 
-    mx_handle_t child, our_pipe;
-    start_test_child(&child, &our_pipe);
+    mx_handle_t child, our_channel;
+    start_test_child(&child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
-    finish_basic_test("debugger", child, eport, our_pipe, MSG_CRASH);
+    finish_basic_test("debugger", child, eport, our_channel, MSG_CRASH);
     END_TEST;
 }
 
@@ -421,13 +421,13 @@ static bool process_gone_notification_test(void)
     BEGIN_TEST;
     unittest_printf("process gone notification test\n");
 
-    mx_handle_t child, our_pipe;
-    start_test_child(&child, &our_pipe);
+    mx_handle_t child, our_channel;
+    start_test_child(&child, &our_channel);
 
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, 0);
 
-    send_msg(our_pipe, MSG_DONE);
+    send_msg(our_channel, MSG_DONE);
     mx_koid_t tid;
     test_received_exception(eport, "process gone", child, true, &tid);
     ASSERT_EQ(tid, 0u, "tid not zero");
@@ -437,7 +437,7 @@ static bool process_gone_notification_test(void)
     tu_handle_close(child);
 
     tu_handle_close(eport);
-    tu_handle_close(our_pipe);
+    tu_handle_close(our_channel);
 
     END_TEST;
 }
@@ -447,15 +447,15 @@ static bool thread_gone_notification_test(void)
     BEGIN_TEST;
     unittest_printf("thread gone notification test\n");
 
-    mx_handle_t our_pipe, their_pipe;
-    tu_message_pipe_create(&our_pipe, &their_pipe);
+    mx_handle_t our_channel, their_channel;
+    tu_channel_create(&our_channel, &their_channel);
     mx_handle_t eport = tu_io_port_create(0);
     thrd_t thread;
-    tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_pipe, "thread-gone-test-thread");
+    tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_channel, "thread-gone-test-thread");
     mx_handle_t thread_handle = thrd_get_mx_handle(thread);
     tu_set_exception_port(thread_handle, eport, 0, 0);
 
-    send_msg(our_pipe, MSG_DONE);
+    send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
     mx_koid_t tid;
     test_received_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, true, &tid);
@@ -466,7 +466,7 @@ static bool thread_gone_notification_test(void)
     thrd_join(thread, NULL);
 
     tu_handle_close(eport);
-    tu_handle_close(our_pipe);
+    tu_handle_close(our_channel);
 
     END_TEST;
 }

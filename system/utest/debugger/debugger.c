@@ -89,7 +89,7 @@ static void send_msg(mx_handle_t handle, enum message msg)
 {
     uint64_t data = msg;
     unittest_printf("sending message %d on handle %u\n", msg, handle);
-    tu_message_write(handle, &data, sizeof(data), NULL, 0, 0);
+    tu_channel_write(handle, 0, &data, sizeof(data), NULL, 0);
 }
 
 // This returns "bool" because it uses ASSERT_*.
@@ -103,7 +103,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg)
 
     ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
 
-    tu_message_read(handle, &data, &num_bytes, NULL, 0, 0);
+    tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
 
     *msg = data;
@@ -454,7 +454,7 @@ static bool setup_inferior(mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_
 {
     mx_status_t status;
     mx_handle_t pipe1, pipe2;
-    tu_message_pipe_create(&pipe1, &pipe2);
+    tu_channel_create(&pipe1, &pipe2);
 
     const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
     const char* test_child_path = program_path;
