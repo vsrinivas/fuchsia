@@ -4,7 +4,9 @@
 
 #include <stdio.h>
 
+#ifndef MAGMA_DLOG_ENABLE
 #define MAGMA_DLOG_ENABLE 0
+#endif
 
 #if MAGMA_DLOG_ENABLE
 
