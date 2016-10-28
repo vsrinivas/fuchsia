@@ -77,14 +77,14 @@ bool ExceptionPort::Run() {
   FTL_DCHECK(!keep_running_);
 
   // Create an I/O port.
-  mtl::UniqueHandle eport(mx_port_create(0u));
-  if (eport.get() < 0) {
-    util::LogErrorWithMxStatus("Failed to create the exception port",
-                               eport.get());
+  mx_handle_t eport_handle;
+  mx_status_t status = mx_port_create(0u, &eport_handle);
+  if (status < 0) {
+    util::LogErrorWithMxStatus("Failed to create the exception port", status);
     return false;
   }
 
-  eport_handle_ = std::move(eport);
+  eport_handle_.reset(eport_handle);
   FTL_DCHECK(eport_handle_.is_valid());
 
   keep_running_ = true;
