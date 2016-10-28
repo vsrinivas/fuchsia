@@ -100,9 +100,9 @@ type Rights = sys::mx_rights_t;
 type Signals = sys::mx_signals_t;
 
 #[repr(u32)]
-pub enum MessagePipeOpts {
+pub enum ChannelOpts {
     Normal = 0,
-    ReplyPipe = sys::MX_FLAG_REPLY_PIPE,
+    ReplyChannel = sys::MX_CHANNEL_CREATE_REPLY_CHANNEL,
 }
 
 pub struct SignalsState(sys::mx_signals_state_t);
@@ -117,8 +117,13 @@ impl SignalsState {
     }
 }
 
-pub fn current_time() -> Time {
-    unsafe { sys::mx_current_time() }
+#[repr(u32)]
+pub enum ClockId {
+    Monotonic = 0,
+}
+
+pub fn time_get(clock_id: ClockId) -> Time {
+    unsafe { sys::mx_time_get(clock_id as u32) }
 }
 
 pub fn nanosleep(time: Time) {
@@ -241,46 +246,49 @@ impl Drop for Handle {
     }
 }
 
-// Message pipes
+// Channels
 
-pub struct MessagePipe(Handle);
+pub struct Channel(Handle);
 
-impl HandleBase for MessagePipe {
+impl HandleBase for Channel {
     fn get_ref(&self) -> HandleRef {
         self.0.get_ref()
     }
 
     fn from_handle(handle: Handle) -> Self {
-        MessagePipe(handle)
+        Channel(handle)
     }
 }
 
-impl MessagePipe {
-    pub fn create(opts: MessagePipeOpts) -> Result<(MessagePipe, MessagePipe), Status> {
+impl Channel {
+    pub fn create(opts: ChannelOpts) -> Result<(Channel, Channel), Status> {
         unsafe {
-            let mut handles = [0, 0];
-            let status = sys::mx_msgpipe_create(handles.as_mut_ptr(), opts as u32);
+            let mut handle0 = 0;
+            let mut handle1 = 0;
+            let status = sys::mx_channel_create(opts as u32, &mut handle0, &mut handle1);
             into_result(status, ||
-                (Self::from_handle(Handle(handles[0])),
-                    Self::from_handle(Handle(handles[1]))))
+                (Self::from_handle(Handle(handle0)),
+                    Self::from_handle(Handle(handle1))))
         }
     }
 
-    pub fn read(&self, flags: u32, buf: &mut MessageBuf) -> Result<(), Status> {
+    pub fn read(&self, opts: u32, buf: &mut MessageBuf) -> Result<(), Status> {
         unsafe {
             buf.reset_handles();
             let raw_handle = self.raw_handle();
             let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
             let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
-            let mut status = sys::mx_msgpipe_read(raw_handle, buf.bytes.as_mut_ptr(), &mut num_bytes,
-                    buf.handles.as_mut_ptr(), &mut num_handles, flags);
+            let mut status = sys::mx_channel_read(raw_handle, opts,
+                buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
+                buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
             if status == sys::ERR_BUFFER_TOO_SMALL {
                 ensure_capacity(&mut buf.bytes, num_bytes as usize);
                 ensure_capacity(&mut buf.handles, num_handles as usize);
                 num_bytes = size_to_u32_sat(buf.bytes.capacity());
                 num_handles = size_to_u32_sat(buf.handles.capacity());
-                status = sys::mx_msgpipe_read(raw_handle, buf.bytes.as_mut_ptr(), &mut num_bytes,
-                        buf.handles.as_mut_ptr(), &mut num_handles, flags);
+                status = sys::mx_channel_read(raw_handle, opts,
+                    buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
+                    buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
             }
             into_result(status, || {
                 buf.bytes.set_len(num_bytes as usize);
@@ -290,13 +298,13 @@ impl MessagePipe {
     }
 
     fn write_raw(handle: sys::mx_handle_t, bytes: &[u8], handles: &mut Vec<Handle>,
-            flags: u32) -> Result<(), Status>
+            opts: u32) -> Result<(), Status>
     {
         unsafe {
             let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::OutOfRange));
             let n_handles = try!(handles.len().value_into().map_err(|_| Status::OutOfRange));
-            let status = sys::mx_msgpipe_write(handle, bytes.as_ptr(), n_bytes,
-                handles.as_ptr() as *const sys::mx_handle_t, n_handles, flags);
+            let status = sys::mx_channel_write(handle, opts, bytes.as_ptr(), n_bytes,
+                handles.as_ptr() as *const sys::mx_handle_t, n_handles);
             into_result(status, || {
                 // Handles were successfully transferred, forget them on sender side
                 handles.set_len(0);
@@ -304,18 +312,18 @@ impl MessagePipe {
         }
     }
 
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, flags: u32)
+    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), Status>
     {
-        Self::write_raw(self.raw_handle(), bytes, handles, flags)
+        Self::write_raw(self.raw_handle(), bytes, handles, opts)
     }
 
-    pub fn write_reply(self, bytes: &[u8], handles: &mut Vec<Handle>, flags: u32)
+    pub fn write_reply(self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), (Self, Status)>
     {
         let raw_handle = self.raw_handle();
         handles.push(self.into_handle());
-        Self::write_raw(raw_handle, bytes, handles, flags).map_err(|status|
+        Self::write_raw(raw_handle, bytes, handles, opts).map_err(|status|
             (Self::from_handle(handles.pop().unwrap()), status)
         )
     }
@@ -533,17 +541,17 @@ mod tests {
 
     #[test]
     fn time_increases() {
-        let time1 = current_time();
-        let time2 = current_time();
+        let time1 = time_get(ClockId::Monotonic);
+        let time2 = time_get(ClockId::Monotonic);
         assert!(time2 > time1);
     }
 
     #[test]
     fn sleep() {
         let sleep_ns = 1_000_000;  // 1ms
-        let time1 = current_time();
+        let time1 = time_get(ClockId::Monotonic);
         nanosleep(sleep_ns);
-        let time2 = current_time();
+        let time2 = time_get(ClockId::Monotonic);
         assert!(time2 > time1 + sleep_ns);
     }
 
@@ -569,8 +577,8 @@ mod tests {
     }
 
     #[test]
-    fn message_pipe_reply_basic() {
-        let (p1, p2) = MessagePipe::create(MessagePipeOpts::Normal).unwrap();
+    fn channel_reply_basic() {
+        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
 
         // Don't need to test trying to include self-handle, ownership forbids it
         let mut empty = vec![];
@@ -579,7 +587,7 @@ mod tests {
         let (p2, _status) = p2.write_reply(b"hello", &mut empty, 0).err().unwrap();
         assert!(p2.write(b"hello", &mut empty, 0).is_ok());
 
-        let (p1, p2) = MessagePipe::create(MessagePipeOpts::ReplyPipe).unwrap();
+        let (p1, p2) = Channel::create(ChannelOpts::ReplyChannel).unwrap();
         let (p1, _status) = p1.write_reply(b"hello", &mut empty, 0).err().unwrap();
         assert!(p1.write(b"hello", &mut empty, 0).is_ok());
         assert!(p2.write(b"hello", &mut empty, 0).is_err());

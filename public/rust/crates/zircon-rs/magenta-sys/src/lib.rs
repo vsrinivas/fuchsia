@@ -93,10 +93,13 @@ bitflags! {
     }
 }
 
-// flags for message pipe creation
+// flags for channel creation
 // TODO: this doesn't have a typedef in the public magenta interface, maybe it should
 // be a named type anyway
-pub const MX_FLAG_REPLY_PIPE: u32 = 1 << 0;
+pub const MX_CHANNEL_CREATE_REPLY_CHANNEL: u32 = 1 << 0;
+
+// clock ids
+pub const MX_CLOCK_MONOTONIC: u32 = 0;
 
 #[repr(C)]
 pub struct mx_waitset_result_t {
@@ -114,13 +117,13 @@ extern {
     pub fn mx_cprng_add_entropy(buffer: *const u8, len: mx_size_t) -> mx_status_t;
 
     // Time
-    pub fn mx_current_time() -> mx_time_t;
+    pub fn mx_time_get(clock_id: u32) -> mx_time_t;
 
     pub fn mx_nanosleep(nanoseconds: mx_time_t) -> mx_status_t;
 
     // Generic handle operations
     pub fn mx_handle_close(handle: mx_handle_t) -> mx_status_t;
-    pub fn mx_handle_duplicate(handle: mx_handle_t, right: mx_rights_t) -> mx_handle_t;
+    pub fn mx_handle_duplicate(handle: mx_handle_t, rights: mx_rights_t) -> mx_handle_t;
     pub fn mx_handle_wait_one(handle: mx_handle_t, signals: mx_signals_t, timeout: mx_time_t,
         signals_state: *mut mx_signals_state_t) -> mx_status_t;
     pub fn mx_handle_wait_many(count: u32, handles: *const mx_handle_t,
@@ -128,12 +131,14 @@ extern {
         signals_states: *mut mx_signals_state_t) -> mx_status_t;
     pub fn mx_handle_replace(handle: mx_handle_t, rights: mx_rights_t) -> mx_handle_t;
 
-    // Message pipes
-    pub fn mx_msgpipe_create(out_handles: *mut mx_handle_t, flags: u32) -> mx_status_t;
-    pub fn mx_msgpipe_read(handle: mx_handle_t, bytes: *mut u8, num_bytes: *mut u32,
-        handles: *mut mx_handle_t, num_handles: *mut u32, flags: u32) -> mx_status_t;
-    pub fn mx_msgpipe_write(handle: mx_handle_t, bytes: *const u8, num_bytes: u32,
-        handles: *const mx_handle_t, num_handles: u32, flags: u32) -> mx_status_t;
+    // Channels
+    pub fn mx_channel_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
+        -> mx_status_t;
+    pub fn mx_channel_read(handle: mx_handle_t, options: u32, bytes: *mut u8,
+        num_bytes: u32, actual_bytes: *mut u32, handles: *mut mx_handle_t,
+        num_handles: u32, actual_handles: *mut u32) -> mx_status_t;
+    pub fn mx_channel_write(handle: mx_handle_t, options: u32, bytes: *const u8,
+        num_bytes: u32, handles: *const mx_handle_t, num_handles: u32) -> mx_status_t;
 
     // Wait sets
     pub fn mx_waitset_create() -> mx_status_t;

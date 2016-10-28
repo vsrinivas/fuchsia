@@ -4,8 +4,10 @@
 
 extern crate magenta;
 
+use magenta::ClockId;
+
 pub fn main() {
-    println!("before sleep, time = {}", magenta::current_time());
+    println!("before sleep, time = {}", magenta::time_get(ClockId::Monotonic));
     magenta::nanosleep(1_000_000_000);
-    println!("after sleep, time = {}", magenta::current_time());
+    println!("after sleep, time = {}", magenta::time_get(ClockId::Monotonic));
 }
