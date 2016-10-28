@@ -231,14 +231,14 @@
 #endif
 #define PTRDIFF_MIN (-(PTRDIFF_MAX)-1)
 
-#define SIG_ATOMIC_MIN __SIG_ATOMIC_MIN__
 #define SIG_ATOMIC_MAX __SIG_ATOMIC_MAX__
+#define SIG_ATOMIC_MIN (-SIG_ATOMIC_MAX - 1)
 
-#ifndef WCHAR_MIN
-#define WCHAR_MIN __WCHAR_MIN__
-#endif
 #ifndef WCHAR_MAX
 #define WCHAR_MAX __WCHAR_MAX__
+#endif
+#ifndef WCHAR_MIN
+#define WCHAR_MIN (-WCHAR_MAX - 1)
 #endif
 
 // GCC defines __<type>INT<size>_C macros which append the correct suffix
