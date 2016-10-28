@@ -28,7 +28,7 @@ struct mxrio {
     // base mxio io object
     mxio_t io;
 
-    // message pipe handle for rpc
+    // channel handle for rpc
     mx_handle_t h;
 
     // event handle for device state signals, or socket handle
@@ -100,7 +100,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 
     mx_handle_t rh = h;
-    if (msg.op & MXRIO_REPLY_PIPE) {
+    if (msg.op & MXRIO_REPLY_CHANNEL) {
         if (msg.hcount == 0) {
             discard_handles(msg.handle, msg.hcount);
             return ERR_INVALID_ARGS;
@@ -133,7 +133,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.arg = (msg.arg < 0) ? msg.arg : ERR_INTERNAL;
     }
 
-    // The kernel requires that a reply pipe endpoint by
+    // The kernel requires that a reply channel endpoint by
     // returned as the last handle attached to a write
     // to that endpoint
     if (rh != h) {
@@ -156,7 +156,7 @@ mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg)
     msg->magic = MXRIO_MAGIC;
     msg->handle[0] = rh;
     msg->hcount = 1;
-    msg->op |= MXRIO_REPLY_PIPE;
+    msg->op |= MXRIO_REPLY_CHANNEL;
 
     if (!is_message_valid(msg)) {
         return ERR_INVALID_ARGS;
@@ -183,19 +183,19 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
 
     mx_status_t r;
 
-    static thread_local mx_handle_t *rpipe = NULL;
-    if (rpipe == NULL) {
-        if ((rpipe = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
+    static thread_local mx_handle_t *rchannel = NULL;
+    if (rchannel == NULL) {
+        if ((rchannel = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
             return ERR_NO_MEMORY;
         }
-        if ((r = mx_channel_create(MX_FLAG_REPLY_PIPE, &rpipe[0], &rpipe[1])) < 0) {
-            free(rpipe);
-            rpipe = NULL;
+        if ((r = mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1])) < 0) {
+            free(rchannel);
+            rchannel = NULL;
             return r;
         }
     }
-    msg->op |= MXRIO_REPLY_PIPE;
-    msg->handle[msg->hcount++] = rpipe[1];
+    msg->op |= MXRIO_REPLY_CHANNEL;
+    msg->handle[msg->hcount++] = rchannel[1];
 
     if ((r = mx_channel_write(rio->h, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
         msg->hcount--;
@@ -203,27 +203,27 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
     }
 
     mx_signals_state_t pending;
-    if ((r = mx_handle_wait_one(rpipe[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    if ((r = mx_handle_wait_one(rchannel[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &pending)) < 0) {
-        goto fail_close_reply_pipe;
+        goto fail_close_reply_channel;
     }
     if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
         !(pending.satisfied & MX_SIGNAL_READABLE)) {
         r = ERR_REMOTE_CLOSED;
-        goto fail_close_reply_pipe;
+        goto fail_close_reply_channel;
     }
 
     dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
     msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = mx_channel_read(rpipe[0], 0, msg, dsize, &dsize,
+    if ((r = mx_channel_read(rchannel[0], 0, msg, dsize, &dsize,
                              msg->handle, msg->hcount, &msg->hcount)) < 0) {
-        goto fail_close_reply_pipe;
+        goto fail_close_reply_channel;
     }
 
-    // The kernel ensures that the reply pipe endpoint is
+    // The kernel ensures that the reply channel endpoint is
     // returned as the last handle in the message's handles.
     // The handle number may have changed, so update it.
-    rpipe[1] = msg->handle[--msg->hcount];
+    rchannel[1] = msg->handle[--msg->hcount];
 
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
@@ -244,15 +244,15 @@ fail_discard_handles:
     msg->hcount = 0;
     return r;
 
-fail_close_reply_pipe:
-    // We lost the far end of the reply pipe, so
+fail_close_reply_channel:
+    // We lost the far end of the reply channel, so
     // close the near end and try to replace it.
-    // If that fails, free rpipe and let the next
+    // If that fails, free rchannel and let the next
     // txn try again.
-    mx_handle_close(rpipe[0]);
-    if (mx_channel_create(MX_FLAG_REPLY_PIPE, &rpipe[0], &rpipe[1]) < 0) {
-        free(rpipe);
-        rpipe = NULL;
+    mx_handle_close(rchannel[0]);
+    if (mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1]) < 0) {
+        free(rchannel);
+        rchannel = NULL;
     }
     return r;
 }

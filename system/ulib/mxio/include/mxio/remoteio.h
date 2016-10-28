@@ -43,8 +43,8 @@ __BEGIN_CDECLS
 #define MXRIO_GETADDRINFO  0x00000017
 #define MXRIO_NUM_OPS      24
 
-#define MXRIO_OP(n)        ((n) & 0xFFFF)
-#define MXRIO_REPLY_PIPE   0x01000000
+#define MXRIO_OP(n)            ((n) & 0xFFFF)
+#define MXRIO_REPLY_CHANNEL    0x01000000
 
 #define MXRIO_OPNAMES { \
     "status", "close", "clone", "open", \
@@ -91,7 +91,7 @@ struct mxrio_msg {
     } arg2;
     int32_t reserved;
     uint32_t hcount;                   // number of valid handles
-    mx_handle_t handle[4];             // up to 3 handles + reply pipe handle
+    mx_handle_t handle[4];             // up to 3 handles + reply channel handle
     uint8_t data[MXIO_CHUNK_SIZE];     // payload
 };
 

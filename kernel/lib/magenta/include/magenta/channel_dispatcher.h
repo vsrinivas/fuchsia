@@ -29,7 +29,9 @@ public:
     mx_koid_t get_inner_koid() const final { return inner_koid_; }
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
-    bool is_reply_pipe() const { return (flags_ & MX_FLAG_REPLY_PIPE) ? true : false; }
+    bool is_reply_channel() const {
+        return (flags_ & MX_FLAG_REPLY_CHANNEL) ? true : false;
+    }
 
     void set_inner_koid(mx_koid_t koid) { inner_koid_ = koid; }
     // See Channel::Read() for details.

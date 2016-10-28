@@ -38,7 +38,7 @@ constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
     LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
 
-    if ((flags != 0u) && (flags != MX_FLAG_REPLY_PIPE))
+    if ((flags != 0u) && (flags != MX_FLAG_REPLY_CHANNEL))
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
@@ -154,7 +154,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     if (result != NO_ERROR)
         return result;
 
-    bool is_reply_pipe = channel->is_reply_pipe();
+    bool is_reply_channel = channel->is_reply_channel();
 
     if (num_bytes > 0u && !_bytes)
         return ERR_INVALID_ARGS;
@@ -189,7 +189,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
             // we remove them from this process.
             AutoLock lock(up->handle_table_lock());
 
-            size_t reply_pipe_found = -1;
+            size_t reply_channel_found = -1;
 
             for (size_t ix = 0; ix != num_handles; ++ix) {
                 auto handle = up->GetHandle_NoLock(handles[ix]);
@@ -197,11 +197,12 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
                     return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
                 if (handle->dispatcher().get() == static_cast<Dispatcher*>(channel.get())) {
-                    // Found itself, which is only allowed for MX_FLAG_REPLY_PIPE (aka Reply) pipes.
-                    if (!is_reply_pipe) {
+                    // Found itself, which is only allowed for
+                    // MX_FLAG_REPLY_CHANNEL (aka Reply) channels.
+                    if (!is_reply_channel) {
                         return ERR_NOT_SUPPORTED;
                     } else {
-                        reply_pipe_found = ix;
+                        reply_channel_found = ix;
                     }
                 }
 
@@ -211,9 +212,10 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
                 msg->mutable_handles()[ix] = handle;
             }
 
-            if (is_reply_pipe) {
-                // For reply pipes, itself must be in the handle array and be the last handle.
-                if ((reply_pipe_found != (num_handles - 1)))
+            if (is_reply_channel) {
+                // For reply channels, itself must be in the handle
+                // array and be the last handle.
+                if ((reply_channel_found != (num_handles - 1)))
                     return ERR_BAD_STATE;
             }
 
@@ -235,8 +237,9 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         // On success, the MessagePacket owns the handles.
         msg->set_owns_handles(true);
     } else {
-        // For reply pipes, itself must be in the handle array and be the last handle.
-        if (is_reply_pipe)
+        // For reply channels, itself must be in the handle array and
+        // be the last handle.
+        if (is_reply_channel)
             return ERR_BAD_STATE;
     }
 

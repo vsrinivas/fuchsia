@@ -81,7 +81,7 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_ALLOC_BASE     (1u << 4)
 
 // flags to channel routines
-#define MX_FLAG_REPLY_PIPE               (1u << 0)
+#define MX_FLAG_REPLY_CHANNEL            (1u << 0)
 #define MX_CHANNEL_CREATE_REPLY_CHANNEL  (1u << 0)
 
 // clock ids

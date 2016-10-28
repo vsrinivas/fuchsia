@@ -29,12 +29,12 @@ to another process via channel write), *MX_RIGHT_WRITE* (allowing
 messages to be written to them), and *MX_RIGHT_READ* (allowing messages
 to be read from them).
 
-The *flags* can be either 0 or *MX_FLAG_REPLY_PIPE*. A reply pipe
+The *flags* can be either 0 or *MX_FLAG_REPLY_CHANNEL*. A reply channel
 behaves like a regular channel except for **mx_channel_write**()
 which must include itself as the last handle being transfered.
 
-When *flags* is *MX_FLAG_REPLY_PIPE*, only *handles[1]* is a reply
-pipe. *handles[0]* is a regular channel.
+When *flags* is *MX_FLAG_REPLY_CHANNEL*, only *handles[1]* is a reply
+channel. *handles[0]* is a regular channel.
 
 
 ## RETURN VALUE
@@ -45,7 +45,7 @@ of failure, a negative error value is returned.
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL or
-*flags* is any value other than 0 or *MX_CHANNEL_CREATE_REPLY_PIPE*.
+*flags* is any value other than 0 or *MX_CHANNEL_CREATE_REPLY_CHANNEL*.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

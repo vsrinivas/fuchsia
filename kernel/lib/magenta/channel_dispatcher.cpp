@@ -35,7 +35,7 @@ status_t ChannelDispatcher::Create(uint32_t flags,
     mxtl::RefPtr<Channel> channel = mxtl::AdoptRef(new (&ac) Channel());
     if (!ac.check()) return ERR_NO_MEMORY;
 
-    auto msgp0 = new (&ac) ChannelDispatcher((flags & ~MX_FLAG_REPLY_PIPE), 0u, channel);
+    auto msgp0 = new (&ac) ChannelDispatcher((flags & ~MX_FLAG_REPLY_CHANNEL), 0u, channel);
     if (!ac.check()) return ERR_NO_MEMORY;
 
     auto msgp1 = new (&ac) ChannelDispatcher(flags, 1u, channel);
