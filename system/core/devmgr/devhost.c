@@ -54,12 +54,12 @@ __EXPORT mx_status_t devhost_add_internal(mx_device_t* parent,
     mx_handle_t hdevice[2];
     mx_handle_t hrpc[2];
     mx_status_t status;
-    if ((status = mx_msgpipe_create(hdevice, 0)) < 0) {
-        printf("devhost_add: failed to create msgpipe: %d\n", status);
+    if ((status = mx_channel_create(0, &hdevice[0], &hdevice[1])) < 0) {
+        printf("devhost_add: failed to create channel: %d\n", status);
         return status;
     }
-    if ((status = mx_msgpipe_create(hrpc, 0)) < 0) {
-        printf("devhost_add: failed to create msgpipe: %d\n", status);
+    if ((status = mx_channel_create(0, &hrpc[0], &hrpc[1])) < 0) {
+        printf("devhost_add: failed to create channel: %d\n", status);
         mx_handle_close(hdevice[0]);
         mx_handle_close(hdevice[1]);
         return status;
@@ -73,8 +73,8 @@ __EXPORT mx_status_t devhost_add_internal(mx_device_t* parent,
     memcpy(msg.name, name, len + 1);
 
     mx_handle_t handles[2] = { hdevice[1], hrpc[1] };
-    if ((status = mx_msgpipe_write(parent->rpc, &msg, sizeof(msg), handles, 2, 0)) < 0) {
-        printf("devhost_add: failed to write msgpipe: %d\n", status);
+    if ((status = mx_channel_write(parent->rpc, 0, &msg, sizeof(msg), handles, 2)) < 0) {
+        printf("devhost_add: failed to write channel: %d\n", status);
         mx_handle_close(hdevice[0]);
         mx_handle_close(hdevice[1]);
         mx_handle_close(hrpc[0]);
@@ -136,7 +136,7 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     ios->dev = NULL;
     mtx_unlock(&ios->lock);
 
-    mx_msgpipe_write(dev->rpc, &msg, sizeof(msg), 0, 0, 0);
+    mx_channel_write(dev->rpc, 0, &msg, sizeof(msg), 0, 0);
     mx_handle_close(dev->rpc);
     dev->rpc = 0;
     return NO_ERROR;

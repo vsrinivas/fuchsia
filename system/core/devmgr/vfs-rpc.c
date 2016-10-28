@@ -32,7 +32,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
 // Initializes io state for a vnode, and attaches it to the vfs dispatcher
 static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn, uint32_t flags) {
-    mx_handle_t h[2];
+    mx_handle_t h0, h1;
     mx_status_t r;
     vfs_iostate_t* ios;
 
@@ -41,20 +41,20 @@ static mx_handle_t vfs_create_handle(vnode_t* vn, const char* trackfn, uint32_t 
     ios->vn = vn;
     ios->io_flags = flags;
 
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
         free(ios);
         return r;
     }
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h[0], vfs_handler, ios)) < 0) {
-        mx_handle_close(h[0]);
-        mx_handle_close(h[1]);
+    if ((r = mxio_dispatcher_add(vfs_dispatcher, h0, vfs_handler, ios)) < 0) {
+        mx_handle_close(h0);
+        mx_handle_close(h1);
         free(ios);
         return r;
     }
     track_vfs_iostate(ios, trackfn);
     // take a ref for the dispatcher
     vn_acquire(vn);
-    return h[1];
+    return h1;
 }
 
 static mx_handle_t devmgr_connect(const char* where) {

@@ -106,11 +106,11 @@ static mx_status_t devhost_remote_create(const char* name, uint32_t protocol_id,
     mx_handle_t hdevice[2];
     mx_handle_t hrpc[2];
     mx_status_t status;
-    if ((status = mx_msgpipe_create(hdevice, 0)) < 0) {
+    if ((status = mx_channel_create(0, &hdevice[0], &hdevice[1])) < 0) {
         free(ctx);
         return status;
     }
-    if ((status = mx_msgpipe_create(hrpc, 0)) < 0) {
+    if ((status = mx_channel_create(0, &hrpc[0], &hrpc[1])) < 0) {
         free(ctx);
         mx_handle_close(hdevice[0]);
         mx_handle_close(hdevice[1]);
@@ -190,7 +190,7 @@ mx_status_t devhost_handler(mx_handle_t h, void* cb, void* cookie) {
 
     uint32_t dsz = sizeof(msg);
     uint32_t hcount = 2;
-    if ((status = mx_msgpipe_read(h, &msg, &dsz, handles, &hcount, 0)) < 0) {
+    if ((status = mx_channel_read(h, 0, &msg, dsz, &dsz, handles, hcount, &hcount)) < 0) {
         if (status == ERR_BAD_STATE) {
             return ERR_DISPATCHER_NO_WORK;
         }

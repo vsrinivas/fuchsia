@@ -260,13 +260,12 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
         if ((watcher = calloc(1, sizeof(vnode_watcher_t))) == NULL) {
             return ERR_NO_MEMORY;
         }
-        mx_handle_t h[2];
-        if (mx_msgpipe_create(h, 0) < 0) {
+        mx_handle_t h;
+        if (mx_channel_create(0, &h, &watcher->h) < 0) {
             free(watcher);
             return ERR_NO_RESOURCES;
         }
-        watcher->h = h[1];
-        memcpy(out_buf, h, sizeof(mx_handle_t));
+        memcpy(out_buf, &h, sizeof(mx_handle_t));
         mtx_lock(&vfs_lock);
         list_add_tail(&vn->watch_list, &watcher->node);
         mtx_unlock(&vfs_lock);
@@ -277,17 +276,17 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
             return ERR_INVALID_ARGS;
         }
-        mx_handle_t h[2];
+        mx_handle_t h0, h1;
         mx_status_t status;
-        if ((status = mx_msgpipe_create(h, 0)) < 0) {
+        if ((status = mx_channel_create(0, &h0, &h1)) < 0) {
             return status;
         }
-        if ((status = vfs_install_remote(vn, h[1])) < 0) {
-            mx_handle_close(h[0]);
-            mx_handle_close(h[1]);
+        if ((status = vfs_install_remote(vn, h1)) < 0) {
+            mx_handle_close(h0);
+            mx_handle_close(h1);
             return status;
         }
-        memcpy(out_buf, h, sizeof(mx_handle_t));
+        memcpy(out_buf, &h0, sizeof(mx_handle_t));
         return sizeof(mx_handle_t);
     }
     default:
@@ -325,7 +324,7 @@ void vfs_notify_add(vnode_t* vn, const char* name, size_t len) {
     vnode_watcher_t* tmp;
     list_for_every_entry_safe (&vn->watch_list, watcher, tmp, vnode_watcher_t, node) {
         mx_status_t status;
-        if ((status = mx_msgpipe_write(watcher->h, name, len, NULL, 0, 0)) < 0) {
+        if ((status = mx_channel_write(watcher->h, 0, name, len, NULL, 0)) < 0) {
             xprintf("devfs: watcher %p write failed %d\n", watcher, status);
             list_delete(&watcher->node);
             mx_handle_close(watcher->h);

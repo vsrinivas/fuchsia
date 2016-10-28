@@ -524,19 +524,19 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
 
 static mx_status_t txn_unmount(mx_handle_t srv) {
     mx_status_t r;
-    mx_handle_t rpipe[2];
-    if ((r = mx_msgpipe_create(rpipe, MX_FLAG_REPLY_PIPE)) < 0) {
+    mx_handle_t rpipe0, rpipe1;
+    if ((r = mx_channel_create(MX_FLAG_REPLY_PIPE, &rpipe0, &rpipe1)) < 0) {
         return r;
     }
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_IOCTL;
     msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
-    if ((r = mxrio_txn_handoff(srv, rpipe[0], &msg)) < 0) {
+    if ((r = mxrio_txn_handoff(srv, rpipe0, &msg)) < 0) {
         return r;
     }
-    if ((r = mx_handle_wait_one(rpipe[1], MX_SIGNAL_PEER_CLOSED,
-                                       MX_TIME_INFINITE, NULL)) < 0) {
+    if ((r = mx_handle_wait_one(rpipe1, MX_SIGNAL_PEER_CLOSED,
+                                MX_TIME_INFINITE, NULL)) < 0) {
         return r;
     }
     return NO_ERROR;

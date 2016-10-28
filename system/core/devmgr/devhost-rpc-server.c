@@ -51,12 +51,12 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
         return ERR_NO_MEMORY;
     }
 
-    mx_handle_t h[2];
-    if ((r = mx_msgpipe_create(h, 0)) < 0) {
+    mx_handle_t h0, h1;
+    if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
         free(newios);
         return r;
     }
-    handles[0] = h[0];
+    handles[0] = h0;
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
     if ((r = device_openat(dev, &dev, path, 0)) < 0) {
@@ -78,14 +78,14 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
         r = 1;
     }
 
-    mxio_dispatcher_add(devhost_rio_dispatcher, h[1], devhost_rio_handler, newios);
+    mxio_dispatcher_add(devhost_rio_dispatcher, h1, devhost_rio_handler, newios);
     return r;
 
 fail2:
     device_close(dev);
 fail1:
-    mx_handle_close(h[0]);
-    mx_handle_close(h[1]);
+    mx_handle_close(h0);
+    mx_handle_close(h1);
     free(newios);
     return r;
 }

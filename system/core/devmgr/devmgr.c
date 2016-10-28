@@ -118,11 +118,7 @@ static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
 static const char* argv_appmgr[] = { "/boot/bin/application_manager" };
 
 void create_mojo_launcher_handles(void) {
-  mx_handle_t h[2];
-  if (mx_msgpipe_create(h, 0) >= 0) {
-      mojo_launcher = h[0];
-      mojo_launcher_child = h[1];
-  }
+    mx_channel_create(0, &mojo_launcher, &mojo_launcher_child);
 }
 
 int service_starter(void* arg) {

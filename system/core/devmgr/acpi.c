@@ -30,7 +30,7 @@ mx_status_t devmgr_launch_acpisvc(void) {
 
     mx_handle_t acpi_comm[2] = {0};
 
-    mx_status_t status = mx_msgpipe_create(acpi_comm, 0);
+    mx_status_t status = mx_channel_create(0, &acpi_comm[0], &acpi_comm[1]);
     if (status != NO_ERROR) {
         goto cleanup_handles;
     }

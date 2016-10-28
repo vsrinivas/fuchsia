@@ -181,7 +181,7 @@ void signal_devmgr_shutdown(void) {
     msg.op = DH_OP_SHUTDOWN;
 
     mx_status_t r;
-    if ((r = mx_msgpipe_write(_dmctl_handle, &msg, sizeof(msg), 0, 0, 0)) < 0) {
+    if ((r = mx_channel_write(_dmctl_handle, 0, &msg, sizeof(msg), 0, 0)) < 0) {
         printf("Unexpected error signalling shutdown: %d\n", r);
     } else if ((r = mx_handle_wait_one(_dmctl_handle, MX_SIGNAL_PEER_CLOSED,
                                        30000000000, NULL)) < 0) {
@@ -232,7 +232,7 @@ mx_status_t devmgr_control(const char* cmd) {
         return NO_ERROR;
     }
     if (!strncmp(cmd, "mojo:", 5)) {
-        return mx_msgpipe_write(mojo_launcher, cmd, strlen(cmd), NULL, 0, 0);
+        return mx_channel_write(mojo_launcher, 0, cmd, strlen(cmd), NULL, 0);
     }
     const char* ps0prefix = "acpi-ps0:";
     if (!strncmp(cmd, ps0prefix, strlen(ps0prefix))) {
