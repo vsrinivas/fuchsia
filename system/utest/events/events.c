@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +43,8 @@ static int thread_fn_1(void* arg) {
 
     do {
         mx_nanosleep(MX_MSEC(200));
-        mx_object_signal(events[1], 0u, MX_SIGNAL_SIGNALED);
+        mx_status_t status = mx_object_signal(events[1], 0u, MX_SIGNAL_SIGNALED);
+        assert(status == NO_ERROR);
     } while (!wait(events[2], events[0]));
 
     return 0;
@@ -53,7 +55,8 @@ static int thread_fn_2(void* arg) {
 
     while (!wait(events[1], events[0])) {
         mx_nanosleep(MX_MSEC(100));
-        mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED);
+        mx_status_t status = mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED);
+        assert(status == NO_ERROR);
     }
 
     return 0;
@@ -94,8 +97,8 @@ static int thread_fn_3(void* arg) {
 
     do {
         mx_nanosleep(MX_MSEC(200));
-        mx_object_signal(events[1], MX_SIGNAL_SIGNAL_ALL, MX_SIGNAL_SIGNAL1);
-    } while (!wait_user(events[2], events[0], MX_SIGNAL_SIGNAL2));
+        mx_object_signal(events[1], MX_USER_SIGNAL_ALL, MX_USER_SIGNAL_1);
+    } while (!wait_user(events[2], events[0], MX_USER_SIGNAL_2));
 
     return 0;
 }
@@ -103,9 +106,9 @@ static int thread_fn_3(void* arg) {
 static int thread_fn_4(void* arg) {
     mx_handle_t* events = (mx_handle_t*)(arg);
 
-    while (!wait_user(events[1], events[0], MX_SIGNAL_SIGNAL1)) {
+    while (!wait_user(events[1], events[0], MX_USER_SIGNAL_1)) {
         mx_nanosleep(MX_MSEC(100));
-        mx_object_signal(events[2], MX_SIGNAL_SIGNAL_ALL, MX_SIGNAL_SIGNAL2);
+        mx_object_signal(events[2], MX_USER_SIGNAL_ALL, MX_USER_SIGNAL_2);
     }
 
     return 0;

@@ -340,7 +340,7 @@ static bool bind_sockets_test(void)
     status = mx_socket_create(0u, &socket0, &socket1);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_port_bind(io_port, 1ull, socket1, MX_SIGNAL_READABLE | MX_SIGNAL_SIGNAL3);
+    status = mx_port_bind(io_port, 1ull, socket1, MX_SIGNAL_READABLE | MX_USER_SIGNAL_3);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_socket_write(socket0, 0u, "ab", 2, &sz);
@@ -378,12 +378,12 @@ static bool bind_sockets_test(void)
     EXPECT_EQ(ret, thrd_success, "");
 
     mx_io_packet_t io_pkt = {0};
-    status = mx_object_signal(socket0, 0u, MX_SIGNAL_SIGNAL3);
+    status = mx_object_signal(socket0, 0u, MX_USER_SIGNAL_3);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_port_wait(io_port, &io_pkt, sizeof(io_pkt));
     EXPECT_EQ(status, NO_ERROR, "");
-    EXPECT_EQ(io_pkt.signals, MX_SIGNAL_SIGNAL3, "");
+    EXPECT_EQ(io_pkt.signals, MX_USER_SIGNAL_3, "");
 
     status = mx_handle_close(io_port);
     EXPECT_EQ(status, NO_ERROR, "");

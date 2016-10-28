@@ -22,10 +22,10 @@
 namespace {
 // Converts a single signal to a value from 0 to 3. Make sure ctz does the right thing.
 
-static_assert(MX_SIGNAL_READABLE    == 1);   // 0
-static_assert(MX_SIGNAL_WRITABLE    == 2);   // 1
-static_assert(MX_SIGNAL_PEER_CLOSED == 4);   // 2
-static_assert(MX_SIGNAL_SIGNALED    == 8);   // 3
+static_assert(MX_SIGNAL_READABLE    == 1);
+static_assert(MX_SIGNAL_SIGNALED    == 8);
+static_assert(MX_SIGNAL_WRITABLE    == 2);
+static_assert(MX_SIGNAL_PEER_CLOSED == 4);
 
 uint32_t signal_to_slot(mx_signals_t signal) {
     DEBUG_ASSERT(ispow2(signal));

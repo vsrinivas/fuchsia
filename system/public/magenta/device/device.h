@@ -54,9 +54,9 @@
 
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
-#define DEVICE_SIGNAL_READABLE MX_SIGNAL_SIGNAL0
-#define DEVICE_SIGNAL_WRITABLE MX_SIGNAL_SIGNAL1
-#define DEVICE_SIGNAL_ERROR MX_SIGNAL_SIGNAL2
+#define DEVICE_SIGNAL_READABLE MX_USER_SIGNAL_0
+#define DEVICE_SIGNAL_WRITABLE MX_USER_SIGNAL_1
+#define DEVICE_SIGNAL_ERROR MX_USER_SIGNAL_2
 
 // ssize_t ioctl_device_bind(int fd, const char* in, size_t in_len);
 IOCTL_WRAPPER_VARIN(ioctl_device_bind, IOCTL_DEVICE_BIND, char);

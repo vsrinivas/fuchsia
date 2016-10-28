@@ -612,25 +612,25 @@ mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types) 
 static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    mx_signals_t signals = MX_SIGNAL_SIGNAL2; // EPOLLERR is always detected
+    mx_signals_t signals = MX_USER_SIGNAL_2; // EPOLLERR is always detected
     if (events & EPOLLIN) {
-        signals |= MX_SIGNAL_SIGNAL0 | MX_SIGNAL_PEER_CLOSED;
+        signals |= MX_USER_SIGNAL_0 | MX_SIGNAL_PEER_CLOSED;
     }
     if (events & EPOLLOUT) {
-        signals |= MX_SIGNAL_SIGNAL1;
+        signals |= MX_USER_SIGNAL_1;
     }
     *_signals = signals;
 }
 
 static void mxrio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SIGNAL_SIGNAL0 | MX_SIGNAL_PEER_CLOSED)) {
+    if (signals & (MX_USER_SIGNAL_0 | MX_SIGNAL_PEER_CLOSED)) {
         events |= EPOLLIN;
     }
-    if (signals & MX_SIGNAL_SIGNAL1) {
+    if (signals & MX_USER_SIGNAL_1) {
         events |= EPOLLOUT;
     }
-    if (signals & MX_SIGNAL_SIGNAL2) {
+    if (signals & MX_USER_SIGNAL_2) {
         events |= EPOLLERR;
     }
     *_events = events;
@@ -730,10 +730,10 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
 static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    mx_signals_t signals = MX_SIGNAL_SIGNAL2; // EPOLLERR is always detected
+    mx_signals_t signals = MX_USER_SIGNAL_2; // EPOLLERR is always detected
     if (events & EPOLLIN) {
-        // MX_SIGNAL_SIGNAL0 is signaled if a network socket gets a connection
-        signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNAL0;
+        // MX_USER_SIGNAL_0 is signaled if a network socket gets a connection
+        signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_0;
     }
     if (events & EPOLLOUT) {
         signals |= MX_SIGNAL_WRITABLE;
@@ -743,13 +743,13 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 
 static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNAL0)) {
+    if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_0)) {
         events |= EPOLLIN;
     }
     if (signals & MX_SIGNAL_WRITABLE) {
         events |= EPOLLOUT;
     }
-    if (signals & MX_SIGNAL_SIGNAL2) {
+    if (signals & MX_USER_SIGNAL_2) {
         events |= EPOLLERR;
     }
     *_events = events;

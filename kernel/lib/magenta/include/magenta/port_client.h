@@ -32,5 +32,5 @@ private:
     const uint64_t key_;
     const mx_signals_t signals_;
     mxtl::RefPtr<PortDispatcher> port_;
-    void* cookie_[8];
+    void* cookie_[32];
 };

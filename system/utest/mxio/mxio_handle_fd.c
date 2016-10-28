@@ -20,7 +20,7 @@ bool epoll_test(void) {
     ASSERT_EQ(NO_ERROR, mx_event_create(0u, &h), "mx_event_create() failed");
     ASSERT_GE(h, 0, "");
 
-    int fd = mxio_handle_fd(h, MX_SIGNAL_SIGNAL0, MX_SIGNAL_SIGNAL1, false);
+    int fd = mxio_handle_fd(h, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1, false);
     ASSERT_GT(fd, 0, "mxio_handle_fd() failed");
 
     int epollfd = epoll_create(0);
@@ -37,7 +37,7 @@ bool epoll_test(void) {
     EXPECT_EQ(nfds, 0, "");
 
     // set SIGNAL0
-    ASSERT_EQ(NO_ERROR, mx_object_signal(h, 0u, MX_SIGNAL_SIGNAL0),
+    ASSERT_EQ(NO_ERROR, mx_object_signal(h, 0u, MX_USER_SIGNAL_0),
               "mx_object_signal() failed");
 
     nfds = epoll_wait(epollfd, events, max_events, 0);
@@ -46,7 +46,7 @@ bool epoll_test(void) {
 
     // clear SIGNAL0 and set SIGNAL1
     ASSERT_EQ(NO_ERROR,
-              mx_object_signal(h, MX_SIGNAL_SIGNAL0, MX_SIGNAL_SIGNAL1),
+              mx_object_signal(h, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1),
               "mx_object_signal() failed");
 
     nfds = epoll_wait(epollfd, events, max_events, 0);
@@ -66,23 +66,23 @@ bool close_test(void) {
     ASSERT_GE(h, 0, "");
 
     // mxio_handle_fd() with shared_handle = true
-    int fd = mxio_handle_fd(h, MX_SIGNAL_SIGNAL0, MX_SIGNAL_SIGNAL1, true);
+    int fd = mxio_handle_fd(h, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1, true);
     ASSERT_GT(fd, 0, "mxio_handle_fd() failed");
 
     close(fd);
 
     // close(fd) has not closed the wrapped handle
-    EXPECT_EQ(NO_ERROR, mx_object_signal(h, 0, MX_SIGNAL_SIGNAL0),
+    EXPECT_EQ(NO_ERROR, mx_object_signal(h, 0, MX_USER_SIGNAL_0),
               "mx_object_signal() should succeed");
 
     // mxio_handle_fd() with shared_handle = false
-    fd = mxio_handle_fd(h, MX_SIGNAL_SIGNAL0, MX_SIGNAL_SIGNAL1, false);
+    fd = mxio_handle_fd(h, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1, false);
     ASSERT_GT(fd, 0, "mxio_handle_fd() failed");
 
     close(fd);
 
     // close(fd) has closed the wrapped handle
-    EXPECT_EQ(ERR_BAD_HANDLE, mx_object_signal(h, 0, MX_SIGNAL_SIGNAL0),
+    EXPECT_EQ(ERR_BAD_HANDLE, mx_object_signal(h, 0, MX_USER_SIGNAL_0),
               "mx_object_signal() should fail");
 
     END_TEST;

@@ -99,14 +99,14 @@ static bool socket_signals(void) {
     status = mx_object_signal(h0, MX_SIGNAL_WRITABLE, 0u);
     ASSERT_EQ(status, ERR_INVALID_ARGS, "");
 
-    status = mx_object_signal(h0, 0u, MX_SIGNAL_SIGNAL1);
+    status = mx_object_signal(h0, 0u, MX_USER_SIGNAL_1);
     ASSERT_EQ(status, NO_ERROR, "");
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
     ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE | MX_SIGNAL_SIGNAL1, "");
+    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE | MX_USER_SIGNAL_1, "");
 
     mx_handle_close(h1);
 

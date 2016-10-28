@@ -31,9 +31,7 @@ constexpr mx_rights_t kDefaultSocketRights =
 constexpr mx_size_t kDeFaultSocketBufferSize = 256 * 1024u;
 
 constexpr mx_signals_t kValidSignalMask =
-    MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
-    MX_SIGNAL_SIGNAL0 | MX_SIGNAL_SIGNAL1 | MX_SIGNAL_SIGNAL2 |
-    MX_SIGNAL_SIGNAL3 | MX_SIGNAL_SIGNAL4;
+    MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_ALL;
 
 namespace {
 // Cribbed from pow2.h, we need overloading to correctly deal with 32 and 64 bits.
@@ -177,7 +175,9 @@ SocketDispatcher::SocketDispatcher(uint32_t flags)
       oob_len_(0u),
       half_closed_{false, false} {
     const auto kSatisfiable =
-        MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED;
+        MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED |
+        MX_USER_SIGNAL_ALL;
+
     state_tracker_.set_initial_signals_state(
             mx_signals_state_t{MX_SIGNAL_WRITABLE, kSatisfiable});
 }
@@ -212,7 +212,7 @@ void SocketDispatcher::OnPeerZeroHandles() {
 }
 
 status_t SocketDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
-    if ((set_mask & ~MX_SIGNAL_SIGNAL_ALL) || (clear_mask & ~MX_SIGNAL_SIGNAL_ALL))
+    if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<SocketDispatcher> other;

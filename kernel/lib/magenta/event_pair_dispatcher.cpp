@@ -50,15 +50,15 @@ void EventPairDispatcher::on_zero_handles() {
     // TODO(vtl): Having to call into |other_->state_tracker_| twice is suboptimal, since it means
     // we take its lock twice.
     auto other_satisfied = other_->state_tracker_.GetSignalsState().satisfied;
-    DEBUG_ASSERT(!(other_satisfied & MX_SIGNAL_PEER_CLOSED));
+    DEBUG_ASSERT(!(other_satisfied & MX_EPAIR_SIGNAL_CLOSED));
     // The already-satisfied (remote) signals remain satisfiable.
-    other_->state_tracker_.UpdateState(0u, MX_SIGNAL_PEER_CLOSED,
-                                       ~0u, other_satisfied | MX_SIGNAL_PEER_CLOSED);
+    other_->state_tracker_.UpdateState(0u, MX_EPAIR_SIGNAL_CLOSED,
+                                       ~0u, other_satisfied | MX_EPAIR_SIGNAL_CLOSED);
     other_.reset();
 }
 
 status_t EventPairDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
-    if ((set_mask & ~MX_SIGNAL_SIGNAL_ALL) || (clear_mask & ~MX_SIGNAL_SIGNAL_ALL))
+    if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
         return ERR_INVALID_ARGS;
 
     AutoLock locker(&lock_);
@@ -71,7 +71,7 @@ status_t EventPairDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask)
 
 EventPairDispatcher::EventPairDispatcher()
         : state_tracker_(true,
-                         mx_signals_state_t{0u, MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNAL_ALL}),
+                         mx_signals_state_t{0u, MX_EPAIR_SIGNAL_MASK}),
           other_koid_(0ull) {}
 
 void EventPairDispatcher::Init(EventPairDispatcher* other) {

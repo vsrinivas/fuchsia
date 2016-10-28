@@ -39,21 +39,70 @@ typedef uint64_t mx_time_t;
 #define MX_SEC(n)  ((mx_time_t)(1000000000ULL * (n)))
 
 typedef uint32_t mx_signals_t;
-#define MX_SIGNAL_NONE            ((mx_signals_t)0u)
-#define MX_SIGNAL_READABLE        ((mx_signals_t)1u << 0)
-#define MX_SIGNAL_WRITABLE        ((mx_signals_t)1u << 1)
-#define MX_SIGNAL_PEER_CLOSED     ((mx_signals_t)1u << 2)
 
-#define MX_SIGNAL_SIGNALED        MX_SIGNAL_SIGNAL0
-#define MX_SIGNAL_SIGNAL0         ((mx_signals_t)1u << 3)
-#define MX_SIGNAL_SIGNAL1         ((mx_signals_t)1u << 4)
-#define MX_SIGNAL_SIGNAL2         ((mx_signals_t)1u << 5)
-#define MX_SIGNAL_SIGNAL3         ((mx_signals_t)1u << 6)
-#define MX_SIGNAL_SIGNAL4         ((mx_signals_t)1u << 7)
-#define MX_SIGNAL_SIGNAL_ALL      ((mx_signals_t)31u << 3)
+#define MX_OBJECT_SIGNAL_ALL        ((mx_signals_t)0x00ffffff)
+#define MX_USER_SIGNAL_ALL          ((mx_signals_t)0xff000000)
 
-#define MX_SIGNAL_READ_THRESHOLD  ((mx_signals_t)1u << 8)
-#define MX_SIGNAL_WRITE_THRESHOLD ((mx_signals_t)1u << 9)
+#define MX_OBJECT_SIGNAL_0          ((mx_signals_t)1u << 0)
+#define MX_OBJECT_SIGNAL_1          ((mx_signals_t)1u << 1)
+#define MX_OBJECT_SIGNAL_2          ((mx_signals_t)1u << 2)
+#define MX_OBJECT_SIGNAL_3          ((mx_signals_t)1u << 3)
+#define MX_OBJECT_SIGNAL_4          ((mx_signals_t)1u << 4)
+#define MX_OBJECT_SIGNAL_5          ((mx_signals_t)1u << 5)
+#define MX_OBJECT_SIGNAL_6          ((mx_signals_t)1u << 6)
+#define MX_OBJECT_SIGNAL_7          ((mx_signals_t)1u << 7)
+#define MX_OBJECT_SIGNAL_8          ((mx_signals_t)1u << 8)
+#define MX_OBJECT_SIGNAL_9          ((mx_signals_t)1u << 9)
+#define MX_OBJECT_SIGNAL_10         ((mx_signals_t)1u << 10)
+#define MX_OBJECT_SIGNAL_11         ((mx_signals_t)1u << 11)
+#define MX_OBJECT_SIGNAL_12         ((mx_signals_t)1u << 12)
+#define MX_OBJECT_SIGNAL_13         ((mx_signals_t)1u << 13)
+#define MX_OBJECT_SIGNAL_14         ((mx_signals_t)1u << 14)
+#define MX_OBJECT_SIGNAL_15         ((mx_signals_t)1u << 15)
+#define MX_OBJECT_SIGNAL_16         ((mx_signals_t)1u << 16)
+#define MX_OBJECT_SIGNAL_17         ((mx_signals_t)1u << 17)
+#define MX_OBJECT_SIGNAL_18         ((mx_signals_t)1u << 18)
+#define MX_OBJECT_SIGNAL_19         ((mx_signals_t)1u << 19)
+#define MX_OBJECT_SIGNAL_20         ((mx_signals_t)1u << 20)
+#define MX_OBJECT_SIGNAL_21         ((mx_signals_t)1u << 21)
+#define MX_OBJECT_SIGNAL_22         ((mx_signals_t)1u << 22)
+#define MX_OBJECT_SIGNAL_23         ((mx_signals_t)1u << 23)
+
+#define MX_USER_SIGNAL_0            ((mx_signals_t)1u << 24)
+#define MX_USER_SIGNAL_1            ((mx_signals_t)1u << 25)
+#define MX_USER_SIGNAL_2            ((mx_signals_t)1u << 26)
+#define MX_USER_SIGNAL_3            ((mx_signals_t)1u << 27)
+#define MX_USER_SIGNAL_4            ((mx_signals_t)1u << 28)
+#define MX_USER_SIGNAL_5            ((mx_signals_t)1u << 29)
+#define MX_USER_SIGNAL_6            ((mx_signals_t)1u << 30)
+#define MX_USER_SIGNAL_7            ((mx_signals_t)1u << 31)
+
+// Event
+#define MX_EVENT_SIGNAL_SIGNALED    MX_OBJECT_SIGNAL_3
+#define MX_EVENT_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_3)
+
+// EventPair
+#define MX_EPAIR_SIGNAL_SIGNALED    MX_OBJECT_SIGNAL_3
+#define MX_EPAIR_SIGNAL_CLOSED      MX_OBJECT_SIGNAL_2
+#define MX_EPAIR_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_2 | MX_OBJECT_SIGNAL_3)
+
+// Task signals
+#define MX_TASK_SIGNAL_TERMINATED   MX_OBJECT_SIGNAL_3
+#define MX_TASK_SIGNAL_MASK         MX_OBJECT_SIGNAL_3
+
+// Legacy signal names, to be removed.
+#define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
+#define MX_SIGNAL_WRITABLE          MX_OBJECT_SIGNAL_1
+#define MX_SIGNAL_PEER_CLOSED       MX_OBJECT_SIGNAL_2
+#define MX_SIGNAL_SIGNALED          MX_OBJECT_SIGNAL_3
+#define MX_SIGNAL_READ_THRESHOLD    MX_OBJECT_SIGNAL_4
+#define MX_SIGNAL_WRITE_THRESHOLD   MX_OBJECT_SIGNAL_5
+#define MX_SIGNAL_SIGNAL0           MX_USER_SIGNAL_0
+#define MX_SIGNAL_SIGNAL1           MX_USER_SIGNAL_1
+#define MX_SIGNAL_SIGNAL2           MX_USER_SIGNAL_2
+#define MX_SIGNAL_SIGNAL3           MX_USER_SIGNAL_3
+#define MX_SIGNAL_SIGNAL4           MX_USER_SIGNAL_4
+
 
 typedef struct {
     mx_signals_t satisfied;
