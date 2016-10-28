@@ -39,8 +39,8 @@ mx_status_t handle_watcher_start(void) {
   vdebug("watch_start: send START\n");
   mx_status_t r;
   uint8_t c = START;
-  if ((r = mx_msgpipe_write(s_ctrl[1], &c, 1u, NULL, 0u, 0u)) < 0) {
-    error("handle_watcher_start: mx_msgpipe_write failed (r=%d)\n", r);
+  if ((r = mx_channel_write(s_ctrl[1], 0u, &c, 1u, NULL, 0u)) < 0) {
+    error("handle_watcher_start: mx_channel_write failed (r=%d)\n", r);
     return r;
   }
   return NO_ERROR;
@@ -60,8 +60,8 @@ mx_status_t handle_watcher_stop(void) {
   if (!(satisfied & MX_SIGNAL_READABLE)) {
     vdebug("watch_stop: send ABORT\n");
     c = ABORT;
-    if ((r = mx_msgpipe_write(s_ctrl[1], &c, 1u, NULL, 0u, 0u)) < 0) {
-      error("handle_watcher_stop: mx_msgpipe_write failed (r=%d)\n", r);
+    if ((r = mx_channel_write(s_ctrl[1], 0u, &c, 1u, NULL, 0u)) < 0) {
+      error("handle_watcher_stop: mx_channel_write failed (r=%d)\n", r);
       return r;
     }
   }
@@ -72,9 +72,8 @@ mx_status_t handle_watcher_stop(void) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
-  uint32_t sz = 1;
-  if ((r = mx_msgpipe_read(s_ctrl[1], &c, &sz, NULL, 0u, 0u)) < 0) {
-    error("handle_watcher_stop: mx_msgpipe_read failed (r=%d)\n", r);
+  if ((r = mx_channel_read(s_ctrl[1], 0u, &c, 1u, NULL, NULL, 0u, NULL)) < 0) {
+    error("handle_watcher_stop: mx_channel_read failed (r=%d)\n", r);
     return r;
   }
   vdebug("watch_stop: recv => %d (%s)\n", c, (c > 0) ? "FOUND" : "NOT FOUND");
@@ -192,9 +191,8 @@ static int handle_watcher_loop(void* arg) {
       return r;
     }
     uint8_t c;
-    uint32_t sz = 1;
-    if ((r = mx_msgpipe_read(s_ctrl[0], &c, &sz, NULL, 0u, 0u)) < 0) {
-      error("handle_watcher_loop: mx_msgpipe_read failed (r=%d)\n", r);
+    if ((r = mx_channel_read(s_ctrl[0], 0u, &c, 1, NULL, NULL, 0u, NULL)) < 0) {
+      error("handle_watcher_loop: mx_channel_read failed (r=%d)\n", r);
       return r;
     }
     vdebug("handle_watcher_loop: recv => %d (%s)\n", c,
@@ -233,8 +231,8 @@ static int handle_watcher_loop(void* arg) {
       }
     }
     // send the result
-    if ((r = mx_msgpipe_write(s_ctrl[0], &c, 1u, NULL, 0u, 0u)) < 0) {
-      error("handle_watcher_loop: mx_msgpipe_write failed (r=%d)\n", r);
+    if ((r = mx_channel_write(s_ctrl[0], 0u, &c, 1u, NULL, 0u)) < 0) {
+      error("handle_watcher_loop: mx_channel_write failed (r=%d)\n", r);
       return r;
     }
   }
@@ -244,8 +242,8 @@ static int handle_watcher_loop(void* arg) {
 
 mx_status_t handle_watcher_init(int* readfd_) {
   mx_status_t r;
-  if ((r = mx_msgpipe_create(s_ctrl, 0)) < 0) {
-    error("mx_msgpipe_create failed (%d)\n", r);
+  if ((r = mx_channel_create(0, &s_ctrl[0], &s_ctrl[1])) < 0) {
+    error("mx_channel_create failed (%d)\n", r);
     goto fail_msgpipe_create;
   }
   if ((s_waitset = mx_waitset_create()) < 0) {

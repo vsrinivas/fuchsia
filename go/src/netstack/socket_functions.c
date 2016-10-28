@@ -88,7 +88,7 @@ static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_h,
   mx_handle_t h[2];
   mx_status_t r;
 
-  if ((r = mx_msgpipe_create(h, 0)) < 0) goto fail_msgpipe_create;
+  if ((r = mx_channel_create(0u, &h[0], &h[1])) < 0) goto fail_msgpipe_create;
 
   mx_handle_t s[2];
   if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
@@ -730,8 +730,8 @@ static void send_status(mxrio_msg_t* msg, mx_handle_t rh) {
   msg->handle[msg->hcount++] = rh;
 
   msg->op = MXRIO_STATUS;
-  if (mx_msgpipe_write(rh, msg, MXRIO_HDR_SZ + msg->datalen, msg->handle,
-                       msg->hcount, 0) < 0) {
+  if (mx_channel_write(rh, 0u, msg, MXRIO_HDR_SZ + msg->datalen, msg->handle,
+                       msg->hcount) < 0) {
     error("send_status: write failed\n");
     discard_handles(msg->handle, msg->hcount);
   }
