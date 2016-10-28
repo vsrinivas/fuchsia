@@ -10,14 +10,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"mojo/public/go/bindings"
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"mojom/generated/fidl_files"
+	"mojom/generated/fidl_types"
 	"mojom/mojom_tool/mojom"
 	myfmt "mojom/mojom_tool/third_party/golang/src/fmt"
 )
 
 //////////////////////////////////////////////////
-/// Mojom Descriptor Serialization
+/// Fidl Descriptor Serialization
 //////////////////////////////////////////////////
 
 // This variable may be set to false in order to omit emitting line and
@@ -32,11 +32,11 @@ var emitComputedPackingData bool = true
 // runtime type info. This is useful in tests.
 var emitSerializedRuntimeTypeInfo bool = true
 
-// Serialize serializes the MojomDescriptor into a binary form that is passed to the
+// Serialize serializes the FidlDescriptor into a binary form that is passed to the
 // backend of the compiler in order to invoke the code generators.
 // To do this we use Mojo serialization.
 // If |debug| is true we also return a human-readable representation
-// of the serialized mojom_types.FileGraph.
+// of the serialized fidl_types.FileGraph.
 // This function is not thread safe.
 func Serialize(d *mojom.MojomDescriptor, debug bool) (bytes []byte, debugString string, err error) {
 	return serialize(d, debug, true, true, true)
@@ -76,22 +76,22 @@ func serialize(d *mojom.MojomDescriptor, debug,
 }
 
 // translateDescriptor translates from a mojom.MojomDescriptor (the pure Go
-// representation used by the parser) to a mojom_files.MojomFileGraph (the
+// representation used by the parser) to a fidl_files.FidlFileGraph (the
 // Mojo Go representation used for serialization.)
-func translateDescriptor(d *mojom.MojomDescriptor) *mojom_files.MojomFileGraph {
-	fileGraph := mojom_files.MojomFileGraph{}
+func translateDescriptor(d *mojom.MojomDescriptor) *fidl_files.FidlFileGraph {
+	fileGraph := fidl_files.FidlFileGraph{}
 
 	// Add |resolved_types| field.
-	fileGraph.ResolvedTypes = make(map[string]mojom_types.UserDefinedType)
+	fileGraph.ResolvedTypes = make(map[string]fidl_types.UserDefinedType)
 	for key, userDefinedType := range d.TypesByKey {
 		fileGraph.ResolvedTypes[key] = translateUserDefinedType(userDefinedType)
 	}
 
 	// Add |resolved_constants| field.
-	fileGraph.ResolvedConstants = make(map[string]mojom_types.DeclaredConstant)
+	fileGraph.ResolvedConstants = make(map[string]fidl_types.DeclaredConstant)
 	for key, userDefinedValue := range d.ValuesByKey {
 		switch c := userDefinedValue.(type) {
-		// Note that our representation of values in mojom_types.mojom is a little different than our
+		// Note that our representation of values in fidl_types.fidl is a little different than our
 		// pure Go representation. In the latter we use value keys to refer to both constants and
 		// enum values but in the former we only use value keys to refer to constants. Enum values
 		// are stored as part of their enum types and they are are referred to  not directly using
@@ -104,18 +104,18 @@ func translateDescriptor(d *mojom.MojomDescriptor) *mojom_files.MojomFileGraph {
 	}
 
 	// Add |files| field.
-	fileGraph.Files = make(map[string]mojom_files.MojomFile)
+	fileGraph.Files = make(map[string]fidl_files.FidlFile)
 	for name, file := range d.MojomFilesByName {
-		fileGraph.Files[name] = translateMojomFile(file, &fileGraph)
+		fileGraph.Files[name] = translateFidlFile(file, &fileGraph)
 	}
 
 	return &fileGraph
 }
 
-// translateMojomFile translates from a mojom.MojomFile (the pure Go
-// representation used by the parser) to a mojom_files.MojomFile (the
+// translateFidlFile translates from a mojom.MojomFile (the pure Go
+// representation used by the parser) to a fidl_files.FidlFile (the
 // Mojo Go representation used for serialization.)
-func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGraph) (file mojom_files.MojomFile) {
+func translateFidlFile(f *mojom.MojomFile, fileGraph *fidl_files.FidlFileGraph) (file fidl_files.FidlFile) {
 	// file_name field
 	file.FileName = f.CanonicalFileName
 
@@ -127,9 +127,9 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 
 	// attributes field
 	if f.Attributes != nil {
-		file.Attributes = new([]mojom_types.Attribute)
+		file.Attributes = new([]fidl_types.Attribute)
 		for _, attr := range f.Attributes.List {
-			*(file.Attributes) = append(*(file.Attributes), translateMojomAttribute(&attr))
+			*(file.Attributes) = append(*(file.Attributes), translateFidlAttribute(&attr))
 		}
 	}
 
@@ -137,7 +137,7 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 	if len(f.Imports) > 0 {
 		file.Imports = new([]string)
 		for _, importName := range f.Imports {
-			// We support serializing a MojomFileGraph that has not had import names
+			// We support serializing a FidlFileGraph that has not had import names
 			// resolved to canonical file names. (For example this is the case in
 			// meta-data-only mode.)
 			if importName.CanonicalFileName != "" {
@@ -153,20 +153,20 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 
 	// We will populate a RuntimeTypeInfo structure and then serialize it and
 	// the serialized bytes will form the |serialized_runtime_type_info| field
-	// of the MojomFile.
-	typeInfo := mojom_types.RuntimeTypeInfo{}
+	// of the FidlFile.
+	typeInfo := fidl_types.RuntimeTypeInfo{}
 	typeInfo.Services = make(map[string]string)
-	typeInfo.TypeMap = make(map[string]mojom_types.UserDefinedType)
+	typeInfo.TypeMap = make(map[string]fidl_types.UserDefinedType)
 
-	// We populate the declared_mojom_objects field
+	// We populate the declared_fidl_objects field
 	// and simultaneously we populate typeInfo.TypeMap.
 
 	// Interfaces
 	if f.Interfaces != nil && len(f.Interfaces) > 0 {
-		file.DeclaredMojomObjects.Interfaces = new([]string)
+		file.DeclaredFidlObjects.Interfaces = new([]string)
 		for _, intrfc := range f.Interfaces {
 			typeKey := intrfc.TypeKey()
-			*(file.DeclaredMojomObjects.Interfaces) = append(*(file.DeclaredMojomObjects.Interfaces), typeKey)
+			*(file.DeclaredFidlObjects.Interfaces) = append(*(file.DeclaredFidlObjects.Interfaces), typeKey)
 
 			addServiceName(intrfc, &typeInfo)
 			typeInfo.TypeMap[typeKey] = fileGraph.ResolvedTypes[typeKey]
@@ -182,10 +182,10 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 
 	// Structs
 	if f.Structs != nil && len(f.Structs) > 0 {
-		file.DeclaredMojomObjects.Structs = new([]string)
+		file.DeclaredFidlObjects.Structs = new([]string)
 		for _, strct := range f.Structs {
 			typeKey := strct.TypeKey()
-			*(file.DeclaredMojomObjects.Structs) = append(*(file.DeclaredMojomObjects.Structs), typeKey)
+			*(file.DeclaredFidlObjects.Structs) = append(*(file.DeclaredFidlObjects.Structs), typeKey)
 			typeInfo.TypeMap[typeKey] = fileGraph.ResolvedTypes[typeKey]
 			if strct.Enums != nil {
 				// Add embedded enums to typeInfo.TypeMap.
@@ -199,35 +199,35 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 
 	// Unions
 	if f.Unions != nil && len(f.Unions) > 0 {
-		file.DeclaredMojomObjects.Unions = new([]string)
+		file.DeclaredFidlObjects.Unions = new([]string)
 		for _, union := range f.Unions {
 			typeKey := union.TypeKey()
-			*(file.DeclaredMojomObjects.Unions) = append(*(file.DeclaredMojomObjects.Unions), typeKey)
+			*(file.DeclaredFidlObjects.Unions) = append(*(file.DeclaredFidlObjects.Unions), typeKey)
 			typeInfo.TypeMap[typeKey] = fileGraph.ResolvedTypes[typeKey]
 		}
 	}
 
 	// TopLevelEnums
 	if f.Enums != nil && len(f.Enums) > 0 {
-		file.DeclaredMojomObjects.TopLevelEnums = new([]string)
+		file.DeclaredFidlObjects.TopLevelEnums = new([]string)
 		for _, enum := range f.Enums {
 			typeKey := enum.TypeKey()
-			*(file.DeclaredMojomObjects.TopLevelEnums) = append(*(file.DeclaredMojomObjects.TopLevelEnums), typeKey)
+			*(file.DeclaredFidlObjects.TopLevelEnums) = append(*(file.DeclaredFidlObjects.TopLevelEnums), typeKey)
 			typeInfo.TypeMap[typeKey] = fileGraph.ResolvedTypes[typeKey]
 		}
 	}
 
 	// TopLevelConstants
 	if f.Constants != nil && len(f.Constants) > 0 {
-		file.DeclaredMojomObjects.TopLevelConstants = new([]string)
+		file.DeclaredFidlObjects.TopLevelConstants = new([]string)
 		for _, constant := range f.Constants {
-			*(file.DeclaredMojomObjects.TopLevelConstants) = append(*(file.DeclaredMojomObjects.TopLevelConstants), constant.ValueKey())
+			*(file.DeclaredFidlObjects.TopLevelConstants) = append(*(file.DeclaredFidlObjects.TopLevelConstants), constant.ValueKey())
 		}
 	}
 
 	// TODO(rudominer) Do we need the EmbeddedEnums and EmbeddedConstants
 	// fields in KeysByType. It seems these fields are not currently being
-	// used in mojom_translator.py.
+	// used in fidl_translator.py.
 
 	// SerializedRuntimeTypeInfo
 	if emitSerializedRuntimeTypeInfo {
@@ -259,7 +259,7 @@ func translateMojomFile(f *mojom.MojomFile, fileGraph *mojom_files.MojomFileGrap
 // addServiceName will add the service name of |intrfc| to the |Services| field of |typeInfo|
 // if |intrfc| is a top-level interface, meaning that it has a non-nil service name. In that
 // case this method returns true. Otherwise this method will do nothing and return fals.
-func addServiceName(intrfc *mojom.MojomInterface, typeInfo *mojom_types.RuntimeTypeInfo) (isTopLevel bool) {
+func addServiceName(intrfc *mojom.MojomInterface, typeInfo *fidl_types.RuntimeTypeInfo) (isTopLevel bool) {
 	isTopLevel = intrfc.ServiceName != nil
 	if isTopLevel {
 		typeInfo.Services[*intrfc.ServiceName] = intrfc.TypeKey()
@@ -268,54 +268,54 @@ func addServiceName(intrfc *mojom.MojomInterface, typeInfo *mojom_types.RuntimeT
 }
 
 // translateUserDefinedType translates from a mojom.UserDefinedType (the pure Go
-// representation used by the parser) to a mojom_types.UserDefinedType (the
+// representation used by the parser) to a fidl_types.UserDefinedType (the
 // Mojo Go representation used for serialization.)
-func translateUserDefinedType(t mojom.UserDefinedType) mojom_types.UserDefinedType {
+func translateUserDefinedType(t mojom.UserDefinedType) fidl_types.UserDefinedType {
 	switch p := t.(type) {
 	case *mojom.MojomStruct:
-		return &mojom_types.UserDefinedTypeStructType{translateMojomStruct(p)}
+		return &fidl_types.UserDefinedTypeStructType{translateFidlStruct(p)}
 	case *mojom.MojomInterface:
-		return translateMojomInterface(p)
+		return translateFidlInterface(p)
 	case *mojom.MojomEnum:
-		return translateMojomEnum(p)
+		return translateFidlEnum(p)
 	case *mojom.MojomUnion:
-		return translateMojomUnion(p)
+		return translateFidlUnion(p)
 	default:
 		panic(fmt.Sprintf("Unexpected type: %T", t))
 
 	}
 }
 
-func translateMojomStruct(s *mojom.MojomStruct) mojom_types.MojomStruct {
-	mojomStruct := mojom_types.MojomStruct{}
-	mojomStruct.DeclData = translateDeclarationData(&s.DeclarationData)
-	mojomStruct.DeclData.ContainedDeclarations = translateContainedDeclarations(&s.NestedDeclarations)
+func translateFidlStruct(s *mojom.MojomStruct) fidl_types.FidlStruct {
+	fidlStruct := fidl_types.FidlStruct{}
+	fidlStruct.DeclData = translateDeclarationData(&s.DeclarationData)
+	fidlStruct.DeclData.ContainedDeclarations = translateContainedDeclarations(&s.NestedDeclarations)
 
 	for _, field := range s.FieldsInOrdinalOrder() {
-		mojomStruct.Fields = append(mojomStruct.Fields, translateStructField(field))
+		fidlStruct.Fields = append(fidlStruct.Fields, translateStructField(field))
 	}
 
 	if emitComputedPackingData {
 		versionInfo := s.VersionInfo()
-		mojomStruct.VersionInfo = new([]mojom_types.StructVersion)
+		fidlStruct.VersionInfo = new([]fidl_types.StructVersion)
 		for _, version := range versionInfo {
-			(*mojomStruct.VersionInfo) = append(*mojomStruct.VersionInfo,
+			(*fidlStruct.VersionInfo) = append(*fidlStruct.VersionInfo,
 				translateStructVersion(version))
 		}
 	}
 
-	return mojomStruct
+	return fidlStruct
 }
 
-func translateStructVersion(v mojom.StructVersion) mojom_types.StructVersion {
-	return mojom_types.StructVersion{
+func translateStructVersion(v mojom.StructVersion) fidl_types.StructVersion {
+	return fidl_types.StructVersion{
 		VersionNumber: v.VersionNumber,
 		NumFields:     v.NumFields,
 		NumBytes:      v.NumBytes,
 	}
 }
 
-func translateStructField(f *mojom.StructField) (field mojom_types.StructField) {
+func translateStructField(f *mojom.StructField) (field fidl_types.StructField) {
 	field.DeclData = translateDeclarationData(&f.DeclarationData)
 	field.Type = translateTypeRef(f.FieldType)
 	if f.DefaultValue != nil {
@@ -329,108 +329,108 @@ func translateStructField(f *mojom.StructField) (field mojom_types.StructField) 
 	return
 }
 
-func translateDefaultFieldValue(v mojom.ValueRef) mojom_types.DefaultFieldValue {
+func translateDefaultFieldValue(v mojom.ValueRef) fidl_types.DefaultFieldValue {
 	switch v := v.(type) {
 	case mojom.LiteralValue:
 		if v.IsDefault() {
-			return &mojom_types.DefaultFieldValueDefaultKeyword{mojom_types.DefaultKeyword{}}
+			return &fidl_types.DefaultFieldValueDefaultKeyword{fidl_types.DefaultKeyword{}}
 		}
-		return &mojom_types.DefaultFieldValueValue{translateLiteralValue(v)}
+		return &fidl_types.DefaultFieldValueValue{translateLiteralValue(v)}
 	case *mojom.UserValueRef:
-		return &mojom_types.DefaultFieldValueValue{translateUserValueRef(v)}
+		return &fidl_types.DefaultFieldValueValue{translateUserValueRef(v)}
 	default:
 		panic(fmt.Sprintf("Unexpected ValueRef type: %T", v))
 
 	}
 }
 
-func translateMojomInterface(intrfc *mojom.MojomInterface) *mojom_types.UserDefinedTypeInterfaceType {
-	mojomInterface := mojom_types.UserDefinedTypeInterfaceType{}
+func translateFidlInterface(intrfc *mojom.MojomInterface) *fidl_types.UserDefinedTypeInterfaceType {
+	fidlInterface := fidl_types.UserDefinedTypeInterfaceType{}
 
-	mojomInterface.Value.DeclData = translateDeclarationData(&intrfc.DeclarationData)
-	mojomInterface.Value.DeclData.ContainedDeclarations = translateContainedDeclarations(&intrfc.NestedDeclarations)
+	fidlInterface.Value.DeclData = translateDeclarationData(&intrfc.DeclarationData)
+	fidlInterface.Value.DeclData.ContainedDeclarations = translateContainedDeclarations(&intrfc.NestedDeclarations)
 
-	mojomInterface.Value.ServiceName = intrfc.ServiceName
+	fidlInterface.Value.ServiceName = intrfc.ServiceName
 
-	mojomInterface.Value.Methods = make(map[uint32]mojom_types.MojomMethod)
+	fidlInterface.Value.Methods = make(map[uint32]fidl_types.FidlMethod)
 	for ordinal, method := range intrfc.MethodsByOrdinal {
-		mojomInterface.Value.Methods[ordinal] = translateMojomMethod(method)
+		fidlInterface.Value.Methods[ordinal] = translateFidlMethod(method)
 	}
 	if emitComputedPackingData {
-		mojomInterface.Value.CurrentVersion = intrfc.Version()
+		fidlInterface.Value.CurrentVersion = intrfc.Version()
 	}
 
-	return &mojomInterface
+	return &fidlInterface
 }
 
-func translateMojomMethod(method *mojom.MojomMethod) mojom_types.MojomMethod {
-	mojomMethod := mojom_types.MojomMethod{}
+func translateFidlMethod(method *mojom.MojomMethod) fidl_types.FidlMethod {
+	fidlMethod := fidl_types.FidlMethod{}
 
 	// decl_data
-	mojomMethod.DeclData = translateDeclarationData(&method.DeclarationData)
+	fidlMethod.DeclData = translateDeclarationData(&method.DeclarationData)
 
 	// parameters
-	mojomMethod.Parameters = translateMojomStruct(method.Parameters)
+	fidlMethod.Parameters = translateFidlStruct(method.Parameters)
 
 	// response_params
 	if method.ResponseParameters != nil {
-		responseParams := translateMojomStruct(method.ResponseParameters)
-		mojomMethod.ResponseParams = &responseParams
+		responseParams := translateFidlStruct(method.ResponseParameters)
+		fidlMethod.ResponseParams = &responseParams
 	}
 
 	// ordinal
-	mojomMethod.Ordinal = method.Ordinal
+	fidlMethod.Ordinal = method.Ordinal
 
 	if emitComputedPackingData {
-		mojomMethod.MinVersion = method.MinVersion()
+		fidlMethod.MinVersion = method.MinVersion()
 	}
 
-	return mojomMethod
+	return fidlMethod
 }
 
-func translateMojomEnum(enum *mojom.MojomEnum) *mojom_types.UserDefinedTypeEnumType {
-	mojomEnum := mojom_types.UserDefinedTypeEnumType{}
-	mojomEnum.Value.DeclData = translateDeclarationData(&enum.DeclarationData)
+func translateFidlEnum(enum *mojom.MojomEnum) *fidl_types.UserDefinedTypeEnumType {
+	fidlEnum := fidl_types.UserDefinedTypeEnumType{}
+	fidlEnum.Value.DeclData = translateDeclarationData(&enum.DeclarationData)
 	for _, value := range enum.Values {
-		mojomEnum.Value.Values = append(mojomEnum.Value.Values, translateEnumValue(value))
+		fidlEnum.Value.Values = append(fidlEnum.Value.Values, translateEnumValue(value))
 	}
-	return &mojomEnum
+	return &fidlEnum
 }
 
-func translateMojomUnion(union *mojom.MojomUnion) *mojom_types.UserDefinedTypeUnionType {
-	mojomUnion := mojom_types.UserDefinedTypeUnionType{}
-	mojomUnion.Value.DeclData = translateDeclarationData(&union.DeclarationData)
+func translateFidlUnion(union *mojom.MojomUnion) *fidl_types.UserDefinedTypeUnionType {
+	fidlUnion := fidl_types.UserDefinedTypeUnionType{}
+	fidlUnion.Value.DeclData = translateDeclarationData(&union.DeclarationData)
 	for _, field := range union.FieldsInTagOrder() {
-		mojomUnion.Value.Fields = append(mojomUnion.Value.Fields,
+		fidlUnion.Value.Fields = append(fidlUnion.Value.Fields,
 			translateUnionField(field))
 	}
-	return &mojomUnion
+	return &fidlUnion
 }
 
-func translateUnionField(unionField *mojom.UnionField) mojom_types.UnionField {
-	outUnionField := mojom_types.UnionField{}
+func translateUnionField(unionField *mojom.UnionField) fidl_types.UnionField {
+	outUnionField := fidl_types.UnionField{}
 	outUnionField.DeclData = translateDeclarationData(&unionField.DeclarationData)
 	outUnionField.Type = translateTypeRef(unionField.FieldType)
 	outUnionField.Tag = unionField.Tag
 	return outUnionField
 }
 
-func translateUserDefinedConstant(t *mojom.UserDefinedConstant) mojom_types.DeclaredConstant {
-	declaredConstant := mojom_types.DeclaredConstant{}
+func translateUserDefinedConstant(t *mojom.UserDefinedConstant) fidl_types.DeclaredConstant {
+	declaredConstant := fidl_types.DeclaredConstant{}
 	declaredConstant.Type = translateTypeRef(t.DeclaredType())
 	declaredConstant.DeclData = *translateDeclarationData(&t.DeclarationData)
 	declaredConstant.Value = translateValueRef(t.ValueRef())
 	// We set the |resolved_concrete_value| field only in the case that the |value| field is a ConstantReference.
-	// See the comments for this field in mojom_types.mojom.
-	if _, ok := declaredConstant.Value.(*mojom_types.ValueConstantReference); ok {
+	// See the comments for this field in fidl_types.mojom.
+	if _, ok := declaredConstant.Value.(*fidl_types.ValueConstantReference); ok {
 		declaredConstant.ResolvedConcreteValue = translateConcreteValue(t.ValueRef().ResolvedConcreteValue())
 	}
 
 	return declaredConstant
 }
 
-func translateEnumValue(v *mojom.EnumValue) mojom_types.EnumValue {
-	enumValue := mojom_types.EnumValue{}
+func translateEnumValue(v *mojom.EnumValue) fidl_types.EnumValue {
+	enumValue := fidl_types.EnumValue{}
 	enumValue.DeclData = translateDeclarationData(&v.DeclarationData)
 	if v.ValueRef() != nil {
 		enumValue.InitializerValue = translateValueRef(v.ValueRef())
@@ -442,7 +442,7 @@ func translateEnumValue(v *mojom.EnumValue) mojom_types.EnumValue {
 	return enumValue
 }
 
-func translateTypeRef(typeRef mojom.TypeRef) mojom_types.Type {
+func translateTypeRef(typeRef mojom.TypeRef) fidl_types.Type {
 	switch t := typeRef.(type) {
 	case mojom.SimpleType:
 		return translateSimpleType(t)
@@ -465,81 +465,81 @@ func translateTypeRef(typeRef mojom.TypeRef) mojom_types.Type {
 	}
 }
 
-func translateSimpleType(simpleType mojom.SimpleType) *mojom_types.TypeSimpleType {
-	var value mojom_types.SimpleType
+func translateSimpleType(simpleType mojom.SimpleType) *fidl_types.TypeSimpleType {
+	var value fidl_types.SimpleType
 	switch simpleType {
 	case mojom.SimpleTypeBool:
-		value = mojom_types.SimpleType_Bool
+		value = fidl_types.SimpleType_Bool
 	case mojom.SimpleTypeDouble:
-		value = mojom_types.SimpleType_Double
+		value = fidl_types.SimpleType_Double
 	case mojom.SimpleTypeFloat:
-		value = mojom_types.SimpleType_Float
+		value = fidl_types.SimpleType_Float
 	case mojom.SimpleTypeInt8:
-		value = mojom_types.SimpleType_Int8
+		value = fidl_types.SimpleType_Int8
 	case mojom.SimpleTypeInt16:
-		value = mojom_types.SimpleType_Int16
+		value = fidl_types.SimpleType_Int16
 	case mojom.SimpleTypeInt32:
-		value = mojom_types.SimpleType_Int32
+		value = fidl_types.SimpleType_Int32
 	case mojom.SimpleTypeInt64:
-		value = mojom_types.SimpleType_Int64
+		value = fidl_types.SimpleType_Int64
 	case mojom.SimpleTypeUInt8:
-		value = mojom_types.SimpleType_Uint8
+		value = fidl_types.SimpleType_Uint8
 	case mojom.SimpleTypeUInt16:
-		value = mojom_types.SimpleType_Uint16
+		value = fidl_types.SimpleType_Uint16
 	case mojom.SimpleTypeUInt32:
-		value = mojom_types.SimpleType_Uint32
+		value = fidl_types.SimpleType_Uint32
 	case mojom.SimpleTypeUInt64:
-		value = mojom_types.SimpleType_Uint64
+		value = fidl_types.SimpleType_Uint64
 	}
-	return &mojom_types.TypeSimpleType{value}
+	return &fidl_types.TypeSimpleType{value}
 }
 
-func translateStringType(stringType mojom.StringType) *mojom_types.TypeStringType {
-	return &mojom_types.TypeStringType{mojom_types.StringType{stringType.Nullable()}}
+func translateStringType(stringType mojom.StringType) *fidl_types.TypeStringType {
+	return &fidl_types.TypeStringType{fidl_types.StringType{stringType.Nullable()}}
 }
 
-func translateHandleType(handleType mojom.HandleTypeRef) *mojom_types.TypeHandleType {
-	var kind mojom_types.HandleType_Kind
+func translateHandleType(handleType mojom.HandleTypeRef) *fidl_types.TypeHandleType {
+	var kind fidl_types.HandleType_Kind
 	switch handleType.HandleKind() {
 	case mojom.HandleKindUnspecified:
-		kind = mojom_types.HandleType_Kind_Unspecified
+		kind = fidl_types.HandleType_Kind_Unspecified
 	case mojom.HandleKindMessagePipe:
-		kind = mojom_types.HandleType_Kind_MessagePipe
+		kind = fidl_types.HandleType_Kind_MessagePipe
 	case mojom.HandleKindDataPipeConsumer:
-		kind = mojom_types.HandleType_Kind_DataPipeConsumer
+		kind = fidl_types.HandleType_Kind_DataPipeConsumer
 	case mojom.HandleKindDataPipeProducer:
-		kind = mojom_types.HandleType_Kind_DataPipeProducer
+		kind = fidl_types.HandleType_Kind_DataPipeProducer
 	case mojom.HandleKindSharedBuffer:
-		kind = mojom_types.HandleType_Kind_SharedBuffer
+		kind = fidl_types.HandleType_Kind_SharedBuffer
 	}
-	return &mojom_types.TypeHandleType{mojom_types.HandleType{handleType.Nullable(), kind}}
+	return &fidl_types.TypeHandleType{fidl_types.HandleType{handleType.Nullable(), kind}}
 }
 
-func translateArrayType(arrayType *mojom.ArrayTypeRef) *mojom_types.TypeArrayType {
-	return &mojom_types.TypeArrayType{mojom_types.ArrayType{
+func translateArrayType(arrayType *mojom.ArrayTypeRef) *fidl_types.TypeArrayType {
+	return &fidl_types.TypeArrayType{fidl_types.ArrayType{
 		Nullable:    arrayType.Nullable(),
 		FixedLength: int32(arrayType.FixedLength()),
 		ElementType: translateTypeRef(arrayType.ElementType())}}
 }
 
-func translateMapType(mapType *mojom.MapTypeRef) *mojom_types.TypeMapType {
-	return &mojom_types.TypeMapType{mojom_types.MapType{
+func translateMapType(mapType *mojom.MapTypeRef) *fidl_types.TypeMapType {
+	return &fidl_types.TypeMapType{fidl_types.MapType{
 		Nullable:  mapType.Nullable(),
 		KeyType:   translateTypeRef(mapType.KeyType()),
 		ValueType: translateTypeRef(mapType.ValueType())}}
 }
 
-func translateUserTypeRef(userType *mojom.UserTypeRef) *mojom_types.TypeTypeReference {
+func translateUserTypeRef(userType *mojom.UserTypeRef) *fidl_types.TypeTypeReference {
 	typeKey := stringPointer(userType.ResolvedType().TypeKey())
 	identifier := stringPointer(userType.Identifier())
-	return &mojom_types.TypeTypeReference{mojom_types.TypeReference{
+	return &fidl_types.TypeTypeReference{fidl_types.TypeReference{
 		Nullable:           userType.Nullable(),
 		IsInterfaceRequest: userType.IsInterfaceRequest(),
 		Identifier:         identifier,
 		TypeKey:            typeKey}}
 }
 
-func translateValueRef(valueRef mojom.ValueRef) mojom_types.Value {
+func translateValueRef(valueRef mojom.ValueRef) fidl_types.Value {
 	switch valueRef := valueRef.(type) {
 	case mojom.LiteralValue:
 		return translateLiteralValue(valueRef)
@@ -550,7 +550,7 @@ func translateValueRef(valueRef mojom.ValueRef) mojom_types.Value {
 	}
 }
 
-func translateConcreteValue(cv mojom.ConcreteValue) mojom_types.Value {
+func translateConcreteValue(cv mojom.ConcreteValue) fidl_types.Value {
 	switch cv := cv.(type) {
 	case mojom.LiteralValue:
 		return translateLiteralValue(cv)
@@ -559,11 +559,11 @@ func translateConcreteValue(cv mojom.ConcreteValue) mojom_types.Value {
 	// value, not a value reference. In the case of a LiteralValue or a
 	// BuiltInConstantValue the distinction is immaterial. But in the case of an
 	// enum value the distinction is important. Here we are building and returning
-	// a synthetic mojom_types.EnumValueReference to represent the enum value.
+	// a synthetic fidl_types.EnumValueReference to represent the enum value.
 	// It does not make sense to populate the |identifier| field for because we
-	// aren't representing any actual occrence in the .mojom file.
+	// aren't representing any actual occrence in the .fidl file.
 	case *mojom.EnumValue:
-		return &mojom_types.ValueEnumValueReference{mojom_types.EnumValueReference{
+		return &fidl_types.ValueEnumValueReference{fidl_types.EnumValueReference{
 			EnumTypeKey:    cv.EnumType().TypeKey(),
 			EnumValueIndex: cv.ValueIndex()}}
 	case mojom.BuiltInConstantValue:
@@ -573,70 +573,70 @@ func translateConcreteValue(cv mojom.ConcreteValue) mojom_types.Value {
 	}
 }
 
-func translateLiteralValue(v mojom.LiteralValue) *mojom_types.ValueLiteralValue {
-	var lv mojom_types.LiteralValue
+func translateLiteralValue(v mojom.LiteralValue) *fidl_types.ValueLiteralValue {
+	var lv fidl_types.LiteralValue
 	switch v.ValueType() {
 	case mojom.SimpleTypeBool:
-		lv = &mojom_types.LiteralValueBoolValue{v.Value().(bool)}
+		lv = &fidl_types.LiteralValueBoolValue{v.Value().(bool)}
 	case mojom.SimpleTypeDouble:
-		lv = &mojom_types.LiteralValueDoubleValue{v.Value().(float64)}
+		lv = &fidl_types.LiteralValueDoubleValue{v.Value().(float64)}
 	case mojom.SimpleTypeFloat:
-		lv = &mojom_types.LiteralValueFloatValue{v.Value().(float32)}
+		lv = &fidl_types.LiteralValueFloatValue{v.Value().(float32)}
 	case mojom.SimpleTypeInt8:
-		lv = &mojom_types.LiteralValueInt8Value{v.Value().(int8)}
+		lv = &fidl_types.LiteralValueInt8Value{v.Value().(int8)}
 	case mojom.SimpleTypeInt16:
-		lv = &mojom_types.LiteralValueInt16Value{v.Value().(int16)}
+		lv = &fidl_types.LiteralValueInt16Value{v.Value().(int16)}
 	case mojom.SimpleTypeInt32:
-		lv = &mojom_types.LiteralValueInt32Value{v.Value().(int32)}
+		lv = &fidl_types.LiteralValueInt32Value{v.Value().(int32)}
 	case mojom.SimpleTypeInt64:
-		lv = &mojom_types.LiteralValueInt64Value{v.Value().(int64)}
+		lv = &fidl_types.LiteralValueInt64Value{v.Value().(int64)}
 	case mojom.SimpleTypeUInt8:
-		lv = &mojom_types.LiteralValueUint8Value{v.Value().(uint8)}
+		lv = &fidl_types.LiteralValueUint8Value{v.Value().(uint8)}
 	case mojom.SimpleTypeUInt16:
-		lv = &mojom_types.LiteralValueUint16Value{v.Value().(uint16)}
+		lv = &fidl_types.LiteralValueUint16Value{v.Value().(uint16)}
 	case mojom.SimpleTypeUInt32:
-		lv = &mojom_types.LiteralValueUint32Value{v.Value().(uint32)}
+		lv = &fidl_types.LiteralValueUint32Value{v.Value().(uint32)}
 	case mojom.SimpleTypeUInt64:
-		lv = &mojom_types.LiteralValueUint64Value{v.Value().(uint64)}
+		lv = &fidl_types.LiteralValueUint64Value{v.Value().(uint64)}
 	case mojom.StringLiteralType:
-		lv = &mojom_types.LiteralValueStringValue{v.Value().(string)}
+		lv = &fidl_types.LiteralValueStringValue{v.Value().(string)}
 	default:
 		panic(fmt.Sprintf("Unexpected literal value type %d", v.ValueType()))
 	}
-	return &mojom_types.ValueLiteralValue{lv}
+	return &fidl_types.ValueLiteralValue{lv}
 }
 
-func translateBuiltInConstantValue(t mojom.BuiltInConstantValue) *mojom_types.ValueBuiltinValue {
-	builtInValue := mojom_types.ValueBuiltinValue{}
+func translateBuiltInConstantValue(t mojom.BuiltInConstantValue) *fidl_types.ValueBuiltinValue {
+	builtInValue := fidl_types.ValueBuiltinValue{}
 	switch t {
 	case mojom.FloatInfinity:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_FloatInfinity
+		builtInValue.Value = fidl_types.BuiltinConstantValue_FloatInfinity
 	case mojom.FloatNegativeInfinity:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_FloatNegativeInfinity
+		builtInValue.Value = fidl_types.BuiltinConstantValue_FloatNegativeInfinity
 	case mojom.FloatNAN:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_FloatNan
+		builtInValue.Value = fidl_types.BuiltinConstantValue_FloatNan
 	case mojom.DoubleInfinity:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_DoubleInfinity
+		builtInValue.Value = fidl_types.BuiltinConstantValue_DoubleInfinity
 	case mojom.DoubleNegativeInfinity:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_DoubleNegativeInfinity
+		builtInValue.Value = fidl_types.BuiltinConstantValue_DoubleNegativeInfinity
 	case mojom.DoubleNAN:
-		builtInValue.Value = mojom_types.BuiltinConstantValue_DoubleNan
+		builtInValue.Value = fidl_types.BuiltinConstantValue_DoubleNan
 	default:
 		panic(fmt.Sprintf("Unrecognized BuiltInConstantValue %v", t))
 	}
 	return &builtInValue
 }
 
-func translateUserValueRef(r *mojom.UserValueRef) mojom_types.Value {
+func translateUserValueRef(r *mojom.UserValueRef) fidl_types.Value {
 	switch t := r.ResolvedDeclaredValue().(type) {
 	case mojom.BuiltInConstantValue:
 		return translateBuiltInConstantValue(t)
 	case *mojom.UserDefinedConstant:
-		return &mojom_types.ValueConstantReference{mojom_types.ConstantReference{
+		return &fidl_types.ValueConstantReference{fidl_types.ConstantReference{
 			Identifier:  r.Identifier(),
 			ConstantKey: t.ValueKey()}}
 	case *mojom.EnumValue:
-		return &mojom_types.ValueEnumValueReference{mojom_types.EnumValueReference{
+		return &fidl_types.ValueEnumValueReference{fidl_types.EnumValueReference{
 			Identifier:     r.Identifier(),
 			EnumTypeKey:    t.EnumType().TypeKey(),
 			EnumValueIndex: t.ValueIndex()}}
@@ -645,14 +645,14 @@ func translateUserValueRef(r *mojom.UserValueRef) mojom_types.Value {
 	}
 }
 
-func translateDeclarationData(d *mojom.DeclarationData) *mojom_types.DeclarationData {
-	declData := mojom_types.DeclarationData{}
+func translateDeclarationData(d *mojom.DeclarationData) *fidl_types.DeclarationData {
+	declData := fidl_types.DeclarationData{}
 
 	// attributes field
 	if d.Attributes() != nil {
-		declData.Attributes = new([]mojom_types.Attribute)
+		declData.Attributes = new([]fidl_types.Attribute)
 		for _, attr := range d.Attributes().List {
-			*(declData.Attributes) = append(*(declData.Attributes), translateMojomAttribute(&attr))
+			*(declData.Attributes) = append(*(declData.Attributes), translateFidlAttribute(&attr))
 		}
 	}
 
@@ -709,7 +709,7 @@ func translateDeclarationData(d *mojom.DeclarationData) *mojom_types.Declaration
 	}
 
 	// source_file_info
-	declData.SourceFileInfo = new(mojom_types.SourceFileInfo)
+	declData.SourceFileInfo = new(fidl_types.SourceFileInfo)
 	declData.SourceFileInfo.FileName = d.OwningFile().CanonicalFileName
 	if emitLineAndColumnNumbers {
 		declData.SourceFileInfo.LineNumber = d.LineNumber()
@@ -719,11 +719,11 @@ func translateDeclarationData(d *mojom.DeclarationData) *mojom_types.Declaration
 }
 
 // Returns nil if there are no contained declarations
-func translateContainedDeclarations(container *mojom.NestedDeclarations) *mojom_types.ContainedDeclarations {
+func translateContainedDeclarations(container *mojom.NestedDeclarations) *fidl_types.ContainedDeclarations {
 	if container.Enums == nil && container.Constants == nil {
 		return nil
 	}
-	declarations := mojom_types.ContainedDeclarations{}
+	declarations := fidl_types.ContainedDeclarations{}
 	if container.Enums != nil {
 		declarations.Enums = new([]string)
 		for _, enum := range container.Enums {
@@ -739,16 +739,16 @@ func translateContainedDeclarations(container *mojom.NestedDeclarations) *mojom_
 	return &declarations
 }
 
-func translateMojomAttribute(a *mojom.MojomAttribute) (attribute mojom_types.Attribute) {
-	return mojom_types.Attribute{a.Key, translateLiteralValue(a.Value).Value}
+func translateFidlAttribute(a *mojom.MojomAttribute) (attribute fidl_types.Attribute) {
+	return fidl_types.Attribute{a.Key, translateLiteralValue(a.Value).Value}
 }
 
 // stringPointer is a convenience function for creating a pointer to a string whose value
 // is the specified string. It may be used in situations where the compiler will
 // not allow you to take the address of a string value directly, such as the
 // return value of a function. It is necessary to create pointers to strings because
-// that is how the Mojom type |string?| (i.e. nullable string) is represented in
-// in the Mojom Go bindings.
+// that is how the Fidl type |string?| (i.e. nullable string) is represented in
+// in the Fidl Go bindings.
 func stringPointer(s string) *string {
 	return &s
 }

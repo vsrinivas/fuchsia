@@ -1,24 +1,24 @@
-package mojom_files
+package fidl_files
 
 import (
 	fmt "fmt"
 	bindings "mojo/public/go/bindings"
-	mojom_types "mojom/generated/mojom_types"
+	fidl_types "mojom/generated/fidl_types"
 	sort "sort"
 )
 
-type MojomFile struct {
+type FidlFile struct {
 	FileName                  string
 	SpecifiedFileName         *string
 	ModuleNamespace           *string
-	Attributes                *[]mojom_types.Attribute
+	Attributes                *[]fidl_types.Attribute
 	Imports                   *[]string
-	DeclaredMojomObjects      KeysByType
+	DeclaredFidlObjects       KeysByType
 	SerializedRuntimeTypeInfo *string
-	Comments                  *mojom_types.Comments
+	Comments                  *fidl_types.Comments
 }
 
-func (s *MojomFile) Encode(encoder *bindings.Encoder) error {
+func (s *FidlFile) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(64, 0)
 	if err := encoder.WritePointer(); err != nil {
 		return err
@@ -87,7 +87,7 @@ func (s *MojomFile) Encode(encoder *bindings.Encoder) error {
 	if err := encoder.WritePointer(); err != nil {
 		return err
 	}
-	if err := s.DeclaredMojomObjects.Encode(encoder); err != nil {
+	if err := s.DeclaredFidlObjects.Encode(encoder); err != nil {
 		return err
 	}
 	if s.SerializedRuntimeTypeInfo == nil {
@@ -117,24 +117,24 @@ func (s *MojomFile) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomFile_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlFile_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{72, 0},
 }
 
-func (s *MojomFile) Decode(decoder *bindings.Decoder) error {
+func (s *FidlFile) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomFile_Versions), func(i int) bool {
-		return mojomFile_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlFile_Versions), func(i int) bool {
+		return fidlFile_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomFile_Versions) {
-		if mojomFile_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlFile_Versions) {
+		if fidlFile_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomFile_Versions[index].Size
+		expectedSize := fidlFile_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -194,14 +194,14 @@ func (s *MojomFile) Decode(decoder *bindings.Decoder) error {
 		if pointer == 0 {
 			s.Attributes = nil
 		} else {
-			s.Attributes = new([]mojom_types.Attribute)
+			s.Attributes = new([]fidl_types.Attribute)
 			len0, err := decoder.StartArray(64)
 			if err != nil {
 				return err
 			}
-			(*s.Attributes) = make([]mojom_types.Attribute, len0)
+			(*s.Attributes) = make([]fidl_types.Attribute, len0)
 			for i := uint32(0); i < len0; i++ {
-				var elem0 mojom_types.Attribute
+				var elem0 fidl_types.Attribute
 				pointer, err := decoder.ReadPointer()
 				if err != nil {
 					return err
@@ -264,7 +264,7 @@ func (s *MojomFile) Decode(decoder *bindings.Decoder) error {
 		if pointer == 0 {
 			return &bindings.ValidationError{bindings.UnexpectedNullPointer, "unexpected null pointer"}
 		} else {
-			if err := s.DeclaredMojomObjects.Decode(decoder); err != nil {
+			if err := s.DeclaredFidlObjects.Decode(decoder); err != nil {
 				return err
 			}
 		}
@@ -292,7 +292,7 @@ func (s *MojomFile) Decode(decoder *bindings.Decoder) error {
 		if pointer == 0 {
 			s.Comments = nil
 		} else {
-			s.Comments = new(mojom_types.Comments)
+			s.Comments = new(fidl_types.Comments)
 			if err := s.Comments.Decode(decoder); err != nil {
 				return err
 			}
@@ -305,13 +305,13 @@ func (s *MojomFile) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomFileGraph struct {
-	Files             map[string]MojomFile
-	ResolvedTypes     map[string]mojom_types.UserDefinedType
-	ResolvedConstants map[string]mojom_types.DeclaredConstant
+type FidlFileGraph struct {
+	Files             map[string]FidlFile
+	ResolvedTypes     map[string]fidl_types.UserDefinedType
+	ResolvedConstants map[string]fidl_types.DeclaredConstant
 }
 
-func (s *MojomFileGraph) Encode(encoder *bindings.Encoder) error {
+func (s *FidlFileGraph) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(24, 0)
 	if err := encoder.WritePointer(); err != nil {
 		return err
@@ -319,7 +319,7 @@ func (s *MojomFileGraph) Encode(encoder *bindings.Encoder) error {
 	encoder.StartMap()
 	{
 		var keys0 []string
-		var values0 []MojomFile
+		var values0 []FidlFile
 		for elem0 := range s.Files {
 			keys0 = append(keys0, elem0)
 		}
@@ -369,7 +369,7 @@ func (s *MojomFileGraph) Encode(encoder *bindings.Encoder) error {
 	encoder.StartMap()
 	{
 		var keys0 []string
-		var values0 []mojom_types.UserDefinedType
+		var values0 []fidl_types.UserDefinedType
 		for elem0 := range s.ResolvedTypes {
 			keys0 = append(keys0, elem0)
 		}
@@ -420,7 +420,7 @@ func (s *MojomFileGraph) Encode(encoder *bindings.Encoder) error {
 	encoder.StartMap()
 	{
 		var keys0 []string
-		var values0 []mojom_types.DeclaredConstant
+		var values0 []fidl_types.DeclaredConstant
 		for elem0 := range s.ResolvedConstants {
 			keys0 = append(keys0, elem0)
 		}
@@ -471,24 +471,24 @@ func (s *MojomFileGraph) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomFileGraph_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlFileGraph_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{32, 0},
 }
 
-func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
+func (s *FidlFileGraph) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomFileGraph_Versions), func(i int) bool {
-		return mojomFileGraph_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlFileGraph_Versions), func(i int) bool {
+		return fidlFileGraph_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomFileGraph_Versions) {
-		if mojomFileGraph_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlFileGraph_Versions) {
+		if fidlFileGraph_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomFileGraph_Versions[index].Size
+		expectedSize := fidlFileGraph_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -504,7 +504,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 			return &bindings.ValidationError{bindings.UnexpectedNullPointer, "unexpected null pointer"}
 		} else {
 
-			s.Files = map[string]MojomFile{}
+			s.Files = map[string]FidlFile{}
 			if err := decoder.StartMap(); err != nil {
 				return err
 			}
@@ -545,7 +545,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					}
 				}
 			}
-			var values0 []MojomFile
+			var values0 []FidlFile
 			{
 				pointer, err := decoder.ReadPointer()
 				if err != nil {
@@ -559,9 +559,9 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					if err != nil {
 						return err
 					}
-					values0 = make([]MojomFile, len0)
+					values0 = make([]FidlFile, len0)
 					for i := uint32(0); i < len0; i++ {
-						var elem0 MojomFile
+						var elem0 FidlFile
 						pointer, err := decoder.ReadPointer()
 						if err != nil {
 							return err
@@ -602,7 +602,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 			return &bindings.ValidationError{bindings.UnexpectedNullPointer, "unexpected null pointer"}
 		} else {
 
-			s.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
+			s.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
 			if err := decoder.StartMap(); err != nil {
 				return err
 			}
@@ -643,7 +643,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					}
 				}
 			}
-			var values0 []mojom_types.UserDefinedType
+			var values0 []fidl_types.UserDefinedType
 			{
 				pointer, err := decoder.ReadPointer()
 				if err != nil {
@@ -657,11 +657,11 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					if err != nil {
 						return err
 					}
-					values0 = make([]mojom_types.UserDefinedType, len0)
+					values0 = make([]fidl_types.UserDefinedType, len0)
 					for i := uint32(0); i < len0; i++ {
-						var elem0 mojom_types.UserDefinedType
+						var elem0 fidl_types.UserDefinedType
 						var err error
-						elem0, err = mojom_types.DecodeUserDefinedType(decoder)
+						elem0, err = fidl_types.DecodeUserDefinedType(decoder)
 						if err != nil {
 							return err
 						}
@@ -697,7 +697,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 			return &bindings.ValidationError{bindings.UnexpectedNullPointer, "unexpected null pointer"}
 		} else {
 
-			s.ResolvedConstants = map[string]mojom_types.DeclaredConstant{}
+			s.ResolvedConstants = map[string]fidl_types.DeclaredConstant{}
 			if err := decoder.StartMap(); err != nil {
 				return err
 			}
@@ -738,7 +738,7 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					}
 				}
 			}
-			var values0 []mojom_types.DeclaredConstant
+			var values0 []fidl_types.DeclaredConstant
 			{
 				pointer, err := decoder.ReadPointer()
 				if err != nil {
@@ -752,9 +752,9 @@ func (s *MojomFileGraph) Decode(decoder *bindings.Decoder) error {
 					if err != nil {
 						return err
 					}
-					values0 = make([]mojom_types.DeclaredConstant, len0)
+					values0 = make([]fidl_types.DeclaredConstant, len0)
 					for i := uint32(0); i < len0; i++ {
-						var elem0 mojom_types.DeclaredConstant
+						var elem0 fidl_types.DeclaredConstant
 						pointer, err := decoder.ReadPointer()
 						if err != nil {
 							return err

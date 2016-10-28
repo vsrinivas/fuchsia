@@ -1,4 +1,4 @@
-package mojom_types
+package fidl_types
 
 import (
 	fmt "fmt"
@@ -678,13 +678,13 @@ func (s *StructVersion) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomStruct struct {
+type FidlStruct struct {
 	DeclData    *DeclarationData
 	Fields      []StructField
 	VersionInfo *[]StructVersion
 }
 
-func (s *MojomStruct) Encode(encoder *bindings.Encoder) error {
+func (s *FidlStruct) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(24, 0)
 	if s.DeclData == nil {
 		encoder.WriteNullPointer()
@@ -737,24 +737,24 @@ func (s *MojomStruct) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomStruct_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlStruct_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{32, 0},
 }
 
-func (s *MojomStruct) Decode(decoder *bindings.Decoder) error {
+func (s *FidlStruct) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomStruct_Versions), func(i int) bool {
-		return mojomStruct_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlStruct_Versions), func(i int) bool {
+		return fidlStruct_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomStruct_Versions) {
-		if mojomStruct_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlStruct_Versions) {
+		if fidlStruct_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomStruct_Versions[index].Size
+		expectedSize := fidlStruct_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -947,12 +947,12 @@ func (s *UnionField) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomUnion struct {
+type FidlUnion struct {
 	DeclData *DeclarationData
 	Fields   []UnionField
 }
 
-func (s *MojomUnion) Encode(encoder *bindings.Encoder) error {
+func (s *FidlUnion) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(16, 0)
 	if s.DeclData == nil {
 		encoder.WriteNullPointer()
@@ -986,24 +986,24 @@ func (s *MojomUnion) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomUnion_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlUnion_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{24, 0},
 }
 
-func (s *MojomUnion) Decode(decoder *bindings.Decoder) error {
+func (s *FidlUnion) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomUnion_Versions), func(i int) bool {
-		return mojomUnion_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlUnion_Versions), func(i int) bool {
+		return fidlUnion_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomUnion_Versions) {
-		if mojomUnion_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlUnion_Versions) {
+		if fidlUnion_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomUnion_Versions[index].Size
+		expectedSize := fidlUnion_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -1159,12 +1159,12 @@ func (s *EnumValue) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomEnum struct {
+type FidlEnum struct {
 	DeclData *DeclarationData
 	Values   []EnumValue
 }
 
-func (s *MojomEnum) Encode(encoder *bindings.Encoder) error {
+func (s *FidlEnum) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(16, 0)
 	if s.DeclData == nil {
 		encoder.WriteNullPointer()
@@ -1198,24 +1198,24 @@ func (s *MojomEnum) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomEnum_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlEnum_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{24, 0},
 }
 
-func (s *MojomEnum) Decode(decoder *bindings.Decoder) error {
+func (s *FidlEnum) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomEnum_Versions), func(i int) bool {
-		return mojomEnum_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlEnum_Versions), func(i int) bool {
+		return fidlEnum_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomEnum_Versions) {
-		if mojomEnum_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlEnum_Versions) {
+		if fidlEnum_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomEnum_Versions[index].Size
+		expectedSize := fidlEnum_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -1277,15 +1277,15 @@ func (s *MojomEnum) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomMethod struct {
+type FidlMethod struct {
 	DeclData       *DeclarationData
-	Parameters     MojomStruct
-	ResponseParams *MojomStruct
+	Parameters     FidlStruct
+	ResponseParams *FidlStruct
 	Ordinal        uint32
 	MinVersion     uint32
 }
 
-func (s *MojomMethod) Encode(encoder *bindings.Encoder) error {
+func (s *FidlMethod) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(32, 0)
 	if s.DeclData == nil {
 		encoder.WriteNullPointer()
@@ -1326,24 +1326,24 @@ func (s *MojomMethod) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomMethod_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlMethod_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{40, 0},
 }
 
-func (s *MojomMethod) Decode(decoder *bindings.Decoder) error {
+func (s *FidlMethod) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomMethod_Versions), func(i int) bool {
-		return mojomMethod_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlMethod_Versions), func(i int) bool {
+		return fidlMethod_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomMethod_Versions) {
-		if mojomMethod_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlMethod_Versions) {
+		if fidlMethod_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomMethod_Versions[index].Size
+		expectedSize := fidlMethod_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -1385,7 +1385,7 @@ func (s *MojomMethod) Decode(decoder *bindings.Decoder) error {
 		if pointer == 0 {
 			s.ResponseParams = nil
 		} else {
-			s.ResponseParams = new(MojomStruct)
+			s.ResponseParams = new(FidlStruct)
 			if err := s.ResponseParams.Decode(decoder); err != nil {
 				return err
 			}
@@ -1412,14 +1412,14 @@ func (s *MojomMethod) Decode(decoder *bindings.Decoder) error {
 	return nil
 }
 
-type MojomInterface struct {
+type FidlInterface struct {
 	DeclData       *DeclarationData
 	ServiceName    *string
-	Methods        map[uint32]MojomMethod
+	Methods        map[uint32]FidlMethod
 	CurrentVersion uint32
 }
 
-func (s *MojomInterface) Encode(encoder *bindings.Encoder) error {
+func (s *FidlInterface) Encode(encoder *bindings.Encoder) error {
 	encoder.StartStruct(32, 0)
 	if s.DeclData == nil {
 		encoder.WriteNullPointer()
@@ -1447,7 +1447,7 @@ func (s *MojomInterface) Encode(encoder *bindings.Encoder) error {
 	encoder.StartMap()
 	{
 		var keys0 []uint32
-		var values0 []MojomMethod
+		var values0 []FidlMethod
 		for elem0 := range s.Methods {
 			keys0 = append(keys0, elem0)
 		}
@@ -1498,24 +1498,24 @@ func (s *MojomInterface) Encode(encoder *bindings.Encoder) error {
 	return nil
 }
 
-var mojomInterface_Versions []bindings.DataHeader = []bindings.DataHeader{
+var fidlInterface_Versions []bindings.DataHeader = []bindings.DataHeader{
 	bindings.DataHeader{40, 0},
 }
 
-func (s *MojomInterface) Decode(decoder *bindings.Decoder) error {
+func (s *FidlInterface) Decode(decoder *bindings.Decoder) error {
 	header, err := decoder.StartStruct()
 	if err != nil {
 		return err
 	}
 
-	index := sort.Search(len(mojomInterface_Versions), func(i int) bool {
-		return mojomInterface_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
+	index := sort.Search(len(fidlInterface_Versions), func(i int) bool {
+		return fidlInterface_Versions[i].ElementsOrVersion >= header.ElementsOrVersion
 	})
-	if index < len(mojomInterface_Versions) {
-		if mojomInterface_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
+	if index < len(fidlInterface_Versions) {
+		if fidlInterface_Versions[index].ElementsOrVersion > header.ElementsOrVersion {
 			index--
 		}
-		expectedSize := mojomInterface_Versions[index].Size
+		expectedSize := fidlInterface_Versions[index].Size
 		if expectedSize != header.Size {
 			return &bindings.ValidationError{bindings.UnexpectedStructHeader,
 				fmt.Sprintf("invalid struct header size: should be %d, but was %d", expectedSize, header.Size),
@@ -1560,7 +1560,7 @@ func (s *MojomInterface) Decode(decoder *bindings.Decoder) error {
 			return &bindings.ValidationError{bindings.UnexpectedNullPointer, "unexpected null pointer"}
 		} else {
 
-			s.Methods = map[uint32]MojomMethod{}
+			s.Methods = map[uint32]FidlMethod{}
 			if err := decoder.StartMap(); err != nil {
 				return err
 			}
@@ -1593,7 +1593,7 @@ func (s *MojomInterface) Decode(decoder *bindings.Decoder) error {
 					}
 				}
 			}
-			var values0 []MojomMethod
+			var values0 []FidlMethod
 			{
 				pointer, err := decoder.ReadPointer()
 				if err != nil {
@@ -1607,9 +1607,9 @@ func (s *MojomInterface) Decode(decoder *bindings.Decoder) error {
 					if err != nil {
 						return err
 					}
-					values0 = make([]MojomMethod, len0)
+					values0 = make([]FidlMethod, len0)
 					for i := uint32(0); i < len0; i++ {
-						var elem0 MojomMethod
+						var elem0 FidlMethod
 						pointer, err := decoder.ReadPointer()
 						if err != nil {
 							return err
@@ -3462,10 +3462,10 @@ type UserDefinedType interface {
 }
 
 type __UserDefinedTypeReflect struct {
-	EnumType      MojomEnum
-	StructType    MojomStruct
-	UnionType     MojomUnion
-	InterfaceType MojomInterface
+	EnumType      FidlEnum
+	StructType    FidlStruct
+	UnionType     FidlUnion
+	InterfaceType FidlInterface
 }
 
 type UserDefinedTypeUnknown struct{ tag uint32 }
@@ -3477,7 +3477,7 @@ func (u *UserDefinedTypeUnknown) Encode(encoder *bindings.Encoder) error {
 	return fmt.Errorf("Trying to serialize an unknown UserDefinedType. There is no sane way to do that!")
 }
 
-type UserDefinedTypeEnumType struct{ Value MojomEnum }
+type UserDefinedTypeEnumType struct{ Value FidlEnum }
 
 func (u *UserDefinedTypeEnumType) Tag() uint32                        { return 0 }
 func (u *UserDefinedTypeEnumType) Interface() interface{}             { return u.Value }
@@ -3512,7 +3512,7 @@ func (u *UserDefinedTypeEnumType) decodeInternal(decoder *bindings.Decoder) erro
 	return nil
 }
 
-type UserDefinedTypeStructType struct{ Value MojomStruct }
+type UserDefinedTypeStructType struct{ Value FidlStruct }
 
 func (u *UserDefinedTypeStructType) Tag() uint32                        { return 1 }
 func (u *UserDefinedTypeStructType) Interface() interface{}             { return u.Value }
@@ -3547,7 +3547,7 @@ func (u *UserDefinedTypeStructType) decodeInternal(decoder *bindings.Decoder) er
 	return nil
 }
 
-type UserDefinedTypeUnionType struct{ Value MojomUnion }
+type UserDefinedTypeUnionType struct{ Value FidlUnion }
 
 func (u *UserDefinedTypeUnionType) Tag() uint32                        { return 2 }
 func (u *UserDefinedTypeUnionType) Interface() interface{}             { return u.Value }
@@ -3582,7 +3582,7 @@ func (u *UserDefinedTypeUnionType) decodeInternal(decoder *bindings.Decoder) err
 	return nil
 }
 
-type UserDefinedTypeInterfaceType struct{ Value MojomInterface }
+type UserDefinedTypeInterfaceType struct{ Value FidlInterface }
 
 func (u *UserDefinedTypeInterfaceType) Tag() uint32                        { return 3 }
 func (u *UserDefinedTypeInterfaceType) Interface() interface{}             { return u.Value }
