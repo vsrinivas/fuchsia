@@ -325,9 +325,9 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
 
-    mx_status_t status = mx_msgpipe_write(loader_svc,
+    mx_status_t status = mx_channel_write(loader_svc, 0,
                                           &msg, sizeof(msg.header) + len + 1,
-                                          NULL, 0, 0);
+                                          NULL, 0);
     if (status != NO_ERROR)
         return status;
 
@@ -339,8 +339,8 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     mx_handle_t handle = MX_HANDLE_INVALID;
     uint32_t reply_size = sizeof(msg.header);
     uint32_t handle_count = 1;
-    status = mx_msgpipe_read(loader_svc, &msg, &reply_size,
-                             &handle, &handle_count, 0);
+    status = mx_channel_read(loader_svc, 0, &msg, reply_size, &reply_size,
+                             &handle, handle_count, &handle_count);
     if (status != NO_ERROR)
         return status;
 
@@ -515,7 +515,7 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc) {
     return result;
 }
 
-static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
+static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
     struct loader_msg {
         mx_proc_args_t header;
         uint32_t handle_info[HND_SPECIAL_COUNT + 1];
@@ -587,8 +587,8 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t topipe) {
         }
     }
 
-    mx_status_t status = mx_msgpipe_write(topipe, msg, msg_size,
-                                          handles, nhandles, 0);
+    mx_status_t status = mx_channel_write(tochannel, 0, msg, msg_size,
+                                          handles, nhandles);
     if (status == NO_ERROR) {
         // message_write consumed all those handles.
         for (enum special_handles i = 0; i < HND_SPECIAL_COUNT; ++i)
@@ -741,8 +741,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         return ERR_BUFFER_TOO_SMALL;
     }
 
-    status = mx_msgpipe_write(to_child, msg, size,
-                              lp->handles, lp->handle_count, 0);
+    status = mx_channel_write(to_child, 0, msg, size,
+                              lp->handles, lp->handle_count);
     free(msg);
     if (status == NO_ERROR) {
         // message_write consumed all the handles.
@@ -763,14 +763,14 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     if (proc < 0)
         return proc;
 
-    mx_handle_t pipeh[2];
-    mx_status_t status = mx_msgpipe_create(pipeh, 0);
+    mx_handle_t channelh[2];
+    mx_status_t status = mx_channel_create(0, channelh, channelh + 1);
     if (status != NO_ERROR) {
         mx_handle_close(proc);
         return status;
     }
-    mx_handle_t to_child = pipeh[0];
-    mx_handle_t child_bootstrap = pipeh[1];
+    mx_handle_t to_child = channelh[0];
+    mx_handle_t child_bootstrap = channelh[1];
 
     mx_handle_t thread;
     uintptr_t sp;
