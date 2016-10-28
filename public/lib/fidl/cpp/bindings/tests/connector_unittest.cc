@@ -38,8 +38,8 @@ class ConnectorTest : public testing::Test {
   void PumpMessages() { loop_.RunUntilIdle(); }
 
  protected:
-  mx::msgpipe handle0_;
-  mx::msgpipe handle1_;
+  mx::channel handle0_;
+  mx::channel handle1_;
 
  private:
   RunLoop loop_;
@@ -265,7 +265,7 @@ TEST_F(ConnectorTest, MessageWithHandles) {
 
   // Now send a message to the transferred handle and confirm it's sent through
   // to the orginal pipe.
-  mx::msgpipe smph;
+  mx::channel smph;
   smph.reset(message_received.handles()->front().value());
   message_received.mutable_handles()->front() = Handle();
   // |smph| now owns this handle.

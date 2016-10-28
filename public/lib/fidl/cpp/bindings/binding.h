@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_BINDING_H_
 #define LIB_FIDL_CPP_BINDINGS_BINDING_H_
 
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 
 #include <memory>
 #include <utility>
@@ -64,7 +64,7 @@ class Binding {
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
   // See class comment for definition of |waiter|.
   Binding(Interface* impl,
-          mx::msgpipe handle,
+          mx::channel handle,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
       : Binding(impl) {
     Bind(std::move(handle), waiter);
@@ -101,7 +101,7 @@ class Binding {
   // Completes a binding that was constructed with only an interface
   // implementation. Takes ownership of |handle| and binds it to the previously
   // specified implementation. See class comment for definition of |waiter|.
-  void Bind(mx::msgpipe handle,
+  void Bind(mx::channel handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
     FTL_DCHECK(!internal_router_);
 
@@ -126,9 +126,9 @@ class Binding {
   // class comment for definition of |waiter|.
   void Bind(InterfaceHandle<Interface>* interface_handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
-    mx::msgpipe endpoint0;
-    mx::msgpipe endpoint1;
-    mx::msgpipe::create(&endpoint0, &endpoint1, 0);
+    mx::channel endpoint0;
+    mx::channel endpoint1;
+    mx::channel::create(&endpoint0, &endpoint1, 0);
     *interface_handle =
         InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_);
     Bind(std::move(endpoint1), waiter);

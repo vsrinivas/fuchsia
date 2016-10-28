@@ -133,7 +133,7 @@ class InterfacePtrState {
   // |proxy_| and |router_| are not initialized until read/write with the
   // message pipe handle is needed. |handle_| and |waiter_| are valid between
   // the Bind() call and the initialization of |proxy_| and |router_|.
-  mx::msgpipe handle_;
+  mx::channel handle_;
   const FidlAsyncWaiter* waiter_;
 
   uint32_t version_;

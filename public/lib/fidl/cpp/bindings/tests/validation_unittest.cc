@@ -115,7 +115,7 @@ class ValidationIntegrationTest : public testing::Test {
   ~ValidationIntegrationTest() override {}
 
   void SetUp() override {
-    mx::msgpipe tester_endpoint;
+    mx::channel tester_endpoint;
     ASSERT_EQ(NO_ERROR,
               CreateMessagePipe(nullptr, &tester_endpoint, &testee_endpoint_));
     test_message_receiver_ =
@@ -133,12 +133,12 @@ class ValidationIntegrationTest : public testing::Test {
 
   MessageReceiver* test_message_receiver() { return test_message_receiver_; }
 
-  mx::msgpipe testee_endpoint() { return testee_endpoint_.Pass(); }
+  mx::channel testee_endpoint() { return testee_endpoint_.Pass(); }
 
  private:
   class TestMessageReceiver : public MessageReceiver {
    public:
-    TestMessageReceiver(ValidationIntegrationTest* owner, mx::msgpipe handle)
+    TestMessageReceiver(ValidationIntegrationTest* owner, mx::channel handle)
         : owner_(owner), connector_(handle.Pass()) {
       connector_.set_enforce_errors_from_incoming_receiver(false);
     }
@@ -159,7 +159,7 @@ class ValidationIntegrationTest : public testing::Test {
 
   RunLoop loop_;
   TestMessageReceiver* test_message_receiver_;
-  mx::msgpipe testee_endpoint_;
+  mx::channel testee_endpoint_;
 };
 
 class IntegrationTestInterfaceImpl : public IntegrationTestInterface {

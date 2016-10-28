@@ -68,7 +68,7 @@ void Message::FreeDataAndCloseHandles() {
   }
 }
 
-mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message) {
+mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
   FTL_DCHECK(handle);
   FTL_DCHECK(message);
   FTL_DCHECK(message->handles()->empty());
@@ -76,7 +76,8 @@ mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message) {
 
   uint32_t num_bytes = 0;
   uint32_t num_handles = 0;
-  mx_status_t rv = handle.read(nullptr, &num_bytes, nullptr, &num_handles, 0);
+  mx_status_t rv =
+      handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
   if (rv != ERR_NO_MEMORY)
     return rv;
 
@@ -85,12 +86,12 @@ mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message) {
 
   uint32_t num_bytes_actual = num_bytes;
   uint32_t num_handles_actual = num_handles;
-  rv = handle.read(message->mutable_data(), &num_bytes_actual,
+  rv = handle.read(0, message->mutable_data(), num_bytes, &num_bytes_actual,
                    message->mutable_handles()->empty()
                        ? nullptr
                        : reinterpret_cast<mx_handle_t*>(
                              &message->mutable_handles()->front()),
-                   &num_handles_actual, 0);
+                   num_handles, &num_handles_actual);
 
   FTL_DCHECK(num_bytes == num_bytes_actual);
   FTL_DCHECK(num_handles == num_handles_actual);
@@ -98,7 +99,7 @@ mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message) {
   return rv;
 }
 
-mx_status_t ReadAndDispatchMessage(const mx::msgpipe& handle,
+mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
                                    MessageReceiver* receiver,
                                    bool* receiver_result) {
   Message message;

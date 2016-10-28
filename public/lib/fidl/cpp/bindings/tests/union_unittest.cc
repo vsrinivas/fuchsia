@@ -1061,8 +1061,8 @@ TEST(UnionTest, UnionInUnionValidationNonNullable) {
 }
 
 TEST(UnionTest, HandleInUnionGetterSetter) {
-  mx::msgpipe pipe0;
-  mx::msgpipe pipe1;
+  mx::channel pipe0;
+  mx::channel pipe1;
 
   CreateMessagePipe(nullptr, &pipe0, &pipe1);
 
@@ -1079,8 +1079,8 @@ TEST(UnionTest, HandleInUnionGetterSetter) {
 }
 
 TEST(UnionTest, HandleInUnionSerialization) {
-  mx::msgpipe pipe0;
-  mx::msgpipe pipe1;
+  mx::channel pipe0;
+  mx::channel pipe1;
 
   CreateMessagePipe(nullptr, &pipe0, &pipe1);
 
@@ -1112,8 +1112,8 @@ TEST(UnionTest, HandleInUnionSerialization) {
 }
 
 TEST(UnionTest, HandleInUnionValidation) {
-  mx::msgpipe pipe0;
-  mx::msgpipe pipe1;
+  mx::channel pipe0;
+  mx::channel pipe1;
 
   CreateMessagePipe(nullptr, &pipe0, &pipe1);
 
@@ -1140,7 +1140,7 @@ TEST(UnionTest, HandleInUnionValidation) {
 }
 
 TEST(UnionTest, HandleInUnionValidationNull) {
-  mx::msgpipe pipe;
+  mx::channel pipe;
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_message_pipe(pipe.Pass());
 

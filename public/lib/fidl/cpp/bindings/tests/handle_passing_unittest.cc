@@ -64,7 +64,7 @@ class SampleFactoryImpl : public sample::Factory {
       : binding_(this, request.Pass()) {}
 
   void DoStuff(sample::RequestPtr request,
-               mx::msgpipe pipe,
+               mx::channel pipe,
                const DoStuffCallback& callback) override {
     std::string text1;
     if (pipe.is_valid())
@@ -78,7 +78,7 @@ class SampleFactoryImpl : public sample::Factory {
       EXPECT_TRUE(request->pipe.is_valid());
     }
 
-    mx::msgpipe pipe0;
+    mx::channel pipe0;
     if (!text2.empty()) {
       CreateMessagePipe(nullptr, &pipe0, &pipe1_);
       EXPECT_TRUE(WriteTextMessage(pipe1_.get(), text2));
@@ -130,7 +130,7 @@ class SampleFactoryImpl : public sample::Factory {
           callback) override {}
 
  private:
-  mx::msgpipe pipe1_;
+  mx::channel pipe1_;
   Binding<sample::Factory> binding_;
 };
 
@@ -161,7 +161,7 @@ struct DoStuffCallback {
       EXPECT_EQ(std::string(kText2), text2);
 
       // Do some more tests of handle passing:
-      mx::msgpipe p = response->pipe.Pass();
+      mx::channel p = response->pipe.Pass();
       EXPECT_TRUE(p.is_valid());
       EXPECT_FALSE(response->pipe.is_valid());
     }
@@ -214,7 +214,7 @@ TEST_F(HandlePassingTest, PassInvalid) {
   bool got_response = false;
   std::string got_text_reply;
   DoStuffCallback cb(&got_response, &got_text_reply);
-  factory->DoStuff(std::move(request), mx::msgpipe(), cb);
+  factory->DoStuff(std::move(request), mx::channel(), cb);
 
   EXPECT_FALSE(*cb.got_response);
 
@@ -280,14 +280,14 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
   MojoHandle handle1_value = extra_pipe.handle1.get().value();
 
   {
-    auto pipes = Array<mx::msgpipe>::New(2);
+    auto pipes = Array<mx::channel>::New(2);
     pipes[0] = extra_pipe.handle0.Pass();
     pipes[1] = extra_pipe.handle1.Pass();
 
     sample::RequestPtr request(sample::Request::New());
     request->more_pipes = pipes.Pass();
 
-    factory->DoStuff(std::move(request), mx::msgpipe(),
+    factory->DoStuff(std::move(request), mx::channel(),
                      sample::Factory::DoStuffCallback());
   }
 

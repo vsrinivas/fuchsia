@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_SYNCHRONOUS_CONNECTOR_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_SYNCHRONOUS_CONNECTOR_H_
 
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/macros.h"
@@ -19,7 +19,7 @@ namespace internal {
 // response message), wait on the message pipe, and read the response.
 class SynchronousConnector {
  public:
-  explicit SynchronousConnector(mx::msgpipe handle);
+  explicit SynchronousConnector(mx::channel handle);
   ~SynchronousConnector();
 
   // This will mutate the message by moving the handles out of it. |msg_to_send|
@@ -31,13 +31,13 @@ class SynchronousConnector {
   // TODO(vardhan): Add a timeout mechanism.
   bool BlockingRead(Message* received_msg);
 
-  mx::msgpipe PassHandle() { return std::move(handle_); }
+  mx::channel PassHandle() { return std::move(handle_); }
 
   // Returns true if the underlying MessagePipe is valid.
   bool is_valid() const { return !!handle_; }
 
  private:
-  mx::msgpipe handle_;
+  mx::channel handle_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SynchronousConnector);
 };

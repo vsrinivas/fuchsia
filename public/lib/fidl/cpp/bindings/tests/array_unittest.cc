@@ -77,33 +77,33 @@ TEST(ArrayTest, Bool) {
   }
 }
 
-// Tests that Array<mx::msgpipe> supports transferring handles.
+// Tests that Array<mx::channel> supports transferring handles.
 TEST(ArrayTest, Handle) {
   MessagePipe pipe;
-  auto handles = Array<mx::msgpipe>::New(2);
+  auto handles = Array<mx::channel>::New(2);
   handles[0] = pipe.handle0.Pass();
   handles[1].reset(pipe.handle1.release());
 
   EXPECT_FALSE(pipe.handle0.is_valid());
   EXPECT_FALSE(pipe.handle1.is_valid());
 
-  Array<mx::msgpipe> handles2 = handles.Pass();
+  Array<mx::channel> handles2 = handles.Pass();
   EXPECT_TRUE(handles2[0].is_valid());
   EXPECT_TRUE(handles2[1].is_valid());
 
-  mx::msgpipe pipe_handle = handles2[0].Pass();
+  mx::channel pipe_handle = handles2[0].Pass();
   EXPECT_TRUE(pipe_handle.is_valid());
   EXPECT_FALSE(handles2[0].is_valid());
 }
 
-// Tests that Array<mx::msgpipe> supports closing handles.
+// Tests that Array<mx::channel> supports closing handles.
 TEST(ArrayTest, HandlesAreClosed) {
   MessagePipe pipe;
   MojoHandle pipe0_value = pipe.handle0.get().value();
   MojoHandle pipe1_value = pipe.handle0.get().value();
 
   {
-    auto handles = Array<mx::msgpipe>::New(2);
+    auto handles = Array<mx::channel>::New(2);
     handles[0] = pipe.handle0.Pass();
     handles[1].reset(pipe.handle0.release());
   }
@@ -173,7 +173,7 @@ TEST(ArrayTest, Clone) {
 
   {
     // Test that array of handles still works although Clone() is not available.
-    auto array = Array<mx::msgpipe>::New(10);
+    auto array = Array<mx::channel>::New(10);
     EXPECT_FALSE(array[0].is_valid());
   }
 }

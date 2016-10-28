@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERFACE_REQUEST_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERFACE_REQUEST_H_
 
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 
 #include <cstddef>
 #include <utility>
@@ -36,7 +36,7 @@ class InterfaceRequest {
 
   // Constructs an InterfaceRequest from a message pipe handle (if |handle| is
   // not set, then this constructs an "empty" InterfaceRequest).
-  explicit InterfaceRequest(mx::msgpipe handle) : handle_(std::move(handle)) {}
+  explicit InterfaceRequest(mx::channel handle) : handle_(std::move(handle)) {}
 
   // Takes the message pipe from another InterfaceRequest.
   InterfaceRequest(InterfaceRequest&& other) {
@@ -57,16 +57,16 @@ class InterfaceRequest {
   // Binds the request to a message pipe over which Interface is to be
   // requested.  If the request is already bound to a message pipe, the current
   // message pipe will be closed.
-  void Bind(mx::msgpipe handle) { handle_ = std::move(handle); }
+  void Bind(mx::channel handle) { handle_ = std::move(handle); }
 
   // Indicates whether the request currently contains a valid message pipe.
   bool is_pending() const { return handle_.is_valid(); }
 
   // Removes the message pipe from the request and returns it.
-  mx::msgpipe PassMessagePipe() { return std::move(handle_); }
+  mx::channel PassMessagePipe() { return std::move(handle_); }
 
  private:
-  mx::msgpipe handle_;
+  mx::channel handle_;
 
   FIDL_MOVE_ONLY_TYPE(InterfaceRequest);
 };
@@ -81,9 +81,9 @@ class InterfaceRequest {
 // as you still need to convert it into something like InterfacePtr<>.
 template <typename Interface>
 InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
-  mx::msgpipe endpoint0;
-  mx::msgpipe endpoint1;
-  mx::msgpipe::create(&endpoint0, &endpoint1, 0);
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(&endpoint0, &endpoint1, 0);
   *handle = InterfaceHandle<Interface>(std::move(endpoint0), 0u);
   return InterfaceRequest<Interface>(std::move(endpoint1));
 }

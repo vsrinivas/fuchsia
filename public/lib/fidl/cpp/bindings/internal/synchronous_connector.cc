@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/synchronous_connector.h"
 
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 #include <utility>
 
 #include "lib/fidl/cpp/bindings/message.h"
@@ -13,7 +13,7 @@
 namespace fidl {
 namespace internal {
 
-SynchronousConnector::SynchronousConnector(mx::msgpipe handle)
+SynchronousConnector::SynchronousConnector(mx::channel handle)
     : handle_(std::move(handle)) {}
 
 SynchronousConnector::~SynchronousConnector() {}
@@ -23,19 +23,19 @@ bool SynchronousConnector::Write(Message* msg_to_send) {
   FTL_DCHECK(msg_to_send);
 
   mx_status_t rv = handle_.write(
-      msg_to_send->data(), msg_to_send->data_num_bytes(),
+      0, msg_to_send->data(), msg_to_send->data_num_bytes(),
       msg_to_send->mutable_handles()->empty()
           ? nullptr
           : reinterpret_cast<const mx_handle_t*>(
                 msg_to_send->mutable_handles()->data()),
-      static_cast<uint32_t>(msg_to_send->mutable_handles()->size()), 0);
+      static_cast<uint32_t>(msg_to_send->mutable_handles()->size()));
 
   switch (rv) {
     case NO_ERROR:
       break;
 
     default:
-      FTL_LOG(WARNING) << "mx_msgpipe_write unsuccessful. error = " << rv;
+      FTL_LOG(WARNING) << "mx_channel_write unsuccessful. error = " << rv;
       return false;
   }
 

@@ -13,7 +13,7 @@ namespace internal {
 
 // ----------------------------------------------------------------------------
 
-Connector::Connector(mx::msgpipe message_pipe, const FidlAsyncWaiter* waiter)
+Connector::Connector(mx::channel message_pipe, const FidlAsyncWaiter* waiter)
     : waiter_(waiter),
       message_pipe_(std::move(message_pipe)),
       incoming_receiver_(nullptr),
@@ -39,7 +39,7 @@ void Connector::CloseMessagePipe() {
   message_pipe_.reset();
 }
 
-mx::msgpipe Connector::PassMessagePipe() {
+mx::channel Connector::PassMessagePipe() {
   CancelWait();
   return std::move(message_pipe_);
 }
@@ -70,12 +70,12 @@ bool Connector::Accept(Message* message) {
     return true;
 
   mx_status_t rv = message_pipe_.write(
-      message->data(), message->data_num_bytes(),
+      0, message->data(), message->data_num_bytes(),
       message->mutable_handles()->empty()
           ? nullptr
           : reinterpret_cast<const mx_handle_t*>(
                 &message->mutable_handles()->front()),
-      static_cast<uint32_t>(message->mutable_handles()->size()), 0);
+      static_cast<uint32_t>(message->mutable_handles()->size()));
 
   switch (rv) {
     case NO_ERROR:

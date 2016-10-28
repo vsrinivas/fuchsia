@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_CONNECTOR_H_
 
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/fidl/cpp/waiter/default.h"
@@ -28,7 +28,7 @@ namespace internal {
 class Connector : public MessageReceiver {
  public:
   // The Connector takes ownership of |message_pipe|.
-  explicit Connector(mx::msgpipe message_pipe,
+  explicit Connector(mx::channel message_pipe,
                      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Connector() override;
 
@@ -62,7 +62,7 @@ class Connector : public MessageReceiver {
 
   // Releases the pipe, not triggering the error state. Connector is put into
   // a quiescent state.
-  mx::msgpipe PassMessagePipe();
+  mx::channel PassMessagePipe();
 
   // Is the connector bound to a MessagePipe handle?
   bool is_valid() const { return !!message_pipe_; }
@@ -101,7 +101,7 @@ class Connector : public MessageReceiver {
   ftl::Closure connection_error_handler_;
   const FidlAsyncWaiter* waiter_;
 
-  mx::msgpipe message_pipe_;
+  mx::channel message_pipe_;
   MessageReceiver* incoming_receiver_;
 
   FidlAsyncWaitID async_wait_id_;

@@ -33,8 +33,8 @@ class ProviderImpl : public sample::Provider {
   }
 
   void EchoMessagePipeHandle(
-      mx::msgpipe a,
-      const Callback<void(mx::msgpipe)>& callback) override {
+      mx::channel a,
+      const Callback<void(mx::channel)>& callback) override {
     callback.Run(a.Pass());
   }
 
@@ -74,7 +74,7 @@ class EnumRecorder {
 class MessagePipeWriter {
  public:
   explicit MessagePipeWriter(const char* text) : text_(text) {}
-  void Run(mx::msgpipe handle) const { WriteTextMessage(handle.get(), text_); }
+  void Run(mx::channel handle) const { WriteTextMessage(handle.get(), text_); }
 
  private:
   std::string text_;

@@ -83,7 +83,7 @@ template <typename T>
 inline void InterfaceDataToHandle(Interface_Data* input,
                                   InterfaceHandle<T>* output) {
   *output = InterfaceHandle<T>(
-      UnwrapHandle<mx::msgpipe>(FetchAndReset(&input->handle)), input->version);
+      UnwrapHandle<mx::channel>(FetchAndReset(&input->handle)), input->version);
 }
 
 }  // namespace internal

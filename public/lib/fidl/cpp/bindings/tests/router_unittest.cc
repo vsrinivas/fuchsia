@@ -133,8 +133,8 @@ class RouterTest : public testing::Test {
   void PumpMessages() { loop_.RunUntilIdle(); }
 
  protected:
-  mx::msgpipe handle0_;
-  mx::msgpipe handle1_;
+  mx::channel handle0_;
+  mx::channel handle1_;
 
  private:
   RunLoop loop_;

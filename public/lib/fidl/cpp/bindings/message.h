@@ -154,7 +154,7 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
 // description of its possible return values.
 //
 // NOTE: The message isn't validated and may be malformed!
-mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message);
+mx_status_t ReadMessage(const mx::channel& handle, Message* message);
 
 // Read a single message from the pipe and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
@@ -165,7 +165,7 @@ mx_status_t ReadMessage(const mx::msgpipe& handle, Message* message);
 // This method calls into |MojoReadMessage()| and propagates any errors it
 // produces. See mojo/public/c/include/mojo/system/message_pipe.h for a
 // description of its possible return values.
-mx_status_t ReadAndDispatchMessage(const mx::msgpipe& handle,
+mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
                                    MessageReceiver* receiver,
                                    bool* receiver_result);
 

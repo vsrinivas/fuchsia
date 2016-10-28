@@ -451,7 +451,7 @@ TEST_F(InterfacePtrTest, RequireVersion) {
 
 class StrongMathCalculatorImpl : public math::Calculator {
  public:
-  StrongMathCalculatorImpl(mx::msgpipe handle,
+  StrongMathCalculatorImpl(mx::channel handle,
                            bool* error_received,
                            bool* destroyed)
       : error_received_(error_received),
@@ -520,7 +520,7 @@ TEST(StrongConnectorTest, Math) {
 
 class WeakMathCalculatorImpl : public math::Calculator {
  public:
-  WeakMathCalculatorImpl(mx::msgpipe handle,
+  WeakMathCalculatorImpl(mx::channel handle,
                          bool* error_received,
                          bool* destroyed)
       : error_received_(error_received),

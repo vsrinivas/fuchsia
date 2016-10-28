@@ -64,12 +64,12 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
   EXPECT_EQ(24u, handle_struct.GetSerializedSize());
 
   // + 8 bytes for initialized array, 0-sized array.
-  handle_struct.array_h = fidl::Array<fidl::mx::msgpipe>::New(0);
+  handle_struct.array_h = fidl::Array<fidl::mx::channel>::New(0);
   EXPECT_EQ(32u, handle_struct.GetSerializedSize());
 
   // + 4 bytes for array of size 1.
   // + 4 more bytes to make the array serialization 8-byte aligned.
-  handle_struct.array_h = fidl::Array<fidl::mx::msgpipe>::New(1);
+  handle_struct.array_h = fidl::Array<fidl::mx::channel>::New(1);
   EXPECT_EQ(16u, GetSerializedSize_(handle_struct.array_h));
   EXPECT_EQ(40u, handle_struct.GetSerializedSize());
 }
@@ -127,7 +127,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
   {
     SCOPED_TRACE("Uninitialized required Handle in an Array");
     HandleStruct handle_struct;
-    handle_struct.array_h = Array<fidl::mx::msgpipe>::New(1);
+    handle_struct.array_h = Array<fidl::mx::channel>::New(1);
     // This won't die (i.e., we don't need to EXPECT_DEATH) because the handle
     // is invalid, so should be serializable.  Instead, we live with a
     // serialization error for an invalid handle.
@@ -143,7 +143,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
     SCOPED_TRACE("Serializing a Handle");
     HandleStruct handle_struct;
     handle_struct.h = MessagePipe().handle0.Pass();
-    handle_struct.array_h = Array<fidl::mx::msgpipe>::New(0);
+    handle_struct.array_h = Array<fidl::mx::channel>::New(0);
     EXPECT_DEATH_IF_SUPPORTED(
         {
           SerializeAndDeserialize(&handle_struct,

@@ -88,8 +88,8 @@ class InterfaceImpl : public sample::Provider {
   }
 
   void EchoMessagePipeHandle(
-      mx::msgpipe a,
-      const Callback<void(mx::msgpipe)>& callback) override {
+      mx::channel a,
+      const Callback<void(mx::channel)>& callback) override {
     FTL_CHECK(false) << "Not implemented.";
   }
 

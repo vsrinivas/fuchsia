@@ -233,7 +233,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
     auto result = Array<InterfaceRequest<I>>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i)
       result.at(i) = InterfaceRequest<I>(
-          UnwrapHandle<mx::msgpipe>(FetchAndReset(&input->at(i))));
+          UnwrapHandle<mx::channel>(FetchAndReset(&input->at(i))));
     output->Swap(&result);
   }
 };

@@ -22,7 +22,7 @@ namespace internal {
 // response messages back to the sender.
 class Router : public MessageReceiverWithResponder {
  public:
-  Router(mx::msgpipe message_pipe,
+  Router(mx::channel message_pipe,
          MessageValidatorList validators,
          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Router() override;
@@ -48,7 +48,7 @@ class Router : public MessageReceiverWithResponder {
 
   void CloseMessagePipe() { connector_.CloseMessagePipe(); }
 
-  mx::msgpipe PassMessagePipe() { return connector_.PassMessagePipe(); }
+  mx::channel PassMessagePipe() { return connector_.PassMessagePipe(); }
 
   // MessageReceiver implementation:
   bool Accept(Message* message) override;

@@ -6,7 +6,7 @@
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_INTERNAL_H_
 
 #include <mx/handle.h>
-#include <mx/msgpipe.h>
+#include <mx/channel.h>
 #include <type_traits>
 
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
