@@ -38,8 +38,8 @@
 #define USER_PTR(type) type*
 #endif
 
-MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 0, void, exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(0, 0, 1, mx_time_t, current_time, void)
+MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 0, void, process_exit, (noreturn), int retcode)
+MAGENTA_SYSCALL_DEF(0, 0, 1, mx_time_t, time_get, uint32_t clock_id)
 MAGENTA_SYSCALL_DEF(1, 2, 2, mx_status_t, nanosleep, mx_time_t nanoseconds)
 MAGENTA_SYSCALL_DEF(0, 0, 3, unsigned int, num_cpus, void)
 

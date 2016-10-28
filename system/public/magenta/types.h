@@ -75,6 +75,9 @@ typedef uint32_t mx_rights_t;
 #define MX_FLAG_REPLY_PIPE               (1u << 0)
 #define MX_CHANNEL_CREATE_REPLY_CHANNEL  (1u << 0)
 
+// clock ids
+#define MX_CLOCK_MONOTONIC        (0u)
+
 // virtual address
 typedef uintptr_t mx_vaddr_t;
 

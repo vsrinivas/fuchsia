@@ -54,7 +54,7 @@ constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
-void sys_exit(int retcode) {
+void sys_process_exit(int retcode) {
     LTRACEF("retcode %d\n", retcode);
     ProcessDispatcher::GetCurrent()->Exit(retcode);
 }
@@ -74,8 +74,14 @@ uint sys_num_cpus() {
     return arch_max_num_cpus();
 }
 
-uint64_t sys_current_time() {
-    return current_time_hires();
+uint64_t sys_time_get(uint32_t clock_id) {
+    switch (clock_id) {
+    case MX_CLOCK_MONOTONIC:
+        return current_time_hires();
+    default:
+        //TODO: figure out the best option here
+        return 0u;
+    }
 }
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,

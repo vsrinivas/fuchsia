@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-syscall exit
+syscall process_exit
     (retcode: int) noreturn;
 
-syscall current_time ()
+syscall current_time (uint32_t clock_id)
     returns (mx_time_t);
 
 syscall nanosleep

@@ -64,4 +64,4 @@
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
 
 ## Time
-+ [current_time](syscalls/current_time.md)
++ [time_get](syscalls/time_get.md)
