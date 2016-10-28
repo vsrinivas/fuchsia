@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"mojom/generators/common"
-	"mojom/generators/go/templates"
-	"mojom/generators/go/translator"
+	"fidl/compiler/generators/common"
+	"fidl/compiler/generators/go/templates"
+	"fidl/compiler/generators/go/translator"
 )
 
 func main() {
@@ -82,7 +82,7 @@ func WriteGoFile(fileName string, config common.GeneratorConfig) {
 	outputFile := outputFileByFileName(fileName, config)
 	writer := createAndOpen(outputFile)
 	goConfig := config.(goConfig)
-	fileTmpl := goConfig.translator.TranslateMojomFile(fileName)
+	fileTmpl := goConfig.translator.TranslateFidlFile(fileName)
 	funcMap := template.FuncMap{
 		"TypesPkg":    fileTmpl.TypesPkg,
 		"DescPkg":     fileTmpl.DescPkg,

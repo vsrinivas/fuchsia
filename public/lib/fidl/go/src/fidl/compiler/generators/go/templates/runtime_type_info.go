@@ -12,7 +12,7 @@ const getRuntimeTypeInfoTmplText = `
 {{- define "GetRuntimeTypeInfo" -}}
 {{- if GenTypeInfo -}}
 {{- $fileTmpl := . -}}
-// This global variable contains a mojom_types.RuntimeTypeInfo struct
+// This global variable contains a fidl_types.RuntimeTypeInfo struct
 // describing the types defined in this file and all of its imports as
 // well as the top-level interfaces defined in this file.
 var runtimeTypeInfo__ = {{TypesPkg}}RuntimeTypeInfo{}
@@ -26,7 +26,7 @@ func getRuntimeTypeInfo() {{TypesPkg}}RuntimeTypeInfo {
 
 func initRuntimeTypeInfo() {
   // serializedRuntimeTypeInfo contains the bytes of the Mojo serialization of
-  // a mojom_types.RuntimeTypeInfo struct describing the Mojom types in this file.
+  // a fidl_types.RuntimeTypeInfo struct describing the Mojom types in this file.
   // The string contains the base64 encoding of the gzip-compressed bytes.
   serializedRuntimeTypeInfo := "{{$fileTmpl.SerializedRuntimeTypeInfo}}"
 

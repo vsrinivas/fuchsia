@@ -5,7 +5,7 @@
 package cgen
 
 import (
-	"mojom/generated/mojom_files"
+	"fidl/compiler/generated/fidl_files"
 )
 
 // Some of these *Template structs are defined in header.go.
@@ -21,8 +21,8 @@ type SourceTemplate struct {
 
 // Since the HeaderTemplate already computes TypeTable (etc.), we should just
 // re-use them here.
-func NewSourceTemplate(fileGraph *mojom_files.MojomFileGraph,
-	file *mojom_files.MojomFile, srcRootPath string, headerTmpl *HeaderTemplate) SourceTemplate {
+func NewSourceTemplate(fileGraph *fidl_files.FidlFileGraph,
+	file *fidl_files.FidlFile, srcRootPath string, headerTmpl *HeaderTemplate) SourceTemplate {
 	return SourceTemplate{
 		HeaderFile: mojomToCFilePath(srcRootPath, file.FileName),
 		Imports:    headerTmpl.Imports,

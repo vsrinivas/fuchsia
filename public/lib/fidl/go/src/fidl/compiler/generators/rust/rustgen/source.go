@@ -10,16 +10,16 @@ import (
 	"strconv"
 	"strings"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
-// Holds the context of the traversal through the MojomFile object.
+// Holds the context of the traversal through the FidlFile object.
 type Context struct {
 	// We need access to the file graph to look at resolved types.
-	FileGraph *mojom_files.MojomFileGraph
+	FileGraph *fidl_files.FidlFileGraph
 	// We need to know what file we are in so that we can handle imports.
-	File *mojom_files.MojomFile
+	File *fidl_files.FidlFile
 	// A map of file names to the names map
 	RustNames *map[string]*Names
 }
@@ -132,7 +132,7 @@ func (c *Context) GetName(name string) string {
 	return (*(*c.RustNames)[c.File.FileName])[name]
 }
 
-func (c *Context) GetNameFromFile(name string, file *mojom_files.MojomFile) string {
+func (c *Context) GetNameFromFile(name string, file *fidl_files.FidlFile) string {
 	if (*(*c.RustNames)[file.FileName])[name] == "" {
 		log.Fatalf("Could not find name '%s' in file '%s'!", name, file.FileName)
 	}
@@ -145,7 +145,7 @@ func (a StructVersions) Less(i, j int) bool { return a[i].Version < a[j].Version
 
 // The follow type allows us to sort fields in packing-order, which is defined
 // by the byte+bit-offsets already provided to us by the mojom parser.
-type MojomSortableStructFields []mojom_types.StructField
+type MojomSortableStructFields []fidl_types.StructField
 
 func (a MojomSortableStructFields) Len() int { return len(a) }
 func (a MojomSortableStructFields) Swap(i, j int) {
@@ -158,7 +158,7 @@ func (a MojomSortableStructFields) Less(i, j int) bool {
 	return a[i].Offset < a[j].Offset
 }
 
-func NewEnumTemplate(context *Context, mojomEnum *mojom_types.MojomEnum) EnumTemplate {
+func NewEnumTemplate(context *Context, mojomEnum *fidl_types.FidlEnum) EnumTemplate {
 	enumName := mojomToRustName(mojomEnum.DeclData, context)
 
 	var values []EnumValueTemplate
@@ -176,17 +176,17 @@ func NewEnumTemplate(context *Context, mojomEnum *mojom_types.MojomEnum) EnumTem
 	}
 }
 
-// Given a |mojom_types.Value|, returns the Rust mangled version of the value.
+// Given a |fidl_types.Value|, returns the Rust mangled version of the value.
 //  - if a literal, returns the Rust equivalent
 //  - if a reference, returns the resolved, concrete value of the reference
 //  (enum value or constant). This avoids any circular-dependency issues.
-func resolveValue(context *Context, value mojom_types.Value) string {
+func resolveValue(context *Context, value fidl_types.Value) string {
 	switch value.(type) {
-	case *mojom_types.ValueLiteralValue:
-		return mojomToRustLiteral(value.Interface().(mojom_types.LiteralValue))
+	case *fidl_types.ValueLiteralValue:
+		return mojomToRustLiteral(value.Interface().(fidl_types.LiteralValue))
 
-	case *mojom_types.ValueConstantReference:
-		const_key := value.Interface().(mojom_types.ConstantReference).ConstantKey
+	case *fidl_types.ValueConstantReference:
+		const_key := value.Interface().(fidl_types.ConstantReference).ConstantKey
 		if decl_const, exists := context.FileGraph.ResolvedConstants[const_key]; exists {
 			constValue := decl_const.Value
 			if decl_const.ResolvedConcreteValue != nil {
@@ -196,10 +196,10 @@ func resolveValue(context *Context, value mojom_types.Value) string {
 		}
 		log.Fatal("Unresolved constant:", value)
 
-	case *mojom_types.ValueEnumValueReference:
-		enumRef := value.Interface().(mojom_types.EnumValueReference)
+	case *fidl_types.ValueEnumValueReference:
+		enumRef := value.Interface().(fidl_types.EnumValueReference)
 		if udt, exists := context.FileGraph.ResolvedTypes[enumRef.EnumTypeKey]; exists {
-			enumType := udt.Interface().(mojom_types.MojomEnum)
+			enumType := udt.Interface().(fidl_types.FidlEnum)
 			enumVal := enumType.Values[enumRef.EnumValueIndex]
 			if enumVal.InitializerValue == nil {
 				return strconv.FormatInt(int64(enumVal.IntValue), 10)
@@ -207,8 +207,8 @@ func resolveValue(context *Context, value mojom_types.Value) string {
 			return resolveValue(context, enumVal.InitializerValue)
 		}
 
-	case *mojom_types.ValueBuiltinValue:
-		return mojomToRustBuiltinValue(value.Interface().(mojom_types.BuiltinConstantValue))
+	case *fidl_types.ValueBuiltinValue:
+		return mojomToRustBuiltinValue(value.Interface().(fidl_types.BuiltinConstantValue))
 
 	default:
 		log.Fatal("Shouldn't be here. Unknown value type for:", value)
@@ -217,13 +217,13 @@ func resolveValue(context *Context, value mojom_types.Value) string {
 	return ""
 }
 
-func NewConstantTemplate(context *Context, mojomConstant mojom_types.DeclaredConstant) ConstantTemplate {
+func NewConstantTemplate(context *Context, mojomConstant fidl_types.DeclaredConstant) ConstantTemplate {
 	var type_text string
 	switch mojomConstant.Type.(type) {
 	// We can't type string constants as a 'String' since it
 	// involves some setup and prevents immediate consumption.
 	// &'static str should suffice.
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		type_text = "&'static str"
 	default:
 		type_text = mojomToRustType(mojomConstant.Type, context)
@@ -241,7 +241,7 @@ func NewConstantTemplate(context *Context, mojomConstant mojom_types.DeclaredCon
 	}
 }
 
-func NewUnionTemplate(context *Context, mojomUnion *mojom_types.MojomUnion) UnionTemplate {
+func NewUnionTemplate(context *Context, mojomUnion *fidl_types.FidlUnion) UnionTemplate {
 	union_name := mojomToRustName(mojomUnion.DeclData, context)
 
 	// Get all variant names and mangle them as needed if they're keywords.
@@ -280,7 +280,7 @@ func NewUnionTemplate(context *Context, mojomUnion *mojom_types.MojomUnion) Unio
 }
 
 func generateContainedDeclarations(context *Context,
-	decls *mojom_types.ContainedDeclarations) (constants []ConstantTemplate, enums []EnumTemplate) {
+	decls *fidl_types.ContainedDeclarations) (constants []ConstantTemplate, enums []EnumTemplate) {
 	if decls.Constants != nil {
 		for _, mojomConstKey := range *decls.Constants {
 			constants = append(constants,
@@ -290,14 +290,14 @@ func generateContainedDeclarations(context *Context,
 
 	if decls.Enums != nil {
 		for _, mojomEnumKey := range *decls.Enums {
-			mojom_enum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(mojom_types.MojomEnum)
+			mojom_enum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
 			enums = append(enums, NewEnumTemplate(context, &mojom_enum))
 		}
 	}
 	return
 }
 
-func NewInterfaceTemplate(context *Context, mojomInterface *mojom_types.MojomInterface) InterfaceTemplate {
+func NewInterfaceTemplate(context *Context, mojomInterface *fidl_types.FidlInterface) InterfaceTemplate {
 	interface_name := mojomToRustName(mojomInterface.DeclData, context)
 	var service_name string
 	if mojomInterface.ServiceName != nil {
@@ -355,7 +355,7 @@ func NewInterfaceTemplate(context *Context, mojomInterface *mojom_types.MojomInt
 // functions, be a method for InterfaceTemplate so that we don't have to pass
 // around |fileGraph| all over the place.
 func NewStructTemplate(context *Context,
-	mojomStruct *mojom_types.MojomStruct) StructTemplate {
+	mojomStruct *fidl_types.FidlStruct) StructTemplate {
 
 	// Sort fields by packing order (by offset,bit).
 	sortedFields := mojomStruct.Fields
@@ -433,41 +433,41 @@ func NewStructTemplate(context *Context,
 
 func NewSourceTemplate(context *Context, srcRootPath string) SourceTemplate {
 	var constants []ConstantTemplate
-	if context.File.DeclaredMojomObjects.TopLevelConstants != nil {
-		for _, mojomConstKey := range *(context.File.DeclaredMojomObjects.TopLevelConstants) {
+	if context.File.DeclaredFidlObjects.TopLevelConstants != nil {
+		for _, mojomConstKey := range *(context.File.DeclaredFidlObjects.TopLevelConstants) {
 			mojomConst := context.FileGraph.ResolvedConstants[mojomConstKey]
 			constants = append(constants, NewConstantTemplate(context, mojomConst))
 		}
 	}
 
 	var enums []EnumTemplate
-	if context.File.DeclaredMojomObjects.TopLevelEnums != nil {
-		for _, mojomEnumKey := range *(context.File.DeclaredMojomObjects.TopLevelEnums) {
-			mojomEnum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(mojom_types.MojomEnum)
+	if context.File.DeclaredFidlObjects.TopLevelEnums != nil {
+		for _, mojomEnumKey := range *(context.File.DeclaredFidlObjects.TopLevelEnums) {
+			mojomEnum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
 			enums = append(enums, NewEnumTemplate(context, &mojomEnum))
 		}
 	}
 
 	var unions []UnionTemplate
-	if context.File.DeclaredMojomObjects.Unions != nil {
-		for _, mojomUnionKey := range *(context.File.DeclaredMojomObjects.Unions) {
-			mojomUnion := context.FileGraph.ResolvedTypes[mojomUnionKey].Interface().(mojom_types.MojomUnion)
+	if context.File.DeclaredFidlObjects.Unions != nil {
+		for _, mojomUnionKey := range *(context.File.DeclaredFidlObjects.Unions) {
+			mojomUnion := context.FileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
 			unions = append(unions, NewUnionTemplate(context, &mojomUnion))
 		}
 	}
 
 	var structs []StructTemplate
-	if context.File.DeclaredMojomObjects.Structs != nil {
-		for _, mojomStructKey := range *(context.File.DeclaredMojomObjects.Structs) {
-			mojomStruct := context.FileGraph.ResolvedTypes[mojomStructKey].Interface().(mojom_types.MojomStruct)
+	if context.File.DeclaredFidlObjects.Structs != nil {
+		for _, mojomStructKey := range *(context.File.DeclaredFidlObjects.Structs) {
+			mojomStruct := context.FileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
 			structs = append(structs, NewStructTemplate(context, &mojomStruct))
 		}
 	}
 
 	var interfaces []InterfaceTemplate
-	if context.File.DeclaredMojomObjects.Interfaces != nil {
-		for _, mojomIfaceKey := range *(context.File.DeclaredMojomObjects.Interfaces) {
-			mojomIface := context.FileGraph.ResolvedTypes[mojomIfaceKey].Interface().(mojom_types.MojomInterface)
+	if context.File.DeclaredFidlObjects.Interfaces != nil {
+		for _, mojomIfaceKey := range *(context.File.DeclaredFidlObjects.Interfaces) {
+			mojomIface := context.FileGraph.ResolvedTypes[mojomIfaceKey].Interface().(fidl_types.FidlInterface)
 			interfaces = append(interfaces, NewInterfaceTemplate(context, &mojomIface))
 		}
 	}

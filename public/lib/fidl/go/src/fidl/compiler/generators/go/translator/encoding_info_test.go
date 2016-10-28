@@ -7,8 +7,8 @@ package translator
 import (
 	"testing"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 func TestSimpleTypeEncodingInfo(t *testing.T) {
@@ -17,25 +17,25 @@ func TestSimpleTypeEncodingInfo(t *testing.T) {
 		bitSize       uint32
 	}
 	testCases := []struct {
-		simpleType mojom_types.SimpleType
+		simpleType fidl_types.SimpleType
 		expected   expected
 	}{
-		{mojom_types.SimpleType_Bool, expected{"WriteBool", 1}},
-		{mojom_types.SimpleType_Float, expected{"WriteFloat32", 32}},
-		{mojom_types.SimpleType_Double, expected{"WriteFloat64", 64}},
-		{mojom_types.SimpleType_Int8, expected{"WriteInt8", 8}},
-		{mojom_types.SimpleType_Int16, expected{"WriteInt16", 16}},
-		{mojom_types.SimpleType_Int32, expected{"WriteInt32", 32}},
-		{mojom_types.SimpleType_Int64, expected{"WriteInt64", 64}},
-		{mojom_types.SimpleType_Uint8, expected{"WriteUint8", 8}},
-		{mojom_types.SimpleType_Uint16, expected{"WriteUint16", 16}},
-		{mojom_types.SimpleType_Uint32, expected{"WriteUint32", 32}},
-		{mojom_types.SimpleType_Uint64, expected{"WriteUint64", 64}},
+		{fidl_types.SimpleType_Bool, expected{"WriteBool", 1}},
+		{fidl_types.SimpleType_Float, expected{"WriteFloat32", 32}},
+		{fidl_types.SimpleType_Double, expected{"WriteFloat64", 64}},
+		{fidl_types.SimpleType_Int8, expected{"WriteInt8", 8}},
+		{fidl_types.SimpleType_Int16, expected{"WriteInt16", 16}},
+		{fidl_types.SimpleType_Int32, expected{"WriteInt32", 32}},
+		{fidl_types.SimpleType_Int64, expected{"WriteInt64", 64}},
+		{fidl_types.SimpleType_Uint8, expected{"WriteUint8", 8}},
+		{fidl_types.SimpleType_Uint16, expected{"WriteUint16", 16}},
+		{fidl_types.SimpleType_Uint32, expected{"WriteUint32", 32}},
+		{fidl_types.SimpleType_Uint64, expected{"WriteUint64", 64}},
 	}
 
 	translator := NewTranslator(nil)
 	for _, testCase := range testCases {
-		actual := translator.encodingInfo(&mojom_types.TypeSimpleType{testCase.simpleType})
+		actual := translator.encodingInfo(&fidl_types.TypeSimpleType{testCase.simpleType})
 		checkEq(t, true, actual.IsSimple())
 		checkEq(t, testCase.expected.writeFunction, actual.WriteFunction())
 		checkEq(t, testCase.expected.bitSize, actual.BitSize())
@@ -43,7 +43,7 @@ func TestSimpleTypeEncodingInfo(t *testing.T) {
 }
 
 func TestStringTypeEncodingInfo(t *testing.T) {
-	mojomType := &mojom_types.TypeStringType{mojom_types.StringType{Nullable: false}}
+	mojomType := &fidl_types.TypeStringType{fidl_types.StringType{Nullable: false}}
 	translator := NewTranslator(nil)
 	info := translator.encodingInfo(mojomType)
 	checkEq(t, false, info.IsNullable())
@@ -57,13 +57,13 @@ func TestStringTypeEncodingInfo(t *testing.T) {
 }
 
 func TestArrayTypeEncodingInfo(t *testing.T) {
-	mojomType := &mojom_types.TypeArrayType{
-		mojom_types.ArrayType{
+	mojomType := &fidl_types.TypeArrayType{
+		fidl_types.ArrayType{
 			Nullable: false,
-			ElementType: &mojom_types.TypeArrayType{
-				mojom_types.ArrayType{
+			ElementType: &fidl_types.TypeArrayType{
+				fidl_types.ArrayType{
 					Nullable:    false,
-					ElementType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float},
+					ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float},
 				},
 			},
 		}}
@@ -81,9 +81,9 @@ func TestArrayTypeEncodingInfo(t *testing.T) {
 }
 
 func TestHandleTypeEncodingInfo(t *testing.T) {
-	mojomType := &mojom_types.TypeHandleType{
-		mojom_types.HandleType{
-			Kind:     mojom_types.HandleType_Kind_Unspecified,
+	mojomType := &fidl_types.TypeHandleType{
+		fidl_types.HandleType{
+			Kind:     fidl_types.HandleType_Kind_Unspecified,
 			Nullable: false,
 		},
 	}
@@ -102,11 +102,11 @@ func TestHandleTypeEncodingInfo(t *testing.T) {
 }
 
 func TestMapTypeEncodingInfo(t *testing.T) {
-	mojomType := &mojom_types.TypeMapType{
-		mojom_types.MapType{
+	mojomType := &fidl_types.TypeMapType{
+		fidl_types.MapType{
 			Nullable:  true,
-			KeyType:   &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint32},
-			ValueType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Int16},
+			KeyType:   &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint32},
+			ValueType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Int16},
 		},
 	}
 
@@ -124,17 +124,17 @@ func TestMapTypeEncodingInfo(t *testing.T) {
 }
 
 func TestStructTypeEncodingInfo(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "SomeStruct"
 	typeKey := "typeKey"
 
-	mojomStruct := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName}}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeStructType{mojomStruct}
+	mojomStruct := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName}}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeStructType{mojomStruct}
 	translator := NewTranslator(&fileGraph)
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{TypeKey: &typeKey}}
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 
 	info := translator.encodingInfo(typeRef)
 
@@ -143,17 +143,17 @@ func TestStructTypeEncodingInfo(t *testing.T) {
 }
 
 func TestUnionTypeEncodingInfo(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "SomeUnion"
 	typeKey := "typeKey"
 
-	mojomUnion := mojom_types.MojomUnion{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName}}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeUnionType{mojomUnion}
+	mojomUnion := fidl_types.FidlUnion{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName}}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeUnionType{mojomUnion}
 	translator := NewTranslator(&fileGraph)
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{TypeKey: &typeKey}}
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 
 	info := translator.encodingInfo(typeRef)
 
@@ -170,15 +170,15 @@ func TestUnionTypeEncodingInfo(t *testing.T) {
 func TestEnumTypeEncodingInfo(t *testing.T) {
 	enumName := "SomeEnum"
 	enumTypeKey := "enumTypeKey"
-	enum := mojom_types.MojomEnum{
-		DeclData: &mojom_types.DeclarationData{ShortName: &enumName},
+	enum := fidl_types.FidlEnum{
+		DeclData: &fidl_types.DeclarationData{ShortName: &enumName},
 	}
 
-	fileGraph := mojom_files.MojomFileGraph{}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[enumTypeKey] = &mojom_types.UserDefinedTypeEnumType{enum}
+	fileGraph := fidl_files.FidlFileGraph{}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[enumTypeKey] = &fidl_types.UserDefinedTypeEnumType{enum}
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{TypeKey: &enumTypeKey}}
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &enumTypeKey}}
 
 	translator := NewTranslator(&fileGraph)
 	info := translator.encodingInfo(typeRef)

@@ -14,7 +14,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"mojom/generators/common"
+	"fidl/compiler/generators/common"
 )
 
 func main() {

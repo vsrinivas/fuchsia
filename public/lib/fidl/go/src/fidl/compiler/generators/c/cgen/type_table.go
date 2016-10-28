@@ -10,8 +10,8 @@ package cgen
 import (
 	"fmt"
 	"log"
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 	"sort"
 )
 
@@ -73,14 +73,14 @@ type TypeTableTemplate struct {
 	counter uint32
 
 	// Used to look up user-defined references.
-	fileGraph *mojom_files.MojomFileGraph
+	fileGraph *fidl_files.FidlFileGraph
 }
 
 func (a StructVersions) Len() int           { return len(a) }
 func (a StructVersions) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a StructVersions) Less(i, j int) bool { return a[i].Version < a[j].Version }
 
-func (table *TypeTableTemplate) getTableForUDT(typeRef mojom_types.TypeReference) (elemTable string, elemType string, nullable bool) {
+func (table *TypeTableTemplate) getTableForUDT(typeRef fidl_types.TypeReference) (elemTable string, elemType string, nullable bool) {
 	nullable = typeRef.Nullable
 	if typeRef.IsInterfaceRequest {
 		elemTable = "NULL"
@@ -92,15 +92,15 @@ func (table *TypeTableTemplate) getTableForUDT(typeRef mojom_types.TypeReference
 	}
 	udt, _ := table.fileGraph.ResolvedTypes[*typeRef.TypeKey]
 	switch udt.(type) {
-	case *mojom_types.UserDefinedTypeStructType:
-		structName := *udt.Interface().(mojom_types.MojomStruct).DeclData.FullIdentifier
+	case *fidl_types.UserDefinedTypeStructType:
+		structName := *udt.Interface().(fidl_types.FidlStruct).DeclData.FullIdentifier
 		elemTable = "&" + mojomToCName(structName) + "__TypeDesc"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_STRUCT_PTR"
-	case *mojom_types.UserDefinedTypeUnionType:
-		unionName := *udt.Interface().(mojom_types.MojomUnion).DeclData.FullIdentifier
+	case *fidl_types.UserDefinedTypeUnionType:
+		unionName := *udt.Interface().(fidl_types.FidlUnion).DeclData.FullIdentifier
 		elemTable = "&" + mojomToCName(unionName) + "__TypeDesc"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_UNION"
-	case *mojom_types.UserDefinedTypeInterfaceType:
+	case *fidl_types.UserDefinedTypeInterfaceType:
 		elemTable = "NULL"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_INTERFACE"
 	default:
@@ -111,34 +111,34 @@ func (table *TypeTableTemplate) getTableForUDT(typeRef mojom_types.TypeReference
 	return
 }
 
-func (table *TypeTableTemplate) makeTableForType(prefix string, dataType mojom_types.Type) (elemTable string, elemType string, nullable bool) {
+func (table *TypeTableTemplate) makeTableForType(prefix string, dataType fidl_types.Type) (elemTable string, elemType string, nullable bool) {
 	switch dataType.(type) {
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		elemTable = "&g_mojom_string_type_description"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_ARRAY_PTR"
-		nullable = dataType.Interface().(mojom_types.StringType).Nullable
-	case *mojom_types.TypeArrayType:
+		nullable = dataType.Interface().(fidl_types.StringType).Nullable
+	case *fidl_types.TypeArrayType:
 		arrayTableName := fmt.Sprintf("%s_%d", prefix, table.counter)
 		table.counter++
-		typ := dataType.Interface().(mojom_types.ArrayType)
+		typ := dataType.Interface().(fidl_types.ArrayType)
 		elemTable = "&" + table.makeArrayPointerEntry(arrayTableName, typ)
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_ARRAY_PTR"
 		nullable = typ.Nullable
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		mapTableName := fmt.Sprintf("%s_%d", prefix, table.counter)
 		table.counter++
-		typ := dataType.Interface().(mojom_types.MapType)
+		typ := dataType.Interface().(fidl_types.MapType)
 		elemTable = "&" + table.makeMapPointerTable(mapTableName, typ)
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_MAP_PTR"
 		nullable = typ.Nullable
-	case *mojom_types.TypeHandleType:
-		typ := dataType.Interface().(mojom_types.HandleType)
+	case *fidl_types.TypeHandleType:
+		typ := dataType.Interface().(fidl_types.HandleType)
 		elemTable = "NULL"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_HANDLE"
 		nullable = typ.Nullable
-	case *mojom_types.TypeTypeReference:
-		return table.getTableForUDT(dataType.Interface().(mojom_types.TypeReference))
-	case *mojom_types.TypeSimpleType:
+	case *fidl_types.TypeTypeReference:
+		return table.getTableForUDT(dataType.Interface().(fidl_types.TypeReference))
+	case *fidl_types.TypeSimpleType:
 		elemTable = "NULL"
 		elemType = "MOJOM_TYPE_DESCRIPTOR_TYPE_POD"
 		nullable = false
@@ -151,7 +151,7 @@ func (table *TypeTableTemplate) makeTableForType(prefix string, dataType mojom_t
 
 // Returns the name of the array type table.
 // Takes in |prefix|, the name this array table entry should be.
-func (table *TypeTableTemplate) makeArrayPointerEntry(prefix string, f mojom_types.ArrayType) string {
+func (table *TypeTableTemplate) makeArrayPointerEntry(prefix string, f fidl_types.ArrayType) string {
 	numElements := uint32(0)
 	if f.FixedLength > 0 {
 		numElements = uint32(f.FixedLength)
@@ -168,7 +168,7 @@ func (table *TypeTableTemplate) makeArrayPointerEntry(prefix string, f mojom_typ
 	return entry.Name
 }
 
-func (table *TypeTableTemplate) makeMapPointerTable(prefix string, f mojom_types.MapType) string {
+func (table *TypeTableTemplate) makeMapPointerTable(prefix string, f fidl_types.MapType) string {
 	structTable := StructPointerTable{
 		Name: prefix + "__TypeDesc",
 		Versions: []StructVersion{
@@ -179,12 +179,12 @@ func (table *TypeTableTemplate) makeMapPointerTable(prefix string, f mojom_types
 		},
 	}
 
-	keyType := mojom_types.ArrayType{
+	keyType := fidl_types.ArrayType{
 		Nullable:    false,
 		FixedLength: -1,
 		ElementType: f.KeyType,
 	}
-	valueType := mojom_types.ArrayType{
+	valueType := fidl_types.ArrayType{
 		Nullable:    false,
 		FixedLength: -1,
 		ElementType: f.ValueType,
@@ -216,25 +216,25 @@ func (table *TypeTableTemplate) makeMapPointerTable(prefix string, f mojom_types
 // there, so we consider unions to be pointers for the purposes of this method.
 // TODO(vardhan): To optimize, check that, if union, there is a reference
 // type inside the union before deeming the union a pointer type.
-func (table *TypeTableTemplate) isPointerOrHandle(typ mojom_types.Type) bool {
+func (table *TypeTableTemplate) isPointerOrHandle(typ fidl_types.Type) bool {
 	switch typ.(type) {
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		return true
-	case *mojom_types.TypeArrayType:
+	case *fidl_types.TypeArrayType:
 		return true
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		return true
-	case *mojom_types.TypeHandleType:
+	case *fidl_types.TypeHandleType:
 		return true
-	case *mojom_types.TypeTypeReference:
-		typRef := typ.Interface().(mojom_types.TypeReference)
+	case *fidl_types.TypeTypeReference:
+		typRef := typ.Interface().(fidl_types.TypeReference)
 		if udt, exists := table.fileGraph.ResolvedTypes[*typRef.TypeKey]; exists {
 			switch udt.(type) {
-			case *mojom_types.UserDefinedTypeStructType:
+			case *fidl_types.UserDefinedTypeStructType:
 				return true
-			case *mojom_types.UserDefinedTypeUnionType:
+			case *fidl_types.UserDefinedTypeUnionType:
 				return true
-			case *mojom_types.UserDefinedTypeInterfaceType:
+			case *fidl_types.UserDefinedTypeInterfaceType:
 				return true
 			}
 		} else {
@@ -248,7 +248,7 @@ func (table *TypeTableTemplate) isPointerOrHandle(typ mojom_types.Type) bool {
 // but won't insert it into the `table`; it is the caller's responsibility to
 // insert it. However, this operation is NOT totally immutable, since it may
 // create type tables for sub types of |fieldType| (e.g. if fieldType is a map).
-func (table *TypeTableTemplate) makeStructPointerTableEntry(prefix string, offset uint32, minVersion uint32, fieldType mojom_types.Type) StructPointerTableEntry {
+func (table *TypeTableTemplate) makeStructPointerTableEntry(prefix string, offset uint32, minVersion uint32, fieldType fidl_types.Type) StructPointerTableEntry {
 	elemTableName := fmt.Sprintf("%s_%d", prefix, offset)
 	elemTable, elemType, nullable := table.makeTableForType(elemTableName, fieldType)
 	return StructPointerTableEntry{
@@ -262,7 +262,7 @@ func (table *TypeTableTemplate) makeStructPointerTableEntry(prefix string, offse
 
 // Given a MojomStruct, creates the templates required to make the type table
 // for it, and inserts it into |table|.
-func (table *TypeTableTemplate) insertStructPointerTable(s mojom_types.MojomStruct) {
+func (table *TypeTableTemplate) insertStructPointerTable(s fidl_types.FidlStruct) {
 	structTablePrefix := mojomToCName(*s.DeclData.FullIdentifier)
 	structTable := StructPointerTable{
 		Name: structTablePrefix + "__TypeDesc",
@@ -288,7 +288,7 @@ func (table *TypeTableTemplate) insertStructPointerTable(s mojom_types.MojomStru
 	table.Structs = append(table.Structs, structTable)
 }
 
-func (table *TypeTableTemplate) makeUnionPointerTableEntry(prefix string, tag uint32, fieldType mojom_types.Type) UnionPointerTableEntry {
+func (table *TypeTableTemplate) makeUnionPointerTableEntry(prefix string, tag uint32, fieldType fidl_types.Type) UnionPointerTableEntry {
 	elemTableName := fmt.Sprintf("%s_%d", prefix, tag)
 	elemTable, elemType, nullable := table.makeTableForType(elemTableName, fieldType)
 	if elemType == "MOJOM_TYPE_DESCRIPTOR_TYPE_UNION" {
@@ -304,7 +304,7 @@ func (table *TypeTableTemplate) makeUnionPointerTableEntry(prefix string, tag ui
 
 // Given a MojomUnion, creates the templates required to make the type table
 // for it, and inserts it into |table|.
-func (table *TypeTableTemplate) insertUnionPointerTable(u mojom_types.MojomUnion) {
+func (table *TypeTableTemplate) insertUnionPointerTable(u fidl_types.FidlUnion) {
 	unionTablePrefix := mojomToCName(*u.DeclData.FullIdentifier)
 	unionTable := UnionPointerTable{
 		Name:      unionTablePrefix + "__TypeDesc",
@@ -319,25 +319,25 @@ func (table *TypeTableTemplate) insertUnionPointerTable(u mojom_types.MojomUnion
 	table.Unions = append(table.Unions, unionTable)
 }
 
-func NewTypeTableTemplate(fileGraph *mojom_files.MojomFileGraph, file *mojom_files.MojomFile) TypeTableTemplate {
+func NewTypeTableTemplate(fileGraph *fidl_files.FidlFileGraph, file *fidl_files.FidlFile) TypeTableTemplate {
 	table := TypeTableTemplate{
 		fileGraph: fileGraph,
 	}
-	if file.DeclaredMojomObjects.Structs != nil {
-		for _, mojomStructKey := range *(file.DeclaredMojomObjects.Structs) {
-			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(mojom_types.MojomStruct)
+	if file.DeclaredFidlObjects.Structs != nil {
+		for _, mojomStructKey := range *(file.DeclaredFidlObjects.Structs) {
+			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
 			table.insertStructPointerTable(mojomStruct)
 		}
 	}
-	if file.DeclaredMojomObjects.Unions != nil {
-		for _, mojomUnionKey := range *(file.DeclaredMojomObjects.Unions) {
-			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(mojom_types.MojomUnion)
+	if file.DeclaredFidlObjects.Unions != nil {
+		for _, mojomUnionKey := range *(file.DeclaredFidlObjects.Unions) {
+			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
 			table.insertUnionPointerTable(mojomUnion)
 		}
 	}
-	if file.DeclaredMojomObjects.Interfaces != nil {
-		for _, mojomInterfaceKey := range *(file.DeclaredMojomObjects.Interfaces) {
-			mojomIface := fileGraph.ResolvedTypes[mojomInterfaceKey].Interface().(mojom_types.MojomInterface)
+	if file.DeclaredFidlObjects.Interfaces != nil {
+		for _, mojomInterfaceKey := range *(file.DeclaredFidlObjects.Interfaces) {
+			mojomIface := fileGraph.ResolvedTypes[mojomInterfaceKey].Interface().(fidl_types.FidlInterface)
 			for _, mojomMethod := range mojomIface.Methods {
 				params := mojomMethod.Parameters
 				fullId := requestMethodToCName(&mojomIface, &params)

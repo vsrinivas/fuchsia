@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 
 	"fidl/bindings"
-	"mojom/generated/mojom_files"
+	"fidl/compiler/generated/fidl_files"
 )
 
 // GetCliConfig provides the primary interface for generators.
@@ -74,15 +74,15 @@ func GetCliConfigWithFlagSet(args []string, flagSet *flag.FlagSet) GeneratorConf
 	return config
 }
 
-// decodeFileGraph decodes a serialized MojomFileGraph.
-func decodeFileGraph(in io.Reader) (fileGraph *mojom_files.MojomFileGraph) {
+// decodeFileGraph decodes a serialized FidlFileGraph.
+func decodeFileGraph(in io.Reader) (fileGraph *fidl_files.FidlFileGraph) {
 	inputBytes, err := ioutil.ReadAll(in)
 	if err != nil {
 		log.Fatalf("Failed to read: %v\n", err)
 	}
 
 	decoder := bindings.NewDecoder(inputBytes, nil)
-	fileGraph = new(mojom_files.MojomFileGraph)
+	fileGraph = new(fidl_files.FidlFileGraph)
 	if err := fileGraph.Decode(decoder); err != nil {
 		log.Fatalf("Failed to decode file graph: %v\n", err)
 	}
@@ -92,7 +92,7 @@ func decodeFileGraph(in io.Reader) (fileGraph *mojom_files.MojomFileGraph) {
 
 // generatorCliConfig implements GeneratorConfig.
 type generatorCliConfig struct {
-	fileGraph    *mojom_files.MojomFileGraph
+	fileGraph    *fidl_files.FidlFileGraph
 	outputDir    string
 	srcRootPath  string
 	noGenImports bool
@@ -100,7 +100,7 @@ type generatorCliConfig struct {
 }
 
 // See GeneratorConfig.
-func (c *generatorCliConfig) FileGraph() *mojom_files.MojomFileGraph {
+func (c *generatorCliConfig) FileGraph() *fidl_files.FidlFileGraph {
 	return c.fileGraph
 }
 

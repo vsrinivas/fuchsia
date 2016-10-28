@@ -7,67 +7,67 @@ package translator
 import (
 	"testing"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 func TestTranslateType(t *testing.T) {
 	testCases := []struct {
 		expected  string
-		mojomType mojom_types.Type
+		mojomType fidl_types.Type
 	}{
-		{"bool", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Bool}},
-		{"float32", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float}},
-		{"float64", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Double}},
-		{"int8", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Int8}},
-		{"int16", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Int16}},
-		{"int32", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Int32}},
-		{"int64", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Int64}},
-		{"uint8", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint8}},
-		{"uint16", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint16}},
-		{"uint32", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint32}},
-		{"uint64", &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint64}},
-		{"string", &mojom_types.TypeStringType{mojom_types.StringType{Nullable: false}}},
-		{"*string", &mojom_types.TypeStringType{mojom_types.StringType{Nullable: true}}},
-		{"system.Handle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_Unspecified, Nullable: false}}},
-		{"system.MessagePipeHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_MessagePipe, Nullable: false}}},
-		{"system.ConsumerHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_DataPipeConsumer, Nullable: false}}},
-		{"system.ProducerHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_DataPipeProducer, Nullable: false}}},
-		{"system.SharedBufferHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_SharedBuffer, Nullable: false}}},
-		{"*system.Handle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_Unspecified, Nullable: true}}},
-		{"*system.MessagePipeHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_MessagePipe, Nullable: true}}},
-		{"*system.ConsumerHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_DataPipeConsumer, Nullable: true}}},
-		{"*system.ProducerHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_DataPipeProducer, Nullable: true}}},
-		{"*system.SharedBufferHandle", &mojom_types.TypeHandleType{mojom_types.HandleType{
-			Kind: mojom_types.HandleType_Kind_SharedBuffer, Nullable: true}}},
-		{"[]float32", &mojom_types.TypeArrayType{mojom_types.ArrayType{
+		{"bool", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Bool}},
+		{"float32", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}},
+		{"float64", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Double}},
+		{"int8", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Int8}},
+		{"int16", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Int16}},
+		{"int32", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Int32}},
+		{"int64", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Int64}},
+		{"uint8", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint8}},
+		{"uint16", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint16}},
+		{"uint32", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint32}},
+		{"uint64", &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint64}},
+		{"string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: false}}},
+		{"*string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: true}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: false}}},
+		{"system.MessagePipeHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_MessagePipe, Nullable: false}}},
+		{"system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: false}}},
+		{"system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: false}}},
+		{"system.SharedBufferHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_SharedBuffer, Nullable: false}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
+		{"*system.MessagePipeHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_MessagePipe, Nullable: true}}},
+		{"*system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: true}}},
+		{"*system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: true}}},
+		{"*system.SharedBufferHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_SharedBuffer, Nullable: true}}},
+		{"[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: false,
-			ElementType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float}}}},
-		{"[10]float32", &mojom_types.TypeArrayType{mojom_types.ArrayType{
+			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},
+		{"[10]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: 10, Nullable: false,
-			ElementType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float}}}},
-		{"*[]float32", &mojom_types.TypeArrayType{mojom_types.ArrayType{
+			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},
+		{"*[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: true,
-			ElementType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float}}}},
-		{"*[10]float32", &mojom_types.TypeArrayType{mojom_types.ArrayType{
+			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},
+		{"*[10]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: 10, Nullable: true,
-			ElementType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Float}}}},
-		{"map[uint32]float64", &mojom_types.TypeMapType{mojom_types.MapType{
-			KeyType:   &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint32},
-			ValueType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Double},
+			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},
+		{"map[uint32]float64", &fidl_types.TypeMapType{fidl_types.MapType{
+			KeyType:   &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint32},
+			ValueType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Double},
 			Nullable:  false}}},
-		{"*map[uint32]float64", &mojom_types.TypeMapType{mojom_types.MapType{
-			KeyType:   &mojom_types.TypeSimpleType{mojom_types.SimpleType_Uint32},
-			ValueType: &mojom_types.TypeSimpleType{mojom_types.SimpleType_Double},
+		{"*map[uint32]float64", &fidl_types.TypeMapType{fidl_types.MapType{
+			KeyType:   &fidl_types.TypeSimpleType{fidl_types.SimpleType_Uint32},
+			ValueType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Double},
 			Nullable:  true}}},
 	}
 
@@ -78,30 +78,30 @@ func TestTranslateType(t *testing.T) {
 }
 
 func TestTranslateReferenceType(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "FooBar"
 	typeKey := "typeKey"
-	enum := mojom_types.MojomEnum{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName}}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeEnumType{enum}
+	enum := fidl_types.FidlEnum{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName}}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeEnumType{enum}
 	translator := NewTranslator(&fileGraph)
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{TypeKey: &typeKey}}
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 	checkEq(t, shortName, translator.translateType(typeRef))
 }
 
 func TestTranslateNullableStructReferenceType(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "FooBar"
 	typeKey := "typeKey"
-	s := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName}}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeStructType{s}
+	s := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName}}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeStructType{s}
 	translator := NewTranslator(&fileGraph)
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{
 		TypeKey:  &typeKey,
 		Nullable: true,
 	}}
@@ -109,16 +109,16 @@ func TestTranslateNullableStructReferenceType(t *testing.T) {
 }
 
 func TestTranslateNullableUnionReferenceType(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "FooBar"
 	typeKey := "typeKey"
-	union := mojom_types.MojomUnion{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName}}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeUnionType{union}
+	union := fidl_types.FidlUnion{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName}}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeUnionType{union}
 	translator := NewTranslator(&fileGraph)
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{
 		TypeKey:  &typeKey,
 		Nullable: true,
 	}}
@@ -126,32 +126,32 @@ func TestTranslateNullableUnionReferenceType(t *testing.T) {
 }
 
 func TestTranslateInterfaceType(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "FooBar"
 	typeKey := "typeKey"
-	i := mojom_types.MojomInterface{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName},
+	i := fidl_types.FidlInterface{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName},
 	}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeInterfaceType{i}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeInterfaceType{i}
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{TypeKey: &typeKey}}
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 
 	translator := NewTranslator(&fileGraph)
 	checkEq(t, "FooBar_Pointer", translator.translateType(typeRef))
 }
 
 func TestTranslateInterfaceRequestType(t *testing.T) {
-	fileGraph := mojom_files.MojomFileGraph{}
+	fileGraph := fidl_files.FidlFileGraph{}
 	shortName := "FooBar"
 	typeKey := "typeKey"
-	i := mojom_types.MojomInterface{
-		DeclData: &mojom_types.DeclarationData{ShortName: &shortName},
+	i := fidl_types.FidlInterface{
+		DeclData: &fidl_types.DeclarationData{ShortName: &shortName},
 	}
-	fileGraph.ResolvedTypes = map[string]mojom_types.UserDefinedType{}
-	fileGraph.ResolvedTypes[typeKey] = &mojom_types.UserDefinedTypeInterfaceType{i}
+	fileGraph.ResolvedTypes = map[string]fidl_types.UserDefinedType{}
+	fileGraph.ResolvedTypes[typeKey] = &fidl_types.UserDefinedTypeInterfaceType{i}
 
-	typeRef := &mojom_types.TypeTypeReference{mojom_types.TypeReference{
+	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{
 		TypeKey:            &typeKey,
 		IsInterfaceRequest: true,
 	}}

@@ -5,6 +5,9 @@
 group("compiler") {
   deps = [
     ":fidl",
+    ":fidl-c",
+    ":fidl-go",
+    ":fidl-rust",
   ]
 }
 
@@ -83,4 +86,28 @@ go_binary("fidl") {
     "//lib/fidl/go",
   ]
   package = "fidl/compiler/cmd/fidl"
+}
+
+# Build the C generator
+go_binary("fidl-c") {
+  gopath = [
+    "//lib/fidl/go",
+  ]
+  package = "fidl/compiler/generators/c"
+}
+
+# Build the Go generator
+go_binary("fidl-go") {
+  gopath = [
+    "//lib/fidl/go",
+  ]
+  package = "fidl/compiler/generators/go"
+}
+
+# Build the Rust generator
+go_binary("fidl-rust") {
+  gopath = [
+    "//lib/fidl/go",
+  ]
+  package = "fidl/compiler/generators/rust"
 }

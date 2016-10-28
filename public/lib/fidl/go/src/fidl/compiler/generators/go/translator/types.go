@@ -7,78 +7,78 @@ package translator
 import (
 	"fmt"
 
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_types"
 )
 
-func (t *translator) translateType(mojomType mojom_types.Type) (goType string) {
+func (t *translator) translateType(mojomType fidl_types.Type) (goType string) {
 	switch m := mojomType.(type) {
 	default:
 		panic("Not implemented yet!")
-	case *mojom_types.TypeSimpleType:
+	case *fidl_types.TypeSimpleType:
 		goType = t.translateSimpleType(m.Value)
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		goType = t.translateStringType(m.Value)
-	case *mojom_types.TypeHandleType:
+	case *fidl_types.TypeHandleType:
 		goType = t.translateHandleType(m.Value)
-	case *mojom_types.TypeTypeReference:
+	case *fidl_types.TypeTypeReference:
 		goType = t.translateTypeReference(m.Value)
-	case *mojom_types.TypeArrayType:
+	case *fidl_types.TypeArrayType:
 		goType = t.translateArrayType(m.Value)
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		goType = t.translateMapType(m.Value)
 	}
 	return
 }
 
-func (t *translator) translateSimpleType(mojomType mojom_types.SimpleType) string {
+func (t *translator) translateSimpleType(mojomType fidl_types.SimpleType) string {
 	switch mojomType {
-	case mojom_types.SimpleType_Bool:
+	case fidl_types.SimpleType_Bool:
 		return "bool"
-	case mojom_types.SimpleType_Float:
+	case fidl_types.SimpleType_Float:
 		return "float32"
-	case mojom_types.SimpleType_Double:
+	case fidl_types.SimpleType_Double:
 		return "float64"
-	case mojom_types.SimpleType_Int8:
+	case fidl_types.SimpleType_Int8:
 		return "int8"
-	case mojom_types.SimpleType_Int16:
+	case fidl_types.SimpleType_Int16:
 		return "int16"
-	case mojom_types.SimpleType_Int32:
+	case fidl_types.SimpleType_Int32:
 		return "int32"
-	case mojom_types.SimpleType_Int64:
+	case fidl_types.SimpleType_Int64:
 		return "int64"
-	case mojom_types.SimpleType_Uint8:
+	case fidl_types.SimpleType_Uint8:
 		return "uint8"
-	case mojom_types.SimpleType_Uint16:
+	case fidl_types.SimpleType_Uint16:
 		return "uint16"
-	case mojom_types.SimpleType_Uint32:
+	case fidl_types.SimpleType_Uint32:
 		return "uint32"
-	case mojom_types.SimpleType_Uint64:
+	case fidl_types.SimpleType_Uint64:
 		return "uint64"
 	}
 	panic("Non-handled mojom SimpleType. This should never happen.")
 }
 
-func (t *translator) translateStringType(mojomType mojom_types.StringType) (goType string) {
+func (t *translator) translateStringType(mojomType fidl_types.StringType) (goType string) {
 	if mojomType.Nullable {
 		return "*string"
 	}
 	return "string"
 }
 
-func (t *translator) translateHandleType(mojomType mojom_types.HandleType) (goType string) {
+func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goType string) {
 	t.imports["system"] = "fidl/system"
 	switch mojomType.Kind {
 	default:
 		panic("Unknown handle type. This should never happen.")
-	case mojom_types.HandleType_Kind_Unspecified:
+	case fidl_types.HandleType_Kind_Unspecified:
 		goType = "system.Handle"
-	case mojom_types.HandleType_Kind_MessagePipe:
+	case fidl_types.HandleType_Kind_MessagePipe:
 		goType = "system.MessagePipeHandle"
-	case mojom_types.HandleType_Kind_DataPipeConsumer:
+	case fidl_types.HandleType_Kind_DataPipeConsumer:
 		goType = "system.ConsumerHandle"
-	case mojom_types.HandleType_Kind_DataPipeProducer:
+	case fidl_types.HandleType_Kind_DataPipeProducer:
 		goType = "system.ProducerHandle"
-	case mojom_types.HandleType_Kind_SharedBuffer:
+	case fidl_types.HandleType_Kind_SharedBuffer:
 		goType = "system.SharedBufferHandle"
 	}
 	if mojomType.Nullable {
@@ -87,7 +87,7 @@ func (t *translator) translateHandleType(mojomType mojom_types.HandleType) (goTy
 	return
 }
 
-func (t *translator) translateArrayType(mojomType mojom_types.ArrayType) (goType string) {
+func (t *translator) translateArrayType(mojomType fidl_types.ArrayType) (goType string) {
 	if mojomType.FixedLength < 0 {
 		goType = "[]"
 	} else {
@@ -103,7 +103,7 @@ func (t *translator) translateArrayType(mojomType mojom_types.ArrayType) (goType
 	return
 }
 
-func (t *translator) translateMapType(mojomType mojom_types.MapType) (goType string) {
+func (t *translator) translateMapType(mojomType fidl_types.MapType) (goType string) {
 	goType = fmt.Sprintf("map[%s]%s",
 		t.translateType(mojomType.KeyType), t.translateType(mojomType.ValueType))
 
@@ -114,13 +114,13 @@ func (t *translator) translateMapType(mojomType mojom_types.MapType) (goType str
 	return
 }
 
-func (t *translator) translateTypeReference(typeRef mojom_types.TypeReference) (goType string) {
+func (t *translator) translateTypeReference(typeRef fidl_types.TypeReference) (goType string) {
 	typeKey := *typeRef.TypeKey
 	userDefinedType := t.fileGraph.ResolvedTypes[typeKey]
 
 	typeName := t.goTypeName(*typeRef.TypeKey)
 
-	if _, ok := userDefinedType.(*mojom_types.UserDefinedTypeInterfaceType); ok {
+	if _, ok := userDefinedType.(*fidl_types.UserDefinedTypeInterfaceType); ok {
 		if typeRef.IsInterfaceRequest {
 			typeName = fmt.Sprintf("%s_Request", typeName)
 		} else {
@@ -131,11 +131,11 @@ func (t *translator) translateTypeReference(typeRef mojom_types.TypeReference) (
 	srcFileInfo := userDefinedTypeDeclData(userDefinedType).SourceFileInfo
 	if srcFileInfo != nil && srcFileInfo.FileName != t.currentFileName {
 		pkgName := fileNameToPackageName(srcFileInfo.FileName)
-		t.importMojomFile(srcFileInfo.FileName)
+		t.importFidlFile(srcFileInfo.FileName)
 		typeName = fmt.Sprintf("%s.%s", pkgName, typeName)
 	}
 
-	if _, ok := userDefinedType.(*mojom_types.UserDefinedTypeUnionType); !ok && typeRef.Nullable {
+	if _, ok := userDefinedType.(*fidl_types.UserDefinedTypeUnionType); !ok && typeRef.Nullable {
 		typeName = "*" + typeName
 	}
 

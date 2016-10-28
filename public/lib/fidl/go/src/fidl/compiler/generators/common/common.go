@@ -6,7 +6,7 @@ package common
 
 import (
 	"io"
-	"mojom/generated/mojom_files"
+	"fidl/compiler/generated/fidl_files"
 )
 
 // common groups together functions which make it easier for generators
@@ -14,8 +14,8 @@ import (
 
 // GeneratorConfig is used to specify configuration for a generator.
 type GeneratorConfig interface {
-	// FileGraph returns a parsed MojomFileGraph.
-	FileGraph() *mojom_files.MojomFileGraph
+	// FileGraph returns a parsed FidlFileGraph.
+	FileGraph() *fidl_files.FidlFileGraph
 
 	// OutputDir returns an absolute path in which generator output must be
 	// written.

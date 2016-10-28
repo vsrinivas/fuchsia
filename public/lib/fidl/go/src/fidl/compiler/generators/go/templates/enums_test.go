@@ -7,7 +7,7 @@ package templates
 import (
 	"testing"
 
-	"mojom/generators/go/translator"
+	"fidl/compiler/generators/go/translator"
 )
 
 func TestEnumDecl(t *testing.T) {

@@ -9,17 +9,17 @@ import (
 	"log"
 	"sort"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
-	"mojom/generators/common"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
+	"fidl/compiler/generators/common"
 )
 
 type Translator interface {
-	TranslateMojomFile(fileName string) *TmplFile
+	TranslateFidlFile(fileName string) *TmplFile
 }
 
 type translator struct {
-	fileGraph *mojom_files.MojomFileGraph
+	fileGraph *fidl_files.FidlFileGraph
 	// goTypeCache maps type keys to go type strings.
 	goTypeCache      map[string]string
 	goConstNameCache map[string]string
@@ -29,7 +29,7 @@ type translator struct {
 	Config           common.GeneratorConfig
 }
 
-func NewTranslator(fileGraph *mojom_files.MojomFileGraph) (t *translator) {
+func NewTranslator(fileGraph *fidl_files.FidlFileGraph) (t *translator) {
 	t = new(translator)
 	t.fileGraph = fileGraph
 	t.goTypeCache = map[string]string{}
@@ -38,7 +38,7 @@ func NewTranslator(fileGraph *mojom_files.MojomFileGraph) (t *translator) {
 	return t
 }
 
-func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
+func (t *translator) TranslateFidlFile(fileName string) (tmplFile *TmplFile) {
 	t.currentFileName = fileName
 	t.imports = map[string]string{}
 
@@ -51,64 +51,64 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 	}
 	t.pkgName = tmplFile.PackageName
 
-	if file.DeclaredMojomObjects.Structs == nil {
-		file.DeclaredMojomObjects.Structs = &[]string{}
+	if file.DeclaredFidlObjects.Structs == nil {
+		file.DeclaredFidlObjects.Structs = &[]string{}
 	}
-	tmplFile.Structs = make([]*StructTemplate, len(*file.DeclaredMojomObjects.Structs))
-	for i, typeKey := range *file.DeclaredMojomObjects.Structs {
+	tmplFile.Structs = make([]*StructTemplate, len(*file.DeclaredFidlObjects.Structs))
+	for i, typeKey := range *file.DeclaredFidlObjects.Structs {
 		tmplFile.Structs[i] = t.translateMojomStruct(typeKey)
 	}
 
-	if file.DeclaredMojomObjects.Unions == nil {
-		file.DeclaredMojomObjects.Unions = &[]string{}
+	if file.DeclaredFidlObjects.Unions == nil {
+		file.DeclaredFidlObjects.Unions = &[]string{}
 	}
-	tmplFile.Unions = make([]*UnionTemplate, len(*file.DeclaredMojomObjects.Unions))
-	for i, typeKey := range *file.DeclaredMojomObjects.Unions {
+	tmplFile.Unions = make([]*UnionTemplate, len(*file.DeclaredFidlObjects.Unions))
+	for i, typeKey := range *file.DeclaredFidlObjects.Unions {
 		tmplFile.Unions[i] = t.translateMojomUnion(typeKey)
 	}
 
-	if file.DeclaredMojomObjects.TopLevelEnums == nil {
-		file.DeclaredMojomObjects.TopLevelEnums = &[]string{}
+	if file.DeclaredFidlObjects.TopLevelEnums == nil {
+		file.DeclaredFidlObjects.TopLevelEnums = &[]string{}
 	}
-	if file.DeclaredMojomObjects.EmbeddedEnums == nil {
-		file.DeclaredMojomObjects.EmbeddedEnums = &[]string{}
+	if file.DeclaredFidlObjects.EmbeddedEnums == nil {
+		file.DeclaredFidlObjects.EmbeddedEnums = &[]string{}
 	}
-	topLevelEnumsNum := len(*file.DeclaredMojomObjects.TopLevelEnums)
-	embeddedEnumsNum := len(*file.DeclaredMojomObjects.EmbeddedEnums)
+	topLevelEnumsNum := len(*file.DeclaredFidlObjects.TopLevelEnums)
+	embeddedEnumsNum := len(*file.DeclaredFidlObjects.EmbeddedEnums)
 	enumNum := embeddedEnumsNum + topLevelEnumsNum
 	tmplFile.Enums = make([]*EnumTemplate, enumNum)
-	for i, typeKey := range *file.DeclaredMojomObjects.TopLevelEnums {
+	for i, typeKey := range *file.DeclaredFidlObjects.TopLevelEnums {
 		tmplFile.Enums[i] = t.translateMojomEnum(typeKey)
 	}
-	for i, typeKey := range *file.DeclaredMojomObjects.EmbeddedEnums {
+	for i, typeKey := range *file.DeclaredFidlObjects.EmbeddedEnums {
 		tmplFile.Enums[i+topLevelEnumsNum] = t.translateMojomEnum(typeKey)
 	}
 
 	methodDefined := false
-	if file.DeclaredMojomObjects.Interfaces == nil {
-		file.DeclaredMojomObjects.Interfaces = &[]string{}
+	if file.DeclaredFidlObjects.Interfaces == nil {
+		file.DeclaredFidlObjects.Interfaces = &[]string{}
 	}
-	tmplFile.Interfaces = make([]*InterfaceTemplate, len(*file.DeclaredMojomObjects.Interfaces))
-	for i, typeKey := range *file.DeclaredMojomObjects.Interfaces {
+	tmplFile.Interfaces = make([]*InterfaceTemplate, len(*file.DeclaredFidlObjects.Interfaces))
+	for i, typeKey := range *file.DeclaredFidlObjects.Interfaces {
 		tmplFile.Interfaces[i] = t.translateMojomInterface(typeKey)
 		if len(tmplFile.Interfaces[i].Methods) > 0 {
 			methodDefined = true
 		}
 	}
 
-	if file.DeclaredMojomObjects.TopLevelConstants == nil {
-		file.DeclaredMojomObjects.TopLevelConstants = &[]string{}
+	if file.DeclaredFidlObjects.TopLevelConstants == nil {
+		file.DeclaredFidlObjects.TopLevelConstants = &[]string{}
 	}
-	if file.DeclaredMojomObjects.EmbeddedConstants == nil {
-		file.DeclaredMojomObjects.EmbeddedConstants = &[]string{}
+	if file.DeclaredFidlObjects.EmbeddedConstants == nil {
+		file.DeclaredFidlObjects.EmbeddedConstants = &[]string{}
 	}
-	for _, constKey := range *file.DeclaredMojomObjects.TopLevelConstants {
+	for _, constKey := range *file.DeclaredFidlObjects.TopLevelConstants {
 		c := t.translateDeclaredConstant(constKey)
 		if c != nil {
 			tmplFile.Constants = append(tmplFile.Constants, c)
 		}
 	}
-	for _, constKey := range *file.DeclaredMojomObjects.EmbeddedConstants {
+	for _, constKey := range *file.DeclaredFidlObjects.EmbeddedConstants {
 		c := t.translateDeclaredConstant(constKey)
 		if c != nil {
 			tmplFile.Constants = append(tmplFile.Constants, c)
@@ -119,7 +119,7 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 	tmplFile.MojomImports = []string{}
 
 	for pkgName, pkgPath := range t.imports {
-		if pkgName != "service_describer" && pkgName != "mojom_types" && pkgPath != "fidl/system" {
+		if pkgName != "service_describer" && pkgName != "fidl_types" && pkgPath != "fidl/system" {
 			tmplFile.MojomImports = append(tmplFile.MojomImports, pkgName)
 		}
 	}
@@ -133,8 +133,8 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 		if tmplFile.PackageName != "service_describer" {
 			t.imports["service_describer"] = "mojo/public/interfaces/bindings/service_describer"
 		}
-		if tmplFile.PackageName != "mojom_types" {
-			t.imports["mojom_types"] = "mojo/public/interfaces/bindings/mojom_types"
+		if tmplFile.PackageName != "fidl_types" {
+			t.imports["fidl_types"] = "mojo/public/interfaces/bindings/fidl_types"
 		}
 	}
 	if len(tmplFile.Structs) > 0 || methodDefined {
@@ -148,8 +148,8 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 		t.imports["gzip"] = "compress/gzip"
 		t.imports["bytes"] = "bytes"
 		t.imports["ioutil"] = "io/ioutil"
-		if tmplFile.PackageName != "mojom_types" {
-			t.imports["mojom_types"] = "mojo/public/interfaces/bindings/mojom_types"
+		if tmplFile.PackageName != "fidl_types" {
+			t.imports["fidl_types"] = "mojo/public/interfaces/bindings/fidl_types"
 		}
 	}
 
@@ -163,14 +163,14 @@ func (t *translator) TranslateMojomFile(fileName string) (tmplFile *TmplFile) {
 	return tmplFile
 }
 
-func (t *translator) GetUserDefinedType(typeKey string) (mojomType mojom_types.UserDefinedType) {
+func (t *translator) GetUserDefinedType(typeKey string) (mojomType fidl_types.UserDefinedType) {
 	return t.fileGraph.ResolvedTypes[typeKey]
 }
 
 func (t *translator) translateMojomStruct(typeKey string) (m *StructTemplate) {
 	m = new(StructTemplate)
 	u := t.GetUserDefinedType(typeKey)
-	mojomStruct, ok := u.Interface().(mojom_types.MojomStruct)
+	mojomStruct, ok := u.Interface().(fidl_types.FidlStruct)
 	if !ok {
 		log.Panicf("%s is not a struct.", userDefinedTypeShortName(u))
 	}
@@ -190,7 +190,7 @@ func (t *translator) translateMojomStruct(typeKey string) (m *StructTemplate) {
 	return m
 }
 
-func (t *translator) translateMojomStructObject(mojomStruct mojom_types.MojomStruct) (m *StructTemplate) {
+func (t *translator) translateMojomStructObject(mojomStruct fidl_types.FidlStruct) (m *StructTemplate) {
 	m = new(StructTemplate)
 	if mojomStruct.VersionInfo == nil || len(*mojomStruct.VersionInfo) == 0 {
 		log.Fatalln(m.Name, "does not have any version_info!")
@@ -216,7 +216,7 @@ func (t *translator) translateMojomStructObject(mojomStruct mojom_types.MojomStr
 	return m
 }
 
-func (t *translator) translateStructField(mojomField *mojom_types.StructField) (field StructFieldTemplate) {
+func (t *translator) translateStructField(mojomField *fidl_types.StructField) (field StructFieldTemplate) {
 	field.Name = formatName(*mojomField.DeclData.ShortName)
 	field.Type = t.translateType(mojomField.Type)
 	field.MinVersion = mojomField.MinVersion
@@ -229,7 +229,7 @@ func (t *translator) translateStructField(mojomField *mojom_types.StructField) (
 func (t *translator) translateMojomUnion(typeKey string) (m *UnionTemplate) {
 	m = new(UnionTemplate)
 	u := t.GetUserDefinedType(typeKey)
-	union, ok := u.Interface().(mojom_types.MojomUnion)
+	union, ok := u.Interface().(fidl_types.FidlUnion)
 	if !ok {
 		log.Panicf("%s is not a union.\n", userDefinedTypeShortName(u))
 	}
@@ -244,7 +244,7 @@ func (t *translator) translateMojomUnion(typeKey string) (m *UnionTemplate) {
 	return m
 }
 
-func (t *translator) translateUnionField(mojomField *mojom_types.UnionField) (field UnionFieldTemplate) {
+func (t *translator) translateUnionField(mojomField *fidl_types.UnionField) (field UnionFieldTemplate) {
 	field.Name = formatName(*mojomField.DeclData.ShortName)
 	field.Type = t.translateType(mojomField.Type)
 	field.Tag = mojomField.Tag
@@ -259,7 +259,7 @@ func (t *translator) translateUnionField(mojomField *mojom_types.UnionField) (fi
 func (t *translator) translateMojomEnum(typeKey string) (m *EnumTemplate) {
 	m = new(EnumTemplate)
 	e := t.GetUserDefinedType(typeKey)
-	enum, ok := e.Interface().(mojom_types.MojomEnum)
+	enum, ok := e.Interface().(fidl_types.FidlEnum)
 	if !ok {
 		log.Panicf("%s is not an enum.\n", userDefinedTypeShortName(e))
 	}
@@ -278,7 +278,7 @@ func (t *translator) translateMojomEnum(typeKey string) (m *EnumTemplate) {
 func (t *translator) translateMojomInterface(typeKey string) (m *InterfaceTemplate) {
 	m = new(InterfaceTemplate)
 	i := t.GetUserDefinedType(typeKey)
-	mojomInterface, ok := i.Interface().(mojom_types.MojomInterface)
+	mojomInterface, ok := i.Interface().(fidl_types.FidlInterface)
 	if !ok {
 		log.Panicf("%s is not an interface.", userDefinedTypeShortName(i))
 	}
@@ -303,7 +303,7 @@ func (t *translator) translateMojomInterface(typeKey string) (m *InterfaceTempla
 	return m
 }
 
-func (t *translator) translateMojomMethod(mojomMethod mojom_types.MojomMethod, interfaceTemplate *InterfaceTemplate) (m *MethodTemplate) {
+func (t *translator) translateMojomMethod(mojomMethod fidl_types.FidlMethod, interfaceTemplate *InterfaceTemplate) (m *MethodTemplate) {
 	m = new(MethodTemplate)
 	m.Interface = interfaceTemplate
 	m.MethodName = formatName(*mojomMethod.DeclData.ShortName)
@@ -323,7 +323,7 @@ func (t *translator) translateMojomMethod(mojomMethod mojom_types.MojomMethod, i
 func (t *translator) translateDeclaredConstant(constKey string) (c *ConstantTemplate) {
 	declaredConstant := t.fileGraph.ResolvedConstants[constKey]
 	resolvedValue := t.resolveConstRef(declaredConstant.Value)
-	if _, ok := resolvedValue.(*mojom_types.ValueBuiltinValue); ok {
+	if _, ok := resolvedValue.(*fidl_types.ValueBuiltinValue); ok {
 		// There is no way to have a constant NaN, or infinity in go.
 		return nil
 	}
@@ -337,7 +337,7 @@ func (t *translator) translateDeclaredConstant(constKey string) (c *ConstantTemp
 ////////////////////////////////////////////////////////////////////////////////
 
 // Implements sort.Interface.
-type structFieldSerializationSorter []mojom_types.StructField
+type structFieldSerializationSorter []fidl_types.StructField
 
 func (s structFieldSerializationSorter) Len() int {
 	return len(s)

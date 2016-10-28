@@ -11,9 +11,9 @@ import (
 	"os"
 	"text/template"
 
-	"mojom/generators/rust/rustgen"
-	"mojom/generators/rust/templates"
-	"mojom/generators/common"
+	"fidl/compiler/generators/rust/rustgen"
+	"fidl/compiler/generators/rust/templates"
+	"fidl/compiler/generators/common"
 )
 
 func main() {

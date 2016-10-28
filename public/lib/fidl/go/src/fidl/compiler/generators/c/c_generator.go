@@ -9,9 +9,9 @@ import (
 	"os"
 	"text/template"
 
-	"mojom/generators/c/cgen"
-	"mojom/generators/c/templates"
-	"mojom/generators/common"
+	"fidl/compiler/generators/c/cgen"
+	"fidl/compiler/generators/c/templates"
+	"fidl/compiler/generators/common"
 )
 
 func main() {

@@ -7,7 +7,7 @@ package templates
 import (
 	"testing"
 
-	"mojom/generators/go/translator"
+	"fidl/compiler/generators/go/translator"
 )
 
 type mockEncodingInfo struct {

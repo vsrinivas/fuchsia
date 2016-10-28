@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 // TODO(vardhan): Make this file unittestable? This involves making it not crash
@@ -97,44 +97,44 @@ type Names map[string]string
 
 // Runs through the file graph and collects all names putting them into a Names map which
 // is a map from the original name to the mangled name
-func CollectAllNames(fileGraph *mojom_files.MojomFileGraph, file *mojom_files.MojomFile) *Names {
+func CollectAllNames(fileGraph *fidl_files.FidlFileGraph, file *fidl_files.FidlFile) *Names {
 	names := make(Names)
 	// Collect all top-level constant names
-	if file.DeclaredMojomObjects.TopLevelConstants != nil {
-		for _, mojomConstKey := range *(file.DeclaredMojomObjects.TopLevelConstants) {
+	if file.DeclaredFidlObjects.TopLevelConstants != nil {
+		for _, mojomConstKey := range *(file.DeclaredFidlObjects.TopLevelConstants) {
 			mojomConst := fileGraph.ResolvedConstants[mojomConstKey]
 			names[*mojomConst.DeclData.ShortName] = *mojomConst.DeclData.ShortName
 		}
 	}
 
 	// Collect all top-level enum names
-	if file.DeclaredMojomObjects.TopLevelEnums != nil {
-		for _, mojomEnumKey := range *(file.DeclaredMojomObjects.TopLevelEnums) {
-			mojomEnum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(mojom_types.MojomEnum)
+	if file.DeclaredFidlObjects.TopLevelEnums != nil {
+		for _, mojomEnumKey := range *(file.DeclaredFidlObjects.TopLevelEnums) {
+			mojomEnum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
 			names[*mojomEnum.DeclData.ShortName] = *mojomEnum.DeclData.ShortName
 		}
 	}
 
 	// Collect all union names
-	if file.DeclaredMojomObjects.Unions != nil {
-		for _, mojomUnionKey := range *(file.DeclaredMojomObjects.Unions) {
-			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(mojom_types.MojomUnion)
+	if file.DeclaredFidlObjects.Unions != nil {
+		for _, mojomUnionKey := range *(file.DeclaredFidlObjects.Unions) {
+			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
 			names[*mojomUnion.DeclData.ShortName] = *mojomUnion.DeclData.ShortName
 		}
 	}
 
 	// Collect all struct names
-	if file.DeclaredMojomObjects.Structs != nil {
-		for _, mojomStructKey := range *(file.DeclaredMojomObjects.Structs) {
-			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(mojom_types.MojomStruct)
+	if file.DeclaredFidlObjects.Structs != nil {
+		for _, mojomStructKey := range *(file.DeclaredFidlObjects.Structs) {
+			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
 			names[*mojomStruct.DeclData.ShortName] = *mojomStruct.DeclData.ShortName
 		}
 	}
 
 	// Collect all interface names
-	if file.DeclaredMojomObjects.Interfaces != nil {
-		for _, mojomIfaceKey := range *(file.DeclaredMojomObjects.Interfaces) {
-			mojomIface := fileGraph.ResolvedTypes[mojomIfaceKey].Interface().(mojom_types.MojomInterface)
+	if file.DeclaredFidlObjects.Interfaces != nil {
+		for _, mojomIfaceKey := range *(file.DeclaredFidlObjects.Interfaces) {
+			mojomIface := fileGraph.ResolvedTypes[mojomIfaceKey].Interface().(fidl_types.FidlInterface)
 			names[*mojomIface.DeclData.ShortName] = *mojomIface.DeclData.ShortName
 			// Pre-mangle all the method names since we know exactly how they look
 			for _, mojomMethod := range mojomIface.Methods {
@@ -164,7 +164,7 @@ func (n *Names) MangleKeywords() {
 
 // Removes the namespace from a full identifier are returns the mangled name
 // for the identifier or type.
-func removeNamespaceFromIdentifier(context *Context, file *mojom_files.MojomFile, ident string) string {
+func removeNamespaceFromIdentifier(context *Context, file *fidl_files.FidlFile, ident string) string {
 	var namespace string
 	if file.ModuleNamespace != nil {
 		namespace = *file.ModuleNamespace + "."
@@ -178,7 +178,7 @@ func removeNamespaceFromIdentifier(context *Context, file *mojom_files.MojomFile
 }
 
 // Given a name (described in mojom IDL), return a Rust-managled name.
-func mojomToRustName(decl *mojom_types.DeclarationData, context *Context) string {
+func mojomToRustName(decl *fidl_types.DeclarationData, context *Context) string {
 	// Might not have a full identifier; use a ShortName instead
 	if decl.FullIdentifier == nil {
 		return context.GetName(*decl.ShortName)
@@ -195,19 +195,19 @@ func mojomToRustName(decl *mojom_types.DeclarationData, context *Context) string
 	return path + "::" + name
 }
 
-func mojomToRustBuiltinValue(val mojom_types.BuiltinConstantValue) string {
+func mojomToRustBuiltinValue(val fidl_types.BuiltinConstantValue) string {
 	switch val {
-	case mojom_types.BuiltinConstantValue_DoubleNegativeInfinity:
+	case fidl_types.BuiltinConstantValue_DoubleNegativeInfinity:
 		return "std::f64::NEG_INFINITY"
-	case mojom_types.BuiltinConstantValue_FloatNegativeInfinity:
+	case fidl_types.BuiltinConstantValue_FloatNegativeInfinity:
 		return "std::f32::NEG_INFINITY"
-	case mojom_types.BuiltinConstantValue_DoubleInfinity:
+	case fidl_types.BuiltinConstantValue_DoubleInfinity:
 		return "std::f64::INFINITY"
-	case mojom_types.BuiltinConstantValue_FloatInfinity:
+	case fidl_types.BuiltinConstantValue_FloatInfinity:
 		return "std::f32::INFINITY"
-	case mojom_types.BuiltinConstantValue_DoubleNan:
+	case fidl_types.BuiltinConstantValue_DoubleNan:
 		return "std::f64::NAN"
-	case mojom_types.BuiltinConstantValue_FloatNan:
+	case fidl_types.BuiltinConstantValue_FloatNan:
 		return "std::f32::NAN"
 	}
 	log.Fatal("Unknown builtin constant", val)
@@ -215,12 +215,12 @@ func mojomToRustBuiltinValue(val mojom_types.BuiltinConstantValue) string {
 }
 
 // A mojom type name-mangled to Rust type.
-func mojomToRustType(t mojom_types.Type, context *Context) string {
+func mojomToRustType(t fidl_types.Type, context *Context) string {
 	switch t.(type) {
-	case *mojom_types.TypeSimpleType:
-		return simpleTypeToRustType(t.Interface().(mojom_types.SimpleType))
-	case *mojom_types.TypeArrayType:
-		array_type := t.Interface().(mojom_types.ArrayType)
+	case *fidl_types.TypeSimpleType:
+		return simpleTypeToRustType(t.Interface().(fidl_types.SimpleType))
+	case *fidl_types.TypeArrayType:
+		array_type := t.Interface().(fidl_types.ArrayType)
 		elem_type_str := mojomToRustType(array_type.ElementType, context)
 		var type_str string
 		if array_type.FixedLength < 0 {
@@ -245,8 +245,8 @@ func mojomToRustType(t mojom_types.Type, context *Context) string {
 			return "Option<" + type_str + ">"
 		}
 		return type_str
-	case *mojom_types.TypeMapType:
-		map_type := t.Interface().(mojom_types.MapType)
+	case *fidl_types.TypeMapType:
+		map_type := t.Interface().(fidl_types.MapType)
 		key_type_str := mojomToRustType(map_type.KeyType, context)
 		value_type_str := mojomToRustType(map_type.ValueType, context)
 		type_str := "HashMap<" + key_type_str + "," + value_type_str + ">"
@@ -254,25 +254,25 @@ func mojomToRustType(t mojom_types.Type, context *Context) string {
 			return "Option<" + type_str + ">"
 		}
 		return type_str
-	case *mojom_types.TypeStringType:
-		string_type := t.Interface().(mojom_types.StringType)
+	case *fidl_types.TypeStringType:
+		string_type := t.Interface().(fidl_types.StringType)
 		if string_type.Nullable {
 			return "Option<String>"
 		}
 		return "String"
-	case *mojom_types.TypeHandleType:
-		handle_type := t.Interface().(mojom_types.HandleType)
+	case *fidl_types.TypeHandleType:
+		handle_type := t.Interface().(fidl_types.HandleType)
 		var type_str string
 		switch handle_type.Kind {
-		case mojom_types.HandleType_Kind_MessagePipe:
+		case fidl_types.HandleType_Kind_MessagePipe:
 			type_str = "message_pipe::MessageEndpoint"
-		case mojom_types.HandleType_Kind_DataPipeConsumer:
+		case fidl_types.HandleType_Kind_DataPipeConsumer:
 			type_str = "system::data_pipe::Consumer<u8>"
-		case mojom_types.HandleType_Kind_DataPipeProducer:
+		case fidl_types.HandleType_Kind_DataPipeProducer:
 			type_str = "system::data_pipe::Producer<u8>"
-		case mojom_types.HandleType_Kind_SharedBuffer:
+		case fidl_types.HandleType_Kind_SharedBuffer:
 			type_str = "system::shared_buffer::SharedBuffer"
-		case mojom_types.HandleType_Kind_Unspecified:
+		case fidl_types.HandleType_Kind_Unspecified:
 			type_str = "system::UntypedHandle"
 		default:
 			log.Fatal("Unknown handle type kind! ", handle_type.Kind)
@@ -281,8 +281,8 @@ func mojomToRustType(t mojom_types.Type, context *Context) string {
 			return "Option<" + type_str + ">"
 		}
 		return type_str
-	case *mojom_types.TypeTypeReference:
-		typ_ref := t.Interface().(mojom_types.TypeReference)
+	case *fidl_types.TypeTypeReference:
+		typ_ref := t.Interface().(fidl_types.TypeReference)
 		resolved_type := context.FileGraph.ResolvedTypes[*typ_ref.TypeKey]
 		type_str := userDefinedTypeToRustType(&resolved_type, context, typ_ref.IsInterfaceRequest)
 		if typ_ref.Nullable {
@@ -296,32 +296,32 @@ func mojomToRustType(t mojom_types.Type, context *Context) string {
 	return ""
 }
 
-func mojomToRustLiteral(value mojom_types.LiteralValue) string {
+func mojomToRustLiteral(value fidl_types.LiteralValue) string {
 	val := value.Interface()
 	switch value.(type) {
-	case *mojom_types.LiteralValueBoolValue:
+	case *fidl_types.LiteralValueBoolValue:
 		return strconv.FormatBool(val.(bool))
-	case *mojom_types.LiteralValueDoubleValue:
+	case *fidl_types.LiteralValueDoubleValue:
 		return strconv.FormatFloat(val.(float64), 'e', -1, 64) + "f64"
-	case *mojom_types.LiteralValueFloatValue:
+	case *fidl_types.LiteralValueFloatValue:
 		return strconv.FormatFloat(val.(float64), 'e', -1, 32) + "f32"
-	case *mojom_types.LiteralValueInt8Value:
+	case *fidl_types.LiteralValueInt8Value:
 		return strconv.FormatInt(int64(val.(int8)), 10) + "i8"
-	case *mojom_types.LiteralValueInt16Value:
+	case *fidl_types.LiteralValueInt16Value:
 		return strconv.FormatInt(int64(val.(int16)), 10) + "i16"
-	case *mojom_types.LiteralValueInt32Value:
+	case *fidl_types.LiteralValueInt32Value:
 		return strconv.FormatInt(int64(val.(int32)), 10) + "i32"
-	case *mojom_types.LiteralValueInt64Value:
+	case *fidl_types.LiteralValueInt64Value:
 		return strconv.FormatInt(int64(val.(int64)), 10) + "i64"
-	case *mojom_types.LiteralValueUint8Value:
+	case *fidl_types.LiteralValueUint8Value:
 		return strconv.FormatUint(uint64(val.(uint8)), 10) + "u8"
-	case *mojom_types.LiteralValueUint16Value:
+	case *fidl_types.LiteralValueUint16Value:
 		return strconv.FormatUint(uint64(val.(uint16)), 10) + "u16"
-	case *mojom_types.LiteralValueUint32Value:
+	case *fidl_types.LiteralValueUint32Value:
 		return strconv.FormatUint(uint64(val.(uint32)), 10) + "u32"
-	case *mojom_types.LiteralValueUint64Value:
+	case *fidl_types.LiteralValueUint64Value:
 		return strconv.FormatUint(uint64(val.(uint64)), 10) + "u64"
-	case *mojom_types.LiteralValueStringValue:
+	case *fidl_types.LiteralValueStringValue:
 		// TODO(mknyszek): Do we have to do any string escaping here?
 		return "\"" + val.(string) + "\"" + ".to_string()"
 	default:
@@ -331,23 +331,23 @@ func mojomToRustLiteral(value mojom_types.LiteralValue) string {
 	return ""
 }
 
-func mojomUnionToRustType(u *mojom_types.MojomUnion, context *Context) string {
+func mojomUnionToRustType(u *fidl_types.FidlUnion, context *Context) string {
 	return mojomToRustName(u.DeclData, context)
 }
 
-func userDefinedTypeToRustType(t *mojom_types.UserDefinedType, context *Context, interfaceRequest bool) string {
+func userDefinedTypeToRustType(t *fidl_types.UserDefinedType, context *Context, interfaceRequest bool) string {
 	switch (*t).(type) {
-	case *mojom_types.UserDefinedTypeStructType:
-		full_name := mojomToRustName((*t).Interface().(mojom_types.MojomStruct).DeclData, context)
+	case *fidl_types.UserDefinedTypeStructType:
+		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlStruct).DeclData, context)
 		return full_name
-	case *mojom_types.UserDefinedTypeEnumType:
-		full_name := mojomToRustName((*t).Interface().(mojom_types.MojomEnum).DeclData, context)
+	case *fidl_types.UserDefinedTypeEnumType:
+		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlEnum).DeclData, context)
 		return full_name
-	case *mojom_types.UserDefinedTypeUnionType:
-		full_name := mojomToRustName((*t).Interface().(mojom_types.MojomUnion).DeclData, context)
+	case *fidl_types.UserDefinedTypeUnionType:
+		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlUnion).DeclData, context)
 		return full_name
-	case *mojom_types.UserDefinedTypeInterfaceType:
-		full_name := mojomToRustName((*t).Interface().(mojom_types.MojomInterface).DeclData, context)
+	case *fidl_types.UserDefinedTypeInterfaceType:
+		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlInterface).DeclData, context)
 		if interfaceRequest {
 			return full_name + "Server"
 		}
@@ -357,29 +357,29 @@ func userDefinedTypeToRustType(t *mojom_types.UserDefinedType, context *Context,
 	return ""
 }
 
-func simpleTypeToRustType(st mojom_types.SimpleType) string {
+func simpleTypeToRustType(st fidl_types.SimpleType) string {
 	switch st {
-	case mojom_types.SimpleType_Int8:
+	case fidl_types.SimpleType_Int8:
 		return "i8"
-	case mojom_types.SimpleType_Int16:
+	case fidl_types.SimpleType_Int16:
 		return "i16"
-	case mojom_types.SimpleType_Int32:
+	case fidl_types.SimpleType_Int32:
 		return "i32"
-	case mojom_types.SimpleType_Int64:
+	case fidl_types.SimpleType_Int64:
 		return "i64"
-	case mojom_types.SimpleType_Uint8:
+	case fidl_types.SimpleType_Uint8:
 		return "u8"
-	case mojom_types.SimpleType_Uint16:
+	case fidl_types.SimpleType_Uint16:
 		return "u16"
-	case mojom_types.SimpleType_Uint32:
+	case fidl_types.SimpleType_Uint32:
 		return "u32"
-	case mojom_types.SimpleType_Uint64:
+	case fidl_types.SimpleType_Uint64:
 		return "u64"
-	case mojom_types.SimpleType_Float:
+	case fidl_types.SimpleType_Float:
 		return "f32"
-	case mojom_types.SimpleType_Double:
+	case fidl_types.SimpleType_Double:
 		return "f64"
-	case mojom_types.SimpleType_Bool:
+	case fidl_types.SimpleType_Bool:
 		return "bool"
 	default:
 		log.Fatal("Unknown Simple type:", st)
@@ -387,22 +387,22 @@ func simpleTypeToRustType(st mojom_types.SimpleType) string {
 	return ""
 }
 
-func mojomTypeIsBool(typ mojom_types.Type) bool {
+func mojomTypeIsBool(typ fidl_types.Type) bool {
 	switch typ.(type) {
-	case *mojom_types.TypeSimpleType:
-		if typ.Interface().(mojom_types.SimpleType) == mojom_types.SimpleType_Bool {
+	case *fidl_types.TypeSimpleType:
+		if typ.Interface().(fidl_types.SimpleType) == fidl_types.SimpleType_Bool {
 			return true
 		}
 	}
 	return false
 }
 
-func mojomTypeIsUnion(typ mojom_types.Type, context *Context) bool {
+func mojomTypeIsUnion(typ fidl_types.Type, context *Context) bool {
 	switch typ.(type) {
-	case *mojom_types.TypeTypeReference:
-		type_key := *typ.Interface().(mojom_types.TypeReference).TypeKey
+	case *fidl_types.TypeTypeReference:
+		type_key := *typ.Interface().(fidl_types.TypeReference).TypeKey
 		switch context.FileGraph.ResolvedTypes[type_key].(type) {
-		case *mojom_types.UserDefinedTypeUnionType:
+		case *fidl_types.UserDefinedTypeUnionType:
 			return true
 		}
 	}
@@ -417,65 +417,65 @@ func mojomAlignToBytes(size uint32, alignment uint32) uint32 {
 	return size + alignment - diff
 }
 
-func mojomTypeSize(typ mojom_types.Type, context *Context) uint32 {
+func mojomTypeSize(typ fidl_types.Type, context *Context) uint32 {
 	switch typ.(type) {
-	case *mojom_types.TypeSimpleType:
-		switch typ.Interface().(mojom_types.SimpleType) {
-		case mojom_types.SimpleType_Bool:
+	case *fidl_types.TypeSimpleType:
+		switch typ.Interface().(fidl_types.SimpleType) {
+		case fidl_types.SimpleType_Bool:
 			log.Fatal("Simple type bool does not have a size in bytes!")
-		case mojom_types.SimpleType_Double:
+		case fidl_types.SimpleType_Double:
 			return 8
-		case mojom_types.SimpleType_Float:
+		case fidl_types.SimpleType_Float:
 			return 4
-		case mojom_types.SimpleType_Int8:
+		case fidl_types.SimpleType_Int8:
 			return 1
-		case mojom_types.SimpleType_Int16:
+		case fidl_types.SimpleType_Int16:
 			return 2
-		case mojom_types.SimpleType_Int32:
+		case fidl_types.SimpleType_Int32:
 			return 4
-		case mojom_types.SimpleType_Int64:
+		case fidl_types.SimpleType_Int64:
 			return 8
-		case mojom_types.SimpleType_Uint8:
+		case fidl_types.SimpleType_Uint8:
 			return 1
-		case mojom_types.SimpleType_Uint16:
+		case fidl_types.SimpleType_Uint16:
 			return 2
-		case mojom_types.SimpleType_Uint32:
+		case fidl_types.SimpleType_Uint32:
 			return 4
-		case mojom_types.SimpleType_Uint64:
+		case fidl_types.SimpleType_Uint64:
 			return 8
 		default:
-			log.Fatal("Invalid simple type:", typ.Interface().(mojom_types.SimpleType))
+			log.Fatal("Invalid simple type:", typ.Interface().(fidl_types.SimpleType))
 		}
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		return 8
-	case *mojom_types.TypeArrayType:
+	case *fidl_types.TypeArrayType:
 		return 8
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		return 8
-	case *mojom_types.TypeHandleType:
+	case *fidl_types.TypeHandleType:
 		return 4
-	case *mojom_types.TypeTypeReference:
-		return referenceTypeSize(typ.Interface().(mojom_types.TypeReference), context)
+	case *fidl_types.TypeTypeReference:
+		return referenceTypeSize(typ.Interface().(fidl_types.TypeReference), context)
 	default:
 		log.Fatal("Should not be here. Unknown mojom type size for:", typ)
 	}
 	return 0
 }
 
-func referenceTypeSize(typ mojom_types.TypeReference, context *Context) uint32 {
+func referenceTypeSize(typ fidl_types.TypeReference, context *Context) uint32 {
 	if typ.IsInterfaceRequest {
 		return 4
 	}
 
 	udt := context.FileGraph.ResolvedTypes[*typ.TypeKey]
 	switch udt.(type) {
-	case *mojom_types.UserDefinedTypeEnumType:
+	case *fidl_types.UserDefinedTypeEnumType:
 		return 4
-	case *mojom_types.UserDefinedTypeStructType:
+	case *fidl_types.UserDefinedTypeStructType:
 		return 8
-	case *mojom_types.UserDefinedTypeUnionType:
+	case *fidl_types.UserDefinedTypeUnionType:
 		return 16
-	case *mojom_types.UserDefinedTypeInterfaceType:
+	case *fidl_types.UserDefinedTypeInterfaceType:
 		return 8
 	}
 	log.Fatal("Uhoh, should not be here.", udt.Interface())

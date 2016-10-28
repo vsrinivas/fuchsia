@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"mojom/generators/go/gofmt"
+	"fidl/compiler/generators/go/gofmt"
 )
 
 func check(t *testing.T, expected string, template string, input interface{}) {

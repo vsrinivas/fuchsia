@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 // Describes a field (such as a struct or a union member) to be printed.
@@ -112,7 +112,7 @@ type HeaderTemplate struct {
 
 // The follow type allows us to sort fields in packing-order, which is defined
 // by the byte+bit-offsets already provided to us by the mojom parser.
-type MojomSortableStructFields []mojom_types.StructField
+type MojomSortableStructFields []fidl_types.StructField
 
 func (a MojomSortableStructFields) Len() int { return len(a) }
 func (a MojomSortableStructFields) Swap(i, j int) {
@@ -125,7 +125,7 @@ func (a MojomSortableStructFields) Less(i, j int) bool {
 	return a[i].Offset < a[j].Offset
 }
 
-func NewEnumTemplate(fileGraph *mojom_files.MojomFileGraph, mojomEnum *mojom_types.MojomEnum) EnumTemplate {
+func NewEnumTemplate(fileGraph *fidl_files.FidlFileGraph, mojomEnum *fidl_types.FidlEnum) EnumTemplate {
 	enumName := mojomToCName(*mojomEnum.DeclData.FullIdentifier)
 	if isReservedKeyword(enumName) {
 		log.Fatalf("Generated name %s is a reserved C keyword", enumName)
@@ -145,17 +145,17 @@ func NewEnumTemplate(fileGraph *mojom_files.MojomFileGraph, mojomEnum *mojom_typ
 	}
 }
 
-// Given a |mojom_types.Value|, returns the C mangled version of the value.
+// Given a |fidl_types.Value|, returns the C mangled version of the value.
 //  - if a literal, returns the C equivalent
 //  - if a reference, returns the resolved, concrete value of the reference
 //  (enum value or constant). This avoids any circular-dependency issues.
-func resolveValue(fileGraph *mojom_files.MojomFileGraph, value mojom_types.Value) string {
+func resolveValue(fileGraph *fidl_files.FidlFileGraph, value fidl_types.Value) string {
 	switch value.(type) {
-	case *mojom_types.ValueLiteralValue:
-		return mojomToCLiteral(value.Interface().(mojom_types.LiteralValue))
+	case *fidl_types.ValueLiteralValue:
+		return mojomToCLiteral(value.Interface().(fidl_types.LiteralValue))
 
-	case *mojom_types.ValueConstantReference:
-		const_key := value.Interface().(mojom_types.ConstantReference).ConstantKey
+	case *fidl_types.ValueConstantReference:
+		const_key := value.Interface().(fidl_types.ConstantReference).ConstantKey
 		if decl_const, exists := fileGraph.ResolvedConstants[const_key]; exists {
 			constValue := decl_const.Value
 			if decl_const.ResolvedConcreteValue != nil {
@@ -165,10 +165,10 @@ func resolveValue(fileGraph *mojom_files.MojomFileGraph, value mojom_types.Value
 		}
 		log.Fatal("Unresolved constant:", value)
 
-	case *mojom_types.ValueEnumValueReference:
-		enumRef := value.Interface().(mojom_types.EnumValueReference)
+	case *fidl_types.ValueEnumValueReference:
+		enumRef := value.Interface().(fidl_types.EnumValueReference)
 		if udt, exists := fileGraph.ResolvedTypes[enumRef.EnumTypeKey]; exists {
-			enumType := udt.Interface().(mojom_types.MojomEnum)
+			enumType := udt.Interface().(fidl_types.FidlEnum)
 			enumVal := enumType.Values[enumRef.EnumValueIndex]
 			if enumVal.InitializerValue == nil {
 				return strconv.FormatInt(int64(enumVal.IntValue), 10)
@@ -176,8 +176,8 @@ func resolveValue(fileGraph *mojom_files.MojomFileGraph, value mojom_types.Value
 			return resolveValue(fileGraph, enumVal.InitializerValue)
 		}
 
-	case *mojom_types.ValueBuiltinValue:
-		return mojomToCBuiltinValue(value.Interface().(mojom_types.BuiltinConstantValue))
+	case *fidl_types.ValueBuiltinValue:
+		return mojomToCBuiltinValue(value.Interface().(fidl_types.BuiltinConstantValue))
 
 	default:
 		log.Fatal("Shouldn't be here. Unknown value type for:", value)
@@ -186,13 +186,13 @@ func resolveValue(fileGraph *mojom_files.MojomFileGraph, value mojom_types.Value
 	return ""
 }
 
-func NewConstantTemplate(fileGraph *mojom_files.MojomFileGraph, mojomConstant mojom_types.DeclaredConstant) ConstantTemplate {
+func NewConstantTemplate(fileGraph *fidl_files.FidlFileGraph, mojomConstant fidl_types.DeclaredConstant) ConstantTemplate {
 	var type_text string
 	switch mojomConstant.Type.(type) {
 	// We can't type string constants as a 'union MojomStringHeaderPtr' since it
 	// involves some setup and prevents immediate consumption. const char* should
 	// suffice.
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		type_text = "char*"
 	default:
 		type_text = mojomToCType(mojomConstant.Type, fileGraph)
@@ -209,7 +209,7 @@ func NewConstantTemplate(fileGraph *mojom_files.MojomFileGraph, mojomConstant mo
 	}
 }
 
-func NewUnionTemplate(fileGraph *mojom_files.MojomFileGraph, mojomUnion *mojom_types.MojomUnion) UnionTemplate {
+func NewUnionTemplate(fileGraph *fidl_files.FidlFileGraph, mojomUnion *fidl_types.FidlUnion) UnionTemplate {
 	union_name := mojomToCName(*mojomUnion.DeclData.FullIdentifier)
 	if isReservedKeyword(union_name) {
 		log.Fatalf("Generated name %s is a reserved C keyword", union_name)
@@ -251,8 +251,8 @@ func NewUnionTemplate(fileGraph *mojom_files.MojomFileGraph, mojomUnion *mojom_t
 	}
 }
 
-func generateContainedDeclarations(fileGraph *mojom_files.MojomFileGraph,
-	decls *mojom_types.ContainedDeclarations) (constants []ConstantTemplate, enums []EnumTemplate) {
+func generateContainedDeclarations(fileGraph *fidl_files.FidlFileGraph,
+	decls *fidl_types.ContainedDeclarations) (constants []ConstantTemplate, enums []EnumTemplate) {
 	if decls.Constants != nil {
 		for _, mojomConstKey := range *decls.Constants {
 			constants = append(constants,
@@ -262,14 +262,14 @@ func generateContainedDeclarations(fileGraph *mojom_files.MojomFileGraph,
 
 	if decls.Enums != nil {
 		for _, mojomEnumKey := range *decls.Enums {
-			mojom_enum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(mojom_types.MojomEnum)
+			mojom_enum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
 			enums = append(enums, NewEnumTemplate(fileGraph, &mojom_enum))
 		}
 	}
 	return
 }
 
-func NewInterfaceTemplate(fileGraph *mojom_files.MojomFileGraph, mojomInterface *mojom_types.MojomInterface) InterfaceTemplate {
+func NewInterfaceTemplate(fileGraph *fidl_files.FidlFileGraph, mojomInterface *fidl_types.FidlInterface) InterfaceTemplate {
 	interface_name := mojomToCName(*mojomInterface.DeclData.FullIdentifier)
 	var service_name string
 	if mojomInterface.ServiceName != nil {
@@ -316,8 +316,8 @@ func NewInterfaceTemplate(fileGraph *mojom_files.MojomFileGraph, mojomInterface 
 // TODO(vardhan): We can make this function, along with all other New*Template()
 // functions, be a method for InterfaceTemplate so that we don't have to pass
 // around |fileGraph| all over the place.
-func NewStructTemplate(fileGraph *mojom_files.MojomFileGraph,
-	mojomStruct *mojom_types.MojomStruct) StructTemplate {
+func NewStructTemplate(fileGraph *fidl_files.FidlFileGraph,
+	mojomStruct *fidl_types.FidlStruct) StructTemplate {
 	// Sort fields by packing order (by offset,bit).
 	sortedFields := mojomStruct.Fields
 	sort.Sort(MojomSortableStructFields(sortedFields))
@@ -374,7 +374,7 @@ func NewStructTemplate(fileGraph *mojom_files.MojomFileGraph,
 	}
 }
 
-func NewHeaderTemplate(fileGraph *mojom_files.MojomFileGraph, file *mojom_files.MojomFile, srcRootPath string) HeaderTemplate {
+func NewHeaderTemplate(fileGraph *fidl_files.FidlFileGraph, file *fidl_files.FidlFile, srcRootPath string) HeaderTemplate {
 	var relGenPath string
 	var err error
 	if relGenPath, err = filepath.Rel(srcRootPath, file.FileName); err != nil {
@@ -389,41 +389,41 @@ func NewHeaderTemplate(fileGraph *mojom_files.MojomFileGraph, file *mojom_files.
 	}
 
 	var constants []ConstantTemplate
-	if file.DeclaredMojomObjects.TopLevelConstants != nil {
-		for _, mojomConstKey := range *(file.DeclaredMojomObjects.TopLevelConstants) {
+	if file.DeclaredFidlObjects.TopLevelConstants != nil {
+		for _, mojomConstKey := range *(file.DeclaredFidlObjects.TopLevelConstants) {
 			mojomConst := fileGraph.ResolvedConstants[mojomConstKey]
 			constants = append(constants, NewConstantTemplate(fileGraph, mojomConst))
 		}
 	}
 
 	var enums []EnumTemplate
-	if file.DeclaredMojomObjects.TopLevelEnums != nil {
-		for _, mojomEnumKey := range *(file.DeclaredMojomObjects.TopLevelEnums) {
-			mojomEnum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(mojom_types.MojomEnum)
+	if file.DeclaredFidlObjects.TopLevelEnums != nil {
+		for _, mojomEnumKey := range *(file.DeclaredFidlObjects.TopLevelEnums) {
+			mojomEnum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
 			enums = append(enums, NewEnumTemplate(fileGraph, &mojomEnum))
 		}
 	}
 
 	var unions []UnionTemplate
-	if file.DeclaredMojomObjects.Unions != nil {
-		for _, mojomUnionKey := range *(file.DeclaredMojomObjects.Unions) {
-			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(mojom_types.MojomUnion)
+	if file.DeclaredFidlObjects.Unions != nil {
+		for _, mojomUnionKey := range *(file.DeclaredFidlObjects.Unions) {
+			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
 			unions = append(unions, NewUnionTemplate(fileGraph, &mojomUnion))
 		}
 	}
 
 	var structs []StructTemplate
-	if file.DeclaredMojomObjects.Structs != nil {
-		for _, mojomStructKey := range *(file.DeclaredMojomObjects.Structs) {
-			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(mojom_types.MojomStruct)
+	if file.DeclaredFidlObjects.Structs != nil {
+		for _, mojomStructKey := range *(file.DeclaredFidlObjects.Structs) {
+			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
 			structs = append(structs, NewStructTemplate(fileGraph, &mojomStruct))
 		}
 	}
 
 	var interfaces []InterfaceTemplate
-	if file.DeclaredMojomObjects.Interfaces != nil {
-		for _, mojomIfaceKey := range *(file.DeclaredMojomObjects.Interfaces) {
-			mojomIface := fileGraph.ResolvedTypes[mojomIfaceKey].Interface().(mojom_types.MojomInterface)
+	if file.DeclaredFidlObjects.Interfaces != nil {
+		for _, mojomIfaceKey := range *(file.DeclaredFidlObjects.Interfaces) {
+			mojomIface := fileGraph.ResolvedTypes[mojomIfaceKey].Interface().(fidl_types.FidlInterface)
 			interfaces = append(interfaces, NewInterfaceTemplate(fileGraph, &mojomIface))
 		}
 	}
@@ -440,7 +440,7 @@ func NewHeaderTemplate(fileGraph *mojom_files.MojomFileGraph, file *mojom_files.
 	}
 }
 
-func getPaddingAfter(fields []mojom_types.StructField, i int, fileGraph *mojom_files.MojomFileGraph) uint32 {
+func getPaddingAfter(fields []fidl_types.StructField, i int, fileGraph *fidl_files.FidlFileGraph) uint32 {
 	// Must be a power of 2 for the remaining computation to work
 	const kAlignment uint32 = 8
 

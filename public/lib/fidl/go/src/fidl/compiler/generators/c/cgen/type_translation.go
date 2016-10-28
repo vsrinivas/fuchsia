@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 // TODO(vardhan): Make this file unittestable? This involves making it not crash
@@ -94,12 +94,12 @@ func mojomToCFilePath(srcRootPath string, mojomImport string) string {
 // Given an interface + method name, return a name-mangled name in C.
 // TODO(vardhan): You don't need to pass an entire MojomInterface/MojomStruct
 // here.
-func requestMethodToCName(mojomIface *mojom_types.MojomInterface, mojomStruct *mojom_types.MojomStruct) string {
+func requestMethodToCName(mojomIface *fidl_types.FidlInterface, mojomStruct *fidl_types.FidlStruct) string {
 	prefix := mojomToCName(*mojomIface.DeclData.FullIdentifier)
 	return fmt.Sprintf("%s_%s", prefix, strings.Replace(*mojomStruct.DeclData.ShortName, "-request", "_Request", 1))
 }
 
-func responseMethodToCName(mojomIface *mojom_types.MojomInterface, mojomStruct *mojom_types.MojomStruct) string {
+func responseMethodToCName(mojomIface *fidl_types.FidlInterface, mojomStruct *fidl_types.FidlStruct) string {
 	prefix := mojomToCName(*mojomIface.DeclData.FullIdentifier)
 	return fmt.Sprintf("%s_%s", prefix, strings.Replace(*mojomStruct.DeclData.ShortName, "-response", "_Response", 1))
 }
@@ -109,19 +109,19 @@ func mojomToCName(name string) string {
 	return strings.Replace(name, ".", "_", -1)
 }
 
-func mojomToCBuiltinValue(val mojom_types.BuiltinConstantValue) string {
+func mojomToCBuiltinValue(val fidl_types.BuiltinConstantValue) string {
 	switch val {
-	case mojom_types.BuiltinConstantValue_DoubleNegativeInfinity:
+	case fidl_types.BuiltinConstantValue_DoubleNegativeInfinity:
 		return "-INFINITY"
-	case mojom_types.BuiltinConstantValue_FloatNegativeInfinity:
+	case fidl_types.BuiltinConstantValue_FloatNegativeInfinity:
 		return "-INFINITY"
-	case mojom_types.BuiltinConstantValue_DoubleInfinity:
+	case fidl_types.BuiltinConstantValue_DoubleInfinity:
 		return "INFINITY"
-	case mojom_types.BuiltinConstantValue_FloatInfinity:
+	case fidl_types.BuiltinConstantValue_FloatInfinity:
 		return "INFINITY"
-	case mojom_types.BuiltinConstantValue_DoubleNan:
+	case fidl_types.BuiltinConstantValue_DoubleNan:
 		return "NAN"
-	case mojom_types.BuiltinConstantValue_FloatNan:
+	case fidl_types.BuiltinConstantValue_FloatNan:
 		return "NAN"
 	}
 	log.Fatal("Unknown builtin constant", val)
@@ -129,20 +129,20 @@ func mojomToCBuiltinValue(val mojom_types.BuiltinConstantValue) string {
 }
 
 // A mojom type name-mangled to C type.
-func mojomToCType(t mojom_types.Type, fileGraph *mojom_files.MojomFileGraph) string {
+func mojomToCType(t fidl_types.Type, fileGraph *fidl_files.FidlFileGraph) string {
 	switch t.(type) {
-	case *mojom_types.TypeSimpleType:
-		return simpleTypeToCType(t.Interface().(mojom_types.SimpleType))
-	case *mojom_types.TypeArrayType:
+	case *fidl_types.TypeSimpleType:
+		return simpleTypeToCType(t.Interface().(fidl_types.SimpleType))
+	case *fidl_types.TypeArrayType:
 		return "union MojomArrayHeaderPtr"
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		return "union MojomMapHeaderPtr"
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		return "union MojomStringHeaderPtr"
-	case *mojom_types.TypeHandleType:
+	case *fidl_types.TypeHandleType:
 		return "MojoHandle"
-	case *mojom_types.TypeTypeReference:
-		typ_ref := t.Interface().(mojom_types.TypeReference)
+	case *fidl_types.TypeTypeReference:
+		typ_ref := t.Interface().(fidl_types.TypeReference)
 		if typ_ref.IsInterfaceRequest {
 			return "MojoHandle"
 		}
@@ -155,32 +155,32 @@ func mojomToCType(t mojom_types.Type, fileGraph *mojom_files.MojomFileGraph) str
 	return ""
 }
 
-func mojomToCLiteral(value mojom_types.LiteralValue) string {
+func mojomToCLiteral(value fidl_types.LiteralValue) string {
 	val := value.Interface()
 	switch value.(type) {
-	case *mojom_types.LiteralValueBoolValue:
+	case *fidl_types.LiteralValueBoolValue:
 		return strconv.FormatBool(val.(bool))
-	case *mojom_types.LiteralValueDoubleValue:
+	case *fidl_types.LiteralValueDoubleValue:
 		return strconv.FormatFloat(val.(float64), 'e', -1, 64)
-	case *mojom_types.LiteralValueFloatValue:
+	case *fidl_types.LiteralValueFloatValue:
 		return strconv.FormatFloat(val.(float64), 'e', -1, 32)
-	case *mojom_types.LiteralValueInt8Value:
+	case *fidl_types.LiteralValueInt8Value:
 		return strconv.FormatInt(int64(val.(int8)), 10)
-	case *mojom_types.LiteralValueInt16Value:
+	case *fidl_types.LiteralValueInt16Value:
 		return strconv.FormatInt(int64(val.(int16)), 10)
-	case *mojom_types.LiteralValueInt32Value:
+	case *fidl_types.LiteralValueInt32Value:
 		return strconv.FormatInt(int64(val.(int32)), 10) + "l"
-	case *mojom_types.LiteralValueInt64Value:
+	case *fidl_types.LiteralValueInt64Value:
 		return strconv.FormatInt(int64(val.(int64)), 10) + "ll"
-	case *mojom_types.LiteralValueUint8Value:
+	case *fidl_types.LiteralValueUint8Value:
 		return strconv.FormatUint(uint64(val.(uint8)), 10)
-	case *mojom_types.LiteralValueUint16Value:
+	case *fidl_types.LiteralValueUint16Value:
 		return strconv.FormatUint(uint64(val.(uint16)), 10)
-	case *mojom_types.LiteralValueUint32Value:
+	case *fidl_types.LiteralValueUint32Value:
 		return strconv.FormatUint(uint64(val.(uint32)), 10) + "ul"
-	case *mojom_types.LiteralValueUint64Value:
+	case *fidl_types.LiteralValueUint64Value:
 		return strconv.FormatUint(uint64(val.(uint64)), 10) + "ull"
-	case *mojom_types.LiteralValueStringValue:
+	case *fidl_types.LiteralValueStringValue:
 		// TODO(vardhan): Do we have to do any string escaping here?
 		return "\"" + val.(string) + "\""
 	default:
@@ -190,54 +190,54 @@ func mojomToCLiteral(value mojom_types.LiteralValue) string {
 	return ""
 }
 
-func mojomUnionToCType(u *mojom_types.MojomUnion) string {
+func mojomUnionToCType(u *fidl_types.FidlUnion) string {
 	return fmt.Sprintf("union %sPtr", mojomToCName(*u.DeclData.FullIdentifier))
 }
 
-func userDefinedTypeToCType(t *mojom_types.UserDefinedType) string {
+func userDefinedTypeToCType(t *fidl_types.UserDefinedType) string {
 	switch (*t).(type) {
-	case *mojom_types.UserDefinedTypeStructType:
-		full_name := mojomToCName(*(*t).Interface().(mojom_types.MojomStruct).DeclData.FullIdentifier)
+	case *fidl_types.UserDefinedTypeStructType:
+		full_name := mojomToCName(*(*t).Interface().(fidl_types.FidlStruct).DeclData.FullIdentifier)
 		return "union " + full_name + "Ptr"
-	case *mojom_types.UserDefinedTypeEnumType:
-		full_name := mojomToCName(*(*t).Interface().(mojom_types.MojomEnum).DeclData.FullIdentifier)
+	case *fidl_types.UserDefinedTypeEnumType:
+		full_name := mojomToCName(*(*t).Interface().(fidl_types.FidlEnum).DeclData.FullIdentifier)
 		return full_name
-	case *mojom_types.UserDefinedTypeUnionType:
-		full_name := mojomToCName(*(*t).Interface().(mojom_types.MojomUnion).DeclData.FullIdentifier)
+	case *fidl_types.UserDefinedTypeUnionType:
+		full_name := mojomToCName(*(*t).Interface().(fidl_types.FidlUnion).DeclData.FullIdentifier)
 		// Caller beware: this should instead be "union %sPtr" if this type is to
 		// be used inside a union instead (since union inside a union is a
 		// reference, not inlined).
 		return "struct " + full_name
-	case *mojom_types.UserDefinedTypeInterfaceType:
+	case *fidl_types.UserDefinedTypeInterfaceType:
 		return "struct MojomInterfaceData"
 	}
 	log.Fatal("Unknown UserDefinedType", t)
 	return ""
 }
 
-func simpleTypeToCType(st mojom_types.SimpleType) string {
+func simpleTypeToCType(st fidl_types.SimpleType) string {
 	switch st {
-	case mojom_types.SimpleType_Int8:
+	case fidl_types.SimpleType_Int8:
 		return "int8_t"
-	case mojom_types.SimpleType_Int16:
+	case fidl_types.SimpleType_Int16:
 		return "int16_t"
-	case mojom_types.SimpleType_Int32:
+	case fidl_types.SimpleType_Int32:
 		return "int32_t"
-	case mojom_types.SimpleType_Int64:
+	case fidl_types.SimpleType_Int64:
 		return "int64_t"
-	case mojom_types.SimpleType_Uint8:
+	case fidl_types.SimpleType_Uint8:
 		return "uint8_t"
-	case mojom_types.SimpleType_Uint16:
+	case fidl_types.SimpleType_Uint16:
 		return "uint16_t"
-	case mojom_types.SimpleType_Uint32:
+	case fidl_types.SimpleType_Uint32:
 		return "uint32_t"
-	case mojom_types.SimpleType_Uint64:
+	case fidl_types.SimpleType_Uint64:
 		return "uint64_t"
-	case mojom_types.SimpleType_Float:
+	case fidl_types.SimpleType_Float:
 		return "float"
-	case mojom_types.SimpleType_Double:
+	case fidl_types.SimpleType_Double:
 		return "double"
-	case mojom_types.SimpleType_Bool:
+	case fidl_types.SimpleType_Bool:
 		return "bool"
 	default:
 		log.Fatal("Unknown Simple type:", st)
@@ -245,22 +245,22 @@ func simpleTypeToCType(st mojom_types.SimpleType) string {
 	return ""
 }
 
-func mojomTypeIsBool(typ mojom_types.Type) bool {
+func mojomTypeIsBool(typ fidl_types.Type) bool {
 	switch typ.(type) {
-	case *mojom_types.TypeSimpleType:
-		if typ.Interface().(mojom_types.SimpleType) == mojom_types.SimpleType_Bool {
+	case *fidl_types.TypeSimpleType:
+		if typ.Interface().(fidl_types.SimpleType) == fidl_types.SimpleType_Bool {
 			return true
 		}
 	}
 	return false
 }
 
-func mojomTypeIsUnion(typ mojom_types.Type, fileGraph *mojom_files.MojomFileGraph) bool {
+func mojomTypeIsUnion(typ fidl_types.Type, fileGraph *fidl_files.FidlFileGraph) bool {
 	switch typ.(type) {
-	case *mojom_types.TypeTypeReference:
-		type_key := *typ.Interface().(mojom_types.TypeReference).TypeKey
+	case *fidl_types.TypeTypeReference:
+		type_key := *typ.Interface().(fidl_types.TypeReference).TypeKey
 		switch fileGraph.ResolvedTypes[type_key].(type) {
-		case *mojom_types.UserDefinedTypeUnionType:
+		case *fidl_types.UserDefinedTypeUnionType:
 			return true
 		}
 	}
@@ -268,45 +268,45 @@ func mojomTypeIsUnion(typ mojom_types.Type, fileGraph *mojom_files.MojomFileGrap
 }
 
 // Returns the inlined (in a struct or array) size of a type in bytes.
-func mojomTypeByteSize(typ mojom_types.Type, fileGraph *mojom_files.MojomFileGraph) uint32 {
+func mojomTypeByteSize(typ fidl_types.Type, fileGraph *fidl_files.FidlFileGraph) uint32 {
 	switch typ.(type) {
-	case *mojom_types.TypeSimpleType:
-		switch typ.Interface().(mojom_types.SimpleType) {
-		case mojom_types.SimpleType_Bool:
+	case *fidl_types.TypeSimpleType:
+		switch typ.Interface().(fidl_types.SimpleType) {
+		case fidl_types.SimpleType_Bool:
 			return 1
-		case mojom_types.SimpleType_Double:
+		case fidl_types.SimpleType_Double:
 			return 8
-		case mojom_types.SimpleType_Float:
+		case fidl_types.SimpleType_Float:
 			return 4
-		case mojom_types.SimpleType_Int8:
+		case fidl_types.SimpleType_Int8:
 			return 1
-		case mojom_types.SimpleType_Int16:
+		case fidl_types.SimpleType_Int16:
 			return 2
-		case mojom_types.SimpleType_Int32:
+		case fidl_types.SimpleType_Int32:
 			return 4
-		case mojom_types.SimpleType_Int64:
+		case fidl_types.SimpleType_Int64:
 			return 8
-		case mojom_types.SimpleType_Uint8:
+		case fidl_types.SimpleType_Uint8:
 			return 1
-		case mojom_types.SimpleType_Uint16:
+		case fidl_types.SimpleType_Uint16:
 			return 2
-		case mojom_types.SimpleType_Uint32:
+		case fidl_types.SimpleType_Uint32:
 			return 4
-		case mojom_types.SimpleType_Uint64:
+		case fidl_types.SimpleType_Uint64:
 			return 8
 		default:
-			log.Fatal("Invalid simple type:", typ.Interface().(mojom_types.SimpleType))
+			log.Fatal("Invalid simple type:", typ.Interface().(fidl_types.SimpleType))
 		}
-	case *mojom_types.TypeStringType:
+	case *fidl_types.TypeStringType:
 		return 8
-	case *mojom_types.TypeArrayType:
+	case *fidl_types.TypeArrayType:
 		return 8
-	case *mojom_types.TypeMapType:
+	case *fidl_types.TypeMapType:
 		return 8
-	case *mojom_types.TypeHandleType:
+	case *fidl_types.TypeHandleType:
 		return 4
-	case *mojom_types.TypeTypeReference:
-		return referenceTypeSize(typ.Interface().(mojom_types.TypeReference), fileGraph)
+	case *fidl_types.TypeTypeReference:
+		return referenceTypeSize(typ.Interface().(fidl_types.TypeReference), fileGraph)
 	default:
 		log.Fatal("Should not be here. Unknown mojom type size for:", typ)
 	}
@@ -314,20 +314,20 @@ func mojomTypeByteSize(typ mojom_types.Type, fileGraph *mojom_files.MojomFileGra
 }
 
 // Returns the inlined (in a struct or array) size of a reference type.
-func referenceTypeSize(typ mojom_types.TypeReference, fileGraph *mojom_files.MojomFileGraph) uint32 {
+func referenceTypeSize(typ fidl_types.TypeReference, fileGraph *fidl_files.FidlFileGraph) uint32 {
 	if typ.IsInterfaceRequest {
 		return 4
 	}
 
 	udt := fileGraph.ResolvedTypes[*typ.TypeKey]
 	switch udt.(type) {
-	case *mojom_types.UserDefinedTypeEnumType:
+	case *fidl_types.UserDefinedTypeEnumType:
 		return 4
-	case *mojom_types.UserDefinedTypeStructType:
+	case *fidl_types.UserDefinedTypeStructType:
 		return 8
-	case *mojom_types.UserDefinedTypeUnionType:
+	case *fidl_types.UserDefinedTypeUnionType:
 		return 16
-	case *mojom_types.UserDefinedTypeInterfaceType:
+	case *fidl_types.UserDefinedTypeInterfaceType:
 		return 8
 	}
 	log.Fatal("Uhoh, should not be here.", udt.Interface())
@@ -335,11 +335,11 @@ func referenceTypeSize(typ mojom_types.TypeReference, fileGraph *mojom_files.Moj
 }
 
 // Same as mojomTypeByteSize, but in bits.
-func mojomTypeBitSize(typ mojom_types.Type, fileGraph *mojom_files.MojomFileGraph) uint32 {
+func mojomTypeBitSize(typ fidl_types.Type, fileGraph *fidl_files.FidlFileGraph) uint32 {
 	switch typ.(type) {
-	case *mojom_types.TypeSimpleType:
-		switch typ.Interface().(mojom_types.SimpleType) {
-		case mojom_types.SimpleType_Bool:
+	case *fidl_types.TypeSimpleType:
+		switch typ.Interface().(fidl_types.SimpleType) {
+		case fidl_types.SimpleType_Bool:
 			return 1
 		}
 	}

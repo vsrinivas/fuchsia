@@ -8,53 +8,53 @@ import (
 	"fmt"
 	"log"
 
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_types"
 )
 
-func (t *translator) translateValue(mojomValue mojom_types.Value) (value string) {
+func (t *translator) translateValue(mojomValue fidl_types.Value) (value string) {
 	switch m := mojomValue.(type) {
 	default:
 		log.Panicf("Not implemented yet: %s", mojomValue)
-	case *mojom_types.ValueLiteralValue:
+	case *fidl_types.ValueLiteralValue:
 		value = t.translateLiteralValue(m.Value)
-	case *mojom_types.ValueEnumValueReference:
+	case *fidl_types.ValueEnumValueReference:
 		value = t.translateEnumValueReference(m.Value)
-	case *mojom_types.ValueConstantReference:
+	case *fidl_types.ValueConstantReference:
 		value = t.translateConstantReference(m.Value)
-	case *mojom_types.ValueBuiltinValue:
+	case *fidl_types.ValueBuiltinValue:
 		log.Panicln("There is no way to represent built-in mojom values as literals in go.")
 	}
 
 	return value
 }
 
-func (t *translator) translateConstantReference(constRef mojom_types.ConstantReference) (value string) {
+func (t *translator) translateConstantReference(constRef fidl_types.ConstantReference) (value string) {
 	declaredConstant := t.fileGraph.ResolvedConstants[constRef.ConstantKey]
 	srcFileInfo := declaredConstant.DeclData.SourceFileInfo
 	value = t.goConstName(constRef.ConstantKey)
 
 	if srcFileInfo != nil && srcFileInfo.FileName != t.currentFileName {
 		pkgName := fileNameToPackageName(srcFileInfo.FileName)
-		t.importMojomFile(srcFileInfo.FileName)
+		t.importFidlFile(srcFileInfo.FileName)
 		value = fmt.Sprintf("%s.%s", pkgName, value)
 	}
 
 	return
 }
 
-func (t *translator) translateLiteralValue(literalValue mojom_types.LiteralValue) (value string) {
-	if s, ok := literalValue.(*mojom_types.LiteralValueStringValue); ok {
+func (t *translator) translateLiteralValue(literalValue fidl_types.LiteralValue) (value string) {
+	if s, ok := literalValue.(*fidl_types.LiteralValueStringValue); ok {
 		return fmt.Sprintf("%q", s.Value)
 	}
 	return fmt.Sprintf("%v", literalValue.Interface())
 }
 
-func (t *translator) translateEnumValueReference(enumValueRef mojom_types.EnumValueReference) string {
-	enumTypeRef := mojom_types.TypeReference{TypeKey: &enumValueRef.EnumTypeKey}
+func (t *translator) translateEnumValueReference(enumValueRef fidl_types.EnumValueReference) string {
+	enumTypeRef := fidl_types.TypeReference{TypeKey: &enumValueRef.EnumTypeKey}
 	enumName := t.translateTypeReference(enumTypeRef)
 
 	e := t.GetUserDefinedType(enumValueRef.EnumTypeKey)
-	enum, ok := e.Interface().(mojom_types.MojomEnum)
+	enum, ok := e.Interface().(fidl_types.FidlEnum)
 	if !ok {
 		log.Panicf("%s is not an enum.\n", userDefinedTypeShortName(e))
 	}
@@ -63,8 +63,8 @@ func (t *translator) translateEnumValueReference(enumValueRef mojom_types.EnumVa
 	return fmt.Sprintf("%s_%s", enumName, enumValueName)
 }
 
-func (t *translator) resolveConstRef(value mojom_types.Value) mojom_types.Value {
-	constRef, ok := value.(*mojom_types.ValueConstantReference)
+func (t *translator) resolveConstRef(value fidl_types.Value) fidl_types.Value {
+	constRef, ok := value.(*fidl_types.ValueConstantReference)
 	if !ok {
 		return value
 	}

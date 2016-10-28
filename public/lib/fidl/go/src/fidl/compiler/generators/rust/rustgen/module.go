@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"mojom/generated/mojom_files"
+	"fidl/compiler/generated/fidl_files"
 )
 
 // Describes a module file for organizing imports
@@ -61,7 +61,7 @@ func (m *Module) Add(namespace []string, file string) {
 }
 
 // Converts a namespace such as "my_module.your_module" into ["my_module", "your_module"]
-func GetNamespace(mojomFile *mojom_files.MojomFile) []string {
+func GetNamespace(mojomFile *fidl_files.FidlFile) []string {
 	if mojomFile.ModuleNamespace != nil {
 		return strings.Split(*mojomFile.ModuleNamespace, ".")
 	}
@@ -69,7 +69,7 @@ func GetNamespace(mojomFile *mojom_files.MojomFile) []string {
 }
 
 // Figure out what the file we're importing is in the file graph
-func fileFromImport(fileGraph *mojom_files.MojomFileGraph, srcRootPath, mojomImport string) mojom_files.MojomFile {
+func fileFromImport(fileGraph *fidl_files.FidlFileGraph, srcRootPath, mojomImport string) fidl_files.FidlFile {
 	// rebase path against srcRootPath
 	rel_path, err := filepath.Rel(srcRootPath, mojomImport)
 	if err != nil {
@@ -96,7 +96,7 @@ func RustModuleName(fileName string) string {
 
 // Given the current file and the imported file, we figure out what that Rust
 // import path looks like and return it.
-func rustImportPath(currentFile *mojom_files.MojomFile, importedFile *mojom_files.MojomFile) string {
+func rustImportPath(currentFile *fidl_files.FidlFile, importedFile *fidl_files.FidlFile) string {
 	imported_namespace := GetNamespace(importedFile)
 	current_namespace := GetNamespace(currentFile)
 	var limit int

@@ -29,8 +29,8 @@ type Import struct {
 }
 
 func (t *TmplFile) TypesPkg() string {
-	if t.PackageName != "mojom_types" {
-		return "mojom_types."
+	if t.PackageName != "fidl_types" {
+		return "fidl_types."
 	}
 	return ""
 }

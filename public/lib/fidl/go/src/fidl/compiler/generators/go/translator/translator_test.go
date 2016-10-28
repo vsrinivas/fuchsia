@@ -8,40 +8,40 @@ import (
 	"sort"
 	"testing"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 func TestTranslateMojomStruct(t *testing.T) {
 	field1Name := "f_uint32"
-	field1 := mojom_types.StructField{
-		DeclData:   &mojom_types.DeclarationData{ShortName: &field1Name},
-		Type:       &mojom_types.TypeSimpleType{Value: mojom_types.SimpleType_Uint32},
+	field1 := fidl_types.StructField{
+		DeclData:   &fidl_types.DeclarationData{ShortName: &field1Name},
+		Type:       &fidl_types.TypeSimpleType{Value: fidl_types.SimpleType_Uint32},
 		Offset:     4,
 		MinVersion: 10}
 
 	field2Name := "f_uint16"
-	field2 := mojom_types.StructField{
-		DeclData:   &mojom_types.DeclarationData{ShortName: &field2Name},
-		Type:       &mojom_types.TypeSimpleType{Value: mojom_types.SimpleType_Uint16},
+	field2 := fidl_types.StructField{
+		DeclData:   &fidl_types.DeclarationData{ShortName: &field2Name},
+		Type:       &fidl_types.TypeSimpleType{Value: fidl_types.SimpleType_Uint16},
 		Offset:     5,
 		MinVersion: 20}
 
 	structName := "foo"
-	s := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &structName},
+	s := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &structName},
 		// field2 must come before field1 to test that sorting happens as expected.
-		Fields: []mojom_types.StructField{field2, field1},
-		VersionInfo: &[]mojom_types.StructVersion{mojom_types.StructVersion{
+		Fields: []fidl_types.StructField{field2, field1},
+		VersionInfo: &[]fidl_types.StructVersion{fidl_types.StructVersion{
 			VersionNumber: 10,
 			NumBytes:      24,
 		}},
 	}
 
-	graph := mojom_files.MojomFileGraph{}
+	graph := fidl_files.FidlFileGraph{}
 	typeKey := "typeKey"
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		typeKey: &mojom_types.UserDefinedTypeStructType{s},
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		typeKey: &fidl_types.UserDefinedTypeStructType{s},
 	}
 
 	translator := NewTranslator(&graph)
@@ -59,13 +59,13 @@ func TestTranslateMojomStruct(t *testing.T) {
 }
 
 func TestFieldSerializationSorter(t *testing.T) {
-	fields := []mojom_types.StructField{
-		mojom_types.StructField{Offset: 3, Bit: -1},
-		mojom_types.StructField{Offset: 1, Bit: 2},
-		mojom_types.StructField{Offset: 2, Bit: -1},
-		mojom_types.StructField{Offset: 1, Bit: 1},
-		mojom_types.StructField{Offset: 1, Bit: 0},
-		mojom_types.StructField{Offset: 0, Bit: -1},
+	fields := []fidl_types.StructField{
+		fidl_types.StructField{Offset: 3, Bit: -1},
+		fidl_types.StructField{Offset: 1, Bit: 2},
+		fidl_types.StructField{Offset: 2, Bit: -1},
+		fidl_types.StructField{Offset: 1, Bit: 1},
+		fidl_types.StructField{Offset: 1, Bit: 0},
+		fidl_types.StructField{Offset: 0, Bit: -1},
 	}
 
 	sorter := structFieldSerializationSorter(fields)
@@ -84,27 +84,27 @@ func TestFieldSerializationSorter(t *testing.T) {
 
 func TestTranslateMojomUnion(t *testing.T) {
 	field1Name := "f_uint32"
-	field1 := mojom_types.UnionField{
-		DeclData: &mojom_types.DeclarationData{ShortName: &field1Name},
-		Type:     &mojom_types.TypeSimpleType{Value: mojom_types.SimpleType_Uint32},
+	field1 := fidl_types.UnionField{
+		DeclData: &fidl_types.DeclarationData{ShortName: &field1Name},
+		Type:     &fidl_types.TypeSimpleType{Value: fidl_types.SimpleType_Uint32},
 		Tag:      5}
 
 	field2Name := "f_uint16"
-	field2 := mojom_types.UnionField{
-		DeclData: &mojom_types.DeclarationData{ShortName: &field2Name},
-		Type:     &mojom_types.TypeSimpleType{Value: mojom_types.SimpleType_Uint16},
+	field2 := fidl_types.UnionField{
+		DeclData: &fidl_types.DeclarationData{ShortName: &field2Name},
+		Type:     &fidl_types.TypeSimpleType{Value: fidl_types.SimpleType_Uint16},
 		Tag:      6}
 
 	unionName := "foo"
-	union := mojom_types.MojomUnion{
-		DeclData: &mojom_types.DeclarationData{ShortName: &unionName},
-		Fields:   []mojom_types.UnionField{field1, field2},
+	union := fidl_types.FidlUnion{
+		DeclData: &fidl_types.DeclarationData{ShortName: &unionName},
+		Fields:   []fidl_types.UnionField{field1, field2},
 	}
 
-	graph := mojom_files.MojomFileGraph{}
+	graph := fidl_files.FidlFileGraph{}
 	typeKey := "typeKey"
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		typeKey: &mojom_types.UserDefinedTypeUnionType{union},
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		typeKey: &fidl_types.UserDefinedTypeUnionType{union},
 	}
 
 	translator := NewTranslator(&graph)
@@ -124,24 +124,24 @@ func TestTranslateMojomUnion(t *testing.T) {
 
 func TestTranslateMojomEnum(t *testing.T) {
 	value1Name := "ALPHA"
-	value1 := mojom_types.EnumValue{
-		DeclData: &mojom_types.DeclarationData{ShortName: &value1Name},
+	value1 := fidl_types.EnumValue{
+		DeclData: &fidl_types.DeclarationData{ShortName: &value1Name},
 		IntValue: int32(10)}
 
 	value2Name := "BETA"
-	value2 := mojom_types.EnumValue{
-		DeclData: &mojom_types.DeclarationData{ShortName: &value2Name},
+	value2 := fidl_types.EnumValue{
+		DeclData: &fidl_types.DeclarationData{ShortName: &value2Name},
 		IntValue: int32(20)}
 
 	enumName := "SomeEnum"
-	enum := mojom_types.MojomEnum{
-		DeclData: &mojom_types.DeclarationData{ShortName: &enumName},
-		Values:   []mojom_types.EnumValue{value1, value2}}
+	enum := fidl_types.FidlEnum{
+		DeclData: &fidl_types.DeclarationData{ShortName: &enumName},
+		Values:   []fidl_types.EnumValue{value1, value2}}
 
-	graph := mojom_files.MojomFileGraph{}
+	graph := fidl_files.FidlFileGraph{}
 	typeKey := "typeKey"
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		typeKey: &mojom_types.UserDefinedTypeEnumType{enum},
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		typeKey: &fidl_types.UserDefinedTypeEnumType{enum},
 	}
 
 	translator := NewTranslator(&graph)
@@ -158,32 +158,32 @@ func TestTranslateMojomEnum(t *testing.T) {
 func TestTranslateNestedMojomEnum(t *testing.T) {
 	structName := "foo"
 	structTypeKey := "structTypeKey"
-	s := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &structName},
+	s := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &structName},
 	}
 
 	value1Name := "ALPHA"
-	value1 := mojom_types.EnumValue{
-		DeclData: &mojom_types.DeclarationData{ShortName: &value1Name},
+	value1 := fidl_types.EnumValue{
+		DeclData: &fidl_types.DeclarationData{ShortName: &value1Name},
 		IntValue: int32(10)}
 
 	value2Name := "BETA"
-	value2 := mojom_types.EnumValue{
-		DeclData: &mojom_types.DeclarationData{ShortName: &value2Name},
+	value2 := fidl_types.EnumValue{
+		DeclData: &fidl_types.DeclarationData{ShortName: &value2Name},
 		IntValue: int32(20)}
 
 	enumName := "SomeEnum"
 	enumTypeKey := "enumTypeKey"
-	enum := mojom_types.MojomEnum{
-		DeclData: &mojom_types.DeclarationData{
+	enum := fidl_types.FidlEnum{
+		DeclData: &fidl_types.DeclarationData{
 			ShortName:        &enumName,
 			ContainerTypeKey: &structTypeKey},
-		Values: []mojom_types.EnumValue{value1, value2}}
+		Values: []fidl_types.EnumValue{value1, value2}}
 
-	graph := mojom_files.MojomFileGraph{}
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		enumTypeKey:   &mojom_types.UserDefinedTypeEnumType{enum},
-		structTypeKey: &mojom_types.UserDefinedTypeStructType{s},
+	graph := fidl_files.FidlFileGraph{}
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		enumTypeKey:   &fidl_types.UserDefinedTypeEnumType{enum},
+		structTypeKey: &fidl_types.UserDefinedTypeStructType{s},
 	}
 
 	translator := NewTranslator(&graph)
@@ -201,13 +201,13 @@ func TestTranslateMojomInterface(t *testing.T) {
 	interfaceTypeKey := "interfaceTypeKey"
 	interfaceName := "some_interface"
 
-	mojomInterface := mojom_types.MojomInterface{
-		DeclData: &mojom_types.DeclarationData{ShortName: &interfaceName},
+	mojomInterface := fidl_types.FidlInterface{
+		DeclData: &fidl_types.DeclarationData{ShortName: &interfaceName},
 	}
 
-	graph := mojom_files.MojomFileGraph{}
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		interfaceTypeKey: &mojom_types.UserDefinedTypeInterfaceType{mojomInterface},
+	graph := fidl_files.FidlFileGraph{}
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		interfaceTypeKey: &fidl_types.UserDefinedTypeInterfaceType{mojomInterface},
 	}
 
 	translator := NewTranslator(&graph)
@@ -219,15 +219,15 @@ func TestTranslateMojomInterface(t *testing.T) {
 }
 
 func TestTranslateMojomMethod(t *testing.T) {
-	params := mojom_types.MojomStruct{
-		VersionInfo: &[]mojom_types.StructVersion{mojom_types.StructVersion{
+	params := fidl_types.FidlStruct{
+		VersionInfo: &[]fidl_types.StructVersion{fidl_types.StructVersion{
 			VersionNumber: 10,
 			NumBytes:      16,
 		}},
 	}
 
-	responseParams := mojom_types.MojomStruct{
-		VersionInfo: &[]mojom_types.StructVersion{mojom_types.StructVersion{
+	responseParams := fidl_types.FidlStruct{
+		VersionInfo: &[]fidl_types.StructVersion{fidl_types.StructVersion{
 			VersionNumber: 10,
 			NumBytes:      16,
 		}},
@@ -236,8 +236,8 @@ func TestTranslateMojomMethod(t *testing.T) {
 	interfaceName := "someInterface"
 	interfaceTemplate := InterfaceTemplate{PrivateName: interfaceName}
 	methodName := "some_method"
-	mojomMethod := mojom_types.MojomMethod{
-		DeclData:       &mojom_types.DeclarationData{ShortName: &methodName},
+	mojomMethod := fidl_types.FidlMethod{
+		DeclData:       &fidl_types.DeclarationData{ShortName: &methodName},
 		Parameters:     params,
 		ResponseParams: &responseParams,
 	}

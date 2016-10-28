@@ -11,7 +11,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_types"
 )
 
 func (t *translator) goTypeName(typeKey string) string {
@@ -25,7 +25,7 @@ func (t *translator) goTypeName(typeKey string) string {
 	// TODO(azani): Resolve conflicts somehow.
 	goType := formatName(shortName)
 
-	if e, ok := userDefinedType.(*mojom_types.UserDefinedTypeEnumType); ok {
+	if e, ok := userDefinedType.(*fidl_types.UserDefinedTypeEnumType); ok {
 		if e.Value.DeclData.ContainerTypeKey != nil {
 			containerName := t.goTypeName(*e.Value.DeclData.ContainerTypeKey)
 			goType = fmt.Sprintf("%s_%s", containerName, goType)
@@ -61,7 +61,7 @@ func fileNameToPackageName(fileName string) string {
 	return strings.Replace(strings.Replace(base[:len(base)-len(ext)], "-", "_", -1), ".", "_", -1)
 }
 
-func (t *translator) importMojomFile(fileName string) {
+func (t *translator) importFidlFile(fileName string) {
 	pkgName := fileNameToPackageName(fileName)
 	pkgPath, err := filepath.Rel(t.Config.SrcRootPath(), fileName)
 	if err != nil {
@@ -71,22 +71,22 @@ func (t *translator) importMojomFile(fileName string) {
 	t.imports[pkgName] = pkgPath
 }
 
-func userDefinedTypeDeclData(userDefinedType mojom_types.UserDefinedType) *mojom_types.DeclarationData {
+func userDefinedTypeDeclData(userDefinedType fidl_types.UserDefinedType) *fidl_types.DeclarationData {
 	switch u := userDefinedType.(type) {
-	case *mojom_types.UserDefinedTypeEnumType:
+	case *fidl_types.UserDefinedTypeEnumType:
 		return u.Value.DeclData
-	case *mojom_types.UserDefinedTypeStructType:
+	case *fidl_types.UserDefinedTypeStructType:
 		return u.Value.DeclData
-	case *mojom_types.UserDefinedTypeUnionType:
+	case *fidl_types.UserDefinedTypeUnionType:
 		return u.Value.DeclData
-	case *mojom_types.UserDefinedTypeInterfaceType:
+	case *fidl_types.UserDefinedTypeInterfaceType:
 		return u.Value.DeclData
 	}
 	panic("Non-handled mojom UserDefinedType. This should never happen.")
 }
 
 // userDefinedTypeShortName extracts the ShortName from a user-defined type.
-func userDefinedTypeShortName(userDefinedType mojom_types.UserDefinedType) string {
+func userDefinedTypeShortName(userDefinedType fidl_types.UserDefinedType) string {
 	return *userDefinedTypeDeclData(userDefinedType).ShortName
 }
 

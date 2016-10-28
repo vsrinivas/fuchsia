@@ -7,8 +7,8 @@ package translator
 import (
 	"testing"
 
-	"mojom/generated/mojom_files"
-	"mojom/generated/mojom_types"
+	"fidl/compiler/generated/fidl_files"
+	"fidl/compiler/generated/fidl_types"
 )
 
 func TestFormatName(t *testing.T) {
@@ -46,14 +46,14 @@ func TestPrivateName(t *testing.T) {
 
 func TestGoTypeName(t *testing.T) {
 	structName := "foo"
-	s := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &structName},
+	s := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &structName},
 	}
 
-	graph := mojom_files.MojomFileGraph{}
+	graph := fidl_files.FidlFileGraph{}
 	typeKey := "typeKey"
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		typeKey: &mojom_types.UserDefinedTypeStructType{s},
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		typeKey: &fidl_types.UserDefinedTypeStructType{s},
 	}
 
 	translator := NewTranslator(&graph)
@@ -64,23 +64,23 @@ func TestGoTypeName(t *testing.T) {
 func TestGoTypeNameNestedEnum(t *testing.T) {
 	structName := "foo"
 	structTypeKey := "structTypeKey"
-	s := mojom_types.MojomStruct{
-		DeclData: &mojom_types.DeclarationData{ShortName: &structName},
+	s := fidl_types.FidlStruct{
+		DeclData: &fidl_types.DeclarationData{ShortName: &structName},
 	}
 
 	enumName := "some_enum"
 	enumTypeKey := "enumTypeKey"
-	e := mojom_types.MojomEnum{
-		DeclData: &mojom_types.DeclarationData{
+	e := fidl_types.FidlEnum{
+		DeclData: &fidl_types.DeclarationData{
 			ShortName:        &enumName,
 			ContainerTypeKey: &structTypeKey,
 		},
 	}
 
-	graph := mojom_files.MojomFileGraph{}
-	graph.ResolvedTypes = map[string]mojom_types.UserDefinedType{
-		structTypeKey: &mojom_types.UserDefinedTypeStructType{s},
-		enumTypeKey:   &mojom_types.UserDefinedTypeEnumType{e},
+	graph := fidl_files.FidlFileGraph{}
+	graph.ResolvedTypes = map[string]fidl_types.UserDefinedType{
+		structTypeKey: &fidl_types.UserDefinedTypeStructType{s},
+		enumTypeKey:   &fidl_types.UserDefinedTypeEnumType{e},
 	}
 
 	translator := NewTranslator(&graph)

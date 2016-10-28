@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"text/template"
 
-	"mojom/generators/go/gofmt"
-	"mojom/generators/go/translator"
+	"fidl/compiler/generators/go/gofmt"
+	"fidl/compiler/generators/go/translator"
 )
 
 // goFileTmpl is the template object for a go file.
@@ -40,7 +40,7 @@ func init() {
 	goFileTmpl = template.New("GoFileTemplate")
 
 	goFileTmpl.Funcs(template.FuncMap{
-		"TypesPkg":    func() string { return "mojom_types." },
+		"TypesPkg":    func() string { return "fidl_types." },
 		"DescPkg":     func() string { return "service_describer." },
 		"GenTypeInfo": func() bool { return false },
 		"IsUnionField": func(templateType interface{}) bool {
