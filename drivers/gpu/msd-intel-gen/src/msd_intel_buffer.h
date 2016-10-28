@@ -37,7 +37,10 @@ public:
     CachingType caching_type() { return caching_type_; }
 
     std::shared_ptr<GpuMapping> ShareBufferMapping(std::unique_ptr<GpuMapping> mapping);
-    std::shared_ptr<GpuMapping> FindBufferMapping(AddressSpaceId id);
+
+    // Returns exact match mappings only.
+    std::shared_ptr<GpuMapping> FindBufferMapping(AddressSpaceId id, uint64_t offset,
+                                                  uint64_t length, uint32_t alignment);
 
     void RemoveExpiredMappings();
 

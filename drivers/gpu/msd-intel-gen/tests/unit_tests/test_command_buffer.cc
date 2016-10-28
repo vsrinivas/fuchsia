@@ -49,9 +49,9 @@ public:
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
         auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index; // dont judge
-        auto batch_buf = cmd_buf_->exec_resources_[batch_buf_index];
+        auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
         void* batch_buf_virt_addr = 0;
-        ASSERT_TRUE(batch_buf->platform_buffer()->MapCpu(&batch_buf_virt_addr));
+        ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_buf_virt_addr));
         auto batch_buf_data = (uint32_t*)batch_buf_virt_addr;
 
         // Clear the relocations to be sure
@@ -124,10 +124,10 @@ public:
         *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
         auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index;
-        auto batch_buf = cmd_buf_->exec_resources_[batch_buf_index];
+        auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
         void* batch_cpu_addr;
 
-        ASSERT_TRUE(batch_buf->platform_buffer()->MapCpu(&batch_cpu_addr));
+        ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
         uint32_t expected_val = 0xdeadbeef;
         uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 

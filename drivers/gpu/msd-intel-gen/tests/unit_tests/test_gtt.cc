@@ -165,7 +165,7 @@ public:
         EXPECT_EQ(ret, true);
 
         // Try to insert without pinning
-        ret = gtt->Insert(addr[0], buffer[0].get(), CACHING_NONE);
+        ret = gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
         EXPECT_EQ(ret, false);
 
         ret = buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE);
@@ -174,21 +174,21 @@ public:
         EXPECT_EQ(ret, true);
 
         // Mismatch addr and buffer
-        ret = gtt->Insert(addr[1], buffer[0].get(), CACHING_NONE);
+        ret = gtt->Insert(addr[1], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
         EXPECT_EQ(ret, false);
 
         // Totally bogus addr
-        ret = gtt->Insert(0xdead1000, buffer[0].get(), CACHING_NONE);
+        ret = gtt->Insert(0xdead1000, buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
         EXPECT_EQ(ret, false);
 
         // Correct
-        ret = gtt->Insert(addr[0], buffer[0].get(), CACHING_NONE);
+        ret = gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
         EXPECT_EQ(ret, true);
 
         check_pte_entries(platform_device->mmio(), buffer[0].get(), addr[0], CACHING_NONE);
 
         // Also correct
-        ret = gtt->Insert(addr[1], buffer[1].get(), CACHING_NONE);
+        ret = gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE);
         EXPECT_EQ(ret, true);
 
         check_pte_entries(platform_device->mmio(), buffer[1].get(), addr[1], CACHING_NONE);

@@ -21,10 +21,10 @@ class CommandBuffer : public MappedBatch {
 public:
     // Takes a weak reference on the context which it locks for the duration of its execution
     static std::unique_ptr<CommandBuffer> Create(magma_system_command_buffer* cmd_buf,
-                                                 msd_buffer** exec_resources,
+                                                 msd_buffer** exec_buffers,
                                                  std::weak_ptr<ClientContext> context)
     {
-        return std::unique_ptr<CommandBuffer>(new CommandBuffer(cmd_buf, exec_resources, context));
+        return std::unique_ptr<CommandBuffer>(new CommandBuffer(cmd_buf, exec_buffers, context));
     }
 
     ~CommandBuffer();
@@ -59,13 +59,20 @@ private:
     // cmd_buf_ and patches the correct virtual addresses into the corresponding buffers
     bool PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings);
 
+    struct ExecResource {
+        std::shared_ptr<MsdIntelBuffer> buffer;
+        uint64_t offset;
+        uint64_t length;
+    };
+
     // utility function used by PatchRelocations to perform the actual relocation for a single entry
-    static bool PatchRelocation(magma_system_relocation_entry* relocation, MsdIntelBuffer* resource,
-                                gpu_addr_t target_gpu_address);
+    static bool PatchRelocation(magma_system_relocation_entry* relocation,
+                                ExecResource* exec_resource, gpu_addr_t target_gpu_address);
 
     // TODO (MA-70) cmd_buf should be uniquely owned here
     magma_system_command_buffer* cmd_buf_;
-    std::vector<std::shared_ptr<MsdIntelBuffer>> exec_resources_;
+
+    std::vector<ExecResource> exec_resources_;
     std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;
     std::weak_ptr<ClientContext> context_;
 

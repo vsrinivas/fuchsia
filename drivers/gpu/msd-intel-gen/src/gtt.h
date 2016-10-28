@@ -31,7 +31,8 @@ public:
     bool Free(uint64_t addr) override;
 
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+                CachingType caching_type) override;
 
 private:
     RegisterIo* reg_io() { return owner_->register_io(); }

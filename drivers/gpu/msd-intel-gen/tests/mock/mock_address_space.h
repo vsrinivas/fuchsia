@@ -21,7 +21,8 @@ public:
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
     bool Free(uint64_t addr) override;
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+                CachingType caching_type) override;
 
     bool is_allocated(uint64_t addr)
     {

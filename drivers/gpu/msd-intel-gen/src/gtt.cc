@@ -170,21 +170,26 @@ static inline void unmap(std::vector<uint64_t>& array, magma::PlatformBuffer* bu
     }
 }
 
-bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType caching_type)
+bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
+                 CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%llx", addr);
 
-    uint64_t length = buffer->size();
+    DASSERT(magma::is_page_aligned(offset));
+    DASSERT(magma::is_page_aligned(length));
 
     size_t allocated_length;
     if (!allocator_->GetSize(addr, &allocated_length))
         return DRETF(false, "couldn't get allocated length for addr");
 
     if (length != allocated_length)
-        return DRETF(false, "allocated length %lld doesn't match length %lld", allocated_length,
-                     length);
+        return DRETF(false, "allocated length (0x%lx) doesn't match length (0x%x)",
+                     allocated_length, length);
 
+    uint32_t start_page_index = offset / PAGE_SIZE;
     uint32_t num_pages = length / PAGE_SIZE;
+
+    DLOG("start_page_index 0x%x num_pages 0x%x", start_page_index, num_pages);
 
     uint64_t first_entry = addr >> PAGE_SHIFT;
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
@@ -194,9 +199,9 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
 
     for (unsigned int i = 0; i < num_pages; i++) {
         uint64_t bus_addr;
-        if (!buffer->MapPageBus(i, &bus_addr)) {
+        if (!buffer->MapPageBus(start_page_index + i, &bus_addr)) {
             unmap(bus_addr_array, buffer);
-            return DRETF(false, "failed obtaining page bus addresses");
+            return DRETF(false, "failed obtaining bus address for page %u", start_page_index + i);
         }
         bus_addr_array.push_back(bus_addr);
     }
@@ -214,9 +219,6 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, CachingType cachi
             DLOG("Mismatch posting read: 0x%0llx != 0x%0llx", readback, expected);
             DASSERT(false);
         }
-    } else {
-        // Avoid compiler warnings
-        (void)readback;
     }
 
 // TODO(MA-36) - gtt - remove GFX_FLSH_CNTL_GEN6 because not documented for bdw

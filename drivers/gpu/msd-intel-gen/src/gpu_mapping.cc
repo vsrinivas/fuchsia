@@ -7,15 +7,16 @@
 #include "msd_intel_buffer.h"
 
 GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
-                       std::shared_ptr<MsdIntelBuffer> buffer, gpu_addr_t gpu_addr)
-    : address_space_(address_space), buffer_(buffer), address_space_id_(address_space->id()),
-      gpu_addr_(gpu_addr)
+                       std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length,
+                       gpu_addr_t gpu_addr)
+    : address_space_(address_space), buffer_(buffer), offset_(offset), length_(length),
+      address_space_id_(address_space->id()), gpu_addr_(gpu_addr)
 {
 }
 
 GpuMapping::~GpuMapping()
 {
-    if (!buffer_->platform_buffer()->UnpinPages(0, buffer_->platform_buffer()->size() / PAGE_SIZE))
+    if (!buffer_->platform_buffer()->UnpinPages(offset_ / PAGE_SIZE, length_ / PAGE_SIZE))
         DLOG("failed to unpin pages");
 
     buffer_->RemoveExpiredMappings();

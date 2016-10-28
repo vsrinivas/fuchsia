@@ -84,7 +84,11 @@ private:
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
     {
         RequestMaxFreq();
-        return render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf));
+
+        if (!render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf)))
+            return DRETF(false, "engine execute failed");
+
+        return true;
     }
 
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;

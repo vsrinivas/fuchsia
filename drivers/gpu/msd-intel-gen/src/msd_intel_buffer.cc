@@ -42,12 +42,18 @@ std::shared_ptr<GpuMapping> MsdIntelBuffer::ShareBufferMapping(std::unique_ptr<G
     return shared_mapping;
 }
 
-std::shared_ptr<GpuMapping> MsdIntelBuffer::FindBufferMapping(AddressSpaceId id)
+std::shared_ptr<GpuMapping> MsdIntelBuffer::FindBufferMapping(AddressSpaceId id, uint64_t offset,
+                                                              uint64_t length, uint32_t alignment)
 {
     for (auto weak_mapping : mapping_list_) {
         std::shared_ptr<GpuMapping> shared_mapping = weak_mapping.lock();
-        DASSERT(shared_mapping);
-        if (shared_mapping->address_space_id() == id)
+        if (!shared_mapping)
+            continue;
+
+        gpu_addr_t gpu_addr = shared_mapping->gpu_addr();
+        if (shared_mapping->address_space_id() == id && shared_mapping->offset() == offset &&
+            shared_mapping->length() == length &&
+            (alignment == 0 || magma::round_up(gpu_addr, alignment) == gpu_addr))
             return shared_mapping;
     }
 
