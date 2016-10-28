@@ -1171,43 +1171,54 @@ static const char *thread_state_to_str(enum thread_state state)
 /**
  * @brief  Dump debugging info about the specified thread.
  */
-void dump_thread(thread_t *t)
+void dump_thread(thread_t *t, bool full_dump)
 {
+    if (t->magic != THREAD_MAGIC) {
+        dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
+    }
+
     lk_bigtime_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
         runtime += current_time_hires() - t->last_started_running_ns;
     }
 
-    dprintf(INFO, "dump_thread: t %p (%s)\n", t, t->name);
+    if (full_dump) {
+        dprintf(INFO, "dump_thread: t %p (%s)\n", t, t->name);
 #if WITH_SMP
-    dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
-            thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_quantum);
+        dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
+                thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_quantum);
 #else
-    dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
-            thread_state_to_str(t->state), t->priority, t->remaining_quantum);
+        dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
+                thread_state_to_str(t->state), t->priority, t->remaining_quantum);
 #endif
-    dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
-            runtime, runtime / 1000000000);
-    dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
-            (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
-            (t->flags & THREAD_FLAG_FREE_STACK) ? "Fs" :"",
-            (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" :"",
-            (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" :"",
-            (t->flags & THREAD_FLAG_IDLE) ? "Id" :"",
-            (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" :"");
-    dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d\n",
-            t->blocking_wait_queue, t->blocked_status, t->interruptable);
+        dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
+                runtime, runtime / 1000000000);
+        dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
+        dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s%s%s\n", t->entry, t->arg, t->flags,
+                (t->flags & THREAD_FLAG_DETACHED) ? "Dt" :"",
+                (t->flags & THREAD_FLAG_FREE_STACK) ? "Fs" :"",
+                (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" :"",
+                (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" :"",
+                (t->flags & THREAD_FLAG_IDLE) ? "Id" :"",
+                (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" :"");
+        dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d\n",
+                t->blocking_wait_queue, t->blocked_status, t->interruptable);
 #if WITH_KERNEL_VM
-    dprintf(INFO, "\taspace %p\n", t->aspace);
+        dprintf(INFO, "\taspace %p\n", t->aspace);
 #endif
-    arch_dump_thread(t);
+        dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n",
+                t->user_thread, t->user_pid, t->user_tid);
+        arch_dump_thread(t);
+    } else {
+        printf("thr %p st %4s pri %2d pid %" PRIu64 " tid %" PRIu64 " (%s)\n",
+            t, thread_state_to_str(t->state), t->priority, t->user_pid, t->user_tid, t->name);
+    }
 }
 
 /**
  * @brief  Dump debugging info about all threads
  */
-void dump_all_threads(void)
+void dump_all_threads(bool full)
 {
     thread_t *t;
 
@@ -1218,7 +1229,7 @@ void dump_all_threads(void)
             hexdump(t, sizeof(thread_t));
             break;
         }
-        dump_thread(t);
+        dump_thread(t, full);
     }
     THREAD_UNLOCK(state);
 }

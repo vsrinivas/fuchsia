@@ -137,10 +137,8 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
     // mark ourselves as running and resume the kernel thread
     SetState(State::RUNNING);
 
-#if WITH_LIB_KTRACE
     thread_.user_tid = dispatcher_->get_koid();
     thread_.user_pid = process_->get_koid();
-#endif
     thread_resume(&thread_);
 
     return NO_ERROR;

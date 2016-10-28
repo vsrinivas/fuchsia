@@ -187,7 +187,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t *frame, ulong cr2)
 
     uint32_t error_code = frame->err_code;
 
-    dump_thread(get_current_thread());
+    dump_thread(get_current_thread(), true);
 
     if (error_code & PFEX_U) {
         // User mode page fault

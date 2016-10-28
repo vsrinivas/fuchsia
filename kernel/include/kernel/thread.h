@@ -96,10 +96,8 @@ typedef struct thread {
 
     /* pointer to user thread if one exists for this thread */
     void* user_thread;
-#if WITH_LIB_KTRACE
     uint64_t user_tid;
     uint64_t user_pid;
-#endif
 
     /* accounting information */
     lk_bigtime_t last_started_running_ns;
@@ -213,9 +211,9 @@ void thread_kill(thread_t *t, bool block);
 /* process pending signals, may never return because of kill signal */
 void thread_process_pending_signals(void);
 
-void dump_thread(thread_t *t);
+void dump_thread(thread_t *t, bool full);
 void arch_dump_thread(thread_t *t);
-void dump_all_threads(void);
+void dump_all_threads(bool full);
 
 /* scheduler routines */
 void thread_yield(void);             /* give up the cpu and time slice voluntarily */

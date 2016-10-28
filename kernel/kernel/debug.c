@@ -29,14 +29,14 @@
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
-static int cmd_threads(int argc, const cmd_args *argv);
+static int cmd_thread(int argc, const cmd_args *argv);
 static int cmd_threadstats(int argc, const cmd_args *argv);
 static int cmd_threadload(int argc, const cmd_args *argv);
 static int cmd_kill(int argc, const cmd_args *argv);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
-STATIC_COMMAND_MASKED("threads", "list kernel threads", &cmd_threads, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_MASKED("thread", "list kernel threads with options", &cmd_thread, CMD_AVAIL_ALWAYS)
 #endif
 #if THREAD_STATS
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
@@ -46,10 +46,26 @@ STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
-static int cmd_threads(int argc, const cmd_args *argv)
+static int cmd_thread(int argc, const cmd_args *argv)
 {
-    printf("thread list:\n");
-    dump_all_threads();
+    if (argc < 2) {
+        printf("not enough arguments\n");
+usage:
+        printf("%s list\n", argv[0].str);
+        printf("%s list_full\n", argv[0].str);
+        return -1;
+    }
+
+    if (!strcmp(argv[1].str, "list")) {
+        printf("thread list:\n");
+        dump_all_threads(false);
+    } else if (!strcmp(argv[1].str, "list_full")) {
+        printf("thread list:\n");
+        dump_all_threads(true);
+    } else {
+        printf("invalid args\n");
+        goto usage;
+    }
 
     return 0;
 }
