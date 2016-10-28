@@ -94,16 +94,16 @@ void output_frame_arm64(const arm64_exc_data_t& exc_data,
            regs.pc, regs.cpsr);
 };
 
-void dump_memory(mx_handle_t proc, uintptr_t start, uint32_t len) {
+void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     // Make sure we're not allocating an excessive amount of stack.
     DEBUG_ASSERT(len <= kMemoryDumpSize);
 
     uint8_t buf[len];
-    auto res = mx_debug_read_memory(proc, start, len, buf);
+    auto res = mx_process_read_memory(proc, start, buf, len, &len);
     if (res < 0) {
-        printf("failed reading %p memory; error : %" PRIdPTR "\n", (void*)start, res);
-    } else if (res != 0) {
-        hexdump(buf, (uint32_t)res);
+        printf("failed reading %p memory; error : %d\n", (void*)start, res);
+    } else if (len != 0) {
+        hexdump(buf, len);
     }
     free(buf);
 }

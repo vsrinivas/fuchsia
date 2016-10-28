@@ -52,16 +52,17 @@ tdep_get_elf_image (struct elf_image *ei, pid_t pid, unw_word_t ip,
 static mx_status_t
 read_mem (mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len)
 {
-  mx_ssize_t bytes_read = mx_debug_read_memory (h, vaddr, len, ptr);
-  if (bytes_read < 0)
+  size_t actual;
+  mx_status_t status = mx_process_read_memory (h, vaddr, ptr, len, &actual);
+  if (status < 0)
   {
-    Debug (3, "read_mem @0x%" PRIxPTR " FAILED %d\n", vaddr, (int) bytes_read);
-    return (mx_status_t) bytes_read;
+    Debug (3, "read_mem @0x%" PRIxPTR " FAILED %d\n", vaddr, status);
+    return status;
   }
-  if (bytes_read != (mx_ssize_t) len)
+  if (len != actual)
   {
     // TODO: Use %zd when MG-164 is fixed.
-    Debug (3, "read_mem @0x%" PRIxPTR " FAILED, short read %ld\n", vaddr, (long) bytes_read);
+    Debug (3, "read_mem @0x%" PRIxPTR " FAILED, short read %zd\n", vaddr, actual);
     return ERR_IO;
   }
   return NO_ERROR;

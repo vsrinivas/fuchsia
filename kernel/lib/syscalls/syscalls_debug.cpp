@@ -134,7 +134,9 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     return dest_hv;
 }
 
-mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, user_ptr<void> buffer) {
+mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
+                                    user_ptr<void> buffer,
+                                    mx_size_t len, user_ptr<mx_size_t> actual) {
     if (!buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)
@@ -169,13 +171,16 @@ mx_ssize_t sys_debug_read_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t le
 
     status_t st = vmo->ReadUser(buffer, offset, len, &read);
 
-    if (st < 0)
-        return st;
-
-    return static_cast<mx_ssize_t>(read);
+    if (st == NO_ERROR) {
+        if (actual.copy_to_user(static_cast<mx_size_t>(read)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+    return st;
 }
 
-mx_ssize_t sys_debug_write_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t len, user_ptr<const void> buffer) {
+mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
+                                     user_ptr<const void> buffer,
+                                     mx_size_t len, user_ptr<mx_size_t> actual) {
     if (!buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugWriteBlock)
@@ -205,10 +210,11 @@ mx_ssize_t sys_debug_write_memory(mx_handle_t proc, uintptr_t vaddr, mx_size_t l
 
     status_t st = vmo->WriteUser(buffer, offset, len, &written);
 
-    if (st < 0)
-        return st;
-
-    return static_cast<mx_ssize_t>(written);
+    if (st == NO_ERROR) {
+        if (actual.copy_to_user(static_cast<mx_size_t>(written)) != NO_ERROR)
+            return ERR_INVALID_ARGS;
+    }
+    return st;
 }
 
 mx_ssize_t sys_ktrace_read(mx_handle_t handle, void* ptr, uint32_t off, uint32_t len) {

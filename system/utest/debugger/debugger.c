@@ -278,20 +278,20 @@ static void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t valu
     free(buf);
 }
 
-static mx_ssize_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_size_t buf_size)
+static mx_size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_size_t len)
 {
-    mx_ssize_t bytes_read = mx_debug_read_memory(proc, vaddr, buf_size, buf);
-    if (bytes_read < 0)
-        tu_fatal("read_inferior_memory", bytes_read);
-    return bytes_read;
+    mx_status_t status = mx_process_read_memory(proc, vaddr, buf, len, &len);
+    if (status < 0)
+        tu_fatal("read_inferior_memory", status);
+    return len;
 }
 
-static mx_ssize_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, mx_size_t buf_size)
+static mx_size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, mx_size_t len)
 {
-    mx_ssize_t bytes_written = mx_debug_write_memory(proc, vaddr, buf_size, buf);
-    if (bytes_written < 0)
-        tu_fatal("write_inferior_memory", bytes_written);
-    return bytes_written;
+    mx_status_t status = mx_process_write_memory(proc, vaddr, buf, len, &len);
+    if (status < 0)
+        tu_fatal("write_inferior_memory", status);
+    return len;
 }
 
 static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)

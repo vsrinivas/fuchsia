@@ -78,13 +78,14 @@ mx_koid_t get_koid(mx_handle_t handle) {
 }
 
 mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {
-    mx_ssize_t bytes_read = mx_debug_read_memory(h, vaddr, len, ptr);
-    if (bytes_read < 0) {
-        printf("read_mem @%p FAILED %d\n", (void*) vaddr, (int) bytes_read);
-        return (mx_status_t) bytes_read;
+    size_t actual;
+    mx_status_t status = mx_process_read_memory(h, vaddr, ptr, len, &actual);
+    if (status < 0) {
+        printf("read_mem @%p FAILED %zd\n", (void*) vaddr, len);
+        return status;
     }
-    if (bytes_read != (mx_ssize_t) len) {
-        printf("read_mem @%p FAILED, short read %ld\n", (void*) vaddr, (long) bytes_read);
+    if (len != actual) {
+        printf("read_mem @%p FAILED, short read %zd\n", (void*) vaddr, len);
         return ERR_IO;
     }
     return NO_ERROR;

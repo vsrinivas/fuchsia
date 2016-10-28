@@ -55,4 +55,26 @@ static inline mx_time_t mx_current_time(void) {
     return mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
+#define mx_debug_read_memory _mx_debug_read_memory
+static inline mx_ssize_t _mx_debug_read_memory(mx_handle_t proc, uintptr_t vaddr,
+                                               mx_size_t len, void* buffer) {
+    mx_status_t status = mx_process_read_memory(proc, vaddr, buffer, len, &len);
+    if (status < 0) {
+        return status;
+    } else {
+        return len;
+    }
+}
+
+#define mx_debug_write_memory _mx_debug_write_memory
+static inline mx_ssize_t _mx_debug_write_memory(mx_handle_t proc, uintptr_t vaddr,
+                                                mx_size_t len, const void* buffer) {
+    mx_status_t status = mx_process_write_memory(proc, vaddr, buffer, len, &len);
+    if (status < 0) {
+        return status;
+    } else {
+        return len;
+    }
+}
+
 __END_CDECLS

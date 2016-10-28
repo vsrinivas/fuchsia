@@ -51,10 +51,10 @@ MAGENTA_SYSCALL_DEF(3, 3, 7, mx_status_t, debug_send_command, mx_handle_t, const
 
 // Temporary syscall to aid debuggers
 MAGENTA_SYSCALL_DEF(2, 2, 8, mx_handle_t, debug_transfer_handle, mx_handle_t proc, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(4, 4, 9, mx_ssize_t, debug_read_memory, mx_handle_t proc, uintptr_t vaddr,
-                    mx_size_t len, USER_PTR(void) buffer)
-MAGENTA_SYSCALL_DEF(4, 4, 10, mx_ssize_t, debug_write_memory, mx_handle_t proc, uintptr_t vaddr,
-                    mx_size_t len, USER_PTR(const void) buffer)
+MAGENTA_SYSCALL_DEF(5, 5, 9, mx_status_t, process_read_memory, mx_handle_t proc, uintptr_t vaddr,
+                    USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
+MAGENTA_SYSCALL_DEF(5, 5, 10, mx_status_t, process_write_memory, mx_handle_t proc, uintptr_t vaddr,
+                    USER_PTR(const void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
 
 // Tracing
 MAGENTA_SYSCALL_DEF(4, 4, 11, mx_ssize_t, ktrace_read, mx_handle_t handle, void* ptr, uint32_t off, uint32_t len)
