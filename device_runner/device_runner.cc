@@ -53,10 +53,15 @@ class DeviceRunnerImpl : public DeviceRunner {
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
     ConnectToService(shell_, "mojo:story_manager", GetProxy(&story_manager_));
+
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
-    // |app_id| is populated by |story_manager| so leaving it empty here.
-    identity->app_id = Array<uint8_t>::New(0);
+    // |app_id| must not be null so it will pass mojo validation and must not
+    // be empty or we'll get ledger::Status::AUTHENTICATION_ERROR when
+    // StoryManagerImpl calls GetLedger().
+    // TODO(jimbe): When there's support from the Ledger, open the user here,
+    // then pass down a handle that is restricted from opening other users.
+    identity->app_id = Array<uint8_t>::New(1);
     story_manager_->Launch(
         std::move(identity), std::move(view_owner_request),
         [](bool success) { FTL_DLOG(INFO) << "story-manager launched."; });

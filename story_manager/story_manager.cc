@@ -45,6 +45,37 @@ using mojo::StrongBinding;
 using mojo::StructPtr;
 using mojo::String;
 
+namespace {
+
+std::string LedgerStatusToString(ledger::Status status) {
+  switch (status) {
+    case ledger::Status::OK:
+      return "OK";
+    case ledger::Status::AUTHENTICATION_ERROR:
+      return "AUTHENTICATION_ERROR";
+    case ledger::Status::PAGE_NOT_FOUND:
+      return "PAGE_NOT_FOUND";
+    case ledger::Status::KEY_NOT_FOUND:
+      return "KEY_NOT_FOUND";
+    case ledger::Status::REFERENCE_NOT_FOUND:
+      return "REFERENCE_NOT_FOUND";
+    case ledger::Status::IO_ERROR:
+      return "IO_ERROR";
+    case ledger::Status::TRANSACTION_ALREADY_IN_PROGRESS:
+      return "TRANSACTION_ALREADY_IN_PROGRESS";
+    case ledger::Status::NO_TRANSACTION_IN_PROGRESS:
+      return "NO_TRANSACTION_IN_PROGRESS";
+    case ledger::Status::INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
+    case ledger::Status::UNKNOWN_ERROR:
+      return "UNKNOWN_ERROR";
+    default:
+      return "(unknown error)";
+  }
+};
+
+}  // namespace
+
 class StoryManagerImpl : public StoryManager {
  public:
   StoryManagerImpl(InterfaceHandle<ApplicationConnector> app_connector,
@@ -69,7 +100,8 @@ class StoryManagerImpl : public StoryManager {
         ](ledger::Status status,
                              InterfaceHandle<ledger::Ledger> ledger) mutable {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "story-manager's connection to ledger failed.";
+            FTL_LOG(ERROR) << "story-manager's connection to ledger failed: "
+                           << LedgerStatusToString(status) << ".";
             callback.Run(false);
             return;
           }
