@@ -65,9 +65,11 @@ mojo::Array<mojo::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   mojo::Array<uint8_t> prefix) {
   mojo::Array<mojo::Array<uint8_t>> result;
   (*snapshot)->GetKeys(
-      std::move(prefix),
-      [&result](Status status, mojo::Array<mojo::Array<uint8_t>> keys) {
+      std::move(prefix), nullptr,
+      [&result](Status status, mojo::Array<mojo::Array<uint8_t>> keys,
+                mojo::Array<uint8_t> next_token) {
         EXPECT_EQ(Status::OK, status);
+        EXPECT_TRUE(next_token.is_null());
         result = std::move(keys);
       });
   EXPECT_TRUE(snapshot->WaitForIncomingResponse());
@@ -78,9 +80,11 @@ mojo::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          mojo::Array<uint8_t> prefix) {
   mojo::Array<EntryPtr> result;
   (*snapshot)->GetEntries(
-      std::move(prefix),
-      [&result](Status status, mojo::Array<EntryPtr> entries) {
+      std::move(prefix), nullptr,
+      [&result](Status status, mojo::Array<EntryPtr> entries,
+                mojo::Array<uint8_t> next_token) {
         EXPECT_EQ(Status::OK, status);
+        EXPECT_TRUE(next_token.is_null());
         result = std::move(entries);
       });
   EXPECT_TRUE(snapshot->WaitForIncomingResponse());
@@ -479,8 +483,11 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
 
   // Get keys matching the prefix "5".
   snapshot->GetEntries(mojo::Array<uint8_t>::From(std::vector<uint8_t>{5}),
-                       [&entries](Status status, mojo::Array<EntryPtr> e) {
+                       nullptr,
+                       [&entries](Status status, mojo::Array<EntryPtr> e,
+                                  mojo::Array<uint8_t> next_token) {
                          EXPECT_EQ(Status::OK, status);
+                         EXPECT_TRUE(next_token.is_null());
                          entries = std::move(e);
                        });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());

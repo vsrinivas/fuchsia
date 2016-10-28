@@ -451,12 +451,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   mojo::Array<EntryPtr> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-      Status status, mojo::Array<EntryPtr> entries) {
+      Status status, mojo::Array<EntryPtr> entries,
+      mojo::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
     actual_entries = std::move(entries);
     message_loop_.QuitNow();
   };
-  snapshot->GetEntries(nullptr, callback_getentries);
+  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   message_loop_.Run();
 
   EXPECT_EQ(1u, actual_entries.size());
@@ -495,12 +497,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 
   mojo::Array<mojo::Array<uint8_t>> actual_keys;
   auto callback_getkeys = [this, &actual_keys](
-      Status status, mojo::Array<mojo::Array<uint8_t>> keys) {
+      Status status, mojo::Array<mojo::Array<uint8_t>> keys,
+      mojo::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
     actual_keys = std::move(keys);
     message_loop_.QuitNow();
   };
-  snapshot->GetKeys(nullptr, callback_getkeys);
+  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
   message_loop_.Run();
 
   EXPECT_EQ(2u, actual_keys.size());

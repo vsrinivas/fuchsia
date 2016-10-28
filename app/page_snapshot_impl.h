@@ -23,8 +23,10 @@ class PageSnapshotImpl : public PageSnapshot {
  private:
   // PageSnapshot:
   void GetEntries(mojo::Array<uint8_t> key_prefix,
+                  mojo::Array<uint8_t> token,
                   const GetEntriesCallback& callback) override;
   void GetKeys(mojo::Array<uint8_t> key_prefix,
+               mojo::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
   void Get(mojo::Array<uint8_t> key, const GetCallback& callback) override;
   void GetPartial(mojo::Array<uint8_t> key,

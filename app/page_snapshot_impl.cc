@@ -90,6 +90,7 @@ PageSnapshotImpl::PageSnapshotImpl(
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
+                                  mojo::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
@@ -123,7 +124,7 @@ void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
 
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
-          callback.Run(Status::IO_ERROR, nullptr);
+          callback.Run(Status::IO_ERROR, nullptr, nullptr);
           return;
         }
 
@@ -132,18 +133,19 @@ void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
 
           storage::Status read_status = results[i]->GetData(&object_contents);
           if (read_status != storage::Status::OK) {
-            callback.Run(Status::IO_ERROR, nullptr);
+            callback.Run(Status::IO_ERROR, nullptr, nullptr);
             return;
           }
 
           entry_list[i]->value = convert::ToArray(object_contents);
         }
-        callback.Run(Status::OK, std::move(entry_list));
+        callback.Run(Status::OK, std::move(entry_list), nullptr);
       });
   waiter->Finalize(result_callback);
 }
 
 void PageSnapshotImpl::GetKeys(mojo::Array<uint8_t> key_prefix,
+                               mojo::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
@@ -156,7 +158,7 @@ void PageSnapshotImpl::GetKeys(mojo::Array<uint8_t> key_prefix,
     keys.push_back(convert::ToArray((*it)->key));
     it->Next();
   }
-  callback.Run(Status::OK, keys.Pass());
+  callback.Run(Status::OK, keys.Pass(), nullptr);
 }
 
 void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,

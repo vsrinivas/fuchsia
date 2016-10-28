@@ -13,6 +13,8 @@ module ledger;
 // Response code for ledger operations.
 enum Status {
   OK = 0,
+  PARTIAL_RESULT,
+  INVALID_TOKEN,
   AUTHENTICATION_ERROR,
   PAGE_NOT_FOUND,
   KEY_NOT_FOUND,
@@ -192,15 +194,29 @@ struct Entry {
 // interface closes all |PageSnapshot| interfaces it created.
 interface PageSnapshot {
   // Returns the entries in the page with keys matching the given prefix. If
-  // |key_prefix| is NULL, all entries are returned. |entries| are sorted by
-  // |key|.
-  GetEntries(array<uint8>? key_prefix) => (Status status, array<Entry>? entries);
+  // |key_prefix| is NULL, all entries are returned. If the result fits in a
+  // single mojo message, |status| will be |OK| and |next_token| equal to NULL.
+  // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
+  // non-NULL value. To retrieve the remaining results, another call to
+  // |GetEntries| should be made, initializing the optional |token| argument
+  // with the value of |next_token| returned in the previous call. |status| will
+  // be |PARTIAL_RESULT| as long as there are more results for the given prefix
+  // and |OK| once finished.
+  // The returned |entries| are sorted by |key|.
+  GetEntries(array<uint8>? key_prefix, array<uint8>? token)
+      => (Status status, array<Entry>? entries, array<uint8>? next_token);
 
-  // Returns the keys of all entries in the page that match the given key
-  // prefix. If |key_prefix| is NULL, all keys are returned. The returned keys
-  // are sorted.
-  GetKeys(array<uint8>? key_prefix)
-      => (Status status, array<array<uint8>>? keys);
+  // Returns the keys of all entries in the page that match the given prefix. If
+  // |key_prefix| is NULL, all entries are returned. If the result fits in a
+  // single mojo message, |status| will be |OK| and |next_token| equal to NULL.
+  // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
+  // non-NULL value. To retrieve the remaining results, another call to
+  // |GetKeys| should be made, initializing the optional |token| argument
+  // with the value of |next_token| returned in the previous call.
+  // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
+  // as there are more results for the given prefix and |OK| once finished.
+  GetKeys(array<uint8>? key_prefix, array<uint8>? token)
+      => (Status status, array<array<uint8>>? keys, array<uint8>? next_token);
 
   // Returns the value of a given key.
   Get(array<uint8> key) => (Status status, Value? value);
@@ -212,8 +228,6 @@ interface PageSnapshot {
   // everything.
   GetPartial(array<uint8> key, int64 offset, int64 max_size)
       => (Status status, handle<shared_buffer>? buffer);
-
-  // TODO(qsr) Add pagination.
 };
 
 // A change in the page. A NULL |new_value| represents a deletion.
