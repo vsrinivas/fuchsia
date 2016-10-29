@@ -5,8 +5,7 @@
 #ifndef APPS_MOZART_LIB_SKIA_SKIA_VMO_DATA_H_
 #define APPS_MOZART_LIB_SKIA_SKIA_VMO_DATA_H_
 
-#include <magenta/process.h>
-#include <utility>
+#include <mx/vmo.h>
 
 #include "third_party/skia/include/core/SkData.h"
 
@@ -15,7 +14,7 @@ namespace mozart {
 // Makes an |SkData| object backed by a virtual memory object which is mapped
 // read only.  Does not take ownership of the handle.
 // Returns nullptr on failure.
-sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo);
+sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo);
 
 }  // namespace mozart
 

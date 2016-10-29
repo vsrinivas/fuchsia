@@ -25,7 +25,7 @@ source_set("type_converters") {
     "type_converters.h",
   ]
 
-  deps = [
+  public_deps = [
     "//mojo/services/geometry/interfaces",
     "//third_party/skia",
   ]
@@ -41,10 +41,10 @@ source_set("vmo") {
     "skia_vmo_surface.h",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
-    "//lib/mtl",
+    "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]
 }

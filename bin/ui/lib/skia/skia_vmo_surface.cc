@@ -4,8 +4,7 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 
-#include <magenta/syscalls.h>
-#include <mx/vmo.h>
+#include <mx/process.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -17,8 +16,8 @@ namespace mozart {
 namespace {
 
 void UnmapMemory(void* pixels, void* context) {
-  mx_status_t status = mx_process_unmap_vm(
-      mx_process_self(), reinterpret_cast<uintptr_t>(pixels), 0u);
+  mx_status_t status =
+      mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(pixels), 0u);
   FTL_CHECK(status == NO_ERROR);
 }
 
@@ -34,10 +33,10 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMOWithSize(const mx::vmo& vmo,
 
   uintptr_t buffer = 0u;
   mx_status_t status =
-      mx_process_map_vm(mx_process_self(), vmo.get(), 0u, needed_bytes, &buffer,
-                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+      mx::process::self().map_vm(vmo, 0u, needed_bytes, &buffer,
+                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx_process_map_vm failed: status=" << status;
+    FTL_LOG(ERROR) << "mx::process::map_vm failed: status=" << status;
     return nullptr;
   }
 
@@ -96,7 +95,7 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
 
   mx::vmo vmo;
   if (mx::vmo::create(total_bytes, 0, &vmo) < 0) {
-    FTL_LOG(ERROR) << "mx_vmo_create failed";
+    FTL_LOG(ERROR) << "mx::vmo::create failed";
     return nullptr;
   }
 
@@ -106,7 +105,7 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
       vmo.op_range(MX_VMO_OP_COMMIT, 0u, total_bytes, nullptr, 0u);
 
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx_vmo_op_range failed: status=" << status;
+    FTL_LOG(ERROR) << "mx::vmo::op_range failed: status=" << status;
     return nullptr;
   }
 
@@ -146,7 +145,7 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const mx::vmo& vmo,
   uint64_t total_bytes = 0u;
   mx_status_t status = vmo.get_size(&total_bytes);
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx_vmo_get_size failed: status=" << status;
+    FTL_LOG(ERROR) << "mx::vmo::get_size failed: status=" << status;
     return nullptr;
   }
 

@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_LIB_SKIA_SKIA_VMO_IMAGE_H_
 #define APPS_MOZART_LIB_SKIA_SKIA_VMO_IMAGE_H_
 
-#include <magenta/types.h>
+#include <mx/vmo.h>
 
 #include "apps/mozart/services/composition/interfaces/image.mojom.h"
 #include "third_party/skia/include/core/SkImage.h"
@@ -20,7 +20,7 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image);
 // Makes an |SkImage| object backed by a virtual memory object which is mapped
 // read only.  Does not take ownership of the handle.
 // Returns nullptr on failure.
-sk_sp<SkImage> MakeSkImageFromVMO(mx_handle_t vmo,
+sk_sp<SkImage> MakeSkImageFromVMO(const mx::vmo&,
                                   const SkImageInfo& info,
                                   size_t row_bytes);
 

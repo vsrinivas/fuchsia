@@ -24,7 +24,7 @@ void SkiaFontLoader::LoadFont(mojo::FontRequestPtr request,
       std::move(request), [this, callback](mojo::FontResponsePtr response) {
         if (response) {
           sk_sp<SkData> font_data =
-              MakeSkDataFromVMO(response->data->vmo.get().value());
+              MakeSkDataFromVMO(mx::vmo(response->data->vmo.release().value()));
           if (font_data) {
             callback(sk_sp<SkTypeface>(
                 SkFontMgr::RefDefault()->createFromData(font_data.get())));

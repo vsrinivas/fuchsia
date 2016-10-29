@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <utility>
 
-#include <magenta/process.h>
-#include <magenta/syscalls.h>
+#include <mx/process.h>
+#include <mx/vmo.h>
 
 #include "apps/mozart/glue/base/trace_event.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
@@ -195,8 +195,8 @@ FramebufferOutput::Rasterizer::Rasterizer(
   const uint32_t height = framebuffer_info_->size->height;
   const size_t row_bytes = framebuffer_info_->row_bytes;
   const size_t size = row_bytes * height;
-  mx_status_t status = mx_process_map_vm(
-      mx_process_self(), framebuffer_info_->vmo.get().value(), 0, size,
+  mx_status_t status = mx::process::self().map_vm(
+      mx::vmo(framebuffer_info_->vmo.release().value()), 0, size,
       &framebuffer_data_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
   if (status < 0) {
     FTL_LOG(ERROR) << "Cannot map framebuffer: status=" << status;
@@ -248,8 +248,8 @@ FramebufferOutput::Rasterizer::Rasterizer(
 
 FramebufferOutput::Rasterizer::~Rasterizer() {
   if (framebuffer_data_) {
-    mx_process_unmap_vm(
-        mx_process_self(), framebuffer_data_,
+    mx::process::self().unmap_vm(
+        framebuffer_data_,
         framebuffer_info_->row_bytes * framebuffer_info_->size->height);
   }
 }

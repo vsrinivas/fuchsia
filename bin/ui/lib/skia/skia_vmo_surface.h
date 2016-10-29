@@ -5,7 +5,6 @@
 #ifndef APPS_MOZART_LIB_SKIA_SKIA_VMO_SURFACE_H_
 #define APPS_MOZART_LIB_SKIA_SKIA_VMO_SURFACE_H_
 
-#include <magenta/types.h>
 #include <mx/vmo.h>
 
 #include "apps/mozart/services/composition/interfaces/image.mojom.h"

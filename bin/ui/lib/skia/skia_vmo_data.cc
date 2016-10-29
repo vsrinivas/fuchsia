@@ -4,7 +4,7 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_data.h"
 
-#include <magenta/syscalls.h>
+#include <mx/process.h>
 
 #include "lib/ftl/logging.h"
 
@@ -15,22 +15,22 @@ namespace mozart {
 namespace {
 
 void UnmapMemory(const void* buffer, void* context) {
-  mx_status_t status = mx_process_unmap_vm(
-      mx_process_self(), reinterpret_cast<uintptr_t>(buffer), 0u);
+  mx_status_t status =
+      mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(buffer), 0u);
   FTL_CHECK(status == NO_ERROR);
 }
 
 }  // namespace
 
-sk_sp<SkData> MakeSkDataFromVMO(mx_handle_t vmo) {
+sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
   uint64_t size = 0u;
-  mx_status_t status = mx_vmo_get_size(vmo, &size);
+  mx_status_t status = vmo.get_size(&size);
   if (status != NO_ERROR)
     return nullptr;
 
   uintptr_t buffer = 0u;
-  status = mx_process_map_vm(mx_process_self(), vmo, 0u, size, &buffer,
-                             MX_VM_FLAG_PERM_READ);
+  status =
+      mx::process::self().map_vm(vmo, 0u, size, &buffer, MX_VM_FLAG_PERM_READ);
   if (status != NO_ERROR)
     return nullptr;
 
