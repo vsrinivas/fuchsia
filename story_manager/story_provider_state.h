@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/modular/services/user/user_runner.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"

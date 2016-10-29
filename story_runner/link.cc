@@ -6,7 +6,7 @@
 
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
-#include "apps/modular/story_runner/link.mojom.h"
+#include "apps/modular/services/story/link.mojom.h"
 #include "apps/modular/story_runner/session.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -31,8 +31,7 @@ using mojo::InterfacePtr;
 using mojo::InterfaceRequest;
 
 struct SharedLinkImplData {
-  SharedLinkImplData(std::shared_ptr<SessionPage> p,
-                     const mojo::String& n)
+  SharedLinkImplData(std::shared_ptr<SessionPage> p, const mojo::String& n)
       : name(n), page_(p) {
     // The document map is always valid, even when empty.
     docs_map.mark_non_null();
@@ -58,7 +57,8 @@ struct SharedLinkImplData {
 
 namespace {
 
-using DocIndex = std::map<std::pair<const std::string&, const std::string&>, Value*>;
+using DocIndex =
+    std::map<std::pair<const std::string&, const std::string&>, Value*>;
 
 DocIndex IndexDocIdToDocMap(const MojoDocMap& docs_map) {
   DocIndex index;
@@ -105,14 +105,11 @@ LinkImpl::LinkImpl(std::shared_ptr<SessionPage> page,
   // to a strong binding on the first connection, and regular bindings
   // on all later ones. This is just how it is and may be revised in
   // the future.
-  binding_.set_connection_error_handler([this]() {
-    delete shared_;
-  });
+  binding_.set_connection_error_handler([this]() { delete shared_; });
 }
 
 LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* const shared)
-    : shared_(shared),
-      binding_(this, std::move(req)) {
+    : shared_(shared), binding_(this, std::move(req)) {
   FTL_LOG(INFO) << "LinkImpl() " << shared->name;
 
   shared_->impls.emplace_back(this);
@@ -124,7 +121,8 @@ LinkImpl::~LinkImpl() {
 }
 
 void LinkImpl::New(std::shared_ptr<SessionPage> page,
-                   const mojo::String& name, InterfaceRequest<Link> req) {
+                   const mojo::String& name,
+                   InterfaceRequest<Link> req) {
   new LinkImpl(page, name, std::move(req));
 }
 
@@ -192,8 +190,7 @@ void LinkImpl::RemoveImpl() {
 // TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
 // the call to SetAllDocument(). Need to find a way to improve this.
 void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
-  FTL_LOG(INFO) << "LinkImpl::AddDocuments() "
-                << shared_->name << " "
+  FTL_LOG(INFO) << "LinkImpl::AddDocuments() " << shared_->name << " "
                 << mojo_add_docs;
   DocMap add_docs;
   mojo_add_docs.Swap(&add_docs);
@@ -226,8 +223,7 @@ void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
 }
 
 void LinkImpl::SetAllDocuments(MojoDocMap new_docs) {
-  FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() "
-                << shared_->name << " "
+  FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() " << shared_->name << " "
                 << new_docs;
 
   bool dirty = !Equal(new_docs, shared_->docs_map);

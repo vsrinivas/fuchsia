@@ -5,7 +5,7 @@
 #include <mojo/system/main.h>
 
 #include "apps/modular/mojo/single_service_application.h"
-#include "apps/modular/story_runner/resolver.mojom.h"
+#include "apps/modular/services/story/resolver.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_request.h"

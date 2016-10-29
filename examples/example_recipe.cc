@@ -10,7 +10,7 @@
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/story_runner/story_runner.mojom.h"
+#include "apps/modular/services/story/story_runner.mojom.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"

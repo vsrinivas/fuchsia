@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 group("all") {
   deps = [
     ":dummy_user_shell",
@@ -21,11 +19,11 @@ executable("story_manager") {
   ]
 
   deps = [
-    ":interfaces",
     "//apps/ledger/api",
     "//apps/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
-    "//apps/modular/story_runner:interfaces",
+    "//apps/modular/services/story",
+    "//apps/modular/services/user",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/c:system",
@@ -43,8 +41,8 @@ executable("dummy_user_shell") {
   ]
 
   deps = [
-    ":interfaces",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
@@ -55,13 +53,3 @@ executable("dummy_user_shell") {
   ]
 }
 
-mojom("interfaces") {
-  sources = [
-    "story_manager.mojom",
-  ]
-
-  deps = [
-    "//apps/ledger/api",
-    "//apps/mozart/services/views/interfaces",
-  ]
-}

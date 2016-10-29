@@ -7,11 +7,6 @@ module modular;
 import "apps/ledger/api/ledger.mojom";
 import "apps/mozart/services/views/interfaces/view_token.mojom";
 
-/*
- * This file contains definitions of interfaces and data structures to access
- * the Story Manager.
- */
-
 // Intended for use by Device Runner to launch a new Story Manager per user.
 [ServiceName="modular.StoryManager"]
 interface StoryManager {
@@ -64,11 +59,4 @@ interface StoryProvider {
   // HACK(alhaad): Return only one of the previous stories until
   // https://github.com/domokit/mojo/issues/818 is fixed.
   PreviousStories() => (/*array<Story>*/Story? stories);
-};
-
-// This interface is meant to be implemented by a User Shell so that
-// |StoryProvider| could be passed to it on startup.
-[ServiceName="modular.UserShell"]
-interface UserShell {
-  SetStoryProvider(StoryProvider service);
 };

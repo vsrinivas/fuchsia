@@ -5,7 +5,8 @@
 module modular;
 
 import "apps/document_store/interfaces/document.mojom";
-import "apps/modular/story_runner/link.mojom";
+import "apps/modular/services/story/link.mojom";
+import "apps/modular/services/story/link.mojom";
 import "apps/mozart/services/views/interfaces/view_token.mojom";
 
 // This service is implemented by a mojo app that is meant to be run

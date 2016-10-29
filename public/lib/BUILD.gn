@@ -3,15 +3,8 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [":modular"]
-}
-
-group("modular") {
   deps = [
-    "device_runner:all",
-    "examples:all",
-    "services:all",
-    "story_manager:all",
-    "story_runner:all",
+    "device",
+    "user",
   ]
 }

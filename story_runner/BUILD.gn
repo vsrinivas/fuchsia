@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 group("all") {
   deps = [
     ":resolver",
@@ -19,7 +17,7 @@ executable("story_runner") {
   ]
 
   deps = [
-    ":interfaces",
+    "//apps/modular/services/story",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//apps/document_store/interfaces",
@@ -39,7 +37,7 @@ executable("resolver") {
   ]
 
   deps = [
-    ":interfaces",
+    "//apps/modular/services/story",
     "//apps/document_store/interfaces",
     "//apps/modular/mojo:single_service_application",
     "//lib/ftl",
@@ -47,19 +45,5 @@ executable("resolver") {
     "//mojo/public/cpp/bindings",
     "//mojo/public/interfaces/application:application_cpp_sources",
     "//mojo/system",
-  ]
-}
-
-mojom("interfaces") {
-  sources = [
-    "link.mojom",
-    "resolver.mojom",
-    "session.mojom",
-    "story_runner.mojom",
-  ]
-
-  deps = [
-    "//apps/ledger/api",
-    "//apps/mozart/services/views/interfaces",
   ]
 }

@@ -7,9 +7,9 @@
 
 #include <mojo/system/main.h>
 
+#include "apps/modular/services/story/session.mojom.h"
+#include "apps/modular/services/story/story_runner.mojom.h"
 #include "apps/modular/story_runner/session.h"
-#include "apps/modular/story_runner/session.mojom.h"
-#include "apps/modular/story_runner/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/run_application.h"

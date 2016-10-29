@@ -7,7 +7,7 @@
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/story_runner/story_runner.mojom.h"
+#include "apps/modular/services/story/story_runner.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"

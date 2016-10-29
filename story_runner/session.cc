@@ -6,9 +6,9 @@
 
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/story_runner/link.h"
-#include "apps/modular/story_runner/link.mojom.h"
-#include "apps/modular/story_runner/resolver.mojom.h"
-#include "apps/modular/story_runner/session.mojom.h"
+#include "apps/modular/services/story/link.mojom.h"
+#include "apps/modular/services/story/resolver.mojom.h"
+#include "apps/modular/services/story/session.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -22,7 +22,8 @@
 namespace modular {
 
 ModuleControllerImpl::ModuleControllerImpl(
-    SessionHost* const session, mojo::InterfacePtr<Module> module,
+    SessionHost* const session,
+    mojo::InterfacePtr<Module> module,
     mojo::InterfaceRequest<ModuleController> module_controller)
     : session_(session),
       binding_(this, std::move(module_controller)),
@@ -60,7 +61,8 @@ SessionHost::SessionHost(SessionImpl* const impl,
 }
 
 SessionHost::SessionHost(
-    SessionImpl* const impl, mojo::InterfaceRequest<Session> session,
+    SessionImpl* const impl,
+    mojo::InterfaceRequest<Session> session,
     mojo::InterfacePtr<Module> module,
     mojo::InterfaceRequest<ModuleController> module_controller)
     : impl_(impl),
@@ -106,7 +108,8 @@ void SessionHost::CreateLink(const mojo::String& name,
 }
 
 void SessionHost::StartModule(
-    const mojo::String& query, mojo::InterfaceHandle<Link> link,
+    const mojo::String& query,
+    mojo::InterfaceHandle<Link> link,
     mojo::InterfaceRequest<ModuleController> module_controller,
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionHost::StartModule() " << query;
@@ -152,7 +155,9 @@ SessionImpl::~SessionImpl() {
   }
 }
 
-void SessionImpl::Add(SessionHost* const client) { clients_.push_back(client); }
+void SessionImpl::Add(SessionHost* const client) {
+  clients_.push_back(client);
+}
 
 void SessionImpl::Remove(SessionHost* const client) {
   auto f = std::find(clients_.begin(), clients_.end(), client);
@@ -166,7 +171,8 @@ void SessionImpl::CreateLink(const mojo::String& name,
 }
 
 void SessionImpl::StartModule(
-    const mojo::String& query, mojo::InterfaceHandle<Link> link,
+    const mojo::String& query,
+    mojo::InterfaceHandle<Link> link,
     mojo::InterfaceRequest<ModuleController> module_controller,
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionImpl::StartModule()";

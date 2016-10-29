@@ -7,7 +7,8 @@
 
 #include <mojo/system/main.h>
 
-#include "apps/modular/device_runner/device_runner.mojom.h"
+#include "apps/modular/services/device/device_runner.mojom.h"
+#include "apps/modular/services/device/device_shell.mojom.h"
 #include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/logging.h"
@@ -43,7 +44,8 @@ class DummyDeviceShellImpl : public DeviceShell {
   ~DummyDeviceShellImpl() override{};
 
   void SetDeviceRunner(InterfaceHandle<DeviceRunner> device_runner) override {
-    device_runner_ = InterfacePtr<DeviceRunner>::Create(std::move(device_runner));
+    device_runner_ =
+        InterfacePtr<DeviceRunner>::Create(std::move(device_runner));
     device_runner_->Login(kDummyUserName, std::move(view_owner_request_));
   }
 

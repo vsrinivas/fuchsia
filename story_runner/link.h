@@ -9,7 +9,7 @@
 
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
-#include "apps/modular/story_runner/link.mojom.h"
+#include "apps/modular/services/story/link.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -71,7 +71,8 @@ class LinkImpl : public Link {
   // are private.
 
   // Called from New() by outside clients.
-  LinkImpl(std::shared_ptr<SessionPage> page, const mojo::String& name,
+  LinkImpl(std::shared_ptr<SessionPage> page,
+           const mojo::String& name,
            mojo::InterfaceRequest<Link> req);
 
   // Called from Dup().

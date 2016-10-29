@@ -5,8 +5,8 @@
 #ifndef APPS_MODULAR_STORY_MANAGER_STORY_STATE_H_
 #define APPS_MODULAR_STORY_MANAGER_STORY_STATE_H_
 
-#include "apps/modular/story_manager/story_manager.mojom.h"
-#include "apps/modular/story_runner/story_runner.mojom.h"
+#include "apps/modular/services/user/user_runner.mojom.h"
+#include "apps/modular/services/story/story_runner.mojom.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"

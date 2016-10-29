@@ -18,8 +18,8 @@
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/ledger/api/ledger.mojom.h"
-#include "apps/modular/story_runner/resolver.mojom.h"
-#include "apps/modular/story_runner/session.mojom.h"
+#include "apps/modular/services/story/resolver.mojom.h"
+#include "apps/modular/services/story/session.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -43,7 +43,8 @@ class SessionPage;
 class ModuleControllerImpl : public ModuleController {
  public:
   ModuleControllerImpl(
-      SessionHost* session, mojo::InterfacePtr<Module> module,
+      SessionHost* session,
+      mojo::InterfacePtr<Module> module,
       mojo::InterfaceRequest<ModuleController> module_controller);
   ~ModuleControllerImpl();
 
@@ -74,7 +75,8 @@ class SessionHost : public Session {
   SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> session);
 
   // Non-primary session host created for the module started by StartModule().
-  SessionHost(SessionImpl* impl, mojo::InterfaceRequest<Session> session,
+  SessionHost(SessionImpl* impl,
+              mojo::InterfaceRequest<Session> session,
               mojo::InterfacePtr<Module> module,
               mojo::InterfaceRequest<ModuleController> module_controller);
   ~SessionHost() override;
@@ -83,7 +85,8 @@ class SessionHost : public Session {
   void CreateLink(const mojo::String& name,
                   mojo::InterfaceRequest<Link> link) override;
   void StartModule(
-      const mojo::String& query, mojo::InterfaceHandle<Link> link,
+      const mojo::String& query,
+      mojo::InterfaceHandle<Link> link,
       mojo::InterfaceRequest<ModuleController> module_controller,
       mojo::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void Done() override;
@@ -104,7 +107,8 @@ class SessionHost : public Session {
 // SessionHost above.
 class SessionImpl {
  public:
-  SessionImpl(mojo::Shell* shell, mojo::InterfaceHandle<Resolver> resolver,
+  SessionImpl(mojo::Shell* shell,
+              mojo::InterfaceHandle<Resolver> resolver,
               mojo::InterfaceHandle<ledger::Page> session_page,
               mojo::InterfaceRequest<Session> req);
   ~SessionImpl();
@@ -113,7 +117,8 @@ class SessionImpl {
   void Add(SessionHost* client);
   void Remove(SessionHost* client);
   void CreateLink(const mojo::String& name, mojo::InterfaceRequest<Link> link);
-  void StartModule(const mojo::String& query, mojo::InterfaceHandle<Link> link,
+  void StartModule(const mojo::String& query,
+                   mojo::InterfaceHandle<Link> link,
                    mojo::InterfaceRequest<ModuleController> module_controller,
                    mojo::InterfaceRequest<mozart::ViewOwner> view_owner);
 
@@ -124,7 +129,6 @@ class SessionImpl {
   std::vector<SessionHost*> clients_;
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
-
 
 // Shared owner of the connection to the ledger page. Shared between
 // the SessionImpl, and all LinkImpls, so the connection is around

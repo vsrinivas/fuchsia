@@ -7,7 +7,8 @@
 #include <mojo/system/main.h>
 
 #include "apps/modular/mojo/single_service_application.h"
-#include "apps/modular/story_manager/story_manager.mojom.h"
+#include "apps/modular/services/user/user_runner.mojom.h"
+#include "apps/modular/services/user/user_shell.mojom.h"
 #include "apps/modular/story_manager/story_provider_state.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"

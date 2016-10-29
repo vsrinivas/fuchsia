@@ -1,0 +1,14 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/device/device_runner.mojom";
+
+// This interface is meant to be implemented by a Device Shell so that
+// |DeviceRunner| could be passed to it on startup.
+[ServiceName="modular.DeviceShell"]
+interface DeviceShell {
+  SetDeviceRunner(DeviceRunner service);
+};
