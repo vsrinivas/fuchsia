@@ -9,4 +9,4 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 exec $DIR/../magenta/scripts/run-magenta -a arm64 \
-    -o $DIR/../out/build-magenta/build-magenta-arm64 "$@"
+    -o $DIR/../out/build-magenta/build-magenta-qemu-arm64 "$@"
