@@ -12,6 +12,8 @@ class event : public handle<event> {
 public:
     event() = default;
 
+    explicit event(mx_handle_t value) : handle(value) {}
+
     explicit event(handle<void>&& h) : handle(h.release()) {}
 
     event(event&& other) : handle(other.release()) {}

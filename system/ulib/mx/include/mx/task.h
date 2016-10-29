@@ -12,7 +12,7 @@ template <typename T = void> class task : public handle<T> {
 public:
     task() = default;
 
-    explicit task(mx_handle_t h) : handle<T>(h) {}
+    explicit task(mx_handle_t value) : handle<T>(value) {}
 
     explicit task(handle<void>&& h) : handle<T>(h.release()) {}
 

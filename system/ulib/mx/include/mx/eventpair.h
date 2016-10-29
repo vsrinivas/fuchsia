@@ -12,6 +12,8 @@ class eventpair : public handle<eventpair> {
 public:
     eventpair() = default;
 
+    explicit eventpair(mx_handle_t value) : handle(value) {}
+
     explicit eventpair(handle<void>&& h) : handle(h.release()) {}
 
     eventpair(eventpair&& other) : handle(other.release()) {}

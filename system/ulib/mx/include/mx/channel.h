@@ -12,6 +12,8 @@ class channel : public handle<channel> {
 public:
     channel() = default;
 
+    explicit channel(mx_handle_t value) : handle(value) {}
+
     explicit channel(handle<void>&& h) : handle(h.release()) {}
 
     channel(channel&& other) : handle(other.release()) {}

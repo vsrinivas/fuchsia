@@ -41,11 +41,11 @@ class datapipe_producer : public datapipe<datapipe_producer> {
 public:
     datapipe_producer() = default;
 
-    explicit datapipe_producer(handle<void>&& h)
-        : datapipe<datapipe_producer>(h.release()) {}
+    explicit datapipe_producer(mx_handle_t value) : datapipe(value) {}
 
-    datapipe_producer(datapipe_producer&& other)
-        : datapipe<datapipe_producer>(other.release()) {}
+    explicit datapipe_producer(handle<void>&& h) : datapipe(h.release()) {}
+
+    datapipe_producer(datapipe_producer&& other) : datapipe(other.release()) {}
 
     datapipe_producer& operator=(datapipe_producer&& other) {
         reset(other.release());
@@ -84,11 +84,11 @@ class datapipe_consumer : public datapipe<datapipe_consumer> {
 public:
     datapipe_consumer() = default;
 
-    explicit datapipe_consumer(handle<void>&& h)
-        : datapipe<datapipe_consumer>(h.release()) {}
+    explicit datapipe_consumer(mx_handle_t value) : datapipe(value) {}
 
-    datapipe_consumer(datapipe_consumer&& other)
-        : datapipe<datapipe_consumer>(other.release()) {}
+    explicit datapipe_consumer(handle<void>&& h) : datapipe(h.release()) {}
+
+    datapipe_consumer(datapipe_consumer&& other) : datapipe(other.release()) {}
 
     datapipe_consumer& operator=(datapipe_consumer&& other) {
         reset(other.release());

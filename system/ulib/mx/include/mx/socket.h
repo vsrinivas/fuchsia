@@ -12,6 +12,8 @@ class socket : public handle<socket> {
 public:
     socket() = default;
 
+    explicit socket(mx_handle_t value) : handle(value) {}
+
     explicit socket(handle<void>&& h) : handle(h.release()) {}
 
     socket(socket&& other) : handle(other.release()) {}

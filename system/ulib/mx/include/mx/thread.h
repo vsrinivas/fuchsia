@@ -14,9 +14,11 @@ class thread : public task<thread> {
 public:
     thread() = default;
 
-    explicit thread(handle<void>&& h) : task<thread>(h.release()) {}
+    explicit thread(mx_handle_t value) : task(value) {}
 
-    thread(thread&& other) : task<thread>(other.release()) {}
+    explicit thread(handle<void>&& h) : task(h.release()) {}
+
+    thread(thread&& other) : task(other.release()) {}
 
     thread& operator=(thread&& other) {
         reset(other.release());

@@ -12,6 +12,8 @@ class port : public handle<port> {
 public:
     port() = default;
 
+    explicit port(mx_handle_t value) : handle(value) {}
+
     explicit port(handle<void>&& h) : handle(h.release()) {}
 
     port(port&& other) : handle(other.release()) {}

@@ -12,6 +12,8 @@ class vmo : public handle<vmo> {
 public:
     vmo() = default;
 
+    explicit vmo(mx_handle_t value) : handle(value) {}
+
     explicit vmo(handle<void>&& h) : handle(h.release()) {}
 
     vmo(vmo&& other) : handle(other.release()) {}

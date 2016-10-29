@@ -12,6 +12,8 @@ class log : public handle<log> {
 public:
     log() = default;
 
+    explicit log(mx_handle_t value) : handle(value) {}
+
     explicit log(handle<void>&& h) : handle(h.release()) {}
 
     log(log&& other) : handle(other.release()) {}

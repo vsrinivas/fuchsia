@@ -15,9 +15,11 @@ class process : public task<process> {
 public:
     process() = default;
 
-    explicit process(handle<void>&& h) : task<process>(h.release()) {}
+    explicit process(mx_handle_t value) : task(value) {}
 
-    process(process&& other) : task<process>(other.release()) {}
+    explicit process(handle<void>&& h) : task(h.release()) {}
+
+    process(process&& other) : task(other.release()) {}
 
     process& operator=(process&& other) {
         reset(other.release());

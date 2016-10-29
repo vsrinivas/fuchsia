@@ -12,6 +12,8 @@ class waitset : public handle<waitset> {
 public:
     waitset() = default;
 
+    explicit waitset(mx_handle_t value) : handle(value) {}
+
     explicit waitset(handle<void>&& h) : handle(h.release()) {}
 
     waitset(waitset&& other) : handle(other.release()) {}
