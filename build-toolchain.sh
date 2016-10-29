@@ -50,7 +50,7 @@ build() {
   local toolchain="${destdir}/clang+llvm-${HOST_TRIPLE}"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64"
+    rm -rf -- "${outdir}/build-binutils-gdb-${HOST_TRIPLE}" "${outdir}/build-clang+llvm-${HOST_TRIPLE}" "${outdir}/build-compiler-rt-aarch64+x86_64" "${outdir}/build-shaderc-${HOST_TRIPLE}"
   fi
 
   rm -rf -- "${toolchain}" && mkdir -p -- "${toolchain}"
@@ -103,6 +103,23 @@ build() {
     -DLLVM_CONFIG_PATH=${outdir}/build-clang+llvm-${HOST_TRIPLE}/bin/llvm-config \
     ${ROOT_DIR}/third_party/llvm/runtimes/compiler-rt/lib/builtins
   env DESTDIR="${toolchain}" ${ROOT_DIR}/buildtools/ninja -j "${jobs}" install
+  popd
+
+  mkdir -p -- "${outdir}/build-shaderc-${HOST_TRIPLE}"
+  pushd "${outdir}/build-shaderc-${HOST_TRIPLE}"
+  [[ -f "${outdir}/build-shaderc-${HOST_TRIPLE}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+    ${CMAKE_HOST_TOOLS:-} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX='' \
+    -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+    -DCMAKE_INSTALL_RPATH="\$ORIGIN/../lib" \
+    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+    -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
+    -DSHADERC_SKIP_TESTS=ON \
+    -DSPIRV_SKIP_TESTS=ON \
+    ${ROOT_DIR}/third_party/shaderc
+  ${ROOT_DIR}/buildtools/ninja -j "${jobs}"
+  cp -- glslc/glslc third_party/spirv-tools/tools/spirv-as third_party/spirv-tools/tools/spirv-dis third_party/spirv-tools/tools/spirv-val ${toolchain}/bin
   popd
 
   local stamp="$(LC_ALL=POSIX cat $(find "${toolchain}" -type f | sort) | shasum -a1  | awk '{print $1}')"
