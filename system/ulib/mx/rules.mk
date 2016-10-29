@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/channel.cc \
     $(LOCAL_DIR)/event.cc \
     $(LOCAL_DIR)/eventpair.cc \
+    $(LOCAL_DIR)/job.cc \
     $(LOCAL_DIR)/log.cc \
     $(LOCAL_DIR)/port.cc \
     $(LOCAL_DIR)/process.cc \

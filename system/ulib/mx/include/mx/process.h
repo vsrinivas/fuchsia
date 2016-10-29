@@ -9,6 +9,7 @@
 #include <mx/vmo.h>
 
 namespace mx {
+class job;
 class thread;
 
 class process : public task<process> {
@@ -26,7 +27,7 @@ public:
         return *this;
     }
 
-    static mx_status_t create(const char* name, uint32_t name_len,
+    static mx_status_t create(const job& job, const char* name, uint32_t name_len,
                               uint32_t flags, process* result);
 
     static inline const process& self() {
