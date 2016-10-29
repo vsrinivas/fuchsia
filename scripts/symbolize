@@ -139,7 +139,8 @@ def main():
             os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x86-64"))
         build_dirs.append(fuchsia_build_dir)
 
-    full_prefix = "^.*> "
+    # Either nothing, or something like "[00007.268] 00304.00325> "
+    full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> )"
     btre = re.compile(full_prefix + "bt#(\d+):")
     bt_with_offsetre = re.compile(full_prefix +
         "bt#(\d+): pc 0x[0-9a-z]+ sp 0x[0-9a-z]+ \((\S+),(0x[0-9a-z]+)\)$")
@@ -159,53 +160,7 @@ def main():
         # Strip any trailing carriage return character ("\r"), since
         # these appear in the serial console output from QEMU.
         line = line.rstrip()
-        if line.find("> ") >= 0:
-            m = arch_re.match(line)
-            if m:
-                arch = m.group(1)
-                continue
-            m = build_id_re.match(line)
-            if m:
-                buildid = m.group(1)
-                bias = int(m.group(2), 16)
-                name = m.group(3)
-                name_to_buildid[name] = buildid
-                continue
-            m = btre.match(line)
-            if m:
-                frame_num = m.group(1)
-                m = bt_with_offsetre.match(line)
-                if m:
-                    dso = m.group(2)
-                    off = m.group(3)
-                    dso_full_path = find_dso_full_path(
-                        dso, args.app, name_to_buildid, build_dirs)
-                    if dso_full_path:
-                        addr2line_output = run_tool(arch, "addr2line", "-Cipfe",
-                                                    dso_full_path, off)
-                        if addr2line_output:
-                            processed_lines.append(
-                                "#%s: %s" % (frame_num, addr2line_output))
-                        if args.disassemble:
-                            pc = int(off, 16)
-                            disassembly = run_tool(
-                                arch, "gdb", "--nx", "--batch", "-ex",
-                                "disassemble %#x" % pc, dso_full_path)
-                            if disassembly:
-                                for line in disassembly.splitlines():
-                                    m = disasm_re.match(line)
-                                    if m:
-                                        addr, rest = m.groups()
-                                        addr = int(addr, 16)
-                                        if addr == pc:
-                                            prefix = "=> "
-                                        else:
-                                            prefix = "   "
-                                            line = "%s%#.16x%s" % (prefix, bias + addr, rest)
-                                        processed_lines.append(line + "\n")
-                        continue
-                processed_lines.append("#%s: (unknown)\n" % frame_num)
-        if line.find("> ") < 0 or bt_end.match(line):
+        if bt_end.match(line):
             if len(processed_lines) != 0:
                 print "start of symbolized stack:"
                 sys.stdout.writelines(processed_lines)
@@ -214,6 +169,51 @@ def main():
                 name_to_buildid = {}
             if end_of_file:
                 break
+        m = arch_re.match(line)
+        if m:
+            arch = m.group(2)
+            continue
+        m = build_id_re.match(line)
+        if m:
+            buildid = m.group(2)
+            bias = int(m.group(3), 16)
+            name = m.group(4)
+            name_to_buildid[name] = buildid
+            continue
+        m = btre.match(line)
+        if m:
+            frame_num = m.group(2)
+            m = bt_with_offsetre.match(line)
+            if m:
+                dso = m.group(3)
+                off = m.group(4)
+                dso_full_path = find_dso_full_path(
+                    dso, args.app, name_to_buildid, build_dirs)
+                if dso_full_path:
+                    addr2line_output = run_tool(arch, "addr2line", "-Cipfe",
+                                                dso_full_path, off)
+                    if addr2line_output:
+                        processed_lines.append(
+                            "#%s: %s" % (frame_num, addr2line_output))
+                    if args.disassemble:
+                        pc = int(off, 16)
+                        disassembly = run_tool(
+                            arch, "gdb", "--nx", "--batch", "-ex",
+                            "disassemble %#x" % pc, dso_full_path)
+                        if disassembly:
+                            for line in disassembly.splitlines():
+                                m = disasm_re.match(line)
+                                if m:
+                                    timestamp, addr, rest = m.groups()
+                                    addr = int(addr, 16)
+                                    if addr == pc:
+                                        prefix = "=> "
+                                    else:
+                                        prefix = "   "
+                                        line = "%s%#.16x%s" % (prefix, bias + addr, rest)
+                                    processed_lines.append(line + "\n")
+                    continue
+            processed_lines.append("#%s: (unknown)\n" % frame_num)
 
 if __name__ == '__main__':
     sys.exit(main())
