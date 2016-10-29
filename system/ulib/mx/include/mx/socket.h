@@ -21,13 +21,16 @@ public:
         return *this;
     }
 
-    static mx_status_t create(uint32_t flags, socket* endpoint0, socket* endpoint1);
+    static mx_status_t create(uint32_t flags, socket* endpoint0,
+                              socket* endpoint1);
 
-    mx_status_t write(uint32_t flags, const void* buffer, mx_size_t len, mx_size_t* actual) const {
+    mx_status_t write(uint32_t flags, const void* buffer, mx_size_t len,
+                      mx_size_t* actual) const {
         return mx_socket_write(get(), flags, buffer, len, actual);
     }
 
-    mx_status_t read(uint32_t flags, void* buffer, mx_size_t len, mx_size_t* actual) const {
+    mx_status_t read(uint32_t flags, void* buffer, mx_size_t len,
+                     mx_size_t* actual) const {
         return mx_socket_read(get(), flags, buffer, len, actual);
     }
 };

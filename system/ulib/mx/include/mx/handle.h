@@ -77,8 +77,9 @@ public:
     }
 
     mx_status_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
-                        mx_size_t buffer_size, mx_size_t* return_size) const {
-        mx_ssize_t result = mx_object_get_info(get(), topic, topic_size, buffer, buffer_size);
+                         mx_size_t buffer_size, mx_size_t* return_size) const {
+        mx_ssize_t result =
+            mx_object_get_info(get(), topic, topic_size, buffer, buffer_size);
         if (result < 0) {
             return static_cast<mx_status_t>(result);
         } else {
@@ -87,7 +88,8 @@ public:
         }
     }
 
-    mx_status_t get_child(uint64_t koid, mx_rights_t rights, handle<T>* result) const {
+    mx_status_t get_child(uint64_t koid, mx_rights_t rights,
+                          handle<T>* result) const {
         mx_handle_t h = mx_object_get_child(value_, koid, rights);
         if (h < 0) {
             result->reset(MX_HANDLE_INVALID);
