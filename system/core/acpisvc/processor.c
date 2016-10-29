@@ -99,7 +99,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
         goto cleanup;
     }
     if (num_handles > 0) {
-        if ((hdr->cmd != ACPI_CMD_NEW_CONNECTION) || (ctx->root_node == false)) {
+        if (hdr->cmd != ACPI_CMD_NEW_CONNECTION) {
             status = ERR_INVALID_ARGS;
             goto cleanup;
         }
@@ -108,7 +108,7 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
             status = ERR_NO_MEMORY;
             goto cleanup;
         }
-        context->root_node = true;
+        context->root_node = ctx->root_node;
         context->ns_node = ctx->ns_node;
         if ((status = mxio_dispatcher_add(dispatcher, cmd_handle, context, NULL)) < 0) {
             free(context);
