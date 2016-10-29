@@ -29,6 +29,10 @@ struct arch_aspace {
     vaddr_t base;
     size_t size;
 
+    /* cpus that are currently executing in this aspace
+     * actually an mp_cpu_mask_t, but header dependencies. */
+    volatile int active_cpus;
+
     /* Pointer to a bitmap::RleBitmap representing the range of ports
      * enabled in this aspace. */
     void *io_bitmap;

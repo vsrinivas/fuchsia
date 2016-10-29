@@ -378,7 +378,7 @@ static void tlb_invalidate_page_task(void* raw_context) {
  * @param level The page table level that maps this vaddr
  * @param global_page True if we are invalidating a global mapping
  *
- * TODO(teisenbe): Optimize this.  This is horrible inefficient.
+ * TODO(teisenbe): Optimize this.  This is horribly inefficient.
  * We should also change this to pool invalidations from a single
  * "transaction" and then only execute a single mp_sync_exec for that
  * transaction, rather than one per page.
@@ -389,7 +389,21 @@ void x86_tlb_invalidate_page(arch_aspace_t* aspace, vaddr_t vaddr, enum page_tab
     struct tlb_invalidate_page_context task_context = {
         .target_cr3 = cr3, .vaddr = vaddr, .level = level, .global_page = global_page,
     };
-    mp_sync_exec(MP_CPU_ALL, tlb_invalidate_page_task, &task_context);
+
+    /* Target only CPUs this aspace is active on.  It may be the case that some
+     * other CPU will become active in it after this load, or will have left it
+     * just before this load.  In the former case, it is becoming active after
+     * the write to the page table, so it will see the change.  In the latter
+     * case, it will get a spurious request to flush. */
+    mp_cpu_mask_t targets;
+    if (global_page || aspace == NULL) {
+        targets = MP_CPU_ALL;
+    } else {
+        targets = atomic_load(&aspace->active_cpus);
+        static_assert(sizeof(mp_cpu_mask_t) == sizeof(aspace->active_cpus), "err");
+    }
+
+    mp_sync_exec(targets, tlb_invalidate_page_task, &task_context);
 }
 
 struct MappingCursor {
@@ -1095,6 +1109,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
 #endif
     }
     aspace->io_bitmap = nullptr;
+    aspace->active_cpus = 0;
     spin_lock_init(&aspace->io_bitmap_lock);
 
     return NO_ERROR;
@@ -1102,6 +1117,7 @@ status_t arch_mmu_init_aspace(arch_aspace_t* aspace, vaddr_t base, size_t size, 
 
 status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
     DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
+    DEBUG_ASSERT(aspace->active_cpus == 0);
 
 #if LK_DEBUGLEVEL > 1
     pt_entry_t *table = static_cast<pt_entry_t *>(aspace->pt_virt);
@@ -1134,13 +1150,22 @@ status_t arch_mmu_destroy_aspace(arch_aspace_t* aspace) {
 }
 
 void arch_mmu_context_switch(arch_aspace_t *old_aspace, arch_aspace_t *aspace) {
+    mp_cpu_mask_t cpu_bit = 1U << arch_curr_cpu_num();
     if (aspace != NULL) {
         DEBUG_ASSERT(aspace->magic == ARCH_ASPACE_MAGIC);
         LTRACEF_LEVEL(3, "switching to aspace %p, pt %#" PRIXPTR "\n", aspace, aspace->pt_phys);
         x86_set_cr3(aspace->pt_phys);
+
+        if (old_aspace != NULL) {
+            atomic_and(&old_aspace->active_cpus, ~cpu_bit);
+        }
+        atomic_or(&aspace->active_cpus, cpu_bit);
     } else {
         LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
         x86_set_cr3(kernel_pt_phys);
+        if (old_aspace != NULL) {
+            atomic_and(&old_aspace->active_cpus, ~cpu_bit);
+        }
     }
 
     /* Cleanup io bitmap entries from previous thread */
