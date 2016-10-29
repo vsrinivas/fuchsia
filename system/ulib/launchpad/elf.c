@@ -6,7 +6,6 @@
 
 #include <elfload/elfload.h>
 
-#include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <stdlib.h>
 

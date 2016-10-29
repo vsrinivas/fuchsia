@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <launchpad/launchpad.h>
-#include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <stdatomic.h>

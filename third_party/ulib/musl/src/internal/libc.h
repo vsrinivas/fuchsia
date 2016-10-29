@@ -24,7 +24,6 @@ struct tls_module {
 
 struct __libc {
     int secure;
-    mx_handle_t proc;
     atomic_int thread_count;
     struct tls_module* tls_head;
     size_t tls_size, tls_align, tls_cnt;

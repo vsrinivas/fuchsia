@@ -70,7 +70,7 @@ static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_
         return thread_stack_vmo;
 
     mx_status_t status = _mx_process_map_vm(
-        libc.proc, thread_stack_vmo, 0, stack_size, stack_out,
+        _mx_process_self(), thread_stack_vmo, 0, stack_size, stack_out,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     _mx_handle_close(thread_stack_vmo);
 

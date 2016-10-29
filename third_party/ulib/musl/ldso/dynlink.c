@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <link.h>
 #include <magenta/dlfcn.h>
+#include <magenta/internal.h>
 #include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>
@@ -489,7 +490,7 @@ static void* choose_load_address(size_t span) {
     // in POSIX terms).  But the kernel currently doesn't allow that, so do
     // a read-only mapping.
     uintptr_t base;
-    mx_status_t status = _mx_process_map_vm(libc.proc, vmo, 0, span, &base,
+    mx_status_t status = _mx_process_map_vm(__magenta_process_self, vmo, 0, span, &base,
                                             MX_VM_FLAG_PERM_READ);
     _mx_handle_close(vmo);
     if (status < 0) {
@@ -507,7 +508,7 @@ static void* choose_load_address(size_t span) {
     // That is, in the general case of dlopen when there are multiple
     // threads, it's racy.  For the startup case (or any time when there
     // is only one thread), it's fine.
-    status = _mx_process_unmap_vm(libc.proc, base, 0);
+    status = _mx_process_unmap_vm(__magenta_process_self, base, 0);
     if (status < 0) {
         error("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
               base, span, status);
@@ -526,7 +527,7 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
     if (copy_vmo < 0)
         return copy_vmo;
     uintptr_t window = 0;
-    mx_status_t status = _mx_process_map_vm(libc.proc, vmo,
+    mx_status_t status = _mx_process_map_vm(__magenta_process_self, vmo,
                                             *off_start, data_size, &window,
                                             MX_VM_FLAG_PERM_READ);
     if (status < 0) {
@@ -534,7 +535,7 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
         return status;
     }
     mx_ssize_t n = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
-    _mx_process_unmap_vm(libc.proc, window, 0);
+    _mx_process_unmap_vm(__magenta_process_self, window, 0);
     if (n >= 0 && n != (mx_ssize_t)data_size)
         n = ERR_IO;
     if (n < 0) {
@@ -678,7 +679,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
 
-        status = _mx_process_map_vm(libc.proc, map_vmo, off_start,
+        status = _mx_process_map_vm(__magenta_process_self, map_vmo, off_start,
                                     map_size, &mapaddr, mx_flags);
         if (map_vmo != vmo)
             _mx_handle_close(map_vmo);
@@ -697,7 +698,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                     goto mx_error;
                 }
                 uintptr_t bss_mapaddr = pgbrk;
-                status = _mx_process_map_vm(libc.proc, bss_vmo, 0, bss_len,
+                status = _mx_process_map_vm(__magenta_process_self, bss_vmo, 0, bss_len,
                                             &bss_mapaddr, mx_flags);
                 _mx_handle_close(bss_vmo);
                 if (status < 0)
@@ -1509,7 +1510,7 @@ dl_start_return_t __dls3(void* start_arg) {
             logger = handles[i];
             break;
         case MX_HND_TYPE_PROC_SELF:
-            libc.proc = handles[i];
+            __magenta_process_self = handles[i];
             break;
         default:
             _mx_handle_close(handles[i]);

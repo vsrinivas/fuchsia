@@ -6,4 +6,10 @@
 
 #include <magenta/types.h>
 
-// TODO: remove all uses of this file then delete it
+__BEGIN_CDECLS
+
+// These symbols are intended to be defined by the language runtime (eg. libc)
+
+extern mx_handle_t __magenta_process_self;
+
+__END_CDECLS

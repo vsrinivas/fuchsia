@@ -5,6 +5,7 @@
 #include <stdatomic.h>
 #include <string.h>
 
+#include <magenta/internal.h>
 #include <magenta/syscalls.h>
 #include <runtime/message.h>
 #include <runtime/processargs.h>
@@ -113,9 +114,9 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             // linker startup, but now we have another one.  They
             // should of course be handles to the same process, but
             // just for cleanliness switch to the "main" one.
-            if (libc.proc != MX_HANDLE_INVALID)
-                _mx_handle_close(libc.proc);
-            libc.proc = handles[i];
+            if (__magenta_process_self != MX_HANDLE_INVALID)
+                _mx_handle_close(__magenta_process_self);
+            __magenta_process_self = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             handle_info[i] = 0;
             break;

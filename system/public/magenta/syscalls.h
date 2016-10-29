@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/process.h>
+#include <magenta/internal.h>
 #include <magenta/syscalls/types.h>
 
 __BEGIN_CDECLS
@@ -19,6 +19,13 @@ __BEGIN_CDECLS
     extern ret mx_##name(args) __attribute__(attrs);
 
 #include <magenta/syscalls.inc>
+
+// Accessors for state provided by the language runtime (eg. libc)
+
+#define mx_process_self _mx_process_self
+static inline mx_handle_t _mx_process_self(void) {
+  return __magenta_process_self;
+}
 
 // Compatibility Wrappers
 

@@ -26,7 +26,7 @@ static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t
         return vmo;
     }
 
-    mx_status_t status = _mx_process_map_vm(libc.proc, vmo, 0u, new_len, new_mapping, flags);
+    mx_status_t status = _mx_process_map_vm(_mx_process_self(), vmo, 0u, new_len, new_mapping, flags);
     _mx_handle_close(vmo);
     if (status != NO_ERROR) {
         return status;
@@ -34,9 +34,9 @@ static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t
 
     memcpy((void*)*new_mapping, (void*)old_mapping, old_len);
 
-    status = _mx_process_unmap_vm(libc.proc, old_mapping, 0);
+    status = _mx_process_unmap_vm(_mx_process_self(), old_mapping, 0);
     if (status != NO_ERROR) {
-        _mx_process_unmap_vm(libc.proc, *new_mapping, new_len);
+        _mx_process_unmap_vm(_mx_process_self(), *new_mapping, new_len);
         return status;
     }
 
