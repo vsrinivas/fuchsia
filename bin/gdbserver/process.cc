@@ -136,6 +136,8 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
       argv_(argv),
       launchpad_(nullptr),
       process_id_(MX_KOID_INVALID),
+      base_address_(0),
+      entry_address_(0),
       eport_key_(0),
       started_(false),
       breakpoints_(this) {
@@ -160,6 +162,8 @@ bool Process::Initialize() {
   FTL_DCHECK(!debug_handle_.is_valid());
   FTL_DCHECK(!eport_key_);
 
+  mx_status_t status;
+
   if (!SetupLaunchpad(&launchpad_, argv_))
     return false;
 
@@ -181,9 +185,31 @@ bool Process::Initialize() {
 
   FTL_LOG(INFO) << "mx_debug handle obtained for process";
 
+  status = launchpad_get_base_address(launchpad_, &base_address_);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus(
+        "Failed to obtain the dynamic linker base address for process",
+        status);
+    goto fail;
+  }
+
+  status = launchpad_get_entry_address(launchpad_, &entry_address_);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus(
+        "Failed to obtain the dynamic linker entry address for process",
+        status);
+    goto fail;
+  }
+
+  FTL_LOG(INFO) << "Obtained base load address: "
+                << ftl::StringPrintf("0x%" PRIxPTR, base_address_)
+                << ", entry address: "
+                << ftl::StringPrintf("0x%" PRIxPTR, entry_address_);
+
   return true;
 
 fail:
+  process_id_ = MX_KOID_INVALID;
   debug_handle_.reset();
   launchpad_destroy(launchpad_);
   launchpad_ = nullptr;

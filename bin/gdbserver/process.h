@@ -93,6 +93,12 @@ class Process final {
   // Returns a mutable handle to the set of breakpoints managed by this process.
   arch::BreakpointSet* breakpoints() { return &breakpoints_; }
 
+  // Returns the base load address of the dynamic linker.
+  mx_vaddr_t base_address() const { return base_address_; }
+
+  // Returns the entry point of the dynamic linker.
+  mx_vaddr_t entry_address() const { return entry_address_; }
+
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
   // owned and managed by this Process instance.
@@ -151,6 +157,12 @@ class Process final {
 
   // The process ID.
   mx_koid_t process_id_;
+
+  // The base load address of the dynamic linker.
+  mx_vaddr_t base_address_;
+
+  // The entry point of the dynamic linker.
+  mx_vaddr_t entry_address_;
 
   // The key we receive after binding an exception port.
   ExceptionPort::Key eport_key_;

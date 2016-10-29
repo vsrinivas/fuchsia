@@ -67,6 +67,9 @@ class CommandHandler final {
                             const ResponseCallback& callback);
   // qfThreadInfo and qsThreadInfo
   bool HandleQueryThreadInfo(bool is_first, const ResponseCallback& callback);
+  // qXfer
+  bool HandleQueryXfer(const ftl::StringView& params,
+                       const ResponseCallback& callback);
   // QNonStop
   bool HandleSetNonStop(const ftl::StringView& params,
                         const ResponseCallback& callback);

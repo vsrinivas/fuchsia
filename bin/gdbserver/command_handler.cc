@@ -4,6 +4,7 @@
 
 #include "command_handler.h"
 
+#include <algorithm>
 #include <cinttypes>
 #include <string>
 
@@ -21,8 +22,8 @@ namespace debugserver {
 
 namespace {
 
-// TODO(armansito): Update this as we add more features.
-const char kSupportedFeatures[] = "QNonStop+;QThreadEvents+;swbreak+";
+const char kSupportedFeatures[] =
+    "QNonStop+;QThreadEvents+;swbreak+;qXfer:auxv:read+";
 
 const char kAttached[] = "Attached";
 const char kCurrentThreadId[] = "C";
@@ -31,6 +32,7 @@ const char kNonStop[] = "NonStop";
 const char kRun[] = "Run;";
 const char kSubsequentThreadInfo[] = "sThreadInfo";
 const char kSupported[] = "Supported";
+const char kXfer[] = "Xfer";
 
 // This always returns true so that command handlers can simple call "return
 // ReplyOK()" rather than "ReplyOK(); return true;
@@ -91,6 +93,9 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
     {
       ftl::StringView prefix, params;
       util::ExtractParameters(packet.substr(1), &prefix, &params);
+
+      FTL_VLOG(1) << "\'" << packet[0] << "\' packet - prefix: " << prefix
+                  << ", params: " << params;
 
       if (packet[0] == 'q')
         return Handle_q(prefix, params, callback);
@@ -363,6 +368,9 @@ bool CommandHandler::Handle_q(const ftl::StringView& prefix,
   if (prefix == kSupported)
     return HandleQuerySupported(params, callback);
 
+  if (prefix == kXfer)
+    return HandleQueryXfer(params, callback);
+
   return false;
 }
 
@@ -576,6 +584,65 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
 
   callback(ftl::StringView(buffer.get(), buf_size));
 
+  return true;
+}
+
+bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
+                                     const ResponseCallback& callback) {
+  // We only support qXfer:auxv:read::
+  ftl::StringView auxv_read("auxv:read::");
+  if (!StartsWith(params, auxv_read))
+    return false;
+
+  // Parse offset,length
+  auto args = ftl::SplitString(params.substr(auxv_read.size()), ",",
+                               ftl::kKeepWhitespace, ftl::kSplitWantNonEmpty);
+  if (args.size() != 2) {
+    FTL_LOG(ERROR) << "qXfer:auxv:read:: Malformed params: " << params;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  size_t offset, length;
+  if (!ftl::StringToNumberWithError<size_t>(args[0], &offset, ftl::Base::k16) ||
+      !ftl::StringToNumberWithError<size_t>(args[1], &length, ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "qXfer:auxv:read:: Malformed params: " << params;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "qXfer:auxv:read: No current process is not set";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  // Build the auxiliary vector. This definition is provided by the Linux manual
+  // page for the proc pseudo-filesystem (i.e. 'man proc'):
+  //
+  // "This contains the contents of the ELF interpreter information passed to
+  // the process at exec time. The format is one unsigned long ID plus one
+  // unsigned long value for each entry. The last entry contains two zeros."
+  struct {
+    unsigned long key;
+    unsigned long value;
+  } auxv[] = {
+    { 7, current_process->base_address() },  // AT_BASE
+    { }
+  };
+
+  // We allow setting sizeof(auxv) as the offset, which would effectively result
+  // in reading 0 bytes.
+  if (offset > sizeof(auxv)) {
+    FTL_LOG(ERROR) << "qXfer:auxv:read: invalid offset";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  size_t rsp_len = std::min(sizeof(auxv) - offset, length);
+  char rsp[1 + rsp_len];
+
+  rsp[0] = 'l';
+  memcpy(rsp + 1, auxv + offset, rsp_len);
+
+  callback(ftl::StringView(rsp, sizeof(rsp)));
   return true;
 }
 
