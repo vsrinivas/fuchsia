@@ -153,6 +153,10 @@ static mx_handle_t hdevice;
 static mx_handle_t hrpc;
 static mx_handle_t hacpi;
 
+__EXPORT mx_handle_t devhost_get_hacpi(void) {
+    return hacpi;
+}
+
 // Give core builtin drivers some control over where they publish
 // Drivers in the non-root devhost do not have access to this.
 
@@ -240,6 +244,13 @@ __EXPORT int devhost_cmdline(int argc, char** argv) {
         dev->props[1].id = BIND_SOC_PID;
         dev->props[1].value = strtoul(argv[3],NULL,10);
         dev->prop_count=2;
+    } else if (!strcmp(argv[1], "acpi")) {
+        // FIXME(yky,teisenbe): this will only add the battery device. need to restructure
+        // the code to scan the acpi tree.
+        if ((status = devhost_init_acpidev(&dev)) < 0) {
+            printf("devhost: cannot init acpi device: %d\n", status);
+            return -1;
+        }
     } else {
         printf("devhost: unsupported mode: %s\n", argv[1]);
         return -1;

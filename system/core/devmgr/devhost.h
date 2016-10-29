@@ -72,6 +72,9 @@ mx_status_t devhost_remove(mx_device_t* dev);
 int devhost_get_pcidev_index(mx_device_t* dev, uint16_t* vid, uint16_t* did);
 mx_status_t devhost_create_pcidev(mx_device_t** out, uint32_t index);
 
+// acpi plumbing
+int devhost_init_acpidev(mx_device_t** out);
+
 // dmctl plumbing
 mx_status_t devmgr_control(const char* cmd);
 

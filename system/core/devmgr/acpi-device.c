@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "acpi.h"
+#include "devhost.h"
 
 typedef struct acpi_device {
     mx_device_t device;
@@ -60,8 +61,32 @@ static mx_status_t acpi_get_child_handle_by_hid(acpi_handle_t* h, const char* hi
     return acpi_get_child_handle(h, name, child);
 }
 
+void devhost_launch_devhost(mx_device_t* parent, const char* name, uint32_t protocol_id, const char* procname, int argc, char** argv);
+
 mx_status_t acpi_init(mx_driver_t* driver) {
-    mx_handle_t hacpi = devmgr_acpi_clone();
+    // launch the acpi devhost
+    char arg1[20];
+    snprintf(arg1, sizeof(arg1), "acpi");
+
+    const char* args[2] = { "/boot/bin/devhost", arg1};
+    devhost_launch_devhost(driver_get_root_device(), "acpi", MX_PROTOCOL_ACPI, "devhost:acpi", 2, (char**)args);
+    return NO_ERROR;
+}
+
+mx_driver_t _driver_acpi = {
+    .ops = {
+        .init = acpi_init,
+    },
+};
+
+extern mx_handle_t devhost_get_hacpi(void);
+
+mx_status_t devhost_init_acpidev(mx_device_t** out) {
+    // Find the battery device.
+    // TODO(yky,teisenbe) The battery device is in _SB.PCI0 on the acer. To be replaced by real
+    // acpi device publishing code.
+
+    mx_handle_t hacpi = devhost_get_hacpi();
     if (hacpi <= 0) {
         printf("no acpi root handle\n");
         return ERR_NOT_SUPPORTED;
@@ -78,29 +103,19 @@ mx_status_t acpi_init(mx_driver_t* driver) {
     }
     acpi_handle_close(&acpi_root);
 
-    // Find the battery device.
-    // TODO(yky,teisenbe) The battery device is in _SB.PCI0 on the acer. To be replaced by real
-    // acpi device publishing code.
-
     acpi_device_t* batt_dev = calloc(1, sizeof(acpi_device_t));
     status = acpi_get_child_handle_by_hid(&pcie_handle, "PNP0C0A", &batt_dev->handle);
     if (status != NO_ERROR) {
         free(batt_dev);
     } else {
         memcpy(batt_dev->hid, "PNP0C0A", 7);
-        device_init(&batt_dev->device, driver, "BAT0", &acpi_device_proto);
+        device_init(&batt_dev->device, &_driver_acpi, "BAT0", &acpi_device_proto);
         batt_dev->device.protocol_id = MX_PROTOCOL_ACPI;
         batt_dev->device.protocol_ops = &acpi_device_acpi_proto;
-        device_add(&batt_dev->device, NULL);
+        // FIXME device is added in devhost.c
     }
 
     acpi_handle_close(&pcie_handle);
+    *out = &batt_dev->device;
     return NO_ERROR;
 }
-
-mx_driver_t _driver_acpi = {
-    .ops = {
-        .init = acpi_init,
-    },
-};
-
