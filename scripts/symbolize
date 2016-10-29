@@ -109,13 +109,13 @@ def tool_path(arch, tool):
 
 
 def run_tool(arch, tool, *args):
-  cmd = [tool_path(arch, tool)] + list(args)
-  try:
-    output = subprocess.check_output(cmd)
-  except Exception as e:
-    print "Calling %s failed: command %s error %s" % (tool, cmd, e)
-    return False
-  return output
+    cmd = [tool_path(arch, tool)] + list(args)
+    try:
+        output = subprocess.check_output(cmd)
+    except Exception as e:
+        print "Calling %s failed: command %s error %s" % (tool, cmd, e)
+        return False
+    return output
 
 
 def main():
@@ -179,29 +179,29 @@ def main():
                     dso_full_path = find_dso_full_path(
                         dso, args.app, name_to_buildid, build_dirs)
                     if dso_full_path:
-                      addr2line_output = run_tool(arch, "addr2line", "-Cipfe",
-                                                  dso_full_path, off)
-                      if addr2line_output:
-                        processed_lines.append(
-                            "#%s: %s" % (frame_num, addr2line_output))
-                      if args.disassemble:
-                        pc = int(off, 16)
-                        disassembly = run_tool(
-                            arch, "gdb", "--nx", "--batch", "-ex",
-                            "disassemble %#x" % pc, dso_full_path)
-                        if disassembly:
-                          for line in disassembly.splitlines():
-                            m = disasm_re.match(line)
-                            if m:
-                              addr, rest = m.groups()
-                              addr = int(addr, 16)
-                              if addr == pc:
-                                prefix = "=> "
-                              else:
-                                prefix = "   "
-                              line = "%s%#.16x%s" % (prefix, bias + addr, rest)
-                            processed_lines.append(line + "\n")
-                      continue
+                        addr2line_output = run_tool(arch, "addr2line", "-Cipfe",
+                                                    dso_full_path, off)
+                        if addr2line_output:
+                            processed_lines.append(
+                                "#%s: %s" % (frame_num, addr2line_output))
+                        if args.disassemble:
+                            pc = int(off, 16)
+                            disassembly = run_tool(
+                                arch, "gdb", "--nx", "--batch", "-ex",
+                                "disassemble %#x" % pc, dso_full_path)
+                            if disassembly:
+                                for line in disassembly.splitlines():
+                                    m = disasm_re.match(line)
+                                    if m:
+                                        addr, rest = m.groups()
+                                        addr = int(addr, 16)
+                                        if addr == pc:
+                                            prefix = "=> "
+                                        else:
+                                            prefix = "   "
+                                            line = "%s%#.16x%s" % (prefix, bias + addr, rest)
+                                        processed_lines.append(line + "\n")
+                        continue
                 processed_lines.append("#%s: (unknown)\n" % frame_num)
         if line.find("> ") < 0 or bt_end.match(line):
             if len(processed_lines) != 0:
