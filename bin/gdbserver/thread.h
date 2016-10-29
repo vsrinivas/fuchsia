@@ -21,6 +21,13 @@ class Process;
 // Represents a thread that is owned by a Process instance.
 class Thread final {
  public:
+  enum class State {
+    kNew,
+    kGone,
+    kStopped,
+    kRunning
+  };
+
   Thread(Process* process, mx_handle_t debug_handle, mx_koid_t thread_id);
   ~Thread();
 
@@ -35,11 +42,19 @@ class Thread final {
   // not be deleted by the caller.
   arch::Registers* registers() const { return registers_.get(); }
 
+  // Returns the current state of this thread.
+  State state() const { return state_; }
+
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure.
   bool Resume();
 
  private:
+  friend class Process;
+
+  // Called by Process to set the state of its threads.
+  void set_state(State state) { state_ = state; }
+
   // The owning process.
   Process* process_;  // weak
 
@@ -51,6 +66,9 @@ class Thread final {
 
   // The arch::Registers object associated with this thread.
   std::unique_ptr<arch::Registers> registers_;
+
+  // The current state of the this thread.
+  State state_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

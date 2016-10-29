@@ -11,6 +11,7 @@
 
 #include "lib/ftl/logging.h"
 
+#include "thread.h"
 #include "util.h"
 
 namespace debugserver {
@@ -146,7 +147,7 @@ std::string GetRegisterValueAsString(const mx_x86_64_general_regs_t& gregs,
 
 class RegistersAmd64 final : public Registers {
  public:
-  RegistersAmd64(const mx_handle_t thread_handle) : Registers(thread_handle) {
+  RegistersAmd64(Thread* thread) : Registers(thread) {
     memset(&gregs_, 0, sizeof(gregs_));
   }
 
@@ -155,8 +156,15 @@ class RegistersAmd64 final : public Registers {
   bool IsSupported() override { return true; }
 
   bool RefreshGeneralRegisters() override {
+    // We report all zeros for the registers if the thread was just created.
+    if (thread()->state() == Thread::State::kNew) {
+      memset(&gregs_, 0, sizeof(gregs_));
+      return true;
+    }
+
     uint32_t gregs_size;
-    return GetGeneralRegistersHelper(thread_handle(), &gregs_, &gregs_size);
+    return GetGeneralRegistersHelper(thread()->debug_handle(), &gregs_,
+                                     &gregs_size);
   }
 
   std::string GetGeneralRegisters() override {
@@ -193,12 +201,13 @@ class RegistersAmd64 final : public Registers {
 
     mx_x86_64_general_regs_t gregs;
     uint32_t gregs_size;
-    if (!GetGeneralRegistersHelper(thread_handle(), &gregs, &gregs_size))
+    if (!GetGeneralRegistersHelper(thread()->debug_handle(), &gregs,
+                                   &gregs_size))
       return false;
 
     std::memcpy(&gregs + register_number * sizeof(uint64_t), value, value_size);
     mx_status_t status = mx_thread_write_state(
-        thread_handle(), MX_THREAD_STATE_REGSET0, &gregs, gregs_size);
+        thread()->debug_handle(), MX_THREAD_STATE_REGSET0, &gregs, gregs_size);
     if (status < 0) {
       util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
       return false;
@@ -214,8 +223,8 @@ class RegistersAmd64 final : public Registers {
 }  // namespace
 
 // static
-std::unique_ptr<Registers> Registers::Create(const mx_handle_t thread_handle) {
-  return std::unique_ptr<Registers>(new RegistersAmd64(thread_handle));
+std::unique_ptr<Registers> Registers::Create(Thread* thread) {
+  return std::unique_ptr<Registers>(new RegistersAmd64(thread));
 }
 
 // static

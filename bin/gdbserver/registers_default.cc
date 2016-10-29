@@ -33,8 +33,7 @@ namespace {
 
 class RegistersDefault final : public Registers {
  public:
-  RegistersDefault(const mx_handle_t thread_handle)
-      : Registers(thread_handle) {}
+  RegistersDefault(Thread* thread) : Registers(thread) {}
 
   ~RegistersDefault() = default;
 
@@ -66,8 +65,8 @@ class RegistersDefault final : public Registers {
 }  // namespace
 
 // static
-std::unique_ptr<Registers> Registers::Create(const mx_handle_t thread_handle) {
-  return std::unique_ptr<Registers>(new RegistersDefault(thread_handle));
+std::unique_ptr<Registers> Registers::Create(Thread* thread) {
+  return std::unique_ptr<Registers>(new RegistersDefault(thread));
 }
 
 // static

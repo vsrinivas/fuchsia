@@ -183,6 +183,7 @@ bool Process::Initialize() {
   return true;
 
 fail:
+  debug_handle_.reset();
   launchpad_destroy(launchpad_);
   launchpad_ = nullptr;
   return false;
@@ -285,12 +286,6 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 }
 
 Thread* Process::PickOneThread() {
-  // TODO(armansito): It's not ideal to refresh the entire thread list but this
-  // is the most accurate way for now. When we have thread life-time events in
-  // the future we can manage |threads_| using events and only partially refresh
-  // it as needed.
-  RefreshAllThreads();
-
   if (threads_.empty())
     return nullptr;
 
@@ -361,22 +356,16 @@ bool Process::ReadMemory(uintptr_t address,
                          size_t length,
                          void* out_buffer,
                          size_t* out_bytes_read) {
-  if (!started()) {
-    FTL_LOG(ERROR) << "Cannot read memory: process not started";
-    return false;
-  }
-
   FTL_DCHECK(out_buffer);
-  mx_status_t status =
-      mx_process_read_memory(debug_handle_.get(), address, out_buffer, length, &length);
+  FTL_DCHECK(debug_handle_.is_valid());
+  mx_status_t status = mx_process_read_memory(
+      debug_handle_.get(), address, out_buffer, length, out_bytes_read);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
         ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
         status);
     return false;
   }
-
-  *out_bytes_read = length;
 
   return true;
 }
@@ -385,24 +374,28 @@ void Process::OnException(const mx_excp_type_t type,
                           const mx_exception_context_t& context) {
   FTL_LOG(INFO) << "Process exception received";
 
-  // TODO(armansito): Call RefreshAllThreads() here?
+  Thread* thread = FindThreadById(context.tid);
 
   // |type| could either map to an architectural exception or Magenta-defined
   // synthetic exceptions.
   if (MX_EXCP_IS_ARCH(type)) {
-    delegate_->OnArchitecturalException(this, type, context);
+    FTL_DCHECK(thread);
+    thread->set_state(Thread::State::kStopped);
+    delegate_->OnArchitecturalException(this, thread, type, context);
     return;
   }
 
-  // TODO(armansito): In my testing I've never had this code path execute when
-  // an inferior exits, most likely because it's not fully implemented in
-  // Magenta yet? Test this flow once it's supported.
   switch (type) {
     case MX_EXCP_START:
-      // TODO(armansito): Use this as a trigger for creating new Thread objects?
-      FTL_VLOG(1) << "Ignoring MX_EXCP_START exception";
+      FTL_VLOG(1) << "Received MX_EXCP_START exception";
+      FTL_DCHECK(thread);
+      FTL_DCHECK(thread->state() == Thread::State::kNew);
+      delegate_->OnThreadStarted(this, thread, context);
       return;
     case MX_EXCP_GONE:
+      FTL_VLOG(1) << "Received MX_EXCP_GONE exception";
+      if (thread)
+        thread->set_state(Thread::State::kGone);
       delegate_->OnProcessOrThreadExited(this, type, context);
       return;
     default:

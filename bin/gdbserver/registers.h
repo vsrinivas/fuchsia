@@ -13,6 +13,9 @@
 #include "lib/ftl/macros.h"
 
 namespace debugserver {
+
+class Thread;
+
 namespace arch {
 
 // The x86-64 general register names.
@@ -62,8 +65,8 @@ int ComputeGdbSignal(const mx_exception_context_t& exception_context);
 class Registers {
  public:
   // Factory method for obtaining a Registers instance on the current
-  // architecture for a particular thread with handle |thread_handle|.
-  static std::unique_ptr<Registers> Create(const mx_handle_t thread_handle);
+  // architecture for a particular thread |thread|.
+  static std::unique_ptr<Registers> Create(Thread* thread);
 
   virtual ~Registers() = default;
 
@@ -116,12 +119,12 @@ class Registers {
   static size_t GetRegisterSize();
 
  protected:
-  Registers(const mx_handle_t thread_handle);
+  Registers(Thread* thread);
 
-  mx_handle_t thread_handle() const { return thread_handle_; }
+  Thread* thread() const { return thread_; }
 
  private:
-  mx_handle_t thread_handle_;
+  Thread* thread_;  // weak
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };

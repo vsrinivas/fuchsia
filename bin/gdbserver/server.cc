@@ -15,6 +15,7 @@
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_printf.h"
 
 #include "util.h"
 
@@ -295,6 +296,19 @@ void Server::OnIOError() {
   QuitMessageLoop(false);
 }
 
+void Server::OnThreadStarted(Process* process,
+                             Thread* thread,
+                             const mx_exception_context_t& context) {
+  FTL_DCHECK(process);
+
+  // TODO(armansito): We send a stop-reply packet for the new thread. This
+  // inherently completes any pending vRun sequence but technically shouldn't be
+  // sent unless GDB enables QThreadEvents. Add some logic here to send this
+  // conditionally only when necessary.
+  std::string thread_id = util::EncodeThreadId(process->id(), context.tid);
+  PostPacketWriteTask(ftl::StringPrintf("T05thread:%s", thread_id.c_str()));
+}
+
 void Server::OnProcessOrThreadExited(Process* process,
                                      const mx_excp_type_t type,
                                      const mx_exception_context_t& context) {
@@ -303,9 +317,11 @@ void Server::OnProcessOrThreadExited(Process* process,
 }
 
 void Server::OnArchitecturalException(Process* process,
+                                      Thread* thread,
                                       const mx_excp_type_t type,
                                       const mx_exception_context_t& context) {
   FTL_DCHECK(process);
+  FTL_DCHECK(thread);
   FTL_LOG(INFO) << "Architectural Exception";
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
@@ -355,9 +371,7 @@ void Server::OnArchitecturalException(Process* process,
   ptr += 2;
 
   // Registers.
-  process->RefreshAllThreads();
-  Thread* thread = process->FindThreadById(context.tid);
-  if (thread && thread->registers()->RefreshGeneralRegisters()) {
+  if (thread->registers()->RefreshGeneralRegisters()) {
     std::array<int, 3> regnos{{arch::GetFPRegisterNumber(),
                                arch::GetSPRegisterNumber(),
                                arch::GetPCRegisterNumber()}};

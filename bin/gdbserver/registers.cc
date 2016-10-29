@@ -6,12 +6,14 @@
 
 #include "lib/ftl/logging.h"
 
+#include "thread.h"
+
 namespace debugserver {
 namespace arch {
 
-Registers::Registers(const mx_handle_t thread_handle)
-    : thread_handle_(thread_handle) {
-  FTL_DCHECK(thread_handle_ != MX_HANDLE_INVALID);
+Registers::Registers(Thread* thread) : thread_(thread) {
+  FTL_DCHECK(thread);
+  FTL_DCHECK(thread->debug_handle() != MX_HANDLE_INVALID);
 }
 
 }  // namespace arch

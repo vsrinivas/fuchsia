@@ -32,6 +32,11 @@ class Process final {
    public:
     virtual ~Delegate() = default;
 
+    // Called when a new that is part of this process has been started.
+    virtual void OnThreadStarted(Process* process,
+                                 Thread* thread,
+                                 const mx_exception_context_t& context) = 0;
+
     // Called when either |process| or one of its threads has exited. If
     // |context.tid| is zero, then the process is gone. Otherwise the thread
     // with that specific thread ID is gone.
@@ -43,6 +48,7 @@ class Process final {
     // Called when the kernel reports an architectural exception.
     virtual void OnArchitecturalException(
         Process* process,
+        Thread* thread,
         const mx_excp_type_t type,
         const mx_exception_context_t& context) = 0;
   };
@@ -86,8 +92,6 @@ class Process final {
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
   // owned and managed by this Process instance.
-  // NOTE: The returned thread might be stale. Call RefreshAllThreads()
-  // beforehand if this is a problem.
   Thread* FindThreadById(mx_koid_t thread_id);
 
   // Returns an arbitrary thread that is owned by this process. This picks the
@@ -146,12 +150,7 @@ class Process final {
   bool started_;
 
   // The threads owned by this process. This is map is populated lazily when
-  // threads are requested through FindThreadById() but gets fully refreshed
-  // through PickOneThread() and RefreshAllThreads().
-  //
-  // TODO(armansito): Currently the contents of |threads_| can be stale unless
-  // RefreshAllThreads() gets called frequently. Once we have support for thread
-  // lifecycle events we can partially update the mapping based on events.
+  // threads are requested through FindThreadById().
   using ThreadMap = std::unordered_map<mx_koid_t, std::unique_ptr<Thread>>;
   ThreadMap threads_;
 

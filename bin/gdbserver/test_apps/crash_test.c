@@ -5,6 +5,14 @@
 #include <stdio.h>
 #include <unistd.h>
 
+void AssignToPtr(int val, int* ptr) {
+  *ptr = val;
+}
+
+void Crash(int value) {
+  AssignToPtr(value, NULL);
+}
+
 int main(void) {
   printf("crash_test: Sleeping for 5 seconds\n");
 
@@ -12,8 +20,8 @@ int main(void) {
 
   printf("crash_test: Dereference and assign to NULL ptr\n");
 
-  int* foo = NULL;
-  *foo = 5;
+  int crash_value = 4;
+  Crash(crash_value);
 
   return 0;
 }

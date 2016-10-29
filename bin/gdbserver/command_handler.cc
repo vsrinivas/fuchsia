@@ -171,7 +171,7 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   // gives us.
   FTL_DCHECK(!current_process->started());
   if (!current_process->Start()) {
-    FTL_LOG(ERROR) << "Failed to run the current inferior";
+    FTL_LOG(ERROR) << "c: Failed to start the current inferior";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
@@ -539,27 +539,23 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
-  // magenta $pc isn't set until the call to launchpad_start (i.e.
-  // debugserver::Process::Start()), however we cannot call that here as a
-  // response to vRun since the program should be created in the "stopped
-  // state". We simply make sure that the process is attached and leave it at
-  // that.
-  //
-  // TODO(armansito|dje): Should this be changed in Magenta, so that $pc is set
-  // before calling launchpad_start?
   FTL_DCHECK(current_process->IsAttached());
 
-  // We need to respond with a Stop-Reply packet, however there is no thread to
-  // report at the moment (see the TODO above). So we send a fake stop-reply
-  // with an unspecified stop reason, setting the signal value to "05", the trap
-  // signal. Here we are reporting 0 for the thread ID but GDB seems to be OK
-  // with it as long as the process ID is also included.
-  //
-  // Note: The point of this is to make GDB aware of the process ID, since it
-  // seems to rely on stop-reply packets to obtain it.
-  std::string thread_id = util::EncodeThreadId(current_process->id(), 0);
-  callback(ftl::StringPrintf("T05thread:%s", thread_id.c_str()));
+  // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
+  // Magenta, calling mx_process_start (called by launchpad_start, which is
+  // called by Process::Start()) creates a synthetic exception of type
+  // MX_EXCP_START if a debugger is attached to the process and halts until a
+  // call to mx_task_resume (i.e. called by Thread::Resume() in gdbserver).
+  if (!current_process->Start()) {
+    FTL_LOG(ERROR) << "vRun: Failed to start process";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  FTL_DCHECK(current_process->started());
+
+  // We defer sending a stop-reply packet. Server will send it out when it
+  // receives an OnThreadStarted() event from |current_process|.
+
   return true;
 }
 
