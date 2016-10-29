@@ -120,14 +120,16 @@ static bool x86_mmu_check_paddr(paddr_t paddr) {
  * These are used for page mapping entries in the table
  */
 template <int Level>
-static arch_flags_t x86_arch_flags(uint flags) {
+static arch_flags_t x86_arch_flags(arch_aspace_t* aspace, uint flags) {
     arch_flags_t arch_flags = 0;
 
     if (flags & ARCH_MMU_FLAG_PERM_WRITE) arch_flags |= X86_MMU_PG_RW;
 
     if (flags & ARCH_MMU_FLAG_PERM_USER) {
         arch_flags |= X86_MMU_PG_U;
-    } else {
+    }
+
+    if (aspace->flags & ARCH_ASPACE_FLAG_KERNEL) {
         /* setting global flag for kernel pages */
         arch_flags |= X86_MMU_PG_G;
     }
@@ -738,7 +740,7 @@ static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, pt_entry_t* table, ui
     *new_cursor = start_cursor;
 
     arch_flags_t interm_arch_flags = get_x86_intermediate_arch_flags();
-    arch_flags_t arch_flags = x86_arch_flags<Level>(mmu_flags);
+    arch_flags_t arch_flags = x86_arch_flags<Level>(aspace, mmu_flags);
 
     size_t ps = page_size<Level>();
     bool level_supports_large_pages = level_supports_ps(static_cast<page_table_levels>(Level));
@@ -813,7 +815,7 @@ status_t x86_mmu_add_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, uin
 
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = x86_arch_flags<PT_L>(mmu_flags);
+    arch_flags_t arch_flags = x86_arch_flags<PT_L>(aspace, mmu_flags);
 
     uint index = vaddr_to_index<PT_L>(new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
@@ -859,7 +861,7 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, pt_entry_t* table,
     status_t ret = NO_ERROR;
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = x86_arch_flags<Level>(mmu_flags);
+    arch_flags_t arch_flags = x86_arch_flags<Level>(aspace, mmu_flags);
 
     size_t ps = page_size<Level>();
     uint index = vaddr_to_index<Level>(new_cursor->vaddr);
@@ -919,7 +921,7 @@ status_t x86_mmu_update_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, 
 
     *new_cursor = start_cursor;
 
-    arch_flags_t arch_flags = x86_arch_flags<PT_L>(mmu_flags);
+    arch_flags_t arch_flags = x86_arch_flags<PT_L>(aspace, mmu_flags);
 
     uint index = vaddr_to_index<PT_L>(new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
