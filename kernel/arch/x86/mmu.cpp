@@ -371,19 +371,19 @@ static void tlb_invalidate_page_task(void* raw_context) {
 /**
  * @brief Invalidate a single page at a given page table level
  *
- * @param cr3 The top-level page table physical address we are performing an invalidation on
+ * @param aspace The aspace we're invalidating for (if NULL, assume for current one)
  * @param vaddr The virtual address we are invalidating the TLB entry for
  * @param level The page table level that maps this vaddr
  * @param global_page True if we are invalidating a global mapping
  *
- * TODO(teisenbe): Optimize this.  This is horrible inefficient on several
- * levels.  We can easily check what CPUs are currently using this page table,
- * and so cut out the spurious IPIs.  We should also change this to pool
- * invalidations from a single "transaction" and then only execute a single
- * mp_sync_exec for that transaction, rather than one per page.
+ * TODO(teisenbe): Optimize this.  This is horrible inefficient.
+ * We should also change this to pool invalidations from a single
+ * "transaction" and then only execute a single mp_sync_exec for that
+ * transaction, rather than one per page.
  */
-void x86_tlb_invalidate_page(ulong cr3, vaddr_t vaddr, enum page_table_levels level,
+void x86_tlb_invalidate_page(arch_aspace_t* aspace, vaddr_t vaddr, enum page_table_levels level,
                              bool global_page) {
+    ulong cr3 = aspace ? aspace->pt_phys : x86_get_cr3();
     struct tlb_invalidate_page_context task_context = {
         .target_cr3 = cr3, .vaddr = vaddr, .level = level, .global_page = global_page,
     };
@@ -397,7 +397,7 @@ struct MappingCursor {
 };
 
 template <int Level>
-static void update_entry(ulong cr3, vaddr_t vaddr, pt_entry_t* pte, paddr_t paddr,
+static void update_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, paddr_t paddr,
                          arch_flags_t flags) {
 
     DEBUG_ASSERT(pte);
@@ -411,12 +411,12 @@ static void update_entry(ulong cr3, vaddr_t vaddr, pt_entry_t* pte, paddr_t padd
 
     /* attempt to invalidate the page */
     if (IS_PAGE_PRESENT(olde)) {
-        x86_tlb_invalidate_page(cr3, vaddr, (page_table_levels)Level, is_kernel_address(vaddr));
+        x86_tlb_invalidate_page(aspace, vaddr, (page_table_levels)Level, is_kernel_address(vaddr));
     }
 }
 
 template <int Level>
-static void unmap_entry(ulong cr3, vaddr_t vaddr, pt_entry_t* pte, bool flush) {
+static void unmap_entry(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte, bool flush) {
     DEBUG_ASSERT(pte);
 
     pt_entry_t olde = *pte;
@@ -425,7 +425,7 @@ static void unmap_entry(ulong cr3, vaddr_t vaddr, pt_entry_t* pte, bool flush) {
 
     /* attempt to invalidate the page */
     if (flush && IS_PAGE_PRESENT(olde)) {
-        x86_tlb_invalidate_page(cr3, vaddr, (page_table_levels)Level, is_kernel_address(vaddr));
+        x86_tlb_invalidate_page(aspace, vaddr, (page_table_levels)Level, is_kernel_address(vaddr));
     }
 }
 
@@ -450,7 +450,7 @@ static pt_entry_t* _map_alloc_page(void) {
  * @brief Split the given large page into smaller pages
  */
 template <int Level>
-static status_t x86_mmu_split(ulong cr3, vaddr_t vaddr, pt_entry_t* pte) {
+static status_t x86_mmu_split(arch_aspace_t* aspace, vaddr_t vaddr, pt_entry_t* pte) {
     static_assert(Level != PT_L, "tried splitting PT_L");
 #if X86_PAGING_LEVELS > 3
     // This can't easily be a static assert without duplicating
@@ -489,14 +489,14 @@ static status_t x86_mmu_split(ulong cr3, vaddr_t vaddr, pt_entry_t* pte) {
         pt_entry_t* e = m + i;
         // If this is a PDP_L (i.e. huge page), flags will include the
         // PS bit still, so the new PD entries will be large pages.
-        update_entry<Level - 1>(cr3, new_vaddr, e, new_paddr, flags);
+        update_entry<Level - 1>(aspace, new_vaddr, e, new_paddr, flags);
         new_vaddr += ps;
         new_paddr += ps;
     }
     DEBUG_ASSERT(new_vaddr == vaddr + page_size<Level>());
 
     flags = get_x86_intermediate_arch_flags();
-    update_entry<Level>(cr3, vaddr, pte, X86_VIRT_TO_PHYS(m), flags);
+    update_entry<Level>(aspace, vaddr, pte, X86_VIRT_TO_PHYS(m), flags);
     return NO_ERROR;
 }
 
@@ -583,7 +583,7 @@ status_t x86_mmu_get_mapping<PT_L>(pt_entry_t* table, vaddr_t vaddr,
  *
  * Level must be MAX_PAGING_LEVEL when invoked.
  *
- * @param cr3 The top-level paging structure's physical address
+ * @param aspace The aspace we're updating
  * @param table The top-level paging structure's virtual address
  * @param start_cursor A cursor describing the range of address space to
  * unmap within table
@@ -593,7 +593,7 @@ status_t x86_mmu_get_mapping<PT_L>(pt_entry_t* table, vaddr_t vaddr,
  * @return true if at least one page was unmapped at this level
  */
 template <int Level>
-static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCursor& start_cursor,
+static bool x86_mmu_remove_mapping(arch_aspace_t* aspace, pt_entry_t* table, const MappingCursor& start_cursor,
                                    MappingCursor* new_cursor) {
     static_assert(Level >= 0, "level too low");
     static_assert(Level < X86_PAGING_LEVELS, "level too high");
@@ -630,7 +630,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
             bool vaddr_level_aligned = page_aligned<Level>(new_cursor->vaddr);
             // If the request covers the entire large page, just unmap it
             if (vaddr_level_aligned && new_cursor->size >= ps) {
-                unmap_entry<Level>(cr3, new_cursor->vaddr, e, true);
+                unmap_entry<Level>(aspace, new_cursor->vaddr, e, true);
                 unmapped = true;
 
                 new_cursor->vaddr += ps;
@@ -640,7 +640,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
             }
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
-            status_t status = x86_mmu_split<Level>(cr3, page_vaddr, e);
+            status_t status = x86_mmu_split<Level>(aspace, page_vaddr, e);
             if (status != NO_ERROR) {
                 panic("Need to implement recovery from split failure");
             }
@@ -649,7 +649,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
         MappingCursor cursor;
         pt_entry_t* next_table = get_next_table_from_entry(*e);
         bool lower_unmapped = x86_mmu_remove_mapping<Level - 1>(
-                cr3, next_table, *new_cursor, &cursor);
+                aspace, next_table, *new_cursor, &cursor);
 
         // If we were requesting to unmap everything in the lower page table,
         // we know we can unmap the lower level page table.  Otherwise, if
@@ -669,7 +669,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
             }
         }
         if (unmap_page_table) {
-            unmap_entry<Level>(cr3, new_cursor->vaddr, e, false);
+            unmap_entry<Level>(aspace, new_cursor->vaddr, e, false);
             pmm_free_page(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table)));
             unmapped = true;
         }
@@ -684,7 +684,7 @@ static bool x86_mmu_remove_mapping(ulong cr3, pt_entry_t* table, const MappingCu
 
 // Base case of x86_remove_mapping for smallest page size
 template <>
-bool x86_mmu_remove_mapping<PT_L>(ulong cr3, pt_entry_t* table, const MappingCursor& start_cursor,
+bool x86_mmu_remove_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, const MappingCursor& start_cursor,
                                   MappingCursor* new_cursor) {
 
     LTRACEF("%016" PRIxPTR " %016zx\n", start_cursor.vaddr, start_cursor.size);
@@ -697,7 +697,7 @@ bool x86_mmu_remove_mapping<PT_L>(ulong cr3, pt_entry_t* table, const MappingCur
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
         pt_entry_t* e = table + index;
         if (IS_PAGE_PRESENT(*e)) {
-            unmap_entry<PT_L>(cr3, new_cursor->vaddr, e, true);
+            unmap_entry<PT_L>(aspace, new_cursor->vaddr, e, true);
             unmapped = true;
         }
 
@@ -713,7 +713,7 @@ bool x86_mmu_remove_mapping<PT_L>(ulong cr3, pt_entry_t* table, const MappingCur
  *
  * Level must be MAX_PAGING_LEVEL when invoked.
  *
- * @param cr3 The top-level paging structure's physical address
+ * @param aspace The aspace we're updating
  * @param table The top-level paging structure's virtual address
  * @param start_cursor A cursor describing the range of address space to
  * act on within table
@@ -725,7 +725,7 @@ bool x86_mmu_remove_mapping<PT_L>(ulong cr3, pt_entry_t* table, const MappingCur
  * @return ERR_NO_MEMORY if intermediate page tables could not be allocated
  */
 template <int Level>
-static status_t x86_mmu_add_mapping(ulong cr3, pt_entry_t* table, uint mmu_flags,
+static status_t x86_mmu_add_mapping(arch_aspace_t* aspace, pt_entry_t* table, uint mmu_flags,
                                     const MappingCursor& start_cursor, MappingCursor* new_cursor) {
     static_assert(Level >= 0, "level too low");
     static_assert(Level < X86_PAGING_LEVELS, "level too high");
@@ -757,7 +757,7 @@ static status_t x86_mmu_add_mapping(ulong cr3, pt_entry_t* table, uint mmu_flags
         if (level_supports_large_pages && !IS_PAGE_PRESENT(*e) && level_valigned &&
             level_paligned && new_cursor->size >= ps) {
 
-            update_entry<Level>(cr3, new_cursor->vaddr, table + index, new_cursor->paddr,
+            update_entry<Level>(aspace, new_cursor->vaddr, table + index, new_cursor->paddr,
                                 arch_flags | X86_MMU_PG_PS);
 
             new_cursor->paddr += ps;
@@ -775,12 +775,12 @@ static status_t x86_mmu_add_mapping(ulong cr3, pt_entry_t* table, uint mmu_flags
 
                 LTRACEF_LEVEL(2, "new table %p at level %d\n", m, Level);
 
-                update_entry<Level>(cr3, new_cursor->vaddr, e, X86_VIRT_TO_PHYS(m),
+                update_entry<Level>(aspace, new_cursor->vaddr, e, X86_VIRT_TO_PHYS(m),
                                     interm_arch_flags);
             }
 
             MappingCursor cursor;
-            ret = x86_mmu_add_mapping<Level - 1>(cr3, get_next_table_from_entry(*e), mmu_flags,
+            ret = x86_mmu_add_mapping<Level - 1>(aspace, get_next_table_from_entry(*e), mmu_flags,
                                                  *new_cursor, &cursor);
             *new_cursor = cursor;
             DEBUG_ASSERT(new_cursor->size <= start_cursor.size);
@@ -797,7 +797,7 @@ err:
         // new_cursor->size should be how much is left to be mapped still
         cursor.size -= new_cursor->size;
         if (cursor.size > 0) {
-            x86_mmu_remove_mapping<MAX_PAGING_LEVEL>(cr3, table, cursor, &result);
+            x86_mmu_remove_mapping<MAX_PAGING_LEVEL>(aspace, table, cursor, &result);
             DEBUG_ASSERT(result.size == 0);
         }
     }
@@ -806,7 +806,7 @@ err:
 
 // Base case of x86_mmu_add_mapping for smallest page size
 template <>
-status_t x86_mmu_add_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_flags,
+status_t x86_mmu_add_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, uint mmu_flags,
                                    const MappingCursor& start_cursor, MappingCursor* new_cursor) {
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size));
@@ -822,7 +822,7 @@ status_t x86_mmu_add_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_flags,
             return ERR_ALREADY_EXISTS;
         }
 
-        update_entry<PT_L>(cr3, new_cursor->vaddr, table + index, new_cursor->paddr, arch_flags);
+        update_entry<PT_L>(aspace, new_cursor->vaddr, table + index, new_cursor->paddr, arch_flags);
 
         new_cursor->paddr += PAGE_SIZE;
         new_cursor->vaddr += PAGE_SIZE;
@@ -838,7 +838,7 @@ status_t x86_mmu_add_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_flags,
  *
  * Level must be MAX_PAGING_LEVEL when invoked.
  *
- * @param cr3 The top-level paging structure's physical address
+ * @param aspace The aspace we're updating
  * @param table The top-level paging structure's virtual address
  * @param start_cursor A cursor describing the range of address space to
  * act on within table
@@ -846,7 +846,7 @@ status_t x86_mmu_add_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_flags,
  * completed.  Must be non-null.
  */
 template <int Level>
-static status_t x86_mmu_update_mapping(ulong cr3, pt_entry_t* table, uint mmu_flags,
+static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, pt_entry_t* table, uint mmu_flags,
                                        const MappingCursor& start_cursor,
                                        MappingCursor* new_cursor) {
     static_assert(Level >= 0, "level too low");
@@ -875,7 +875,7 @@ static status_t x86_mmu_update_mapping(ulong cr3, pt_entry_t* table, uint mmu_fl
             // If the request covers the entire large page, just change the
             // permissions
             if (vaddr_level_aligned && new_cursor->size >= ps) {
-                update_entry<Level>(cr3, new_cursor->vaddr, e, paddr_from_pte<Level>(*e),
+                update_entry<Level>(aspace, new_cursor->vaddr, e, paddr_from_pte<Level>(*e),
                                     arch_flags | X86_MMU_PG_PS);
 
                 new_cursor->vaddr += ps;
@@ -885,7 +885,7 @@ static status_t x86_mmu_update_mapping(ulong cr3, pt_entry_t* table, uint mmu_fl
             }
             // Otherwise, we need to split it
             vaddr_t page_vaddr = new_cursor->vaddr & ~(ps - 1);
-            ret = x86_mmu_split<Level>(cr3, page_vaddr, e);
+            ret = x86_mmu_split<Level>(aspace, page_vaddr, e);
             if (ret != NO_ERROR) {
                 goto err;
             }
@@ -893,7 +893,7 @@ static status_t x86_mmu_update_mapping(ulong cr3, pt_entry_t* table, uint mmu_fl
 
         MappingCursor cursor;
         pt_entry_t* next_table = get_next_table_from_entry(*e);
-        ret = x86_mmu_update_mapping<Level - 1>(cr3, next_table, mmu_flags, *new_cursor, &cursor);
+        ret = x86_mmu_update_mapping<Level - 1>(aspace, next_table, mmu_flags, *new_cursor, &cursor);
         *new_cursor = cursor;
         if (ret != NO_ERROR) {
             goto err;
@@ -910,7 +910,7 @@ err:
 
 // Base case of x86_update_mapping for smallest page size
 template <>
-status_t x86_mmu_update_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_flags,
+status_t x86_mmu_update_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, uint mmu_flags,
                                       const MappingCursor& start_cursor,
                                       MappingCursor* new_cursor) {
 
@@ -928,7 +928,7 @@ status_t x86_mmu_update_mapping<PT_L>(ulong cr3, pt_entry_t* table, uint mmu_fla
             // TODO: Cleanup
             return ERR_NOT_FOUND;
         }
-        update_entry<PT_L>(cr3, new_cursor->vaddr, e, paddr_from_pte<PT_L>(*e), arch_flags);
+        update_entry<PT_L>(aspace, new_cursor->vaddr, e, paddr_from_pte<PT_L>(*e), arch_flags);
 
         new_cursor->vaddr += PAGE_SIZE;
         new_cursor->size -= PAGE_SIZE;
@@ -954,7 +954,7 @@ int arch_mmu_unmap(arch_aspace_t* aspace, vaddr_t vaddr, size_t count) {
     };
 
     MappingCursor result;
-    x86_mmu_remove_mapping<MAX_PAGING_LEVEL>(aspace->pt_phys, aspace->pt_virt, start, &result);
+    x86_mmu_remove_mapping<MAX_PAGING_LEVEL>(aspace, aspace->pt_virt, start, &result);
     DEBUG_ASSERT(result.size == 0);
     return NO_ERROR;
 }
@@ -980,7 +980,7 @@ int arch_mmu_map(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t paddr, size_t cou
         .paddr = paddr, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    status_t status = x86_mmu_add_mapping<MAX_PAGING_LEVEL>(aspace->pt_phys, aspace->pt_virt, flags,
+    status_t status = x86_mmu_add_mapping<MAX_PAGING_LEVEL>(aspace, aspace->pt_virt, flags,
                                                             start, &result);
     if (status != NO_ERROR) {
         dprintf(SPEW, "Add mapping failed with err=%d\n", status);
@@ -1007,7 +1007,7 @@ int arch_mmu_protect(arch_aspace_t* aspace, vaddr_t vaddr, size_t count, uint fl
         .paddr = 0, .vaddr = vaddr, .size = count * PAGE_SIZE,
     };
     MappingCursor result;
-    status_t status = x86_mmu_update_mapping<MAX_PAGING_LEVEL>(aspace->pt_phys, aspace->pt_virt,
+    status_t status = x86_mmu_update_mapping<MAX_PAGING_LEVEL>(aspace, aspace->pt_virt,
                                                                flags, start, &result);
     if (status != NO_ERROR) {
         return status;
@@ -1022,7 +1022,7 @@ void x86_mmu_early_init() {
 
 #if ARCH_X86_64
     /* unmap the lower identity mapping */
-    unmap_entry<PML4_L>(x86_get_cr3(), 0, &pml4[0], true);
+    unmap_entry<PML4_L>(nullptr, 0, &pml4[0], true);
 #else
     /* unmap the lower identity mapping */
     for (uint i = 0; i < (1 * GB) / (4 * MB); i++) {
