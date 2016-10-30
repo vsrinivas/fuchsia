@@ -25,6 +25,9 @@ public:
         return *this;
     }
 
+    // Rather than creating a thread directly with this syscall, consider using
+    // std::thread or thrd_create, which properly integrates with the
+    // thread-local data structures in libc.
     static mx_status_t create(const process& process, const char* name,
                               uint32_t name_len, uint32_t flags,
                               thread* result);
