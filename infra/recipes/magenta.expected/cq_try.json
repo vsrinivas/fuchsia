@@ -85,10 +85,10 @@
       "cl",
       "patch",
       "-host",
-      "https://https://fuchsia-review.googlesource.com",
+      "fuchsia-review.googlesource.com",
       "-delete=true",
       "-force=true",
-      "refs/changes/11/338811/3"
+      "refs/changes/89/456789/12"
     ],
     "name": "patch"
   },
