@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
 #include <magenta/status.h>
 #include <runtime/thread.h>
@@ -157,17 +158,51 @@ mx_handle_t tu_launch(const char* name,
     return child;
 }
 
-mx_handle_t tu_launch_mxio_etc(const char* name,
-                               int argc, const char* const* argv,
-                               const char* const* envp,
-                               size_t num_handles, mx_handle_t* handles,
-                               uint32_t* handle_ids)
+launchpad_t* tu_launch_mxio_init(const char* name,
+                                 int argc, const char* const* argv,
+                                 const char* const* envp,
+                                 size_t hnds_count, mx_handle_t* handles,
+                                 uint32_t* ids)
 {
-    mx_handle_t child = launchpad_launch_mxio_etc(name, argc, argv, envp,
-                                                  num_handles, handles, handle_ids);
-    if (child < 0)
-        tu_fatal("launchpad_launch_mxio_etc", child);
-    return child;
+    // This is the first part of launchpad_launch_mxio_etc.
+    // It does everything except start the process running.
+    launchpad_t* lp;
+
+    const char* filename = argv[0];
+    if (name == NULL)
+        name = filename;
+
+    mx_status_t status = launchpad_create(name, &lp);
+    if (status == NO_ERROR) {
+        status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
+        if (status == NO_ERROR)
+            status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
+        if (status == NO_ERROR)
+            status = launchpad_add_vdso_vmo(lp);
+        if (status == NO_ERROR)
+            status = launchpad_arguments(lp, argc, argv);
+        if (status == NO_ERROR)
+            status = launchpad_environ(lp, envp);
+        if (status == NO_ERROR)
+            status = launchpad_add_all_mxio(lp);
+        if (status == NO_ERROR)
+            status = launchpad_add_handles(lp, hnds_count, handles, ids);
+    }
+
+    if (status != NO_ERROR)
+        tu_fatal("tu_launchpad_mxio_init", status);
+    return lp;
+}
+
+mx_handle_t tu_launch_mxio_fini(launchpad_t* lp)
+{
+    // This is just launchpad's finish_launch function, but it's not exported.
+    mx_handle_t proc;
+    proc = launchpad_start(lp);
+    launchpad_destroy(lp);
+    if (proc < 0)
+        tu_fatal("tu_launch_mxio_fini", proc);
+    return proc;
 }
 
 int tu_process_get_return_code(mx_handle_t process)

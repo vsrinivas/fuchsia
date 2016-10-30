@@ -18,6 +18,7 @@
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 #include <magenta/syscalls/object.h>
+#include <launchpad/launchpad.h>
 
 __BEGIN_CDECLS
 
@@ -48,13 +49,19 @@ mx_handle_t tu_launch(const char* name,
                       size_t num_handles, mx_handle_t* handles,
                       uint32_t* handle_ids);
 
-// A wrapper on launchpad_launch_mxio_etc.
+// The first part of launchpad_launch_mxio_etc that creates the
+// launchpad and initializes the process.
 
-mx_handle_t tu_launch_mxio_etc(const char* name,
-                               int argc, const char* const* argv,
-                               const char* const* envp,
-                               size_t num_handles, mx_handle_t* handles,
-                               uint32_t* handle_ids);
+launchpad_t* tu_launch_mxio_init(const char* name,
+                                 int argc, const char* const* argv,
+                                 const char* const* envp,
+                                 size_t num_handles, mx_handle_t* handles,
+                                 uint32_t* handle_ids);
+
+// The second part of launchpad_launch_mxio_etc that starts the process.
+// Returns a handle of the started process.
+
+mx_handle_t tu_launch_mxio_fini(launchpad_t* lp);
 
 // A wrapper on C11 thrd_create.
 

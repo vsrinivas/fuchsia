@@ -139,6 +139,7 @@ static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
 static bool test_received_exception(mx_handle_t eport,
                                     const char* kind,
                                     mx_handle_t process,
+                                    mx_excp_type_t expected_type,
                                     bool test_not_enough_buffer,
                                     mx_koid_t* tid)
 {
@@ -147,6 +148,7 @@ static bool test_received_exception(mx_handle_t eport,
     const mx_exception_report_t* report = &packet.report;
 
     EXPECT_EQ(packet.hdr.key, 0u, "bad report key");
+    EXPECT_EQ(report->header.type, expected_type, "bad exception type");
 
     if (strcmp(kind, "process") == 0) {
         mx_handle_t debug_child = mx_object_get_child(MX_HANDLE_INVALID, report->context.pid, MX_RIGHT_SAME_RIGHTS);
@@ -159,7 +161,7 @@ static bool test_received_exception(mx_handle_t eport,
     } else if (strcmp(kind, "thread") == 0) {
         // TODO(dje)
     } else {
-        // process/thread done, nothing to do
+        // process/thread gone, nothing to do
     }
 
     // Verify the exception was from |process|.
@@ -252,7 +254,7 @@ static void test_child(void)
     exit(0);
 }
 
-static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_channel)
+static launchpad_t* setup_test_child(mx_handle_t* out_channel)
 {
     unittest_printf("Starting test child.\n");
     mx_handle_t our_channel, their_channel;
@@ -264,9 +266,16 @@ static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_channel)
     };
     mx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
-    mx_handle_t child = tu_launch_mxio_etc(test_child_name, 2, argv, NULL, 1, handles, handle_ids);
-    *out_child = child;
     *out_channel = our_channel;
+    launchpad_t* lp = tu_launch_mxio_init(test_child_name, 2, argv, NULL, 1, handles, handle_ids);
+    unittest_printf("Test child setup.\n");
+    return lp;
+}
+
+static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_channel)
+{
+    launchpad_t* lp = setup_test_child(out_channel);
+    *out_child = tu_launch_mxio_fini(lp);
     unittest_printf("Test child started.\n");
 }
 
@@ -360,7 +369,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
 {
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
-    test_received_exception(eport, kind, child, false, &tid);
+    test_received_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
     resume_thread_from_exception(child, tid);
     tu_wait_signaled(child);
 
@@ -429,7 +438,7 @@ static bool process_gone_notification_test(void)
 
     send_msg(our_channel, MSG_DONE);
     mx_koid_t tid;
-    test_received_exception(eport, "process gone", child, true, &tid);
+    test_received_exception(eport, "process gone", child, MX_EXCP_GONE, true, &tid);
     ASSERT_EQ(tid, 0u, "tid not zero");
     // there's no reply to a "gone" notification
 
@@ -458,7 +467,7 @@ static bool thread_gone_notification_test(void)
     send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
     mx_koid_t tid;
-    test_received_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, true, &tid);
+    test_received_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid);
     ASSERT_GT(tid, 0u, "tid not >= 0");
     // there's no reply to a "gone" notification
 
