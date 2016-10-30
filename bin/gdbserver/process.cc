@@ -137,7 +137,8 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
       launchpad_(nullptr),
       process_id_(MX_KOID_INVALID),
       eport_key_(0),
-      started_(false) {
+      started_(false),
+      breakpoints_(this) {
   FTL_DCHECK(server_);
   FTL_DCHECK(delegate_);
   FTL_DCHECK(argv_.size() > 0);
@@ -364,6 +365,35 @@ bool Process::ReadMemory(uintptr_t address,
     util::LogErrorWithMxStatus(
         ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
         status);
+    return false;
+  }
+
+  return true;
+}
+
+bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
+  FTL_DCHECK(debug_handle_.is_valid());
+
+  if (length == 0) {
+    FTL_VLOG(1) << "No data to write";
+    return false;
+  }
+
+  FTL_DCHECK(data);
+
+  mx_size_t bytes_written;
+  mx_status_t status = mx_process_write_memory(debug_handle_.get(), address,
+                                               data, length, &bytes_written);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus(
+        ftl::StringPrintf("Failed to write memory at addr: %" PRIxPTR, address),
+        status);
+    return false;
+  }
+
+  if (bytes_written != length) {
+    FTL_LOG(WARNING) << "Failed to write requested number of bytes - length: "
+                     << length << ", written: " << bytes_written;
     return false;
   }
 

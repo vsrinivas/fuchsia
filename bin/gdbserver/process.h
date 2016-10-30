@@ -17,6 +17,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
+#include "breakpoint.h"
 #include "exception_port.h"
 #include "thread.h"
 
@@ -89,6 +90,9 @@ class Process final {
   // Returns the process ID.
   mx_koid_t id() const { return process_id_; }
 
+  // Returns a mutable handle to the set of breakpoints managed by this process.
+  arch::BreakpointSet* breakpoints() { return &breakpoints_; }
+
   // Returns the thread with the thread ID |thread_id| that's owned by this
   // process. Returns nullptr if no such thread exists. The returned pointer is
   // owned and managed by this Process instance.
@@ -109,13 +113,18 @@ class Process final {
   using ThreadCallback = std::function<void(Thread*)>;
   void ForEachThread(const ThreadCallback& callback);
 
-  // Reads the block of memory of length |length| starting at address |address|
-  // into |out_buffer|. |out_buffer| must be at least as large as |length|.
-  // Returns true on success or false on failure.
+  // Reads the block of memory of length |length| bytes starting at address
+  // |address| into |out_buffer|. |out_buffer| must be at least as large as
+  // |length|. Returns true on success or false on failure.
   bool ReadMemory(uintptr_t address,
                   size_t length,
                   void* out_buffer,
                   size_t* out_bytes_read);
+
+  // Writes the block of memory of length |length| bytes from |data| to the
+  // memory address |address| of this process. Returns true on success or false
+  // on failure.
+  bool WriteMemory(uintptr_t address, const void* data, size_t length);
 
  private:
   Process() = default;
@@ -148,6 +157,9 @@ class Process final {
 
   // True, if the inferior has been run via a call to Start().
   bool started_;
+
+  // The collection of breakpoints that belong to this process.
+  arch::BreakpointSet breakpoints_;
 
   // The threads owned by this process. This is map is populated lazily when
   // threads are requested through FindThreadById().

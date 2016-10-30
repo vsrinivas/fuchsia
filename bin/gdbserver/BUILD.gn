@@ -16,6 +16,8 @@ executable("bin") {
   output_name = "debugserver"
 
   sources = [
+    "breakpoint.cc",
+    "breakpoint.h",
     "command_handler.cc",
     "command_handler.h",
     "exception_port.cc",
@@ -29,6 +31,8 @@ executable("bin") {
     "process.h",
     "server.cc",
     "server.h",
+    "stop_reply_packet.cc",
+    "stop_reply_packet.h",
     "thread.cc",
     "thread.h",
     "util.cc",
@@ -36,11 +40,20 @@ executable("bin") {
   ]
 
   if (current_cpu == "x64") {
-    sources += [ "registers_amd64.cc" ]
+    sources += [
+      "breakpoint_amd64.cc",
+      "registers_amd64.cc",
+    ]
   } else if (current_cpu == "arm64") {
-    sources += [ "registers_arm64.cc" ]
+    sources += [
+      "breakpoint_arm64.cc",
+      "registers_arm64.cc",
+    ]
   } else {
-    sources += [ "registers_default.cc" ]
+    sources += [
+      "breakpoint_default.cc",
+      "registers_default.cc",
+    ]
   }
 
   deps = [
@@ -59,6 +72,9 @@ executable("gdbserver_unittests") {
   testonly = true
 
   sources = [
+    "stop_reply_packet.cc",
+    "stop_reply_packet.h",
+    "stop_reply_packet_unittest.cc",
     "test/run_all_unittests.cc",
     "util.cc",
     "util.h",

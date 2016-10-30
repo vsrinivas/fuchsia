@@ -43,6 +43,7 @@ bool Thread::Resume() {
   }
 
   state_ = State::kRunning;
+  FTL_LOG(INFO) << "Thread (tid = " << thread_id_ << ") is running";
 
   return true;
 }

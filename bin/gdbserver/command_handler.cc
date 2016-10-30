@@ -4,6 +4,7 @@
 
 #include "command_handler.h"
 
+#include <cinttypes>
 #include <string>
 
 #include "lib/ftl/logging.h"
@@ -21,7 +22,7 @@ namespace debugserver {
 namespace {
 
 // TODO(armansito): Update this as we add more features.
-const char kSupportedFeatures[] = "QNonStop+;QThreadEvents+";
+const char kSupportedFeatures[] = "QNonStop+;QThreadEvents+;swbreak+";
 
 const char kAttached[] = "Attached";
 const char kCurrentThreadId[] = "C";
@@ -97,6 +98,9 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
     }
     case 'v':
       return Handle_v(packet.substr(1), callback);
+    case 'z':
+    case 'Z':
+      return Handle_zZ(packet[0] == 'Z', packet.substr(1), callback);
     default:
       break;
   }
@@ -379,6 +383,62 @@ bool CommandHandler::Handle_v(const ftl::StringView& packet,
   return false;
 }
 
+bool CommandHandler::Handle_zZ(bool insert,
+                               const ftl::StringView& packet,
+                               const ResponseCallback& callback) {
+  // A Z packet contains the "type,addr,kind" parameters before all other
+  // optional parameters, which follow an optional ';' character. Check to see
+  // if there are any optional parameters:
+  size_t semicolon = packet.find(';');
+
+  // ftl::StringView::find returns npos if it can't find the character. Adjust
+  // |semicolon| to point just beyond the end of |packet| so that
+  // packet.substr() works..
+  if (semicolon == ftl::StringView::npos)
+    semicolon = packet.size();
+
+  auto params = ftl::SplitString(packet.substr(0, semicolon), ",",
+                                 ftl::kKeepWhitespace, ftl::kSplitWantNonEmpty);
+  if (params.size() != 3) {
+    FTL_LOG(ERROR) << "zZ: 3 required parameters missing";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  size_t type;
+  uintptr_t addr;
+  size_t kind;
+  if (!ftl::StringToNumberWithError<uintptr_t>(params[0], &type,
+                                               ftl::Base::k16) ||
+      !ftl::StringToNumberWithError<uintptr_t>(params[1], &addr,
+                                               ftl::Base::k16) ||
+      !ftl::StringToNumberWithError<size_t>(params[2], &kind, ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "zZ: Failed to parse |type|, |addr| and |kind|";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  auto optional_params = packet.substr(semicolon);
+
+  // "Remove breakpoint" packets don't contain any optional fields.
+  if (!insert && !optional_params.empty()) {
+    FTL_LOG(ERROR) << "zZ: Malformed packet";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  switch (type) {
+    case 0:
+      if (insert)
+        return InsertSoftwareBreakpoint(addr, kind, optional_params, callback);
+      return RemoveSoftwareBreakpoint(addr, kind, callback);
+    default:
+      break;
+  }
+
+  FTL_LOG(WARNING) << "Breakpoints of type " << type
+                   << " currently not supported";
+
+  return false;
+}
+
 bool CommandHandler::HandleQueryAttached(const ftl::StringView& params,
                                          const ResponseCallback& callback) {
   // We don't support multiprocessing yet, so make sure we received the version
@@ -557,6 +617,51 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
   // receives an OnThreadStarted() event from |current_process|.
 
   return true;
+}
+
+bool CommandHandler::InsertSoftwareBreakpoint(
+    uintptr_t addr,
+    size_t kind,
+    const ftl::StringView& optional_params,
+    const ResponseCallback& callback) {
+  FTL_LOG(INFO) << ftl::StringPrintf(
+      "Insert software breakpoint at %" PRIxPTR ", kind: %lu", addr, kind);
+
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "No current process exists";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  // TODO(armansito): Handle |optional_params|.
+
+  if (!current_process->breakpoints()->InsertSoftwareBreakpoint(addr, kind)) {
+    FTL_LOG(ERROR) << "Failed to insert software breakpoint";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  return ReplyOK(callback);
+}
+
+bool CommandHandler::RemoveSoftwareBreakpoint(
+    uintptr_t addr,
+    size_t kind,
+    const ResponseCallback& callback) {
+  FTL_LOG(INFO) << ftl::StringPrintf("Remove software breakpoint at %" PRIxPTR,
+                                     addr);
+
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "No current process exists";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  if (!current_process->breakpoints()->RemoveSoftwareBreakpoint(addr)) {
+    FTL_LOG(ERROR) << "Failed to remove software breakpoint";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  return ReplyOK(callback);
 }
 
 }  // namespace debugserver

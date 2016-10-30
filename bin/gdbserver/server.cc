@@ -17,6 +17,7 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
+#include "stop_reply_packet.h"
 #include "util.h"
 
 namespace debugserver {
@@ -305,8 +306,13 @@ void Server::OnThreadStarted(Process* process,
   // inherently completes any pending vRun sequence but technically shouldn't be
   // sent unless GDB enables QThreadEvents. Add some logic here to send this
   // conditionally only when necessary.
-  std::string thread_id = util::EncodeThreadId(process->id(), context.tid);
-  PostPacketWriteTask(ftl::StringPrintf("T05thread:%s", thread_id.c_str()));
+  StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
+  stop_reply.SetSignalNumber(5);
+  stop_reply.SetThreadId(process->id(), context.tid);
+  stop_reply.SetStopReason("create");
+
+  auto packet = stop_reply.Build();
+  PostPacketWriteTask(ftl::StringView(packet.data(), packet.size()));
 }
 
 void Server::OnProcessOrThreadExited(Process* process,
@@ -336,39 +342,15 @@ void Server::OnArchitecturalException(Process* process,
 
   FTL_DCHECK(sigval < std::numeric_limits<uint8_t>::max());
 
-  // TODO(armansito): Implement the "hwbreak" and "swbreak" stop reasons once
-  // we support them.
+  StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
+  stop_reply.SetSignalNumber(sigval);
+  stop_reply.SetThreadId(process->id(), context.tid);
 
-  // Send a "T" Stop-Reply ("The program received signal"). We use this over
-  // "S", and include some of the important register values in the packet.
-  // We are sending:
-  //    - 1 byte for "T"
-  //    - 2 bytes for the two-digit hexadecimal signal number
-  //    - For the PC, FP, and SP registers each, we add:
-  //        a. 2 bytes for the two-digit register number (we assume that these
-  //           will fit inside one byte).
-  //        b. 1 byte for the pair delimiter ':'
-  //        c. 2 times the register on the current platform
-  //    - For the thread-id of the stopped thread we allocate at least
-  //        a. strlen("thread")
-  //        b. 1 byte for the pair delimiter ':'
-  //        c. thread_id.length()
-  //    - Semi-colons (';') for each parameter (thread_id + 3 registers)  => 4
-  //
-  // => 1 + 2 + 3 * (2 + 1 + (variable) * 2) + 6 + 1 + (variable)
-  std::string thread_id = util::EncodeThreadId(process->id(), context.tid);
-  const size_t kReplySize =
-      14 + 3 * (3 + arch::Registers::GetRegisterSize() * 2) + thread_id.size();
-
-  char buffer[kReplySize];
-  char* ptr = buffer;
-
-  // T
-  *ptr++ = 'T';
-
-  // sigval
-  util::EncodeByteString(static_cast<uint8_t>(sigval), ptr);
-  ptr += 2;
+  // TODO(armansito): The kernel doesn't report MX_EXCP_*_BREAKPOINT currently,
+  // so we condition this on MX_EXCP_GENERAL. We always set "swbreak" for the
+  // stop reason since that's the only kind we currently support.
+  if (type == MX_EXCP_GENERAL)
+    stop_reply.SetStopReason("swbreak");
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
@@ -379,39 +361,15 @@ void Server::OnArchitecturalException(Process* process,
     for (int regno : regnos) {
       FTL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
       std::string regval = thread->registers()->GetRegisterValue(regno);
-
-      // Register number
-      util::EncodeByteString(static_cast<uint8_t>(regno), ptr);
-      ptr += 2;
-
-      // Pair delimiter
-      *ptr++ = ':';
-
-      // Register value
-      std::memcpy(ptr, regval.data(), regval.size());
-      ptr += regval.size();
-
-      // Param delimiter
-      *ptr++ = ';';
+      stop_reply.AddRegisterValue(regno, regval);
     }
   } else {
     FTL_LOG(WARNING)
         << "Couldn't read thread registers while handling exception";
   }
 
-  // thread_id
-  std::strcpy(ptr, "thread:");
-  ptr += std::strlen(ptr);
-  std::memcpy(ptr, thread_id.data(), thread_id.size());
-  ptr += thread_id.size();
-
-  // Param delimiter
-  *ptr++ = ';';
-
-  FTL_DCHECK(ptr > buffer);
-  size_t reply_size = ptr - buffer;
-
-  SendNotification("Stop", ftl::StringView(buffer, reply_size));
+  auto packet = stop_reply.Build();
+  SendNotification("Stop", ftl::StringView(packet.data(), packet.size()));
 }
 
 }  // namespace debugserver

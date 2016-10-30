@@ -51,6 +51,9 @@ class CommandHandler final {
                 const ResponseCallback& callback);
   bool Handle_v(const ftl::StringView& packet,
                 const ResponseCallback& callback);
+  bool Handle_zZ(bool insert,
+                 const ftl::StringView& packet,
+                 const ResponseCallback& callback);
 
   // q/Q packets:
   // qAttached
@@ -72,6 +75,15 @@ class CommandHandler final {
   // vRun
   bool Handle_vRun(const ftl::StringView& packet,
                    const ResponseCallback& callback);
+
+  // Breakpoints
+  bool InsertSoftwareBreakpoint(uintptr_t addr,
+                                size_t kind,
+                                const ftl::StringView& optional_params,
+                                const ResponseCallback& callback);
+  bool RemoveSoftwareBreakpoint(uintptr_t addr,
+                                size_t kind,
+                                const ResponseCallback& callback);
 
   // The root Server instance that owns us.
   Server* server_;  // weak
