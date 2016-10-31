@@ -31,11 +31,6 @@ static inline mx_handle_t _mx_process_self(void) {
 
 #ifndef WITHOUT_COMPAT_SYSCALLS
 
-#define mx_current_time _mx_current_time
-static inline mx_time_t mx_current_time(void) {
-    return mx_time_get(MX_CLOCK_MONOTONIC);
-}
-
 #define mx_debug_read_memory _mx_debug_read_memory
 static inline mx_ssize_t _mx_debug_read_memory(mx_handle_t proc, uintptr_t vaddr,
                                                mx_size_t len, void* buffer) {
