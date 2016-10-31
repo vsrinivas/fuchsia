@@ -102,3 +102,5 @@ finished for basic debugging to work:
   is already running)
 - user muscle memory will make them want to type "debugserver :7000 ..."
   instead of "debugserver 7000 ...", should stay consistent
+- need usable copies of ld.so.1, dsos
+  - the ones in out/sysroot are stubs
