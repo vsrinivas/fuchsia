@@ -148,7 +148,7 @@ mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
         return ERR_NO_MEMORY;
     }
     vn->inode.magic = MINFS_MAGIC(type);
-    // TODO(orr) update when mx_current_time() works with unix epoch time
+    // TODO(orr) update when mx_time_get() works with unix epoch time
     vn->inode.create_time = vn->inode.modify_time = minfs_current_utc_time();
     vn->inode.link_count = 1;
     vn->refcount = 1;
