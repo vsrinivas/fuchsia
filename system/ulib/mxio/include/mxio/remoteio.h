@@ -41,7 +41,8 @@ __BEGIN_CDECLS
 #define MXRIO_GETSOCKOPT   0x00000015
 #define MXRIO_SETSOCKOPT   0x00000016
 #define MXRIO_GETADDRINFO  0x00000017
-#define MXRIO_NUM_OPS      24
+#define MXRIO_SETATTR      0x00000018
+#define MXRIO_NUM_OPS      25
 
 #define MXRIO_OP(n)            ((n) & 0xFFFF)
 #define MXRIO_REPLY_CHANNEL    0x01000000
@@ -52,7 +53,8 @@ __BEGIN_CDECLS
     "stat", "readdir", "ioctl", "unlink", \
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
-    "getpeername", "getsockopt", "setsockopt", "getaddrinfo" }
+    "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
+    "setattr" }
 
 typedef struct mxrio_msg mxrio_msg_t;
 
@@ -123,6 +125,7 @@ struct mxrio_msg {
 // GETSOCKOPT  maxreply   0        <sockopt>         0           <sockopt>       -
 // SETSOCKOPT  0          0        <sockopt>         0           <sockopt>       -
 // GETADDRINFO maxreply   0        <getaddrinfo>     0           <getaddrinfo>   -
+// SETATTR     0          0        <vnattr>          0           -               -
 //
 // proposed:
 //

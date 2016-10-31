@@ -16,6 +16,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <utime.h>
 #include <threads.h>
 #include <unistd.h>
 
@@ -428,6 +429,17 @@ int mxio_stat(mxio_t* io, struct stat* s) {
     return 0;
 }
 
+
+mx_status_t mxio_setattr(mxio_t* io, vnattr_t* vn){
+    mx_status_t r = io->ops->misc(io, MXRIO_SETATTR, 0, 0, vn, sizeof(*vn));
+    if (r < 0) {
+        return ERR_BAD_HANDLE;
+    }
+
+    return  r;
+}
+
+
 // TODO: determine complete correct mapping
 int mxio_status_to_errno(mx_status_t status) {
     switch (status) {
@@ -820,6 +832,59 @@ int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
 int stat(const char* fn, struct stat* s) {
     return fstatat(AT_FDCWD, fn, s, 0);
 }
+
+static int mx_utimens(mxio_t* io, const struct timespec times[2], int flags) {
+    vnattr_t vn;
+    mx_status_t r;
+
+    vn.valid = 0;
+
+    // extract modify time
+    vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
+        ? mx_time_get(MX_CLOCK_MONOTONIC)  // TODO(orr): update to MX_CLOCK_UTC when available
+        : MX_SEC(times[1].tv_sec) + times[1].tv_nsec;
+
+    if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
+        // TODO(orr) UTIME_NOW requires write access or euid == owner or "appropriate privilege"
+        vn.valid = ATTR_MTIME;      // for setattr, tell which fields are valid
+    }
+
+    // TODO(orr): access time not implemented for now
+
+    // set time(s) on underlying object
+    r = mxio_setattr(io, &vn);
+    return r;
+}
+
+int utimensat(int dirfd, const char *fn,
+              const struct timespec times[2], int flags) {
+    mxio_t* io;
+    mx_status_t r;
+
+    // TODO(orr): AT_SYMLINK_NOFOLLOW
+    if ((flags & AT_SYMLINK_NOFOLLOW) != 0) {
+        return ERRNO(EINVAL);
+    }
+
+    if ((r = __mxio_open_at(&io, dirfd, fn, 0, 0)) < 0) {
+        return ERROR(r);
+    }
+
+    r = mx_utimens(io, times, 0);
+
+    mxio_close(io);
+    mxio_release(io);
+    return STATUS(r);
+}
+
+
+int futimens(int fd, const struct timespec times[2]) {
+    mxio_t* io = fd_to_io(fd);
+
+    mx_status_t r = mx_utimens(io, times, 0);
+    return STATUS(r);
+}
+
 
 int pipe2(int pipefd[2], int flags) {
     const int allowed_flags = O_NONBLOCK | O_CLOEXEC;

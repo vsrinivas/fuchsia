@@ -75,6 +75,9 @@ struct vnode_ops {
     mx_status_t (*getattr)(vnode_t* vn, vnattr_t* a);
     // Read attributes of vn.
 
+    mx_status_t (*setattr)(vnode_t* vn, vnattr_t* a);
+    // Set attributes of vn.
+
     mx_status_t (*readdir)(vnode_t* vn, void* cookie, void* dirents, size_t len);
     // Read directory entries of vn, error if not a directory.
     // Cookie must be a buffer of vdircookie_t size or larger.
@@ -103,13 +106,19 @@ struct vnode_ops {
 };
 
 struct vnattr {
+    uint32_t valid;       // mask of which bits to set for setattr
     uint32_t mode;
-    uint32_t reserved;
     uint64_t inode;
     uint64_t size;
     uint64_t create_time;  // posix time (seconds since epoch)
     uint64_t modify_time;  // posix time
 };
+
+// mask that identifies what fields to set in setattr
+#define ATTR_CTIME  0000001
+#define ATTR_MTIME  0000002
+#define ATTR_ATIME  0000004  // not yet implemented
+
 
 // bits compatible with POSIX stat
 #define V_TYPE_MASK 0170000

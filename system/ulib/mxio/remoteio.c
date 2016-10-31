@@ -457,7 +457,7 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
     msg.arg = maxreply;
     msg.arg2.off = off;
     msg.datalen = len;
-    if (ptr) {
+    if (ptr && len > 0) {
         memcpy(msg.data, ptr, len);
     }
 
@@ -469,7 +469,7 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
     if (msg.datalen > maxreply) {
         return ERR_IO;
     }
-    if (ptr) {
+    if (ptr && msg.datalen > 0) {
         memcpy(ptr, msg.data, msg.datalen);
     }
     return r;
