@@ -4,13 +4,16 @@
 
 group("acquirers") {
   deps = [
-    ":acquirers/gps",
+    ":gps",
   ]
 }
 
-executable("acquirers/gps") {
+executable("gps") {
+  output_name = "acquirers/gps"
+
   sources = [
     "gps.cc",
+    "gps.h",
   ]
 
   deps = [

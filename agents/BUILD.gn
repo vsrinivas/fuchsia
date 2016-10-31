@@ -4,12 +4,14 @@
 
 group("agents") {
   deps = [
-    ":agents/carmen_sandiego",
-    ":agents/ideas",
+    ":carmen_sandiego",
+    ":ideas",
   ]
 }
 
-executable("agents/carmen_sandiego") {
+executable("carmen_sandiego") {
+  output_name = "agents/carmen_sandiego"
+
   sources = [
     "carmen_sandiego.cc",
   ]
@@ -20,6 +22,7 @@ executable("agents/carmen_sandiego") {
 
   deps = [
     "//apps/maxwell:debug",
+    "//apps/maxwell/acquirers:gps",
     "//apps/maxwell/interfaces",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/utility:utility",
@@ -27,9 +30,12 @@ executable("agents/carmen_sandiego") {
   ]
 }
 
-executable("agents/ideas") {
+executable("ideas") {
+  output_name = "agents/ideas"
+
   sources = [
     "ideas.cc",
+    "ideas.h",
   ]
 
   public_deps = [

@@ -16,6 +16,7 @@ mojom("interfaces") {
 source_set("formatting") {
   sources = [
     "formatting.cc",
+    "formatting.h",
   ]
 
   deps = [

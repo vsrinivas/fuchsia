@@ -14,6 +14,16 @@ group("maxwell") {
   ]
 }
 
+source_set("bound_set") {
+  sources = [
+    "bound_set.h",
+  ]
+
+  deps = [
+    "//mojo/public/cpp/bindings:core",
+  ]
+}
+
 source_set("debug") {
   sources = [
     "debug.cc",
