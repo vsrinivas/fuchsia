@@ -12,10 +12,10 @@ group("all") {
 executable("story_manager") {
   sources = [
     "story_manager.cc",
-    "story_provider_state.cc",
-    "story_provider_state.h",
-    "story_state.cc",
-    "story_state.h",
+    "story_provider_impl.cc",
+    "story_provider_impl.h",
+    "story_impl.cc",
+    "story_impl.h",
   ]
 
   deps = [

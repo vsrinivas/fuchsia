@@ -53,8 +53,7 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
       mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
       InterfaceRequest<UserShell> user_shell_request,
       InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(std::move(app_connector),
-                 std::move(view_owner_request),
+      : BaseView(std::move(app_connector), std::move(view_owner_request),
                  "DummyUserShellImpl"),
         binding_(this, std::move(user_shell_request)),
         child_view_key_(0) {}

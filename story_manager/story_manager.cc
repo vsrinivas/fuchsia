@@ -9,7 +9,7 @@
 #include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/services/user/user_runner.mojom.h"
 #include "apps/modular/services/user/user_shell.mojom.h"
-#include "apps/modular/story_manager/story_provider_state.h"
+#include "apps/modular/story_manager/story_provider_impl.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -80,13 +80,13 @@ std::string LedgerStatusToString(ledger::Status status) {
 class StoryManagerImpl : public StoryManager {
  public:
   StoryManagerImpl(InterfaceHandle<ApplicationConnector> app_connector,
-                   InterfaceRequest<StoryManager> request)
-      : app_connector_(InterfacePtr<ApplicationConnector>::Create(
-            std::move(app_connector))),
-        binding_(this, std::move(request)) {}
+                   InterfaceRequest<StoryManager> story_manager_request)
+      : binding_(this, std::move(story_manager_request)) {
+    app_connector_.Bind(std::move(app_connector));
+  }
   ~StoryManagerImpl() override {}
 
- private:
+  // |StoryManager|:
   void Launch(StructPtr<ledger::Identity> identity,
               InterfaceRequest<mozart::ViewOwner> view_owner_request,
               const LaunchCallback& callback) override {
@@ -95,9 +95,10 @@ class StoryManagerImpl : public StoryManager {
     // Establish connection with Ledger.
     ConnectToService(app_connector_.get(), "mojo:ledger",
                      GetProxy(&ledger_factory_));
+
     ledger_factory_->GetLedger(
         std::move(identity), ftl::MakeCopyable([
-          this, callback, request = std::move(view_owner_request)
+          this, callback, view_owner_request = std::move(view_owner_request)
         ](ledger::Status status,
                              InterfaceHandle<ledger::Ledger> ledger) mutable {
           if (status != ledger::Status::OK) {
@@ -106,32 +107,36 @@ class StoryManagerImpl : public StoryManager {
             callback.Run(false);
             return;
           }
+
           callback.Run(true);
-          StartUserShell(std::move(ledger), std::move(request));
+          StartUserShell(std::move(ledger), std::move(view_owner_request));
         }));
   }
 
+ private:
   // Run the User shell and provide it the |StoryProvider| interface.
   void StartUserShell(InterfaceHandle<ledger::Ledger> ledger,
                       InterfaceRequest<mozart::ViewOwner> view_owner_request) {
     // First use ViewProvider service to plumb |view_owner_request| and get the
     // associated service provider.
     InterfacePtr<mozart::ViewProvider> view_provider;
-    InterfacePtr<mojo::ServiceProvider> service_provider;
     ConnectToService(app_connector_.get(), "mojo:dummy_user_shell",
                      GetProxy(&view_provider));
+
+    InterfacePtr<mojo::ServiceProvider> service_provider;
     view_provider->CreateView(std::move(view_owner_request),
                               GetProxy(&service_provider));
+
     user_shell_ptrs_.AddInterfacePtr(std::move(view_provider));
 
     // Use this service provider to get |UserShell| interface.
     service_provider->ConnectToService(
         UserShell::Name_, GetProxy(&user_shell_).PassMessagePipe());
-    InterfaceHandle<StoryProvider> service;
-    new StoryProviderState(
-        DuplicateApplicationConnector(app_connector_.get()),
-        InterfacePtr<ledger::Ledger>::Create(std::move(ledger)), &service);
-    user_shell_->SetStoryProvider(std::move(service));
+
+    InterfaceHandle<StoryProvider> story_provider;
+    new StoryProviderImpl(DuplicateApplicationConnector(app_connector_.get()),
+                          std::move(ledger), GetProxy(&story_provider));
+    user_shell_->SetStoryProvider(std::move(story_provider));
   }
 
   InterfacePtr<ApplicationConnector> app_connector_;

@@ -251,10 +251,10 @@ SessionPage::~SessionPage() {
   bytes.resize(data_->GetSerializedSize());
   data_->Serialize(bytes.data(), bytes.size());
 
+  // Return value callback is never invoked, because the pipe closes,
+  // so we just pass an empty instance.
   session_page_->Put(to_array("session_data"), std::move(bytes),
-                     [this](ledger::Status) {
-                       // Never called, because the pipe closes.
-                     });
+                     ledger::Page::PutCallback());
 }
 
 void SessionPage::Init(std::function<void()> done) {
@@ -277,7 +277,8 @@ void SessionPage::Init(std::function<void()> done) {
       }));
 }
 
-void SessionPage::MaybeReadLink(const mojo::String& name, MojoDocMap* docs_map) const {
+void SessionPage::MaybeReadLink(const mojo::String& name,
+                                MojoDocMap* const docs_map) const {
   auto i = data_->links.find(name);
   if (i != data_->links.end()) {
     for (const auto& doc : i.GetValue()->docs) {

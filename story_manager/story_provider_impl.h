@@ -17,44 +17,39 @@
 #include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace modular {
-class StoryState;
+class StoryImpl;
 
-class StoryProviderState : public StoryProvider {
+class StoryProviderImpl : public StoryProvider {
  public:
-  StoryProviderState(
+  StoryProviderImpl(
       mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-      mojo::InterfacePtr<ledger::Ledger> ledger,
-      mojo::InterfaceHandle<StoryProvider>* service);
-  ~StoryProviderState() override;
+      mojo::InterfaceHandle<ledger::Ledger> ledger,
+      mojo::InterfaceRequest<StoryProvider> story_provider_request);
+  ~StoryProviderImpl() override;
 
   // Used to resume a story. Fetches the Session Page associated with
-  // |story_state| and calls |RunStory|. This does not take ownership of
-  // |story_state|.
-  void ResumeStoryState(
-      StoryState* story_state,
+  // |story_impl| and calls |RunStory|. Does not take ownership of
+  // |story_impl|.
+  void ResumeStory(
+      StoryImpl* story_impl,
       mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
-  // Commits story meta-data to the ledger. This is used after calling
-  // |Stop| or when the |Story| pipe is close. This does not take ownership
-  // of |story_state|.
-  void CommitStoryState(StoryState* story_state);
+  // Commits story meta-data to the ledger. Used after calling |Stop|
+  // or when the |Story| pipe is closed. Does not take ownership of
+  // |story_impl|.
+  void CommitStory(StoryImpl* story_impl);
 
-  // Removes all the in-memory data structures from |StoryProviderState|
-  // associated with |story_state|. This does not take ownership of
-  // |story_state|.
-  virtual void RemoveStoryState(StoryState* story_state);
+  // Removes all the in-memory data associated with |story_impl| from
+  // |StoryProviderImpl|. Does not take ownership of |story_impl|.
+  virtual void RemoveStory(StoryImpl* story_impl);
 
  private:
   // |StoryProvider| override.
   void CreateStory(const mojo::String& url,
-                   mojo::InterfaceRequest<Story> request) override;
+                   mojo::InterfaceRequest<Story> story_request) override;
 
   // |StoryProvider| override.
   void PreviousStories(const PreviousStoriesCallback& callback) override;
-
-  // Generates a unique randomly generated string of |length| size to be used
-  // as a story id.
-  std::string GenerateNewStoryId(size_t length);
 
   mojo::InterfacePtr<mojo::ApplicationConnector> app_connector_;
   mojo::StrongBinding<StoryProvider> binding_;
@@ -62,14 +57,14 @@ class StoryProviderState : public StoryProvider {
 
   mojo::InterfacePtr<ledger::Page> root_page_;
 
-  std::unordered_map<StoryState*, std::string> story_state_to_id_;
-  std::unordered_map<std::string, StoryState*> story_id_to_state_;
+  std::unordered_map<StoryImpl*, std::string> story_impl_to_id_;
+  std::unordered_map<std::string, StoryImpl*> story_id_to_impl_;
   std::unordered_set<std::string> story_ids_;
 
   std::unordered_map<std::string, mojo::InterfacePtr<ledger::Page>>
       session_page_map_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderState);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };
 
 }  // namespace modular
