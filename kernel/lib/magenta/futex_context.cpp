@@ -59,41 +59,9 @@ status_t FutexContext::FutexWait(int* value_ptr, int current_value, mx_time_t ti
         return NO_ERROR;
     }
     // If we got a timeout, we need to remove the thread's node from the
-    // wait queue, since FutexWake() didn't do that.  We need to re-get the
-    // hash table key, because it might have changed if the thread was
-    // requeued by FutexRequeue().
-    futex_key = node->GetKey();
-    auto list_head_iter = futex_table_.find(futex_key);
-    if (list_head_iter.IsValid()) {
-        FutexNode& list_head = *list_head_iter;
-        FutexNode* test = &list_head;
-        FutexNode* prev = nullptr;
-        while (test) {
-            DEBUG_ASSERT(test->GetKey() == futex_key);
-            FutexNode* next = test->next();
-            if (test == node) {
-                if (prev) {
-                    // unlink from linked list
-                    prev->set_next(next);
-                    if (!next) {
-                        // We have removed the last element, so we need to
-                        // update the tail pointer.
-                        list_head.set_tail(prev);
-                    }
-                } else {
-                    // reset head of futex
-                    futex_table_.erase(futex_key);
-                    if (next) {
-                        next->set_tail(list_head.tail());
-                        DEBUG_ASSERT(next->GetKey() == futex_key);
-                        futex_table_.insert(next);
-                    }
-                }
-                return ERR_TIMED_OUT;
-            }
-            prev = test;
-            test = next;
-        }
+    // wait queue, since FutexWake() didn't do that.
+    if (UnqueueNodeLocked(node)) {
+        return ERR_TIMED_OUT;
     }
     // The current thread was not found on the wait queue.  This means
     // that, although we got a timeout, we were *also* woken by FutexWake()
@@ -125,6 +93,14 @@ void FutexContext::WakeAll() {
         FutexNode::WakeThreads(&entry);
     }
     futex_table_.clear();
+}
+
+void FutexContext::WakeKilledThread(FutexNode* node) {
+    LTRACE_ENTRY;
+
+    AutoLock lock(lock_);
+    if (UnqueueNodeLocked(node))
+        node->WakeKilledThread();
 }
 
 status_t FutexContext::FutexWake(int* value_ptr, uint32_t count) {
@@ -222,6 +198,8 @@ status_t FutexContext::FutexRequeue(int* wake_ptr, uint32_t wake_count, int curr
 }
 
 void FutexContext::QueueNodesLocked(FutexNode* head) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
     FutexNode::HashTable::iterator iter;
 
     // Attempt to insert this FutexNode into the hash table.  If the insert
@@ -230,4 +208,53 @@ void FutexContext::QueueNodesLocked(FutexNode* head) {
     // waiting on this futex.  Add ourselves to that thread's list.
     if (!futex_table_.insert_or_find(head, &iter))
         iter->AppendList(head);
+}
+
+// This attempts to unqueue a thread (which may or may not be waiting on a
+// futex), given its FutexNode.  This returns whether the FutexNode was
+// found and removed from a futex wait queue.
+bool FutexContext::UnqueueNodeLocked(FutexNode* node) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
+    // Note: When UnqueueNode() is called from FutexWait(), it might be
+    // tempting to reuse the futex key that was passed to FutexWait().
+    // However, that could be out of date if the thread was requeued by
+    // FutexRequeue(), so we need to re-get the hash table key here.
+    uintptr_t futex_key = node->GetKey();
+
+    auto list_head_iter = futex_table_.find(futex_key);
+    if (list_head_iter.IsValid()) {
+        FutexNode& list_head = *list_head_iter;
+        FutexNode* test = &list_head;
+        FutexNode* prev = nullptr;
+        while (test) {
+            DEBUG_ASSERT(test->GetKey() == futex_key);
+            FutexNode* next = test->next();
+            if (test == node) {
+                if (prev) {
+                    // unlink from linked list
+                    prev->set_next(next);
+                    if (!next) {
+                        // We have removed the last element, so we need to
+                        // update the tail pointer.
+                        list_head.set_tail(prev);
+                    }
+                } else {
+                    // reset head of futex
+                    futex_table_.erase(futex_key);
+                    if (next) {
+                        next->set_tail(list_head.tail());
+                        DEBUG_ASSERT(next->GetKey() == futex_key);
+                        futex_table_.insert(next);
+                    }
+                }
+                // The node was found and removed.
+                return true;
+            }
+            prev = test;
+            test = next;
+        }
+    }
+    // The node was not found and so didn't need to be removed.
+    return false;
 }

@@ -185,6 +185,11 @@ void UserThread::Kill() {
     // deliver a kernel kill signal to the thread
     thread_kill(&thread_, false);
 
+    // We do this after thread_kill() to ensure that any interrupted
+    // futex_wait syscall does not return control to userland before
+    // the kill signal takes effect.
+    process_->futex_context()->WakeKilledThread(&futex_node_);
+
     // enter the dying state
     SetState(State::DYING);
 }

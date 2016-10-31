@@ -49,11 +49,15 @@ public:
     // WakeAll wakes all outstanding threads on all futexes.
     void WakeAll();
 
+    void WakeKilledThread(FutexNode* node);
+
 private:
     FutexContext(const FutexContext&) = delete;
     FutexContext& operator=(const FutexContext&) = delete;
 
     void QueueNodesLocked(FutexNode* head);
+
+    bool UnqueueNodeLocked(FutexNode* node);
 
     // protects futex_table_
     Mutex lock_;

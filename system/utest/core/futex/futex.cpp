@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
+#include <magenta/threads.h>
 #include <unittest/unittest.h>
 #include <sched.h>
 #include <stdio.h>
@@ -111,6 +112,11 @@ public:
         }
         EXPECT_EQ(state_, STATE_WAIT_RETURNED, "wrong state");
         return true;
+    }
+
+    void kill_thread() {
+        EXPECT_EQ(mx_task_kill(thrd_get_mx_handle(thread_)), NO_ERROR,
+                  "mx_task_kill() failed");
     }
 
 private:
@@ -352,6 +358,25 @@ bool test_futex_requeue_unqueued_on_timeout() {
     END_TEST;
 }
 
+// Test that we can successfully kill a thread that is waiting on a futex,
+// and that we can join the thread afterwards.  This checks that waiting on
+// a futex does not leave the thread in an unkillable state.
+bool test_futex_thread_killed() {
+    BEGIN_TEST;
+    volatile int futex_value = 1;
+    // Note: TestThread's destructor tests joining the thread.
+    TestThread thread(&futex_value);
+    thread.kill_thread();
+
+    // Check that the futex_wait() syscall does not return control to
+    // userland before the thread gets killed.
+    struct timespec wait_time = {0, 10 * 1000000 /* nanoseconds */};
+    ASSERT_EQ(nanosleep(&wait_time, NULL), 0, "Error during sleep");
+    thread.assert_thread_not_woken();
+
+    END_TEST;
+}
+
 static void log(const char* str) {
     uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
@@ -441,6 +466,7 @@ RUN_TEST(test_futex_requeue_value_mismatch);
 RUN_TEST(test_futex_requeue_same_addr);
 RUN_TEST(test_futex_requeue);
 RUN_TEST(test_futex_requeue_unqueued_on_timeout);
+RUN_TEST(test_futex_thread_killed);
 RUN_TEST(test_event_signaling);
 END_TEST_CASE(futex_tests)
 

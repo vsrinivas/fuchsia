@@ -62,6 +62,10 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) {
     return cond_wait_timeout(&condvar_, mutex->GetInternal(), t);
 }
 
+void FutexNode::WakeKilledThread() {
+    cond_signal(&condvar_);
+}
+
 void FutexNode::WakeThreads(FutexNode* head) {
     while (head != nullptr) {
         cond_signal(&head->condvar_);

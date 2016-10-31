@@ -37,6 +37,8 @@ public:
     // is blocked
     status_t BlockThread(Mutex* mutex, mx_time_t timeout);
 
+    void WakeKilledThread();
+
     // wakes the list of threads starting with node |head|
     static void WakeThreads(FutexNode* head);
 
