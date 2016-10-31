@@ -27,32 +27,4 @@ static inline mx_handle_t _mx_process_self(void) {
   return __magenta_process_self;
 }
 
-// Compatibility Wrappers
-
-#ifndef WITHOUT_COMPAT_SYSCALLS
-
-#define mx_debug_read_memory _mx_debug_read_memory
-static inline mx_ssize_t _mx_debug_read_memory(mx_handle_t proc, uintptr_t vaddr,
-                                               mx_size_t len, void* buffer) {
-    mx_status_t status = mx_process_read_memory(proc, vaddr, buffer, len, &len);
-    if (status < 0) {
-        return status;
-    } else {
-        return len;
-    }
-}
-
-#define mx_debug_write_memory _mx_debug_write_memory
-static inline mx_ssize_t _mx_debug_write_memory(mx_handle_t proc, uintptr_t vaddr,
-                                                mx_size_t len, const void* buffer) {
-    mx_status_t status = mx_process_write_memory(proc, vaddr, buffer, len, &len);
-    if (status < 0) {
-        return status;
-    } else {
-        return len;
-    }
-}
-
-#endif
-
 __END_CDECLS
