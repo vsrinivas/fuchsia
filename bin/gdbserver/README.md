@@ -98,3 +98,5 @@ finished for basic debugging to work:
 - sw/hw breakpoints and stepping
 - vCont and friends
 - Support architectures other than x86-64
+- vRun should create the process (and, for now, flag an error if a process
+  is already running)
