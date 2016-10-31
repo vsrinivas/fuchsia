@@ -13,10 +13,7 @@
 #include <err.h>
 #include <string.h>
 #include <lk/init.h>
-
-#if WITH_KERNEL_VM
 #include <kernel/vm.h>
-#endif
 
 #define LOCAL_TRACE 0
 
@@ -146,12 +143,7 @@ static void bootargs_init_hook(uint level)
     }
 
     /* parse the boot arg pointer */
-#if WITH_KERNEL_VM
     boot_args = paddr_to_kvaddr(lk_boot_args[1]);
-#else
-    boot_args = (void *)lk_boot_args[1];
-#endif
-
     if (!boot_args) {
         LTRACEF("null or invalid boot pointer\n");
         return;

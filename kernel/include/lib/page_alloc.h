@@ -13,11 +13,7 @@
 #include <magenta/compiler.h>
 
 // to pick up PAGE_SIZE, PAGE_ALIGN, etc
-#if WITH_KERNEL_VM
 #include <kernel/vm.h>
-#else
-#include <kernel/novm.h>
-#endif
 
 /* A simple page-aligned wrapper around the pmm or novm implementation of
  * the underlying physical page allocator. Used by system heaps or any

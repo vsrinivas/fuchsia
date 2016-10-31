@@ -17,13 +17,11 @@
 #include <platform/debug.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
+#include <kernel/vm.h>
 #include <arch.h>
 
 #include <lib/console.h>
 
-#if WITH_KERNEL_VM
-#include <kernel/vm.h>
-#endif
 
 static int cmd_display_mem(int argc, const cmd_args *argv);
 static int cmd_modify_mem(int argc, const cmd_args *argv);
@@ -108,13 +106,11 @@ static int cmd_display_mem(int argc, const cmd_args *argv)
         return -1;
     }
 
-#if WITH_KERNEL_VM
     /* preflight the start address to see if it's mapped */
     if (vaddr_to_paddr((void *)address) == 0) {
         printf("ERROR: address 0x%lx is unmapped\n", address);
         return -1;
     }
-#endif
 
     for ( ; address < stop; address += size) {
         if (count == 0)

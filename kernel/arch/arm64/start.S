@@ -48,7 +48,6 @@ arm_reset:
     bl      arm64_elX_to_el1
     bl      arch_invalidate_cache_all
 
-#if WITH_KERNEL_VM
     /* enable caches so atomics and spinlocks work */
     mrs     tmp, sctlr_el1
     orr     tmp, tmp, #(1<<12) /* Enable icache */
@@ -350,7 +349,6 @@ arm_reset:
 #if WITH_SMP
     cbnz    cpuid, .Lsecondary_boot
 #endif
-#endif /* WITH_KERNEL_VM */
 
     ldr tmp, =__stack_end
     mov sp, tmp
@@ -419,9 +417,7 @@ DATA(__stack)
     .align 16
 DATA(__stack_end)
 
-#if WITH_KERNEL_VM
 .section ".bss.prebss.translation_table"
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
 DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
-#endif

@@ -35,10 +35,8 @@
 #define FREE_FILL 0x77
 #define PADDING_FILL 0x55
 
-#if WITH_KERNEL_VM && !defined(HEAP_GROW_SIZE)
+#if !defined(HEAP_GROW_SIZE)
 #define HEAP_GROW_SIZE (1 * 1024 * 1024) /* Grow aggressively */
-#elif !defined(HEAP_GROW_SIZE)
-#define HEAP_GROW_SIZE (4 * 1024) /* Grow less aggressively */
 #endif
 
 static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");

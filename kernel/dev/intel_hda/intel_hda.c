@@ -4,11 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#if !WITH_KERNEL_VM
-/* TODO(johngro) : Make this work without a VM */
-#error Intel HDA Controller driver depends on the kernel VM module!
-#endif
-
 #include <arch/ops.h>
 #include <debug.h>
 #include <dev/pcie.h>

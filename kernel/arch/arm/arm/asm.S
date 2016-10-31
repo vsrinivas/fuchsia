@@ -108,7 +108,6 @@ FUNCTION(arm_chain_load)
     mov     r2, r3
     ldr     r3, [sp]
 
-#if WITH_KERNEL_VM
 /* The MMU is initialized and running at this point, so we'll need to
  * make sure we can disable it and continue to run. The caller should
  * have built a identity map for us and branched to our identity mapping,
@@ -124,8 +123,6 @@ FUNCTION(arm_chain_load)
     /* Write back SCTLR */
     mcr     p15, 0, r12, c1, c0, 0
     isb
-
-#endif // WITH_KERNEL_VM
 
     /* call the entry point */
     bx      r4

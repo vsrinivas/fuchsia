@@ -342,7 +342,6 @@ void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3
     paddr_t entry_pa;
     paddr_t loader_pa;
 
-#if WITH_KERNEL_VM
     /* get the physical address of the entry point we're going to branch to */
     if (arm_vtop((addr_t)entry, &entry_pa) < 0) {
         panic("error translating entry physical address\n");
@@ -368,11 +367,6 @@ void arch_chain_load(void *entry, ulong arg0, ulong arg1, ulong arg2, ulong arg3
 
     /* using large pages, map around the target location */
     arch_mmu_map(&vmm_get_kernel_aspace()->arch_aspace, loader_pa_section, loader_pa_section, (2 * SECTION_SIZE / PAGE_SIZE), 0);
-#else
-    /* for non vm case, just branch directly into it */
-    entry_pa = (paddr_t)entry;
-    loader_pa = (paddr_t)&arm_chain_load;
-#endif
 
     LTRACEF("disabling instruction/data cache\n");
     arch_disable_cache(UCACHE);

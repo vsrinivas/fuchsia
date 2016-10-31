@@ -26,13 +26,11 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/mp.h>
+#include <kernel/vm.h>
 #include <platform.h>
 #include <target.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
-#if WITH_KERNEL_VM
-#include <kernel/vm.h>
-#endif
 
 #if THREAD_STATS
 struct thread_stats thread_stats[SMP_MAX_CPUS];
@@ -734,12 +732,10 @@ static void thread_resched(void)
     uthread_context_switch(oldthread, newthread);
 #endif
 
-#if WITH_KERNEL_VM
     /* see if we need to swap mmu context */
     if (newthread->aspace != oldthread->aspace) {
         vmm_context_switch(oldthread->aspace, newthread->aspace);
     }
-#endif
 
     /* do the low level context switch */
     arch_context_switch(oldthread, newthread);
@@ -1203,9 +1199,7 @@ void dump_thread(thread_t *t, bool full_dump)
                 (t->flags & THREAD_FLAG_DEBUG_STACK_BOUNDS_CHECK) ? "Sc" :"");
         dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d\n",
                 t->blocking_wait_queue, t->blocked_status, t->interruptable);
-#if WITH_KERNEL_VM
         dprintf(INFO, "\taspace %p\n", t->aspace);
-#endif
         dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n",
                 t->user_thread, t->user_pid, t->user_tid);
         arch_dump_thread(t);

@@ -24,6 +24,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.c \
 	$(LOCAL_DIR)/fpu.c \
+	$(LOCAL_DIR)/mmu.c \
 	$(LOCAL_DIR)/spinlock.S \
 	$(LOCAL_DIR)/start.S \
 	$(LOCAL_DIR)/thread.c \
@@ -62,14 +63,6 @@ ARCH_OPTFLAGS := -O2
 # This is necessary for unwinding through optimized code.
 GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
 
-# we have a mmu and want the vmm/pmm
-WITH_KERNEL_VM ?= 1
-
-ifeq ($(WITH_KERNEL_VM),1)
-
-MODULE_SRCS += \
-	$(LOCAL_DIR)/mmu.c
-
 KERNEL_ASPACE_BASE ?= 0xffff000000000000
 KERNEL_ASPACE_SIZE ?= 0x0001000000000000
 USER_ASPACE_BASE   ?= 0x0000000001000000
@@ -87,13 +80,6 @@ KERNEL_LOAD_OFFSET ?= 0
 KERNEL_DEFINES += \
     KERNEL_BASE=$(KERNEL_BASE) \
     KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
-
-else
-
-KERNEL_BASE ?= $(MEMBASE)
-KERNEL_LOAD_OFFSET ?= 0
-
-endif
 
 KERNEL_DEFINES += \
 	MEMBASE=$(MEMBASE) \

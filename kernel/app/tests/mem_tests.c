@@ -12,12 +12,9 @@
 #include <arch.h>
 #include <arch/ops.h>
 #include <lib/console.h>
+#include <kernel/vm.h>
 #include <platform.h>
 #include <debug.h>
-
-#if WITH_KERNEL_VM
-#include <kernel/vm.h>
-#endif
 
 static void mem_test_fail(void *ptr, uint32_t should, uint32_t is)
 {
@@ -170,7 +167,6 @@ usage:
         void *ptr;
         size_t len = argv[1].u;
 
-#if WITH_KERNEL_VM
         /* rounding up len to the next page */
         len = PAGE_ALIGN(len);
         if (len == 0) {
@@ -189,27 +185,14 @@ usage:
         paddr_t pa;
         pa = vaddr_to_paddr(ptr);
         printf("physical address 0x%lx\n", pa);
-#else
-        /* allocate from the heap */
-        ptr = malloc(len);
-        if (!ptr ) {
-            printf("error allocating test area from heap\n");
-            return -1;
-        }
-
-#endif
 
         printf("got buffer at %p of length 0x%lx\n", ptr, len);
 
         /* run the tests */
         do_mem_tests(ptr, len);
 
-#if WITH_KERNEL_VM
-        // XXX free memory region here
-        printf("NOTE: leaked memory\n");
-#else
-        free(ptr);
-#endif
+        /* free the test memory */
+        vmm_free_region(vmm_get_kernel_aspace(), (vaddr_t)ptr);
     } else if (argc == 3) {
         void *ptr = argv[1].p;
         size_t len = argv[2].u;

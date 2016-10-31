@@ -32,7 +32,6 @@
 
 #define LOCAL_TRACE 0
 
-#if WITH_KERNEL_VM
 struct mmu_initial_mapping mmu_initial_mappings[] = {
 #if ARCH_X86_64
     /* 64GB of memory mapped where the kernel lives */
@@ -62,7 +61,6 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
     /* null entry to terminate the list */
     { 0 }
 };
-#endif
 
 void *_zero_page_boot_params;
 

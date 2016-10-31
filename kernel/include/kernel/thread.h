@@ -16,11 +16,8 @@
 #include <arch/thread.h>
 #include <kernel/wait.h>
 #include <kernel/spinlock.h>
-#include <debug.h>
-
-#if WITH_KERNEL_VM
 #include <kernel/vm.h>
-#endif
+#include <debug.h>
 
 __BEGIN_CDECLS;
 
@@ -90,9 +87,7 @@ typedef struct thread {
 #endif
 
     /* pointer to the kernel address space this thread is associated with */
-#if WITH_KERNEL_VM
     vmm_aspace_t *aspace;
-#endif
 
     /* pointer to user thread if one exists for this thread */
     void* user_thread;

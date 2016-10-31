@@ -28,11 +28,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/cmdline.c \
 
-
-ifeq ($(WITH_KERNEL_VM),1)
 MODULE_DEPS += kernel/vm
-else
-MODULE_DEPS += kernel/novm
-endif
 
 include make/module.mk
