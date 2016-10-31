@@ -260,11 +260,14 @@ TEST_F(SuggestionEngineTest, Dedup) {
   SetResultCount(10);
   gps.Publish(90, 0);
   CHECK_RESULT_COUNT(1);
-  const std::string headline1 =
-      GetOnlySuggestion()->display_properties->headline;
+  const Suggestion* suggestion = GetOnlySuggestion();
+  const std::string uuid1 = suggestion->uuid;
+  const std::string headline1 = suggestion->display_properties->headline;
   gps.Publish(-90, 0);
   CHECK_RESULT_COUNT(1);
-  EXPECT_NE(headline1, GetOnlySuggestion()->display_properties->headline);
+  suggestion = GetOnlySuggestion();
+  EXPECT_EQ(uuid1, suggestion->uuid);
+  EXPECT_NE(headline1, suggestion->display_properties->headline);
 }
 
 // Tests two different agents proposing with the same ID (expect distinct

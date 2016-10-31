@@ -70,6 +70,9 @@ interface SuggestionListener {
   // TODO(thatguy): Figure out what's the best pattern to use here, to make
   // sure that UI updates are smooth.
   // TODO(anwilson): Sit down with thatguy@ and hash this out.
+  // TODO(rosswang): For now, changed suggestions will maintain the same UUID
+  // but will result in a remove/add pair. This may change in the future; if it
+  // doesn't, document this behavior here.
   OnAdd(array<Suggestion> suggestions);
   OnRemove(string uuid);
   OnRemoveAll();
