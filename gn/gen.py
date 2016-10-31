@@ -22,7 +22,8 @@ def main():
                         choices=['x86-64', 'aarch64'])
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
                         nargs='?', const=True, default=False)
-    args = parser.parse_args()
+    (args, passthrough) = parser.parse_known_args()
+
     if args.release:
         args.outdir = "out/release"
 
@@ -47,6 +48,8 @@ def main():
                 parser.error('invalid goma path: %s' % path)
             gn_args += " goma_dir=\"" + path + "\""
     gn_command += [gn_args]
+    if passthrough:
+        gn_command += passthrough
 
     return gn.run(gn_command)
 
