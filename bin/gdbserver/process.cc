@@ -360,16 +360,16 @@ bool Process::ReadMemory(uintptr_t address,
   }
 
   FTL_DCHECK(out_buffer);
-  mx_ssize_t result_size =
-      mx_debug_read_memory(debug_handle_.get(), address, length, out_buffer);
-  if (result_size < 0) {
+  mx_status_t status =
+      mx_process_read_memory(debug_handle_.get(), address, out_buffer, length, &length);
+  if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
         ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
-        result_size);
+        status);
     return false;
   }
 
-  *out_bytes_read = result_size;
+  *out_bytes_read = length;
 
   return true;
 }
