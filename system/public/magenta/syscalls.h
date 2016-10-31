@@ -31,11 +31,6 @@ static inline mx_handle_t _mx_process_self(void) {
 
 #ifndef WITHOUT_COMPAT_SYSCALLS
 
-#define mx_exit _mx_exit
-__attribute__((noreturn)) static inline void _mx_exit(int rc) {
-    mx_process_exit(rc);
-}
-
 #define mx_current_time _mx_current_time
 static inline mx_time_t mx_current_time(void) {
     return mx_time_get(MX_CLOCK_MONOTONIC);
