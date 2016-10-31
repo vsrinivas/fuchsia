@@ -63,10 +63,9 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
     }
 
     struct arch_aspace* as = vmm_get_arch_aspace(t->aspace);
-    auto bitmap = static_cast<bitmap::RleBitmap*>(as->io_bitmap);
 
     mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
-    if (!bitmap) {
+    if (!as->io_bitmap) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
         // case, when we make the allocation we will use it.
@@ -98,9 +97,10 @@ int x86_set_io_bitmap(uint32_t port, uint32_t len, bool enable) {
         AutoSpinLock guard(as->io_bitmap_lock);
 
         if (!as->io_bitmap) {
-            bitmap = optimistic_bitmap.release();
-            as->io_bitmap = static_cast<void*>(bitmap);
+            as->io_bitmap = optimistic_bitmap.release();
         }
+        auto bitmap = static_cast<bitmap::RleBitmap*>(as->io_bitmap);
+        DEBUG_ASSERT(bitmap);
 
         status = enable ?
                 bitmap->SetNoAlloc(port, port + len, &bitmap_freelist) :
