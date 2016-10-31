@@ -15,6 +15,8 @@ instructions (click
 [here](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Enabling-Networking-under-Qemu-x86_64-only)
 for enabling network under QEMU)
 
+**N.B.** If using QEMU make sure you are using version 2.5.0 or later.
+
 See [this document](https://docs.google.com/a/google.com/document/d/1wKQbLgxKBsdlXX9iPSw4MHnTYN4Lx2xjzyoWyth-uy4/edit?usp=sharing) for setting up `netstack`.
 
 ## Debugging a program
