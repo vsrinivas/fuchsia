@@ -16,12 +16,6 @@ import("//build/dart/dart_package.gni")
 # output files will go under the generated file directory tree with the same
 # path as each input file.
 #
-# If a fidl target is intended for use in a client repo where the location of
-# the Mojo SDK will be different than its location in the Mojo repo,
-# dependencies on the SDK should be specified relative to the parent directory
-# of the Mojo public SDK in |mojo_sdk_deps| rather than via absolute paths in
-# |deps|.
-#
 # Parameters:
 #
 #   sources (optional if one of the deps sets listed below is present)
@@ -30,18 +24,8 @@ import("//build/dart/dart_package.gni")
 #   deps (optional)
 #       Note: this can contain only other fidl targets.
 #
-#   mojo_sdk_deps (optional)
-#       List of deps specified relative to the parent directory of the Mojo
-#       public SDK. These deps will be added as ordinary deps rebased to the
-#       current directory.
-#
 #   public_deps (optional)
 #       Note: this can contain only other fidl targets.
-#
-#   mojo_sdk_public_deps (optional)
-#       List of public deps specified relative to the parent directory of the
-#       Mojo public SDK. These deps will be added as ordinary public deps
-#       rebased to the current directory.
 #
 #   import_dirs (optional)
 #       List of import directories that will get added when processing sources.
@@ -52,8 +36,7 @@ import("//build/dart/dart_package.gni")
 template("fidl") {
   assert(
       defined(invoker.sources) || defined(invoker.deps) ||
-          defined(invoker.public_deps) || defined(invoker.mojo_sdk_deps) ||
-          defined(invoker.mojo_sdk_public_deps),
+      defined(invoker.public_deps),
       "\"sources\" or \"deps\" must be defined for the $target_name template.")
 
   cpp_sources_suffix = "cpp_sources"
@@ -177,24 +160,6 @@ template("fidl") {
   }
   generator_python_zip_output = "$target_out_dir/${target_name}_python.pyzip"
 
-  rebased_mojo_sdk_public_deps = []
-  if (defined(invoker.mojo_sdk_public_deps)) {
-    foreach(sdk_dep, invoker.mojo_sdk_public_deps) {
-      # Check that the SDK dep was not mistakenly given as an absolute path.
-      assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      rebased_mojo_sdk_public_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
-    }
-  }
-
-  rebased_mojo_sdk_deps = []
-  if (defined(invoker.mojo_sdk_deps)) {
-    foreach(sdk_dep, invoker.mojo_sdk_deps) {
-      # Check that the SDK dep was not mistakenly given as an absolute path.
-      assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      rebased_mojo_sdk_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
-    }
-  }
-
   if (defined(invoker.sources)) {
     generator_target_name = target_name + "__generator"
     action_foreach(generator_target_name) {
@@ -257,23 +222,16 @@ template("fidl") {
   }
 
   # Some re-usable variables for the C++ source sets:
-  cpp_public_deps = rebased_mojo_sdk_public_deps
+  cpp_public_deps = []
   if (defined(invoker.public_deps)) {
     cpp_public_deps += invoker.public_deps
   }
   if (defined(invoker.sources)) {
     cpp_public_deps += [ ":$generator_target_name" ]
   }
-  cpp_deps = rebased_mojo_sdk_deps
+  cpp_deps = []
   if (defined(invoker.deps)) {
     cpp_deps += invoker.deps
-  }
-  if (defined(invoker.mojo_sdk_deps)) {
-    foreach(sdk_dep, invoker.mojo_sdk_deps) {
-      # Check that the SDK dep was not mistakenly given as an absolute path.
-      assert(get_path_info(sdk_dep, "abspath") != sdk_dep)
-      cpp_deps += [ rebase_path(sdk_dep, ".", fidl_root) ]
-    }
   }
 
   source_set(target_name) {
@@ -345,7 +303,7 @@ template("fidl") {
     deps = cpp_deps
   }
 
-  all_deps = rebased_mojo_sdk_deps + rebased_mojo_sdk_public_deps
+  all_deps = []
   if (defined(invoker.deps)) {
     all_deps += invoker.deps
   }
@@ -357,7 +315,7 @@ template("fidl") {
   }
 
   # Explicitly ensure that all dependencies (invoker.deps and
-  # invoker.public_deps) are mojom targets themselves.
+  # invoker.public_deps) are fidl targets themselves.
   group("${target_name}__check_deps_are_all_fidl") {
     deps = []
     foreach(d, all_deps) {
@@ -412,7 +370,7 @@ template("fidl") {
 
   if (defined(invoker.sources)) {
     # The generated C++ source files. The main reason to introduce this target
-    # is so that lib/fidl/cpp/bindings can depend on mojom interfaces without
+    # is so that lib/fidl/cpp/bindings can depend on fidl interfaces without
     # circular dependencies. It means that the target is missing the dependency
     # on lib/fidl/cpp/bindings. No external targets should depend directly on
     # this target *except* lib/fidl/cpp/bindings and other *_cpp_sources
@@ -508,16 +466,16 @@ template("fidl") {
     source_dir = target_gen_dir
 
     deps = []
-    mojom_deps = []
+    fidl_deps = []
     if (defined(invoker.deps)) {
-      mojom_deps += invoker.deps
+      fidl_deps += invoker.deps
     }
     if (defined(invoker.public_deps)) {
-      mojom_deps += invoker.public_deps
+      fidl_deps += invoker.public_deps
     }
 
-    # Depend on the generated Dart package for all of our mojom dependencies.
-    foreach(d, mojom_deps) {
+    # Depend on the generated Dart package for all of our fidl dependencies.
+    foreach(d, fidl_deps) {
       dep_label = get_label_info(d, "label_no_toolchain")
       deps += [ "${dep_label}_dart" ]
     }
