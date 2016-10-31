@@ -76,6 +76,31 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
     return port_->Queue(iopk);
 }
 
+void ExceptionPort::BuildThreadStartReport(mx_exception_report_t* report,
+                                           mx_koid_t pid, mx_koid_t tid) {
+    memset(report, 0, sizeof(*report));
+    report->header.size = sizeof(*report);
+    report->header.type = MX_EXCP_START;
+    report->context.pid = pid;
+    report->context.tid = tid;
+}
+
+void ExceptionPort::OnThreadStart(UserThread* thread) {
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
+    mx_exception_report_t report;
+    BuildThreadStartReport(&report, pid, tid);
+    arch_exception_context_t context;
+    // There is no iframe at the moment. We'll need one (or equivalent) if/when
+    // we want to make $pc, $sp available.
+    memset(&context, 0, sizeof(context));
+    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context);
+    if (status != NO_ERROR) {
+        // Ignore any errors, we still want the thread to run.
+    }
+}
+
 void ExceptionPort::BuildProcessGoneReport(mx_exception_report_t* report,
                                            mx_koid_t pid) {
     memset(report, 0, sizeof(*report));

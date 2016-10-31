@@ -123,7 +123,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 // This test assumes no presence of the "debugger API" and therefore we can't
 // resume from a segfault. Such a test is for the debugger API anyway.
 
-static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid)
+static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid, uint32_t flags)
 {
     mx_handle_t thread = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS);
     // TODO: Really want to just kill the process here.
@@ -370,7 +370,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
     test_received_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
-    resume_thread_from_exception(child, tid);
+    resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
     tu_wait_signaled(child);
 
     tu_handle_close(child);
@@ -422,6 +422,33 @@ static bool debugger_handler_test(void)
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
     finish_basic_test("debugger", child, eport, our_channel, MSG_CRASH);
+    END_TEST;
+}
+
+static bool process_start_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("process start test\n");
+
+    mx_handle_t child, our_channel;
+    launchpad_t* lp = setup_test_child(&our_channel);
+    mx_handle_t eport = tu_io_port_create(0);
+    // Note: child is a borrowed handle, launchpad still owns it at this point.
+    child = launchpad_get_process_handle(lp);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    // Now we own the child handle, and lp is destroyed.
+    child = tu_launch_mxio_fini(lp);
+
+    mx_koid_t tid;
+    test_received_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+    send_msg(our_channel, MSG_DONE);
+    resume_thread_from_exception(child, tid, 0);
+    tu_wait_signaled(child);
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
     END_TEST;
 }
 
@@ -485,6 +512,7 @@ RUN_TEST(process_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
 RUN_TEST(process_handler_test);
 RUN_TEST(thread_handler_test);
+RUN_TEST(process_start_test);
 RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
 END_TEST_CASE(exceptions_tests)

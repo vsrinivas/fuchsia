@@ -30,6 +30,11 @@ static status_t arch_get_general_regs(struct thread *thread, mx_aarch64_general_
 
     struct arm64_iframe_long *p = thread->exception_context->frame;
 
+    // TODO: We could get called while processing a synthetic exception where
+    // there is no frame.
+    if (p == NULL)
+        return ERR_NOT_SUPPORTED;
+
     static_assert(sizeof(p->r) == sizeof(gr->r), "");
     memcpy(&gr->r[0], &p->r[0], sizeof(p->r));
     gr->lr = p->lr;
@@ -49,6 +54,11 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_aarch64_ge
         return ERR_BAD_STATE;
 
     struct arm64_iframe_long *p = thread->exception_context->frame;
+
+    // TODO: We could get called while processing a synthetic exception where
+    // there is no frame.
+    if (p == NULL)
+        return ERR_NOT_SUPPORTED;
 
     static_assert(sizeof(p->r) == sizeof(gr->r), "");
     memcpy(&p->r[0], &gr->r[0], sizeof(p->r));

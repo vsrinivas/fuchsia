@@ -270,6 +270,19 @@ int UserThread::StartRoutine(void* arg) {
     // check that the entry point makes sense and we haven't forgotten to set it
     DEBUG_ASSERT(t->user_entry_);
 
+    // Notify debugger if attached.
+    // This is done by first obtaining our own reference to the port so the
+    // test can be done safely. Note that this function doesn't return so we
+    // need the reference to go out of scope before then.
+    // TODO(dje): Allow debugger to say whether it wants these.
+    // A process might want these as well.
+    {
+        mxtl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
+        if (debugger_port) {
+            debugger_port->OnThreadStart(t);
+        }
+    }
+
     LTRACEF("arch_enter_uspace SP: %#" PRIxPTR " PC: %#" PRIxPTR
             ", ARG1: %#" PRIxPTR ", ARG2: %#" PRIxPTR "\n",
             t->user_sp_, t->user_entry_, t->user_arg1_, t->user_arg2_);

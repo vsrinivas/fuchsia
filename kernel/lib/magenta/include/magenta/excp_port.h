@@ -22,6 +22,8 @@ public:
 
     mx_status_t SendReport(const mx_exception_report_t* packet);
 
+    void OnThreadStart(UserThread* thread);
+
     void OnProcessExit(ProcessDispatcher* process);
     void OnThreadExit(UserThread* thread);
 
@@ -32,6 +34,8 @@ private:
     ExceptionPort& operator=(const ExceptionPort&) = delete;
 
     void OnDestruction();
+
+    void BuildThreadStartReport(mx_exception_report_t* report, mx_koid_t pid, mx_koid_t tid);
 
     void BuildProcessGoneReport(mx_exception_report_t* report, mx_koid_t pid);
     void BuildThreadGoneReport(mx_exception_report_t* report, mx_koid_t pid, mx_koid_t tid);

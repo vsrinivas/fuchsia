@@ -37,6 +37,12 @@ static status_t arch_get_general_regs(struct thread *thread, void *grp, uint32_t
         return ERR_BAD_STATE;
 
     x86_iframe_t *p = thread->exception_context->frame;
+
+    // TODO: We could get called while processing a synthetic exception where
+    // there is no frame.
+    if (p == NULL)
+        return ERR_NOT_SUPPORTED;
+
     gr->rax = p->rax;
     gr->rbx = p->rbx;
     gr->rcx = p->rcx;
@@ -74,6 +80,12 @@ static status_t arch_set_general_regs(struct thread *thread, const void *grp, ui
         return ERR_BAD_STATE;
 
     x86_iframe_t *p = thread->exception_context->frame;
+
+    // TODO: We could get called while processing a synthetic exception where
+    // there is no frame.
+    if (p == NULL)
+        return ERR_NOT_SUPPORTED;
+
     p->rax = gr->rax;
     p->rbx = gr->rbx;
     p->rcx = gr->rcx;
