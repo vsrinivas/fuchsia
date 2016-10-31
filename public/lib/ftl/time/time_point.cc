@@ -45,7 +45,7 @@ TimePoint TimePoint::Now() {
 
 // static
 TimePoint TimePoint::Now() {
-  return TimePoint(mx_current_time());
+  return TimePoint(mx_time_get(MX_CLOCK_MONOTONIC));
 }
 
 #else
