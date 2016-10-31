@@ -251,6 +251,10 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         return msg->datalen;
     }
+    case MXRIO_SETATTR: {
+        mx_status_t r = vn->ops->setattr(vn, (vnattr_t*)msg->data);
+        return r;
+    }
     case MXRIO_READDIR: {
         if (arg > MXIO_CHUNK_SIZE) {
             return ERR_INVALID_ARGS;

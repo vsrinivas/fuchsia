@@ -101,7 +101,7 @@ static mx_status_t minfs_inode_destroy(vnode_t* vn) {
     // save local copy, destroy inode on disk
     memcpy(&inode, &vn->inode, sizeof(inode));
     memset(&vn->inode, 0, sizeof(inode));
-    minfs_sync_vnode(vn);
+    minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     minfs_ino_free(vn->fs, vn->ino);
 
     // release all direct blocks
@@ -150,7 +150,7 @@ static mx_status_t minfs_inode_destroy(vnode_t* vn) {
 }
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
-// the file.
+// the file. Does not update mtime/atime.
 static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
     mx_status_t status;
     gbb_ctxt_t gbb;
@@ -168,7 +168,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
         bitmap_clr(&vn->fs->block_map, vn->inode.dnum[bno]);
         vn->inode.dnum[bno] = 0;
         vn->inode.block_count--;
-        minfs_sync_vnode(vn);
+        minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     }
 
     const unsigned direct_per_indirect = MINFS_BLOCK_SIZE / sizeof(uint32_t);
@@ -216,7 +216,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
         }
         // only update the indirect block if an entry was deleted
         if (iflags & BLOCK_DIRTY) {
-            minfs_sync_vnode(vn);
+            minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
         }
         bcache_put(vn->fs->bc, blk, iflags);
 
@@ -228,7 +228,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             bitmap_clr(&vn->fs->block_map, vn->inode.inum[indirect]);
             vn->inode.inum[indirect] = 0;
             vn->inode.block_count--;
-            minfs_sync_vnode(vn);
+            minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
         }
     }
 
@@ -253,7 +253,7 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
                 if (blk != NULL) {
                     vn->inode.dnum[n] = bno;
                     vn->inode.block_count++;
-                    minfs_sync_vnode(vn);
+                    minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
                 }
                 return blk;
             } else {
@@ -320,7 +320,7 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
     // and update the inode as well if we changed it
     bcache_put(vn->fs->bc, iblk, iflags);
     if (iflags & BLOCK_DIRTY) {
-        minfs_sync_vnode(vn);
+        minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     }
 
     return blk;
@@ -381,6 +381,7 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de) {
     // erase dirent (convert to empty entry), decrement dirent count
     de->ino = 0;
     vndir->inode.dirent_count--;
+    minfs_sync_vnode(vndir, MX_FS_SYNC_MTIME);
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -524,7 +525,7 @@ static mx_status_t vn_dir_for_each(vnode_t* vn, dir_args_t* args,
             case DIR_CB_SAVE_SYNC:
                 vn->inode.seq_num++;
                 vn_put_block_dirty(vn, blk);
-                minfs_sync_vnode(vn);
+                minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);
                 return NO_ERROR;
             case DIR_CB_DONE:
             default:
@@ -643,8 +644,9 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     }
     if ((off + len) > vn->inode.size) {
         vn->inode.size = off + len;
-        minfs_sync_vnode(vn);
     }
+
+    minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);  // writes always update mtime
     return len;
 }
 
@@ -678,6 +680,28 @@ static mx_status_t fs_getattr(vnode_t* vn, vnattr_t* a) {
     a->modify_time = vn->inode.modify_time;
     return NO_ERROR;
 }
+
+static mx_status_t fs_setattr(vnode_t* vn, vnattr_t* a) {
+    int dirty = 0;
+    trace(MINFS, "minfs_setattr() vn=%p(#%u)\n", vn, vn->ino);
+    if ((a->valid & ~(ATTR_CTIME|ATTR_MTIME)) != 0) {
+        return ERR_NOT_SUPPORTED;
+    }
+    if ((a->valid & ATTR_CTIME) != 0) {
+        vn->inode.create_time = a->create_time;
+        dirty = 1;
+    }
+    if ((a->valid & ATTR_MTIME) != 0) {
+        vn->inode.modify_time = a->modify_time;
+        dirty = 1;
+    }
+    if (dirty) {
+        // write to disk, but don't overwrite the time
+        minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
+    }
+    return NO_ERROR;
+}
+
 
 typedef struct dircookie {
     uint32_t used;   // not the first call
@@ -808,7 +832,7 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
         vn->inode.block_count = 1;
         vn->inode.dirent_count = 2;
         vn->inode.size = MINFS_BLOCK_SIZE;
-        minfs_sync_vnode(vn);
+        minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     }
     *out = vn;
     return NO_ERROR;
@@ -867,7 +891,7 @@ static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
             }
         }
         vn->inode.size = len;
-        minfs_sync_vnode(vn);
+        minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);
     } else if (len > vn->inode.size) {
         // Truncate should make the file longer, filled with zeroes.
         if (MAX_FILE_BLOCK * MINFS_BLOCK_SIZE < len) {
@@ -1002,6 +1026,7 @@ vnode_ops_t minfs_ops = {
     .write = fs_write,
     .lookup = fs_lookup,
     .getattr = fs_getattr,
+    .setattr = fs_setattr,
     .readdir = fs_readdir,
     .create = fs_create,
     .ioctl = fs_ioctl,

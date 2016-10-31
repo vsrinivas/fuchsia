@@ -10,6 +10,11 @@
 #define MINFS_HASH_BITS (8)
 #define MINFS_BUCKETS (1 << MINFS_HASH_BITS)
 
+// minfs_sync_vnode flags
+#define MX_FS_SYNC_DEFAULT 0     // default: no implicit time update
+#define MX_FS_SYNC_MTIME (1<<0)
+#define MX_FS_SYNC_CTIME (1<<1)
+
 typedef struct minfs minfs_t;
 
 struct minfs {
@@ -53,8 +58,8 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
 // free ino in inode bitmap
 mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino);
 
-// write the inode data of this vnode to disk
-void minfs_sync_vnode(vnode_t* vn);
+// write the inode data of this vnode to disk (default does not update time values)
+void minfs_sync_vnode(vnode_t* vn, uint32_t flags);
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max);
 void minfs_dump_info(minfs_info_t* info);

@@ -51,9 +51,23 @@ static uint64_t minfs_current_utc_time(void) {
     return timestamp++;
 }
 
-void minfs_sync_vnode(vnode_t* vn) {
+void minfs_sync_vnode(vnode_t* vn, uint32_t flags) {
+    // sync the data portion of the current vnode
     block_t* blk;
     void* bdata;
+
+    // by default, c/mtimes are not updated to current time
+    if (flags != MX_FS_SYNC_DEFAULT) {
+        mx_time_t cur_time = minfs_current_utc_time();
+        // update times before syncing
+        if ((flags & MX_FS_SYNC_MTIME) != 0) {
+            vn->inode.modify_time = cur_time;
+        }
+        if ((flags & MX_FS_SYNC_CTIME) != 0) {
+            vn->inode.create_time = cur_time;
+        }
+        // TODO(orr): no current support for atime
+    }
 
     uint32_t bno_of_ino = vn->fs->info.ino_block + (vn->ino / MINFS_INODES_PER_BLOCK);
     uint32_t off_of_ino = (vn->ino % MINFS_INODES_PER_BLOCK) * MINFS_INODE_SIZE;
@@ -64,9 +78,6 @@ void minfs_sync_vnode(vnode_t* vn) {
 
     memcpy(bdata + off_of_ino, &vn->inode, MINFS_INODE_SIZE);
     bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
-
-    // update modify time
-    vn->inode.modify_time = minfs_current_utc_time();
 }
 
 mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino) {
