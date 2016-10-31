@@ -100,3 +100,5 @@ finished for basic debugging to work:
 - Support architectures other than x86-64
 - vRun should create the process (and, for now, flag an error if a process
   is already running)
+- user muscle memory will make them want to type "debugserver :7000 ..."
+  instead of "debugserver 7000 ...", should stay consistent
