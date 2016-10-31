@@ -47,7 +47,7 @@ extern "C" const char vdso_image[], userboot_image[];
 // Get a handle to a VM object, with full rights except perhaps for writing.
 static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
                                   mxtl::RefPtr<VmObjectDispatcher>* disp_ptr,
-                                  HandleUniquePtr* ptr) {
+                                  Handle** ptr) {
     if (!vmo)
         return ERR_NO_MEMORY;
     mx_rights_t rights;
@@ -60,35 +60,33 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
         if (ptr)
-            *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
+            *ptr = MakeHandle(mxtl::move(dispatcher), rights);
     }
     return result;
 }
 
-static mx_status_t get_job_handle(HandleUniquePtr* ptr) {
+static mx_status_t get_job_handle(Handle** ptr) {
     mx_rights_t rights;
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
-    if (result == NO_ERROR) {
-        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
-    }
+    if (result == NO_ERROR)
+        *ptr = MakeHandle(mxtl::move(dispatcher), rights);
     return result;
 }
 
-static mx_status_t get_resource_handle(HandleUniquePtr* ptr) {
+static mx_status_t get_resource_handle(Handle** ptr) {
     mx_rights_t rights;
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = ResourceDispatcher::Create(&dispatcher, &rights);
-    if (result == NO_ERROR) {
-        *ptr = HandleUniquePtr(MakeHandle(mxtl::move(dispatcher), rights));
-    }
+    if (result == NO_ERROR)
+        *ptr = MakeHandle(mxtl::move(dispatcher), rights);
     return result;
 }
 
 // Map a segment from one of our embedded VM objects.
 // If *mapped_address is zero to begin with, it can go anywhere.
-static mx_status_t map_dso_segment(ProcessDispatcher* process,
+static mx_status_t map_dso_segment(mxtl::RefPtr<ProcessDispatcher> process,
                                    const char* name, bool code,
                                    mxtl::RefPtr<VmObjectDispatcher> vmo,
                                    uintptr_t start_offset,
@@ -106,8 +104,9 @@ static mx_status_t map_dso_segment(ProcessDispatcher* process,
 
     size_t len = end_offset - start_offset;
 
-    mx_status_t status = process->Map(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, start_offset, len,
-                                      mapped_address, flags);
+    mx_status_t status = process->Map(
+        mxtl::move(vmo), MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP,
+        start_offset, len, mapped_address, flags);
 
     if (status != NO_ERROR) {
         dprintf(CRITICAL,
@@ -126,7 +125,7 @@ static mx_status_t map_dso_segment(ProcessDispatcher* process,
 // Map one of our embedded DSOs from its VM object.
 // If *start_address is zero, it can go anywhere.
 static mx_status_t map_dso_image(const char* name,
-                                 ProcessDispatcher* process,
+                                 mxtl::RefPtr<ProcessDispatcher> process,
                                  uintptr_t* start_address,
                                  mxtl::RefPtr<VmObjectDispatcher> vmo,
                                  size_t code_start, size_t code_end) {
@@ -140,7 +139,7 @@ static mx_status_t map_dso_image(const char* name,
                                          0, code_start, start_address);
     if (status == 0) {
         uintptr_t code_address = *start_address + code_start;
-        status = map_dso_segment(process, name, true, vmo,
+        status = map_dso_segment(process, name, true, mxtl::move(vmo),
                                  code_start, code_end, &code_address);
     }
 
@@ -149,42 +148,30 @@ static mx_status_t map_dso_image(const char* name,
 
 // Create a channel and write the bootstrap message down one side of
 // it, returning the handle to the other side.
-static HandleUniquePtr make_bootstrap_channel(
-    const void* bytes, uint32_t num_bytes,
-    HandleUniquePtr handles[], uint32_t num_handles) {
+static mx_handle_t make_bootstrap_channel(
+    mxtl::RefPtr<ProcessDispatcher> process,
+    mxtl::unique_ptr<MessagePacket> msg) {
     HandleUniquePtr user_channel_handle;
     mxtl::RefPtr<ChannelDispatcher> kernel_channel;
     {
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
-        status_t status = ChannelDispatcher::Create(
-            0, &mpd0, &mpd1, &rights);
+        status_t status = ChannelDispatcher::Create(0, &mpd0, &mpd1, &rights);
         if (status != NO_ERROR)
-            return nullptr;
+            return status;
         user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
         kernel_channel.reset(mpd1->get_specific<ChannelDispatcher>());
     }
-    if (!user_channel_handle)
-        return nullptr;
-    ASSERT(kernel_channel);
-
-    // Now pack up the bytes and handles to write down the channel.
-    AllocChecker ac;
-    mxtl::unique_ptr<MessagePacket> msg;
-    if (MessagePacket::Create(num_bytes, num_handles, &msg) != NO_ERROR)
-        return nullptr;
-
-    memcpy(msg->mutable_data(), bytes, num_bytes);
-
-    Handle** handle_list = msg->mutable_handles();
-    for (uint32_t i = 0; i < num_handles; ++i)
-        handle_list[i] = handles[i].release();
 
     // Here it goes!
-    if (kernel_channel->Write(mxtl::move(msg)) != NO_ERROR)
-        return nullptr;
+    mx_status_t status = kernel_channel->Write(mxtl::move(msg));
+    if (status != NO_ERROR)
+        return status;
 
-    return user_channel_handle;
+    mx_handle_t hv = process->MapHandleToValue(user_channel_handle.get());
+    process->AddHandle(mxtl::move(user_channel_handle));
+
+    return hv;
 }
 
 enum bootstrap_handle_index {
@@ -205,7 +192,17 @@ struct bootstrap_message {
     char cmdline[CMDLINE_MAX];
 };
 
-static uint32_t prepare_bootstrap_msg(struct bootstrap_message* msg) {
+static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
+    mxtl::unique_ptr<MessagePacket> packet;
+    uint32_t data_size =
+        static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline)) +
+        __kernel_cmdline_size;
+    uint32_t num_handles = BOOTSTRAP_HANDLES;
+    if (MessagePacket::Create(data_size, num_handles, &packet) != NO_ERROR)
+        return nullptr;
+
+    bootstrap_message* msg =
+        reinterpret_cast<bootstrap_message*>(packet->mutable_data());
     memset(&msg->header, 0, sizeof(msg->header));
     msg->header.protocol = MX_PROCARGS_PROTOCOL;
     msg->header.version = MX_PROCARGS_VERSION;
@@ -246,8 +243,8 @@ static uint32_t prepare_bootstrap_msg(struct bootstrap_message* msg) {
         msg->handle_info[i] = info;
     }
     memcpy(msg->cmdline, __kernel_cmdline, __kernel_cmdline_size);
-    return static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline) +
-                                 __kernel_cmdline_size);
+
+    return packet;
 }
 
 static int attempt_userboot(const void* bootfs, size_t bfslen) {
@@ -265,7 +262,15 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     auto bootfs_vmo = VmObject::CreateFromROData(bootfs, bfslen);
     auto rootfs_vmo = VmObject::CreateFromROData(rbase, rsize);
 
-    HandleUniquePtr handles[BOOTSTRAP_HANDLES];
+    // Prepare the bootstrap message packet.  This puts its data (the
+    // kernel command line) in place, and allocates space for its handles.
+    // We'll fill in the handles as we create things.
+    mxtl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
+    if (!msg)
+        return ERR_NO_MEMORY;
+
+    Handle** const handles = msg->mutable_handles();
+    DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
     mx_status_t status = get_vmo_handle(bootfs_vmo, false, NULL,
                                         &handles[BOOTSTRAP_BOOTFS]);
     if (status == NO_ERROR)
@@ -298,9 +303,9 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (status < 0)
         return status;
 
-    handles[BOOTSTRAP_PROC].reset(MakeHandle(proc_disp, rights));
+    handles[BOOTSTRAP_PROC] = MakeHandle(proc_disp, rights);
 
-    auto proc = proc_disp->get_specific<ProcessDispatcher>();
+    auto proc = DownCastDispatcher<ProcessDispatcher>(mxtl::move(proc_disp));
 
     // Map the userboot image anywhere.
     uintptr_t userboot_base = 0;
@@ -341,7 +346,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
     // Create the user thread and stash its handle for the bootstrap message.
-    ThreadDispatcher* thread;
+    mxtl::RefPtr<ThreadDispatcher> thread;
     {
         mxtl::RefPtr<UserThread> ut;
         status = proc->CreateUserThread("userboot", 0, &ut);
@@ -351,35 +356,20 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         status = ThreadDispatcher::Create(ut, &ut_disp, &rights);
         if (status < 0)
             return status;
-        thread = ut_disp->get_specific<ThreadDispatcher>();
-        handles[BOOTSTRAP_THREAD].reset(MakeHandle(mxtl::move(ut_disp), rights));
+        handles[BOOTSTRAP_THREAD] = MakeHandle(ut_disp, rights);
+        thread = DownCastDispatcher<ThreadDispatcher>(mxtl::move(ut_disp));
     }
     DEBUG_ASSERT(thread);
 
-    mx_handle_t hv;
-    {
-        // The bootstrap message buffer is too big to fit on a kernel
-        // stack, so allocate it.
-        AllocChecker ac;
-        mxtl::unique_ptr<bootstrap_message> msg(new (&ac) bootstrap_message);
-        if (!ac.check())
-            return ERR_NO_MEMORY;
-
-        uint32_t msg_size = prepare_bootstrap_msg(msg.get());
-        auto handle = make_bootstrap_channel(
-            msg.get(), msg_size,
-            handles, static_cast<uint32_t>(BOOTSTRAP_HANDLES));
-        if (!handle)
-            return ERR_NO_MEMORY;
-
-        hv = proc->MapHandleToValue(handle.get());
-        proc->AddHandle(mxtl::move(handle));
-    }
+    // All the handles are in place, so we can send the bootstrap message.
+    mx_handle_t hv = make_bootstrap_channel(proc, mxtl::move(msg));
+    if (hv < 0)
+        return hv;
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
 
     // start the process
-    status = proc->Start(mxtl::WrapRefPtr(thread), entry, sp, hv, vdso_base);
+    status = proc->Start(mxtl::move(thread), entry, sp, hv, vdso_base);
     if (status != NO_ERROR) {
         printf("userboot: failed to start process %d\n", status);
         return status;
