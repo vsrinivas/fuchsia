@@ -35,18 +35,18 @@ class ImageCache {
           vk::Format format,
           uint32_t width,
           uint32_t height,
-          GpuMem memory,
+          GpuMemPtr memory,
           ImageCache* cache);
     ~Image();
 
    private:
     ImageCache* cache_;
-    GpuMem memory_;
+    GpuMemPtr memory_;
 
     FTL_DISALLOW_COPY_AND_ASSIGN(Image);
   };
 
-  void DestroyImage(vk::Image image, vk::Format format, GpuMem memory);
+  void DestroyImage(vk::Image image, vk::Format format);
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;

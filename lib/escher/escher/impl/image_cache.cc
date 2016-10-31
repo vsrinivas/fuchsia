@@ -25,11 +25,11 @@ ftl::RefPtr<Image> ImageCache::NewImage(const vk::ImageCreateInfo& info) {
   vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(info));
 
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
-  GpuMem memory =
+  GpuMemPtr memory =
       allocator_->Allocate(reqs, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   vk::Result result =
-      device_.bindImageMemory(image, memory.base(), memory.offset());
+      device_.bindImageMemory(image, memory->base(), memory->offset());
   FTL_CHECK(result == vk::Result::eSuccess);
 
   image_count_++;
@@ -54,9 +54,7 @@ ftl::RefPtr<Image> ImageCache::GetDepthImage(vk::Format format,
   return NewImage(info);
 }
 
-void ImageCache::DestroyImage(vk::Image image,
-                              vk::Format format,
-                              GpuMem memory) {
+void ImageCache::DestroyImage(vk::Image image, vk::Format format) {
   device_.destroyImage(image);
   image_count_--;
 }
@@ -65,14 +63,14 @@ ImageCache::Image::Image(vk::Image image,
                          vk::Format format,
                          uint32_t width,
                          uint32_t height,
-                         GpuMem memory,
+                         GpuMemPtr memory,
                          ImageCache* cache)
     : escher::Image(image, format, width, height),
       cache_(cache),
       memory_(std::move(memory)) {}
 
 ImageCache::Image::~Image() {
-  cache_->DestroyImage(image(), format(), std::move(memory_));
+  cache_->DestroyImage(image(), format());
 }
 
 }  // namespace impl

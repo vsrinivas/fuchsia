@@ -4,9 +4,9 @@
 
 #include "escher/impl/escher_impl.h"
 
-#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
+#include "escher/impl/naive_gpu_allocator.h"
 #include "escher/impl/render_pass_manager.h"
 #include "escher/util/cplusplus.h"
 
@@ -17,7 +17,7 @@ EscherImpl::EscherImpl(const VulkanContext& context,
                        const VulkanSwapchain& swapchain)
     : vulkan_context_(context),
       render_pass_manager_(std::make_unique<RenderPassManager>(context)),
-      gpu_allocator_(std::make_unique<GpuAllocator>(context)),
+      gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
       image_cache_(std::make_unique<ImageCache>(context.device,
                                                 context.physical_device,
                                                 gpu_allocator())),

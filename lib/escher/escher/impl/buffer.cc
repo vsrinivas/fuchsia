@@ -21,10 +21,10 @@ inline vk::Buffer CreateBufferHelper(vk::Device device,
   return ESCHER_CHECKED_VK_RESULT(device.createBuffer(info));
 }
 
-inline GpuMem AllocateMemoryHelper(vk::Device device,
-                                   GpuAllocator* allocator,
-                                   vk::Buffer buffer,
-                                   vk::MemoryPropertyFlags flags) {
+inline GpuMemPtr AllocateMemoryHelper(vk::Device device,
+                                      GpuAllocator* allocator,
+                                      vk::Buffer buffer,
+                                      vk::MemoryPropertyFlags flags) {
   vk::MemoryRequirements reqs = device.getBufferMemoryRequirements(buffer);
   return allocator->Allocate(reqs, flags);
 }
@@ -45,7 +45,7 @@ Buffer::Buffer(vk::Device device,
                                 allocator,
                                 buffer_,
                                 memory_property_flags)) {
-  device.bindBufferMemory(buffer_, mem_.base(), mem_.offset());
+  device.bindBufferMemory(buffer_, mem_->base(), mem_->offset());
 }
 
 Buffer::Buffer(Buffer&& other)
@@ -71,7 +71,7 @@ Buffer::~Buffer() {
 uint8_t* Buffer::Map() {
   if (!mapped_) {
     mapped_ = ESCHER_CHECKED_VK_RESULT(
-        device_.mapMemory(mem_.base(), mem_.offset(), mem_.size()));
+        device_.mapMemory(mem_->base(), mem_->offset(), mem_->size()));
   }
   return reinterpret_cast<uint8_t*>(mapped_);
 }
@@ -80,12 +80,12 @@ void Buffer::Unmap() {
   if (mapped_) {
     // TODO: only flush if the coherent bit isn't set.
     vk::MappedMemoryRange range;
-    range.memory = mem_.base();
-    range.offset = mem_.offset();
-    range.size = mem_.size();
+    range.memory = mem_->base();
+    range.offset = mem_->offset();
+    range.size = mem_->size();
     device_.flushMappedMemoryRanges(1, &range);
 
-    device_.unmapMemory(mem_.base());
+    device_.unmapMemory(mem_->base());
     mapped_ = nullptr;
   }
 }

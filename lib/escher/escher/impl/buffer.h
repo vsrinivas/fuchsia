@@ -21,7 +21,7 @@ class Buffer {
   Buffer(Buffer&& other);
   ~Buffer();
 
-  vk::DeviceSize GetSize() const { return mem_.size(); }
+  vk::DeviceSize GetSize() const { return mem_->size(); }
   vk::Buffer buffer() const { return buffer_; }
 
   uint8_t* Map();
@@ -33,7 +33,7 @@ class Buffer {
   vk::BufferUsageFlags usage_flags_;
   vk::MemoryPropertyFlags memory_property_flags_;
   vk::Buffer buffer_;
-  GpuMem mem_;
+  GpuMemPtr mem_;
   void* mapped_ = nullptr;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Buffer);

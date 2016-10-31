@@ -10,33 +10,43 @@ namespace escher {
 namespace impl {
 
 GpuAllocator::GpuAllocator(const VulkanContext& context)
-    : physical_device_(context.physical_device), device_(context.device) {}
+    : physical_device_(context.physical_device),
+      device_(context.device),
+      num_bytes_allocated_(0),
+      slab_count_(0) {}
 
 GpuAllocator::~GpuAllocator() {
   FTL_CHECK(num_bytes_allocated_ == 0);
+  FTL_CHECK(slab_count_ == 0);
 }
 
-GpuMem GpuAllocator::Allocate(vk::MemoryRequirements reqs,
-                              vk::MemoryPropertyFlags flags) {
+std::unique_ptr<GpuMemSlab> GpuAllocator::AllocateSlab(
+    vk::DeviceSize size,
+    uint32_t memory_type_index) {
   vk::MemoryAllocateInfo info;
-  info.allocationSize = reqs.size;
-  // TODO: cache flags for efficiency?
-  info.memoryTypeIndex =
-      GetMemoryTypeIndex(physical_device_, reqs.memoryTypeBits, flags);
-
-  // TODO: allocate large chunks of memory, and return memory from within these
-  // chunks.  This will require changes to Free(), of course.
+  info.allocationSize = size;
+  info.memoryTypeIndex = memory_type_index;
   vk::DeviceMemory mem = ESCHER_CHECKED_VK_RESULT(device_.allocateMemory(info));
-  num_bytes_allocated_ += reqs.size;
-  // TODO: need to manually overallocate and adjust offset to ensure alignment,
-  // based on the content of reqs.alignment?
-  return GpuMem(mem, 0, reqs.size, info.memoryTypeIndex, this);
+  num_bytes_allocated_ += size;
+  ++slab_count_;
+  return std::unique_ptr<GpuMemSlab>(
+      new GpuMemSlab(mem, size, memory_type_index, this));
 }
 
-void GpuAllocator::Free(GpuMem mem) {
-  FTL_CHECK(mem.offset() == 0);
-  num_bytes_allocated_ -= mem.size();
-  device_.freeMemory(mem.base());
+void GpuAllocator::FreeSlab(std::unique_ptr<GpuMemSlab> slab) {
+  FTL_DCHECK(slab->ref_count_ == 0);
+  FTL_DCHECK(slab->allocator_ == this);
+  num_bytes_allocated_ -= slab->size();
+  device_.freeMemory(slab->base());
+  --slab_count_;
+}
+
+GpuMemPtr GpuAllocator::AllocateMem(GpuMemSlab* slab,
+                                    vk::DeviceSize offset,
+                                    vk::DeviceSize size) {
+  FTL_DCHECK(slab->allocator_ == this);
+  FTL_DCHECK(offset + size <= slab->size());
+  return ftl::AdoptRef(new GpuMem(slab, offset, size));
 }
 
 }  // namespace impl
