@@ -4,6 +4,8 @@
 
 module maxwell.suggestion_engine;
 
+import "suggestion_display.mojom";
+
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based
 // on contextual changes, as well as Suggestions derived from
@@ -102,13 +104,4 @@ struct Suggestion {
   float rank;
 
   SuggestionDisplayProperties display_properties;
-};
-
-// TODO(thatguy): This will likely be a union eventually, with different
-// display descriptions for different kinds of Suggestions.
-struct SuggestionDisplayProperties {
-  string icon;  // logo?
-  string headline;
-  string subtext;
-  string details;
 };

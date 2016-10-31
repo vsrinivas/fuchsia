@@ -93,11 +93,11 @@ class Proposinator {
     ProposalPtr p = Proposal::New();
     p->id = id;
     p->on_selected = mojo::Array<ActionPtr>::New(0);
-    ProposalDisplayPropertiesPtr d = ProposalDisplayProperties::New();
+    SuggestionDisplayPropertiesPtr d = SuggestionDisplayProperties::New();
 
-    d->headline = "";
-    d->subtext = "";
     d->icon = "";
+    d->headline = "";
+    d->subheadline = "";
     d->details = "";
 
     p->display = std::move(d);
@@ -127,7 +127,7 @@ class NProposals : public Proposinator, public ContextSubscriberLink {
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));
-    for (int i = n_ - 1; i >= n; i--)
+    for (int i = n; i < n_; i++)
       Remove(std::to_string(i));
 
     n_ = n;

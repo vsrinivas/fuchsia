@@ -4,6 +4,8 @@
 
 module maxwell.suggestion_engine;
 
+import "suggestion_display.mojom";
+
 // A service and supporting structures enabling Agents to contribute Proposals
 // to the Suggestion engine.
 //
@@ -38,14 +40,7 @@ struct Proposal {
   // The list of actions to take when the user selects the assocated Suggestion.
   array<Action> on_selected;
 
-  ProposalDisplayProperties display;
-};
-
-struct ProposalDisplayProperties {
-  string headline;
-  string subtext;
-  string icon;  // logo?
-  string details;
+  SuggestionDisplayProperties display;
 };
 
 /*

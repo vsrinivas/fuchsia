@@ -128,18 +128,6 @@ class SuggestionEngine : public SuggestionManager {
       SourceEntry* const source_entry_;
     };
 
-    // TODO(rosswang): get rid of this
-    static SuggestionDisplayPropertiesPtr ConvertDisplay(
-        const ProposalDisplayProperties& pd) {
-      SuggestionDisplayPropertiesPtr sd = SuggestionDisplayProperties::New();
-      sd->icon = pd.icon;
-      sd->headline = pd.headline;
-      sd->subtext = pd.subtext;
-      sd->details = pd.details;
-
-      return sd;
-    }
-
     void ProposalToSuggestion(const Proposal& proposal,
                               Suggestion* suggestion) {
       // TODO(rosswang): real UUIDs
@@ -148,7 +136,7 @@ class SuggestionEngine : public SuggestionManager {
       // TODO(rosswang): rank
       suggestion->rank = id_;  // shhh
 
-      suggestion->display_properties = ConvertDisplay(*proposal.display);
+      suggestion->display_properties = proposal.display->Clone();
     }
 
     void BroadcastNewSuggestion(const Suggestion& suggestion) {
@@ -174,7 +162,7 @@ class SuggestionEngine : public SuggestionManager {
       BroadcastRemoveSuggestion(*suggestion);
 
       // TODO(rosswang): re-rank if necessary
-      suggestion->display_properties = ConvertDisplay(*proposal.display);
+      suggestion->display_properties = proposal.display->Clone();
 
       BroadcastNewSuggestion(*suggestion);
     }

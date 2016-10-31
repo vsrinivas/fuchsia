@@ -70,11 +70,11 @@ class IdeasAgentImpl : public IdeasAgent,
         ProposalPtr p = Proposal::New();
         p->id = kIdeaId;
         p->on_selected = mojo::Array<ActionPtr>::New(0);
-        ProposalDisplayPropertiesPtr d = ProposalDisplayProperties::New();
+        SuggestionDisplayPropertiesPtr d = SuggestionDisplayProperties::New();
 
-        d->headline = idea;
-        d->subtext = "";
         d->icon = "";
+        d->headline = idea;
+        d->subheadline = "";
         d->details = "";
 
         p->display = std::move(d);

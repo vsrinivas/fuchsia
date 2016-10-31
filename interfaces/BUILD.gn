@@ -9,6 +9,7 @@ mojom("interfaces") {
     "context_engine.mojom",
     "debug.mojom",
     "proposal_manager.mojom",
+    "suggestion_display.mojom",
     "suggestion_manager.mojom",
   ]
 }

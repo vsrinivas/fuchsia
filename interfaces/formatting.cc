@@ -19,7 +19,8 @@ namespace suggestion_engine {
 std::ostream& operator<<(std::ostream& os,
                          const SuggestionDisplayProperties& o) {
   return os << "{ icon: " << o.icon << ", headline: " << o.headline
-            << ", subtext: " << o.subtext << ", details: " << o.details << "}";
+            << ", subheadline: " << o.subheadline << ", details: " << o.details
+            << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const Suggestion& o) {
