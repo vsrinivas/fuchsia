@@ -150,26 +150,22 @@ static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
 static int hci_read_thread(void* arg) {
     hci_t* hci = (hci_t*)arg;
 
-    mx_handle_t handles[2];
-    handles[0] = hci->control_pipe[0];
-    handles[1] = hci->acl_pipe[0];
-    mx_signals_t signals[2];
-    signals[0] = MX_SIGNAL_READABLE;
-    signals[1] = MX_SIGNAL_READABLE;
+    mx_wait_item_t items[2];
+    items[0].handle = hci->control_pipe[0];
+    items[1].handle = hci->acl_pipe[0];
+    items[0].waitfor = MX_SIGNAL_READABLE;
+    items[1].waitfor = MX_SIGNAL_READABLE;
 
     while (1) {
-        mx_signals_state_t signals_state[2];
-
-        mx_status_t status = mx_handle_wait_many(countof(handles), handles, signals,
-                                                       MX_TIME_INFINITE, NULL, signals_state);
+        mx_status_t status = mx_handle_wait_many(items, countof(items), MX_TIME_INFINITE);
         if (status < 0) {
             printf("mx_handle_wait_many fail\n");
             break;
         }
-        if (signals_state[0].satisfied & MX_SIGNAL_READABLE) {
+        if (items[0].pending & MX_SIGNAL_READABLE) {
             uint8_t buf[256];
             uint32_t length = sizeof(buf);
-            status = mx_channel_read(handles[0], 0, buf, length, &length, NULL, 0, NULL);
+            status = mx_channel_read(items[0].handle, 0, buf, length, &length, NULL, 0, NULL);
             if (status >= 0) {
                 status = usb_control(hci->usb_device,
                                      USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
@@ -182,10 +178,10 @@ static int hci_read_thread(void* arg) {
                 break;
             }
         }
-        if (signals_state[1].satisfied & MX_SIGNAL_READABLE) {
+        if (items[1].pending & MX_SIGNAL_READABLE) {
             uint8_t buf[ACL_BUF_SIZE];
             uint32_t length = sizeof(buf);
-            status = mx_channel_read(handles[1], 0, buf, length, &length, NULL, 0, NULL);
+            status = mx_channel_read(items[1].handle, 0, buf, length, &length, NULL, 0, NULL);
             if (status >= 0) {
                 mtx_lock(&hci->mutex);
 

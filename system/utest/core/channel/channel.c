@@ -42,29 +42,32 @@ static int reader_thread(void* arg) {
     const unsigned int index = 2;
     mx_handle_t* channel = &_channel[index];
     __UNUSED mx_status_t status;
-    mx_signals_state_t states[2];
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     unsigned int packets[2] = {0, 0};
     bool closed[2] = {false, false};
+    mx_wait_item_t items[2];
+    items[0].handle = channel[0];
+    items[1].handle = channel[1];
+    items[0].waitfor = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    items[1].waitfor = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
     do {
-        status = mx_handle_wait_many(2, channel, &signals, MX_TIME_INFINITE, NULL, states);
+        status = mx_handle_wait_many(items, 2, MX_TIME_INFINITE);
         assert(status == NO_ERROR);
         uint32_t data;
         uint32_t num_bytes = sizeof(uint32_t);
-        if (states[0].satisfied & MX_SIGNAL_READABLE) {
+        if (items[0].pending & MX_SIGNAL_READABLE) {
             status = mx_channel_read(channel[0], 0u, &data, num_bytes, &num_bytes,
                                      NULL, 0, NULL);
             assert(status == NO_ERROR);
             packets[0] += 1;
-        } else if (states[1].satisfied & MX_SIGNAL_READABLE) {
+        } else if (items[1].pending & MX_SIGNAL_READABLE) {
             status = mx_channel_read(channel[1], 0u, &data, num_bytes, &num_bytes,
                                      NULL, 0, NULL);
             assert(status == NO_ERROR);
             packets[1] += 1;
         } else {
-            if (states[0].satisfied & MX_SIGNAL_PEER_CLOSED)
+            if (items[0].pending & MX_SIGNAL_PEER_CLOSED)
                 closed[0] = true;
-            if (states[1].satisfied & MX_SIGNAL_PEER_CLOSED)
+            if (items[1].pending & MX_SIGNAL_PEER_CLOSED)
                 closed[1] = true;
         }
     } while (!closed[0] || !closed[1]);

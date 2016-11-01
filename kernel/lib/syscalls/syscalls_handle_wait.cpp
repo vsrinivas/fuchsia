@@ -88,12 +88,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     return result;
 }
 
-mx_status_t sys_handle_wait_many(uint32_t count,
-                                 user_ptr<const mx_handle_t> _handle_values,
-                                 user_ptr<const mx_signals_t> _signals,
-                                 mx_time_t timeout,
-                                 user_ptr<uint32_t> _result_index,
-                                 user_ptr<mx_signals_state_t> _signals_states) {
+mx_status_t sys_handle_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count, mx_time_t timeout) {
     LTRACEF("count %u\n", count);
 
     if (!count) {
@@ -103,30 +98,19 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         return ERR_TIMED_OUT;
     }
 
-    if (!_handle_values || !_signals)
+    if (!_items)
         return ERR_INVALID_ARGS;
     if (count > kMaxWaitHandleCount)
         return ERR_INVALID_ARGS;
 
     AllocChecker ac;
-    mxtl::InlineArray<mx_handle_t, kWaitManyInlineCount> handle_values(&ac, count);
+    mxtl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    if (_handle_values.copy_array_from_user(handle_values.get(), count) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    mxtl::InlineArray<mx_signals_t, kWaitManyInlineCount> signals(&ac, count);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
-    if (_signals.copy_array_from_user(signals.get(), count) != NO_ERROR)
+    if (_items.copy_array_from_user(items.get(), count) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     mxtl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
-    if (!ac.check())
-        return ERR_NO_MEMORY;
-
-    mxtl::InlineArray<mx_signals_state_t, kWaitManyInlineCount>
-            signals_states(&ac, _signals_states ? count : 0);
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -140,9 +124,9 @@ mx_status_t sys_handle_wait_many(uint32_t count,
         AutoLock lock(up->handle_table_lock());
 
         for (; num_added != count; ++num_added) {
-            Handle* handle = up->GetHandle_NoLock(handle_values[num_added]);
+            Handle* handle = up->GetHandle_NoLock(items[num_added].handle);
             if (!handle) {
-                result = up->BadHandle(handle_values[num_added], ERR_BAD_HANDLE);
+                result = up->BadHandle(items[num_added].handle, ERR_BAD_HANDLE);
                 break;
             }
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ)) {
@@ -150,14 +134,13 @@ mx_status_t sys_handle_wait_many(uint32_t count,
                 break;
             }
 
-            result = wait_state_observers[num_added].Begin(&event, handle, signals[num_added],
+            result = wait_state_observers[num_added].Begin(&event, handle, items[num_added].waitfor,
                                                            static_cast<uint64_t>(num_added));
             if (result != NO_ERROR)
                 break;
         }
     }
     if (result != NO_ERROR) {
-        DEBUG_ASSERT(num_added < count);
         for (size_t ix = 0; ix < num_added; ++ix)
             wait_state_observers[ix].End();
         return result;
@@ -174,19 +157,11 @@ mx_status_t sys_handle_wait_many(uint32_t count,
     // Regardless of wait outcome, we must call End().
     for (size_t ix = 0; ix != count; ++ix) {
         auto s = wait_state_observers[ix].End();
-        if (signals_states.size())
-            signals_states[ix] = s;
+        items[ix].pending = s.satisfied;
     }
 
-    if (_result_index && WaitEvent::HaveContextForResult(wait_event_result)) {
-        if (_result_index.copy_to_user(static_cast<uint32_t>(context)) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    }
-
-    if (_signals_states) {
-        if (_signals_states.copy_array_to_user(signals_states.get(), count) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    }
+    if (_items.copy_array_to_user(items.get(), count) != NO_ERROR)
+        return ERR_INVALID_ARGS;
 
     return result;
 }

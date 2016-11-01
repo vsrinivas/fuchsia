@@ -1134,8 +1134,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
     mx_status_t r = NO_ERROR;
     nfds_t nvalid = 0;
 
-    mx_handle_t handles[n];
-    mx_signals_t signals[n];
+    mx_wait_item_t items[n];
 
     for (nfds_t i = 0; i < n; i++) {
         struct pollfd* pfd = &fds[i];
@@ -1163,19 +1162,16 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
             r = ERR_INVALID_ARGS;
             break;
         }
-        handles[nvalid] = h;
-        signals[nvalid] = sigs;
+        items[nvalid].handle = h;
+        items[nvalid].waitfor = sigs;
         nvalid++;
     }
 
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
-        uint32_t result_index = 0;
-        mx_signals_state_t signals_states[nvalid];
         mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
 
-        if ((r = mx_handle_wait_many(nvalid, handles, signals, tmo, &result_index,
-                                     signals_states)) == NO_ERROR) {
+        if ((r = mx_handle_wait_many(items, nvalid, tmo)) == NO_ERROR) {
             nfds_t j = 0; // j counts up on a valid entry
 
             for (nfds_t i = 0; i < n; i++) {
@@ -1186,9 +1182,9 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
                     // skip an invalid entry
                     continue;
                 }
-                if (j >= result_index && j < nvalid) {
+                if (j < nvalid) {
                     uint32_t events = 0;
-                    io->ops->wait_end(io, signals_states[j].satisfied, &events);
+                    io->ops->wait_end(io, items[j].pending, &events);
                     // mask unrequested events except HUP/ERR
                     pfd->revents = events & (pfd->events | EPOLLHUP | EPOLLERR);
                     if (pfd->revents != 0) {
@@ -1221,8 +1217,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     mx_status_t r = NO_ERROR;
     int nvalid = 0;
 
-    mx_handle_t handles[n];
-    mx_signals_t signals[n];
+    mx_wait_item_t items[n];
 
     for (int fd = 0; fd < n; fd++) {
         ios[fd] = NULL;
@@ -1253,21 +1248,17 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
             r = ERR_INVALID_ARGS;
             break;
         }
-        handles[nvalid] = h;
-        signals[nvalid] = sigs;
+        items[nvalid].handle = h;
+        items[nvalid].pending = sigs;
         nvalid++;
     }
 
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
-        uint32_t result_index = 0;
-        mx_signals_state_t signals_states[nvalid];
-
         mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
             MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec);
 
-        if ((r = mx_handle_wait_many(nvalid, handles, signals, tmo, &result_index,
-                                     signals_states)) == NO_ERROR) {
+        if ((r = mx_handle_wait_many(items, nvalid, tmo)) == NO_ERROR) {
             int j = 0; // j counts up on a valid entry
 
             for (int fd = 0; fd < n; fd++) {
@@ -1276,9 +1267,9 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
                     // skip an invalid entry
                     continue;
                 }
-                if ((uint32_t)j >= result_index && j < nvalid) {
+                if (j < nvalid) {
                     uint32_t events = 0;
-                    io->ops->wait_end(io, signals_states[j].satisfied, &events);
+                    io->ops->wait_end(io, items[j].pending, &events);
 
                     if (rfds && FD_ISSET(fd, rfds)) {
                         if (events & EPOLLIN) {

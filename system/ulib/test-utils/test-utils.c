@@ -72,10 +72,18 @@ void tu_thread_create_c11(thrd_t* t, thrd_start_t entry, void* arg,
 static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signals,
                            uint32_t num_handles, uint32_t* result_index,
                            mx_time_t deadline,
-                           mx_signals_state_t* signals_states)
+                           mx_signals_t* pending)
 {
-    return mx_handle_wait_many(num_handles, handles, signals, deadline, NULL,
-                               signals_states);
+    mx_wait_item_t items[num_handles];
+    for (uint32_t n = 0; n < num_handles; n++) {
+        items[n].handle = handles[n];
+        items[n].waitfor = signals[n];
+    }
+    mx_status_t status = mx_handle_wait_many(items, num_handles, deadline);
+    for (uint32_t n = 0; n < num_handles; n++) {
+        pending[n] = items[n].pending;
+    }
+    return status;
 }
 
 void tu_channel_create(mx_handle_t* handle0, mx_handle_t* handle1) {
@@ -109,12 +117,12 @@ void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* 
 bool tu_wait_readable(mx_handle_t handle)
 {
     mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-    mx_signals_state_t signals_state;
+    mx_signals_t pending;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &signals_state);
+    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &pending);
     if (result != NO_ERROR)
         tu_fatal(__func__, result);
-    if ((signals_state.satisfied & MX_SIGNAL_READABLE) == 0) {
+    if ((pending & MX_SIGNAL_READABLE) == 0) {
         unittest_printf("%s: peer closed\n", __func__);
         return false;
     }
@@ -124,12 +132,12 @@ bool tu_wait_readable(mx_handle_t handle)
 void tu_wait_signaled(mx_handle_t handle)
 {
     mx_signals_t signals = MX_SIGNAL_SIGNALED;
-    mx_signals_state_t signals_state;
+    mx_signals_t pending;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &signals_state);
+    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &pending);
     if (result != NO_ERROR)
         tu_fatal(__func__, result);
-    if ((signals_state.satisfied & MX_SIGNAL_SIGNALED) == 0) {
+    if ((pending & MX_SIGNAL_SIGNALED) == 0) {
         unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
         exit(TU_FAIL_ERRCODE);
     }

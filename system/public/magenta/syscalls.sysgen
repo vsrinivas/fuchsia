@@ -93,9 +93,7 @@ syscall handle_wait_one
     returns (mx_status_t);
 
 syscall handle_wait_many
-    (count: uint32_t, handles: mx_handle_t[count] IN, signals: mx_signals_t[count] IN,
-        timeout: mx_time_t, result_index: uint32_t[1] OUT,
-        signals_states: mx_signals_state_t[count] OUT)
+    (handles: mx_wait_item_t[count] INOUT, count: uint32_t, timeout: mx_time_t)
     returns (mx_status_t);
 
 syscall handle_replace

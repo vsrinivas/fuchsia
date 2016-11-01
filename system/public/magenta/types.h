@@ -106,6 +106,12 @@ typedef uint32_t mx_signals_t;
 
 
 typedef struct {
+    mx_handle_t handle;
+    mx_signals_t waitfor;
+    mx_signals_t pending;
+} mx_wait_item_t;
+
+typedef struct {
     mx_signals_t satisfied;
     mx_signals_t satisfiable;
 } mx_signals_state_t;
