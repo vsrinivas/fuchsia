@@ -59,7 +59,8 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   mozart::NodePtr MakeVideoNode(mojo::TransformPtr transform,
                                 const mozart::SceneUpdatePtr& update);
 
-  // Draws the video texture image and returns its resource.
+  // Draws the video texture image and returns its resource. |presentation_time|
+  // is in nanoseconds.
   mozart::ResourcePtr DrawVideoTexture(const mojo::Size& size,
                                        int64_t presentation_time);
 

@@ -349,9 +349,8 @@ mozart::ResourcePtr VideoPlayerView::DrawVideoTexture(
   image->alpha_format = mozart::Image::AlphaFormat::OPAQUE;
   image->buffer = buffer_.GetDuplicateHandle();
 
-  video_renderer_.GetRgbaFrame(
-      static_cast<uint8_t*>(buffer_.PtrFromOffset(0)), size,
-      mojo::media::Timeline::ns_from_us(presentation_time));
+  video_renderer_.GetRgbaFrame(static_cast<uint8_t*>(buffer_.PtrFromOffset(0)),
+                               size, presentation_time);
 
   mozart::ResourcePtr resource = mozart::Resource::New();
   resource->set_image(mozart::ImageResource::New());
