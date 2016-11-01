@@ -13,10 +13,10 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <mxtl/array.h>
+#include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-#include <mxtl/intrusive_double_list.h>
 #include <stdint.h>
 
 // The base vm object that holds a range of bytes of data
@@ -34,24 +34,42 @@ public:
     virtual size_t AllocatedPages() const { return 0; }
 
     // find physical pages to back the range of the object
-    virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t *committed) { return ERR_NOT_SUPPORTED; }
+    virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     // find a contiguous run of physical pages to back the range of the object
-    virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t *committed, uint8_t alignment_log2) { return ERR_NOT_SUPPORTED; };
+    virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
+                                           uint8_t alignment_log2) {
+        return ERR_NOT_SUPPORTED;
+    };
 
     // free a range of the vmo back to the default state
-    virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t *decommitted) { return ERR_NOT_SUPPORTED; }
+    virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     // read/write operators against kernel pointers only
-    virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) { return ERR_NOT_SUPPORTED; }
-    virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) { return ERR_NOT_SUPPORTED; };
+    virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+        return ERR_NOT_SUPPORTED;
+    }
+    virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+        return ERR_NOT_SUPPORTED;
+    };
 
     // read/write operators against user space pointers only
-    virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) { return ERR_NOT_SUPPORTED; }
-    virtual status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) { return ERR_NOT_SUPPORTED; }
+    virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+        return ERR_NOT_SUPPORTED;
+    }
+    virtual status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+                               size_t* bytes_written) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     // translate a range of the vmo to physical addresses and store in the buffer
-    virtual status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) { return ERR_NOT_SUPPORTED; }
+    virtual status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) {
+        return ERR_NOT_SUPPORTED;
+    }
 
     virtual void Dump(bool page_dump = false) {}
 
@@ -83,8 +101,8 @@ public:
 
     Mutex& lock() { return lock_; }
 
-    void AddRegionLocked(VmRegion *r);
-    void RemoveRegionLocked(VmRegion *r);
+    void AddRegionLocked(VmRegion* r);
+    void RemoveRegionLocked(VmRegion* r);
 
 protected:
     // private constructor (use Create())
@@ -110,37 +128,39 @@ class VmObjectPaged final : public VmObject {
 public:
     static mxtl::RefPtr<VmObject> Create(uint32_t pmm_alloc_flags, uint64_t size);
 
-    static mxtl::RefPtr<VmObject> CreateFromROData(const void* data,
-                                                   size_t size);
+    static mxtl::RefPtr<VmObject> CreateFromROData(const void* data, size_t size);
 
-    virtual status_t Resize(uint64_t size) override;
+    status_t Resize(uint64_t size) override;
 
-    virtual uint64_t size() const override { return size_; }
-    virtual size_t AllocatedPages() const override;
+    uint64_t size() const override { return size_; }
+    size_t AllocatedPages() const override;
 
-    virtual status_t CommitRange(uint64_t offset, uint64_t len, uint64_t *committed) override;
-    virtual status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t *committed, uint8_t alignment_log2) override;
-    virtual status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t *decommitted) override;
+    status_t CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) override;
+    status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
+                                           uint8_t alignment_log2) override;
+    status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) override;
 
-    virtual status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
-    virtual status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
+    status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
+    status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
 
-    virtual status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
-    virtual status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
+    status_t ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len,
+                              size_t* bytes_read) override;
+    status_t WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+                               size_t* bytes_written) override;
 
-    virtual status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
+    status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    virtual void Dump(bool page_dump = false) override;
+    void Dump(bool page_dump = false) override;
 
-    virtual vm_page_t* GetPageLocked(uint64_t offset) override;
-    virtual vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override;
+    vm_page_t* GetPageLocked(uint64_t offset) override;
+    vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override;
 
 private:
     // private constructor (use Create())
     explicit VmObjectPaged(uint32_t pmm_alloc_flags);
 
     // private destructor, only called from refptr
-    virtual ~VmObjectPaged() override;
+    ~VmObjectPaged() override;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
@@ -175,19 +195,19 @@ class VmObjectPhysical final : public VmObject {
 public:
     static mxtl::RefPtr<VmObject> Create(paddr_t base, uint64_t size);
 
-    virtual status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
+    status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    virtual void Dump(bool page_dump = false) override;
+    void Dump(bool page_dump = false) override;
 
-    virtual status_t GetPageLocked(uint64_t offset, paddr_t* pa) override;
-    virtual status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override;
+    status_t GetPageLocked(uint64_t offset, paddr_t* pa) override;
+    status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override;
 
 private:
     // private constructor (use Create())
     VmObjectPhysical(paddr_t base, uint64_t size);
 
     // private destructor, only called from refptr
-    virtual ~VmObjectPhysical() override;
+    ~VmObjectPhysical() override;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 

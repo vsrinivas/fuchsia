@@ -52,10 +52,11 @@ static void mark_pages_in_use(vaddr_t va, size_t len) {
         uint flags;
         paddr_t pa;
 
-        status_t err = arch_mmu_query(&vmm_aspace_to_obj(vmm_get_kernel_aspace())->arch_aspace(),
-                                      va + offset, &pa, &flags);
+        status_t err = arch_mmu_query(&vmm_aspace_to_obj(vmm_get_kernel_aspace())->arch_aspace(), va + offset,
+                                      &pa, &flags);
         if (err >= 0) {
-            LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR " runlen %#" PRIxPTR "\n",
+            LTRACEF("va %#" PRIxPTR ", pa %#" PRIxPTR ", flags %#x, err %d, start_pa %#" PRIxPTR
+                    " runlen %#" PRIxPTR "\n",
                     va + offset, pa, flags, err, start_pa, runlen);
 
             // see if we continue the run
@@ -81,9 +82,7 @@ static void mark_pages_in_use(vaddr_t va, size_t len) {
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;
-    list_for_every_entry (&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_WIRED;
-    }
+    list_for_every_entry (&list, p, vm_page_t, free.node) { p->state = VM_PAGE_STATE_WIRED; }
 }
 
 void vm_init_preheap(uint level) {
@@ -98,8 +97,8 @@ void vm_init_preheap(uint level) {
 
     // mark the physical pages used by the boot time allocator
     if (boot_alloc_end != boot_alloc_start) {
-        LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n",
-                boot_alloc_start, boot_alloc_end);
+        LTRACEF("marking boot alloc used from %#" PRIxPTR " to %#" PRIxPTR "\n", boot_alloc_start,
+                boot_alloc_end);
 
         mark_pages_in_use(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
@@ -189,23 +188,18 @@ void vm_init_postheap(uint level) {
             // If vaddr isn't the start of a kernel code/data region, then we should make
             // a mapping between it and the next closest one.
             if (next_kernel_region != vaddr) {
-                status_t status =
-                    vmm_reserve_space(aspace, map->name, next_kernel_region - vaddr, vaddr);
+                status_t status = vmm_reserve_space(aspace, map->name, next_kernel_region - vaddr, vaddr);
                 ASSERT(status == NO_ERROR);
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
-                    LTRACEF("Freeing region [%016" PRIxPTR ", %016" PRIxPTR
-                            ")\n",
-                            vaddr, next_kernel_region);
+                    LTRACEF("Freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
                     status = vmm_free_region(aspace, vaddr);
                     ASSERT(status == NO_ERROR);
                 } else {
                     // Otherwise, mark it no-exec since it's not explicitly code
-                    status = vmm_protect_region(
-                        aspace,
-                        vaddr,
-                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+                    status =
+                        vmm_protect_region(aspace, vaddr, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
                     ASSERT(status == NO_ERROR);
                 }
             }
@@ -302,8 +296,8 @@ static int cmd_vm(int argc, const cmd_args* argv) {
 
         VmAspace* aspace = vmm_aspace_to_obj(_aspace);
 
-        int err = arch_mmu_map(&aspace->arch_aspace(), argv[3].u, argv[2].u, (uint)argv[4].u,
-                               (uint)argv[5].u);
+        int err =
+            arch_mmu_map(&aspace->arch_aspace(), argv[3].u, argv[2].u, (uint)argv[4].u, (uint)argv[5].u);
         printf("arch_mmu_map returns %d\n", err);
     } else if (!strcmp(argv[1].str, "unmap")) {
         if (argc < 4)

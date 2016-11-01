@@ -8,10 +8,10 @@
 
 #include <assert.h>
 #include <kernel/mutex.h>
-#include <kernel/vm/vm_page_list.h>
 #include <kernel/vm/vm_object.h>
-#include <mxtl/intrusive_wavl_tree.h>
+#include <kernel/vm/vm_page_list.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
@@ -69,7 +69,8 @@ public:
 
 private:
     // private constructor, use Create()
-    VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo, uint64_t offset, uint arch_mmu_flags, const char* name);
+    VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo,
+             uint64_t offset, uint arch_mmu_flags, const char* name);
 
     // magic value
     static const uint32_t MAGIC = 0x564d5247; // VMRG

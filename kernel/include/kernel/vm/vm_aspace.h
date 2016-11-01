@@ -48,9 +48,9 @@ public:
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
 
     // map a vm object at a given offset
-    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
-                       size_t size, void** ptr, uint8_t align_pow2, size_t min_alloc_gap,
-                       uint vmm_flags, uint arch_mmu_flags);
+    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
+                       void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
+                       uint arch_mmu_flags);
 
     // common routines, mostly used by internal kernel code
 
@@ -59,8 +59,8 @@ public:
 
     // allocate a vm region mapping a physical range of memory
     status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_log2,
-                           size_t min_alloc_gap, paddr_t paddr,
-                           uint vmm_flags, uint arch_mmu_flags);
+                           size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
+                           uint arch_mmu_flags);
 
     // allocate a block of virtual memory
     status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
@@ -80,9 +80,7 @@ public:
     status_t Destroy();
 
     // accessor for singleton kernel address space
-    static VmAspace* kernel_aspace() {
-        return kernel_aspace_;
-    }
+    static VmAspace* kernel_aspace() { return kernel_aspace_; }
 
     // set the per thread aspace pointer to this
     void AttachToThread(thread_t* t);
@@ -111,10 +109,9 @@ private:
     vaddr_t AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_t min_alloc_gap,
                       uint arch_mmu_flags);
     mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
-    bool CheckGap(const RegionTree::iterator& prev,
-                  const RegionTree::iterator& next,
-                  vaddr_t* pva, vaddr_t search_base, vaddr_t align, size_t region_size,
-                  size_t min_gap, uint arch_mmu_flags);
+    bool CheckGap(const RegionTree::iterator& prev, const RegionTree::iterator& next, vaddr_t* pva,
+                  vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
+                  uint arch_mmu_flags);
 
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS

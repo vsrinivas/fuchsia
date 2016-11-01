@@ -84,13 +84,12 @@ void VmObjectPaged::Dump(bool page_dump) {
     size_t count = 0;
     page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
 
-    printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n",
-           this, ref_count_debug(), size_, count);
+    printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n", this, ref_count_debug(), size_,
+           count);
 
     if (page_dump) {
         auto f = [](const auto p, uint64_t offset) {
-            printf("\t\t\toffset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n",
-                   offset, p, vm_page_to_paddr(p));
+            printf("\t\t\toffset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p, vm_page_to_paddr(p));
         };
         page_list_.ForEveryPage(f);
     }
@@ -106,8 +105,7 @@ size_t VmObjectPaged::AllocatedPages() const {
 
 status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("vmo %p, offset %#" PRIx64 ", page %p (%#" PRIxPTR ")\n",
-            this, offset, p, vm_page_to_paddr(p));
+    LTRACEF("vmo %p, offset %#" PRIx64 ", page %p (%#" PRIxPTR ")\n", this, offset, p, vm_page_to_paddr(p));
 
     DEBUG_ASSERT(p);
 
@@ -119,8 +117,7 @@ status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
     return page_list_.AddPage(p, offset);
 }
 
-mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data,
-                                                       size_t size) {
+mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data, size_t size) {
     auto vmo = Create(PMM_ALLOC_FLAG_ANY, size);
     if (vmo && size > 0) {
         ASSERT(IS_PAGE_ALIGNED(size));
@@ -148,8 +145,8 @@ mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data,
                 ASSERT(pmm_alloc_range(pa, 1, nullptr) == 1);
                 page->state = VM_PAGE_STATE_WIRED;
             } else {
-                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n",
-                      pa, page->state);
+                panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
+                      page->state);
             }
 
             // XXX hack to work around the ref pointer to the base class
@@ -183,8 +180,7 @@ vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(lock_.IsHeld());
 
-    LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n",
-            this, offset, pf_flags);
+    LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n", this, offset, pf_flags);
 
     if (offset >= size_)
         return nullptr;
@@ -212,7 +208,7 @@ vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
     return p;
 }
 
-status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t *committed) {
+status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
@@ -282,10 +278,10 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t *com
     return NO_ERROR;
 }
 
-status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t *committed, uint8_t alignment_log2) {
+status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
+                                              uint8_t alignment_log2) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n",
-            offset, len, alignment_log2);
+    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n", offset, len, alignment_log2);
 
     if (committed)
         *committed = 0;
@@ -317,8 +313,7 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     list_node page_list;
     list_initialize(&page_list);
 
-    size_t allocated =
-        pmm_alloc_contiguous(count, pmm_alloc_flags_, alignment_log2, nullptr, &page_list);
+    size_t allocated = pmm_alloc_contiguous(count, pmm_alloc_flags_, alignment_log2, nullptr, &page_list);
     if (allocated < count) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", count, allocated);
         pmm_free(&page_list);
@@ -350,7 +345,7 @@ status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uin
     return NO_ERROR;
 }
 
-status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t *decommitted) {
+status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
@@ -374,10 +369,11 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t *d
     DEBUG_ASSERT(end > start);
     uint64_t page_aligned_len = end - start;
 
-    LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 ", page_aliged_len %#" PRIx64 "\n", start, end, page_aligned_len);
+    LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 ", page_aliged_len %#" PRIx64 "\n", start, end,
+            page_aligned_len);
 
     // unmap all of the pages in this range on all the mapping regions
-    for (auto& r: region_list_) {
+    for (auto& r : region_list_) {
         // unmap any pages the region may have mapped that intersect this range
         r.UnmapVmoRangeLocked(start, page_aligned_len);
     }
@@ -414,7 +410,7 @@ status_t VmObjectPaged::Resize(uint64_t s) {
         // we're only worried about whole pages to be removed
         if (page_aligned_len > 0) {
             // unmap all of the pages in this range on all the mapping regions
-            for (auto& r: region_list_) {
+            for (auto& r : region_list_) {
                 // unmap any pages the region may have mapped that intersect this range
                 r.UnmapVmoRangeLocked(start, page_aligned_len);
             }
@@ -436,8 +432,8 @@ status_t VmObjectPaged::Resize(uint64_t s) {
 // perform some sort of copy in/out on a range of the object using a passed in lambda
 // for the copy routine
 template <typename T>
-status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied,
-                                          bool write, T copyfunc) {
+status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
+                                          T copyfunc) {
     DEBUG_ASSERT(magic_ == MAGIC);
     if (bytes_copied)
         *bytes_copied = 0;
@@ -534,7 +530,8 @@ status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len
     return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
 }
 
-status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
+                                  size_t* bytes_written) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     // test to make sure this is a user pointer

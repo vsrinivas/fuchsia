@@ -40,8 +40,7 @@ static mxtl::DoublyLinkedList<VmAspace*> aspaces;
 // called once at boot to initialize the singleton kernel address space
 void VmAspace::KernelAspaceInitPreHeap() {
     // the singleton kernel address space
-    static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
-                                   "kernel");
+    static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL, "kernel");
     auto err = _kernel_aspace.Init();
     ASSERT(err >= 0);
 
@@ -225,8 +224,8 @@ status_t VmAspace::AddRegion(const mxtl::RefPtr<VmRegion>& r) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(r);
 
-    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size %#zx r %p base %#" PRIxPTR " size %#zx\n", this, base_,
-                  size_, r.get(), r->base(), r->size());
+    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size %#zx r %p base %#" PRIxPTR " size %#zx\n", this,
+                  base_, size_, r.get(), r->base(), r->size());
 
     // only try if the region will at least fit in the address space
     if (r->size() == 0 || !is_inside(*this, *r)) {
@@ -262,9 +261,8 @@ status_t VmAspace::AddRegion(const mxtl::RefPtr<VmRegion>& r) {
 //
 //  Arch can override this to impose it's own restrictions.
 
-__WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base,
-                                  uint prev_region_arch_mmu_flags, vaddr_t end,
-                                  uint next_region_arch_mmu_flags, vaddr_t align, size_t size,
+__WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base, uint prev_region_arch_mmu_flags,
+                                  vaddr_t end, uint next_region_arch_mmu_flags, vaddr_t align, size_t size,
                                   uint arch_mmu_flags) {
     // just align it by default
     return ALIGN(base, align);
@@ -273,10 +271,9 @@ __WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base,
 //
 //  Returns true if the caller has to stop search
 
-bool VmAspace::CheckGap(const RegionTree::iterator& prev,
-                        const RegionTree::iterator& next,
-                        vaddr_t* pva, vaddr_t search_base, vaddr_t align, size_t region_size,
-                        size_t min_gap, uint arch_mmu_flags) {
+bool VmAspace::CheckGap(const RegionTree::iterator& prev, const RegionTree::iterator& next, vaddr_t* pva,
+                        vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
+                        uint arch_mmu_flags) {
     safeint::CheckedNumeric<vaddr_t> gap_beg; // first byte of a gap
     safeint::CheckedNumeric<vaddr_t> gap_end; // last byte of a gap
     vaddr_t real_gap_beg = 0;
@@ -325,13 +322,13 @@ bool VmAspace::CheckGap(const RegionTree::iterator& prev,
 
     DEBUG_ASSERT(real_gap_end > real_gap_beg);
 
-    LTRACEF_LEVEL(2, "search base %#" PRIxPTR " real_gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n", search_base, real_gap_beg, real_gap_end);
+    LTRACEF_LEVEL(2, "search base %#" PRIxPTR " real_gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n", search_base,
+                  real_gap_beg, real_gap_end);
 
     *pva = arch_mmu_pick_spot(&arch_aspace(), real_gap_beg,
-                              prev.IsValid() ? prev->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID,
-                              real_gap_end,
-                              next.IsValid() ? next->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID,
-                              align, region_size, arch_mmu_flags);
+                              prev.IsValid() ? prev->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID, real_gap_end,
+                              next.IsValid() ? next->arch_mmu_flags() : ARCH_MMU_FLAG_INVALID, align,
+                              region_size, arch_mmu_flags);
     if (*pva < real_gap_beg)
         goto not_found; // address wrapped around
 
@@ -410,15 +407,14 @@ mxtl::RefPtr<VmRegion> VmAspace::FindRegion(vaddr_t vaddr) {
     return FindRegionLocked(vaddr);
 }
 
-status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
-                             size_t size, void** ptr, uint8_t align_pow2, size_t min_alloc_gap,
-                             uint vmm_flags, uint arch_mmu_flags) {
+status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
+                             void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
+                             uint arch_mmu_flags) {
 
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF(
-        "aspace %p name '%s' vmo %p, offset %#" PRIx64 " size %#zx "
-        "ptr %p align %hhu vmm_flags %#x arch_mmu_flags %#x\n",
-        this, name, vmo.get(), offset, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
+    LTRACEF("aspace %p name '%s' vmo %p, offset %#" PRIx64 " size %#zx "
+            "ptr %p align %hhu vmm_flags %#x arch_mmu_flags %#x\n",
+            this, name, vmo.get(), offset, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
@@ -493,8 +489,7 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
 
 status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n",
-            this, name, size, vaddr);
+    LTRACEF("aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n", this, name, size, vaddr);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
@@ -525,18 +520,15 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     }
 
     // map it, creating a new region
-    void *ptr = reinterpret_cast<void *>(vaddr);
+    void* ptr = reinterpret_cast<void*>(vaddr);
     return MapObject(mxtl::move(vmo), name, 0, size, &ptr, 0, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
 }
 
 status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                                 size_t min_alloc_gap, paddr_t paddr,
-                                 uint vmm_flags, uint arch_mmu_flags) {
+                                 size_t min_alloc_gap, paddr_t paddr, uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF(
-        "aspace %p name '%s' size %#zx ptr %p paddr %#" PRIxPTR
-        " vmm_flags 0x%x arch_mmu_flags 0x%x\n",
-        this, name, size, ptr ? *ptr : 0, paddr, vmm_flags, arch_mmu_flags);
+    LTRACEF("aspace %p name '%s' size %#zx ptr %p paddr %#" PRIxPTR " vmm_flags 0x%x arch_mmu_flags 0x%x\n",
+            this, name, size, ptr ? *ptr : 0, paddr, vmm_flags, arch_mmu_flags);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
@@ -556,14 +548,15 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     // TODO: add new flag to precisely mean pre-map
     vmm_flags |= VMM_FLAG_COMMIT;
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+                     arch_mmu_flags);
 }
 
 status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                                    size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n",
-            this, name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
+    LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
+            name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
@@ -589,14 +582,15 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return ERR_NO_MEMORY;
     }
 
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+                     arch_mmu_flags);
 }
 
-status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                         size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags) {
+status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2, size_t min_alloc_gap,
+                         uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n",
-            this, name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
+    LTRACEF("aspace %p name '%s' size 0x%zx ptr %p align %hhu vmm_flags 0x%x arch_mmu_flags 0x%x\n", this,
+            name, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
 
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
@@ -622,7 +616,8 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
     }
 
     // map it, creating a new region
-    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags,
+                     arch_mmu_flags);
 }
 
 status_t VmAspace::FreeRegion(vaddr_t vaddr) {
@@ -683,9 +678,7 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
 
 void VmAspace::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    printf("aspace %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
-           " size %#zx flags %#x\n",
-           this,
+    printf("aspace %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR " size %#zx flags %#x\n", this,
            ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
 
     printf("regions:\n");

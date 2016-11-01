@@ -25,8 +25,8 @@ void PmmArena::BootAllocArray() {
     size_t size = page_count * VM_PAGE_STRUCT_SIZE;
     void* raw_page_array = boot_alloc_mem(size);
 
-    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %zu\n",
-            info_->base, info_->size, raw_page_array, size);
+    LTRACEF("arena for base 0%#" PRIxPTR " size %#zx page array at %p size %zu\n", info_->base, info_->size,
+            raw_page_array, size);
 
     memset(raw_page_array, 0, size);
 
@@ -141,8 +141,7 @@ retry:
                 /* this run is broken, break out of the inner loop.
                  * start over at the next alignment boundary
                  */
-                start = ROUNDUP(start - aligned_offset + i + 1,
-                                1UL << (alignment_log2 - PAGE_SIZE_SHIFT)) +
+                start = ROUNDUP(start - aligned_offset + i + 1, 1UL << (alignment_log2 - PAGE_SIZE_SHIFT)) +
                         aligned_offset;
                 goto retry;
             }
@@ -191,8 +190,8 @@ status_t PmmArena::FreePage(vm_page_t* page) {
 }
 
 void PmmArena::Dump(bool dump_pages) {
-    printf("arena %p: name '%s' base %#" PRIxPTR " size 0x%zx priority %u flags 0x%x\n", this, name(),
-           base(), size(), priority(), flags());
+    printf("arena %p: name '%s' base %#" PRIxPTR " size 0x%zx priority %u flags 0x%x\n", this, name(), base(),
+           size(), priority(), flags());
     printf("\tpage_array %p, free_count %zu\n", page_array_, free_count_);
 
     /* dump all of the pages */
@@ -210,7 +209,8 @@ void PmmArena::Dump(bool dump_pages) {
 
     printf("\tpage states:\n");
     for (unsigned int i = 0; i < _VM_PAGE_STATE_COUNT; i++) {
-        printf("\t\t%-12s %-16zu (%zu bytes)\n", page_state_to_string(i), state_count[i], state_count[i] * PAGE_SIZE);
+        printf("\t\t%-12s %-16zu (%zu bytes)\n", page_state_to_string(i), state_count[i],
+               state_count[i] * PAGE_SIZE);
     }
 
     /* dump the free pages */

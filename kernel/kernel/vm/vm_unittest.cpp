@@ -153,8 +153,7 @@ static bool vmm_tests(void* context) {
         // allocate a region of memory
         void* ptr;
         auto err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", alloc_size, &ptr, 0, 0,
-                                        VMM_FLAG_COMMIT,
-                                        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+                                        VMM_FLAG_COMMIT, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         EXPECT_EQ(0, err, "vmm_allocate_contiguous region of memory");
         EXPECT_NEQ(nullptr, ptr, "vmm_allocate_contiguous region of memory");
 
@@ -259,8 +258,7 @@ static bool vmm_tests(void* context) {
             arch_aspace_t* aaspace = vmm_get_arch_aspace(aspace);
 
             vaddr_t addresses[] = {
-                vaddr - 1, vaddr - gap_size + 1,
-                vaddr + alloc_size, vaddr + alloc_size + gap_size - 1,
+                vaddr - 1, vaddr - gap_size + 1, vaddr + alloc_size, vaddr + alloc_size + gap_size - 1,
             };
 
             for (vaddr_t address : addresses) {
@@ -295,8 +293,7 @@ static bool vmm_tests(void* context) {
         EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc");
 
         // should have VMM_FLAG_COMMIT
-        err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", 4096, &ptr, 0, 0, 0,
-                                   arch_rw_flags);
+        err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", 4096, &ptr, 0, 0, 0, arch_rw_flags);
         EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous");
 
         // zero size
@@ -306,11 +303,10 @@ static bool vmm_tests(void* context) {
     }
 
     unittest_printf("allocating a vm address space object directly, allowing it to go out of scope\n");
-    {
-        auto aspace = VmAspace::Create(0, "test aspace");
-    }
+    { auto aspace = VmAspace::Create(0, "test aspace"); }
 
-    unittest_printf("allocating a vm address space object directly, mapping somethign on it, allowing it to go out of scope\n");
+    unittest_printf("allocating a vm address space object directly, mapping somethign on it, "
+                    "allowing it to go out of scope\n");
     {
         auto aspace = VmAspace::Create(0, "test aspace2");
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -386,8 +382,7 @@ static bool vmm_object_tests(void* context) {
 
         auto ka = VmAspace::kernel_aspace();
         void* ptr;
-        auto ret =
-            ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
+        auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
         EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
         // fill with known pattern and test
@@ -427,8 +422,8 @@ static bool vmm_object_tests(void* context) {
 
         auto ka = VmAspace::kernel_aspace();
         void* ptr;
-        auto ret = ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT,
-                                 arch_rw_flags);
+        auto ret =
+            ka->MapObject(mxtl::move(vmo), "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
         EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
         EXPECT_FALSE(vmo, "dropped ref to object");
@@ -452,8 +447,7 @@ static bool vmm_object_tests(void* context) {
 
         auto ka = VmAspace::kernel_aspace();
         void* ptr;
-        auto ret =
-            ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
+        auto ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
         EXPECT_EQ(NO_ERROR, ret, "mapping object");
 
         // fill with known pattern and test
@@ -464,8 +458,7 @@ static bool vmm_object_tests(void* context) {
         EXPECT_EQ(NO_ERROR, err, "unmapping object");
 
         // map it again
-        ret =
-            ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
+        ret = ka->MapObject(vmo, "test", 0, alloc_size, &ptr, 0, 0, VMM_FLAG_COMMIT, arch_rw_flags);
         EXPECT_EQ(ret, NO_ERROR, "mapping object");
 
         // test that the pattern is still valid

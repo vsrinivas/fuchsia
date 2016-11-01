@@ -32,7 +32,7 @@ static Mutex arena_lock;
 
 paddr_t vm_page_to_paddr(const vm_page_t* page) {
     for (const auto& a : arena_list) {
-        //LTRACEF("testing page %p against arena %p\n", page, &a);
+        // LTRACEF("testing page %p against arena %p\n", page, &a);
         if (a.page_belongs_to_arena(page)) {
             return a.page_address_from_arena(page);
         }
@@ -205,8 +205,7 @@ void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* _pa) {
             list_add_tail(list, &p->free.node);
         }
     } else {
-        size_t alloc_count =
-            pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP, PAGE_SIZE_SHIFT, &pa, list);
+        size_t alloc_count = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP, PAGE_SIZE_SHIFT, &pa, list);
         if (alloc_count == 0)
             return nullptr;
     }
@@ -378,10 +377,8 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
 
         paddr_t pa;
         size_t ret = pmm_alloc_contiguous((uint)argv[2].u, 0, (uint8_t)argv[3].u, &pa, &list);
-        printf("pmm_alloc_contiguous returns %zu, address %#" PRIxPTR "\n",
-               ret, pa);
-        printf("address %% align = %#" PRIxPTR "\n",
-               static_cast<uintptr_t>(pa % argv[3].u));
+        printf("pmm_alloc_contiguous returns %zu, address %#" PRIxPTR "\n", ret, pa);
+        printf("address %% align = %#" PRIxPTR "\n", static_cast<uintptr_t>(pa % argv[3].u));
 
         /* add the pages to the local allocated list */
         struct list_node* node;

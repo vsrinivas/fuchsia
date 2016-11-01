@@ -57,8 +57,8 @@ void VmObjectPhysical::Dump(bool page_dump) {
         return;
     }
 
-    printf("\t\tobject %p: ref %d base %#" PRIxPTR " size %#" PRIx64 "\n",
-           this, ref_count_debug(), base_, size_);
+    printf("\t\tobject %p: ref %d base %#" PRIxPTR " size %#" PRIx64 "\n", this, ref_count_debug(), base_,
+           size_);
 }
 
 // get the physical address of a page at offset
@@ -91,7 +91,8 @@ status_t VmObjectPhysical::FaultPageLocked(uint64_t offset, uint pf_flags, paddr
     return NO_ERROR;
 }
 
-status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer, size_t buffer_size) {
+status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> buffer,
+                                  size_t buffer_size) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     if (unlikely(len == 0))

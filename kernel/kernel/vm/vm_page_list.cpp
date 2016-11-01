@@ -72,14 +72,15 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
     size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 
-    LTRACEF_LEVEL(2, "%p page %p, offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n",
-                  this, p, offset, node_offset, index);
+    LTRACEF_LEVEL(2, "%p page %p, offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, p, offset,
+                  node_offset, index);
 
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);
     if (!pln.IsValid()) {
         AllocChecker ac;
-        mxtl::unique_ptr<VmPageListNode> pl = mxtl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
+        mxtl::unique_ptr<VmPageListNode> pl =
+            mxtl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
         if (!ac.check())
             return ERR_NO_MEMORY;
 
@@ -99,8 +100,8 @@ vm_page* VmPageList::GetPage(uint64_t offset) {
     uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
     size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 
-    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n",
-                  this, offset, node_offset, index);
+    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, offset, node_offset,
+                  index);
 
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);
@@ -115,8 +116,8 @@ status_t VmPageList::FreePage(uint64_t offset) {
     uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
     size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 
-    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n",
-                  this, offset, node_offset, index);
+    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, offset, node_offset,
+                  index);
 
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);

@@ -22,11 +22,10 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size,
-                   mxtl::RefPtr<VmObject> vmo, uint64_t offset,
+VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo, uint64_t offset,
                    uint arch_mmu_flags, const char* name)
-    : base_(base), size_(size), arch_mmu_flags_(arch_mmu_flags), aspace_(&aspace),
-      object_(mxtl::move(vmo)), object_offset_(offset), vmo_lock_(object_->lock()) {
+    : base_(base), size_(size), arch_mmu_flags_(arch_mmu_flags), aspace_(&aspace), object_(mxtl::move(vmo)),
+      object_offset_(offset), vmo_lock_(object_->lock()) {
     strlcpy(name_, name, sizeof(name_));
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -35,10 +34,11 @@ VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size,
 }
 
 mxtl::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
-                                        mxtl::RefPtr<VmObject> vmo, uint64_t offset,
-                                        uint arch_mmu_flags, const char* name) {
+                                        mxtl::RefPtr<VmObject> vmo, uint64_t offset, uint arch_mmu_flags,
+                                        const char* name) {
     AllocChecker ac;
-    auto r = mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, mxtl::move(vmo), offset, arch_mmu_flags, name));
+    auto r =
+        mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, mxtl::move(vmo), offset, arch_mmu_flags, name));
     return ac.check() ? r : nullptr;
 }
 
@@ -71,11 +71,10 @@ status_t VmRegion::Destroy() {
 
 void VmRegion::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    printf(
-        "\tregion %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
-        " size %#zx mmu_flags %#x vmo %p offset %#" PRIx64 "\n",
-        this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_,
-        arch_mmu_flags_, object_.get(), object_offset_);
+    printf("\tregion %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
+           " size %#zx mmu_flags %#x vmo %p offset %#" PRIx64 "\n",
+           this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_, arch_mmu_flags_, object_.get(),
+           object_offset_);
     object_->Dump();
 }
 
@@ -171,14 +170,11 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
         }
 
         vaddr_t va = base_ + o;
-        LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n",
-                      pa, va);
+        LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
 
         auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_);
         if (ret < 0) {
-            TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR
-                   "\n",
-                   ret, va, pa);
+            TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
         }
     }
 
@@ -192,8 +188,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     va = ROUNDDOWN(va, PAGE_SIZE);
     uint64_t vmo_offset = va - base_ + object_offset_;
 
-    LTRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n",
-            this, name_, vmo_offset, pf_flags);
+    LTRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, name_, vmo_offset, pf_flags);
 
     // make sure we have permission to continue
     if ((pf_flags & VMM_PF_FLAG_USER) && (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_USER) == 0) {
@@ -269,7 +264,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
         }
     }
 
-    // TODO: figure out what to do with this
+// TODO: figure out what to do with this
 #if ARCH_ARM64
     if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)
         arch_sync_cache_range(va, PAGE_SIZE);
