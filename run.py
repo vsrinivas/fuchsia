@@ -42,23 +42,26 @@ def main():
     fuchsia_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out",
                                      ("debug" if args.debug else "release") +
                                          "-" + args.arch)
+    # TODO(vtl): Not sure what to use instead of "qemu" for booting on real
+    # ARM64 hardware (probably varies depending on hardware).
+    magenta_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
+            "build-magenta-%s-%s%s" %
+                ("pc" if args.arch == "x86-64" else "qemu", args.arch,
+                 "" if args.debug else "-release"))
 
     boot_fs = (os.path.join(fuchsia_build_dir, "user.bootfs") if args.fuchsia
                   else None)
 
     if args.bootserver:
-        # TODO(vtl): Not sure what to use instead of "pc-" for booting on real
-        # ARM64 hardware.
-        magenta_build_dir = os.path.join(
-            paths.MAGENTA_ROOT, "build-magenta-pc-" + args.arch +
-                                    ("" if args.debug else "-release"))
-        command = [os.path.join(magenta_build_dir, "tools", "bootserver")]
+        command = [os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
+                   "tools", "bootserver")]
         command += [os.path.join(magenta_build_dir, "magenta.bin")]
         if boot_fs:
             command += [boot_fs]
     else:
         command = [os.path.join(paths.MAGENTA_ROOT, "scripts", "run-magenta")]
         command += ["-a", args.arch]
+        command += ["-o", magenta_build_dir]
         if boot_fs:
             command += ["-x", boot_fs]
         if args.graphical:
