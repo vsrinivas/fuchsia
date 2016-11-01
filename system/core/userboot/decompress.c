@@ -97,13 +97,14 @@ static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self,
         // newsize wrapped, which means the outsize was too large
         fail(log, ERR_NO_MEMORY, "lz4 output size too large\n");
     }
-    mx_handle_t dst_vmo = mx_vmo_create((uint64_t)newsize);
-    if (dst_vmo < 0) {
-        check(log, dst_vmo, "mx_vmo_create failed for decompressing bootfs\n");
+    mx_handle_t dst_vmo;
+    mx_status_t status = mx_vmo_create((uint64_t)newsize, 0, &dst_vmo);
+    if (status < 0) {
+        check(log, status, "mx_vmo_create failed for decompressing bootfs\n");
     }
 
     uintptr_t dst_addr = 0;
-    mx_status_t status = mx_process_map_vm(proc_self, dst_vmo, 0, newsize, &dst_addr,
+    status = mx_process_map_vm(proc_self, dst_vmo, 0, newsize, &dst_addr,
             MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
     check(log, status, "mx_process_map_vm failed on bootfs vmo during decompression\n");
 

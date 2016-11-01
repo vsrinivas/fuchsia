@@ -12,15 +12,17 @@
 #include <unistd.h>
 
 mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len) {
-    mx_handle_t vmo = mx_vmo_create(len);
-    if (vmo < 0)
-        return vmo;
-    mx_ssize_t n = mx_vmo_write(vmo, data, 0, len);
-    if (n < 0) {
+    mx_handle_t vmo;
+    mx_status_t status = mx_vmo_create(len, 0, &vmo);
+    if (status < 0)
+        return status;
+    mx_size_t n;
+    status = mx_vmo_write(vmo, data, 0, len, &n);
+    if (status < 0) {
         mx_handle_close(vmo);
-        return n;
+        return status;
     }
-    if (n != (mx_ssize_t)len) {
+    if (n != len) {
         mx_handle_close(vmo);
         return ERR_IO;
     }
@@ -46,9 +48,10 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
     uint64_t size = st.st_size;
     uint64_t offset = 0;
 
-    mx_handle_t vmo = mx_vmo_create(size);
-    if (vmo < 0)
-        return vmo;
+    mx_handle_t vmo;
+    mx_status_t status = mx_vmo_create(size, 0, &vmo);
+    if (status < 0)
+        return status;
 
     while (size > 0) {
         if (size < MIN_WINDOW) {
@@ -66,12 +69,13 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
                 errno = ESPIPE;
                 return ERR_IO;
             }
-            mx_ssize_t n = mx_vmo_write(vmo, buffer, offset, nread);
-            if (n < 0) {
+            mx_size_t n;
+            status = mx_vmo_write(vmo, buffer, offset, nread, &n);
+            if (status < 0) {
                 mx_handle_close(vmo);
-                return n;
+                return status;
             }
-            if (n != nread) {
+            if (n != (size_t)nread) {
                 mx_handle_close(vmo);
                 errno = 0;
                 return ERR_IO;

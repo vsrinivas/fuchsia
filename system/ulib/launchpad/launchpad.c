@@ -675,11 +675,12 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     *sp = 0;
     if (lp->stack_size > 0) {
         // Allocate the initial thread's stack.
-        mx_handle_t stack_vmo = mx_vmo_create(lp->stack_size);
-        if (stack_vmo < 0)
-            return stack_vmo;
+        mx_handle_t stack_vmo;
+        mx_status_t status = mx_vmo_create(lp->stack_size, 0, &stack_vmo);
+        if (status < 0)
+            return status;
         mx_vaddr_t stack_base;
-        mx_status_t status = mx_process_map_vm(
+        status = mx_process_map_vm(
             lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
             MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
         if (status == NO_ERROR) {

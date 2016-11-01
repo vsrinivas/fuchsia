@@ -23,8 +23,8 @@ bool vmo_create_test() {
 
     // allocate a bunch of vmos then free them
     for (size_t i = 0; i < countof(vmo); i++) {
-        vmo[i] = mx_vmo_create(i * PAGE_SIZE);
-        EXPECT_LT(0, vmo[i], "vm_object_create");
+        status = mx_vmo_create(i * PAGE_SIZE, 0, &vmo[i]);
+        EXPECT_EQ(NO_ERROR, status, "vm_object_create");
     }
 
     for (size_t i = 0; i < countof(vmo); i++) {
@@ -39,21 +39,23 @@ bool vmo_read_write_test() {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_ssize_t sstatus;
+    mx_size_t size;
     mx_handle_t vmo;
 
     // allocate an object and read/write from it
     const size_t len = PAGE_SIZE * 4;
-    vmo = mx_vmo_create(len);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(status, NO_ERROR, "vm_object_create");
 
     char buf[PAGE_SIZE];
-    sstatus = mx_vmo_read(vmo, buf, 0, sizeof(buf));
-    EXPECT_EQ((mx_ssize_t)sizeof(buf), sstatus, "vm_object_read");
+    status = mx_vmo_read(vmo, buf, 0, sizeof(buf), &size);
+    EXPECT_EQ(status, NO_ERROR, "vm_object_read");
+    EXPECT_EQ(sizeof(buf), size, "vm_object_read");
 
     memset(buf, 0x99, sizeof(buf));
-    sstatus = mx_vmo_write(vmo, buf, 0, sizeof(buf));
-    EXPECT_EQ((mx_ssize_t)sizeof(buf), sstatus, "vm_object_write");
+    status = mx_vmo_write(vmo, buf, 0, sizeof(buf), &size);
+    EXPECT_EQ(status, NO_ERROR, "vm_object_write");
+    EXPECT_EQ(sizeof(buf), size, "vm_object_write");
 
     // map it
     uintptr_t ptr;
@@ -83,8 +85,8 @@ bool vmo_map_test() {
     uintptr_t ptr[5] = {};
 
     // allocate a vmo
-    vmo = mx_vmo_create(4 * PAGE_SIZE);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(4 * PAGE_SIZE, 0, &vmo);
+    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
 
     // do a regular map
     ptr[0] = 0;
@@ -171,8 +173,8 @@ bool vmo_read_only_map_test() {
 
     // allocate an object and read/write from it
     const size_t len = PAGE_SIZE;
-    vmo = mx_vmo_create(len);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
 
     // map it
     uintptr_t ptr;
@@ -202,8 +204,8 @@ bool vmo_resize_test() {
 
     // allocate an object
     size_t len = PAGE_SIZE * 4;
-    vmo = mx_vmo_create(len);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
 
     // get the size that we set it to
     uint64_t size = 0x99999999;
@@ -260,45 +262,45 @@ bool vmo_rights_test() {
 
     char buf[4096];
     size_t len = PAGE_SIZE * 4;
-    ssize_t r;
+    size_t r;
     mx_status_t status;
     uintptr_t ptr;
     mx_handle_t vmo, vmo2;
 
     // allocate an object
-    vmo = mx_vmo_create(len);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(NO_ERROR, status, "vm_object_create");
 
     // test that we can read/write it
-    r = mx_vmo_read(vmo, buf, 0, 0);
-    EXPECT_EQ(0, r, "vmo_read");
-    r = mx_vmo_write(vmo, buf, 0, 0);
-    EXPECT_EQ(0, r, "vmo_write");
+    status = mx_vmo_read(vmo, buf, 0, 0, &r);
+    EXPECT_EQ(0, status, "vmo_read");
+    status = mx_vmo_write(vmo, buf, 0, 0, &r);
+    EXPECT_EQ(0, status, "vmo_write");
 
     vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ);
-    r = mx_vmo_read(vmo2, buf, 0, 0);
-    EXPECT_EQ(0, r, "vmo_read");
-    r = mx_vmo_write(vmo2, buf, 0, 0);
-    EXPECT_EQ(ERR_ACCESS_DENIED, r, "vmo_write");
+    status = mx_vmo_read(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(0, status, "vmo_read");
+    status = mx_vmo_write(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
     vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_WRITE);
-    r = mx_vmo_read(vmo2, buf, 0, 0);
-    EXPECT_EQ(ERR_ACCESS_DENIED, r, "vmo_read");
-    r = mx_vmo_write(vmo2, buf, 0, 0);
-    EXPECT_EQ(0, r, "vmo_write");
+    status = mx_vmo_read(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
+    status = mx_vmo_write(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(0, status, "vmo_write");
     mx_handle_close(vmo2);
 
     vmo2 = mx_handle_duplicate(vmo, 0);
-    r = mx_vmo_read(vmo2, buf, 0, 0);
-    EXPECT_EQ(ERR_ACCESS_DENIED, r, "vmo_read");
-    r = mx_vmo_write(vmo2, buf, 0, 0);
-    EXPECT_EQ(ERR_ACCESS_DENIED, r, "vmo_write");
+    status = mx_vmo_read(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
+    status = mx_vmo_write(vmo2, buf, 0, 0, &r);
+    EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
     // no permission map (should fail for now)
-    r = mx_process_map_vm(mx_process_self(), vmo, 0, len, &ptr, 0);
-    EXPECT_EQ(ERR_INVALID_ARGS, r, "map_noperms");
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, len, &ptr, 0);
+    EXPECT_EQ(ERR_INVALID_ARGS, status, "map_noperms");
 
     // full perm test
     if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
@@ -372,8 +374,8 @@ bool vmo_lookup_test() {
     const size_t size = 16384;
     mx_paddr_t buf[size / PAGE_SIZE];
 
-    vmo = mx_vmo_create(size);
-    EXPECT_LT(0, vmo, "vm_object_create");
+    status = mx_vmo_create(size, 0, &vmo);
+    EXPECT_EQ(0, status, "vm_object_create");
 
     // do a lookup (this should fail becase the pages aren't committed)
     status = mx_vmo_op_range(vmo, MX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));

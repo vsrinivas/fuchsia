@@ -99,14 +99,15 @@ mx_handle_t bootfs_open(mx_handle_t log,
     if (fs->len - file.offset < file.size)
         fail(log, ERR_INVALID_ARGS, "bogus size in bootfs header!\n");
 
-    mx_handle_t vmo = mx_vmo_create(file.size);
-    if (vmo < 0)
-        fail(log, vmo, "mx_vmo_create failed\n");
-    mx_ssize_t n = mx_vmo_write(vmo, &fs->contents[file.offset],
-                                      0, file.size);
-    if (n < 0)
-        fail(log, n, "mx_vmo_write failed\n");
-    if (n != (mx_ssize_t)file.size)
+    mx_handle_t vmo;
+    mx_status_t status = mx_vmo_create(file.size, 0, &vmo);
+    if (status < 0)
+        fail(log, status, "mx_vmo_create failed\n");
+    mx_size_t n;
+    status = mx_vmo_write(vmo, &fs->contents[file.offset], 0, file.size, &n);
+    if (status < 0)
+        fail(log, status, "mx_vmo_write failed\n");
+    if (n != file.size)
         fail(log, ERR_IO, "mx_vmo_write short write\n");
 
     return vmo;

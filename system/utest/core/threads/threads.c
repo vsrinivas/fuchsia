@@ -18,7 +18,8 @@ bool threads_test(void) {
     BEGIN_TEST;
 
     const mx_size_t stack_size = 256u << 10;
-    mx_handle_t thread_stack_vmo = mx_vmo_create(stack_size);
+    mx_handle_t thread_stack_vmo;
+    ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), NO_ERROR, "");
     ASSERT_GT(thread_stack_vmo, 0, "");
 
     uintptr_t stack = 0u;

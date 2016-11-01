@@ -9,14 +9,10 @@
 namespace mx {
 
 mx_status_t vmo::create(uint64_t size, uint32_t options, vmo* result) {
-    mx_handle_t h = mx_vmo_create(size);
-    if (h < 0) {
-        result->reset(MX_HANDLE_INVALID);
-        return h;
-    } else {
-        result->reset(h);
-        return NO_ERROR;
-    }
+    mx_handle_t h = MX_HANDLE_INVALID;
+    mx_status_t status = mx_vmo_create(size, options, &h);
+    result->reset(h);
+    return status;
 }
 
 } // namespace mx

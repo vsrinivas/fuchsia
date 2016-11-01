@@ -48,8 +48,8 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         // round up to page size
         len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-        mx_handle_t vmo = _mx_vmo_create(len);
-        if (vmo < 0)
+        mx_handle_t vmo;
+        if (_mx_vmo_create(len, 0, &vmo) < 0)
             return MAP_FAILED;
 
         // build magenta flags for this

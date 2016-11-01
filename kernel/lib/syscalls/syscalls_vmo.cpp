@@ -25,8 +25,11 @@
 
 #define LOCAL_TRACE 0
 
-mx_handle_t sys_vmo_create(uint64_t size) {
+mx_handle_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("size %#" PRIx64 "\n", size);
+
+    if (options)
+        return ERR_INVALID_ARGS;
 
     // create a vm object
     mxtl::RefPtr<VmObject> vmo = VmObject::Create(0, size);
@@ -47,13 +50,16 @@ mx_handle_t sys_vmo_create(uint64_t size) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
     up->AddHandle(mxtl::move(handle));
 
-    return hv;
+    return NO_ERROR;
 }
 
-mx_ssize_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data, uint64_t offset, mx_size_t len) {
+mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data,
+                         uint64_t offset, mx_size_t len, user_ptr<mx_size_t> actual) {
     LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#" PRIxPTR "\n",
             handle, data.get(), offset, len);
 
@@ -66,10 +72,18 @@ mx_ssize_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data, uint64_t offset
         return status;
 
     // do the read operation
-    return vmo->Read(data, len, offset);
+    mx_ssize_t result = vmo->Read(data, len, offset);
+    if (result < 0)
+        return static_cast<mx_status_t>(result);
+
+    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }
 
-mx_ssize_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data, uint64_t offset, mx_size_t len) {
+mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data,
+                          uint64_t offset, mx_size_t len, user_ptr<mx_size_t> actual) {
     LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#" PRIxPTR "\n",
             handle, data.get(), offset, len);
 
@@ -82,7 +96,14 @@ mx_ssize_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data, uint64_t
         return status;
 
     // do the write operation
-    return vmo->Write(data, len, offset);
+    mx_ssize_t result = vmo->Write(data, len, offset);
+    if (result < 0)
+        return static_cast<mx_status_t>(result);
+
+    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    return NO_ERROR;
 }
 
 mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {

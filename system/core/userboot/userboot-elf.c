@@ -122,11 +122,12 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t proc_self,
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
-        mx_ssize_t n = mx_vmo_read(
-            vmo, &interp[sizeof(INTERP_PREFIX) - 1], interp_off, interp_len);
-        if (n < 0)
-            fail(log, n, "mx_vmo_read failed\n");
-        if (n != (mx_ssize_t)interp_len)
+        mx_size_t n;
+        mx_status_t status = mx_vmo_read(
+            vmo, &interp[sizeof(INTERP_PREFIX) - 1], interp_off, interp_len, &n);
+        if (status < 0)
+            fail(log, status, "mx_vmo_read failed\n");
+        if (n != interp_len)
             fail(log, ERR_ELF_BAD_FORMAT, "mx_vmo_read short read\n");
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 

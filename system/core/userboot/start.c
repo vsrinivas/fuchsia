@@ -175,9 +175,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
-    mx_handle_t stack_vmo = mx_vmo_create(stack_size);
-    if (stack_vmo < 0)
-        fail(log, stack_vmo, "mx_vmo_create failed for child stack\n");
+    mx_handle_t stack_vmo;
+    status = mx_vmo_create(stack_size, 0, &stack_vmo);
+    if (status < 0)
+        fail(log, status, "mx_vmo_create failed for child stack\n");
     mx_vaddr_t stack_base;
     status = mx_process_map_vm(proc, stack_vmo, 0, stack_size, &stack_base,
                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);

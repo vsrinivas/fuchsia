@@ -483,7 +483,9 @@ static void unmap_library(struct dso* dso) {
 
 static void* choose_load_address(size_t span) {
     // vm_map requires some vm_object handle, so create a dummy one.
-    mx_handle_t vmo = _mx_vmo_create(0);
+    mx_handle_t vmo;
+    if (_mx_vmo_create(0, 0, &vmo) < 0)
+        return MAP_FAILED;
 
     // Do a mapping to let the kernel choose an address range.
     // TODO(MG-161): This really ought to be a no-access mapping (PROT_NONE
@@ -523,24 +525,28 @@ static void* choose_load_address(size_t span) {
 // This will go away when we have copy-on-write.
 static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
                                     off_t* off_start, size_t* map_size) {
-    mx_handle_t copy_vmo = _mx_vmo_create(data_size);
-    if (copy_vmo < 0)
-        return copy_vmo;
+    mx_handle_t copy_vmo;
+    mx_status_t status = _mx_vmo_create(data_size, 0, &copy_vmo);
+    if (status < 0)
+        return status;
     uintptr_t window = 0;
-    mx_status_t status = _mx_process_map_vm(__magenta_process_self, vmo,
-                                            *off_start, data_size, &window,
-                                            MX_VM_FLAG_PERM_READ);
+    status = _mx_process_map_vm(__magenta_process_self, vmo,
+                                *off_start, data_size, &window,
+                                MX_VM_FLAG_PERM_READ);
     if (status < 0) {
         _mx_handle_close(copy_vmo);
         return status;
     }
-    mx_ssize_t n = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
+    mx_size_t n;
+    status = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
     _mx_process_unmap_vm(__magenta_process_self, window, 0);
-    if (n >= 0 && n != (mx_ssize_t)data_size)
-        n = ERR_IO;
-    if (n < 0) {
+    if (status < 0) {
         mx_handle_close(copy_vmo);
-        return n;
+        return status;
+    }
+    if (n != data_size) {
+        mx_handle_close(copy_vmo);
+        return ERR_IO;
     }
     *off_start = 0;
     *map_size = data_size;
@@ -562,9 +568,10 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t tls_image = 0;
     size_t i;
 
-    ssize_t l = _mx_vmo_read(vmo, buf, 0, sizeof buf);
+    size_t l;
+    mx_status_t status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
     eh = buf;
-    if (l < 0)
+    if (status < 0)
         return 0;
     // We cannot support ET_EXEC in the general case, because its fixed
     // addresses might conflict with where the dynamic linker has already
@@ -578,15 +585,15 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         allocated_buf = malloc(phsize);
         if (!allocated_buf)
             return 0;
-        l = _mx_vmo_read(vmo, allocated_buf, eh->e_phoff, phsize);
-        if (l < 0)
+        status = _mx_vmo_read(vmo, allocated_buf, eh->e_phoff, phsize, &l);
+        if (status < 0)
             goto error;
         if (l != phsize)
             goto noexec;
         ph = ph0 = allocated_buf;
     } else if (eh->e_phoff + phsize > l) {
-        l = _mx_vmo_read(vmo, buf + 1, eh->e_phoff, phsize);
-        if (l < 0)
+        status = _mx_vmo_read(vmo, buf + 1, eh->e_phoff, phsize, &l);
+        if (status < 0)
             goto error;
         if (l != phsize)
             goto noexec;
@@ -692,9 +699,9 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             memset((void*)brk, 0, pgbrk - brk & PAGE_SIZE - 1);
             if (pgbrk - (size_t)base < this_max) {
                 size_t bss_len = (size_t)base + this_max - pgbrk;
-                mx_handle_t bss_vmo = _mx_vmo_create(bss_len);
-                if (bss_vmo < 0) {
-                    status = bss_vmo;
+                mx_handle_t bss_vmo;
+                status = _mx_vmo_create(bss_len, 0, &bss_vmo);
+                if (status < 0) {
                     goto mx_error;
                 }
                 uintptr_t bss_mapaddr = pgbrk;

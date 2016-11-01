@@ -67,8 +67,7 @@ found:
         goto fail;
     }
 
-    if ((vmo = mx_vmo_create(s.st_size)) < 0) {
-        err = vmo;
+    if ((err = mx_vmo_create(s.st_size, 0, &vmo)) < 0) {
         goto fail;
     }
 
@@ -76,13 +75,17 @@ found:
     size_t size = s.st_size;
     ssize_t r;
     while (size > 0) {
-        ssize_t xfer = (size > sizeof(buffer)) ? sizeof(buffer) : size;
+        size_t xfer = (size > sizeof(buffer)) ? sizeof(buffer) : size;
         if ((r = read(fd, buffer, xfer)) < 0) {
             fprintf(stderr, "dlsvc: read error @%zd in '%s'\n", off, path);
             goto fail;
         }
-        if ((r = mx_vmo_write(vmo, buffer, off, xfer)) != xfer) {
-            err = (r < 0) ? r : ERR_IO;
+        size_t n;
+        if ((err = mx_vmo_write(vmo, buffer, off, xfer, &n)) < 0) {
+            goto fail;
+        }
+        if (n != xfer) {
+            err = ERR_IO;
             goto fail;
         }
         off += xfer;

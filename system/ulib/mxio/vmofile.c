@@ -39,7 +39,12 @@ static ssize_t vmofile_read(mxio_t* io, void* data, size_t len) {
     vf->ptr += len;
     mtx_unlock(&vf->lock);
 
-    return mx_vmo_read(vf->vmo, data, at, len);
+    mx_status_t status = mx_vmo_read(vf->vmo, data, at, len, &len);
+    if (status < 0) {
+        return status;
+    } else {
+        return len;
+    }
 }
 
 static off_t vmofile_seek(mxio_t* io, off_t offset, int whence) {

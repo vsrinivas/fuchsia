@@ -129,11 +129,12 @@ MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, USER_PTR(mx_futex_t) w
                     int current_value, USER_PTR(mx_futex_t) requeue_ptr, uint32_t requeue_count)
 
 // Memory management
-MAGENTA_SYSCALL_DEF(1, 2, 100, mx_handle_t, vmo_create, uint64_t size)
-MAGENTA_SYSCALL_DEF(4, 5, 101, mx_ssize_t, vmo_read, mx_handle_t handle, USER_PTR(void) data, uint64_t offset,
-                    mx_size_t len)
-MAGENTA_SYSCALL_DEF(4, 5, 102, mx_ssize_t, vmo_write, mx_handle_t handle, USER_PTR(const void) data,
-                    uint64_t offset, mx_size_t len)
+MAGENTA_SYSCALL_DEF(3, 4, 100, mx_handle_t, vmo_create, uint64_t size, uint32_t options,
+                    USER_PTR(mx_handle_t) out)
+MAGENTA_SYSCALL_DEF(5, 6, 101, mx_status_t, vmo_read, mx_handle_t handle, USER_PTR(void) data, uint64_t offset,
+                    mx_size_t len, USER_PTR(mx_size_t) actual)
+MAGENTA_SYSCALL_DEF(5, 6, 102, mx_status_t, vmo_write, mx_handle_t handle, USER_PTR(const void) data,
+                    uint64_t offset, mx_size_t len, USER_PTR(mx_size_t) actual)
 MAGENTA_SYSCALL_DEF(2, 4, 103, mx_status_t, vmo_get_size, mx_handle_t handle, USER_PTR(uint64_t) size)
 MAGENTA_SYSCALL_DEF(2, 4, 104, mx_status_t, vmo_set_size, mx_handle_t handle, uint64_t size)
 MAGENTA_SYSCALL_DEF(6, 8, 105, mx_status_t, vmo_op_range, mx_handle_t handle, uint32_t op,

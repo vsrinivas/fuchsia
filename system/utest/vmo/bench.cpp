@@ -33,7 +33,7 @@ int vmo_run_benchmark() {
 
     t = time_it([&](){
         for (auto& vmo : vmos) {
-            vmo = mx_vmo_create(size);
+            mx_vmo_create(size, 0, &vmo);
         }
     });
 
@@ -49,7 +49,7 @@ int vmo_run_benchmark() {
     // create a vmo and demand fault it in
     auto &vmo = vmos[0];
 
-    vmo = mx_vmo_create(size);
+    mx_vmo_create(size, 0, &vmo);
 
     uintptr_t ptr;
     mx_process_map_vm(mx_process_self(), vmo, 0, size, &ptr, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);

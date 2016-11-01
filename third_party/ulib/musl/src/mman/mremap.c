@@ -21,12 +21,13 @@ static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t
         return NO_ERROR;
     }
 
-    mx_handle_t vmo = _mx_vmo_create(new_len);
-    if (vmo < 0) {
-        return vmo;
+    mx_handle_t vmo;
+    mx_status_t status = _mx_vmo_create(new_len, 0, &vmo);
+    if (status < 0) {
+        return status;
     }
 
-    mx_status_t status = _mx_process_map_vm(_mx_process_self(), vmo, 0u, new_len, new_mapping, flags);
+    status = _mx_process_map_vm(_mx_process_self(), vmo, 0u, new_len, new_mapping, flags);
     _mx_handle_close(vmo);
     if (status != NO_ERROR) {
         return status;

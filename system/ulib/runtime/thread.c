@@ -49,13 +49,14 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
 
     const mx_size_t len = sizeof(mxr_thread_t);
 
-    mx_handle_t vmo = _mx_vmo_create(len);
-    if (vmo < 0)
-        return (mx_status_t)vmo;
+    mx_handle_t vmo;
+    mx_status_t status = _mx_vmo_create(len, 0, &vmo);
+    if (status < 0)
+        return status;
 
     uintptr_t mapping = 0;
     uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    mx_status_t status = _mx_process_map_vm(mx_process_self(), vmo, 0, len,
+    status = _mx_process_map_vm(mx_process_self(), vmo, 0, len,
                                             &mapping, flags);
     _mx_handle_close(vmo);
     if (status != NO_ERROR)

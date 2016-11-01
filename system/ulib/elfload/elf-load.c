@@ -36,10 +36,11 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
                              uintptr_t* phoff) {
     // Read the file header and validate basic format sanity.
     elf_ehdr_t ehdr;
-    mx_ssize_t n = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr));
-    if (n < 0)
-        return n;
-    if (n != (mx_ssize_t)sizeof(ehdr) ||
+    mx_size_t n;
+    mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
+    if (status < 0)
+        return status;
+    if (n != sizeof(ehdr) ||
         ehdr.e_ident[EI_MAG0] != ELFMAG0 ||
         ehdr.e_ident[EI_MAG1] != ELFMAG1 ||
         ehdr.e_ident[EI_MAG2] != ELFMAG2 ||
@@ -67,10 +68,11 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
 mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
                                 uintptr_t phoff, size_t phnum) {
     size_t phdrs_size = (size_t)phnum * sizeof(elf_phdr_t);
-    mx_ssize_t n = mx_vmo_read(vmo, phdrs, phoff, phdrs_size);
-    if (n < 0)
-        return n;
-    if (n != (mx_ssize_t)phdrs_size)
+    mx_size_t n;
+    mx_status_t status = mx_vmo_read(vmo, phdrs, phoff, phdrs_size, &n);
+    if (status < 0)
+        return status;
+    if (n != phdrs_size)
         return ERR_ELF_BAD_FORMAT;
     return NO_ERROR;
 }
@@ -111,8 +113,8 @@ static mx_status_t choose_load_bias(mx_handle_t proc,
         return NO_ERROR;
 
     // vm_map requires some vm_object handle, so create a dummy one.
-    mx_handle_t vmo = mx_vmo_create(0);
-    if (vmo < 0)
+    mx_handle_t vmo;
+    if (mx_vmo_create(0, 0, &vmo) < 0)
         return ERR_NO_MEMORY;
 
     // Do a mapping to let the kernel choose an address range.
@@ -148,24 +150,28 @@ static mx_handle_t get_writable_vmo(mx_handle_t proc_self,
                                     mx_handle_t vmo, size_t data_size,
                                     uintptr_t* file_start,
                                     uintptr_t* file_end) {
-    mx_handle_t copy_vmo = mx_vmo_create(data_size);
-    if (copy_vmo < 0)
-        return copy_vmo;
+    mx_handle_t copy_vmo;
+    mx_status_t status = mx_vmo_create(data_size, 0, &copy_vmo);
+    if (status < 0)
+        return status;
     uintptr_t window = 0;
-    mx_status_t status = mx_process_map_vm(proc_self, vmo,
-                                           *file_start, data_size, &window,
-                                           MX_VM_FLAG_PERM_READ);
+    status = mx_process_map_vm(proc_self, vmo,
+                               *file_start, data_size, &window,
+                               MX_VM_FLAG_PERM_READ);
     if (status < 0) {
         mx_handle_close(copy_vmo);
         return status;
     }
-    mx_ssize_t n = mx_vmo_write(copy_vmo, (void*)window, 0, data_size);
+    mx_size_t n;
+    status = mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
     mx_process_unmap_vm(proc_self, window, 0);
-    if (n >= 0 && n != (mx_ssize_t)data_size)
-        n = ERR_IO;
-    if (n < 0) {
+    if (status < 0) {
         mx_handle_close(copy_vmo);
-        return n;
+        return status;
+    }
+    if (n != data_size) {
+        mx_handle_close(copy_vmo);
+        return ERR_IO;
     }
     *file_end -= *file_start;
     *file_start = 0;
@@ -199,37 +205,38 @@ static mx_status_t finish_load_segment(
     }
 
     // The rest of the segment will be backed by anonymous memory.
-    mx_handle_t bss_vmo = mx_vmo_create(size);
-    if (bss_vmo < 0)
-        return bss_vmo;
+    mx_handle_t bss_vmo;
+    mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
+    if (status < 0)
+        return status;
 
     // The final partial page of initialized data falls into the
     // region backed by bss_vmo rather than (the file) vmo.  We need
     // to read that data out of the file and copy it into bss_vmo.
     if (partial_page > 0) {
         char buffer[PAGE_SIZE];
-        mx_ssize_t n = mx_vmo_read(vmo, buffer, file_end, partial_page);
-        if (n < 0) {
+        mx_size_t n;
+        status = mx_vmo_read(vmo, buffer, file_end, partial_page, &n);
+        if (status < 0) {
             mx_handle_close(bss_vmo);
-            return n;
+            return status;
         }
-        if (n != (mx_ssize_t)partial_page) {
+        if (n != partial_page) {
             mx_handle_close(bss_vmo);
             return ERR_ELF_BAD_FORMAT;
         }
-        n = mx_vmo_write(bss_vmo, buffer, 0, n);
-        if (n < 0) {
+        status = mx_vmo_write(bss_vmo, buffer, 0, n, &n);
+        if (status < 0) {
             mx_handle_close(bss_vmo);
-            return n;
+            return status;
         }
-        if (n != (mx_ssize_t)partial_page) {
+        if (n != partial_page) {
             mx_handle_close(bss_vmo);
             return ERR_IO;
         }
     }
 
-    mx_status_t status = mx_process_map_vm(proc, bss_vmo, 0,
-                                           size, &start, flags);
+    status = mx_process_map_vm(proc, bss_vmo, 0, size, &start, flags);
     mx_handle_close(bss_vmo);
 
     return status;

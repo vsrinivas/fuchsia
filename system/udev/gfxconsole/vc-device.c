@@ -359,7 +359,7 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
         goto fail;
 
     size_t sz = hw_gfx->pixelsize * hw_gfx->stride * hw_gfx->height;
-    if ((device->gfx_vmo = mx_vmo_create(sz)) < 0)
+    if ((mx_vmo_create(sz, 0, &device->gfx_vmo)) < 0)
         goto fail;
 
     uintptr_t ptr;
