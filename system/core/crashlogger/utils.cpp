@@ -64,8 +64,9 @@ void do_print_mx_error(const char* file, int line, const char* what, mx_status_t
 
 mx_koid_t get_koid(mx_handle_t handle) {
     mx_info_handle_basic_t info;
-    mx_ssize_t size = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
-                                         &info, sizeof(info));
+    mx_size_t size = 0;
+    mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
+                       &info, sizeof(info), &size);
     if (size == sizeof(info))
         return info.rec.koid;
     // This shouldn't ever happen, so don't just ignore it.

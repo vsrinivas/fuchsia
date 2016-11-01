@@ -31,9 +31,9 @@ syscall debug_send_command
 
 # Temporary syscall to aid debuggers
 
-syscall debug_task_get_child
-    (handle: mx_handle_t, koid: uint64_t)
-    returns (mx_handle_t);
+syscall object_get_child
+    (handle: mx_handle_t, koid: uint64_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall debug_transfer_handle
     (proc: mx_handle_t, handle: mx_handle_t)
@@ -108,8 +108,9 @@ syscall object_signal
 
 syscall object_get_info
     (handle: mx_handle_t, topic: uint32_t, topic_size: uint16_t,
-        buffer: any[buffer_size] OUT, buffer_size: mx_size_t)
-    returns (mx_ssize_t);
+        buffer: any[buffer_size] OUT, buffer_size: mx_size_t,
+        actual_size: mx_size_t[1] OUT)
+    returns (mx_status_t);
 
 # Threads
 

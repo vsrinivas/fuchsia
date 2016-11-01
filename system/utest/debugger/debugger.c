@@ -367,8 +367,9 @@ static bool wait_inferior_thread_worker(void* arg)
         }
 
         mx_koid_t tid = packet.report.context.tid;
-        mx_handle_t thread = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS);
-        ASSERT_GT(thread, 0, "mx_debug_task_get_child failed");
+        mx_handle_t thread;
+        mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+        ASSERT_EQ(status, 0, "mx_debug_task_get_child failed");
 
         dump_inferior_regs(thread);
 
@@ -381,7 +382,7 @@ static bool wait_inferior_thread_worker(void* arg)
         // Useful for debugging, otherwise a bit too verbose.
         //dump_inferior_regs(thread);
 
-        mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+        status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
         tu_handle_close(thread);
         ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
     }
@@ -577,10 +578,13 @@ static bool debugger_thread_list_test(void)
 
     uint32_t buf_size = sizeof(mx_info_process_threads_t) + 100 * sizeof(mx_record_process_thread_t);
     mx_info_process_threads_t* threads = tu_malloc(buf_size);
-    mx_ssize_t size = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS, sizeof(mx_record_process_thread_t), threads, buf_size);
+    mx_size_t size;
+    mx_status_t status = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS,
+                                            sizeof(mx_record_process_thread_t), threads, buf_size, &size);
+    ASSERT_EQ(status, NO_ERROR, "");
 
     // There should be at least 1+NUM_EXTRA_THREADS threads in the result.
-    ASSERT_GE((size_t) size, sizeof(mx_info_header_t) + (1+NUM_EXTRA_THREADS) * sizeof(mx_record_process_thread_t), "mx_object_get_info failed");
+    ASSERT_GE(size, sizeof(mx_info_header_t) + (1+NUM_EXTRA_THREADS) * sizeof(mx_record_process_thread_t), "mx_object_get_info failed");
 
     uint32_t num_threads = threads->hdr.count;
 
@@ -588,11 +592,13 @@ static bool debugger_thread_list_test(void)
     for (uint32_t i = 0; i < num_threads; ++i) {
         mx_koid_t koid = threads->rec[i].koid;
         unittest_printf("Looking up thread %llu\n", (long long) koid);
-        mx_handle_t thread = mx_object_get_child(inferior, koid, MX_RIGHT_SAME_RIGHTS);
-        EXPECT_GT(thread, 0, "mx_debug_task_get_child failed");
+        mx_handle_t thread;
+        status = mx_object_get_child(inferior, koid, MX_RIGHT_SAME_RIGHTS, &thread);
+        EXPECT_EQ(status, 0, "mx_debug_task_get_child failed");
+        mx_size_t size = 0;
         mx_info_handle_basic_t info;
-        size = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, sizeof(mx_record_handle_basic_t), &info, sizeof(info));
-        EXPECT_EQ((size_t) size, sizeof(info), "mx_object_get_info failed");
+        mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, sizeof(mx_record_handle_basic_t), &info, sizeof(info), &size);
+        EXPECT_EQ(size, sizeof(info), "mx_object_get_info failed");
         EXPECT_EQ(info.rec.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
     }
 

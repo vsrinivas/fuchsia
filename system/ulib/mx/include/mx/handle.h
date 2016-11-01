@@ -82,14 +82,10 @@ public:
 
     mx_status_t get_child(uint64_t koid, mx_rights_t rights,
                           handle<T>* result) const {
-        mx_handle_t h = mx_object_get_child(value_, koid, rights);
-        if (h < 0) {
-            result->reset(MX_HANDLE_INVALID);
-            return h;
-        } else {
-            result->reset(h);
-            return NO_ERROR;
-        }
+        mx_handle_t h = MX_HANDLE_INVALID;
+        mx_status_t status = mx_object_get_child(value_, koid, rights, &h);
+        result->reset(h);
+        return status;
     }
     // TODO(abarth): mx_object_bind_exception_port
 

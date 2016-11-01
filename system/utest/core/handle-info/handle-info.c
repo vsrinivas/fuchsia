@@ -18,18 +18,20 @@ bool handle_info_test(void) {
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &duped);
     ASSERT_EQ(status, NO_ERROR, "");
 
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u), NO_ERROR,
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u, NULL), NO_ERROR,
               "handle should be valid");
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close the handle");
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u), ERR_BAD_HANDLE,
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u, NULL), ERR_BAD_HANDLE,
               "handle should be valid");
 
+    mx_size_t sz;
     mx_info_handle_basic_t info = {0};
-    ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, 4u),
+    ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, 4u, &sz),
               ERR_BUFFER_TOO_SMALL, "bad struct size validation");
 
-    ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info)),
-              (mx_ssize_t)sizeof(info), "handle should be valid");
+    status = mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(sz, sizeof(info), "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;
@@ -54,9 +56,11 @@ bool handle_rights_test(void) {
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_READ, &duped_ro);
     ASSERT_EQ(status, NO_ERROR, "");
 
+    mx_size_t sz;
     mx_info_handle_basic_t info = {0};
-    ASSERT_EQ(mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info)),
-              (mx_ssize_t)sizeof(info), "handle should be valid");
+    status = mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(sz, sizeof(info), "handle should be valid");
 
     ASSERT_EQ(info.rec.rights, MX_RIGHT_READ, "wrong set of rights");
 

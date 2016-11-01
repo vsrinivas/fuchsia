@@ -25,15 +25,18 @@ static bool create_test(void) {
 
         mx_info_handle_basic_t info;
         memset(&info, 0, sizeof(info));
-        ASSERT_EQ(mx_object_get_info(h[0], MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info,
-                  sizeof(info)), (mx_ssize_t)sizeof(info), "object_get_info failed");
+        mx_size_t sz;
+        mx_status_t status = mx_object_get_info(h[0], MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
+        ASSERT_EQ(status, NO_ERROR, "");
+        ASSERT_EQ(sz, sizeof(info), "object_get_info failed");
         EXPECT_EQ(info.rec.rights,
                   MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE,
                   "wrong rights");
         EXPECT_EQ(info.rec.type, (uint32_t)MX_OBJ_TYPE_EVENT_PAIR, "wrong type");
         memset(&info, 0, sizeof(info));
-        ASSERT_EQ(mx_object_get_info(h[1], MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info,
-                  sizeof(info)), (mx_ssize_t)sizeof(info), "object_get_info failed");
+        status = mx_object_get_info(h[1], MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
+        ASSERT_EQ(status, NO_ERROR, "");
+        ASSERT_EQ(sz, sizeof(info), "object_get_info failed");
         EXPECT_EQ(info.rec.rights,
                   MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE,
                   "wrong rights");

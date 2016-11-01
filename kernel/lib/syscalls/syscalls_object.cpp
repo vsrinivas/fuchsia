@@ -23,8 +23,9 @@
 #define LOCAL_TRACE 0
 
 
-mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,
-                            user_ptr<void> _buffer, mx_size_t buffer_size) {
+mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,
+                                user_ptr<void> _buffer, mx_size_t buffer_size,
+                                user_ptr<mx_size_t> actual) {
     auto up = ProcessDispatcher::GetCurrent();
 
     LTRACEF("handle %d topic %u topic_size %u buffer %p buffer_size %"
@@ -89,8 +90,9 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 
             if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-
-            return tocopy;
+            if (actual.copy_to_user(tocopy) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
         }
         case MX_INFO_PROCESS: {
             // grab a reference to the dispatcher
@@ -135,8 +137,9 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
 
             if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-
-            return tocopy;
+            if (actual.copy_to_user(tocopy) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
         }
         case MX_INFO_PROCESS_THREADS: {
             // grab a reference to the dispatcher
@@ -193,7 +196,9 @@ mx_ssize_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topi
             if (thread_result_buffer.reinterpret<mx_record_process_thread_t>().copy_array_to_user(threads.get(), num_to_copy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             size_t result_bytes = thread_offset + (num_to_copy * topic_size);
-            return result_bytes;
+            if (actual.copy_to_user(result_bytes) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
         }
         default:
             return ERR_NOT_FOUND;
@@ -347,7 +352,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
 //
 // MX_HANDLE_INVALID is currently treated as a "magic" handle used to
 // object a process from "the system".
-mx_handle_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t rights) {
+mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t rights, user_ptr<mx_handle_t> out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (handle == MX_HANDLE_INVALID) {
@@ -371,9 +376,10 @@ mx_handle_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!process_h)
             return ERR_NO_MEMORY;
 
-        auto process_hv = up->MapHandleToValue(process_h.get());
+        if (out.copy_to_user(up->MapHandleToValue(process_h.get())))
+            return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(process_h));
-        return process_hv;
+        return NO_ERROR;
     }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -399,9 +405,10 @@ mx_handle_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!thread_h)
             return ERR_NO_MEMORY;
 
-        auto thread_hv = up->MapHandleToValue(thread_h.get());
+        if (out.copy_to_user(up->MapHandleToValue(thread_h.get())) != NO_ERROR)
+            return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(thread_h));
-        return thread_hv;
+        return NO_ERROR;
     }
 
     return ERR_WRONG_TYPE;

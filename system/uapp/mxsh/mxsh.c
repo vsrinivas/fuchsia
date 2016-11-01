@@ -435,8 +435,9 @@ void joinproc(mx_handle_t p) {
 
     // read the return code
     mx_info_process_t proc_info;
-    mx_ssize_t ret = mx_object_get_info(p, MX_INFO_PROCESS, sizeof(proc_info.rec),
-            &proc_info, sizeof(proc_info));
+    mx_size_t ret = 0;
+    mx_object_get_info(p, MX_INFO_PROCESS, sizeof(proc_info.rec),
+                       &proc_info, sizeof(proc_info), &ret);
     if (ret != sizeof(proc_info)) {
         fprintf(stderr, "[process(%x): object_get_info failed? %" PRIdPTR "]\n", p, ret);
     } else {

@@ -93,12 +93,13 @@ static void run_tests(const char* dirn) {
 
         // read the return code
         mx_info_process_t proc_info;
-        mx_ssize_t info_status = mx_object_get_info(handle, MX_INFO_PROCESS, sizeof(proc_info.rec),
-                &proc_info, sizeof(proc_info));
+        mx_size_t sz = 0;
+        status = mx_object_get_info(handle, MX_INFO_PROCESS, sizeof(proc_info.rec),
+                                    &proc_info, sizeof(proc_info), &sz);
         mx_handle_close(handle);
 
-        if (info_status != sizeof(proc_info)) {
-            printf("FAILURE: Failed to get process return code %s: %" PRIdPTR "\n", de->d_name, info_status);
+        if (sz != sizeof(proc_info)) {
+            printf("FAILURE: Failed to get process return code %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_RETURN_CODE, 0);
             failed_count++;
             continue;

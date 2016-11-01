@@ -82,9 +82,11 @@ MAGENTA_SYSCALL_DEF(3, 3, 44, mx_status_t, handle_replace, mx_handle_t handle, m
 // Generic object operations
 MAGENTA_SYSCALL_DEF(3, 3, 45, mx_status_t, object_signal, mx_handle_t handle, uint32_t clear_mask,
                     uint32_t set_mask)
-MAGENTA_SYSCALL_DEF(4, 4, 46, mx_ssize_t, object_get_info, mx_handle_t handle, uint32_t topic,
-                    uint16_t topic_size, USER_PTR(void) buffer, mx_size_t buffer_size)
-MAGENTA_SYSCALL_DEF(2, 3, 47, mx_handle_t, object_get_child, mx_handle_t handle, uint64_t koid, mx_rights_t rights)
+MAGENTA_SYSCALL_DEF(6, 6, 46, mx_status_t, object_get_info, mx_handle_t handle, uint32_t topic,
+                    uint16_t topic_size, USER_PTR(void) buffer, mx_size_t buffer_size,
+                    USER_PTR(mx_size_t) actual_size)
+MAGENTA_SYSCALL_DEF(4, 6, 47, mx_status_t, object_get_child, mx_handle_t handle, uint64_t koid,
+                    mx_rights_t rights, USER_PTR(mx_handle_t) out)
 
 // Threads
 MAGENTA_SYSCALL_DEF(5, 5, 50, mx_status_t, thread_create, mx_handle_t process, USER_PTR(const char) name, uint32_t name_len, uint32_t flags, USER_PTR(mx_handle_t) out)

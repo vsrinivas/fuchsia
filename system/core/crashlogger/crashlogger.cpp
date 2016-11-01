@@ -125,14 +125,16 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
     printf("<== %s , PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
 
-    auto process = mx_object_get_child(0, context.pid, MX_RIGHT_SAME_RIGHTS);
-    if (process <= 0) {
-        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", context.pid, process);
+    mx_handle_t process;
+    mx_status_t status = mx_object_get_child(0, context.pid, MX_RIGHT_SAME_RIGHTS, &process);
+    if (status < 0) {
+        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", context.pid, status);
         return;
     }
-    auto thread = mx_object_get_child(process, context.tid, MX_RIGHT_SAME_RIGHTS);
-    if (thread <= 0) {
-        printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, thread);
+    mx_handle_t thread;
+    status = mx_object_get_child(process, context.tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status < 0) {
+        printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
         mx_handle_close(process);
         return;
     }
@@ -153,7 +155,7 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     const char* arch = "unknown";
 
     uint32_t regs_size = sizeof(regs);
-    auto status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, &regs_size);
+    status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, &regs_size);
     if (status < 0) {
         printf("unable to read general regs for [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
         goto Fail;
