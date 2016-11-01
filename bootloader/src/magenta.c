@@ -180,6 +180,72 @@ static void install_memmap(kernel_t* k, struct e820entry* memmap, unsigned count
     ZP8(k->zeropage, ZP_E820_COUNT) = count;
 }
 
+static void get_bit_range(uint32_t mask, int* high, int* low) {
+    *high = -1;
+    *low = -1;
+    int idx = 0;
+    while (mask) {
+        if (*low < 0 && (mask & 1)) *low = idx;
+        idx++;
+        mask >>= 1;
+    }
+    *high = idx - 1;
+}
+
+static int get_mx_pixel_format_from_bitmask(efi_pixel_bitmask bitmask) {
+    int r_hi = -1, r_lo = -1, g_hi = -1, g_lo = -1, b_hi = -1, b_lo = -1;
+
+    get_bit_range(bitmask.RedMask, &r_hi, &r_lo);
+    get_bit_range(bitmask.GreenMask, &g_hi, &g_lo);
+    get_bit_range(bitmask.BlueMask, &b_hi, &b_lo);
+
+    if (r_lo < 0 || g_lo < 0 || b_lo < 0) {
+        goto unsupported;
+    }
+
+    if ((r_hi == 23 && r_lo == 16) &&
+        (g_hi == 15 && g_lo == 8) &&
+        (b_hi == 7 && b_lo == 0)) {
+        return MX_PIXEL_FORMAT_RGB_x888;
+    }
+
+    if ((r_hi == 7 && r_lo == 5) &&
+        (g_hi == 4 && g_lo == 2) &&
+        (b_hi == 1 && b_lo == 0)) {
+        return MX_PIXEL_FORMAT_RGB_332;
+    }
+
+    if ((r_hi == 15 && r_lo == 11) &&
+        (g_hi == 10 && g_lo == 5) &&
+        (b_hi == 4 && b_lo == 0)) {
+        return MX_PIXEL_FORMAT_RGB_565;
+    }
+
+    if ((r_hi == 7 && r_lo == 6) &&
+        (g_hi == 5 && g_lo == 4) &&
+        (b_hi == 3 && b_lo == 2)) {
+        return MX_PIXEL_FORMAT_RGB_2220;
+    }
+
+unsupported:
+    printf("unsupported pixel format bitmask: r %08x / g %08x / b %08x\n",
+            bitmask.RedMask, bitmask.GreenMask, bitmask.BlueMask);
+    return MX_PIXEL_FORMAT_NONE;
+}
+
+static int get_mx_pixel_format(efi_graphics_output_protocol* gop) {
+    efi_graphics_pixel_format efi_fmt = gop->Mode->Info->PixelFormat;
+    switch (efi_fmt) {
+    case PixelBlueGreenRedReserved8BitPerColor:
+        return MX_PIXEL_FORMAT_RGB_x888;
+    case PixelBitMask:
+        return get_mx_pixel_format_from_bitmask(gop->Mode->Info->PixelInformation);
+    default:
+        printf("unsupported pixel format %d!\n", efi_fmt);
+        return MX_PIXEL_FORMAT_NONE;
+    }
+}
+
 static void start_kernel(kernel_t* k) {
     // 64bit entry is at offset 0x200
     uint64_t entry = (uint64_t)(k->image + 0x200);
@@ -316,7 +382,7 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
     ZP32(kernel.zeropage, ZP_FB_WIDTH) = (uint32_t)gop->Mode->Info->HorizontalResolution;
     ZP32(kernel.zeropage, ZP_FB_HEIGHT) = (uint32_t)gop->Mode->Info->VerticalResolution;
     ZP32(kernel.zeropage, ZP_FB_STRIDE) = (uint32_t)gop->Mode->Info->PixelsPerScanLine;
-    ZP32(kernel.zeropage, ZP_FB_FORMAT) = MX_PIXEL_FORMAT_RGB_x888;  // TODO: compute this
+    ZP32(kernel.zeropage, ZP_FB_FORMAT) = get_mx_pixel_format(gop);
     ZP32(kernel.zeropage, ZP_FB_REGBASE) = 0;
     ZP32(kernel.zeropage, ZP_FB_SIZE) = 256 * 1024 * 1024;
 
