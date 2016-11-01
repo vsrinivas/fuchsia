@@ -111,8 +111,8 @@ func checkedMakeFileNode(t *testing.T, metadata *Metadata, parent DirectoryNode,
 		t.Fatal("Invalid metadata")
 	} else if node.Size() != 0 {
 		t.Fatal("node.Size() should be zero")
-	} else if node.StartCluster() != metadata.ClusterMgr.ClusterEOF() {
-		t.Fatal("Node should be initialized with an EOF cluster")
+	} else if node.StartCluster() != 0 {
+		t.Fatal("Node should be initialized with a zero cluster")
 	} else if node.NumClusters() != 0 {
 		t.Fatal("Node should be initialized with no clusters")
 	} else if c, exists := parent.ChildFile(direntIndex); c != node || !exists {

@@ -531,7 +531,7 @@ func createIncremental(parent node.DirectoryNode, name string, flags fs.OpenFlag
 	// tragic error.
 
 	if flags.File() {
-		entry := direntry.New(name, parent.Metadata().ClusterMgr.ClusterEOF(), fs.FileTypeRegularFile)
+		entry := direntry.New(name, 0, fs.FileTypeRegularFile)
 		direntryIndex, err := node.Allocate(parent, entry)
 		if err != nil {
 			return nil, err

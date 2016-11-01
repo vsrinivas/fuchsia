@@ -316,7 +316,7 @@ func (n *node) IsDirectory() bool {
 
 func (n *node) StartCluster() uint32 {
 	if len(n.clusters) == 0 {
-		return n.metadata.ClusterMgr.ClusterEOF()
+		return 0
 	}
 	return n.clusters[0]
 }
