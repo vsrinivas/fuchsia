@@ -7,18 +7,23 @@
 #pragma once
 
 #include <assert.h>
+#include <kernel/mutex.h>
 #include <kernel/vm/vm_page_list.h>
+#include <kernel/vm/vm_object.h>
 #include <mxtl/intrusive_wavl_tree.h>
+#include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
 
 class VmAspace;
-class VmObject;
 
-class VmRegion : public mxtl::WAVLTreeContainable<mxtl::RefPtr<VmRegion>>, public mxtl::RefCounted<VmRegion> {
+class VmRegion : public mxtl::WAVLTreeContainable<mxtl::RefPtr<VmRegion>>,
+                 public mxtl::DoublyLinkedListable<VmRegion*>,
+                 public mxtl::RefCounted<VmRegion> {
 public:
     static mxtl::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
+                                         mxtl::RefPtr<VmObject> vmo, uint64_t offset,
                                          uint arch_mmu_flags, const char* name);
     ~VmRegion();
 
@@ -37,9 +42,6 @@ public:
 
     size_t AllocatedPages() const;
 
-    // set the object that this region backs
-    status_t SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset);
-
     // map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);
 
@@ -55,14 +57,14 @@ public:
     // page fault in an address into the region
     status_t PageFault(vaddr_t va, uint pf_flags);
 
-    mxtl::RefPtr<VmObject> vmo();
+    mxtl::RefPtr<VmObject> vmo() { return object_; };
 
     // WAVL tree key function
     vaddr_t GetKey() const { return base(); }
 
 private:
     // private constructor, use Create()
-    VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_flags, const char* name);
+    VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo, uint64_t offset, uint arch_mmu_flags, const char* name);
 
     // magic value
     static const uint32_t MAGIC = 0x564d5247; // VMRG
@@ -81,6 +83,9 @@ private:
     // pointer and region of the object we are mapping
     mxtl::RefPtr<VmObject> object_;
     uint64_t object_offset_ = 0;
+
+    // our lock is shared with the vmo we map
+    Mutex& vmo_lock_;
 
     char name_[32];
 };

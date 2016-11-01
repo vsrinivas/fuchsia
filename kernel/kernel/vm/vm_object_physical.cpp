@@ -61,7 +61,9 @@ void VmObjectPhysical::Dump(bool page_dump) {
 }
 
 // get the physical address of a page at offset
-status_t VmObjectPhysical::GetPage(uint64_t offset, paddr_t* _pa) {
+status_t VmObjectPhysical::GetPageLocked(uint64_t offset, paddr_t* _pa) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
     if (offset >= size_)
         return ERR_OUT_OF_RANGE;
 
@@ -74,7 +76,9 @@ status_t VmObjectPhysical::GetPage(uint64_t offset, paddr_t* _pa) {
 }
 
 // get the physical address of a page at offset
-status_t VmObjectPhysical::FaultPage(uint64_t offset, uint pf_flags, paddr_t* _pa) {
+status_t VmObjectPhysical::FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* _pa) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
     if (offset >= size_)
         return ERR_OUT_OF_RANGE;
 

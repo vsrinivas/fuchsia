@@ -13,6 +13,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/type_support.h>
 #include <new.h>
 #include <string.h>
@@ -20,17 +21,23 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_flags,
-                   const char* name)
-    : base_(base), size_(size), arch_mmu_flags_(arch_mmu_flags), aspace_(&aspace) {
+VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size,
+                   mxtl::RefPtr<VmObject> vmo, uint64_t offset,
+                   uint arch_mmu_flags, const char* name)
+    : base_(base), size_(size), arch_mmu_flags_(arch_mmu_flags), aspace_(&aspace),
+      object_(mxtl::move(vmo)), object_offset_(offset), vmo_lock_(object_->lock()) {
     strlcpy(name_, name, sizeof(name_));
     LTRACEF("%p '%s'\n", this, name_);
+
+    AutoLock al(vmo_lock_);
+    object_->AddRegionLocked(this);
 }
 
 mxtl::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
+                                        mxtl::RefPtr<VmObject> vmo, uint64_t offset,
                                         uint arch_mmu_flags, const char* name) {
     AllocChecker ac;
-    auto r = mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, arch_mmu_flags, name));
+    auto r = mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, mxtl::move(vmo), offset, arch_mmu_flags, name));
     return ac.check() ? r : nullptr;
 }
 
@@ -48,8 +55,15 @@ status_t VmRegion::Destroy() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s'\n", this, name_);
 
-    // detach from any object we have mapped
-    object_.reset();
+    if (object_) {
+        {
+            AutoLock al(vmo_lock_);
+            object_->RemoveRegionLocked(this);
+        }
+
+        // detach from any object we have mapped
+        object_.reset();
+    }
 
     return NO_ERROR;
 }
@@ -61,22 +75,20 @@ void VmRegion::Dump() const {
         " size %#zx mmu_flags %#x vmo %p offset %#" PRIx64 "\n",
         this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_,
         arch_mmu_flags_, object_.get(), object_offset_);
-    if (object_.get()) {
-        object_->Dump();
-    }
+    object_->Dump();
 }
 
 size_t VmRegion::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    if (object_.get()) {
-        return object_.get()->AllocatedPages();
-    } else {
-        return 0;
-    }
+    return object_->AllocatedPages();
 }
 
 status_t VmRegion::Protect(uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
+
+    // grab the lock for the vmo
+    AutoLock al(vmo_lock_);
+
     arch_mmu_flags_ = arch_mmu_flags;
 
     auto err = arch_mmu_protect(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE, arch_mmu_flags);
@@ -90,22 +102,11 @@ int VmRegion::Unmap() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s'\n", this, name_);
 
+    // grab the lock for the vmo
+    AutoLock al(vmo_lock_);
+
     // unmap the section of address space we cover
     return arch_mmu_unmap(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE);
-}
-
-status_t VmRegion::SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("%p '%s', o %p, offset %#" PRIx64 "\n", this, name_, &o, offset);
-
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-
-    DEBUG_ASSERT(!object_); // cant handle setting a different object than before right now
-
-    object_ = o;
-    object_offset_ = offset;
-
-    return NO_ERROR;
 }
 
 status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
@@ -115,12 +116,8 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
 
-    DEBUG_ASSERT(object_); // assert on this for now
-
-    if (!object_) {
-        // we have no backing object, you should not call MapRange on this
-        return ERR_NO_MEMORY;
-    }
+    // grab the lock for the vmo
+    AutoLock al(vmo_lock_);
 
     // iterate through the range, grabbing a page from the underlying object and mapping it in
     size_t o;
@@ -130,9 +127,9 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
         status_t status;
         paddr_t pa;
         if (commit) {
-            status = object_->FaultPage(vmo_offset, VMM_PF_FLAG_WRITE, &pa);
+            status = object_->FaultPageLocked(vmo_offset, VMM_PF_FLAG_WRITE, &pa);
         } else {
-            status = object_->GetPage(vmo_offset, &pa);
+            status = object_->GetPageLocked(vmo_offset, &pa);
         }
         if (status < 0) {
             // no page to map, skip ahead
@@ -190,15 +187,12 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
         }
     }
 
-    if (!object_) {
-        // we have no backing object, error
-        TRACEF("ERROR: faulted on region with no backing object\n");
-        return ERR_NO_MEMORY;
-    }
+    // grab the lock for the vmo
+    AutoLock al(vmo_lock_);
 
     // fault in or grab an existing page
     paddr_t new_pa;
-    auto status = object_->FaultPage(vmo_offset, pf_flags, &new_pa);
+    auto status = object_->FaultPageLocked(vmo_offset, pf_flags, &new_pa);
     if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
         return status;
@@ -210,9 +204,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     paddr_t pa;
     status_t err = arch_mmu_query(&aspace_->arch_aspace(), va, &pa, &page_flags);
     if (err >= 0) {
-        LTRACEF("queried va, page at pa %#" PRIxPTR
-                ", flags %#x is already there\n",
-                pa, page_flags);
+        LTRACEF("queried va, page at pa %#" PRIxPTR ", flags %#x is already there\n", pa, page_flags);
         if (pa == new_pa) {
             // page was already mapped, are the permissions compatible?
             if (page_flags == arch_mmu_flags_)
@@ -229,8 +221,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
             // currently this is an error situation, since there's no way for this to have
             // happened, but in the future this will be a path for copy-on-write.
             // TODO: implement
-            printf("KERN: thread %s faulted on va %#" PRIxPTR
-                   ", different page was present, unhandled\n",
+            printf("KERN: thread %s faulted on va %#" PRIxPTR ", different page was present, unhandled\n",
                    get_current_thread()->name, va);
             return ERR_NOT_SUPPORTED;
         }
@@ -243,13 +234,11 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
             return ERR_NO_MEMORY;
         }
     }
+
+    // TODO: figure out what to do with this
 #if ARCH_ARM64
     if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)
         arch_sync_cache_range(va, PAGE_SIZE);
 #endif
     return NO_ERROR;
-}
-
-mxtl::RefPtr<VmObject> VmRegion::vmo() {
-    return object_;
 }

@@ -382,50 +382,6 @@ vaddr_t VmAspace::AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_
     return -1;
 }
 
-// allocate a region and insert it into the list
-mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vaddr_t vaddr,
-                                             uint8_t align_pow2, size_t min_alloc_gap,
-                                             uint vmm_flags, uint arch_mmu_flags) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(is_mutex_held(&lock_));
-    LTRACEF_LEVEL(2, "aspace %p name '%s' vmm_flags %#x size %#zx vaddr %#" PRIxPTR "\n",
-                  this, name, vmm_flags, size, vaddr);
-
-    // make a region struct for it and stick it in the list
-    mxtl::RefPtr<VmRegion> r = VmRegion::Create(*this, vaddr, size, arch_mmu_flags, name);
-    if (!r)
-        return nullptr;
-
-    // if they ask us for a specific spot, put it there
-    if (vmm_flags & VMM_FLAG_VALLOC_SPECIFIC) {
-        DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
-
-        // stick it in the list, checking to see if it fits
-        if (AddRegion(r) < 0) {
-            // didn't fit
-            return nullptr;
-        }
-    } else {
-        // allocate a virtual slot for it
-        RegionTree::iterator after;
-        vaddr_t base = (vmm_flags & VMM_FLAG_VALLOC_BASE) ? vaddr : 0;
-        vaddr = AllocSpot(base, size, align_pow2, min_alloc_gap, arch_mmu_flags);
-        LTRACEF_LEVEL(2, "alloc_spot returns %#" PRIxPTR "\n", vaddr);
-
-        if (vaddr == (vaddr_t)-1) {
-            LTRACEF_LEVEL(2, "failed to find spot\n");
-            return nullptr;
-        }
-
-        r->set_base(vaddr);
-
-        // add it to the region list
-        regions_.insert(r);
-    }
-
-    return r;
-}
-
 // internal find region search routine
 mxtl::RefPtr<VmRegion> VmAspace::FindRegionLocked(vaddr_t vaddr) {
     DEBUG_ASSERT(magic_ == MAGIC);
@@ -486,17 +442,40 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
             return ERR_INVALID_ARGS;
     }
 
-    // hold the vmm lock for the rest of the function
+    // allocate a region and put it in the aspace list
+    mxtl::RefPtr<VmRegion> r = VmRegion::Create(*this, vaddr, size, vmo, offset, arch_mmu_flags, name);
+    if (!r)
+        return ERR_NO_MEMORY;
+
+    // hold the aspace lock for the rest of the function
     AutoLock a(lock_);
 
-    // allocate a region and put it in the aspace list
-    auto r = AllocRegion(name, size, vaddr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
-    if (!r) {
-        return ERR_NO_MEMORY;
-    }
+    // if they ask us for a specific spot, put it there
+    if (vmm_flags & VMM_FLAG_VALLOC_SPECIFIC) {
+        DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
 
-    // associate the vm object with it
-    r->SetObject(mxtl::move(vmo), offset);
+        // stick it in the list, checking to see if it fits
+        if (AddRegion(r) < 0) {
+            // didn't fit
+            return ERR_NO_MEMORY;
+        }
+    } else {
+        // allocate a virtual slot for it
+        RegionTree::iterator after;
+        vaddr_t base = (vmm_flags & VMM_FLAG_VALLOC_BASE) ? vaddr : 0;
+        vaddr = AllocSpot(base, size, align_pow2, min_alloc_gap, arch_mmu_flags);
+        LTRACEF_LEVEL(2, "alloc_spot returns %#" PRIxPTR "\n", vaddr);
+
+        if (vaddr == (vaddr_t)-1) {
+            LTRACEF_LEVEL(2, "failed to find spot\n");
+            return ERR_NO_MEMORY;
+        }
+
+        r->set_base(vaddr);
+
+        // add it to the region list
+        regions_.insert(r);
+    }
 
     // if we're committing it, map the region now
     if (vmm_flags & VMM_FLAG_COMMIT) {
@@ -531,7 +510,11 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     // trim the size
     size = trim_to_aspace(*this, vaddr, size);
 
-    AutoLock a(lock_);
+    // allocate a zero length vm object to back it
+    // TODO: decide if a null vmo object is worth it
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0);
+    if (!vmo)
+        return ERR_NO_MEMORY;
 
     // lookup how it's already mapped
     uint arch_mmu_flags = 0;
@@ -541,10 +524,9 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
         arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;
     }
 
-    // build a new region structure without any backing vm object
-    auto r = AllocRegion(name, size, vaddr, 0, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
-
-    return r ? NO_ERROR : ERR_NO_MEMORY;
+    // map it, creating a new region
+    void *ptr = reinterpret_cast<void *>(vaddr);
+    return MapObject(mxtl::move(vmo), name, 0, size, &ptr, 0, 0, VMM_FLAG_VALLOC_SPECIFIC, arch_mmu_flags);
 }
 
 status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,

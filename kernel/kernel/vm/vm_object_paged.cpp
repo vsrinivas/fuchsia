@@ -189,18 +189,12 @@ mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data,
 
 vm_page_t* VmObjectPaged::GetPageLocked(uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(lock_.IsHeld());
 
     if (offset >= size_)
         return nullptr;
 
     return page_list_.GetPage(offset);
-}
-
-vm_page_t* VmObjectPaged::GetPage(uint64_t offset) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    AutoLock a(lock_);
-
-    return GetPageLocked(offset);
 }
 
 vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
@@ -234,13 +228,6 @@ vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
 
     return p;
-}
-
-vm_page_t* VmObjectPaged::FaultPage(uint64_t offset, uint pf_flags) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    AutoLock a(lock_);
-
-    return FaultPageLocked(offset, pf_flags);
 }
 
 int64_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {

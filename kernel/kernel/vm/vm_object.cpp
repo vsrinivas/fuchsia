@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
@@ -23,11 +24,27 @@
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmObject::VmObject() {
+    LTRACEF("%p\n", this);
 }
 
 VmObject::~VmObject() {
+    LTRACEF("%p\n", this);
+    DEBUG_ASSERT(region_list_.is_empty());
+
     // clear our magic value
     magic_ = 0;
+}
+
+void VmObject::AddRegionLocked(VmRegion *r) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
+    region_list_.push_front(r);
+}
+
+void VmObject::RemoveRegionLocked(VmRegion *r) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
+    region_list_.erase(*r);
 }
 
 static int cmd_vm_object(int argc, const cmd_args* argv) {
