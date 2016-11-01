@@ -13,6 +13,8 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")
+    parser.add_argument("--args", dest="gn_args", help="additional args to pass to gn",
+                        action="append")
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
                         default="default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
@@ -47,6 +49,9 @@ def main():
             if not os.path.exists(path):
                 parser.error('invalid goma path: %s' % path)
             gn_args += " goma_dir=\"" + path + "\""
+    if args.gn_args:
+        gn_args += " " + " ".join(args.gn_args)
+
     gn_command += [gn_args]
     if passthrough:
         gn_command += passthrough
