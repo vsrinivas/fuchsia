@@ -20,6 +20,7 @@
 class SharedLegacyIrqHandler;
 
 class  PcieBridge;
+class  PcieDebugConsole;
 class  PcieDevice;
 struct pcie_config_t;
 
@@ -27,9 +28,6 @@ enum class PcieAddrSpace { MMIO, PIO };
 
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
-    using ForeachCallback = bool (*)(const mxtl::RefPtr<PcieDevice>& dev,
-                                     void* ctx, uint level);
-
     struct EcamRegion {
         paddr_t phys_base;  // Physical address of the memory mapped config region.
         size_t  size;       // Size (in bytes) of the memory mapped config region.
@@ -92,8 +90,6 @@ public:
     mxtl::RefPtr<PcieDevice> GetRefedDevice(uint bus_id, uint dev_id, uint func_id);
 
     // TODO(johngro) : Make these private when we can.
-    void ForeachDevice(ForeachCallback cbk, void* ctx);
-    void ScanDevices();
     mxtl::RefPtr<SharedLegacyIrqHandler> FindLegacyIrqHandler(uint irq_id);
     // TODO(johngro) : end TODO section
 
@@ -113,11 +109,12 @@ public:
     bool RescanLockIsHeld() const { return bus_rescan_lock_.IsHeld(); };
 
 private:
-    friend class PcieBridge;
-    friend class PcieDevice;
-
+    friend class PcieDebugConsole;
     static constexpr size_t REGION_BOOKKEEPING_SLAB_SIZE = 16  << 10;
     static constexpr size_t REGION_BOOKKEEPING_MAX_MEM   = 128 << 10;
+
+    using ForeachCallback = bool (*)(const mxtl::RefPtr<PcieDevice>& dev,
+                                     void* ctx, uint level);
 
     class MappedEcamRegion : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<MappedEcamRegion>> {
     public:
@@ -141,7 +138,9 @@ private:
     static mxtl::RefPtr<PcieBusDriver> driver_;
     static Mutex driver_lock_;
 
+    void     ScanDevices();
     status_t AllocBookkeeping();
+    void     ForeachDevice(ForeachCallback cbk, void* ctx);
     bool     ForeachDeviceOnBridge(const mxtl::RefPtr<PcieBridge>& bridge,
                                    uint                            level,
                                    ForeachCallback                 cbk,

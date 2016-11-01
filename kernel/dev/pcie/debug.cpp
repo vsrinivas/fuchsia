@@ -17,6 +17,14 @@
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 
+class PcieDebugConsole {
+public:
+    static int CmdLsPci(int argc, const cmd_args *argv);
+    static int CmdPciUnplug(int argc, const cmd_args *argv);
+    static int CmdPciReset(int argc, const cmd_args *argv);
+    static int CmdPciRescan(int argc, const cmd_args *argv);
+};
+
 /* Class code/Subclass code definitions taken from
  * http://wiki.osdev.org/Pci#Class_Codes */
 typedef struct {
@@ -468,8 +476,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
     return true;
 }
 
-static int cmd_lspci(int argc, const cmd_args *argv)
-{
+int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv) {
     lspci_params_t params;
     uint filter_ndx = 0;
 
@@ -581,8 +588,7 @@ static int cmd_lspci(int argc, const cmd_args *argv)
     return NO_ERROR;
 }
 
-static int cmd_pciunplug(int argc, const cmd_args *argv)
-{
+int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv) {
     bool confused = false;
     uint bus_id, dev_id, func_id;
 
@@ -623,8 +629,7 @@ static int cmd_pciunplug(int argc, const cmd_args *argv)
     return NO_ERROR;
 }
 
-static int cmd_pcireset(int argc, const cmd_args *argv)
-{
+int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv) {
     bool confused = false;
     uint bus_id, dev_id, func_id;
 
@@ -667,8 +672,7 @@ static int cmd_pcireset(int argc, const cmd_args *argv)
     return NO_ERROR;
 }
 
-static int cmd_pcirescan(int argc, const cmd_args *argv)
-{
+int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
@@ -681,17 +685,17 @@ static int cmd_pcirescan(int argc, const cmd_args *argv)
 STATIC_COMMAND_START
 STATIC_COMMAND("lspci",
                "Enumerate the devices detected in PCIe ECAM space",
-               &cmd_lspci)
+               &PcieDebugConsole::CmdLsPci)
 STATIC_COMMAND("pciunplug",
                "Force \"unplug\" the specified PCIe device",
-               &cmd_pciunplug)
+               &PcieDebugConsole::CmdPciUnplug)
 STATIC_COMMAND("pcireset",
                "Initiate a Function Level Reset of the specified device.",
-               &cmd_pcireset)
+               &PcieDebugConsole::CmdPciReset)
 STATIC_COMMAND("pcirescan",
                "Force a rescan of the PCIe configuration space, matching drivers to unclaimed "
                "devices as we go.  Then attempt to start all newly claimed devices.",
-               &cmd_pcirescan)
+               &PcieDebugConsole::CmdPciRescan)
 STATIC_COMMAND_END(pcie);
 
 #endif  // WITH_LIB_CONSOLE
