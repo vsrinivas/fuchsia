@@ -104,26 +104,6 @@ size_t VmObjectPaged::AllocatedPages() const {
     return count;
 }
 
-status_t VmObjectPaged::Resize(uint64_t s) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
-
-    // there's a max size to keep indexes within range
-    if (ROUNDUP_PAGE_SIZE(s) > MAX_SIZE)
-        return ERR_OUT_OF_RANGE;
-
-    AutoLock a(lock_);
-
-    if (size_ != 0) {
-        return ERR_NOT_SUPPORTED; // TODO: support resizing an existing object
-    }
-
-    // save bytewise size
-    size_ = s;
-
-    return NO_ERROR;
-}
-
 status_t VmObjectPaged::AddPage(vm_page_t* p, uint64_t offset) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("vmo %p, offset %#" PRIx64 ", page %p (%#" PRIxPTR ")\n",
@@ -410,6 +390,45 @@ status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t *d
         }
         start += PAGE_SIZE;
     }
+
+    return NO_ERROR;
+}
+
+status_t VmObjectPaged::Resize(uint64_t s) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
+
+    // there's a max size to keep indexes within range
+    if (s > MAX_SIZE)
+        return ERR_OUT_OF_RANGE;
+
+    AutoLock a(lock_);
+
+    // see if we're shrinking the vmo
+    if (s < size_) {
+        // figure the starting and ending page offset that is affected
+        uint64_t start = ROUNDUP_PAGE_SIZE(s);
+        uint64_t end = ROUNDUP_PAGE_SIZE(size_);
+        uint64_t page_aligned_len = end - start;
+
+        // we're only worried about whole pages to be removed
+        if (page_aligned_len > 0) {
+            // unmap all of the pages in this range on all the mapping regions
+            for (auto& r: region_list_) {
+                // unmap any pages the region may have mapped that intersect this range
+                r.UnmapVmoRangeLocked(start, page_aligned_len);
+            }
+
+            // iterate through the pages, freeing them
+            while (start < end) {
+                page_list_.FreePage(start);
+                start += PAGE_SIZE;
+            }
+        }
+    }
+
+    // save bytewise size
+    size_ = s;
 
     return NO_ERROR;
 }

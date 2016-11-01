@@ -214,8 +214,6 @@ bool vmo_resize_test() {
     EXPECT_EQ(NO_ERROR, status, "vm_object_get_size");
     EXPECT_EQ(len, size, "vm_object_get_size");
 
-// set_size is not implemented right now, so test for the failure mode
-#if 0
     // try to resize it
     len += PAGE_SIZE;
     status = mx_vmo_set_size(vmo, len);
@@ -229,11 +227,22 @@ bool vmo_resize_test() {
 
     // try to resize it to a ludicrous size
     status = mx_vmo_set_size(vmo, UINT64_MAX);
-    EXPECT_EQ(ERR_NO_MEMORY, status, "vm_object_set_size");
-#else
-    status = mx_vmo_set_size(vmo, len + PAGE_SIZE);
-    EXPECT_EQ(ERR_NOT_SUPPORTED, status, "vm_object_set_size");
-#endif
+    EXPECT_EQ(ERR_OUT_OF_RANGE, status, "vm_object_set_size too big");
+
+    // map it
+    uintptr_t ptr;
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, len, &ptr,
+                                     MX_VM_FLAG_PERM_READ);
+    EXPECT_EQ(NO_ERROR, status, "vm_map");
+    EXPECT_NONNULL(ptr, "vm_map");
+
+    // resize it with it mapped
+    status = mx_vmo_set_size(vmo, size);
+    EXPECT_EQ(NO_ERROR, status, "vm_object_set_size");
+
+    // unmap it
+    status = mx_process_unmap_vm(mx_process_self(), ptr, 0);
+    EXPECT_EQ(NO_ERROR, status, "unmap");
 
     // close the handle
     status = mx_handle_close(vmo);
