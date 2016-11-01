@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <ddk/io-alloc.h>
+#include <ddk/io-buffer.h>
 #include <ddk/driver.h>
 #include <magenta/syscalls.h>
 #include <limits.h>
@@ -20,9 +21,7 @@
 typedef struct io_block_header io_block_header_t;
 
 struct io_alloc {
-    mx_paddr_t phys;
-    void* virt;
-    size_t size;
+    io_buffer_t buffer;
     intptr_t virt_offset;
     mtx_t mutex;
     io_block_header_t* free_list;
@@ -43,21 +42,16 @@ io_alloc_t* io_alloc_init(size_t size) {
 
     mtx_init(&ioa->mutex, mtx_plain);
 
-    mx_paddr_t phys;
-    void* virt;
-    mx_status_t status = mx_alloc_device_memory(get_root_resource(), size, &phys, &virt);
-    if (status) {
-        printf("mx_alloc_device_memory failed %d\n", status);
+    mx_status_t status = io_buffer_init(&ioa->buffer, size, IO_BUFFER_RW);
+    if (status != NO_ERROR) {
+        printf("io_buffer_init failed %d\n", status);
         free(ioa);
         return NULL;
     }
 
-    ioa->phys = phys;
-    ioa->virt = virt;
-    ioa->size = size;
-    ioa->virt_offset = (uintptr_t)virt - phys;
+    ioa->virt_offset = (uintptr_t)io_buffer_virt(&ioa->buffer) - io_buffer_phys(&ioa->buffer);
 
-    io_block_header_t* free_list = virt;
+    io_block_header_t* free_list = io_buffer_virt(&ioa->buffer);
     free_list->size = size;
     free_list->ptr = NULL;
     ioa->free_list = free_list;
@@ -66,7 +60,7 @@ io_alloc_t* io_alloc_init(size_t size) {
 }
 
 void io_alloc_free(io_alloc_t* ioa) {
-    // FIXME (voydanoff) no way to release memory allocated via mx_alloc_device_memory
+    io_buffer_release(&ioa->buffer);
     free(ioa);
 }
 
@@ -173,7 +167,7 @@ void io_free(io_alloc_t* ioa, void* ptr) {
     if (!ptr)
         return;
 
-    assert(ptr > ioa->virt && ptr < ioa->virt + ioa->size);
+    assert(ptr > io_buffer_virt(&ioa->buffer) && ptr < io_buffer_virt(&ioa->buffer) +ioa->buffer.size);
 
     // block header is immediately before *ptr
     io_block_header_t* header = &((io_block_header_t*)ptr)[-1];
@@ -195,7 +189,7 @@ void io_free(io_alloc_t* ioa, void* ptr) {
 
 mx_paddr_t io_virt_to_phys(io_alloc_t* ioa, mx_vaddr_t virt_addr) {
     mx_paddr_t result = virt_addr - ioa->virt_offset;
-    if (result < ioa->phys || result >= ioa->phys + ioa->size) {
+    if (result <ioa->buffer.phys || result >=ioa->buffer.phys +ioa->buffer.size) {
         printf("ERROR: bad address %p in io_virt_to_phys\n", (void *)virt_addr);
         abort();
     }
@@ -203,7 +197,7 @@ mx_paddr_t io_virt_to_phys(io_alloc_t* ioa, mx_vaddr_t virt_addr) {
 }
 
 mx_vaddr_t io_phys_to_virt(io_alloc_t* ioa, mx_paddr_t phys_addr) {
-    if (phys_addr < ioa->phys || phys_addr >= ioa->phys + ioa->size) {
+    if (phys_addr <ioa->buffer.phys || phys_addr >=ioa->buffer.phys +ioa->buffer.size) {
         printf("ERROR: bad address %p in io_phys_to_virt\n", (void *)phys_addr);
         abort();
     }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/io-buffer.h>
 #include <ddk/iotxn.h>
 #include <ddk/device.h>
 #include <magenta/syscalls.h>
@@ -27,25 +28,15 @@
 typedef struct iotxn_priv iotxn_priv_t;
 
 struct iotxn_priv {
-    // data payload. either data buffer or vmo.
-    mx_size_t data_size;
-    void* data;
-    mx_paddr_t data_phys;
-    mx_size_t vmo_offset;
-    mx_handle_t vmo;
+    // data payload.
+    io_buffer_t buffer;
 
     uint32_t flags;
 
+    // payload size
+    mx_size_t data_size;
     // extra data, at the end of this ioxtn_t structure
     mx_size_t extra_size;
-
-    // total size and physical address of buffer containing this structure, minus the
-    // size of this structure
-    // this field is set on memory allocation and should never be modified afterwards
-    mx_size_t buffer_size;
-    mx_paddr_t buffer_phys;
-
-    // 64-bytes at this point on 64-bit systems
 
     iotxn_t txn; // must be at the end for extra data, only valid if not a clone
 };
@@ -68,23 +59,23 @@ static void iotxn_complete(iotxn_t* txn, mx_status_t status, mx_off_t actual) {
 static void iotxn_copyfrom(iotxn_t* txn, void* data, size_t length, size_t offset) {
     iotxn_priv_t* priv = get_priv(txn);
     size_t count = MIN(length, priv->data_size - offset);
-    memcpy(data, priv->data + offset, count);
+    memcpy(data, io_buffer_virt(&priv->buffer) + offset, count);
 }
 
 static void iotxn_copyto(iotxn_t* txn, const void* data, size_t length, size_t offset) {
     iotxn_priv_t* priv = get_priv(txn);
     size_t count = MIN(length, priv->data_size - offset);
-    memcpy(priv->data + offset, data, count);
+    memcpy(io_buffer_virt(&priv->buffer) + offset, data, count);
 }
 
 static void iotxn_physmap(iotxn_t* txn, mx_paddr_t* addr) {
     iotxn_priv_t* priv = get_priv(txn);
-    *addr = priv->data_phys;
+    *addr = priv->buffer.phys;
 }
 
 static void iotxn_mmap(iotxn_t* txn, void** data) {
     iotxn_priv_t* priv = get_priv(txn);
-    *data = priv->data;
+    *data = io_buffer_virt(&priv->buffer);
 }
 
 static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
@@ -97,7 +88,7 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     mtx_lock(&clone_list_mutex);
     list_for_every_entry (&clone_list, clone, iotxn_t, node) {
         cpriv = get_priv(clone);
-        if (cpriv->buffer_size >= extra_size) {
+        if (cpriv->extra_size >= extra_size) {
             found = true;
             break;
         }
@@ -106,31 +97,25 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     if (found) {
         list_delete(&clone->node);
         cpriv->flags &= ~IOTXN_FLAG_FREE;
-        if (cpriv->buffer_size) memset(cpriv + sizeof(iotxn_priv_t), 0, cpriv->buffer_size);
+        if (cpriv->extra_size) memset(&cpriv[1], 0, cpriv->extra_size);
         mtx_unlock(&clone_list_mutex);
         goto out;
     }
     mtx_unlock(&clone_list_mutex);
 
     // didn't find one that fits, allocate a new one
-    size_t sz = sizeof(iotxn_priv_t) + extra_size;
-    cpriv = calloc(1, sz); // cloned iotxn's don't have to be in contiguous memory
+    cpriv = calloc(1, sizeof(iotxn_priv_t) + extra_size);
     if (!cpriv) {
         xprintf("iotxn: out of memory\n");
         return ERR_NO_MEMORY;
     }
     memset(cpriv, 0, sizeof(iotxn_priv_t));
 
-    // copy properties to the new iotxn
-    cpriv->buffer_size = extra_size;
 out:
     cpriv->flags |= IOTXN_FLAG_CLONE;
     // copy data payload metadata to the clone so the api can just work
+    memcpy(&cpriv->buffer, &priv->buffer, sizeof(priv->buffer));
     cpriv->data_size = priv->data_size;
-    cpriv->data = priv->data;
-    cpriv->data_phys = priv->data_phys;
-    cpriv->vmo_offset = priv->vmo_offset;
-    cpriv->vmo = priv->vmo;
     memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
     cpriv->txn.complete_cb = NULL; // clear the complete cb
     *out = &cpriv->txn;
@@ -178,7 +163,7 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     mtx_lock(&free_list_mutex);
     list_for_every_entry (&free_list, txn, iotxn_t, node) {
         priv = get_priv(txn);
-        if (priv->buffer_size >= data_size + extra_size) {
+        if (priv->buffer.size >= data_size && priv->extra_size >= extra_size) {
             found = true;
             break;
         }
@@ -186,7 +171,8 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     // found one that fits, skip allocation
     if (found) {
         list_delete(&txn->node);
-        memset(txn, 0, sizeof(iotxn_t) + priv->buffer_size);
+        memset(&txn, 0, sizeof(iotxn_t));
+        memset(io_buffer_virt(&priv->buffer), 0, priv->buffer.size);
         priv->flags &= ~IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
         goto out;
@@ -194,26 +180,23 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     mtx_unlock(&free_list_mutex);
 
     // didn't find one that fits, allocate a new one
-    size_t sz = sizeof(iotxn_priv_t) + data_size + extra_size;
-    mx_paddr_t phys;
-    mx_status_t status = mx_alloc_device_memory(get_root_resource(), sz, &phys, (void**)&priv);
-    if (status < 0) {
-        xprintf("iotxn: out of memory\n");
-        return status;
+    priv = calloc(1, sizeof(iotxn_priv_t) + extra_size);
+    if (!priv) return ERR_NO_MEMORY;
+    if (data_size > 0) {
+        mx_status_t status = io_buffer_init(&priv->buffer, data_size, IO_BUFFER_RW);
+        if (status != NO_ERROR) {
+            free(priv);
+            return status;
+        }
     }
-    memset(priv, 0, sz);
 
-    // layout is iotxn_priv_t | extra_size | data
-    priv->buffer_size = data_size + extra_size;
-    priv->buffer_phys = phys;
+    // layout is iotxn_priv_t | extra_size
+    priv->extra_size = extra_size;
 out:
     priv->data_size = data_size;
-    priv->extra_size = extra_size;
-    priv->data = (void*)priv + sizeof(iotxn_priv_t) + extra_size;
-    priv->data_phys = priv->buffer_phys + sizeof(iotxn_priv_t) + extra_size;
     priv->txn.ops = &ops;
     *out = &priv->txn;
-    xprintf("iotxn_alloc: found=%d txn=%p buffer_size=0x%zx\n", found, &priv->txn, priv->buffer_size);
+    xprintf("iotxn_alloc: found=%d txn=%p buffer_size=0x%zx\n", found, &priv->txn, priv->buffer.size);
     return NO_ERROR;
 }
 
