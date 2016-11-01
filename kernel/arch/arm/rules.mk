@@ -20,72 +20,6 @@ KERNEL_DEFINES += \
 
 # do set some options based on the cpu core
 HANDLED_CORE := false
-ifeq ($(ARM_CPU),cortex-m0)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M0=1 \
-	ARM_ISA_ARMV6M=1 \
-	ARM_WITH_THUMB=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
-ifeq ($(ARM_CPU),cortex-m0plus)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M0_PLUS=1 \
-	ARM_ISA_ARMV6M=1 \
-	ARM_WITH_THUMB=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
-ifeq ($(ARM_CPU),cortex-m3)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M3=1 \
-	ARM_ISA_ARMv7=1 \
-	ARM_ISA_ARMv7M=1 \
-	ARM_WITH_THUMB=1 \
-	ARM_WITH_THUMB2=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
-ifeq ($(ARM_CPU),cortex-m4)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M4=1 \
-	ARM_ISA_ARMv7=1 \
-	ARM_ISA_ARMv7M=1 \
-	ARM_WITH_THUMB=1 \
-	ARM_WITH_THUMB2=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
-ifeq ($(ARM_CPU),cortex-m4f)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M4=1 \
-	ARM_CPU_CORTEX_M4F=1 \
-	ARM_ISA_ARMv7=1 \
-	ARM_ISA_ARMv7M=1 \
-	ARM_WITH_THUMB=1 \
-	ARM_WITH_THUMB2=1 \
-	ARM_WITH_VFP=1 \
-	__FPU_PRESENT=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
-ifeq ($(ARM_CPU),cortex-m7)
-KERNEL_DEFINES += \
-	ARM_CPU_CORTEX_M7=1 \
-	ARM_ISA_ARMv7=1 \
-	ARM_ISA_ARMv7M=1 \
-	ARM_WITH_THUMB=1 \
-	ARM_WITH_THUMB2=1 \
-	ARM_WITH_CACHE=1
-HANDLED_CORE := true
-ENABLE_THUMB := true
-SUBARCH := arm-m
-endif
 ifeq ($(ARM_CPU),cortex-a7)
 KERNEL_DEFINES += \
 	ARM_WITH_CP15=1 \
@@ -198,7 +132,6 @@ endif
 KERNEL_INCLUDES += \
 	$(LOCAL_DIR)/$(SUBARCH)/include
 
-ifeq ($(SUBARCH),arm)
 MODULE_SRCS += \
 	$(LOCAL_DIR)/arm/start.S \
 	$(LOCAL_DIR)/arm/arch.c \
@@ -257,29 +190,6 @@ endif
 ifeq (true,$(call TOBOOL,$(WITH_NS_MAPPING)))
 KERNEL_DEFINES += \
     WITH_ARCH_MMU_PICK_SPOT=1
-endif
-
-endif
-ifeq ($(SUBARCH),arm-m)
-MODULE_SRCS += \
-	$(LOCAL_DIR)/arm-m/arch.c \
-	$(LOCAL_DIR)/arm-m/cache.c \
-	$(LOCAL_DIR)/arm-m/exceptions.c \
-	$(LOCAL_DIR)/arm-m/start.c \
-	$(LOCAL_DIR)/arm-m/spin_cycles.c \
-	$(LOCAL_DIR)/arm-m/thread.c \
-	$(LOCAL_DIR)/arm-m/vectab.c
-
-# we're building for small binaries
-KERNEL_DEFINES += \
-	ARM_ONLY_THUMB=1 \
-	ARCH_DEFAULT_STACK_SIZE=1024 \
-	SMP_MAX_CPUS=1
-
-MODULE_DEPS += \
-	arch/arm/arm-m/CMSIS
-
-ARCH_OPTFLAGS := -Os
 endif
 
 MODULE_SRCS += \
