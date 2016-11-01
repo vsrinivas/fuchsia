@@ -66,6 +66,11 @@ config("no_exceptions") {
   cflags_objcc = cflags_cc
 }
 
+config("no_rtti") {
+  cflags_cc = [ "-fno-rtti" ]
+  cflags_objcc = cflags_cc
+}
+
 config("default_include_dirs") {
   include_dirs = [
     "//",

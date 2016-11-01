@@ -37,6 +37,7 @@ _shared_binary_target_configs = [
   "//build/config:default_include_dirs",
   "//build/config:default_warnings",
   "//build/config:no_exceptions",
+  "//build/config:no_rtti",
 ]
 if (is_debug) {
   _shared_binary_target_configs += [ "//build/config:debug" ]
