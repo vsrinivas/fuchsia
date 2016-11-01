@@ -101,7 +101,6 @@ void PaperRenderer::BeginModelRenderPass(const FramebufferPtr& framebuffer,
   info.renderPass = render_pass_;
   info.renderArea.offset.x = 0;
   info.renderArea.offset.y = 0;
-  // TODO: pull these from somewhere
   info.renderArea.extent.width = width;
   info.renderArea.extent.height = height;
   info.clearValueCount = 2;

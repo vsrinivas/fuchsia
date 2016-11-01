@@ -24,6 +24,8 @@ class Image : public impl::Resource {
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
+  bool HasStencilComponent() const;
+
  private:
   vk::Image image_;
   vk::Format format_;

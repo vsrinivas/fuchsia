@@ -18,4 +18,11 @@ Image::Image(vk::Image image,
 
 Image::~Image() {}
 
+bool Image::HasStencilComponent() const {
+  // TODO: are these the only stencil formats?  How do we future-proof this
+  // in case more are added?
+  return format_ == vk::Format::eD32SfloatS8Uint ||
+         format_ == vk::Format::eD24UnormS8Uint;
+}
+
 }  // namespace escher

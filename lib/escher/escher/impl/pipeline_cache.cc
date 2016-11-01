@@ -153,6 +153,13 @@ std::unique_ptr<Pipeline> PipelineCache::NewPipeline(
   input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
   input_assembly_info.primitiveRestartEnable = false;
 
+  vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+  depth_stencil_info.depthTestEnable = true;
+  depth_stencil_info.depthWriteEnable = true;
+  depth_stencil_info.depthCompareOp = vk::CompareOp::eLess;
+  depth_stencil_info.depthBoundsTestEnable = false;
+  depth_stencil_info.stencilTestEnable = false;
+
   // TODO: make viewport a dynamic pipeline property that is updated each frame.
   vk::Viewport viewport;
   viewport.x = 0.0f;
@@ -219,6 +226,7 @@ std::unique_ptr<Pipeline> PipelineCache::NewPipeline(
   pipeline_info.pInputAssemblyState = &input_assembly_info;
   pipeline_info.pViewportState = &viewport_state;
   pipeline_info.pRasterizationState = &rasterizer;
+  pipeline_info.pDepthStencilState = &depth_stencil_info;
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
   pipeline_info.layout = pipeline_layout;

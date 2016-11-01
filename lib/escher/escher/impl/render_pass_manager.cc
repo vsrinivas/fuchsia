@@ -42,7 +42,6 @@ vk::RenderPass RenderPassManager::CreatePaperRendererRenderPass() {
   color_attachment.initialLayout = vk::ImageLayout::eUndefined;
   color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-  // TODO: create and use a depth attachment image.
   depth_attachment.format = ESCHER_CHECKED_VK_RESULT(
       GetSupportedDepthFormat(context_.physical_device));
   depth_attachment.samples = vk::SampleCountFlagBits::e1;
@@ -50,7 +49,8 @@ vk::RenderPass RenderPassManager::CreatePaperRendererRenderPass() {
   depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
   depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
   depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-  depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
+  depth_attachment.initialLayout =
+      vk::ImageLayout::eDepthStencilAttachmentOptimal;
   depth_attachment.finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
 

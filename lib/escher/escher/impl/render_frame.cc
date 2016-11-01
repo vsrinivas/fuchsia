@@ -82,6 +82,9 @@ bool RenderFrame::Retire() {
 
   if (!fence_) {
     // Submission must have failed in EndFrameAndSubmit().
+    // TODO: exiting early here means that we don't clear the
+    // semaphores/resources/etc.
+    FTL_LOG(ERROR) << "returning early without clearing semaphores/resources";
     return true;
   } else {
     // Check if fence has been reached.
@@ -139,7 +142,7 @@ void RenderFrame::AddWaitSemaphore(SemaphorePtr semaphore,
   if (semaphore) {
     // Retain semaphore to ensure that it doesn't prematurely die.
     wait_semaphores_.push_back(semaphore);
-    // Build up list that will be used when frame is submitted.
+    // Build up lists that will be used when frame is submitted.
     wait_semaphores_for_submit_.push_back(semaphore->value());
     wait_semaphore_stages_.push_back(stage);
   }

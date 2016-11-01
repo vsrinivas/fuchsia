@@ -4,6 +4,8 @@
 
 #include "escher/impl/escher_impl.h"
 
+#include "escher/impl/command_buffer_pool.h"
+#include "escher/impl/gpu_allocator.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/naive_gpu_allocator.h"
@@ -16,11 +18,14 @@ namespace impl {
 EscherImpl::EscherImpl(const VulkanContext& context,
                        const VulkanSwapchain& swapchain)
     : vulkan_context_(context),
+      command_buffer_pool_(std::make_unique<CommandBufferPool>(context)),
       render_pass_manager_(std::make_unique<RenderPassManager>(context)),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
       image_cache_(std::make_unique<ImageCache>(context.device,
                                                 context.physical_device,
-                                                gpu_allocator())),
+                                                context.queue,
+                                                gpu_allocator(),
+                                                command_buffer_pool())),
       mesh_manager_(std::make_unique<MeshManager>(context, gpu_allocator())),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
@@ -37,6 +42,10 @@ EscherImpl::~EscherImpl() {
   vulkan_context_.device.waitIdle();
   mesh_manager_.reset();
   gpu_allocator_.reset();
+}
+
+CommandBufferPool* EscherImpl::command_buffer_pool() {
+  return command_buffer_pool_.get();
 }
 
 ImageCache* EscherImpl::image_cache() {

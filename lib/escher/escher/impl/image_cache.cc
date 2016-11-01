@@ -4,6 +4,7 @@
 
 #include "escher/impl/image_cache.h"
 
+#include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
 
@@ -12,10 +13,14 @@ namespace impl {
 
 ImageCache::ImageCache(vk::Device device,
                        vk::PhysicalDevice physical_device,
-                       GpuAllocator* allocator)
+                       vk::Queue queue,
+                       GpuAllocator* allocator,
+                       CommandBufferPool* command_buffer_pool)
     : device_(device),
       physical_device_(physical_device),
-      allocator_(allocator) {}
+      queue_(queue),
+      allocator_(allocator),
+      command_buffer_pool_(command_buffer_pool) {}
 
 ImageCache::~ImageCache() {
   FTL_CHECK(image_count_ == 0);
@@ -48,10 +53,68 @@ ftl::RefPtr<Image> ImageCache::GetDepthImage(vk::Format format,
   info.arrayLayers = 1;
   info.samples = vk::SampleCountFlagBits::e1;
   info.tiling = vk::ImageTiling::eOptimal;
-  info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment |
-               vk::ImageUsageFlagBits::eTransferSrc;
+  info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
   info.initialLayout = vk::ImageLayout::eUndefined;
-  return NewImage(info);
+
+  auto image = NewImage(info);
+  TransitionImageLayout(image, vk::ImageLayout::eUndefined,
+                        vk::ImageLayout::eDepthStencilAttachmentOptimal);
+  return image;
+}
+
+void ImageCache::TransitionImageLayout(const ImagePtr& image,
+                                       vk::ImageLayout old_layout,
+                                       vk::ImageLayout new_layout) {
+  auto command_buffer = command_buffer_pool_->GetCommandBuffer(nullptr);
+
+  vk::ImageMemoryBarrier barrier;
+  barrier.oldLayout = old_layout;
+  barrier.newLayout = new_layout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image->image();
+
+  if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+    if (image->HasStencilComponent()) {
+      barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+    }
+  } else {
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+  }
+
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  if (old_layout == vk::ImageLayout::ePreinitialized &&
+      new_layout == vk::ImageLayout::eTransferSrcOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+  } else if (old_layout == vk::ImageLayout::ePreinitialized &&
+             new_layout == vk::ImageLayout::eTransferDstOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+  } else if (old_layout == vk::ImageLayout::eTransferDstOptimal &&
+             new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+  } else if (old_layout == vk::ImageLayout::eUndefined &&
+             new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+                            vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+  } else {
+    FTL_LOG(ERROR) << "Unsupported layout transition from: "
+                   << to_string(old_layout) << " to: " << to_string(new_layout);
+    FTL_DCHECK(false);
+    return;
+  }
+  command_buffer->get().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                                        vk::PipelineStageFlagBits::eTopOfPipe,
+                                        vk::DependencyFlags(), 0, nullptr, 0,
+                                        nullptr, 1, &barrier);
+  command_buffer->Submit(queue_);
 }
 
 void ImageCache::DestroyImage(vk::Image image, vk::Format format) {

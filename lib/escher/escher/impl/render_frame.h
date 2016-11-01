@@ -56,6 +56,8 @@ class RenderFrame {
 
   void DrawMesh(const MeshPtr& mesh);
 
+  // If semaphore is not null, it will be be added to the vk::SubmitInfo in
+  // EndFrameAndSubmit().
   void AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFlags stage);
 
   uint64_t frame_number() const { return frame_number_; }
