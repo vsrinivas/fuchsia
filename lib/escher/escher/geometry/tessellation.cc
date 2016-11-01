@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <math.h>
 
+#include "escher/impl/model_data.h"
+#include "escher/shape/mesh_builder.h"
+#include "escher/shape/mesh_builder_factory.h"
 #include "ftl/logging.h"
 
 namespace escher {
@@ -25,42 +28,57 @@ void Tessellation::SanityCheck() const {
       [vertex_count](size_t index) { return index < vertex_count; }));
 }
 
-Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
+MeshPtr TessellateCircle(MeshBuilderFactory* factory,
+                         const MeshSpec& spec,
+                         int subdivisions,
+                         vec2 center,
+                         float radius) {
   // Compute the number of vertices in the tessellated circle.
   FTL_DCHECK(subdivisions >= 0);
   size_t circle_vertex_count = 4;
   while (subdivisions-- > 0)
     circle_vertex_count *= 2;
 
-  // Reserve space for the result, and for intermediate computations.
-  Tessellation result;
-  result.positions.reserve(circle_vertex_count);
-  result.indices.reserve(circle_vertex_count * 3 - 6);
-  std::vector<uint16_t> circle_indices;
-  std::vector<uint16_t> half_of_circle_indices;
-  circle_indices.reserve(circle_vertex_count);
-  half_of_circle_indices.reserve(circle_vertex_count / 2);
+  auto builder = factory->NewMeshBuilder(spec, circle_vertex_count,
+                                         circle_vertex_count * 3 - 6);
 
-  // Generate vertex positions, and indices that will be consumed below.
+  {
+    // TODO: Only pos/color vertices are currently supported.
+    MeshSpec supported_spec;
+    supported_spec.flags |= MeshAttributeFlagBits::kPosition;
+    supported_spec.flags |= MeshAttributeFlagBits::kColor;
+    FTL_DCHECK(spec == supported_spec);
+  }
+  impl::ModelData::ColorVertex vertex{vec2(0.0, 0.0), vec3(1.0, 1.0, 1.0)};
+
+  // Generate vertex positions.
   const float radian_step = 2 * M_PI / circle_vertex_count;
   for (size_t i = 0; i < circle_vertex_count; ++i) {
     float radians = i * radian_step;
     float x = sin(radians) * radius + center.x;
     float y = cos(radians) * radius + center.y;
-    result.positions.push_back(vec3(x, y, 0.0f));
-    circle_indices.push_back(i);
+    vertex.position = vec2(x, y);
+    builder->AddVertex(vertex);
   }
 
+  // Generate vertex indices.
   // Tesselate outer edge of circle, working inward.  Every second vertex
   // becomes the outer point of a triangle, and is not made available to the
   // next iteration.  As a result, each successive iteration has half as many
   // indices to process, exactly as if 'subdivisions - 1' had been passed as
   // the argument to this function.
+  std::vector<uint16_t> circle_indices;
+  std::vector<uint16_t> half_of_circle_indices;
+  circle_indices.reserve(circle_vertex_count);
+  half_of_circle_indices.reserve(circle_vertex_count / 2);
+  for (size_t i = 0; i < circle_vertex_count; ++i) {
+    circle_indices.push_back(i);
+  }
   while (circle_indices.size() > 2) {
     for (size_t i = 0; i < circle_indices.size(); i += 2) {
-      result.indices.push_back(circle_indices[i]);
-      result.indices.push_back(circle_indices[(i + 1) % circle_indices.size()]);
-      result.indices.push_back(circle_indices[(i + 2) % circle_indices.size()]);
+      builder->AddIndex(circle_indices[(i + 1) % circle_indices.size()]);
+      builder->AddIndex(circle_indices[i]);
+      builder->AddIndex(circle_indices[(i + 2) % circle_indices.size()]);
 
       // Keep half of the indices (every second one) for the next iteration.
       half_of_circle_indices.push_back(circle_indices[i]);
@@ -69,10 +87,10 @@ Tessellation TessellateCircle(int subdivisions, vec2 center, float radius) {
     half_of_circle_indices.clear();
   }
   FTL_DCHECK(circle_indices.size() == 2);
-  FTL_DCHECK(result.positions.size() == circle_vertex_count);
-  FTL_DCHECK(result.indices.size() == circle_vertex_count * 3 - 6);
 
-  return result;
+  auto mesh = builder->Build();
+  FTL_DCHECK(mesh->num_indices == circle_vertex_count * 3 - 6);
+  return mesh;
 }
 
 }  // namespace escher

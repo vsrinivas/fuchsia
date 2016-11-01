@@ -74,6 +74,7 @@ Buffer MeshManager::GetStagingBuffer(uint32_t size) {
       free_staging_buffers_.erase(it);
       return buf;
     }
+    ++it;
   }
   // Couldn't find a large enough buffer, so create a new one.
   return Buffer(device_, allocator_, size,

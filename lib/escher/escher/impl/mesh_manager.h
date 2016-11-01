@@ -14,6 +14,7 @@
 #include "escher/impl/buffer.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/shape/mesh_builder.h"
+#include "escher/shape/mesh_builder_factory.h"
 #include "escher/vk/vulkan_context.h"
 #include "ftl/memory/ref_ptr.h"
 
@@ -23,14 +24,17 @@ class GpuAllocator;
 
 // Responsible for generating Meshes, tracking their memory use, managing
 // synchronization, etc.
-class MeshManager {
+//
+// Not thread-safe.
+class MeshManager : public MeshBuilderFactory {
  public:
   MeshManager(const VulkanContext& context, GpuAllocator* allocator);
   ~MeshManager();
 
+  // The returned MeshBuilder is not thread-safe.
   MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
                                 size_t max_vertex_count,
-                                size_t max_index_count);
+                                size_t max_index_count) override;
 
   const MeshSpecImpl& GetMeshSpecImpl(MeshSpec spec);
 

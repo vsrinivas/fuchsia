@@ -15,6 +15,7 @@ class Escher;
 class Framebuffer;
 class Image;
 class MeshBuilder;
+class MeshBuilderFactory;
 struct MeshSpec;
 class Material;
 class Mesh;

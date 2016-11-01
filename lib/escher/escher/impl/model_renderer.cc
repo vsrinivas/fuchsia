@@ -4,9 +4,7 @@
 
 #include "escher/impl/model_renderer.h"
 
-// TODO: may not be needed once tessellation is moved out.
-#include "escher/geometry/types.h"
-
+#include "escher/geometry/tessellation.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
@@ -47,24 +45,25 @@ void ModelRenderer::Draw(Stage& stage, Model& model, RenderFrame* frame) {
   // used once the uniforms have been flushed to the GPU.
   FTL_DCHECK(per_object_bindings_.empty());
   {
+    // TODO: read screen width from stage.
+    constexpr float kHalfWidthRecip = 2.f / 1024.f;
+    constexpr float kHalfHeightRecip = 2.f / 1024.f;
+
     ModelData::PerObject per_object;
     auto& scale_x = per_object.transform[0][0];
     auto& scale_y = per_object.transform[1][1];
     auto& translate_x = per_object.transform[3][0];
     auto& translate_y = per_object.transform[3][1];
-    auto& r = per_object.color[0];
-    auto& g = per_object.color[1];
-    auto& b = per_object.color[2];
-    per_object.color[3] = 1.f;  // always opaque
+    auto& translate_z = per_object.transform[3][2];
     for (const Object& o : objects) {
       // Push uniforms for scale/translation and color.
-      scale_x = o.scale;
-      scale_y = o.scale;
-      translate_x = o.x;
-      translate_y = o.y;
-      r = o.red;
-      g = o.green;
-      b = o.blue;
+      scale_x = o.width() * kHalfWidthRecip;
+      scale_y = o.height() * kHalfHeightRecip;
+      translate_x = o.position().x * kHalfWidthRecip - 1.f;
+      translate_y = o.position().y * kHalfHeightRecip - 1.f;
+      translate_z = o.position().z;
+      per_object.color = vec4(o.color(), 1.f);  // always opaque
+
       per_object_bindings_.push_back(writer->WritePerObjectData(per_object));
     }
     writer->Flush(command_buffer);
@@ -129,23 +128,31 @@ MeshPtr ModelRenderer::CreateRectangle() {
   spec.flags |= MeshAttributeFlagBits::kPosition;
   spec.flags |= MeshAttributeFlagBits::kColor;
 
-  ModelData::ColorVertex v0{vec2(-0.5, -0.5), vec3(1.0, 0.0, 0.0)};
-  ModelData::ColorVertex v1{vec2(0.5, 0.5), vec3(0.0, 0.0, 1.0)};
-  ModelData::ColorVertex v2{vec2(-0.5, 0.5), vec3(0.0, 1.0, 0.0)};
+  ModelData::ColorVertex v0{vec2(0.f, 0.f), vec3(1.0, 0.0, 0.0)};
+  ModelData::ColorVertex v1{vec2(1.f, 0.f), vec3(0.0, 0.0, 1.0)};
+  ModelData::ColorVertex v2{vec2(1.f, 1.f), vec3(0.0, 1.0, 0.0)};
+  ModelData::ColorVertex v3{vec2(0.f, 1.f), vec3(0.0, 1.0, 0.0)};
 
-  MeshBuilderPtr builder = mesh_manager_->NewMeshBuilder(spec, 6, 12);
+  MeshBuilderPtr builder = mesh_manager_->NewMeshBuilder(spec, 4, 6);
   return builder->AddVertex(v0)
       .AddVertex(v1)
       .AddVertex(v2)
+      .AddVertex(v3)
       .AddIndex(0)
       .AddIndex(1)
       .AddIndex(2)
+      .AddIndex(0)
+      .AddIndex(2)
+      .AddIndex(3)
       .Build();
 }
 
 MeshPtr ModelRenderer::CreateCircle() {
-  // TODO: create circle, not a rectangle (erm.. triangle).
-  return CreateRectangle();
+  MeshSpec spec;
+  spec.flags |= MeshAttributeFlagBits::kPosition;
+  spec.flags |= MeshAttributeFlagBits::kColor;
+
+  return TessellateCircle(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
 }
 
 }  // namespace impl

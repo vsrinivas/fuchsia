@@ -8,24 +8,14 @@
 
 namespace escher {
 
-Shape::Shape(Type type) : type_(type) {}
+Shape::Shape(Type type) : type_(type) {
+  FTL_DCHECK(type != Type::kMesh);
+}
+
+Shape::Shape(MeshPtr mesh) : type_(Type::kMesh), mesh_(mesh) {
+  FTL_DCHECK(mesh);
+}
 
 Shape::~Shape() {}
-
-Shape Shape::NewRect(const vec2& position, const vec2& size, float z) {
-  Shape shape(Type::kRect);
-  shape.position_ = position;
-  shape.size_ = size;
-  shape.z_ = z;
-  return shape;
-}
-
-Shape Shape::NewCircle(const vec2& center, float radius, float z) {
-  Shape shape(Type::kCircle);
-  shape.position_ = vec2(center.x - radius, center.y - radius);
-  shape.size_ = vec2(radius * 2.0f, radius * 2.0f);
-  shape.z_ = z;
-  return shape;
-}
 
 }  // namespace escher

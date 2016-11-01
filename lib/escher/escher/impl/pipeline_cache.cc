@@ -36,7 +36,9 @@ constexpr char g_vertex_src[] = R"GLSL(
 
   void main() {
       // Halfway between min and max depth.
-      gl_Position = vec4(inPosition, 0.5, 1.0);
+      gl_Position = transform * vec4(inPosition, 0, 1);
+      // Divide by 25 to convert 'Material Stage' depth to range 0-1.
+      gl_Position.z *= 0.04;
       fragColor = inColor;  // deprecated
   }
   )GLSL";

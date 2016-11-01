@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "escher/forward_declarations.h"
 #include "escher/geometry/types.h"
 
 namespace escher {
@@ -32,6 +33,10 @@ struct Tessellation {
 
 // Tessellate a circle.  The coarsest circle (i.e. subdivisions == 0) is a
 // square.
-Tessellation TessellateCircle(int subdivisions, vec2 center, float radius);
+MeshPtr TessellateCircle(MeshBuilderFactory* factory,
+                         const MeshSpec& spec,
+                         int subdivisions,
+                         vec2 center,
+                         float radius);
 
 }  // namespace escher

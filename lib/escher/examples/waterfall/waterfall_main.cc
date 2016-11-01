@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
   escher::GlslangInitializeProcess();
   {
     using escher::vec2;
+    using escher::vec3;
 
     escher::VulkanContext vulkan_context = demo->GetVulkanContext();
 
@@ -61,10 +62,14 @@ int main(int argc, char** argv) {
     uint64_t first_frame_microseconds;
 
     // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
-    escher::Object object(escher::Shape::NewRect(vec2(0, 0), vec2(10, 10), 5),
-                          nullptr);
-    object.red = 1.0;
-    std::vector<escher::Object> objects{object};
+    escher::Object circle(
+        escher::Object::NewCircle(vec2(512.f, 512.f), 256.f, 5.f, nullptr));
+    circle.set_color(vec3(1.f, 0.f, 0.f));
+    escher::Object rectangle(escher::Object::NewRect(
+        vec2(12.f, 400.f), vec2(1000.f, 100.f), 6.f, nullptr));
+    rectangle.set_color(vec3(0.f, 0.f, 1.f));
+
+    std::vector<escher::Object> objects{circle, rectangle};
     escher::Model model(objects);
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {

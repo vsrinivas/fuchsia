@@ -14,4 +14,24 @@ Object::Object(const Shape& shape, const Material* material)
 
 Object::~Object() {}
 
+Object Object::NewRect(const vec2& position,
+                       const vec2& size,
+                       float z,
+                       const Material* material) {
+  Object obj(Shape(Shape::Type::kRect), material);
+  obj.position_ = vec3(position, z);
+  obj.size_ = size;
+  return obj;
+}
+
+Object Object::NewCircle(const vec2& center,
+                         float radius,
+                         float z,
+                         const Material* material) {
+  Object obj(Shape(Shape::Type::kCircle), material);
+  obj.position_ = vec3(center.x - radius, center.y - radius, z);
+  obj.size_ = vec2(radius * 2.f, radius * 2.f);
+  return obj;
+}
+
 }  // namespace escher

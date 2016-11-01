@@ -70,8 +70,6 @@ ModelUniformWriter::ModelUniformWriter(
     std::vector<vk::DescriptorSetLayout> layouts(capacity, per_object_layout);
     info.descriptorSetCount = capacity;
     info.pSetLayouts = layouts.data();
-    FTL_CHECK(capacity == 1);
-    info.pSetLayouts = &per_object_layout;
     per_object_descriptor_sets_ =
         ESCHER_CHECKED_VK_RESULT(device_.allocateDescriptorSets(info));
   }

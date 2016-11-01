@@ -8,12 +8,16 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/status.h"
+#include "escher/shape/mesh_builder_factory.h"
 #include "ftl/macros.h"
 
 namespace escher {
 
 // Escher is the primary class used by clients of the Escher library.
-class Escher {
+//
+// Escher is currently not thread-safe; it (and all objects obtained from it)
+// must be used from a single thread.
+class Escher : public MeshBuilderFactory {
  public:
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that
@@ -21,9 +25,10 @@ class Escher {
   Escher(const VulkanContext& context, const VulkanSwapchain& swapchain);
   ~Escher();
 
+  // Implement MeshBuilderFactory interface.
   MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
                                 size_t max_vertex_count,
-                                size_t max_index_count);
+                                size_t max_index_count) override;
 
   PaperRendererPtr NewPaperRenderer();
 
