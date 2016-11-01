@@ -51,12 +51,12 @@ static ssize_t acpi_battery_read(mx_device_t* dev, void* buf, size_t count, mx_o
 
     acpi_battery_device_t* device = get_acpi_battery_device(dev);
     mtx_lock(&device->lock);
-    ssize_t rc;
+    ssize_t rc = 0;
     if (device->state & ACPI_BATTERY_STATE_CHARGING) {
         rc = snprintf(buf, count, "charging");
     } else if ((device->capacity_remaining == 0xffffffff) || ((device->capacity_full == 0xffffffff) && device->capacity_design == 0xffffffff)) {
         rc = snprintf(buf, count, "error");
-    } else {
+    } else if (device->capacity_full > 0) {
         rc = snprintf(buf, count, "%u%%", device->capacity_remaining * 100 / device->capacity_full);
     }
     if (rc > 0 && (size_t)rc < count) {

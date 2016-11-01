@@ -221,18 +221,18 @@ static void vc_device_reset(vc_device_t* dev) {
     vc_gfx_invalidate_all(dev);
 }
 
-void vc_device_write_status(vc_device_t* dev) {
+#define STATUS_FG 7
+#define STATUS_BG 0
+
+static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) {
     static enum { NORMAL,
                   ESCAPE } state = NORMAL;
-    int fg = 7;
-    int bg = 0;
-    char c, str[512];
-    int idx = 0;
+    int fg = STATUS_FG;
+    int bg = STATUS_BG;
+    char c;
+    int idx = offset;
     int p_num = 0;
-    vc_get_status_line(str, sizeof(str));
-    // TODO clean this up with textcon stuff
-    gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, bg));
-    for (unsigned i = 0; i < MIN(dev->columns, strlen(str)); i++) {
+    for (unsigned i = 0; i < MIN(dev->columns - offset, strlen(str)); i++) {
         c = str[i];
         if (state == NORMAL) {
             if (c == 0x1b) {
@@ -262,6 +262,16 @@ void vc_device_write_status(vc_device_t* dev) {
             }
         }
     }
+}
+
+void vc_device_write_status(vc_device_t* dev) {
+    char str[512];
+    vc_get_status_line(str, sizeof(str));
+    // TODO clean this up with textcon stuff
+    gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, STATUS_BG));
+    write_status_at(dev, str, 0);
+    vc_get_battery_string(str, sizeof(str));
+    write_status_at(dev, str, dev->columns - 5);
     gfx_flush(dev->st_gfx);
 }
 

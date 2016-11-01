@@ -52,6 +52,7 @@ static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
 static unsigned vc_count = 0;
 static vc_device_t* active_vc;
 static unsigned active_vc_index;
+static char battery_string[8];
 static mtx_t vc_lock = MTX_INIT;
 
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
@@ -401,6 +402,12 @@ void vc_get_status_line(char* str, int n) {
         ptr += chars;
         i++;
     }
+    mtx_unlock(&vc_lock);
+}
+
+void vc_get_battery_string(char* str, int n) {
+    mtx_lock(&vc_lock);
+    strncpy(str, battery_string, n);
     mtx_unlock(&vc_lock);
 }
 
@@ -777,6 +784,62 @@ static int vc_log_reader_thread(void* arg) {
     return 0;
 }
 
+static int vc_battery_poll_thread(void* arg) {
+    char str[16];
+    for (;;) {
+        int fd = open("/dev/class/misc/acpi-battery", O_RDONLY);
+        if (fd < 0) {
+            printf("vc: no battery\n");
+            return -1;
+        }
+        ssize_t r = read(fd, str, sizeof(str));
+        close(fd);
+        if (r < 0) {
+            break;
+        }
+        mtx_lock(&vc_lock);
+        if (str[0] == 'c') {
+            snprintf(battery_string, sizeof(battery_string), "chg");
+        } else if (str[0] == 'e') {
+            snprintf(battery_string, sizeof(battery_string), "err");
+        } else {
+            snprintf(battery_string, sizeof(battery_string), "%s", str);
+        }
+        mtx_unlock(&vc_lock);
+        if (active_vc) {
+            vc_device_write_status(active_vc);
+            vc_gfx_invalidate_status(active_vc);
+        }
+        mx_nanosleep(MX_MSEC(1000));
+    }
+    return 0;
+}
+
+static mx_status_t vc_misc_device_added(int dirfd, const char* fn, void* cookie) {
+    printf("vc: misc poll fn=%s\n", fn);
+    if (strcmp("acpi-battery", fn)) {
+        return NO_ERROR;
+    }
+    printf("vc: found battery\n");
+    thrd_t t;
+    int rc = thrd_create_with_name(&t, vc_battery_poll_thread, NULL, "vc-battery-poll");
+    if (rc != thrd_success) {
+        return -1;
+    }
+    thrd_detach(t);
+    return NO_ERROR;
+}
+
+static int vc_misc_poll_thread(void* arg) {
+    int dirfd;
+    if ((dirfd = open("/dev/class/misc", O_DIRECTORY | O_RDONLY)) < 0) {
+        return -1;
+    }
+    mxio_watch_directory(dirfd, vc_misc_device_added, NULL);
+    close(dirfd);
+    return 0;
+}
+
 static mx_protocol_device_t vc_root_proto = {
     .open = vc_root_open,
 };
@@ -837,6 +900,9 @@ static mx_status_t vc_root_bind(mx_driver_t* drv, mx_device_t* dev) {
         thrd_t t;
         thrd_create_with_name(&t, vc_log_reader_thread, dev, "vc-log-reader");
     }
+
+    thrd_t u;
+    thrd_create_with_name(&u, vc_misc_poll_thread, NULL, "vc-misc-poll");
 
     return NO_ERROR;
 fail:
