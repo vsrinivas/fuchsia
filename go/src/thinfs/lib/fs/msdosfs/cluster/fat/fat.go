@@ -187,25 +187,6 @@ func (f *FAT) IsFree(e uint32) bool {
 	return e == 0
 }
 
-// setDirty marks that the volume has been mounted and may be in a modified state.
-func (f *FAT) setDirty(m bool) error {
-	offset := f.dirtyByteOffset()
-	var buf [1]byte
-	_, err := f.device.ReadAt(buf[:], offset)
-	if err != nil {
-		return err
-	}
-	if m {
-		// Setting Dirty
-		buf[0] |= 0x01
-	} else {
-		// Setting Clean
-		buf[0] &^= 0x01
-	}
-	_, err = f.device.WriteAt(buf[:], offset)
-	return err
-}
-
 // SetHardError marks that the volume has encountered a disk I/O error.
 func (f *FAT) SetHardError() error {
 	// Error Bit exists in FAT[1].
@@ -454,7 +435,19 @@ func (f *FAT) isBad(e uint32) bool {
 	}
 }
 
-func (f *FAT) dirtyByteOffset() int64 {
+// setDirty marks that the volume has been mounted and may be in a modified state.
+func (f *FAT) setDirty(m bool) error {
+	if f.br.Type() == bootrecord.FAT12 {
+		return nil
+	} else if err := f.setDirtyLinux(m); err != nil {
+		return err
+	} else if err := f.setDirtyBSD(m); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *FAT) dirtyByteOffsetLinux() int64 {
 	// NOTE: An undocumented 'dirty bit' exists in the bottom bit of either:
 	// 1) Byte 0x41 (FAT32), or
 	// 2) Byte 0x25 (FAT16) of the bootsector.
@@ -464,13 +457,46 @@ func (f *FAT) dirtyByteOffset() int64 {
 	return 0x25
 }
 
+// Linux and BSD use distinct bits to represent that the FAT filesystem is dirty.  To be as
+// conservative as possible, flip both bits to dirty when mounting a filesystem, and flip them both
+// to clean when unmounting.
+func (f *FAT) setDirtyLinux(m bool) error {
+	offset := f.dirtyByteOffsetLinux()
+	var buf [1]byte
+	if _, err := f.device.ReadAt(buf[:], offset); err != nil {
+		return err
+	} else if m { // Setting Dirty
+		buf[0] |= 0x01
+	} else { // Setting Clean
+		buf[0] &^= 0x01
+	}
+	_, err := f.device.WriteAt(buf[:], offset)
+	return err
+}
+
+func (f *FAT) setDirtyBSD(m bool) error {
+	offset := f.br.ClusterLocationFATPrimary(1)
+	v, err := f.getRawEntry(offset)
+	if err != nil {
+		return err
+	} else if m { // Clearing the bit marks the volume as dirty
+		v &^= f.dirtyBit()
+	} else { // Setting the bit marks the volume as clean
+		v |= f.dirtyBit()
+	}
+	return f.setRawEntry(v, offset)
+}
+
 // isDirty returns true if the volume is dirty (i.e., it was not dismounted properly).
 func (f *FAT) isDirty() bool {
 	if f.br.Type() == bootrecord.FAT12 {
 		return false
 	}
+	return f.isDirtyLinux() || f.isDirtyBSD()
+}
 
-	offset := f.dirtyByteOffset()
+func (f *FAT) isDirtyLinux() bool {
+	offset := f.dirtyByteOffsetLinux()
 	var buf [1]byte
 	_, err := f.device.ReadAt(buf[:], offset)
 	if err != nil {
@@ -478,6 +504,17 @@ func (f *FAT) isDirty() bool {
 		return true
 	}
 	return (buf[0] & 0x01) != 0
+}
+
+func (f *FAT) isDirtyBSD() bool {
+	// Dirty Bit exists in FAT[1]
+	offset := f.br.ClusterLocationFATPrimary(1)
+	v, err := f.getRawEntry(offset)
+	if err != nil {
+		// If we can't identify the dirty bit, assume the volume is dirty.
+		return true
+	}
+	return (v & f.dirtyBit()) == 0
 }
 
 // isHardError returns true if a disk I/O error occurred the last time the volume was mounted.
