@@ -374,9 +374,9 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of size 2 */,
-                                 uint32_t flags) {
-    LTRACEF("entry out_handles[] %p\n", out_handles.get());
+mx_status_t sys_eventpair_create(uint32_t flags,
+                                 user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
+    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
 
     if (flags != 0u)  // No flags defined/supported yet.
         return ERR_NOT_SUPPORTED;
@@ -396,9 +396,10 @@ mx_status_t sys_eventpair_create(user_ptr<mx_handle_t> out_handles /* array of s
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv[2] = {up->MapHandleToValue(h0.get()), up->MapHandleToValue(h1.get())};
+    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
 
-    if (out_handles.copy_array_to_user(hv, 2) != NO_ERROR)
+    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));

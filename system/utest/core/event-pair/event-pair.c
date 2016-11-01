@@ -19,7 +19,7 @@ static bool create_test(void) {
 
     {
         mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-        ASSERT_EQ(mx_eventpair_create(h, 0u), NO_ERROR, "eventpair_create failed");
+        ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), NO_ERROR, "eventpair_create failed");
         ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
         ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
 
@@ -46,7 +46,7 @@ static bool create_test(void) {
     // Currently no flags are supported.
     {
         mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-        EXPECT_EQ(mx_eventpair_create(h, 1u), ERR_NOT_SUPPORTED, "eventpair_create failed to fail");
+        EXPECT_EQ(mx_eventpair_create(1u, &h[0], &h[1]), ERR_NOT_SUPPORTED, "eventpair_create failed to fail");
         EXPECT_EQ(h[0], MX_HANDLE_INVALID, "valid handle from failed eventpair_create?");
         EXPECT_EQ(h[1], MX_HANDLE_INVALID, "valid handle from failed eventpair_create?");
     }
@@ -58,7 +58,7 @@ static bool signal_test(void) {
     BEGIN_TEST;
 
     mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    ASSERT_EQ(mx_eventpair_create(h, 0u), NO_ERROR, "eventpair_create failed");
+    ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), NO_ERROR, "eventpair_create failed");
     ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
     ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
 

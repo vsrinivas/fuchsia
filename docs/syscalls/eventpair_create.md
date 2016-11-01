@@ -9,7 +9,7 @@ eventpair_create - create an event pair
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_eventpair_create(mx_handle_t handles[2], uint32_t flags);
+mx_status_t mx_eventpair_create(uint32_t flags, mx_handle_t* out0, mx_handle_t* out1);
 ```
 
 ## DESCRIPTION
@@ -36,7 +36,7 @@ error code is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *handles* is an invalid pointer or NULL.
+**ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL.
 
 **ERR_NOT_SUPPORTED**  *flags* has an unsupported flag set (i.e., is not 0).
 

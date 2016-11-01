@@ -202,7 +202,7 @@ syscall event_create
     returns (mx_status_t);
 
 syscall eventpair_create
-    (out_handles: mx_handle_t[2] OUT, flags: uint32_t)
+    (uint32_t options, out0: mx_handle_t[1] OUT, out1: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 syscall futex_wait

@@ -10,10 +10,11 @@ namespace mx {
 
 mx_status_t eventpair::create(uint32_t flags, eventpair* endpoint0,
                               eventpair* endpoint1) {
-    mx_handle_t h[2];
-    mx_status_t result = mx_eventpair_create(h, flags);
-    endpoint0->reset(h[0]);
-    endpoint1->reset(h[1]);
+    mx_handle_t h0 = MX_HANDLE_INVALID;
+    mx_handle_t h1 = MX_HANDLE_INVALID;
+    mx_status_t result = mx_eventpair_create(flags, &h0, &h1);
+    endpoint0->reset(h0);
+    endpoint1->reset(h1);
     return result;
 }
 
