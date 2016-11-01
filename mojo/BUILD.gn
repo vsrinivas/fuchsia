@@ -24,3 +24,13 @@ source_set("single_service_view_app") {
     "//mojo/public/cpp/bindings",
   ]
 }
+
+source_set("array_to_string") {
+  sources = [
+    "array_to_string.h",
+  ]
+
+  deps = [
+    "//mojo/public/cpp/bindings",
+  ]
+}

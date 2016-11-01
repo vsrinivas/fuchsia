@@ -41,15 +41,15 @@ class DummyDeviceShellImpl : public DeviceShell {
       InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : binding_(this, std::move(device_shell_request)),
         view_owner_request_(std::move(view_owner_request)) {}
-  ~DummyDeviceShellImpl() override{};
 
+  ~DummyDeviceShellImpl() override = default;
+
+ private:
   void SetDeviceRunner(InterfaceHandle<DeviceRunner> device_runner) override {
-    device_runner_ =
-        InterfacePtr<DeviceRunner>::Create(std::move(device_runner));
+    device_runner_.Bind(std::move(device_runner));
     device_runner_->Login(kDummyUserName, std::move(view_owner_request_));
   }
 
- private:
   StrongBinding<DeviceShell> binding_;
   InterfacePtr<DeviceRunner> device_runner_;
   InterfaceRequest<mozart::ViewOwner> view_owner_request_;

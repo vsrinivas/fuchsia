@@ -178,7 +178,7 @@ void LinkImpl::Dup(InterfaceRequest<Link> dup) {
 void LinkImpl::RemoveImpl() {
   auto it = std::remove_if(
       shared_->impls.begin(), shared_->impls.end(),
-      [this](const std::unique_ptr<LinkImpl>& p) { return (p.get() == this); });
+      [this](const std::unique_ptr<LinkImpl>& p) { return p.get() == this; });
   FTL_DCHECK(it != shared_->impls.end());
   shared_->impls.erase(it, shared_->impls.end());
 }

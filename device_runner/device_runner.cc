@@ -42,14 +42,15 @@ Array<uint8_t> UserIdentityArray(const std::string& username) {
 
 class DeviceRunnerImpl : public DeviceRunner {
  public:
-  DeviceRunnerImpl(Shell* shell, InterfaceHandle<DeviceRunner>* service)
-      : shell_(shell), binding_(this, service) {}
-  ~DeviceRunnerImpl() override {}
+  DeviceRunnerImpl(Shell* const shell, InterfaceRequest<DeviceRunner> service)
+      : shell_(shell), binding_(this, std::move(service)) {}
+
+  ~DeviceRunnerImpl() override = default;
 
  private:
   void Login(const String& username,
              InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
-    FTL_DLOG(INFO) << "Received username: " << username;
+    FTL_LOG(INFO) << "DeviceRunnerImpl::Login() " << username;
 
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
@@ -63,12 +64,14 @@ class DeviceRunnerImpl : public DeviceRunner {
     // TODO(jimbe): When there's support from the Ledger, open the user here,
     // then pass down a handle that is restricted from opening other users.
     identity->app_id = Array<uint8_t>::New(1);
+
     story_manager_->Launch(
-        std::move(identity), std::move(view_owner_request),
-        [](bool success) { FTL_DLOG(INFO) << "story-manager launched."; });
+        std::move(identity), std::move(view_owner_request), [](bool success) {
+          FTL_LOG(INFO) << "DeviceRunnerImpl::Login() StoryManager.Launch()";
+        });
   }
 
-  Shell* shell_;
+  Shell* const shell_;
   StrongBinding<DeviceRunner> binding_;
 
   // Interface pointer to the |StoryManager| handle exposed by the Story
@@ -81,40 +84,45 @@ class DeviceRunnerImpl : public DeviceRunner {
 
 class DeviceRunnerApp : public ApplicationImplBase {
  public:
-  DeviceRunnerApp() {}
-  ~DeviceRunnerApp() override {}
+  DeviceRunnerApp() = default;
+
+  ~DeviceRunnerApp() override = default;
 
  private:
   void OnInitialize() override {
-    FTL_DLOG(INFO) << "Starting device shell.";
+    FTL_LOG(INFO) << "DeviceRunnerApp::OnInitialize()";
+
     ConnectToService(shell(), "mojo:launcher", GetProxy(&mozart_launcher_));
+
     InterfacePtr<mozart::ViewProvider> view_provider;
-    InterfacePtr<ServiceProvider> service_provider;
     ConnectToService(shell(), "mojo:dummy_device_shell",
                      GetProxy(&view_provider));
+
     InterfaceHandle<mozart::ViewOwner> root_view;
+
+    InterfacePtr<ServiceProvider> device_shell_provider;
     view_provider->CreateView(GetProxy(&root_view),
-                              GetProxy(&service_provider));
+                              GetProxy(&device_shell_provider));
+
     mozart_launcher_->Display(std::move(root_view));
 
-    // Use this service provider to get |DeviceShell| interface.
-    service_provider->ConnectToService(
+    device_shell_provider->ConnectToService(
         DeviceShell::Name_, GetProxy(&device_shell_).PassMessagePipe());
-    InterfaceHandle<DeviceRunner> service;
-    new DeviceRunnerImpl(shell(), &service);
-    device_shell_->SetDeviceRunner(std::move(service));
+
+    InterfaceHandle<DeviceRunner> device_runner_handle;
+    new DeviceRunnerImpl(shell(), GetProxy(&device_runner_handle));
+    device_shell_->SetDeviceRunner(std::move(device_runner_handle));
   }
 
   InterfacePtr<DeviceShell> device_shell_;
-
   InterfacePtr<mozart::Launcher> mozart_launcher_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
 }  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
+  FTL_LOG(INFO) << "device runner main";
   modular::DeviceRunnerApp app;
   return mojo::RunApplication(application_request, &app);
 }

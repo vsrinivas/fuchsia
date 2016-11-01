@@ -84,8 +84,10 @@ class StoryManagerImpl : public StoryManager {
       : binding_(this, std::move(story_manager_request)) {
     app_connector_.Bind(std::move(app_connector));
   }
-  ~StoryManagerImpl() override {}
 
+  ~StoryManagerImpl() override = default;
+
+ private:
   // |StoryManager|:
   void Launch(StructPtr<ledger::Identity> identity,
               InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -104,8 +106,9 @@ class StoryManagerImpl : public StoryManager {
           ledger = std::move(ledger)
         ](ledger::Status status) mutable {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "story-manager's connection to ledger failed: "
-                           << LedgerStatusToString(status) << ".";
+            FTL_LOG(ERROR) << "StoryManagerImpl::Launch():"
+                           << " LedgerFactory.GetLedger() failed:"
+                           << " " << LedgerStatusToString(status) << ".";
             callback.Run(false);
             return;
           }
@@ -115,7 +118,6 @@ class StoryManagerImpl : public StoryManager {
         }));
   }
 
- private:
   // Run the User shell and provide it the |StoryProvider| interface.
   void StartUserShell(InterfaceHandle<ledger::Ledger> ledger,
                       InterfaceRequest<mozart::ViewOwner> view_owner_request) {
@@ -138,6 +140,7 @@ class StoryManagerImpl : public StoryManager {
     InterfaceHandle<StoryProvider> story_provider;
     new StoryProviderImpl(DuplicateApplicationConnector(app_connector_.get()),
                           std::move(ledger), GetProxy(&story_provider));
+
     user_shell_->SetStoryProvider(std::move(story_provider));
   }
 

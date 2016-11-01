@@ -13,7 +13,6 @@ mojom("story") {
   ]
 
   deps = [
-    "//apps/ledger/api",
     "//apps/mozart/services/views/interfaces",
   ]
 }

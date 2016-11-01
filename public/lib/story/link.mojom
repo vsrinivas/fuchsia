@@ -79,7 +79,7 @@ interface Link {
   // Obtains another handle for the same Link instance. Can be used to
   // keep a reference to a Link instance and pass it as an argument to
   // another service.
-  Dup(Link & dup);
+  Dup(Link& dup);
 };
 
 // This interface is meant to be implemented by a client of Link.

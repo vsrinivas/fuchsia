@@ -8,55 +8,105 @@
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/macros.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/connection_context.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 
 namespace modular {
 
-// A common base class for applications that implement the
-// |mozart::ViewProvider| service and then provide a *single* service via
-// |mozart::ViewProvider::CreateView|.
-// This is not a clean pattern.
-// TODO(alhaad): Bug jeffbrown@ and abarth@ about it.
 template <class Service, class ServiceImpl>
-class SingleServiceViewApp : public mojo::ApplicationImplBase,
-                             public mozart::ViewProvider {
+class ServiceProviderImpl : public mojo::ServiceProvider {
  public:
-  SingleServiceViewApp() {}
-  ~SingleServiceViewApp() override {}
+  ServiceProviderImpl(
+      mojo::Shell* const shell,
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      mojo::InterfaceRequest<mojo::ServiceProvider> service_provider_request)
+      : shell_(shell),
+        binding_(this, std::move(service_provider_request)),
+        view_owner_request_(std::move(view_owner_request)) {}
+
+  ~ServiceProviderImpl() override = default;
 
  private:
-  // |mojo::ApplicationImplBase| override.
+  // TODO/HACK(mesch): After calling CreateView() with a view owner
+  // request, the ConnectToService() can be called at most once,
+  // because it uses up the view owner request. So the whole
+  // ServiceProvider instance should be used exactly once, and a new
+  // one created for the next request. This is what story runner does,
+  // but the question remains why we have two separate calls on two
+  // separate service instances to pass two parameters for the *same*
+  // constructor invocation.
+  //
+  // Presumably, if ConnectToService() is called multiple times, it
+  // should always connect to the same service instance, but we
+  // neither need nor support this right now.
+  void ConnectToService(const mojo::String& service_name,
+                        mojo::ScopedMessagePipeHandle client_handle) override {
+    if (service_name == Service::Name_) {
+      new ServiceImpl(mojo::CreateApplicationConnector(shell_),
+                      mojo::InterfaceRequest<Service>(std::move(client_handle)),
+                      std::move(view_owner_request_));
+    }
+  }
+
+  mojo::Shell* const shell_;
+  mojo::StrongBinding<mojo::ServiceProvider> binding_;
+  mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
+};
+
+template <class Service, class ServiceImpl>
+class ViewProviderImpl : public mozart::ViewProvider {
+ public:
+  ViewProviderImpl(mojo::Shell* const shell,
+                   mojo::InterfaceRequest<mozart::ViewProvider> request)
+      : shell_(shell), binding_(this, std::move(request)) {}
+
+  ~ViewProviderImpl() override = default;
+
+ private:
+  void CreateView(mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  mojo::InterfaceRequest<mojo::ServiceProvider>
+                      service_provider_request) override {
+    new ServiceProviderImpl<Service, ServiceImpl>(
+        shell_, std::move(view_owner_request),
+        std::move(service_provider_request));
+  }
+
+  mojo::Shell* const shell_;
+  mojo::StrongBinding<mozart::ViewProvider> binding_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderImpl);
+};
+
+// A common implementation for applications that implement the
+// |mozart::ViewProvider| service and provide (possibly multiple
+// instances of) a *single* service via
+// |mozart::ViewProvider::CreateView|. The ServiceImpl instance is
+// owned by its clients and is expected to delete itself eventually
+// according to its service contract.
+template <class Service, class ServiceImpl>
+class SingleServiceViewApp : public mojo::ApplicationImplBase {
+ public:
+  SingleServiceViewApp() = default;
+
+  ~SingleServiceViewApp() override = default;
+
+ private:
   bool OnAcceptConnection(mojo::ServiceProviderImpl* const s) override {
-    s->AddService<mozart::ViewProvider>(
-        [this](const mojo::ConnectionContext& ctx,
-               mojo::InterfaceRequest<mozart::ViewProvider> request) {
-          bindings_.AddBinding(this, std::move(request));
-        });
+    s->AddService<mozart::ViewProvider>([this](
+        const mojo::ConnectionContext& ctx,
+        mojo::InterfaceRequest<mozart::ViewProvider> request) {
+      new ViewProviderImpl<Service, ServiceImpl>(shell(), std::move(request));
+    });
     return true;
   }
 
-  // |mozart::ViewProvider| override.
-  void CreateView(
-      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
-    service_provider_impl_.Bind(mojo::ConnectionContext(), std::move(services));
-    service_provider_impl_.AddService<Service>(ftl::MakeCopyable([
-      this, view_owner_request = std::move(view_owner_request)
-    ](const mojo::ConnectionContext& ctx,
-      mojo::InterfaceRequest<Service> service_request) mutable {
-      new ServiceImpl(mojo::CreateApplicationConnector(shell()),
-                      std::move(service_request),
-                      std::move(view_owner_request));
-    }));
-  }
-
-  mojo::BindingSet<mozart::ViewProvider> bindings_;
-  mojo::ServiceProviderImpl service_provider_impl_;
   FTL_DISALLOW_COPY_AND_ASSIGN(SingleServiceViewApp);
 };
 

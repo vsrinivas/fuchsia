@@ -93,9 +93,18 @@ interface Session {
   Done();
 };
 
-
 // Internal state of the session, used for storage in Ledger.
+// immediate motivation to use this service is that Ledger crashes
+// <https://fuchsia.atlassian.net/browse/LE-46>, so we use an
+// implementation of this service that does not write to ledger to
+// experiment with session persistence. The abstraction might be
+// useful anyway, but is certain to change as persistence evolves.
 // TODO(mesch/jimbe): Use document store instead of ledger?
+interface SessionStorage {
+  ReadSessionData() => (SessionData? data);
+  WriteSessionData(SessionData data);
+};
+
 struct SessionData {
   map<string, LinkData> links;
 };

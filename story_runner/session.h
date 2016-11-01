@@ -17,7 +17,6 @@
 
 #include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
-#include "apps/ledger/api/ledger.mojom.h"
 #include "apps/modular/services/story/resolver.mojom.h"
 #include "apps/modular/services/story/session.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
@@ -109,8 +108,8 @@ class SessionImpl {
  public:
   SessionImpl(mojo::Shell* shell,
               mojo::InterfaceHandle<Resolver> resolver,
-              mojo::InterfaceHandle<ledger::Page> session_page,
-              mojo::InterfaceRequest<Session> req);
+              mojo::InterfaceHandle<SessionStorage> session_storage,
+              mojo::InterfaceRequest<Session> session_request);
   ~SessionImpl();
 
   // These methods are called by SessionHost.
@@ -135,7 +134,7 @@ class SessionImpl {
 // until all Links are closed when the session shuts down.
 class SessionPage {
  public:
-  SessionPage(mojo::InterfaceHandle<ledger::Page> session_page);
+  SessionPage(mojo::InterfaceHandle<SessionStorage> session_storage);
   ~SessionPage();
 
   void Init(std::function<void()> done);
@@ -145,9 +144,9 @@ class SessionPage {
   void WriteLink(const mojo::String& name, const MojoDocMap& data);
 
  private:
-  mojo::InterfacePtr<ledger::Page> session_page_;
-  mojo::InterfacePtr<ledger::PageSnapshot> session_page_snapshot_;
+  mojo::InterfacePtr<SessionStorage> session_storage_;
   mojo::StructPtr<SessionData> data_;
+  mojo::Array<uint8_t> id_;  // logging only
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(SessionPage);
 };

@@ -7,21 +7,25 @@ module modular;
 import "apps/ledger/api/ledger.mojom";
 import "apps/mozart/services/views/interfaces/view_token.mojom";
 
-// Intended for use by Device Runner to launch a new Story Manager per user.
+// For use by Device Runner to launch a new Story Manager per user.
 [ServiceName="modular.StoryManager"]
 interface StoryManager {
-  // Used to launch story-manager for a particular user, identified by
-  // |user_id|. Returns false if there is a problem with |user_id| or |Launch|
-  // has already been called. If successful, returns the view associated with
-  // this story manager.
+  // Launches a story manager instance for a user identified by
+  // |user_id|. Returns false if there is a problem with |user_id| or
+  // |Launch| has already been called. If successful, connects to the
+  // view associated with this story manager instance.
   Launch(ledger.Identity user_id, mozart.ViewOwner& view_owner) =>
       (bool success);
 };
 
+// Information about a story as provided by Story.GetInfo().
 struct StoryInfo {
   // URL of the first mojo application run as a part of this story. Typically
   // this will be the URL of the recipe.
   string url;
+
+  // The ID of the Story, under which it's kept in the root page.
+  string id;
 
   // Whether this story is running on this device.
   bool is_running;
@@ -32,31 +36,64 @@ struct StoryInfo {
 };
 
 // Intended for use by SysUi to interact with a single story.
+// TODO(mesch): This could be StoryController, and then Session could
+// be Story.
 interface Story {
   GetInfo() => (StoryInfo info);
 
   // Runs this |Story| if not running, else does nothing. |view_owner| is an
   // interface request for the root view of this story.
-  //
-  // TODO(alhaad): Also register a watcher here to push updates regarding this
-  // story.
   Start(mozart.ViewOwner& view_owner);
 
-  // Stops this |Story| if it is running - committing all story data to Ledger,
-  // else does nothing.
+  // Stops this |Story| if it is running, else does nothing.
   Stop();
+
+  // Registers a listener for changes of the story state.
+  Watch(StoryWatcher watcher);
 };
 
-// Intended for use by SysUi to create a new story by URL or to get a list of
-// previously run stories which can be resumed.
-// If |StoryProvider| is closed, all associated |Story| objects will have an
-// undefined behavior.
+// To be implemented by clients of Story to be notified of changes of
+// Story. NOTE(mesch): TBD what we really want. It's just a skeleton
+// right now. Conceivably there could be just one method with an
+// updated StoryInfo value as its argument, or each method could have
+// such an argument.
+interface StoryWatcher {
+  // Story starts.
+  OnStart();
+
+  // Data is written to the root link.
+  OnData();
+
+  // Story stopped after Story.Stop() was called.
+  OnStop();
+
+  // Story stopped by root module calling Done().
+  OnDone();
+};
+
+// For use by SysUi to create a new story by URL and to get a list of
+// previously run stories which can be resumed. If |StoryProvider| is
+// closed, all associated |Story| objects will have an undefined
+// behavior. TODO(mesch): Actually they will crash because the story
+// manager impl gets deleted and the story impl still accesses it.
+// Apply same pattern as for Session/Module/Link here.
 interface StoryProvider {
   // Creates a new story by running the module at |url|.
   CreateStory(string url, Story& story);
 
-  // Returns interfaces to all the previously run stories for the user.
-  // HACK(alhaad): Return only one of the previous stories until
-  // https://github.com/domokit/mojo/issues/818 is fixed.
-  PreviousStories() => (/*array<Story>*/Story? stories);
+  // Obtains a controller for a previously run story identified by its
+  // story ID. Obtaining the controller doesn't run it yet.
+  ResumeStoryById(string story_id, Story& story);
+
+  // Obtains a controller for a previously run story identified by its
+  // story info. Obtaining the controller doesn't run it yet.
+  //
+  // NOTE(mesch): This is a workaround for
+  // <https://fuchsia.atlassian.net/projects/LE/issues/LE-54>.
+  ResumeStoryByInfo(StoryInfo story_info, Story& story);
+
+  // Returns IDs of all previously run stories for the user. More
+  // information about the stories can be retrieved using
+  // ResumeStoryById().
+  PreviousStories() => (array<string> story_ids);
 };

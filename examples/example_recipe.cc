@@ -105,28 +105,6 @@ class LinkConnection : public LinkChanged {
   MOJO_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
-// Implementation of the LinkChanged service that just reports every
-// document changed in the given Link.
-class LinkMonitor : public LinkChanged {
- public:
-  LinkMonitor(const std::string tag, InterfacePtr<Link>& link)
-      : binding_(this), tag_(tag) {
-    InterfaceHandle<LinkChanged> watcher;
-    binding_.Bind(GetProxy(&watcher));
-    link->WatchAll(std::move(watcher));
-  }
-
-  void Notify(MojoDocMap docs) override {
-    FTL_LOG(INFO) << "LinkMonitor::Notify()";
-  }
-
- private:
-  Binding<LinkChanged> binding_;
-  const std::string tag_;
-
-  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkMonitor);
-};
-
 class ModuleMonitor : public ModuleWatcher {
  public:
   ModuleMonitor(InterfacePtr<ModuleController>& module_client,
@@ -166,16 +144,12 @@ class RecipeImpl : public Module, public mozart::BaseView {
         module_binding_(this, std::move(module_request)) {
     FTL_LOG(INFO) << "RecipeImpl";
   }
+
   ~RecipeImpl() override { FTL_LOG(INFO) << "~RecipeImpl"; }
 
   void Initialize(InterfaceHandle<Session> session,
                   InterfaceHandle<Link> link) override {
     FTL_LOG(INFO) << "RecipeImpl::Initialize()";
-
-    // TODO(mesch): Good illustration of the remaining issue to
-    // restart a session: How does this code look like when the
-    // Session is not new, but already contains existing Modules and
-    // Links from the previous execution that is continued here?
 
     session_.Bind(std::move(session));
     link_.Bind(std::move(link));
@@ -207,24 +181,38 @@ class RecipeImpl : public Module, public mozart::BaseView {
     views_.emplace(
         std::make_pair(1, std::unique_ptr<ViewData>(new ViewData(1))));
 
-    monitors_.emplace_back(new LinkMonitor("module1", module1_link_));
-    monitors_.emplace_back(new LinkMonitor("module2", module2_link_));
-
     connections_.emplace_back(new LinkConnection(module1_link_, module2_link_));
     connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
+
+    // Also connect with the root link, to create change notifications
+    // the user shell can react on.
+    connections_.emplace_back(new LinkConnection(module1_link_, link_));
+    connections_.emplace_back(new LinkConnection(module2_link_, link_));
 
     module_monitors_.emplace_back(new ModuleMonitor(module1_, session_));
     module_monitors_.emplace_back(new ModuleMonitor(module2_, session_));
 
-    // This must come last, otherwise we get a notification of our own
-    // write because of the "send initial values" code.
-    MojoDocMap docs;
-    DocumentEditor(kDocId)
-        .SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue))
-        .SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1))
-        .SetProperty(kSenderLabel, DocumentEditor::NewStringValue("RecipeImpl"))
-        .Insert(&docs);
-    module1_link_->SetAllDocuments(std::move(docs));
+    // TODO(mesch): Good illustration of the remaining issue to
+    // restart a session: Here is how does this code look like when
+    // the Session is not new, but already contains existing Modules
+    // and Links from the previous execution that is continued here.
+    // Is that really enough?
+    module1_link_->Query(
+        [this](mojo::Map<mojo::String, document_store::DocumentPtr> value) {
+          if (value.size() == 0) {
+            // This must come last, otherwise LinkConnection gets a
+            // notification of our own write because of the "send
+            // initial values" code.
+            MojoDocMap docs;
+            DocumentEditor(kDocId)
+                .SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue))
+                .SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1))
+                .SetProperty(kSenderLabel,
+                             DocumentEditor::NewStringValue("RecipeImpl"))
+                .Insert(&docs);
+            module1_link_->SetAllDocuments(std::move(docs));
+          }
+        });
   }
 
  private:
@@ -376,7 +364,6 @@ class RecipeImpl : public Module, public mozart::BaseView {
   InterfacePtr<Link> module2_link_;
 
   std::vector<std::unique_ptr<LinkConnection>> connections_;
-  std::vector<std::unique_ptr<LinkMonitor>> monitors_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;

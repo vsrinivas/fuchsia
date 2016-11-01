@@ -11,16 +11,20 @@ group("all") {
 
 executable("story_manager") {
   sources = [
+    "session_storage_impl.h",
+    "story_impl.cc",
+    "story_impl.h",
     "story_manager.cc",
     "story_provider_impl.cc",
     "story_provider_impl.h",
-    "story_impl.cc",
-    "story_impl.h",
+    "transaction.cc",
+    "transaction.h",
   ]
 
   deps = [
-    "//apps/ledger/api",
     "//apps/document_store/interfaces",
+    "//apps/ledger/api",
+    "//apps/modular/mojo:array_to_string",
     "//apps/modular/mojo:single_service_application",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
@@ -41,14 +45,17 @@ executable("dummy_user_shell") {
   ]
 
   deps = [
+    "//apps/modular/mojo:array_to_string",
     "//apps/modular/mojo:single_service_view_app",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
+    "//lib/mtl/tasks",
     "//mojo/public/c:system",
     "//mojo/public/cpp/application:standalone",
     "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/utility:utility",
     "//mojo/system",
   ]
 }

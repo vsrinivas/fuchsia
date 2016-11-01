@@ -4,7 +4,6 @@
 
 module modular;
 
-import "apps/ledger/api/ledger.mojom";
 import "apps/modular/services/story/session.mojom";
 import "apps/modular/services/story/resolver.mojom";
 
@@ -15,5 +14,5 @@ import "apps/modular/services/story/resolver.mojom";
 [ServiceName="modular.StoryRunner"]  // Created by story-runner app.
 interface StoryRunner {
   Initialize(ResolverFactory resolver_factory);
-  StartStory(ledger.Page session_page, Session& session);
+  StartStory(SessionStorage session_storage, Session& session);
 };

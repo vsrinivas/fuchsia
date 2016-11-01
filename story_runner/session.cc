@@ -5,10 +5,11 @@
 #include "apps/modular/story_runner/session.h"
 
 #include "apps/document_store/interfaces/document.mojom.h"
-#include "apps/modular/story_runner/link.h"
+#include "apps/modular/mojo/array_to_string.h"
 #include "apps/modular/services/story/link.mojom.h"
 #include "apps/modular/services/story/resolver.mojom.h"
 #include "apps/modular/services/story/session.mojom.h"
+#include "apps/modular/story_runner/link.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -78,7 +79,7 @@ SessionHost::SessionHost(
 }
 
 SessionHost::~SessionHost() {
-  FTL_LOG(INFO) << "~SessionHost() " << this;
+  FTL_LOG(INFO) << "~SessionHost() " << this << (primary_ ? " primary" : "");
 
   if (module_controller_) {
     FTL_LOG(INFO) << "~SessionHost() delete module_controller "
@@ -134,14 +135,13 @@ void SessionHost::Remove(ModuleControllerImpl* const module_controller) {
 
 SessionImpl::SessionImpl(mojo::Shell* const shell,
                          mojo::InterfaceHandle<Resolver> resolver,
-                         mojo::InterfaceHandle<ledger::Page> session_page,
+                         mojo::InterfaceHandle<SessionStorage> session_storage,
                          mojo::InterfaceRequest<Session> req)
-    : shell_(shell), page_(new SessionPage(std::move(session_page))) {
-
+    : shell_(shell), page_(new SessionPage(std::move(session_storage))) {
   FTL_LOG(INFO) << "SessionImpl()";
   resolver_.Bind(std::move(resolver));
 
-  page_->Init(ftl::MakeCopyable([this, req = std::move(req)]() mutable {
+  page_->Init(ftl::MakeCopyable([ this, req = std::move(req) ]() mutable {
     new SessionHost(this, std::move(req));  // Calls Add();
   }));
 }
@@ -206,39 +206,11 @@ void SessionImpl::StartModule(
       }));
 }
 
-namespace {
-std::string to_string(mojo::Array<uint8_t>& data) {
-  std::string ret;
-  ret.reserve(data.size());
-
-  for (uint8_t val : data) {
-    ret += std::to_string(val);
-  }
-
-  return ret;
-}
-
-mojo::Array<uint8_t> to_array(const std::string& val) {
-  mojo::Array<uint8_t> ret;
-  for (char c : val) {
-    ret.push_back(c);
-  }
-  return ret;
-}
-}  // namespace
-
-SessionPage::SessionPage(mojo::InterfaceHandle<ledger::Page> session_page)
+SessionPage::SessionPage(mojo::InterfaceHandle<SessionStorage> session_storage)
     : data_(SessionData::New()) {
-  data_->links.mark_non_null();
-
   FTL_LOG(INFO) << "SessionPage()";
-
-  session_page_.Bind(std::move(session_page));
-
-  session_page_->GetId([](mojo::Array<uint8_t> id) {
-    FTL_LOG(INFO) << "story-runner init session with session page: "
-                  << to_string(id);
-  });
+  data_->links.mark_non_null();
+  session_storage_.Bind(std::move(session_storage));
 };
 
 SessionPage::~SessionPage() {
@@ -246,29 +218,19 @@ SessionPage::~SessionPage() {
 
   // TODO(mesch): We should write on every link change, not just at
   // the end.
-
-  mojo::Array<uint8_t> bytes;
-  bytes.resize(data_->GetSerializedSize());
-  data_->Serialize(bytes.data(), bytes.size());
-
-  // Return value callback is never invoked, because the pipe closes,
-  // so we just pass an empty instance.
-  session_page_->Put(to_array("session_data"), std::move(bytes),
-                     ledger::Page::PutCallback());
+  session_storage_->WriteSessionData(std::move(data_));
 }
 
 void SessionPage::Init(std::function<void()> done) {
-  session_page_->GetSnapshot(GetProxy(&session_page_snapshot_),
-                             [](ledger::Status status) {});
-  session_page_snapshot_->Get(
-      to_array("session_data"),
-      [this, done](ledger::Status status, ledger::ValuePtr value) {
-        if (value) {
-          data_->Deserialize(value->get_bytes().data(),
-                             value->get_bytes().size());
+  FTL_LOG(INFO) << "SessionPage::Init() " << to_string(id_);
+
+  session_storage_->ReadSessionData(
+      ftl::MakeCopyable([this, done](SessionDataPtr data) {
+        if (!data.is_null()) {
+          data_ = std::move(data);
         }
         done();
-      });
+      }));
 }
 
 void SessionPage::MaybeReadLink(const mojo::String& name,
@@ -279,9 +241,15 @@ void SessionPage::MaybeReadLink(const mojo::String& name,
       (*docs_map)[doc->docid] = doc->Clone();
     }
   }
+  FTL_LOG(INFO) << "SessionPage::MaybeReadlink() " << to_string(id_) << " name "
+                << name << " docs " << *docs_map;
 }
 
-void SessionPage::WriteLink(const mojo::String& name, const MojoDocMap& docs_map) {
+void SessionPage::WriteLink(const mojo::String& name,
+                            const MojoDocMap& docs_map) {
+  FTL_LOG(INFO) << "SessionPage::WriteLink() " << to_string(id_) << " name "
+                << name << " docs " << docs_map;
+
   auto i = data_->links.find(name);
   if (i == data_->links.end()) {
     data_->links[name] = LinkData::New();

@@ -41,11 +41,11 @@ class StoryRunnerImpl : public StoryRunner {
     resolver_factory_.Bind(std::move(resolver_factory));
   }
 
-  void StartStory(mojo::InterfaceHandle<ledger::Page> session_page,
+  void StartStory(mojo::InterfaceHandle<SessionStorage> session_storage,
                   mojo::InterfaceRequest<Session> session) override {
     mojo::InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(shell_, std::move(resolver), std::move(session_page),
+    new SessionImpl(shell_, std::move(resolver), std::move(session_storage),
                     std::move(session));
   }
 

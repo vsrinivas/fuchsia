@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_STORY_MANAGER_STORY_STATE_H_
-#define APPS_MODULAR_STORY_MANAGER_STORY_STATE_H_
+#ifndef APPS_MODULAR_STORY_MANAGER_STORY_IMPL_H_
+#define APPS_MODULAR_STORY_MANAGER_STORY_IMPL_H_
 
+#include <vector>
+
+#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/story_runner.mojom.h"
 #include "apps/modular/services/user/user_runner.mojom.h"
+#include "apps/modular/story_manager/session_storage_impl.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
@@ -18,7 +22,7 @@
 namespace modular {
 class StoryProviderImpl;
 
-class StoryImpl : public Story, public ModuleWatcher {
+class StoryImpl : public Story, public ModuleWatcher, public LinkChanged {
  public:
   static StoryImpl* New(
       mojo::StructPtr<StoryInfo> story_info,
@@ -28,15 +32,8 @@ class StoryImpl : public Story, public ModuleWatcher {
     return new StoryImpl(std::move(story_info), story_provider_impl,
                          std::move(app_connector), std::move(story_request));
   }
+
   ~StoryImpl() override;
-
-  mojo::StructPtr<StoryInfo> GetStoryInfo() const;
-
-  // Runs this story. If |session_page| is empty, we are effectively
-  // starting a new session, else we are re-inflating an existing
-  // session. Will write session info data to |session_page|.
-  void RunStory(mojo::InterfacePtr<ledger::Page> session_page,
-                mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
  private:  // factory support
   // Constructor is private to ensure (by way of New()) that instances
@@ -48,28 +45,49 @@ class StoryImpl : public Story, public ModuleWatcher {
             mojo::InterfaceRequest<Story> story_request);
 
  private:  // virtual method implementations
-  // |ModuleWatcher| override.
-  void Done() override;
-
-  // |Story| override.
+  // |Story|
   void GetInfo(const GetInfoCallback& callback) override;
 
-  // |Story| override.
+  // |Story|
   void Start(
       mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
-  // |Story| override.
+  // |Story|
   void Stop() override;
 
+  // |Story|
+  void Watch(mojo::InterfaceHandle<StoryWatcher> story_watcher) override;
+
+  // |ModuleWatcher|
+  void Done() override;
+
+  // |LinkChanged|
+  void Notify(MojoDocMap docs) override;
+
  private:
+  void NotifyStoryWatchers(void (StoryWatcher::*method)());
+
+  // Starts the StoryRunner instance for the given session.
+  void StartStoryRunner(
+      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+
+  // Tears down the currently used StoryRunner instance, if any.
+  void TearDownStoryRunner();
+
   mojo::StructPtr<StoryInfo> story_info_;
   StoryProviderImpl* const story_provider_impl_;
+  std::shared_ptr<SessionStorageImpl::Storage> storage_;
   mojo::InterfacePtr<mojo::ApplicationConnector> app_connector_;
+
   mojo::StrongBinding<Story> binding_;
   mojo::Binding<ModuleWatcher> module_watcher_binding_;
+  mojo::Binding<LinkChanged> link_changed_binding_;
+
+  std::vector<mojo::InterfacePtr<StoryWatcher>> story_watchers_;
 
   mojo::InterfacePtr<StoryRunner> runner_;
   mojo::InterfacePtr<Session> session_;
+  mojo::InterfacePtr<Link> root_;
   mojo::InterfacePtr<ModuleController> module_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
@@ -77,4 +95,4 @@ class StoryImpl : public Story, public ModuleWatcher {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_STORY_MANAGER_STORY_STATE_H_
+#endif  // APPS_MODULAR_STORY_MANAGER_STORY_IMPL_H_
