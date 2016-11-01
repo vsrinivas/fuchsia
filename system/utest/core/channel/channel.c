@@ -74,17 +74,10 @@ static int reader_thread(void* arg) {
 }
 
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
-    mx_signals_state_t signals_state = {0};
-    __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+    mx_signals_t pending = 0;
+    __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &pending);
     assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
-    return signals_state.satisfied;
-}
-
-static mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
-    mx_signals_state_t signals_state = {0};
-    __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
-    return signals_state.satisfiable;
+    return pending;
 }
 
 static bool channel_test(void) {
@@ -98,10 +91,6 @@ static bool channel_test(void) {
 
     ASSERT_EQ(get_satisfied_signals(h[0]), MX_SIGNAL_WRITABLE, "");
     ASSERT_EQ(get_satisfied_signals(h[1]), MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(get_satisfiable_signals(h[0]),
-              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(h[1]),
-              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
 
     _channel[0] = h[0];
     _channel[2] = h[1];
@@ -140,7 +129,6 @@ static bool channel_test(void) {
     mx_handle_close(_channel[1]);
     // The reader thread is reading from _channel[3], so we may or may not have "readable".
     ASSERT_TRUE((get_satisfied_signals(_channel[3]) & MX_SIGNAL_PEER_CLOSED), "");
-    ASSERT_TRUE((get_satisfiable_signals(_channel[3]) & MX_SIGNAL_PEER_CLOSED), "");
 
     usleep(1);
     mx_handle_close(_channel[0]);
@@ -150,7 +138,6 @@ static bool channel_test(void) {
     // Since the the other side of _channel[3] is closed, and the read thread read everything from it,
     // the only satisfied/satisfiable signals should be "peer closed".
     ASSERT_EQ(get_satisfied_signals(_channel[3]), MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(_channel[3]), MX_SIGNAL_PEER_CLOSED, "");
 
     mx_handle_close(_channel[2]);
     mx_handle_close(_channel[3]);
@@ -214,18 +201,13 @@ static bool channel_close_test(void) {
     ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
     channel[1] = MX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(channel1[1]), MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(channel1[1]), MX_SIGNAL_PEER_CLOSED, "");
     ASSERT_EQ(get_satisfied_signals(channel2[1]), MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(get_satisfiable_signals(channel2[1]),
-              MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
 
     // Close channel[0]; the former channel2[0] should be closed, so channel2[1] should have peer closed.
     ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
     channel[0] = MX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(channel1[1]), MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(channel1[1]), MX_SIGNAL_PEER_CLOSED, "");
     ASSERT_EQ(get_satisfied_signals(channel2[1]), MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(channel2[1]), MX_SIGNAL_PEER_CLOSED, "");
 
     ASSERT_EQ(mx_handle_close(channel1[1]), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(channel2[1]), NO_ERROR, "");

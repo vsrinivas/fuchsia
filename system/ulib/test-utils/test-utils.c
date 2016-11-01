@@ -74,18 +74,8 @@ static mx_status_t tu_wait(const mx_handle_t* handles, const mx_signals_t* signa
                            mx_time_t deadline,
                            mx_signals_state_t* signals_states)
 {
-    mx_status_t result;
-
-    if (num_handles == 1u) {
-        result =
-            mx_handle_wait_one(*handles, *signals, deadline, signals_states);
-    } else {
-        result = mx_handle_wait_many(num_handles, handles, signals, deadline, NULL,
-                                     signals_states);
-    }
-
-    // xyzdje, from mx_wait: TODO(cpu): implement |result_index|, see MG-33 bug.
-    return result;
+    return mx_handle_wait_many(num_handles, handles, signals, deadline, NULL,
+                               signals_states);
 }
 
 void tu_channel_create(mx_handle_t* handle0, mx_handle_t* handle1) {

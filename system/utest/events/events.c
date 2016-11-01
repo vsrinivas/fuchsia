@@ -159,22 +159,23 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(mx_event_create(0U, &events[2]), 0, "Error during event create");
 
     mx_status_t status;
+    mx_signals_t pending;
     mx_signals_state_t states[3] = {0};
 
     const mx_signals_t signals[3] = {
         MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED, MX_SIGNAL_SIGNALED};
 
-    status = mx_handle_wait_one(events[0], signals[0], 1u, &states[0]);
+    status = mx_handle_wait_one(events[0], signals[0], 1u, &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(states[0].satisfied, 0u, "");
+    ASSERT_EQ(pending, 0u, "");
 
     status = mx_handle_wait_many(3u, events, signals, 1u, NULL, states);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
     ASSERT_FALSE(states[0].satisfied || states[1].satisfied || states[2].satisfied, "")
 
-    status = mx_handle_wait_one(events[0], signals[0], 0u, &states[0]);
+    status = mx_handle_wait_one(events[0], signals[0], 0u, &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
-    ASSERT_EQ(states[0].satisfied, 0u, "");
+    ASSERT_EQ(pending, 0u, "");
 
     status = mx_handle_wait_many(3u, events, signals, 0u, NULL, states);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
@@ -182,9 +183,9 @@ static bool wait_signals_test(void) {
 
     ASSERT_GE(mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");
 
-    status = mx_handle_wait_one(events[0], signals[0], 1u, &states[0]);
+    status = mx_handle_wait_one(events[0], signals[0], 1u, &pending);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(states[0].satisfied, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_SIGNAL_SIGNALED, "Error during wait call");
 
     uint32_t result_index = 123u;
     status = mx_handle_wait_many(3u, events, signals, 1u, &result_index, states);
@@ -192,9 +193,9 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(states[0].satisfied, MX_SIGNAL_SIGNALED, "Error during wait call");
     ASSERT_EQ(result_index, 0u, "Incorrect result index");
 
-    status = mx_handle_wait_one(events[0], signals[0], 0u, &states[0]);
+    status = mx_handle_wait_one(events[0], signals[0], 0u, &pending);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(states[0].satisfied, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_SIGNAL_SIGNALED, "Error during wait call");
 
     ASSERT_GE(mx_object_signal(events[0], MX_SIGNAL_SIGNALED, 0u), 0, "Error during event reset");
     ASSERT_GE(mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");

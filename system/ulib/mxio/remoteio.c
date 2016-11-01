@@ -202,13 +202,13 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
         goto fail_discard_handles;
     }
 
-    mx_signals_state_t pending;
+    mx_signals_t pending;
     if ((r = mx_handle_wait_one(rchannel[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &pending)) < 0) {
         goto fail_close_reply_channel;
     }
-    if ((pending.satisfied & MX_SIGNAL_PEER_CLOSED) &&
-        !(pending.satisfied & MX_SIGNAL_READABLE)) {
+    if ((pending & MX_SIGNAL_PEER_CLOSED) &&
+        !(pending & MX_SIGNAL_READABLE)) {
         r = ERR_REMOTE_CLOSED;
         goto fail_close_reply_channel;
     }
@@ -675,7 +675,7 @@ static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
             return 0;
         } else if (r == ERR_SHOULD_WAIT) {
             // TODO: follow socket blocking/nonblocking state
-            mx_signals_state_t pending;
+            mx_signals_t pending;
             r = mx_handle_wait_one(rio->h2,
                                    MX_SIGNAL_READABLE
                                    | MX_SIGNAL_PEER_CLOSED,
@@ -683,10 +683,10 @@ static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
             if (r < 0) {
                 return r;
             }
-            if (pending.satisfied & MX_SIGNAL_READABLE) {
+            if (pending & MX_SIGNAL_READABLE) {
                 continue;
             }
-            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
+            if (pending & MX_SIGNAL_PEER_CLOSED) {
                 return 0;
             }
             // impossible
@@ -710,14 +710,14 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
             // No wait for PEER_CLOSED signal. PEER_CLOSED could be signaled
             // even if the socket is only half-closed for read.
             // TODO: how to detect if the write direction is closed?
-            mx_signals_state_t pending;
+            mx_signals_t pending;
             r = mx_handle_wait_one(rio->h2,
                                    MX_SIGNAL_WRITABLE,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
-            if (pending.satisfied & MX_SIGNAL_WRITABLE) {
+            if (pending & MX_SIGNAL_WRITABLE) {
                 continue;
             }
             // impossible

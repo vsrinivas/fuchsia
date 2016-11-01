@@ -88,8 +88,8 @@ syscall handle_duplicate
     returns (mx_handle_t);
 
 syscall handle_wait_one
-    (handle: mx_handle_t, signals: mx_signals_t, timeout: mx_time_t,
-        signals_state: mx_signals_state_t[1] OUT)
+    (handle: mx_handle_t, waitfor: mx_signals_t, timeout: mx_time_t,
+        observed: mx_signals_t[1] OUT)
     returns (mx_status_t);
 
 syscall handle_wait_many

@@ -23,7 +23,7 @@ int watchdog(void* arg) {
 bool cleanup_test(void) {
     BEGIN_TEST;
     mx_handle_t p0[2], p1[2];
-    mx_signals_state_t pending;
+    mx_signals_t pending;
     mx_status_t r;
 
     thrd_t thread;
@@ -42,7 +42,7 @@ bool cleanup_test(void) {
                                  MX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending.satisfied, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     mx_handle_close(p1[0]);
     mx_handle_close(p1[1]);
@@ -99,7 +99,7 @@ bool cleanup_test(void) {
                                  MX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending.satisfied, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
 
     test_state = 100;
     unittest_printf("cleanup-test: PASSED\n");

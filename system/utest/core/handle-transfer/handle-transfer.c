@@ -128,9 +128,8 @@ bool handle_transfer_cancel_wait_test(void) {
     int ret = thrd_create_with_name(&thr, thread, A, "write thread");
     EXPECT_EQ(ret, thrd_success, "failed to create write thread");
 
-    mx_signals_state_t signals_state;
     mx_signals_t signals = MX_SIGNAL_PEER_CLOSED;
-    status = mx_handle_wait_one(A[0], signals, MX_SEC(1), &signals_state);
+    status = mx_handle_wait_one(A[0], signals, MX_SEC(1), NULL);
     EXPECT_NEQ(ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
     thrd_join(thr, NULL);

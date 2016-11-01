@@ -226,9 +226,8 @@ mx_handle_t LaunchTestRun(char* bin, mx_handle_t h) {
 }
 
 int JoinProcess(mx_handle_t proc) {
-    mx_signals_state_t state;
     mx_status_t status =
-        mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, &state);
+        mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         printf("join failed? %d\n", status);
         return -1;

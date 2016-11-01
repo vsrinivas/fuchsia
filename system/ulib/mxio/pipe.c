@@ -27,16 +27,16 @@ static ssize_t _blocking_read(mx_handle_t h, void* data, size_t len) {
             return (ssize_t) len;
         }
         if (r == ERR_SHOULD_WAIT) {
-            mx_signals_state_t pending;
+            mx_signals_t pending;
             r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
-            if (pending.satisfied & MX_SIGNAL_READABLE) {
+            if (pending & MX_SIGNAL_READABLE) {
                 continue;
             }
-            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
+            if (pending & MX_SIGNAL_PEER_CLOSED) {
                 return ERR_REMOTE_CLOSED;
             }
             // impossible
@@ -53,16 +53,16 @@ static ssize_t _blocking_write(mx_handle_t h, const void* data, size_t len) {
             return (ssize_t)len;
         }
         if (r == ERR_SHOULD_WAIT) {
-            mx_signals_state_t pending;
+            mx_signals_t pending;
             r = mx_handle_wait_one(h, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
-            if (pending.satisfied & MX_SIGNAL_WRITABLE) {
+            if (pending & MX_SIGNAL_WRITABLE) {
                 continue;
             }
-            if (pending.satisfied & MX_SIGNAL_PEER_CLOSED) {
+            if (pending & MX_SIGNAL_PEER_CLOSED) {
                 return ERR_REMOTE_CLOSED;
             }
             // impossible

@@ -48,15 +48,9 @@ static bool test_region(void* _ptr, size_t len, uint32_t seed) {
 #define KB_(x) (x*1024)
 
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
-    mx_signals_state_t signals_state = {0};
-    mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return signals_state.satisfied;
-}
-
-static mx_signals_t get_satisfiable_signals(mx_handle_t handle) {
-    mx_signals_state_t signals_state = {0};
-    mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return signals_state.satisfiable;
+    mx_signals_t observed = 0;
+    mx_handle_wait_one(handle, 0u, 0u, &observed);
+    return observed;
 }
 
 static bool create_destroy_test(void) {
@@ -71,11 +65,6 @@ static bool create_destroy_test(void) {
 
     ASSERT_EQ(get_satisfied_signals(consumer), 0u, "");
     ASSERT_EQ(get_satisfied_signals(producer), MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD, "");
-
-    ASSERT_EQ(get_satisfiable_signals(consumer),
-              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, "");
-    ASSERT_EQ(get_satisfiable_signals(producer),
-              MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_WRITE_THRESHOLD, "");
 
     status = mx_datapipe_end_write(producer, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "wrong pipe state");
@@ -131,14 +120,11 @@ static bool loop_write_full(void) {
     }
 
     ASSERT_EQ(get_satisfied_signals(producer), 0u, "");
-    ASSERT_EQ(get_satisfiable_signals(producer),
-              MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_WRITE_THRESHOLD, "");
 
     status = mx_handle_close(consumer);
     ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
 
     ASSERT_EQ(get_satisfied_signals(producer), MX_SIGNAL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfiable_signals(producer), MX_SIGNAL_PEER_CLOSED, "");
 
     status = mx_handle_close(producer);
     ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
@@ -360,8 +346,6 @@ static bool consumer_signals_when_producer_closed(void) {
 
         ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_PEER_CLOSED,
                   "incorrect satisfied signals");
-        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_PEER_CLOSED,
-                  "incorrect satisfiable signals");
 
         ASSERT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
     }
@@ -381,24 +365,16 @@ static bool consumer_signals_when_producer_closed(void) {
         ASSERT_EQ(get_satisfied_signals(consumer),
                   MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD,
                   "incorrect satisfied signals");
-        ASSERT_EQ(get_satisfiable_signals(consumer),
-                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD,
-                  "incorrect satisfiable signals");
 
         char buffer[64];
         ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
         ASSERT_EQ(get_satisfied_signals(consumer),
                   MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD,
                   "incorrect satisfied signals");
-        ASSERT_EQ(get_satisfiable_signals(consumer),
-                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD,
-                  "incorrect satisfiable signals");
 
         ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
         ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_PEER_CLOSED,
                   "incorrect satisfied signals");
-        ASSERT_EQ(get_satisfiable_signals(consumer), MX_SIGNAL_PEER_CLOSED,
-                  "incorrect satisfiable signals");
 
         ASSERT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
     }
@@ -651,73 +627,59 @@ static bool write_threshold(void) {
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 0u, "incorrect default write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "xx"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 2u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 2u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 4u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 4u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "yy"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(producer), W, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 2u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 2u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 4u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 4u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 2u, NULL), 2,
               "read (discard) failed");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 0u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 0u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "zz"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "AA"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(producer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_write_threshold(producer, 4u), NO_ERROR, "failed to set write threshold");
     EXPECT_EQ(get_write_threshold(producer, &threshold), NO_ERROR, "failed to get write threshold");
     EXPECT_EQ(threshold, 4u, "incorrect write threshold");
     EXPECT_EQ(get_satisfied_signals(producer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 2u, NULL), 2,
               "read (discard) failed");
     EXPECT_EQ(get_satisfied_signals(producer), W, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
     EXPECT_EQ(get_satisfied_signals(producer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), PC, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
 
@@ -767,25 +729,20 @@ static bool write_two_phase_signals(void) {
     ASSERT_GT(consumer, 0, "could not create data pipe consumer");
 
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     uintptr_t ptr = 0u;
     EXPECT_EQ(mx_datapipe_begin_write(producer, 0u, &ptr), 4, "incorrect begin_write result");
     EXPECT_EQ(get_satisfied_signals(producer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_end_write(producer, 0u), NO_ERROR, "end_write failed");
     EXPECT_EQ(get_satisfied_signals(producer), W | WT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), W | PC | WT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_begin_write(producer, 0u, &ptr), 4, "incorrect begin_write result");
     EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
     EXPECT_EQ(get_satisfied_signals(producer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), PC, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_end_write(producer, 0u), NO_ERROR, "end_write failed");
     EXPECT_EQ(get_satisfied_signals(producer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(producer), PC, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
 
@@ -1044,63 +1001,51 @@ static bool read_threshold(void) {
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 0u, "incorrect default read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "xx"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 2u), NO_ERROR, "failed to set read threshold");
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 2u, "incorrect read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 4u), NO_ERROR, "failed to set read threshold");
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 4u, "incorrect read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), R, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "yy"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 2u, NULL), 2,
               "read (discard) failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 0u), NO_ERROR, "failed to set read threshold");
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 0u, "incorrect read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "zz"), 2, "write failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 4u), NO_ERROR, "failed to set read threshold");
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 4u, "incorrect read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
     EXPECT_EQ(get_satisfied_signals(consumer), R | PC | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_read(consumer, MX_DATAPIPE_READ_FLAG_DISCARD, 2u, NULL), 2,
               "read (discard) failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 2u), NO_ERROR, "failed to set read threshold");
     EXPECT_EQ(get_read_threshold(consumer, &threshold), NO_ERROR, "failed to get read threshold");
     EXPECT_EQ(threshold, 2u, "incorrect read threshold");
     EXPECT_EQ(get_satisfied_signals(consumer), R | PC | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
 
@@ -1152,44 +1097,34 @@ static bool read_two_phase_signals(void) {
     ASSERT_EQ(mx_datapipe_write(producer, 0u, 2u, "AB"), 2, "write failed");
 
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     uintptr_t ptr;
     EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
     EXPECT_EQ(get_satisfied_signals(consumer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_end_read(consumer, 0u), NO_ERROR, "end_read failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 4u), NO_ERROR, "incorrect result");
     EXPECT_EQ(get_satisfied_signals(consumer), R, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
     EXPECT_EQ(get_satisfied_signals(consumer), 0u, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
     EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_end_read(consumer, 0u), NO_ERROR, "end_read failed");
     EXPECT_EQ(get_satisfied_signals(consumer), R | PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC, "incorrect satisfiable signals");
 
     ASSERT_EQ(set_read_threshold(consumer, 2u), NO_ERROR, "incorrect result");
     EXPECT_EQ(get_satisfied_signals(consumer), R | PC | RT, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_begin_read(consumer, 0u, &ptr), 2, "incorrect begin_read result");
     EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), R | PC | RT, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_datapipe_end_read(consumer, 2u), NO_ERROR, "end_read failed");
     EXPECT_EQ(get_satisfied_signals(consumer), PC, "incorrect satisfied signals");
-    EXPECT_EQ(get_satisfiable_signals(consumer), PC, "incorrect satisfiable signals");
 
     EXPECT_EQ(mx_handle_close(consumer), NO_ERROR, "failed to close data pipe consumer");
 

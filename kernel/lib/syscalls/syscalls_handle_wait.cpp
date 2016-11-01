@@ -33,7 +33,7 @@ constexpr size_t kWaitManyInlineCount = 8u;
 mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t timeout,
-                                user_ptr<mx_signals_state_t> _signals_state) {
+                                user_ptr<mx_signals_t> _observed) {
     LTRACEF("handle %d\n", handle_value);
 
     WaitEvent event;
@@ -80,8 +80,8 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE_DONE, koid, signals_state.satisfied, result, 0);
 #endif
 
-    if (_signals_state) {
-        if (_signals_state.copy_to_user(signals_state) != NO_ERROR)
+    if (_observed) {
+        if (_observed.copy_to_user(signals_state.satisfied) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 

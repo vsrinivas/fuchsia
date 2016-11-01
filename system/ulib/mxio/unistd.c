@@ -386,11 +386,11 @@ mx_status_t mxio_wait_fd(int fd, uint32_t _events, uint32_t* _pending, mx_time_t
         r = ERR_INVALID_ARGS;
         goto end;
     }
-    mx_signals_state_t pending;
+    mx_signals_t pending;
     if ((r = mx_handle_wait_one(h, signals, timeout, &pending)) < 0) {
         goto end;
     }
-    io->ops->wait_end(io, pending.satisfied, &events);
+    io->ops->wait_end(io, pending, &events);
 
     if (_pending) {
         uint32_t out = 0;

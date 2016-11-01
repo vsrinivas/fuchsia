@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
-    mx_signals_state_t signals_state = {0};
-    mx_handle_wait_one(handle, 0u, 0u, &signals_state);
-    return signals_state.satisfied;
+    mx_signals_t pending = 0;
+    mx_handle_wait_one(handle, 0u, 0u, &pending);
+    return pending;
 }
 
 static bool socket_basic(void) {

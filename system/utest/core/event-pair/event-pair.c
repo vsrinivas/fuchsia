@@ -9,10 +9,9 @@
 #include <unittest/unittest.h>
 
 static void check_signals_state(mx_handle_t h, mx_signals_t satisfied, mx_signals_t satisfiable) {
-    mx_signals_state_t st = {0};
-    EXPECT_EQ(mx_handle_wait_one(h, 0u, 0u, &st), ERR_BAD_STATE, "wrong wait result");
-    EXPECT_EQ(st.satisfied, satisfied, "wrong satisfied state");
-    EXPECT_EQ(st.satisfiable, satisfiable, "wrong satisfiable state");
+    mx_signals_t pending = 0;
+    EXPECT_EQ(mx_handle_wait_one(h, 0u, 0u, &pending), ERR_BAD_STATE, "wrong wait result");
+    EXPECT_EQ(pending, satisfied, "wrong satisfied state");
 }
 
 static bool create_test(void) {
