@@ -55,3 +55,7 @@ group("magma_tests") {
     "tests",
   ]
 }
+
+group("mesa_tests") {
+  deps = [ "$mesa_build_root:tests" ]
+}

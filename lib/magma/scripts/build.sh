@@ -36,7 +36,7 @@ autorun_magma_sys_tests=true;
 $tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="is_debug=$debug magma_indriver_test=\"$indriver_test\""
 
 echo "Building magma_service_driver"
-$tools_path/ninja -C $build_dir magma_service_driver magma_service_driver_test magma_tests
+$tools_path/ninja -C $build_dir magma_service_driver magma_service_driver_test magma_tests mesa_tests
 
 rm -rf $bootfs_path
 mkdir -p $bootfs_path/bin
