@@ -5,15 +5,20 @@
     ],
     "binaries": [
         {
-            "binary": "component_manager.mojo",
+            "binary": "component_manager_program",
             "bootfs_path": "apps/component_manager"
         },
         {
             "binary": "request_components",
             "bootfs_path": "apps/request_components"
+        },
+        {
+            "binary": "components/index.json",
+            "bootfs_path": "components/index.json"
         }
     ],
-    "components": {
-        "fuchsia:hello_component": "apps/component_manager/examples/hello_component/hello_component.json"
-    }
+    "components": [
+        "apps/component_manager/component_manager.json",
+        "apps/component_manager/examples/hello_component/hello_component.json"
+    ]
 }

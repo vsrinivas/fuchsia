@@ -22,6 +22,7 @@ action("mkbootfs") {
 
   manifest_file = rebase_path("user.bootfs.manifest", "", target_gen_dir)
   depfile = "$target_gen_dir/mkbootfs.d"
+  component_index = "$root_build_dir/components/index.json"
 
   all_binaries = exec_script("process_modules.py",
                              [
@@ -33,6 +34,8 @@ action("mkbootfs") {
                                rebase_path(root_build_dir),
                                "--depfile",
                                rebase_path(depfile),
+                               "--component-index",
+                               rebase_path(component_index),
                                "--arch",
                                target_cpu
                              ],
@@ -43,7 +46,8 @@ action("mkbootfs") {
   build_id_file = "$root_build_dir/ids.txt"
   outputs = [
     output_file,
-    build_id_file
+    build_id_file,
+    component_index,
   ]
   deps = all_binaries
 
