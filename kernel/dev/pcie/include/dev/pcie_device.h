@@ -274,6 +274,8 @@ public:
     static status_t ParsePciExpressCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
     static status_t ParsePciAdvFeatures(PcieDevice* dev, void* hdr, uint version, uint space_left);
 
+    void SetQuirksDone() { quirks_done_ = true; }
+
     /**
      * Convenience functions.  @see MaskUnmaskIrq for details.
      */
@@ -282,10 +284,12 @@ public:
 
     const pcie_config_t* config()      const { return cfg_; }
     paddr_t              config_phys() const { return cfg_phys_; }
+    PcieBusDriver&       driver()            { return bus_drv_; }
 
     bool     plugged_in()     const { return plugged_in_; }
     bool     disabled()       const { return disabled_; }
     bool     claimed()        const { return claimed_; }
+    bool     quirks_done()    const { return quirks_done_; }
 
     bool     is_bridge()      const { return is_bridge_; }
     uint16_t vendor_id()      const { return vendor_id_; }
@@ -352,9 +356,10 @@ protected:
 
     /* State related to lifetime management */
     mutable Mutex dev_lock_;
-    bool          plugged_in_ = false;
-    bool          disabled_   = false;
-    bool          claimed_    = false;
+    bool          plugged_in_  = false;
+    bool          disabled_    = false;
+    bool          claimed_     = false;
+    bool          quirks_done_ = false;
 
     /* Info about the BARs computed and cached during the initial setup/probe,
      * indexed by starting BAR register index */

@@ -327,11 +327,20 @@ status_t PcieBusDriver::AllocBookkeeping() {
 void PcieBusDriver::ScanDevices() {
     AutoLock lock(bus_rescan_lock_);
 
-    /* Scan the root complex looking for for devices and other bridges. */
+    // Scan the root complex looking for for devices and other bridges.
     DEBUG_ASSERT(root_complex_ != nullptr);
     root_complex_->ScanDownstream();
 
-    /* Attempt to allocate any unallocated BARs */
+    // Run registered quirk handlers for any newly discovered devices.
+    ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+        PcieBusDriver::RunQuirks(dev);
+        return true;
+    }, nullptr);
+
+    // Indicate to the registered quirks handlers that we are finished with the quirks phase.
+    PcieBusDriver::RunQuirks(nullptr);
+
+    // Attempt to allocate any unallocated BARs
     root_complex_->AllocateDownstreamBars();
 }
 
@@ -573,4 +582,21 @@ status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
                               ARCH_MMU_FLAG_UNCACHED_DEVICE |
                               ARCH_MMU_FLAG_PERM_READ |
                               ARCH_MMU_FLAG_PERM_WRITE);
+}
+
+// External references to the quirks handler table.
+extern PcieBusDriver::QuirkHandler __start_pcie_quirk_handlers[] __WEAK;
+extern PcieBusDriver::QuirkHandler __stop_pcie_quirk_handlers[] __WEAK;
+void PcieBusDriver::RunQuirks(const mxtl::RefPtr<PcieDevice>& dev) {
+    if (dev && dev->quirks_done())
+        return;
+
+    const PcieBusDriver::QuirkHandler* quirk;
+    for (quirk = __start_pcie_quirk_handlers; quirk < __stop_pcie_quirk_handlers; ++quirk) {
+        if (*quirk != nullptr)
+            (**quirk)(dev);
+    }
+
+    if (dev != nullptr)
+        dev->SetQuirksDone();
 }

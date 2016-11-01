@@ -28,6 +28,29 @@ enum class PcieAddrSpace { MMIO, PIO };
 
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
+    // QuirkHandler
+    //
+    // Definition of a quirk handler hook.  Quirks are behaviors which can be
+    // registered by patforms to deal with the sometimes odd (dare I say,
+    // quirky?) behavior of hardware detected on the PCI bus.  All registered
+    // quirks handlers are executed whenever new hardware is discovered and
+    // probed, but before resource assignement has taken place.
+    //
+    // Once the system has been initialized and is ready to begin resource
+    // allocation, all quirks will be executed one final time will nullptr
+    // passed as the device argument.  It is recommended that all quirks
+    // implementations use this final call as one last chance to make certain
+    // that the quirk has successfully done its job, and to log a warning/error
+    // if it has not.
+    //
+    // For example, if a platform has a quirk to deal with a particular oddness
+    // of a specific chipset, the quirk should use the final call as a chance to
+    // check to make sure that it saw a chipset device recogized and took
+    // appropriate action.  If it didn't, it should log a warning informing the
+    // maintainers to come back and update the quirk to take the appropriate
+    // actions (if any) for the new chipset.
+    using QuirkHandler = void (*)(const mxtl::RefPtr<PcieDevice>& device);
+
     struct EcamRegion {
         paddr_t phys_base;  // Physical address of the memory mapped config region.
         size_t  size;       // Size (in bytes) of the memory mapped config region.
@@ -135,9 +158,6 @@ private:
 
     explicit PcieBusDriver(PciePlatformInterface& platform);
 
-    static mxtl::RefPtr<PcieBusDriver> driver_;
-    static Mutex driver_lock_;
-
     void     ScanDevices();
     status_t AllocBookkeeping();
     void     ForeachDevice(ForeachCallback cbk, void* ctx);
@@ -150,6 +170,8 @@ private:
 
     // IRQ support.  Implementation in pcie_irqs.cpp
     void ShutdownIrqs();
+
+    static void RunQuirks(const mxtl::RefPtr<PcieDevice>& device);
 
     bool                                started_ = false;
     Mutex                               bus_topology_lock_;
@@ -164,5 +186,16 @@ private:
     Mutex                               legacy_irq_list_lock_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;
     PciePlatformInterface&              platform_;
+
+    static mxtl::RefPtr<PcieBusDriver>  driver_;
+    static Mutex                        driver_lock_;
 };
 
+#if WITH_DEV_PCIE
+#define STATIC_PCIE_QUIRK_HANDLER(quirk_handler) \
+    extern const PcieBusDriver::QuirkHandler __pcie_quirk_handler_##quirk_handler; \
+    const PcieBusDriver::QuirkHandler __pcie_quirk_handler_##quirk_handler \
+    __ALIGNED(sizeof(void *)) __SECTION("pcie_quirk_handlers") = quirk_handler
+#else  // WITH_DEV_PCIE
+#define STATIC_PCIE_QUIRK_HANDLER(quirk_handler)
+#endif  // WITH_DEV_PCIE
