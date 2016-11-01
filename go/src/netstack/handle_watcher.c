@@ -21,14 +21,6 @@
 static mx_handle_t s_ctrl[2];
 static mx_handle_t s_waitset;
 
-static mx_status_t get_satisfied_signals(mx_handle_t handle,
-                                         mx_signals_t* satisfied) {
-  mx_status_t r = mx_handle_wait_one(handle, 0u, 0u, satisfied);
-  if (r != ERR_BAD_STATE)  // ERR_BAD_STATE is expected
-    return r;
-  return NO_ERROR;
-}
-
 #define START 1
 #define ABORT 2
 
@@ -50,12 +42,14 @@ mx_status_t handle_watcher_stop(void) {
   vdebug("watch_stop: enter\n");
   mx_status_t r;
   uint8_t c;
-  mx_signals_t satisfied;
-  if ((r = get_satisfied_signals(s_ctrl[1], &satisfied)) < 0) {
-    error("handle_watcher_stop: get_satisfied_signals failed (r=%d)\n", r);
+  mx_signals_t observed;
+  if ((r = mx_handle_wait_one(s_ctrl[1],
+                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, 0u,
+                              &observed)) < 0) {
+    error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
-  if (!(satisfied & MX_SIGNAL_READABLE)) {
+  if (!(observed & MX_SIGNAL_READABLE)) {
     vdebug("watch_stop: send ABORT\n");
     c = ABORT;
     if ((r = mx_channel_write(s_ctrl[1], 0u, &c, 1u, NULL, 0u)) < 0) {
@@ -64,10 +58,15 @@ mx_status_t handle_watcher_stop(void) {
     }
   }
 
-  if ((r = mx_handle_wait_one(s_ctrl[1], MX_SIGNAL_READABLE, MX_TIME_INFINITE,
-                              NULL)) < 0) {
+  if ((r = mx_handle_wait_one(s_ctrl[1],
+                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                              MX_TIME_INFINITE, &observed)) < 0) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
+  }
+  if (!(observed & MX_SIGNAL_READABLE)) {
+    error("handle_watcher_stop: mx_handle_wait_one not readable (r=%d)\n", r);
+    return ERR_BAD_STATE;
   }
   if ((r = mx_channel_read(s_ctrl[1], 0u, &c, 1u, NULL, NULL, 0u, NULL)) < 0) {
     error("handle_watcher_stop: mx_channel_read failed (r=%d)\n", r);
@@ -184,10 +183,16 @@ static int handle_watcher_loop(void* arg) {
 
   for (;;) {
     // wait for START command (ignore ABORT received in the last round)
-    if ((r = mx_handle_wait_one(s_ctrl[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE,
-                                NULL)) < 0) {
+    mx_signals_t observed;
+    if ((r = mx_handle_wait_one(s_ctrl[0],
+                                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                MX_TIME_INFINITE, &observed)) < 0) {
       error("handle_watcher_loop: mx_handle_wait_one failed (r=%d)\n", r);
       return r;
+    }
+    if (!(observed & MX_SIGNAL_READABLE)) {
+      error("handle_watcher_loop: mx_handle_wait_one not readable (r=%d)\n", r);
+      return ERR_BAD_STATE;
     }
     uint8_t c;
     if ((r = mx_channel_read(s_ctrl[0], 0u, &c, 1, NULL, NULL, 0u, NULL)) < 0) {
