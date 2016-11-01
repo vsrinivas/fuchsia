@@ -394,6 +394,8 @@ bool Process::ReadMemory(uintptr_t address,
     return false;
   }
 
+  FTL_VLOG(1) << "Bytes read: " << *out_bytes_read;
+
   return true;
 }
 
@@ -422,6 +424,8 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
                      << length << ", written: " << bytes_written;
     return false;
   }
+
+  FTL_VLOG(1) << "Bytes written: " << bytes_written;
 
   return true;
 }

@@ -49,6 +49,11 @@ class RegistersDefault final : public Registers {
     return "";
   }
 
+  bool SetGeneralRegisters(const ftl::StringView& value) override {
+    FTL_NOTIMPLEMENTED();
+    return false;
+  }
+
   std::string GetRegisterValue(unsigned int register_number) override {
     FTL_NOTIMPLEMENTED();
     return "";

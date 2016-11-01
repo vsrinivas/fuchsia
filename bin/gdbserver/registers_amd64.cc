@@ -174,6 +174,29 @@ class RegistersAmd64 final : public Registers {
     return GetRegisterValueAsString(gregs_, -1);
   }
 
+  bool SetGeneralRegisters(const ftl::StringView& value) override {
+    auto bytes = util::DecodeByteArrayString(value);
+    if (bytes.size() != sizeof(mx_x86_64_general_regs_t)) {
+      FTL_LOG(ERROR) << "|value| doesn't match x86-64 general registers size: "
+                     << value;
+      return false;
+    }
+
+    mx_x86_64_general_regs_t* gregs =
+        reinterpret_cast<mx_x86_64_general_regs_t*>(bytes.data());
+    mx_status_t status =
+        mx_thread_write_state(thread()->debug_handle(), MX_THREAD_STATE_REGSET0,
+                              gregs, sizeof(*gregs));
+    if (status < 0) {
+      util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
+      return false;
+    }
+
+    FTL_VLOG(1) << "General registers written: " << bytes.size() << " bytes";
+
+    return true;
+  }
+
   std::string GetRegisterValue(unsigned int register_number) override {
     if (register_number >=
         static_cast<unsigned int>(Amd64Register::NUM_REGISTERS)) {

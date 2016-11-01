@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <deque>
 #include <string>
+#include <vector>
 
 #include <magenta/syscalls/types.h>
 #include <magenta/types.h>
@@ -31,6 +32,11 @@ void EncodeByteString(const uint8_t byte, char out_hex[2]);
 // result in a string.
 std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes);
 
+// Decodes the given ASCII string describing a series of bytes and returns the
+// bytes. |string| must contain and even number of characters, since each byte
+// is represented by two ASCII characters.
+std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string);
+
 // Logs the given |message| using the global errno variable, including the
 // result of strerror in a nicely formatted way.
 void LogErrorWithErrno(const std::string& message);
@@ -43,6 +49,10 @@ void LogErrorWithMxStatus(const std::string& message, mx_status_t status);
 // https://sourceware.org/gdb/onlinedocs/gdb/Errno-Values.html#Errno-Valuesfor
 // reference). We don't rely on macros from errno.h because some of the integer
 // definitions don't match.
+// TODO(armansito): The error code definitions from GDB aren't really granular
+// enough to aid debug various error conditions that packet handling potentially
+// produces. Since GDB always ignores the error codes, perhaps we should come up
+// with some of our own.
 enum class ErrorCode {
   PERM = 1,
   NOENT = 2,

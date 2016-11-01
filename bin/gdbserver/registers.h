@@ -11,6 +11,7 @@
 #include <magenta/types.h>
 
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace debugserver {
 
@@ -83,6 +84,12 @@ class Registers {
   // Remove this once that is fully supported.
   virtual bool RefreshGeneralRegisters() = 0;
 
+  // TODO(armansito): GetGeneralRegisters() and SetGeneralRegisters() below both
+  // work with strings that conform to the GDB remote serial protocol. We should
+  // change this so that this class is agnostic to the protocol and isolate such
+  // parsing to the CommandHandler/Server. This way we can separate the back end
+  // bits into a stand-alone library that we can use in gdb/lldb ports.
+
   // Returns a string containing sequentially encoded hexadecimal values of all
   // general registers. For example, on an architecture with 4 registers of 4
   // bytes each, this would return the following value:
@@ -91,6 +98,11 @@ class Registers {
   //
   // Returns an empty string if there is an error while reading the registers.
   virtual std::string GetGeneralRegisters() = 0;
+
+  // Writes |value| to all general registers. |value| should be encoded the same
+  // way as the return value of GetGeneralRegisters(), as described above.
+  // Returns true on success.
+  virtual bool SetGeneralRegisters(const ftl::StringView& value) = 0;
 
   // Gets the value of the register numbered |register_number|. Returns an empty
   // string in case of an error or if |register_number| is invalid. This avoids

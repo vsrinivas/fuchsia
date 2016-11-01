@@ -84,10 +84,14 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
       if (packet.size() > 1)
         break;
       return Handle_g(callback);
+    case 'G':
+      return Handle_G(packet.substr(1), callback);
     case 'H':  // Set a thread for subsequent operations
       return Handle_H(packet.substr(1), callback);
     case 'm':
       return Handle_m(packet.substr(1), callback);
+    case 'M':
+      return Handle_M(packet.substr(1), callback);
     case 'q':  // General query packet
     case 'Q':  // General set packet
     {
@@ -203,6 +207,10 @@ bool CommandHandler::Handle_g(const ResponseCallback& callback) {
   }
 
   // If there is no current thread, then we reply with "0"s for all registers.
+  // TODO(armansito): gG packets are technically used to read/write "ALL"
+  // registers, not just the general registers. We'll have to take this into
+  // account in the future, though for now we're just supporting general
+  // registers.
   std::string result;
   if (!server_->current_thread()) {
     result = arch::Registers::GetUninitializedGeneralRegisters();
@@ -219,6 +227,36 @@ bool CommandHandler::Handle_g(const ResponseCallback& callback) {
 
   callback(result);
   return true;
+}
+
+bool CommandHandler::Handle_G(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "G: No inferior";
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  // If there is no current thread report an error.
+  Thread* current_thread = server_->current_thread();
+  if (!current_thread) {
+    FTL_LOG(ERROR) << "G: No current thread";
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  // We pass the packet here directly since arch::Registers handles the parsing.
+  // TODO(armansito): gG packets are technically used to read/write "ALL"
+  // registers, not just the general registers. We'll have to take this into
+  // account in the future, though for now we're just supporting general
+  // registers.
+  if (!current_thread->registers()->SetGeneralRegisters(packet)) {
+    FTL_LOG(ERROR) << "G: Failed to write to general registers";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  return ReplyOK(callback);
 }
 
 bool CommandHandler::Handle_H(const ftl::StringView& packet,
@@ -348,6 +386,73 @@ bool CommandHandler::Handle_m(const ftl::StringView& packet,
   std::string result = util::EncodeByteArrayString(buffer.get(), bytes_read);
   callback(result);
   return true;
+}
+
+bool CommandHandler::Handle_M(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "M: No inferior";
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  // The "M" packet parameters look like this: "addr,length:XX...".
+  // First, extract the addr,len and data sections. Using ftl::kSplitWantAll
+  // here since the data portion could technically be empty if the given length
+  // is 0.
+  auto params =
+      ftl::SplitString(packet, ":", ftl::kKeepWhitespace, ftl::kSplitWantAll);
+  if (params.size() != 2) {
+    FTL_LOG(ERROR) << "M: Malformed packet: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  ftl::StringView data = params[1];
+
+  // Extract addr and len
+  params = ftl::SplitString(params[0], ",", ftl::kKeepWhitespace,
+                            ftl::kSplitWantNonEmpty);
+  if (params.size() != 2) {
+    FTL_LOG(ERROR) << "M: Malformed packet: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  uintptr_t addr;
+  size_t length;
+  if (!ftl::StringToNumberWithError<uintptr_t>(params[0], &addr,
+                                               ftl::Base::k16) ||
+      !ftl::StringToNumberWithError<size_t>(params[1], &length,
+                                            ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "M: Malformed params: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  FTL_VLOG(1) << ftl::StringPrintf("M: addr=0x%" PRIxPTR ", len=%lu", addr,
+                                   length);
+
+  auto data_bytes = util::DecodeByteArrayString(data);
+  if (data_bytes.size() != length) {
+    FTL_LOG(ERROR) << "M: payload length doesn't match length argument - "
+                   << "payload size: " << data_bytes.size()
+                   << ", length requested: " << length;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  // Short-circuit if |length| is 0.
+  if (length &&
+      !current_process->WriteMemory(addr, data_bytes.data(), length)) {
+    FTL_LOG(ERROR) << "M: Failed to write memory";
+
+    // TODO(armansito): The error code definitions from GDB aren't really
+    // granular enough to aid debug various error conditions (e.g. we may want
+    // to report why the memory write failed based on the mx_status_t returned
+    // from Magenta). (See TODO in util.h).
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  return ReplyOK(callback);
 }
 
 bool CommandHandler::Handle_q(const ftl::StringView& prefix,

@@ -90,6 +90,23 @@ TEST(UtilTest, EncodeByteString) {
   }
 }
 
+TEST(UtilTest, EncodeByteArrayString) {
+  std::vector<uint8_t> data;
+  EXPECT_EQ("", EncodeByteArrayString(data.data(), data.size()));
+
+  data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 127, 255};
+  EXPECT_EQ("0102030405060708090a0b0c0d0e0f107fff",
+            EncodeByteArrayString(data.data(), data.size()));
+}
+
+TEST(UtilTest, DecodeByteArrayString) {
+  EXPECT_EQ(std::vector<uint8_t>{}, DecodeByteArrayString(""));
+  EXPECT_EQ(std::vector<uint8_t>{}, DecodeByteArrayString("0102030"));
+  EXPECT_EQ(std::vector<uint8_t>{}, DecodeByteArrayString("01020:04"));
+  EXPECT_EQ((std::vector<uint8_t>{10, 11, 12, 13, 14, 15, 16, 127, 255}),
+            DecodeByteArrayString("0a0b0c0d0e0f107fff"));
+}
+
 TEST(UtilTest, BuildErrorPacket) {
   EXPECT_EQ("E01", BuildErrorPacket(ErrorCode::PERM));
   EXPECT_EQ("E02", BuildErrorPacket(ErrorCode::NOENT));

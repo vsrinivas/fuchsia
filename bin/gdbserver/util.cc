@@ -77,6 +77,27 @@ std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   return result;
 }
 
+std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
+  std::vector<uint8_t> result;
+  if (string.size() % 2) {
+    FTL_LOG(ERROR)
+        << "Byte array string must have an even number of characters";
+    return result;
+  }
+
+  if (string.empty())
+    return result;
+
+  const size_t kResultSize = string.size() / 2;
+  result.resize(kResultSize);
+  for (size_t i = 0; i < kResultSize; ++i) {
+    if (!util::DecodeByteString(string.data() + (i * 2), result.data() + i))
+      return std::vector<uint8_t>{};
+  }
+
+  return result;
+}
+
 void LogErrorWithErrno(const std::string& message) {
   FTL_LOG(ERROR) << message << " (errno = " << errno << ", \""
                  << strerror(errno) << "\")";
