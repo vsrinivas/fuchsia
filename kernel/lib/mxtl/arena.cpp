@@ -129,7 +129,7 @@ void Arena::CommitMemoryAheadIfNeeded() {
     // rather than suffer a page fault, we commit ahead 4 pages or less
     // if we are near the end.
 
-    auto len = vmo_->CommitRange(p_top_ - d_start_, 4 * PAGE_SIZE);
+    auto len = vmo_->CommitRange(p_top_ - d_start_, 4 * PAGE_SIZE, nullptr);
     if (len < 0) {
         // it seems we ran out of physical memory.
         panic("failed to commit arena pages\n");

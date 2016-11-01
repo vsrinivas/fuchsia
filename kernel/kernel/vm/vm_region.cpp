@@ -98,7 +98,7 @@ status_t VmRegion::Protect(uint arch_mmu_flags) {
     return NO_ERROR;
 }
 
-int VmRegion::Unmap() {
+status_t VmRegion::Unmap() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -107,6 +107,29 @@ int VmRegion::Unmap() {
 
     // unmap the section of address space we cover
     return arch_mmu_unmap(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE);
+}
+
+status_t VmRegion::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    LTRACEF("region %p '%s', offset %#" PRIx64 ", len %#" PRIx64 "\n", this, name_, offset, len);
+
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+    DEBUG_ASSERT(len > 0);
+
+    if (len == 0)
+        return NO_ERROR;
+
+    // compute the intersection of the passed in vmo range and our mapping
+    uint64_t offset_new;
+    uint64_t len_new;
+    if (!GetIntersect(object_offset_, size_, offset, len, offset_new, len_new))
+        return NO_ERROR;
+
+    LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, len_new);
+
+    LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", base_ + offset_new, len_new);
+    return arch_mmu_unmap(&aspace_->arch_aspace(), base_ + offset_new, len_new);
 }
 
 status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {

@@ -46,7 +46,16 @@ public:
     }
 
     vm_page* GetPage(size_t index);
+    vm_page* RemovePage(size_t index);
     status_t AddPage(vm_page* p, size_t index);
+
+    bool IsEmpty() const {
+        for (const auto p: pages_) {
+            if (p)
+                return false;
+        }
+        return true;
+    }
 
 private:
     static const uint32_t kMagic = 0x504c5354; // 'PLST'

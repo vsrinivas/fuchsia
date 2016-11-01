@@ -78,16 +78,15 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
 
     switch (op) {
         case MX_VMO_OP_COMMIT: {
-            auto committed = vmo_->CommitRange(offset, size);
-            if (committed < 0)
-                return static_cast<mx_status_t>(committed);
-
             // TODO: handle partial commits
-            return NO_ERROR;
+            auto status = vmo_->CommitRange(offset, size, nullptr);
+            return status;
         }
-        case MX_VMO_OP_DECOMMIT:
-            // TODO: handle
-            return ERR_NOT_SUPPORTED;
+        case MX_VMO_OP_DECOMMIT: {
+            // TODO: handle partial decommits
+            auto status = vmo_->DecommitRange(offset, size, nullptr);
+            return status;
+        }
         case MX_VMO_OP_LOCK:
         case MX_VMO_OP_UNLOCK:
             // TODO: handle

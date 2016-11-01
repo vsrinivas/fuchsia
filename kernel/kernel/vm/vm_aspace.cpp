@@ -579,10 +579,13 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return ERR_NO_MEMORY;
 
     // always immediately commit memory to the object
-    int64_t committed = vmo->CommitRangeContiguous(0, size, align_pow2);
-    if (committed < 0 || (size_t)committed < size) {
+    uint64_t committed;
+    auto status = vmo->CommitRangeContiguous(0, size, &committed, align_pow2);
+    if (status < 0)
+        return status;
+    if (static_cast<size_t>(committed) < size) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
-                (size_t)committed / PAGE_SIZE);
+                static_cast<size_t>(committed) / PAGE_SIZE);
         return ERR_NO_MEMORY;
     }
 
@@ -607,10 +610,13 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
     // commit memory up front if requested
     if (vmm_flags & VMM_FLAG_COMMIT) {
         // commit memory to the object
-        int64_t committed = vmo->CommitRange(0, size);
-        if (committed < 0 || (size_t)committed < size) {
+        uint64_t committed;
+        auto status = vmo->CommitRange(0, size, &committed);
+        if (status < 0)
+            return status;
+        if (static_cast<size_t>(committed) < size) {
             LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
-                    (size_t)committed / PAGE_SIZE);
+                    static_cast<size_t>(committed) / PAGE_SIZE);
             return ERR_NO_MEMORY;
         }
     }

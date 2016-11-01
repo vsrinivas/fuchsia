@@ -11,6 +11,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <mxtl/limits.h>
+#include <mxtl/algorithm.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -70,6 +71,49 @@ static inline bool TrimRange(O& offset, L& len, O trim_to_len) {
     // trim to the range
     if (offset + len > trim_to_len)
         len = static_cast<L>(trim_to_len - offset);
+
+    return true;
+}
+
+// given two offset/length pairs, determine if they overlap at all
+template <typename O, typename L>
+static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
+    static_assert(mxtl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
+    static_assert(mxtl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
+
+    if (offset1 <= offset2) {
+        // doesn't intersect, 1 is completely below 2
+        if (offset1 + len1 <= offset2)
+            return false;
+    } else if (offset1 >= offset2 + len2) {
+        // 1 is completely above 2
+        return false;
+    }
+
+    return true;
+}
+
+// given two offset/length pairs, determine if they overlap and compute the intersection
+template <typename O, typename L>
+static inline bool GetIntersect(O offset1, L len1, O offset2, L len2, O& offset_out, L& len_out) {
+    static_assert(mxtl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
+    static_assert(mxtl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
+
+    // see if they intersect at all
+    if (!Intersects(offset1, len1, offset2, len2))
+        return false;
+
+    // they intersect in some way, 2 cases
+    if (offset1 < offset2) {
+        // range 1 starts lower then range 2, but must extend into it or across it
+        offset_out = offset2;
+        len_out = mxtl::min((offset1 + len1) - offset2, len2);
+    } else { // (offset2 <= offset1)
+        // range 2 starts lower then range 1, but must extend into it or across it
+        // also range 1 and two may start at the same address
+        offset_out = offset1;
+        len_out = mxtl::min((offset2 + len2) - offset1, len1);
+    }
 
     return true;
 }

@@ -35,13 +35,13 @@ VmObject::~VmObject() {
     magic_ = 0;
 }
 
-void VmObject::AddRegionLocked(VmRegion *r) {
+void VmObject::AddRegionLocked(VmRegion* r) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     region_list_.push_front(r);
 }
 
-void VmObject::RemoveRegionLocked(VmRegion *r) {
+void VmObject::RemoveRegionLocked(VmRegion* r) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     region_list_.erase(*r);

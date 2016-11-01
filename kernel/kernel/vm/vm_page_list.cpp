@@ -37,6 +37,19 @@ vm_page* VmPageListNode::GetPage(size_t index) {
     return pages_[index];
 }
 
+vm_page* VmPageListNode::RemovePage(size_t index) {
+    DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(index < kPageFanOut);
+
+    auto p = pages_[index];
+    if (!p)
+        return nullptr;
+
+    pages_[index] = nullptr;
+
+    return p;
+}
+
 status_t VmPageListNode::AddPage(vm_page* p, size_t index) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(index < kPageFanOut);
@@ -99,9 +112,29 @@ vm_page* VmPageList::GetPage(uint64_t offset) {
 }
 
 status_t VmPageList::FreePage(uint64_t offset) {
-    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 "\n", this, offset);
+    uint64_t node_offset = ROUNDDOWN(offset, PAGE_SIZE * VmPageListNode::kPageFanOut);
+    size_t index = (offset >> PAGE_SIZE_SHIFT) % VmPageListNode::kPageFanOut;
 
-    PANIC_UNIMPLEMENTED;
+    LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n",
+                  this, offset, node_offset, index);
+
+    // lookup the tree node that holds this page
+    auto pln = list_.find(node_offset);
+    if (!pln.IsValid()) {
+        return ERR_NOT_FOUND;
+    }
+
+    // free this page
+    auto page = pln->RemovePage(index);
+    if (page) {
+        // if it was the last page in the node, remove the node from the tree
+        if (pln->IsEmpty()) {
+            LTRACEF_LEVEL(2, "%p freeing the list node\n", this);
+            list_.erase(*pln);
+        }
+
+        pmm_free_page(page);
+    }
 
     return NO_ERROR;
 }

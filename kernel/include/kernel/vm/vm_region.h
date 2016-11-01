@@ -49,7 +49,7 @@ public:
     status_t Destroy();
 
     // unmap the region of memory in the container address space
-    int Unmap();
+    status_t Unmap();
 
     // change mapping permissions
     status_t Protect(uint arch_mmu_flags);
@@ -61,6 +61,11 @@ public:
 
     // WAVL tree key function
     vaddr_t GetKey() const { return base(); }
+
+    // calls in from VMO land
+
+    // unmap any pages that map the passed in vmo range. May not intersect with this range
+    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size);
 
 private:
     // private constructor, use Create()

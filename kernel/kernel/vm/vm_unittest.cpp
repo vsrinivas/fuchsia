@@ -347,8 +347,10 @@ static bool vmm_object_tests(void* context) {
         auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
-        auto ret = vmo->CommitRange(0, alloc_size);
-        EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object\n");
+        uint64_t committed;
+        auto ret = vmo->CommitRange(0, alloc_size, &committed);
+        EXPECT_EQ(0, ret, "committing vm object\n");
+        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object\n");
     }
 
     unittest_printf("creating vm object, committing odd sized memory\n");
@@ -357,8 +359,10 @@ static bool vmm_object_tests(void* context) {
         auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
-        auto ret = vmo->CommitRange(0, alloc_size);
-        EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object\n");
+        uint64_t committed;
+        auto ret = vmo->CommitRange(0, alloc_size, &committed);
+        EXPECT_EQ(0, ret, "committing vm object\n");
+        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object\n");
     }
 
     unittest_printf("creating vm object, committing contiguous memory\n");
@@ -367,8 +371,10 @@ static bool vmm_object_tests(void* context) {
         auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
-        auto ret = vmo->CommitRangeContiguous(0, alloc_size, 0);
-        EXPECT_EQ((ssize_t)alloc_size, ret, "committing vm object contiguously\n");
+        uint64_t committed;
+        auto ret = vmo->CommitRangeContiguous(0, alloc_size, &committed, 0);
+        EXPECT_EQ(0, ret, "committing vm object contig\n");
+        EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), committed, "committing vm object contig\n");
     }
 
     unittest_printf("creating vm object, mapping it, precommitted\n");

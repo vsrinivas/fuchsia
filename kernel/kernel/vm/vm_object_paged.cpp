@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
@@ -22,17 +23,21 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-static void ZeroPage(paddr_t pa) {
+namespace {
+
+void ZeroPage(paddr_t pa) {
     void* ptr = paddr_to_kvaddr(pa);
     DEBUG_ASSERT(ptr);
 
     arch_zero_page(ptr);
 }
 
-static void ZeroPage(vm_page_t* p) {
+void ZeroPage(vm_page_t* p) {
     paddr_t pa = vm_page_to_paddr(p);
     ZeroPage(pa);
 }
+
+} // namespace
 
 VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags)
     : pmm_alloc_flags_(pmm_alloc_flags) {
@@ -230,9 +235,12 @@ vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) {
     return p;
 }
 
-int64_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
+status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t *committed) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
+
+    if (committed)
+        *committed = 0;
 
     AutoLock a(lock_);
 
@@ -242,7 +250,7 @@ int64_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
 
     // was in range, just zero length
     if (len == 0)
-        return 0;
+        return NO_ERROR;
 
     // compute a page aligned end to do our searches in to make sure we cover all the pages
     uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
@@ -255,7 +263,7 @@ int64_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
             count++;
     }
     if (count == 0)
-        return 0;
+        return NO_ERROR;
 
     // allocate count number of pages
     list_node page_list;
@@ -284,17 +292,26 @@ int64_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
 
         __UNUSED auto status = page_list_.AddPage(p, o);
         DEBUG_ASSERT(status == NO_ERROR);
+
+        if (committed)
+            *committed += PAGE_SIZE;
     }
 
     DEBUG_ASSERT(list_is_empty(&page_list));
 
-    return len;
+    // for now we only support committing as much as we were asked for
+    DEBUG_ASSERT(!committed || *committed == count * PAGE_SIZE);
+
+    return NO_ERROR;
 }
 
-int64_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint8_t alignment_log2) {
+status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t *committed, uint8_t alignment_log2) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n",
             offset, len, alignment_log2);
+
+    if (committed)
+        *committed = 0;
 
     AutoLock a(lock_);
 
@@ -304,7 +321,7 @@ int64_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint
 
     // was in range, just zero length
     if (len == 0)
-        return 0;
+        return NO_ERROR;
 
     // compute a page aligned end to do our searches in to make sure we cover all the pages
     uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
@@ -345,9 +362,59 @@ int64_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint
 
         __UNUSED auto status = page_list_.AddPage(p, o);
         DEBUG_ASSERT(status == NO_ERROR);
+
+        if (committed)
+            *committed += PAGE_SIZE;
     }
 
-    return count * PAGE_SIZE;
+    // for now we only support committing as much as we were asked for
+    DEBUG_ASSERT(!committed || *committed == count * PAGE_SIZE);
+
+    return NO_ERROR;
+}
+
+status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t *decommitted) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
+
+    if (decommitted)
+        *decommitted = 0;
+
+    AutoLock a(lock_);
+
+    // trim the size
+    if (!TrimRange(offset, len, size_))
+        return ERR_OUT_OF_RANGE;
+
+    // was in range, just zero length
+    if (len == 0)
+        return NO_ERROR;
+
+    // figure the starting and ending page offset
+    uint64_t start = PAGE_ALIGN(offset);
+    uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
+    DEBUG_ASSERT(end > offset);
+    DEBUG_ASSERT(end > start);
+    uint64_t page_aligned_len = end - start;
+
+    LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 ", page_aliged_len %#" PRIx64 "\n", start, end, page_aligned_len);
+
+    // unmap all of the pages in this range on all the mapping regions
+    for (auto& r: region_list_) {
+        // unmap any pages the region may have mapped that intersect this range
+        r.UnmapVmoRangeLocked(start, page_aligned_len);
+    }
+
+    // iterate through the pages, freeing them
+    while (start < end) {
+        auto status = page_list_.FreePage(start);
+        if (status == NO_ERROR && decommitted) {
+            *decommitted += PAGE_SIZE;
+        }
+        start += PAGE_SIZE;
+    }
+
+    return NO_ERROR;
 }
 
 // perform some sort of copy in/out on a range of the object using a passed in lambda

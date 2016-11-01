@@ -432,6 +432,90 @@ bool vmo_lookup_test() {
     END_TEST;
 }
 
+bool vmo_commit_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    mx_status_t status;
+    uintptr_t ptr, ptr2, ptr3;
+
+    // create a vmo
+    const size_t size = 16384;
+
+    status = mx_vmo_create(size, 0, &vmo);
+    EXPECT_EQ(0, status, "vm_object_create");
+
+    // commit a range of it
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0, size, nullptr, 0);
+    EXPECT_EQ(0, status, "vm commit");
+
+    // decommit that range
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0, size, nullptr, 0);
+    EXPECT_EQ(0, status, "vm decommit");
+
+    // commit a range of it
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_COMMIT, 0, size, nullptr, 0);
+    EXPECT_EQ(0, status, "vm commit");
+
+    // map it
+    ptr = 0;
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, size, &ptr, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
+    EXPECT_EQ(NO_ERROR, status, "map");
+    EXPECT_NONNULL(ptr, "map address");
+
+    // second mapping with an offset
+    ptr2 = 0;
+    status = mx_process_map_vm(mx_process_self(), vmo, PAGE_SIZE, size, &ptr2, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
+    EXPECT_EQ(NO_ERROR, status, "map2");
+    EXPECT_NONNULL(ptr, "map address2");
+
+    // third mapping with a totally non-overlapping offset
+    ptr3 = 0;
+    status = mx_process_map_vm(mx_process_self(), vmo, size * 2, size, &ptr3, MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
+    EXPECT_EQ(NO_ERROR, status, "map3");
+    EXPECT_NONNULL(ptr, "map address3");
+
+    // write into it at offset PAGE_SIZE, read it back
+    uint32_t *u32 = (uint32_t *)(ptr + PAGE_SIZE);
+    *u32 = 99;
+    EXPECT_EQ(99u, (*u32), "written memory");
+
+    uint32_t *u32a = (uint32_t *)(ptr2);
+    EXPECT_EQ(99u, (*u32a), "written memory");
+
+    // decommit page 0
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, nullptr, 0);
+    EXPECT_EQ(0, status, "vm decommit");
+
+    // verify that it didn't get unmapped
+    EXPECT_EQ(99u, (*u32), "written memory");
+    // verify that it didn't get unmapped
+    EXPECT_EQ(99u, (*u32a), "written memory2");
+
+    // decommit page 1
+    status = mx_vmo_op_range(vmo, MX_VMO_OP_DECOMMIT, PAGE_SIZE, PAGE_SIZE, nullptr, 0);
+    EXPECT_EQ(0, status, "vm decommit");
+
+    // verify that it did get unmapped
+    EXPECT_EQ(0u, (*u32), "written memory");
+    // verify that it did get unmapped
+    EXPECT_EQ(0u, (*u32a), "written memory2");
+
+    // unmap our vmos
+    status = mx_process_unmap_vm(mx_process_self(), ptr, 0);
+    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    status = mx_process_unmap_vm(mx_process_self(), ptr2, 0);
+    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+    status = mx_process_unmap_vm(mx_process_self(), ptr3, 0);
+    EXPECT_EQ(NO_ERROR, status, "vm_unmap");
+
+    // close the handle
+    status = mx_handle_close(vmo);
+    EXPECT_EQ(NO_ERROR, status, "handle_close");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(vmo_tests)
 RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
@@ -440,6 +524,7 @@ RUN_TEST(vmo_read_only_map_test);
 RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
+RUN_TEST(vmo_commit_test);
 END_TEST_CASE(vmo_tests)
 
 int main(int argc, char** argv) {
