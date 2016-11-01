@@ -36,6 +36,7 @@ _shared_binary_target_configs = [
   "//build/config:compiler",
   "//build/config:default_include_dirs",
   "//build/config:default_warnings",
+  "//build/config:no_exceptions",
 ]
 if (is_debug) {
   _shared_binary_target_configs += [ "//build/config:debug" ]
@@ -44,7 +45,6 @@ if (is_debug) {
 }
 
 _shared_library_target_configs = _shared_binary_target_configs + [
-                                   "//build/config:no_exceptions",
                                    "//build/config:shared_library_config",
                                    "//build/config:symbol_visibility_hidden",
                                  ]
