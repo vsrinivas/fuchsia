@@ -151,6 +151,8 @@ status_t ProcessDispatcher::Start(mxtl::RefPtr<ThreadDispatcher> thread,
 void ProcessDispatcher::Exit(int retcode) {
     LTRACE_ENTRY_OBJ;
 
+    DEBUG_ASSERT(ProcessDispatcher::GetCurrent() == this);
+
     {
         AutoLock lock(state_lock_);
 
