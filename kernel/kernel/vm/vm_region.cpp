@@ -13,10 +13,10 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <mxtl/type_support.h>
 #include <new.h>
 #include <string.h>
 #include <trace.h>
-#include <mxtl/type_support.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -28,7 +28,7 @@ VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_fl
 }
 
 mxtl::RefPtr<VmRegion> VmRegion::Create(VmAspace& aspace, vaddr_t base, size_t size,
-                                         uint arch_mmu_flags, const char* name) {
+                                        uint arch_mmu_flags, const char* name) {
     AllocChecker ac;
     auto r = mxtl::AdoptRef(new (&ac) VmRegion(aspace, base, size, arch_mmu_flags, name));
     return ac.check() ? r : nullptr;
@@ -187,7 +187,8 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
         auto ret = arch_mmu_map(&aspace_->arch_aspace(), va, pa, 1, arch_mmu_flags_);
         if (ret < 0) {
             TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR
-                   "\n", ret, va, pa);
+                   "\n",
+                   ret, va, pa);
         }
     }
 
@@ -285,9 +286,11 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     }
 #if ARCH_ARM64
     if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)
-        arch_sync_cache_range(va,PAGE_SIZE);
+        arch_sync_cache_range(va, PAGE_SIZE);
 #endif
     return NO_ERROR;
 }
 
-mxtl::RefPtr<VmObject> VmRegion::vmo() { return object_; }
+mxtl::RefPtr<VmObject> VmRegion::vmo() {
+    return object_;
+}

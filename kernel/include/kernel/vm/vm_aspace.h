@@ -12,14 +12,14 @@
 #include <kernel/vm.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
+#include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
 class VmRegion;
 class VmObject;
 
-class VmAspace : public mxtl::DoublyLinkedListable<VmAspace*>
-               , public mxtl::RefCounted<VmAspace> {
+class VmAspace : public mxtl::DoublyLinkedListable<VmAspace*>, public mxtl::RefCounted<VmAspace> {
 public:
     // complete initialization, may fail in OOM cases
     status_t Init();
@@ -27,6 +27,8 @@ public:
     // factory that creates a user/kernel address space based on flags
     // may fail due to resource starvation
     static mxtl::RefPtr<VmAspace> Create(uint flags, const char* name);
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
 
     void Rename(const char* name);
 
@@ -91,10 +93,6 @@ public:
 
 private:
     using RegionTree = mxtl::WAVLTree<vaddr_t, mxtl::RefPtr<VmRegion>>;
-
-    // nocopy
-    VmAspace(const VmAspace&) = delete;
-    VmAspace& operator=(const VmAspace&) = delete;
 
     // can only be constructed via factory
     VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);

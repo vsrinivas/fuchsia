@@ -99,7 +99,7 @@ void VmObject::Dump(bool page_dump) {
     if (page_dump) {
         auto f = [](const auto p, uint64_t offset) {
             printf("\t\t\toffset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n",
-                offset, p, vm_page_to_paddr(p));
+                   offset, p, vm_page_to_paddr(p));
         };
         page_list_.ForEveryPage(f);
     }
@@ -168,7 +168,7 @@ mxtl::RefPtr<VmObject> VmObject::CreateFromROData(const void* data,
 
         for (size_t count = 0; count < size / PAGE_SIZE; count++) {
             paddr_t pa = start_paddr + count * PAGE_SIZE;
-            vm_page_t *page = paddr_to_vm_page(pa);
+            vm_page_t* page = paddr_to_vm_page(pa);
             ASSERT(page);
 
             if (page->state == VM_PAGE_STATE_WIRED) {
@@ -178,7 +178,7 @@ mxtl::RefPtr<VmObject> VmObject::CreateFromROData(const void* data,
                 page->state = VM_PAGE_STATE_WIRED;
             } else {
                 panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n",
-                       pa, page->state);
+                      pa, page->state);
             }
 
             vmo->AddPage(page, count * PAGE_SIZE);
@@ -544,14 +544,14 @@ static int cmd_vm_object(int argc, const cmd_args* argv) {
         if (argc < 2)
             goto notenoughargs;
 
-        VmObject *o = reinterpret_cast<VmObject *>(argv[2].u);
+        VmObject* o = reinterpret_cast<VmObject*>(argv[2].u);
 
         o->Dump();
     } else if (!strcmp(argv[1].str, "dump_pages")) {
         if (argc < 2)
             goto notenoughargs;
 
-        VmObject *o = reinterpret_cast<VmObject *>(argv[2].u);
+        VmObject* o = reinterpret_cast<VmObject*>(argv[2].u);
 
         o->Dump(true);
     } else {

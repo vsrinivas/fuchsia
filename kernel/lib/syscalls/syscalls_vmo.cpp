@@ -128,7 +128,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
                              user_ptr<void> buffer, mx_size_t buffer_size) {
     LTRACEF("handle %d op %u offset %#" PRIx64 " size %#" PRIx64
             " buffer %p buffer_size %" PRIuPTR "\n",
-             handle, op, offset, size, buffer.get(), buffer_size);
+            handle, op, offset, size, buffer.get(), buffer_size);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -202,7 +202,8 @@ mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, mx_
 mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
                                    uint32_t prot) {
     LTRACEF("proc handle %d, address %#" PRIxPTR ", len %#" PRIxPTR
-            ", prot %#x\n", proc_handle, address, len, prot);
+            ", prot %#x\n",
+            proc_handle, address, len, prot);
 
     auto up = ProcessDispatcher::GetCurrent();
 

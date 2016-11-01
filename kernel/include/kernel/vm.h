@@ -33,12 +33,12 @@
 #include <arch.h>
 #include <arch/mmu.h>
 #include <assert.h>
+#include <kernel/vm/page.h>
 #include <list.h>
 #include <magenta/compiler.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <kernel/vm/page.h>
 
 __BEGIN_CDECLS
 
@@ -152,7 +152,7 @@ size_t pmm_free_page(vm_page_t* page) __NONNULL((1));
 void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* pa);
 
 /* Same as above but a single page at a time */
-void* pmm_alloc_kpage(paddr_t* pa, vm_page_t **p);
+void* pmm_alloc_kpage(paddr_t* pa, vm_page_t** p);
 
 size_t pmm_free_kpages(void* ptr, size_t count);
 

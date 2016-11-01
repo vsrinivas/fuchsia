@@ -7,9 +7,9 @@
 
 #include <err.h>
 #include <inttypes.h>
-#include <lib/console.h>
-#include <kernel/vm/page.h>
 #include <kernel/vm.h>
+#include <kernel/vm/page.h>
+#include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -52,17 +52,17 @@ static int cmd_vm_page(int argc, const cmd_args* argv) {
         if (argc < 2)
             goto notenoughargs;
 
-        vm_page *page = reinterpret_cast<vm_page *>(argv[2].u);
+        vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 
         dump_page(page);
-    } if (!strcmp(argv[1].str, "hexdump")) {
+    } else if (!strcmp(argv[1].str, "hexdump")) {
         if (argc < 2)
             goto notenoughargs;
 
-        vm_page *page = reinterpret_cast<vm_page *>(argv[2].u);
+        vm_page* page = reinterpret_cast<vm_page*>(argv[2].u);
 
         paddr_t pa = vm_page_to_paddr(page);
-        void *ptr = paddr_to_kvaddr(pa);
+        void* ptr = paddr_to_kvaddr(pa);
         if (!ptr) {
             printf("bad page or page not mapped in kernel space\n");
             return -1;

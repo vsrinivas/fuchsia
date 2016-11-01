@@ -10,9 +10,9 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <mxtl/limits.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <mxtl/limits.h>
 
 #define VM_GLOBAL_TRACE 0
 
@@ -61,7 +61,7 @@ static inline bool TrimRange(O& offset, L& len, O trim_to_len) {
 
     // trim offset/len to the range
     if (offset + len < offset)
-        return false;  // offset + len wrapped
+        return false; // offset + len wrapped
 
     // we started off the end of the range
     if (offset > trim_to_len)
@@ -73,4 +73,3 @@ static inline bool TrimRange(O& offset, L& len, O trim_to_len) {
 
     return true;
 }
-

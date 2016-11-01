@@ -16,14 +16,14 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
 #include <lk/init.h>
-#include <new.h>
-#include <stdlib.h>
-#include <string.h>
-#include <trace.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
+#include <new.h>
 #include <safeint/safe_math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <trace.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -225,8 +225,7 @@ status_t VmAspace::AddRegion(const mxtl::RefPtr<VmRegion>& r) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(r);
 
-    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size %#zx r %p base %#"
-                  PRIxPTR " size %#zx\n", this, base_,
+    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size %#zx r %p base %#" PRIxPTR " size %#zx\n", this, base_,
                   size_, r.get(), r->base(), r->size());
 
     // only try if the region will at least fit in the address space
@@ -369,7 +368,7 @@ vaddr_t VmAspace::AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_
 
     // Find the first gap in the address space which can contain a region of the requested size.
     auto before_iter = regions_.end();
-    auto after_iter  = regions_.begin();
+    auto after_iter = regions_.begin();
 
     do {
         if (CheckGap(before_iter, after_iter, &spot, base, align, size, min_alloc_gap, arch_mmu_flags)) {
@@ -385,8 +384,8 @@ vaddr_t VmAspace::AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_
 
 // allocate a region and insert it into the list
 mxtl::RefPtr<VmRegion> VmAspace::AllocRegion(const char* name, size_t size, vaddr_t vaddr,
-                                              uint8_t align_pow2, size_t min_alloc_gap,
-                                              uint vmm_flags, uint arch_mmu_flags) {
+                                             uint8_t align_pow2, size_t min_alloc_gap,
+                                             uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
     DEBUG_ASSERT(is_mutex_held(&lock_));
     LTRACEF_LEVEL(2, "aspace %p name '%s' vmm_flags %#x size %#zx vaddr %#" PRIxPTR "\n",
@@ -726,7 +725,8 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
 void VmAspace::Dump() const {
     DEBUG_ASSERT(magic_ == MAGIC);
     printf("aspace %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
-           " size %#zx flags %#x\n", this,
+           " size %#zx flags %#x\n",
+           this,
            ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
 
     printf("regions:\n");

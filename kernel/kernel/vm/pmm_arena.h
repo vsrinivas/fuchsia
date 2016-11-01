@@ -6,6 +6,7 @@
 #pragma once
 
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/macros.h>
 
 #include <kernel/vm.h>
 #include <trace.h>
@@ -14,6 +15,8 @@ class PmmArena : public mxtl::DoublyLinkedListable<PmmArena*> {
 public:
     PmmArena(const pmm_arena_info_t* info);
     ~PmmArena();
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PmmArena);
 
     // set up the per page structures, allocated out of the boot time allocator
     void BootAllocArray();

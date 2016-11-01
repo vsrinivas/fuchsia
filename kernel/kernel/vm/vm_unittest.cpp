@@ -11,9 +11,9 @@
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_region.h>
+#include <mxtl/array.h>
 #include <new.h>
 #include <unittest.h>
-#include <mxtl/array.h>
 
 static bool pmm_tests(void* context) {
     BEGIN_TEST;
@@ -53,7 +53,7 @@ static bool pmm_tests(void* context) {
     {
         list_node list = LIST_INITIAL_VALUE(list);
 
-        static const size_t alloc_count = (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE;  // 128GB
+        static const size_t alloc_count = (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
 
         auto count = pmm_alloc_pages(alloc_count, 0, &list);
         EXPECT_NEQ(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
@@ -190,7 +190,7 @@ static bool vmm_tests(void* context) {
         EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
         EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
 
-        vmm_aspace_t *old_aspace = get_current_thread()->aspace;
+        vmm_aspace_t* old_aspace = get_current_thread()->aspace;
         vmm_set_active_aspace(aspace);
 
         // allocate region 0
@@ -239,7 +239,7 @@ static bool vmm_tests(void* context) {
         EXPECT_EQ(0, err, "vmm_allocate_aspace error code");
         EXPECT_NEQ(nullptr, aspace, "vmm_allocate_aspace pointer");
 
-        vmm_aspace_t *old_aspace = get_current_thread()->aspace;
+        vmm_aspace_t* old_aspace = get_current_thread()->aspace;
         vmm_set_active_aspace(aspace);
 
         // allocate regions
@@ -253,11 +253,10 @@ static bool vmm_tests(void* context) {
                 all_ok = false;
         }
 
-
         for (void* p : ptr) {
             paddr_t paddr;
             vaddr_t vaddr = reinterpret_cast<vaddr_t>(p);
-            arch_aspace_t *aaspace = vmm_get_arch_aspace(aspace);
+            arch_aspace_t* aaspace = vmm_get_arch_aspace(aspace);
 
             vaddr_t addresses[] = {
                 vaddr - 1, vaddr - gap_size + 1,
@@ -303,7 +302,8 @@ static bool vmm_tests(void* context) {
         // zero size
         err = vmm_alloc_contiguous(vmm_get_kernel_aspace(), "test", 0, &ptr, 0, 0, VMM_FLAG_COMMIT,
                                    arch_rw_flags);
-        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous"); }
+        EXPECT_EQ(ERR_INVALID_ARGS, err, "invalid args to vmm_alloc_contiguous");
+    }
 
     unittest_printf("allocating a vm address space object directly, allowing it to go out of scope\n");
     {
@@ -315,7 +315,7 @@ static bool vmm_tests(void* context) {
         auto aspace = VmAspace::Create(0, "test aspace2");
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
-        void *ptr;
+        void* ptr;
         auto err = aspace->Alloc("test", PAGE_SIZE, &ptr, 0, 0, 0, arch_rw_flags);
         EXPECT_EQ(NO_ERROR, err, "allocating region\n");
 
@@ -572,7 +572,7 @@ static bool vmm_object_tests(void* context) {
         // map the object
         auto ka = VmAspace::kernel_aspace();
         uint8_t* ptr;
-        err = ka->MapObject(vmo, "test", 0, alloc_size, (void **)&ptr, 0, 0, 0, arch_rw_flags);
+        err = ka->MapObject(vmo, "test", 0, alloc_size, (void**)&ptr, 0, 0, 0, arch_rw_flags);
         EXPECT_EQ(NO_ERROR, err, "mapping object");
 
         // write to it at odd offsets

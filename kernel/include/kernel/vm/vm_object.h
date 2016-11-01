@@ -13,6 +13,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <mxtl/array.h>
+#include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
@@ -28,6 +29,8 @@ public:
 
     static mxtl::RefPtr<VmObject> CreateFromROData(const void* data,
                                                    size_t size);
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
     status_t Resize(uint64_t size);
 
@@ -64,10 +67,6 @@ public:
     size_t AllocatedPages() const;
 
 private:
-    // kill copy constructors
-    VmObject(const VmObject& o) = delete;
-    VmObject& operator=(VmObject& o) = delete;
-
     // private constructor (use Create())
     explicit VmObject(uint32_t pmm_alloc_flags);
 

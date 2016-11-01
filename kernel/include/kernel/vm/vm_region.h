@@ -7,21 +7,22 @@
 #pragma once
 
 #include <assert.h>
-#include <stdint.h>
+#include <kernel/vm/vm_page_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-#include <kernel/vm/vm_page_list.h>
+#include <stdint.h>
 
 class VmAspace;
 class VmObject;
 
-class VmRegion : public mxtl::WAVLTreeContainable<mxtl::RefPtr<VmRegion>>
-               , public mxtl::RefCounted<VmRegion> {
+class VmRegion : public mxtl::WAVLTreeContainable<mxtl::RefPtr<VmRegion>>, public mxtl::RefCounted<VmRegion> {
 public:
     static mxtl::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
-                                          uint arch_mmu_flags, const char* name);
+                                         uint arch_mmu_flags, const char* name);
     ~VmRegion();
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmRegion);
 
     // accessors
     vaddr_t base() const { return base_; }
@@ -65,10 +66,6 @@ public:
 private:
     // private constructor, use Create()
     VmRegion(VmAspace& aspace, vaddr_t base, size_t size, uint arch_mmu_flags, const char* name);
-
-    // nocopy
-    VmRegion(const VmRegion&) = delete;
-    VmRegion& operator=(const VmRegion&) = delete;
 
     // magic value
     static const uint32_t MAGIC = 0x564d5247; // VMRG

@@ -80,8 +80,8 @@ static void mark_pages_in_use(vaddr_t va, size_t len) {
         pmm_alloc_range(start_pa, runlen / PAGE_SIZE, &list);
 
     // mark all of the pages we allocated as WIRED
-    vm_page_t *p;
-    list_for_every_entry(&list, p, vm_page_t, free.node) {
+    vm_page_t* p;
+    list_for_every_entry (&list, p, vm_page_t, free.node) {
         p->state = VM_PAGE_STATE_WIRED;
     }
 }
@@ -196,7 +196,8 @@ void vm_init_postheap(uint level) {
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
                     LTRACEF("Freeing region [%016" PRIxPTR ", %016" PRIxPTR
-                            ")\n", vaddr, next_kernel_region);
+                            ")\n",
+                            vaddr, next_kernel_region);
                     status = vmm_free_region(aspace, vaddr);
                     ASSERT(status == NO_ERROR);
                 } else {

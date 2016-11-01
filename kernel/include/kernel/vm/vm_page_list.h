@@ -7,6 +7,7 @@
 #pragma once
 
 #include <mxtl/intrusive_wavl_tree.h>
+#include <mxtl/macros.h>
 #include <mxtl/unique_ptr.h>
 
 struct vm_page;
@@ -16,9 +17,7 @@ public:
     explicit VmPageListNode(uint64_t offset);
     ~VmPageListNode();
 
-    // nocopy
-    VmPageListNode(const VmPageListNode&) = delete;
-    VmPageListNode& operator=(const VmPageListNode&) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmPageListNode);
 
     static const size_t kPageFanOut = 16;
 
@@ -62,9 +61,7 @@ public:
     VmPageList();
     ~VmPageList();
 
-    // nocopy
-    VmPageList(const VmPageList&) = delete;
-    VmPageList& operator=(const VmPageList&) = delete;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmPageList);
 
     // walk the page tree, calling the passed in function on every tree node
     template <typename T>

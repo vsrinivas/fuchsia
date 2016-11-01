@@ -8,8 +8,8 @@
 #pragma once
 
 #include <list.h>
-#include <stdint.h>
 #include <magenta/compiler.h>
+#include <stdint.h>
 
 #if __cplusplus
 struct VmObject;
@@ -37,7 +37,7 @@ typedef struct vm_page {
         struct {
             // attached to a vm object
             uint64_t offset;
-            VmObject *obj;
+            VmObject* obj;
         } object;
 #endif
 
@@ -65,8 +65,7 @@ static inline bool page_is_free(const vm_page_t* page) {
     return page->state == VM_PAGE_STATE_FREE;
 }
 
-const char *page_state_to_string(unsigned int state);
+const char* page_state_to_string(unsigned int state);
 void dump_page(const vm_page_t* page);
 
 __END_CDECLS
-
