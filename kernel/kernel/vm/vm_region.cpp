@@ -16,6 +16,7 @@
 #include <mxtl/auto_lock.h>
 #include <mxtl/type_support.h>
 #include <new.h>
+#include <safeint/safe_math.h>
 #include <string.h>
 #include <trace.h>
 
@@ -113,6 +114,8 @@ status_t VmRegion::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("region %p '%s', offset %#" PRIx64 ", len %#" PRIx64 "\n", this, name_, offset, len);
 
+    DEBUG_ASSERT(vmo_lock_.IsHeld());
+
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
     DEBUG_ASSERT(len > 0);
@@ -123,13 +126,21 @@ status_t VmRegion::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     // compute the intersection of the passed in vmo range and our mapping
     uint64_t offset_new;
     uint64_t len_new;
-    if (!GetIntersect(object_offset_, size_, offset, len, offset_new, len_new))
+    if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len, offset_new, len_new))
         return NO_ERROR;
+
+    DEBUG_ASSERT(len_new <= SIZE_MAX);
 
     LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, len_new);
 
-    LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", base_ + offset_new, len_new);
-    return arch_mmu_unmap(&aspace_->arch_aspace(), base_ + offset_new, len_new);
+    // make sure the base + offset is within our address space
+    // should be, according to the range stored in base_ + size_
+    safeint::CheckedNumeric<vaddr_t> unmap_base = base_;
+    unmap_base += offset_new;
+
+    LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 "\n", unmap_base.ValueOrDie(), len_new);
+
+    return arch_mmu_unmap(&aspace_->arch_aspace(), unmap_base.ValueOrDie(), static_cast<size_t>(len_new));
 }
 
 status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {

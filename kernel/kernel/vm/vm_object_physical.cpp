@@ -16,6 +16,7 @@
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
+#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -25,9 +26,6 @@
 VmObjectPhysical::VmObjectPhysical(paddr_t base, uint64_t size)
     : size_(size), base_(base) {
     LTRACEF("%p\n", this);
-
-    // assert that base and size are reasonable
-    DEBUG_ASSERT(base + size >= base);
 }
 
 VmObjectPhysical::~VmObjectPhysical() {
@@ -39,7 +37,10 @@ mxtl::RefPtr<VmObject> VmObjectPhysical::Create(paddr_t base, uint64_t size) {
     if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
         return nullptr;
 
-    if (base + size < base)
+    // check that base + size is a valid range
+    safeint::CheckedNumeric<paddr_t> safe_base = base;
+    safe_base += size - 1;
+    if (!safe_base.IsValid())
         return nullptr;
 
     AllocChecker ac;

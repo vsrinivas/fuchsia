@@ -48,9 +48,6 @@ VmObjectPaged::~VmObjectPaged() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p\n", this);
 
-    list_node list;
-    list_initialize(&list);
-
     // free all of the pages attached to us
     page_list_.FreeAllPages();
 }
@@ -85,7 +82,7 @@ void VmObjectPaged::Dump(bool page_dump) {
     AutoLock a(lock_);
 
     size_t count = 0;
-    page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
+    page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
 
     printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n",
            this, ref_count_debug(), size_, count);
@@ -103,7 +100,7 @@ size_t VmObjectPaged::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
     AutoLock a(lock_);
     size_t count = 0;
-    page_list_.ForEveryPage([&](const auto p, uint64_t) { count++; });
+    page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
     return count;
 }
 
