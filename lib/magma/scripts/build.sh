@@ -102,5 +102,5 @@ echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $bootfs
 echo ""
 echo "Recommended loglistener command:"
 echo ""
-echo "$magenta_build_dir/tools/loglistener | grep --line-buffered -F -f $fuchsia_root/magma/gnbuild/test_patterns.txt"
+echo "$magenta_build_dir/tools/loglistener | grep --line-buffered -F -f $fuchsia_root/magma/scripts/test_patterns.txt"
 echo ""
