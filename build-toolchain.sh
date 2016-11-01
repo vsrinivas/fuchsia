@@ -9,7 +9,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 readonly HOST_ARCH=$(uname -m)
-readonly HOST_OS=$(uname | sed 'y/LINUXDARWIN/linuxdarwin/')
+readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
 if [[ "x${HOST_OS}" == "xlinux" ]]; then
