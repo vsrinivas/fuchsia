@@ -18,6 +18,7 @@ group("mozart") {
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/input/cpp",
     "//apps/mozart/services/input/interfaces",
     "//apps/mozart/services/launcher/interfaces",
     "//apps/mozart/services/views/cpp",
