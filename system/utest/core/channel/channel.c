@@ -226,8 +226,8 @@ static bool channel_non_transferable(void) {
             sizeof(event_handle_info.rec), &event_handle_info, sizeof(event_handle_info));
     ASSERT_EQ(get_info_result, (mx_ssize_t)sizeof(event_handle_info), "failed to get event info");
     mx_rights_t initial_event_rights = event_handle_info.rec.rights;
-    mx_handle_t non_transferable_event =
-            mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER);
+    mx_handle_t non_transferable_event;
+    mx_handle_duplicate(event, initial_event_rights & ~MX_RIGHT_TRANSFER, &non_transferable_event);
 
     mx_status_t write_result = mx_channel_write(channel[0], 0u, NULL, 0, &non_transferable_event, 1u);
     EXPECT_EQ(write_result, ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
@@ -365,8 +365,8 @@ static void write_test_message(mx_handle_t channel,
     assert(num_handles <= countof(handles));
 
     for (uint32_t i = 0; i < num_handles; i++) {
-        handles[i] = mx_handle_duplicate(handle, MX_RIGHT_TRANSFER);
-        assert(handles[i] != MX_HANDLE_INVALID);
+        mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_TRANSFER, &handles[i]);
+        assert(status == NO_ERROR);
     }
 
     __UNUSED mx_status_t status = mx_channel_write(channel, 0u, data, size, handles, num_handles);

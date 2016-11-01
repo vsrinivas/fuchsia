@@ -34,9 +34,10 @@ static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,
             return ERR_BUFFER_TOO_SMALL;
         }
         //TODO: ktrace-only handle once resources are further along
-        mx_handle_t h = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
-        if (h < 0) {
-            return h;
+        mx_handle_t h;
+        mx_status_t status = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &h);
+        if (status < 0) {
+            return status;
         }
         *((mx_handle_t*) reply) = h;
         return sizeof(mx_handle_t);

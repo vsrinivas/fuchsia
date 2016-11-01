@@ -213,7 +213,8 @@ static void msg_loop(mx_handle_t channel)
                 thrd_t thread;
                 tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) channel_from_thread, "msg-loop-subthread");
                 mx_handle_t thread_handle = thrd_get_mx_handle(thread);
-                mx_handle_t copy = mx_handle_duplicate(thread_handle, MX_RIGHT_SAME_RIGHTS);
+                mx_handle_t copy = MX_HANDLE_INVALID;
+                mx_handle_duplicate(thread_handle, MX_RIGHT_SAME_RIGHTS, &copy);
                 send_msg_new_thread_handle(channel, copy);
             }
             break;

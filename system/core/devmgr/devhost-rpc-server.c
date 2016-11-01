@@ -68,8 +68,7 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
 
     if (dev->event > 0) {
         //TODO: read only?
-        if ((handles[1] = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS)) < 0) {
-            r = handles[1];
+        if ((r = mx_handle_duplicate(dev->event, MX_RIGHT_SAME_RIGHTS, &handles[1])) < 0) {
             goto fail2;
         }
         ids[1] = MX_HND_TYPE_MXIO_REMOTE;
@@ -155,8 +154,10 @@ static ssize_t do_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_
             r = ERR_BUFFER_TOO_SMALL;
         } else {
             mx_handle_t* event = out_buf;
-            *event = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ);
-            r = sizeof(mx_handle_t);
+            r = mx_handle_duplicate(dev->event, MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ, event);
+            if (r == NO_ERROR) {
+                r = sizeof(mx_handle_t);
+            }
         }
         break;
     }

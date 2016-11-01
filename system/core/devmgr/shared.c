@@ -50,7 +50,8 @@ void devmgr_launch_devhost(const char* name, int argc, char** argv,
     ids[2] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HRPC);
     hnd[2] = hrpc;
     ids[3] = MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0);
-    hnd[3] = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
+    hnd[3] = MX_HANDLE_INVALID;
+    mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &hnd[3]);
     ids[4] = MX_HND_TYPE_MXIO_ROOT;
 #if DEVMGR
     hnd[4] = vfs_create_global_root_handle();

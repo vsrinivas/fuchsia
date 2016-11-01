@@ -53,8 +53,9 @@ bool c11_thread_test(void) {
     mx_handle_t handle = thrd_get_mx_handle(thread);
     ASSERT_NEQ(handle, MX_HANDLE_INVALID, "got invalid thread handle");
     // Prove this is a valid handle by duplicating it.
-    mx_handle_t dup_handle = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS);
-    ASSERT_GT(dup_handle, 0, "failed to duplicate thread handle");
+    mx_handle_t dup_handle;
+    mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS, &dup_handle);
+    ASSERT_EQ(status, 0, "failed to duplicate thread handle");
 
     ret = thrd_join(thread, &return_value);
     ASSERT_EQ(ret, thrd_success, "Error while thread join");

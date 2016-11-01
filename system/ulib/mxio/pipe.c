@@ -129,9 +129,9 @@ static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events
 
 static mx_status_t mx_pipe_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mx_pipe_t* p = (void*)io;
-    handles[0] = mx_handle_duplicate(p->h, MX_RIGHT_SAME_RIGHTS);
-    if (handles[0] < 0) {
-        return handles[0];
+    mx_status_t status = mx_handle_duplicate(p->h, MX_RIGHT_SAME_RIGHTS, &handles[0]);
+    if (status < 0) {
+        return status;
     }
     types[0] = MX_HND_TYPE_MXIO_PIPE;
     return 1;

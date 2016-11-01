@@ -98,9 +98,11 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
     };
     mx_handle_t handles[] = {
         [BOOTSTRAP_EXEC_VMO] = vmo,
-        [BOOTSTRAP_LOGGER] = mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS),
-        [BOOTSTRAP_PROC] = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS),
+        [BOOTSTRAP_LOGGER] = MX_HANDLE_INVALID,
+        [BOOTSTRAP_PROC] = MX_HANDLE_INVALID,
     };
+    mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]);
+    mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]);
 
     mx_status_t status = mx_channel_write(
         to_child, 0, &msg, sizeof(msg),

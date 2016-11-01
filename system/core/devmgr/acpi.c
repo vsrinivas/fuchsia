@@ -46,7 +46,8 @@ mx_status_t devmgr_launch_acpisvc(void) {
     ids[0] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
     hnd[0] = logger;
     ids[1] = MX_HND_TYPE_USER0;
-    hnd[1] = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS);
+    hnd[1] = MX_HANDLE_INVALID;
+    mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &hnd[1]);
     ids[2] = MX_HND_TYPE_USER1;
     hnd[2] = acpi_comm[1];
 

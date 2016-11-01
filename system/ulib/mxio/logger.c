@@ -70,9 +70,9 @@ static mx_status_t log_close(mxio_t* io) {
 static mx_status_t log_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mxio_log_t* log_io = (mxio_log_t*)io;
 
-    handles[0] = mx_handle_duplicate(log_io->handle, MX_RIGHT_SAME_RIGHTS);
-    if (handles[0] < 1) {
-        return handles[0];
+    mx_status_t status = mx_handle_duplicate(log_io->handle, MX_RIGHT_SAME_RIGHTS, &handles[0]);
+    if (status < 0) {
+        return status;
     }
     types[0] = MX_HND_TYPE_MXIO_LOGGER;
     return 1;

@@ -14,7 +14,9 @@ bool handle_info_test(void) {
 
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0u, &event), 0, "");
-    mx_handle_t duped = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t duped;
+    mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &duped);
+    ASSERT_EQ(status, NO_ERROR, "");
 
     ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u), NO_ERROR,
               "handle should be valid");
@@ -48,7 +50,9 @@ bool handle_rights_test(void) {
 
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0u, &event), 0, "");
-    mx_handle_t duped_ro = mx_handle_duplicate(event, MX_RIGHT_READ);
+    mx_handle_t duped_ro;
+    mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_READ, &duped_ro);
+    ASSERT_EQ(status, NO_ERROR, "");
 
     mx_info_handle_basic_t info = {0};
     ASSERT_EQ(mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info)),
@@ -56,17 +60,18 @@ bool handle_rights_test(void) {
 
     ASSERT_EQ(info.rec.rights, MX_RIGHT_READ, "wrong set of rights");
 
-    mx_handle_t h = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS);
-    ASSERT_EQ(h, ERR_ACCESS_DENIED, "should fail rights check");
+    mx_handle_t h;
+    status = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);
+    ASSERT_EQ(status, ERR_ACCESS_DENIED, "should fail rights check");
 
-    h = mx_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ);
-    ASSERT_EQ(h, ERR_INVALID_ARGS, "cannot upgrade rights");
+    status = mx_handle_duplicate(event, MX_RIGHT_EXECUTE | MX_RIGHT_READ, &h);
+    ASSERT_EQ(status, ERR_INVALID_ARGS, "cannot upgrade rights");
 
-    ASSERT_EQ(mx_handle_replace(duped_ro, MX_RIGHT_EXECUTE | MX_RIGHT_READ), ERR_INVALID_ARGS,
+    ASSERT_EQ(mx_handle_replace(duped_ro, MX_RIGHT_EXECUTE | MX_RIGHT_READ, &h), ERR_INVALID_ARGS,
               "cannot upgrade rights");
 
-    h = mx_handle_replace(duped_ro, MX_RIGHT_SAME_RIGHTS);
-    ASSERT_GT(h, MX_HANDLE_INVALID, "should be able to duplicate handle");
+    status = mx_handle_replace(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);
+    ASSERT_EQ(status, NO_ERROR, "should be able to duplicate handle");
     // duped_ro should now be invalid.
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close original handle");

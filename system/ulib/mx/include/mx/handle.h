@@ -42,14 +42,10 @@ public:
     mx_status_t duplicate(mx_rights_t rights, handle<T>* result) const {
         static_assert(handle_traits<T>::supports_duplication,
                       "Receiver must support duplication.");
-        mx_handle_t h = mx_handle_duplicate(value_, rights);
-        if (h < 0) {
-            result->reset(MX_HANDLE_INVALID);
-            return h;
-        } else {
-            result->reset(h);
-            return NO_ERROR;
-        }
+        mx_handle_t h = MX_HANDLE_INVALID;
+        mx_status_t status = mx_handle_duplicate(value_, rights, &h);
+        result->reset(h);
+        return status;
     }
 
     mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
@@ -58,14 +54,10 @@ public:
     }
 
     mx_status_t replace(mx_rights_t rights, handle<T>* result) const {
-        mx_handle_t h = mx_handle_replace(value_, rights);
-        if (h < 0) {
-            result->reset(MX_HANDLE_INVALID);
-            return h;
-        } else {
-            result->reset(h);
-            return NO_ERROR;
-        }
+        mx_handle_t h = MX_HANDLE_INVALID;
+        mx_status_t status = mx_handle_replace(value_, rights, &h);
+        result->reset(h);
+        return status;
     }
 
     // TODO(abarth): Not all of these methods apply to every type of handle. We

@@ -209,7 +209,9 @@ bool handle_wait_test(void) {
     // TODO(vtl): This is a flaky assumption, though the following sleep should help.
     mx_nanosleep(MX_MSEC(20));
 
-    mx_handle_t event_handle_dup = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t event_handle_dup;
+    mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);
+    ASSERT_EQ(status, NO_ERROR, "");
     ASSERT_GE(event_handle_dup, 0, "handle duplication failed");
     ASSERT_EQ(mx_handle_close(event_handle), NO_ERROR, "handle close failed");
 

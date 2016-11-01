@@ -461,10 +461,15 @@ static mx_handle_t vdso_get_vmo(void) {
 
 mx_handle_t launchpad_get_vdso_vmo(void) {
     vdso_lock();
-    mx_handle_t result = mx_handle_duplicate(vdso_get_vmo(),
-                                             MX_RIGHT_SAME_RIGHTS);
+    mx_handle_t result;
+    mx_status_t status = mx_handle_duplicate(vdso_get_vmo(),
+                                             MX_RIGHT_SAME_RIGHTS, &result);
     vdso_unlock();
-    return result;
+    if (status < 0) {
+        return status;
+    } else {
+        return result;
+    }
 }
 
 mx_handle_t launchpad_set_vdso_vmo(mx_handle_t new_vdso_vmo) {
@@ -569,11 +574,12 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
         case HND_SPECIAL_COUNT:;
             // Duplicate the process handle so we can send it in the
             // loader message and still have it later.
-            mx_handle_t proc = mx_handle_duplicate(lp_proc(lp),
-                                                   MX_RIGHT_SAME_RIGHTS);
-            if (proc < 0) {
+            mx_handle_t proc;
+            mx_status_t status = mx_handle_duplicate(lp_proc(lp),
+                                                     MX_RIGHT_SAME_RIGHTS, &proc);
+            if (status < 0) {
                 free(msg);
-                return proc;
+                return status;
             }
             handles[nhandles] = proc;
             msg->handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
@@ -709,11 +715,11 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         // Pass the thread handle down to the child.  The handle we pass
         // will be consumed by message_write.  So we need a duplicate to
         // pass to mx_process_start later.
-        mx_handle_t thread_copy =
-            mx_handle_duplicate(*thread, MX_RIGHT_SAME_RIGHTS);
-        if (thread_copy < 0) {
+        mx_handle_t thread_copy;
+        status = mx_handle_duplicate(*thread, MX_RIGHT_SAME_RIGHTS, &thread_copy);
+        if (status < 0) {
             mx_handle_close(*thread);
-            return thread_copy;
+            return status;
         }
         status = launchpad_add_handle(lp, thread_copy,
                                       MX_HND_TYPE_THREAD_SELF);
@@ -768,12 +774,13 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
 mx_handle_t launchpad_start(launchpad_t* lp) {
     // The proc handle in lp->handles[0] will be consumed by message_write.
     // So we'll need a duplicate to do process operations later.
-    mx_handle_t proc = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS);
-    if (proc < 0)
-        return proc;
+    mx_handle_t proc;
+    mx_status_t status = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS, &proc);
+    if (status < 0)
+        return status;
 
     mx_handle_t channelh[2];
-    mx_status_t status = mx_channel_create(0, channelh, channelh + 1);
+    status = mx_channel_create(0, channelh, channelh + 1);
     if (status != NO_ERROR) {
         mx_handle_close(proc);
         return status;

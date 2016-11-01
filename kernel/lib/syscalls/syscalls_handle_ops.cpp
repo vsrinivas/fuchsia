@@ -28,11 +28,11 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
     return NO_ERROR;
 }
 
-mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
+mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights,
+                                 user_ptr<mx_handle_t> out) {
     LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t dup_hv;
 
     {
         AutoLock lock(up->handle_table_lock());
@@ -54,19 +54,20 @@ mx_handle_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights) {
         if (!dest)
             return ERR_NO_MEMORY;
 
-        dup_hv = up->MapHandleToValue(dest.get());
+        if (out.copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
+            return ERR_INVALID_ARGS;
         up->AddHandle_NoLock(mxtl::move(dest));
     }
 
-    return dup_hv;
+    return NO_ERROR;
 }
 
-mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
+mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights,
+                               user_ptr<mx_handle_t> out) {
     LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     HandleUniquePtr source;
-    mx_handle_t replacement_hv;
 
     {
         AutoLock lock(up->handle_table_lock());
@@ -92,9 +93,10 @@ mx_handle_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights) {
             return error;
         }
 
-        replacement_hv = up->MapHandleToValue(dest.get());
+        if (out.copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
+            return ERR_INVALID_ARGS;
         up->AddHandle_NoLock(mxtl::move(dest));
     }
 
-    return replacement_hv;
+    return NO_ERROR;
 }

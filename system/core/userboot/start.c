@@ -140,10 +140,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     const mx_handle_t proc_self = *proc_handle_loc;
 
     // Hang on to the resource root handle.
-    mx_handle_t root_resource_handle =
-        mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS);
-    if (root_resource_handle < 0)
-        fail(log, root_resource_handle, "mx_handle_duplicate failed\n");
+    mx_handle_t root_resource_handle;
+    status = mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS, &root_resource_handle);
+    if (status < 0)
+        fail(log, status, "mx_handle_duplicate failed\n");
 
     // Decompress any bootfs VMOs if necessary
     for (uint32_t i = 0; i < nhandles; ++i) {
@@ -194,9 +194,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     }
 
     // Reuse the slot for the child's handle.
-    *proc_handle_loc = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS);
-    if (*proc_handle_loc < 0)
-        fail(log, *proc_handle_loc,
+    status = mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS, proc_handle_loc);
+    if (status < 0)
+        fail(log, status,
              "mx_handle_duplicate failed on child process handle\n");
 
     // Create the initial thread in the new process
@@ -208,9 +208,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.
         // NOTE: Leaks the current thread handle the same way as the process handle.
-        *thread_handle_loc = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS);
-        if (*thread_handle_loc < 0)
-            fail(log, *thread_handle_loc,
+        status = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, thread_handle_loc);
+        if (status < 0)
+            fail(log, status,
                  "mx_handle_duplicate failed on child thread handle\n");
     }
 

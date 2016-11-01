@@ -277,21 +277,24 @@ bool vmo_rights_test() {
     status = mx_vmo_write(vmo, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_write");
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ, &vmo2);
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_WRITE);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_WRITE, &vmo2);
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_write");
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, 0);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, 0, &vmo2);
     status = mx_vmo_read(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ERR_ACCESS_DENIED, status, "vmo_read");
     status = mx_vmo_write(vmo2, buf, 0, 0, &r);
@@ -310,7 +313,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
 
     // try most of the permuations of mapping a vmo with various rights dropped
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -318,7 +322,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_MAP);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_MAP, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -326,7 +331,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_WRITE | MX_RIGHT_MAP);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -334,7 +340,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -342,7 +349,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -350,7 +358,8 @@ bool vmo_rights_test() {
     if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
-    vmo2 = mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP);
+    vmo2 = MX_HANDLE_INVALID;
+    mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, ERR_ACCESS_DENIED, "map_readwrite")) return false;

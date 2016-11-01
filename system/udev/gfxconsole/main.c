@@ -681,8 +681,12 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         fb->info.pixelsize = vc->gfx->pixelsize;
         fb->info.flags = 0;
         //TODO: take away access to the vmo when the client closes the device
-        fb->vmo = mx_handle_duplicate(vc->gfx_vmo, MX_RIGHT_SAME_RIGHTS);
-        return sizeof(ioctl_display_get_fb_t);
+        mx_status_t status = mx_handle_duplicate(vc->gfx_vmo, MX_RIGHT_SAME_RIGHTS, &fb->vmo);
+        if (status < 0) {
+            return status;
+        } else {
+            return sizeof(ioctl_display_get_fb_t);
+        }
     }
     case IOCTL_DISPLAY_FLUSH_FB:
         vc_gfx_invalidate_all(vc);

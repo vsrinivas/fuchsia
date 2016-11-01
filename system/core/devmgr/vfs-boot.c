@@ -68,12 +68,14 @@ static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size
 
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len) {
     vnboot_t* vnb = vn->pdata;
-    mx_handle_t vmo = mx_handle_duplicate(vnb->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER);
+    mx_handle_t vmo;
+    mx_status_t status = mx_handle_duplicate(vnb->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
+    if (status < 0)
+        return status;
     xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%zd\n", vmo, vnb->vmo, vnb->off, vnb->datalen);
-    if (vmo > 0) {
-        *off = vnb->off;
-        *len = vnb->datalen;
-    }
+
+    *off = vnb->off;
+    *len = vnb->datalen;
     return vmo;
 }
 

@@ -478,8 +478,8 @@ static bool setup_inferior(mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_
     // |inferior| is given to the child by launchpad_start.
     // We need our own copy, but we need it before launchpad_start returns.
     // So create our own copy.
-    inferior = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS);
-    ASSERT_GT(inferior, 0, "mx_handle_duplicate failed");
+    status = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS, &inferior);
+    ASSERT_EQ(status, 0, "mx_handle_duplicate failed");
 
     // TODO(dje): Set the debug exception port when available.
     mx_handle_t eport = tu_io_port_create(0);

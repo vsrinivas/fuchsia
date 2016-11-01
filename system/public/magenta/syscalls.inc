@@ -70,12 +70,14 @@ MAGENTA_SYSCALL_DEF(4, 3, 32, mx_status_t, log_read,
 
 // Generic handle operations
 MAGENTA_SYSCALL_DEF(1, 1, 40, mx_status_t, handle_close, mx_handle_t handle)
-MAGENTA_SYSCALL_DEF(2, 2, 41, mx_handle_t, handle_duplicate, mx_handle_t handle, mx_rights_t rights)
+MAGENTA_SYSCALL_DEF(3, 3, 41, mx_status_t, handle_duplicate, mx_handle_t handle, mx_rights_t rights,
+                    USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(4, 5, 42, mx_status_t, handle_wait_one, mx_handle_t handle, mx_signals_t waitfor,
                     mx_time_t timeout, USER_PTR(mx_signals_t) observed)
 MAGENTA_SYSCALL_DEF(3, 4, 43, mx_status_t, handle_wait_many, USER_PTR(mx_wait_item_t) items, uint32_t count,
                     mx_time_t timeout);
-MAGENTA_SYSCALL_DEF(2, 2, 44, mx_handle_t, handle_replace, mx_handle_t handle, mx_rights_t rights)
+MAGENTA_SYSCALL_DEF(3, 3, 44, mx_status_t, handle_replace, mx_handle_t handle, mx_rights_t rights,
+                    USER_PTR(mx_handle_t) out)
 
 // Generic object operations
 MAGENTA_SYSCALL_DEF(3, 3, 45, mx_status_t, object_signal, mx_handle_t handle, uint32_t clear_mask,

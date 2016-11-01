@@ -9,7 +9,7 @@ handle_replace - replace a handle
 ```
 #include <magenta/syscalls.h>
 
-mx_handle_t mx_handle_replace(mx_handle_t handle, mx_rights_t rights);
+mx_status_t mx_handle_replace(mx_handle_t handle, mx_rights_t rights, mx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -24,15 +24,15 @@ a subset of original handle's rights.
 
 ## RETURN VALUE
 
-**handle_replace**() returns the replacement handle on success (a
-positive value), or an error code (negative).
+**handle_replace**() returns NO_ERROR and the replacement handle (via *out)
+on success.
 
 ## ERRORS
 
 **ERR_BAD_HANDLE**  *handle* isn't a valid handle.
 
 **ERR_INVALID_ARGS**  The *rights* requested are not a subset of
-*handle*'s rights.
+*handle*'s rights or *out* is an invalid pointer.
 
 **ERR_NO_MEMORY**  (Temporary) out of memory situation.
 

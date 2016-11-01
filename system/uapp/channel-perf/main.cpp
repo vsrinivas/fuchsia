@@ -23,8 +23,7 @@ void argument_error(const char* argv0, const char* message) {
 
 void duplicate_handles(uint32_t n, mx_handle_t src, mx_handle_t* dest) {
     for (uint32_t i = 0; i < n; i++) {
-        dest[i] = mx_handle_duplicate(src, MX_RIGHT_SAME_RIGHTS);
-        assert(dest[i] > 0);
+        assert(mx_handle_duplicate(src, MX_RIGHT_SAME_RIGHTS, &dest[i]) == 0);
     }
 }
 
