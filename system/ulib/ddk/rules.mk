@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/completion.c \
     $(LOCAL_DIR)/protocol/input.c \
     $(LOCAL_DIR)/io-alloc.c \
+    $(LOCAL_DIR)/io-buffer.c \
     $(LOCAL_DIR)/iotxn.c \
 
 MODULE_STATIC_LIBS := ulib/hexdump
