@@ -23,11 +23,9 @@ static mx_handle_t s_waitset;
 
 static mx_status_t get_satisfied_signals(mx_handle_t handle,
                                          mx_signals_t* satisfied) {
-  mx_signals_state_t signals_state = {0, 0};
-  mx_status_t r = mx_handle_wait_one(handle, 0u, 0u, &signals_state);
+  mx_status_t r = mx_handle_wait_one(handle, 0u, 0u, satisfied);
   if (r != ERR_BAD_STATE)  // ERR_BAD_STATE is expected
     return r;
-  *satisfied = signals_state.satisfied;
   return NO_ERROR;
 }
 
@@ -66,9 +64,8 @@ mx_status_t handle_watcher_stop(void) {
     }
   }
 
-  mx_signals_state_t state;
   if ((r = mx_handle_wait_one(s_ctrl[1], MX_SIGNAL_READABLE, MX_TIME_INFINITE,
-                              &state)) < 0) {
+                              NULL)) < 0) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
@@ -138,7 +135,8 @@ mx_status_t handle_watcher_schedule_request(void) {
   return NO_ERROR;
 }
 
-static void socket_signals_change(iostate_t* ios, mx_signals_t old_sigs,
+static void socket_signals_change(iostate_t* ios,
+                                  mx_signals_t old_sigs,
                                   mx_signals_t new_sigs) {
   if (new_sigs)
     debug_socket("new watcing signals: ios=%p, sigs=0x%x\n", ios, new_sigs);
@@ -163,14 +161,16 @@ static void socket_signals_change(iostate_t* ios, mx_signals_t old_sigs,
 
 void socket_signals_set(iostate_t* ios, mx_signals_t sigs) {
   debug("socket_signals_set: ios=%p, sigs==0x%x\n", ios, sigs);
-  if ((ios->watching_signals & sigs) == sigs) return;
+  if ((ios->watching_signals & sigs) == sigs)
+    return;
   sigs = ios->watching_signals | sigs;
   socket_signals_change(ios, ios->watching_signals, sigs);
 }
 
 void socket_signals_clear(iostate_t* ios, mx_signals_t sigs) {
   debug("socket_signals_clear: ios=%p, sigs=0x%x\n", ios, sigs);
-  if ((ios->watching_signals & sigs) == 0x0) return;
+  if ((ios->watching_signals & sigs) == 0x0)
+    return;
   sigs = ios->watching_signals & (~sigs);
   socket_signals_change(ios, ios->watching_signals, sigs);
 }
@@ -184,9 +184,8 @@ static int handle_watcher_loop(void* arg) {
 
   for (;;) {
     // wait for START command (ignore ABORT received in the last round)
-    mx_signals_state_t state;
     if ((r = mx_handle_wait_one(s_ctrl[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE,
-                                &state)) < 0) {
+                                NULL)) < 0) {
       error("handle_watcher_loop: mx_handle_wait_one failed (r=%d)\n", r);
       return r;
     }
