@@ -65,7 +65,7 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     auto data_mem_sz = count * ob_size;
 
     sprintf(vname, "%s_data", name);
-    vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, data_mem_sz);
+    vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, data_mem_sz);
     if (!vmo_) {
         vmm_free_region(kspace, reinterpret_cast<vaddr_t>(c_start_));
         return ERR_NO_MEMORY;

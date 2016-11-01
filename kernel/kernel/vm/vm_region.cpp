@@ -108,41 +108,6 @@ status_t VmRegion::SetObject(mxtl::RefPtr<VmObject> o, uint64_t offset) {
     return NO_ERROR;
 }
 
-status_t VmRegion::MapPhysicalRange(size_t offset, size_t len, paddr_t paddr, bool allow_remap) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-    LTRACEF("%p '%s', offset %#zx, size %#zx, paddr %#" PRIxPTR ", remap %d\n",
-            this, name_, offset, len, paddr, allow_remap);
-
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
-
-    DEBUG_ASSERT(!object_); // assert on this for now
-
-    if (!TrimRange(offset, len, size_))
-        return ERR_INVALID_ARGS;
-
-    if (object_) {
-        // we have a backing object, which means we should not be physically mapping this
-        return ERR_NO_MEMORY;
-    }
-
-    if (allow_remap) {
-        auto ret = arch_mmu_unmap(&aspace_->arch_aspace(), base_ + offset, len / PAGE_SIZE);
-        if (ret < 0) {
-            TRACEF("error unmapping old region\n");
-            return ret;
-        }
-    }
-
-    auto ret = arch_mmu_map(&aspace_->arch_aspace(), base_ + offset, paddr, len / PAGE_SIZE,
-                            arch_mmu_flags_);
-    if (ret < 0) {
-        TRACEF("error %d mapping pages at va %#" PRIxPTR " pa %#" PRIxPTR "\n",
-               ret, base_, paddr);
-    }
-    return (ret < 0) ? ret : 0;
-}
-
 status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("region %p '%s', offset 0x%zu, size 0x%zx\n", this, name_, offset, len);
@@ -161,26 +126,20 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
     size_t o;
     for (o = offset; o < offset + len; o += PAGE_SIZE) {
         uint64_t vmo_offset = object_offset_ + o;
-        vm_page_t* p = object_->GetPage(vmo_offset);
-        if (!p) {
-            if (!commit) {
-                // no page to map, skip ahead
-                continue;
-            }
 
-            int64_t committed = object_->CommitRange(vmo_offset, PAGE_SIZE);
-            if (committed < 0 || committed != PAGE_SIZE) {
-                LTRACEF("error committing memory for region\n");
-                return (status_t)committed;
-            }
-
-            p = object_->GetPage(vmo_offset);
+        status_t status;
+        paddr_t pa;
+        if (commit) {
+            status = object_->FaultPage(vmo_offset, VMM_PF_FLAG_WRITE, &pa);
+        } else {
+            status = object_->GetPage(vmo_offset, &pa);
+        }
+        if (status < 0) {
+            // no page to map, skip ahead
+            continue;
         }
 
-        DEBUG_ASSERT(p);
-
         vaddr_t va = base_ + o;
-        paddr_t pa = vm_page_to_paddr(p);
         LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n",
                       pa, va);
 
@@ -238,12 +197,12 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     }
 
     // fault in or grab an existing page
-    vm_page_t* new_p = object_->FaultPage(vmo_offset, pf_flags);
-    if (!new_p) {
+    paddr_t new_pa;
+    auto status = object_->FaultPage(vmo_offset, pf_flags, &new_pa);
+    if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
-        return ERR_NO_MEMORY;
+        return status;
     }
-    paddr_t new_pa = vm_page_to_paddr(new_p);
 
     // see if something is mapped here now
     // this may happen if we are one of multiple threads racing on a single address

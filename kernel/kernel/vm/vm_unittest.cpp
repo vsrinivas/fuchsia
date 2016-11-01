@@ -337,14 +337,14 @@ static bool vmm_object_tests(void* context) {
     BEGIN_TEST;
     unittest_printf("creating vm object\n");
     {
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE);
         EXPECT_TRUE(vmo, "vmobject creation\n");
     }
 
     unittest_printf("creating vm object, committing memory\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ret = vmo->CommitRange(0, alloc_size);
@@ -354,7 +354,7 @@ static bool vmm_object_tests(void* context) {
     unittest_printf("creating vm object, committing odd sized memory\n");
     {
         static const size_t alloc_size = 15;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ret = vmo->CommitRange(0, alloc_size);
@@ -364,7 +364,7 @@ static bool vmm_object_tests(void* context) {
     unittest_printf("creating vm object, committing contiguous memory\n");
     {
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ret = vmo->CommitRangeContiguous(0, alloc_size, 0);
@@ -375,7 +375,7 @@ static bool vmm_object_tests(void* context) {
     {
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ka = VmAspace::kernel_aspace();
@@ -396,7 +396,7 @@ static bool vmm_object_tests(void* context) {
     {
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ka = VmAspace::kernel_aspace();
@@ -416,7 +416,7 @@ static bool vmm_object_tests(void* context) {
     {
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ka = VmAspace::kernel_aspace();
@@ -441,7 +441,7 @@ static bool vmm_object_tests(void* context) {
     {
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ka = VmAspace::kernel_aspace();
@@ -476,7 +476,7 @@ static bool vmm_object_tests(void* context) {
     {
         const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         static const size_t alloc_size = PAGE_SIZE * 16;
-        auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
+        auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         auto ka = VmAspace::kernel_aspace();
@@ -527,7 +527,7 @@ static bool vmm_object_tests(void* context) {
         static const size_t alloc_size = PAGE_SIZE * 16;
 
         // create object
-        auto vmo = VmObject::Create(0, alloc_size);
+        auto vmo = VmObjectPaged::Create(0, alloc_size);
         EXPECT_TRUE(vmo, "vmobject creation\n");
 
         // create test buffer

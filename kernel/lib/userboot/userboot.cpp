@@ -255,12 +255,12 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
-    auto vdso_vmo = VmObject::CreateFromROData(vdso_image, VDSO_CODE_END);
-    auto userboot_vmo = VmObject::CreateFromROData(userboot_image,
+    auto vdso_vmo = VmObjectPaged::CreateFromROData(vdso_image, VDSO_CODE_END);
+    auto userboot_vmo = VmObjectPaged::CreateFromROData(userboot_image,
                                                    USERBOOT_CODE_END);
-    auto stack_vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, stack_size);
-    auto bootfs_vmo = VmObject::CreateFromROData(bootfs, bfslen);
-    auto rootfs_vmo = VmObject::CreateFromROData(rbase, rsize);
+    auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
+    auto bootfs_vmo = VmObjectPaged::CreateFromROData(bootfs, bfslen);
+    auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);
 
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.

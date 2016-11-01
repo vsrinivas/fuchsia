@@ -97,7 +97,7 @@ bool vmo_map_test() {
     //printf("mapped %#" PRIxPTR "\n", ptr[0]);
 
     // map it in a fixed spot
-    const uintptr_t fixed = 0x3f000000; // arbitrary fixed spot
+    const uintptr_t fixed = 0x3e000000; // arbitrary fixed spot
     ptr[1] = fixed;
     status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[1],
                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_FIXED);

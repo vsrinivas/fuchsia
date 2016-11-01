@@ -32,7 +32,7 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
         return ERR_INVALID_ARGS;
 
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo = VmObject::Create(0, size);
+    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(0, size);
     if (!vmo)
         return ERR_NO_MEMORY;
 

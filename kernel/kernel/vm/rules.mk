@@ -21,6 +21,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vm.cpp \
     $(LOCAL_DIR)/vm_aspace.cpp \
     $(LOCAL_DIR)/vm_object.cpp \
+    $(LOCAL_DIR)/vm_object_paged.cpp \
+    $(LOCAL_DIR)/vm_object_physical.cpp \
     $(LOCAL_DIR)/vm_page_list.cpp \
     $(LOCAL_DIR)/vm_region.cpp \
     $(LOCAL_DIR)/vm_unittest.cpp \

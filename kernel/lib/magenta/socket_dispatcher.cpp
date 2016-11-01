@@ -45,7 +45,7 @@ SocketDispatcher::CBuf::~CBuf() {
 }
 
 bool SocketDispatcher::CBuf::Init(uint32_t len) {
-    vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, len);
+    vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, len);
     if (!vmo_)
         return false;
 

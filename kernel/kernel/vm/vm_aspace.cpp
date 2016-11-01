@@ -547,7 +547,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
     return r ? NO_ERROR : ERR_NO_MEMORY;
 }
 
-status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_log2,
+status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                                  size_t min_alloc_gap, paddr_t paddr,
                                  uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
@@ -565,45 +565,16 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
 
     size = ROUNDUP_PAGE_SIZE(size);
 
-    // test for invalid flags
-    if (vmm_flags & VMM_FLAG_COMMIT)
-        return ERR_INVALID_ARGS;
-
-    vaddr_t vaddr = 0;
-
-    // if they're asking for a specific spot or starting address, copy the address
-    if (vmm_flags & (VMM_FLAG_VALLOC_SPECIFIC | VMM_FLAG_VALLOC_BASE)) {
-        // can't ask for a specific spot and then not provide one
-        if (!ptr) {
-            return ERR_INVALID_ARGS;
-        }
-        vaddr = reinterpret_cast<vaddr_t>(*ptr);
-
-        // check that it's page aligned
-        if (!IS_PAGE_ALIGNED(vaddr))
-            return ERR_INVALID_ARGS;
-    }
-
-    AutoLock a(lock_);
-
-    // allocate a region and put it in the aspace list
-    auto r = AllocRegion(name, size, vaddr, align_log2, min_alloc_gap, vmm_flags, arch_mmu_flags);
-    if (!r) {
+    // create a vm object to back it
+    auto vmo = VmObjectPhysical::Create(paddr, size);
+    if (!vmo)
         return ERR_NO_MEMORY;
-    }
 
-    // map memory physically
-    auto err = r->MapPhysicalRange(0, size, paddr, false);
-    if (err < 0) {
-        // TODO: remove the region from the aspace
-        return err;
-    }
+    // force it to be mapped up front
+    // TODO: add new flag to precisely mean pre-map
+    vmm_flags |= VMM_FLAG_COMMIT;
 
-    // return the vaddr if requested
-    if (ptr)
-        *ptr = reinterpret_cast<void*>(r->base());
-
-    return NO_ERROR;
+    return MapObject(mxtl::move(vmo), name, 0, size, ptr, align_pow2, min_alloc_gap, vmm_flags, arch_mmu_flags);
 }
 
 status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
@@ -621,7 +592,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return ERR_INVALID_ARGS;
 
     // create a vm object to back it
-    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, size);
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
     if (!vmo)
         return ERR_NO_MEMORY;
 
@@ -647,7 +618,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
         return ERR_INVALID_ARGS;
 
     // allocate a vm object to back it
-    auto vmo = VmObject::Create(PMM_ALLOC_FLAG_ANY, size);
+    auto vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
     if (!vmo)
         return ERR_NO_MEMORY;
 

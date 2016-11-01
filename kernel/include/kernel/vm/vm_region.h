@@ -43,9 +43,6 @@ public:
     // map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);
 
-    // map in a physical range of memory to this region
-    status_t MapPhysicalRange(size_t offset, size_t len, paddr_t paddr, bool allow_remap);
-
     // unmap all pages and remove dependency on vm object it has a ref to
     status_t Destroy();
 

@@ -75,7 +75,7 @@ bool DataPipe::Init() {
     if (capacity_ > kMaxDataPipeCapacity)
         return false;
 
-    vmo_ = VmObject::Create(PMM_ALLOC_FLAG_ANY, ROUNDUP(capacity_, PAGE_SIZE));
+    vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, ROUNDUP(capacity_, PAGE_SIZE));
     if (!vmo_)
         return false;
     DEBUG_ASSERT(vmo_->size() >= capacity_);

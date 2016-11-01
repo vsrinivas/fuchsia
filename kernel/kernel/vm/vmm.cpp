@@ -76,18 +76,6 @@ status_t vmm_protect_region(vmm_aspace_t* _aspace, vaddr_t va, uint arch_mmu_fla
     return r->Protect(arch_mmu_flags);
 }
 
-status_t vmm_move_region_phys(vmm_aspace_t* _aspace, vaddr_t va, paddr_t paddr) {
-    auto aspace = vmm_aspace_to_obj(_aspace);
-    if (!aspace)
-        return ERR_INVALID_ARGS;
-
-    auto r = aspace->FindRegion(va);
-    if (!r)
-        return ERR_NOT_FOUND;
-
-    return r->MapPhysicalRange(0, r->size(), paddr, true);
-}
-
 status_t vmm_free_region(vmm_aspace_t* _aspace, vaddr_t vaddr) {
     auto aspace = vmm_aspace_to_obj(_aspace);
     if (!aspace)

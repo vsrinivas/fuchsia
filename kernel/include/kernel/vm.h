@@ -212,9 +212,6 @@ status_t vmm_alloc(vmm_aspace_t* aspace, const char* name, size_t size, void** p
 /* Unmap previously allocated region and free physical memory pages backing it (if any) */
 status_t vmm_free_region(vmm_aspace_t* aspace, vaddr_t va);
 
-/* Change the base physical address of a previously allocated region */
-status_t vmm_move_region_phys(vmm_aspace_t* aspace, vaddr_t va, paddr_t paddr);
-
 /* Change permissions on a previously allocated region */
 status_t vmm_protect_region(vmm_aspace_t* aspace, vaddr_t va, uint arch_mmu_flags);
 
