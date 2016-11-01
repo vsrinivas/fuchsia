@@ -115,8 +115,9 @@ mxio_t* mxio_epoll_create(mx_handle_t h) {
 
 mx_status_t mxio_epoll(mxio_t** out) {
     mx_handle_t h;
-    if ((h = mx_waitset_create()) < 0) {
-        return h;
+    mx_status_t status;
+    if ((status = mx_waitset_create(0, &h)) < 0) {
+        return status;
     }
     mxio_t* io;
     if ((io = mxio_epoll_create(h)) == NULL) {
@@ -223,7 +224,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
         }
 
         cookie->ep_event = *ep_event;
-        if ((r = mx_waitset_add(epio->h, h, signals, (uint64_t)(uintptr_t)cookie)) < 0) {
+        if ((r = mx_waitset_add(epio->h, (uint64_t)(uintptr_t)cookie, h, signals)) < 0) {
             mxio_release(cookie->io);
             free(cookie);
             goto end;
@@ -264,7 +265,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
     mx_waitset_result_t results[maxevents];
     mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
 
-    if ((r = mx_waitset_wait(epio->h, tmo, &num_results, results, NULL)) < 0) {
+    if ((r = mx_waitset_wait(epio->h, tmo, results, &num_results)) < 0) {
         mxio_release(io);
         return (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
     }
@@ -274,7 +275,7 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
         mxio_t* io = cookie->io;
         uint32_t events;
 
-        io->ops->wait_end(io, results[i].signals_state.satisfied, &events);
+        io->ops->wait_end(io, results[i].observed, &events);
         // mask unrequested events except HUP/ERR
         ep_events[i].events = events & (cookie->ep_event.events | EPOLLHUP | EPOLLERR);
 

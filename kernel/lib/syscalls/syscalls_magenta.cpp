@@ -522,7 +522,10 @@ mx_status_t sys_cprng_add_entropy(user_ptr<void> buffer, mx_size_t len) {
     return NO_ERROR;
 }
 
-mx_handle_t sys_waitset_create(void) {
+mx_status_t sys_waitset_create(uint32_t options, user_ptr<mx_handle_t> out) {
+    if (options != 0)
+        return ERR_INVALID_ARGS;
+
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = WaitSetDispatcher::Create(&dispatcher, &rights);
@@ -534,16 +537,17 @@ mx_handle_t sys_waitset_create(void) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
+                            uint64_t cookie,
                             mx_handle_t handle_value,
-                            mx_signals_t signals,
-                            uint64_t cookie) {
+                            mx_signals_t signals) {
     LTRACEF("wait set handle %d, handle %d\n", ws_handle_value, handle_value);
 
     mxtl::unique_ptr<WaitSetDispatcher::Entry> entry;
@@ -592,24 +596,24 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
 mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
                              mx_time_t timeout,
-                             user_ptr<uint32_t> _num_results,
                              user_ptr<mx_waitset_result_t> _results,
-                             user_ptr<uint32_t> _max_results) {
+                             user_ptr<uint32_t> _count) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
-    uint32_t num_results;
-    if (_num_results.copy_from_user(&num_results) != NO_ERROR)
+    uint32_t count;
+    if (_count.copy_from_user(&count) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
+    //TODO: use inline array here
     mxtl::unique_ptr<mx_waitset_result_t[]> results;
-    if (num_results > 0u) {
-        if (num_results > kMaxWaitSetWaitResults)
+    if (count > 0u) {
+        if (count > kMaxWaitSetWaitResults)
             return ERR_OUT_OF_RANGE;
 
         // TODO(vtl): It kind of sucks that we always have to allocate the indicated maximum size
-        // here (namely, |num_results|).
+        // here (namely, |count|).
         AllocChecker ac;
-        results.reset(new (&ac) mx_waitset_result_t[num_results]);
+        results.reset(new (&ac) mx_waitset_result_t[count]);
         if (!ac.check())
             return ERR_NO_MEMORY;
     }
@@ -623,16 +627,12 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
         return status;
 
     uint32_t max_results = 0u;
-    mx_status_t result = ws_dispatcher->Wait(timeout, &num_results, results.get(), &max_results);
+    mx_status_t result = ws_dispatcher->Wait(timeout, &count, results.get(), &max_results);
     if (result == NO_ERROR) {
-        if (_num_results.copy_to_user(num_results) != NO_ERROR)
+        if (_count.copy_to_user(count) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        if (num_results > 0u) {
-            if (_results.copy_array_to_user(results.get(), num_results) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-        }
-        if (_max_results) {
-            if (_max_results.copy_to_user(max_results) != NO_ERROR)
+        if (count > 0u) {
+            if (_results.copy_array_to_user(results.get(), count) != NO_ERROR)
                 return ERR_INVALID_ARGS;
         }
     }

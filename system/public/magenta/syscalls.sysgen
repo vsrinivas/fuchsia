@@ -395,12 +395,12 @@ syscall datapipe_end_read
 
 # Wait sets
 
-syscall waitset_create ()
-    returns (mx_handle_t);
+syscall waitset_create (options: uint32_t, out: mx_handle_t[1] OUT)
+    returns (mx_status_t);
 
 syscall waitset_add
-    (waitset_handle: mx_handle_t, handle: mx_handle_t,
-        signals: mx_signals_t, cookie: uint64_t)
+    (waitset_handle: mx_handle_t, cookie: uint64_t,
+        handle: mx_handle_t, signals: mx_signals_t)
     returns (mx_status_t);
 
 syscall waitset_remove
@@ -408,8 +408,8 @@ syscall waitset_remove
     returns (mx_status_t);
 
 syscall waitset_wait
-    (waitset_handle: mx_handle_t, timeout: mx_time_t, num_results: uint32_t[1] INOUT,
-        results: mx_waitset_result_t[num_results] OUT, max_results: uint32_t[1] OUT)
+    (waitset_handle: mx_handle_t, timeout: mx_time_t,
+        results: mx_waitset_result_t[count] OUT, count: uint32_t[1] INOUT)
     returns (mx_status_t);
 
 # Object Properties

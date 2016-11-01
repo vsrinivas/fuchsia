@@ -210,13 +210,12 @@ MAGENTA_SYSCALL_DEF(3, 3, 235, mx_ssize_t, datapipe_begin_read, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(2, 2, 236, mx_status_t, datapipe_end_read, mx_handle_t handle, mx_size_t read)
 
 // Wait sets
-MAGENTA_SYSCALL_DEF(0, 0, 240, mx_handle_t, waitset_create, void)
-MAGENTA_SYSCALL_DEF(4, 6, 241, mx_status_t, waitset_add, mx_handle_t waitset_handle, mx_handle_t handle,
-                    mx_signals_t signals, uint64_t cookie)
+MAGENTA_SYSCALL_DEF(2, 2, 240, mx_status_t, waitset_create, uint32_t options, USER_PTR(mx_handle_t) out)
+MAGENTA_SYSCALL_DEF(4, 6, 241, mx_status_t, waitset_add, mx_handle_t waitset_handle, uint64_t cookie,
+                    mx_handle_t handle, mx_signals_t signals)
 MAGENTA_SYSCALL_DEF(2, 4, 242, mx_status_t, waitset_remove, mx_handle_t waitset_handle, uint64_t cookie)
-MAGENTA_SYSCALL_DEF(5, 7, 243, mx_status_t, waitset_wait, mx_handle_t waitset_handle, mx_time_t timeout,
-                    USER_PTR(uint32_t) num_results, USER_PTR(mx_waitset_result_t) results,
-                    USER_PTR(uint32_t) max_results)
+MAGENTA_SYSCALL_DEF(4, 6, 243, mx_status_t, waitset_wait, mx_handle_t waitset_handle, mx_time_t timeout,
+                    USER_PTR(mx_waitset_result_t) results, USER_PTR(uint32_t) count)
 
 // Object Properties
 MAGENTA_SYSCALL_DEF(4, 4, 250, mx_status_t, object_get_property, mx_handle_t handle, uint32_t property,

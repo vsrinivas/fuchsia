@@ -10,9 +10,9 @@ waitset_add - add an entry to a wait set
 #include <magenta/syscalls.h>
 
 mx_status_t mx_waitset_add(mx_handle_t waitset_handle,
-                            mx_handle_t handle,
-                            mx_signals_t signals,
-                            uint64_t cookie);
+                           uint64_t cookie,
+                           mx_handle_t handle,
+                           mx_signals_t signals);
 ```
 
 ## DESCRIPTION

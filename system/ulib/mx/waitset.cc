@@ -9,14 +9,10 @@
 namespace mx {
 
 mx_status_t waitset::create(uint32_t options, waitset* result) {
-    mx_handle_t h = mx_waitset_create();
-    if (h < 0) {
-        result->reset(MX_HANDLE_INVALID);
-        return h;
-    } else {
-        result->reset(h);
-        return NO_ERROR;
-    }
+    mx_handle_t h = MX_HANDLE_INVALID;
+    mx_status_t status = mx_waitset_create(options, &h);
+    result->reset(h);
+    return status;
 }
 
 } // namespace mx

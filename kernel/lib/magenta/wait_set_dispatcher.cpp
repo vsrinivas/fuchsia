@@ -340,21 +340,15 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
         DEBUG_ASSERT(it != triggered_entries_.cend());
 
         results[i].cookie = it->GetKey();
-        results[i].reserved = 0u;
         if (it->GetHandle_NoLock()) {
             // Not cancelled: satisfied or unsatisfiable.
             auto st = it->GetSignalsState_NoLock();
-            if ((st.satisfied & it->watched_signals())) {
-                results[i].wait_result = NO_ERROR;
-            } else {
-                DEBUG_ASSERT(!(st.satisfiable & it->watched_signals()));
-                results[i].wait_result = ERR_BAD_STATE;
-            }
-            results[i].signals_state = st;
+            results[i].status = NO_ERROR;
+            results[i].observed = st.satisfied;
         } else {
             // Cancelled.
-            results[i].wait_result = ERR_HANDLE_CLOSED;
-            results[i].signals_state = mx_signals_state_t{0u, 0u};
+            results[i].status = ERR_HANDLE_CLOSED;
+            results[i].observed = 0;
         }
     }
 

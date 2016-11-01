@@ -34,9 +34,8 @@ typedef uint64_t mx_koid_t;
 // Structure for mx_waitset_*():
 typedef struct mx_waitset_result {
     uint64_t cookie;
-    mx_status_t wait_result;
-    uint32_t reserved;
-    mx_signals_state_t signals_state;
+    mx_status_t status;
+    mx_signals_t observed;
 } mx_waitset_result_t;
 
 // forward declarations needed by syscalls.h

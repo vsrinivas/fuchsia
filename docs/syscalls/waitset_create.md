@@ -9,7 +9,7 @@ waitset_create - create a wait set
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_waitset_create(void);
+mx_status_t mx_waitset_create(uint32_t options, mx_handle_t* out);
 
 ```
 
@@ -22,13 +22,16 @@ on those other handles.
 A newly-created wait set handle has the **MX_RIGHT_READ** and **MX_RIGHT_WRITE**
 rights. Note that it is neither duplicatable nor transferrable.
 
+*options* must be zero.
+
 ## RETURN VALUE
 
-**waitset_create**() returns a valid wait set handle (strictly positive) on
-success. On failure, a (strictly) negative error value is returned. Zero (the
-"invalid handle") is never returned.
+**waitset_create**() returns NO_ERROR and a valid wait set handle via *out*.
+On failure, an error value is returned.
 
 ## ERRORS
+
+**ERR_INVALID_ARGS**  *out* is an invalid pointer.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

@@ -25,9 +25,9 @@ public:
 
     static mx_status_t create(uint32_t options, waitset* result);
 
-    mx_status_t add(const handle& handle, uint64_t cookie,
+    mx_status_t add(uint64_t cookie, const handle& handle,
                     mx_signals_t signals) const {
-        return mx_waitset_add(get(), handle.get(), signals, cookie);
+        return mx_waitset_add(get(), cookie, handle.get(), signals);
     }
 
     mx_status_t remove(uint64_t cookie) const {
@@ -36,7 +36,7 @@ public:
 
     mx_status_t wait(mx_time_t timeout, mx_waitset_result_t* results,
                      uint32_t* num_results) const {
-        return mx_waitset_wait(get(), timeout, num_results, results, nullptr);
+        return mx_waitset_wait(get(), timeout, results, num_results);
     }
 };
 
