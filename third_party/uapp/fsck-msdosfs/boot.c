@@ -223,6 +223,28 @@ readboot(int dosfs, struct bootblock *boot)
 	boot->NumFiles = 1;
 	boot->NumFree = 0;
 
+	// @localmod begin
+	// The BSD FAT driver follows the FAT specification of the "dirty bit"
+	// exactly. The Linux FAT driver, however, marks a bit in the boot sector as
+	// "dirty", which is outside the typical FAT specification. For maximum
+	// compatibility, this modification allows fsck to detect (and clean) the
+	// unspecified Linux dirty bit.
+	int dirtybyte = boot->flags&FAT32 ? 0x41 : 0x25;
+	if (block[dirtybyte] & 0x01) {
+		if (ask(1, "MARK BOOT BLOCK CLEAN") == 0) {
+			pwarn("\n***** BOOT BLOCK IS LEFT MARKED AS DIRTY *****\n");
+			return FSERROR;
+		}
+		pwarn("MARKING BOOT BLOCK CLEAN\n");
+		block[dirtybyte] &= ~0x01;
+		if (lseek(dosfs, 0, SEEK_SET) != 0
+			|| write(dosfs, block, sizeof block) != sizeof block) {
+			perr("could not write boot block");
+			return FSFATAL;
+		}
+	}
+	// @localmod end
+
 	return ret;
 }
 
