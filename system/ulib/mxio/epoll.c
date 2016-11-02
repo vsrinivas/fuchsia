@@ -275,8 +275,8 @@ int epoll_wait(int epfd, struct epoll_event* ep_events, int maxevents, int timeo
         uint32_t events;
 
         io->ops->wait_end(io, results[i].signals_state.satisfied, &events);
-        // report the requested events only
-        ep_events[i].events = events & cookie->ep_event.events;
+        // mask unrequested events except HUP/ERR
+        ep_events[i].events = events & (cookie->ep_event.events | EPOLLHUP | EPOLLERR);
 
         ep_events[i].data = cookie->ep_event.data;
     }

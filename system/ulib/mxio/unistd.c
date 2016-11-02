@@ -1189,9 +1189,8 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
                 if (j >= result_index && j < nvalid) {
                     uint32_t events = 0;
                     io->ops->wait_end(io, signals_states[j].satisfied, &events);
-                    pfd->revents = events & pfd->events;
-                    // TODO: error events should be reported here
-                    // (after masked with pfd->events)
+                    // mask unrequested events except HUP/ERR
+                    pfd->revents = events & (pfd->events | EPOLLHUP | EPOLLERR);
                     if (pfd->revents != 0) {
                         nfds++;
                     }
