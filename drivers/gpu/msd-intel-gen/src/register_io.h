@@ -5,8 +5,8 @@
 #ifndef REGISTER_IO_H
 #define REGISTER_IO_H
 
-#include "magma_util/platform/platform_mmio.h"
 #include "magma_util/dlog.h"
+#include "platform_mmio.h"
 #include <memory>
 #include <vector>
 

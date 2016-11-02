@@ -5,9 +5,9 @@
 #include "device_id.h"
 #include "forcewake.h"
 #include "helper/platform_device_helper.h"
-#include "magma_util/platform/platform_mmio.h"
 #include "mock/mock_mmio.h"
 #include "msd_intel_device.h"
+#include "platform_mmio.h"
 #include "registers.h"
 #include "gtest/gtest.h"
 

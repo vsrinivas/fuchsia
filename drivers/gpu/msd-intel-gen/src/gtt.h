@@ -7,8 +7,8 @@
 
 #include "address_space.h"
 #include "magma_util/address_space_allocator.h"
-#include "magma_util/platform/platform_buffer.h"
-#include "magma_util/platform/platform_device.h"
+#include "platform_buffer.h"
+#include "platform_device.h"
 #include "register_io.h"
 #include <memory>
 

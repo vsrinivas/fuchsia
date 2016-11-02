@@ -6,8 +6,8 @@
 #define MSD_INTEL_BUFFER_H
 
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
+#include "platform_buffer.h"
 #include "sequencer.h"
 #include "types.h"
 #include <list>

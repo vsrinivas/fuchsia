@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gtt.h"
-#include "magma_util/platform/platform_mmio.h"
 #include "mock/mock_mmio.h"
+#include "platform_mmio.h"
 #include "registers.h"
 #include "gtest/gtest.h"
 
