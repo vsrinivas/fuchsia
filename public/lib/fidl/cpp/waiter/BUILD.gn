@@ -6,4 +6,8 @@ source_set("waiter") {
   sources = [
     "default.h",
   ]
+
+  public_deps = [
+    "//lib/fidl/c/waiter",
+  ]
 }
