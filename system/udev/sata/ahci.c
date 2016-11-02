@@ -246,7 +246,12 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     if ((cmd_is_read(pdata->cmd) || cmd_is_write(pdata->cmd)) && pdata->count == 0) {
         // Empty reads and writes complete immediately, and are not actually
         // transmitted to the underlying device.
-        ahci_port_complete_txn(dev, port, NO_ERROR);
+        // resume the port if paused for sync and no outstanding transactions
+        if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
+            port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
+        }
+        txn->ops->complete(txn, NO_ERROR, txn->length);
+        completion_signal(&dev->worker_completion);
         return NO_ERROR;
     }
 

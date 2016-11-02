@@ -52,6 +52,12 @@
 #define IOCTL_DEVICE_DEBUG_RESUME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 6)
 
+// Sync the device
+//   in: none
+//   out: none
+#define IOCTL_DEVICE_SYNC \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVICE, 7)
+
 // Indicates if there's data available to read,
 // or room to write, or an error condition.
 #define DEVICE_SIGNAL_READABLE MX_USER_SIGNAL_0
@@ -78,3 +84,6 @@ IOCTL_WRAPPER(ioctl_device_debug_suspend, IOCTL_DEVICE_DEBUG_SUSPEND);
 
 // ssize_t ioctl_device_debug_resume(int fd);
 IOCTL_WRAPPER(ioctl_device_debug_resume, IOCTL_DEVICE_DEBUG_RESUME);
+
+// ssize_t ioctl_device_sync(int fd);
+IOCTL_WRAPPER(ioctl_device_sync, IOCTL_DEVICE_SYNC);

@@ -155,31 +155,6 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
 
 static mx_protocol_device_t sata_device_proto;
 
-static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    sata_device_t* device = get_sata_device(dev);
-    // TODO implement other block ioctls
-    switch (op) {
-    case IOCTL_BLOCK_GET_SIZE: {
-        uint64_t* size = reply;
-        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
-        *size = device->capacity;
-        return sizeof(*size);
-    }
-    case IOCTL_BLOCK_GET_BLOCKSIZE: {
-        uint64_t* blksize = reply;
-        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
-        *blksize = device->sector_sz;
-        return sizeof(*blksize);
-    }
-    case IOCTL_BLOCK_RR_PART: {
-        // rebind to reread the partition table
-        return device_rebind(dev);
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
 static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     sata_device_t* device = get_sata_device(dev);
 
@@ -202,6 +177,53 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
     pdata->port = device->port;
 
     ahci_iotxn_queue(dev->parent, txn);
+}
+
+static void sata_sync_complete(iotxn_t* txn, void* cookie) {
+    completion_signal((completion_t*)cookie);
+}
+
+static ssize_t sata_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    sata_device_t* device = get_sata_device(dev);
+    // TODO implement other block ioctls
+    switch (op) {
+    case IOCTL_BLOCK_GET_SIZE: {
+        uint64_t* size = reply;
+        if (max < sizeof(*size)) return ERR_BUFFER_TOO_SMALL;
+        *size = device->capacity;
+        return sizeof(*size);
+    }
+    case IOCTL_BLOCK_GET_BLOCKSIZE: {
+        uint64_t* blksize = reply;
+        if (max < sizeof(*blksize)) return ERR_BUFFER_TOO_SMALL;
+        *blksize = device->sector_sz;
+        return sizeof(*blksize);
+    }
+    case IOCTL_BLOCK_RR_PART: {
+        // rebind to reread the partition table
+        return device_rebind(dev);
+    }
+    case IOCTL_DEVICE_SYNC: {
+        iotxn_t* txn;
+        mx_status_t status = iotxn_alloc(&txn, IOTXN_SYNC_BEFORE, 0, 0);
+        if (status != NO_ERROR) {
+            return status;
+        }
+        completion_t completion = COMPLETION_INIT;
+        txn->opcode = IOTXN_OP_READ;
+        txn->offset = 0;
+        txn->length = 0;
+        txn->complete_cb = sata_sync_complete;
+        txn->cookie = &completion;
+        sata_iotxn_queue(dev, txn);
+        completion_wait(&completion, MX_TIME_INFINITE);
+        status = txn->status;
+        txn->ops->release(txn);
+        return status;
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
 }
 
 static mx_off_t sata_getsize(mx_device_t* dev) {
