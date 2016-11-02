@@ -9,4 +9,8 @@ mojom("device") {
     "device_runner.mojom",
     "device_shell.mojom",
   ]
+
+  deps = [
+    "//apps/mozart/services/views/interfaces"
+  ]
 }
