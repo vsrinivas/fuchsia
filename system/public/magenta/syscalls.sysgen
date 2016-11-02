@@ -262,8 +262,8 @@ syscall alloc_device_memory
     returns (mx_status_t);
 
 syscall cprng_draw
-    (buffer: any[len] OUT, len: mx_size_t)
-    returns (mx_ssize_t);
+    (buffer: any[len] OUT, len: mx_size_t, actual: mx_size_t[1] OUT)
+    returns (mx_status_t);
 
 # TODO(security)
 

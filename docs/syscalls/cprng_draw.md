@@ -9,7 +9,7 @@ mx_cprng_draw - Draw from the kernel's CPRNG
 ```
 #include <magenta/syscalls.h>
 
-mx_ssize_t mx_cprng_draw(void* buffer, mx_size_t len);
+mx_status_t mx_cprng_draw(void* buffer, mx_size_t len, mx_size_t* actual);
 ```
 
 ## DESCRIPTION
@@ -20,7 +20,8 @@ suitable for cryptographic applications.  It will return at most
 
 ## RETURN VALUE
 
-**mx_cprng_draw**() returns the number of random bytes drawn into *buffer*.
+**mx_cprng_draw**() returns NO_ERROR and the number of random bytes
+drawn into *buffer* (via *actual) on success.
 
 ## ERRORS
 

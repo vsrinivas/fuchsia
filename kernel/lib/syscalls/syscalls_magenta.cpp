@@ -488,7 +488,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint3
     return log->ReadFromUser(ptr.get(), len, flags);
 }
 
-mx_ssize_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len) {
+mx_status_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len, user_ptr<mx_size_t> actual) {
     if (len > kMaxCPRNGDraw)
         return ERR_INVALID_ARGS;
 
@@ -499,14 +499,16 @@ mx_ssize_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len) {
 
     if (buffer.copy_array_to_user(kernel_buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
+    if (actual.copy_to_user(len) != NO_ERROR)
+        return ERR_INVALID_ARGS;
 
     // Get rid of the stack copy of the random data
     memset(kernel_buf, 0, sizeof(kernel_buf));
 
-    return len;
+    return NO_ERROR;
 }
 
-mx_status_t sys_cprng_add_entropy(user_ptr<void> buffer, mx_size_t len) {
+mx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, mx_size_t len) {
     if (len > kMaxCPRNGSeed)
         return ERR_INVALID_ARGS;
 

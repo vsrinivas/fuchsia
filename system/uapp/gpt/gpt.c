@@ -137,7 +137,8 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     uint8_t type[16];
     uint8_t guid[16];
     memset(type, 0xff, 16);
-    mx_cprng_draw(guid, 16);
+    mx_size_t sz;
+    mx_cprng_draw(guid, 16, &sz);
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {
         printf("add partition: name=%s offset=0x%" PRIx64 " blocks=0x%" PRIx64 "\n", name, offset, blocks);

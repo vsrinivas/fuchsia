@@ -151,9 +151,10 @@ MAGENTA_SYSCALL_DEF(5, 5, 111, mx_status_t, mmap_device_memory, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(4, 4, 112, mx_status_t, alloc_device_memory, mx_handle_t handle, uint32_t len,
                     mx_paddr_t *out_paddr, void **out_vaddr)
 
-MAGENTA_SYSCALL_DEF(2, 2, 160, mx_ssize_t, cprng_draw, USER_PTR(void) buffer, mx_size_t len);
+MAGENTA_SYSCALL_DEF(3, 3, 160, mx_status_t, cprng_draw, USER_PTR(void) buffer, mx_size_t len,
+                    USER_PTR(mx_size_t) actual);
 // TODO(security)
-MAGENTA_SYSCALL_DEF(2, 2, 161, mx_status_t, cprng_add_entropy, USER_PTR(void) buffer, mx_size_t len);
+MAGENTA_SYSCALL_DEF(2, 2, 161, mx_status_t, cprng_add_entropy, USER_PTR(const void) buffer, mx_size_t len);
 
 // TODO(security)
 MAGENTA_SYSCALL_DEF(4, 4, 170, mx_status_t, bootloader_fb_get_info, uint32_t* format, uint32_t* width,

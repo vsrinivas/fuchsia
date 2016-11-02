@@ -183,7 +183,8 @@ bool vmo_read_only_map_test() {
     EXPECT_EQ(NO_ERROR, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
 
-    auto sstatus = mx_cprng_draw((void*)ptr, 1);
+    mx_size_t sz;
+    auto sstatus = mx_cprng_draw((void*)ptr, 1, &sz);
     EXPECT_LT(sstatus, 0, "write");
 
     status = mx_process_unmap_vm(mx_process_self(), ptr, 0);
