@@ -32,6 +32,11 @@ void EncodeByteString(const uint8_t byte, char out_hex[2]);
 // result in a string.
 std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes);
 
+// Escapes binary non-printable (based on the current locale) characters in a
+// printable format to enable pretty-printing of binary data. For example, '0'
+// becomes "\x00".
+std::string EscapeNonPrintableString(const ftl::StringView& data);
+
 // Decodes the given ASCII string describing a series of bytes and returns the
 // bytes. |string| must contain and even number of characters, since each byte
 // is represented by two ASCII characters.

@@ -83,7 +83,7 @@ void IOLoop::StartReadLoop() {
     }
 
     ftl::StringView bytes_read(in_buffer_.data(), read_size);
-    FTL_VLOG(2) << "rx: " << bytes_read;
+    FTL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
 
     // Notify the delegate that we read some bytes. We copy the buffer data
     // into the closure as |in_buffer_| can get modified before the closure
@@ -114,7 +114,7 @@ void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
       ReportError();
       return;
     }
-    FTL_VLOG(2) << "tx: " << bytes;
+    FTL_VLOG(2) << "<- " << util::EscapeNonPrintableString(bytes);
   });
 }
 

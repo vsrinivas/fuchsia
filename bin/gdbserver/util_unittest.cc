@@ -107,6 +107,25 @@ TEST(UtilTest, DecodeByteArrayString) {
             DecodeByteArrayString("0a0b0c0d0e0f107fff"));
 }
 
+TEST(UtilTest, EscapeNonPrintableString) {
+  const char kPrintableChars[] =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ";
+  const char kSomeNonPrintableChars[] = {
+      0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+      // 32 is "space", which is printable.
+  };
+
+  EXPECT_EQ(kPrintableChars, EscapeNonPrintableString(kPrintableChars));
+  EXPECT_EQ(
+      "\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\x09\\x0a\\x0b\\x0c\\x0d"
+      "\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b"
+      "\\x1c\\x1d\\x1e\\x1f ",
+      EscapeNonPrintableString(ftl::StringView(
+          kSomeNonPrintableChars, sizeof(kSomeNonPrintableChars))));
+}
+
 TEST(UtilTest, BuildErrorPacket) {
   EXPECT_EQ("E01", BuildErrorPacket(ErrorCode::PERM));
   EXPECT_EQ("E02", BuildErrorPacket(ErrorCode::NOENT));

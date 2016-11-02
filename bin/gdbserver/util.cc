@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <cctype>
+
 #include <magenta/status.h>
 
 #include "lib/ftl/logging.h"
@@ -93,6 +95,24 @@ std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
   for (size_t i = 0; i < kResultSize; ++i) {
     if (!util::DecodeByteString(string.data() + (i * 2), result.data() + i))
       return std::vector<uint8_t>{};
+  }
+
+  return result;
+}
+
+std::string EscapeNonPrintableString(const ftl::StringView& data) {
+  std::string result;
+  for (char c : data) {
+    if (std::isprint(c)) {
+      result.push_back(c);
+      continue;
+    }
+
+    char str[4];
+    str[0] = '\\';
+    str[1] = 'x';
+    EncodeByteString(static_cast<uint8_t>(c), str + 2);
+    result.append(str, sizeof(str));
   }
 
   return result;
