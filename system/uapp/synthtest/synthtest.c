@@ -4,6 +4,7 @@
 
 #include <magenta/device/audio.h>
 #include <magenta/device/midi.h>
+#include <mxio/io.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <math.h>
@@ -59,6 +60,7 @@ static int midi_read_thread(void* arg) {
     uint8_t buffer[3];
 
     while (1) {
+        mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
         int event_size = read(fd, buffer, sizeof(buffer));
         if (event_size < 1) {
             midi_done = true;
