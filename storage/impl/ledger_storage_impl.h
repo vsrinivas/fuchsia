@@ -29,9 +29,10 @@ class LedgerStorageImpl : public LedgerStorage {
   Status CreatePageStorage(PageIdView page_id,
                            std::unique_ptr<PageStorage>* page_storage) override;
 
-  void GetPageStorage(PageIdView page_id,
-                      const std::function<void(std::unique_ptr<PageStorage>)>&
-                          callback) override;
+  void GetPageStorage(
+      PageIdView page_id,
+      const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback)
+      override;
 
   bool DeletePageStorage(PageIdView page_id) override;
 

@@ -40,10 +40,11 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 
   void GetPageStorage(
       storage::PageIdView page_id,
-      const std::function<void(std::unique_ptr<storage::PageStorage>)>&
+      const std::function<void(storage::Status,
+                               std::unique_ptr<storage::PageStorage>)>&
           callback) override {
     get_page_calls.push_back(page_id.ToString());
-    callback(nullptr);
+    callback(storage::Status::NOT_FOUND, nullptr);
   }
 
   bool DeletePageStorage(storage::PageIdView page_id) override {

@@ -5,6 +5,7 @@
 #include "apps/ledger/app/ledger_manager.h"
 
 #include "apps/ledger/app/constants.h"
+#include "apps/ledger/app/page_utils.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/public/page_storage.h"
 #include "lib/ftl/logging.h"
@@ -58,24 +59,31 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
     return;
   }
 
-  storage_->GetPageStorage(page_id, [
-    this, create_if_not_found, page_id = page_id.ToString(), callback
-  ](std::unique_ptr<storage::PageStorage> page_storage) {
-    if (!page_storage) {
-      if (create_if_not_found == CreateIfNotFound::NO) {
-        callback(Status::PAGE_NOT_FOUND, nullptr);
-        return;
-      }
-      storage::Status status =
-          storage_->CreatePageStorage(page_id, &page_storage);
-      if (status != storage::Status::OK) {
-        callback(Status::INTERNAL_ERROR, nullptr);
-        return;
-      }
-    }
-    callback(Status::OK,
-             AddPageManagerAndGetPagePtr(page_id, std::move(page_storage)));
-  });
+  storage_->GetPageStorage(
+      page_id,
+      [ this, create_if_not_found, page_id = page_id.ToString(), callback ](
+          storage::Status storage_status,
+          std::unique_ptr<storage::PageStorage> page_storage) {
+        Status status = PageUtils::ConvertStatus(storage_status, Status::OK);
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        if (!page_storage) {
+          if (create_if_not_found == CreateIfNotFound::NO) {
+            callback(Status::PAGE_NOT_FOUND, nullptr);
+            return;
+          }
+          storage::Status status =
+              storage_->CreatePageStorage(page_id, &page_storage);
+          if (status != storage::Status::OK) {
+            callback(Status::INTERNAL_ERROR, nullptr);
+            return;
+          }
+        }
+        callback(Status::OK,
+                 AddPageManagerAndGetPagePtr(page_id, std::move(page_storage)));
+      });
 }
 
 Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
