@@ -9,6 +9,7 @@ source_set("sys_driver") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:buffer",
   ]
 
   sources = [
@@ -29,6 +30,7 @@ source_set("sys_driver") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util/platform",
+    "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:device",
   ]
 }

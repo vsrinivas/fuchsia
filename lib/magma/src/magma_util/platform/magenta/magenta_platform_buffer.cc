@@ -4,8 +4,8 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_buffer.h"
 #include "magma_util/refcounted.h"
+#include "platform_buffer.h"
 #include <ddk/driver.h>
 #include <errno.h>
 #include <limits.h> // PAGE_SIZE

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_util/platform/platform_connection.h"
+#include "platform_connection.h"
 
 #include <errno.h>
 #include <magenta/types.h>

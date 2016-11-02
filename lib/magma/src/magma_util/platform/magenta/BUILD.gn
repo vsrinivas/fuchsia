@@ -4,21 +4,71 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("magenta") {
-  configs += [ "$magma_build_root:magma_src_include_config" ]
+source_set("buffer") {
+  configs += [ "..:platform_include_config" ]
 
   sources = [
     "magenta_platform_buffer.cc",
-    "magenta_platform_connection.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "magenta",
+  ]
+}
+
+source_set("device") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
     "magenta_platform_device.cc",
     "magenta_platform_device.h",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "magenta",
+  ]
+}
+
+source_set("futex") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
     "magenta_platform_futex.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "magenta",
+  ]
+}
+
+source_set("connection") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_connection.cc",
   ]
 
   deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform",
   ]
 
   libs = [

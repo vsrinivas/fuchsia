@@ -6,8 +6,8 @@
 #define _MOCK_MSD_H_
 
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
+#include "platform_buffer.h"
 #include <memory>
 #include <vector>
 

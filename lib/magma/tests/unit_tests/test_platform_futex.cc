@@ -5,8 +5,8 @@
 #include <chrono>
 #include <thread>
 
-#include "magma_util/platform/platform_futex.h"
 #include "magma_util/sleep.h"
+#include "platform_futex.h"
 #include "gtest/gtest.h"
 
 static inline uint64_t timeout_from_ms(uint64_t timeout_ms) { return timeout_ms * 1000000ull; }

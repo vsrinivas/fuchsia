@@ -5,7 +5,7 @@
 #ifndef MAGENTA_PLATFORM_DEVICE_H
 #define MAGENTA_PLATFORM_DEVICE_H
 
-#include "magma_util/platform/platform_device.h"
+#include "platform_device.h"
 
 #include <ddk/device.h>
 

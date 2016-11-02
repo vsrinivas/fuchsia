@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "magenta/syscalls.h"
-#include "magma_util/platform/platform_futex.h"
+#include "platform_futex.h"
 
 namespace magma {
 

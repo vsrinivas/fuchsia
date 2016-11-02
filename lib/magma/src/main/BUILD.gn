@@ -17,9 +17,8 @@ source_set("main") {
   ]
 
   deps = [
-    "$magma_build_root:libmsd",
+    "$magma_build_root/src/sys_driver",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform/magenta",
   ]
 
   libs = [
@@ -39,9 +38,9 @@ source_set("test_driver") {
   ]
 
   deps = [
-    "$magma_build_root:libmsd",
+    "$magma_build_root/src/sys_driver",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform/magenta",
+    "$magma_build_root/tests/helper:platform_device_helper",
   ]
 
   defines = []

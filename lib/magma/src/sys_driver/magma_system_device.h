@@ -7,8 +7,8 @@
 
 #include "magma_system_connection.h"
 #include "magma_system_display.h"
-#include "magma_util/platform/platform_connection.h"
 #include "msd.h"
+#include "platform_connection.h"
 #include <functional>
 #include <memory>
 #include <unordered_map>

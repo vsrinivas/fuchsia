@@ -8,7 +8,7 @@
 #include "magenta_platform_device.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_mmio.h"
+#include "platform_mmio.h"
 
 namespace magma {
 

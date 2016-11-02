@@ -4,8 +4,8 @@
 
 #include "helper/platform_device_helper.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_device.h"
 #include "mock/mock_mmio.h"
+#include "platform_device.h"
 #include "gtest/gtest.h"
 
 static void test_mock_mmio(magma::PlatformMmio* mmio)

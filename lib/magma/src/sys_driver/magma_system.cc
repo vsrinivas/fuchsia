@@ -7,7 +7,7 @@
 #include "magma_driver.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"
-#include "magma_util/platform/platform_connection.h"
+#include "platform_connection.h"
 #include <errno.h>
 
 #ifdef __linux__

@@ -5,7 +5,7 @@
 #ifndef TEST_PLATFORM_DEVICE_H
 #define TEST_PLATFORM_DEVICE_H
 
-#include "magma_util/platform/platform_device.h"
+#include "platform_device.h"
 #include <memory>
 
 class TestPlatformDevice {

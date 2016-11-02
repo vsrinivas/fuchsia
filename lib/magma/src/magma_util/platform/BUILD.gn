@@ -4,18 +4,72 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("platform") {
-  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+config("platform_include_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("buffer") {
+  public_configs = [ ":platform_include_config" ]
 
   sources = [
     "platform_buffer.h",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "magenta:buffer",
+  ]
+}
+
+source_set("device") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
     "platform_device.h",
-    "platform_futex.h",
     "platform_mmio.h",
   ]
 
+  deps = [
+    "magenta:device",
+  ]
+}
+
+source_set("mmio") {
+  public_configs = [ ":platform_include_config" ]
+
   public_deps = [
-    "$magma_build_root/include:msd_abi",
-    "..:common",
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_mmio.h",
+  ]
+}
+
+source_set("futex") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_futex.h",
+  ]
+
+  deps = [
+    "magenta:futex",
+  ]
+}
+
+source_set("connection") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "platform_connection.h",
+  ]
+
+  deps = [
+    "magenta:connection",
   ]
 }

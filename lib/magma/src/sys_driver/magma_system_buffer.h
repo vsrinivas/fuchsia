@@ -5,8 +5,8 @@
 #ifndef _MAGMA_SYSTEM_BUFFER_H_
 #define _MAGMA_SYSTEM_BUFFER_H_
 
-#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
+#include "platform_buffer.h"
 
 #include <functional>
 #include <memory>

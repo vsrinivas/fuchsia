@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_util/platform/platform_buffer.h"
 #include "msd.h"
+#include "platform_buffer.h"
 #include "gtest/gtest.h"
 
 TEST(MsdBuffer, ImportAndDestroy)
