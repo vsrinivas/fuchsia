@@ -24,8 +24,9 @@ def main():
                         choices=['x86-64', 'aarch64'])
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
                         nargs='?', const=True, default=False)
+    parser.add_argument("--ccache", "-c", help="use ccache",
+                        action="store_true")
     (args, passthrough) = parser.parse_known_args()
-
     if args.release:
         args.outdir = "out/release"
 
@@ -49,6 +50,8 @@ def main():
             if not os.path.exists(path):
                 parser.error('invalid goma path: %s' % path)
             gn_args += " goma_dir=\"" + path + "\""
+    if args.ccache:
+        gn_args += " use_ccache=true"
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
 
