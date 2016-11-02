@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "apps/ledger/app/constants.h"
+#include "apps/ledger/app/page_manager.h"
 #include "apps/ledger/app/page_snapshot_impl.h"
 #include "apps/ledger/app/page_utils.h"
 #include "apps/ledger/convert/convert.h"
@@ -19,7 +20,8 @@
 
 namespace ledger {
 
-PageImpl::PageImpl(storage::PageStorage* storage) : storage_(storage) {}
+PageImpl::PageImpl(PageManager* manager, storage::PageStorage* storage)
+    : manager_(manager), storage_(storage) {}
 
 PageImpl::~PageImpl() {}
 
@@ -56,11 +58,7 @@ void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
     callback.Run(PageUtils::ConvertStatus(status), nullptr);
     return;
   }
-  PageSnapshotPtr snapshot_ptr;
-  page_snapshot_bindings_.AddBinding(
-      new PageSnapshotImpl(storage_, commit->GetContents()),
-      GetProxy(&snapshot_ptr));
-  callback.Run(Status::OK, snapshot_ptr.Pass());
+  callback.Run(Status::OK, manager_->GetPageSnapshotPtr(commit->GetContents()));
 }
 
 // Watch(PageWatcher watcher) => (Status status);

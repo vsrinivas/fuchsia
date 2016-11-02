@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "apps/ledger/app/constants.h"
+#include "apps/ledger/app/page_manager.h"
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/fake/fake_journal.h"
 #include "apps/ledger/storage/fake/fake_journal_delegate.h"
@@ -33,15 +34,19 @@ class PageImplTest : public ::testing::Test {
   void SetUp() override {
     ::testing::Test::SetUp();
     page_id1_ = storage::PageId(kPageIdSize, 'a');
-    fake_storage_.reset(new storage::fake::FakePageStorage(page_id1_));
+    std::unique_ptr<storage::fake::FakePageStorage> fake_storage(
+        new storage::fake::FakePageStorage(page_id1_));
+    fake_storage_ = fake_storage.get();
 
-    page_impl_.reset(new PageImpl(fake_storage_.get()));
+    manager_.reset(new PageManager(std::move(fake_storage), [] {}));
     binding_.reset(
         new mojo::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
+    page_ptr_ = manager_->GetPagePtr();
   }
 
   storage::PageId page_id1_;
-  std::unique_ptr<storage::fake::FakePageStorage> fake_storage_;
+  storage::fake::FakePageStorage* fake_storage_;
+  std::unique_ptr<PageManager> manager_;
 
   PagePtr page_ptr_;
 

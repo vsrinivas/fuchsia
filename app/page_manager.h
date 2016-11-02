@@ -9,12 +9,23 @@
 #include <vector>
 
 #include "apps/ledger/app/page_impl.h"
+#include "apps/ledger/app/page_snapshot_impl.h"
 #include "apps/ledger/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
 
 namespace ledger {
+
+template <class Interface, class Impl>
+struct BoundInterface {
+  template <class... Args>
+  BoundInterface(mojo::InterfaceRequest<Interface> request, Args&&... args)
+      : impl(std::forward<Args>(args)...), binding(&impl, std::move(request)) {}
+
+  Impl impl;
+  mojo::Binding<Interface> binding;
+};
 
 // Manages a ledger page.
 //
@@ -40,15 +51,20 @@ class PageManager {
   // bound to it.
   PagePtr GetPagePtr();
 
- private:
-  struct BoundPage;
+  // Creates a new PageSnapshotImpl managed by this PageManager, and returns a
+  // proxy bound to it.
+  PageSnapshotPtr GetPageSnapshotPtr(
+      std::unique_ptr<storage::CommitContents> contents);
 
+ private:
   std::unique_ptr<storage::PageStorage> page_storage_;
 
   // TODO(ppi): switch to something like a (Strong)BindingSet when they grow
   // facilities to notify the client when the bindings shut down, so that we can
   // implement |on_empty_callback|.
-  std::vector<std::unique_ptr<BoundPage>> pages_;
+  std::vector<std::unique_ptr<BoundInterface<Page, PageImpl>>> pages_;
+  std::vector<std::unique_ptr<BoundInterface<PageSnapshot, PageSnapshotImpl>>>
+      snapshots_;
 
   ftl::Closure on_empty_callback_;
 

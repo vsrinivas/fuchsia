@@ -608,6 +608,35 @@ TEST_F(LedgerApplicationTest, PageCreatePutLargeReference) {
   EXPECT_EQ(big_data, retrieved_data);
 }
 
+TEST_F(LedgerApplicationTest, PageSnapshotClosePageGet) {
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+
+  // Close the pipe. PageSnapshotPtr should remain valid.
+  page.reset();
+
+  ValuePtr value;
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+    EXPECT_EQ(status, Status::OK);
+    value = std::move(v);
+  });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+  EXPECT_TRUE(value->is_bytes());
+  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
+
+  // Attempt to get an entry that is not in the page.
+  snapshot->Get(convert::ToArray("favorite book"),
+                [](Status status, ValuePtr v) {
+                  // People don't read much these days.
+                  EXPECT_EQ(status, Status::KEY_NOT_FOUND);
+                });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+}
+
 }  // namespace
 }  // namespace ledger
 
