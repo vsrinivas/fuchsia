@@ -450,7 +450,7 @@ syscall socket_read (handle: mx_handle_t, flags: uint32_t, buffer: any[size] OUT
 
 syscall thread_read_state
     (handle: mx_handle_t, kind: uint32_t,
-        buffer: any[buffer_len] OUT, buffer_len: uint32_t[1] INOUT)
+        buffer: any[buffer_len] OUT, len: uint32_t, actual: uint32_t[1] OUT)
     returns (mx_status_t);
 
 syscall thread_write_state

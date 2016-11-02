@@ -213,10 +213,10 @@ static bool dump_inferior_regs(mx_handle_t thread)
 
     for (unsigned i = 0; i < num_regsets; ++i) {
         uint32_t regset_size = 0;
-        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, &regset_size);
+        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, NULL, regset_size, &regset_size);
         ASSERT_EQ(status, ERR_BUFFER_TOO_SMALL, "getting regset size failed");
         void* buf = tu_malloc(regset_size);
-        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, &regset_size);
+        status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
         ASSERT_EQ(status, NO_ERROR, "getting regset failed");
         dump_arch_regs(thread, i, buf);
         free(buf);
@@ -229,7 +229,7 @@ static uint32_t get_inferior_greg_buf_size(mx_handle_t thread)
 {
     // The general regs are defined to be in regset zero.
     uint32_t regset_size = 0;
-    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, NULL, &regset_size);
+    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
     // It's easier to just terminate if this fails.
     if (status != ERR_BUFFER_TOO_SMALL)
         tu_fatal("get_inferior_greg_buf_size: mx_thread_read_state", status);
@@ -241,7 +241,7 @@ static uint32_t get_inferior_greg_buf_size(mx_handle_t thread)
 static void read_inferior_gregs(mx_handle_t thread, void* buf, unsigned buf_size)
 {
     // By convention the general regs are in regset 0.
-    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, buf, &buf_size);
+    mx_status_t status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
     // It's easier to just terminate if this fails.
     if (status != NO_ERROR)
         tu_fatal("read_inferior_gregs: mx_thread_read_state", status);

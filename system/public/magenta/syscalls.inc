@@ -240,8 +240,8 @@ MAGENTA_SYSCALL_DEF(5, 5, 282, mx_status_t, socket_read, mx_handle_t handle, uin
                     USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
 
 // Debugger calls
-MAGENTA_SYSCALL_DEF(4, 4, 290, mx_status_t, thread_read_state, mx_handle_t handle, uint32_t kind, USER_PTR(void) buffer, USER_PTR(uint32_t) buffer_len)
-MAGENTA_SYSCALL_DEF(4, 4, 291, mx_status_t, thread_write_state, mx_handle_t handle, uint32_t kind, USER_PTR(const void) buffer, uint32_t buffer_len)
+MAGENTA_SYSCALL_DEF(5, 5, 290, mx_status_t, thread_read_state, mx_handle_t handle, uint32_t kind, USER_PTR(void) state, uint32_t len, USER_PTR(uint32_t) actual)
+MAGENTA_SYSCALL_DEF(4, 4, 291, mx_status_t, thread_write_state, mx_handle_t handle, uint32_t kind, USER_PTR(const void) state, uint32_t len)
 
 // Jobs
 MAGENTA_SYSCALL_DEF(3, 3, 300, mx_status_t, job_create, mx_handle_t parent_job, uint32_t flags, USER_PTR(mx_handle_t) out)

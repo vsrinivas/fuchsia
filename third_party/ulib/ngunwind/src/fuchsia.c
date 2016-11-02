@@ -73,7 +73,7 @@ get_inferior_greg_buf_size (mx_handle_t thread)
 {
   // The general regs are defined to be in regset zero.
   uint32_t regset_size = 0;
-  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, NULL, &regset_size);
+  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
   assert (status != NO_ERROR);
   if (status != ERR_BUFFER_TOO_SMALL)
     return status;
@@ -85,7 +85,7 @@ read_inferior_gregs (mx_handle_t thread, void* buf, size_t regset_size)
 {
   uint32_t buf_size = (uint32_t) regset_size;
   // By convention the general regs are in regset 0.
-  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, buf, &buf_size);
+  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, buf, buf_size, &buf_size);
   return status;
 }
 

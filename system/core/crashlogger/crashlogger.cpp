@@ -155,7 +155,7 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     const char* arch = "unknown";
 
     uint32_t regs_size = sizeof(regs);
-    status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, &regs_size);
+    status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, regs_size, &regs_size);
     if (status < 0) {
         printf("unable to read general regs for [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
         goto Fail;

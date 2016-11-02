@@ -266,7 +266,8 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
-                                  user_ptr<void> _buffer_ptr, user_ptr<uint32_t> _buffer_len) {
+                                  user_ptr<void> _buffer_ptr,
+                                  uint32_t buffer_len, user_ptr<uint32_t> actual) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -276,10 +277,6 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     mx_status_t status = up->GetDispatcher(handle, &thread, MX_RIGHT_READ);
     if (status != NO_ERROR)
         return status;
-
-    uint32_t buffer_len;
-    if (_buffer_len.copy_from_user(&buffer_len) != NO_ERROR)
-        return ERR_INVALID_ARGS;
 
     // avoid malloc'ing insane amounts
     if (buffer_len > kMaxThreadStateSize)
@@ -296,15 +293,14 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
     if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
-        if (_buffer_len.copy_to_user(buffer_len) != NO_ERROR)
+        if (actual.copy_to_user(buffer_len) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (status != NO_ERROR)
         return status;
 
-    status = _buffer_ptr.copy_array_to_user(bytes.get(), buffer_len);
-    if (status != NO_ERROR)
+    if (_buffer_ptr.copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
