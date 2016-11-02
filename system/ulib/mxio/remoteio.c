@@ -671,7 +671,9 @@ mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
 
 static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
+    int nonblock = rio->io.flags & MXIO_FLAG_NONBLOCK;
 
+    // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r;
         if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == NO_ERROR) {
@@ -679,8 +681,7 @@ static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
         }
         if (r == ERR_REMOTE_CLOSED) {
             return 0;
-        } else if (r == ERR_SHOULD_WAIT) {
-            // TODO: follow socket blocking/nonblocking state
+        } else if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_handle_wait_one(rio->h2,
                                    MX_SIGNAL_READABLE
@@ -704,15 +705,15 @@ static ssize_t mxsio_read(mxio_t* io, void* data, size_t len) {
 
 static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
+    int nonblock = rio->io.flags & MXIO_FLAG_NONBLOCK;
 
+    // TODO: let the generic write() to do this loop
     for (;;) {
         ssize_t r;
         if ((r = mx_socket_write(rio->h2, 0, data, len, &len)) == NO_ERROR) {
             return (ssize_t) len;
         }
-        if (r == ERR_SHOULD_WAIT) {
-            // TODO: follow socket blocking/nonblocking state
-
+        if (r == ERR_SHOULD_WAIT && !nonblock) {
             // No wait for PEER_CLOSED signal. PEER_CLOSED could be signaled
             // even if the socket is only half-closed for read.
             // TODO: how to detect if the write direction is closed?
@@ -737,12 +738,25 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
     mx_signals_t signals = MX_USER_SIGNAL_2; // EPOLLERR is always detected
-    if (events & EPOLLIN) {
-        // MX_USER_SIGNAL_0 is signaled if a network socket gets a connection
-        signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_0;
-    }
-    if (events & EPOLLOUT) {
-        signals |= MX_SIGNAL_WRITABLE;
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
+        // if socket is connected
+        if (events & EPOLLIN) {
+            signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+        }
+        if (events & EPOLLOUT) {
+            signals |= MX_SIGNAL_WRITABLE;
+        }
+    } else {
+        // if socket is not connected
+        if (events & EPOLLIN) {
+            // signal when a listening socket gets an incoming connection
+            signals |= MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION |
+                MX_SIGNAL_PEER_CLOSED;
+        }
+        if (events & EPOLLOUT) {
+            // signal when connect() operation is finished
+            signals |= MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION;
+        }
     }
     if (events & EPOLLRDHUP) {
         signals |= MX_SIGNAL_PEER_CLOSED;
@@ -752,13 +766,23 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 
 static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_0)) {
-        events |= EPOLLIN;
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
+        if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
+            events |= EPOLLIN;
+        }
+        if (signals & MX_SIGNAL_WRITABLE) {
+            events |= EPOLLOUT;
+        }
+    } else {
+        if (signals & (MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION |
+                       MX_SIGNAL_PEER_CLOSED)) {
+            events |= EPOLLIN;
+        }
+        if (signals & MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION) {
+            events |= EPOLLOUT;
+        }
     }
-    if (signals & MX_SIGNAL_WRITABLE) {
-        events |= EPOLLOUT;
-    }
-    if (signals & MX_USER_SIGNAL_2) {
+    if (signals & MXIO_SIGNAL_SOCKET_ERROR) {
         events |= EPOLLERR;
     }
     if (signals & MX_SIGNAL_PEER_CLOSED) {

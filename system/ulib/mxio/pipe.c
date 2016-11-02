@@ -20,13 +20,14 @@ typedef struct mx_pipe {
     mx_handle_t h;
 } mx_pipe_t;
 
-static ssize_t _blocking_read(mx_handle_t h, void* data, size_t len) {
+static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
+    // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r;
         if ((r = mx_socket_read(h, 0, data, len, &len)) == NO_ERROR) {
             return (ssize_t) len;
         }
-        if (r == ERR_SHOULD_WAIT) {
+        if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
@@ -46,13 +47,14 @@ static ssize_t _blocking_read(mx_handle_t h, void* data, size_t len) {
     }
 }
 
-static ssize_t _blocking_write(mx_handle_t h, const void* data, size_t len) {
+static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock) {
+    // TODO: let the generic write() to do this loop
     for (;;) {
         ssize_t r;
         if ((r = mx_socket_write(h, 0, data, len, &len)) == NO_ERROR) {
             return (ssize_t)len;
         }
-        if (r == ERR_SHOULD_WAIT) {
+        if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_handle_wait_one(h, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
@@ -75,12 +77,12 @@ static ssize_t _blocking_write(mx_handle_t h, const void* data, size_t len) {
 
 static ssize_t mx_pipe_write(mxio_t* io, const void* data, size_t len) {
     mx_pipe_t* p = (mx_pipe_t*)io;
-    return _blocking_write(p->h, data, len);
+    return _write(p->h, data, len, io->flags & MXIO_FLAG_NONBLOCK);
 }
 
 static ssize_t mx_pipe_read(mxio_t* io, void* data, size_t len) {
     mx_pipe_t* p = (mx_pipe_t*)io;
-    return _blocking_read(p->h, data, len);
+    return _read(p->h, data, len, io->flags & MXIO_FLAG_NONBLOCK);
 }
 
 static mx_status_t mx_pipe_close(mxio_t* io) {

@@ -532,7 +532,7 @@ ssize_t read(int fd, void* buf, size_t count) {
     mx_status_t status;
     for (;;) {
         status = io->ops->read(io, buf, count);
-        if (status != ERR_SHOULD_WAIT) {
+        if (status != ERR_SHOULD_WAIT || io->flags & MXIO_FLAG_NONBLOCK) {
             break;
         }
         mxio_wait_fd(fd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
@@ -637,10 +637,34 @@ int fcntl(int fd, int cmd, ...) {
         mxio_release(io);
         return 0;
     }
-    case F_GETFL:
-    case F_SETFL:
+    case F_GETFL: {
         // TODO(kulakowski) File status flags and access modes.
-        return ERRNO(ENOSYS);
+        mxio_t* io = fd_to_io(fd);
+        if (io == NULL) {
+            return ERRNO(EBADF);
+        }
+        int status = 0;
+        if (io->flags & MXIO_FLAG_NONBLOCK) {
+            status |= O_NONBLOCK;
+        }
+        mxio_release(io);
+        return status;
+    }
+    case F_SETFL: {
+        // TODO(kulakowski) File status flags and access modes.
+        mxio_t* io = fd_to_io(fd);
+        if (io == NULL) {
+            return ERRNO(EBADF);
+        }
+        GET_INT_ARG(status);
+        if (status & O_NONBLOCK) {
+            io->flags |= MXIO_FLAG_NONBLOCK;
+        } else {
+            io->flags &= ~MXIO_FLAG_NONBLOCK;
+        }
+        mxio_release(io);
+        return 0;
+    }
     case F_GETOWN:
     case F_SETOWN:
         // TODO(kulakowski) Socket support.
@@ -763,6 +787,9 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
     }
     if ((r = __mxio_open_at(&io, dirfd, path, flags, mode)) < 0) {
         return ERROR(r);
+    }
+    if (flags & O_NONBLOCK) {
+        io->flags |= MXIO_FLAG_NONBLOCK;
     }
     if ((fd = mxio_bind_to_fd(io, -1, 0)) < 0) {
         io->ops->close(io);

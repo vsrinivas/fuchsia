@@ -4,14 +4,16 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <netdb.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
+#include <sys/socket.h>
 #include <threads.h>
 #include <unistd.h>
 
-#include <sys/socket.h>
-#include <netdb.h>
+#include <magenta/syscalls.h>
 
 #include <mxio/debug.h>
 #include <mxio/io.h>
@@ -20,6 +22,10 @@
 #include <mxio/socket.h>
 
 #include "unistd.h"
+
+static mx_status_t mxio_getsockopt(mxio_t* io, int level, int optname,
+                                   void* restrict optval,
+                                   socklen_t* restrict optlen);
 
 int socket(int domain, int type, int protocol) {
     mxio_t* io = NULL;
@@ -34,6 +40,10 @@ int socket(int domain, int type, int protocol) {
 
     if ((r = __mxio_open(&io, path, 0, 0)) < 0) {
         return ERROR(r);
+    }
+
+    if (type & SOCK_NONBLOCK) {
+        io->flags |= MXIO_FLAG_NONBLOCK;
     }
 
     int fd;
@@ -53,8 +63,52 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
     mx_status_t r;
     r = io->ops->misc(io, MXRIO_CONNECT, 0, 0, (void*)addr, len);
+    if (r == ERR_SHOULD_WAIT) {
+        if (io->flags & MXIO_FLAG_NONBLOCK) {
+            mxio_release(io);
+            return ERRNO(EINPROGRESS);
+        }
+        // going to wait for the completion
+    } else {
+        if (r == NO_ERROR) {
+            io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+        }
+        mxio_release(io);
+        return STATUS(r);
+    }
+
+    // wait for the completion
+    uint32_t events = EPOLLOUT;
+    mx_handle_t h;
+    mx_signals_t sigs;
+    io->ops->wait_begin(io, events, &h, &sigs);
+    r = mx_handle_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
+    io->ops->wait_end(io, sigs, &events);
+    if (!(events & EPOLLOUT)) {
+        mxio_release(io);
+        return ERRNO(EIO);
+    }
+    if (r < 0) {
+        mxio_release(io);
+        return ERROR(r);
+    }
+
+    // check the result
+    int errno_;
+    socklen_t errno_len = sizeof(errno_);
+    r = mxio_getsockopt(io, SOL_SOCKET, SO_ERROR, &errno_, &errno_len);
+    if (r < 0) {
+        mxio_release(io);
+        return ERRNO(EIO);
+    }
+    if (errno_ == 0) {
+        io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+    }
     mxio_release(io);
-    return STATUS(r);
+    if (errno_ != 0) {
+        return ERRNO(errno_);
+    }
+    return 0;
 }
 
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
@@ -83,18 +137,43 @@ int listen(int fd, int backlog) {
 
 int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             int flags) {
-    // TODO: support flags
-
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
     mxio_t* io2;
-    mx_status_t r = io->ops->open(io, MXRIO_SOCKET_DIR_ACCEPT, 0, 0, &io2);
-    mxio_release(io);
-    if (r < 0) {
+    mx_status_t r;
+    for (;;) {
+        r = io->ops->open(io, MXRIO_SOCKET_DIR_ACCEPT, 0, 0, &io2);
+        if (r == ERR_SHOULD_WAIT) {
+            if (io->flags & MXIO_FLAG_NONBLOCK) {
+                mxio_release(io);
+                return EWOULDBLOCK;
+            }
+            // wait for an incoming connection
+            uint32_t events = EPOLLIN;
+            mx_handle_t h;
+            mx_signals_t sigs;
+            io->ops->wait_begin(io, events, &h, &sigs);
+            r = mx_handle_wait_one(h, sigs, MX_TIME_INFINITE, &sigs);
+            io->ops->wait_end(io, sigs, &events);
+            if (!(events & EPOLLIN)) {
+                mxio_release(io);
+                return ERRNO(EIO);
+            }
+            continue;
+        } else if (r == NO_ERROR) {
+            break;
+        }
+        mxio_release(io);
         return ERROR(r);
+    }
+    mxio_release(io);
+    io2->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+
+    if (flags & SOCK_NONBLOCK) {
+        io2->flags |= MXIO_FLAG_NONBLOCK;
     }
 
     if (addr != NULL && len != NULL) {
@@ -228,32 +307,41 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     return getsockaddr(fd, MXRIO_GETPEERNAME, addr, len);
 }
 
-int getsockopt(int fd, int level, int optname, void* restrict optval,
-               socklen_t* restrict optlen) {
+static mx_status_t mxio_getsockopt(mxio_t* io, int level, int optname,
+                            void* restrict optval, socklen_t* restrict optlen) {
     if (optval == NULL || optlen == NULL) {
         return ERRNO(EINVAL);
     }
 
+    mxrio_sockopt_req_reply_t req_reply;
+    req_reply.level = level;
+    req_reply.optname = optname;
+    mx_status_t r = io->ops->misc(io, MXRIO_GETSOCKOPT, 0,
+                                  sizeof(mxrio_sockopt_req_reply_t),
+                                  &req_reply, sizeof(req_reply));
+    if (r < 0) {
+        return r;
+    }
+    socklen_t avail = *optlen;
+    *optlen = req_reply.optlen;
+    memcpy(optval, req_reply.optval,
+           (avail < req_reply.optlen) ? avail : req_reply.optlen);
+
+    return NO_ERROR;
+}
+
+int getsockopt(int fd, int level, int optname, void* restrict optval,
+               socklen_t* restrict optlen) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
 
-    mxrio_sockopt_req_reply_t reply;
-    mx_status_t r = io->ops->misc(io, MXRIO_GETSOCKOPT, 0,
-                                  sizeof(mxrio_sockopt_req_reply_t),
-                                  &reply, sizeof(reply));
+    mx_status_t r;
+    r = mxio_getsockopt(io, level, optname, optval, optlen);
     mxio_release(io);
 
-    if (r < 0) {
-        return ERROR(r);
-    }
-
-    socklen_t avail = *optlen;
-    *optlen = reply.optlen;
-    memcpy(optval, reply.optval, (avail < reply.optlen) ? avail : reply.optlen);
-
-    return 0;
+    return STATUS(r);
 }
 
 int setsockopt(int fd, int level, int optname, const void* optval,
@@ -271,6 +359,7 @@ int setsockopt(int fd, int level, int optname, const void* optval,
         mxio_release(io);
         return ERRNO(EINVAL);
     }
+    memcpy(req.optval, optval, optlen);
     req.optlen = optlen;
     mx_status_t r = io->ops->misc(io, MXRIO_SETSOCKOPT, 0, 0, &req,
                                   sizeof(req));
