@@ -8,6 +8,9 @@
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
 #include "apps/modular/services/story/story_runner.mojom.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
+#include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/run_application.h"
 #include "mojo/public/cpp/bindings/interface_handle.h"
@@ -16,8 +19,14 @@
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/environment/logging.h"
 #include "mojo/public/cpp/system/macros.h"
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkColor.h"
+#include "third_party/skia/include/core/SkRect.h"
 
 namespace {
+
+constexpr uint32_t kContentImageResourceId = 1;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 // Subjects
 constexpr char kDocId[] =
@@ -49,13 +58,17 @@ using modular::operator<<;
 
 // Module implementation that acts as a leaf module. It implements
 // both Module and the LinkChanged observer of its own Link.
-class Module2Impl : public Module, public LinkChanged {
+class Module2Impl : public mozart::BaseView, public Module, public LinkChanged {
  public:
   explicit Module2Impl(InterfaceHandle<ApplicationConnector> app_connector,
                        InterfaceRequest<Module> module_request,
                        InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : module_binding_(this, std::move(module_request)),
-        watcher_binding_(this) {
+      : BaseView(std::move(app_connector),
+                 std::move(view_owner_request),
+                 "Module2Impl"),
+        module_binding_(this, std::move(module_request)),
+        watcher_binding_(this),
+        tick_(0) {
     FTL_LOG(INFO) << "Module2Impl";
   }
 
@@ -102,15 +115,64 @@ class Module2Impl : public Module, public LinkChanged {
     }
 
     editor.Keep(&docs);
+    Invalidate();
     link_->SetAllDocuments(std::move(docs));
   }
 
  private:
+  // Copied from
+  // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
+  // |BaseView|:
+  void OnDraw() override {
+    FTL_DCHECK(properties());
+    auto update = mozart::SceneUpdate::New();
+    const mojo::Size& size = *properties()->view_layout->size;
+    if (size.width > 0 && size.height > 0) {
+      mojo::RectF bounds;
+      bounds.width = size.width;
+      bounds.height = size.height;
+      mozart::ImagePtr image;
+      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      FTL_CHECK(surface);
+      DrawContent(surface->getCanvas(), size);
+      auto content_resource = mozart::Resource::New();
+      content_resource->set_image(mozart::ImageResource::New());
+      content_resource->get_image()->image = std::move(image);
+      update->resources.insert(kContentImageResourceId,
+                               std::move(content_resource));
+      auto root_node = mozart::Node::New();
+      root_node->op = mozart::NodeOp::New();
+      root_node->op->set_image(mozart::ImageNodeOp::New());
+      root_node->op->get_image()->content_rect = bounds.Clone();
+      root_node->op->get_image()->image_resource_id = kContentImageResourceId;
+      update->nodes.insert(kRootNodeId, std::move(root_node));
+    } else {
+      auto root_node = mozart::Node::New();
+      update->nodes.insert(kRootNodeId, std::move(root_node));
+    }
+    scene()->Update(std::move(update));
+    scene()->Publish(CreateSceneMetadata());
+  }
+
+  void DrawContent(SkCanvas* const canvas, const mojo::Size& size) {
+    canvas->clear(SK_ColorBLUE);
+    canvas->translate(size.width / 2, size.height / 2);
+    canvas->rotate(SkIntToScalar(45 * (tick_++)));
+    SkPaint paint;
+    paint.setColor(0xFFFF00FF);
+    paint.setAntiAlias(true);
+    float d = std::min(size.width, size.height) / 4;
+    canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
+    canvas->flush();
+  }
+
   StrongBinding<Module> module_binding_;
   StrongBinding<LinkChanged> watcher_binding_;
 
   InterfacePtr<Session> session_;
   InterfacePtr<Link> link_;
+
+  int tick_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(Module2Impl);
 };

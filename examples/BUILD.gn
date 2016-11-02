@@ -23,10 +23,14 @@ executable("example_module1") {
     "//apps/modular/document_editor",
     "//apps/modular/mojo:single_service_view_app",
     "//apps/modular/services/story",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/system",
     "//mojo/public/cpp/bindings:utility",
+    "//third_party/skia",
   ]
 }
 
@@ -40,10 +44,14 @@ executable("example_module2") {
     "//apps/modular/document_editor",
     "//apps/modular/mojo:single_service_view_app",
     "//apps/modular/services/story",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
     "//mojo/public/cpp/application:standalone",
     "//mojo/system",
     "//mojo/public/cpp/bindings:utility",
+    "//third_party/skia",
   ]
 }
 

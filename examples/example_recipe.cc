@@ -13,7 +13,6 @@
 #include "apps/modular/services/story/story_runner.mojom.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
@@ -28,15 +27,20 @@
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/cpp/bindings/strong_binding_set.h"
 #include "mojo/public/cpp/system/macros.h"
+#include "mojo/services/geometry/cpp/geometry_util.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
 
 namespace {
 
-constexpr uint32_t kContentImageResourceId = 1;
+constexpr uint32_t kViewResourceIdBase = 100;
+constexpr uint32_t kViewResourceIdSpacing = 100;
+
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-constexpr float kSpeed = 0.25f;
+constexpr uint32_t kViewNodeIdBase = 100;
+constexpr uint32_t kViewNodeIdSpacing = 100;
+constexpr uint32_t kViewSceneNodeIdOffset = 1;
 
 // Subjects
 constexpr char kDocId[] =
@@ -63,6 +67,7 @@ using mojo::InterfaceRequest;
 using mojo::ServiceProviderImpl;
 using mojo::Shell;
 using mojo::StrongBinding;
+using mojo::StructPtr;
 
 using modular::DocumentEditor;
 using modular::Link;
@@ -140,13 +145,24 @@ class ModuleMonitor : public ModuleWatcher {
   MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
+struct ViewData {
+  explicit ViewData(uint32_t key) : key(key) {}
+  const uint32_t key;
+  StructPtr<mozart::ViewInfo> view_info;
+  StructPtr<mozart::ViewProperties> view_properties;
+  mojo::RectF layout_bounds;
+  uint32_t scene_version = 1u;
+};
+
 // Module implementation that acts as a recipe.
 class RecipeImpl : public Module, public mozart::BaseView {
  public:
   RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
              InterfaceRequest<Module> module_request,
              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(std::move(app_connector), std::move(view_owner_request), "RecipeImpl"),
+      : BaseView(std::move(app_connector),
+                 std::move(view_owner_request),
+                 "RecipeImpl"),
         module_binding_(this, std::move(module_request)) {
     FTL_LOG(INFO) << "RecipeImpl";
   }
@@ -174,14 +190,22 @@ class RecipeImpl : public Module, public mozart::BaseView {
     module2_link_->Dup(GetProxy(&module2_link_handle));
 
     FTL_LOG(INFO) << "recipe start module module1";
+    InterfaceHandle<mozart::ViewOwner> module1_view;
     session_->StartModule("mojo:example_module1",
                           std::move(module1_link_handle), GetProxy(&module1_),
-                          GetProxy(&module1_view_));
+                          GetProxy(&module1_view));
+    GetViewContainer()->AddChild(0, std::move(module1_view));
+    views_.emplace(
+        std::make_pair(0, std::unique_ptr<ViewData>(new ViewData(0))));
 
     FTL_LOG(INFO) << "recipe start module module2";
+    InterfaceHandle<mozart::ViewOwner> module2_view;
     session_->StartModule("mojo:example_module2",
                           std::move(module2_link_handle), GetProxy(&module2_),
-                          GetProxy(&module2_view_));
+                          GetProxy(&module2_view));
+    GetViewContainer()->AddChild(1, std::move(module2_view));
+    views_.emplace(
+        std::make_pair(1, std::unique_ptr<ViewData>(new ViewData(1))));
 
     monitors_.emplace_back(new LinkMonitor("module1", module1_link_));
     monitors_.emplace_back(new LinkMonitor("module2", module2_link_));
@@ -206,55 +230,140 @@ class RecipeImpl : public Module, public mozart::BaseView {
   }
 
  private:
-  // Copied from
-  // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
+  // |BaseView| implementation copied from
+  // https://github.com/fuchsia-mirror/mozart/blob/master/examples/tile/tile_view.cc
   // |BaseView|:
-  void OnDraw() override {
-    FTL_DCHECK(properties());
-    auto update = mozart::SceneUpdate::New();
-    const mojo::Size& size = *properties()->view_layout->size;
-    if (size.width > 0 && size.height > 0) {
-      mojo::RectF bounds;
-      bounds.width = size.width;
-      bounds.height = size.height;
-      mozart::ImagePtr image;
-      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
-      FTL_CHECK(surface);
-      DrawContent(surface->getCanvas(), size);
-      auto content_resource = mozart::Resource::New();
-      content_resource->set_image(mozart::ImageResource::New());
-      content_resource->get_image()->image = std::move(image);
-      update->resources.insert(kContentImageResourceId,
-                               std::move(content_resource));
-      auto root_node = mozart::Node::New();
-      root_node->op = mozart::NodeOp::New();
-      root_node->op->set_image(mozart::ImageNodeOp::New());
-      root_node->op->get_image()->content_rect = bounds.Clone();
-      root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-      update->nodes.insert(kRootNodeId, std::move(root_node));
-    } else {
-      auto root_node = mozart::Node::New();
-      update->nodes.insert(kRootNodeId, std::move(root_node));
-    }
-    scene()->Update(std::move(update));
-    scene()->Publish(CreateSceneMetadata());
+  void OnChildAttached(uint32_t child_key,
+                       StructPtr<mozart::ViewInfo> child_view_info) override {
+    auto it = views_.find(child_key);
+    FTL_DCHECK(it != views_.end()) << "Invalid child_key.";
+    auto view_data = it->second.get();
+    view_data->view_info = std::move(child_view_info);
     Invalidate();
   }
 
-  void DrawContent(SkCanvas* const canvas, const mojo::Size& size) {
-    canvas->clear(SK_ColorBLUE);
-    canvas->translate(size.width / 2, size.height / 2);
-    float t =
-        fmod(frame_tracker().presentation_time().ToEpochDelta().ToSecondsF() *
-                 kSpeed,
-             1.f);
-    canvas->rotate(360.f * t);
-    SkPaint paint;
-    paint.setColor(0xFFFF00FF);
-    paint.setAntiAlias(true);
-    float d = std::min(size.width, size.height) / 4;
-    canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
-    canvas->flush();
+  // |BaseView|:
+  void OnChildUnavailable(uint32_t child_key) override {
+    auto it = views_.find(child_key);
+    FTL_DCHECK(it != views_.end()) << "Invalid child_key.";
+    FTL_LOG(ERROR) << "View died unexpectedly: child_key=" << child_key;
+    std::unique_ptr<ViewData> view_data = std::move(it->second);
+    views_.erase(it);
+    GetViewContainer()->RemoveChild(child_key, nullptr);
+    Invalidate();
+  }
+
+  // |BaseView|:
+  void OnLayout() override {
+    FTL_DCHECK(properties());
+    // Layout all children in a row.
+    if (!views_.empty()) {
+      const mojo::Size& size = *properties()->view_layout->size;
+
+      uint32_t index = 0;
+      uint32_t space = size.width;
+      uint32_t base = space / views_.size();
+      uint32_t excess = space % views_.size();
+      uint32_t offset = 0;
+      for (auto it = views_.begin(); it != views_.end(); ++it, ++index) {
+        auto view_data = it->second.get();
+
+        // Distribute any excess width among the leading children.
+        uint32_t extent = base;
+        if (excess) {
+          extent++;
+          excess--;
+        }
+
+        view_data->layout_bounds.x = offset;
+        view_data->layout_bounds.y = 0;
+        view_data->layout_bounds.width = extent;
+        view_data->layout_bounds.height = size.height;
+        offset += extent;
+
+        auto view_properties = mozart::ViewProperties::New();
+        view_properties->view_layout = mozart::ViewLayout::New();
+        view_properties->view_layout->size = mojo::Size::New();
+        view_properties->view_layout->size->width =
+            view_data->layout_bounds.width;
+        view_properties->view_layout->size->height =
+            view_data->layout_bounds.height;
+
+        if (view_data->view_properties.Equals(view_properties))
+          continue;  // no layout work to do
+
+        view_data->view_properties = view_properties.Clone();
+        view_data->scene_version++;
+        GetViewContainer()->SetChildProperties(
+            it->first, view_data->scene_version, view_properties.Pass());
+      }
+    }
+  }
+
+  // |BaseView|:
+  void OnDraw() override {
+    FTL_DCHECK(properties());
+
+    // Update the scene.
+    // TODO: only send the resources once, be more incremental
+    auto update = mozart::SceneUpdate::New();
+    update->clear_resources = true;
+    update->clear_nodes = true;
+
+    // Create the root node.
+    auto root_node = mozart::Node::New();
+
+    // Add the children.
+    for (auto it = views_.cbegin(); it != views_.cend(); it++) {
+      const ViewData& view_data = *(it->second.get());
+      const uint32_t scene_resource_id =
+          kViewResourceIdBase + view_data.key * kViewResourceIdSpacing;
+      const uint32_t container_node_id =
+          kViewNodeIdBase + view_data.key * kViewNodeIdSpacing;
+
+      mojo::RectF extent;
+      extent.width = view_data.layout_bounds.width;
+      extent.height = view_data.layout_bounds.height;
+
+      // Create a container to represent the place where the child view
+      // will be presented.  The children of the container provide
+      // fallback behavior in case the view is not available.
+      auto container_node = mozart::Node::New();
+      container_node->content_clip = extent.Clone();
+      container_node->content_transform = mojo::Transform::New();
+      SetTranslationTransform(container_node->content_transform.get(),
+                              view_data.layout_bounds.x,
+                              view_data.layout_bounds.y, 0.f);
+
+      // If we have the view, add it to the scene.
+      if (view_data.view_info) {
+        auto scene_resource = mozart::Resource::New();
+        scene_resource->set_scene(mozart::SceneResource::New());
+        scene_resource->get_scene()->scene_token =
+            view_data.view_info->scene_token.Clone();
+        update->resources.insert(scene_resource_id, scene_resource.Pass());
+
+        const uint32_t scene_node_id =
+            container_node_id + kViewSceneNodeIdOffset;
+        auto scene_node = mozart::Node::New();
+        scene_node->op = mozart::NodeOp::New();
+        scene_node->op->set_scene(mozart::SceneNodeOp::New());
+        scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
+        update->nodes.insert(scene_node_id, scene_node.Pass());
+        container_node->child_node_ids.push_back(scene_node_id);
+      }
+
+      // Add the container.
+      update->nodes.insert(container_node_id, container_node.Pass());
+      root_node->child_node_ids.push_back(container_node_id);
+    }
+
+    // Add the root node.
+    update->nodes.insert(kRootNodeId, root_node.Pass());
+    scene()->Update(update.Pass());
+
+    // Publish the scene.
+    scene()->Publish(CreateSceneMetadata());
   }
 
   StrongBinding<Module> module_binding_;
@@ -272,8 +381,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
   std::vector<std::unique_ptr<LinkMonitor>> monitors_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
-  InterfacePtr<mozart::ViewOwner> module1_view_;
-  InterfacePtr<mozart::ViewOwner> module2_view_;
+  std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
 };
