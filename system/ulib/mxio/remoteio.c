@@ -619,6 +619,9 @@ static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
     if (events & EPOLLOUT) {
         signals |= MX_USER_SIGNAL_1;
     }
+    if (events & EPOLLRDHUP) {
+        signals |= MX_SIGNAL_PEER_CLOSED;
+    }
     *_signals = signals;
 }
 
@@ -632,6 +635,9 @@ static void mxrio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
     }
     if (signals & MX_USER_SIGNAL_2) {
         events |= EPOLLERR;
+    }
+    if (signals & MX_SIGNAL_PEER_CLOSED) {
+        events |= EPOLLRDHUP;
     }
     *_events = events;
 }
@@ -738,6 +744,9 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
     if (events & EPOLLOUT) {
         signals |= MX_SIGNAL_WRITABLE;
     }
+    if (events & EPOLLRDHUP) {
+        signals |= MX_SIGNAL_PEER_CLOSED;
+    }
     *_signals = signals;
 }
 
@@ -751,6 +760,9 @@ static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
     }
     if (signals & MX_USER_SIGNAL_2) {
         events |= EPOLLERR;
+    }
+    if (signals & MX_SIGNAL_PEER_CLOSED) {
+        events |= EPOLLRDHUP;
     }
     *_events = events;
 }

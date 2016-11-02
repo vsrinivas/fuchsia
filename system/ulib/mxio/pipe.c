@@ -107,6 +107,9 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
     if (events & EPOLLOUT) {
         signals |= MX_SIGNAL_WRITABLE;
     }
+    if (events & EPOLLRDHUP) {
+        signals |= MX_SIGNAL_PEER_CLOSED;
+    }
     *_signals = signals;
 }
 
@@ -117,6 +120,9 @@ static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events
     }
     if (signals & MX_SIGNAL_WRITABLE) {
         events |= EPOLLOUT;
+    }
+    if (signals & MX_SIGNAL_PEER_CLOSED) {
+        events |= EPOLLRDHUP;
     }
     *_events = events;
 }
