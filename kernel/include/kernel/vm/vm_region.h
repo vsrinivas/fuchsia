@@ -92,8 +92,5 @@ private:
     mxtl::RefPtr<VmObject> object_;
     uint64_t object_offset_ = 0;
 
-    // our lock is shared with the vmo we map
-    Mutex& vmo_lock_;
-
     char name_[32];
 };

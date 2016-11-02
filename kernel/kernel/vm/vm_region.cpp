@@ -25,11 +25,11 @@
 VmRegion::VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo, uint64_t offset,
                    uint arch_mmu_flags, const char* name)
     : base_(base), size_(size), arch_mmu_flags_(arch_mmu_flags), aspace_(&aspace), object_(mxtl::move(vmo)),
-      object_offset_(offset), vmo_lock_(object_->lock()) {
+      object_offset_(offset) {
     strlcpy(name_, name, sizeof(name_));
     LTRACEF("%p '%s'\n", this, name_);
 
-    AutoLock al(vmo_lock_);
+    AutoLock al(object_->lock());
     object_->AddRegionLocked(this);
 }
 
@@ -58,7 +58,7 @@ status_t VmRegion::Destroy() {
 
     if (object_) {
         {
-            AutoLock al(vmo_lock_);
+            AutoLock al(object_->lock());
             object_->RemoveRegionLocked(this);
         }
 
@@ -80,14 +80,17 @@ void VmRegion::Dump() const {
 
 size_t VmRegion::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
+
     return object_->AllocatedPages();
 }
 
 status_t VmRegion::Protect(uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
 
     // grab the lock for the vmo
-    AutoLock al(vmo_lock_);
+    AutoLock al(object_->lock());
 
     arch_mmu_flags_ = arch_mmu_flags;
 
@@ -100,10 +103,11 @@ status_t VmRegion::Protect(uint arch_mmu_flags) {
 
 status_t VmRegion::Unmap() {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
     LTRACEF("%p '%s'\n", this, name_);
 
     // grab the lock for the vmo
-    AutoLock al(vmo_lock_);
+    AutoLock al(object_->lock());
 
     // unmap the section of address space we cover
     return arch_mmu_unmap(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE);
@@ -111,9 +115,10 @@ status_t VmRegion::Unmap() {
 
 status_t VmRegion::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
     LTRACEF("region %p '%s', offset %#" PRIx64 ", len %#" PRIx64 "\n", this, name_, offset, len);
 
-    DEBUG_ASSERT(vmo_lock_.IsHeld());
+    DEBUG_ASSERT(object_->lock().IsHeld());
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
@@ -144,13 +149,14 @@ status_t VmRegion::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) {
 
 status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
     LTRACEF("region %p '%s', offset 0x%zu, size 0x%zx\n", this, name_, offset, len);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
 
     // grab the lock for the vmo
-    AutoLock al(vmo_lock_);
+    AutoLock al(object_->lock());
 
     // iterate through the range, grabbing a page from the underlying object and mapping it in
     size_t o;
@@ -183,6 +189,7 @@ status_t VmRegion::MapRange(size_t offset, size_t len, bool commit) {
 
 status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
+    DEBUG_ASSERT(object_);
     DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);
 
     va = ROUNDDOWN(va, PAGE_SIZE);
@@ -217,7 +224,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     }
 
     // grab the lock for the vmo
-    AutoLock al(vmo_lock_);
+    AutoLock al(object_->lock());
 
     // fault in or grab an existing page
     paddr_t new_pa;
