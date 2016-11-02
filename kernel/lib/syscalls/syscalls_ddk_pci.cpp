@@ -496,6 +496,10 @@ mx_status_t sys_pci_init(mx_handle_t, user_ptr<mx_pci_init_arg_t>, uint32_t) {
     return ERR_NOT_SUPPORTED;
 }
 
+mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
+    return ERR_NOT_SUPPORTED;
+}
+
 mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, mx_pcie_get_nth_info_t*) {
     return ERR_NOT_SUPPORTED;
 }
