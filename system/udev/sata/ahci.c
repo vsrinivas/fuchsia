@@ -187,6 +187,16 @@ static bool ahci_port_cmd_busy(ahci_port_t* port, int slot) {
     return ((ahci_read(&port->regs->sact) | ahci_read(&port->regs->ci)) & (1 << slot)) || (port->commands[slot] != NULL) || (port->running & (1 << slot));
 }
 
+static bool cmd_is_read(uint8_t cmd) {
+    if (cmd == SATA_CMD_READ_DMA ||
+        cmd == SATA_CMD_READ_DMA_EXT ||
+        cmd == SATA_CMD_READ_FPDMA_QUEUED) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static bool cmd_is_write(uint8_t cmd) {
     if (cmd == SATA_CMD_WRITE_DMA ||
         cmd == SATA_CMD_WRITE_DMA_EXT ||
@@ -201,11 +211,45 @@ static bool cmd_is_queued(uint8_t cmd) {
     return (cmd == SATA_CMD_READ_FPDMA_QUEUED) || (cmd == SATA_CMD_WRITE_FPDMA_QUEUED);
 }
 
+static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, mx_status_t status) {
+    iotxn_t* txn;
+    uint32_t sact = ahci_read(&port->regs->sact);
+    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
+        txn = port->commands[i];
+        if (txn == NULL) {
+            continue;
+        }
+        if (!(sact & (1 << i))) {
+            mtx_lock(&port->lock);
+            // clear state before calling the complete() hook
+            port->running &= ~(1 << i);
+            port->commands[i] = NULL;
+
+            // resume the port if paused for sync and no outstanding transactions
+            if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
+                port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
+            }
+            mtx_unlock(&port->lock);
+
+            txn->ops->complete(txn, status, txn->length);
+        }
+    }
+    // hit the worker thread to do the next txn
+    completion_signal(&dev->worker_completion);
+}
+
 static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, iotxn_t* txn) {
     assert(slot < AHCI_MAX_COMMANDS);
     assert(!ahci_port_cmd_busy(port, slot));
 
     sata_pdata_t* pdata = sata_iotxn_pdata(txn);
+    if ((cmd_is_read(pdata->cmd) || cmd_is_write(pdata->cmd)) && pdata->count == 0) {
+        // Empty reads and writes complete immediately, and are not actually
+        // transmitted to the underlying device.
+        ahci_port_complete_txn(dev, port, NO_ERROR);
+        return NO_ERROR;
+    }
+
     mx_paddr_t phys;
     txn->ops->physmap(txn, &phys);
 
@@ -217,7 +261,7 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         }
     }
 
-    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%llx count=%u phys=0x%lx data_sz=0x%llx offset=0x%llx\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
+    //xprintf("ahci.%d: do_txn slot=%d cmd=0x%x device=0x%x lba=0x%lx count=%u phys=0x%lx data_sz=0x%lx offset=0x%lx\n", port->nr, slot, pdata->cmd, pdata->device, pdata->lba, pdata->count, phys, txn->length, txn->offset);
 
     // build the command
     ahci_cl_t* cl = port->cl + slot;
@@ -283,33 +327,6 @@ static mx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     pdata->timeout = mx_time_get(MX_CLOCK_MONOTONIC) + MX_SEC(1);
     completion_signal(&dev->watchdog_completion);
     return NO_ERROR;
-}
-
-static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, mx_status_t status) {
-    iotxn_t* txn;
-    uint32_t sact = ahci_read(&port->regs->sact);
-    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
-        txn = port->commands[i];
-        if (txn == NULL) {
-            continue;
-        }
-        if (!(sact & (1 << i))) {
-            mtx_lock(&port->lock);
-            // clear state before calling the complete() hook
-            port->running &= ~(1 << i);
-            port->commands[i] = NULL;
-
-            // resume the port if paused for sync and no outstanding transactions
-            if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
-                port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
-            }
-            mtx_unlock(&port->lock);
-
-            txn->ops->complete(txn, status, txn->length);
-        }
-    }
-    // hit the worker thread to do the next txn
-    completion_signal(&dev->worker_completion);
 }
 
 static mx_status_t ahci_port_initialize(ahci_port_t* port) {
