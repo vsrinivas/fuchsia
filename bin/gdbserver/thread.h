@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/types.h>
 #include <magenta/types.h>
 
@@ -45,6 +46,15 @@ class Thread final {
   // Returns the current state of this thread.
   State state() const { return state_; }
 
+  // Returns a GDB signal number based on the current exception context. If no
+  // exception context was set on this Thread or if the exception data from the
+  // context does not map to a meaningful GDB signal number, this method returns
+  // -1.
+  int GetGdbSignal() const;
+
+  // Sets the current exception context for this thread.
+  void SetExceptionContext(const mx_exception_context_t& context);
+
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure.
   bool Resume();
@@ -69,6 +79,11 @@ class Thread final {
 
   // The current state of the this thread.
   State state_;
+
+  // Pointer to the most recent exception context that this Thread received via
+  // an architectural exception. Contains nullptr if the thread never received
+  // an exception.
+  std::unique_ptr<mx_exception_context_t> exception_context_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

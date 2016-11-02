@@ -80,17 +80,19 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
       return HandleQuestionMark(callback);
     case 'c':  // Continue (at addr)
       return Handle_c(packet.substr(1), callback);
+    case 'C':  // Continue with signal (optionally at addr)
+      return Handle_C(packet.substr(1), callback);
     case 'g':  // Read general registers
       if (packet.size() > 1)
         break;
       return Handle_g(callback);
-    case 'G':
+    case 'G':  // Write general registers
       return Handle_G(packet.substr(1), callback);
     case 'H':  // Set a thread for subsequent operations
       return Handle_H(packet.substr(1), callback);
-    case 'm':
+    case 'm':  // Read memory
       return Handle_m(packet.substr(1), callback);
-    case 'M':
+    case 'M':  // Write memory
       return Handle_M(packet.substr(1), callback);
     case 'q':  // General query packet
     case 'Q':  // General set packet
@@ -105,10 +107,10 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
         return Handle_q(prefix, params, callback);
       return Handle_Q(prefix, params, callback);
     }
-    case 'v':
+    case 'v':  // v-packets
       return Handle_v(packet.substr(1), callback);
-    case 'z':
-    case 'Z':
+    case 'z':  // Remove software breakpoint
+    case 'Z':  // Insert software breakpoint
       return Handle_zZ(packet[0] == 'Z', packet.substr(1), callback);
     default:
       break;
@@ -137,7 +139,7 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   // then report an error.
   Process* current_process = server_->current_process();
   if (!current_process || !current_process->IsAttached()) {
-    FTL_LOG(ERROR) << "g: No inferior";
+    FTL_LOG(ERROR) << "c: No inferior";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
@@ -182,6 +184,7 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   // There is no current thread. This means that the process hasn't been started
   // yet. We start it and set the current thread to the first one the kernel
   // gives us.
+  // TODO(armansito): Remove this logic now that we handle MX_EXCP_START?
   FTL_DCHECK(!current_process->started());
   if (!current_process->Start()) {
     FTL_LOG(ERROR) << "c: Failed to start the current inferior";
@@ -193,6 +196,79 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   current_thread = current_process->PickOneThread();
   if (current_thread)
     server_->SetCurrentThread(current_thread);
+
+  return ReplyOK(callback);
+}
+
+bool CommandHandler::Handle_C(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process || !current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "C: No inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  Thread* current_thread = server_->current_thread();
+  if (!current_thread) {
+    FTL_LOG(ERROR) << "C: No current thread";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  // Parse the parameters. The packet format is: sig[;addr]
+  size_t semicolon = packet.find(';');
+  if (semicolon == ftl::StringView::npos)
+    semicolon = packet.size();
+
+  unsigned int signo;
+  if (!ftl::StringToNumberWithError<unsigned int>(packet.substr(0, semicolon),
+                                                  &signo, ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "C: Malformed packet: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  int thread_signo = current_thread->GetGdbSignal();
+  if (thread_signo < 0) {
+    FTL_LOG(ERROR) << "C: Current thread has received no signal";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  if (static_cast<unsigned int>(thread_signo) != signo) {
+    FTL_LOG(ERROR) << "C: Signal numbers don't match - actual: " << thread_signo
+                   << ", received: " << signo;
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  auto addr_param = packet.substr(semicolon);
+
+  // If the packet contains an address parameter, then try to set the program
+  // counter to then continue at that address. Otherwise, the PC register will
+  // remain untouched.
+  // TODO(armansito): Make Thread::Resume take an optional address argument so
+  // we don't have to keep repeating this code.
+  if (!addr_param.empty()) {
+    mx_vaddr_t addr;
+    if (!ftl::StringToNumberWithError<mx_vaddr_t>(addr_param, &addr,
+                                                  ftl::Base::k16)) {
+      FTL_LOG(ERROR) << "C: Malformed address given: " << packet;
+      return ReplyWithError(util::ErrorCode::INVAL, callback);
+    }
+
+    if (!current_thread->registers()->SetRegisterValue(
+            arch::GetPCRegisterNumber(), &addr, sizeof(addr))) {
+      FTL_LOG(ERROR) << "C: Failed to set the PC register";
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+
+    // TODO(armansito): Restore the PC register to its original state in case of
+    // a failure condition below?
+  }
+
+  if (!current_thread->Resume()) {
+    FTL_LOG(ERROR) << "Failed to resume thread";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
 
   return ReplyOK(callback);
 }

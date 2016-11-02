@@ -441,6 +441,7 @@ void Process::OnException(const mx_excp_type_t type,
   if (MX_EXCP_IS_ARCH(type)) {
     FTL_DCHECK(thread);
     thread->set_state(Thread::State::kStopped);
+    thread->SetExceptionContext(context);
     delegate_->OnArchitecturalException(this, thread, type, context);
     return;
   }

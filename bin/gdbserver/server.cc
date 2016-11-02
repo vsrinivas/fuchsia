@@ -333,7 +333,7 @@ void Server::OnArchitecturalException(Process* process,
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FTL_DCHECK(process == current_process());
 
-  int sigval = arch::ComputeGdbSignal(context);
+  int sigval = thread->GetGdbSignal();
   if (sigval < 0) {
     FTL_LOG(ERROR) << "Exception reporting not supported on current "
                    << "architecture!";

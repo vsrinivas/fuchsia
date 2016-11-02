@@ -38,6 +38,8 @@ class CommandHandler final {
   bool HandleQuestionMark(const ResponseCallback& callback);
   bool Handle_c(const ftl::StringView& packet,
                 const ResponseCallback& callback);
+  bool Handle_C(const ftl::StringView& packet,
+                const ResponseCallback& callback);
   bool Handle_g(const ResponseCallback& callback);
   bool Handle_G(const ftl::StringView& packet,
                 const ResponseCallback& callback);
