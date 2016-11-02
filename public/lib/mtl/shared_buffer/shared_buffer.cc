@@ -20,9 +20,10 @@ bool SharedBufferFromContainer(const Container& container,
   FTL_DCHECK(handle_ptr);
 
   uint64_t num_bytes = container.size();
-  mx_handle_t mx_handle = mx_vmo_create(num_bytes);
-  if (mx_handle < 0) {
-    FTL_LOG(WARNING) << "mx_vmo_create failed: " << mx_handle;
+  mx_handle_t mx_handle = MX_HANDLE_INVALID;
+  mx_status_t status = mx_vmo_create(num_bytes, 0u, &mx_handle);
+  if (status < 0) {
+    FTL_LOG(WARNING) << "mx_vmo_create failed: " << status;
     return false;
   }
 
@@ -33,13 +34,14 @@ bool SharedBufferFromContainer(const Container& container,
     return true;
   }
 
-  ssize_t written = mx_vmo_write(mx_handle, container.data(), 0, num_bytes);
-  if (written < 0) {
-    FTL_LOG(WARNING) << "mx_vmo_write failed: " << written;
+  mx_size_t actual;
+  status = mx_vmo_write(mx_handle, container.data(), 0, num_bytes, &actual);
+  if (status < 0) {
+    FTL_LOG(WARNING) << "mx_vmo_write failed: " << status;
     return false;
   }
-  if ((size_t)written != num_bytes) {
-    FTL_LOG(WARNING) << "mx_vmo_write wrote " << written << " bytes instead of "
+  if ((size_t)actual != num_bytes) {
+    FTL_LOG(WARNING) << "mx_vmo_write wrote " << actual << " bytes instead of "
                      << num_bytes << " bytes.";
     return false;
   }
@@ -68,10 +70,10 @@ bool ContainerFromSharedBuffer(
     return true;
   }
 
-  ssize_t num_read =
-      mx_vmo_read(vmo_handle, &(*container_ptr)[0], 0, num_bytes);
-  if (num_read < 0) {
-    FTL_LOG(WARNING) << "mx_vmo_read failed: " << num_read;
+  mx_size_t num_read;
+  mx_status_t status = mx_vmo_read(vmo_handle, &(*container_ptr)[0], 0, num_bytes, &num_read);
+  if (status < 0) {
+    FTL_LOG(WARNING) << "mx_vmo_read failed: " << status;
     return false;
   }
 
