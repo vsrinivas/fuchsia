@@ -201,7 +201,7 @@ void ProcessDispatcher::KillAllThreads() {
     for (auto& thread : thread_list_) {
         LTRACEF("killing thread %p\n", &thread);
         thread.Kill();
-    };
+    }
 
     // Unblock any futexes.
     // This is issued after all threads are marked as DYING so there
@@ -293,7 +293,7 @@ void ProcessDispatcher::SetState(State s) {
             Handle* handle;
             while ((handle = handles_.pop_front()) != nullptr) {
                 DeleteHandle(handle);
-            };
+            }
         }
         LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 
