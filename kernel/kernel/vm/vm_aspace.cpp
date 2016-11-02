@@ -44,7 +44,7 @@ void VmAspace::KernelAspaceInitPreHeap() {
     auto err = _kernel_aspace.Init();
     ASSERT(err >= 0);
 
-#if LK_DEBUGLEVEL > 0
+#if LK_DEBUGLEVEL > 1
     _kernel_aspace.Adopt();
 #endif
 
