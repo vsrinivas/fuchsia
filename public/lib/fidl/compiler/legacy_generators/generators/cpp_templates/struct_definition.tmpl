@@ -72,7 +72,7 @@
   const fidl::internal::WrappedHandle {{name}}_handle
     = object->{{name}}.handle;
 {%-   else %}
-  const fidl::internal::WrappedHandle {{name}}_handle = object->{{name}};
+  const fidl::internal::WrappedHandle {{name}}_handle{ object->{{name}} };
 {%-   endif %}
 {%-   if not kind|is_nullable_kind %}
   if ({{name}}_handle.value == fidl::internal::kEncodedInvalidHandleValue) {
