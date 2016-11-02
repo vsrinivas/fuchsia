@@ -1,12 +1,9 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/handle.h>
-#include <mojo/system/message_pipe.h>
-#include <mojo/system/result.h>
-#include <mojo/system/time.h>
-#include <mojo/system/wait.h>
+#include "lib/fidl/dart/sdk_ext/src/handle_watcher.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
@@ -17,15 +14,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include "mojo/public/platform/dart/dart_handle_watcher.h"
-
 #include "dart/runtime/include/dart_api.h"
 #include "dart/runtime/include/dart_native_api.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_point.h"
 
-namespace mojo {
+namespace fidl {
 namespace dart {
 
-#define CONTROL_HANDLE_INDEX 0
+constexpr int kControlHandleIndex = 0;
 
 static void PostNull(Dart_Port port) {
   if (port == ILLEGAL_PORT) {
@@ -46,7 +43,7 @@ static void PostSignal(Dart_Port port, int32_t signalled) {
 // The internal state of the handle watcher thread.
 class HandleWatcherThreadState {
  public:
-  HandleWatcherThreadState(MojoHandle control_pipe_consumer_handle);
+  HandleWatcherThreadState(mx::channel consumer_handle);
 
   ~HandleWatcherThreadState();
 
@@ -64,13 +61,11 @@ class HandleWatcherThreadState {
     }
   };
 
-  void AddHandle(MojoHandle handle,
-                 MojoHandleSignals signals,
-                 Dart_Port port);
+  void AddHandle(mx_handle_t handle, mx_signals_t signals, Dart_Port port);
 
-  void RemoveHandle(MojoHandle handle);
+  void RemoveHandle(mx_handle_t handle);
 
-  void CloseHandle(MojoHandle handle, Dart_Port port, bool pruning = false);
+  void CloseHandle(mx_handle_t handle, Dart_Port port, bool pruning = false);
 
   void UpdateTimer(int64_t deadline, Dart_Port port);
 
@@ -82,7 +77,7 @@ class HandleWatcherThreadState {
 
   void ProcessTimers();
 
-  void ProcessWaitManyResults(MojoResult result, uint32_t result_index);
+  void ProcessWaitManyResults(mx_status_t result);
 
   void PruneClosedHandles(bool signals_state_is_valid);
 
@@ -96,58 +91,48 @@ class HandleWatcherThreadState {
 
   bool shutdown_;
 
-  MojoHandle control_pipe_consumer_handle_;
+  mx::channel consumer_handle_;
 
   // All of these vectors are indexed together.
-  std::vector<MojoHandle> wait_many_handles_;
-  std::vector<MojoHandleSignals> wait_many_signals_;
-  std::vector<MojoHandleSignalsState> wait_many_signals_state_;
+  std::vector<mx_handle_t> wait_many_handles_;
+  std::vector<mx_signals_t> wait_many_signals_;
+  std::vector<mx_signals_state_t> wait_many_signals_state_;
   std::vector<Dart_Port> handle_ports_;
 
-  // Map from MojoHandle -> index into above arrays.
-  std::unordered_map<MojoHandle, intptr_t> handle_to_index_map_;
+  // Map from mx_handle_t -> index into above arrays.
+  std::unordered_map<mx_handle_t, intptr_t> handle_to_index_map_;
 
   // Set of timers sorted by earliest deadline.
   std::set<HandleWatcherTimer> timers_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(HandleWatcherThreadState);
+  FTL_DISALLOW_COPY_AND_ASSIGN(HandleWatcherThreadState);
 };
 
-HandleWatcherThreadState::HandleWatcherThreadState(
-    MojoHandle control_pipe_consumer_handle)
-    : shutdown_(false),
-      control_pipe_consumer_handle_(control_pipe_consumer_handle) {
-  MOJO_CHECK(control_pipe_consumer_handle_ != MOJO_HANDLE_INVALID);
+HandleWatcherThreadState::HandleWatcherThreadState(mx::channel consumer_handle)
+    : shutdown_(false), consumer_handle_(std::move(consumer_handle)) {
+  FTL_CHECK(consumer_handle_);
   // Add the control handle.
-  AddHandle(control_pipe_consumer_handle_,
-            MOJO_HANDLE_SIGNAL_READABLE,
-            ILLEGAL_PORT);
+  AddHandle(consumer_handle_.get(), MX_SIGNAL_READABLE, ILLEGAL_PORT);
 }
 
-HandleWatcherThreadState::~HandleWatcherThreadState() {
-  if (control_pipe_consumer_handle_ != MOJO_HANDLE_INVALID) {
-    MojoClose(control_pipe_consumer_handle_);
-    control_pipe_consumer_handle_ = MOJO_HANDLE_INVALID;
-  }
-}
+HandleWatcherThreadState::~HandleWatcherThreadState() {}
 
-void HandleWatcherThreadState::AddHandle(MojoHandle handle,
-                                         MojoHandleSignals signals,
+void HandleWatcherThreadState::AddHandle(mx_handle_t handle,
+                                         mx_signals_t signals,
                                          Dart_Port port) {
   const size_t index = wait_many_handles_.size();
-  MojoHandleSignalsState signals_state =
-      { MOJO_HANDLE_SIGNAL_NONE, MOJO_HANDLE_SIGNAL_NONE};
+  mx_signals_state_t signals_state = {MX_SIGNAL_NONE, MX_SIGNAL_NONE};
 
   auto it = handle_to_index_map_.find(handle);
   if (it != handle_to_index_map_.end()) {
     intptr_t index = it->second;
     // Sanity check.
-    MOJO_CHECK(wait_many_handles_[index] == handle);
+    FTL_CHECK(wait_many_handles_[index] == handle);
     // We only support 1:1 mapping from handles to ports.
     if (handle_ports_[index] != port) {
-      MOJO_LOG(ERROR) << "(Dart Handle Watcher) "
-                      << "Handle " << handle << " is already bound!";
-      PostSignal(port, MOJO_HANDLE_SIGNAL_PEER_CLOSED);
+      FTL_LOG(ERROR) << "(Dart Handle Watcher) "
+                     << "Handle " << handle << " is already bound!";
+      PostSignal(port, MX_SIGNAL_PEER_CLOSED);
       return;
     }
     // Adjust the signals for this handle.
@@ -162,10 +147,10 @@ void HandleWatcherThreadState::AddHandle(MojoHandle handle,
   }
 
   // Sanity check.
-  MOJO_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
+  FTL_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
 }
 
-void HandleWatcherThreadState::RemoveHandle(MojoHandle handle) {
+void HandleWatcherThreadState::RemoveHandle(mx_handle_t handle) {
   auto it = handle_to_index_map_.find(handle);
 
   // Removal of a handle for an incoming event can race with the removal of
@@ -177,38 +162,38 @@ void HandleWatcherThreadState::RemoveHandle(MojoHandle handle) {
   }
   const intptr_t index = it->second;
   // We should never be removing the control handle.
-  MOJO_CHECK(index != CONTROL_HANDLE_INDEX);
+  FTL_CHECK(index != kControlHandleIndex);
   RemoveHandleAtIndex(index);
 }
 
-void HandleWatcherThreadState::CloseHandle(MojoHandle handle,
+void HandleWatcherThreadState::CloseHandle(mx_handle_t handle,
                                            Dart_Port port,
                                            bool pruning) {
-  MOJO_CHECK(!pruning || (port == ILLEGAL_PORT));
+  FTL_CHECK(!pruning || (port == ILLEGAL_PORT));
   auto it = handle_to_index_map_.find(handle);
   if (it == handle_to_index_map_.end()) {
     // An app isolate may request that the handle watcher close a handle that
     // has already been pruned. This happens when the app isolate has not yet
     // received the PEER_CLOSED event. The app isolate will not close the
     // handle, so we must do so here.
-    MojoClose(handle);
+    mx_handle_close(handle);
     if (port != ILLEGAL_PORT) {
       // Notify that close is done.
       PostNull(port);
     }
     return;
   }
-  MojoClose(handle);
+  mx_handle_close(handle);
   if (port != ILLEGAL_PORT) {
     // Notify that close is done.
     PostNull(port);
   }
   const intptr_t index = it->second;
-  MOJO_CHECK(index != CONTROL_HANDLE_INDEX);
+  FTL_CHECK(index != kControlHandleIndex);
   if (pruning) {
     // If this handle is being pruned, notify the application isolate
     // by sending PEER_CLOSED;
-    PostSignal(handle_ports_[index], MOJO_HANDLE_SIGNAL_PEER_CLOSED);
+    PostSignal(handle_ports_[index], MX_SIGNAL_PEER_CLOSED);
   }
   // Remove the handle.
   RemoveHandle(handle);
@@ -248,16 +233,16 @@ void HandleWatcherThreadState::Shutdown() {
 }
 
 void HandleWatcherThreadState::RemoveHandleAtIndex(intptr_t index) {
-  MOJO_CHECK(index != CONTROL_HANDLE_INDEX);
+  FTL_CHECK(index != kControlHandleIndex);
   const intptr_t last_index = wait_many_handles_.size() - 1;
 
   // Remove handle from handle map.
   handle_to_index_map_.erase(wait_many_handles_[index]);
 
   if (index != last_index) {
-    // We should never be overwriting CONTROL_HANDLE_INDEX.
+    // We should never be overwriting kControlHandleIndex.
 
-    MojoHandle handle = wait_many_handles_[last_index];
+    mx_handle_t handle = wait_many_handles_[last_index];
 
     // Replace |index| with |last_index|.
     wait_many_handles_[index] = wait_many_handles_[last_index];
@@ -273,53 +258,47 @@ void HandleWatcherThreadState::RemoveHandleAtIndex(intptr_t index) {
   wait_many_signals_.pop_back();
   wait_many_signals_state_.pop_back();
   handle_ports_.pop_back();
-  MOJO_CHECK(wait_many_handles_.size() >= 1);
+  FTL_CHECK(wait_many_handles_.size() >= 1);
 
   // Sanity check.
-  MOJO_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
+  FTL_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
 }
 
 void HandleWatcherThreadState::ProcessControlMessage() {
   HandleWatcherCommand command = HandleWatcherCommand::Empty();
   uint32_t num_bytes = sizeof(command);
   uint32_t num_handles = 0;
-  MojoResult res = MojoReadMessage(control_pipe_consumer_handle_,
-                                   reinterpret_cast<void*>(&command),
-                                   &num_bytes,
-                                   nullptr,
-                                   &num_handles,
-                                   0);
+  mx_status_t res =
+      consumer_handle_.read(0, reinterpret_cast<void*>(&command), num_bytes,
+                            &num_bytes, nullptr, 0, &num_handles);
   // Sanity check that we received the expected amount of data.
-  MOJO_CHECK(res == MOJO_RESULT_OK);
-  MOJO_CHECK(num_bytes == sizeof(command));
-  MOJO_CHECK(num_handles == 0);
+  FTL_CHECK(res == NO_ERROR);
+  FTL_CHECK(num_bytes == sizeof(command));
+  FTL_CHECK(num_handles == 0);
   switch (command.command()) {
     case HandleWatcherCommand::kCommandAddHandle:
       AddHandle(command.handle(), command.signals(), command.port());
-    break;
+      break;
     case HandleWatcherCommand::kCommandRemoveHandle:
       RemoveHandle(command.handle());
-    break;
+      break;
     case HandleWatcherCommand::kCommandCloseHandle:
       CloseHandle(command.handle(), command.port());
-    break;
+      break;
     case HandleWatcherCommand::kCommandAddTimer:
       UpdateTimer(command.deadline(), command.port());
-    break;
+      break;
     case HandleWatcherCommand::kCommandShutdownHandleWatcher:
       Shutdown();
-    break;
+      break;
     default:
-      MOJO_CHECK(false);
-    break;
+      FTL_NOTREACHED();
+      break;
   }
 }
 
-// Dart's Timer class uses MojoCoreNatives.timerMillisecondClock(), which
-// calls MojoGetTimeTicksNow() and divides by 1000;
 static int64_t GetDartTimeInMillis() {
-  MojoTimeTicks ticks = MojoGetTimeTicksNow();
-  return static_cast<int64_t>(ticks) / 1000;
+  return ftl::TimePoint::Now().ToEpochDelta().ToMilliseconds();
 }
 
 void HandleWatcherThreadState::ProcessTimers() {
@@ -332,7 +311,7 @@ void HandleWatcherThreadState::ProcessTimers() {
 
 void HandleWatcherThreadState::CompleteNextTimer() {
   auto it = timers_.begin();
-  MOJO_CHECK(it != timers_.end());
+  FTL_CHECK(it != timers_.end());
   // Notify that the timer is complete.
   PostNull(it->port);
   // Remove it from the timer set.
@@ -345,40 +324,38 @@ bool HandleWatcherThreadState::HasTimers() {
 
 int64_t HandleWatcherThreadState::NextTimerDeadline() {
   auto it = timers_.begin();
-  MOJO_CHECK(it != timers_.end());
+  FTL_CHECK(it != timers_.end());
   return it->deadline;
 }
 
 int64_t HandleWatcherThreadState::WaitDeadline() {
   if (!HasTimers()) {
     // No pending timers. Wait indefinitely.
-    return MOJO_DEADLINE_INDEFINITE;
+    return MX_TIME_INFINITE;
   }
   int64_t now = GetDartTimeInMillis();
   return (NextTimerDeadline() - now) * 1000;
 }
 
-static bool ShouldCloseHandle(MojoHandle handle) {
-  if (handle == MOJO_HANDLE_INVALID) {
+static bool ShouldCloseHandle(mx_handle_t handle) {
+  if (handle == MX_HANDLE_INVALID)
     return false;
-  }
-  // Call wait with a deadline of 0. If the result of this is OK or
-  // DEADLINE_EXCEEDED, the handle is still open.
-  MojoResult result = MojoWait(handle, MOJO_HANDLE_SIGNAL_ALL, 0, NULL);
-  return (result != MOJO_RESULT_OK) &&
-         (result != MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
+  // Call wait with a deadline of 0. If the result of this is NO_ERROR or
+  // ERR_TIMED_OUT, the handle is still open.
+  mx_status_t result =
+      mx_handle_wait_one(handle, FIDL_DART_HANDLE_SIGNAL_ALL, 0, nullptr);
+  return (result != NO_ERROR) && (result != ERR_TIMED_OUT);
 }
 
 void HandleWatcherThreadState::PruneClosedHandles(bool signals_state_is_valid) {
-  std::vector<MojoHandle> closed_handles;
+  std::vector<mx_handle_t> closed_handles;
   const intptr_t num_handles = wait_many_handles_.size();
   if (signals_state_is_valid) {
     // We can rely on |wait_many_signals_state_| having valid data.
     for (intptr_t i = 0; i < num_handles; i++) {
       // Check if the handle at index |i| has been closed.
-      MojoHandleSignals satisfied_signals =
-          wait_many_signals_state_[i].satisfied_signals;
-      if ((satisfied_signals & MOJO_HANDLE_SIGNAL_PEER_CLOSED) != 0) {
+      mx_signals_t observed = wait_many_signals_state_[i].satisfied;
+      if ((observed & MX_SIGNAL_PEER_CLOSED) != 0) {
         closed_handles.push_back(wait_many_handles_[i]);
       }
     }
@@ -386,7 +363,7 @@ void HandleWatcherThreadState::PruneClosedHandles(bool signals_state_is_valid) {
     // We can't rely on |wait_many_signals_state_| having valid data. So
     // we call Wait on each handle and check the status.
     for (intptr_t i = 0; i < num_handles; i++) {
-      MojoHandle handle = wait_many_handles_[i];
+      mx_handle_t handle = wait_many_handles_[i];
       if (ShouldCloseHandle(handle)) {
         closed_handles.push_back(handle);
       }
@@ -395,24 +372,23 @@ void HandleWatcherThreadState::PruneClosedHandles(bool signals_state_is_valid) {
 
   // Process all closed handles and notify their ports.
   for (size_t i = 0; i < closed_handles.size(); i++) {
-    MojoHandle handle = closed_handles[i];
+    mx_handle_t handle = closed_handles[i];
     CloseHandle(handle, ILLEGAL_PORT, true);
   }
 }
 
-void HandleWatcherThreadState::ProcessWaitManyResults(MojoResult result,
-                                                      uint32_t result_index) {
-  MOJO_CHECK(result != MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
-  if (result != MOJO_RESULT_OK) {
+void HandleWatcherThreadState::ProcessWaitManyResults(mx_status_t result) {
+  FTL_CHECK(result != ERR_TIMED_OUT);
+  if (result != NO_ERROR) {
     // The WaitMany call failed. We need to prune closed handles from our
     // wait many set and try again.
     //
     // If the result is an invalid argument |wait_many_signals_state_| is
     // meaningless.
-    PruneClosedHandles(result != MOJO_SYSTEM_RESULT_INVALID_ARGUMENT);
+    PruneClosedHandles(result != ERR_INVALID_ARGS);
     return;
   }
-  MOJO_CHECK(result == MOJO_RESULT_OK);
+  FTL_CHECK(result == NO_ERROR);
 
   // Indexes of handles that we are done with.
   std::vector<intptr_t> to_remove;
@@ -423,15 +399,14 @@ void HandleWatcherThreadState::ProcessWaitManyResults(MojoResult result,
   // The order of the looping matters because we call RemoveHandleAtIndex
   // and need the handle indexes to start at the highest and decrease.
   for (intptr_t i = num_handles - 1; i > 0; i--) {
-    MojoHandleSignals signals = wait_many_signals_[i];
-    MojoHandleSignals satisfied_signals =
-        wait_many_signals_state_[i].satisfied_signals;
-    satisfied_signals &= signals;
-    if (satisfied_signals != 0) {
+    mx_signals_t signals = wait_many_signals_[i];
+    mx_signals_t observed = wait_many_signals_state_[i].satisfied;
+    observed &= signals;
+    if (observed != 0) {
       // Something happened to this handle.
 
       // Notify the port.
-      PostSignal(handle_ports_[i], satisfied_signals);
+      PostSignal(handle_ports_[i], observed);
 
       // Now that we have notified the waiting Dart program, remove this handle
       // from the wait many set until we are requested to add it again.
@@ -447,11 +422,11 @@ void HandleWatcherThreadState::ProcessWaitManyResults(MojoResult result,
 
   // Now check for control messages.
   {
-    MojoHandleSignals signals = wait_many_signals_[CONTROL_HANDLE_INDEX];
-    MojoHandleSignals satisfied_signals =
-        wait_many_signals_state_[CONTROL_HANDLE_INDEX].satisfied_signals;
-    satisfied_signals &= signals;
-    if (satisfied_signals != 0) {
+    mx_signals_t signals = wait_many_signals_[kControlHandleIndex];
+    mx_signals_t observed =
+        wait_many_signals_state_[kControlHandleIndex].satisfied;
+    observed &= signals;
+    if (observed != 0) {
       // We have a control message.
       ProcessControlMessage();
     }
@@ -465,123 +440,109 @@ void HandleWatcherThreadState::Run() {
     // Wait for the next timer or an event on a handle.
     uint32_t result_index = -1;
     uint32_t num_handles = wait_many_handles_.size();
-    MOJO_CHECK(wait_many_signals_.size() == num_handles);
-    MojoResult result = MojoWaitMany(wait_many_handles_.data(),
-                                     wait_many_signals_.data(),
-                                     num_handles,
-                                     WaitDeadline(),
-                                     &result_index,
-                                     wait_many_signals_state_.data());
+    FTL_CHECK(wait_many_signals_.size() == num_handles);
+    mx_status_t result = mx_handle_wait_many(
+        num_handles, wait_many_handles_.data(), wait_many_signals_.data(),
+        WaitDeadline(), &result_index, wait_many_signals_state_.data());
 
-    if (result == MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED) {
+    if (result == ERR_TIMED_OUT) {
       // Timers are ready.
       continue;
     }
 
     // Process wait results.
-    ProcessWaitManyResults(result, result_index);
+    ProcessWaitManyResults(result);
   }
 
-  // Close our end of the message pipe.
-  MojoClose(control_pipe_consumer_handle_);
+  // Close our end of the channel.
+  consumer_handle_.reset();
 }
 
-std::unordered_map<MojoHandle, std::thread*>
+std::unordered_map<mx_handle_t, std::thread*>
     HandleWatcher::handle_watcher_threads_;
 std::mutex HandleWatcher::handle_watcher_threads_mutex_;
 
-// Create a message pipe for communication and spawns a handle watcher thread.
-MojoHandle HandleWatcher::Start() {
-  MojoCreateMessagePipeOptions options;
-  options.struct_size = sizeof(MojoCreateMessagePipeOptions);
-  options.flags = MOJO_CREATE_MESSAGE_PIPE_OPTIONS_FLAG_NONE;
+// Create a channel for communication and spawns a handle watcher thread.
+mx::channel HandleWatcher::Start() {
+  mx::channel consumer_handle;
+  mx::channel producer_handle;
+  mx_status_t res = mx::channel::create(0, &consumer_handle, &producer_handle);
+  if (res != NO_ERROR)
+    return mx::channel();
 
-  MojoHandle control_pipe_consumer_handle = MOJO_HANDLE_INVALID;
-  MojoHandle control_pipe_producer_handle = MOJO_HANDLE_INVALID;
-  MojoResult res = MojoCreateMessagePipe(&options,
-                                         &control_pipe_consumer_handle,
-                                         &control_pipe_producer_handle);
-  if (res != MOJO_RESULT_OK) {
-    return MOJO_HANDLE_INVALID;
-  }
-
-  // Spawn thread and pass both ends of the pipe to it.
-  std::thread* thread = new std::thread(
-      ThreadMain, control_pipe_consumer_handle);
+  // Spawn thread and pass one end of the channel to it.
+  std::thread* thread = new std::thread(ThreadMain, consumer_handle.release());
 
   {
     std::lock_guard<std::mutex> lock(handle_watcher_threads_mutex_);
     // Record the thread object so that we can join on it during shutdown.
-    MOJO_CHECK(handle_watcher_threads_.find(control_pipe_producer_handle) ==
-               handle_watcher_threads_.end());
-    handle_watcher_threads_[control_pipe_producer_handle] = thread;
+    FTL_CHECK(handle_watcher_threads_.find(producer_handle.get()) ==
+              handle_watcher_threads_.end());
+    handle_watcher_threads_[producer_handle.get()] = thread;
   }
 
-  // Return producer end of pipe to caller.
-  return control_pipe_producer_handle;
+  // Return producer end of channel to caller.
+  return producer_handle;
 }
 
-void HandleWatcher::ThreadMain(MojoHandle control_pipe_consumer_handle) {
-  HandleWatcherThreadState state(control_pipe_consumer_handle);
+void HandleWatcher::ThreadMain(mx_handle_t consumer_handle) {
+  HandleWatcherThreadState state((mx::channel(consumer_handle)));
 
   // Run the main loop. When this returns the handle watcher has exited.
   state.Run();
 }
 
-MojoResult HandleWatcher::SendCommand(MojoHandle control_pipe_producer_handle,
-                                      const HandleWatcherCommand& command) {
-  return MojoWriteMessage(control_pipe_producer_handle,
+mx_status_t HandleWatcher::SendCommand(mx_handle_t producer_handle,
+                                       const HandleWatcherCommand& command) {
+  return mx_channel_write(producer_handle, 0,
                           reinterpret_cast<const void*>(&command),
-                          sizeof(command),
-                          nullptr,
-                          0,
-                          0);
+                          sizeof(command), nullptr, 0);
 }
 
-std::thread* HandleWatcher::RemoveLocked(MojoHandle handle) {
+std::thread* HandleWatcher::RemoveLocked(mx_handle_t producer_handle) {
   std::thread* t;
-  auto mapping = handle_watcher_threads_.find(handle);
+  auto mapping = handle_watcher_threads_.find(producer_handle);
   if (mapping == handle_watcher_threads_.end()) {
     return nullptr;
   }
   t = mapping->second;
-  handle_watcher_threads_.erase(handle);
+  handle_watcher_threads_.erase(producer_handle);
   return t;
 }
 
-void HandleWatcher::Stop(MojoHandle control_pipe_producer_handle) {
-  std::thread *t;
+void HandleWatcher::Stop(mx_handle_t producer_handle) {
+  std::thread* t;
   {
     std::lock_guard<std::mutex> lock(handle_watcher_threads_mutex_);
-    t = RemoveLocked(control_pipe_producer_handle);
+    t = RemoveLocked(producer_handle);
   }
 
   if (t == nullptr) {
     return;
   }
 
-  SendCommand(control_pipe_producer_handle, HandleWatcherCommand::Shutdown());
+  SendCommand(producer_handle, HandleWatcherCommand::Shutdown());
   t->join();
 
-  MojoClose(control_pipe_producer_handle);
+  mx_handle_close(producer_handle);
   delete t;
 }
 
-void HandleWatcher::StopLocked(MojoHandle handle) {
-  std::thread *t = RemoveLocked(handle);
-  MOJO_CHECK(t != nullptr);
+void HandleWatcher::StopLocked(mx_handle_t producer_handle) {
+  std::thread* t = RemoveLocked(producer_handle);
+  FTL_CHECK(t != nullptr);
 
-  SendCommand(handle, HandleWatcherCommand::Shutdown());
+  SendCommand(producer_handle, HandleWatcherCommand::Shutdown());
   t->join();
 
-  MojoClose(handle);
+  mx_handle_close(producer_handle);
   delete t;
 }
 
 void HandleWatcher::StopAll() {
   std::lock_guard<std::mutex> lock(handle_watcher_threads_mutex_);
 
-  std::vector<MojoHandle> control_handles;
+  std::vector<mx_handle_t> control_handles;
   control_handles.reserve(handle_watcher_threads_.size());
 
   for (const auto& it : handle_watcher_threads_) {
@@ -594,4 +555,4 @@ void HandleWatcher::StopAll() {
 }
 
 }  // namespace dart
-}  // namespace mojo
+}  // namespace fidl

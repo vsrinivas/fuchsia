@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,13 +11,13 @@ class _OpenHandle {
   _OpenHandle(this.stack, {this.description});
 }
 
-class MojoCoreNatives {
-  static int getTimeTicksNow() native "Mojo_GetTimeTicksNow";
+class MxTimeNatives {
+  static int get(int clockId) native "MxTime_Get";
 
-  static int timerMillisecondClock() => getTimeTicksNow() ~/ 1000;
+  static int timerMillisecondClock() => getTimeTicksNow() ~/ (1000 * 1000);
 }
 
-class MojoHandleNatives {
+class MxHandleNatives {
   static HashMap<int, _OpenHandle> _openHandles = new HashMap();
 
   static void addOpenHandle(int handleToken, {String description}) {
@@ -64,22 +64,22 @@ class MojoHandleNatives {
   }
 
   static int registerFinalizer(Object eventSubscription, int handleToken)
-      native "MojoHandle_RegisterFinalizer";
+      native "MxHandle_RegisterFinalizer";
 
-  static int close(int handleToken) native "MojoHandle_Close";
+  static int close(int handleToken) native "MxHandle_Close";
 
-  static List wait(int handleToken, int signals, int deadline)
-      native "MojoHandle_Wait";
+  static List waitOne(int handleToken, int signals, int deadline)
+      native "MxHandle_WaitOne";
 
   static List waitMany(List<int> handleTokens, List<int> signals, int deadline)
-      native "MojoHandle_WaitMany";
+      native "MxHandle_WaitMany";
 
   // Called from the embedder's unhandled exception callback.
   // Returns the number of successfully closed handles.
   static int _closeOpenHandles() {
     int count = 0;
     _openHandles.forEach((int handle, _) {
-      if (MojoHandleNatives.close(handle) == 0) {
+      if (MxHandleNatives.close(handle) == 0) {
         count++;
       }
     });
@@ -88,60 +88,24 @@ class MojoHandleNatives {
   }
 }
 
-class _MojoHandleWatcherNatives {
+class _MxHandleWatcherNatives {
   static int sendControlData(
       int controlHandle,
       int commandCode,
       int handleOrDeadline,
       SendPort port,
-      int data) native "MojoHandleWatcher_SendControlData";
+      int data) native "MxHandleWatcher_SendControlData";
 }
 
-class MojoMessagePipeNatives {
-  static List MojoCreateMessagePipe(int flags) native "MojoMessagePipe_Create";
+class MxChannelNatives {
+  static List Create(int flags) native "MxChannel_Create";
 
-  static int MojoWriteMessage(int handleToken, ByteData data, int numBytes,
-      List<int> handles, int flags) native "MojoMessagePipe_Write";
+  static int Write(int handleToken, ByteData data, int numBytes,
+      List<int> handles, int flags) native "MxChannel_Write";
 
-  static List MojoReadMessage(int handleToken, ByteData data, int numBytes,
-      List<int> handleTokens, int flags) native "MojoMessagePipe_Read";
+  static List Read(int handleToken, ByteData data, int numBytes,
+      List<int> handleTokens, int flags) native "MxChannel_Read";
 
-  static void MojoQueryAndReadMessage(int handleToken, int flags, List result)
-      native "MojoMessagePipe_QueryAndRead";
-}
-
-class MojoDataPipeNatives {
-  static List MojoCreateDataPipe(int elementBytes, int capacityBytes, int flags)
-      native "MojoDataPipe_Create";
-
-  static List MojoWriteData(int handle, ByteData data, int numBytes, int flags)
-      native "MojoDataPipe_WriteData";
-
-  static List MojoBeginWriteData(int handleToken, int flags)
-      native "MojoDataPipe_BeginWriteData";
-
-  static int MojoEndWriteData(int handleToken, int bytesWritten)
-      native "MojoDataPipe_EndWriteData";
-
-  static List MojoReadData(int handleToken, ByteData data, int numBytes,
-      int flags) native "MojoDataPipe_ReadData";
-
-  static List MojoBeginReadData(int handleToken, int flags)
-      native "MojoDataPipe_BeginReadData";
-
-  static int MojoEndReadData(int handleToken, int bytesRead)
-      native "MojoDataPipe_EndReadData";
-}
-
-class MojoSharedBufferNatives {
-  static List Create(int numBytes, int flags) native "MojoSharedBuffer_Create";
-
-  static List Duplicate(int bufferHandleToken, int flags)
-      native "MojoSharedBuffer_Duplicate";
-
-  static List Map(int bufferHandleToken, int offset, int numBytes, int flags)
-      native "MojoSharedBuffer_Map";
-
-  static List GetInformation(int bufferHandleToken)
-      native "MojoSharedBuffer_GetInformation";
+  static void QueryAndRead(int handleToken, int flags, List result)
+      native "MxChannel_QueryAndRead";
 }

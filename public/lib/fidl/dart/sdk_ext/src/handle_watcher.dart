@@ -1,10 +1,10 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 part of internal;
 
-class MojoHandleWatcher {
+class HandleWatcher {
   // Control commands.
   static const int _ADD = 0;
   static const int _REMOVE = 1;
@@ -12,21 +12,23 @@ class MojoHandleWatcher {
   static const int _TIMER = 3;
   static const int _SHUTDOWN = 4;
 
-  static const int _kMojoHandleInvalid = 0;
-  static const int _kMojoResultFailedPrecondition = 9;
+  static const int _kHandleInvalid = 0;
 
-  static int mojoControlHandle;
+  // This value is from //magenta/system/public/magenta/errors.h
+  static const int _kErrBadState = -20;
+
+  static int controlHandle;
 
   static int _sendControlData(int command,
                               int handleOrDeadline,
                               SendPort port,
                               int signals) {
-    int controlHandle = mojoControlHandle;
-    if (controlHandle == _kMojoHandleInvalid) {
-      return _kMojoResultFailedPrecondition;
+    final int localControlHandle = controlHandle;
+    if (localControlHandle == _kHandleInvalid) {
+      return _kErrBadState;
     }
-    var result = _MojoHandleWatcherNatives.sendControlData(
-        controlHandle, command, handleOrDeadline, port, signals);
+    var result = _MxHandleWatcherNatives.sendControlData(
+        localControlHandle, command, handleOrDeadline, port, signals);
     return result;
   }
 
