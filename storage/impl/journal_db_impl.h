@@ -24,7 +24,8 @@ class JournalDBImpl : public Journal {
   ~JournalDBImpl() override;
 
   // Creates a new Journal for a simple commit.
-  static std::unique_ptr<Journal> Simple(PageStorageImpl* page_storage,
+  static std::unique_ptr<Journal> Simple(JournalType type,
+                                         PageStorageImpl* page_storage,
                                          DB* db,
                                          const JournalId& id,
                                          const CommitId& base);
@@ -48,18 +49,27 @@ class JournalDBImpl : public Journal {
   Status Rollback() override;
 
  private:
-  JournalDBImpl(PageStorageImpl* page_storage,
+  JournalDBImpl(JournalType type,
+                PageStorageImpl* page_storage,
                 DB* db,
                 const JournalId& id,
                 const CommitId& base);
 
+  const JournalType type_;
   PageStorageImpl* const page_storage_;
   DB* const db_;
   const JournalId id_;
   CommitId base_;
   ObjectStore object_store_;
   std::unique_ptr<CommitId> other_;
+  // A journal is no longer valid if either commit or rollback have been
+  // executed.
   bool valid_;
+  // |failed_operation_| is true if any of the Put or Delete methods in this
+  // journal have failed. In this case, any operation on EXPLICIT journals other
+  // than rolling back will fail. IMPLICIT journals can still be commited even
+  // if some operations have failed.
+  bool failed_operation_;
 };
 
 }  // namespace storage

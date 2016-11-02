@@ -247,7 +247,7 @@ Status DB::CreateJournal(JournalType journal_type,
                          const CommitId& base,
                          std::unique_ptr<Journal>* journal) {
   JournalId id = NewJournalId(journal_type);
-  *journal = JournalDBImpl::Simple(page_storage_, this, id, base);
+  *journal = JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
   if (journal_type == JournalType::IMPLICIT) {
     return Put(GetImplicitJournalMetaKeyFor(id), base);
   }
@@ -273,7 +273,8 @@ Status DB::GetImplicitJournal(const JournalId& journal_id,
   CommitId base;
   Status s = Get(GetImplicitJournalMetaKeyFor(journal_id), &base);
   if (s == Status::OK) {
-    *journal = JournalDBImpl::Simple(page_storage_, this, journal_id, base);
+    *journal = JournalDBImpl::Simple(JournalType::IMPLICIT, page_storage_, this,
+                                     journal_id, base);
   }
   return s;
 }

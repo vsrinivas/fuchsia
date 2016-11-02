@@ -14,16 +14,19 @@
 
 namespace storage {
 
-JournalDBImpl::JournalDBImpl(PageStorageImpl* page_storage,
+JournalDBImpl::JournalDBImpl(JournalType type,
+                             PageStorageImpl* page_storage,
                              DB* db,
                              const JournalId& id,
                              const CommitId& base)
-    : page_storage_(page_storage),
+    : type_(type),
+      page_storage_(page_storage),
       db_(db),
       id_(id),
       base_(base),
       object_store_(page_storage),
-      valid_(true) {}
+      valid_(true),
+      failed_operation_(false) {}
 
 JournalDBImpl::~JournalDBImpl() {
   // Log a warning if the journal was not committed or rolled back.
@@ -32,12 +35,13 @@ JournalDBImpl::~JournalDBImpl() {
   }
 }
 
-std::unique_ptr<Journal> JournalDBImpl::Simple(PageStorageImpl* page_storage,
+std::unique_ptr<Journal> JournalDBImpl::Simple(JournalType type,
+                                               PageStorageImpl* page_storage,
                                                DB* db,
                                                const JournalId& id,
                                                const CommitId& base) {
   return std::unique_ptr<Journal>(
-      new JournalDBImpl(page_storage, db, id, base));
+      new JournalDBImpl(type, page_storage, db, id, base));
 }
 
 std::unique_ptr<Journal> JournalDBImpl::Merge(PageStorageImpl* page_storage,
@@ -45,7 +49,8 @@ std::unique_ptr<Journal> JournalDBImpl::Merge(PageStorageImpl* page_storage,
                                               const JournalId& id,
                                               const CommitId& base,
                                               const CommitId& other) {
-  JournalDBImpl* db_journal = new JournalDBImpl(page_storage, db, id, base);
+  JournalDBImpl* db_journal =
+      new JournalDBImpl(JournalType::EXPLICIT, page_storage, db, id, base);
   db_journal->other_ = std::unique_ptr<CommitId>(new std::string(other));
   std::unique_ptr<Journal> journal(db_journal);
   return journal;
@@ -58,22 +63,30 @@ JournalId JournalDBImpl::GetId() const {
 Status JournalDBImpl::Put(convert::ExtendedStringView key,
                           ObjectIdView object_id,
                           KeyPriority priority) {
-  if (!valid_) {
+  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
-  return db_->AddJournalEntry(id_, key, object_id, priority);
+  Status s = db_->AddJournalEntry(id_, key, object_id, priority);
+  if (s != Status::OK) {
+    failed_operation_ = true;
+  }
+  return s;
 }
 
 Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
-  if (!valid_) {
+  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
-  return db_->RemoveJournalEntry(id_, key);
+  Status s = db_->RemoveJournalEntry(id_, key);
+  if (s != Status::OK) {
+    failed_operation_ = true;
+  }
+  return s;
 }
 
 void JournalDBImpl::Commit(
     std::function<void(Status, const CommitId&)> callback) {
-  if (!valid_) {
+  if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     callback(Status::ILLEGAL_STATE, "");
     return;
   }
