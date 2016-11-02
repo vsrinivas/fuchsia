@@ -1,0 +1,20 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.resolver;
+
+import "apps/document_store/interfaces/document.mojom";
+
+[ServiceName="maxwell.resolver"]
+interface Resolver {
+  // Find components whose module facets match the specified |contract| and can
+  // accept the optionally-specified |data|. The |results| are ordered from
+  // most relevant to least relevant.
+  Resolve(string contract, document_store.Document? data) => (array<Result> results);
+};
+
+struct Result {
+  // URL that can be used to connect to the module service.
+  string module_url;
+};
