@@ -19,12 +19,12 @@
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
 
+class VmRegion;
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAspace::MapObject
-class VmRegion;
-
 class VmObject : public mxtl::RefCounted<VmObject> {
 public:
     // public API
@@ -73,9 +73,20 @@ public:
 
     virtual void Dump(bool page_dump = false) {}
 
-    // semi-private apis used by the VmRegion class
+protected:
+    // private constructor (use Create())
+    VmObject();
 
+    // private destructor, only called from refptr
+    virtual ~VmObject();
+    friend mxtl::RefPtr<VmObject>;
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
+
+    // private apis used by the VmRegion class
     // get a pointer to a page at a given offset
+    friend class VmRegion;
+
     virtual vm_page_t* GetPageLocked(uint64_t offset) { return nullptr; }
 
     // get the physical address of a page at offset
@@ -103,16 +114,6 @@ public:
 
     void AddRegionLocked(VmRegion* r);
     void RemoveRegionLocked(VmRegion* r);
-
-protected:
-    // private constructor (use Create())
-    VmObject();
-
-    // private destructor, only called from refptr
-    virtual ~VmObject();
-    friend mxtl::RefPtr<VmObject>;
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
     // magic value
     static const uint32_t MAGIC = 0x564d4f5f; // VMO_

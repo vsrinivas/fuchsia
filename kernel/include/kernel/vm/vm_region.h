@@ -25,10 +25,6 @@ public:
     static mxtl::RefPtr<VmRegion> Create(VmAspace& aspace, vaddr_t base, size_t size,
                                          mxtl::RefPtr<VmObject> vmo, uint64_t offset,
                                          uint arch_mmu_flags, const char* name);
-    ~VmRegion();
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmRegion);
-
     // accessors
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
@@ -62,15 +58,21 @@ public:
     // WAVL tree key function
     vaddr_t GetKey() const { return base(); }
 
-    // calls in from VMO land
-
-    // unmap any pages that map the passed in vmo range. May not intersect with this range
-    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size);
-
 private:
     // private constructor, use Create()
     VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo,
              uint64_t offset, uint arch_mmu_flags, const char* name);
+
+    friend mxtl::RefPtr<VmRegion>;
+    ~VmRegion();
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmRegion);
+
+    // private apis from VmObject land
+    friend class VmObjectPaged;
+
+    // unmap any pages that map the passed in vmo range. May not intersect with this range
+    status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size);
 
     // magic value
     static const uint32_t MAGIC = 0x564d5247; // VMRG

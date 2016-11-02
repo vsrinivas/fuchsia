@@ -28,8 +28,6 @@ public:
     // may fail due to resource starvation
     static mxtl::RefPtr<VmAspace> Create(uint flags, const char* name);
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
-
     void Rename(const char* name);
 
     // flags
@@ -94,6 +92,8 @@ private:
 
     // can only be constructed via factory
     VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
 
     // private destructor that can only be used from the ref ptr or vmm_free_aspace
     ~VmAspace();
