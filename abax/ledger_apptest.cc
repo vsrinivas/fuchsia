@@ -288,7 +288,7 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
   LedgerFactoryPtr ledgerFactory;
-  ConnectToService(shell(), "mojo:ledger", GetProxy(&ledgerFactory));
+  ConnectToService(shell(), "mojo:ledger_abax", GetProxy(&ledgerFactory));
 
   Status status;
   mojo::InterfaceHandle<Ledger> ledger;

@@ -115,7 +115,7 @@ class LedgerApplicationTest : public mojo::test::ApplicationTestBase {
   // ApplicationTestBase:
   void SetUp() override {
     ApplicationTestBase::SetUp();
-    ConnectToService(shell(), "mojo:ledger_codex", GetProxy(&ledger_factory_));
+    ConnectToService(shell(), "mojo:ledger", GetProxy(&ledger_factory_));
     ledger_ = GetTestLedger();
     std::srand(0);
   }
