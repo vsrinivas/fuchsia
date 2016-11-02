@@ -40,8 +40,9 @@ typedef uint64_t mx_time_t;
 
 typedef uint32_t mx_signals_t;
 
-#define MX_OBJECT_SIGNAL_ALL        ((mx_signals_t)0x00ffffff)
-#define MX_USER_SIGNAL_ALL          ((mx_signals_t)0xff000000)
+#define MX_SIGNAL_NONE              ((mx_signals_t)0u)
+#define MX_OBJECT_SIGNAL_ALL        ((mx_signals_t)0x00ffffffu)
+#define MX_USER_SIGNAL_ALL          ((mx_signals_t)0xff000000u)
 
 #define MX_OBJECT_SIGNAL_0          ((mx_signals_t)1u << 0)
 #define MX_OBJECT_SIGNAL_1          ((mx_signals_t)1u << 1)
