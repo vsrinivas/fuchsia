@@ -10,7 +10,7 @@
 
 static void check_signals_state(mx_handle_t h, mx_signals_t satisfied, mx_signals_t satisfiable) {
     mx_signals_t pending = 0;
-    EXPECT_EQ(mx_handle_wait_one(h, 0u, 0u, &pending), ERR_BAD_STATE, "wrong wait result");
+    EXPECT_EQ(mx_handle_wait_one(h, 0u, 0u, &pending), ERR_TIMED_OUT, "wrong wait result");
     EXPECT_EQ(pending, satisfied, "wrong satisfied state");
 }
 

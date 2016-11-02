@@ -56,10 +56,6 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
             return result;
     }
 
-    lk_time_t t = mx_time_to_lk(timeout);
-    if ((timeout > 0ull) && (t == 0u))
-        t = 1u;
-
 #if WITH_LIB_KTRACE
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
@@ -71,7 +67,16 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     }
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)timeout, (uint32_t)(timeout >> 32));
 #endif
-    result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
+
+    if (timeout > 0ull) {
+        lk_time_t t = mx_time_to_lk(timeout);
+        if (t == 0)
+            t = 1u;
+
+        result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
+    } else {
+        result = ERR_TIMED_OUT;
+    }
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
@@ -146,13 +151,17 @@ mx_status_t sys_handle_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
         return result;
     }
 
-    lk_time_t t = mx_time_to_lk(timeout);
-    if ((timeout > 0ull) && (t == 0u))
-        t = 1u;
+    if (timeout > 0ull) {
+        lk_time_t t = mx_time_to_lk(timeout);
+        if (t == 0u)
+            t = 1u;
 
-    uint64_t context = -1;
-    WaitEvent::Result wait_event_result = event.Wait(t, &context);
-    result = WaitEvent::ResultToStatus(wait_event_result);
+        uint64_t context = -1;
+        WaitEvent::Result wait_event_result = event.Wait(t, &context);
+        result = WaitEvent::ResultToStatus(wait_event_result);
+    } else {
+        result = ERR_TIMED_OUT;
+    }
 
     // Regardless of wait outcome, we must call End().
     for (size_t ix = 0; ix != count; ++ix) {

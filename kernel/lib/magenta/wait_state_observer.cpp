@@ -97,8 +97,5 @@ bool WaitStateObserver::MaybeSignal(mx_signals_state_t state) {
     if (state.satisfied & watched_signals_)
         return event_->Signal(WaitEvent::Result::SATISFIED, context_);
 
-    if (!(state.satisfiable & watched_signals_))
-        return event_->Signal(WaitEvent::Result::UNSATISFIABLE, context_);
-
     return false;
 }

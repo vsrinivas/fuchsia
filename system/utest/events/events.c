@@ -204,7 +204,7 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(items[0].pending, MX_SIGNAL_SIGNALED, "Error during wait call");
 
     status = mx_handle_wait_one(events[0], MX_SIGNAL_SIGNALED, 0u, &pending);
-    ASSERT_EQ(status, 0, "wait failed");
+    ASSERT_EQ(status, ERR_TIMED_OUT, "wait failed");
     ASSERT_EQ(pending, MX_SIGNAL_SIGNALED, "Error during wait call");
 
     ASSERT_GE(mx_object_signal(events[0], MX_SIGNAL_SIGNALED, 0u), 0, "Error during event reset");

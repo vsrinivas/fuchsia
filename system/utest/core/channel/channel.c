@@ -79,7 +79,7 @@ static int reader_thread(void* arg) {
 static mx_signals_t get_satisfied_signals(mx_handle_t handle) {
     mx_signals_t pending = 0;
     __UNUSED mx_status_t status = mx_handle_wait_one(handle, 0u, 0u, &pending);
-    assert(status == ERR_BAD_STATE);  // "Unsatisfiable".
+    assert(status == ERR_TIMED_OUT);
     return pending;
 }
 
@@ -176,10 +176,6 @@ static bool channel_read_error_test(void) {
     // Read from an empty channel with a closed peer, should yield a channel closed error.
     status = mx_channel_read(channel[0], 0u, NULL, 0, NULL, NULL, 0, NULL);
     ASSERT_EQ(status, ERR_REMOTE_CLOSED, "read on empty closed channel produced incorrect error");
-
-    // Waiting for readability should yield a bad state error.
-    status = mx_handle_wait_one(channel[0], MX_SIGNAL_READABLE, 0u, NULL);
-    ASSERT_EQ(status, ERR_BAD_STATE, "waiting for readability should not succeed");
 
     END_TEST;
 }
