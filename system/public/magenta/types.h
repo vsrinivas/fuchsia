@@ -111,14 +111,6 @@ typedef struct {
     mx_signals_t pending;
 } mx_wait_item_t;
 
-#if _KERNEL
-//TODO: remove once kernel no longer needs this
-typedef struct {
-    mx_signals_t satisfied;
-    mx_signals_t satisfiable;
-} mx_signals_state_t;
-#endif
-
 typedef uint32_t mx_rights_t;
 #define MX_RIGHT_NONE             ((mx_rights_t)0u)
 #define MX_RIGHT_DUPLICATE        ((mx_rights_t)1u << 0)

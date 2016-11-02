@@ -21,7 +21,7 @@ public:
         if ((set_mask & ~MX_SIGNAL_SIGNALED) || (clear_mask & ~MX_SIGNAL_SIGNALED))
             return ERR_INVALID_ARGS;
 
-        state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+        state_tracker_.UpdateState(clear_mask, set_mask);
         return NO_ERROR;
     }
 
@@ -31,7 +31,7 @@ public:
 
 protected:
     InterruptDispatcher()
-        : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) { }
+        : state_tracker_(true, 0u) { }
 
     IrqStateTracker state_tracker_;
 };

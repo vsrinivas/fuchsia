@@ -78,7 +78,7 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
 
 status_t InterruptEventDispatcher::InterruptComplete() {
     // Clear the state in the state tracker, then unmask the interrupt.
-    state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
+    state_tracker_.UpdateState(MX_SIGNAL_SIGNALED, 0u);
     unmask_interrupt(vector_);
     return NO_ERROR;
 }
@@ -89,7 +89,7 @@ enum handler_return InterruptEventDispatcher::IrqHandler(void* ctx) {
     // TODO(johngro): make sure that this is safe to do from an IRQ.
     mask_interrupt(thiz->vector_);
 
-    return thiz->state_tracker_.UpdateSatisfiedFromIrq(0u, MX_SIGNAL_SIGNALED)
+    return thiz->state_tracker_.UpdateStateFromIrq(0u, MX_SIGNAL_SIGNALED)
             ? INT_RESCHEDULE
             : INT_NO_RESCHEDULE;
 }

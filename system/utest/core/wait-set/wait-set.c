@@ -273,8 +273,7 @@ bool wait_set_wait_single_thread_2_test(void) {
     EXPECT_EQ(mx_handle_close(mp[1]), NO_ERROR, "");
     num_results = 5u;
     EXPECT_EQ(mx_waitset_wait(ws, 0u, results, &num_results), NO_ERROR, "");
-    ASSERT_EQ(num_results, 2u, "wrong num_results from mx_waitset_wait()");
-    EXPECT_TRUE(check_results(num_results, results, cookie1, NO_ERROR, MX_SIGNAL_PEER_CLOSED), "");
+    ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
     EXPECT_TRUE(check_results(num_results, results, cookie2, NO_ERROR, MX_SIGNAL_PEER_CLOSED), "");
 
     EXPECT_EQ(mx_handle_close(mp[0]), NO_ERROR, "");

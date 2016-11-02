@@ -46,14 +46,7 @@ void EventPairDispatcher::on_zero_handles() {
     AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
-    // We're the only thing that updates the remote's signals state, so there are no races.
-    // TODO(vtl): Having to call into |other_->state_tracker_| twice is suboptimal, since it means
-    // we take its lock twice.
-    auto other_satisfied = other_->state_tracker_.GetSignalsState().satisfied;
-    DEBUG_ASSERT(!(other_satisfied & MX_EPAIR_SIGNAL_CLOSED));
-    // The already-satisfied (remote) signals remain satisfiable.
-    other_->state_tracker_.UpdateState(0u, MX_EPAIR_SIGNAL_CLOSED,
-                                       ~0u, other_satisfied | MX_EPAIR_SIGNAL_CLOSED);
+    other_->state_tracker_.UpdateState(0u, MX_EPAIR_SIGNAL_CLOSED);
     other_.reset();
 }
 
@@ -65,13 +58,12 @@ status_t EventPairDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask)
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
         return ERR_BAD_HANDLE;
-    other_->state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+    other_->state_tracker_.UpdateState(clear_mask, set_mask);
     return NO_ERROR;
 }
 
 EventPairDispatcher::EventPairDispatcher()
-        : state_tracker_(true,
-                         mx_signals_state_t{0u, MX_EPAIR_SIGNAL_MASK}),
+        : state_tracker_(true, 0u),
           other_koid_(0ull) {}
 
 void EventPairDispatcher::Init(EventPairDispatcher* other) {

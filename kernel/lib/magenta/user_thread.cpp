@@ -36,7 +36,7 @@ UserThread::UserThread(mxtl::RefPtr<ProcessDispatcher> process,
                        uint32_t flags)
     : koid_(MX_KOID_INVALID),
       process_(mxtl::move(process)),
-      state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+      state_tracker_(true, 0u) {
     LTRACE_ENTRY_OBJ;
 }
 
@@ -217,7 +217,7 @@ void UserThread::Exiting() {
     DEBUG_ASSERT(state_ == State::DYING);
 
     // signal any waiters
-    state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
+    state_tracker_.UpdateState(0u, MX_SIGNAL_SIGNALED);
 
     {
         AutoLock lock(exception_lock_);

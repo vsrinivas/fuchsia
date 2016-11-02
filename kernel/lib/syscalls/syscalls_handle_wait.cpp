@@ -82,11 +82,11 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     auto signals_state = wait_state_observer.End();
 
 #if WITH_LIB_KTRACE
-    ktrace(TAG_WAIT_ONE_DONE, koid, signals_state.satisfied, result, 0);
+    ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
 #endif
 
     if (_observed) {
-        if (_observed.copy_to_user(signals_state.satisfied) != NO_ERROR)
+        if (_observed.copy_to_user(signals_state) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -165,8 +165,7 @@ mx_status_t sys_handle_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
 
     // Regardless of wait outcome, we must call End().
     for (size_t ix = 0; ix != count; ++ix) {
-        auto s = wait_state_observers[ix].End();
-        items[ix].pending = s.satisfied;
+        items[ix].pending = wait_state_observers[ix].End();
     }
 
     if (_items.copy_array_to_user(items.get(), count) != NO_ERROR)

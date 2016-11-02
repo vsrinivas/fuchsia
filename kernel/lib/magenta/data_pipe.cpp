@@ -59,12 +59,8 @@ DataPipe::DataPipe(mx_size_t element_size, mx_size_t capacity)
       free_space_(0u),
       write_threshold_(0u),
       read_threshold_(0u) {
-    producer_.state_tracker.set_initial_signals_state(
-        mx_signals_state_t{MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
-                           MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_WRITE_THRESHOLD});
-    consumer_.state_tracker.set_initial_signals_state(
-        mx_signals_state_t{0u,
-                           MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD});
+    producer_.state_tracker.set_initial_signals_state(MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD);
+    consumer_.state_tracker.set_initial_signals_state(0u);
 
     consumer_.read_only = true;
 }
@@ -129,11 +125,10 @@ void DataPipe::UpdateProducerSignalsNoLock() {
             else
                 satisfied = 0u;
         }
-        producer_.state_tracker.UpdateSatisfied(MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
-                                                satisfied);
+        producer_.state_tracker.UpdateState(MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD,
+                                            satisfied);
     } else {
         producer_.state_tracker.UpdateState(
-                MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD, MX_SIGNAL_PEER_CLOSED,
                 MX_SIGNAL_WRITABLE | MX_SIGNAL_WRITE_THRESHOLD, MX_SIGNAL_PEER_CLOSED);
     }
 }
@@ -152,24 +147,12 @@ void DataPipe::UpdateConsumerSignalsNoLock() {
             satisfied = 0u;
     }
     if (producer_.alive) {
-        consumer_.state_tracker.UpdateSatisfied(MX_SIGNAL_READABLE | MX_SIGNAL_READ_THRESHOLD,
-                                                satisfied);
+        consumer_.state_tracker.UpdateState(MX_SIGNAL_READABLE | MX_SIGNAL_READ_THRESHOLD,
+                                            satisfied);
     } else {
         satisfied |= MX_SIGNAL_PEER_CLOSED;
-
-        // Note: READABLE/READ_THRESHOLD may still be satisfiable even if they're not satisfied, if
-        // the reason for the latter is that we're in a two-phase read.
-        mx_signals_t satisfiable;
-        if (available_size_no_lock() >= read_threshold_no_lock())
-            satisfiable = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD;
-        else if (available_size_no_lock() > 0u)
-            satisfiable = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-        else
-            satisfiable = MX_SIGNAL_PEER_CLOSED;
-
         consumer_.state_tracker.UpdateState(
-                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfied,
-                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfiable);
+                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_READ_THRESHOLD, satisfied);
     }
 }
 

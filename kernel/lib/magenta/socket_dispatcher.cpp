@@ -173,12 +173,8 @@ status_t SocketDispatcher::Create(uint32_t flags,
 SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
       half_closed_{false, false} {
-    const auto kSatisfiable =
-        MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED |
-        MX_USER_SIGNAL_ALL;
 
-    state_tracker_.set_initial_signals_state(
-            mx_signals_state_t{MX_SIGNAL_WRITABLE, kSatisfiable});
+    state_tracker_.set_initial_signals_state(MX_SIGNAL_WRITABLE);
 }
 
 SocketDispatcher::~SocketDispatcher() {
@@ -204,8 +200,7 @@ void SocketDispatcher::on_zero_handles() {
 void SocketDispatcher::OnPeerZeroHandles() {
     AutoLock lock(&lock_);
     other_.reset();
-    state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
-                               MX_SIGNAL_WRITABLE, 0u);
+    state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED);
     if (iopc_)
         iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
 }
@@ -227,7 +222,7 @@ status_t SocketDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
 
 status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     AutoLock lock(&lock_);
-    auto satisfied = state_tracker_.GetSignalsState().satisfied;
+    auto satisfied = state_tracker_.GetSignalsState();
     auto changed = ~satisfied & set_mask;
 
     if (changed) {
@@ -235,7 +230,7 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
             iopc_->Signal(changed, 0u, &lock_);
     }
 
-    state_tracker_.UpdateSatisfied(clear_mask, set_mask);
+    state_tracker_.UpdateState(clear_mask, set_mask);
     return NO_ERROR;
 }
 
@@ -267,8 +262,7 @@ status_t SocketDispatcher::HalfClose() {
             return ERR_REMOTE_CLOSED;
         other = other_;
         half_closed_[0] = true;
-        state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u,
-                                   MX_SIGNAL_WRITABLE, 0u);
+        state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u);
     }
     return other->HalfCloseOther();
 }
@@ -276,7 +270,7 @@ status_t SocketDispatcher::HalfClose() {
 status_t SocketDispatcher::HalfCloseOther() {
     AutoLock lock(&lock_);
     half_closed_[1] = true;
-    state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_PEER_CLOSED);
+    state_tracker_.UpdateState(0u, MX_SIGNAL_PEER_CLOSED);
     return NO_ERROR;
 }
 
@@ -306,13 +300,13 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
 
     if (st > 0) {
         if (was_empty)
-            state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_READABLE);
+            state_tracker_.UpdateState(0u, MX_SIGNAL_READABLE);
         if (iopc_)
             iopc_->Signal(MX_SIGNAL_READABLE, st, &lock_);
     }
 
     if (!cbuf_.free())
-        other_->state_tracker_.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
+        other_->state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u);
 
     return st;
 }
@@ -329,21 +323,12 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
 
     auto st = cbuf_.Read(dest, len, from_user);
 
-    mx_signals_t satisfied_clear = 0u;
-    mx_signals_t satisfiable_clear = 0u;
-
     if (cbuf_.empty()) {
-        satisfied_clear = MX_SIGNAL_READABLE;
-        // If the far end is closed or half closed, no more data will ever arrive.
-        if ((st == 0) && closed)
-            satisfiable_clear = MX_SIGNAL_READABLE;
+        state_tracker_.UpdateState(MX_SIGNAL_READABLE, 0u);
     }
 
-    state_tracker_.UpdateState(satisfied_clear, 0u, satisfiable_clear, 0u);
-
     if (!closed && was_full && (st > 0))
-        other_->state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_WRITABLE);
+        other_->state_tracker_.UpdateState(0u, MX_SIGNAL_WRITABLE);
 
     return st;
 }
-

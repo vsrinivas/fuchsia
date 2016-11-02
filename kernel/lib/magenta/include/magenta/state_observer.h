@@ -25,13 +25,13 @@ public:
     // Called when this object is added to a StateTracker, to give it the initial state. Returns
     // true if a thread was awoken.
     // WARNING: This is called under StateTracker's mutex.
-    virtual bool OnInitialize(mx_signals_state_t initial_state) = 0;
+    virtual bool OnInitialize(mx_signals_t initial_state) = 0;
 
     // Called whenever the state changes, to give it the new state. Returns true if a thread was
     // awoken.
     // WARNING: This is called under StateTracker's lock and may be called from an IRQ (instead of a
     // thread) if irq_safe() is true.
-    virtual bool OnStateChange(mx_signals_state_t new_state);
+    virtual bool OnStateChange(mx_signals_t new_state);
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may

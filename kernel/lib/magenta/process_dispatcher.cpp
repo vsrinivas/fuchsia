@@ -73,7 +73,7 @@ mx_status_t ProcessDispatcher::Create(mxtl::StringPiece name,
 }
 
 ProcessDispatcher::ProcessDispatcher(mxtl::StringPiece name, uint32_t flags)
-    : state_tracker_(true, mx_signals_state_t{0u, MX_SIGNAL_SIGNALED}) {
+    : state_tracker_(true, 0u) {
     LTRACE_ENTRY_OBJ;
 
     // Add ourself to the global process list, generating an ID at the same time.
@@ -302,7 +302,7 @@ void ProcessDispatcher::SetState(State s) {
 
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
-        state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
+        state_tracker_.UpdateState(0u, MX_SIGNAL_SIGNALED);
 
         {
             AutoLock lock(&exception_lock_);

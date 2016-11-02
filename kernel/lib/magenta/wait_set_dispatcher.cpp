@@ -82,31 +82,30 @@ bool WaitSetDispatcher::Entry::IsTriggered_NoLock() const {
     return is_triggered_;
 }
 
-mx_signals_state_t WaitSetDispatcher::Entry::GetSignalsState_NoLock() const {
+mx_signals_t WaitSetDispatcher::Entry::GetSignalsState_NoLock() const {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
-    return signals_state_;
+    return signals_;
 }
 
 WaitSetDispatcher::Entry::Entry(mx_signals_t watched_signals, uint64_t cookie)
     : StateObserver(IrqDisposition::IRQ_UNSAFE),
       watched_signals_(watched_signals), cookie_(cookie) {}
 
-bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_state_t initial_state) {
+bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state) {
     AutoLock lock(&wait_set_->mutex_);
 
     DEBUG_ASSERT(state_ == State::ADD_PENDING);
     state_ = State::ADDED;
 
-    signals_state_ = initial_state;
+    signals_ = initial_state;
 
-    if ((watched_signals_ & signals_state_.satisfied) ||
-        !(watched_signals_ & signals_state_.satisfiable))
+    if (watched_signals_ & signals_)
         return Trigger_NoLock();
 
     return false;
 }
 
-bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_state_t new_state) {
+bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
     AutoLock lock(&wait_set_->mutex_);
 
     if (state_ == State::REMOVED)
@@ -114,10 +113,9 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_state_t new_state) {
 
     DEBUG_ASSERT(state_ == State::ADDED);
 
-    signals_state_ = new_state;
+    signals_= new_state;
 
-    if ((watched_signals_ & signals_state_.satisfied) ||
-        !(watched_signals_ & signals_state_.satisfiable)) {
+    if (watched_signals_ & signals_) {
         if (is_triggered_)
             return false;  // Already triggered.
         return Trigger_NoLock();
@@ -342,9 +340,8 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
         results[i].cookie = it->GetKey();
         if (it->GetHandle_NoLock()) {
             // Not cancelled: satisfied or unsatisfiable.
-            auto st = it->GetSignalsState_NoLock();
             results[i].status = NO_ERROR;
-            results[i].observed = st.satisfied;
+            results[i].observed = it->GetSignalsState_NoLock();
         } else {
             // Cancelled.
             results[i].status = ERR_HANDLE_CLOSED;
@@ -366,9 +363,9 @@ WaitSetDispatcher::WaitSetDispatcher()
     state_tracker_.AddObserver(this);
 }
 
-bool WaitSetDispatcher::OnInitialize(mx_signals_state_t initial_state) { return false; }
+bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state) { return false; }
 
-bool WaitSetDispatcher::OnStateChange(mx_signals_state_t new_state) { return false; }
+bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 
 bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) {
     DEBUG_ASSERT(!*should_remove);  // We'll leave |*should_remove| at its default, which is false.

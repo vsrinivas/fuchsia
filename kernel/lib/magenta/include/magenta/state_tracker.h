@@ -34,12 +34,10 @@ public:
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
-    virtual void UpdateState(mx_signals_t satisfied_clear_mask,
-                             mx_signals_t satisfied_set_mask,
-                             mx_signals_t satisfiable_clear_mask,
-                             mx_signals_t satisfiable_set_mask) = 0;
+    virtual void UpdateState(mx_signals_t clear_mask,
+                             mx_signals_t set_mask) = 0;
 
-    virtual mx_signals_state_t GetSignalsState() = 0;
+    virtual mx_signals_t GetSignalsState() = 0;
 
     bool is_waitable() const { return is_waitable_; }
 
@@ -93,17 +91,17 @@ public:
     // Note: The initial state can also be set using SetInitialSignalsState() if the default
     // constructor must be used for some reason.
     StateTrackerImpl(bool is_waitable = true,
-                     mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u})
+                     mx_signals_t signals = 0u)
         : StateTracker(is_waitable),
-          signals_state_(signals_state) { }
+          signals_(signals) { }
 
     StateTrackerImpl(const StateTrackerImpl& o) = delete;
     StateTrackerImpl& operator=(const StateTrackerImpl& o) = delete;
 
     // Set the initial signals state. This is an alternative to provide the initial signals state to
     // the constructor. This does no locking and does not notify anything.
-    void set_initial_signals_state(mx_signals_state_t signals_state) {
-        signals_state_ = signals_state;
+    void set_initial_signals_state(mx_signals_t signals) {
+        signals_ = signals;
     }
 
     // Add an observer.
@@ -117,24 +115,15 @@ public:
     // destroyed or transferred.
     void Cancel(Handle* handle) final;
 
-    // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
-    // setting satisfiable signals should not wake anyone.)
-    void UpdateState(mx_signals_t satisfied_clear_mask,
-                     mx_signals_t satisfied_set_mask,
-                     mx_signals_t satisfiable_clear_mask,
-                     mx_signals_t satisfiable_set_mask) final;
+    // Notify others of a change in state (possibly waking them).
+    void UpdateState(mx_signals_t clear_mask,
+                     mx_signals_t set_mask) final;
 
-    mx_signals_state_t GetSignalsState() final;
-
-    void UpdateSatisfied(mx_signals_t clear_mask, mx_signals_t set_mask) {
-        UpdateState(clear_mask, set_mask, 0u, 0u);
-    }
+    mx_signals_t GetSignalsState() final;
 
 protected:
-    bool UpdateStateInternal(mx_signals_t satisfied_clear_mask,
-                             mx_signals_t satisfied_set_mask,
-                             mx_signals_t satisfiable_clear_mask,
-                             mx_signals_t satisfiable_set_mask);
+    bool UpdateStateInternal(mx_signals_t clear_mask,
+                             mx_signals_t set_mask);
 
 private:
     using LockState = typename Traits::LockState;
@@ -145,8 +134,7 @@ private:
     // Active observers are elements in |observers_|.
     mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_;
 
-    // mojo-style signaling.
-    mx_signals_state_t signals_state_;
+    mx_signals_t signals_;
 };
 
 }  // namespace internal
@@ -156,24 +144,14 @@ using NonIrqStateTracker = internal::StateTrackerImpl<internal::NonIrqStateTrack
 class IrqStateTracker : public internal::StateTrackerImpl<internal::IrqStateTrackerTraits> {
 public:
     IrqStateTracker(bool is_waitable = true,
-                    mx_signals_state_t signals_state = mx_signals_state_t{0u, 0u})
-        : internal::StateTrackerImpl<internal::IrqStateTrackerTraits>(is_waitable, signals_state) {}
+                    mx_signals_t signals = 0u)
+        : internal::StateTrackerImpl<internal::IrqStateTrackerTraits>(is_waitable, signals) {}
 
     IrqStateTracker(const IrqStateTracker& o) = delete;
     IrqStateTracker& operator=(const IrqStateTracker& o) = delete;
 
-    bool UpdateStateFromIrq(mx_signals_t satisfied_clear_mask,
-                            mx_signals_t satisfied_set_mask,
-                            mx_signals_t satisfiable_clear_mask,
-                            mx_signals_t satisfiable_set_mask) {
-        return UpdateStateInternal(satisfied_clear_mask,
-                                   satisfied_set_mask,
-                                   satisfiable_clear_mask,
-                                   satisfiable_set_mask);
-    }
-
-    bool UpdateSatisfiedFromIrq(mx_signals_t satisfied_clear_mask,
-                                mx_signals_t satisfied_set_mask) {
-        return UpdateStateInternal(satisfied_clear_mask, satisfied_set_mask, 0u, 0u);
+    bool UpdateStateFromIrq(mx_signals_t clear_mask,
+                            mx_signals_t set_mask) {
+        return UpdateStateInternal(clear_mask, set_mask);
     }
 };

@@ -73,7 +73,7 @@ public:
         Handle* GetHandle_NoLock() const;
         const mxtl::RefPtr<Dispatcher>& GetDispatcher_NoLock() const;
         bool IsTriggered_NoLock() const;
-        mx_signals_state_t GetSignalsState_NoLock() const;
+        mx_signals_t GetSignalsState_NoLock() const;
 
         bool InTriggeredEntriesList_NoLock() const {
             return triggered_entries_node_state_.InContainer();
@@ -87,8 +87,8 @@ public:
         Entry(const Entry&) = delete;
         Entry& operator=(const Entry&) = delete;
 
-        bool OnInitialize(mx_signals_state_t initial_state) final;
-        bool OnStateChange(mx_signals_state_t new_state) final;
+        bool OnInitialize(mx_signals_t initial_state) final;
+        bool OnStateChange(mx_signals_t new_state) final;
         bool OnCancel(Handle* handle, bool* should_remove, bool* call_uninitialize) final;
         void OnDidCancel() final {}
 
@@ -110,7 +110,7 @@ public:
         mxtl::RefPtr<Dispatcher> dispatcher_;
 
         bool is_triggered_ = false;
-        mx_signals_state_t signals_state_ = {0u, 0u};
+        mx_signals_t signals_ = 0u;
 
         mxtl::DoublyLinkedListNodeState<Entry*> triggered_entries_node_state_;
         mxtl::WAVLTreeNodeState<WAVLTreePtrType> wavl_node_state_;
@@ -146,8 +146,8 @@ private:
     WaitSetDispatcher& operator=(const WaitSetDispatcher&) = delete;
 
     // StateObserver implementation:
-    bool OnInitialize(mx_signals_state_t initial_state) final;
-    bool OnStateChange(mx_signals_state_t new_state) final;
+    bool OnInitialize(mx_signals_t initial_state) final;
+    bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
     void OnDidCancel() final {}
 

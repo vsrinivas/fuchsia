@@ -105,7 +105,7 @@ status_t JobDispatcher::Create(uint32_t flags,
 
 JobDispatcher::JobDispatcher(uint32_t flags, JobDispatcher* parent)
     : flags_(flags), parent_(parent) {
-    state_tracker_.set_initial_signals_state(mx_signals_state_t{0, MX_SIGNAL_SIGNALED});
+    state_tracker_.set_initial_signals_state(0u);
 }
 
 JobDispatcher::~JobDispatcher() {

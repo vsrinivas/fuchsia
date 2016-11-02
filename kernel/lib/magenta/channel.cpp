@@ -28,12 +28,8 @@ size_t other_side(size_t side) {
 
 Channel::Channel()
     : dispatcher_alive_{true, true} {
-    state_tracker_[0].set_initial_signals_state(
-            mx_signals_state_t{MX_SIGNAL_WRITABLE,
-                               MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
-    state_tracker_[1].set_initial_signals_state(
-            mx_signals_state_t{MX_SIGNAL_WRITABLE,
-                               MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED});
+    state_tracker_[0].set_initial_signals_state(MX_SIGNAL_WRITABLE);
+    state_tracker_[1].set_initial_signals_state(MX_SIGNAL_WRITABLE);
 }
 
 Channel::~Channel() {
@@ -52,11 +48,7 @@ void Channel::OnDispatcherDestruction(size_t side) {
         messages_to_destroy.swap(messages_[side]);
 
         if (dispatcher_alive_[other]) {
-            mx_signals_t other_satisfiable_clear = MX_SIGNAL_WRITABLE;
-            if (messages_[other].is_empty())
-                other_satisfiable_clear |= MX_SIGNAL_READABLE;
-            state_tracker_[other].UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED,
-                                              other_satisfiable_clear, 0u);
+            state_tracker_[other].UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED);
             if (iopc_[other])
                 iopc_[other]->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
         }
@@ -93,8 +85,7 @@ status_t Channel::Read(size_t side,
     *msg = messages_[side].pop_front();
 
     if (messages_[side].is_empty()) {
-        state_tracker_[side].UpdateState(MX_SIGNAL_READABLE, 0u,
-                                         !other_alive ? MX_SIGNAL_READABLE : 0u, 0u);
+        state_tracker_[side].UpdateState(MX_SIGNAL_READABLE, 0u);
     }
 
     return rv;
@@ -115,7 +106,7 @@ status_t Channel::Write(size_t side, mxtl::unique_ptr<MessagePacket> msg) {
     auto size = msg->data_size();
     messages_[other].push_back(mxtl::move(msg));
 
-    state_tracker_[other].UpdateSatisfied(0u, MX_SIGNAL_READABLE);
+    state_tracker_[other].UpdateState(0u, MX_SIGNAL_READABLE);
     if (iopc_[other])
         iopc_[other]->Signal(MX_SIGNAL_READABLE, size, &lock_);
     return NO_ERROR;

@@ -29,24 +29,24 @@ public:
                       uint64_t context);
 
     // This should *not* be called under the handle table lock.
-    mx_signals_state_t End();
+    mx_signals_t End();
 
 private:
     WaitStateObserver(const WaitStateObserver&) = delete;
     WaitStateObserver& operator=(const WaitStateObserver&) = delete;
 
     // StateObserver implementation:
-    bool OnInitialize(mx_signals_state_t initial_state) final;
-    bool OnStateChange(mx_signals_state_t new_state) final;
+    bool OnInitialize(mx_signals_t initial_state) final;
+    bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
     void OnDidCancel() final {}
 
-    bool MaybeSignal(mx_signals_state_t state);
+    bool MaybeSignal(mx_signals_t signals);
 
     WaitEvent* event_ = nullptr;
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
-    mx_signals_state_t wakeup_reasons_;
+    mx_signals_t wakeup_reasons_;
     uint64_t context_ = 0u;
     mxtl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };
