@@ -13,6 +13,30 @@ namespace mtl {
 namespace internal {
 namespace {
 
+MojoResult ToMojoResult(mx_status_t status) {
+  switch (status) {
+    case NO_ERROR:
+      return MOJO_RESULT_OK;
+    case ERR_HANDLE_CLOSED:
+      return MOJO_SYSTEM_RESULT_CANCELLED;
+    case ERR_NO_MEMORY:
+      return MOJO_SYSTEM_RESULT_RESOURCE_EXHAUSTED;
+    case ERR_BAD_HANDLE:
+    case ERR_INVALID_ARGS:
+      return MOJO_SYSTEM_RESULT_INVALID_ARGUMENT;
+    case ERR_TIMED_OUT:
+      return MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED;
+    case ERR_BAD_STATE:
+      return MOJO_SYSTEM_RESULT_FAILED_PRECONDITION;
+    // TODO(vtl): The Mojo version doesn't require any rights to wait, whereas
+    // Magenta requires MX_RIGHT_READ.
+    case ERR_ACCESS_DENIED:
+      return MOJO_SYSTEM_RESULT_PERMISSION_DENIED;
+    default:
+      return MOJO_SYSTEM_RESULT_UNKNOWN;
+  }
+}
+
 class HandleWatcher : public MessageLoopHandler {
  public:
   HandleWatcher(MojoHandle handle,
@@ -33,26 +57,28 @@ class HandleWatcher : public MessageLoopHandler {
       timeout = ftl::TimeDelta::Max();
     else
       timeout = ftl::TimeDelta::FromMicroseconds(deadline);
-    key_ = message_loop->AddHandler(this, handle_, signals, timeout);
+    key_ =
+        message_loop->AddHandler(this, static_cast<mx_handle_t>(handle_),
+                                 static_cast<mx_signals_t>(signals), timeout);
   }
 
  protected:
-  void OnHandleReady(MojoHandle handle) override {
-    FTL_DCHECK(handle_ == handle);
-    CallCallback(MOJO_RESULT_OK);
+  void OnHandleReady(mx_handle_t handle) override {
+    FTL_DCHECK(handle_ == static_cast<MojoHandle>(handle));
+    CallCallback(NO_ERROR);
   }
 
-  void OnHandleError(MojoHandle handle, MojoResult result) override {
-    FTL_DCHECK(handle_ == handle);
-    CallCallback(result);
+  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
+    FTL_DCHECK(handle_ == static_cast<MojoHandle>(handle));
+    CallCallback(status);
   }
 
  private:
-  void CallCallback(MojoResult result) {
+  void CallCallback(mx_status_t status) {
     MojoAsyncWaitCallback callback = callback_;
     void* context = context_;
     delete this;
-    callback(context, result);
+    callback(context, ToMojoResult(status));
   }
 
   MessageLoop::HandlerKey key_;

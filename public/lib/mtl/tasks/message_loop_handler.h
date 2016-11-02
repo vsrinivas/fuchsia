@@ -5,14 +5,14 @@
 #ifndef LIB_MTL_TASKS_MESSAGE_LOOP_HANDLER_H_
 #define LIB_MTL_TASKS_MESSAGE_LOOP_HANDLER_H_
 
-#include <mojo/system/handle.h>
+#include <magenta/types.h>
 
 namespace mtl {
 
 class MessageLoopHandler {
  public:
-  virtual void OnHandleReady(MojoHandle handle) = 0;
-  virtual void OnHandleError(MojoHandle handle, MojoResult result) = 0;
+  virtual void OnHandleReady(mx_handle_t handle) = 0;
+  virtual void OnHandleError(mx_handle_t handle, mx_status_t result) = 0;
 
  protected:
   virtual ~MessageLoopHandler();

@@ -4,7 +4,7 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-#include <mojo/system/result.h>
+#include <mx/channel.h>
 
 #include <string>
 #include <thread>
@@ -13,7 +13,6 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/system/message_pipe.h"
 
 namespace mtl {
 namespace {
@@ -212,11 +211,11 @@ class TestMessageLoopHandler : public MessageLoopHandler {
   void clear_error_count() { error_count_ = 0; }
   int error_count() const { return error_count_; }
 
-  MojoResult last_error_result() const { return last_error_result_; }
+  mx_status_t last_error_result() const { return last_error_result_; }
 
   // MessageLoopHandler:
-  void OnHandleReady(MojoHandle handle) override { ready_count_++; }
-  void OnHandleError(MojoHandle handle, MojoResult status) override {
+  void OnHandleReady(mx_handle_t handle) override { ready_count_++; }
+  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     error_count_++;
     last_error_result_ = status;
   }
@@ -224,7 +223,7 @@ class TestMessageLoopHandler : public MessageLoopHandler {
  private:
   int ready_count_ = 0;
   int error_count_ = 0;
-  MojoResult last_error_result_ = MOJO_RESULT_OK;
+  mx_status_t last_error_result_ = NO_ERROR;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestMessageLoopHandler);
 };
@@ -238,7 +237,7 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleReady(MojoHandle handle) override {
+  void OnHandleReady(mx_handle_t handle) override {
     message_loop_->QuitNow();
     TestMessageLoopHandler::OnHandleReady(handle);
   }
@@ -252,16 +251,16 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 // Verifies Quit() from OnHandleReady() quits the loop.
 TEST(MessageLoop, QuitFromReady) {
   QuitOnReadyMessageLoopHandler handler;
-  mojo::MessagePipe pipe;
-  MojoResult result =
-      mojo::WriteMessageRaw(pipe.handle1.get(), nullptr, 0, nullptr, 0, 0);
-  EXPECT_EQ(MOJO_RESULT_OK, result);
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
+  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(NO_ERROR, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-      ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
@@ -279,7 +278,7 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
   void set_handler_key(MessageLoop::HandlerKey key) { key_ = key; }
 
-  void OnHandleReady(MojoHandle handle) override {
+  void OnHandleReady(mx_handle_t handle) override {
     message_loop_->RemoveHandler(key_);
     TestMessageLoopHandler::OnHandleReady(handle);
     MessageLoop::GetCurrent()->PostQuitTask();
@@ -294,16 +293,16 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
 TEST(MessageLoop, HandleReady) {
   RemoveOnReadyMessageLoopHandler handler;
-  mojo::MessagePipe pipe;
-  MojoResult result =
-      mojo::WriteMessageRaw(pipe.handle1.get(), nullptr, 0, nullptr, 0, 0);
-  EXPECT_EQ(MOJO_RESULT_OK, result);
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
+  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(NO_ERROR, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-      ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
   handler.set_handler_key(key);
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
@@ -313,16 +312,16 @@ TEST(MessageLoop, HandleReady) {
 
 TEST(MessageLoop, AfterHandleReadyCallback) {
   RemoveOnReadyMessageLoopHandler handler;
-  mojo::MessagePipe pipe;
-  MojoResult result =
-      mojo::WriteMessageRaw(pipe.handle1.get(), nullptr, 0, nullptr, 0, 0);
-  EXPECT_EQ(MOJO_RESULT_OK, result);
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
+  mx_status_t rv = endpoint1.write(0, nullptr, 0, nullptr, 0);
+  EXPECT_EQ(NO_ERROR, rv);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-      ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
   handler.set_handler_key(key);
   int after_task_callback_count = 0;
   message_loop.SetAfterTaskCallback(
@@ -336,11 +335,12 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
 
 TEST(MessageLoop, AfterDeadlineExpiredCallback) {
   TestMessageLoopHandler handler;
-  mojo::MessagePipe pipe;
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
-  message_loop.AddHandler(&handler, pipe.handle0.get().value(),
-                          MOJO_HANDLE_SIGNAL_READABLE,
+  message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
                           ftl::TimeDelta::FromMicroseconds(10000));
   message_loop.task_runner()->PostDelayedTask(
       [&message_loop] { message_loop.QuitNow(); },
@@ -361,9 +361,9 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleError(MojoHandle handle, MojoResult result) override {
+  void OnHandleError(mx_status_t handle, mx_status_t status) override {
     message_loop_->QuitNow();
-    TestMessageLoopHandler::OnHandleError(handle, result);
+    TestMessageLoopHandler::OnHandleError(handle, status);
   }
 
  private:
@@ -375,31 +375,35 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
 // Verifies Quit() when the deadline is reached works.
 TEST(MessageLoop, QuitWhenDeadlineExpired) {
   QuitOnErrorRunMessageHandler handler;
-  mojo::MessagePipe pipe;
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
-  MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-      ftl::TimeDelta::FromMicroseconds(10000));
+  MessageLoop::HandlerKey key =
+      message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+                              ftl::TimeDelta::FromMicroseconds(10000));
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED, handler.last_error_result());
+  EXPECT_EQ(ERR_TIMED_OUT, handler.last_error_result());
   EXPECT_FALSE(message_loop.HasHandler(key));
 }
 
 // Test that handlers are notified of loop destruction.
 TEST(MessageLoop, Destruction) {
   TestMessageLoopHandler handler;
-  mojo::MessagePipe pipe;
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
   {
     MessageLoop message_loop;
-    message_loop.AddHandler(&handler, pipe.handle0.get().value(),
-                            MOJO_HANDLE_SIGNAL_READABLE, ftl::TimeDelta::Max());
+    message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+                            ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, handler.last_error_result());
+  EXPECT_EQ(ERR_HANDLE_CLOSED, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -413,10 +417,10 @@ class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
 
   void add_handler_key(MessageLoop::HandlerKey key) { keys_.push_back(key); }
 
-  void OnHandleError(MojoHandle handle, MojoResult result) override {
+  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     for (auto key : keys_)
       message_loop_->RemoveHandler(key);
-    TestMessageLoopHandler::OnHandleError(handle, result);
+    TestMessageLoopHandler::OnHandleError(handle, status);
   }
 
  private:
@@ -426,29 +430,37 @@ class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(RemoveManyMessageLoopHandler);
 };
 
+class ChannelPair {
+ public:
+  ChannelPair() { mx::channel::create(0, &endpoint0, &endpoint1); }
+
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+};
+
 // Test that handlers are notified of loop destruction.
 TEST(MessageLoop, MultipleHandleDestruction) {
   RemoveManyMessageLoopHandler odd_handler;
   TestMessageLoopHandler even_handler;
-  mojo::MessagePipe pipe1;
-  mojo::MessagePipe pipe2;
-  mojo::MessagePipe pipe3;
+  ChannelPair pipe1;
+  ChannelPair pipe2;
+  ChannelPair pipe3;
   {
     MessageLoop message_loop;
     odd_handler.set_message_loop(&message_loop);
-    odd_handler.add_handler_key(message_loop.AddHandler(
-        &odd_handler, pipe1.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-        ftl::TimeDelta::Max()));
-    message_loop.AddHandler(&even_handler, pipe2.handle0.get().value(),
-                            MOJO_HANDLE_SIGNAL_READABLE, ftl::TimeDelta::Max());
-    odd_handler.add_handler_key(message_loop.AddHandler(
-        &odd_handler, pipe3.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-        ftl::TimeDelta::Max()));
+    odd_handler.add_handler_key(
+        message_loop.AddHandler(&odd_handler, pipe1.endpoint0.get(),
+                                MX_SIGNAL_READABLE, ftl::TimeDelta::Max()));
+    message_loop.AddHandler(&even_handler, pipe2.endpoint0.get(),
+                            MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
+    odd_handler.add_handler_key(
+        message_loop.AddHandler(&odd_handler, pipe3.endpoint0.get(),
+                                MX_SIGNAL_READABLE, ftl::TimeDelta::Max()));
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, odd_handler.last_error_result());
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, even_handler.last_error_result());
+  EXPECT_EQ(ERR_HANDLE_CLOSED, odd_handler.last_error_result());
+  EXPECT_EQ(ERR_HANDLE_CLOSED, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -460,10 +472,10 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleError(MojoHandle handle, MojoResult result) override {
-    message_loop_->AddHandler(this, handle, MOJO_HANDLE_SIGNAL_READABLE,
+  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
+    message_loop_->AddHandler(this, handle, MX_SIGNAL_READABLE,
                               ftl::TimeDelta::Max());
-    TestMessageLoopHandler::OnHandleError(handle, result);
+    TestMessageLoopHandler::OnHandleError(handle, status);
   }
 
  private:
@@ -474,15 +486,17 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
 
 TEST(MessageLoop, AddHandlerOnError) {
   AddHandlerOnErrorHandler handler;
-  mojo::MessagePipe pipe;
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
   {
     MessageLoop message_loop;
     handler.set_message_loop(&message_loop);
-    message_loop.AddHandler(&handler, pipe.handle0.get().value(),
-                            MOJO_HANDLE_SIGNAL_READABLE, ftl::TimeDelta::Max());
+    message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+                            ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_CANCELLED, handler.last_error_result());
+  EXPECT_EQ(ERR_HANDLE_CLOSED, handler.last_error_result());
 }
 
 class RemoveHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -496,9 +510,9 @@ class RemoveHandlerOnErrorHandler : public TestMessageLoopHandler {
 
   void set_key_to_remove(MessageLoop::HandlerKey key) { key_to_remove_ = key; }
 
-  void OnHandleError(MojoHandle handle, MojoResult result) override {
+  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     message_loop_->RemoveHandler(key_to_remove_);
-    TestMessageLoopHandler::OnHandleError(handle, result);
+    TestMessageLoopHandler::OnHandleError(handle, status);
   }
 
  private:
@@ -510,15 +524,16 @@ class RemoveHandlerOnErrorHandler : public TestMessageLoopHandler {
 
 TEST(MessageLoop, AfterPreconditionFailedCallback) {
   RemoveHandlerOnErrorHandler handler;
-  mojo::MessagePipe pipe;
+  mx::channel endpoint0;
+  mx::channel endpoint1;
+  mx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, pipe.handle0.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-      ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
   handler.set_message_loop(&message_loop);
   handler.set_key_to_remove(key);
-  message_loop.task_runner()->PostTask([&pipe] { pipe.handle1.reset(); });
+  message_loop.task_runner()->PostTask([&endpoint1] { endpoint1.reset(); });
   message_loop.task_runner()->PostDelayedTask(
       [&message_loop] { message_loop.QuitNow(); },
       ftl::TimeDelta::FromMicroseconds(10000));

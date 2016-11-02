@@ -5,7 +5,7 @@
 #ifndef LIB_MTL_TASKS_MESSAGE_LOOP_H_
 #define LIB_MTL_TASKS_MESSAGE_LOOP_H_
 
-#include <mojo/system/wait.h>
+#include <magenta/types.h>
 #include <mx/event.h>
 
 #include <map>
@@ -53,8 +53,8 @@ class MessageLoop : public internal::TaskQueueDelegate {
   // The returned key can be used to remove the callback. The returned key will
   // always be non-zero.
   HandlerKey AddHandler(MessageLoopHandler* handler,
-                        MojoHandle handle,
-                        MojoHandleSignals handle_signals,
+                        mx_handle_t handle,
+                        mx_signals_t handle_signals,
                         ftl::TimeDelta timeout);
 
   // The message loop will no longer call the handler identified by the key. It
@@ -93,8 +93,8 @@ class MessageLoop : public internal::TaskQueueDelegate {
   // Contains the data needed to track a request to AddHandler().
   struct HandlerData {
     MessageLoopHandler* handler = nullptr;
-    MojoHandle handle = MOJO_HANDLE_INVALID;
-    MojoHandleSignals signals = MOJO_HANDLE_SIGNAL_NONE;
+    mx_handle_t handle = MX_HANDLE_INVALID;
+    mx_signals_t signals = MX_SIGNAL_NONE;
     ftl::TimePoint deadline;
   };
 
@@ -106,7 +106,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   ftl::TimePoint RunReadyTasks(ftl::TimePoint now);
   ftl::TimePoint Wait(ftl::TimePoint now, ftl::TimePoint next_run_time);
   void RunTask(const internal::PendingTask& pending_task);
-  void NotifyHandlers(ftl::TimePoint now, MojoResult result);
+  void NotifyHandlers(ftl::TimePoint now, mx_status_t result);
   void CallAfterTaskCallback();
 
   internal::IncomingTaskQueue* incoming_tasks() {
@@ -135,15 +135,15 @@ class MessageLoop : public internal::TaskQueueDelegate {
   class WaitState {
    public:
     std::vector<HandlerKey> keys;
-    std::vector<MojoHandle> handles;
-    std::vector<MojoHandleSignals> signals;
+    std::vector<mx_handle_t> handles;
+    std::vector<mx_signals_t> signals;
 
     size_t size() const { return keys.size(); }
 
     void Set(size_t index,
              HandlerKey key,
-             MojoHandle handle,
-             MojoHandleSignals signals);
+             mx_handle_t handle,
+             mx_signals_t signals);
     void Resize(size_t size);
   };
 

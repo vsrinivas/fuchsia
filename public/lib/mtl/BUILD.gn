@@ -11,6 +11,7 @@ group("mtl") {
     "//lib/mtl/shared_buffer",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
+    "//lib/mtl/waiter",
   ]
 
   deps = [

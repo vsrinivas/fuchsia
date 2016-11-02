@@ -5,7 +5,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 #include <magenta/syscalls.h>
-#include <mojo/system/result.h>
 
 #include <utility>
 
@@ -38,7 +37,7 @@ MessageLoop::~MessageLoop() {
       << "Message loops must be destroyed on their own threads.";
 
   // TODO(abarth): What if more handlers are registered here?
-  NotifyHandlers(ftl::TimePoint::Max(), MOJO_SYSTEM_RESULT_CANCELLED);
+  NotifyHandlers(ftl::TimePoint::Max(), ERR_HANDLE_CLOSED);
 
   incoming_tasks()->ClearDelegate();
   ReloadQueue();
@@ -55,14 +54,13 @@ MessageLoop* MessageLoop::GetCurrent() {
   return g_current;
 }
 
-MessageLoop::HandlerKey MessageLoop::AddHandler(
-    MessageLoopHandler* handler,
-    MojoHandle handle,
-    MojoHandleSignals handle_signals,
-    ftl::TimeDelta timeout) {
+MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
+                                                mx_handle_t handle,
+                                                mx_signals_t handle_signals,
+                                                ftl::TimeDelta timeout) {
   FTL_DCHECK(GetCurrent() == this);
   FTL_DCHECK(handler);
-  FTL_DCHECK(handle != MOJO_HANDLE_INVALID);
+  FTL_DCHECK(handle != MX_HANDLE_INVALID);
   HandlerData handler_data;
   handler_data.handler = handler;
   handler_data.handle = handle;
@@ -93,7 +91,7 @@ void MessageLoop::ClearAfterTaskCallback() {
   after_task_callback_ = ftl::Closure();
 }
 
-void MessageLoop::NotifyHandlers(ftl::TimePoint now, MojoResult result) {
+void MessageLoop::NotifyHandlers(ftl::TimePoint now, mx_status_t status) {
   // Make a copy in case someone tries to add/remove new handlers as part of
   // notifying.
   const HandleToHandlerData cloned_handlers(handler_data_);
@@ -105,7 +103,7 @@ void MessageLoop::NotifyHandlers(ftl::TimePoint now, MojoResult result) {
     if (handler_data_.find(it->first) == handler_data_.end())
       continue;
     handler_data_.erase(it->first);
-    it->second.handler->OnHandleError(it->second.handle, result);
+    it->second.handler->OnHandleError(it->second.handle, status);
     CallAfterTaskCallback();
   }
 }
@@ -134,11 +132,11 @@ void MessageLoop::Run() {
 
 ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
                                  ftl::TimePoint next_run_time) {
-  MojoDeadline timeout = 0;
+  mx_time_t timeout = 0;
   if (next_run_time == ftl::TimePoint::Max()) {
-    timeout = MOJO_DEADLINE_INDEFINITE;
+    timeout = MX_TIME_INFINITE;
   } else if (next_run_time > now) {
-    timeout = (next_run_time - now).ToMicroseconds();
+    timeout = (next_run_time - now).ToNanoseconds();
   }
 
   wait_state_.Resize(handler_data_.size() + 1);
@@ -149,30 +147,29 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     if (it->second.deadline <= now) {
       timeout = 0;
     } else if (it->second.deadline != ftl::TimePoint::Max()) {
-      MojoDeadline handle_timeout =
-          (it->second.deadline - now).ToMicroseconds();
+      mx_time_t handle_timeout = (it->second.deadline - now).ToNanoseconds();
       timeout = std::min(timeout, handle_timeout);
     }
   }
 
   uint32_t result_index = kInvalidWaitManyIndexValue;
-  const MojoResult wait_result =
-      MojoWaitMany(wait_state_.handles.data(), wait_state_.signals.data(),
-                   wait_state_.size(), timeout, &result_index, nullptr);
+  const mx_status_t wait_status = mx_handle_wait_many(
+      wait_state_.size(), wait_state_.handles.data(),
+      wait_state_.signals.data(), timeout, &result_index, nullptr);
 
   // Update now after waiting.
   now = ftl::TimePoint::Now();
 
   if (result_index == kInvalidWaitManyIndexValue) {
-    FTL_DCHECK(wait_result == MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
-    NotifyHandlers(now, MOJO_SYSTEM_RESULT_DEADLINE_EXCEEDED);
+    FTL_DCHECK(wait_status == ERR_TIMED_OUT);
+    NotifyHandlers(now, ERR_TIMED_OUT);
     return now;
   }
 
   if (result_index == 0) {
-    FTL_DCHECK(wait_result == MOJO_RESULT_OK);
-    mx_status_t event_status = event_.signal(MX_SIGNAL_SIGNALED, 0u);
-    FTL_DCHECK(event_status == NO_ERROR);
+    FTL_DCHECK(wait_status == NO_ERROR);
+    mx_status_t rv = event_.signal(MX_SIGNAL_SIGNALED, 0u);
+    FTL_DCHECK(rv == NO_ERROR);
     return now;
   }
 
@@ -181,28 +178,27 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   const HandlerData& data = handler_data_[key];
   FTL_DCHECK(data.handle == wait_state_.handles[result_index]);
   MessageLoopHandler* handler = handler_data_[key].handler;
-  MojoHandle handle = handler_data_[key].handle;
+  mx_handle_t handle = handler_data_[key].handle;
 
-  switch (wait_result) {
-    case MOJO_RESULT_OK:
+  switch (wait_status) {
+    case NO_ERROR:
       data.handler->OnHandleReady(handle);
       CallAfterTaskCallback();
       break;
-    case MOJO_SYSTEM_RESULT_INVALID_ARGUMENT:
-    case MOJO_SYSTEM_RESULT_CANCELLED:
-    case MOJO_SYSTEM_RESULT_BUSY:
+    case ERR_INVALID_ARGS:
+    case ERR_HANDLE_CLOSED:
       // These results indicate a bug in "our" code (e.g., race conditions).
-      FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
+      FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
     // Fall through.
-    case MOJO_SYSTEM_RESULT_FAILED_PRECONDITION:
+    case ERR_BAD_STATE:
       // Remove the handle first, this way if OnHandleError() tries to remove
       // the handle our iterator isn't invalidated.
       handler_data_.erase(handle);
-      handler->OnHandleError(handle, wait_result);
+      handler->OnHandleError(handle, wait_status);
       CallAfterTaskCallback();
       break;
     default:
-      FTL_DCHECK(false) << "Unexpected wait result: " << wait_result;
+      FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
       break;
   }
 
@@ -265,8 +261,8 @@ void MessageLoop::CallAfterTaskCallback() {
 
 void MessageLoop::WaitState::Set(size_t i,
                                  HandlerKey key,
-                                 MojoHandle handle,
-                                 MojoHandleSignals signals) {
+                                 mx_handle_t handle,
+                                 mx_signals_t signals) {
   keys[i] = key;
   handles[i] = handle;
   this->signals[i] = signals;
