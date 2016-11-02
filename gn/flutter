@@ -2,6 +2,7 @@
     "imports": [
         "fonts",
         "framebuffer",
+        "mozart",
         "icu_data",
         "mojo"
     ],

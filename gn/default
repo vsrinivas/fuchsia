@@ -7,6 +7,7 @@
         "component_manager",
         "dart",
         "dropbear",
+        "fidl",
         "flutter",
         "fonts",
         "fortune",
