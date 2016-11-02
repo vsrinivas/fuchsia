@@ -38,6 +38,7 @@ struct launchpad {
     size_t handle_alloc;
 
     mx_vaddr_t entry;
+    mx_vaddr_t base;
     mx_vaddr_t vdso_base;
 
     size_t stack_size;
@@ -279,7 +280,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     elf_load_info_t* elf;
     mx_status_t status = elf_load_start(vmo, &elf);
     if (status == NO_ERROR)
-        status = elf_load_finish(lp_proc(lp), elf, vmo, NULL, &lp->entry);
+        status = elf_load_finish(lp_proc(lp), elf, vmo, &lp->base, &lp->entry);
     if (status == NO_ERROR)
         check_elf_stack_size(lp, elf);
     elf_load_destroy(elf);
@@ -396,7 +397,7 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
     status = elf_load_start(interp_vmo, &elf);
     if (status == NO_ERROR) {
         status = elf_load_finish(lp_proc(lp), elf, interp_vmo,
-                                 NULL, &lp->entry);
+                                 &lp->base, &lp->entry);
         elf_load_destroy(elf);
     }
     mx_handle_close(interp_vmo);
@@ -426,7 +427,7 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
         if (status == NO_ERROR) {
             if (interp == NULL) {
                 status = elf_load_finish(lp_proc(lp), elf, vmo,
-                                         NULL, &lp->entry);
+                                         &lp->base, &lp->entry);
                 if (status == NO_ERROR) {
                     lp->loader_message = false;
                     mx_handle_close(vmo);
@@ -500,6 +501,13 @@ mx_status_t launchpad_get_entry_address(launchpad_t* lp, mx_vaddr_t* entry) {
     if (lp->entry == 0)
         return ERR_BAD_STATE;
     *entry = lp->entry;
+    return NO_ERROR;
+}
+
+mx_status_t launchpad_get_base_address(launchpad_t* lp, mx_vaddr_t* base) {
+    if (lp->base == 0)
+        return ERR_BAD_STATE;
+    *base = lp->base;
     return NO_ERROR;
 }
 
