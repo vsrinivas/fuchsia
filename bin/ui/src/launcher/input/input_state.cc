@@ -5,12 +5,13 @@
 #include "apps/mozart/src/launcher/input/input_state.h"
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace {
 // The input event mojom is currently defined to expect some number
 // of milliseconds.
 int64_t InputEventTimestampNow() {
-  return MojoGetTimeTicksNow() / 1000;
+  return ftl::TimePoint::Now().ToEpochDelta().ToMilliseconds();
 }
 }  // namespace
 

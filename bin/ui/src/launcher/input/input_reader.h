@@ -28,14 +28,14 @@ class InputReader : mtl::MessageLoopHandler {
  private:
   void MonitorDirectory();
   void DeviceAdded(std::unique_ptr<InputDevice> device);
-  void DeviceRemoved(MojoHandle handle);
+  void DeviceRemoved(mx_handle_t handle);
 
-  void OnDirectoryHandleReady(MojoHandle handle);
-  void OnDeviceHandleReady(MojoHandle handle);
+  void OnDirectoryHandleReady(mx_handle_t handle);
+  void OnDeviceHandleReady(mx_handle_t handle);
 
   // |mtl::MessageLoopHandler|:
-  void OnHandleReady(MojoHandle handle);
-  void OnHandleError(MojoHandle handle, MojoResult result);
+  void OnHandleReady(mx_handle_t handle);
+  void OnHandleError(mx_handle_t handle, mx_status_t result);
 
   InputInterpreter* interpreter_;
 
@@ -45,7 +45,7 @@ class InputReader : mtl::MessageLoopHandler {
   mx::channel input_directory_channel_;
 
   std::map<
-      MojoHandle,
+      mx_handle_t,
       std::pair<std::unique_ptr<InputDevice>, mtl::MessageLoop::HandlerKey>>
       devices_;
 

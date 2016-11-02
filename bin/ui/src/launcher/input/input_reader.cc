@@ -12,7 +12,6 @@
 #include <magenta/device/input.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <mojo/system/time.h>
 #include <mxio/io.h>
 #include <mxio/watcher.h>
 
@@ -85,10 +84,9 @@ void InputReader::MonitorDirectory() {
   }
   input_directory_channel_.reset(handle);
 
-  MojoHandleSignals signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-  input_directory_key_ =
-      main_loop_->AddHandler(this, MojoHandle(input_directory_channel_.get()),
-                             signals, ftl::TimeDelta::Max());
+  mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+  input_directory_key_ = main_loop_->AddHandler(
+      this, input_directory_channel_.get(), signals, ftl::TimeDelta::Max());
 }
 
 void InputReader::Start() {
@@ -98,7 +96,7 @@ void InputReader::Start() {
   main_loop_->task_runner()->PostTask([this] { MonitorDirectory(); });
 }
 
-void InputReader::DeviceRemoved(MojoHandle handle) {
+void InputReader::DeviceRemoved(mx_handle_t handle) {
   FTL_LOG(INFO) << "Input device " << devices_.at(handle).first->name()
                 << " removed";
   main_loop_->RemoveHandler(devices_.at(handle).second);
@@ -108,15 +106,15 @@ void InputReader::DeviceRemoved(MojoHandle handle) {
 
 void InputReader::DeviceAdded(std::unique_ptr<InputDevice> device) {
   FTL_LOG(INFO) << "Input device " << device->name() << " added ";
-  MojoHandle handle = device->handle();
-  MojoHandleSignals signals = MOJO_HANDLE_SIGNAL_SIGNAL0;
+  mx_handle_t handle = device->handle();
+  mx_signals_t signals = MX_SIGNAL_SIGNAL0;
   mtl::MessageLoop::HandlerKey key =
       main_loop_->AddHandler(this, handle, signals, ftl::TimeDelta::Max());
   interpreter_->RegisterDevice(device.get());
   devices_[handle] = std::make_pair(std::move(device), key);
 }
 
-void InputReader::OnDirectoryHandleReady(MojoHandle handle) {
+void InputReader::OnDirectoryHandleReady(mx_handle_t handle) {
   mx_status_t status;
   uint32_t sz = MXIO_MAX_FILENAME;
   char name[MXIO_MAX_FILENAME + 1];
@@ -133,7 +131,7 @@ void InputReader::OnDirectoryHandleReady(MojoHandle handle) {
   }
 }
 
-void InputReader::OnDeviceHandleReady(MojoHandle handle) {
+void InputReader::OnDeviceHandleReady(mx_handle_t handle) {
   InputDevice* device = devices_[handle].first.get();
   bool ret = device->Read([this, device](InputReport::ReportType type) {
     interpreter_->OnReport(device, type);
@@ -146,8 +144,8 @@ void InputReader::OnDeviceHandleReady(MojoHandle handle) {
 #pragma mark mtl::MessageLoopHandler
 // |mtl::MessageLoopHandler|:
 
-void InputReader::OnHandleReady(MojoHandle handle) {
-  if (MojoHandle(input_directory_channel_.get()) == handle) {
+void InputReader::OnHandleReady(mx_handle_t handle) {
+  if (input_directory_channel_.get() == handle) {
     OnDirectoryHandleReady(handle);
   } else if (devices_.count(handle)) {
     OnDeviceHandleReady(handle);
@@ -155,7 +153,7 @@ void InputReader::OnHandleReady(MojoHandle handle) {
   }
 }
 
-void InputReader::OnHandleError(MojoHandle handle, MojoResult result) {
+void InputReader::OnHandleError(mx_handle_t handle, mx_status_t result) {
   DeviceRemoved(handle);
 }
 

@@ -38,7 +38,7 @@ class InputDevice {
   bool Read(const OnReportCallback& callback);
 
   const std::string& name() const { return name_; }
-  MojoHandle handle() { return MojoHandle(event_.get()); }
+  mx_handle_t handle() { return event_.get(); }
 
   bool has_keyboard() const { return has_keyboard_; }
   bool has_mouse() const { return has_mouse_; }
