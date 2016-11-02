@@ -141,15 +141,10 @@ template("fidl") {
       "{{source_gen_dir}}/{{source_file_part}}.h",
       "{{source_gen_dir}}/{{source_file_part}}.cc",
     ]
-    generator_c_outputs = [
-      "{{source_gen_dir}}/{{source_file_part}}-c.c",
-      "{{source_gen_dir}}/{{source_file_part}}-c.h",
-    ]
     generator_js_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.js" ]
     generator_dart_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
-    generator_go_outputs = [ "${root_gen_dir}/go/src/{{source_dir}}/{{source_name_part}}/{{source_file_part}}.go" ]
     # TODO(vardhan): We can't have both .mojom and .fidl coexist because of
     # this hardcoded '_fidl' suffix. Has to do with python imports not handling
     # '.fidl/.mojom' in names. Investigate putting in a package instead.
@@ -176,8 +171,8 @@ template("fidl") {
       sources = invoker.sources
       outputs =
           generator_cpp_outputs + generator_dart_outputs +
-          generator_go_outputs + generator_java_outputs + generator_js_outputs +
-          generator_python_outputs + generator_c_outputs
+          generator_java_outputs + generator_js_outputs +
+          generator_python_outputs
       args = [
         fidl_tool,
         "gen",
