@@ -1,0 +1,18 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("app") {
+  sources = [
+    "application.cc",
+    "application.h",
+    "service_provider_impl.cc",
+    "service_provider_impl.h",
+  ]
+
+  deps = [
+    "//apps/modular/services/application",
+    "//lib/ftl",
+    "//lib/fidl/cpp/bindings",
+  ]
+}
