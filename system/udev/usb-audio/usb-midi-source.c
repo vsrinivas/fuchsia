@@ -135,7 +135,7 @@ static ssize_t usb_midi_source_read(mx_device_t* dev, void* data, size_t len, mx
 
     list_node_t* node = list_peek_head(&source->completed_reads);
     if (!node) {
-        status = ERR_BAD_STATE;
+        status = ERR_SHOULD_WAIT;
         goto out;
     }
     iotxn_t* txn = containerof(node, iotxn_t, node);

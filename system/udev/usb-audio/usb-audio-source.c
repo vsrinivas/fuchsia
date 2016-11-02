@@ -185,6 +185,7 @@ static ssize_t usb_audio_source_read(mx_device_t* dev, void* data, size_t length
 
     iotxn_t* txn = list_peek_head_type(&source->completed_reads, iotxn_t, node);
     if (!txn) {
+        status = ERR_SHOULD_WAIT;
         goto out;
     }
     // FIXME - for now we assume client reads with a buffer large enough for packet received
