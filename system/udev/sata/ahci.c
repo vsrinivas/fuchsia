@@ -469,7 +469,6 @@ static int ahci_worker_thread(void* arg) {
             // if IOTXN_SYNC_AFTER, pause the port until this command is complete
             if (txn->flags & IOTXN_SYNC_AFTER) {
                 port->flags |= AHCI_PORT_FLAG_SYNC_PAUSED;
-                goto next;
             }
             // run the command
             ahci_do_txn(dev, port, i, txn);
