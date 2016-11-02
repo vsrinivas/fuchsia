@@ -52,7 +52,7 @@ static struct list_node vc_list = LIST_INITIAL_VALUE(vc_list);
 static unsigned vc_count = 0;
 static vc_device_t* active_vc;
 static unsigned active_vc_index;
-static char battery_string[8];
+static vc_battery_info_t battery_info;
 static mtx_t vc_lock = MTX_INIT;
 
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
@@ -405,9 +405,9 @@ void vc_get_status_line(char* str, int n) {
     mtx_unlock(&vc_lock);
 }
 
-void vc_get_battery_string(char* str, int n) {
+void vc_get_battery_info(vc_battery_info_t* info) {
     mtx_lock(&vc_lock);
-    strncpy(str, battery_string, n);
+    memcpy(info, &battery_info, sizeof(vc_battery_info_t));
     mtx_unlock(&vc_lock);
 }
 
@@ -802,12 +802,17 @@ static int vc_battery_poll_thread(void* arg) {
             break;
         }
         mtx_lock(&vc_lock);
-        if (str[0] == 'c') {
-            snprintf(battery_string, sizeof(battery_string), "chg");
-        } else if (str[0] == 'e') {
-            snprintf(battery_string, sizeof(battery_string), "err");
+        if (str[0] == 'e') {
+            battery_info.state = ERROR;
+            battery_info.pct = -1;
         } else {
-            snprintf(battery_string, sizeof(battery_string), "%s", str);
+            if (str[0] == 'c') {
+                battery_info.state = CHARGING;
+                battery_info.pct = atoi(&str[1]);
+            } else {
+                battery_info.state = NOT_CHARGING;
+                battery_info.pct = atoi(str);
+            }
         }
         mtx_unlock(&vc_lock);
         if (active_vc) {
@@ -820,7 +825,6 @@ static int vc_battery_poll_thread(void* arg) {
 }
 
 static mx_status_t vc_misc_device_added(int dirfd, const char* fn, void* cookie) {
-    printf("vc: misc poll fn=%s\n", fn);
     if (strcmp("acpi-battery", fn)) {
         return NO_ERROR;
     }

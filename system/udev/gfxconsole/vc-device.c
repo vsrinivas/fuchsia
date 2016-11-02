@@ -232,7 +232,7 @@ static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) 
     char c;
     int idx = offset;
     int p_num = 0;
-    for (unsigned i = 0; i < MIN(dev->columns - offset, strlen(str)); i++) {
+    for (unsigned i = 0; i < strlen(str); i++) {
         c = str[i];
         if (state == NORMAL) {
             if (c == 0x1b) {
@@ -253,8 +253,8 @@ static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) 
                 } else if (p_num == 1 && fg <= 0x7) {
                     fg += 8;
                 } else if (p_num == 0) {
-                    fg = 7;
-                    bg = 0;
+                    fg = STATUS_FG;
+                    bg = STATUS_BG;
                 }
                 state = NORMAL;
             } else {
@@ -266,12 +266,36 @@ static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) 
 
 void vc_device_write_status(vc_device_t* dev) {
     char str[512];
+
+    // draw the tabs
     vc_get_status_line(str, sizeof(str));
     // TODO clean this up with textcon stuff
     gfx_fillrect(dev->st_gfx, 0, 0, dev->st_gfx->width, dev->st_gfx->height, palette_to_color(dev, STATUS_BG));
     write_status_at(dev, str, 0);
-    vc_get_battery_string(str, sizeof(str));
-    write_status_at(dev, str, dev->columns - 5);
+
+    // draw the battery status
+    vc_battery_info_t info;
+    vc_get_battery_info(&info);
+    switch (info.state) {
+        case ERROR:
+            snprintf(str, sizeof(str), "err");
+            break;
+        case CHARGING:
+            snprintf(str, sizeof(str), "\033[36m\033[1mc %d%%", info.pct);
+            break;
+        case NOT_CHARGING:
+            if (info.pct <= 20) {
+                snprintf(str, sizeof(str), "\033[34m\033[1m%d%%", info.pct);
+            } else {
+                snprintf(str, sizeof(str), "%d%%", info.pct);
+            }
+            break;
+        default:
+            str[0] = '\0';
+            break;
+    }
+    write_status_at(dev, str, dev->columns - 8);
+
     gfx_flush(dev->st_gfx);
 }
 

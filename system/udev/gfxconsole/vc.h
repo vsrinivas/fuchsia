@@ -102,7 +102,14 @@ void vc_device_free(vc_device_t* dev);
 
 mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
-void vc_get_battery_string(char* str, int n);
+
+typedef struct vc_battery_info {
+    enum {
+        UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
+    } state;
+    int pct;
+} vc_battery_info_t;
+void vc_get_battery_info(vc_battery_info_t* info);
 
 void vc_device_write_status(vc_device_t* dev);
 void vc_device_render(vc_device_t* dev);
