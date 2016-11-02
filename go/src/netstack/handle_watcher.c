@@ -45,11 +45,11 @@ mx_status_t handle_watcher_stop(void) {
   mx_signals_t observed;
   if ((r = mx_handle_wait_one(s_ctrl[1],
                               MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, 0u,
-                              &observed)) < 0) {
+                              &observed)) < 0 && r != ERR_TIMED_OUT) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
-  if (!(observed & MX_SIGNAL_READABLE)) {
+  if (r == ERR_TIMED_OUT || !(observed & MX_SIGNAL_READABLE)) {
     vdebug("watch_stop: send ABORT\n");
     c = ABORT;
     if ((r = mx_channel_write(s_ctrl[1], 0u, &c, 1u, NULL, 0u)) < 0) {
