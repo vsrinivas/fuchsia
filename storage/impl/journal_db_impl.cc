@@ -26,8 +26,10 @@ JournalDBImpl::JournalDBImpl(PageStorageImpl* page_storage,
       valid_(true) {}
 
 JournalDBImpl::~JournalDBImpl() {
-  FTL_DCHECK(!valid_)
-      << "Journal should be committed or rolled back before being destroyed.";
+  // Log a warning if the journal was not committed or rolled back.
+  if (valid_) {
+    FTL_LOG(WARNING) << "Journal not committed or rolled back.";
+  }
 }
 
 std::unique_ptr<Journal> JournalDBImpl::Simple(PageStorageImpl* page_storage,

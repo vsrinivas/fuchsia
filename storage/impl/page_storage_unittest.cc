@@ -208,6 +208,16 @@ TEST_F(PageStorageTest, CreateJournals) {
   EXPECT_NE(nullptr, journal);
 }
 
+TEST_F(PageStorageTest, DestroyUncommittedJournal) {
+  // It is not an error if a journal is not committed or rolled back.
+  std::unique_ptr<Journal> journal;
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::EXPLICIT, &journal));
+  EXPECT_NE(nullptr, journal);
+  EXPECT_EQ(Status::OK,
+            journal->Put("key", RandomId(kObjectIdSize), KeyPriority::EAGER));
+}
+
 TEST_F(PageStorageTest, AddObjectFromLocal) {
   std::string content("Some data");
 
