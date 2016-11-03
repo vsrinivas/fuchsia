@@ -8,10 +8,6 @@
             "bootfs_path": "bin/epolltest"
         },
         {
-            "binary": "nbiotest",
-            "bootfs_path": "bin/nbiotest"
-        },
-        {
             "binary": "netstack",
             "bootfs_path": "bin/netstack"
         },
