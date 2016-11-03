@@ -59,9 +59,10 @@ bool {{class_name}}_{{method.name}}_ForwardToCallback::Accept(
 {%-   endif %}
 {%- endfor %}
 
-{{proxy_name}}::{{proxy_name}}(::fidl::MessageReceiverWithResponder* receiver) {
-{#- Empty interfaces don't use receiver_, so silence compiler warnings. -#}
-  (void)receiver_;
+{{proxy_name}}::{{proxy_name}}(::fidl::MessageReceiverWithResponder* receiver)
+    : receiver_(receiver) {
+{# receiver_ is unused when there are no generated methods. Silence warnings. #}
+  (void)receiver_;      
 }
 
 {#--- Proxy definitions #}
