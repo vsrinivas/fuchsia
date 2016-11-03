@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/db.h"
+#include "apps/ledger/storage/impl/db_impl.h"
 
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/glue/crypto/rand.h"
@@ -152,32 +152,39 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
   std::unique_ptr<EntryChange> change_;
 };
 
+class BatchImpl : public DB::Batch {
+ public:
+  BatchImpl(std::function<Status(bool)> callback)
+      : callback_(callback), executed_(false) {}
+
+  ~BatchImpl() override {
+    if (!executed_)
+      callback_(false);
+  }
+
+  Status Execute() override {
+    FTL_DCHECK(!executed_);
+    executed_ = true;
+    return callback_(true);
+  }
+
+ private:
+  std::function<Status(bool)> callback_;
+  bool executed_;
+};
+
 }  // namespace
 
-DB::Batch::Batch(std::function<Status(bool)> callback)
-    : callback_(callback), executed_(false) {}
-
-DB::Batch::~Batch() {
-  if (!executed_)
-    callback_(false);
-}
-
-Status DB::Batch::Execute() {
-  FTL_DCHECK(!executed_);
-  executed_ = true;
-  return callback_(true);
-}
-
-DB::DB(PageStorageImpl* page_storage, std::string db_path)
+DbImpl::DbImpl(PageStorageImpl* page_storage, std::string db_path)
     : page_storage_(page_storage), db_path_(db_path) {
   FTL_DCHECK(page_storage);
 }
 
-DB::~DB() {
+DbImpl::~DbImpl() {
   FTL_DCHECK(!batch_);
 }
 
-Status DB::Init() {
+Status DbImpl::Init() {
   if (!files::CreateDirectory(db_path_)) {
     FTL_LOG(ERROR) << "Failed to create directory under " << db_path_;
     return Status::INTERNAL_IO_ERROR;
@@ -195,10 +202,10 @@ Status DB::Init() {
   return Status::OK;
 }
 
-std::unique_ptr<DB::Batch> DB::StartBatch() {
+std::unique_ptr<DB::Batch> DbImpl::StartBatch() {
   FTL_DCHECK(!batch_);
   batch_.reset(new leveldb::WriteBatch());
-  return std::unique_ptr<Batch>(new Batch([this](bool execute) {
+  return std::unique_ptr<Batch>(new BatchImpl([this](bool execute) {
     std::unique_ptr<leveldb::WriteBatch> batch = std::move(batch_);
     if (execute) {
       leveldb::Status status = db_->Write(write_options_, batch.get());
@@ -212,40 +219,40 @@ std::unique_ptr<DB::Batch> DB::StartBatch() {
   }));
 }
 
-Status DB::GetHeads(std::vector<CommitId>* heads) {
+Status DbImpl::GetHeads(std::vector<CommitId>* heads) {
   return GetByPrefix(convert::ToSlice(kHeadPrefix), heads);
 }
 
-Status DB::AddHead(const CommitId& head) {
+Status DbImpl::AddHead(const CommitId& head) {
   return Put(GetHeadKeyFor(head), "");
 }
 
-Status DB::RemoveHead(const CommitId& head) {
+Status DbImpl::RemoveHead(const CommitId& head) {
   return Delete(GetHeadKeyFor(head));
 }
 
-Status DB::ContainsHead(const CommitId& commit_id) {
+Status DbImpl::ContainsHead(const CommitId& commit_id) {
   std::string value;
   return Get(GetHeadKeyFor(commit_id), &value);
 }
 
-Status DB::GetCommitStorageBytes(const CommitId& commit_id,
-                                 std::string* storage_bytes) {
+Status DbImpl::GetCommitStorageBytes(const CommitId& commit_id,
+                                     std::string* storage_bytes) {
   return Get(GetCommitKeyFor(commit_id), storage_bytes);
 }
 
-Status DB::AddCommitStorageBytes(const CommitId& commit_id,
-                                 const std::string& storage_bytes) {
+Status DbImpl::AddCommitStorageBytes(const CommitId& commit_id,
+                                     const std::string& storage_bytes) {
   return Put(GetCommitKeyFor(commit_id), storage_bytes);
 }
 
-Status DB::RemoveCommit(const CommitId& commit_id) {
+Status DbImpl::RemoveCommit(const CommitId& commit_id) {
   return Delete(GetCommitKeyFor(commit_id));
 }
 
-Status DB::CreateJournal(JournalType journal_type,
-                         const CommitId& base,
-                         std::unique_ptr<Journal>* journal) {
+Status DbImpl::CreateJournal(JournalType journal_type,
+                             const CommitId& base,
+                             std::unique_ptr<Journal>* journal) {
   JournalId id = NewJournalId(journal_type);
   *journal = JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
   if (journal_type == JournalType::IMPLICIT) {
@@ -254,20 +261,20 @@ Status DB::CreateJournal(JournalType journal_type,
   return Status::OK;
 }
 
-Status DB::CreateMergeJournal(const CommitId& base,
-                              const CommitId& other,
-                              std::unique_ptr<Journal>* journal) {
+Status DbImpl::CreateMergeJournal(const CommitId& base,
+                                  const CommitId& other,
+                                  std::unique_ptr<Journal>* journal) {
   *journal = JournalDBImpl::Merge(
       page_storage_, this, NewJournalId(JournalType::EXPLICIT), base, other);
   return Status::OK;
 }
 
-Status DB::GetImplicitJournalIds(std::vector<JournalId>* journal_ids) {
+Status DbImpl::GetImplicitJournalIds(std::vector<JournalId>* journal_ids) {
   return GetByPrefix(convert::ToSlice(kImplicitJournalMetaPrefix), journal_ids);
 }
 
-Status DB::GetImplicitJournal(const JournalId& journal_id,
-                              std::unique_ptr<Journal>* journal) {
+Status DbImpl::GetImplicitJournal(const JournalId& journal_id,
+                                  std::unique_ptr<Journal>* journal) {
   FTL_DCHECK(journal_id.size() == kJournalIdSize);
   FTL_DCHECK(journal_id[0] == kImplicitJournalIdPrefix);
   CommitId base;
@@ -279,13 +286,13 @@ Status DB::GetImplicitJournal(const JournalId& journal_id,
   return s;
 }
 
-Status DB::RemoveExplicitJournals() {
+Status DbImpl::RemoveExplicitJournals() {
   static std::string kExplicitJournalPrefix = Concatenate(
       {kJournalPrefix, ftl::StringView(&kImplicitJournalIdPrefix, 1)});
   return DeleteByPrefix(kExplicitJournalPrefix);
 }
 
-Status DB::RemoveJournal(const JournalId& journal_id) {
+Status DbImpl::RemoveJournal(const JournalId& journal_id) {
   if (journal_id[0] == kImplicitJournalIdPrefix) {
     Status s = Delete(GetImplicitJournalMetaKeyFor(journal_id));
     if (s != Status::OK) {
@@ -295,20 +302,20 @@ Status DB::RemoveJournal(const JournalId& journal_id) {
   return DeleteByPrefix(GetJournalEntryPrefixFor(journal_id));
 }
 
-Status DB::AddJournalEntry(const JournalId& journal_id,
-                           ftl::StringView key,
-                           ftl::StringView value,
-                           KeyPriority priority) {
+Status DbImpl::AddJournalEntry(const JournalId& journal_id,
+                               ftl::StringView key,
+                               ftl::StringView value,
+                               KeyPriority priority) {
   return Put(GetJournalEntryKeyFor(journal_id, key),
              GetJournalEntryValueFor(value, priority));
 }
 
-Status DB::RemoveJournalEntry(const JournalId& journal_id,
-                              convert::ExtendedStringView key) {
+Status DbImpl::RemoveJournalEntry(const JournalId& journal_id,
+                                  convert::ExtendedStringView key) {
   return Put(GetJournalEntryKeyFor(journal_id, key), kJournalEntryDelete);
 }
 
-Status DB::GetJournalEntries(
+Status DbImpl::GetJournalEntries(
     const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
@@ -319,19 +326,19 @@ Status DB::GetJournalEntries(
   return Status::OK;
 }
 
-Status DB::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
+Status DbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
   return GetByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), commit_ids);
 }
 
-Status DB::MarkCommitIdSynced(const CommitId& commit_id) {
+Status DbImpl::MarkCommitIdSynced(const CommitId& commit_id) {
   return Delete(GetUnsyncedCommitKeyFor(commit_id));
 }
 
-Status DB::MarkCommitIdUnsynced(const CommitId& commit_id) {
+Status DbImpl::MarkCommitIdUnsynced(const CommitId& commit_id) {
   return Put(GetUnsyncedCommitKeyFor(commit_id), "");
 }
 
-Status DB::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
+Status DbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
   std::string value;
   Status s = Get(GetUnsyncedCommitKeyFor(commit_id), &value);
   if (s == Status::INTERNAL_IO_ERROR) {
@@ -341,19 +348,19 @@ Status DB::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
   return Status::OK;
 }
 
-Status DB::GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) {
+Status DbImpl::GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) {
   return GetByPrefix(convert::ToSlice(kUnsyncedObjectPrefix), object_ids);
 }
 
-Status DB::MarkObjectIdSynced(ObjectIdView object_id) {
+Status DbImpl::MarkObjectIdSynced(ObjectIdView object_id) {
   return Delete(GetUnsyncedObjectKeyFor(object_id));
 }
 
-Status DB::MarkObjectIdUnsynced(ObjectIdView object_id) {
+Status DbImpl::MarkObjectIdUnsynced(ObjectIdView object_id) {
   return Put(GetUnsyncedObjectKeyFor(object_id), "");
 }
 
-Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
+Status DbImpl::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   std::string value;
   Status s = Get(GetUnsyncedObjectKeyFor(object_id), &value);
   if (s == Status::INTERNAL_IO_ERROR) {
@@ -363,12 +370,12 @@ Status DB::IsObjectSynced(ObjectIdView object_id, bool* is_synced) {
   return Status::OK;
 }
 
-Status DB::SetNodeSize(size_t node_size) {
+Status DbImpl::SetNodeSize(size_t node_size) {
   ftl::StringView value(reinterpret_cast<char*>(&node_size), sizeof(int));
   return Put(kNodeSizeKey, value);
 }
 
-Status DB::GetNodeSize(size_t* node_size) {
+Status DbImpl::GetNodeSize(size_t* node_size) {
   std::string value;
   Status s = Get(kNodeSizeKey, &value);
   if (s != Status::OK) {
@@ -378,8 +385,8 @@ Status DB::GetNodeSize(size_t* node_size) {
   return Status::OK;
 }
 
-Status DB::GetByPrefix(const leveldb::Slice& prefix,
-                       std::vector<std::string>* key_suffixes) {
+Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,
+                           std::vector<std::string>* key_suffixes) {
   std::vector<std::string> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
   for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
@@ -395,7 +402,7 @@ Status DB::GetByPrefix(const leveldb::Slice& prefix,
   return Status::OK;
 }
 
-Status DB::DeleteByPrefix(const leveldb::Slice& prefix) {
+Status DbImpl::DeleteByPrefix(const leveldb::Slice& prefix) {
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
   for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
        it->Next()) {
@@ -404,7 +411,7 @@ Status DB::DeleteByPrefix(const leveldb::Slice& prefix) {
   return it->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
-Status DB::Get(convert::ExtendedStringView key, std::string* value) {
+Status DbImpl::Get(convert::ExtendedStringView key, std::string* value) {
   leveldb::Status s = db_->Get(read_options_, key, value);
   if (s.IsNotFound()) {
     return Status::NOT_FOUND;
@@ -415,7 +422,7 @@ Status DB::Get(convert::ExtendedStringView key, std::string* value) {
   return Status::OK;
 }
 
-Status DB::Put(convert::ExtendedStringView key, ftl::StringView value) {
+Status DbImpl::Put(convert::ExtendedStringView key, ftl::StringView value) {
   if (batch_) {
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
@@ -424,7 +431,7 @@ Status DB::Put(convert::ExtendedStringView key, ftl::StringView value) {
   return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
 }
 
-Status DB::Delete(convert::ExtendedStringView key) {
+Status DbImpl::Delete(convert::ExtendedStringView key) {
   if (batch_) {
     batch_->Delete(key);
     return Status::OK;

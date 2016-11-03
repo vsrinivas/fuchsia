@@ -11,6 +11,7 @@
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
+#include "apps/ledger/storage/impl/db_impl.h"
 #include "apps/ledger/storage/impl/journal_db_impl.h"
 #include "apps/ledger/storage/impl/page_storage_impl.h"
 #include "apps/ledger/storage/public/constants.h"
@@ -68,7 +69,7 @@ class DBTest : public ::testing::Test {
   // Test:
   void SetUp() override {
     std::srand(0);
-    db_.reset(new DB(&page_storage_, tmp_dir_.path()));
+    db_.reset(new DbImpl(&page_storage_, tmp_dir_.path()));
     ASSERT_EQ(Status::OK, db_->Init());
   }
 

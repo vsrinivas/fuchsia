@@ -19,8 +19,9 @@ source_set("lib") {
   sources = [
     "commit_impl.cc",
     "commit_impl.h",
-    "db.cc",
     "db.h",
+    "db_impl.cc",
+    "db_impl.h",
     "journal_db_impl.cc",
     "journal_db_impl.h",
     "ledger_storage_impl.cc",
