@@ -12,7 +12,7 @@ Notification::Notification() = default;
 
 Notification::Notification(NotificationId&& id,
                            Data&& content,
-                           std::map<StorageObjectId, Data>&& storage_objects)
+                           std::map<ObjectId, Data>&& storage_objects)
     : id(std::move(id)),
       content(std::move(content)),
       storage_objects(std::move(storage_objects)) {}

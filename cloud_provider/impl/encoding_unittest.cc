@@ -22,8 +22,7 @@ std::string operator"" _s(const char* str, size_t size) {
 TEST(EncodingTest, Encode) {
   Notification notification(
       "some_id", "some_content",
-      std::map<StorageObjectId, Data>{{"object_a", "data_a"},
-                                      {"object_b", "data_b"}});
+      std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
   std::string encoded;
   EXPECT_TRUE(EncodeNotification(notification, &encoded));
@@ -94,10 +93,9 @@ TEST(EncodingTest, DecodeMultiple) {
 // Verifies that encoding and JSON parsing we use work with zero bytes within
 // strings.
 TEST(EncodingTest, EncodeDecodeZeroByte) {
-  Notification notification(
-      "id\0\0\0"_s, "\0"_s,
-      std::map<StorageObjectId, Data>{{"object_a", "\0\0\0"_s},
-                                      {"object_\0"_s, "\0"_s}});
+  Notification notification("id\0\0\0"_s, "\0"_s,
+                            std::map<ObjectId, Data>{{"object_a", "\0\0\0"_s},
+                                                     {"object_\0"_s, "\0"_s}});
 
   std::string encoded;
   EXPECT_TRUE(EncodeNotification(notification, &encoded));

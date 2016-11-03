@@ -12,7 +12,7 @@ namespace cloud_provider {
 using AppId = std::string;
 using PageId = std::string;
 using NotificationId = std::string;
-using StorageObjectId = std::string;
+using ObjectId = std::string;
 using Data = std::string;
 
 enum class Status { OK, UNKNOWN_ERROR };

@@ -115,8 +115,7 @@ class CloudProviderImplTest : public ::testing::Test,
 TEST_F(CloudProviderImplTest, AddNotification) {
   Notification notification(
       "commit_id", "some_content",
-      std::map<StorageObjectId, Data>{{"object_a", "data_a"},
-                                      {"object_b", "data_b"}});
+      std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
   bool callback_called = false;
   cloud_provider_->AddNotification("page_id", notification,
@@ -185,10 +184,9 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
 
   watch_client_->OnPut("/", document);
 
-  Notification expected_n1("id_1", "some_content",
-                           std::map<StorageObjectId, Data>{});
+  Notification expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
   Notification expected_n2("id_2", "some_other_content",
-                           std::map<StorageObjectId, Data>{});
+                           std::map<ObjectId, Data>{});
   EXPECT_EQ(2u, notifications_.size());
   EXPECT_EQ(2u, server_timestamps_.size());
   EXPECT_EQ(expected_n1, notifications_[0]);
@@ -217,8 +215,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
 
   Notification expected_notification(
       "commit_id", "some_content",
-      std::map<StorageObjectId, Data>{{"object_a", "data_a"},
-                                      {"object_b", "data_b"}});
+      std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
   std::string expected_timestamp = ServerTimestampToBytes(1472722368296);
   EXPECT_EQ(1u, notifications_.size());
   EXPECT_EQ(expected_notification, notifications_[0]);
@@ -253,9 +250,9 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
 
     const Notification expected_notification_1(
         "id1", "xyz",
-        std::map<StorageObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
-    const Notification expected_notification_2(
-        "id2", "bazinga", std::map<StorageObjectId, Data>{});
+        std::map<ObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
+    const Notification expected_notification_2("id2", "bazinga",
+                                               std::map<ObjectId, Data>{});
     EXPECT_EQ(2u, records.size());
     EXPECT_EQ(expected_notification_1, records[0].notification);
     EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);

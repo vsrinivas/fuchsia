@@ -18,7 +18,7 @@ struct Notification {
   Notification();
   Notification(NotificationId&& id,
                Data&& content,
-               std::map<StorageObjectId, Data>&& inline_storage_objects);
+               std::map<ObjectId, Data>&& inline_storage_objects);
 
   ~Notification();
 
@@ -36,7 +36,7 @@ struct Notification {
   Data content;
 
   // The inline storage objects.
-  std::map<StorageObjectId, Data> storage_objects;
+  std::map<ObjectId, Data> storage_objects;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Notification);

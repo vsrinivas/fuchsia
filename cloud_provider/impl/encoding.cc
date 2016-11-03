@@ -143,10 +143,10 @@ bool DecodeNotificationFromValue(const rapidjson::Value& value,
     return false;
   }
 
-  std::map<StorageObjectId, Data> storage_objects;
+  std::map<ObjectId, Data> storage_objects;
   if (value.HasMember(kObjectsKey)) {
     for (auto& it : value[kObjectsKey].GetObject()) {
-      StorageObjectId storage_object_id;
+      ObjectId storage_object_id;
       if (!firebase::Decode(it.name.GetString(), &storage_object_id)) {
         return false;
       }
