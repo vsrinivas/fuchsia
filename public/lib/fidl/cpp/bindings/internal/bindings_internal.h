@@ -264,8 +264,10 @@ struct ValueTraits<T,
 };
 
 template <typename T>
-struct ValueTraits<mx::handle<T>> {
-  static bool Equals(const mx::handle<T>& a, const mx::handle<T>& b) {
+struct ValueTraits<T,
+                   typename std::enable_if<
+                      std::is_base_of<mx::handle<T>,T>::value>::type> {
+  static bool Equals(const T& a, const T& b) {
     return (&a == &b) || (!a && !b);
   }
 };

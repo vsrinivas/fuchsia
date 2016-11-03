@@ -19,16 +19,16 @@ _kind_to_cpp_type = {
   mojom.INT32:                 "int32_t",
   mojom.UINT32:                "uint32_t",
   mojom.FLOAT:                 "float",
-  mojom.HANDLE:                "fidl::Handle",
-  mojom.DCPIPE:                "fidl::DataPipeConsumerHandle",
-  mojom.DPPIPE:                "fidl::DataPipeProducerHandle",
-  mojom.MSGPIPE:               "mx::channel",
-  mojom.SHAREDBUFFER:          "fidl::SharedBufferHandle",
-  mojom.NULLABLE_HANDLE:       "fidl::Handle",
-  mojom.NULLABLE_DCPIPE:       "fidl::DataPipeConsumerHandle",
-  mojom.NULLABLE_DPPIPE:       "fidl::DataPipeProducerHandle",
-  mojom.NULLABLE_MSGPIPE:      "mx::channel",
-  mojom.NULLABLE_SHAREDBUFFER: "fidl::SharedBufferHandle",
+  mojom.HANDLE:                "fidl::internal::WrappedHandle",
+  mojom.DCPIPE:                "fidl::internal::WrappedHandle",
+  mojom.DPPIPE:                "fidl::internal::WrappedHandle",
+  mojom.MSGPIPE:               "fidl::internal::WrappedHandle",
+  mojom.SHAREDBUFFER:          "fidl::internal::WrappedHandle",
+  mojom.NULLABLE_HANDLE:       "fidl::internal::WrappedHandle",
+  mojom.NULLABLE_DCPIPE:       "fidl::internal::WrappedHandle",
+  mojom.NULLABLE_DPPIPE:       "fidl::internal::WrappedHandle",
+  mojom.NULLABLE_MSGPIPE:      "fidl::internal::WrappedHandle",
+  mojom.NULLABLE_SHAREDBUFFER: "fidl::internal::WrappedHandle",
   mojom.INT64:                 "int64_t",
   mojom.UINT64:                "uint64_t",
   mojom.DOUBLE:                "double",
@@ -92,7 +92,7 @@ def GetCppType(kind):
   if mojom.IsInterfaceKind(kind):
     return "fidl::internal::Interface_Data"
   if mojom.IsInterfaceRequestKind(kind):
-    return "mx::channel"
+    return "fidl::internal::WrappedHandle"
   if mojom.IsEnumKind(kind):
     return "int32_t"
   if mojom.IsStringKind(kind):
@@ -121,15 +121,15 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "fidl::ScopedHandle"
+    return "mx::channel"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "fidl::ScopedDataPipeConsumerHandle"
+    return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
-    return "fidl::ScopedDataPipeProducerHandle"
+    return "mx::datapipe_producer"
   if mojom.IsMessagePipeKind(kind):
-    return "fidl::ScopedMessagePipeHandle"
+    return "mx::channel"
   if mojom.IsSharedBufferKind(kind):
-    return "fidl::ScopedSharedBufferHandle"
+    return "mx::vmo"
   return GetCppTypeForKind(kind)
 
 def GetCppResultWrapperType(kind):
@@ -149,15 +149,15 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "fidl::ScopedHandle"
+    return "mx::channel"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "fidl::ScopedDataPipeConsumerHandle"
+    return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
-    return "fidl::ScopedDataPipeProducerHandle"
+    return "mx::datapipe_producer"
   if mojom.IsMessagePipeKind(kind):
-    return "fidl::ScopedMessagePipeHandle"
+    return "mx::channel"
   if mojom.IsSharedBufferKind(kind):
-    return "fidl::ScopedSharedBufferHandle"
+    return "mx::vmo"
   return GetCppTypeForKind(kind)
 
 def GetCppWrapperType(kind):
@@ -177,15 +177,15 @@ def GetCppWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "fidl::ScopedHandle"
+    return "mx::channel"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "fidl::ScopedDataPipeConsumerHandle"
+    return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
-    return "fidl::ScopedDataPipeProducerHandle"
+    return "mx::datapipe_producer"
   if mojom.IsMessagePipeKind(kind):
-    return "fidl::ScopedMessagePipeHandle"
+    return "mx::channel"
   if mojom.IsSharedBufferKind(kind):
-    return "fidl::ScopedSharedBufferHandle"
+    return "mx::vmo"
   return GetCppTypeForKind(kind)
 
 def GetCppConstWrapperType(kind):
@@ -205,15 +205,15 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "const fidl::String&"
   if mojom.IsGenericHandleKind(kind):
-    return "fidl::ScopedHandle"
+    return "mx::channel"
   if mojom.IsDataPipeConsumerKind(kind):
-    return "fidl::ScopedDataPipeConsumerHandle"
+    return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
-    return "fidl::ScopedDataPipeProducerHandle"
+    return "mx::datapipe_producer"
   if mojom.IsMessagePipeKind(kind):
-    return "fidl::ScopedMessagePipeHandle"
+    return "mx::channel"
   if mojom.IsSharedBufferKind(kind):
-    return "fidl::ScopedSharedBufferHandle"
+    return "mx::vmo"
   if not kind in _kind_to_cpp_type:
     print "missing:", kind.spec
   return GetCppTypeForKind(kind)

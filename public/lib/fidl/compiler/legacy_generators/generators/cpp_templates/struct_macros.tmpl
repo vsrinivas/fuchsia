@@ -258,8 +258,7 @@
     {{output_field}}.Bind(fidl::internal::UnwrapHandle<mx::channel>(
       fidl::internal::FetchAndReset(&{{input}}->{{name}})));
 {%-     elif kind|is_any_handle_kind %}
-    {{output_field}}.reset(fidl::internal::UnwrapHandle<mx::channel>(
-      fidl::internal::FetchAndReset(&{{input}}->{{name}})));
+    {{output_field}}.reset(fidl::internal::FetchAndReset(&{{input}}->{{name}}).value);
 {%-     elif kind|is_enum_kind %}
     {{output_field}} = static_cast<{{kind|cpp_wrapper_type}}>({{input}}->{{name}});
 {%-     else %}
