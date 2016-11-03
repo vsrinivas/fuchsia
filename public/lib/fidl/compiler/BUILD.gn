@@ -50,7 +50,15 @@ template("go_binary") {
   if (defined(invoker.deps)) {
     target_deps += invoker.deps
   }
+
   go_binary = "//buildtools/go"
+
+  assert(host_os == "mac" || host_os == "linux")
+  if (host_os == "mac") {
+    goroot = rebase_path("//buildtools/mac/go")
+  } else {
+    goroot = rebase_path("//buildtools/linux64/go")
+  }
 
   if (defined(invoker.output)) {
     output_path = "${root_out_dir}/${invoker.output}"
@@ -65,6 +73,7 @@ template("go_binary") {
     # TODO(ianloic): use 'go install' instead of 'go build' to avoid recompiling more than is needed.
     args = [
       "GOPATH=${gopath_str}",
+      "GOROOT=${goroot}",
       rebase_path(go_binary),
       "build",
       "-o",
