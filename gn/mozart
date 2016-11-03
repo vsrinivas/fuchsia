@@ -36,6 +36,10 @@
             "bootfs_path": "apps/paint_view"
         },
         {
+            "binary": "print_input",
+            "bootfs_path": "apps/print_input"
+        },
+        {
             "binary": "shapes_view",
             "bootfs_path": "apps/shapes_view"
         },
