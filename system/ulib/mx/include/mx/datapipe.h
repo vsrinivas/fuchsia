@@ -26,24 +26,6 @@ public:
                               datapipe_consumer* consumer);
 };
 
-// static
-template <typename T>
-mx_status_t datapipe<T>::create(mx_size_t element_size, mx_size_t capacity,
-                             uint32_t options, datapipe_producer* producer,
-                             datapipe_consumer* consumer) {
-    mx_handle_t consumer_handle = MX_HANDLE_INVALID;
-    mx_handle_t h = mx_datapipe_create(options, element_size,
-                                       capacity, &consumer_handle);
-    consumer->reset(consumer_handle);
-    if (h < 0) {
-        producer->reset(MX_HANDLE_INVALID);
-        return h;
-    } else {
-        producer->reset(h);
-        return NO_ERROR;
-    }
-}
-
 class datapipe_producer : public datapipe<datapipe_producer> {
 public:
     datapipe_producer() = default;
@@ -128,5 +110,23 @@ public:
         return mx_datapipe_end_read(get(), read);
     }
 };
+
+// static
+template <typename T>
+mx_status_t datapipe<T>::create(mx_size_t element_size, mx_size_t capacity,
+                             uint32_t options, datapipe_producer* producer,
+                             datapipe_consumer* consumer) {
+    mx_handle_t consumer_handle = MX_HANDLE_INVALID;
+    mx_handle_t h = mx_datapipe_create(options, element_size,
+                                       capacity, &consumer_handle);
+    consumer->reset(consumer_handle);
+    if (h < 0) {
+        producer->reset(MX_HANDLE_INVALID);
+        return h;
+    } else {
+        producer->reset(h);
+        return NO_ERROR;
+    }
+}
 
 } // namespace mx
