@@ -14,7 +14,7 @@ import '../core.dart'
     show
         MojoResult,
         HandleSignals,
-        Channel,
+        ChannelPipe,
         ChannelEndpoint,
         DataPipe,
         DataPipeProducer,

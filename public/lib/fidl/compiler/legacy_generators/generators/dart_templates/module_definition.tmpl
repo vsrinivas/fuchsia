@@ -26,7 +26,7 @@ const {{constant.kind|dart_type}} {{constant|name}} = {{constant.resolved_value}
 {%-   include "interface_definition.tmpl" %}
 {%- endfor %}
 
-{% if should_gen_mojom_types -%}
+{% if should_gen_fidl_types -%}
 {{typepkg}}RuntimeTypeInfo getRuntimeTypeInfo() => _runtimeTypeInfo ??
     _initRuntimeTypeInfo();
 
@@ -37,7 +37,7 @@ Map<String, {{typepkg}}UserDefinedType> getAllMojomTypeDefinitions() {
 var _runtimeTypeInfo;
 {{typepkg}}RuntimeTypeInfo  _initRuntimeTypeInfo() {
   // serializedRuntimeTypeInfo contains the bytes of the Mojo serialization of
-  // a mojom_types.RuntimeTypeInfo struct describing the Mojom types in this
+  // a fidl_types.RuntimeTypeInfo struct describing the Mojom types in this
   // file. The string contains the base64 encoding of the gzip-compressed bytes.
   var serializedRuntimeTypeInfo = "{{module.serialized_runtime_type_info}}";
 

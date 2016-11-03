@@ -190,11 +190,11 @@ _spec_to_encode_method = {
   mojom.UINT8.spec:                 'encodeUint8',
 }
 
-# The mojom_types.mojom and service_describer.mojom files are special because
+# The fidl_types.mojom and service_describer.mojom files are special because
 # they are used to generate mojom Type's and ServiceDescription implementations.
 # They need to be imported, unless the file itself is being generated.
 _service_describer_pkg_short = "service_describer"
-_mojom_types_pkg_short = "fidl_types"
+_fidl_types_pkg_short = "fidl_types"
 
 def GetDartType(kind):
   if kind.imported_from:
@@ -466,17 +466,19 @@ def GetPackage(ignore_package_annotations, module):
       package = package.strip()
       if package != '':
         return package
-    # Default package.
-    return 'mojom'
+    return module.namespace
 
 def GetImportUri(ignore_package_annotations, module):
   if ignore_package_annotations:
       return os.path.join(GetPackage(ignore_package_annotations, module), module.name)
   else:
-      package = GetPackage(ignore_package_annotations, module);
-      elements = module.namespace.split('.')
-      elements.append("%s" % module.name)
-      return os.path.join(package, *elements)
+      if module.attributes and 'DartPackage' in module.attributes:
+          package = GetPackage(ignore_package_annotations, module);
+          elements = module.namespace.split('.')
+          elements.append("%s" % module.name)
+          return os.path.join(package, *elements)
+      else:
+          return os.path.join(module.namespace, module.name)
 
 def RaiseHelper(msg):
     raise Exception(msg)
@@ -515,7 +517,7 @@ class Generator(generator.Generator):
   }
 
   # If set to True, then mojom type information will be generated.
-  should_gen_mojom_types = False
+  should_gen_fidl_types = False
 
   def GetParameters(self, args):
     package = self.module.name.split('.')[0]
@@ -533,13 +535,13 @@ class Generator(generator.Generator):
     if self.ignore_package_annotations:
       service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
         _service_describer_pkg_short
-      mojom_types_pkg = "package:lib.fidl.compiler.interface/%s.fidl.dart" % \
-        _mojom_types_pkg_short
+      fidl_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
+        _fidl_types_pkg_short
     else:
       service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
               _service_describer_pkg_short
-      mojom_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
-              _mojom_types_pkg_short
+      fidl_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
+              _fidl_types_pkg_short
 
     parameters = {
       "namespace": self.module.namespace,
@@ -552,10 +554,10 @@ class Generator(generator.Generator):
       "interfaces": self.GetInterfaces(),
       "imported_interfaces": self.GetImportedInterfaces(),
       "imported_from": self.ImportedFrom(),
-      "typepkg": '%s.' % _mojom_types_pkg_short,
+      "typepkg": '%s.' % _fidl_types_pkg_short,
       "descpkg": '%s.' % _service_describer_pkg_short,
-      "mojom_types_import": 'import \'%s\' as %s;' % \
-        (mojom_types_pkg, _mojom_types_pkg_short),
+      "fidl_types_import": 'import \'%s\' as %s;' % \
+        (fidl_types_pkg, _fidl_types_pkg_short),
       "service_describer_import": 'import \'%s\' as %s;' % \
         (service_describer_pkg, _service_describer_pkg_short),
       "has_handles": has_handles,
@@ -563,9 +565,9 @@ class Generator(generator.Generator):
     }
 
     # If this is the mojom types package, clear the import-related params.
-    if package == _mojom_types_pkg_short:
+    if package == _fidl_types_pkg_short:
       parameters["typepkg"] = ""
-      parameters["mojom_types_import"] = ""
+      parameters["fidl_types_import"] = ""
 
     # If this is the service describer package, clear the import-related params.
     if package == _service_describer_pkg_short:
@@ -580,7 +582,7 @@ class Generator(generator.Generator):
 
   def GetGlobals(self):
     return {
-      'should_gen_mojom_types': self.should_gen_mojom_types,
+      'should_gen_fidl_types': self.should_gen_fidl_types,
     }
 
   @UseJinja("dart_templates/module.lib.tmpl", filters=dart_filters)
@@ -589,8 +591,8 @@ class Generator(generator.Generator):
 
 
   def GenerateFiles(self, args):
-    self.should_gen_mojom_types = "--generate_type_info" in args
-    self.ignore_package_annotations = True # "--dart_ignore-package-annotations" in args
+    self.should_gen_fidl_types = "--generate_type_info" in args
+    self.ignore_package_annotations = "--dart_ignore-package-annotations" in args
 
     elements = self.module.namespace.split('.')
     elements.append("%s.dart" % self.module.name)

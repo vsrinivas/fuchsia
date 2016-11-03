@@ -4,7 +4,6 @@
 
 import 'package:lib.fidl.examples.interfaces/hello.fidl.dart';
 
-
 void main(List args, Object request) {
   Hello h;
   /*

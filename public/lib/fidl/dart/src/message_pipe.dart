@@ -176,15 +176,15 @@ class ChannelEndpoint {
       "status: ${MojoResult.string(status)})";
 }
 
-class Channel {
+class ChannelPipe {
   static const int FLAG_NONE = 0;
 
   List<ChannelEndpoint> endpoints;
   int status;
 
-  Channel._() : status = MojoResult.kOk;
+  ChannelPipe._() : status = MojoResult.kOk;
 
-  factory Channel([int flags = FLAG_NONE]) {
+  factory ChannelPipe([int flags = FLAG_NONE]) {
     List result = ChannelNatives.MojoCreateMessagePipe(flags);
     if (result == null) {
       return null;
@@ -193,7 +193,7 @@ class Channel {
 
     Handle end1 = new Handle(result[1]);
     Handle end2 = new Handle(result[2]);
-    Channel pipe = new Channel._();
+    ChannelPipe pipe = new ChannelPipe._();
     pipe.endpoints = new List(2);
     pipe.endpoints[0] = new ChannelEndpoint(end1);
     pipe.endpoints[1] = new ChannelEndpoint(end2);

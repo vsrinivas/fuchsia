@@ -218,7 +218,7 @@ class Encoder {
       return;
     }
     if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.Channel();
+      var pipe = new core.ChannelPipe();
       mojoInterface.ctrl.bind(pipe.endpoints[0]);
       encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);
       // Set the version to the version in the stub.
@@ -242,7 +242,7 @@ class Encoder {
       return;
     }
     if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.Channel();
+      var pipe = new core.ChannelPipe();
       mojoInterface.ctrl.bind(pipe.endpoints[0]);
       mojoInterface.ctrl.beginHandlingEvents();
       encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);

@@ -9,7 +9,7 @@ const int _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name =
 {%-  endfor %}
 
 class _{{interface|name}}ServiceDescription implements {{descpkg}}ServiceDescription {
-{%- if should_gen_mojom_types and interface.service_name %}
+{%- if should_gen_fidl_types and interface.service_name %}
   void getTopLevelInterface(Function responder){
     var interfaceTypeKey = getRuntimeTypeInfo().services["{{interface.service_name}}"];
     var userDefinedType = getAllMojomTypeDefinitions()[interfaceTypeKey];
