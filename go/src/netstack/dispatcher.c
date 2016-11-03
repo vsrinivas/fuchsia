@@ -30,7 +30,10 @@
 static mxio_dispatcher_t* remoteio_dispatcher;
 
 static mxrio_msg_t* msg_dup(mxrio_msg_t* msg) {
-  size_t len = MXRIO_HDR_SZ + msg->datalen;
+  // msg->datalen : the data size in the request
+  // msg->arg : the max data size in the reply
+  size_t len =
+      MXRIO_HDR_SZ + (((int)msg->datalen > msg->arg) ? msg->datalen : msg->arg);
   mxrio_msg_t* msg_copy = calloc(1, len);
   debug_alloc("msg_dup %p\n", msg_copy);
   return memcpy(msg_copy, msg, len);

@@ -28,6 +28,19 @@ executable("epolltest") {
   ]
 }
 
+executable("nbiotest") {
+  testonly = true
+
+  sources = [
+    "nbiotest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+}
+
 executable("polltest") {
   testonly = true
 

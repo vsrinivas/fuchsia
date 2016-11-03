@@ -219,18 +219,25 @@ int net_getsockopt(int sockfd, int level, int optname, void* optval,
       errno = EINVAL;
       return -1;
   }
+  debug_port("net_getsockopt: level=%d optname=%d *optlen=%d\n", level, optname,
+             *optlen);
+  // lwip_getsockopt() doesn't adjust optlen so we have to do it here
   switch (optname) {
     case SO_ERROR:
       lwip_optname = 0x1007;
+      *optlen = sizeof(int);
       break;
     case SO_REUSEADDR:
       lwip_optname = 0x0004;
+      *optlen = sizeof(int);
       break;
     case SO_KEEPALIVE:
       lwip_optname = 0x0008;
+      *optlen = sizeof(int);
       break;
     case SO_BROADCAST:
       lwip_optname = 0x0020;
+      *optlen = sizeof(int);
       break;
     default:
       error("net_getsockopt: unknown optname %d\n", optname);

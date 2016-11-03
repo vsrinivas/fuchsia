@@ -16,6 +16,7 @@ typedef struct iostate {
   atomic_int refcount;
   int sockfd;
   mx_handle_t s;  // socket
+  int last_errno;
 
   rwbuf_t* rbuf;
   int rlen;

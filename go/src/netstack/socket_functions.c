@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
+#include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +11,6 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-
-#include <assert.h>
-#include <errno.h>
 
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
@@ -36,10 +35,18 @@ void handle_close(iostate_t* ios, mx_signals_t signals) {
   handle_request(request_pack(MXRIO_CLOSE, 0, NULL, ios), EVENT_NONE, signals);
 }
 
-static void schedule_sigconn(iostate_t* ios) {
-  debug("schedule_sigconn\n");
+static void schedule_sigconn_r(iostate_t* ios) {
+  debug("schedule_sigconn_r\n");
   fd_event_set(ios->sockfd, EVENT_READ);
-  wait_queue_put(WAIT_NET, ios->sockfd, request_pack(IO_SIGCONN, 0, NULL, ios));
+  wait_queue_put(WAIT_NET, ios->sockfd,
+                 request_pack(IO_SIGCONN_R, 0, NULL, ios));
+}
+
+static void schedule_sigconn_w(iostate_t* ios) {
+  debug("schedule_sigconn_w\n");
+  fd_event_set(ios->sockfd, EVENT_WRITE);
+  wait_queue_put(WAIT_NET, ios->sockfd,
+                 request_pack(IO_SIGCONN_W, 0, NULL, ios));
 }
 
 static void schedule_rw(iostate_t* ios) {
@@ -128,20 +135,22 @@ enum {
 
 static mx_status_t errno_to_status(int errno_) {
   switch (errno_) {
-    case ENOMEM:
-      return ERR_NO_MEMORY;
-    case ENOBUFS:
-      return ERR_NO_RESOURCES;
-    case EWOULDBLOCK:
-      return ERR_SHOULD_WAIT;
-    case EBADF:
-      return ERR_BAD_HANDLE;
     case EACCES:
       return ERR_ACCESS_DENIED;
+    case EBADF:
+      return ERR_BAD_HANDLE;
+    case EINPROGRESS:
+      return ERR_SHOULD_WAIT;
     case EINVAL:
       return ERR_INVALID_ARGS;
     case EIO:
       return ERR_IO;
+    case ENOBUFS:
+      return ERR_NO_RESOURCES;
+    case ENOMEM:
+      return ERR_NO_MEMORY;
+    case EWOULDBLOCK:
+      return ERR_SHOULD_WAIT;
     default:
       return ERR_IO;  // TODO: map more errno
   }
@@ -254,6 +263,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
 
   ios->sockfd = net_socket(domain, type, protocol);
   int errno_ = (ios->sockfd < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_socket => %d (errno=%d)\n", ios->sockfd, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -264,6 +274,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   int ret = net_ioctl(ios->sockfd, FIONBIO, &non_blocking);
   debug_net("net_ioctl(FIONBIO) => %d (errno=%d)\n", ret, errno_);
   errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   if (errno_ != 0) {
     iostate_release(ios);
     return errno_to_status(errno_);
@@ -312,29 +323,13 @@ mx_status_t do_close(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_connect(mxrio_msg_t* msg, iostate_t* ios, int events,
                        mx_signals_t signals) {
   int errno_ = 0;
-  if (events == EVENT_NONE) {
-    int ret = net_connect(ios->sockfd, (struct sockaddr*)msg->data,
-                          (socklen_t)msg->datalen);
-    errno_ = (ret < 0) ? errno : 0;
-    debug_net("net_connect => %d (errno=%d)\n", ret, errno_);
-    if (errno_ == EINPROGRESS) {
-      debug("connect pending\n");
-      // when the connection is done, it'll be writable
-      fd_event_set(ios->sockfd, EVENT_WRITE);
-      return PENDING_NET;
-    }
-  } else {
-    debug("connect resumed\n");
-    int val;
-    socklen_t vallen = sizeof(val);
-    int ret = net_getsockopt(ios->sockfd, SOL_SOCKET, SO_ERROR, &val, &vallen);
-    errno_ = (ret < 0) ? errno : 0;
-    debug_net("net_getsockopt => %d (errno=%d)\n", ret, errno_);
-    if (errno_ != 0) {
-      return errno_to_status(errno_);
-    }
-    debug_net("val(errno)=%d, vallen=%d\n", val, vallen);
-    errno_ = val;
+  int ret = net_connect(ios->sockfd, (struct sockaddr*)msg->data,
+                        (socklen_t)msg->datalen);
+  errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
+  debug_net("net_connect => %d (errno=%d)\n", ret, errno_);
+  if (errno_ == EINPROGRESS) {
+    schedule_sigconn_w(ios);
   }
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -346,11 +341,31 @@ mx_status_t do_connect(mxrio_msg_t* msg, iostate_t* ios, int events,
   return NO_ERROR;
 }
 
+mx_status_t do_sigconn_w(mxrio_msg_t* msg, iostate_t* ios, int events,
+                         mx_signals_t signals) {
+  debug_net("do_sigconn_w: events=0x%x\n", events);
+  mx_status_t r =
+      mx_object_signal(ios->s, 0u, MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION);
+  debug_always("mx_object_signal(set) => %d\n", r);
+  int val;
+  socklen_t vallen = sizeof(val);
+  int ret = net_getsockopt(ios->sockfd, SOL_SOCKET, SO_ERROR, &val, &vallen);
+  int errno_ = (ret < 0) ? errno : 0;
+  debug_net("net_getsockopt => %d (errno=%d)\n", ret, errno_);
+  if (errno_ == 0) {
+    debug_net("last_errno=%d\n", val);
+    ios->last_errno = val;
+    if (val == 0) schedule_rw(ios);
+  }
+  return NO_ERROR;
+}
+
 mx_status_t do_bind(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
   int ret = net_bind(ios->sockfd, (struct sockaddr*)msg->data,
                      (socklen_t)msg->datalen);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_bind => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -371,16 +386,17 @@ mx_status_t do_listen(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
-  schedule_sigconn(ios);
+  schedule_sigconn_r(ios);
   msg->datalen = 0;
   msg->arg2.off = 0;
   return NO_ERROR;
 }
 
-mx_status_t do_sigconn(mxrio_msg_t* msg, iostate_t* ios, int events,
-                       mx_signals_t signals) {
-  debug_net("do_sigconn: events=0x%x\n", events);
-  mx_status_t r = mx_object_signal(ios->s, 0u, MX_SIGNAL_SIGNAL0);
+mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
+                         mx_signals_t signals) {
+  debug_net("do_sigconn_r: events=0x%x\n", events);
+  mx_status_t r =
+      mx_object_signal(ios->s, 0u, MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION);
   debug_always("mx_object_signal(set) => %d\n", r);
   return NO_ERROR;
 }
@@ -391,18 +407,15 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   // the client will call getpeername later.
   int ret = net_accept(ios->sockfd, NULL, NULL);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_accept => %d (errno=%d)\n", ret, errno_);
-  if (errno_ == EWOULDBLOCK) {
-    vdebug("accept pending\n");
-    fd_event_set(ios->sockfd, EVENT_READ);
-    return PENDING_NET;
-  } else if (errno_ != 0) {
+  if (errno_ != 0) {
     return errno_to_status(errno_);
   }
 
   mx_status_t r = mx_object_signal(ios->s, MX_SIGNAL_SIGNAL0, 0u);
   debug_always("mx_object_signal(clear) => %d\n", r);
-  schedule_sigconn(ios);
+  schedule_sigconn_r(ios);
 
   // TODO: share this code with socket()
   iostate_t* ios_new = iostate_alloc();
@@ -411,6 +424,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   int non_blocking = 1;
   ret = net_ioctl(ios_new->sockfd, FIONBIO, &non_blocking);
   errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_ioctl(FIONBIO) => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     iostate_release(ios_new);
@@ -437,6 +451,22 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   return NO_ERROR;
 }
 
+mx_status_t do_ioctl(mxrio_msg_t* msg, iostate_t* ios, int events,
+                     mx_signals_t signals) {
+  mx_status_t r = NO_ERROR;
+  int op = msg->arg2.op;
+  debug("do_ioctl: op=0x%x, datalen=%d\n", op, msg->datalen);
+  switch (op) {
+    default:
+      error("do_ioctl: unknown op 0x%x\n", op);
+      r = ERR_INVALID_ARGS;
+      break;
+  }
+
+  msg->arg2.off = 0;
+  return r;
+}
+
 mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
   debug_rw("do_read: rlen=%d net=%d socket=%d events=0x%x signals=0x%x\n",
@@ -451,6 +481,7 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
     }
     int n = net_read(ios->sockfd, ios->rbuf->data, RWBUF_SIZE);
     int errno_ = (n < 0) ? errno : 0;
+    ios->last_errno = errno_;
     debug_net("net_read => %d (errno=%d)\n", n, errno_);
     if (n == 0) {
     connection_closed:
@@ -547,6 +578,7 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
     int n = net_write(ios->sockfd, ios->wbuf->data + ios->woff,
                       ios->wlen - ios->woff);
     int errno_ = (n < 0) ? errno : 0;
+    ios->last_errno = errno_;
     debug_net("net_write => %d (errno=%d)\n", n, errno_);
     if (errno_ == EWOULDBLOCK) {
       fd_event_set(ios->sockfd, EVENT_WRITE);
@@ -586,6 +618,7 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
   struct addrinfo* res;
   int ret = net_getaddrinfo(node, service, (struct addrinfo*)hints, &res);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_getaddrinfo() => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -622,6 +655,7 @@ mx_status_t do_getsockname(mxrio_msg_t* msg, iostate_t* ios, int events,
   int ret =
       net_getsockname(ios->sockfd, (struct sockaddr*)&reply->addr, &reply->len);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_getsockname => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -639,6 +673,7 @@ mx_status_t do_getpeername(mxrio_msg_t* msg, iostate_t* ios, int events,
   int ret =
       net_getpeername(ios->sockfd, (struct sockaddr*)&reply->addr, &reply->len);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_getpeername => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -653,14 +688,22 @@ mx_status_t do_getsockopt(mxrio_msg_t* msg, iostate_t* ios, int events,
                           mx_signals_t signals) {
   struct mxrio_sockopt_req_reply* req_reply =
       (struct mxrio_sockopt_req_reply*)msg->data;
-  req_reply->optlen = sizeof(req_reply->optval);
-  int ret = net_getsockopt(ios->sockfd, req_reply->level, req_reply->optname,
-                           &req_reply->optval, &req_reply->optlen);
-  int errno_ = (ret < 0) ? errno : 0;
-  debug_net("net_getsockopt => %d (errno=%d)\n", ret, errno_);
+  int errno_ = 0;
+  if (req_reply->level == SOL_SOCKET && req_reply->optname == SO_ERROR) {
+    req_reply->optlen = sizeof(int);
+    *(int*)req_reply->optval = ios->last_errno;
+  } else {
+    req_reply->optlen = sizeof(req_reply->optval);
+    int ret = net_getsockopt(ios->sockfd, req_reply->level, req_reply->optname,
+                             &req_reply->optval, &req_reply->optlen);
+    errno_ = (ret < 0) ? errno : 0;
+    ios->last_errno = errno_;
+    debug_net("net_getsockopt => %d (errno=%d)\n", ret, errno_);
+  }
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
+  debug("do_getsockopt: optlen=%d\n", req_reply->optlen);
 
   msg->arg2.off = 0;
   msg->datalen = sizeof(*req_reply);
@@ -674,6 +717,7 @@ mx_status_t do_setsockopt(mxrio_msg_t* msg, iostate_t* ios, int events,
   int ret = net_setsockopt(ios->sockfd, req->level, req->optname, &req->optval,
                            req->optlen);
   int errno_ = (ret < 0) ? errno : 0;
+  ios->last_errno = errno_;
   debug_net("net_setsockopt => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
@@ -691,6 +735,7 @@ static do_func_t do_funcs[] = {
         [MXRIO_CONNECT] = do_connect,
         [MXRIO_BIND] = do_bind,
         [MXRIO_LISTEN] = do_listen,
+        [MXRIO_IOCTL] = do_ioctl,
         [MXRIO_GETADDRINFO] = do_getaddrinfo,
         [MXRIO_GETSOCKNAME] = do_getsockname,
         [MXRIO_GETPEERNAME] = do_getpeername,
@@ -699,12 +744,14 @@ static do_func_t do_funcs[] = {
         [MXRIO_WRITE] = do_write,
         [MXRIO_READ] = do_read,
         [MXRIO_CLOSE] = do_close,
-        [IO_SIGCONN] = do_sigconn,
+        [IO_SIGCONN_R] = do_sigconn_r,
+        [IO_SIGCONN_W] = do_sigconn_w,
 };
 
 static bool is_message_valid(mxrio_msg_t* msg) {
   if ((msg->magic != MXRIO_MAGIC) || (msg->datalen > MXIO_CHUNK_SIZE) ||
       (msg->hcount > MXIO_MAX_HANDLES)) {
+    error("send_status: msg invalid\n");
     return false;
   }
   return true;
@@ -719,7 +766,6 @@ static void discard_handles(mx_handle_t* handles, unsigned count) {
 static void send_status(mxrio_msg_t* msg, mx_handle_t rh) {
   debug("send_status: msg->arg = %d\n", msg->arg);
   if ((msg->arg < 0) || !is_message_valid(msg)) {
-    error("send_status: msg invalid\n");
     discard_handles(msg->handle, msg->hcount);
     msg->datalen = 0;
     msg->hcount = 0;
@@ -774,7 +820,8 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
       case MXRIO_READ:
       case MXRIO_WRITE:
       case MXRIO_CLOSE:
-      case IO_SIGCONN:
+      case IO_SIGCONN_R:
+      case IO_SIGCONN_W:
         // Don't call send_status()
         break;
       default:
