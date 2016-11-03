@@ -29,9 +29,7 @@ typedef uint64_t mx_koid_t;
 #define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
 
 // Socket flags and limits.
-#define MX_SOCKET_CONTROL                   1u
-#define MX_SOCKET_HALF_CLOSE                2u
-#define MX_SOCKET_CONTROL_MAX_LEN           1024u
+#define MX_SOCKET_HALF_CLOSE                1u
 
 // Structure for mx_waitset_*():
 typedef struct mx_waitset_result {

@@ -172,7 +172,6 @@ status_t SocketDispatcher::Create(uint32_t flags,
 
 SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
-      oob_len_(0u),
       half_closed_{false, false} {
     const auto kSatisfiable =
         MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED |
@@ -281,8 +280,7 @@ status_t SocketDispatcher::HalfCloseOther() {
     return NO_ERROR;
 }
 
-mx_ssize_t SocketDispatcher::WriteHelper(const void* src, mx_size_t len,
-                                         bool from_user, bool is_oob) {
+mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_user) {
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -293,10 +291,7 @@ mx_ssize_t SocketDispatcher::WriteHelper(const void* src, mx_size_t len,
         other = other_;
     }
 
-    auto st = is_oob ?
-        other->OOB_WriteSelf(src, len, from_user) :
-        other->WriteSelf(src, len, from_user);
-    return st;
+    return other->WriteSelf(src, len, from_user);
 }
 
 mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from_user) {
@@ -320,27 +315,6 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
         other_->state_tracker_.UpdateSatisfied(MX_SIGNAL_WRITABLE, 0u);
 
     return st;
-}
-
-mx_ssize_t SocketDispatcher::OOB_WriteSelf(const void* src, mx_size_t len, bool from_user) {
-    AutoLock lock(&lock_);
-    if (oob_len_)
-        return ERR_SHOULD_WAIT;
-    if (len > sizeof(oob_))
-        return ERR_BUFFER_TOO_SMALL;
-
-    if (from_user) {
-        if (user_ptr<const void>(src).copy_array_from_user(oob_, len) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    } else {
-        memcpy(oob_, src, len);
-    }
-
-    oob_len_ = len;
-    state_tracker_.UpdateSatisfied(0u, MX_SIGNAL_SIGNALED);
-    if (iopc_)
-        iopc_->Signal(MX_SIGNAL_SIGNALED, &lock_);
-    return len;
 }
 
 mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
@@ -373,21 +347,3 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     return st;
 }
 
-mx_ssize_t SocketDispatcher::OOB_Read(void* dest, mx_size_t len, bool from_user) {
-    AutoLock lock(&lock_);
-    if (!oob_len_)
-        return ERR_SHOULD_WAIT;
-    if (oob_len_ > len)
-        return ERR_BUFFER_TOO_SMALL;
-
-    if (from_user) {
-        if (user_ptr<void>(dest).copy_array_to_user(oob_, oob_len_) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-    } else {
-        memcpy(dest, oob_, oob_len_);
-    }
-    auto read_len = oob_len_;
-    oob_len_ = 0u;
-    state_tracker_.UpdateSatisfied(MX_SIGNAL_SIGNALED, 0u);
-    return read_len;
-}
