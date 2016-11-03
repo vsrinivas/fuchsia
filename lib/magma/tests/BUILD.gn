@@ -12,5 +12,6 @@ group("tests") {
   deps = [
     "unit_tests:magma_app_unit_tests",
     "unit_tests:magma_sys_unit_tests",
+    "unit_tests:magma_sys_abi_conformance_tests",
   ]
 }

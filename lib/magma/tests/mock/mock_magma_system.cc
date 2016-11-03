@@ -12,7 +12,7 @@ void magma_system_close(magma_system_connection* connection) { delete connection
 int32_t magma_system_get_error(magma_system_connection* connection) { return 0; }
 
 // Returns the device id.  0 is an invalid device id.
-uint32_t magma_system_get_device_id(int32_t fd) { return 0; }
+uint32_t magma_system_get_device_id(int32_t fd) { return 0xdada; }
 
 uint32_t next_context_id;
 void magma_system_create_context(magma_system_connection* connection, uint32_t* context_id_out)
@@ -27,7 +27,7 @@ int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, u
                            uint32_t* handle_out)
 {
     *size_out = size;
-    *handle_out = next_handle++;
+    *handle_out = ++next_handle;
     return 0;
 }
 

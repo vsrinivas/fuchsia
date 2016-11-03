@@ -104,15 +104,29 @@ source_set("magma_platform_tests") {
   ]
 }
 
+executable("magma_sys_abi_conformance_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":sys_abi_conformance_tests",
+    "$magma_build_root/tests/mock:magma_system",
+    "//third_party/gtest",
+  ]
+}
+
 source_set("sys_abi_conformance_tests") {
   testonly = true
 
   sources = [
-    "test_sys_abi_connection.cc",
+    "test_sys_abi.cc",
   ]
 
   deps = [
-    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/include:sys_abi",
     "//third_party/gtest",
   ]
 }
