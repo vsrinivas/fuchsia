@@ -41,11 +41,14 @@ class LedgerManager : public LedgerImpl::Delegate {
   Status DeletePage(convert::ExtendedStringView page_id) override;
 
  private:
-  // Adds a new PageManager for |page_id| and configures its so that we delete
-  // it from |page_managers_| automatically when the last local client
-  // disconnects from the page. Returns a new PagePtr bound to this manager.
-  PagePtr AddPageManagerAndGetPagePtr(
-      storage::PageIdView page_id,
+  class PageManagerContainer;
+  // Adds a new PageManagerContainer for |page_id| and configures its so that we
+  // delete it from |page_managers_| automatically when the last local client
+  // disconnects from the page. Returns the container.
+  PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
+  // Create a new page manager for the given storage.
+  std::unique_ptr<PageManager> NewPageManager(
+      storage::PageId&& page_id,
       std::unique_ptr<storage::PageStorage> page_storage);
 
   std::unique_ptr<storage::LedgerStorage> storage_;
@@ -54,7 +57,7 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   // Mapping from page id to the manager of that page.
   std::map<storage::PageId,
-           std::unique_ptr<PageManager>,
+           std::unique_ptr<PageManagerContainer>,
            convert::StringViewComparator>
       page_managers_;
 

@@ -27,7 +27,8 @@ storage::PageId RandomId() {
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  FakeLedgerStorage() {}
+  FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
+      : task_runner_(task_runner) {}
   ~FakeLedgerStorage() {}
 
   storage::Status CreatePageStorage(
@@ -44,7 +45,8 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                std::unique_ptr<storage::PageStorage>)>&
           callback) override {
     get_page_calls.push_back(page_id.ToString());
-    callback(storage::Status::NOT_FOUND, nullptr);
+    task_runner_->PostTask(
+        [callback]() { callback(storage::Status::NOT_FOUND, nullptr); });
   }
 
   bool DeletePageStorage(storage::PageIdView page_id) override {
@@ -63,6 +65,8 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   std::vector<storage::PageId> delete_page_calls;
 
  private:
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
@@ -82,7 +86,7 @@ class LedgerManagerTest : public ::testing::Test {
 // that is, make correct calls to ledger storage.
 TEST_F(LedgerManagerTest, LedgerImpl) {
   std::unique_ptr<FakeLedgerStorage> storage =
-      std::make_unique<FakeLedgerStorage>();
+      std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
   FakeLedgerStorage* storage_ptr = storage.get();
   LedgerManager ledger_manager(std::move(storage));
 
@@ -132,7 +136,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 // to LedgerImpl.
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   std::unique_ptr<LedgerManager> ledger_manager =
-      std::make_unique<LedgerManager>(std::make_unique<FakeLedgerStorage>());
+      std::make_unique<LedgerManager>(
+          std::make_unique<FakeLedgerStorage>(message_loop_.task_runner()));
 
   LedgerPtr ledger = ledger_manager->GetLedgerPtr();
   bool ledger_closed = false;
@@ -144,6 +149,34 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   ledger_manager.reset();
   message_loop_.Run();
   EXPECT_TRUE(ledger_closed);
+}
+
+// Verifies that two successive calls to GetPage do not create 2 storages.
+TEST_F(LedgerManagerTest, CallGetPageTwice) {
+  std::unique_ptr<FakeLedgerStorage> storage =
+      std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
+  FakeLedgerStorage* storage_ptr = storage.get();
+  LedgerManager ledger_manager(std::move(storage));
+  LedgerPtr ledger = ledger_manager.GetLedgerPtr();
+  storage::PageId id = RandomId();
+
+  uint8_t calls = 0;
+  ledger->GetPage(convert::ToArray(id),
+                  [this, &calls](Status, mojo::InterfaceHandle<Page>) {
+                    calls++;
+                    message_loop_.QuitNow();
+                  });
+  ledger->GetPage(convert::ToArray(id),
+                  [this, &calls](Status, mojo::InterfaceHandle<Page>) {
+                    calls++;
+                    message_loop_.QuitNow();
+                  });
+  message_loop_.Run();
+  EXPECT_EQ(2u, calls);
+  EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
+  EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
+  EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
+  EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 }
 
 }  // namespace
