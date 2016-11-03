@@ -45,10 +45,11 @@ public:
             return DRETF(false, "failed to get duplicate_handle");
 
         uint64_t id;
-        connection_->delegate()->ImportBuffer(duplicate_handle, &id);
+        if (!connection_->delegate()->ImportBuffer(duplicate_handle, &id))
+            SetError(-EINVAL);
         DASSERT(id == buffer->id());
 
-        buffer_map_.insert(std::make_pair(buffer->id(), std::move(buffer)));
+        buffer_map_.insert(std::make_pair(id, std::move(buffer)));
         return true;
     }
 
@@ -60,8 +61,8 @@ public:
         if (iter == buffer_map_.end())
             return DRETF(false, "attempting to release invalid buffer handle");
 
-        if (!connection_->delegate()->ReleaseBuffer(iter->second->id()))
-            error_ = -EINVAL;
+        if (!connection_->delegate()->ReleaseBuffer(id))
+            SetError(-EINVAL);
 
         buffer_map_.erase(iter);
 
@@ -84,14 +85,20 @@ public:
         auto context_id = next_context_id_++;
         *context_id_out = context_id;
         if (!connection_->delegate()->CreateContext(context_id))
-            error_ = -EINVAL;
+            SetError(-EINVAL);
     }
 
     // Destroys a context for the given id
     void DestroyContext(uint32_t context_id) override
     {
         if (!connection_->delegate()->DestroyContext(context_id))
-            error_ = -EINVAL;
+            SetError(-EINVAL);
+    }
+
+    void SetError(int32_t error)
+    {
+        if (!error_)
+            error_ = error;
     }
 
     int32_t GetError() override
@@ -105,7 +112,7 @@ public:
                               uint32_t context_id) override
     {
         if (!connection_->delegate()->ExecuteCommandBuffer(command_buffer, context_id)) {
-            error_ = -EINVAL;
+            SetError(-EINVAL);
             return;
         }
     }
