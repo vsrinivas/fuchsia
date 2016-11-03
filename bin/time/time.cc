@@ -39,14 +39,18 @@ int main(int argc, char **argv) {
   }
 
   mx_info_process_t proc_info;
-  mx_ssize_t info_status = mx_object_get_info(handle, MX_INFO_PROCESS,
-                                              sizeof(proc_info.rec), &proc_info,
-                                              sizeof(proc_info));
+  mx_size_t info_size;
+  status = mx_object_get_info(handle, MX_INFO_PROCESS, sizeof(proc_info.rec),
+                              &proc_info, sizeof(proc_info), &info_size);
   mx_handle_close(handle);
 
-  if (info_status != sizeof(proc_info)) {
-    fprintf(stderr, "Failed to get process return code %s: %ld\n", argv[1],
-           info_status);
+  if (status != NO_ERROR) {
+    fprintf(stderr, "Failed to get process return code %s: %d\n", argv[1],
+           status);
+    return 1;
+  }
+  if (info_size != sizeof(proc_info)) {
+    fprintf(stderr, "Failed to get full process info\n");
     return 1;
   }
   if (proc_info.rec.return_code != 0) {
