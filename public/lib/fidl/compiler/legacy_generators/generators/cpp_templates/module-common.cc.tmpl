@@ -61,7 +61,9 @@ namespace internal {
 ::fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
     const ::fidl::Message* message,
     std::string* err) {
+{%- if interface.methods | length -%}
   ::fidl::internal::ValidationError retval;
+{%- endif -%}
 
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
