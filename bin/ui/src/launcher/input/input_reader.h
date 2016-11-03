@@ -30,12 +30,11 @@ class InputReader : mtl::MessageLoopHandler {
   void DeviceAdded(std::unique_ptr<InputDevice> device);
   void DeviceRemoved(mx_handle_t handle);
 
-  void OnDirectoryHandleReady(mx_handle_t handle);
-  void OnDeviceHandleReady(mx_handle_t handle);
+  void OnDirectoryHandleReady(mx_handle_t handle, mx_signals_t pending);
+  void OnDeviceHandleReady(mx_handle_t handle, mx_signals_t pending);
 
   // |mtl::MessageLoopHandler|:
-  void OnHandleReady(mx_handle_t handle);
-  void OnHandleError(mx_handle_t handle, mx_status_t result);
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
 
   InputInterpreter* interpreter_;
 

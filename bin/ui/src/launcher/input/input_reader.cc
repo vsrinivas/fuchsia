@@ -114,29 +114,38 @@ void InputReader::DeviceAdded(std::unique_ptr<InputDevice> device) {
   devices_[handle] = std::make_pair(std::move(device), key);
 }
 
-void InputReader::OnDirectoryHandleReady(mx_handle_t handle) {
-  mx_status_t status;
-  uint32_t sz = MXIO_MAX_FILENAME;
-  char name[MXIO_MAX_FILENAME + 1];
-  if ((status = input_directory_channel_.read(0, name, sz, &sz, nullptr, 0,
-                                              nullptr)) < 0) {
-    FTL_LOG(ERROR) << "Failed to read from " << DEV_INPUT;
-    return;
-  }
-  name[sz] = 0;
-  std::unique_ptr<InputDevice> device =
-      InputDevice::Open(input_directory_fd_, name);
-  if (device) {
-    DeviceAdded(std::move(device));
+void InputReader::OnDirectoryHandleReady(mx_handle_t handle,
+                                         mx_signals_t pending) {
+  if (pending & MX_SIGNAL_READABLE) {
+    mx_status_t status;
+    uint32_t sz = MXIO_MAX_FILENAME;
+    char name[MXIO_MAX_FILENAME + 1];
+    if ((status = input_directory_channel_.read(0, name, sz, &sz, nullptr, 0,
+                                                nullptr)) < 0) {
+      FTL_LOG(ERROR) << "Failed to read from " << DEV_INPUT;
+      return;
+    }
+    name[sz] = 0;
+    std::unique_ptr<InputDevice> device =
+        InputDevice::Open(input_directory_fd_, name);
+    if (device)
+      DeviceAdded(std::move(device));
+  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+    FTL_CHECK(false) << "Input device directory disappeared; input is broken";
   }
 }
 
-void InputReader::OnDeviceHandleReady(mx_handle_t handle) {
+void InputReader::OnDeviceHandleReady(mx_handle_t handle,
+                                      mx_signals_t pending) {
   InputDevice* device = devices_[handle].first.get();
-  bool ret = device->Read([this, device](InputReport::ReportType type) {
-    interpreter_->OnReport(device, type);
-  });
-  if (!ret) {
+  if (pending & MX_SIGNAL_READABLE) {
+    bool ret = device->Read([this, device](InputReport::ReportType type) {
+      interpreter_->OnReport(device, type);
+    });
+    if (!ret) {
+      DeviceRemoved(handle);
+    }
+  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
     DeviceRemoved(handle);
   }
 }
@@ -144,17 +153,12 @@ void InputReader::OnDeviceHandleReady(mx_handle_t handle) {
 #pragma mark mtl::MessageLoopHandler
 // |mtl::MessageLoopHandler|:
 
-void InputReader::OnHandleReady(mx_handle_t handle) {
+void InputReader::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (input_directory_channel_.get() == handle) {
-    OnDirectoryHandleReady(handle);
+    OnDirectoryHandleReady(handle, pending);
   } else if (devices_.count(handle)) {
-    OnDeviceHandleReady(handle);
-    return;
+    OnDeviceHandleReady(handle, pending);
   }
-}
-
-void InputReader::OnHandleError(mx_handle_t handle, mx_status_t result) {
-  DeviceRemoved(handle);
 }
 
 }  // namespace input
