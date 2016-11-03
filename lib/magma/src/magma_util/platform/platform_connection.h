@@ -11,8 +11,6 @@
 
 #include <memory>
 
-class MagmaSystemConnection;
-
 namespace magma {
 
 class PlatformIpcConnection : public magma_system_connection {
