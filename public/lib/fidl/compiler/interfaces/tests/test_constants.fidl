@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[JavaPackage="org.chromium.fidl.bindings.test.fidl.test_constants"]
-module fidl.test;
+[JavaPackage="org.chromium.mojo.bindings.test.fidl.test_constants"]
+module mojo.test;
 
 // Integral types.
 const bool kBoolValue = true;

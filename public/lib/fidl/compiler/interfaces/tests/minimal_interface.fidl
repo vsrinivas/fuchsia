@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[JavaPackage="org.chromium.fidl.bindings.test.fidl.ping"]
-module fidl.test;
+module mojo.test;
 
-interface PingService {
-  Ping() => ();
+interface MinimalInterface {
+  Message();
 };

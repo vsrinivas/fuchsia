@@ -4,8 +4,8 @@
 
 // Module containing entities for regression tests of the generator. Entities
 // must never be modified, instead new entity must be added to add new tests.
-[DartPackage="_fidl_for_test_only",
- JavaPackage="org.chromium.fidl.bindings.test.fidl.regression_tests"]
+[DartPackage="_mojo_for_test_only",
+ JavaPackage="org.chromium.mojo.bindings.test.fidl.regression_tests"]
 module regression_tests;
 
 interface CheckMethodWithEmptyResponse {

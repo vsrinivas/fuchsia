@@ -2,8 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module fidl.test;
+module mojo.test;
 
-interface MinimalInterface {
-  Message();
+interface A {
+  GetB(B& b);
+};
+
+interface B {
+  GetC(C& c);
+};
+
+interface C {
+  D();
 };

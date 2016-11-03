@@ -1,5 +1,5 @@
-[DartPackage="_fidl_for_test_only"]
-module fidl.test;
+[DartPackage="_mojo_for_test_only"]
+module mojo.test;
 
 enum TestEnum {
   TEST = 0,

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="_fidl_for_test_only",
- JavaPackage="org.chromium.fidl.bindings.test.fidl.test_structs"]
-module fidl.test;
+[DartPackage="_mojo_for_test_only",
+ JavaPackage="org.chromium.mojo.bindings.test.fidl.test_structs"]
+module mojo.test;
 
-import "fidl/public/interfaces/bindings/tests/rect.fidl";
+import "lib/fidl/compiler/interfaces/tests/rect.fidl";
 
 // Tests that you can reference yet-to-be-declared structs in a union.
 union UnionOfStructs {

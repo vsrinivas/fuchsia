@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="_fidl_for_test_only",
- JavaPackage="org.chromium.fidl.bindings.test.fidl.sample"]
+[DartPackage="_mojo_for_test_only",
+ JavaPackage="org.chromium.mojo.bindings.test.fidl.sample"]
 module sample;
 
 import "sample_import.fidl";

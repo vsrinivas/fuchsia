@@ -2,16 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module fidl.test;
+[DartPackage="_mojo_for_test_only"]
+module mojo.test;
 
-interface A {
-  GetB(B& b);
-};
-
-interface B {
-  GetC(C& c);
-};
-
-interface C {
-  D();
+union IncludedUnion {
+  int8 a;
 };

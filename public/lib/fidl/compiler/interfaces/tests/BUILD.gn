@@ -2,50 +2,50 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../../../mojo/public/tools/bindings/mojom.gni")
+import("../../../fidl.gni")
 
-mojom("test_interfaces") {
+fidl("test_interfaces") {
   testonly = true
 
   # Some of those files are part of tests that check type info generation.
   generate_type_info = true
   sources = [
-    "math_calculator.mojom",
-    "minimal_interface.mojom",
-    "no_module.mojom",
-    "ping_service.mojom",
-    "rect.mojom",
-    "regression_tests.mojom",
-    "sample_factory.mojom",
-    "sample_import.mojom",
-    "sample_import2.mojom",
-    "sample_interfaces.mojom",
-    "sample_service.mojom",
-    "scoping.mojom",
-    "serialization_test_structs.mojom",
-    "test_arrays.mojom",
-    "test_constants.mojom",
-    "test_enums.mojom",
-    "test_included_unions.mojom",
-    "test_structs.mojom",
-    "test_unions.mojom",
-    "validation_test_interfaces.mojom",
+    "math_calculator.fidl",
+    "minimal_interface.fidl",
+    "no_module.fidl",
+    "ping_service.fidl",
+    "rect.fidl",
+    "regression_tests.fidl",
+    "sample_factory.fidl",
+    "sample_import.fidl",
+    "sample_import2.fidl",
+    "sample_interfaces.fidl",
+    "sample_service.fidl",
+    "scoping.fidl",
+    "serialization_test_structs.fidl",
+    "test_arrays.fidl",
+    "test_constants.fidl",
+    "test_enums.fidl",
+    "test_included_unions.fidl",
+    "test_structs.fidl",
+    "test_unions.fidl",
+    "validation_test_interfaces.fidl",
   ]
 }
 
-mojom("versioning_test_service_interfaces") {
+fidl("versioning_test_service_interfaces") {
   # FIXME: Dart packaged applications cannot depend on testonly fidls.
   # testonly = true
   sources = [
-    "versioning_test_service.mojom",
+    "versioning_test_service.fidl",
   ]
 }
 
-mojom("versioning_test_client_interfaces") {
+fidl("versioning_test_client_interfaces") {
   # FIXME: Dart packaged applications cannot depend on testonly fidls.
   # testonly = true
   sources = [
-    "versioning_test_client.mojom",
+    "versioning_test_client.fidl",
   ]
 }
 
@@ -55,14 +55,14 @@ mojom("versioning_test_client_interfaces") {
 # can link against to get a parser for the validation test "golden files".
 #
 
-static_library("validation_parser") {
-  testonly = true
-  complete_static_lib = true
-  sources = [
-    "validation_parser/validation_parser.cc",
-    "validation_parser/validation_parser.h",
-  ]
-  deps = [
-    "../../../cpp/bindings/tests:fidl_public_bindings_test_utils",
-  ]
-}
+#static_library("validation_parser") {
+#  testonly = true
+#  complete_static_lib = true
+#  sources = [
+#    "validation_parser/validation_parser.cc",
+#    "validation_parser/validation_parser.h",
+#  ]
+#  deps = [
+#    "../../../cpp/bindings/tests:mojo_public_bindings_test_utils",
+#  ]
+#}
