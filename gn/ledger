@@ -50,10 +50,6 @@
         {
             "binary": "storage_btree_unittests",
             "bootfs_path": "test/storage_btree_unittests"
-        },
-        {
-            "binary": "storage_store_unittests",
-            "bootfs_path": "test/storage_store_unittests"
         }
     ]
 }
