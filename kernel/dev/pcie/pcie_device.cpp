@@ -39,19 +39,6 @@ PcieDevice::PcieDevice(PcieBusDriver& bus_drv,
     memset(&pcie_adv_caps_, 0, sizeof(pcie_adv_caps_));
 }
 
-// TODO(johngro): Remove this once we have refactored so that roots are not
-// modeled as bridges.
-PcieDevice::PcieDevice(PcieBusDriver& bus_drv)
-    : bus_drv_(bus_drv),
-      is_bridge_(true),
-      bus_id_(0),
-      dev_id_(0),
-      func_id_(0),
-      bar_count_(0) {
-    memset(&pcie_caps_, 0, sizeof(pcie_caps_));
-    memset(&pcie_adv_caps_, 0, sizeof(pcie_adv_caps_));
-}
-
 PcieDevice::~PcieDevice() {
     /* We should already be unlinked from the bus's device tree. */
     DEBUG_ASSERT(!upstream_);
@@ -69,9 +56,9 @@ PcieDevice::~PcieDevice() {
         pcie_write16(&cfg_->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
 }
 
-mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieBridge& upstream, uint dev_id, uint func_id) {
+mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id) {
     AllocChecker ac;
-    auto raw_dev = new (&ac) PcieDevice(upstream.bus_drv_,
+    auto raw_dev = new (&ac) PcieDevice(upstream.driver(),
                                         upstream.managed_bus_id(), dev_id, func_id);
     if (!ac.check()) {
         DEBUG_ASSERT(raw_dev == nullptr);
@@ -91,7 +78,7 @@ mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieBridge& upstream, uint dev_id, u
     return dev;
 }
 
-status_t PcieDevice::Init(PcieBridge& upstream) {
+status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
     AutoLock dev_lock(dev_lock_);
 
     status_t res = InitLocked(upstream);
@@ -105,7 +92,7 @@ status_t PcieDevice::Init(PcieBridge& upstream) {
     return res;
 }
 
-status_t PcieDevice::InitLocked(PcieBridge& upstream) {
+status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     status_t res;
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(cfg_ == nullptr);
@@ -145,7 +132,7 @@ status_t PcieDevice::InitLocked(PcieBridge& upstream) {
     return NO_ERROR;
 }
 
-mxtl::RefPtr<PcieBridge> PcieDevice::GetUpstream() {
+mxtl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
     return bus_drv_.GetUpstream(*this);
 }
 
@@ -509,54 +496,31 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
 
 
 status_t PcieDevice::AllocateBars() {
-    status_t ret;
     AutoLock dev_lock(dev_lock_);
-
-    /* We do not want to hold the driver-wide topology lock during this
-     * operation.  This implies that it is not safe to access our upstream_
-     * member directly.  Grab a reference using the GetUpstream method instead.
-     * This will keep any upstream bridge from being free'ed out from under us
-     * during BAR allocation (although it might still become unplugged and
-     * nerfed while we are allocating.
-     */
-    mxtl::RefPtr<PcieBridge> upstream = GetUpstream();
-
-    /* Has the device or its upstream bridge/complex been unplugged already? */
-    if (!plugged_in_ || (upstream == nullptr))
-        return ERR_UNAVAILABLE;
-
-    /* If this has been claimed by a driver, do not make any changes
-     * to the BAR allocation.
-     *
-     * TODO(johngro) : kill this.  It should be impossible to become claimed if
-     * we have not already allocated all of our BARs.
-     */
-    if (claimed_)
-        return NO_ERROR;
-
-    ret = AllocateBarsLocked(*upstream);
-
-    /* If things have gone well so far, and we happen to be a bridge device,
-     * release our device lock and attempt to allocate BARs for downstream
-     * devices.
-     */
-    if ((ret == NO_ERROR) && is_bridge_) {
-        dev_lock.release();
-        static_cast<PcieBridge*>(this)->AllocateDownstreamBars();
-    }
-
-    return ret;
+    return AllocateBarsLocked();
 }
 
-status_t PcieDevice::AllocateBarsLocked(PcieBridge& upstream) {
+status_t PcieDevice::AllocateBarsLocked() {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(plugged_in_ && !claimed_);
+
+    // Have we become unplugged?
+    if (!plugged_in_)
+        return ERR_UNAVAILABLE;
+
+    // If this has been claimed by a driver, do not make any changes to the BAR
+    // allocation.
+    //
+    // TODO(johngro) : kill this.  It should be impossible to become claimed if
+    // we have not already allocated all of our BARs.
+    if (claimed_)
+        return NO_ERROR;
 
     /* Allocate BARs for the device */
     DEBUG_ASSERT(bar_count_ <= countof(bars_));
     for (size_t i = 0; i < bar_count_; ++i) {
         if (bars_[i].size) {
-            status_t ret = AllocateBarLocked(upstream, bars_[i]);
+            status_t ret = AllocateBarLocked(bars_[i]);
             if (ret != NO_ERROR)
                 return ret;
         }
@@ -565,14 +529,21 @@ status_t PcieDevice::AllocateBarsLocked(PcieBridge& upstream) {
     return NO_ERROR;
 }
 
-status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& info) {
+status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(plugged_in_ && !claimed_);
 
-    /* Do not attempt to remap if we are rescanning the bus and this BAR is
-     * already allocated, or if it does not exist (size is zero) */
+    // Do not attempt to remap if we are rescanning the bus and this BAR is
+    // already allocated, or if it does not exist (size is zero)
     if ((info.size == 0) || (info.allocation != nullptr))
         return NO_ERROR;
+
+    // Hold a reference to our upstream node while we do this.  If we cannot
+    // obtain a reference, then our upstream node has become unplugged and we
+    // should just fail out now.
+    auto upstream = GetUpstream();
+    if (upstream == nullptr)
+        return ERR_UNAVAILABLE;
 
     /* Does this BAR already have an assigned address?  If so, try to preserve
      * it, if possible. */
@@ -584,13 +555,13 @@ status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& in
              * allocation and attempt to re-allocate. */
             uint64_t inclusive_end = info.bus_addr + info.size - 1;
             if (inclusive_end <= mxtl::numeric_limits<uint32_t>::max()) {
-                alloc = &upstream.mmio_lo_regions_;
+                alloc = &upstream->mmio_lo_regions();
             } else
             if (info.bus_addr > mxtl::numeric_limits<uint32_t>::max()) {
-                alloc = &upstream.mmio_hi_regions_;
+                alloc = &upstream->mmio_hi_regions();
             }
         } else {
-            alloc = &upstream.pio_regions_;
+            alloc = &upstream->pio_regions();
         }
 
         status_t res = ERR_NOT_FOUND;
@@ -619,9 +590,9 @@ status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& in
     /* Choose which region allocator we will attempt to allocate from, then
      * check to see if we have the space. */
     RegionAllocator* alloc = !info.is_mmio
-                             ? &upstream.pio_regions_
-                             : (info.is_64bit ? &upstream.mmio_hi_regions_
-                                              : &upstream.mmio_lo_regions_);
+                             ? &upstream->pio_regions()
+                             : (info.is_64bit ? &upstream->mmio_hi_regions()
+                                              : &upstream->mmio_lo_regions());
     uint32_t addr_mask = info.is_mmio
                        ? PCI_BAR_MMIO_ADDR_MASK
                        : PCI_BAR_PIO_ADDR_MASK;
@@ -640,12 +611,12 @@ status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& in
         status_t res = alloc->GetRegion(align_size, align_size, info.allocation);
 
         if (res != NO_ERROR) {
-            if ((res == ERR_NOT_FOUND) && (alloc == &upstream.mmio_hi_regions_)) {
+            if ((res == ERR_NOT_FOUND) && (alloc == &upstream->mmio_hi_regions())) {
                 LTRACEF("Insufficient space to map 64-bit MMIO BAR in high region while "
                         "configuring BARs for device at %02x:%02x.%01x (cfg vaddr = %p).  "
                         "Falling back on low memory region.\n",
                         bus_id_, dev_id_, func_id_, cfg_);
-                alloc = &upstream.mmio_lo_regions_;
+                alloc = &upstream->mmio_lo_regions();
                 continue;
             }
 
@@ -654,9 +625,8 @@ status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& in
                    info.is_mmio ? "MMIO" : "PIO", info.size,
                    bus_id_, dev_id_, func_id_, res);
 
-            /* Looks like we are out of luck, disable the device and propagate
-             * the error up the stack. */
-            DisableLocked();
+            // Looks like we are out of luck.  Propagate the error up the stack
+            // so that our upstream node knows to disable us.
             return res;
         }
 
@@ -676,6 +646,12 @@ status_t PcieDevice::AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& in
         pcie_write32(bar_reg + 1, static_cast<uint32_t>(info.bus_addr >> 32));
 
     return NO_ERROR;
+}
+
+void PcieDevice::Disable() {
+    DEBUG_ASSERT(!dev_lock_.IsHeld());
+    AutoLock dev_lock(dev_lock_);
+    DisableLocked();
 }
 
 void PcieDevice::DisableLocked() {

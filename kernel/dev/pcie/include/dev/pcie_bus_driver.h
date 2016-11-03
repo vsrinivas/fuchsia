@@ -22,6 +22,8 @@ class SharedLegacyIrqHandler;
 class  PcieBridge;
 class  PcieDebugConsole;
 class  PcieDevice;
+class  PcieRoot;
+class  PcieUpstreamNode;
 struct pcie_config_t;
 
 enum class PcieAddrSpace { MMIO, PIO };
@@ -60,10 +62,6 @@ public:
 
     ~PcieBusDriver();
 
-    const RegionAllocator::RegionPool::RefPtr& region_bookkeeping() const {
-        return region_bookkeeping_;
-    }
-
     PciePlatformInterface& platform() const { return platform_; }
 
     // Add a section of memory mapped PCI config space to the bus driver,
@@ -74,23 +72,22 @@ public:
                              uint func_id,
                              paddr_t* out_cfg_phys = nullptr) const;
 
-    /* Address space (PIO and MMIO) allocation management
-     *
-     * Note: Internally, regions held for MMIO address space allocation are
-     * tracked in two different allocators; one for <4GB allocations usable by
-     * 32-bit or 64-bit BARs, and one for >4GB allocations usable only by 64-bit
-     * BARs.
-     *
-     * Users of Add/SubtractBusRegion are permitted to supply regions
-     * which span the 4GB mark in the MMIO address space, but their operation
-     * will be internally split into two different operations executed against
-     * the two different allocators.  The low memory portion of the operation
-     * will be executed first.  In the case that the first of the split
-     * operations succeeds but the second fails, the first operation will not be
-     * rolled back.  If this behavior is unacceptable, users should be sure to
-     * submit only MMIO address space operations which target regions either
-     * entirely above or entirely below the 4GB mark.
-     */
+    // Address space (PIO and MMIO) allocation management
+    //
+    // Note: Internally, regions held for MMIO address space allocation are
+    // tracked in two different allocators; one for <4GB allocations usable by
+    // 32-bit or 64-bit BARs, and one for >4GB allocations usable only by 64-bit
+    // BARs.
+    //
+    // Users of Add/SubtractBusRegion are permitted to supply regions which span
+    // the 4GB mark in the MMIO address space, but their operation will be
+    // internally split into two different operations executed against the two
+    // different allocators.  The low memory portion of the operation will be
+    // executed first.  In the case that the first of the split operations
+    // succeeds but the second fails, the first operation will not be rolled
+    // back.  If this behavior is unacceptable, users should be sure to submit
+    // only MMIO address space operations which target regions either entirely
+    // above or entirely below the 4GB mark.
     status_t AddBusRegion(uint64_t base, uint64_t size, PcieAddrSpace aspace) {
         return AddSubtractBusRegion(base, size, aspace, true);
     }
@@ -99,18 +96,26 @@ public:
         return AddSubtractBusRegion(base, size, aspace, false);
     }
 
-    /* Add a root bus to the driver and attempt to scan it for devices. */
+    // Add a root bus to the driver and attempt to scan it for devices.
     status_t AddRoot(uint bus_id);
 
     mxtl::RefPtr<PcieDevice> GetNthDevice(uint32_t index);
-    uint MapPinToIrq(const PcieDevice& dev, const PcieBridge& upstream);
+    uint MapPinToIrq(const PcieDevice& dev, const PcieUpstreamNode& upstream);
 
-    /* Topology related stuff */
-    void LinkDeviceToUpstream(PcieDevice& dev, PcieBridge& bridge);
+    // Topology related stuff
+    void LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream);
     void UnlinkDeviceFromUpstream(PcieDevice& dev);
-    mxtl::RefPtr<PcieBridge> GetUpstream(PcieDevice& dev);
-    mxtl::RefPtr<PcieDevice> GetDownstream(PcieBridge& bridge, uint ndx);
+    mxtl::RefPtr<PcieUpstreamNode> GetUpstream(PcieDevice& dev);
+    mxtl::RefPtr<PcieDevice> GetDownstream(PcieUpstreamNode& upstream, uint ndx);
     mxtl::RefPtr<PcieDevice> GetRefedDevice(uint bus_id, uint dev_id, uint func_id);
+
+    // Bus region allocation
+    const RegionAllocator::RegionPool::RefPtr& region_bookkeeping() const {
+        return region_bookkeeping_;
+    }
+    RegionAllocator& mmio_lo_regions() { return mmio_lo_regions_; }
+    RegionAllocator& mmio_hi_regions() { return mmio_hi_regions_; }
+    RegionAllocator& pio_regions()     { return pio_regions_; }
 
     // TODO(johngro) : Make these private when we can.
     mxtl::RefPtr<SharedLegacyIrqHandler> FindLegacyIrqHandler(uint irq_id);
@@ -161,10 +166,10 @@ private:
     void     ScanDevices();
     status_t AllocBookkeeping();
     void     ForeachDevice(ForeachCallback cbk, void* ctx);
-    bool     ForeachDeviceOnBridge(const mxtl::RefPtr<PcieBridge>& bridge,
-                                   uint                            level,
-                                   ForeachCallback                 cbk,
-                                   void*                           ctx);
+    bool     ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>& upstream,
+                                     uint                                  level,
+                                     ForeachCallback                       cbk,
+                                     void*                                 ctx);
     status_t AddSubtractBusRegion(uint64_t base, uint64_t size,
                                   PcieAddrSpace aspace, bool add_op);
 
@@ -176,9 +181,12 @@ private:
     bool                                started_ = false;
     Mutex                               bus_topology_lock_;
     Mutex                               bus_rescan_lock_;
-    mxtl::RefPtr<PcieBridge>            root_complex_;
+    mxtl::RefPtr<PcieRoot>              root_complex_;
 
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
+    RegionAllocator                     mmio_lo_regions_;
+    RegionAllocator                     mmio_hi_regions_;
+    RegionAllocator                     pio_regions_;
 
     mutable Mutex                       ecam_region_lock_;
     mxtl::WAVLTree<uint8_t, mxtl::unique_ptr<MappedEcamRegion>> ecam_regions_;

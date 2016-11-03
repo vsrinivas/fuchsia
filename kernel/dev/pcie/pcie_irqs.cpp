@@ -788,7 +788,7 @@ status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
         : ERR_BAD_STATE;
 }
 
-status_t PcieDevice::InitLegacyIrqStateLocked(PcieBridge& upstream) {
+status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(!irq_.legacy.pin);

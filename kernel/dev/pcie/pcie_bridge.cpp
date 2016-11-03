@@ -28,46 +28,26 @@
 
 PcieBridge::PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id)
     : PcieDevice(bus_drv, bus_id, dev_id, func_id, true),
-      managed_bus_id_(mbus_id) {
+      PcieUpstreamNode(bus_drv, PcieUpstreamNode::Type::BRIDGE, mbus_id) {
     /* Assign the driver-wide region pool to this bridge's allocators. */
-    DEBUG_ASSERT(bus_drv_.region_bookkeeping() != nullptr);
-    mmio_lo_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
-    mmio_hi_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
-    pio_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
+    DEBUG_ASSERT(driver().region_bookkeeping() != nullptr);
+    mmio_lo_regions_.SetRegionPool(driver().region_bookkeeping());
+    mmio_hi_regions_.SetRegionPool(driver().region_bookkeeping());
+    pio_regions_.SetRegionPool(driver().region_bookkeeping());
 }
 
-// TODO(johngro): Remove this once we have refactored so that roots are not
-// modeled as bridges.
-PcieBridge::PcieBridge(PcieBusDriver& bus_drv, uint mbus_id)
-    : PcieDevice(bus_drv),
-      managed_bus_id_(mbus_id) {
-    /* Assign the driver-wide region pool to this bridge's allocators. */
-    DEBUG_ASSERT(bus_drv_.region_bookkeeping() != nullptr);
-    mmio_lo_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
-    mmio_hi_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
-    pio_regions_.SetRegionPool(bus_drv_.region_bookkeeping());
-}
-
-PcieBridge::~PcieBridge() {
-#if LK_DEBUGLEVEL > 0
-     /* Sanity check to make sure that all child devices have been released as well. */
-    for (size_t i = 0; i < countof(downstream_); ++i)
-        DEBUG_ASSERT(!downstream_[i]);
-#endif
-}
-
-mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieBridge& upstream,
+mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
                                             uint dev_id,
                                             uint func_id,
                                             uint managed_bus_id) {
     AllocChecker ac;
-    auto raw_bridge = new (&ac) PcieBridge(upstream.bus_drv_,
+    auto raw_bridge = new (&ac) PcieBridge(upstream.driver(),
                                            upstream.managed_bus_id(), dev_id, func_id,
                                            managed_bus_id);
     if (!ac.check()) {
         DEBUG_ASSERT(raw_bridge == nullptr);
         TRACEF("Out of memory attemping to create PCIe bridge %02x:%02x.%01x.\n",
-                upstream.managed_bus_id_, dev_id, func_id);
+                upstream.managed_bus_id(), dev_id, func_id);
         return nullptr;
     }
 
@@ -75,28 +55,14 @@ mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieBridge& upstream,
     status_t res = raw_bridge->Init(upstream);
     if (res != NO_ERROR) {
         TRACEF("Failed to initialize PCIe bridge %02x:%02x.%01x. (res %d)\n",
-                upstream.managed_bus_id_, dev_id, func_id, res);
+                upstream.managed_bus_id(), dev_id, func_id, res);
         return nullptr;
     }
 
     return bridge;
 }
 
-// TODO(johngro): Remove this once we have refactored so that roots are not
-// modeled as bridges.
-mxtl::RefPtr<PcieBridge> PcieBridge::CreateRoot(PcieBusDriver& bus_drv, uint managed_bus_id) {
-    AllocChecker ac;
-    auto bridge = mxtl::AdoptRef(new (&ac) PcieBridge(bus_drv, managed_bus_id));
-    if (!ac.check()) {
-        TRACEF("Out of memory attemping to create PCIe root for bus 0x%02x\n",
-                managed_bus_id);
-        return nullptr;
-    }
-
-    return bridge;
-}
-
-status_t PcieBridge::Init(PcieBridge& upstream) {
+status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
     AutoLock dev_lock(dev_lock_);
 
     // Initialize the device portion of ourselves first.
@@ -130,7 +96,7 @@ status_t PcieBridge::Init(PcieBridge& upstream) {
         return ERR_BAD_STATE;
     }
 
-    if (secondary_id != managed_bus_id_) {
+    if (secondary_id != managed_bus_id()) {
         TRACEF("PCI-to-PCI bridge detected at %02x:%02x.%01x has invalid secondary bus id "
                "(%02x)... skipping scan.\n",
                bus_id_, dev_id_, func_id_, secondary_id);
@@ -145,7 +111,7 @@ status_t PcieBridge::Init(PcieBridge& upstream) {
     // Things went well, flag the device as plugged in and link ourselves up to
     // the graph.
     plugged_in_ = true;
-    bus_drv_.LinkDeviceToUpstream(*this, upstream);
+    driver().LinkDeviceToUpstream(*this, upstream);
 
     // Release the device lock, then recurse and scan for downstream devices.
     dev_lock.release();
@@ -202,189 +168,132 @@ status_t PcieBridge::ParseBusWindowsLocked() {
     return NO_ERROR;
 }
 
-void PcieBridge::ScanDownstream() {
-    DEBUG_ASSERT(bus_drv_.RescanLockIsHeld());
-    DEBUG_ASSERT(!dev_lock_.IsHeld());
-
-    for (uint dev_id = 0; dev_id < PCIE_MAX_DEVICES_PER_BUS; ++dev_id) {
-        for (uint func_id = 0; func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE; ++func_id) {
-            /* If we can find the config, and it has a valid vendor ID, go ahead
-             * and scan it looking for a valid function. */
-            pcie_config_t* cfg = bus_drv_.GetConfig(managed_bus_id_, dev_id, func_id);
-            bool good_device = cfg && (pcie_read16(&cfg->base.vendor_id) != PCIE_INVALID_VENDOR_ID);
-            if (good_device) {
-                /* Don't scan the function again if we have already discovered
-                 * it.  If this function happens to be a bridge, go ahead and
-                 * look under it for new devices. */
-                uint ndx    = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
-                DEBUG_ASSERT(ndx < countof(downstream_));
-
-                auto downstream_device = GetDownstream(ndx);
-                if (!downstream_device) {
-                    auto new_dev = ScanDevice(cfg, dev_id, func_id);
-                    if (new_dev == nullptr) {
-                        TRACEF("Failed to initialize device %02x:%02x:%01x; This is Very Bad.  "
-                               "Device (and any of its children) will be inaccessible!\n",
-                               managed_bus_id_, dev_id, func_id);
-                        good_device = false;
-                    }
-                } else if (downstream_device->is_bridge()) {
-                    static_cast<PcieBridge*>(downstream_device.get())->ScanDownstream();
-                }
-            }
-
-            /* If this was function zero, and there is either no device, or the
-             * config's header type indicates that this is not a multi-function
-             * device, then just move on to the next device. */
-            if (!func_id &&
-               (!good_device || !(pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MULTI_FN)))
-                break;
-        }
-    }
-}
-
-mxtl::RefPtr<PcieDevice> PcieBridge::ScanDevice(pcie_config_t* cfg, uint dev_id, uint func_id) {
-    DEBUG_ASSERT(cfg);
-    DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
-    DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
-    DEBUG_ASSERT(bus_drv_.RescanLockIsHeld());
-
-    __UNUSED uint ndx = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
-    DEBUG_ASSERT(ndx < countof(downstream_));
-    DEBUG_ASSERT(downstream_[ndx] == nullptr);
-
-    LTRACEF("Scanning new function at %02x:%02x.%01x\n", managed_bus_id_, dev_id, func_id);
-
-    /* Is there an actual device here? */
-    uint16_t vendor_id = pcie_read16(&cfg->base.vendor_id);
-    if (vendor_id == PCIE_INVALID_VENDOR_ID) {
-        LTRACEF("Bad vendor ID (0x%04hx) when looking for PCIe device at %02x:%02x.%01x\n",
-                vendor_id, managed_bus_id_, dev_id, func_id);
-        return nullptr;
-    }
-
-    // Create the either a PcieBridge or a PcieDevice based on the configuration
-    // header type.
-    uint8_t header_type = pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
-    if (header_type == PCI_HEADER_TYPE_PCI_BRIDGE) {
-        auto bridge_cfg = reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg->base);
-        uint secondary_id = pcie_read8(&bridge_cfg->secondary_bus_id);
-        return PcieBridge::Create(*this, dev_id, func_id, secondary_id);
-    }
-
-    return PcieDevice::Create(*this, dev_id, func_id);
-}
-
 void PcieBridge::Unplug() {
     PcieDevice::Unplug();
-
-    for (uint i = 0; i < countof(downstream_); ++i) {
-        auto downstream_device = GetDownstream(i);
-        if (downstream_device)
-            downstream_device->Unplug();
-    }
+    PcieUpstreamNode::UnplugDownstream();
 }
 
-void PcieBridge::AllocateDownstreamBars() {
-    /* Finally, allocate all of the BARs for our downstream devices.  Make sure
-     * to not access our downstream devices directly.  Instead, hold references
-     * to downstream devices we obtain while holding bus driver's topology lock.
-     * */
-    for (uint i = 0; i < countof(downstream_); ++i) {
-        auto device = GetDownstream(i);
-        if (device != nullptr)
-            device->AllocateBars();
-    }
+status_t PcieBridge::AllocateBars() {
+    AutoLock dev_lock(dev_lock_);
+
+    // Start by making sure we can allocate our bridge windows.
+    status_t res = AllocateBridgeWindowsLocked();
+    if (res != NO_ERROR)
+        return res;
+
+    // Now, attempt to allocate our device BARs.
+    res = PcieDevice::AllocateBarsLocked();
+    if (res != NO_ERROR)
+        return res;
+
+    // Great, we are good to go.  Leave our device lock and attempt to allocate
+    // our downstream devices' resources.
+    dev_lock.release();
+    PcieUpstreamNode::AllocateDownstreamBars();
+    return NO_ERROR;
 }
 
-status_t PcieBridge::AllocateBarsLocked(PcieBridge& upstream) {
+status_t PcieBridge::AllocateBridgeWindowsLocked() {
     status_t ret;
     DEBUG_ASSERT(dev_lock_.IsHeld());
-    DEBUG_ASSERT(plugged_in_ && !claimed_);
 
-    /* We are configuring a bridge.  We need to be able to allocate the MMIO and
-     * PIO regions this bridge is configured to manage.  Currently, we don't
-     * support re-allocating a bridge's MMIO/PIO windows.
-     *
-     * TODO(johngro) : support dynamic configuration of bridge windows.  Its
-     * going to be important when we need to support hot-plugging.  See MG-322
-     */
+    // Hold a reference to our upstream node while we do this.  If we cannot
+    // obtain a reference, then our upstream node has become unplugged and we
+    // should just fail out now.
+    auto upstream = GetUpstream();
+    if (upstream == nullptr)
+        return ERR_UNAVAILABLE;
+
+    // We are configuring a bridge.  We need to be able to allocate the MMIO and
+    // PIO regions this bridge is configured to manage.  Currently, we don't
+    // support re-allocating a bridge's MMIO/PIO windows.
+    //
+    // TODO(johngro) : support dynamic configuration of bridge windows.  Its
+    // going to be important when we need to support hot-plugging.  See MG-322
+    //
     if (io_base_ <= io_limit_) {
         uint64_t size = static_cast<uint64_t>(io_limit_) - io_base_ + 1;
-        ret = upstream.pio_regions_.GetRegion({ .base = io_base_, .size = size }, pio_window_);
+        ret = upstream->pio_regions().GetRegion({ .base = io_base_, .size = size }, pio_window_);
 
         if (ret != NO_ERROR) {
             TRACEF("Failed to allocate bridge PIO window [0x%08x, 0x%08x]\n", io_base_, io_limit_);
-            DisableLocked();
             return ret;
         }
 
         DEBUG_ASSERT(pio_window_ != nullptr);
-        pio_regions_.AddRegion(*pio_window_);
+        pio_regions().AddRegion(*pio_window_);
     }
 
-    /* TODO(johngro) : Figure out what we are supposed to do with
-     * prefetchable MMIO windows and allocations behind bridges above 4GB.
-     * See MG-321 for details */
+    // TODO(johngro) : Figure out what we are supposed to do with prefetchable
+    // MMIO windows and allocations behind bridges above 4GB.  See MG-321 for
+    // details.
+    //
     if (mem_base_ <= mem_limit_) {
         uint64_t size = mem_limit_ - mem_base_ + 1;
-        ret = upstream.mmio_lo_regions_.GetRegion({ .base = mem_base_, .size = size },
-                                                  mmio_window_);
+        ret = upstream->mmio_lo_regions().GetRegion({ .base = mem_base_, .size = size },
+                                                    mmio_window_);
 
         if (ret != NO_ERROR) {
             TRACEF("Failed to allocate bridge MMIO window [0x%08x, 0x%08x]\n",
                     mem_base_, mem_limit_);
-            DisableLocked();
             return ret;
         }
 
         DEBUG_ASSERT(mmio_window_ != nullptr);
-        mmio_lo_regions_.AddRegion(*mmio_window_);
+        mmio_lo_regions().AddRegion(*mmio_window_);
     }
 
-    /* OK - now that we have allocated our MMIO/PIO windows, allocate the BARs
-     * for the bridge device itself.
-     */
-    return PcieDevice::AllocateBarsLocked(upstream);
+    return NO_ERROR;
 }
 
-void PcieBridge::DisableLocked() {
-    // Start by disabling the device portion of ourselves.
-    DEBUG_ASSERT(dev_lock_.IsHeld());
-    PcieDevice::DisableLocked();
+void PcieBridge::Disable() {
+    DEBUG_ASSERT(!dev_lock_.IsHeld());
 
-    // Now, disable all of downstream devices.  Then close any of the bus
-    // forwarding windows and release any bus allocations.
-    for (uint i = 0; i < countof(downstream_); ++i) {
-        auto downstream_device = GetDownstream(i);
-        if (downstream_device)
-            downstream_device->DisableLocked();
+    // Immediately enter the device lock and enter the disabled state.  We want
+    // to be outside of the device lock as we disable our downstream devices,
+    // but we don't want any new devices to be able to plug into us as we do so.
+    {
+        AutoLock dev_lock(dev_lock_);
+        disabled_ = true;
     }
 
-    // Close the windows at the HW level, update the internal bookkeeping to
-    // indicate that they are closed
-    auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg_->base));
-    pf_mem_limit_ = mem_limit_ = io_limit_ = 0u;
-    pf_mem_base_  = mem_base_  = io_base_  = 1u;
+    // Start by disabling all of our downstream devices.  This should prevent
+    // the from bothering us moving forward.  Do not hold the device lock while
+    // we do this.
+    PcieUpstreamNode::DisableDownstream();
 
-    pcie_write8(&bcfg.io_base, 0xF0);
-    pcie_write8(&bcfg.io_limit, 0);
-    pcie_write16(&bcfg.io_base_upper, 0);
-    pcie_write16(&bcfg.io_limit_upper, 0);
+    // Enter the device lock again and finish shooting ourselves in the head.
+    {
+        AutoLock dev_lock(dev_lock_);
 
-    pcie_write16(&bcfg.memory_base, 0xFFF0);
-    pcie_write16(&bcfg.memory_limit, 0);
+        // Disable the device portion of ourselves.
+        PcieDevice::DisableLocked();
 
-    pcie_write16(&bcfg.prefetchable_memory_base, 0xFFF0);
-    pcie_write16(&bcfg.prefetchable_memory_limit, 0);
-    pcie_write32(&bcfg.prefetchable_memory_base_upper, 0);
-    pcie_write32(&bcfg.prefetchable_memory_limit_upper, 0);
+        // Close all of our IO windows at the HW level and update the internal
+        // bookkeeping to indicate that they are closed.
+        auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg_->base));
+        pcie_write8(&bcfg.io_base, 0xF0);
+        pcie_write8(&bcfg.io_limit, 0);
+        pcie_write16(&bcfg.io_base_upper, 0);
+        pcie_write16(&bcfg.io_limit_upper, 0);
 
-    // Release our internal bookkeeping
-    mmio_lo_regions_.Reset();
-    mmio_hi_regions_.Reset();
-    pio_regions_.Reset();
+        pcie_write16(&bcfg.memory_base, 0xFFF0);
+        pcie_write16(&bcfg.memory_limit, 0);
 
-    mmio_window_.reset();
-    pio_window_.reset();
+        pcie_write16(&bcfg.prefetchable_memory_base, 0xFFF0);
+        pcie_write16(&bcfg.prefetchable_memory_limit, 0);
+        pcie_write32(&bcfg.prefetchable_memory_base_upper, 0);
+        pcie_write32(&bcfg.prefetchable_memory_limit_upper, 0);
+
+        pf_mem_limit_ = mem_limit_ = io_limit_ = 0u;
+        pf_mem_base_  = mem_base_  = io_base_  = 1u;
+
+        // Release our internal bookkeeping
+        mmio_lo_regions().Reset();
+        mmio_hi_regions().Reset();
+        pio_regions().Reset();
+
+        mmio_window_.reset();
+        pio_window_.reset();
+    }
 }

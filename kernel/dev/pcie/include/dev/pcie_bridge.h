@@ -10,36 +10,39 @@
 #include <magenta/compiler.h>
 #include <magenta/errors.h>
 #include <dev/pcie_bus_driver.h>
-#include <dev/pcie_constants.h>
 #include <dev/pcie_device.h>
-#include <kernel/mutex.h>
+#include <dev/pcie_upstream_node.h>
+
 #include <region-alloc/region-alloc.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
-/* Fwd decls */
-class PcieBusDriver;
-
-class PcieBridge : public PcieDevice {
+class PcieBridge : public PcieDevice,
+                   public PcieUpstreamNode {
 public:
-    static mxtl::RefPtr<PcieDevice> Create(PcieBridge& upstream,
+    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream,
                                            uint dev_id,
                                            uint func_id,
                                            uint managed_bus_id);
-    static mxtl::RefPtr<PcieBridge> CreateRoot(PcieBusDriver& bus_drv, uint managed_bus_id);
-    virtual ~PcieBridge();
 
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBridge);
 
-    mxtl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
-
+    // Device overrides
     void Unplug() override;
 
-    // TODO(johngro) : bury these once we refactor roots.  It should not need to be public.
-    void ScanDownstream();
-    void AllocateDownstreamBars();
+    // UpstreamNode overrides
+    RegionAllocator& mmio_lo_regions() override { return mmio_lo_regions_; }
+    RegionAllocator& mmio_hi_regions() override { return mmio_hi_regions_; }
+    RegionAllocator& pio_regions()     override { return pio_regions_; }
+
+    // Properties
+    PcieBusDriver& driver() { return PcieDevice::driver(); }
+
+    // RefCounting dismbiguation... see comment in PcieUpstreamNode
+    void AddRef() { PcieDevice::AddRef(); }
+    bool Release() __WARN_UNUSED_RESULT { return PcieDevice::Release(); }
 
     uint64_t pf_mem_base()        const { return pf_mem_base_; }
     uint64_t pf_mem_limit()       const { return pf_mem_limit_; }
@@ -48,21 +51,26 @@ public:
     uint32_t io_base()            const { return io_base_; }
     uint32_t io_limit()           const { return io_limit_; }
     bool     supports_32bit_pio() const { return supports_32bit_pio_; }
-    uint     managed_bus_id()     const { return managed_bus_id_; }
 
-    // TODO(johngro) : hide these once we refactor roots.  Currently, PcieDevice
-    // needs access to them in order to allocate BARs.
-    RegionAllocator mmio_lo_regions_;
-    RegionAllocator mmio_hi_regions_;
-    RegionAllocator pio_regions_;
+protected:
+    status_t AllocateBars() override;
+    status_t AllocateBridgeWindowsLocked();
+    void     Disable() override;
 
 private:
     friend class PcieBusDriver;
 
+    PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id);
+
+    status_t ParseBusWindowsLocked();
+    status_t Init(PcieUpstreamNode& upstream);
+
+    RegionAllocator mmio_lo_regions_;
+    RegionAllocator mmio_hi_regions_;
+    RegionAllocator pio_regions_;
+
     RegionAllocator::Region::UPtr mmio_window_;
     RegionAllocator::Region::UPtr pio_window_;
-
-    const uint managed_bus_id_;  // The ID of the downstream bus which this bridge manages.
 
     uint64_t pf_mem_base_;
     uint64_t pf_mem_limit_;
@@ -71,18 +79,4 @@ private:
     uint32_t io_base_;
     uint32_t io_limit_;
     bool     supports_32bit_pio_;
-
-    /* An array of pointers for all the possible functions which exist on the
-     * downstream bus of this bridge. */
-    mxtl::RefPtr<PcieDevice> downstream_[PCIE_MAX_FUNCTIONS_PER_BUS];
-
-    mxtl::RefPtr<PcieDevice> ScanDevice(pcie_config_t* cfg, uint dev_id, uint func_id);
-    status_t ParseBusWindowsLocked();
-
-    status_t Init(PcieBridge& upstream);
-    status_t AllocateBarsLocked(PcieBridge& upstream) override;
-    void     DisableLocked() override;
-
-    PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id);
-    PcieBridge(PcieBusDriver& bus_drv, uint mbus_id);
 };

@@ -25,7 +25,7 @@
 
 /* Fwd decls */
 class  PcieBusDriver;
-class  PcieBridge;
+class  PcieUpstreamNode;
 struct pcie_config_t;
 
 /*
@@ -50,13 +50,13 @@ struct pcie_bar_info_t {
  */
 class PcieDevice : public mxtl::RefCounted<PcieDevice> {
 public:
-    static mxtl::RefPtr<PcieDevice> Create(PcieBridge& upstream, uint dev_id, uint func_id);
+    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
     virtual ~PcieDevice();
 
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieDevice);
 
-    mxtl::RefPtr<PcieBridge> GetUpstream();
+    mxtl::RefPtr<PcieUpstreamNode> GetUpstream();
 
     status_t     Claim();
     void         Unclaim();
@@ -268,7 +268,7 @@ public:
 
     // Capability parsing
     //
-    // TODO(johngro): these needs to be refactored to use non-static methods,
+    // TODO(johngro): these need to be refactored to use non-static methods,
     // and to be private.
     static status_t ParseMsiCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
     static status_t ParsePciExpressCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
@@ -310,49 +310,50 @@ public:
     Mutex& dev_lock() { return dev_lock_; }
 
 protected:
+    friend class PcieUpstreamNode;
     friend class PcieBusDriver;  // TODO(johngro): remove this.  Currently used for IRQ swizzle.
-    friend class PcieBridge;
     PcieDevice(PcieBusDriver& bus_drv,
                uint bus_id, uint dev_id, uint func_id, bool is_bridge = false);
-    explicit PcieDevice(PcieBusDriver& bus_drv);
 
     void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits);
     void AssignCmdLocked(uint16_t value) { ModifyCmdLocked(0xFFFF, value); }
 
     // Initialization and probing.
-    status_t Init(PcieBridge& upstream);
-    status_t InitLocked(PcieBridge& upstream);
+    status_t Init(PcieUpstreamNode& upstream);
+    status_t InitLocked(PcieUpstreamNode& upstream);
     status_t ProbeBarsLocked();
     status_t ProbeBarLocked(uint bar_id);
     status_t ParseCapabilitiesLocked();
-    status_t InitLegacyIrqStateLocked(PcieBridge& upstream);
+    status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
 
     // BAR allocation
-    status_t         AllocateBars();
-    virtual status_t AllocateBarsLocked(PcieBridge& upstream);
-    status_t         AllocateBarLocked(PcieBridge& upstream, pcie_bar_info_t& info);
+    virtual status_t AllocateBars();
+    status_t         AllocateBarsLocked();
+    status_t         AllocateBarLocked(pcie_bar_info_t& info);
 
     // Disable a device, and anything downstream of it.  The device will
     // continue to enumerate, but users will only be able to access config (and
     // only in a read only fashion).  BAR windows, bus mastering, and interrupts
     // will all be disabled.
-    virtual void DisableLocked();
+    virtual void Disable();
+    void         DisableLocked();
 
-    PcieBusDriver&           bus_drv_;        // Reference to our bus driver state.
-    pcie_config_t*           cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
-    paddr_t                  cfg_phys_ = 0;   // The physical address of the device's ECAM
-    mxtl::RefPtr<PcieBridge> upstream_;       // The upstream bridge, or NULL if we are root
-    const bool               is_bridge_;      // True if this device is also a bridge
-    const uint               bus_id_;         // The bus ID this bridge/device exists on
-    const uint               dev_id_;         // The device ID of this bridge/device
-    const uint               func_id_;        // The function ID of this bridge/device
-    uint16_t                 vendor_id_;      // The device's vendor ID, as read from config
-    uint16_t                 device_id_;      // The device's device ID, as read from config
-    uint8_t                  class_id_;       // The device's class ID, as read from config.
-    uint8_t                  subclass_;       // The device's subclass, as read from config.
-    uint8_t                  prog_if_;        // The device's programming interface (from cfg)
-    uint8_t                  rev_id_;         // The device's revision ID (from cfg)
-    SpinLock                 cmd_reg_lock_;
+    PcieBusDriver& bus_drv_;        // Reference to our bus driver state.
+    pcie_config_t* cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
+    paddr_t        cfg_phys_ = 0;   // The physical address of the device's ECAM
+    SpinLock       cmd_reg_lock_;   // Protection for access to the command register.
+    const bool     is_bridge_;      // True if this device is also a bridge
+    const uint     bus_id_;         // The bus ID this bridge/device exists on
+    const uint     dev_id_;         // The device ID of this bridge/device
+    const uint     func_id_;        // The function ID of this bridge/device
+    uint16_t       vendor_id_;      // The device's vendor ID, as read from config
+    uint16_t       device_id_;      // The device's device ID, as read from config
+    uint8_t        class_id_;       // The device's class ID, as read from config.
+    uint8_t        subclass_;       // The device's subclass, as read from config.
+    uint8_t        prog_if_;        // The device's programming interface (from cfg)
+    uint8_t        rev_id_;         // The device's revision ID (from cfg)
+
+    mxtl::RefPtr<PcieUpstreamNode> upstream_;  // The upstream node in the device graph.
 
     /* State related to lifetime management */
     mutable Mutex dev_lock_;
@@ -457,13 +458,3 @@ private:
         struct { } msi_x;
     } irq_;
 };
-
-/*
- * temporary hack.
- * Previously static functions which are about to migrate into the device class.
- */
-status_t pcie_scan_init_device(const mxtl::RefPtr<PcieDevice>& dev,
-                               const mxtl::RefPtr<PcieBridge>& upstream_bridge,
-                               uint                            bus_id,
-                               uint                            dev_id,
-                               uint                            func_id);
