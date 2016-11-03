@@ -10,6 +10,7 @@ group("all") {
     ":example_module2",
     ":example_module3",
     ":example_recipe",
+    "hello_app",
   ]
 }
 

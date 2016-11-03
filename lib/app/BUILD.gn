@@ -4,13 +4,14 @@
 
 source_set("app") {
   sources = [
-    "application.cc",
-    "application.h",
+    "application_context.cc",
+    "application_context.h",
+    "connect.h",
     "service_provider_impl.cc",
     "service_provider_impl.h",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/modular/services/application",
     "//lib/ftl",
     "//lib/fidl/cpp/bindings",

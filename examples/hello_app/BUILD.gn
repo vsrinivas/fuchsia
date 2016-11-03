@@ -1,0 +1,42 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/fidl/fidl.gni")
+
+group("hello_app") {
+  deps = [
+    ":hello_app_child",
+    ":hello_app_parent",
+  ]
+}
+
+executable("hello_app_parent") {
+  deps = [
+    ":interfaces",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+
+  sources = [
+    "hello_app_parent.cc",
+  ]
+}
+
+executable("hello_app_child") {
+  deps = [
+    ":interfaces",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+
+  sources = [
+    "hello_app_child.cc",
+  ]
+}
+
+fidl("interfaces") {
+  sources = [
+    "hello.fidl",
+  ]
+}
