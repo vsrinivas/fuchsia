@@ -71,7 +71,7 @@ bool ContainerFromSharedBuffer(
   }
 
   mx_size_t num_read;
-  mx_status_t status = mx_vmo_read(vmo_handle, &(*container_ptr)[0], 0, num_bytes, &num_read);
+  status = mx_vmo_read(vmo_handle, &(*container_ptr)[0], 0, num_bytes, &num_read);
   if (status < 0) {
     FTL_LOG(WARNING) << "mx_vmo_read failed: " << status;
     return false;
