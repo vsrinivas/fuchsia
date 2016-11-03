@@ -5,12 +5,13 @@
 #pragma once
 
 #include <mx/handle.h>
+#include <magenta/types.h>
 
 namespace mx {
 class datapipe_producer;
 class datapipe_consumer;
 
-template <typename T = void> class datapipe : public handle<T> {
+template <typename T> class datapipe : public handle<T> {
 public:
     datapipe() = default;
 
@@ -22,20 +23,26 @@ public:
 
     static mx_status_t create(mx_size_t element_size, mx_size_t capacity,
                               uint32_t options, datapipe_producer* producer,
-                              datapipe_consumer* consumer) const {
-        mx_handle_t consumer_handle = MX_HANDLE_INVALID;
-        mx_handle_t h = mx_datapipe_create(options, mx_size_t element_size,
-                                           capacity, &consumer_handle);
-        consumer->reset(consumer_handle);
-        if (h < 0) {
-            producer->reset(MX_HANDLE_INVALID);
-            return h;
-        } else {
-            producer->reset(h);
-            return NO_ERROR;
-        }
-    }
+                              datapipe_consumer* consumer);
 };
+
+// static
+template <typename T>
+mx_status_t datapipe<T>::create(mx_size_t element_size, mx_size_t capacity,
+                             uint32_t options, datapipe_producer* producer,
+                             datapipe_consumer* consumer) {
+    mx_handle_t consumer_handle = MX_HANDLE_INVALID;
+    mx_handle_t h = mx_datapipe_create(options, element_size,
+                                       capacity, &consumer_handle);
+    consumer->reset(consumer_handle);
+    if (h < 0) {
+        producer->reset(MX_HANDLE_INVALID);
+        return h;
+    } else {
+        producer->reset(h);
+        return NO_ERROR;
+    }
+}
 
 class datapipe_producer : public datapipe<datapipe_producer> {
 public:
@@ -97,7 +104,7 @@ public:
 
     mx_status_t read(uint32_t flags, void* buffer, mx_size_t len,
                      mx_size_t* actual) const {
-        mx_ssize_t result = mx_datapipe_read(get(), flags, requested, buffer);
+        mx_ssize_t result = mx_datapipe_read(get(), flags, len, buffer);
         if (result < 0) {
             return static_cast<mx_status_t>(result);
         } else {
