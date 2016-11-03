@@ -40,8 +40,8 @@ namespace {{namespace}} {
 {% for interface in interfaces %}
 {%- set base_name = "internal::%s_Base"|format(interface.name) -%}
 {{interface.name}}_SynchronousProxy::{{interface.name}}_SynchronousProxy(
-      fidl::internal::SynchronousConnector* connector,
-      fidl::internal::MessageValidatorList&& validators)
+      ::fidl::internal::SynchronousConnector* connector,
+      ::fidl::internal::MessageValidatorList&& validators)
           : connector_(connector), validators_(std::move(validators)) {
 }
 
@@ -58,9 +58,9 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
 
   auto msg_name = static_cast<uint32_t>({{message_name}});
 {%-   if method.response_parameters != None %}
-  fidl::RequestMessageBuilder builder(msg_name, size);
+  ::fidl::RequestMessageBuilder builder(msg_name, size);
 {%-   else %}
-  fidl::MessageBuilder builder(msg_name, size);
+  ::fidl::MessageBuilder builder(msg_name, size);
 {%-   endif %}
 
   {{struct_macros.serialize(params_struct,
@@ -72,15 +72,15 @@ bool {{interface.name}}_SynchronousProxy::{{method.name}}(
     return false;
   
 {%-   if method.response_parameters != None %}
-  fidl::Message response_msg;
+  ::fidl::Message response_msg;
   if (!connector_->BlockingRead(&response_msg))
     return false; 
   
   // Validate the incoming message.
   std::string response_err;
-  if (fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
+  if (::fidl::internal::RunValidatorsOnMessage(validators_, &response_msg,
                                              &response_err)
-        != fidl::internal::ValidationError::NONE) {
+        != ::fidl::internal::ValidationError::NONE) {
     FTL_LOG(WARNING) << response_err;
     return false;
   }

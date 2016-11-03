@@ -58,10 +58,10 @@ namespace internal {
 // --- Request and response validator definitions for interfaces ---
 {%- for interface in interfaces %}
 {%-   set base_name = "internal::%s_Base"|format(interface.name) %}
-fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
-    const fidl::Message* message,
+::fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
+    const ::fidl::Message* message,
     std::string* err) {
-  fidl::internal::ValidationError retval;
+  ::fidl::internal::ValidationError retval;
 
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
@@ -70,9 +70,9 @@ fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
     case {{base_name}}::MessageOrdinals::{{method.name}}: {
 {%-     if method.response_parameters != None %}
       retval =
-          fidl::internal::ValidateMessageIsRequestExpectingResponse(message,
+          ::fidl::internal::ValidateMessageIsRequestExpectingResponse(message,
                                                                     err);
-      if (retval != fidl::internal::ValidationError::NONE) {
+      if (retval != ::fidl::internal::ValidationError::NONE) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "
              "message name '" << message->header()->name << "': " <<
@@ -81,9 +81,9 @@ fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
         return retval;
       }
 {%-     else %}
-      retval = fidl::internal::ValidateMessageIsRequestWithoutResponse(message,
+      retval = ::fidl::internal::ValidateMessageIsRequestWithoutResponse(message,
                                                                        err);
-      if (retval != fidl::internal::ValidationError::NONE) {
+      if (retval != ::fidl::internal::ValidationError::NONE) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "
              "message name '" << message->header()->name << "': " <<
@@ -92,10 +92,10 @@ fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
         return retval;
       }
 {%-     endif %}
-      retval = fidl::internal::ValidateMessagePayload<
+      retval = ::fidl::internal::ValidateMessagePayload<
                  internal::{{interface.name}}_{{method.name}}_Params_Data>(
                     message, err); 
-      if (retval != fidl::internal::ValidationError::NONE) {
+      if (retval != ::fidl::internal::ValidationError::NONE) {
          FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "request validation error for interface '{{interface.name}}', "
                "message name '" << message->header()->name << "': " <<
@@ -103,7 +103,7 @@ fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
         ReportValidationError(retval, err);
         return retval;
       }
-      return fidl::internal::ValidationError::NONE;
+      return ::fidl::internal::ValidationError::NONE;
     }
 {%-   endfor %}
     default:
@@ -116,19 +116,19 @@ fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
                                          << "' for interface "
                                             "'{{interface.name}}'";
   ReportValidationError(
-      fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
-  return fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
+      ::fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
+  return ::fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
 }
 
 {#--- Response validator definitions #}
 {%-   if interface|has_callbacks %}
-fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
-    const fidl::Message* message,
+::fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
+    const ::fidl::Message* message,
     std::string* err) {
-  fidl::internal::ValidationError retval;
+  ::fidl::internal::ValidationError retval;
 
-  retval = fidl::internal::ValidateMessageIsResponse(message, err);
-  if (retval != fidl::internal::ValidationError::NONE) {
+  retval = ::fidl::internal::ValidateMessageIsResponse(message, err);
+  if (retval != ::fidl::internal::ValidationError::NONE) {
     FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "response validation error for interface '{{interface.name}}', "
                "message name '" << message->header()->name << "': " <<
@@ -142,10 +142,10 @@ fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
   switch (method_ordinal) {
 {%-    for method in interface.methods if method.response_parameters != None %}
     case {{base_name}}::MessageOrdinals::{{method.name}}: {
-      retval = fidl::internal::ValidateMessagePayload<
+      retval = ::fidl::internal::ValidateMessagePayload<
                   internal::{{interface.name}}_{{method.name}}_ResponseParams_Data>(
                       message, err);
-      if (retval != fidl::internal::ValidationError::NONE) {
+      if (retval != ::fidl::internal::ValidationError::NONE) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
             << "response validation error for interface '{{interface.name}}',"
                " message name '" << message->header()->name << "': " <<
@@ -153,7 +153,7 @@ fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
         ReportValidationError(retval, err);
         return retval;
       }
-      return fidl::internal::ValidationError::NONE;
+      return ::fidl::internal::ValidationError::NONE;
     }
 {%-    endfor %}
     default:
@@ -166,8 +166,8 @@ fidl::internal::ValidationError {{interface.name}}ResponseValidator::Validate(
                                           << "' for interface "
                                              "'{{interface.name}}'";
   ReportValidationError(
-      fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
-  return fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
+      ::fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD, err);
+  return ::fidl::internal::ValidationError::MESSAGE_HEADER_UNKNOWN_METHOD;
 }
 {%-   endif -%}
 

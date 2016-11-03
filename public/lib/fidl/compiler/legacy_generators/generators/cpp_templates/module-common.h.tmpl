@@ -48,9 +48,9 @@ class {{interface.name}}_Synchronous;
 {%- for union in unions %}
 class {{union.name}};
 {%-   if union|should_inline_union %}
-typedef fidl::InlinedStructPtr<{{union.name}}> {{union.name}}Ptr;
+typedef ::fidl::InlinedStructPtr<{{union.name}}> {{union.name}}Ptr;
 {%-   else %}
-typedef fidl::StructPtr<{{union.name}}> {{union.name}}Ptr;
+typedef ::fidl::StructPtr<{{union.name}}> {{union.name}}Ptr;
 {%-   endif %}
 {%- endfor %}
 
@@ -87,7 +87,7 @@ class {{interface.name}}_Base {
 {%- if interface|has_callbacks %}
   using ResponseValidator_ = {{interface.name}}ResponseValidator;
 {%- else %}
-  using ResponseValidator_ = fidl::internal::PassThroughValidator;
+  using ResponseValidator_ = ::fidl::internal::PassThroughValidator;
   {%- endif %}
   using Synchronous_ = {{interface.name}}_Synchronous;
 

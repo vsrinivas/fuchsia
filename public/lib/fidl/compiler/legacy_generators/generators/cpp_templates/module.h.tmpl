@@ -32,7 +32,7 @@ namespace {{namespace}} {
 
 // --- Interface Forward Declarations ---
 {%  for interface in interfaces %}
-using {{interface.name}}Ptr = fidl::InterfacePtr<{{interface.name}}>;
+using {{interface.name}}Ptr = ::fidl::InterfacePtr<{{interface.name}}>;
 {%  endfor %}
 
 // --- Interface Proxies ---

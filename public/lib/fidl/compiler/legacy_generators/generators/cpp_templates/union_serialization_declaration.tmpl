@@ -1,7 +1,7 @@
 size_t GetSerializedSize_(const {{union.name}}Ptr& input);
-fidl::internal::ValidationError SerializeUnion_(
+::fidl::internal::ValidationError SerializeUnion_(
     {{union.name}}* input,
-    fidl::internal::Buffer* buffer,
+    ::fidl::internal::Buffer* buffer,
     internal::{{union.name}}_Data** output);
 void Deserialize_(internal::{{union.name}}_Data* input,
                   {{union.name}}* output);

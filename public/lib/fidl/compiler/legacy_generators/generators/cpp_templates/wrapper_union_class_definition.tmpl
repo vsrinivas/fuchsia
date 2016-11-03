@@ -1,7 +1,7 @@
 // static
 {{union.name}}Ptr {{union.name}}::New() {
   {{union.name}}Ptr rv;
-  fidl::internal::StructHelper<{{union.name}}>::Initialize(&rv);
+  ::fidl::internal::StructHelper<{{union.name}}>::Initialize(&rv);
   return rv;
 }
 
@@ -46,9 +46,9 @@ bool {{union.name}}::Equals(const {{union.name}}& other) const {
     case Tag::{{field.name|upper}}:
 {%    if field.kind|is_object_kind or field.kind|is_any_handle_kind
           or field.kind|is_interface_kind %}
-      return fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(*(data_.{{field.name}}), *(other.data_.{{field.name}}));
+      return ::fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(*(data_.{{field.name}}), *(other.data_.{{field.name}}));
 {%-   else %}
-      return fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(data_.{{field.name}}, other.data_.{{field.name}});
+      return ::fidl::internal::ValueTraits<{{field.kind|cpp_wrapper_type}}>::Equals(data_.{{field.name}}, other.data_.{{field.name}});
 {%-   endif %}
 {%- endfor %}
     case Tag::__UNKNOWN__:

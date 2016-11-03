@@ -2,17 +2,17 @@
 
 class {{class_name}} {
  public:
-  static {{class_name}}* New(fidl::internal::Buffer* buf);
+  static {{class_name}}* New(::fidl::internal::Buffer* buf);
 
-  static fidl::internal::ValidationError Validate(
+  static ::fidl::internal::ValidationError Validate(
       const void* data,
-      fidl::internal::BoundsChecker* bounds_checker,
+      ::fidl::internal::BoundsChecker* bounds_checker,
       std::string* err);
 
   void EncodePointersAndHandles(std::vector<mx_handle_t>* handles);
   void DecodePointersAndHandles(std::vector<mx_handle_t>* handles);
 
-  fidl::internal::StructHeader header_;
+  ::fidl::internal::StructHeader header_;
 {%- for packed_field in struct.packed.packed_fields %}
 {%-   set name = packed_field.field.name %}
 {%-   set kind = packed_field.field.kind %}

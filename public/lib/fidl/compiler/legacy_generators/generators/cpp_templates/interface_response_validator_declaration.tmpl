@@ -1,6 +1,6 @@
 class {{interface.name}}ResponseValidator
-    : public fidl::internal::MessageValidator {
+    : public ::fidl::internal::MessageValidator {
  public:
-  fidl::internal::ValidationError Validate(const fidl::Message* message,
+  ::fidl::internal::ValidationError Validate(const ::fidl::Message* message,
                                            std::string* err) override;
 };

@@ -44,15 +44,15 @@
 {%- macro call_serialize_array(name, kind, input, buffer, output,
                                should_return_errors, indent_size) -%}
   {
-    const fidl::internal::ArrayValidateParams {{name}}_validate_params(
+    const ::fidl::internal::ArrayValidateParams {{name}}_validate_params(
       {{kind|get_array_validate_params_ctor_args|indent(indent_size)}});
 {%-       if should_return_errors -%}
     auto retval =
 {%-       endif -%}
-    fidl::SerializeArray_({{input}}, {{buffer}}, {{output}},
+    ::fidl::SerializeArray_({{input}}, {{buffer}}, {{output}},
                           &{{name}}_validate_params);
 {%-       if should_return_errors %}
-    if (retval != fidl::internal::ValidationError::NONE)
+    if (retval != ::fidl::internal::ValidationError::NONE)
       return retval;
 {%-       endif %}
   }
@@ -61,16 +61,16 @@
 {%- macro call_serialize_map(name, kind, input, buffer, output,
                              should_return_errors, indent_size) -%}
   {
-    const fidl::internal::ArrayValidateParams {{name}}_validate_params(
+    const ::fidl::internal::ArrayValidateParams {{name}}_validate_params(
         {{kind.value_kind|get_map_validate_params_ctor_args|indent(indent_size)}});
 {%- if should_return_errors -%}
     auto retval =
 {%- endif -%}
-    fidl::SerializeMap_(
+    ::fidl::SerializeMap_(
         {{input}}, {{buffer}}, {{output}},
         &{{name}}_validate_params);
 {%- if should_return_errors %}
-    if (retval != fidl::internal::ValidationError::NONE)
+    if (retval != ::fidl::internal::ValidationError::NONE)
       return retval;
 {%- endif %}
   }
@@ -85,7 +85,7 @@
                       {{buffer}},
                       {{output}});
 {%- if should_return_errors %}
-    if (retval != fidl::internal::ValidationError::NONE)
+    if (retval != ::fidl::internal::ValidationError::NONE)
       return retval;
 {%- endif %}
   }
@@ -100,7 +100,7 @@
                {{buffer}},
                {{output}});
 {%- if should_return_errors %}
-    if (retval != fidl::internal::ValidationError::NONE)
+    if (retval != ::fidl::internal::ValidationError::NONE)
       return retval;
 {%- endif %}
   }
@@ -172,20 +172,20 @@
 {%-       endif %}
   {{_validation_check_macro(
     condition = condition,
-    error_code = "fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER",
+    error_code = "::fidl::internal::ValidationError::UNEXPECTED_NULL_POINTER",
     error_msg = "null %s in %s" | format(name, struct_display_name),
     should_return_errors = should_return_errors)}}
 {%-     endif %}
 {%-   elif kind|is_any_handle_kind or kind|is_interface_kind %}
 {%-     if kind|is_interface_kind %}
-  fidl::internal::InterfaceHandleToData(std::move({{input_field}}),
+  ::fidl::internal::InterfaceHandleToData(std::move({{input_field}}),
                                         &{{output}}->{{name}});
 {%-     elif kind|is_interface_request_kind %}
   {{output}}->{{name}} =
-    fidl::internal::WrappedHandle{ {{input_field}}.PassMessagePipe().release() };
+    ::fidl::internal::WrappedHandle{ {{input_field}}.PassMessagePipe().release() };
 {%-     else %}
   {{output}}->{{name}} =
-    fidl::internal::WrappedHandle{ {{input_field}}.release() };
+    ::fidl::internal::WrappedHandle{ {{input_field}}.release() };
 {%-     endif %}
 {%-     if not kind|is_nullable_kind %}
 {%-       if kind|is_interface_kind %}
@@ -195,7 +195,7 @@
 {%-       endif %}
   {{_validation_check_macro(
     condition = condition,
-    error_code = "fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE",
+    error_code = "::fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE",
     error_msg = "invalid %s in %s" | format(name, struct_display_name),
     should_return_errors = should_return_errors)}}
 {%-     endif %}
@@ -253,12 +253,12 @@
     Deserialize_({{input}}->{{name}}.ptr, &{{output_field}});
 {%-       endif %}
 {%-     elif kind|is_interface_kind %}
-    fidl::internal::InterfaceDataToHandle(&{{input}}->{{name}}, &{{output_field}});
+    ::fidl::internal::InterfaceDataToHandle(&{{input}}->{{name}}, &{{output_field}});
 {%-     elif kind|is_interface_request_kind %}
-    {{output_field}}.Bind(fidl::internal::UnwrapHandle<mx::channel>(
-      fidl::internal::FetchAndReset(&{{input}}->{{name}})));
+    {{output_field}}.Bind(::fidl::internal::UnwrapHandle<mx::channel>(
+      ::fidl::internal::FetchAndReset(&{{input}}->{{name}})));
 {%-     elif kind|is_any_handle_kind %}
-    {{output_field}}.reset(fidl::internal::FetchAndReset(&{{input}}->{{name}}).value);
+    {{output_field}}.reset(::fidl::internal::FetchAndReset(&{{input}}->{{name}}).value);
 {%-     elif kind|is_enum_kind %}
     {{output_field}} = static_cast<{{kind|cpp_wrapper_type}}>({{input}}->{{name}});
 {%-     else %}
@@ -269,15 +269,15 @@
 {%- endmacro %}
 
 {# Forward declares |struct|, and typedefs the appropriate Ptr wrapper
-   (|fidl::StructPtr| or |fidl::InlinedStructPtr|).  This macro is expanded for
+   (|::fidl::StructPtr| or |::fidl::InlinedStructPtr|).  This macro is expanded for
    all generated structs:
    - user-defined mojo structs
    - interface method params/response params #}
 {%- macro structptr_forward_decl(struct) -%}
 class {{struct.name}};
 {%    if struct|should_inline %}
-using {{struct.name}}Ptr = fidl::InlinedStructPtr<{{struct.name}}>;
+using {{struct.name}}Ptr = ::fidl::InlinedStructPtr<{{struct.name}}>;
 {%    else %}
-using {{struct.name}}Ptr = fidl::StructPtr<{{struct.name}}>;
+using {{struct.name}}Ptr = ::fidl::StructPtr<{{struct.name}}>;
 {%    endif %}
 {% endmacro %}

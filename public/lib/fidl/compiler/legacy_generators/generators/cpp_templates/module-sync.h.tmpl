@@ -50,8 +50,8 @@ class {{interface.name}}_SynchronousProxy
     : public {{interface.name}}_Synchronous {
  public:
   explicit {{interface.name}}_SynchronousProxy(
-      fidl::internal::SynchronousConnector* connector,
-      fidl::internal::MessageValidatorList&& validators);
+      ::fidl::internal::SynchronousConnector* connector,
+      ::fidl::internal::MessageValidatorList&& validators);
 
 {%-   for method in interface.methods %}
   bool {{method.name}}({{interface_macros.declare_sync_request_params(method)}})
@@ -60,8 +60,8 @@ class {{interface.name}}_SynchronousProxy
 
  private:
   // |connector_| is passed to us, and is not owned by us.
-  fidl::internal::SynchronousConnector* const connector_;
-  fidl::internal::MessageValidatorList const validators_;
+  ::fidl::internal::SynchronousConnector* const connector_;
+  ::fidl::internal::MessageValidatorList const validators_;
 };
 {% endfor %}
 
