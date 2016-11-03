@@ -111,7 +111,8 @@ bool GetGeneralRegistersHelper(const mx_handle_t thread_handle,
 
   *out_gregs_size = sizeof(*out_gregs);
   mx_status_t status = mx_thread_read_state(
-      thread_handle, MX_THREAD_STATE_REGSET0, out_gregs, out_gregs_size);
+      thread_handle, MX_THREAD_STATE_REGSET0, out_gregs, sizeof(*out_gregs),
+      out_gregs_size);
   if (status < 0) {
     util::LogErrorWithMxStatus("Failed to read x86_64 registers", status);
     return false;
