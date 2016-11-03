@@ -25,6 +25,7 @@ group("mozart") {
     "//apps/mozart/src/input_manager",
     "//apps/mozart/src/input_reader",
     "//apps/mozart/src/launcher",
+    "//apps/mozart/src/print_input",
     "//apps/mozart/src/view_manager",
   ]
 }
