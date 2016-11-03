@@ -46,7 +46,8 @@ function umount_retry() {
 }
 
 function usage() {
-  echo "$0 [block device] [root directory]"
+  echo "$0 BLOCK_DEVICE ROOT_DIRECTORY [type]"
+  echo "\"type\" is optional and can be \"dev\" or \"net\""
 }
 
 is_usb() {
@@ -68,11 +69,15 @@ DC_DIR="${SCRIPT_DIR}/../third_party/depthcharge"
 MX_DIR="${SCRIPT_DIR}/../magenta"
 
 # Grab some arguments, do some basic validation.
-[[ $# -eq 2 ]] || (usage; die)
+[[ $# -eq 3 ]] || [[ $# -eq 2 ]] || (usage; die)
 [[ -b "$1" ]] || (usage; die "$1 is not a block device")
 [[ -d "$2" ]] || (usage; die "$2 is not a directory")
 BLOCK_DEVICE=$1
 ROOT_DIR=$2
+
+if [[ $# -eq 3 ]]; then
+  DC_TYPE="$3"
+fi
 
 KERNEL_IMAGE="$(mktemp)"
 trap "rm -rf \"${KERNEL_IMAGE}\"" INT TERM EXIT
@@ -88,10 +93,6 @@ fi
 sgdisk --zap-all "${BLOCK_DEVICE}"
 
 make -C "${VB_DIR}" cgpt futil
-
-PATH="${PATH}:${VB_DIR}/build/futility" \
-    BUILD_IMAGE_PATH="${VB_DIR}/tests/devkeys" \
-    VB_SOURCE="${VB_DIR}" make -j8 -C "${DC_DIR}" uefi
 
 "${VB_DIR}"/build/futility/futility vbutil_kernel \
 	--pack "${KERNEL_IMAGE}"  \
@@ -145,12 +146,4 @@ chown -R root:root "${MOUNT_POINT}"/*
 umount_retry "${MOUNT_POINT}"
 
 # Copy depthcharge to the EFI partition (and just let the trap unmount us).
-mount "${BLOCK_DEVICE}4" "${MOUNT_POINT}"
-mkdir -p "${MOUNT_POINT}"/efi/boot
-mkdir -p "${MOUNT_POINT}"/depthcharge
-cp "${DC_DIR}"/build/uefi/image/uefi_dev.efi \
-    "${MOUNT_POINT}"/efi/boot/bootx64.efi
-cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwa.bin \
-    "${MOUNT_POINT}"/depthcharge/rwa
-cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwb.bin \
-    "${MOUNT_POINT}"/depthcharge/rwb
+"${SCRIPT_DIR}"/install-uefi-depthcharge.sh "${BLOCK_DEVICE}" ${DC_TYPE}
