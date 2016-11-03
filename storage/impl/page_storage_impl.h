@@ -8,7 +8,6 @@
 #include "apps/ledger/storage/public/page_storage.h"
 
 #include "apps/ledger/storage/impl/db_impl.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -84,7 +83,6 @@ class PageStorageImpl : public PageStorage {
   PageId page_id_;
   DbImpl db_;
   std::vector<CommitWatcher*> watchers_;
-  ObjectStore store_;
   std::string objects_dir_;
   std::string staging_dir_;
   std::vector<std::unique_ptr<FileWriter>> writers_;

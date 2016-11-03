@@ -15,8 +15,9 @@
 
 namespace storage {
 
-CommitContentsImpl::CommitContentsImpl(ObjectIdView root_id, ObjectStore* store)
-    : root_id_(root_id.ToString()), store_(store) {}
+CommitContentsImpl::CommitContentsImpl(ObjectIdView root_id,
+                                       PageStorage* page_storage)
+    : root_id_(root_id.ToString()), page_storage_(page_storage) {}
 
 CommitContentsImpl::~CommitContentsImpl() {}
 
@@ -35,10 +36,10 @@ std::unique_ptr<Iterator<const EntryChange>> CommitContentsImpl::diff(
     const CommitContents& other) const {
   std::unique_ptr<const TreeNode> root;
   // TODO(nellyv): Update API to return error Status. LE-39
-  FTL_CHECK(TreeNode::FromId(store_, root_id_, &root) == Status::OK);
+  FTL_CHECK(TreeNode::FromId(page_storage_, root_id_, &root) == Status::OK);
 
   std::unique_ptr<const TreeNode> right;
-  FTL_CHECK(TreeNode::FromId(store_, other.GetBaseObjectId(), &right) ==
+  FTL_CHECK(TreeNode::FromId(page_storage_, other.GetBaseObjectId(), &right) ==
             Status::OK);
 
   return std::unique_ptr<DiffIterator>(
@@ -52,7 +53,7 @@ ObjectId CommitContentsImpl::GetBaseObjectId() const {
 std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
   std::unique_ptr<const TreeNode> root;
   // TODO(nellyv): Update API to return error Status. LE-39
-  FTL_CHECK(TreeNode::FromId(store_, root_id_, &root) == Status::OK);
+  FTL_CHECK(TreeNode::FromId(page_storage_, root_id_, &root) == Status::OK);
   return std::unique_ptr<BTreeIterator>(new BTreeIterator(std::move(root)));
 }
 

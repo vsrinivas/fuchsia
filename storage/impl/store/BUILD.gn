@@ -17,8 +17,6 @@ source_set("lib") {
   sources = [
     "encoding.cc",
     "encoding.h",
-    "object_store.cc",
-    "object_store.h",
     "tree_node.cc",
     "tree_node.h",
   ]
@@ -44,7 +42,7 @@ executable("unittests") {
 
   sources = [
     "encoding_unittest.cc",
-    "object_store_unittest.cc",
+    "tree_node_unittest.cc",
   ]
 
   deps = [

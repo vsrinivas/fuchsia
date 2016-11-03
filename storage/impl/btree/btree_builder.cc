@@ -10,7 +10,7 @@
 namespace storage {
 
 void BTreeBuilder::ApplyChanges(
-    ObjectStore* store,
+    PageStorage* page_storage,
     ObjectIdView root_id,
     size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
@@ -19,19 +19,19 @@ void BTreeBuilder::ApplyChanges(
   if (root_id.empty()) {
     ObjectId tmp_root_id;
     Status status =
-        TreeNode::FromEntries(store, std::vector<Entry>(),
+        TreeNode::FromEntries(page_storage, std::vector<Entry>(),
                               std::vector<ObjectId>{ObjectId()}, &tmp_root_id);
     if (status != Status::OK) {
       callback(status, ObjectId());
       return;
     }
-    status = TreeNode::FromId(store, tmp_root_id, &root);
+    status = TreeNode::FromId(page_storage, tmp_root_id, &root);
     if (status != Status::OK) {
       callback(status, ObjectId());
       return;
     }
   } else {
-    Status status = TreeNode::FromId(store, root_id, &root);
+    Status status = TreeNode::FromId(page_storage, root_id, &root);
     if (status != Status::OK) {
       callback(status, ObjectId());
       return;
@@ -39,12 +39,13 @@ void BTreeBuilder::ApplyChanges(
   }
 
   ObjectId new_id;
-  Status status = BTreeBuilder::ApplyChanges(
-      store, std::move(root), node_size, "", changes.get(), nullptr, &new_id);
+  Status status =
+      BTreeBuilder::ApplyChanges(page_storage, std::move(root), node_size, "",
+                                 changes.get(), nullptr, &new_id);
   callback(status, new_id);
 }
 
-Status BTreeBuilder::ApplyChanges(ObjectStore* store,
+Status BTreeBuilder::ApplyChanges(PageStorage* page_storage,
                                   std::unique_ptr<const TreeNode> node,
                                   size_t node_size,
                                   const std::string& max_key,
@@ -74,7 +75,7 @@ Status BTreeBuilder::ApplyChanges(ObjectStore* store,
           return right_status;
         }
         Status merge_status =
-            Merge(store, std::move(left), std::move(right), &child_id);
+            Merge(page_storage, std::move(left), std::move(right), &child_id);
         if (merge_status != Status::OK) {
           return merge_status;
         }
@@ -99,9 +100,9 @@ Status BTreeBuilder::ApplyChanges(ObjectStore* store,
           next_key = entry.key;
         }
         ObjectId new_child_id;
-        Status status = BTreeBuilder::ApplyChanges(store, std::move(child),
-                                                   node_size, next_key, changes,
-                                                   &mutation, &new_child_id);
+        Status status = BTreeBuilder::ApplyChanges(
+            page_storage, std::move(child), node_size, next_key, changes,
+            &mutation, &new_child_id);
         if (status != Status::OK) {
           return status;
         }
@@ -132,7 +133,7 @@ Status BTreeBuilder::ApplyChanges(ObjectStore* store,
   return mutation.Finish(node_size, parent_mutation, max_key, new_id);
 }
 
-Status BTreeBuilder::Merge(ObjectStore* store,
+Status BTreeBuilder::Merge(PageStorage* page_storage,
                            std::unique_ptr<const TreeNode> left,
                            std::unique_ptr<const TreeNode> right,
                            ObjectId* new_id) {
@@ -158,14 +159,14 @@ Status BTreeBuilder::Merge(ObjectStore* store,
   if (right_status != Status::OK && right_status != Status::NOT_FOUND) {
     return right_status;
   }
-  Status child_result = Merge(store, std::move(left_rightmost_child),
+  Status child_result = Merge(page_storage, std::move(left_rightmost_child),
                               std::move(right_leftmost_child), &child_id);
   if (child_result != Status::OK) {
     return child_result;
   }
 
-  return TreeNode::Merge(store, std::move(left), std::move(right), child_id,
-                         new_id);
+  return TreeNode::Merge(page_storage, std::move(left), std::move(right),
+                         child_id, new_id);
 }
 
 }  // namespace storage

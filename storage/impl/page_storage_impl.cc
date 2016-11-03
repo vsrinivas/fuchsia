@@ -168,7 +168,6 @@ PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
       page_dir_(page_dir),
       page_id_(page_id.ToString()),
       db_(this, page_dir_ + kLevelDbDir),
-      store_(this),
       objects_dir_(page_dir_ + kObjectDir),
       staging_dir_(page_dir_ + kStagingDir) {}
 
@@ -244,7 +243,7 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
   static std::string first_commit_id =
       std::string(kFirstPageCommitId, kCommitIdSize);
   if (commit_id == first_commit_id) {
-    *commit = CommitImpl::Empty(&store_);
+    *commit = CommitImpl::Empty(this);
     return Status::OK;
   }
   std::string bytes;
@@ -253,7 +252,7 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
     return s;
   }
   std::unique_ptr<Commit> c =
-      CommitImpl::FromStorageBytes(&store_, commit_id, std::move(bytes));
+      CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes));
   if (!c) {
     return Status::FORMAT_ERROR;
   }
@@ -268,7 +267,7 @@ Status PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit) {
 Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
                                           std::string&& storage_bytes) {
   std::unique_ptr<Commit> commit =
-      CommitImpl::FromStorageBytes(&store_, id, std::move(storage_bytes));
+      CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
   if (!commit) {
     return Status::FORMAT_ERROR;
   }

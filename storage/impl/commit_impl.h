@@ -5,8 +5,8 @@
 #ifndef APPS_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 #define APPS_LEDGER_STORAGE_IMPL_COMMIT_IMPL_H_
 
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit.h"
+#include "apps/ledger/storage/public/page_storage.h"
 
 namespace storage {
 
@@ -17,18 +17,18 @@ class CommitImpl : public Commit {
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, a NULL pointer will be
   // returned.
-  static std::unique_ptr<Commit> FromStorageBytes(ObjectStore* store,
+  static std::unique_ptr<Commit> FromStorageBytes(PageStorage* page_storage,
                                                   const CommitId& id,
                                                   std::string&& storage_bytes);
 
   static std::unique_ptr<Commit> FromContentAndParents(
-      ObjectStore* store,
+      PageStorage* page_storage,
       ObjectIdView root_node_id,
       std::vector<CommitId>&& parent_ids);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
   // parents and with empty contents.
-  static std::unique_ptr<Commit> Empty(ObjectStore* store);
+  static std::unique_ptr<Commit> Empty(PageStorage* page_storage);
 
   // Commit:
   CommitId GetId() const override;
@@ -41,14 +41,14 @@ class CommitImpl : public Commit {
  private:
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
-  CommitImpl(ObjectStore* store,
+  CommitImpl(PageStorage* page_storage,
              const CommitId& id,
              int64_t timestamp,
              ObjectIdView root_node_id,
              const std::vector<CommitId>& parent_ids,
              std::string&& storage_bytes);
 
-  ObjectStore* store_;
+  PageStorage* page_storage_;
   CommitId id_;
   int64_t timestamp_;
   ObjectId root_node_id_;

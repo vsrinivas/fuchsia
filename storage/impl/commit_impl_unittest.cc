@@ -6,7 +6,6 @@
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -23,15 +22,13 @@ std::string RandomId(size_t size) {
 
 class CommitImplTest : public ::testing::Test {
  public:
-  CommitImplTest()
-      : page_storage_(ObjectId(kObjectIdSize, 'a')),
-        object_store_(&page_storage_) {}
+  CommitImplTest() : page_storage_(ObjectId(kObjectIdSize, 'a')) {}
 
   ~CommitImplTest() override {}
 
   void CheckCommitStorageBytes(const std::unique_ptr<Commit>& commit) {
     std::unique_ptr<Commit> copy = CommitImpl::FromStorageBytes(
-        &object_store_, commit->GetId(), commit->GetStorageBytes());
+        &page_storage_, commit->GetId(), commit->GetStorageBytes());
     EXPECT_EQ(commit->GetId(), copy->GetId());
     EXPECT_EQ(commit->GetTimestamp(), copy->GetTimestamp());
     EXPECT_EQ(commit->GetParentIds(), copy->GetParentIds());
@@ -40,7 +37,6 @@ class CommitImplTest : public ::testing::Test {
 
  protected:
   fake::FakePageStorage page_storage_;
-  ObjectStore object_store_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitImplTest);
@@ -54,13 +50,13 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
 
   // A commit with one parent.
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &object_store_, root_node_id, std::vector<CommitId>(parents));
+      &page_storage_, root_node_id, std::vector<CommitId>(parents));
   CheckCommitStorageBytes(commit);
 
   // A commit with two parents.
   parents.push_back(RandomId(kCommitIdSize));
   std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
-      &object_store_, root_node_id, std::move(parents));
+      &page_storage_, root_node_id, std::move(parents));
   CheckCommitStorageBytes(commit2);
 }
 

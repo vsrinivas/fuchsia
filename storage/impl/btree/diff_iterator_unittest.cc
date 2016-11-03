@@ -7,7 +7,6 @@
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "apps/ledger/storage/public/types.h"
@@ -27,7 +26,7 @@ ObjectId RandomId() {
 
 class DiffIteratorTest : public ::testing::Test {
  public:
-  DiffIteratorTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
+  DiffIteratorTest() : fake_storage_("page_id") {}
 
   ~DiffIteratorTest() override {}
 
@@ -39,7 +38,6 @@ class DiffIteratorTest : public ::testing::Test {
 
  protected:
   fake::FakePageStorage fake_storage_;
-  ObjectStore store_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(DiffIteratorTest);
@@ -51,15 +49,15 @@ TEST_F(DiffIteratorTest, IterateEmptyDiff) {
   Entry entry3 = Entry{"key3", RandomId(), storage::KeyPriority::LAZY};
   Entry entry4 = Entry{"key4", RandomId(), storage::KeyPriority::LAZY};
   ObjectId node_id1;
-  EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(
-                &store_, std::vector<Entry>{entry1, entry2, entry3, entry4},
-                std::vector<ObjectId>(5), &node_id1));
+  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
+                            &fake_storage_,
+                            std::vector<Entry>{entry1, entry2, entry3, entry4},
+                            std::vector<ObjectId>(5), &node_id1));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &right));
 
   DiffIterator it(std::move(left), std::move(right));
   EXPECT_FALSE(it.Valid());
@@ -73,10 +71,11 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
   Entry entry4 = Entry{"key4", RandomId(), KeyPriority::LAZY};
   Entry entry5 = Entry{"key5", RandomId(), KeyPriority::LAZY};
   ObjectId node_id1;
-  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
-                            &store_, std::vector<Entry>{entry1, entry2, entry3,
-                                                        entry4, entry5},
-                            std::vector<ObjectId>(6), &node_id1));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(
+                &fake_storage_,
+                std::vector<Entry>{entry1, entry2, entry3, entry4, entry5},
+                std::vector<ObjectId>(6), &node_id1));
 
   Entry entry11 = Entry{"key11", RandomId(), KeyPriority::EAGER};
   Entry entry22 = Entry{"key22", RandomId(), KeyPriority::EAGER};
@@ -84,15 +83,15 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
   Entry entry5bis = Entry{entry5.key, entry5.object_id, KeyPriority::EAGER};
   ObjectId node_id2;
   EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(&store_,
+            TreeNode::FromEntries(&fake_storage_,
                                   std::vector<Entry>{entry1, entry11, entry22,
                                                      entry4bis, entry5bis},
                                   std::vector<ObjectId>(6), &node_id2));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node_id2, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id2, &right));
 
   DiffIterator it(std::move(left), std::move(right));
 

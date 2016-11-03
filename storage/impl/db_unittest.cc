@@ -61,8 +61,8 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class DBTest : public ::testing::Test {
  public:
   DBTest()
-      : page_storage_(message_loop_.task_runner(), tmp_dir_.path(), "page_id"),
-        object_store_(&page_storage_) {}
+      : page_storage_(message_loop_.task_runner(), tmp_dir_.path(), "page_id") {
+  }
 
   ~DBTest() override {}
 
@@ -78,7 +78,6 @@ class DBTest : public ::testing::Test {
   mtl::MessageLoop message_loop_;
   files::ScopedTempDir tmp_dir_;
   PageStorageImpl page_storage_;
-  ObjectStore object_store_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DBTest);
 };
@@ -106,7 +105,7 @@ TEST_F(DBTest, Commits) {
   std::unique_ptr<Commit> stored_commit;
   std::string storage_bytes;
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &object_store_, RandomId(kCommitIdSize), std::move(parents));
+      &page_storage_, RandomId(kCommitIdSize), std::move(parents));
 
   EXPECT_EQ(Status::NOT_FOUND,
             db_->GetCommitStorageBytes(commit->GetId(), &storage_bytes));

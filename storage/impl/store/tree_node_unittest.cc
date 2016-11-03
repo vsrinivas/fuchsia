@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/store/object_store.h"
+#include "apps/ledger/storage/impl/store/tree_node.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/store/encoding.h"
-#include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
@@ -34,11 +33,11 @@ std::vector<Entry> GetEntries(int size) {
   return entries;
 }
 
-class ObjectStoreTest : public ::testing::Test {
+class TreeNodeTest : public ::testing::Test {
  public:
-  ObjectStoreTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
+  TreeNodeTest() : fake_storage_("page_id") {}
 
-  ~ObjectStoreTest() override {}
+  ~TreeNodeTest() override {}
 
   // Test:
   void SetUp() override {
@@ -49,7 +48,7 @@ class ObjectStoreTest : public ::testing::Test {
  protected:
   std::unique_ptr<const TreeNode> FromId(ObjectIdView id) {
     std::unique_ptr<const TreeNode> node;
-    EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, id, &node));
+    EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, id, &node));
     return node;
   }
 
@@ -58,7 +57,7 @@ class ObjectStoreTest : public ::testing::Test {
       const std::vector<ObjectId>& children) {
     ObjectId id;
     EXPECT_EQ(Status::OK,
-              TreeNode::FromEntries(&store_, entries, children, &id));
+              TreeNode::FromEntries(&fake_storage_, entries, children, &id));
     return FromId(id);
   }
 
@@ -87,23 +86,23 @@ class ObjectStoreTest : public ::testing::Test {
   }
 
   fake::FakePageStorage fake_storage_;
-  ObjectStore store_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(ObjectStoreTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(TreeNodeTest);
 };
 
-TEST_F(ObjectStoreTest, CreateGetTreeNode) {
+TEST_F(TreeNodeTest, CreateGetTreeNode) {
   std::unique_ptr<const TreeNode> node = CreateEmptyNode();
 
   std::unique_ptr<const TreeNode> found_node;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, node->GetId(), &found_node));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromId(&fake_storage_, node->GetId(), &found_node));
 
   EXPECT_EQ(Status::NOT_FOUND,
-            TreeNode::FromId(&store_, RandomId(), &found_node));
+            TreeNode::FromId(&fake_storage_, RandomId(), &found_node));
 }
 
-TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
+TEST_F(TreeNodeTest, GetEntryChild) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
   std::unique_ptr<const TreeNode> node =
@@ -119,7 +118,7 @@ TEST_F(ObjectStoreTest, TreeNodeGetEntryChild) {
   }
 }
 
-TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
+TEST_F(TreeNodeTest, SplitMerge) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
   std::unique_ptr<const TreeNode> node =
@@ -144,7 +143,7 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
 
   // Merge
   ObjectId merged_id;
-  EXPECT_EQ(Status::OK, TreeNode::Merge(&store_, std::move(left_node),
+  EXPECT_EQ(Status::OK, TreeNode::Merge(&fake_storage_, std::move(left_node),
                                         std::move(right_node), "", &merged_id));
   std::unique_ptr<const TreeNode> merged_node = FromId(merged_id);
   EXPECT_EQ(size, merged_node->GetKeyCount());
@@ -153,7 +152,7 @@ TEST_F(ObjectStoreTest, TreeNodeSplitMerge) {
   }
 }
 
-TEST_F(ObjectStoreTest, TreeNodeFindKeyOrChild) {
+TEST_F(TreeNodeTest, FindKeyOrChild) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
   std::unique_ptr<const TreeNode> node =
@@ -182,7 +181,7 @@ TEST_F(ObjectStoreTest, TreeNodeFindKeyOrChild) {
   EXPECT_EQ(10, index);
 }
 
-TEST_F(ObjectStoreTest, TreeNodeMutationAddEntry) {
+TEST_F(TreeNodeTest, MutationAddEntry) {
   int size = 2;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
@@ -218,7 +217,7 @@ TEST_F(ObjectStoreTest, TreeNodeMutationAddEntry) {
   EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 3));
 }
 
-TEST_F(ObjectStoreTest, TreeNodeMutationUpdateEntry) {
+TEST_F(TreeNodeTest, MutationUpdateEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
@@ -247,7 +246,7 @@ TEST_F(ObjectStoreTest, TreeNodeMutationUpdateEntry) {
   }
 }
 
-TEST_F(ObjectStoreTest, TreeNodeMutationRemoveEntry) {
+TEST_F(TreeNodeTest, MutationRemoveEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
@@ -277,7 +276,7 @@ TEST_F(ObjectStoreTest, TreeNodeMutationRemoveEntry) {
   EXPECT_EQ(GetChildId(node.get(), 3), GetChildId(new_node.get(), 2));
 }
 
-TEST_F(ObjectStoreTest, TreeNodeMutationUpdateChildId) {
+TEST_F(TreeNodeTest, MutationUpdateChildId) {
   int size = 2;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
@@ -308,7 +307,7 @@ TEST_F(ObjectStoreTest, TreeNodeMutationUpdateChildId) {
   EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 2));
 }
 
-TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
+TEST_F(TreeNodeTest, EmptyMutation) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
@@ -330,7 +329,7 @@ TEST_F(ObjectStoreTest, TreeNodeEmptyMutation) {
   }
 }
 
-TEST_F(ObjectStoreTest, Serialization) {
+TEST_F(TreeNodeTest, Serialization) {
   int size = 3;
   std::vector<Entry> entries = GetEntries(size);
   std::vector<ObjectId> children = CreateChildren(size + 1);
@@ -348,7 +347,8 @@ TEST_F(ObjectStoreTest, Serialization) {
       });
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&store_, object->GetId(), &node));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromId(&fake_storage_, object->GetId(), &node));
 
   ftl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));

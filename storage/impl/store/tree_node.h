@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "apps/ledger/convert/convert.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/object.h"
+#include "apps/ledger/storage/public/page_storage.h"
 #include "apps/ledger/storage/public/types.h"
 
 namespace storage {
@@ -100,7 +100,7 @@ class TreeNode {
 
   // Creates a |TreeNode| object for an existing node and stores it in the given
   // |node|.
-  static Status FromId(ObjectStore* store,
+  static Status FromId(PageStorage* page_storage,
                        ObjectIdView id,
                        std::unique_ptr<const TreeNode>* node);
 
@@ -108,7 +108,7 @@ class TreeNode {
   // are optional and if a child is not present, an empty id should be given in
   // the corresponding index. The id of the new node is stored in |node_id|. It
   // is expected that |children| = |entries| + 1.
-  static Status FromEntries(ObjectStore* store,
+  static Status FromEntries(PageStorage* page_storage,
                             const std::vector<Entry>& entries,
                             const std::vector<ObjectId>& children,
                             ObjectId* node_id);
@@ -120,7 +120,7 @@ class TreeNode {
   // Typical usage of this method would be to merge nodes bottom-up, each time
   // using the id of the newly merged node as the |merged_child_id| of the next
   // merge call.
-  static Status Merge(ObjectStore* store,
+  static Status Merge(PageStorage* page_storage,
                       std::unique_ptr<const TreeNode> left,
                       std::unique_ptr<const TreeNode> right,
                       ObjectIdView merged_child_id,
@@ -162,12 +162,12 @@ class TreeNode {
   ObjectId GetId() const;
 
  private:
-  TreeNode(ObjectStore* store,
+  TreeNode(PageStorage* page_storage,
            std::string&& id,
            std::vector<Entry>&& entries,
            std::vector<ObjectId>&& children);
 
-  ObjectStore* store_;
+  PageStorage* page_storage_;
   ObjectId id_;
   const std::vector<Entry> entries_;
   const std::vector<ObjectId> children_;

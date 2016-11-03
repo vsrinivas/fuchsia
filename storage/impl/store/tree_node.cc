@@ -13,11 +13,11 @@
 
 namespace storage {
 
-TreeNode::TreeNode(ObjectStore* store,
+TreeNode::TreeNode(PageStorage* page_storage,
                    std::string&& id,
                    std::vector<Entry>&& entries,
                    std::vector<ObjectId>&& children)
-    : store_(store),
+    : page_storage_(page_storage),
       id_(std::move(id)),
       entries_(entries),
       children_(children) {
@@ -26,11 +26,11 @@ TreeNode::TreeNode(ObjectStore* store,
 
 TreeNode::~TreeNode() {}
 
-Status TreeNode::FromId(ObjectStore* store,
+Status TreeNode::FromId(PageStorage* page_storage,
                         ObjectIdView id,
                         std::unique_ptr<const TreeNode>* node) {
   std::unique_ptr<const Object> object;
-  Status status = store->GetObject(id, &object);
+  Status status = page_storage->GetObjectSynchronous(id, &object);
   if (status != Status::OK) {
     return status;
   }
@@ -43,19 +43,19 @@ Status TreeNode::FromId(ObjectStore* store,
   if (!DecodeNode(json, &entries, &children)) {
     return Status::FORMAT_ERROR;
   }
-  node->reset(new TreeNode(store, object->GetId(), std::move(entries),
+  node->reset(new TreeNode(page_storage, object->GetId(), std::move(entries),
                            std::move(children)));
   return Status::OK;
 }
 
-Status TreeNode::FromEntries(ObjectStore* store,
+Status TreeNode::FromEntries(PageStorage* page_storage,
                              const std::vector<Entry>& entries,
                              const std::vector<ObjectId>& children,
                              ObjectId* node_id) {
   FTL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = storage::EncodeNode(entries, children);
   std::unique_ptr<const Object> object;
-  Status s = store->AddObject(encoding, &object);
+  Status s = page_storage->AddObjectSynchronous(encoding, &object);
   if (s != Status::OK) {
     return s;
   }
@@ -63,7 +63,7 @@ Status TreeNode::FromEntries(ObjectStore* store,
   return Status::OK;
 }
 
-Status TreeNode::Merge(ObjectStore* store,
+Status TreeNode::Merge(PageStorage* page_storage,
                        std::unique_ptr<const TreeNode> left,
                        std::unique_ptr<const TreeNode> right,
                        ObjectIdView merged_child_id,
@@ -81,7 +81,7 @@ Status TreeNode::Merge(ObjectStore* store,
   children.insert(children.end(), right->children_.begin() + 1,
                   right->children_.end());
 
-  return FromEntries(store, entries, children, merged_id);
+  return FromEntries(page_storage, entries, children, merged_id);
 }
 
 TreeNode::Mutation TreeNode::StartMutation() const {
@@ -103,7 +103,7 @@ Status TreeNode::Split(int index,
   }
   children.push_back(left_rightmost_child.ToString());
   ObjectId left_id;
-  Status s = FromEntries(store_, entries, children, &left_id);
+  Status s = FromEntries(page_storage_, entries, children, &left_id);
   if (s != Status::OK) {
     return s;
   }
@@ -117,10 +117,10 @@ Status TreeNode::Split(int index,
     children.push_back(children_[i + 1]);
   }
   ObjectId right_id;
-  s = FromEntries(store_, entries, children, &right_id);
+  s = FromEntries(page_storage_, entries, children, &right_id);
   if (s != Status::OK) {
     // TODO(nellyv): If this fails, remove the left  object from the object
-    // store.
+    // page_storage.
     return s;
   }
 
@@ -145,7 +145,7 @@ Status TreeNode::GetChild(int index,
   if (children_[index].empty()) {
     return Status::NOT_FOUND;
   }
-  return FromId(store_, children_[index], child);
+  return FromId(page_storage_, children_[index], child);
 }
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
@@ -257,7 +257,7 @@ void TreeNode::Mutation::FinalizeEntriesChildren() {
 Status TreeNode::Mutation::Finish(ObjectId* new_id) {
   FTL_DCHECK(!finished);
   FinalizeEntriesChildren();
-  return FromEntries(node_.store_, entries_, children_, new_id);
+  return FromEntries(node_.page_storage_, entries_, children_, new_id);
 }
 
 Status TreeNode::Mutation::Finish(size_t max_size,
@@ -273,7 +273,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   if (new_node_count == 1) {
     ObjectId result_id;
     ObjectId new_id;
-    Status s = FromEntries(node_.store_, entries_, children_, &new_id);
+    Status s = FromEntries(node_.page_storage_, entries_, children_, &new_id);
     if (s != Status::OK) {
       return s;
     }
@@ -306,7 +306,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
     children_.erase(children_.begin(), children_.begin() + (element_count + 1));
 
     ObjectId new_id;
-    FromEntries(node_.store_, entries, children, &new_id);
+    FromEntries(node_.page_storage_, entries, children, &new_id);
     new_children.push_back(new_id);
 
     if (entries_.size() != 0) {
@@ -332,10 +332,10 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   // No parent node, create a new one.
   std::unique_ptr<const TreeNode> new_node;
   ObjectId tmp_node_id;
-  FTL_DCHECK(TreeNode::FromEntries(node_.store_, std::vector<Entry>(),
+  FTL_DCHECK(TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
                                    std::vector<ObjectId>{ObjectId()},
                                    &tmp_node_id) == Status::OK);
-  FTL_DCHECK(TreeNode::FromId(node_.store_, tmp_node_id, &new_node) ==
+  FTL_DCHECK(TreeNode::FromId(node_.page_storage_, tmp_node_id, &new_node) ==
              Status::OK);
   // new_entries could contain more than max_size elements, so we can't directly
   // create the root using FromEntries. We use a mutation instead.

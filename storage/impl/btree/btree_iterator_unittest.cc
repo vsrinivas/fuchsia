@@ -7,7 +7,6 @@
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/impl/store/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
@@ -28,7 +27,7 @@ ObjectId RandomId() {
 
 class BTreeIteratorTest : public ::testing::Test {
  public:
-  BTreeIteratorTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
+  BTreeIteratorTest() : fake_storage_("page_id") {}
 
   ~BTreeIteratorTest() override {}
 
@@ -40,7 +39,6 @@ class BTreeIteratorTest : public ::testing::Test {
 
  protected:
   fake::FakePageStorage fake_storage_;
-  ObjectStore store_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeIteratorTest);
@@ -51,11 +49,12 @@ TEST_F(BTreeIteratorTest, IterateOneNode) {
   Entry entry2 = Entry{"key2", RandomId(), storage::KeyPriority::EAGER};
   Entry entry3 = Entry{"key3", RandomId(), storage::KeyPriority::LAZY};
   ObjectId node_id;
-  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
-                            &store_, std::vector<Entry>{entry1, entry2, entry3},
-                            std::vector<ObjectId>(4), &node_id));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(&fake_storage_,
+                                  std::vector<Entry>{entry1, entry2, entry3},
+                                  std::vector<ObjectId>(4), &node_id));
 
-  CommitContentsImpl reader(node_id, &store_);
+  CommitContentsImpl reader(node_id, &fake_storage_);
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
 
@@ -78,10 +77,10 @@ TEST_F(BTreeIteratorTest, IterateOneNode) {
 TEST_F(BTreeIteratorTest, IterateEmptyTree) {
   ObjectId node_id;
   EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(&store_, std::vector<Entry>{},
+            TreeNode::FromEntries(&fake_storage_, std::vector<Entry>{},
                                   std::vector<ObjectId>(1), &node_id));
 
-  CommitContentsImpl reader(node_id, &store_);
+  CommitContentsImpl reader(node_id, &fake_storage_);
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
 
@@ -105,22 +104,24 @@ TEST_F(BTreeIteratorTest, IterateTree) {
   //  A:[0, 1]   B:[]   C:[4, 5, 6]
 
   ObjectId node_A, node_B, node_C, node_D;
-  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
-                            &store_, std::vector<Entry>{entries[0], entries[1]},
-                            std::vector<ObjectId>(3), &node_A));
   EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(&store_, std::vector<Entry>(),
+            TreeNode::FromEntries(&fake_storage_,
+                                  std::vector<Entry>{entries[0], entries[1]},
+                                  std::vector<ObjectId>(3), &node_A));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(&fake_storage_, std::vector<Entry>(),
                                   std::vector<ObjectId>(1), &node_B));
   EXPECT_EQ(Status::OK,
             TreeNode::FromEntries(
-                &store_, std::vector<Entry>{entries[4], entries[5], entries[6]},
+                &fake_storage_,
+                std::vector<Entry>{entries[4], entries[5], entries[6]},
                 std::vector<ObjectId>(4), &node_C));
   EXPECT_EQ(Status::OK,
             TreeNode::FromEntries(
-                &store_, std::vector<Entry>{entries[2], entries[3]},
+                &fake_storage_, std::vector<Entry>{entries[2], entries[3]},
                 std::vector<ObjectId>{node_A, node_B, node_C}, &node_D));
 
-  CommitContentsImpl reader(node_D, &store_);
+  CommitContentsImpl reader(node_D, &fake_storage_);
 
   std::unique_ptr<Iterator<const Entry>> it = reader.begin();
   EXPECT_TRUE(it->Valid());
@@ -150,22 +151,24 @@ TEST_F(BTreeIteratorTest, Seek) {
   //  A:[0, 1]   B:[]   C:[4, 5, 6]
 
   ObjectId node_A, node_B, node_C, node_D;
-  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
-                            &store_, std::vector<Entry>{entries[0], entries[1]},
-                            std::vector<ObjectId>(3), &node_A));
   EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(&store_, std::vector<Entry>(),
+            TreeNode::FromEntries(&fake_storage_,
+                                  std::vector<Entry>{entries[0], entries[1]},
+                                  std::vector<ObjectId>(3), &node_A));
+  EXPECT_EQ(Status::OK,
+            TreeNode::FromEntries(&fake_storage_, std::vector<Entry>(),
                                   std::vector<ObjectId>(1), &node_B));
   EXPECT_EQ(Status::OK,
             TreeNode::FromEntries(
-                &store_, std::vector<Entry>{entries[4], entries[5], entries[6]},
+                &fake_storage_,
+                std::vector<Entry>{entries[4], entries[5], entries[6]},
                 std::vector<ObjectId>(4), &node_C));
   EXPECT_EQ(Status::OK,
             TreeNode::FromEntries(
-                &store_, std::vector<Entry>{entries[2], entries[3]},
+                &fake_storage_, std::vector<Entry>{entries[2], entries[3]},
                 std::vector<ObjectId>{node_A, node_B, node_C}, &node_D));
 
-  CommitContentsImpl reader(node_D, &store_);
+  CommitContentsImpl reader(node_D, &fake_storage_);
 
   std::unique_ptr<Iterator<const Entry>> it = reader.find("key");
   EXPECT_EQ(entries[0], **it);

@@ -10,8 +10,8 @@
 
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/commit_contents.h"
+#include "apps/ledger/storage/public/page_storage.h"
 #include "apps/ledger/storage/public/types.h"
 
 namespace storage {
@@ -19,7 +19,7 @@ namespace storage {
 // B-Tree implementation of |CommitContents|.
 class CommitContentsImpl : public CommitContents {
  public:
-  CommitContentsImpl(ObjectIdView root_id, ObjectStore* store);
+  CommitContentsImpl(ObjectIdView root_id, PageStorage* page_storage);
   ~CommitContentsImpl() override;
 
   // CommitContents:
@@ -37,7 +37,7 @@ class CommitContentsImpl : public CommitContents {
   std::unique_ptr<BTreeIterator> NewIterator() const;
 
   const ObjectId root_id_;
-  ObjectStore* store_;
+  PageStorage* page_storage_;
 };
 
 }  // namespace storage

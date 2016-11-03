@@ -42,7 +42,7 @@ class EntryChangeIterator : public Iterator<const storage::EntryChange> {
 
 class BTreeBuilderTest : public ::testing::Test {
  public:
-  BTreeBuilderTest() : fake_storage_("page_id"), store_(&fake_storage_) {}
+  BTreeBuilderTest() : fake_storage_("page_id") {}
 
   ~BTreeBuilderTest() override {}
 
@@ -54,14 +54,14 @@ class BTreeBuilderTest : public ::testing::Test {
 
   ObjectId CreateEmptyContents() {
     ObjectId id;
-    EXPECT_EQ(Status::OK, TreeNode::FromEntries(&store_, std::vector<Entry>(),
-                                                std::vector<ObjectId>(1), &id));
+    EXPECT_EQ(Status::OK,
+              TreeNode::FromEntries(&fake_storage_, std::vector<Entry>(),
+                                    std::vector<ObjectId>(1), &id));
     return id;
   }
 
  protected:
   fake::FakePageStorage fake_storage_;
-  ObjectStore store_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeBuilderTest);
 };
@@ -78,7 +78,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesFromEmpty) {
       EntryChange{entry3, false}, EntryChange{entry4, false}};
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id, 4,
+      &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {
@@ -86,7 +86,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesFromEmpty) {
         new_root_id = obj_id;
       });
 
-  CommitContentsImpl reader(new_root_id, &store_);
+  CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
   EXPECT_TRUE(entries->Valid());
   EXPECT_EQ(entry1, **entries);
@@ -133,7 +133,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
   };
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id, 4,
+      &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {
@@ -141,7 +141,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
         new_root_id = obj_id;
       });
 
-  CommitContentsImpl reader(new_root_id, &store_);
+  CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     EXPECT_TRUE(entries->Valid());
@@ -158,7 +158,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
 
   ObjectId new_root_id2;
   BTreeBuilder::ApplyChanges(
-      &store_, new_root_id, 4,
+      &fake_storage_, new_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(new_change.begin(), new_change.end())),
       [&new_root_id2](Status status, ObjectId obj_id) {
@@ -166,7 +166,7 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
         new_root_id2 = obj_id;
       });
 
-  CommitContentsImpl reader2(new_root_id2, &store_);
+  CommitContentsImpl reader2(new_root_id2, &fake_storage_);
   entries = reader2.begin();
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     EXPECT_TRUE(entries->Valid());
@@ -211,7 +211,7 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
 
   ObjectId tmp_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, root_id, 4,
+      &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
       [&tmp_root_id](Status status, ObjectId obj_id) {
@@ -227,7 +227,7 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
   FTL_DCHECK(delete_changes.size() == entries_to_delete.size());
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
-      &store_, tmp_root_id, 4,
+      &fake_storage_, tmp_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(new EntryChangeIterator(
           delete_changes.begin(), delete_changes.end())),
       [&new_root_id](Status status, ObjectId obj_id) {
@@ -235,7 +235,7 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
         new_root_id = obj_id;
       });
 
-  CommitContentsImpl reader(new_root_id, &store_);
+  CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {

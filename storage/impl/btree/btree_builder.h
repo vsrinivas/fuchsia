@@ -14,7 +14,7 @@ class BTreeBuilder {
  public:
   // Apply changes provided by |changes| to the BTree starting at |root_id|.
   // |changes| must provide |EntryChange| objects sorted by their key.
-  static void ApplyChanges(ObjectStore* store,
+  static void ApplyChanges(PageStorage* page_storage,
                            ObjectIdView root_id,
                            size_t node_size,
                            std::unique_ptr<Iterator<const EntryChange>> changes,
@@ -22,7 +22,7 @@ class BTreeBuilder {
 
  private:
   // Recursively applies the changes starting from the given |node|.
-  static Status ApplyChanges(ObjectStore* store,
+  static Status ApplyChanges(PageStorage* page_storage,
                              std::unique_ptr<const TreeNode> node,
                              size_t node_size,
                              const std::string& max_key,
@@ -32,7 +32,7 @@ class BTreeBuilder {
 
   // Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
   // the new, merged node. Returns OK on success or the error code otherwise.
-  static Status Merge(ObjectStore* store,
+  static Status Merge(PageStorage* page_storage,
                       std::unique_ptr<const TreeNode> left,
                       std::unique_ptr<const TreeNode> right,
                       ObjectId* new_id);

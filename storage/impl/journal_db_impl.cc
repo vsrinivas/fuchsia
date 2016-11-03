@@ -24,7 +24,6 @@ JournalDBImpl::JournalDBImpl(JournalType type,
       db_(db),
       id_(id),
       base_(base),
-      object_store_(page_storage),
       valid_(true),
       failed_operation_(false) {}
 
@@ -112,7 +111,7 @@ void JournalDBImpl::Commit(
   }
 
   BTreeBuilder::ApplyChanges(
-      &object_store_, base_commit->GetRootId(), node_size, std::move(entries),
+      page_storage_, base_commit->GetRootId(), node_size, std::move(entries),
       [this, callback](Status status, ObjectId object_id) {
         if (status != Status::OK) {
           callback(status, "");
@@ -125,7 +124,7 @@ void JournalDBImpl::Commit(
         }
 
         std::unique_ptr<storage::Commit> commit =
-            CommitImpl::FromContentAndParents(&object_store_, object_id,
+            CommitImpl::FromContentAndParents(page_storage_, object_id,
                                               std::move(parents));
         ObjectId id = commit->GetId();
         status = page_storage_->AddCommitFromLocal(std::move(commit));

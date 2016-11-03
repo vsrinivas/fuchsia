@@ -180,9 +180,8 @@ class PageStorageTest : public ::testing::Test {
   }
 
   CommitId TryCommitFromSync() {
-    ObjectStore object_store(storage_.get());
     std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-        &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+        storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
     CommitId id = commit->GetId();
 
     EXPECT_EQ(Status::OK,
@@ -247,9 +246,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
             storage_->GetCommit(RandomId(kCommitIdSize), &commit));
   EXPECT_FALSE(commit);
 
-  ObjectStore object_store(storage_.get());
   commit = CommitImpl::FromContentAndParents(
-      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+      storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
@@ -261,9 +259,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  ObjectStore object_store(storage_.get());
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+      storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
 
   EXPECT_EQ(Status::OK,
@@ -280,7 +277,6 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 }
 
 TEST_F(PageStorageTest, SyncCommits) {
-  ObjectStore object_store(storage_.get());
   std::vector<std::unique_ptr<const Commit>> commits;
 
   // Initially there should be no unsynced commits.
@@ -289,7 +285,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 
   // After adding a commit it should marked as unsynced.
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+      storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
@@ -305,7 +301,6 @@ TEST_F(PageStorageTest, SyncCommits) {
 }
 
 TEST_F(PageStorageTest, HeadCommits) {
-  ObjectStore object_store(storage_.get());
   // Every page should have one initial head commit.
   std::vector<CommitId> heads;
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
@@ -314,7 +309,7 @@ TEST_F(PageStorageTest, HeadCommits) {
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+      storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
 
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));

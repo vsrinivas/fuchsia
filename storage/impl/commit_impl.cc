@@ -39,19 +39,19 @@ int64_t BytesToTimestamp(std::string bytes) {
 
 }  // namespace
 
-CommitImpl::CommitImpl(ObjectStore* store,
+CommitImpl::CommitImpl(PageStorage* page_storage,
                        const CommitId& id,
                        int64_t timestamp,
                        ObjectIdView root_node_id,
                        const std::vector<CommitId>& parent_ids,
                        std::string&& storage_bytes)
-    : store_(store),
+    : page_storage_(page_storage),
       id_(id),
       timestamp_(timestamp),
       root_node_id_(root_node_id.ToString()),
       parent_ids_(parent_ids),
       storage_bytes_(std::move(storage_bytes)) {
-  FTL_DCHECK(store_ != nullptr);
+  FTL_DCHECK(page_storage_ != nullptr);
   FTL_DCHECK(id == kFirstPageCommitId ||
              (!parent_ids_.empty() && parent_ids_.size() <= 2));
 }
@@ -59,7 +59,7 @@ CommitImpl::CommitImpl(ObjectStore* store,
 CommitImpl::~CommitImpl() {}
 
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
-    ObjectStore* store,
+    PageStorage* page_storage,
     const CommitId& id,
     std::string&& storage_bytes) {
   int parent_count =
@@ -82,13 +82,13 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     parent_ids.push_back(storage_bytes.substr(
         kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
   }
-  return std::unique_ptr<Commit>(new CommitImpl(store, id, timestamp,
+  return std::unique_ptr<Commit>(new CommitImpl(page_storage, id, timestamp,
                                                 root_node_id, parent_ids,
                                                 std::move(storage_bytes)));
 }
 
 std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
-    ObjectStore* store,
+    PageStorage* page_storage,
     ObjectIdView root_node_id,
     std::vector<CommitId>&& parent_ids) {
   // Sort commit ids for uniqueness.
@@ -110,16 +110,17 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
   CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
 
   return std::unique_ptr<Commit>(
-      new CommitImpl(store, id, timestamp, root_node_id, std::move(parent_ids),
-                     std::move(storage_bytes)));
+      new CommitImpl(page_storage, id, timestamp, root_node_id,
+                     std::move(parent_ids), std::move(storage_bytes)));
 }
 
-std::unique_ptr<Commit> CommitImpl::Empty(ObjectStore* store) {
+std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
   ObjectId root_node_id;
-  TreeNode::FromEntries(store, std::vector<Entry>(), std::vector<ObjectId>(1),
-                        &root_node_id);
-  return std::unique_ptr<Commit>(new CommitImpl(
-      store, kFirstPageCommitId, 0, root_node_id, std::vector<CommitId>(), ""));
+  TreeNode::FromEntries(page_storage, std::vector<Entry>(),
+                        std::vector<ObjectId>(1), &root_node_id);
+  return std::unique_ptr<Commit>(
+      new CommitImpl(page_storage, kFirstPageCommitId, 0, root_node_id,
+                     std::vector<CommitId>(), ""));
 }
 
 CommitId CommitImpl::GetId() const {
@@ -136,7 +137,7 @@ int64_t CommitImpl::GetTimestamp() const {
 
 std::unique_ptr<CommitContents> CommitImpl::GetContents() const {
   return std::unique_ptr<CommitContents>(
-      new CommitContentsImpl(root_node_id_, store_));
+      new CommitContentsImpl(root_node_id_, page_storage_));
 }
 
 ObjectId CommitImpl::CommitImpl::GetRootId() const {

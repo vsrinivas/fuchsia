@@ -12,7 +12,6 @@
 
 #include "apps/ledger/storage/impl/db.h"
 #include "apps/ledger/storage/impl/page_storage_impl.h"
-#include "apps/ledger/storage/impl/store/object_store.h"
 #include "apps/ledger/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -60,7 +59,6 @@ class JournalDBImpl : public Journal {
   DB* const db_;
   const JournalId id_;
   CommitId base_;
-  ObjectStore object_store_;
   std::unique_ptr<CommitId> other_;
   // A journal is no longer valid if either commit or rollback have been
   // executed.
