@@ -106,7 +106,8 @@ class MessageLoop : public internal::TaskQueueDelegate {
   ftl::TimePoint RunReadyTasks(ftl::TimePoint now);
   ftl::TimePoint Wait(ftl::TimePoint now, ftl::TimePoint next_run_time);
   void RunTask(const internal::PendingTask& pending_task);
-  void NotifyHandlers(ftl::TimePoint now, mx_status_t result);
+  void CancelAllHandlers(mx_status_t error);
+  void CancelHandlers(std::vector<HandlerKey> keys, mx_status_t error);
   void CallAfterTaskCallback();
 
   internal::IncomingTaskQueue* incoming_tasks() {
@@ -135,8 +136,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   class WaitState {
    public:
     std::vector<HandlerKey> keys;
-    std::vector<mx_handle_t> handles;
-    std::vector<mx_signals_t> signals;
+    std::vector<mx_wait_item_t> items;
 
     size_t size() const { return keys.size(); }
 

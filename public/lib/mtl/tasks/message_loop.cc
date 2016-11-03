@@ -15,7 +15,6 @@ namespace {
 
 thread_local MessageLoop* g_current;
 
-constexpr uint32_t kInvalidWaitManyIndexValue = static_cast<uint32_t>(-1);
 constexpr MessageLoop::HandlerKey kIgnoredKey = 0;
 
 }  // namespace
@@ -36,8 +35,18 @@ MessageLoop::~MessageLoop() {
   FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
-  // TODO(abarth): What if more handlers are registered here?
-  NotifyHandlers(ftl::TimePoint::Max(), ERR_HANDLE_CLOSED);
+  // TODO(jeffbrown): Decide what to do if we couldn't actually clean up
+  // all handlers in one pass.  We could retry it a few times but since we
+  // are doing this to prevent leaks perhaps it would be less error prone
+  // if we changed the ownership model instead.  For example, handlers could
+  // be represented as closures which we would simply delete when no longer
+  // needed.  (We could still get into loops but it would be less tempting.)
+  CancelAllHandlers(ERR_BAD_STATE);
+  if (!handler_data_.empty()) {
+    FTL_DLOG(WARNING)
+        << "MessageLoopHandlers added while destroying the message loop; "
+           "they will not be notified of shutdown";
+  }
 
   incoming_tasks()->ClearDelegate();
   ReloadQueue();
@@ -91,19 +100,25 @@ void MessageLoop::ClearAfterTaskCallback() {
   after_task_callback_ = ftl::Closure();
 }
 
-void MessageLoop::NotifyHandlers(ftl::TimePoint now, mx_status_t status) {
-  // Make a copy in case someone tries to add/remove new handlers as part of
-  // notifying.
-  const HandleToHandlerData cloned_handlers(handler_data_);
-  for (auto it = cloned_handlers.begin(); it != cloned_handlers.end(); ++it) {
-    if (it->second.deadline > now)
+void MessageLoop::CancelAllHandlers(mx_status_t error) {
+  std::vector<HandlerKey> keys;
+  for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it) {
+    keys.push_back(it->first);
+  }
+  CancelHandlers(std::move(keys), error);
+}
+
+void MessageLoop::CancelHandlers(std::vector<HandlerKey> keys,
+                                 mx_status_t error) {
+  for (auto key : keys) {
+    auto it = handler_data_.find(key);
+    if (it == handler_data_.end())
       continue;
-    // Since we're iterating over a clone of the handlers, verify the handler
-    // is still valid before notifying.
-    if (handler_data_.find(it->first) == handler_data_.end())
-      continue;
-    handler_data_.erase(it->first);
-    it->second.handler->OnHandleError(it->second.handle, status);
+
+    mx_handle_t handle = it->second.handle;
+    MessageLoopHandler* handler = it->second.handler;
+    handler_data_.erase(it);
+    handler->OnHandleError(handle, error);
     CallAfterTaskCallback();
   }
 }
@@ -141,9 +156,10 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
 
   wait_state_.Resize(handler_data_.size() + 1);
   wait_state_.Set(0, kIgnoredKey, event_.get(), MX_SIGNAL_SIGNALED);
-  size_t i = 1;
-  for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it, ++i) {
-    wait_state_.Set(i, it->first, it->second.handle, it->second.signals);
+  size_t count = 1;
+  for (auto it = handler_data_.begin(); it != handler_data_.end();
+       ++it, ++count) {
+    wait_state_.Set(count, it->first, it->second.handle, it->second.signals);
     if (it->second.deadline <= now) {
       timeout = 0;
     } else if (it->second.deadline != ftl::TimePoint::Max()) {
@@ -152,54 +168,49 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
     }
   }
 
-  uint32_t result_index = kInvalidWaitManyIndexValue;
-  const mx_status_t wait_status = mx_handle_wait_many(
-      wait_state_.size(), wait_state_.handles.data(),
-      wait_state_.signals.data(), timeout, &result_index, nullptr);
+  const mx_status_t wait_status =
+      mx_handle_wait_many(wait_state_.items.data(), count, timeout);
 
   // Update now after waiting.
   now = ftl::TimePoint::Now();
 
-  if (result_index == kInvalidWaitManyIndexValue) {
-    FTL_DCHECK(wait_status == ERR_TIMED_OUT);
-    NotifyHandlers(now, ERR_TIMED_OUT);
+  // Handle errors which indicate bugs in "our" code (e.g. race conditions)
+  if (wait_status != NO_ERROR && wait_status != ERR_TIMED_OUT) {
+    FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
     return now;
   }
 
-  if (result_index == 0) {
-    FTL_DCHECK(wait_status == NO_ERROR);
+  // Reset signals on control channel.
+  if (wait_state_.items[0].pending & MX_SIGNAL_SIGNALED) {
     mx_status_t rv = event_.signal(MX_SIGNAL_SIGNALED, 0u);
     FTL_DCHECK(rv == NO_ERROR);
-    return now;
   }
 
-  HandlerKey key = wait_state_.keys[result_index];
-  FTL_DCHECK(handler_data_.find(key) != handler_data_.end());
-  const HandlerData& data = handler_data_[key];
-  FTL_DCHECK(data.handle == wait_state_.handles[result_index]);
-  MessageLoopHandler* handler = handler_data_[key].handler;
-  mx_handle_t handle = handler_data_[key].handle;
+  // Deliver pending signals.
+  for (size_t i = 1; i < count; ++i) {
+    const mx_wait_item_t& wait_item = wait_state_.items[i];
+    if (!(wait_item.pending & wait_item.waitfor))
+      continue;  // handler was not signalled
 
-  switch (wait_status) {
-    case NO_ERROR:
-      data.handler->OnHandleReady(handle);
-      CallAfterTaskCallback();
-      break;
-    case ERR_INVALID_ARGS:
-    case ERR_HANDLE_CLOSED:
-      // These results indicate a bug in "our" code (e.g., race conditions).
-      FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
-    // Fall through.
-    case ERR_BAD_STATE:
-      // Remove the handle first, this way if OnHandleError() tries to remove
-      // the handle our iterator isn't invalidated.
-      handler_data_.erase(handle);
-      handler->OnHandleError(handle, wait_status);
-      CallAfterTaskCallback();
-      break;
-    default:
-      FTL_DCHECK(false) << "Unexpected wait status: " << wait_status;
-      break;
+    HandlerKey key = wait_state_.keys[i];
+    auto it = handler_data_.find(key);
+    if (it == handler_data_.end())
+      continue;  // handler was removed while delivering signals
+
+    const HandlerData& data = it->second;
+    FTL_DCHECK(data.handle == wait_item.handle);
+    data.handler->OnHandleReady(data.handle, wait_item.pending);
+    CallAfterTaskCallback();
+  }
+
+  // Deliver timeouts.
+  if (wait_status == ERR_TIMED_OUT) {
+    std::vector<HandlerKey> keys;
+    for (auto it = handler_data_.begin(); it != handler_data_.end(); ++it) {
+      if (it->second.deadline <= now)
+        keys.push_back(it->first);
+    }
+    CancelHandlers(std::move(keys), ERR_TIMED_OUT);
   }
 
   return now;
@@ -264,14 +275,12 @@ void MessageLoop::WaitState::Set(size_t i,
                                  mx_handle_t handle,
                                  mx_signals_t signals) {
   keys[i] = key;
-  handles[i] = handle;
-  this->signals[i] = signals;
+  items[i] = {handle, signals, 0};
 }
 
 void MessageLoop::WaitState::Resize(size_t size) {
   keys.resize(size);
-  handles.resize(size);
-  signals.resize(size);
+  items.resize(size);
 }
 
 }  // namespace mtl

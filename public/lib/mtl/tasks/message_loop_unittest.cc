@@ -214,7 +214,9 @@ class TestMessageLoopHandler : public MessageLoopHandler {
   mx_status_t last_error_result() const { return last_error_result_; }
 
   // MessageLoopHandler:
-  void OnHandleReady(mx_handle_t handle) override { ready_count_++; }
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+    ready_count_++;
+  }
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
     error_count_++;
     last_error_result_ = status;
@@ -237,9 +239,9 @@ class QuitOnReadyMessageLoopHandler : public TestMessageLoopHandler {
     message_loop_ = message_loop;
   }
 
-  void OnHandleReady(mx_handle_t handle) override {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
     message_loop_->QuitNow();
-    TestMessageLoopHandler::OnHandleReady(handle);
+    TestMessageLoopHandler::OnHandleReady(handle, pending);
   }
 
  private:
@@ -278,9 +280,10 @@ class RemoveOnReadyMessageLoopHandler : public TestMessageLoopHandler {
 
   void set_handler_key(MessageLoop::HandlerKey key) { key_ = key; }
 
-  void OnHandleReady(mx_handle_t handle) override {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+    EXPECT_TRUE(message_loop_->HasHandler(key_));
     message_loop_->RemoveHandler(key_);
-    TestMessageLoopHandler::OnHandleReady(handle);
+    TestMessageLoopHandler::OnHandleReady(handle, pending);
     MessageLoop::GetCurrent()->PostQuitTask();
   }
 
@@ -373,6 +376,7 @@ class QuitOnErrorRunMessageHandler : public TestMessageLoopHandler {
 };
 
 // Verifies Quit() when the deadline is reached works.
+// Also ensures that handlers are removed after a timeout occurs.
 TEST(MessageLoop, QuitWhenDeadlineExpired) {
   QuitOnErrorRunMessageHandler handler;
   mx::channel endpoint0;
@@ -403,7 +407,7 @@ TEST(MessageLoop, Destruction) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(ERR_HANDLE_CLOSED, handler.last_error_result());
+  EXPECT_EQ(ERR_BAD_STATE, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -459,8 +463,8 @@ TEST(MessageLoop, MultipleHandleDestruction) {
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(ERR_HANDLE_CLOSED, odd_handler.last_error_result());
-  EXPECT_EQ(ERR_HANDLE_CLOSED, even_handler.last_error_result());
+  EXPECT_EQ(ERR_BAD_STATE, odd_handler.last_error_result());
+  EXPECT_EQ(ERR_BAD_STATE, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -484,6 +488,9 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(AddHandlerOnErrorHandler);
 };
 
+// Ensures that the MessageLoop doesn't get into infinite loops if
+// new handlers are added while canceling handlers during MessageLoop
+// destruction.
 TEST(MessageLoop, AddHandlerOnError) {
   AddHandlerOnErrorHandler handler;
   mx::channel endpoint0;
@@ -496,52 +503,7 @@ TEST(MessageLoop, AddHandlerOnError) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(ERR_HANDLE_CLOSED, handler.last_error_result());
-}
-
-class RemoveHandlerOnErrorHandler : public TestMessageLoopHandler {
- public:
-  RemoveHandlerOnErrorHandler() {}
-  ~RemoveHandlerOnErrorHandler() override {}
-
-  void set_message_loop(MessageLoop* message_loop) {
-    message_loop_ = message_loop;
-  }
-
-  void set_key_to_remove(MessageLoop::HandlerKey key) { key_to_remove_ = key; }
-
-  void OnHandleError(mx_handle_t handle, mx_status_t status) override {
-    message_loop_->RemoveHandler(key_to_remove_);
-    TestMessageLoopHandler::OnHandleError(handle, status);
-  }
-
- private:
-  MessageLoop* message_loop_ = nullptr;
-  MessageLoop::HandlerKey key_to_remove_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(RemoveHandlerOnErrorHandler);
-};
-
-TEST(MessageLoop, AfterPreconditionFailedCallback) {
-  RemoveHandlerOnErrorHandler handler;
-  mx::channel endpoint0;
-  mx::channel endpoint1;
-  mx::channel::create(0, &endpoint0, &endpoint1);
-
-  MessageLoop message_loop;
-  MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
-  handler.set_message_loop(&message_loop);
-  handler.set_key_to_remove(key);
-  message_loop.task_runner()->PostTask([&endpoint1] { endpoint1.reset(); });
-  message_loop.task_runner()->PostDelayedTask(
-      [&message_loop] { message_loop.QuitNow(); },
-      ftl::TimeDelta::FromMicroseconds(10000));
-  int after_task_callback_count = 0;
-  message_loop.SetAfterTaskCallback(
-      [&after_task_callback_count] { ++after_task_callback_count; });
-  message_loop.Run();
-  EXPECT_EQ(2, after_task_callback_count);
+  EXPECT_EQ(ERR_BAD_STATE, handler.last_error_result());
 }
 
 }  // namespace

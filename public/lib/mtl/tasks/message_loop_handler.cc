@@ -8,4 +8,9 @@ namespace mtl {
 
 MessageLoopHandler::~MessageLoopHandler() {}
 
+void MessageLoopHandler::OnHandleReady(mx_handle_t handle,
+                                       mx_signals_t pending) {}
+
+void MessageLoopHandler::OnHandleError(mx_handle_t handle, mx_status_t error) {}
+
 }  // namespace mtl

@@ -34,7 +34,8 @@ class HandleWatcher : public MessageLoopHandler {
   }
 
  protected:
-  void OnHandleReady(mx_handle_t handle) override {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+    // TODO(jeffbrown): We should be passing the signals through to FIDL here.
     FTL_DCHECK(handle_ == handle);
     CallCallback(NO_ERROR);
   }

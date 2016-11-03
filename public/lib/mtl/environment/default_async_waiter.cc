@@ -57,15 +57,26 @@ class HandleWatcher : public MessageLoopHandler {
       timeout = ftl::TimeDelta::Max();
     else
       timeout = ftl::TimeDelta::FromMicroseconds(deadline);
-    key_ =
-        message_loop->AddHandler(this, static_cast<mx_handle_t>(handle_),
-                                 static_cast<mx_signals_t>(signals), timeout);
+    awaited_signals_ = static_cast<mx_signals_t>(signals);
+    // Emulate Mojo's behavior of implicitly waiting for peer closed on
+    // channels or data pipes.
+    mx_status_t inferred_signals = awaited_signals_;
+    if (inferred_signals & (MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE))
+      inferred_signals |= MX_SIGNAL_PEER_CLOSED;
+    key_ = message_loop->AddHandler(this, static_cast<mx_handle_t>(handle_),
+                                    inferred_signals, timeout);
   }
 
  protected:
-  void OnHandleReady(mx_handle_t handle) override {
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
     FTL_DCHECK(handle_ == static_cast<MojoHandle>(handle));
-    CallCallback(NO_ERROR);
+    // Emulate Mojo's behavior of reporting ERR_BAD_STATE for unsatisfiable
+    // signals.
+    if (!(pending & awaited_signals_)) {
+      CallCallback(ERR_BAD_STATE);
+    } else {
+      CallCallback(NO_ERROR);
+    }
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
@@ -85,6 +96,7 @@ class HandleWatcher : public MessageLoopHandler {
   MojoHandle handle_;
   MojoAsyncWaitCallback callback_;
   void* context_;
+  mx_signals_t awaited_signals_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HandleWatcher);
 };
