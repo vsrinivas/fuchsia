@@ -31,6 +31,9 @@ struct mx_device {
 
     mx_protocol_device_t* ops;
 
+    void* ctx;
+    // reserved for driver use; will not be touched by devmgr
+
     uint32_t flags;
     uint32_t refcount;
 
@@ -74,7 +77,8 @@ struct mx_device {
 // mx_device_t objects must be created or initialized by the driver manager's
 // device_create() and device_init() functions.  Drivers MAY NOT touch any
 // fields in the mx_device_t, except for the protocol_id and protocol_ops
-// fields which it may fill out after init and before device_add() is called.
+// fields which it may fill out after init and before device_add() is called,
+// and the ctx field which may be used to store driver-specific data.
 
 // The Device Protocol
 typedef struct mx_protocol_device {
