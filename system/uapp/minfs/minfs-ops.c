@@ -1018,6 +1018,10 @@ done:
     return status;
 }
 
+static mx_status_t fs_sync(vnode_t* vn) {
+    return bcache_sync(vn->fs->bc);
+}
+
 vnode_ops_t minfs_ops = {
     .release = fs_release,
     .open = fs_open,
@@ -1033,5 +1037,6 @@ vnode_ops_t minfs_ops = {
     .unlink = fs_unlink,
     .truncate = fs_truncate,
     .rename = fs_rename,
+    .sync = fs_sync,
 };
 

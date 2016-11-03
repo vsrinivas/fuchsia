@@ -299,6 +299,9 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         return vfs_rename(vn, oldpath, newpath);
     }
+    case MXRIO_SYNC: {
+        return vn->ops->sync(vn);
+    }
     case MXRIO_UNLINK:
         return vn->ops->unlink(vn, (const char*)msg->data, len);
     default:

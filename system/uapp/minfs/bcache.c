@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <magenta/device/device.h>
 #include <magenta/listnode.h>
 
 #include "minfs.h"
@@ -202,6 +203,10 @@ mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, ui
     } else {
         return ERR_IO;
     }
+}
+
+mx_status_t bcache_sync(bcache_t* bc) {
+    return ioctl_device_sync(bc->fd);
 }
 
 int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num) {

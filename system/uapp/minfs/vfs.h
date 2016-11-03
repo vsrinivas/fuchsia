@@ -107,6 +107,8 @@ void bcache_put(bcache_t* bc, block_t* blk, uint32_t flags);
 
 mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, uint32_t len);
 
+mx_status_t bcache_sync(bcache_t* bc);
+
 uint32_t bcache_max_block(bcache_t* bc);
 
 // drop all non-busy, non-dirty blocks
