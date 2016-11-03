@@ -9,6 +9,7 @@
 #include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
+#include "apps/ledger/storage/impl/journal_db_impl.h"
 #include "apps/ledger/storage/public/commit_watcher.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
@@ -52,6 +53,106 @@ class FakeCommitWatcher : public CommitWatcher {
   int commit_count = 0;
   CommitId last_commit_id;
   ChangeSource last_source;
+};
+
+// Only implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
+// returns an |IO_ERROR| in all other cases.
+class FakeDbImpl : public DB {
+ public:
+  FakeDbImpl(PageStorageImpl* page_storage) : page_storage_(page_storage) {}
+
+  Status Init() override { return Status::OK; }
+  Status CreateJournal(JournalType journal_type,
+                       const CommitId& base,
+                       std::unique_ptr<Journal>* journal) override {
+    JournalId id = RandomId(10);
+    *journal =
+        JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
+    return Status::OK;
+  }
+  Status CreateMergeJournal(const CommitId& base,
+                            const CommitId& other,
+                            std::unique_ptr<Journal>* journal) override {
+    *journal =
+        JournalDBImpl::Merge(page_storage_, this, RandomId(10), base, other);
+    return Status::OK;
+  }
+
+  std::unique_ptr<Batch> StartBatch() override { return nullptr; }
+  Status GetHeads(std::vector<CommitId>* heads) override {
+    return Status::IO_ERROR;
+  }
+  Status AddHead(const CommitId& head) override { return Status::IO_ERROR; }
+  Status RemoveHead(const CommitId& head) override { return Status::IO_ERROR; }
+  Status ContainsHead(const CommitId& commit_id) override {
+    return Status::IO_ERROR;
+  }
+  Status GetCommitStorageBytes(const CommitId& commit_id,
+                               std::string* storage_bytes) override {
+    return Status::IO_ERROR;
+  }
+  Status AddCommitStorageBytes(const CommitId& commit_id,
+                               const std::string& storage_bytes) override {
+    return Status::IO_ERROR;
+  }
+  Status RemoveCommit(const CommitId& commit_id) override {
+    return Status::IO_ERROR;
+  }
+  Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) override {
+    return Status::IO_ERROR;
+  }
+  Status GetImplicitJournal(const JournalId& journal_id,
+                            std::unique_ptr<Journal>* journal) override {
+    return Status::IO_ERROR;
+  }
+  Status RemoveExplicitJournals() override { return Status::IO_ERROR; }
+  Status RemoveJournal(const JournalId& journal_id) override {
+    return Status::IO_ERROR;
+  }
+  Status AddJournalEntry(const JournalId& journal_id,
+                         ftl::StringView key,
+                         ftl::StringView value,
+                         KeyPriority priority) override {
+    return Status::IO_ERROR;
+  }
+  Status RemoveJournalEntry(const JournalId& journal_id,
+                            convert::ExtendedStringView key) override {
+    return Status::IO_ERROR;
+  }
+  Status GetJournalEntries(
+      const JournalId& journal_id,
+      std::unique_ptr<Iterator<const EntryChange>>* entries) override {
+    return Status::IO_ERROR;
+  }
+  Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override {
+    return Status::IO_ERROR;
+  }
+  Status MarkCommitIdSynced(const CommitId& commit_id) override {
+    return Status::IO_ERROR;
+  }
+  Status MarkCommitIdUnsynced(const CommitId& commit_id) override {
+    return Status::IO_ERROR;
+  }
+  Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override {
+    return Status::IO_ERROR;
+  }
+  Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override {
+    return Status::IO_ERROR;
+  }
+  Status MarkObjectIdSynced(ObjectIdView object_id) override {
+    return Status::IO_ERROR;
+  }
+  Status MarkObjectIdUnsynced(ObjectIdView object_id) override {
+    return Status::IO_ERROR;
+  }
+  Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) override {
+    return Status::IO_ERROR;
+  }
+  Status SetNodeSize(size_t node_size) override { return Status::IO_ERROR; }
+  Status GetNodeSize(size_t* node_size) override { return Status::IO_ERROR; }
+
+ private:
+  PageStorageImpl* page_storage_;
 };
 
 class PageStorageTest : public ::testing::Test {
@@ -233,6 +334,37 @@ TEST_F(PageStorageTest, CreateJournals) {
             storage_->StartMergeCommit(left_id, right_id, &journal));
   EXPECT_EQ(Status::OK, journal->Rollback());
   EXPECT_NE(nullptr, journal);
+}
+
+TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
+  FakeDbImpl db(storage_.get());
+
+  std::unique_ptr<Journal> journal;
+  // Explicit journals.
+  // The first call will fail because FakeDBImpl::AddJournalEntry() returns an
+  // IO_ERROR. After a failed call all other Put/Delete/Commit operations should
+  // fail with ILLEGAL_STATE. Rollback will fail with IO_ERROR because
+  // FakeDBImpl::RemoveJournal() returns it.
+  db.CreateJournal(JournalType::EXPLICIT, RandomId(kCommitIdSize), &journal);
+  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
+  EXPECT_EQ(Status::ILLEGAL_STATE,
+            journal->Put("key", "value", KeyPriority::EAGER));
+  EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
+  journal->Commit([](Status s, const CommitId& id) {
+    EXPECT_EQ(Status::ILLEGAL_STATE, s);
+  });
+  EXPECT_EQ(Status::IO_ERROR, journal->Rollback());
+
+  // Implicit journals.
+  // All calls will fail because of FakeDBImpl implementation, not because of
+  // ILLEGAL_STATE.
+  db.CreateJournal(JournalType::IMPLICIT, RandomId(kCommitIdSize), &journal);
+  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
+  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
+  EXPECT_EQ(Status::IO_ERROR, journal->Delete("key"));
+  journal->Commit(
+      [](Status s, const CommitId& id) { EXPECT_EQ(Status::IO_ERROR, s); });
+  EXPECT_EQ(Status::IO_ERROR, journal->Rollback());
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
