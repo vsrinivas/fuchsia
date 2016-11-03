@@ -128,7 +128,7 @@ class Binding {
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
     mx::channel endpoint0;
     mx::channel endpoint1;
-    mx::channel::create(&endpoint0, &endpoint1, 0);
+    mx::channel::create(0, &endpoint0, &endpoint1);
     *interface_handle =
         InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_);
     Bind(std::move(endpoint1), waiter);
