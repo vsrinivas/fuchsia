@@ -88,7 +88,7 @@ mx_status_t handle_watcher_schedule_request(void) {
   }
   debug_socket("watcher: num_results=%d max_results=%d\n", NSOCKETS,
                num_results);
-  if (num_results < NSOCKETS) {
+  if (num_results > NSOCKETS) {
     // TODO
     error("not enough buffer to get all handles with signals (%d/%d)\n",
           num_results, NSOCKETS);
@@ -148,7 +148,7 @@ static void socket_signals_change(iostate_t* ios,
     }
   }
   if (new_sigs) {
-    if ((r = mx_waitset_add(s_waitset, ios->s, new_sigs, (uint64_t)ios)) < 0) {
+    if ((r = mx_waitset_add(s_waitset, (uint64_t)ios, ios->s, new_sigs)) < 0) {
       error("mx_waitset_add failed (%d)\n", r);
       return;
     }
