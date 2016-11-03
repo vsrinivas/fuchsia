@@ -11,9 +11,10 @@ import urlparse
 import re
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "..", "apps", "component_manager", "python")))
+def component_url_bootfs_path(url):
+    """Take an URL and generate a local path used by the component manager's fake network service"""
+    return 'fake_network/' + re.sub(r'[:/]+', '/', url)
 
-from component_manifest import ComponentManifest, url_to_path
 
 class Amalgamation:
 
@@ -21,7 +22,6 @@ class Amalgamation:
         self.labels = []
         self.files = []
         self.config_paths = []
-        self.component_urls = []
         self.build_root = ""
 
     def add_config(self, config, config_path):
@@ -38,15 +38,31 @@ class Amalgamation:
             file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
             file["bootfs_path"] = r["bootfs_path"]
             self.files.append(file)
-        for c in config.get("components", []):
+        for url, manifest_name in config.get("components", {}).items():
             # See https://fuchsia.googlesource.com/component_manager/ for what a component is.
-            manifest = ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
-            self.component_urls.append(manifest.url)
-            for component_file in manifest.files().values():
+            manifest_path = os.path.join(paths.FUCHSIA_ROOT, manifest_name)
+            component_dir = os.path.dirname(manifest_path)
+            manifest = json.load(open(manifest_path))
+            # Add the manifest.
+            self.files.append({
+                "file": manifest_path,
+                "bootfs_path": component_url_bootfs_path(url),
+            })
+            # Add the program.
+            if 'fuchsia:program' in manifest:
+                program_url = urlparse.urljoin(url, manifest['fuchsia:program']['url'])
+                program_name = os.path.basename(urlparse.urlparse(program_url).path)
                 self.files.append({
-                    'file': os.path.join(self.build_root, 'components', component_file.url_as_path),
-                    'bootfs_path': os.path.join('components', component_file.url_as_path)
+                    "file": os.path.join(self.build_root, program_name),
+                    "bootfs_path": component_url_bootfs_path(program_url),
                 })
+            # Add the resources.
+            for resource in manifest.get('fuchsia:resources', []):
+                self.files.append({
+                    "file": os.path.join(component_dir, resource),
+                    "bootfs_path": component_url_bootfs_path(urlparse.urljoin(url, resource)),
+                })
+
 
 
 def resolve_imports(import_queue, build_root):
@@ -65,21 +81,18 @@ def resolve_imports(import_queue, build_root):
                         import_queue.append(i)
                         imported.add(i)
             except Exception as e:
-                import traceback
-                traceback.print_exc()
                 sys.stderr.write("Failed to parse config %s, error %s\n" % (config_path, str(e)))
                 return None
     return amalgamation
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate bootfs manifest and "
+    parser = argparse.ArgumentParser(description="Generate bootfs manifest and"
                                      + "list of GN targets for a list of Fuchsia modules")
     parser.add_argument("--manifest", help="path to manifest file to generate")
     parser.add_argument("--modules", help="list of modules", default="default")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
-    parser.add_argument("--component-index", help="path to component index to generate")
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
@@ -112,10 +125,6 @@ def main():
             f.write(args.manifest)
             for path in amalgamation.config_paths:
                 f.write(" " + path)
-
-    if args.component_index != "":
-        with open(args.component_index, "w") as f:
-            json.dump(amalgamation.component_urls, f)
 
     sys.stdout.write("\n".join(amalgamation.labels))
     sys.stdout.write("\n")
