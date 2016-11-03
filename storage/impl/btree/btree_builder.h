@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_STORAGE_IMPL_BTREE_BTREE_BUILDER_H_
 #define APPS_LEDGER_STORAGE_IMPL_BTREE_BTREE_BUILDER_H_
 
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 #include "apps/ledger/storage/public/types.h"
 
 namespace storage {

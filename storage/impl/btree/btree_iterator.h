@@ -10,7 +10,7 @@
 
 #include "apps/ledger/convert/convert.h"
 #include "apps/ledger/storage/impl/btree/position.h"
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/iterator.h"
 #include "lib/ftl/macros.h"

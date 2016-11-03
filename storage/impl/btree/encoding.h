@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_STORAGE_IMPL_STORE_ENCODING_H_
-#define APPS_LEDGER_STORAGE_IMPL_STORE_ENCODING_H_
+#ifndef APPS_LEDGER_STORAGE_IMPL_BTREE_ENCODING_H_
+#define APPS_LEDGER_STORAGE_IMPL_BTREE_ENCODING_H_
 
 #include <string>
 
@@ -21,4 +21,4 @@ bool DecodeNode(ftl::StringView json,
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_STORAGE_IMPL_STORE_ENCODING_H_
+#endif  // APPS_LEDGER_STORAGE_IMPL_BTREE_ENCODING_H_

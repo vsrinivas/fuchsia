@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 
 namespace storage {
 

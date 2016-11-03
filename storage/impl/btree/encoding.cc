@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/store/encoding.h"
+#include "apps/ledger/storage/impl/btree/encoding.h"
 
 #include "apps/ledger/glue/crypto/base64.h"
 #include "lib/ftl/logging.h"

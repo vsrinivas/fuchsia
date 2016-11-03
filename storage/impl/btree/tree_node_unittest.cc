@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
-#include "apps/ledger/storage/impl/store/encoding.h"
+#include "apps/ledger/storage/impl/btree/encoding.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"

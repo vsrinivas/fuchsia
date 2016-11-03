@@ -7,7 +7,7 @@
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/fake/fake_page_storage.h"
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 #include "apps/ledger/storage/public/commit_contents.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "apps/ledger/storage/public/iterator.h"

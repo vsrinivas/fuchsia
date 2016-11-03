@@ -5,7 +5,7 @@
 #include "apps/ledger/storage/impl/btree/diff_iterator.h"
 
 #include "apps/ledger/storage/impl/btree/commit_contents_impl.h"
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 #include "lib/ftl/logging.h"
 
 namespace storage {

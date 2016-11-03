@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_STORAGE_IMPL_STORE_TREE_NODE_H_
-#define APPS_LEDGER_STORAGE_IMPL_STORE_TREE_NODE_H_
+#ifndef APPS_LEDGER_STORAGE_IMPL_BTREE_TREE_NODE_H_
+#define APPS_LEDGER_STORAGE_IMPL_BTREE_TREE_NODE_H_
 
 #include <memory>
 #include <vector>
@@ -175,4 +175,4 @@ class TreeNode {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_STORAGE_IMPL_TREE_NODE_H_
+#endif  // APPS_LEDGER_STORAGE_IMPL_BTREE_TREE_NODE_H_

@@ -4,7 +4,7 @@
 
 #include "apps/ledger/storage/impl/btree/btree_iterator.h"
 
-#include "apps/ledger/storage/impl/store/tree_node.h"
+#include "apps/ledger/storage/impl/btree/tree_node.h"
 #include "lib/ftl/logging.h"
 
 namespace storage {

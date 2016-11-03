@@ -11,7 +11,6 @@ group("impl") {
     ":lib",
     ":unittests",
     "//apps/ledger/storage/impl/btree",
-    "//apps/ledger/storage/impl/store",
   ]
 }
 
@@ -35,7 +34,6 @@ source_set("lib") {
   deps = [
     "//apps/ledger/glue",
     "//apps/ledger/storage/impl/btree:lib",
-    "//apps/ledger/storage/impl/store:lib",
     "//apps/ledger/storage/public",
     "//lib/ftl",
     "//mojo/public/cpp/system",
@@ -64,7 +62,6 @@ executable("unittests") {
     ":lib",
     "//apps/ledger/glue",
     "//apps/ledger/storage/fake:lib",
-    "//apps/ledger/storage/impl/store:lib",
     "//apps/ledger/storage/public",
     "//apps/ledger/test",
     "//lib/ftl",
