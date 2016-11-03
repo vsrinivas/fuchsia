@@ -67,7 +67,8 @@ class DummyUserShellImpl : public UserShell, public mozart::BaseView {
 
     // Check for previous stories.
     story_provider_->PreviousStories([this](InterfaceHandle<Story> story) {
-      FTL_DCHECK(!story.is_valid());
+      //TODO(jimbe) Put this back when the function is implemented.
+      //FTL_DCHECK(!story.is_valid());
     });
 
     StartAndEmbedStory(kExampleRecipeUrl);

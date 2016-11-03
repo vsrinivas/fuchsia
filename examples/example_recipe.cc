@@ -218,14 +218,12 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
     // This must come last, otherwise we get a notification of our own
     // write because of the "send initial values" code.
-    DocumentEditor editor(kDocId);
-    editor.SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue));
-    editor.SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1));
-    editor.SetProperty(kSenderLabel,
-                       DocumentEditor::NewStringValue("RecipeImpl"));
-
     MojoDocMap docs;
-    editor.TakeDocument(&docs[editor.docid()]);
+    DocumentEditor(kDocId)
+        .SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue))
+        .SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1))
+        .SetProperty(kSenderLabel, DocumentEditor::NewStringValue("RecipeImpl"))
+        .Insert(&docs);
     module1_link_->SetAllDocuments(std::move(docs));
   }
 

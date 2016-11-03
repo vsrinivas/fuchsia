@@ -114,7 +114,6 @@ class Module2Impl : public mozart::BaseView, public Module, public LinkChanged {
       editor.RemoveProperty(kSenderLabel);
     }
 
-    editor.Keep(&docs);
     Invalidate();
     link_->SetAllDocuments(std::move(docs));
   }

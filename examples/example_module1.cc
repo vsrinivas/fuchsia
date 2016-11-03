@@ -96,21 +96,8 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
     FTL_LOG(INFO) << "Module1Impl::Notify() " << (int64_t)this << docs;
     docs_ = std::move(docs);
 
-    if (!editor_.Edit(kDocId, &docs_))
-      return;
-
-    Value* sender = editor_.GetValue(kSenderLabel);
-    Value* value = editor_.GetValue(kCounterLabel);
-    FTL_DCHECK(value != nullptr);
-
     tick_++;
-    int counter = value->get_int_value();
-    if (counter > 10) {
-      // For the last iteration, Module2 removes the sender.
-      FTL_DCHECK(sender == nullptr);
-      session_->Done();
-    } else {
-      FTL_DCHECK(sender != nullptr);
+    if (UpdateCounter()) {
       handoff_time_ = ftl::TimePoint::Now() +
                       ftl::TimeDelta::FromSeconds(kValueHandoffDuration);
       Invalidate();
@@ -118,6 +105,31 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
   }
 
  private:
+  bool UpdateCounter() {
+    DocumentEditor editor;
+    if (!editor.Edit(kDocId, &docs_))
+      return false;
+
+    Value* sender = editor.GetValue(kSenderLabel);
+    Value* value = editor.GetValue(kCounterLabel);
+    FTL_DCHECK(value != nullptr);
+
+    int counter = value->get_int_value();
+    value->set_int_value(counter + 1);
+
+    bool updated = counter <= 10;
+    if (updated) {
+      sender->set_string_value("Module1Impl");
+      link_->SetAllDocuments(docs_.Clone());
+    } else {
+      // For the last iteration, test that Module2 removes the sender.
+      FTL_DCHECK(sender == nullptr);
+      session_->Done();
+    }
+
+    return updated;
+  }
+
   // Copied from
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
@@ -152,16 +164,7 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
     scene()->Publish(CreateSceneMetadata());
 
     if (ftl::TimePoint::Now() >= handoff_time_) {
-      Value* sender = editor_.GetValue(kSenderLabel);
-      Value* value = editor_.GetValue(kCounterLabel);
-      FTL_DCHECK(value != nullptr);
-
-      int counter = value->get_int_value();
-      value->set_int_value(counter + 1);
-      sender->set_string_value("Module1Impl");
-
-      editor_.Keep(&docs_);
-      link_->SetAllDocuments(docs_.Clone());
+      UpdateCounter();
     } else {
       Invalidate();
     }
@@ -189,7 +192,6 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
   // value can be sent back and a new frame drawn.
   ftl::TimePoint handoff_time_;
   MojoDocMap docs_;
-  DocumentEditor editor_;
 
   // This is a counter that is incremented when a new value is received and used
   // to rotate a square.

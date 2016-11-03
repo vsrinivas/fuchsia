@@ -28,61 +28,74 @@ using mojo::InterfaceRequest;
 using mojo::String;
 using mojo::StructPtr;
 
-DocumentEditor::DocumentEditor() {
-}
+DocumentEditor::DocumentEditor() {}
+
+DocumentEditor::DocumentEditor(Document* const doc) : doc_(doc) {}
 
 DocumentEditor::DocumentEditor(const std::string& docid) {
-  doc_ = Document::New();
-  doc_->properties = MojoPropertyArray::New(0);
-  doc_->docid = docid;
+  newdoc_ = Document::New();
+  newdoc_->properties = MojoPropertyArray::New(0);
+  newdoc_->docid = docid;
+  doc_ = newdoc_.get();
+}
+
+void DocumentEditor::Reset() {
+  doc_ = nullptr;
+  newdoc_.reset();
 }
 
 Value* DocumentEditor::GetValue(const std::string& property) {
   for (auto& p : doc_->properties) {
-    if (p->property == property) return p->value.get();
+    if (p->property == property)
+      return p->value.get();
   }
   return nullptr;
 }
 
-bool DocumentEditor::Edit(
-    const std::string& docid, MojoDocMap* docs) {
-  if (!*docs) return false;
+bool DocumentEditor::Edit(const std::string& docid, MojoDocMap* const docs) {
+  FTL_DCHECK(newdoc_.get() == nullptr);
+  FTL_DCHECK(doc_ == nullptr);
+  FTL_DCHECK(docs != nullptr);
 
   auto it = docs->find(docid);
-  if (it == docs->end()) return false;
+  if (it == docs->end())
+    return false;
 
-  doc_ = std::move(it.GetValue());
-
-  DocMap doc_map;
-  docs->Swap(&doc_map);
-  doc_map.erase(docid);
-  docs->Swap(&doc_map);
+  doc_ = it.GetValue().get();
 
   return true;
 }
 
-void DocumentEditor::Keep(MojoDocMap* docs) {
-  FTL_DCHECK(docs != nullptr);
-  (*docs)[doc_->docid] = std::move(doc_);
+void DocumentEditor::TakeDocument(document_store::DocumentPtr* const ptr) {
+  FTL_DCHECK(newdoc_.get() != nullptr);
+  *ptr = std::move(newdoc_);
 }
 
-void DocumentEditor::SetProperty(PropertyPtr new_property) {
+void DocumentEditor::Insert(MojoDocMap* const docs) {
+  FTL_DCHECK(newdoc_.get() != nullptr);
+  FTL_DCHECK(docs != nullptr);
+  (*docs)[newdoc_->docid] = std::move(newdoc_);
+}
+
+DocumentEditor& DocumentEditor::SetProperty(PropertyPtr new_property) {
   for (auto& p : doc_->properties) {
     if (p->property == new_property->property) {
       // Note: it's valid for new_property->value to be null.
       std::swap(p, new_property);
-      return;
+      return *this;
     }
   }
   doc_->properties.push_back(std::move(new_property));
+  return *this;
 }
 
-void DocumentEditor::SetProperty(const std::string& property_label,
-                                 StructPtr<Value> value) {
+DocumentEditor& DocumentEditor::SetProperty(const std::string& property_label,
+                                            StructPtr<Value> value) {
   auto property = document_store::Property::New();
   property->property = property_label;
   property->value = std::move(value);
   SetProperty(std::move(property));
+  return *this;
 }
 
 void DocumentEditor::RemoveProperty(const Property& del_property) {
@@ -132,7 +145,8 @@ ValuePtr DocumentEditor::NewIriValue(const std::string& iri) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MojoPropertyArray& props) {
-  if (props.size() == 0) os << std::endl << "  (No properties)";
+  if (props.size() == 0)
+    os << std::endl << "  (No properties)";
   // Cast away const because there's no "const" member function of begin() for
   // the range-based for loop, nor is there a cbegin().
   for (const auto& prop : const_cast<MojoPropertyArray&>(props)) {
@@ -142,7 +156,7 @@ std::ostream& operator<<(std::ostream& os, const MojoPropertyArray& props) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, Value* v) {
+std::ostream& operator<<(std::ostream& os, Value* const v) {
   switch (v->which()) {
     case Value::Tag::STRING_VALUE:
       os << v->get_string_value();
@@ -170,19 +184,22 @@ std::ostream& operator<<(std::ostream& os, Value* v) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MojoDocMap& docs) {
-  if (docs.size() == 0) os << " NO DOCUMENTS";
+  if (docs.size() == 0)
+    os << " NO DOCUMENTS";
   for (auto it = docs.cbegin(); it != docs.cend(); ++it) {
     if (it != docs.cbegin()) {
       os << std::endl << "--------";
     }
     os << std::endl << "  @id: " << it.GetKey();
-    if (it.GetValue()->properties.size() == 0) os << std::endl << "  (No properties)";
+    if (it.GetValue()->properties.size() == 0)
+      os << std::endl << "  (No properties)";
     return os << std::dec << it.GetValue()->properties;
   }
   return os;
 }
 
-StatementPtr NewStatement(const std::string& docid, const std::string& property,
+StatementPtr NewStatement(const std::string& docid,
+                          const std::string& property,
                           StructPtr<Value> value) {
   auto statement = document_store::Statement::New();
   statement->docid = docid;
