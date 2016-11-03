@@ -239,7 +239,7 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 }
 
 Status PageStorageImpl::GetCommit(const CommitId& commit_id,
-                                  std::unique_ptr<Commit>* commit) {
+                                  std::unique_ptr<const Commit>* commit) {
   static std::string first_commit_id =
       std::string(kFirstPageCommitId, kCommitIdSize);
   if (commit_id == first_commit_id) {
@@ -251,7 +251,7 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
   if (s != Status::OK) {
     return s;
   }
-  std::unique_ptr<Commit> c =
+  std::unique_ptr<const Commit> c =
       CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes));
   if (!c) {
     return Status::FORMAT_ERROR;
@@ -312,7 +312,7 @@ Status PageStorageImpl::GetUnsyncedCommits(
 
   std::vector<std::unique_ptr<const Commit>> result;
   for (size_t i = 0; i < result_ids.size(); ++i) {
-    std::unique_ptr<Commit> commit;
+    std::unique_ptr<const Commit> commit;
     Status s = GetCommit(result_ids[i], &commit);
     if (s != Status::OK) {
       return s;
@@ -437,7 +437,7 @@ void PageStorageImpl::NotifyWatchers(const Commit& commit,
   }
 }
 
-Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
+Status PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
                                   ChangeSource source) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();

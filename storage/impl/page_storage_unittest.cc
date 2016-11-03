@@ -215,7 +215,7 @@ class PageStorageTest : public ::testing::Test {
     EXPECT_EQ(Status::ILLEGAL_STATE, journal->Rollback());
 
     // Check the contents.
-    std::unique_ptr<Commit> commit;
+    std::unique_ptr<const Commit> commit;
     EXPECT_EQ(Status::OK, storage_->GetCommit(commit_id, &commit));
     std::unique_ptr<Iterator<const Entry>> contents =
         commit->GetContents()->begin();
@@ -241,19 +241,19 @@ class PageStorageTest : public ::testing::Test {
 
 TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit id that doesn't exist and see the error.
-  std::unique_ptr<Commit> commit;
+  std::unique_ptr<const Commit> lookup_commit;
   EXPECT_EQ(Status::NOT_FOUND,
-            storage_->GetCommit(RandomId(kCommitIdSize), &commit));
-  EXPECT_FALSE(commit);
+            storage_->GetCommit(RandomId(kCommitIdSize), &lookup_commit));
+  EXPECT_FALSE(lookup_commit);
 
-  commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
   // Search for a commit that exist and check the content.
   EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
-  std::unique_ptr<Commit> found;
+  std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
 }
@@ -266,7 +266,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   EXPECT_EQ(Status::OK,
             storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
 
-  std::unique_ptr<Commit> found;
+  std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));
   EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
 

@@ -26,7 +26,7 @@ class FakePageStorage : public PageStorage {
   PageId GetId() override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
   Status GetCommit(const CommitId& commit_id,
-                   std::unique_ptr<Commit>* commit) override;
+                   std::unique_ptr<const Commit>* commit) override;
   Status AddCommitFromSync(const CommitId& id,
                            std::string&& storage_bytes) override;
   Status StartCommit(const CommitId& commit_id,

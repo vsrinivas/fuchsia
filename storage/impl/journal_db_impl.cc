@@ -96,7 +96,7 @@ void JournalDBImpl::Commit(
     return;
   }
 
-  std::unique_ptr<storage::Commit> base_commit;
+  std::unique_ptr<const storage::Commit> base_commit;
   status = page_storage_->GetCommit(base_, &base_commit);
   if (status != Status::OK) {
     callback(status, "");

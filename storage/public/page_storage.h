@@ -34,7 +34,7 @@ class PageStorage {
   // Finds the commit with the given |commit_id| and stores the value in
   // |commit|.
   virtual Status GetCommit(const CommitId& commit_id,
-                           std::unique_ptr<Commit>* commit) = 0;
+                           std::unique_ptr<const Commit>* commit) = 0;
 
   // Adds the given synced |commit| in this |PageStorage|.
   virtual Status AddCommitFromSync(const CommitId& id,

@@ -52,7 +52,7 @@ void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
   } else {
     commit_id = journal_parent_commit_;
   }
-  std::unique_ptr<storage::Commit> commit;
+  std::unique_ptr<const storage::Commit> commit;
   storage::Status status = storage_->GetCommit(commit_id, &commit);
   if (status != storage::Status::OK) {
     callback.Run(PageUtils::ConvertStatus(status), nullptr);
