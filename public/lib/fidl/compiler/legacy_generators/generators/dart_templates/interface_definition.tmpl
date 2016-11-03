@@ -58,7 +58,7 @@ abstract class {{interface|name}} {
     {{interface|name}}Proxy p = new {{interface|name}}Proxy.unbound();
     String name = serviceName ?? {{interface|name}}.serviceName;
     if ((name == null) || name.isEmpty) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "If an interface has no ServiceName, then one must be provided.");
     }
     s.connectToService(url, p, name);
@@ -92,13 +92,13 @@ abstract class {{interface|name}} {
 }
 
 abstract class {{interface|name}}Interface
-    implements bindings.MojoInterface<{{interface|name}}>,
+    implements bindings.FidlInterface<{{interface|name}}>,
                {{interface|name}} {
   factory {{interface|name}}Interface([{{interface|name}} impl]) =>
       new {{interface|name}}Stub.unbound(impl);
 
   factory {{interface|name}}Interface.fromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint,
+      core.ChannelEndpoint endpoint,
       [{{interface|name}} impl]) =>
       new {{interface|name}}Stub.fromEndpoint(endpoint, impl);
 
@@ -108,7 +108,7 @@ abstract class {{interface|name}}Interface
 }
 
 abstract class {{interface|name}}InterfaceRequest
-    implements bindings.MojoInterface<{{interface|name}}>,
+    implements bindings.FidlInterface<{{interface|name}}>,
                {{interface|name}} {
   factory {{interface|name}}InterfaceRequest() =>
       new {{interface|name}}Proxy.unbound();
@@ -120,10 +120,10 @@ class _{{interface|name}}ProxyControl
   {{interface|name}} impl;
 
   _{{interface|name}}ProxyControl.fromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint) : super.fromEndpoint(endpoint);
+      core.ChannelEndpoint endpoint) : super.fromEndpoint(endpoint);
 
   _{{interface|name}}ProxyControl.fromHandle(
-      core.MojoHandle handle) : super.fromHandle(handle);
+      core.Handle handle) : super.fromHandle(handle);
 
   _{{interface|name}}ProxyControl.unbound() : super.unbound();
 
@@ -168,10 +168,10 @@ class {{interface|name}}Proxy
                {{interface|name}}Interface,
                {{interface|name}}InterfaceRequest {
   {{interface|name}}Proxy.fromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint)
+      core.ChannelEndpoint endpoint)
       : super(new _{{interface|name}}ProxyControl.fromEndpoint(endpoint));
 
-  {{interface|name}}Proxy.fromHandle(core.MojoHandle handle)
+  {{interface|name}}Proxy.fromHandle(core.Handle handle)
       : super(new _{{interface|name}}ProxyControl.fromHandle(handle));
 
   {{interface|name}}Proxy.unbound()
@@ -185,7 +185,7 @@ class {{interface|name}}Proxy
   }
 
   static {{interface|name}}Proxy newFromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint) {
+      core.ChannelEndpoint endpoint) {
     assert(endpoint.setDescription("For {{interface|name}}Proxy"));
     return new {{interface|name}}Proxy.fromEndpoint(endpoint);
   }
@@ -277,13 +277,13 @@ class _{{interface|name}}StubControl
   {{interface|name}} _impl;
 
   _{{interface|name}}StubControl.fromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint, [{{interface|name}} impl])
+      core.ChannelEndpoint endpoint, [{{interface|name}} impl])
       : super.fromEndpoint(endpoint, autoBegin: impl != null) {
     _impl = impl;
   }
 
   _{{interface|name}}StubControl.fromHandle(
-      core.MojoHandle handle, [{{interface|name}} impl])
+      core.Handle handle, [{{interface|name}} impl])
       : super.fromHandle(handle, autoBegin: impl != null) {
     _impl = impl;
   }
@@ -317,13 +317,8 @@ class _{{interface|name}}StubControl
 {%- endfor %}
 
   void handleMessage(bindings.ServiceMessage message) {
-    if (bindings.ControlMessageHandler.isControlMessage(message)) {
-      bindings.ControlMessageHandler.handleMessage(
-          this, {{interface.version}}, message);
-      return;
-    }
     if (_impl == null) {
-      throw new core.MojoApiError("$this has no implementation set");
+      throw new core.FidlApiError("$this has no implementation set");
     }
     switch (message.header.type) {
 {%- for method in interface.methods %}
@@ -349,7 +344,7 @@ class _{{interface|name}}StubControl
         break;
 {%- endfor %}
       default:
-        throw new bindings.MojoCodecError("Unexpected message name");
+        throw new bindings.FidlCodecError("Unexpected message name");
         break;
     }
   }
@@ -357,7 +352,7 @@ class _{{interface|name}}StubControl
   {{interface|name}} get impl => _impl;
   set impl({{interface|name}} d) {
     if (d == null) {
-      throw new core.MojoApiError("$this: Cannot set a null implementation");
+      throw new core.FidlApiError("$this: Cannot set a null implementation");
     }
     if (isBound && (_impl == null)) {
       beginHandlingEvents();
@@ -366,7 +361,7 @@ class _{{interface|name}}StubControl
   }
 
   @override
-  void bind(core.MojoMessagePipeEndpoint endpoint) {
+  void bind(core.ChannelEndpoint endpoint) {
     super.bind(endpoint);
     if (!isOpen && (_impl != null)) {
       beginHandlingEvents();
@@ -391,15 +386,15 @@ class {{interface|name}}Stub
       : super(new _{{interface|name}}StubControl.unbound(impl));
 
   {{interface|name}}Stub.fromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint, [{{interface|name}} impl])
+      core.ChannelEndpoint endpoint, [{{interface|name}} impl])
       : super(new _{{interface|name}}StubControl.fromEndpoint(endpoint, impl));
 
   {{interface|name}}Stub.fromHandle(
-      core.MojoHandle handle, [{{interface|name}} impl])
+      core.Handle handle, [{{interface|name}} impl])
       : super(new _{{interface|name}}StubControl.fromHandle(handle, impl));
 
   static {{interface|name}}Stub newFromEndpoint(
-      core.MojoMessagePipeEndpoint endpoint) {
+      core.ChannelEndpoint endpoint) {
     assert(endpoint.setDescription("For {{interface|name}}Stub"));
     return new {{interface|name}}Stub.fromEndpoint(endpoint);
   }

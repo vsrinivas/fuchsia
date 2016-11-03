@@ -48,15 +48,15 @@ class ArrayDataHeader {
   String toString() => "ArrayDataHeader($size, $numElements)";
 }
 
-class MojoCodecError {
+class FidlCodecError {
   String message;
-  MojoCodecError(this.message);
+  FidlCodecError(this.message);
   String toString() => message;
 }
 
 class _EncoderBuffer {
   ByteData buffer;
-  List<core.MojoHandle> handles;
+  List<core.Handle> handles;
   int extent;
 
   static const int kInitialBufferSize = 1024;
@@ -143,7 +143,7 @@ class Encoder {
 
   void encodeUint8(int value, int offset) {
     if (value < 0) {
-      throw new MojoCodecError('$kErrorUnsigned: $value');
+      throw new FidlCodecError('$kErrorUnsigned: $value');
     }
     _buffer.buffer.setUint8(_base + offset, value);
   }
@@ -153,7 +153,7 @@ class Encoder {
 
   void encodeUint16(int value, int offset) {
     if (value < 0) {
-      throw new MojoCodecError('$kErrorUnsigned: $value');
+      throw new FidlCodecError('$kErrorUnsigned: $value');
     }
     _buffer.buffer.setUint16(_base + offset, value, Endianness.LITTLE_ENDIAN);
   }
@@ -163,7 +163,7 @@ class Encoder {
 
   void encodeUint32(int value, int offset) {
     if (value < 0) {
-      throw new MojoCodecError('$kErrorUnsigned: $value');
+      throw new FidlCodecError('$kErrorUnsigned: $value');
     }
     _buffer.buffer.setUint32(_base + offset, value, Endianness.LITTLE_ENDIAN);
   }
@@ -173,7 +173,7 @@ class Encoder {
 
   void encodeUint64(int value, int offset) {
     if (value < 0) {
-      throw new MojoCodecError('$kErrorUnsigned: $value');
+      throw new FidlCodecError('$kErrorUnsigned: $value');
     }
     _buffer.buffer.setUint64(_base + offset, value, Endianness.LITTLE_ENDIAN);
   }
@@ -184,7 +184,7 @@ class Encoder {
   void encodeDouble(double value, int offset) => _buffer.buffer
       .setFloat64(_base + offset, value, Endianness.LITTLE_ENDIAN);
 
-  void encodeHandle(core.MojoHandle value, int offset, bool nullable) {
+  void encodeHandle(core.Handle value, int offset, bool nullable) {
     if ((value == null) || !value.isValid) {
       encodeInvalideHandle(offset, nullable);
     } else {
@@ -194,23 +194,23 @@ class Encoder {
   }
 
   void encodeMessagePipeHandle(
-          core.MojoMessagePipeEndpoint value, int offset, bool nullable) =>
+          core.ChannelEndpoint value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeConsumerHandle(
-          core.MojoDataPipeConsumer value, int offset, bool nullable) =>
+          core.DataPipeConsumer value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeProducerHandle(
-          core.MojoDataPipeProducer value, int offset, bool nullable) =>
+          core.DataPipeProducer value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeSharedBufferHandle(
-          core.MojoSharedBuffer value, int offset, bool nullable) =>
+          core.SharedBuffer value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeInterface(
-      MojoInterface mojoInterface, int offset, bool nullable) {
+      FidlInterface mojoInterface, int offset, bool nullable) {
     if (mojoInterface == null) {
       encodeInvalideHandle(offset, nullable);
       // Set the version field to 0.
@@ -218,7 +218,7 @@ class Encoder {
       return;
     }
     if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.MojoMessagePipe();
+      var pipe = new core.Channel();
       mojoInterface.ctrl.bind(pipe.endpoints[0]);
       encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);
       // Set the version to the version in the stub.
@@ -236,13 +236,13 @@ class Encoder {
   }
 
   void encodeInterfaceRequest(
-      MojoInterface mojoInterface, int offset, bool nullable) {
+      FidlInterface mojoInterface, int offset, bool nullable) {
     if (mojoInterface == null) {
       encodeInvalideHandle(offset, nullable);
       return;
     }
     if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.MojoMessagePipe();
+      var pipe = new core.Channel();
       mojoInterface.ctrl.bind(pipe.endpoints[0]);
       mojoInterface.ctrl.beginHandlingEvents();
       encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);
@@ -260,7 +260,7 @@ class Encoder {
 
   void encodeNullPointer(int offset, bool nullable) {
     if (!nullable) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Cannot encode a null pointer for a non-nullable type');
     }
     _buffer.buffer.setUint64(_base + offset, 0, Endianness.LITTLE_ENDIAN);
@@ -268,7 +268,7 @@ class Encoder {
 
   void encodeInvalideHandle(int offset, bool nullable) {
     if (!nullable) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Cannot encode a null pointer for a non-nullable type');
     }
     _buffer.buffer.setInt32(_base + offset, -1, Endianness.LITTLE_ENDIAN);
@@ -289,7 +289,7 @@ class Encoder {
   void encodeUnion(Union value, int offset, bool nullable) {
     if (value == null) {
       if (!nullable) {
-        throw new MojoCodecError('Cannot encode a non-nullable null union.');
+        throw new FidlCodecError('Cannot encode a non-nullable null union.');
       }
       encodeUint64(0, offset);
       encodeUint64(0, offset + 8);
@@ -298,8 +298,8 @@ class Encoder {
     value.encode(this, offset);
   }
 
-  void encodeEnum(MojoEnum value, int offset) =>
-      encodeUint32(value.mojoEnumValue, offset);
+  void encodeEnum(FidlEnum value, int offset) =>
+      encodeUint32(value.fidlEnumValue, offset);
 
   void encodeNestedUnion(Union value, int offset, bool nullable) {
     encodePointerToNextUnclaimed(offset);
@@ -321,7 +321,7 @@ class Encoder {
       int elementSize, int length, int offset, int expectedLength) {
     if ((expectedLength != kUnspecifiedArrayLength) &&
         (expectedLength != length)) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Cannot encode a fixed array of incorrect length');
     }
     return encoderForArrayByTotalSize(length * elementSize, length, offset);
@@ -341,7 +341,7 @@ class Encoder {
     }
     if ((expectedLength != kUnspecifiedArrayLength) &&
         (expectedLength != value.length)) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Cannot encode a fixed array of incorrect size.');
     }
     var bytes = new Uint8List((value.length + 7) >> kAlignmentShift);
@@ -436,12 +436,12 @@ class Encoder {
     }
   }
 
-  void encodeHandleArray(List<core.MojoHandle> value, int offset,
+  void encodeHandleArray(List<core.Handle> value, int offset,
           int nullability, int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeHandle(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeMessagePipeHandleArray(List<core.MojoMessagePipeEndpoint> value,
+  void encodeMessagePipeHandleArray(List<core.ChannelEndpoint> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper(
           (e, v, o, n) => e.encodeMessagePipeHandle(v, o, n),
@@ -451,17 +451,17 @@ class Encoder {
           nullability,
           expectedLength);
 
-  void encodeConsumerHandleArray(List<core.MojoDataPipeConsumer> value,
+  void encodeConsumerHandleArray(List<core.DataPipeConsumer> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeConsumerHandle(v, o, n),
           value, offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeProducerHandleArray(List<core.MojoDataPipeProducer> value,
+  void encodeProducerHandleArray(List<core.DataPipeProducer> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeProducerHandle(v, o, n),
           value, offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeSharedBufferHandleArray(List<core.MojoSharedBuffer> value,
+  void encodeSharedBufferHandleArray(List<core.SharedBuffer> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper(
           (e, v, o, n) => e.encodeSharedBufferHandle(v, o, n),
@@ -620,10 +620,10 @@ class _Validator {
 
   void claimHandle(int handle) {
     if (handle < _minNextClaimedHandle) {
-      throw new MojoCodecError('Cannot access handle out of order.');
+      throw new FidlCodecError('Cannot access handle out of order.');
     }
     if (handle >= _numberOfHandles) {
-      throw new MojoCodecError('Cannot access non present handle.');
+      throw new FidlCodecError('Cannot access non present handle.');
     }
     for (int i = _minNextClaimedHandle; i < handle; i++) {
       _skippedIndices.add(i);
@@ -633,16 +633,16 @@ class _Validator {
 
   void claimMemory(int start, int end) {
     if ((start & kAlignmentMask) != 0) {
-      throw new MojoCodecError('Incorrect starting alignment: $start.');
+      throw new FidlCodecError('Incorrect starting alignment: $start.');
     }
     if (start < _minNextMemory) {
-      throw new MojoCodecError('Cannot access memory out of order.');
+      throw new FidlCodecError('Cannot access memory out of order.');
     }
     if (end < start) {
-      throw new MojoCodecError('Incorrect memory range.');
+      throw new FidlCodecError('Incorrect memory range.');
     }
     if (end > _maxMemory) {
-      throw new MojoCodecError('Cannot access out of range memory.');
+      throw new FidlCodecError('Cannot access out of range memory.');
     }
     _minNextMemory = align(end);
   }
@@ -666,10 +666,10 @@ class Decoder {
       new Decoder(d._message, offset, validator);
 
   ByteData get _buffer => _message.buffer;
-  List<core.MojoHandle> get _handles => _message.handles;
-  List<core.MojoHandle> get excessHandles {
+  List<core.Handle> get _handles => _message.handles;
+  List<core.Handle> get excessHandles {
     if (_message.handlesLength == 0) return null;
-    List<core.MojoHandle> handles = new List();
+    List<core.Handle> handles = new List();
     for (int i = _validator._minNextClaimedHandle;
         i < _message.handlesLength;
         i++) {
@@ -703,33 +703,33 @@ class Decoder {
   bool decodeBool(int offset, int bit) =>
       (decodeUint8(offset) & (1 << bit)) != 0;
 
-  core.MojoHandle decodeHandle(int offset, bool nullable) {
+  core.Handle decodeHandle(int offset, bool nullable) {
     int index = decodeInt32(offset);
     if (index == -1) {
       if (!nullable) {
-        throw new MojoCodecError(
+        throw new FidlCodecError(
             'Cannot decode an invalid handle from a non-nullable type.');
       }
-      return new core.MojoHandle.invalid();
+      return new core.Handle.invalid();
     }
     _validator.claimHandle(index);
     return _handles[index];
   }
 
-  core.MojoMessagePipeEndpoint decodeMessagePipeHandle(
+  core.ChannelEndpoint decodeMessagePipeHandle(
           int offset, bool nullable) =>
-      new core.MojoMessagePipeEndpoint(decodeHandle(offset, nullable));
+      new core.ChannelEndpoint(decodeHandle(offset, nullable));
 
-  core.MojoDataPipeConsumer decodeConsumerHandle(int offset, bool nullable) =>
-      new core.MojoDataPipeConsumer(decodeHandle(offset, nullable));
+  core.DataPipeConsumer decodeConsumerHandle(int offset, bool nullable) =>
+      new core.DataPipeConsumer(decodeHandle(offset, nullable));
 
-  core.MojoDataPipeProducer decodeProducerHandle(int offset, bool nullable) =>
-      new core.MojoDataPipeProducer(decodeHandle(offset, nullable));
+  core.DataPipeProducer decodeProducerHandle(int offset, bool nullable) =>
+      new core.DataPipeProducer(decodeHandle(offset, nullable));
 
-  core.MojoSharedBuffer decodeSharedBufferHandle(int offset, bool nullable) =>
-      new core.MojoSharedBuffer(decodeHandle(offset, nullable));
+  core.SharedBuffer decodeSharedBufferHandle(int offset, bool nullable) =>
+      new core.SharedBuffer(decodeHandle(offset, nullable));
 
-  MojoInterface decodeServiceInterface(
+  FidlInterface decodeServiceInterface(
       int offset, bool nullable, Function clientFactory) {
     var endpoint = decodeMessagePipeHandle(offset, nullable);
     var version = decodeUint32(offset + kSerializedHandleSize);
@@ -741,7 +741,7 @@ class Decoder {
     return client;
   }
 
-  MojoInterface decodeInterfaceRequest(
+  FidlInterface decodeInterfaceRequest(
       int offset, bool nullable, Function interfaceFactory) {
     var endpoint = decodeMessagePipeHandle(offset, nullable);
     return endpoint.handle.isValid ? interfaceFactory(endpoint) : null;
@@ -752,7 +752,7 @@ class Decoder {
     int pointerOffset = decodeUint64(offset);
     if (pointerOffset == 0) {
       if (!nullable) {
-        throw new MojoCodecError(
+        throw new FidlCodecError(
             'Cannot decode a null pointer for a non-nullable type');
       }
       return null;
@@ -766,10 +766,10 @@ class Decoder {
     int size = decodeUint32(StructDataHeader.kSizeOffset);
     int version = decodeUint32(StructDataHeader.kVersionOffset);
     if (size < 0) {
-      throw new MojoCodecError('Negative size.');
+      throw new FidlCodecError('Negative size.');
     }
     if (version < 0) {
-      throw new MojoCodecError('Negative version number.');
+      throw new FidlCodecError('Negative version number.');
     }
     _validator.claimMemory(_base + StructDataHeader.kHeaderSize, _base + size);
     return new StructDataHeader(size, version);
@@ -780,10 +780,10 @@ class Decoder {
     int size = decodeUint32(ArrayDataHeader.kSizeOffset);
     int numElements = decodeUint32(ArrayDataHeader.kNumElementsOffset);
     if (size < 0) {
-      throw new MojoCodecError('Negative size.');
+      throw new FidlCodecError('Negative size.');
     }
     if (numElements < 0) {
-      throw new MojoCodecError('Negative number of elements.');
+      throw new FidlCodecError('Negative number of elements.');
     }
     _validator.claimMemory(_base + ArrayDataHeader.kHeaderSize, _base + size);
     return new ArrayDataHeader(size, numElements);
@@ -795,11 +795,11 @@ class Decoder {
     var arrayByteCount = ArrayDataHeader.kHeaderSize +
         ((header.numElements + 7) >> kAlignmentShift);
     if (header.size < arrayByteCount) {
-      throw new MojoCodecError('Array header is incorrect');
+      throw new FidlCodecError('Array header is incorrect');
     }
     if ((expectedLength != kUnspecifiedArrayLength) &&
         (header.numElements != expectedLength)) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Incorrect array length. Expected $expectedLength, but got '
           '${header.numElements}.');
     }
@@ -834,12 +834,12 @@ class Decoder {
     var arrayByteCount =
         ArrayDataHeader.kHeaderSize + header.numElements * elementSize;
     if (header.size < arrayByteCount) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Array header is incorrect: $header, elementSize = $elementSize');
     }
     if ((expectedLength != kUnspecifiedArrayLength) &&
         (header.numElements != expectedLength)) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Incorrect array length. Expected $expectedLength, but got '
           '${header.numElements}');
     }
@@ -1047,27 +1047,27 @@ class Decoder {
     return result;
   }
 
-  List<core.MojoHandle> decodeHandleArray(
+  List<core.Handle> decodeHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeHandle(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.MojoDataPipeConsumer> decodeConsumerHandleArray(
+  List<core.DataPipeConsumer> decodeConsumerHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeConsumerHandle(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.MojoDataPipeProducer> decodeProducerHandleArray(
+  List<core.DataPipeProducer> decodeProducerHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeProducerHandle(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.MojoMessagePipeEndpoint> decodeMessagePipeHandleArray(
+  List<core.ChannelEndpoint> decodeMessagePipeHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeMessagePipeHandle(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.MojoSharedBuffer> decodeSharedBufferHandleArray(
+  List<core.SharedBuffer> decodeSharedBufferHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeSharedBufferHandle(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
@@ -1104,11 +1104,11 @@ class Decoder {
   StructDataHeader decodeDataHeaderForMap() {
     var header = decodeStructDataHeader();
     if (header.size != kMapStructHeader.size) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Incorrect header for map. The size is incorrect.');
     }
     if (header.version != kMapStructHeader.version) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
           'Incorrect header for map. The version is incorrect.');
     }
     return header;

@@ -121,16 +121,16 @@ _kind_to_dart_decl_type = {
   mojom.INT32:                 "int",
   mojom.UINT32:                "int",
   mojom.FLOAT:                 "double",
-  mojom.HANDLE:                "core.MojoHandle",
-  mojom.DCPIPE:                "core.MojoDataPipeConsumer",
-  mojom.DPPIPE:                "core.MojoDataPipeProducer",
-  mojom.MSGPIPE:               "core.MojoMessagePipeEndpoint",
-  mojom.SHAREDBUFFER:          "core.MojoSharedBuffer",
-  mojom.NULLABLE_HANDLE:       "core.MojoHandle",
-  mojom.NULLABLE_DCPIPE:       "core.MojoDataPipeConsumer",
-  mojom.NULLABLE_DPPIPE:       "core.MojoDataPipeProducer",
-  mojom.NULLABLE_MSGPIPE:      "core.MojoMessagePipeEndpoint",
-  mojom.NULLABLE_SHAREDBUFFER: "core.MojoSharedBuffer",
+  mojom.HANDLE:                "core.Handle",
+  mojom.DCPIPE:                "core.DataPipeConsumer",
+  mojom.DPPIPE:                "core.DataPipeProducer",
+  mojom.MSGPIPE:               "core.ChannelEndpoint",
+  mojom.SHAREDBUFFER:          "core.SharedBuffer",
+  mojom.NULLABLE_HANDLE:       "core.Handle",
+  mojom.NULLABLE_DCPIPE:       "core.DataPipeConsumer",
+  mojom.NULLABLE_DPPIPE:       "core.DataPipeProducer",
+  mojom.NULLABLE_MSGPIPE:      "core.ChannelEndpoint",
+  mojom.NULLABLE_SHAREDBUFFER: "core.SharedBuffer",
   mojom.INT64:                 "int",
   mojom.UINT64:                "int",
   mojom.DOUBLE:                "double",
@@ -194,7 +194,7 @@ _spec_to_encode_method = {
 # they are used to generate mojom Type's and ServiceDescription implementations.
 # They need to be imported, unless the file itself is being generated.
 _service_describer_pkg_short = "service_describer"
-_mojom_types_pkg_short = "mojom_types"
+_mojom_types_pkg_short = "fidl_types"
 
 def GetDartType(kind):
   if kind.imported_from:
@@ -531,14 +531,14 @@ class Generator(generator.Generator):
                                for method in interface.methods)
                            for interface in self.GetInterfaces())
     if self.ignore_package_annotations:
-      service_describer_pkg = "package:mojo.public.interfaces.bindings/%s.mojom.dart" % \
+      service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
         _service_describer_pkg_short
-      mojom_types_pkg = "package:mojo.public.interfaces.bindings/%s.mojom.dart" % \
+      mojom_types_pkg = "package:lib.fidl.compiler.interface/%s.fidl.dart" % \
         _mojom_types_pkg_short
     else:
-      service_describer_pkg = "package:mojo/mojo/bindings/types/%s.mojom.dart" % \
+      service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
               _service_describer_pkg_short
-      mojom_types_pkg = "package:mojo/mojo/bindings/types/%s.mojom.dart" % \
+      mojom_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
               _mojom_types_pkg_short
 
     parameters = {
@@ -590,7 +590,7 @@ class Generator(generator.Generator):
 
   def GenerateFiles(self, args):
     self.should_gen_mojom_types = "--generate_type_info" in args
-    self.ignore_package_annotations = "--dart_ignore-package-annotations" in args
+    self.ignore_package_annotations = True # "--dart_ignore-package-annotations" in args
 
     elements = self.module.namespace.split('.')
     elements.append("%s.dart" % self.module.name)
@@ -659,7 +659,7 @@ class Generator(generator.Generator):
         unique_name = simple_name + str(counter)
 
       used_names.add(unique_name)
-      each_import["unique_name"] = unique_name + '_mojom'
+      each_import["unique_name"] = unique_name + '_fidl'
       counter += 1
 
       each_import["rebased_path"] = GetImportUri(self.ignore_package_annotations, each_import['module'])

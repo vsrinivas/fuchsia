@@ -20,12 +20,12 @@ abstract class Struct {
             // Found a match.
             break;
           }
-          throw new MojoCodecError(
+          throw new FidlCodecError(
               "Header size doesn't correspond to known version size.");
         }
       }
     } else if (mainDataHeader.size < knownVersions.last.size) {
-      throw new MojoCodecError(
+      throw new FidlCodecError(
         'Message newer than the last known version cannot be shorter than '
         'required by the last known version.');
     }
@@ -42,7 +42,7 @@ abstract class Struct {
   }
 
   static void fixErrorMessage(
-      MojoCodecError e, String fieldName, String structName) {
+      FidlCodecError e, String fieldName, String structName) {
     e.message = "Error encountered while encoding field $fieldName "
                 "of struct $structName: $e";
   }

@@ -4,29 +4,29 @@
 
 part of core;
 
-class MojoSharedBufferInformation {
+class SharedBufferInformation {
   final int flags;
   final int sizeInBytes;
 
-  MojoSharedBufferInformation(this.flags, this.sizeInBytes);
+  SharedBufferInformation(this.flags, this.sizeInBytes);
 }
 
 
-class MojoSharedBuffer {
+class SharedBuffer {
   static const int createFlagNone = 0;
   static const int duplicateFlagNone = 0;
   static const int mapFlagNone = 0;
 
-  MojoHandle _handle;
+  Handle _handle;
   int _status = MojoResult.kOk;
 
-  MojoHandle get handle => _handle;
+  Handle get handle => _handle;
   int get status => _status;
 
-  MojoSharedBuffer(this._handle, [this._status = MojoResult.kOk]);
+  SharedBuffer(this._handle, [this._status = MojoResult.kOk]);
 
-  factory MojoSharedBuffer.create(int numBytes, [int flags = createFlagNone]) {
-    List result = MojoSharedBufferNatives.Create(numBytes, flags);
+  factory SharedBuffer.create(int numBytes, [int flags = createFlagNone]) {
+    List result = SharedBufferNatives.Create(numBytes, flags);
     if (result == null) {
       return null;
     }
@@ -34,14 +34,14 @@ class MojoSharedBuffer {
       return null;
     }
 
-    MojoSharedBuffer buf =
-        new MojoSharedBuffer(new MojoHandle(result[1]), result[0]);
+    SharedBuffer buf =
+        new SharedBuffer(new Handle(result[1]), result[0]);
     return buf;
   }
 
-  factory MojoSharedBuffer.duplicate(MojoSharedBuffer msb,
+  factory SharedBuffer.duplicate(SharedBuffer msb,
       [int flags = duplicateFlagNone]) {
-    List result = MojoSharedBufferNatives.Duplicate(msb.handle.h, flags);
+    List result = SharedBufferNatives.Duplicate(msb.handle.h, flags);
     if (result == null) {
       return null;
     }
@@ -49,25 +49,25 @@ class MojoSharedBuffer {
       return null;
     }
 
-    MojoSharedBuffer dupe =
-        new MojoSharedBuffer(new MojoHandle(result[1]), result[0]);
+    SharedBuffer dupe =
+        new SharedBuffer(new Handle(result[1]), result[0]);
     return dupe;
   }
 
-  MojoSharedBufferInformation get information {
+  SharedBufferInformation get information {
     if (handle == null) {
       _status = MojoResult.kInvalidArgument;
       return null;
     }
 
-    List result = MojoSharedBufferNatives.GetInformation(handle.h);
+    List result = SharedBufferNatives.GetInformation(handle.h);
 
     if (result[0] != MojoResult.kOk) {
       _status = result[0];
       return null;
     }
 
-    return new MojoSharedBufferInformation(result[1], result[2]);
+    return new SharedBufferInformation(result[1], result[2]);
   }
 
   int close() {
@@ -86,7 +86,7 @@ class MojoSharedBuffer {
       return null;
     }
     List result =
-        MojoSharedBufferNatives.Map(handle.h, offset, numBytes, flags);
+        SharedBufferNatives.Map(handle.h, offset, numBytes, flags);
     if (result == null) {
       _status = MojoResult.kInvalidArgument;
       return null;

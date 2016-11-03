@@ -64,7 +64,7 @@ class {{union|name}} extends bindings.Union {
         break;
 {%-   endfor %}
       default:
-        throw new bindings.MojoCodecError("Bad union tag: $tag");
+        throw new bindings.FidlCodecError("Bad union tag: $tag");
     }
 
     return result;
@@ -85,7 +85,7 @@ class {{union|name}} extends bindings.Union {
         break;
 {%-   endfor %}
       default:
-        throw new bindings.MojoCodecError("Bad union tag: $_tag");
+        throw new bindings.FidlCodecError("Bad union tag: $_tag");
     }
   }
 

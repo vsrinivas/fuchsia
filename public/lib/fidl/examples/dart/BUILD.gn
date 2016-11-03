@@ -1,0 +1,14 @@
+import("//apps/dart_content_handler/dart_app.gni")
+
+group("dart") {
+  deps=[ ":hello_fidl_dart"]
+}
+
+dart_app("hello_fidl_dart") {
+  main_dart = "hello_fidl_dart.dart"
+  deps = [
+    "//lib/fidl/compiler/interfaces:interfaces_dart",
+    "//lib/fidl/examples/interfaces:interfaces_dart",
+    "//lib/fidl/dart",
+  ]
+}

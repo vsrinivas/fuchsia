@@ -91,7 +91,7 @@ if (decoder{{level+1}} == null) {
   {{variable}} = {{kind|dart_type}}.decode(decoder{{level}}, {{offset}});
 {%-   if not kind|is_nullable_kind %}
   if ({{variable}} == null) {
-    throw new bindings.MojoCodecError(
+    throw new bindings.FidlCodecError(
       'Trying to decode null union for non-nullable {{kind|dart_type}}.');
   }
 {%    endif %}

@@ -16,7 +16,7 @@ abstract class StubControl<T> implements StubMessageHandler {
 }
 
 /// Generated Stub classes extend this base class.
-class Stub<T> implements MojoInterface<T> {
+class Stub<T> implements FidlInterface<T> {
   // In general it's probalby better to avoid adding fields and methods to this
   // class. Names added to this class have to be mangled by Mojo bindings
   // generation to avoid name conflicts.
@@ -42,12 +42,12 @@ class Stub<T> implements MojoInterface<T> {
 }
 
 abstract class StubMessageHandler extends core.MojoEventHandler
-                                  implements MojoInterfaceControl {
-  StubMessageHandler.fromEndpoint(core.MojoMessagePipeEndpoint endpoint,
+                                  implements FidlInterfaceControl {
+  StubMessageHandler.fromEndpoint(core.ChannelEndpoint endpoint,
                                   {bool autoBegin: true})
       : super.fromEndpoint(endpoint, autoBegin: autoBegin);
 
-  StubMessageHandler.fromHandle(core.MojoHandle handle, {bool autoBegin: true})
+  StubMessageHandler.fromHandle(core.Handle handle, {bool autoBegin: true})
       : super.fromHandle(handle, autoBegin: autoBegin);
 
   StubMessageHandler.unbound() : super.unbound();
@@ -64,7 +64,7 @@ abstract class StubMessageHandler extends core.MojoEventHandler
   void handleRead() {
     var result = endpoint.queryAndRead();
     if ((result.data == null) || (result.dataLength == 0)) {
-      throw new MojoCodecError('Unexpected empty message or error: $result');
+      throw new FidlCodecError('Unexpected empty message or error: $result');
     }
 
     try {

@@ -46,12 +46,11 @@ template("go_binary") {
                                   "list lines")
   }
 
-  go_runtime_target = "//third_party/go:go_runtime"
-  target_deps = [ go_runtime_target ]
+  target_deps = [ ]
   if (defined(invoker.deps)) {
     target_deps += invoker.deps
   }
-  go_binary = get_label_info(go_runtime_target, "target_gen_dir") + "/bin/go"
+  go_binary = "//buildtools/go"
 
   if (defined(invoker.output)) {
     output_path = "${root_out_dir}/${invoker.output}"

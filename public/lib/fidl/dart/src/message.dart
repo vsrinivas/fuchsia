@@ -37,14 +37,14 @@ class MessageHeader {
     var decoder = new Decoder(message);
     _header = decoder.decodeStructDataHeader();
     if (_header.size < kSimpleMessageSize) {
-      throw new MojoCodecError('Incorrect message size. Got: ${_header.size} '
+      throw new FidlCodecError('Incorrect message size. Got: ${_header.size} '
           'wanted $kSimpleMessageSize');
     }
     type = decoder.decodeUint32(kMessageTypeOffset);
     flags = decoder.decodeUint32(kMessageFlagsOffset);
     if (mustHaveRequestId(flags)) {
       if (_header.size < kMessageWithRequestIdSize) {
-        throw new MojoCodecError('Incorrect message size. Got: ${_header.size} '
+        throw new FidlCodecError('Incorrect message size. Got: ${_header.size} '
             'wanted $kMessageWithRequestIdSize');
       }
       requestId = decoder.decodeUint64(kMessageRequestIdOffset);
@@ -76,7 +76,7 @@ class MessageHeader {
 
 class Message {
   final ByteData buffer;
-  final List<core.MojoHandle> handles;
+  final List<core.Handle> handles;
   final dataLength;
   final handlesLength;
   Message(this.buffer, this.handles, this.dataLength, this.handlesLength);

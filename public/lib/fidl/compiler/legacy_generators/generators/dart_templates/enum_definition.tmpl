@@ -1,5 +1,5 @@
 {%- macro enum_def(enum, typepkg, package) %}
-class {{enum|name}} extends bindings.MojoEnum {
+class {{enum|name}} extends bindings.FidlEnum {
 {%- for field in enum.fields %}
   static const {{enum|name}} {{field|name}} = const {{enum|name}}._({{field.resolved_value}});
 {%- endfor %}
@@ -34,7 +34,7 @@ class {{enum|name}} extends bindings.MojoEnum {
     int v = decoder0.decodeUint32(offset);
     {{enum|name}} result = new {{enum|name}}(v);
     if (result == null) {
-      throw new bindings.MojoCodecError(
+      throw new bindings.FidlCodecError(
           'Bad value $v for enum {{enum|name}}.');
     }
     return result;
@@ -51,7 +51,7 @@ class {{enum|name}} extends bindings.MojoEnum {
     }
   }
 
-  int toJson() => mojoEnumValue;
+  int toJson() => fidlEnumValue;
 }
 
 {%- endmacro %}

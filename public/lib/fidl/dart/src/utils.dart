@@ -14,14 +14,14 @@ int getTimeTicksNow() {
   return MojoCoreNatives.getTimeTicksNow();
 }
 
-class MojoInternalError {
+class FidlInternalError {
   final String _msg;
-  MojoInternalError(this._msg);
-  String toString() => "MojoInternalError: $_msg";
+  FidlInternalError(this._msg);
+  String toString() => "FidlInternalError: $_msg";
 }
 
-class MojoApiError {
+class FidlApiError {
   final String _msg;
-  MojoApiError(this._msg);
-  String toString() => "MojoApiError: $_msg";
+  FidlApiError(this._msg);
+  String toString() => "FidlApiError: $_msg";
 }

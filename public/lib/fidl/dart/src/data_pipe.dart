@@ -4,15 +4,15 @@
 
 part of core;
 
-class MojoDataPipeProducer {
+class DataPipeProducer {
   static const int FLAG_NONE = 0;
   static const int FLAG_ALL_OR_NONE = 1 << 0;
 
   final int elementBytes;
-  MojoHandle handle;
+  Handle handle;
   int status;
 
-  MojoDataPipeProducer(this.handle,
+  DataPipeProducer(this.handle,
       [this.status = MojoResult.kOk, this.elementBytes = 1]);
 
   int write(ByteData data, [int numBytes = -1, int flags = FLAG_NONE]) {
@@ -23,7 +23,7 @@ class MojoDataPipeProducer {
 
     int data_numBytes = (numBytes == -1) ? data.lengthInBytes : numBytes;
     List result =
-        MojoDataPipeNatives.MojoWriteData(handle.h, data, data_numBytes, flags);
+        DataPipeNatives.MojoWriteData(handle.h, data, data_numBytes, flags);
     if (result == null) {
       status = MojoResult.kInvalidArgument;
       return 0;
@@ -41,7 +41,7 @@ class MojoDataPipeProducer {
       return null;
     }
 
-    List result = MojoDataPipeNatives.MojoBeginWriteData(handle.h, flags);
+    List result = DataPipeNatives.MojoBeginWriteData(handle.h, flags);
     if (result == null) {
       status = MojoResult.kInvalidArgument;
       return null;
@@ -57,27 +57,27 @@ class MojoDataPipeProducer {
       status = MojoResult.kInvalidArgument;
       return status;
     }
-    int result = MojoDataPipeNatives.MojoEndWriteData(handle.h, bytesWritten);
+    int result = DataPipeNatives.MojoEndWriteData(handle.h, bytesWritten);
     status = result;
     return status;
   }
 
-  String toString() => "MojoDataPipeProducer(handle: $handle, "
+  String toString() => "DataPipeProducer(handle: $handle, "
       "status: ${MojoResult.string(status)})";
 }
 
-class MojoDataPipeConsumer {
+class DataPipeConsumer {
   static const int FLAG_NONE = 0;
   static const int FLAG_ALL_OR_NONE = 1 << 0;
   static const int FLAG_DISCARD = 1 << 1;
   static const int FLAG_QUERY = 1 << 2;
   static const int FLAG_PEEK = 1 << 3;
 
-  MojoHandle handle;
+  Handle handle;
   final int elementBytes;
   int status;
 
-  MojoDataPipeConsumer(this.handle,
+  DataPipeConsumer(this.handle,
       [this.status = MojoResult.kOk, this.elementBytes = 1]);
 
   int read(ByteData data, [int numBytes = -1, int flags = FLAG_NONE]) {
@@ -88,7 +88,7 @@ class MojoDataPipeConsumer {
 
     int data_numBytes = (numBytes == -1) ? data.lengthInBytes : numBytes;
     List result =
-        MojoDataPipeNatives.MojoReadData(handle.h, data, data_numBytes, flags);
+        DataPipeNatives.MojoReadData(handle.h, data, data_numBytes, flags);
     if (result == null) {
       status = MojoResult.kInvalidArgument;
       return 0;
@@ -105,7 +105,7 @@ class MojoDataPipeConsumer {
       return null;
     }
 
-    List result = MojoDataPipeNatives.MojoBeginReadData(handle.h, flags);
+    List result = DataPipeNatives.MojoBeginReadData(handle.h, flags);
     if (result == null) {
       status = MojoResult.kInvalidArgument;
       return null;
@@ -121,46 +121,46 @@ class MojoDataPipeConsumer {
       status = MojoResult.kInvalidArgument;
       return status;
     }
-    int result = MojoDataPipeNatives.MojoEndReadData(handle.h, bytesRead);
+    int result = DataPipeNatives.MojoEndReadData(handle.h, bytesRead);
     status = result;
     return status;
   }
 
   int query() => read(null, 0, FLAG_QUERY);
 
-  String toString() => "MojoDataPipeConsumer(handle: $handle, "
+  String toString() => "DataPipeConsumer(handle: $handle, "
       "status: ${MojoResult.string(status)}, "
       "available: ${query()})";
 }
 
-class MojoDataPipe {
+class DataPipe {
   static const int FLAG_NONE = 0;
   static const int DEFAULT_ELEMENT_SIZE = 1;
   static const int DEFAULT_CAPACITY = 0;
 
-  MojoDataPipeProducer producer;
-  MojoDataPipeConsumer consumer;
+  DataPipeProducer producer;
+  DataPipeConsumer consumer;
   int status;
 
-  MojoDataPipe._internal() : status = MojoResult.kOk;
+  DataPipe._internal() : status = MojoResult.kOk;
 
-  factory MojoDataPipe(
+  factory DataPipe(
       [int elementBytes = DEFAULT_ELEMENT_SIZE,
       int capacityBytes = DEFAULT_CAPACITY,
       int flags = FLAG_NONE]) {
-    List result = MojoDataPipeNatives.MojoCreateDataPipe(
+    List result = DataPipeNatives.MojoCreateDataPipe(
         elementBytes, capacityBytes, flags);
     if (result == null) {
       return null;
     }
     assert((result is List) && (result.length == 3));
-    MojoHandle producerHandle = new MojoHandle(result[1]);
-    MojoHandle consumerHandle = new MojoHandle(result[2]);
-    MojoDataPipe pipe = new MojoDataPipe._internal();
+    Handle producerHandle = new Handle(result[1]);
+    Handle consumerHandle = new Handle(result[2]);
+    DataPipe pipe = new DataPipe._internal();
     pipe.producer =
-        new MojoDataPipeProducer(producerHandle, result[0], elementBytes);
+        new DataPipeProducer(producerHandle, result[0], elementBytes);
     pipe.consumer =
-        new MojoDataPipeConsumer(consumerHandle, result[0], elementBytes);
+        new DataPipeConsumer(consumerHandle, result[0], elementBytes);
     pipe.status = result[0];
     return pipe;
   }
