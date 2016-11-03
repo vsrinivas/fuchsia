@@ -25,7 +25,6 @@
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
 
 namespace fidl {
-
 namespace internal {
 
 // The ArraySerializer template contains static methods for serializing |Array|s
@@ -152,8 +151,9 @@ struct ArraySerializer<bool, bool, false> {
 
 // Serializes and deserializes arrays of handles.
 template <typename H>
-struct ArraySerializer<mx::handle<H>, WrappedHandle, false> {
-  static size_t GetSerializedSize(const Array<mx::handle<H>>& input) {
+struct ArraySerializer<H, WrappedHandle, false,
+    typename std::enable_if<IsHandleType<H>::value>::type> {
+  static size_t GetSerializedSize(const Array<H>& input) {
     return sizeof(Array_Data<WrappedHandle>) +
            Align(input.size() * sizeof(WrappedHandle));
   }
@@ -170,7 +170,7 @@ struct ArraySerializer<mx::handle<H>, WrappedHandle, false> {
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the handle.
-      output->at(i) = it->release();
+      output->at(i) = WrappedHandle{it->release()};
       if (!validate_params->element_is_nullable
           && output->at(i).value != MX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
@@ -186,8 +186,8 @@ struct ArraySerializer<mx::handle<H>, WrappedHandle, false> {
   }
 
   static void DeserializeElements(Array_Data<WrappedHandle>* input,
-                                  Array<mx::handle<H>>* output) {
-    auto result = Array<mx::handle<H>>::New(input->size());
+                                  Array<H>* output) {
+    auto result = Array<H>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i)
       result.at(i) = UnwrapHandle<H>(FetchAndReset(&input->at(i)));
     output->Swap(&result);
@@ -214,7 +214,7 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
 
     for (size_t i = 0; i < num_elements; ++i, ++it) {
       // Transfer ownership of the WrappedHandle.
-      output->at(i) = it->PassMessagePipe().release();
+      output->at(i) = WrappedHandle{it->PassMessagePipe().release()};
       if (!validate_params->element_is_nullable
           && output->at(i).value != MX_HANDLE_INVALID) {
         FIDL_INTERNAL_DLOG_SERIALIZATION_WARNING(
@@ -294,9 +294,8 @@ struct ArraySerializer<
         std::is_pointer<typename WrapperTraits<S>::DataType>::value,
         typename WrapperTraits<S>::DataType>::type,
     false> {
-  typedef
-      typename std::remove_pointer<typename WrapperTraits<S>::DataType>::type
-          S_Data;
+  using S_Data =
+      typename std::remove_pointer<typename WrapperTraits<S>::DataType>::type;
   static size_t GetSerializedSize(const Array<S>& input) {
     size_t size = sizeof(Array_Data<S_Data*>) +
                   input.size() * sizeof(StructPointer<S_Data>);

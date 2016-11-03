@@ -241,7 +241,7 @@ def GetCppFieldType(kind):
 
 def GetCppUnionFieldType(kind):
   if mojom.IsAnyHandleKind(kind):
-    return "mx_handle_t"
+    return "fidl::internal::WrappedHandle"
   if mojom.IsInterfaceKind(kind):
     return "uint64_t"
   if mojom.IsEnumKind(kind):

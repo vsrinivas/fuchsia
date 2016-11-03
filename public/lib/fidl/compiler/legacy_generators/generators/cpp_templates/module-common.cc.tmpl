@@ -61,19 +61,15 @@ namespace internal {
 ::fidl::internal::ValidationError {{interface.name}}RequestValidator::Validate(
     const ::fidl::Message* message,
     std::string* err) {
-{%- if interface.methods | length -%}
-  ::fidl::internal::ValidationError retval;
-{%- endif -%}
-
   {{base_name}}::MessageOrdinals method_ordinal =
       static_cast<{{base_name}}::MessageOrdinals>(message->header()->name);
   switch (method_ordinal) {
 {%-   for method in interface.methods %}
     case {{base_name}}::MessageOrdinals::{{method.name}}: {
+      auto retval = ::fidl::internal::ValidationError::NONE;
 {%-     if method.response_parameters != None %}
-      retval =
-          ::fidl::internal::ValidateMessageIsRequestExpectingResponse(message,
-                                                                    err);
+      retval = ::fidl::internal::ValidateMessageIsRequestExpectingResponse(
+          message, err);
       if (retval != ::fidl::internal::ValidationError::NONE) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "
@@ -83,8 +79,8 @@ namespace internal {
         return retval;
       }
 {%-     else %}
-      retval = ::fidl::internal::ValidateMessageIsRequestWithoutResponse(message,
-                                                                       err);
+      retval = ::fidl::internal::ValidateMessageIsRequestWithoutResponse(
+          message, err);
       if (retval != ::fidl::internal::ValidationError::NONE) {
         FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err)
           << "request validation error for interface '{{interface.name}}', "

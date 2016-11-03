@@ -69,8 +69,7 @@
 {%-   set name = packed_field.field.name %}
 {%-   set kind = packed_field.field.kind %}
 {%-   if kind|is_interface_kind %}
-  const ::fidl::internal::WrappedHandle {{name}}_handle
-    = object->{{name}}.handle;
+  const ::fidl::internal::WrappedHandle {{name}}_handle{ object->{{name}}.handle };
 {%-   else %}
   const ::fidl::internal::WrappedHandle {{name}}_handle{ object->{{name}} };
 {%-   endif %}

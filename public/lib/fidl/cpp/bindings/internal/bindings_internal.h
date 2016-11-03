@@ -5,9 +5,10 @@
 #ifndef LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_INTERNAL_H_
 #define LIB_FIDL_CPP_BINDINGS_INTERNAL_BINDINGS_INTERNAL_H_
 
-#include <mx/handle.h>
-#include <mx/channel.h>
 #include <type_traits>
+
+#include <mx/channel.h>
+#include <mx/handle.h>
 
 #include "lib/fidl/cpp/bindings/internal/template_util.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
@@ -211,18 +212,26 @@ struct IsUnionDataType {
 // and have specializations define their own Enable expressions (similar to how
 // ValueTraits is).
 template <typename T,
-          bool move_only = IsMoveOnlyType<T>::value,
+          bool is_move_only = IsMoveOnlyType<T>::value,
           bool is_union =
-              IsUnionWrapperType<typename RemoveStructPtr<T>::type>::value>
+              IsUnionWrapperType<typename RemoveStructPtr<T>::type>::value,
+          typename enable = void>
 struct WrapperTraits;
+
+template <typename T>
+struct IsHandleType {
+  static constexpr bool value = std::is_base_of<mx::handle<T>, T>::value;
+};
 
 // Catch-all for all mojom types not specialized below.
 template <typename T>
-struct WrapperTraits<T, false, false> {
+struct WrapperTraits<T, false, false,
+                     typename std::enable_if<!IsHandleType<T>::value>::type> {
   using DataType = T;
 };
 template <typename H>
-struct WrapperTraits<mx::handle<H>, true, false> {
+struct WrapperTraits<H, true, false,
+                     typename std::enable_if<IsHandleType<H>::value>::type> {
   using DataType = WrappedHandle;
 };
 template <typename I>
@@ -242,10 +251,15 @@ template <typename U>
 struct WrapperTraits<InlinedStructPtr<U>, true, true> {
   using DataType = typename U::Data_;
 };
-// Catch-all for other pointer types: arrays, maps.
-template <typename S>
-struct WrapperTraits<S, true, false> {
-  using DataType = typename S::Data_*;
+// Structs, arrays, maps.
+template <typename P>
+struct WrapperTraits<P, true, false,
+                     typename std::enable_if<
+                         IsSpecializationOf<Array, P>::value ||
+                         IsSpecializationOf<Map, P>::value ||
+                         IsSpecializationOf<StructPtr, P>::value ||
+                         IsSpecializationOf<InlinedStructPtr, P>::value>::type> {
+  using DataType = typename P::Data_*;
 };
 
 template <typename T, typename Enable = void>
@@ -265,8 +279,7 @@ struct ValueTraits<T,
 
 template <typename T>
 struct ValueTraits<T,
-                   typename std::enable_if<
-                      std::is_base_of<mx::handle<T>,T>::value>::type> {
+                   typename std::enable_if<IsHandleType<T>::value>::type> {
   static bool Equals(const T& a, const T& b) {
     return (&a == &b) || (!a && !b);
   }

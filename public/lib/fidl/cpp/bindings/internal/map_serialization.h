@@ -44,11 +44,14 @@ struct MapSerializer<bool, bool, false, false> {
 };
 
 template <typename H>
-struct MapSerializer<mx::handle<H>, mx_handle_t, true, false> {
+struct MapSerializer<
+    H,
+    typename std::enable_if<IsHandleType<H>::value, WrappedHandle>::type,
+    true, false> {
   static size_t GetBaseArraySize(size_t count) {
     return Align(count * sizeof(H));
   }
-  static size_t GetItemSize(const mx::handle<H>& item) { return 0; }
+  static size_t GetItemSize(const H& item) { return 0; }
 };
 
 // This template must only apply to pointer mojo entity (structs and arrays).

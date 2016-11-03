@@ -27,7 +27,9 @@ if (validate_retval != ::fidl::internal::ValidationError::NONE) {
 {%- endmacro %}
 
 {%- macro validate_handle(field_expr, field, object_name, err_string) -%}
-  const ::fidl::internal::WrappedHandle {{field.name}}_handle(object->data.f_{{field.name}});
+  const ::fidl::internal::WrappedHandle {{field.name}}_handle{
+    object->data.f_{{field.name}}
+  };
 
 {%-   if not field.kind|is_nullable_kind %}
   if ({{field.name}}_handle.value == ::fidl::internal::kEncodedInvalidHandleValue) {

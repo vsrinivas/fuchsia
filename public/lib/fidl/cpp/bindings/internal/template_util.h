@@ -22,14 +22,12 @@ struct NoType {
 // A helper template to determine if given type is non-const move-only-type,
 template <typename T>
 struct IsMoveOnlyType {
-  template <typename U>
-  static YesType Test(const typename U::MoveOnlyTypeForCPP03*);
-
-  template <typename U>
-  static NoType Test(...);
-
-  static const bool value =
-      sizeof(Test<T>(0)) == sizeof(YesType) && !std::is_const<T>::value;
+    static const bool value =
+      !std::is_const<T>::value &&
+      std::is_move_constructible<T>::value &&
+      std::is_move_assignable<T>::value &&
+      !std::is_copy_constructible<T>::value &&
+      !std::is_copy_assignable<T>::value;
 };
 
 // Returns a reference to |t| when T is not a move-only type.

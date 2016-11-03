@@ -96,14 +96,15 @@ size_t GetSerializedSize_(const {{union.name}}Ptr& input) {
               indent_size = 16)|indent(6)}}
 {%-     endif %}
 {%    elif field.kind|is_any_handle_kind %}
-        result->data.f_{{field.name}} =
-            input_acc.data()->{{field.name}}->release().value();
+        result->data.f_{{field.name}} = ::fidl::internal::WrappedHandle{
+          input_acc.data()->{{field.name}}->release()
+        };
 {%    elif field.kind|is_interface_kind %}
         ::fidl::internal::Interface_Data* {{field.name}} =
             reinterpret_cast<::fidl::internal::Interface_Data*>(
                 &result->data.f_{{field.name}});
         ::fidl::internal::InterfaceHandleToData(
-            input_acc.data()->{{field.name}}->Pass(), {{field.name}});
+            std::move(*(input_acc.data()->{{field.name}})), {{field.name}});
 {%    elif field.kind|is_enum_kind %}
         result->data.f_{{field.name}} = 
           static_cast<int32_t>(input_acc.data()->{{field.name}});
@@ -146,7 +147,7 @@ void Deserialize_(internal::{{union.name}}_Data* input,
 {%    elif field.kind|is_any_handle_kind %}
         {{field.kind|cpp_wrapper_type}}* {{field.name}} =
             reinterpret_cast<{{field.kind|cpp_wrapper_type}}*>(&input->data.f_{{field.name}});
-        output->set_{{field.name}}({{field.name}}->Pass());
+        output->set_{{field.name}}(std::move(*({{field.name}})));
 {%    elif field.kind|is_interface_kind %}
         {{field.kind|cpp_wrapper_type}} {{field.name}}_out;
         ::fidl::internal::Interface_Data* {{field.name}}_in =
