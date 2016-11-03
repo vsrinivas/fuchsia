@@ -77,9 +77,9 @@ class HandleWatcherThreadState {
 
   void ProcessTimers();
 
-  void ProcessWaitManyResults(mx_status_t result);
+  void ProcessWaitManyResults();
 
-  void PruneClosedHandles(bool signals_state_is_valid);
+  void PruneClosedHandles();
 
   void CompleteNextTimer();
 
@@ -94,9 +94,7 @@ class HandleWatcherThreadState {
   mx::channel consumer_handle_;
 
   // All of these vectors are indexed together.
-  std::vector<mx_handle_t> wait_many_handles_;
-  std::vector<mx_signals_t> wait_many_signals_;
-  std::vector<mx_signals_state_t> wait_many_signals_state_;
+  std::vector<mx_wait_item_t> wait_many_items_;
   std::vector<Dart_Port> handle_ports_;
 
   // Map from mx_handle_t -> index into above arrays.
@@ -120,14 +118,13 @@ HandleWatcherThreadState::~HandleWatcherThreadState() {}
 void HandleWatcherThreadState::AddHandle(mx_handle_t handle,
                                          mx_signals_t signals,
                                          Dart_Port port) {
-  const size_t index = wait_many_handles_.size();
-  mx_signals_state_t signals_state = {MX_SIGNAL_NONE, MX_SIGNAL_NONE};
+  const size_t index = wait_many_items_.size();
 
   auto it = handle_to_index_map_.find(handle);
   if (it != handle_to_index_map_.end()) {
     intptr_t index = it->second;
     // Sanity check.
-    FTL_CHECK(wait_many_handles_[index] == handle);
+    FTL_CHECK(wait_many_items_[index].handle == handle);
     // We only support 1:1 mapping from handles to ports.
     if (handle_ports_[index] != port) {
       FTL_LOG(ERROR) << "(Dart Handle Watcher) "
@@ -136,18 +133,17 @@ void HandleWatcherThreadState::AddHandle(mx_handle_t handle,
       return;
     }
     // Adjust the signals for this handle.
-    wait_many_signals_[index] |= signals;
+    wait_many_items_[index].waitfor |= signals;
   } else {
     // New handle.
-    wait_many_handles_.push_back(handle);
-    wait_many_signals_.push_back(signals);
-    wait_many_signals_state_.push_back(signals_state);
+    mx_wait_item_t wait_item = {handle, signals, 0u};
+    wait_many_items_.emplace_back(wait_item);
     handle_ports_.push_back(port);
     handle_to_index_map_[handle] = index;
   }
 
   // Sanity check.
-  FTL_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
+  FTL_CHECK(wait_many_items_.size() == handle_to_index_map_.size());
 }
 
 void HandleWatcherThreadState::RemoveHandle(mx_handle_t handle) {
@@ -234,34 +230,30 @@ void HandleWatcherThreadState::Shutdown() {
 
 void HandleWatcherThreadState::RemoveHandleAtIndex(intptr_t index) {
   FTL_CHECK(index != kControlHandleIndex);
-  const intptr_t last_index = wait_many_handles_.size() - 1;
+  const intptr_t last_index = wait_many_items_.size() - 1;
 
   // Remove handle from handle map.
-  handle_to_index_map_.erase(wait_many_handles_[index]);
+  handle_to_index_map_.erase(wait_many_items_[index].handle);
 
   if (index != last_index) {
     // We should never be overwriting kControlHandleIndex.
 
-    mx_handle_t handle = wait_many_handles_[last_index];
+    mx_handle_t handle = wait_many_items_[last_index].handle;
 
     // Replace |index| with |last_index|.
-    wait_many_handles_[index] = wait_many_handles_[last_index];
-    wait_many_signals_[index] = wait_many_signals_[last_index];
-    wait_many_signals_state_[index] = wait_many_signals_state_[last_index];
+    wait_many_items_[index] = wait_many_items_[last_index];
     handle_ports_[index] = handle_ports_[last_index];
 
     // Update handle map.
     handle_to_index_map_[handle] = index;
   }
 
-  wait_many_handles_.pop_back();
-  wait_many_signals_.pop_back();
-  wait_many_signals_state_.pop_back();
+  wait_many_items_.pop_back();
   handle_ports_.pop_back();
-  FTL_CHECK(wait_many_handles_.size() >= 1);
+  FTL_CHECK(wait_many_items_.size() >= 1);
 
   // Sanity check.
-  FTL_CHECK(wait_many_handles_.size() == handle_to_index_map_.size());
+  FTL_CHECK(wait_many_items_.size() == handle_to_index_map_.size());
 }
 
 void HandleWatcherThreadState::ProcessControlMessage() {
@@ -340,33 +332,18 @@ int64_t HandleWatcherThreadState::WaitDeadline() {
 static bool ShouldCloseHandle(mx_handle_t handle) {
   if (handle == MX_HANDLE_INVALID)
     return false;
-  // Call wait with a deadline of 0. If the result of this is NO_ERROR or
-  // ERR_TIMED_OUT, the handle is still open.
-  mx_status_t result =
-      mx_handle_wait_one(handle, FIDL_DART_HANDLE_SIGNAL_ALL, 0, nullptr);
-  return (result != NO_ERROR) && (result != ERR_TIMED_OUT);
+  mx_status_t result = mx_handle_wait_one(handle, 0, 0, nullptr);
+  return (result == ERR_HANDLE_CLOSED);
 }
 
-void HandleWatcherThreadState::PruneClosedHandles(bool signals_state_is_valid) {
+void HandleWatcherThreadState::PruneClosedHandles() {
   std::vector<mx_handle_t> closed_handles;
-  const intptr_t num_handles = wait_many_handles_.size();
-  if (signals_state_is_valid) {
-    // We can rely on |wait_many_signals_state_| having valid data.
-    for (intptr_t i = 0; i < num_handles; i++) {
-      // Check if the handle at index |i| has been closed.
-      mx_signals_t observed = wait_many_signals_state_[i].satisfied;
-      if ((observed & MX_SIGNAL_PEER_CLOSED) != 0) {
-        closed_handles.push_back(wait_many_handles_[i]);
-      }
-    }
-  } else {
-    // We can't rely on |wait_many_signals_state_| having valid data. So
-    // we call Wait on each handle and check the status.
-    for (intptr_t i = 0; i < num_handles; i++) {
-      mx_handle_t handle = wait_many_handles_[i];
-      if (ShouldCloseHandle(handle)) {
-        closed_handles.push_back(handle);
-      }
+  const intptr_t num_handles = wait_many_items_.size();
+
+  for (intptr_t i = 0; i < num_handles; i++) {
+    mx_handle_t handle = wait_many_items_[i].handle;
+    if (ShouldCloseHandle(handle)) {
+      closed_handles.push_back(handle);
     }
   }
 
@@ -377,36 +354,23 @@ void HandleWatcherThreadState::PruneClosedHandles(bool signals_state_is_valid) {
   }
 }
 
-void HandleWatcherThreadState::ProcessWaitManyResults(mx_status_t result) {
-  FTL_CHECK(result != ERR_TIMED_OUT);
-  if (result != NO_ERROR) {
-    // The WaitMany call failed. We need to prune closed handles from our
-    // wait many set and try again.
-    //
-    // If the result is an invalid argument |wait_many_signals_state_| is
-    // meaningless.
-    PruneClosedHandles(result != ERR_INVALID_ARGS);
-    return;
-  }
-  FTL_CHECK(result == NO_ERROR);
-
+void HandleWatcherThreadState::ProcessWaitManyResults() {
   // Indexes of handles that we are done with.
   std::vector<intptr_t> to_remove;
 
-  const intptr_t num_handles = wait_many_handles_.size();
+  const intptr_t num_handles = wait_many_items_.size();
 
   // Loop over all handles except for the control handle.
   // The order of the looping matters because we call RemoveHandleAtIndex
   // and need the handle indexes to start at the highest and decrease.
   for (intptr_t i = num_handles - 1; i > 0; i--) {
-    mx_signals_t signals = wait_many_signals_[i];
-    mx_signals_t observed = wait_many_signals_state_[i].satisfied;
-    observed &= signals;
-    if (observed != 0) {
+    mx_signals_t waitfor = wait_many_items_[i].waitfor;
+    mx_signals_t pending = wait_many_items_[i].pending;
+    if (pending & waitfor) {
       // Something happened to this handle.
 
       // Notify the port.
-      PostSignal(handle_ports_[i], observed);
+      PostSignal(handle_ports_[i], pending);
 
       // Now that we have notified the waiting Dart program, remove this handle
       // from the wait many set until we are requested to add it again.
@@ -422,11 +386,9 @@ void HandleWatcherThreadState::ProcessWaitManyResults(mx_status_t result) {
 
   // Now check for control messages.
   {
-    mx_signals_t signals = wait_many_signals_[kControlHandleIndex];
-    mx_signals_t observed =
-        wait_many_signals_state_[kControlHandleIndex].satisfied;
-    observed &= signals;
-    if (observed != 0) {
+    mx_signals_t waitfor = wait_many_items_[kControlHandleIndex].waitfor;
+    mx_signals_t pending = wait_many_items_[kControlHandleIndex].pending;
+    if (pending & waitfor) {
       // We have a control message.
       ProcessControlMessage();
     }
@@ -437,21 +399,21 @@ void HandleWatcherThreadState::Run() {
   while (!shutdown_) {
     // Process timers.
     ProcessTimers();
-    // Wait for the next timer or an event on a handle.
-    uint32_t result_index = -1;
-    uint32_t num_handles = wait_many_handles_.size();
-    FTL_CHECK(wait_many_signals_.size() == num_handles);
-    mx_status_t result = mx_handle_wait_many(
-        num_handles, wait_many_handles_.data(), wait_many_signals_.data(),
-        WaitDeadline(), &result_index, wait_many_signals_state_.data());
 
-    if (result == ERR_TIMED_OUT) {
-      // Timers are ready.
+    // Wait for the next timer or an event on a handle.
+    uint32_t num_handles = wait_many_items_.size();
+    FTL_CHECK(wait_many_items_.size() == num_handles);
+    mx_status_t result = mx_handle_wait_many(wait_many_items_.data(),
+                                             num_handles, WaitDeadline());
+
+    if (result == ERR_HANDLE_CLOSED) {
+      PruneClosedHandles();
       continue;
     }
 
-    // Process wait results.
-    ProcessWaitManyResults(result);
+    FTL_CHECK(result == NO_ERROR && result == ERR_TIMED_OUT)
+        << "mx_handle_wait_many returned unexpected result: " << result;
+    ProcessWaitManyResults();
   }
 
   // Close our end of the channel.

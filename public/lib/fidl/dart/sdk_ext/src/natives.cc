@@ -84,7 +84,7 @@ static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
 }
 
 static bool ObservedSignalsAreValid(mx_status_t status) {
-  return status != ERR_INVALID_ARGS && status != ERR_NO_MEMORY;
+  return status == NO_ERROR || status == ERR_TIMED_OUT;
 }
 
 #define CHECK_INTEGER_ARGUMENT(args, num, result, failure)       \
@@ -203,8 +203,7 @@ void MxHandle_WaitMany(Dart_NativeArguments arguments) {
     return;
   }
 
-  std::vector<mx_handle_t> handles(handles_len);
-  std::vector<mx_signals_t> signals(handles_len);
+  std::vector<mx_wait_item_t> items(handles_len);
 
   for (int i = 0; i < handles_len; i++) {
     Dart_Handle dart_handle = Dart_ListGetAt(dart_handles, i);
@@ -217,15 +216,12 @@ void MxHandle_WaitMany(Dart_NativeArguments arguments) {
     int64_t signal = 0;
     Dart_IntegerToInt64(dart_handle, &handle);
     Dart_IntegerToInt64(dart_signal, &signal);
-    handles[i] = static_cast<mx_handle_t>(handle);
-    signals[i] = static_cast<mx_signals_t>(signal);
+    items[i] = {static_cast<mx_handle_t>(handle),
+                static_cast<mx_signals_t>(signal), 0};
   }
 
-  std::vector<mx_signals_state_t> states(handles_len);
-  uint32_t result_index = -1;
-  mx_status_t rv = mx_handle_wait_many(
-      handles_len, handles.data(), signals.data(),
-      static_cast<mx_time_t>(deadline), &result_index, states.data());
+  mx_status_t rv = mx_handle_wait_many(items.data(), handles_len,
+                                       static_cast<mx_time_t>(deadline));
 
   // The return value is structured as a list of length 2:
   // [0] mx_status_t
@@ -235,7 +231,7 @@ void MxHandle_WaitMany(Dart_NativeArguments arguments) {
   if (ObservedSignalsAreValid(rv)) {
     Dart_Handle observed_list = Dart_NewList(handles_len);
     for (int i = 0; i < handles_len; i++) {
-      Dart_ListSetAt(observed_list, i, Dart_NewInteger(states[i].satisfied));
+      Dart_ListSetAt(observed_list, i, Dart_NewInteger(items[i].pending));
     }
     Dart_ListSetAt(list, 1, observed_list);
   } else {
