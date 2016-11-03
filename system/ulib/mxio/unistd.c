@@ -806,6 +806,23 @@ int mkdirat(int dirfd, const char* path, mode_t mode) {
     return 0;
 }
 
+int fsync(int fd) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    int r = STATUS(io->ops->misc(io, MXRIO_SYNC, 0, 0, 0, 0));
+    mxio_release(io);
+    return r;
+}
+
+int fdatasync(int fd) {
+    // TODO(smklein): fdatasync does not need to flush metadata under certain
+    // circumstances -- however, for now, this implementation will appear
+    // functionally the same (if a little slower).
+    return fsync(fd);
+}
+
 int fstat(int fd, struct stat* s) {
     mxio_t* io = fd_to_io(fd);
     if (io == NULL) {

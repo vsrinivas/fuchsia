@@ -42,7 +42,8 @@ __BEGIN_CDECLS
 #define MXRIO_SETSOCKOPT   0x00000016
 #define MXRIO_GETADDRINFO  0x00000017
 #define MXRIO_SETATTR      0x00000018
-#define MXRIO_NUM_OPS      25
+#define MXRIO_SYNC         0x00000019
+#define MXRIO_NUM_OPS      26
 
 #define MXRIO_OP(n)            ((n) & 0xFFFF)
 #define MXRIO_REPLY_CHANNEL    0x01000000
@@ -54,7 +55,7 @@ __BEGIN_CDECLS
     "read_at", "write_at", "truncate", "rename", \
     "connect", "bind", "listen", "getsockname", \
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
-    "setattr" }
+    "setattr", "sync" }
 
 typedef struct mxrio_msg mxrio_msg_t;
 
@@ -126,6 +127,7 @@ struct mxrio_msg {
 // SETSOCKOPT  0          0        <sockopt>         0           <sockopt>       -
 // GETADDRINFO maxreply   0        <getaddrinfo>     0           <getaddrinfo>   -
 // SETATTR     0          0        <vnattr>          0           -               -
+// SYNC        0          0        0                 0           -               -
 //
 // proposed:
 //
@@ -135,7 +137,6 @@ struct mxrio_msg {
 // READLINK    maxreply   0        -                 0           <path>          -
 // MMAP        flags      offset   <uint64:len>      offset      -               vmohandle
 // FLUSH       0          0        -                 0           -               -
-// SYNC        0          0        -                 0           -               -
 // LINK*       0          0        <name>            0           -               -
 //
 // on response arg32 is always mx_status, and may be positive for read/write calls

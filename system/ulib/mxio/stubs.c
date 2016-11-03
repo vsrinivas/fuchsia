@@ -114,12 +114,6 @@ int lstat(const char* path, struct stat* buf) {
 
 void sync(void) {
 }
-int fsync(int fd) {
-    return checkfd(fd, 0);
-}
-int fdatasync(int fd) {
-    return checkfd(fd, 0);
-}
 
 // at the moment our unlink works on all fs objects
 int rmdir(const char* path) {

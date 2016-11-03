@@ -103,6 +103,9 @@ struct vnode_ops {
     mx_status_t (*rename)(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen, const char* newname, size_t newlen);
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Unlinks any prior newname if it already exists.
+
+    mx_status_t (*sync)(vnode_t* vn);
+    // Syncs the vnode with its underlying storage
 };
 
 struct vnattr {
