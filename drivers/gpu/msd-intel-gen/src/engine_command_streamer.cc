@@ -326,7 +326,7 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context)
 
     uint32_t tail = context->get_ringbuffer(id())->tail();
 
-    DLOG("UpdateContext ringbuffer gpu_addr 0x%llx tail 0x%x", gpu_addr, tail);
+    DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 
     helper.write_ring_tail_pointer(tail);
     helper.write_ring_buffer_start(gpu_addr);

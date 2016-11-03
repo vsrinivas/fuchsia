@@ -17,7 +17,7 @@ bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
     // address space size
     size_ = (gtt_size / sizeof(gen_pte_t)) * PAGE_SIZE;
 
-    DLOG("Gtt::Init gtt_size (for page tables) 0x%llx size (address space) 0x%llx ", gtt_size, size_);
+    DLOG("Gtt::Init gtt_size (for page tables) 0x%lx size (address space) 0x%lx ", gtt_size, size_);
 
     InitPrivatePat();
 
@@ -28,7 +28,7 @@ bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
     if (gtt_size > mmio_->size() / 2)
         return DRETF(false, "mmio space too small for gtt");
 
-    DLOG("mmio_base %p size 0x%llx gtt_size 0x%llx", mmio_->addr(), mmio_->size(), gtt_size);
+    DLOG("mmio_base %p size 0x%lx gtt_size 0x%lx", mmio_->addr(), mmio_->size(), gtt_size);
 
     if (!InitScratch())
         return DRETF(false, "InitScratch failed");
@@ -143,7 +143,7 @@ bool Gtt::Clear(uint64_t start, uint64_t length)
     uint64_t first_entry = start >> PAGE_SHIFT;
     uint64_t num_entries = length >> PAGE_SHIFT;
 
-    DLOG("first_entry 0x%llx num_entries %lld max_entries %lld", first_entry, num_entries,
+    DLOG("first_entry 0x%lx num_entries %ld max_entries %ld", first_entry, num_entries,
          max_entries);
 
     if (first_entry + num_entries > max_entries)
@@ -173,7 +173,7 @@ static inline void unmap(std::vector<uint64_t>& array, magma::PlatformBuffer* bu
 bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
                  CachingType caching_type)
 {
-    DLOG("InsertEntries addr 0x%llx", addr);
+    DLOG("InsertEntries addr 0x%lx", addr);
 
     DASSERT(magma::is_page_aligned(offset));
     DASSERT(magma::is_page_aligned(length));
@@ -216,7 +216,7 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
     if (magma::kDebug) {
         auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], caching_type, true);
         if (readback != expected) {
-            DLOG("Mismatch posting read: 0x%0llx != 0x%0llx", readback, expected);
+            DLOG("Mismatch posting read: 0x%0lx != 0x%0lx", readback, expected);
             DASSERT(false);
         }
     }
