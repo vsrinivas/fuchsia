@@ -98,7 +98,7 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
                  &continue_search)) {
         *addr_out = addr;
         regions_.emplace_front(addr, size);
-        DLOG("allocated addr 0x%llx", addr);
+        DLOG("allocated addr 0x%lx", addr);
         return true;
     }
 
@@ -109,7 +109,7 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
         if (CheckGap(prev, next, align, size, &addr, &continue_search)) {
             *addr_out = addr;
             regions_.insert(iter, Region(addr, size));
-            DLOG("allocated addr 0x%llx", addr);
+            DLOG("allocated addr 0x%lx", addr);
             return true;
         }
     }
@@ -119,7 +119,7 @@ bool SimpleAllocator::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 
 bool SimpleAllocator::Free(uint64_t addr)
 {
-    DLOG("Free addr 0x%llx", addr);
+    DLOG("Free addr 0x%lx", addr);
 
     auto iter = FindRegion(addr);
     if (iter == regions_.end())

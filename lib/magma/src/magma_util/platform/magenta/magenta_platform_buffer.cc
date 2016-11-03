@@ -127,7 +127,7 @@ class MagentaPlatformBuffer : public PlatformBuffer {
 public:
     MagentaPlatformBuffer(mx_handle_t handle, uint64_t size) : handle_(handle), size_(size)
     {
-        DLOG("MagentaPlatformBuffer ctor size %lld handle 0x%x", size, handle_);
+        DLOG("MagentaPlatformBuffer ctor size %ld handle 0x%x", size, handle_);
 
         DASSERT(magma::is_page_aligned(size));
         pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
@@ -380,7 +380,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
         return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size, vmo_handle);
     }
 
-    DLOG("allocated vmo size %lld handle 0x%x", size, vmo_handle);
+    DLOG("allocated vmo size %ld handle 0x%x", size, vmo_handle);
     return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(vmo_handle, size));
 }
 
