@@ -37,7 +37,7 @@ function die() {
 function umount_retry() {
   set +e
   TRIES=0
-  while (! umount $1); do
+  while (! sudo umount $1); do
     ((TRIES++))
     [[ ${TRIES} > 2 ]] && die "Unable to umount $0"
     sleep 2
@@ -108,7 +108,7 @@ PATH="${PATH}:${FUTILITY}" \
 
 # Figure out what partition on the device is the EFI system partition.
 
-EFI_SYS_PART=`"${CGPT}" show -q /dev/sdb |
+EFI_SYS_PART=`sudo "${CGPT}" show -q /dev/sdb |
               grep 'EFI System Partition' |
               awk '{ print $3 }'`
 EFI_SYS="${BLOCK_DEVICE}${EFI_SYS_PART}"
@@ -117,32 +117,32 @@ EFI_SYS="${BLOCK_DEVICE}${EFI_SYS_PART}"
 # Copy depthcharge to the EFI partition (and just let the trap unmount us).
 MOUNT_POINT="$(mktemp -d)"
 trap "umount_retry \"${MOUNT_POINT}\" && rm -rf \"${MOUNT_POINT}\"" INT TERM EXIT
-mount "${EFI_SYS}" "${MOUNT_POINT}"
-mkdir -p "${MOUNT_POINT}"/efi/boot
-mkdir -p "${MOUNT_POINT}"/depthcharge
+sudo mount "${EFI_SYS}" "${MOUNT_POINT}"
+sudo mkdir -p "${MOUNT_POINT}"/efi/boot
+sudo mkdir -p "${MOUNT_POINT}"/depthcharge
 
 echo "Installing the \"${DC_TYPE}\" version of depthcharge..."
 case "${DC_TYPE}" in
 "normal")
-  cp "${DC_DIR}"/build/uefi/image/uefi.efi \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi.efi \
       "${MOUNT_POINT}"/efi/boot/bootx64.efi
-  cp "${DC_DIR}"/build/uefi/image/uefi.rwa.bin \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi.rwa.bin \
       "${MOUNT_POINT}"/depthcharge/rwa
-  cp "${DC_DIR}"/build/uefi/image/uefi.rwb.bin \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi.rwb.bin \
       "${MOUNT_POINT}"/depthcharge/rwb
   ;;
 "dev")
-  cp "${DC_DIR}"/build/uefi/image/uefi_dev.efi \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi_dev.efi \
       "${MOUNT_POINT}"/efi/boot/bootx64.efi
-  cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwa.bin \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwa.bin \
       "${MOUNT_POINT}"/depthcharge/rwa
-  cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwb.bin \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi_dev.rwb.bin \
       "${MOUNT_POINT}"/depthcharge/rwb
   ;;
 "net")
-  cp "${DC_DIR}"/build/uefi/image/uefi_net.efi \
+  sudo cp "${DC_DIR}"/build/uefi/image/uefi_net.efi \
       "${MOUNT_POINT}"/efi/boot/bootx64.efi
-  touch "${MOUNT_POINT}"/depthcharge/netboot_params
+  sudo touch "${MOUNT_POINT}"/depthcharge/netboot_params
   ;;
 *)
   die "Unrecognized image type."

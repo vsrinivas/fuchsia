@@ -17,9 +17,6 @@
 # This script produces a bootable USB drive, designed to boot using verified
 # boot.
 
-# Because this script does things like sgdisk, mount, etc. you must be root,
-# so don't get the wrong command line parameters! <- super serious
-
 set -e
 shopt -s extglob
 
@@ -37,7 +34,7 @@ function die() {
 function umount_retry() {
   set +e
   TRIES=0
-  while (! umount $1); do
+  while (! sudo umount $1); do
     ((TRIES++))
     [[ ${TRIES} > 2 ]] && die "Unable to umount $0"
     sleep 2
@@ -90,7 +87,7 @@ fi
 
 # Destroy any existing GPT/MBR on the device.  We're going to use cgpt soon and
 # it doesn't seem to properly wipe existing partitions.
-sgdisk --zap-all "${BLOCK_DEVICE}"
+sudo sgdisk --zap-all "${BLOCK_DEVICE}"
 
 make -C "${VB_DIR}" cgpt futil
 
@@ -107,43 +104,46 @@ make -C "${VB_DIR}" cgpt futil
 CGPT="${VB_DIR}/build/cgpt/cgpt"
 
 # The size of the first two partitions (kernel, root) don't vary per-device.
-"${CGPT}" create "${BLOCK_DEVICE}"
-"${CGPT}" add -s 32768 -t kernel -b 64 -l kernel "${BLOCK_DEVICE}"
-"${CGPT}" add -s 4194304 -t rootfs -b 32832 -l root "${BLOCK_DEVICE}"
-"${CGPT}" add -i 1 -T 1 -S 1 -P 2 "${BLOCK_DEVICE}"
-"${CGPT}" add -i 4 -s 131072 -t efi -b 4227136 -l efi "${BLOCK_DEVICE}"
+sudo "${CGPT}" create "${BLOCK_DEVICE}"
+sudo "${CGPT}" add -s 32768 -t kernel -b 64 -l kernel "${BLOCK_DEVICE}"
+sudo "${CGPT}" add -s 4194304 -t rootfs -b 32832 -l root "${BLOCK_DEVICE}"
+sudo "${CGPT}" add -i 1 -T 1 -S 1 -P 2 "${BLOCK_DEVICE}"
+sudo "${CGPT}" add -i 4 -s 131072 -t efi -b 4227136 -l efi "${BLOCK_DEVICE}"
 
 # Use sgdisk to make the data partition so we don't have to calculate the size.
-sgdisk -N3 -c3:data -t3:0700 "${BLOCK_DEVICE}"
+sudo sgdisk -N3 -c3:data -t3:0700 "${BLOCK_DEVICE}"
 
 # Copy kernel to the kernel partition.
-dd if="${KERNEL_IMAGE}" of="${BLOCK_DEVICE}1"
+sudo dd if="${KERNEL_IMAGE}" of="${BLOCK_DEVICE}1"
 
 # Clean up the temporary kernel image.
 rm -rf "${KERNEL_IMAGE}"
 
 # Format the other two partitions.
-mkfs.ext4 "${BLOCK_DEVICE}2"
-mkfs.ext4 "${BLOCK_DEVICE}3"
+sudo mkfs.ext4 "${BLOCK_DEVICE}2"
+sudo mkfs.ext4 "${BLOCK_DEVICE}3"
 
-mkfs.vfat -F 32 "${BLOCK_DEVICE}4"
+sudo mkfs.vfat -F 32 "${BLOCK_DEVICE}4"
 
 # Mount the root partition, trap the unmount.
 MOUNT_POINT="$(mktemp -d)"
-mount "${BLOCK_DEVICE}2" "$MOUNT_POINT"
+sudo mount "${BLOCK_DEVICE}2" "$MOUNT_POINT"
 trap "umount_retry \"${MOUNT_POINT}\" && rm -rf \"${MOUNT_POINT}\"" INT TERM EXIT
 
 # Make everything owned by root.
-chown -R root:root "${MOUNT_POINT}"/*
+sudo chown -R root:root "${MOUNT_POINT}"/*
 
 # Unmount the root partition (might as well reuse the mount point).
 umount_retry "${MOUNT_POINT}"
 
 # Copy data to the data partition.
-mount "${BLOCK_DEVICE}3" "${MOUNT_POINT}"
-cp -a "${ROOT_DIR}"/* "${MOUNT_POINT}"
-chown -R root:root "${MOUNT_POINT}"/*
+sudo mount "${BLOCK_DEVICE}3" "${MOUNT_POINT}"
+sudo cp -a "${ROOT_DIR}"/* "${MOUNT_POINT}"
+sudo chown -R root:root "${MOUNT_POINT}"/*
 umount_retry "${MOUNT_POINT}"
 
-# Copy depthcharge to the EFI partition (and just let the trap unmount us).
+rm -rf "${MOUNT_POINT}"
+trap - INT TERM EXIT
+
+# Install depthcharge to the EFI partition.
 "${SCRIPT_DIR}"/install-uefi-depthcharge.sh "${BLOCK_DEVICE}" ${DC_TYPE}
