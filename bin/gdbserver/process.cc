@@ -90,16 +90,18 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
   FTL_DCHECK(process_handle);
 
   mx_info_handle_basic_t info;
-  mx_ssize_t size = mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC,
-                                       sizeof(info.rec), &info, sizeof(info));
+  mx_size_t size;
+  mx_status_t status = mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC,
+                                          sizeof(info.rec), &info,
+                                          sizeof(info), &size);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus("mx_object_get_info_failed", status);
+    return MX_KOID_INVALID;
+  }
   if (size != sizeof(info)) {
-    if (size < 0) {
-      util::LogErrorWithMxStatus("mx_object_get_info_failed", size);
-    } else {
-      FTL_LOG(ERROR) << "mx_object_get_info failed - expected size: "
-                     << sizeof(info) << ", returned: " << size;
-    }
-    return MX_HANDLE_INVALID;
+    FTL_LOG(ERROR) << "mx_object_get_info failed - expected size: "
+                   << sizeof(info) << ", returned: " << size;
+    return MX_KOID_INVALID;
   }
 
   FTL_DCHECK(info.rec.type == MX_OBJ_TYPE_PROCESS);
@@ -108,10 +110,12 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
 }
 
 mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
-  mx_handle_t debug_handle =
-      mx_object_get_child(MX_HANDLE_INVALID, pid, MX_RIGHT_SAME_RIGHTS);
-  if (debug_handle < 0) {
-    util::LogErrorWithMxStatus("mx_object_get_child failed", debug_handle);
+  mx_handle_t debug_handle = MX_HANDLE_INVALID;
+  mx_status_t status =
+      mx_object_get_child(MX_HANDLE_INVALID, pid, MX_RIGHT_SAME_RIGHTS,
+                          &debug_handle);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus("mx_object_get_child failed", status);
     return MX_HANDLE_INVALID;
   }
 
@@ -265,11 +269,13 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
-  mx_status_t thread_debug_handle =
-      mx_object_get_child(debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS);
-  if (thread_debug_handle < 0) {
+  mx_handle_t thread_debug_handle;
+  mx_status_t status =
+      mx_object_get_child(debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS,
+                          &thread_debug_handle);
+  if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
-                               thread_debug_handle);
+                               status);
     return nullptr;
   }
 
@@ -297,11 +303,11 @@ bool Process::RefreshAllThreads() {
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
   mx_info_header_t hdr;
-  mx_ssize_t result_size = mx_object_get_info(
-      debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr));
-  if (result_size < 0) {
-    util::LogErrorWithMxStatus("Failed to get process thread info",
-                               result_size);
+  mx_size_t result_size;
+  mx_status_t status = mx_object_get_info(
+      debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr), &result_size);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
   }
 
@@ -309,12 +315,12 @@ bool Process::RefreshAllThreads() {
       sizeof(mx_info_process_threads_t) +
       hdr.avail_count * sizeof(mx_record_process_thread_t);
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
-  result_size = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
-                                   sizeof(mx_record_process_thread_t),
-                                   buffer.get(), buffer_size);
-  if (result_size < 0) {
+  status = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
+                              sizeof(mx_record_process_thread_t),
+                              buffer.get(), buffer_size, &result_size);
+  if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info",
-                               result_size);
+                               status);
     return false;
   }
 
@@ -328,11 +334,12 @@ bool Process::RefreshAllThreads() {
   ThreadMap new_threads;
   for (size_t i = 0; i < hdr.avail_count; ++i) {
     mx_koid_t thread_id = thread_info->rec[i].koid;
-    mx_handle_t thread_debug_handle = mx_object_get_child(
-        debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS);
-    if (thread_debug_handle < 0) {
+    mx_handle_t thread_debug_handle = MX_HANDLE_INVALID;
+    status = mx_object_get_child(
+        debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
+    if (status != NO_ERROR) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
-                                 thread_debug_handle);
+                                 status);
       continue;
     }
     new_threads[thread_id] =
