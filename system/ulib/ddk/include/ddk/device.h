@@ -65,8 +65,8 @@ struct mx_device {
     uint32_t prop_count;
     // properties for driver binding
 
-    void* ctx;
-    // internal use
+    void* ios;
+    // iostate
 
     char name[MX_DEVICE_NAME_MAX + 1];
 };

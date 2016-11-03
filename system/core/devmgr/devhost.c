@@ -98,7 +98,7 @@ static mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_han
         return ERR_NO_MEMORY;
     }
     dev->rpc = hrpc;
-    dev->ctx = ios;
+    dev->ios = ios;
     mx_status_t status;
     if ((status = mxio_dispatcher_add(devhost_rio_dispatcher, hdevice, devhost_rio_handler, ios)) < 0) {
         printf("devhost_connect: cannot add to dispatcher: %d\n", status);
@@ -106,7 +106,7 @@ static mx_status_t devhost_connect(mx_device_t* dev, mx_handle_t hdevice, mx_han
         mx_handle_close(hrpc);
         free(ios);
         dev->rpc = 0;
-        dev->ctx = 0;
+        dev->ios = 0;
         return status;
     }
     return NO_ERROR;
@@ -127,12 +127,12 @@ mx_status_t devhost_remove(mx_device_t* dev) {
     devhost_msg_t msg;
     memset(&msg, 0, sizeof(msg));
     msg.op = DH_OP_REMOVE;
-    //printf("devhost_remove(%p:%s) ios=%p\n", dev, dev->name, dev->ctx);
+    //printf("devhost_remove(%p:%s) ios=%p\n", dev, dev->name, dev->ios);
 
     // ensure we don't pull the rug out from under devhost_rio_handler()
-    devhost_iostate_t* ios = dev->ctx;
+    devhost_iostate_t* ios = dev->ios;
     mtx_lock(&ios->lock);
-    dev->ctx = NULL;
+    dev->ios = NULL;
     ios->dev = NULL;
     mtx_unlock(&ios->lock);
 
