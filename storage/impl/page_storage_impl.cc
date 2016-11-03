@@ -288,11 +288,19 @@ Status PageStorageImpl::StartMergeCommit(const CommitId& left,
 }
 
 Status PageStorageImpl::AddCommitWatcher(CommitWatcher* watcher) {
-  return Status::NOT_IMPLEMENTED;
+  watchers_.push_back(watcher);
+  return Status::OK;
 }
 
 Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
-  return Status::NOT_IMPLEMENTED;
+  auto watcher_it =
+      std::find_if(watchers_.begin(), watchers_.end(),
+                   [watcher](CommitWatcher* w) { return w == watcher; });
+  if (watcher_it == watchers_.end()) {
+    return Status::NOT_FOUND;
+  }
+  watchers_.erase(watcher_it);
+  return Status::OK;
 }
 
 Status PageStorageImpl::GetUnsyncedCommits(
@@ -423,6 +431,13 @@ Status PageStorageImpl::AddObjectSynchronous(
   return GetObjectSynchronous(object_id, object);
 }
 
+void PageStorageImpl::NotifyWatchers(const Commit& commit,
+                                     ChangeSource source) {
+  for (CommitWatcher* watcher : watchers_) {
+    watcher->OnNewCommit(commit, source);
+  }
+}
+
 Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
                                   ChangeSource source) {
   // Apply all changes atomically.
@@ -453,7 +468,13 @@ Status PageStorageImpl::AddCommit(std::unique_ptr<Commit> commit,
     db_.RemoveHead(parent_id);
   }
 
-  return batch->Execute();
+  s = batch->Execute();
+  if (s != Status::OK) {
+    return s;
+  }
+
+  NotifyWatchers(*(commit.get()), source);
+  return Status::OK;
 }
 
 }  // namespace storage

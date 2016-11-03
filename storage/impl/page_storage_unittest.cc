@@ -9,6 +9,7 @@
 #include "apps/ledger/glue/crypto/hash.h"
 #include "apps/ledger/glue/crypto/rand.h"
 #include "apps/ledger/storage/impl/commit_impl.h"
+#include "apps/ledger/storage/public/commit_watcher.h"
 #include "apps/ledger/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
@@ -38,6 +39,21 @@ std::string ToHex(const std::string& string) {
   return result;
 }
 
+class FakeCommitWatcher : public CommitWatcher {
+ public:
+  FakeCommitWatcher() {}
+
+  void OnNewCommit(const Commit& commit, ChangeSource source) override {
+    ++commit_count;
+    last_commit_id = commit.GetId();
+    last_source = source;
+  }
+
+  int commit_count = 0;
+  CommitId last_commit_id;
+  ChangeSource last_source;
+};
+
 class PageStorageTest : public ::testing::Test {
  public:
   PageStorageTest() {}
@@ -62,7 +78,18 @@ class PageStorageTest : public ::testing::Test {
     return ids[0];
   }
 
-  CommitId TryCommit(JournalType type, int keys) {
+  CommitId TryCommitFromSync() {
+    ObjectStore object_store(storage_.get());
+    std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+        &object_store, RandomId(kObjectIdSize), {GetFirstHead()});
+    CommitId id = commit->GetId();
+
+    EXPECT_EQ(Status::OK,
+              storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
+    return id;
+  }
+
+  CommitId TryCommitFromLocal(JournalType type, int keys) {
     std::unique_ptr<Journal> journal;
     EXPECT_EQ(Status::OK,
               storage_->StartCommit(GetFirstHead(), type, &journal));
@@ -197,8 +224,8 @@ TEST_F(PageStorageTest, HeadCommits) {
 
 TEST_F(PageStorageTest, CreateJournals) {
   // Explicit journal.
-  CommitId left_id = TryCommit(JournalType::EXPLICIT, 5);
-  CommitId right_id = TryCommit(JournalType::IMPLICIT, 10);
+  CommitId left_id = TryCommitFromLocal(JournalType::EXPLICIT, 5);
+  CommitId right_id = TryCommitFromLocal(JournalType::IMPLICIT, 10);
 
   // Journal for merge commit.
   std::unique_ptr<Journal> journal;
@@ -317,6 +344,36 @@ TEST_F(PageStorageTest, GetObjectSynchronous) {
   ftl::StringView data;
   ASSERT_EQ(Status::OK, object->GetData(&data));
   EXPECT_EQ(content, convert::ToString(data));
+}
+
+TEST_F(PageStorageTest, CommitWatchers) {
+  FakeCommitWatcher watcher;
+  storage_->AddCommitWatcher(&watcher);
+
+  // Add a watcher and receive the commit.
+  CommitId expected = TryCommitFromLocal(JournalType::EXPLICIT, 10);
+  EXPECT_EQ(1, watcher.commit_count);
+  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
+
+  // Add a second watcher.
+  FakeCommitWatcher watcher2;
+  storage_->AddCommitWatcher(&watcher2);
+  expected = TryCommitFromLocal(JournalType::IMPLICIT, 10);
+  EXPECT_EQ(2, watcher.commit_count);
+  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
+  EXPECT_EQ(1, watcher2.commit_count);
+  EXPECT_EQ(expected, watcher2.last_commit_id);
+  EXPECT_EQ(ChangeSource::LOCAL, watcher2.last_source);
+
+  // Remove one watcher.
+  storage_->RemoveCommitWatcher(&watcher2);
+  expected = TryCommitFromSync();
+  EXPECT_EQ(3, watcher.commit_count);
+  EXPECT_EQ(expected, watcher.last_commit_id);
+  EXPECT_EQ(ChangeSource::SYNC, watcher.last_source);
+  EXPECT_EQ(1, watcher2.commit_count);
 }
 
 }  // namespace

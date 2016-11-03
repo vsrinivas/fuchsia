@@ -76,10 +76,14 @@ class PageStorageImpl : public PageStorage {
 
   Status AddCommit(std::unique_ptr<Commit> commit, ChangeSource source);
 
+  // Notifies the registered watchers with the given |commit|.
+  void NotifyWatchers(const Commit& commit, ChangeSource source);
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string page_dir_;
   PageId page_id_;
   DB db_;
+  std::vector<CommitWatcher*> watchers_;
   ObjectStore store_;
   std::string objects_dir_;
   std::string staging_dir_;
