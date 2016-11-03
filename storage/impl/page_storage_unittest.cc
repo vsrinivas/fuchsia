@@ -173,14 +173,14 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
 
   // Check that the commit is not marked as unsynced.
-  std::vector<std::unique_ptr<Commit>> commits;
+  std::vector<std::unique_ptr<const Commit>> commits;
   EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
   EXPECT_TRUE(commits.empty());
 }
 
 TEST_F(PageStorageTest, SyncCommits) {
   ObjectStore object_store(storage_.get());
-  std::vector<std::unique_ptr<Commit>> commits;
+  std::vector<std::unique_ptr<const Commit>> commits;
 
   // Initially there should be no unsynced commits.
   EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));

@@ -45,7 +45,7 @@ class PageStorageImpl : public PageStorage {
   Status AddCommitWatcher(CommitWatcher* watcher) override;
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   Status GetUnsyncedCommits(
-      std::vector<std::unique_ptr<Commit>>* commits) override;
+      std::vector<std::unique_ptr<const Commit>>* commits) override;
   Status MarkCommitSynced(const CommitId& commit_id) override;
   Status GetDeltaObjects(
       const CommitId& commit_id,

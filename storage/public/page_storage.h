@@ -63,7 +63,7 @@ class PageStorage {
   // Finds the commits that have not yet been synced and adds them in the given
   // |commit| vector.
   virtual Status GetUnsyncedCommits(
-      std::vector<std::unique_ptr<Commit>>* commits) = 0;
+      std::vector<std::unique_ptr<const Commit>>* commits) = 0;
   // Marks the given commit as synced.
   virtual Status MarkCommitSynced(const CommitId& commit_id) = 0;
 

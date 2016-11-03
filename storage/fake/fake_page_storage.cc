@@ -105,7 +105,7 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 Status FakePageStorage::GetUnsyncedCommits(
-    std::vector<std::unique_ptr<Commit>>* commits) {
+    std::vector<std::unique_ptr<const Commit>>* commits) {
   return Status::NOT_IMPLEMENTED;
 }
 

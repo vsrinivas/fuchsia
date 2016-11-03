@@ -304,14 +304,14 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 Status PageStorageImpl::GetUnsyncedCommits(
-    std::vector<std::unique_ptr<Commit>>* commits) {
+    std::vector<std::unique_ptr<const Commit>>* commits) {
   std::vector<CommitId> result_ids;
   Status s = db_.GetUnsyncedCommitIds(&result_ids);
   if (s != Status::OK) {
     return s;
   }
 
-  std::vector<std::unique_ptr<Commit>> result;
+  std::vector<std::unique_ptr<const Commit>> result;
   for (size_t i = 0; i < result_ids.size(); ++i) {
     std::unique_ptr<Commit> commit;
     Status s = GetCommit(result_ids[i], &commit);
