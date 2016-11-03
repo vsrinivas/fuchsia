@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/launcher/input/input_reader.h"
+#include "apps/mozart/src/input_reader/input_reader.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -15,7 +15,7 @@
 #include <mxio/io.h>
 #include <mxio/watcher.h>
 
-#include "apps/mozart/src/launcher/input/input_device.h"
+#include "apps/mozart/src/input_reader/input_device.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
 

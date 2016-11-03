@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_REPORT_H_
-#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_REPORT_H_
+#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_REPORT_H_
+#define APPS_MOZART_SRC_INPUT_READER_INPUT_REPORT_H_
 
 #include <stdint.h>
 
 #include <vector>
 
-#include "apps/mozart/src/launcher/input/input_descriptor.h"
+#include "apps/mozart/src/input_reader/input_descriptor.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace mozart {
@@ -61,4 +61,4 @@ struct TouchReport : InputReport {
 }
 }
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_REPORT_H_
+#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_REPORT_H_

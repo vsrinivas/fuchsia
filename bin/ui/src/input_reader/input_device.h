@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
-#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
+#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
+#define APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_
 
 #include <hid/acer12.h>
 #include <magenta/device/input.h>
@@ -13,8 +13,8 @@
 #include <map>
 #include <string>
 
-#include "apps/mozart/src/launcher/input/input_descriptor.h"
-#include "apps/mozart/src/launcher/input/input_report.h"
+#include "apps/mozart/src/input_reader/input_descriptor.h"
+#include "apps/mozart/src/input_reader/input_report.h"
 #include "mojo/public/c/include/mojo/system/handle.h"
 #include "mojo/public/cpp/system/handle.h"
 
@@ -101,4 +101,4 @@ class InputDevice {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DEVICE_H_
+#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_DEVICE_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/launcher/input/input_device.h"
+#include "apps/mozart/src/input_reader/input_device.h"
 
 #include <fcntl.h>
 #include <hid/acer12.h>
@@ -16,7 +16,7 @@
 #include <unistd.h>
 
 #include "apps/mozart/glue/base/trace_event.h"
-#include "apps/mozart/src/launcher/input/input_report.h"
+#include "apps/mozart/src/input_reader/input_report.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 #include "mojo/public/cpp/system/handle.h"

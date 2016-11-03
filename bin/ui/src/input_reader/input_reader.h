@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_READER_H_
-#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_READER_H_
+#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
+#define APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_
 
 #include <mx/channel.h>
 
 #include <map>
 #include <utility>
 
-#include "apps/mozart/src/launcher/input/input_interpreter.h"
+#include "apps/mozart/src/input_reader/input_interpreter.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -54,4 +54,4 @@ class InputReader : mtl::MessageLoopHandler {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_READER_H_
+#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_READER_H_

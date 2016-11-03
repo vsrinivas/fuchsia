@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DESCRIPTOR_H_
-#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DESCRIPTOR_H_
+#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_DESCRIPTOR_H_
+#define APPS_MOZART_SRC_INPUT_READER_INPUT_DESCRIPTOR_H_
 
 #include <stdint.h>
 
@@ -86,4 +86,4 @@ struct TouchscreenDescriptor : public InputDescriptor {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_DESCRIPTOR_H_
+#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_DESCRIPTOR_H_

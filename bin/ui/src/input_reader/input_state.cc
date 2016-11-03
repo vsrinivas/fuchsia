@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/launcher/input/input_state.h"
+#include "apps/mozart/src/input_reader/input_state.h"
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"

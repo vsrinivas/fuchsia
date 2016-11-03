@@ -33,7 +33,7 @@ source_set("lib") {
     "//apps/mozart/services/launcher/interfaces",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/services/views/interfaces",
-    "//apps/mozart/src/launcher/input",
+    "//apps/mozart/src/input_reader",
     "//lib/ftl",
     "//lib/mtl",
     "//mojo/public/cpp/application",

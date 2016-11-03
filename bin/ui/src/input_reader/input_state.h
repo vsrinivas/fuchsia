@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_STATE_H_
-#define APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_STATE_H_
+#ifndef APPS_MOZART_SRC_INPUT_READER_INPUT_STATE_H_
+#define APPS_MOZART_SRC_INPUT_READER_INPUT_STATE_H_
 
 #include <hid/hid.h>
 #include <hid/usages.h>
@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "apps/mozart/services/input/interfaces/input_events.mojom.h"
-#include "apps/mozart/src/launcher/input/input_report.h"
+#include "apps/mozart/src/input_reader/input_report.h"
 
 namespace mozart {
 namespace input {
@@ -84,4 +84,4 @@ struct DeviceState {
 }  // namespace input
 }  // namespace mozart
 
-#endif  // APPS_MOZART_SRC_LAUNCHER_INPUT_INPUT_STATE_H_
+#endif  // APPS_MOZART_SRC_INPUT_READER_INPUT_STATE_H_
