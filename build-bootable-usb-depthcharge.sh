@@ -120,8 +120,8 @@ sudo dd if="${KERNEL_IMAGE}" of="${BLOCK_DEVICE}1"
 rm -rf "${KERNEL_IMAGE}"
 
 # Format the other two partitions.
-sudo mkfs.ext4 "${BLOCK_DEVICE}2"
-sudo mkfs.ext4 "${BLOCK_DEVICE}3"
+sudo mkfs.ext4 -q "${BLOCK_DEVICE}2"
+sudo mkfs.ext4 -q "${BLOCK_DEVICE}3"
 
 sudo mkfs.vfat -F 32 "${BLOCK_DEVICE}4"
 
