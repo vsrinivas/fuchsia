@@ -180,7 +180,8 @@ void Connector::CancelWait() {
 void Connector::NotifyError() {
   error_ = true;
   CloseMessagePipe();
-  connection_error_handler_();
+  if (connection_error_handler_)
+    connection_error_handler_();
 }
 
 }  // namespace internal

@@ -114,8 +114,10 @@ class Binding {
     internal_router_.reset(
         new internal::Router(std::move(handle), std::move(validators), waiter));
     internal_router_->set_incoming_receiver(&stub_);
-    internal_router_->set_connection_error_handler(
-        [this]() { connection_error_handler_(); });
+    internal_router_->set_connection_error_handler([this]() {
+      if (connection_error_handler_)
+        connection_error_handler_();
+    });
   }
 
   // Completes a binding that was constructed with only an interface
