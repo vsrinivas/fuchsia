@@ -145,6 +145,7 @@ MediaResult AudioOutput::Init(const AudioOutputPtr& self) {
   // for us.
   MediaResult res = Init();
   if (res != MediaResult::OK) {
+    ftl::MutexLocker locker(&mutex_);
     ShutdownSelf();
     return res;
   }
@@ -166,8 +167,6 @@ bool AudioOutput::BeginShutdown() {
   // be called from either a processing context, or from the audio output
   // manager.  After it finishes, any pending processing callbacks will have
   // been nerfed, although there may still be callbacks in flight.
-  ftl::MutexLocker locker(&mutex_);
-
   if (shutting_down_) {
     return true;
   }
@@ -191,7 +190,10 @@ void AudioOutput::Shutdown() {
 
   // Make sure no new callbacks can be generated, and that pending callbacks
   // have been nerfed.
-  BeginShutdown();
+  {
+    ftl::MutexLocker locker(&mutex_);
+    BeginShutdown();
+  }
 
   // Unlink ourselves from all of our tracks.  Then go ahead and clear the track
   // set.

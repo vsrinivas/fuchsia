@@ -109,7 +109,7 @@ class AudioOutput {
   // main message loop finds out about our shutdown request, it will complete
   // the process of shutting us down, unlinking us from our tracks and calling
   // the Cleanup method.
-  void ShutdownSelf();
+  void ShutdownSelf() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // shutting_down
   //
@@ -153,7 +153,7 @@ class AudioOutput {
   //
   // @return true if this call just kicked off the process of shutting down,
   // false otherwise.
-  bool BeginShutdown();
+  bool BeginShutdown() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Called from the AudioOutputManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
