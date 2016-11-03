@@ -18,6 +18,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test_rw_workers.c \
     $(LOCAL_DIR)/test_basic.c \
     $(LOCAL_DIR)/test_rename.c \
+    $(LOCAL_DIR)/test_sync.c \
     $(LOCAL_DIR)/test_truncate.c \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
