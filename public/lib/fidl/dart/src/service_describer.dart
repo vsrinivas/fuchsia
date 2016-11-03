@@ -8,7 +8,7 @@ class _ServiceDescriberImpl implements service_describer.ServiceDescriber {
   final HashMap<String, service_describer.ServiceDescription> _data;
   service_describer.ServiceDescriberStub _stub;
 
-  _ServiceDescriberImpl(this._data, core.MojoMessagePipeEndpoint endpoint) {
+  _ServiceDescriberImpl(this._data, core.ChannelEndpoint endpoint) {
     _stub =
         new service_describer.ServiceDescriberStub.fromEndpoint(endpoint, this);
   }

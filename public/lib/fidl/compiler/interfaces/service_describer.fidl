@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="fidl",
- JavaPackage="org.chromium.fidl.bindings"]
-// TODO(rudominer) Move this file into the module fidl.bindings when
-// https://github.com/domokit/fidl/issues/435 is fixed.
-module fidl.bindings.types;
+module lib.fidl.compiler.interfaces;
 
 import "fidl_types.fidl";
 
@@ -49,7 +45,7 @@ interface ServiceDescription {
   // those that are embedded in the structures returned from earlier queries
   // of this ServiceDescription. If the key is invalid then |type| will be null.
   GetTypeDefinition(string type_key)
-      => (fidl.bindings.types.UserDefinedType? type);
+      => (UserDefinedType? type);
 
   // Returns all the data queryable via GetTypeDefinition in a single
   // structure, or null if the implementation is not willing or not able to

@@ -5,12 +5,12 @@
 part of core;
 
 class DataPipeFiller {
-  final MojoDataPipeProducer _producer;
+  final DataPipeProducer _producer;
   final ByteData _data;
   MojoEventSubscription _eventSubscription;
   int _dataPosition = 0;
 
-  DataPipeFiller(MojoDataPipeProducer producer, ByteData data)
+  DataPipeFiller(DataPipeProducer producer, ByteData data)
       : _producer = producer,
         _data = data,
         _eventSubscription = new MojoEventSubscription(producer.handle);
@@ -30,24 +30,24 @@ class DataPipeFiller {
   void fill() {
     _eventSubscription.enableWriteEvents();
     _eventSubscription.subscribe((int mojoSignals) {
-      if (MojoHandleSignals.isWritable(mojoSignals)) {
+      if (HandleSignals.isWritable(mojoSignals)) {
         int result = _doWrite();
         if ((_dataPosition >= _data.lengthInBytes) ||
             (result != MojoResult.kOk)) {
           _eventSubscription.close();
           _eventSubscription = null;
         }
-      } else if (MojoHandleSignals.isPeerClosed(mojoSignals)) {
+      } else if (HandleSignals.isPeerClosed(mojoSignals)) {
         _eventSubscription.close();
         _eventSubscription = null;
       } else {
-        String signals = MojoHandleSignals.string(mojoSignals);
+        String signals = HandleSignals.string(mojoSignals);
         throw 'Unexpected handle event: $signals';
       }
     });
   }
 
-  static void fillHandle(MojoDataPipeProducer producer, ByteData data) {
+  static void fillHandle(DataPipeProducer producer, ByteData data) {
     var filler = new DataPipeFiller(producer, data);
     filler.fill();
   }

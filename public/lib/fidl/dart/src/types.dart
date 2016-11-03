@@ -74,7 +74,7 @@ class MojoResult {
   }
 }
 
-class MojoHandleSignals {
+class HandleSignals {
   static const int kNone = 0x0;
   static const int kReadable = 0x1;
   static const int kWritable = 0x2;
@@ -85,7 +85,7 @@ class MojoHandleSignals {
   static const int kAll = 0x7;
   static const int kBitfieldSize = 3;
 
-  MojoHandleSignals._();
+  HandleSignals._();
 
   static bool isNone(int v) => v == 0;
   static bool isReadable(int v) => (v & kReadable) == kReadable;
@@ -114,17 +114,17 @@ class MojoHandleSignals {
   }
 }
 
-class MojoHandleSignalsState {
-  MojoHandleSignalsState(this.satisfied_signals, this.satisfiable_signals);
+class HandleSignalsState {
+  HandleSignalsState(this.satisfied_signals, this.satisfiable_signals);
   final int satisfied_signals;
   final int satisfiable_signals;
-  String toString() => MojoHandleSignals.string(satisfied_signals);
+  String toString() => HandleSignals.string(satisfied_signals);
 }
 
 class MojoWaitResult {
   MojoWaitResult(this.result, this.state);
   final int result;
-  MojoHandleSignalsState state;
+  HandleSignalsState state;
   String toString() {
     String r = MojoResult.string(result);
     return "MojoWaitResult(result: $r, state: $state)";
@@ -135,7 +135,7 @@ class MojoWaitManyResult {
   MojoWaitManyResult(this.result, this.index, this.states);
   final int result;
   final int index;
-  List<MojoHandleSignalsState> states;
+  List<HandleSignalsState> states;
 
   bool get isIndexValid => (this.index != null);
   bool get areSignalStatesValid => (this.states != null);

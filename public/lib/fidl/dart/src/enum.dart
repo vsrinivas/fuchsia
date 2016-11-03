@@ -4,7 +4,7 @@
 
 part of bindings;
 
-class MojoEnum {
-  final int mojoEnumValue;
-  const MojoEnum(this.mojoEnumValue);
+class FidlEnum {
+  final int fidlEnumValue;
+  const FidlEnum(this.fidlEnumValue);
 }

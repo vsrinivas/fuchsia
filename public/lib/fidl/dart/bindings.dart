@@ -9,12 +9,10 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:mojo/core.dart' as core;
-import 'package:mojo.public.interfaces.bindings/interface_control_messages.mojom.dart' as icm;
-import 'package:mojo.public.interfaces.bindings/service_describer.mojom.dart'
+import 'package:lib.fidl.dart/core.dart' as core;
+import 'package:lib.fidl.compiler.interfaces/service_describer.fidl.dart'
     as service_describer;
 
-part 'src/control_message.dart';
 part 'src/codec.dart';
 part 'src/enum.dart';
 part 'src/interfaces.dart';

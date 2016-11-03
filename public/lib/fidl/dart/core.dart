@@ -12,9 +12,8 @@ import 'src/internal.dart';
 
 part 'src/buffer.dart';
 part 'src/data_pipe.dart';
-part 'src/drain_data.dart';
-part 'src/event_subscription.dart';
 part 'src/event_handler.dart';
+part 'src/event_subscription.dart';
 part 'src/fill_data.dart';
 part 'src/handle.dart';
 part 'src/message_pipe.dart';

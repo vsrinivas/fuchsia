@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(vardhan|ianloic): Move this file out of the compiler directory.
+module lib.fidl.compiler.interfaces;
 
-[DartPackage="fidl",
- JavaPackage="org.chromium.fidl.bindings"]
-module fidl;
+// TODO(vardhan|ianloic): Move this file out of the compiler directory.
 
 // For each message pipe representing a user-defined interface, some control
 // functions are provided at the same end of the message pipe as the

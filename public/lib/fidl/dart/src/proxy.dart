@@ -26,7 +26,7 @@ abstract class ProxyControl<T> implements ProxyMessageHandler {
 }
 
 /// Generated Proxy classes extend this base class.
-class Proxy<T> implements MojoInterface<T> {
+class Proxy<T> implements FidlInterface<T> {
   // In general it's probalby better to avoid adding fields and methods to this
   // class. Names added to this class have to be mangled by Mojo bindings
   // generation to avoid name conflicts.
@@ -68,7 +68,7 @@ abstract class ServiceConnector {
 }
 
 abstract class ProxyMessageHandler extends core.MojoEventHandler
-    implements MojoInterfaceControl {
+    implements FidlInterfaceControl {
   HashMap<int, Function> _callbackMap = new HashMap<int, Function>();
   Completer _errorCompleter = new Completer();
   Set<Completer> _errorCompleters;
@@ -76,10 +76,10 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
   int _version = 0;
   int _pendingCount = 0;
 
-  ProxyMessageHandler.fromEndpoint(core.MojoMessagePipeEndpoint endpoint)
+  ProxyMessageHandler.fromEndpoint(core.ChannelEndpoint endpoint)
       : super.fromEndpoint(endpoint);
 
-  ProxyMessageHandler.fromHandle(core.MojoHandle handle)
+  ProxyMessageHandler.fromHandle(core.Handle handle)
       : super.fromHandle(handle);
 
   ProxyMessageHandler.unbound() : super.unbound();
@@ -113,12 +113,8 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
       var message = new ServiceMessage.fromMessage(new Message(result.data,
           result.handles, result.dataLength, result.handlesLength));
       _pendingCount--;
-      if (ControlMessageHandler.isControlMessage(message)) {
-        _handleControlMessageResponse(message);
-        return;
-      }
       handleResponse(message);
-    } on MojoCodecError catch (e) {
+    } on FidlCodecError catch (e) {
       proxyError(e.toString());
       close(immediate: true);
     }
@@ -206,48 +202,6 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
     return "ProxyMessageHandler(${superString})";
   }
 
-  /// Queries the max version that the remote side supports.
-  /// Updates [version].
-  Future<int> queryVersion() {
-    Completer<int> completer = new Completer<int>();
-    var params = new icm.RunMessageParams();
-    params.reserved0 = 16;
-    params.reserved1 = 0;
-    params.queryVersion = new icm.QueryVersion();
-    sendMessageWithRequestId(
-        params, icm.kRunMessageId, -1, MessageHeader.kMessageExpectsResponse,
-        (r0, r1, queryResult) {
-      _version = queryResult.version;
-      completer.complete(_version);
-    });
-    return completer.future;
-  }
-
-  /// If the remote side doesn't support the [requiredVersion], it will close
-  /// its end of the message pipe asynchronously. This does nothing if it's
-  /// already known that the remote side supports [requiredVersion].
-  /// Updates [version].
-  void requireVersion(int requiredVersion) {
-    if (requiredVersion <= _version) {
-      // Already supported.
-      return;
-    }
-
-    // If the remote end doesn't close the pipe, we know that it supports
-    // required version.
-    _version = requiredVersion;
-
-    var params = new icm.RunOrClosePipeMessageParams();
-    params.reserved0 = 16;
-    params.reserved1 = 0;
-    params.requireVersion = new icm.RequireVersion();
-    params.requireVersion.version = requiredVersion;
-    // TODO(johnmccutchan): We've set _version above but if this sendMessage
-    // fails we may not have sent the RunOrClose message. Should
-    // we reset _version in that case?
-    sendMessage(params, icm.kRunOrClosePipeMessageId);
-  }
-
   void proxyError(String msg) {
     if (!_errorCompleter.isCompleted) {
       errorFuture.whenComplete(() {
@@ -292,29 +246,6 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
     });
     _errorCompleters.add(callCompleter);
     return callCompleter.future;
-  }
-
-  _handleControlMessageResponse(ServiceMessage message) {
-    // We only expect to see Run messages.
-    if (message.header.type != icm.kRunMessageId) {
-      proxyError("Unexpected header type in control message response: "
-          "${message.header.type}");
-      return;
-    }
-    var response = icm.RunResponseMessageParams.deserialize(message.payload);
-    if (!message.header.hasRequestId) {
-      proxyError("Expected a message with a valid request Id.");
-      return;
-    }
-    Function callback = _callbackMap[message.header.requestId];
-    if (callback == null) {
-      proxyError("Message had unknown request Id: ${message.header.requestId}");
-      return;
-    }
-    _callbackMap.remove(message.header.requestId);
-    callback(
-        response.reserved0, response.reserved1, response.queryVersionResult);
-    return;
   }
 }
 

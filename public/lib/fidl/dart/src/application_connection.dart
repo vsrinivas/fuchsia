@@ -4,9 +4,9 @@
 
 part of application;
 
-typedef void ServiceFactory(core.MojoMessagePipeEndpoint endpoint);
+typedef void ServiceFactory(core.ChannelEndpoint endpoint);
 typedef void FallbackServiceFactory(
-    String interfaceName, core.MojoMessagePipeEndpoint endpoint);
+    String interfaceName, core.ChannelEndpoint endpoint);
 
 class LocalServiceProvider implements ServiceProvider {
   final ApplicationConnection connection;
@@ -15,7 +15,7 @@ class LocalServiceProvider implements ServiceProvider {
   LocalServiceProvider(this.connection, this._stub) {
     _stub.impl = this;
     if (!_stub.ctrl.isOpen) {
-      throw new core.MojoApiError("The service provider stub must be open");
+      throw new core.FidlApiError("The service provider stub must be open");
     }
   }
 
@@ -26,7 +26,7 @@ class LocalServiceProvider implements ServiceProvider {
   Future close({bool immediate: false}) => _stub.close(immediate: immediate);
 
   void connectToService_(
-      String interfaceName, core.MojoMessagePipeEndpoint pipe) {
+      String interfaceName, core.ChannelEndpoint pipe) {
     if (connection._nameToServiceFactory.containsKey(interfaceName)) {
       connection._nameToServiceFactory[interfaceName](pipe);
       return;
@@ -84,28 +84,28 @@ class ApplicationConnection {
   FallbackServiceFactory get fallbackServiceFactory => _fallbackServiceFactory;
   set fallbackServiceFactory(FallbackServiceFactory f) {
     if (_localServiceProvider == null) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "There must be a local service provider to set a service factory");
     }
     _fallbackServiceFactory = f;
   }
 
-  void requestService(bindings.MojoInterface iface, [String serviceName]) {
+  void requestService(bindings.FidlInterface iface, [String serviceName]) {
     if (iface.ctrl.isBound ||
         (remoteServiceProvider == null) ||
         !remoteServiceProvider.ctrl.isBound) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "The interface is already bound, "
           "or there is no remote service provider");
     }
 
     var name = serviceName ?? iface.ctrl.serviceName;
     if ((name == null) || name.isEmpty) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "If an interface has no ServiceName, then one must be provided.");
     }
 
-    var pipe = new core.MojoMessagePipe();
+    var pipe = new core.Channel();
     iface.ctrl.bind(pipe.endpoints[0]);
     remoteServiceProvider.connectToService_(name, pipe.endpoints[1]);
   }
@@ -116,11 +116,11 @@ class ApplicationConnection {
   void provideService(String interfaceName, ServiceFactory factory,
       {service_describer.ServiceDescription description}) {
     if (_localServiceProvider == null) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "There must be a local service provider to provide a service");
     }
     if ((interfaceName == null) || interfaceName.isEmpty) {
-      throw new core.MojoApiError(
+      throw new core.FidlApiError(
           "The interface name must be non-null and non-empty");
     }
 

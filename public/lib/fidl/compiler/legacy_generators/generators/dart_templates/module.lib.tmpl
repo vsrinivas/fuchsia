@@ -17,10 +17,10 @@ import 'dart:typed_data';
 {%- endif %}
 
 {%- if module.structs or module.unions or module.interfaces or module.enums or should_gen_mojom_types%}
-import 'package:mojo/bindings.dart' as bindings;
+import 'package:lib.fidl.dart/bindings.dart' as bindings;
 {%- endif %}
 {%- if module.interfaces or has_handles %}
-import 'package:mojo/core.dart' as core;
+import 'package:lib.fidl.dart/core.dart' as core;
 {%- endif %}
 {%- if should_gen_mojom_types %}
 {{mojom_types_import}}

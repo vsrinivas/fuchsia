@@ -4,7 +4,7 @@
 
 part of core;
 
-class MojoHandle {
+class Handle {
   // TODO(floitsch): get the INVALID value from the backing internal
   // implementation.
   static const int INVALID = 0;
@@ -15,30 +15,30 @@ class MojoHandle {
   Object _h;
   Object get h => _h;
 
-  MojoHandle(this._h, {String description}) {
-    MojoHandleNatives.addOpenHandle(_h, description: description);
+  Handle(this._h, {String description}) {
+    HandleNatives.addOpenHandle(_h, description: description);
   }
 
-  MojoHandle._internal(this._h);
+  Handle._internal(this._h);
 
-  MojoHandle.invalid() : this._internal(INVALID);
+  Handle.invalid() : this._internal(INVALID);
 
   int close() {
-    MojoHandleNatives.removeOpenHandle(_h);
-    int result = MojoHandleNatives.close(_h);
+    HandleNatives.removeOpenHandle(_h);
+    int result = HandleNatives.close(_h);
     _h = INVALID;
     return result;
   }
 
-  MojoHandle pass() {
-    MojoHandleNatives.removeOpenHandle(_h);
+  Handle pass() {
+    HandleNatives.removeOpenHandle(_h);
     return this;
   }
 
   MojoWaitResult wait(int signals, int deadline) {
-    List result = MojoHandleNatives.wait(h, signals, deadline);
+    List result = HandleNatives.wait(h, signals, deadline);
     var state = result[1] != null
-        ? new MojoHandleSignalsState(result[1][0], result[1][1])
+        ? new HandleSignalsState(result[1][0], result[1][1])
         : null;
     return new MojoWaitResult(result[0], state);
   }
@@ -55,41 +55,41 @@ class MojoHandle {
         return false;
       default:
         // Should be unreachable.
-        throw new MojoInternalError("Unexpected result $mwr for wait on $h");
+        throw new FidlInternalError("Unexpected result $mwr for wait on $h");
     }
   }
 
-  bool get readyRead => _ready(MojoHandleSignals.kPeerClosedReadable);
-  bool get readyWrite => _ready(MojoHandleSignals.kWritable);
+  bool get readyRead => _ready(HandleSignals.kPeerClosedReadable);
+  bool get readyWrite => _ready(HandleSignals.kWritable);
   bool get isValid => (_h != INVALID);
 
   String toString() {
     if (!isValid) {
-      return "MojoHandle(INVALID)";
+      return "Handle(INVALID)";
     }
-    var mwr = wait(MojoHandleSignals.kAll, 0);
-    return "MojoHandle(h: $h, status: $mwr)";
+    var mwr = wait(HandleSignals.kAll, 0);
+    return "Handle(h: $h, status: $mwr)";
   }
 
   bool operator ==(other) =>
-      (other is MojoHandle) && (_h == other._h);
+      (other is Handle) && (_h == other._h);
 
   int get hashCode => _h.hashCode;
 
   static MojoWaitManyResult waitMany(
       List<int> handles, List<int> signals, int deadline) {
-    List result = MojoHandleNatives.waitMany(handles, signals, deadline);
+    List result = HandleNatives.waitMany(handles, signals, deadline);
     List states = result[2] != null
-        ? result[2].map((l) => new MojoHandleSignalsState(l[0], l[1])).toList()
+        ? result[2].map((l) => new HandleSignalsState(l[0], l[1])).toList()
         : null;
     return new MojoWaitManyResult(result[0], result[1], states);
   }
 
   static bool registerFinalizer(MojoEventSubscription eventSubscription) {
-    return MojoHandleNatives.registerFinalizer(
+    return HandleNatives.registerFinalizer(
             eventSubscription, eventSubscription._handle.h) ==
         MojoResult.kOk;
   }
 
-  static bool reportLeakedHandles() => MojoHandleNatives.reportOpenHandles();
+  static bool reportLeakedHandles() => HandleNatives.reportOpenHandles();
 }

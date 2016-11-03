@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="fidl",
- JavaPackage="org.chromium.fidl.bindings.types"]
-module fidl.bindings.types;
+module lib.fidl.compiler.interfaces;
 
 /*
  * This file contains definitions of data structures used to represent

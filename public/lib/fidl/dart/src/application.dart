@@ -10,13 +10,13 @@ class _ApplicationImpl implements application_mojom.Application {
   Application _application;
 
   _ApplicationImpl(
-      Application application, core.MojoMessagePipeEndpoint endpoint) {
+      Application application, core.ChannelEndpoint endpoint) {
     _application = application;
     _stub = new application_mojom.ApplicationStub.fromEndpoint(endpoint, this);
     _stub.ctrl.onError = ((_) => close());
   }
 
-  _ApplicationImpl.fromHandle(Application application, core.MojoHandle handle) {
+  _ApplicationImpl.fromHandle(Application application, core.Handle handle) {
     _application = application;
     _stub = new application_mojom.ApplicationStub.fromHandle(handle, this);
     _stub.ctrl.onError = ((_) => close());
@@ -68,13 +68,13 @@ abstract class Application implements bindings.ServiceConnector {
   List<ApplicationConnection> _applicationConnections;
   Function onError;
 
-  Application(core.MojoMessagePipeEndpoint endpoint) {
+  Application(core.ChannelEndpoint endpoint) {
     _applicationConnections = [];
     _applicationImpl = new _ApplicationImpl(this, endpoint);
     _applicationImpl.onError = _errorHandler;
   }
 
-  Application.fromHandle(core.MojoHandle appHandle) {
+  Application.fromHandle(core.Handle appHandle) {
     _applicationConnections = [];
     _applicationImpl = new _ApplicationImpl.fromHandle(this, appHandle);
     _applicationImpl.onError = _errorHandler;
@@ -103,7 +103,7 @@ abstract class Application implements bindings.ServiceConnector {
     return connection;
   }
 
-  void connectToService(String url, bindings.MojoInterface iface,
+  void connectToService(String url, bindings.FidlInterface iface,
       [String serviceName]) {
     connectToApplication(url).requestService(iface, serviceName);
   }

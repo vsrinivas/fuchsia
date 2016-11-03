@@ -71,7 +71,7 @@ class {{struct|name}} extends bindings.Struct {
       {{encoding_macros.encode(packed_field.field|name, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(6)}}
 {%-   endfor %}
 {%- endfor %}
-    } on bindings.MojoCodecError catch(e) {
+    } on bindings.FidlCodecError catch(e) {
       bindings.Struct.fixErrorMessage(e, fieldName, structName);
       rethrow;
     }
@@ -92,7 +92,7 @@ class {{struct|name}} extends bindings.Struct {
     {%- endfor %}
     return map;
     {%- else %}
-    throw new bindings.MojoCodecError(
+    throw new bindings.FidlCodecError(
         'Object containing handles cannot be encoded to JSON.');
     {%- endif %}
   }

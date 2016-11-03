@@ -13,38 +13,38 @@ import 'dart:typed_data' show ByteData;
 import '../core.dart'
     show
         MojoResult,
-        MojoHandleSignals,
-        MojoMessagePipe,
-        MojoMessagePipeEndpoint,
-        MojoDataPipe,
-        MojoDataPipeProducer,
-        MojoDataPipeConsumer,
+        HandleSignals,
+        Channel,
+        ChannelEndpoint,
+        DataPipe,
+        DataPipeProducer,
+        DataPipeConsumer,
         MojoEventSubscription,
-        MojoSharedBuffer;
+        SharedBuffer;
 
 /// This class contains static methods to send a stream of events to application
 /// isolates that register Mojo handles with it.
-class MojoHandleWatcher {
+class HandleWatcher {
   /// Starts watching for events on the given [handleToken].
   ///
   /// Returns an integer, encoding the result as specified in the [MojoResult]
   /// class. In particular, a successful operation returns [MojoResult.kOk].
   ///
-  /// Instructs the MojoHandleWatcher isolate to add [handleToken] to the set of
+  /// Instructs the HandleWatcher isolate to add [handleToken] to the set of
   /// handles it watches, and to notify the calling isolate only for the events
   /// specified by [signals] using the send port [port].
-  // TODO(floitsch): what does "MojoHandleWatcher isolate" mean?
+  // TODO(floitsch): what does "HandleWatcher isolate" mean?
   // TODO(floitsch): what is the calling isolate?
   ///
   /// The [handleToken] is a token that identifies the Mojo handle.
   ///
   /// The filtering [signals] are encoded as specified in the
-  /// [MojoHandleSignals] class. For example, setting [signals] to
-  /// [MojoHandleSignals.kPeerClosedReadable] instructs the handle watcher to
+  /// [HandleSignals] class. For example, setting [signals] to
+  /// [HandleSignals.kPeerClosedReadable] instructs the handle watcher to
   /// notify the caller, when the handle becomes readable (that is, has data
   /// available for reading), or when it is closed.
   static int add(Object handleToken, SendPort port, int signals) {
-    throw new UnsupportedError("MojoHandleWatcher.add on contract");
+    throw new UnsupportedError("HandleWatcher.add on contract");
   }
 
   /// Stops watching the given [handleToken].
@@ -52,13 +52,13 @@ class MojoHandleWatcher {
   /// Returns an integer, encoding the result as specified in the [MojoResult]
   /// class. In particular, a successful operation returns [MojoResult.kOk].
   ///
-  /// Instructs the MojoHandleWatcher isolate to remove [handleToken] from the
+  /// Instructs the HandleWatcher isolate to remove [handleToken] from the
   /// set of handles it watches. This allows the application isolate
   /// to, for example, pause the stream of events.
   ///
   /// The [handleToken] is a token that identifies the Mojo handle.
   static int remove(Object handleToken) {
-    throw new UnsupportedError("MojoHandleWatcher.remove on contract");
+    throw new UnsupportedError("HandleWatcher.remove on contract");
   }
 
   /// Stops watching and closes the given [handleToken].
@@ -75,7 +75,7 @@ class MojoHandleWatcher {
   // has actually been closed by the handle watcher. Otherwise, returns a
   // future that resolves immediately.
   static Future<int> close(Object handleToken, {bool wait: false}) {
-    throw new UnsupportedError("MojoHandleWatcher.close on contract");
+    throw new UnsupportedError("HandleWatcher.close on contract");
   }
 
   /// Requests a notification on the given [port] at [deadline].
@@ -92,7 +92,7 @@ class MojoHandleWatcher {
   /// A negative [deadline] is used to remove a port. That is, a negative value
   /// is ignored after any existing value for the port has been discarded.
   static int timer(Object ignored, SendPort port, int deadline) {
-    throw new UnsupportedError("MojoHandleWatcher.timer on contract");
+    throw new UnsupportedError("HandleWatcher.timer on contract");
   }
 }
 
@@ -119,7 +119,7 @@ class MojoCoreNatives {
   }
 }
 
-class MojoHandleNatives {
+class HandleNatives {
   /// Puts the given [handleToken] with the given [description] into the set of
   /// open handles.
   ///
@@ -127,7 +127,7 @@ class MojoHandleNatives {
   ///
   /// This method is only used to report open handles (see [reportOpenHandles]).
   static void addOpenHandle(Object handleToken, {String description}) {
-    throw new UnsupportedError("MojoHandleNatives.addOpenHandle on contract");
+    throw new UnsupportedError("HandleNatives.addOpenHandle on contract");
   }
 
   /// Removes the given [handleToken] from the set of open handles.
@@ -140,7 +140,7 @@ class MojoHandleNatives {
   /// are serialized in the mojo encoder [codec.dart].
   static void removeOpenHandle(Object handleToken) {
     throw new UnsupportedError(
-        "MojoHandleNatives.removeOpenHandle on contract");
+        "HandleNatives.removeOpenHandle on contract");
   }
 
   /// Prints a list of all open handles.
@@ -153,7 +153,7 @@ class MojoHandleNatives {
   /// Programs should not have open handles when the program terminates.
   static bool reportOpenHandles() {
     throw new UnsupportedError(
-        "MojoHandleNatives.reportOpenHandles on contract");
+        "HandleNatives.reportOpenHandles on contract");
   }
 
   /// Updates the description of the given [handleToken] in the set of open
@@ -163,7 +163,7 @@ class MojoHandleNatives {
   ///
   /// Does nothing, if the [handleToken] isn't in the set.
   static bool setDescription(Object handleToken, String description) {
-    throw new UnsupportedError("MojoHandleNatives.setDescription on contract");
+    throw new UnsupportedError("HandleNatives.setDescription on contract");
   }
 
   /// Registers a finalizer on [eventSubscription] to close the given
@@ -181,7 +181,7 @@ class MojoHandleNatives {
   /// finalizer directly on the token.
   static int registerFinalizer(Object eventStream, Object handleToken) {
     throw new UnsupportedError(
-        "MojoHandleNatives.registerFinalizer on contract");
+        "HandleNatives.registerFinalizer on contract");
   }
 
   /// Closes the given [handleToken].
@@ -191,7 +191,7 @@ class MojoHandleNatives {
   ///
   /// The [handleToken] is a token that identifies the Mojo handle.
   static int close(Object handleToken) {
-    throw new UnsupportedError("MojoHandleNatives.close on contract");
+    throw new UnsupportedError("HandleNatives.close on contract");
   }
 
   /// Waits on the given [handleToken] for a signal.
@@ -201,7 +201,7 @@ class MojoHandleNatives {
   /// class. In particular, a successful operation is signaled by
   /// [MojoResult.kOk]. The second entry is itself a list of 2 elements:
   /// an integer of satisfied signals, and an integer of satisfiable signals.
-  /// Both entries are encoded as specified in [MojoHandleSignals].
+  /// Both entries are encoded as specified in [HandleSignals].
   ///
   /// A signal is satisfiable, if the signal may become true in the future.
   ///
@@ -212,7 +212,7 @@ class MojoHandleNatives {
   /// is already satisfied (see below).
   ///
   /// The [signals] integer encodes the signals this method should wait for.
-  /// The integer is encoded as specified in [MojoHandleSignals].
+  /// The integer is encoded as specified in [HandleSignals].
   ///
   /// Waits on the given handle until one of the following happens:
   /// - A signal indicated by [signals] is satisfied.
@@ -220,7 +220,7 @@ class MojoHandleNatives {
   ///   satisfied (for example the handle has been closed on the other side).
   /// - The [deadline] has passed.
   static List wait(Object handleToken, int signals, int deadline) {
-    throw new UnsupportedError("MojoHandleNatives.woit on contract");
+    throw new UnsupportedError("HandleNatives.woit on contract");
   }
 
   /// Waits on many handles at the same time.
@@ -238,24 +238,24 @@ class MojoHandleNatives {
   /// completing when the first would complete.
   static List waitMany(
       List<Object> handleTokens, List<int> signals, int deadline) {
-    throw new UnsupportedError("MojoHandleNatives.wainMany on contract");
+    throw new UnsupportedError("HandleNatives.wainMany on contract");
   }
 }
 
-class MojoMessagePipeNatives {
+class ChannelNatives {
   /// Creates a message pipe represented by its two endpoints (handles).
   ///
   /// Returns a list with exactly 3 elements:
   /// - the result integer, encoded as specified in [MojoResult]. In particular,
   ///   [MojoResult.kOk] signals a successful creation.
   /// - the two endpoints of the message pipe. These tokens can be used in the
-  ///   methods of [MojoHandleNatives].
+  ///   methods of [HandleNatives].
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoMessagePipe.FLAG_NONE] (equal to 0).
+  /// set to [Channel.FLAG_NONE] (equal to 0).
   static List MojoCreateMessagePipe(int flags) {
     throw new UnsupportedError(
-        "MojoMessagePipeNatives.MojoCreateMessagePipe on contract");
+        "ChannelNatives.MojoCreateMessagePipe on contract");
   }
 
   /// Writes a message into the endpoint [handleToken].
@@ -269,11 +269,11 @@ class MojoMessagePipeNatives {
   /// [handleTokens].
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoMessagePipeEndpoint.WRITE_FLAG_NONE] (equal to 0).
+  /// set to [ChannelEndpoint.WRITE_FLAG_NONE] (equal to 0).
   static int MojoWriteMessage(Object handleToken, ByteData data, int numBytes,
       List<Object> handleTokens, int flags) {
     throw new UnsupportedError(
-        "MojoMessagePipeNatives.MojoWriteMessage on contract");
+        "ChannelNatives.MojoWriteMessage on contract");
   }
 
   /// Reads a message from the endpoint [handleToken].
@@ -309,14 +309,14 @@ class MojoMessagePipeNatives {
   /// message that is in the pipe.
   ///
   /// The parameter [flags] may set to either
-  /// [MojoMessagePipeEndpoint.READ_FLAG_NONE] (equal to 0) or
-  /// [MojoMessagePipeEndpoint.READ_FLAG_MAY_DISCARD] (equal to 1). In the
+  /// [ChannelEndpoint.READ_FLAG_NONE] (equal to 0) or
+  /// [ChannelEndpoint.READ_FLAG_MAY_DISCARD] (equal to 1). In the
   /// latter case messages that couldn't be read (for example, because the
   /// [data] or [handleTokens] wasn't big enough) are discarded.
   static List MojoReadMessage(Object handleToken, ByteData data, int numBytes,
       List<Object> handleTokens, int flags) {
     throw new UnsupportedError(
-        "MojoMessagePipeNatives.MojoReadMessage on contract");
+        "ChannelNatives.MojoReadMessage on contract");
   }
 
   /// Reads a message from the endpoint [handleToken].
@@ -342,19 +342,19 @@ class MojoMessagePipeNatives {
   /// The [handleToken] is a token that identifies the Mojo handle.
   ///
   /// The parameter [flags] may set to either
-  /// [MojoMessagePipeEndpoint.READ_FLAG_NONE] (equal to 0) or
-  /// [MojoMessagePipeEndpoint.READ_FLAG_MAY_DISCARD] (equal to 1). In the
+  /// [ChannelEndpoint.READ_FLAG_NONE] (equal to 0) or
+  /// [ChannelEndpoint.READ_FLAG_MAY_DISCARD] (equal to 1). In the
   /// latter case messages that couldn't be read are discarded.
   ///
   /// Also see [MojoReadMessage].
   static void MojoQueryAndReadMessage(
       Object handleToken, int flags, List result) {
     throw new UnsupportedError(
-        "MojoMessagePipeNatives.MojoQueryAndReadMessage on contract");
+        "ChannelNatives.MojoQueryAndReadMessage on contract");
   }
 }
 
-class MojoDataPipeNatives {
+class DataPipeNatives {
   /// Creates a (unidirectional) data pipe represented by its two endpoints
   /// (handles).
   ///
@@ -367,20 +367,20 @@ class MojoDataPipeNatives {
   /// The parameter [elementBytes] specifies the size of an element in bytes.
   /// All transactions and buffers consist of an integral number of elements.
   /// The integer [elementBytes] must be non-zero. The default should be
-  /// [MojoDataPipe.DEFAULT_ELEMENT_SIZE] (equal to 1).
+  /// [DataPipe.DEFAULT_ELEMENT_SIZE] (equal to 1).
   ///
   /// The parameter [capacityBytes] specifies the capacity of the data-pipe, in
   /// bytes. The parameter must be a multiple of [elementBytes]. The data-pipe
   /// will always be able to queue *at least* this much data. If [capacityBytes]
   /// is set to zero, a system-dependent automatically-calculated capacity is
-  /// used. The default should be [MojoDataPipe.DEFAULT_CAPACITY] (equal to 0).
+  /// used. The default should be [DataPipe.DEFAULT_CAPACITY] (equal to 0).
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoDataPipe.FLAG_NONE] (equal to 0).
+  /// set to [DataPipe.FLAG_NONE] (equal to 0).
   static List MojoCreateDataPipe(
       int elementBytes, int capacityBytes, int flags) {
     throw new UnsupportedError(
-        "MojoDataPipeNatives.MojoCreateDataPipe on contract");
+        "DataPipeNatives.MojoCreateDataPipe on contract");
   }
 
   /// Writes [numBytes] bytes from [data] into the producer handle.
@@ -395,19 +395,19 @@ class MojoDataPipeNatives {
   /// element size.
   ///
   /// The argument [flags] can be
-  /// - [MojoDataPipeProducer.FLAG_NONE] (equal to 0), or
-  /// - [MojoDataPipeProducer.FLAG_ALL_OR_NONE] (equal to 1).
+  /// - [DataPipeProducer.FLAG_NONE] (equal to 0), or
+  /// - [DataPipeProducer.FLAG_ALL_OR_NONE] (equal to 1).
   ///
-  /// If [flags] is equal to [MojoDataPipeProducer.FLAG_ALL_OR_NONE], then
+  /// If [flags] is equal to [DataPipeProducer.FLAG_ALL_OR_NONE], then
   /// either all data is written, or none is. If the data can't be written, then
   /// the result integer is set to [MojoResult.kOutOfRange].
   ///
   /// If no data can currently be written to an open consumer (and [flags] is
-  /// *not* set to [MojoDataPipeProducer.FLAG_ALL_OR_NONE]), then the
+  /// *not* set to [DataPipeProducer.FLAG_ALL_OR_NONE]), then the
   /// result-integer is set to [MojoResult.kShouldWait].
   static List MojoWriteData(
       Object handleToken, ByteData data, int numBytes, int flags) {
-    throw new UnsupportedError("MojoDataPipeNatives.MojoWriteData on contract");
+    throw new UnsupportedError("DataPipeNatives.MojoWriteData on contract");
   }
 
   /// Starts a two-phase write.
@@ -436,10 +436,10 @@ class MojoDataPipeNatives {
   /// executing a two-phase write.
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoDataPipeProducer.FLAG_NONE] (equal to 0).
+  /// set to [DataPipeProducer.FLAG_NONE] (equal to 0).
   static List MojoBeginWriteData(Object handleToken, int flags) {
     throw new UnsupportedError(
-        "MojoDataPipeNatives.MojoBeginWriteData on contract");
+        "DataPipeNatives.MojoBeginWriteData on contract");
   }
 
   /// Finishes a two-phase write.
@@ -457,7 +457,7 @@ class MojoDataPipeNatives {
   /// of the data pipe's element size.
   static int MojoEndWriteData(Object handleToken, int bytesWritten) {
     throw new UnsupportedError(
-        "MojoDataPipeNatives.MojoEndWriteData on contract");
+        "DataPipeNatives.MojoEndWriteData on contract");
   }
 
   /// Reads up to [numBytes] from the given consumer [handleToken].
@@ -474,34 +474,34 @@ class MojoDataPipeNatives {
   /// The argument [numBytes] must be a multiple of the data pipe's element
   /// size.
   ///
-  /// If [flags] has neither [MojoDataPipeConsumer.FLAG_DISCARD] (equal to 2),
-  /// nor [MojoDataPipeConsumer.FLAG_QUERY] (equal to 4) set, tries to read up
+  /// If [flags] has neither [DataPipeConsumer.FLAG_DISCARD] (equal to 2),
+  /// nor [DataPipeConsumer.FLAG_QUERY] (equal to 4) set, tries to read up
   /// to [numBytes] bytes of data into the [data] buffer and set
   /// `readBytes` (the second element of the returned list) to the amount
   /// actually read.
   ///
-  /// If [flags] has [MojoDataPipeConsumer.FLAG_ALL_OR_NONE] (equal to 1) set,
+  /// If [flags] has [DataPipeConsumer.FLAG_ALL_OR_NONE] (equal to 1) set,
   /// either reads exactly [numBytes] bytes of data or none. Additionally, if
-  /// [flags] has [MojoDataPipeConsumer.FLAG_PEEK] (equal to 8) set, the data
+  /// [flags] has [DataPipeConsumer.FLAG_PEEK] (equal to 8) set, the data
   /// read remains in the pipe and is available to future reads.
   ///
-  /// If [flags] has [MojoDataPipeConsumer.FLAG_DISCARD] (equal to 2) set, it
+  /// If [flags] has [DataPipeConsumer.FLAG_DISCARD] (equal to 2) set, it
   /// discards up to [numBytes] (which again must be a multiple of the element
   /// size) bytes of  data, setting `readBytes` to the amount actually
-  /// discarded. If [flags] has [MojoDataPipeConsumer.FLAG_ALL_OR_NONE] (equal
+  /// discarded. If [flags] has [DataPipeConsumer.FLAG_ALL_OR_NONE] (equal
   /// to 1), either discards exactly [numBytes] bytes of data or none. In this
-  /// case, [MojoDataPipeConsumer.FLAG_QUERY] must not be set, and
+  /// case, [DataPipeConsumer.FLAG_QUERY] must not be set, and
   /// the [data] buffer is ignored (and should typically be set to
   /// null).
   ///
-  /// If flags has [MojoDataPipeConsumer.FLAG_QUERY] set, queries the amount of
+  /// If flags has [DataPipeConsumer.FLAG_QUERY] set, queries the amount of
   /// data available, setting `readBytes` to the number of bytes available. In
-  /// this case, [MojoDataPipeConsumer.FLAG_DISCARD] must not be set, and
-  /// [MojoDataPipeConsumer.FLAG_ALL_OR_NONE] is ignored, as are [data] and
+  /// this case, [DataPipeConsumer.FLAG_DISCARD] must not be set, and
+  /// [DataPipeConsumer.FLAG_ALL_OR_NONE] is ignored, as are [data] and
   /// [numBytes].
   static List MojoReadData(
       Object handleToken, ByteData data, int numBytes, int flags) {
-    throw new UnsupportedError("MojoDataPipeNatives.MojoReadData on contract");
+    throw new UnsupportedError("DataPipeNatives.MojoReadData on contract");
   }
 
   /// Starts a two-phase read.
@@ -533,10 +533,10 @@ class MojoDataPipeNatives {
   /// no data available.
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoDataPipeConsumer.FLAG_NONE] (equal to 0).
+  /// set to [DataPipeConsumer.FLAG_NONE] (equal to 0).
   static List MojoBeginReadData(Object handleToken, int flags) {
     throw new UnsupportedError(
-        "MojoDataPipeNatives.MojoBeginReadData on contract");
+        "DataPipeNatives.MojoBeginReadData on contract");
   }
 
   /// Finishes a two-phase read.
@@ -554,11 +554,11 @@ class MojoDataPipeNatives {
   /// of the data pipe's element size.
   static int MojoEndReadData(Object handleToken, int bytesRead) {
     throw new UnsupportedError(
-        "MojoDataPipeNatives.MojoEndReadData on contract");
+        "DataPipeNatives.MojoEndReadData on contract");
   }
 }
 
-class MojoSharedBufferNatives {
+class SharedBufferNatives {
   /// Creates a shared buffer of [numBytes] bytes.
   ///
   /// Returns a List of exactly 2 elements:
@@ -572,9 +572,9 @@ class MojoSharedBufferNatives {
   /// A shared buffer can be accessed through by invoking [Map].
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoSharedBuffer.createFlagNone] (equal to 0).
+  /// set to [SharedBuffer.createFlagNone] (equal to 0).
   static List Create(int numBytes, int flags) {
-    throw new UnsupportedError("MojoSharedBufferNatives.Create on contract");
+    throw new UnsupportedError("SharedBufferNatives.Create on contract");
   }
 
   /// Duplicates the given [bufferHandleToken] so that it can be shared through
@@ -593,9 +593,9 @@ class MojoSharedBufferNatives {
   /// have).
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoSharedBuffer.duplicateFlagNone] (equal to 0).
+  /// set to [SharedBuffer.duplicateFlagNone] (equal to 0).
   static List Duplicate(Object bufferHandleToken, int flags) {
-    throw new UnsupportedError("MojoSharedBufferNatives.Duplicate on contract");
+    throw new UnsupportedError("SharedBufferNatives.Duplicate on contract");
   }
 
   /// Maps the given [bufferHandleToken] so that its data can be access through
@@ -615,10 +615,10 @@ class MojoSharedBufferNatives {
   /// finalizers.
   ///
   /// The parameter [flags] is reserved for future use and should currently be
-  /// set to [MojoSharedBuffer.mapFlagNone] (equal to 0).
+  /// set to [SharedBuffer.mapFlagNone] (equal to 0).
   static List Map(
       Object bufferHandleToken, int offset, int numBytes, int flags) {
-    throw new UnsupportedError("MojoSharedBufferNatives.Map on contract");
+    throw new UnsupportedError("SharedBufferNatives.Map on contract");
   }
 
   /// Returns information about [bufferHandleToken].
@@ -632,6 +632,6 @@ class MojoSharedBufferNatives {
   /// The [bufferHandleToken] must be a handle created by [Create].
   static List GetInformation(Object bufferHandleToken) {
     throw new UnsupportedError(
-        "MojoSharedBufferNatives.GetInformation on contract");
+        "SharedBufferNatives.GetInformation on contract");
   }
 }

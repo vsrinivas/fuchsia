@@ -4,12 +4,12 @@
 
 part of bindings;
 
-/// [MojoInterface] is the interface implemented by the generated
-/// Interface and InterfaceRequest classes. The [MojoInterfaceControl] field
+/// [FidlInterface] is the interface implemented by the generated
+/// Interface and InterfaceRequest classes. The [FidlInterfaceControl] field
 /// [ctrl] gives access to the underlying implementation of the interface, which
 /// is either a [ProxyControl] or [StubControl] depending on the situation.
-abstract class MojoInterface<T> {
-  MojoInterfaceControl get ctrl;
+abstract class FidlInterface<T> {
+  FidlInterfaceControl get ctrl;
   T impl;
   Future close({bool immediate: false});
 }
@@ -17,7 +17,7 @@ abstract class MojoInterface<T> {
 /// This interface is implemented by [ProxyMessageHandler] and
 /// [StubMessageHandler]. Most of the interface is inherited from, and
 /// ultimately implemented by [core.MojoEventHandler].
-abstract class MojoInterfaceControl implements core.MojoEventHandler {
+abstract class FidlInterfaceControl implements core.MojoEventHandler {
   String get serviceName;
   int get version;
 }
