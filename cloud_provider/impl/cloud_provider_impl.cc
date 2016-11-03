@@ -28,7 +28,7 @@ void CloudProviderImpl::AddNotification(
   FTL_DCHECK(ok);
 
   firebase_->Put(
-      GetLocation(page_id) + "/" + firebase::EncodeKey(notification.GetId()),
+      GetLocation(page_id) + "/" + firebase::EncodeKey(notification.id),
       encoded_notification, [callback](firebase::Status status) {
         if (status == firebase::Status::OK) {
           callback(Status::OK);

@@ -80,7 +80,7 @@ class CloudProviderImplTest : public ::testing::Test,
   // NotificationWatcher:
   void OnNewNotification(const Notification& notification,
                          const std::string& timestamp) override {
-    notifications_.push_back(notification);
+    notifications_.push_back(notification.Clone());
     server_timestamps_.push_back(timestamp);
   }
 

@@ -6,7 +6,15 @@
 
 namespace cloud_provider {
 
-Record::Record(const Notification& n, std::string t)
-    : notification(n), timestamp(t) {}
+Record::Record() = default;
+
+Record::Record(Notification&& n, std::string&& t)
+    : notification(std::move(n)), timestamp(std::move(t)) {}
+
+Record::~Record() = default;
+
+Record::Record(Record&&) = default;
+
+Record& Record::operator=(Record&&) = default;
 
 }  // namespace cloud_provider

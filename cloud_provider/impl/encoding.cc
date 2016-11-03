@@ -31,17 +31,17 @@ bool EncodeNotification(const Notification& notification,
   writer.StartObject();
 
   writer.Key(kIdKey);
-  std::string id = firebase::EncodeValue(notification.GetId());
+  std::string id = firebase::EncodeValue(notification.id);
   writer.String(id.c_str(), id.size());
 
   writer.Key(kContentKey);
-  std::string content = firebase::EncodeValue(notification.GetContent());
+  std::string content = firebase::EncodeValue(notification.content);
   writer.String(content.c_str(), content.size());
 
-  if (!notification.GetStorageObjects().empty()) {
+  if (!notification.storage_objects.empty()) {
     writer.Key(kObjectsKey);
     writer.StartObject();
-    for (const auto& entry : notification.GetStorageObjects()) {
+    for (const auto& entry : notification.storage_objects) {
       std::string key = firebase::EncodeKey(entry.first);
       writer.Key(key.c_str(), key.size());
       std::string value = firebase::EncodeValue(entry.second);
@@ -119,7 +119,7 @@ bool DecodeMultipleNotificationsFromValue(const rapidjson::Value& value,
       return false;
     }
     FTL_DCHECK(record);
-    records.push_back(*record);
+    records.push_back(std::move(*record));
   }
 
   output_records->swap(records);
@@ -164,9 +164,10 @@ bool DecodeNotificationFromValue(const rapidjson::Value& value,
     return false;
   }
 
-  std::unique_ptr<Record> record(
-      new Record(Notification(notification_id, commit_content, storage_objects),
-                 ServerTimestampToBytes(value[kTimestampKey].GetInt64())));
+  std::unique_ptr<Record> record(new Record(
+      Notification(std::move(notification_id), std::move(commit_content),
+                   std::move(storage_objects)),
+      ServerTimestampToBytes(value[kTimestampKey].GetInt64())));
   output_record->swap(record);
   return true;
 }

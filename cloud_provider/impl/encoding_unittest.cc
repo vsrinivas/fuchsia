@@ -50,11 +50,11 @@ TEST(EncodingTest, Decode) {
 
   std::unique_ptr<Record> record;
   EXPECT_TRUE(DecodeNotification(json, &record));
-  EXPECT_EQ("abc", record->notification.GetId());
-  EXPECT_EQ("xyz", record->notification.GetContent());
-  EXPECT_EQ(2u, record->notification.GetStorageObjects().size());
-  EXPECT_EQ("a", record->notification.GetStorageObjects().at("object_a"));
-  EXPECT_EQ("b", record->notification.GetStorageObjects().at("object_b"));
+  EXPECT_EQ("abc", record->notification.id);
+  EXPECT_EQ("xyz", record->notification.content);
+  EXPECT_EQ(2u, record->notification.storage_objects.size());
+  EXPECT_EQ("a", record->notification.storage_objects.at("object_a"));
+  EXPECT_EQ("b", record->notification.storage_objects.at("object_b"));
   EXPECT_EQ(ServerTimestampToBytes(1472722368296), record->timestamp);
 }
 
@@ -78,16 +78,16 @@ TEST(EncodingTest, DecodeMultiple) {
   EXPECT_TRUE(DecodeMultipleNotifications(json, &records));
   EXPECT_EQ(2u, records.size());
 
-  EXPECT_EQ("id1", records[0].notification.GetId());
-  EXPECT_EQ("xyz", records[0].notification.GetContent());
-  EXPECT_EQ(2u, records[0].notification.GetStorageObjects().size());
-  EXPECT_EQ("a", records[0].notification.GetStorageObjects().at("object_a"));
-  EXPECT_EQ("b", records[0].notification.GetStorageObjects().at("object_b"));
+  EXPECT_EQ("id1", records[0].notification.id);
+  EXPECT_EQ("xyz", records[0].notification.content);
+  EXPECT_EQ(2u, records[0].notification.storage_objects.size());
+  EXPECT_EQ("a", records[0].notification.storage_objects.at("object_a"));
+  EXPECT_EQ("b", records[0].notification.storage_objects.at("object_b"));
   EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);
 
-  EXPECT_EQ("id2", records[1].notification.GetId());
-  EXPECT_EQ("bazinga", records[1].notification.GetContent());
-  EXPECT_EQ(0u, records[1].notification.GetStorageObjects().size());
+  EXPECT_EQ("id2", records[1].notification.id);
+  EXPECT_EQ("bazinga", records[1].notification.content);
+  EXPECT_EQ(0u, records[1].notification.storage_objects.size());
   EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
 }
 

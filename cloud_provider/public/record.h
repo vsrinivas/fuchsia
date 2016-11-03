@@ -6,17 +6,25 @@
 #define APPS_LEDGER_CLOUD_PROVIDER_PUBLIC_RECORD_H_
 
 #include "apps/ledger/cloud_provider/public/notification.h"
+#include "lib/ftl/macros.h"
 
 namespace cloud_provider {
 
 // Represents a notification along with its timestamp.
-// TODO(ppi): this currently makes a copy of the notification. We should
-//            probably make Notification movable and take an rvalue reference.
 struct Record {
-  Record(const Notification& n, std::string t);
+  Record();
+  Record(Notification&& n, std::string&& t);
+
+  ~Record();
+
+  Record(Record&&);
+  Record& operator=(Record&&);
 
   Notification notification;
   std::string timestamp;
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(Record);
 };
 
 }  // namespace cloud_provider

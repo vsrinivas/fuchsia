@@ -7,37 +7,39 @@
 
 #include <map>
 #include <string>
-#include <utility>
 
 #include "apps/ledger/cloud_provider/public/types.h"
+#include "lib/ftl/macros.h"
 
 namespace cloud_provider {
 
 // Represents a notification.
-class Notification {
- public:
-  Notification(const NotificationId& id,
-               const Data& content,
-               const std::map<StorageObjectId, Data>& inline_storage_objects);
+struct Notification {
+  Notification();
+  Notification(NotificationId&& id,
+               Data&& content,
+               std::map<StorageObjectId, Data>&& inline_storage_objects);
+
   ~Notification();
 
-  // Returns the notification id.
-  const NotificationId& GetId() const { return id_; }
-
-  // Returns the notification content.
-  const Data& GetContent() const { return content_; }
-
-  // Returns the inline storage objects.
-  const std::map<StorageObjectId, Data>& GetStorageObjects() const {
-    return storage_objects_;
-  }
+  Notification(Notification&&);
+  Notification& operator=(Notification&&);
 
   bool operator==(const Notification& other) const;
 
+  Notification Clone() const;
+
+  // The notification id.
+  NotificationId id;
+
+  // The notification content.
+  Data content;
+
+  // The inline storage objects.
+  std::map<StorageObjectId, Data> storage_objects;
+
  private:
-  const NotificationId id_;
-  const Data content_;
-  const std::map<StorageObjectId, Data> storage_objects_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(Notification);
 };
 
 }  // namespace cloud_provider

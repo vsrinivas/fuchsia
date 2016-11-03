@@ -4,19 +4,36 @@
 
 #include "apps/ledger/cloud_provider/public/notification.h"
 
+#include <utility>
+
 namespace cloud_provider {
 
-Notification::Notification(
-    const NotificationId& id,
-    const Data& content,
-    const std::map<StorageObjectId, Data>& storage_objects)
-    : id_(id), content_(content), storage_objects_(storage_objects) {}
+Notification::Notification() = default;
 
-Notification::~Notification() {}
+Notification::Notification(NotificationId&& id,
+                           Data&& content,
+                           std::map<StorageObjectId, Data>&& storage_objects)
+    : id(std::move(id)),
+      content(std::move(content)),
+      storage_objects(std::move(storage_objects)) {}
+
+Notification::~Notification() = default;
+
+Notification::Notification(Notification&&) = default;
+
+Notification& Notification::operator=(Notification&&) = default;
 
 bool Notification::operator==(const Notification& other) const {
-  return id_ == other.id_ && content_ == other.content_ &&
-         storage_objects_ == other.storage_objects_;
+  return id == other.id && content == other.content &&
+         storage_objects == other.storage_objects;
+}
+
+Notification Notification::Clone() const {
+  Notification clone;
+  clone.id = id;
+  clone.content = content;
+  clone.storage_objects = storage_objects;
+  return clone;
 }
 
 }  // namespace cloud_provider
