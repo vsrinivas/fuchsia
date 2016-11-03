@@ -1,0 +1,36 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("application_manager") {
+  output_name = "new_application_manager"
+
+  sources = [
+    "application_controller_impl.cc",
+    "application_controller_impl.h",
+    "application_environment_controller_impl.cc",
+    "application_environment_controller_impl.h",
+    "application_environment_impl.cc",
+    "application_environment_impl.h",
+    "main.cc",
+    "root_environment_host.cc",
+    "root_environment_host.h",
+    "startup_config.cc",
+    "startup_config.h",
+    "url_resolver.cc",
+    "url_resolver.h",
+  ]
+
+  deps = [
+    "//apps/modular/services/application",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//third_party/rapidjson",
+  ]
+
+  libs = [
+    "launchpad",
+    "mxio",
+  ]
+}
