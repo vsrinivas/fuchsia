@@ -26,7 +26,7 @@
 #define ETH_HEADER_SIZE 4
 
 typedef struct {
-    mx_device_t device;
+    mx_device_t* device;
     mx_device_t* usb_device;
     mx_driver_t* driver;
 
@@ -51,7 +51,7 @@ typedef struct {
 
     mtx_t mutex;
 } ax88772b_t;
-#define get_ax88772b(dev) containerof(dev, ax88772b_t, device)
+#define get_ax88772b(dev) ((ax88772b_t*)dev->ctx)
 
 static void update_signals_locked(ax88772b_t* eth) {
     mx_signals_t new_signals = 0;
@@ -63,7 +63,7 @@ static void update_signals_locked(ax88772b_t* eth) {
     if (!list_is_empty(&eth->free_write_reqs) && eth->online)
         new_signals |= DEV_STATE_WRITABLE;
     if (new_signals != eth->signals) {
-        device_state_set_clr(&eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
+        device_state_set_clr(eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
         eth->signals = new_signals;
     }
 }
@@ -364,12 +364,10 @@ static void ax88772b_unbind(mx_device_t* device) {
     mtx_unlock(&eth->mutex);
 
     // this must be last since this can trigger releasing the device
-    device_remove(&eth->device);
+    device_remove(eth->device);
 }
 
-static mx_status_t ax88772b_release(mx_device_t* device) {
-    ax88772b_t* eth = get_ax88772b(device);
-
+static void ax88772b_free(ax88772b_t* eth) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
         txn->ops->release(txn);
@@ -381,7 +379,13 @@ static mx_status_t ax88772b_release(mx_device_t* device) {
         txn->ops->release(txn);
     }
 
+    free(eth->device);
     free(eth);
+}
+
+static mx_status_t ax88772b_release(mx_device_t* device) {
+    ax88772b_t* eth = get_ax88772b(device);
+    ax88772b_free(eth);
     return NO_ERROR;
 }
 
@@ -496,19 +500,24 @@ static int ax88772b_start_thread(void* arg) {
            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
-    device_init(&eth->device, eth->driver, "usb-ethernet", &ax88772b_device_proto);
+    status = device_create(&eth->device, eth->driver, "usb-ethernet", &ax88772b_device_proto);
+    if (status < 0) {
+        printf("ax8872b: failed to create device: %d\n", status);
+        goto fail;
+    }
 
     mtx_lock(&eth->mutex);
     queue_interrupt_requests_locked(eth);
     mtx_unlock(&eth->mutex);
 
-    eth->device.protocol_id = MX_PROTOCOL_ETHERNET;
-    eth->device.protocol_ops = &ax88772b_proto;
-    status = device_add(&eth->device, eth->usb_device);
+    eth->device->ctx = eth;
+    eth->device->protocol_id = MX_PROTOCOL_ETHERNET;
+    eth->device->protocol_ops = &ax88772b_proto;
+    status = device_add(eth->device, eth->usb_device);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:
-    ax88772b_release(&eth->device);
+    ax88772b_free(eth);
     return status;
 }
 
@@ -607,7 +616,7 @@ static mx_status_t ax88772b_bind(mx_driver_t* driver, mx_device_t* device) {
 
 fail:
     printf("ax88772b_bind failed: %d\n", status);
-    ax88772b_release(&eth->device);
+    ax88772b_free(eth);
     return status;
 }
 

@@ -39,7 +39,7 @@
 #define RX_HEADER_SIZE 4
 
 typedef struct {
-    mx_device_t device;
+    mx_device_t* device;
     mx_device_t* usb_device;
     mx_driver_t* driver;
 
@@ -68,7 +68,7 @@ typedef struct {
 
     mtx_t mutex;
 } ax88179_t;
-#define get_ax88179(dev) containerof(dev, ax88179_t, device)
+#define get_ax88179(dev) ((ax88179_t*)dev->ctx)
 
 typedef struct {
     uint16_t num_pkts;
@@ -91,7 +91,7 @@ static void update_signals_locked(ax88179_t* eth) {
     if (!list_is_empty(&eth->free_write_reqs) && eth->online)
         new_signals |= DEV_STATE_WRITABLE;
     if (new_signals != eth->signals) {
-        device_state_set_clr(&eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
+        device_state_set_clr(eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
         eth->signals = new_signals;
     }
 }
@@ -455,12 +455,10 @@ static void ax88179_unbind(mx_device_t* device) {
     mtx_unlock(&eth->mutex);
 
     // this must be last since this can trigger releasing the device
-    device_remove(&eth->device);
+    device_remove(eth->device);
 }
 
-static mx_status_t ax88179_release(mx_device_t* device) {
-    ax88179_t* eth = get_ax88179(device);
-
+static void ax88179_free(ax88179_t* eth) {
     iotxn_t* txn;
     while ((txn = list_remove_head_type(&eth->free_read_reqs, iotxn_t, node)) != NULL) {
         txn->ops->release(txn);
@@ -470,7 +468,13 @@ static mx_status_t ax88179_release(mx_device_t* device) {
     }
     eth->interrupt_req->ops->release(eth->interrupt_req);
 
+    free(eth->device);
     free(eth);
+}
+
+static mx_status_t ax88179_release(mx_device_t* device) {
+    ax88179_t* eth = get_ax88179(device);
+    ax88179_free(eth);
     return NO_ERROR;
 }
 
@@ -639,11 +643,17 @@ static int ax88179_thread(void* arg) {
         goto fail;
     }
 
-    device_init(&eth->device, eth->driver, "ax88179", &ax88179_device_proto);
+    // Create the device
+    status = device_create(&eth->device, eth->driver, "ax88179", &ax88179_device_proto);
+    if (status < 0) {
+        printf("ax88179: failed to create device: %d\n", status);
+        goto fail;
+    }
 
-    eth->device.protocol_id = MX_PROTOCOL_ETHERNET;
-    eth->device.protocol_ops = &ax88179_proto;
-    status = device_add(&eth->device, eth->usb_device);
+    eth->device->ctx = eth;
+    eth->device->protocol_id = MX_PROTOCOL_ETHERNET;
+    eth->device->protocol_ops = &ax88179_proto;
+    status = device_add(eth->device, eth->usb_device);
     if (status != NO_ERROR) {
         goto fail;
     }
@@ -667,7 +677,7 @@ static int ax88179_thread(void* arg) {
     }
 
 fail:
-    ax88179_release(&eth->device);
+    ax88179_free(eth);
     return status;
 }
 
@@ -774,7 +784,7 @@ static mx_status_t ax88179_bind(mx_driver_t* driver, mx_device_t* device) {
 
 fail:
     printf("ax88179_bind failed: %d\n", status);
-    ax88179_release(&eth->device);
+    ax88179_free(eth);
     return status;
 }
 
