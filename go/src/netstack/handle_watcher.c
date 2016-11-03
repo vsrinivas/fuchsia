@@ -80,20 +80,18 @@ mx_status_t handle_watcher_stop(void) {
 mx_status_t handle_watcher_schedule_request(void) {
   uint32_t num_results = NSOCKETS;
   mx_waitset_result_t results[NSOCKETS];
-  uint32_t max_results;
   mx_status_t r;
 
-  if ((r = mx_waitset_wait(s_waitset, 0u, &num_results, results,
-                           &max_results)) < 0) {
+  if ((r = mx_waitset_wait(s_waitset, 0u, results, &num_results)) < 0) {
     error("mx_waitset_wait failed (%d)\n", r);
     return r;
   }
-  debug_socket("watcher: num_results=%d max_results=%d\n", num_results,
-               max_results);
-  if (num_results < max_results) {
+  debug_socket("watcher: num_results=%d max_results=%d\n", NSOCKETS,
+               num_results);
+  if (num_results < NSOCKETS) {
     // TODO
-    error("not enough buffur to get all handles with signals (%d/%d)\n",
-          num_results, max_results);
+    error("not enough buffer to get all handles with signals (%d/%d)\n",
+          num_results, NSOCKETS);
   }
 
   for (int i = 0; i < (int)num_results; i++) {
@@ -103,7 +101,7 @@ mx_status_t handle_watcher_schedule_request(void) {
       continue;
     }
     iostate_t* ios = (iostate_t*)results[i].cookie;
-    mx_signals_t satisfied = results[i].signals_state.satisfied;
+    mx_signals_t satisfied = results[i].observed;
     debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s)\n", i,
                  ios->sockfd, satisfied,
                  (satisfied & MX_SIGNAL_READABLE) ? "R" : "",
@@ -209,9 +207,7 @@ static int handle_watcher_loop(void* arg) {
     debug("handle_watcher_loop: waiting\n");
     uint32_t num_results = 2u;
     mx_waitset_result_t results[2];
-    uint32_t max_results = 0u;
-    if ((r = mx_waitset_wait(s_waitset, MX_TIME_INFINITE, &num_results, results,
-                             &max_results)) < 0) {
+    if ((r = mx_waitset_wait(s_waitset, MX_TIME_INFINITE, results, &num_results)) < 0) {
       return r;
     }
     debug("handle_watcher_loop: wait_done (num=%d)\n", num_results);
@@ -250,13 +246,13 @@ mx_status_t handle_watcher_init(int* readfd_) {
     error("mx_channel_create failed (%d)\n", r);
     goto fail_channel_create;
   }
-  if ((s_waitset = mx_waitset_create()) < 0) {
+  if ((r = mx_waitset_create(0u, &s_waitset)) < 0) {
     error("mx_waitset_create failed (%d)\n", r);
     goto fail_waitset_create;
   }
 
-  if ((r = mx_waitset_add(s_waitset, s_ctrl[0], MX_SIGNAL_READABLE,
-                          CTRL_COOKIE)) < 0) {
+  if ((r = mx_waitset_add(s_waitset, CTRL_COOKIE, s_ctrl[0],
+                          MX_SIGNAL_READABLE)) < 0) {
     error("mx_waitset_add failed (%d)\n", r);
     goto fail_waitset_add;
   }
