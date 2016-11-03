@@ -24,8 +24,6 @@ class FakePageStorage : public PageStorage {
 
   // PageStorage:
   PageId GetId() override;
-  void SetPageDeletionHandler(
-      const std::function<void()>& on_page_deletion) override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
   Status GetCommit(const CommitId& commit_id,
                    std::unique_ptr<Commit>* commit) override;

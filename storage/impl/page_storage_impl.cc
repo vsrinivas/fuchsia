@@ -235,9 +235,6 @@ PageId PageStorageImpl::GetId() {
   return page_id_;
 }
 
-void PageStorageImpl::SetPageDeletionHandler(
-    const std::function<void()>& on_page_deletion) {}
-
 Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   return db_.GetHeads(commit_ids);
 }

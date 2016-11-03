@@ -27,13 +27,6 @@ class PageStorage {
   // Returns the id of this page.
   virtual PageId GetId() = 0;
 
-  // Sets a handler for the case of page deletion. After a page has been deleted
-  // all corresponding commits, objects and journals are no longer valid, and
-  // any call to any of this |PageStorage|'s methods will fail with a
-  // |PAGE_DELETED| error.
-  virtual void SetPageDeletionHandler(
-      const std::function<void()>& on_page_deletion) = 0;
-
   // Finds the ids of all head commits and adds them in the |commit_ids| vector.
   // It is guaranteed that valid pages have at least one head commit, even if
   // they are empty.

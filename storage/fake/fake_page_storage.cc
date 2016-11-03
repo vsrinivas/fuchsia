@@ -50,9 +50,6 @@ PageId FakePageStorage::GetId() {
   return page_id_;
 }
 
-void FakePageStorage::SetPageDeletionHandler(
-    const std::function<void()>& on_page_deletion) {}
-
 Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   commit_ids->clear();
 

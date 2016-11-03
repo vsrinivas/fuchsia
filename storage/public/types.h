@@ -57,7 +57,6 @@ enum class Status {
   ILLEGAL_STATE,
   INTERNAL_IO_ERROR,
   OBJECT_ID_MISMATCH,
-  PAGE_DELETED,
 
   // Temporary status.
   NOT_IMPLEMENTED,
