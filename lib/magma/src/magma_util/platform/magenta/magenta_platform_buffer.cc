@@ -150,8 +150,9 @@ public:
 
     bool duplicate_handle(uint32_t* handle_out) override
     {
-        mx_handle_t duplicate = mx_handle_duplicate(handle_, MX_RIGHT_SAME_RIGHTS);
-        if (duplicate < 0)
+        mx_handle_t duplicate;
+        mx_status_t status = mx_handle_duplicate(handle_, MX_RIGHT_SAME_RIGHTS, &duplicate);
+        if (status < 0)
             return DRETF(false, "mx_handle_duplicate failed");
         *handle_out = duplicate;
         return true;
@@ -360,9 +361,10 @@ bool MagentaPlatformBuffer::UnmapPageBus(uint32_t page_index) { return true; }
 bool OpaquePlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
 {
     mx_info_handle_basic_t info;
-    mx_ssize_t info_size =
-        mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info));
-    if (info_size != sizeof(info))
+    mx_size_t info_size = 0;
+    mx_status_t status =
+        mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &info_size);
+    if (status != NO_ERROR || info_size != sizeof(info))
         return DRETF(false, "mx_object_get_info failed");
 
     *id_out = info.rec.koid;
@@ -375,8 +377,9 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
     if (size == 0)
         return DRETP(nullptr, "attempting to allocate 0 sized buffer");
 
-    mx_handle_t vmo_handle = mx_vmo_create(size);
-    if (vmo_handle == MX_HANDLE_INVALID) {
+    mx_handle_t vmo_handle;
+    mx_status_t status = mx_vmo_create(size, 0, &vmo_handle);
+    if (status != NO_ERROR) {
         return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size, vmo_handle);
     }
 
