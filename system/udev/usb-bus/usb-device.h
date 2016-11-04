@@ -25,8 +25,6 @@ typedef struct usb_device {
     usb_device_descriptor_t device_desc;
     usb_configuration_descriptor_t* config_desc;
 
-    mx_device_prop_t props[7];
-
     // list of child devices (for USB composite devices)
     list_node_t children;
 

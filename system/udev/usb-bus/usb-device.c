@@ -269,17 +269,6 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
     device_init(&dev->device, &_driver_usb_device, name, &usb_device_proto);
     dev->device.protocol_id = MX_PROTOCOL_USB;
 
-    int count = 0;
-    dev->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_DEVICE };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_desc->bDeviceClass };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_desc->bDeviceSubClass };
-    dev->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_desc->bDeviceProtocol };
-    dev->device.props = dev->props;
-    dev->device.prop_count = count;
-
     // Do not allow binding to root of a composite device.
     // Clients will bind to the child interfaces instead.
     device_set_bindable(&dev->device, false);
