@@ -58,10 +58,6 @@
             "bootfs_path": "apps/logging"
         },
         {
-            "binary": "maxwell_test",
-            "bootfs_path": "apps/maxwell_test"
-        },
-        {
             "binary": "resolver",
             "bootfs_path": "apps/resolver"
         },
