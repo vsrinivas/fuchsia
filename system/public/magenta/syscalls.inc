@@ -133,7 +133,7 @@ MAGENTA_SYSCALL_DEF(5, 5, 95, mx_status_t, futex_requeue, USER_PTR(mx_futex_t) w
                     int current_value, USER_PTR(mx_futex_t) requeue_ptr, uint32_t requeue_count)
 
 // Memory management
-MAGENTA_SYSCALL_DEF(3, 4, 100, mx_handle_t, vmo_create, uint64_t size, uint32_t options,
+MAGENTA_SYSCALL_DEF(3, 4, 100, mx_status_t, vmo_create, uint64_t size, uint32_t options,
                     USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(5, 6, 101, mx_status_t, vmo_read, mx_handle_t handle, USER_PTR(void) data, uint64_t offset,
                     mx_size_t len, USER_PTR(mx_size_t) actual)

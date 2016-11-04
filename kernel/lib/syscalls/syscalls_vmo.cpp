@@ -25,7 +25,7 @@
 
 #define LOCAL_TRACE 0
 
-mx_handle_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t> out) {
+mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("size %#" PRIx64 "\n", size);
 
     if (options)
