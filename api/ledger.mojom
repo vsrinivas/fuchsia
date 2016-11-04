@@ -260,38 +260,45 @@ interface PageWatcher {
 // own implementation. This can be decided on a page-by-page basis.
 interface ConflictResolverFactory {
   // Returns the conflict resolution policy for the given page.
-  GetPolicy(array<uint8> page_id) => (ConflictResolutionPolicy policy);
+  GetPolicy(array<uint8> page_id) => (MergePolicy policy);
   // Returns a |ConflictResolver| to use for the given page. This will only be
   // called if |GetPolicy| for the same page returned |CUSTOM|.
   NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
 };
 
 // Strategy to be used when resolving conflicts.
-enum ConflictResolutionPolicy {
-  // No conflict resolution. Conflicting commits are not merged.
+enum MergePolicy {
+  // No merge happens on the device. Parallel commits are not merged.
   NONE,
   // Last one wins. When 2 commits are merged, the resulting commit contains:
   //  - all keys/values that do not conflict
   //  - all keys/values of the commit with the biggest timestamp (or biggest
   //    id, if the timestamps are the same)
   LAST_ONE_WINS,
-  // Resolution is delegated to a user-provided |ConflictResolver| that is
-  // created by calling |ConflictResolverFactory.NewConflictResolver|. A single
-  // |ConflictResolver| is created for each page. When the |ConflictResolver|
-  // is disconnected, a new one is requested.
+  // Commits are automatically merged when no key has been modified on both
+  // sides. When a key has been modified by both commits, conflict resolution is
+  // delegated to a user-provided |ConflictResolver| that is created by calling
+  // |ConflictResolverFactory.NewConflictResolver|. A single |ConflictResolver|
+  // is created for each page. When the |ConflictResolver| is disconnected, a
+  // new one is requested.
+  AUTOMATIC_WITH_FALLBACK,
+  // All merges are resolved by a user-provided |ConflictResolver| as described
+  // above, even when commits to be merged change a disjoined set of keys.
   CUSTOM,
 };
 
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
-// |ConflictResolverFactory.GetPolicy()| returns |CUSTOM| when called for a
-// given page, the |NewConflictResolver| method will be called and will provide
-// a |ConflictResolver|. Each time a conflict is detected, the method
+// |ConflictResolverFactory.GetPolicy()| returns |AUTOMATIC_WITH_FALLBACK| or
+// |CUSTOM| when called for a given page, the |NewConflictResolver| method will
+// be called and will provide a |ConflictResolver|. Each time a custom conflict
+// resolution is needed according to the chosen policy, the method
 // |ConflictResolver.Resolve()| will be called, and the client will resolve the
 // conflict by returning the final value for all conflicting keys as well as
 // values for any other key that the client wants to change.
 interface ConflictResolver {
   // Method called when a conflict needs to be resolved. |change1| and
   // |change2| contain the conflicting keys/values of the 2 branches to merge.
+  // If the |CUSTOM| policy was selected, all modified keys are present.
   // |common_version| is the snapshot of the first common ancestor of the 2
   // changes and will only be NULL if this version is no longer available.
   // This method must return a set of changes that will be used to
