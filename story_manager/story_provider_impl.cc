@@ -57,13 +57,10 @@ StoryProviderImpl::StoryProviderImpl(
   app_connector_.Bind(std::move(app_connector));
   ledger_.Bind(std::move(ledger));
 
-  ledger_->GetRootPage([this](ledger::Status status,
-                              mojo::InterfaceHandle<ledger::Page> root_page) {
+  ledger_->GetRootPage(GetProxy(&root_page_), [](ledger::Status status) {
     if (status != ledger::Status::OK) {
-      FTL_NOTREACHED() << "Ledger did not return root page. Unhandled error";
-      return;
+      FTL_NOTREACHED() << "Ledger did not return root page. Error: " << status;
     }
-    root_page_.Bind(std::move(root_page));
   });
 }
 
@@ -73,16 +70,18 @@ void StoryProviderImpl::ResumeStory(
     StoryImpl* const story_impl,
     mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   mojo::StructPtr<StoryInfo> story_info = story_impl->GetStoryInfo();
-  ledger_->GetPage(
-      std::move(story_info->session_page_id),
-      ftl::MakeCopyable([
-        story_impl, view_owner_request = std::move(view_owner_request)
-      ](ledger::Status status,
-        mojo::InterfaceHandle<ledger::Page> session_page) mutable {
-        story_impl->RunStory(
-            mojo::InterfacePtr<ledger::Page>::Create(std::move(session_page)),
-            std::move(view_owner_request));
-      }));
+  mojo::InterfacePtr<ledger::Page> session_page;
+  ledger_->GetPage(std::move(story_info->session_page_id),
+                   GetProxy(&session_page), [](ledger::Status status) {
+                     if (status != ledger::Status::OK) {
+                       FTL_NOTREACHED() << "Ledger did not return a page to "
+                                           "resume the story. Error: "
+                                        << status;
+                     }
+                   });
+  story_impl->RunStory(
+      mojo::InterfacePtr<ledger::Page>::Create(std::move(session_page)),
+      std::move(view_owner_request));
 }
 
 void StoryProviderImpl::CommitStory(StoryImpl* const story_impl) {
@@ -107,47 +106,48 @@ void StoryProviderImpl::RemoveStory(StoryImpl* const story_impl) {
 }
 
 void StoryProviderImpl::CreateStory(
-    const mojo::String& url, mojo::InterfaceRequest<Story> story_request) {
+    const mojo::String& url,
+    mojo::InterfaceRequest<Story> story_request) {
   // TODO(alhaad): Creating multiple stories can only work after
   // https://fuchsia-review.googlesource.com/#/c/8941/ has landed.
   FTL_LOG(INFO) << "StoryProviderImpl::CreateStory() " << url;
+  // TODO(mesch): This is sloppy: We check the new story ID here
+  // against story_ids_, but insert it only asynchoronously
+  // below. In principle a second request for CreateStory()
+  // could create the same story ID again. We should not use
+  // random IDs anyway.
+  const std::string story_id = MakeStoryId(story_ids_, 10);
   ledger_->NewPage(
-      ftl::MakeCopyable([ this, story_request = std::move(story_request), url ](
-          ledger::Status status,
-          mojo::InterfaceHandle<ledger::Page> session_page) mutable {
-        // TODO(mesch): This is sloppy: We check the new story ID here
-        // against story_ids_, but insert it only asynchoronously
-        // below. In principle a second request for CreateStory()
-        // could create the same story ID again. We should not use
-        // random IDs anyway.
-        const std::string story_id = MakeStoryId(story_ids_, 10);
-        session_page_map_[story_id].Bind(std::move(session_page));
-        session_page_map_[story_id]->GetId(ftl::MakeCopyable([
-          this, story_request = std::move(story_request), url, story_id
-        ](mojo::Array<uint8_t> session_page_id) mutable {
-          mojo::StructPtr<StoryInfo> story_info = StoryInfo::New();
-          story_info->url = url;
-          story_info->session_page_id = std::move(session_page_id);
-          story_info->is_running = false;
+      GetProxy(&session_page_map_[story_id]), [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_NOTREACHED() << "Ledger did not create a new page. Error: "
+                           << status;
+        }
+      });
+  session_page_map_[story_id]->GetId(ftl::MakeCopyable([
+    this, story_request = std::move(story_request), url, story_id
+  ](mojo::Array<uint8_t> session_page_id) mutable {
+    mojo::StructPtr<StoryInfo> story_info = StoryInfo::New();
+    story_info->url = url;
+    story_info->session_page_id = std::move(session_page_id);
+    story_info->is_running = false;
 
-          StoryImpl* const story_impl = StoryImpl::New(
-              std::move(story_info), this,
-              mojo::DuplicateApplicationConnector(app_connector_.get()),
-              std::move(story_request));
-          story_ids_.insert(story_id);
-          story_impl_to_id_.emplace(story_impl, story_id);
-          story_id_to_impl_.emplace(story_id, story_impl);
-        }));
-      }));
+    StoryImpl* const story_impl = StoryImpl::New(
+        std::move(story_info), this,
+        mojo::DuplicateApplicationConnector(app_connector_.get()),
+        std::move(story_request));
+    story_ids_.insert(story_id);
+    story_impl_to_id_.emplace(story_impl, story_id);
+    story_id_to_impl_.emplace(story_id, story_impl);
+  }));
 }
 
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
+  mojo::InterfacePtr<ledger::PageSnapshot> snapshot;
   root_page_->GetSnapshot(
-      [this, callback](ledger::Status status,
-                       mojo::InterfaceHandle<ledger::PageSnapshot> snapshot) {
-        callback.Run(nullptr);
-      });
+      GetProxy(&snapshot),
+      [this, callback](ledger::Status status) { callback.Run(nullptr); });
 }
 
 }  // namespace modular

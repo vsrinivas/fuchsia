@@ -96,11 +96,13 @@ class StoryManagerImpl : public StoryManager {
     ConnectToService(app_connector_.get(), "mojo:ledger",
                      GetProxy(&ledger_factory_));
 
+    mojo::InterfacePtr<ledger::Ledger> ledger;
+    auto request = GetProxy(&ledger);
     ledger_factory_->GetLedger(
-        std::move(identity), ftl::MakeCopyable([
-          this, callback, view_owner_request = std::move(view_owner_request)
-        ](ledger::Status status,
-                             InterfaceHandle<ledger::Ledger> ledger) mutable {
+        std::move(identity), std::move(request), ftl::MakeCopyable([
+          this, callback, view_owner_request = std::move(view_owner_request),
+          ledger = std::move(ledger)
+        ](ledger::Status status) mutable {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "story-manager's connection to ledger failed: "
                            << LedgerStatusToString(status) << ".";

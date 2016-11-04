@@ -258,23 +258,17 @@ SessionPage::~SessionPage() {
 }
 
 void SessionPage::Init(std::function<void()> done) {
-  session_page_->GetSnapshot(ftl::MakeCopyable(
-      [this, done](
-          ledger::Status status,
-          mojo::InterfaceHandle<ledger::PageSnapshot> snapshot) mutable {
-        session_page_snapshot_.Bind(std::move(snapshot));
-        session_page_snapshot_->Get(
-            to_array("session_data"), ftl::MakeCopyable(
-                [this, done](
-                    ledger::Status status, ledger::ValuePtr value) mutable {
-                  if (value) {
-                    data_->Deserialize(value->get_bytes().data(),
-                                       value->get_bytes().size());
-                  }
-
-                  done();
-                }));
-      }));
+  session_page_->GetSnapshot(GetProxy(&session_page_snapshot_),
+                             [](ledger::Status status) {});
+  session_page_snapshot_->Get(
+      to_array("session_data"),
+      [this, done](ledger::Status status, ledger::ValuePtr value) {
+        if (value) {
+          data_->Deserialize(value->get_bytes().data(),
+                             value->get_bytes().size());
+        }
+        done();
+      });
 }
 
 void SessionPage::MaybeReadLink(const mojo::String& name,
