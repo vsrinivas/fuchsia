@@ -5,6 +5,7 @@
 module maxwell.suggestion;
 
 import "suggestion_agent_client.fidl";
+import "suggestion_provider.fidl"; // convenience import
 
 // Administrative interface for Suggestion Engine.
 [ServiceName="maxwell.suggestion.SuggestionEngine"]

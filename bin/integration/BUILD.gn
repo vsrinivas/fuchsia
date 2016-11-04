@@ -9,6 +9,7 @@ executable("integration") {
 
   deps = [
     ":context_engine_test",
+    ":launcher_test",
     ":suggestion_engine_test",
   ]
 }
@@ -38,7 +39,7 @@ source_set("suggestion_engine_test") {
 
   deps = [
     ":common",
-    "//apps/maxwell/lib/suggestion:formatting",
+    ":test_suggestion_listener",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src/acquirers/mock:gps",
@@ -46,6 +47,22 @@ source_set("suggestion_engine_test") {
     "//apps/modular/lib/app",
   ]
 }
+
+source_set("launcher_test") {
+  testonly = true
+
+  sources = [
+    "launcher_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    ":test_suggestion_listener",
+    "//apps/maxwell/services/suggestion",
+  ]
+}
+
+# TODO(rosswang): move utils to a subdirectory
 
 source_set("common") {
   testonly = true
@@ -59,8 +76,27 @@ source_set("common") {
   deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:application_environment_host_impl",
+    "//apps/maxwell/src/launcher:agent_launcher",
     "//apps/modular/lib/app",
     "//lib/mtl",
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}
+
+source_set("test_suggestion_listener") {
+  testonly = true
+
+  sources = [
+    "test_suggestion_listener.cc",
+    "test_suggestion_listener.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/lib/suggestion:formatting",
+    "//apps/maxwell/services/suggestion",
   ]
 
   public_deps = [

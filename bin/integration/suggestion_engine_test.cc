@@ -4,58 +4,17 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/lib/suggestion/formatting.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
+#include "apps/maxwell/src/integration/test_suggestion_listener.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
 namespace {
-
-class TestListener : public maxwell::suggestion::Listener {
- public:
-  void OnAdd(
-      fidl::Array<maxwell::suggestion::SuggestionPtr> suggestions) override {
-    FTL_LOG(INFO) << "OnAdd(" << suggestions << ")";
-    naive_suggestion_count_ += suggestions.size();
-    for (auto& suggestion : suggestions)
-      suggestions_[suggestion->uuid] = std::move(suggestion);
-
-    EXPECT_EQ(naive_suggestion_count_, (signed)suggestions_.size());
-  }
-
-  void OnRemove(const fidl::String& uuid) override {
-    FTL_LOG(INFO) << "OnRemove(" << uuid << ")";
-    naive_suggestion_count_--;
-    suggestions_.erase(uuid);
-
-    EXPECT_EQ(naive_suggestion_count_, (signed)suggestions_.size());
-  }
-
-  void OnRemoveAll() override {
-    FTL_LOG(INFO) << "OnRemoveAll";
-    naive_suggestion_count_ = 0;
-    suggestions_.clear();
-  }
-
-  int suggestion_count() const { return naive_suggestion_count_; }
-
-  // Exposes a pointer to the only suggestion in this listener. Retains
-  // ownership of the pointer.
-  const maxwell::suggestion::Suggestion* GetOnlySuggestion() const {
-    EXPECT_EQ(1, suggestion_count());
-    return suggestions_.begin()->second.get();
-  }
-
- private:
-  int naive_suggestion_count_ = 0;
-  std::unordered_map<std::string, maxwell::suggestion::SuggestionPtr>
-      suggestions_;
-};
 
 // context agent that publishes an int n
 class NPublisher {
@@ -184,7 +143,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
  private:
   maxwell::suggestion::SuggestionProviderPtr suggestion_provider_;
-  TestListener listener_;
+  TestSuggestionListener listener_;
   fidl::Binding<maxwell::suggestion::Listener> listener_binding_;
   maxwell::suggestion::NextControllerPtr ctl_;
 };

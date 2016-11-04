@@ -67,24 +67,8 @@ MaxwellTestBase::MaxwellTestBase()
       std::move(test_environment_host_handle), GetProxy(&test_environment_),
       NULL);
   test_environment_->GetApplicationLauncher(GetProxy(&test_launcher_));
-}
-
-void MaxwellTestBase::StartAgent(
-    const std::string& url,
-    std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
-  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> agent_host_handle =
-      agent_host_bindings_.AddBinding(std::move(env_host));
-
-  modular::ApplicationEnvironmentPtr agent_env;
-  test_environment_->CreateNestedEnvironment(std::move(agent_host_handle),
-                                             GetProxy(&agent_env), NULL);
-
-  modular::ApplicationLauncherPtr agent_launcher;
-  agent_env->GetApplicationLauncher(GetProxy(&agent_launcher));
-
-  auto launch_info = modular::ApplicationLaunchInfo::New();
-  launch_info->url = url;
-  agent_launcher->CreateApplication(std::move(launch_info), NULL);
+  agent_launcher_ =
+      std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
 }
 
 modular::ServiceProviderPtr MaxwellTestBase::StartServiceProvider(

@@ -89,7 +89,7 @@ class GpsAcquirerApp : public maxwell::acquirers::GpsAcquirer,
 
   fidl::Binding<maxwell::context::PublisherController> ctl_;
   maxwell::context::PublisherLinkPtr out_;
-  int tick_keep_alive_;
+  int tick_keep_alive_ = 0;
 };
 
 }  // namespace

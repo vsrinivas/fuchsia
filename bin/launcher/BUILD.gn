@@ -1,0 +1,31 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("launcher") {
+  output_name = "maxwell_launcher"
+
+  sources = [
+    "launcher.cc",
+  ]
+
+  deps = [
+    ":agent_launcher",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+}
+
+source_set("agent_launcher") {
+  sources = [
+    "agent_launcher.cc",
+    "agent_launcher.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/src:application_environment_host_impl",
+    "//apps/modular/lib/app",
+  ]
+}

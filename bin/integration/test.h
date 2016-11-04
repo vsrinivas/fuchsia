@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "apps/maxwell/src/application_environment_host_impl.h"
+#include "apps/maxwell/src/launcher/agent_launcher.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -99,7 +100,10 @@ class MaxwellTestBase : public ::testing::Test {
 
   void StartAgent(
       const std::string& url,
-      std::unique_ptr<modular::ApplicationEnvironmentHost> env_host);
+      std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
+    agent_launcher_->StartAgent(url, std::move(env_host));
+  }
+
   modular::ServiceProviderPtr StartServiceProvider(const std::string& url);
 
   template <typename Interface>
@@ -114,8 +118,5 @@ class MaxwellTestBase : public ::testing::Test {
       test_environment_host_binding_;
   modular::ApplicationEnvironmentPtr test_environment_;
   modular::ApplicationLauncherPtr test_launcher_;
-
-  fidl::BindingSet<modular::ApplicationEnvironmentHost,
-                   std::unique_ptr<modular::ApplicationEnvironmentHost>>
-      agent_host_bindings_;
+  std::unique_ptr<maxwell::AgentLauncher> agent_launcher_;
 };
