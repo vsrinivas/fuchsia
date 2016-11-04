@@ -31,6 +31,17 @@ static void usb_device_iotxn_queue(mx_device_t* device, iotxn_t* txn) {
     iotxn_queue(dev->hci_device, txn);
 }
 
+static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int config) {
+    int num_configurations = dev->device_desc.bNumConfigurations;
+    for (int i = 0; i < num_configurations; i++) {
+        usb_configuration_descriptor_t* desc = dev->config_descs[i];
+        if (desc->bConfigurationValue == config) {
+            return desc;
+        }
+    }
+    return NULL;
+}
+
 static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
     usb_device_t* dev = get_usb_device(device);
@@ -54,17 +65,38 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         memcpy(out_buf, descriptor, sizeof(*descriptor));
         return sizeof(*descriptor);
     }
-    case IOCTL_USB_GET_CONFIG_DESC_SIZE:
+    case IOCTL_USB_GET_CONFIG_DESC_SIZE: {
+        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        int config = *((int *)in_buf);
+        int* reply = out_buf;
+        usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
+        if (!descriptor) {
+            return ERR_INVALID_ARGS;
+        }
+        *reply = le16toh(descriptor->wTotalLength);
+        return sizeof(*reply);
+    }
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
-        usb_configuration_descriptor_t* descriptor = dev->config_desc;
+        usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
         *reply = le16toh(descriptor->wTotalLength);
         return sizeof(*reply);
     }
-    case IOCTL_USB_GET_CONFIG_DESC:
+    case IOCTL_USB_GET_CONFIG_DESC: {
+        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        int config = *((int *)in_buf);
+        usb_configuration_descriptor_t* descriptor = get_config_desc(dev, config);
+        if (!descriptor) {
+            return ERR_INVALID_ARGS;
+        }
+        size_t desc_length = le16toh(descriptor->wTotalLength);
+        if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
+        memcpy(out_buf, descriptor, desc_length);
+        return desc_length;
+    }
     case IOCTL_USB_GET_DESCRIPTORS: {
-        usb_configuration_descriptor_t* descriptor = dev->config_desc;
+        usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
         size_t desc_length = le16toh(descriptor->wTotalLength);
         if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptor, desc_length);
@@ -112,6 +144,19 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         *reply = dev->hub_id;
         return sizeof(*reply);
     }
+    case IOCTL_USB_GET_CONFIGURATION: {
+        int* reply = out_buf;
+        if (out_len != sizeof(*reply)) return ERR_INVALID_ARGS;
+        usb_configuration_descriptor_t* descriptor = dev->config_descs[dev->current_config_index];
+        *reply = descriptor->bConfigurationValue;
+        return sizeof(*reply);
+    }
+    case IOCTL_USB_SET_CONFIGURATION: {
+        if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
+        int config = *((int *)in_buf);
+        printf("IOCTL_USB_SET_CONFIGURATION %d\n", config);
+        return ERR_NOT_SUPPORTED;
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }
@@ -125,7 +170,13 @@ void usb_device_remove(usb_device_t* dev) {
 static mx_status_t usb_device_release(mx_device_t* device) {
     usb_device_t* dev = get_usb_device(device);
 
-    free(dev->config_desc);
+    if (dev->config_descs) {
+        int num_configurations = dev->device_desc.bNumConfigurations;
+        for (int i = 0; i < num_configurations; i++) {
+            if (dev->config_descs[i]) free(dev->config_descs[i]);
+        }
+        free(dev->config_descs);
+    }
     free(dev);
 
     return NO_ERROR;
@@ -247,43 +298,50 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
         return status;
     }
 
-    // read configuration descriptor header to determine size
-    usb_configuration_descriptor_t config_desc_header;
-    status = usb_device_get_descriptor(hci_device, device_id, USB_DT_CONFIG, 0,
-                                    &config_desc_header, sizeof(config_desc_header));
-    if (status != sizeof(config_desc_header)) {
-        printf("usb_device_get_descriptor failed\n");
-        free(dev);
-        return status;
-    }
-    uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
-    usb_configuration_descriptor_t* config_desc = malloc(config_desc_size);
-    if (!config_desc) {
-        free(dev);
-        return ERR_NO_MEMORY;
+    int num_configurations = device_desc->bNumConfigurations;
+    usb_configuration_descriptor_t** configs = calloc(num_configurations,
+                                                      sizeof(usb_configuration_descriptor_t*));
+    if (!configs) {
+        status = ERR_NO_MEMORY;
+        goto error_exit;
     }
 
-    // read full configuration descriptor
-    status = usb_device_get_descriptor(hci_device, device_id, USB_DT_CONFIG, 0,
-                                    config_desc, config_desc_size);
-     if (status != config_desc_size) {
-        printf("usb_device_get_descriptor failed\n");
-        free(config_desc);
-        free(dev);
-        return status;
+    for (int config = 0; config < num_configurations; config++) {
+        // read configuration descriptor header to determine size
+        usb_configuration_descriptor_t config_desc_header;
+        status = usb_device_get_descriptor(hci_device, device_id, USB_DT_CONFIG, config,
+                                        &config_desc_header, sizeof(config_desc_header));
+        if (status != sizeof(config_desc_header)) {
+            printf("usb_device_get_descriptor failed\n");
+            goto error_exit;
+        }
+        uint16_t config_desc_size = letoh16(config_desc_header.wTotalLength);
+        usb_configuration_descriptor_t* config_desc = malloc(config_desc_size);
+        if (!config_desc) {
+            status = ERR_NO_MEMORY;
+            goto error_exit;
+        }
+        configs[config] = config_desc;
+
+        // read full configuration descriptor
+        status = usb_device_get_descriptor(hci_device, device_id, USB_DT_CONFIG, config,
+                                        config_desc, config_desc_size);
+         if (status != config_desc_size) {
+            printf("usb_device_get_descriptor failed\n");
+            goto error_exit;
+        }
     }
 
     // set configuration
     status = usb_device_control(hci_device, device_id,
                              USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                             USB_REQ_SET_CONFIGURATION, config_desc->bConfigurationValue, 0,
+                             USB_REQ_SET_CONFIGURATION, configs[0]->bConfigurationValue, 0,
                              NULL, 0);
     if (status < 0) {
         printf("set configuration failed\n");
-        free(config_desc);
-        free(dev);
-        return status;
+        goto error_exit;
     }
+    dev->current_config_index = 0;
 
     printf("* found USB device (0x%04x:0x%04x, USB %x.%x)\n", device_desc->idVendor,
            device_desc->idProduct, device_desc->bcdUSB >> 8, device_desc->bcdUSB & 0xff);
@@ -294,7 +352,7 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
     dev->device_id = device_id;
     dev->hub_id = hub_id;
     dev->speed = speed;
-    dev->config_desc = config_desc;
+    dev->config_descs = configs;
 
     char name[16];
     snprintf(name, sizeof(name), "usb-dev-%03d", device_id);
@@ -310,10 +368,18 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
     if (status == NO_ERROR) {
         *out_device = dev;
     } else {
-        free(config_desc);
-        free(dev);
-        return status;
+        goto error_exit;
     }
 
-    return usb_device_add_interfaces(dev, device_desc, config_desc);
+    return usb_device_add_interfaces(dev, device_desc, configs[0]);
+
+error_exit:
+    if (configs) {
+        for (int i = 0; i < num_configurations; i++) {
+            if (configs[i]) free(configs[i]);
+        }
+        free(configs);
+    }
+    free(dev);
+    return status;
 }

@@ -23,7 +23,8 @@ typedef struct usb_device {
     usb_hci_protocol_t* hci_protocol;
 
     usb_device_descriptor_t device_desc;
-    usb_configuration_descriptor_t* config_desc;
+    usb_configuration_descriptor_t** config_descs;
+    int current_config_index;
 
     // list of child devices (for USB composite devices)
     list_node_t children;

@@ -34,7 +34,8 @@ static const char* usb_speeds[] = {
     "SUPER",
 };
 
-static int do_list_device(int fd, bool verbose, const char* devname, int depth, int max_depth) {
+static int do_list_device(int fd, int configuration, bool verbose, const char* devname, int depth,
+                          int max_depth) {
     usb_device_descriptor_t device_desc;
     char manufacturer[256];
     char product[256];
@@ -97,8 +98,13 @@ static int do_list_device(int fd, bool verbose, const char* devname, int depth, 
         printf("  iSerialNumber                   %d %s\n", device_desc.iSerialNumber, string_buf);
         printf("  bNumConfigurations              %d\n", device_desc.bNumConfigurations);
 
+        if (configuration == -1) {
+            ret = ioctl_usb_get_configuration(fd, &configuration);
+            if (ret != sizeof(configuration)) return ret;
+        }
+
         int desc_size;
-        ret = ioctl_usb_get_config_desc_size(fd, &desc_size);
+        ret = ioctl_usb_get_config_desc_size(fd, &configuration, &desc_size);
         if (ret != sizeof(desc_size)) {
             printf("IOCTL_USB_GET_CONFIG_DESC_SIZE failed for %s/%s\n", DEV_USB, devname);
             return ret;
@@ -109,7 +115,8 @@ static int do_list_device(int fd, bool verbose, const char* devname, int depth, 
             ret = -1;
             return ret;
         }
-        ret = ioctl_usb_get_config_desc(fd, desc, desc_size);
+
+        ret = ioctl_usb_get_config_desc(fd, &configuration, desc, desc_size);
         if (ret != desc_size) {
             printf("IOCTL_USB_GET_CONFIG_DESC failed for %s/%s\n", DEV_USB, devname);
             goto free_out;
@@ -217,7 +224,7 @@ free_out:
     return 0;
 }
 
-static int list_device(const char* device_id, bool verbose) {
+static int list_device(const char* device_id, int configuration, bool verbose) {
     char devname[128];
 
     snprintf(devname, sizeof(devname), "%s/%s", DEV_USB, device_id);
@@ -227,7 +234,7 @@ static int list_device(const char* device_id, bool verbose) {
         return fd;
     }
 
-    int ret = do_list_device(fd, verbose, device_id, 0, 0);
+    int ret = do_list_device(fd, configuration, verbose, device_id, 0, 0);
     close(fd);
     return ret;
 }
@@ -241,7 +248,7 @@ static int list_devices(bool verbose) {
     }
 
     while ((de = readdir(dir)) != NULL) {
-        list_device(de->d_name, verbose);
+        list_device(de->d_name, -1, verbose);
     }
 
     closedir(dir);
@@ -275,7 +282,7 @@ static void do_list_tree(struct device_node* devices, uint64_t hub_id, int max_d
     struct device_node* node = devices;
     while (node) {
         if (node->hub_id == hub_id) {
-            do_list_device(node->fd, false, node->devname, node->depth, max_depth);
+            do_list_device(node->fd, -1, false, node->devname, node->depth, max_depth);
             do_list_tree(devices, node->device_id, max_depth);
         }
         node = node->next;
@@ -375,6 +382,7 @@ int main(int argc, const char** argv) {
     bool verbose = false;
     bool tree = false;
     const char* device_id = NULL;
+    int configuration = -1;
 
     for (int i = 1; i < argc; i++) {
         const char* arg = argv[i];
@@ -382,6 +390,13 @@ int main(int argc, const char** argv) {
             verbose = true;
         } else if (!strcmp(arg, "-t")) {
             tree = true;
+        } else if (!strcmp(arg, "-c")) {
+            if (++i == argc) {
+                printf("configuration required after -c option\n");
+                result = -1;
+                goto usage;
+            }
+            configuration = atoi(argv[i]);
         } else if (!strcmp(arg, "-d")) {
             if (++i == argc) {
                 printf("device ID required after -d option\n");
@@ -401,7 +416,7 @@ int main(int argc, const char** argv) {
     } else {
         printf("ID    VID:PID   SPEED  MANUFACTURER PRODUCT\n");
         if (device_id) {
-            return list_device(device_id, verbose);
+            return list_device(device_id, configuration, verbose);
         } else {
             return list_devices(verbose);
         }
@@ -409,9 +424,10 @@ int main(int argc, const char** argv) {
 
 usage:
     printf("Usage:\n");
-    printf("%s [-v] [-d <device ID>]", argv[0]);
+    printf("%s [-c <configuration>] [-d <device ID>] [-t] [-v]", argv[0]);
+    printf("  -c   Prints configuration descriptor for specified configuration (rather than current configuration)\n");
+    printf("  -d   Prints only specified device\n");
     printf("  -t   Prints USB device tree\n");
     printf("  -v   Verbose output (prints descriptors\n");
-    printf("  -d   Prints only specified device\n");
     return result;
 }

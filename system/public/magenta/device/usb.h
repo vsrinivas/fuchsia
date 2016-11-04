@@ -29,11 +29,14 @@ __BEGIN_CDECLS
 // call with out_len = sizeof(usb_device_descriptor_t)
 #define IOCTL_USB_GET_DEVICE_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 2)
 
-// returns the size of the USB configuration descriptor for the device's current configuration
-// call with out_len = sizeof(int)
+// returns the size of the USB configuration descriptor for a device's configuration
+// in: configuration number
+// out: configuration descriptor size
 #define IOCTL_USB_GET_CONFIG_DESC_SIZE  IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 3)
 
-// returns the USB configuration descriptor for the device's current configuration
+// returns the USB configuration descriptor for a device's configuration
+// in: configuration number
+// out: configuration descriptor
 // call with out_len = value returned from IOCTL_USB_GET_CONFIG_DESC_SIZE
 #define IOCTL_USB_GET_CONFIG_DESC       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 4)
 
@@ -44,7 +47,8 @@ __BEGIN_CDECLS
 // returns the USB descriptors for an abstract USB device
 // for top-level USB devices, this begins with USB configuration descriptor for the active configuration
 // followed by the remaining descriptors for the configuration
-// for children of USB composite devices, this begins with the USB interface descriptor
+// for children of USB composite devices, this begins with USB interface descriptor
+// or interface association descriptor
 // for the interface, followed by descriptors associated with that interface
 // call with out_len = value returned from IOCTL_USB_GET_DESCRIPTORS_SIZE
 #define IOCTL_USB_GET_DESCRIPTORS       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 6)
@@ -74,11 +78,19 @@ __BEGIN_CDECLS
 // call with out_len = sizeof(uint64_t)
 #define IOCTL_USB_GET_DEVICE_HUB_ID     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 11)
 
+// returns the device's current configuration
+// call with out_len = sizeof(int)
+#define IOCTL_USB_GET_CONFIGURATION     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 12)
+
+// sets the device's current configuration
+// call with in_len = sizeof(int)
+#define IOCTL_USB_SET_CONFIGURATION     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB, 13)
+
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_type, IOCTL_USB_GET_DEVICE_TYPE, int);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_speed, IOCTL_USB_GET_DEVICE_SPEED, int);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_desc, IOCTL_USB_GET_DEVICE_DESC, usb_device_descriptor_t);
-IOCTL_WRAPPER_OUT(ioctl_usb_get_config_desc_size, IOCTL_USB_GET_CONFIG_DESC_SIZE, int);
-IOCTL_WRAPPER_VAROUT(ioctl_usb_get_config_desc, IOCTL_USB_GET_CONFIG_DESC, void);
+IOCTL_WRAPPER_INOUT(ioctl_usb_get_config_desc_size, IOCTL_USB_GET_CONFIG_DESC_SIZE, int, int);
+IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_config_desc, IOCTL_USB_GET_CONFIG_DESC, int, void);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_descriptors_size, IOCTL_USB_GET_DESCRIPTORS_SIZE, int);
 IOCTL_WRAPPER_VAROUT(ioctl_usb_get_descriptors, IOCTL_USB_GET_DESCRIPTORS, void);
 IOCTL_WRAPPER_IN_VAROUT(ioctl_usb_get_string_desc, IOCTL_USB_GET_STRING_DESC, int, void);
@@ -90,5 +102,7 @@ static inline ssize_t ioctl_usb_set_interface(int fd, const int in[static 2]) {
 IOCTL_WRAPPER_OUT(ioctl_usb_get_current_frame, IOCTL_USB_GET_CURRENT_FRAME, uint64_t);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_id, IOCTL_USB_GET_DEVICE_ID, uint64_t);
 IOCTL_WRAPPER_OUT(ioctl_usb_get_device_hub_id, IOCTL_USB_GET_DEVICE_HUB_ID, uint64_t);
+IOCTL_WRAPPER_OUT(ioctl_usb_get_configuration, IOCTL_USB_GET_CONFIGURATION, int);
+IOCTL_WRAPPER_IN(ioctl_usb_set_configuration, IOCTL_USB_SET_CONFIGURATION, int);
 
 __END_CDECLS
