@@ -43,7 +43,7 @@ static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     for (;;) {
         mx_status_t r;
-        if ((r = mx_handle_wait_one(edev->irqh, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL)) < 0) {
+        if ((r = mx_interrupt_wait(edev->irqh)) < 0) {
             printf("eth: irq wait failed? %d\n", r);
             mx_interrupt_complete(edev->irqh);
             break;

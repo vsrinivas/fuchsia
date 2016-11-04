@@ -6,32 +6,50 @@
 
 #pragma once
 
+#include <kernel/event.h>
+
 #include <magenta/dispatcher.h>
-#include <magenta/state_tracker.h>
 #include <sys/types.h>
+
+// TODO:
+// - maintain a uint32_t state instead of single bit
+// - provide a way to bind an ID to another ID
+//   to notify a specific bit in state when that ID trips
+//   (by default IDs set bit0 of their own state)
+// - provide either a dedicated syscall or wire up UserSignal()
+//   to allow userspace to set bits for "virtual" interrupts
+// - return state via out param on sys_interrupt_wait
 
 class InterruptDispatcher : public Dispatcher {
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
 
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_INTERRUPT; }
-    StateTracker* get_state_tracker() final { return &state_tracker_; }
-
-    status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final {
-        if ((set_mask & ~MX_SIGNAL_SIGNALED) || (clear_mask & ~MX_SIGNAL_SIGNALED))
-            return ERR_INVALID_ARGS;
-
-        state_tracker_.UpdateState(clear_mask, set_mask);
-        return NO_ERROR;
-    }
 
     // Notify the system that the caller has finished processing the interrupt.
     // Required before the handle can be waited upon again.
     virtual status_t InterruptComplete() = 0;
 
-protected:
-    InterruptDispatcher()
-        : state_tracker_(true, 0u) { }
+    status_t WaitForInterrupt() {
+        return event_wait(&event_);
+    }
 
-    IrqStateTracker state_tracker_;
+    virtual void on_zero_handles() final {
+        // Ensure any waiters stop waiting
+        event_signal_etc(&event_, false, ERR_HANDLE_CLOSED);
+    }
+
+protected:
+    InterruptDispatcher() {
+        event_init(&event_, false, 0);
+    }
+    int signal() {
+        return event_signal(&event_, false);
+    }
+    void unsignal() {
+        event_unsignal(&event_);
+    }
+
+private:
+    event_t event_;
 };

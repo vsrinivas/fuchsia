@@ -494,7 +494,7 @@ static int i8042_irq_thread(void* arg) {
         return 0;
 
     for (;;) {
-        status = mx_handle_wait_one(device->irq, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+        status = mx_interrupt_wait(device->irq);
         if (status == NO_ERROR) {
             // ack IRQ so we don't lose any IRQs that arrive while processing
             // (as this is an edge-triggered IRQ)

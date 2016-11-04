@@ -206,7 +206,7 @@ static mx_status_t wait_for_data_avail(enum locality loc) {
             return NO_ERROR;
         }
 
-        st = mx_handle_wait_one(irq_handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+        st = mx_interrupt_wait(irq_handle);
         if (st < 0) {
             return st;
         }

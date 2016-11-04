@@ -228,6 +228,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 162, mx_status_t, debug_send_command, mx_handle_t,
 MAGENTA_SYSCALL_DEF(3, 3, 170, mx_handle_t, interrupt_create, mx_handle_t handle,
                     uint32_t vector, uint32_t options)
 MAGENTA_SYSCALL_DEF(1, 1, 171, mx_status_t, interrupt_complete, mx_handle_t handle)
+MAGENTA_SYSCALL_DEF(1, 1, 172, mx_status_t, interrupt_wait, mx_handle_t handle)
 
 // DDK Syscalls: MMIO and Ports
 MAGENTA_SYSCALL_DEF(3, 3, 180, mx_status_t, mmap_device_io, mx_handle_t handle,

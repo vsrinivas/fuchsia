@@ -45,7 +45,7 @@ static const vaddr_t mmio_map_base_address =
 #if _LP64
     0x7ff0'0000'0000ULL;
 #else
-    0x2000'0000UL;
+    0x20000000UL;
 #endif
 
 mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
@@ -82,6 +82,19 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
 
     return interrupt->InterruptComplete();
 }
+
+mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
+    LTRACEF("handle %d\n", handle_value);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mxtl::RefPtr<InterruptDispatcher> interrupt;
+    mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
+    if (status != NO_ERROR)
+        return status;
+
+    return interrupt->WaitForInterrupt();
+}
+
 
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
