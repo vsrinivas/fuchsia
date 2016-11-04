@@ -122,7 +122,7 @@ status_t FutexContext::FutexWake(user_ptr<int> value_ptr, uint32_t count) {
         DEBUG_ASSERT(node->GetKey() == futex_key);
 
         FutexNode* wake_head = node;
-        node = node->RemoveFromHead(count, futex_key, 0u);
+        node = FutexNode::RemoveFromHead(node, count, futex_key, 0u);
         // node is now the new blocked thread list head
 
         if (node != nullptr) {
@@ -172,7 +172,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
         wake_head = nullptr;
     } else {
         wake_head = node;
-        node = node->RemoveFromHead(wake_count, wake_key, 0u);
+        node = FutexNode::RemoveFromHead(node, wake_count, wake_key, 0u);
     }
 
     // node is now the head of wake_ptr futex after possibly removing some threads to wake
@@ -180,7 +180,8 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
         if (requeue_count > 0) {
             // head and tail of list of nodes to requeue
             FutexNode* requeue_head = node;
-            node = node->RemoveFromHead(requeue_count, wake_key, requeue_key);
+            node = FutexNode::RemoveFromHead(node, requeue_count,
+                                             wake_key, requeue_key);
 
             // now requeue our nodes to requeue_ptr mutex
             DEBUG_ASSERT(requeue_head->GetKey() == requeue_key);

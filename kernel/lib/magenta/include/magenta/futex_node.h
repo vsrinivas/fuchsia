@@ -28,10 +28,10 @@ public:
     // adds a list of nodes to our tail
     void AppendList(FutexNode* head);
 
-    // remove up to |count| nodes from our head and return new head
-    // the removed nodes remain a valid list after this operation
-    FutexNode* RemoveFromHead(uint32_t count, uintptr_t old_hash_key,
-                              uintptr_t new_hash_key);
+    static FutexNode* RemoveFromHead(FutexNode* list_head,
+                                     uint32_t count,
+                                     uintptr_t old_hash_key,
+                                     uintptr_t new_hash_key);
 
     // block the current thread, releasing the given mutex while the thread
     // is blocked

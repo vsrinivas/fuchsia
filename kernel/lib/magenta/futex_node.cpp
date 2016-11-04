@@ -32,14 +32,21 @@ void FutexNode::AppendList(FutexNode* head) {
     tail_ = head->tail();
 }
 
-// remove up to |count| nodes from our head and return new head
-// the removed nodes remain a valid list after this operation
-FutexNode* FutexNode::RemoveFromHead(uint32_t count, uintptr_t old_hash_key,
+// This removes up to |count| nodes from |list_head|.  It returns the new
+// list head (i.e. the list of remaining nodes), which may be null (empty).
+// On return, |list_head| is the list of nodes that were removed --
+// |list_head| remains a valid list.
+//
+// This will always remove at least one node, because it requires that
+// |count| is non-zero and |list_head| is a non-empty list.
+FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
+                                     uintptr_t old_hash_key,
                                      uintptr_t new_hash_key) {
-    if (count == 0) return this;
+    ASSERT(list_head);
+    ASSERT(count != 0);
 
-    FutexNode* node = this;
-    FutexNode* last = this;
+    FutexNode* node = list_head;
+    FutexNode* last = nullptr;
     for (uint32_t i = 0; i < count && node != nullptr; i++) {
         DEBUG_ASSERT(node->GetKey() == old_hash_key);
         // For requeuing, update the key so that FutexWait() can remove the
@@ -50,9 +57,9 @@ FutexNode* FutexNode::RemoveFromHead(uint32_t count, uintptr_t old_hash_key,
         node = node->next_;
     }
 
-    if (node != nullptr) node->tail_ = tail_;
+    if (node != nullptr) node->tail_ = list_head->tail_;
     last->next_ = nullptr;
-    tail_ = last;
+    list_head->tail_ = last;
     return node;
 }
 
