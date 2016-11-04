@@ -42,7 +42,11 @@ magma_system_connection* magma_system_open(int fd)
     return magma::PlatformIpcConnection::Create(connection_handle).release();
 }
 
-void magma_system_close(magma_system_connection* connection) { delete connection; }
+void magma_system_close(magma_system_connection* connection)
+{
+    // TODO(MA-109): close the connection
+    delete magma::PlatformIpcConnection::cast(connection);
+}
 
 int32_t magma_system_get_error(magma_system_connection* connection)
 {
@@ -95,6 +99,9 @@ void magma_system_free(magma_system_connection* connection, uint32_t handle)
         return;
 
     magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(id);
+
+    // Workaround for MA-108: must close the duplicated handle
+    magma::PlatformBuffer::Import(handle).reset();
 }
 
 int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,

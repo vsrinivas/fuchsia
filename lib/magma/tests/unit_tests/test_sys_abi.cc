@@ -5,6 +5,7 @@
 #include <fcntl.h>
 
 #include "magma_system.h"
+#include "platform_buffer.h"
 #include "gtest/gtest.h"
 
 class TestBase {
@@ -68,6 +69,9 @@ public:
         EXPECT_NE(handle, 0u);
 
         magma_system_free(connection_, handle);
+
+        uint64_t id;
+        EXPECT_FALSE(magma::PlatformBuffer::IdFromHandle(handle, &id));
     }
 
     void WaitRendering()
@@ -97,6 +101,12 @@ TEST(MagmaSystemAbi, DeviceId)
     test.GetDeviceId();
 }
 
+TEST(MagmaSystemAbi, Buffer)
+{
+    TestConnection test;
+    test.Buffer();
+}
+
 TEST(MagmaSystemAbi, Connection)
 {
     TestConnection test;
@@ -107,12 +117,6 @@ TEST(MagmaSystemAbi, Context)
 {
     TestConnection test;
     test.Context();
-}
-
-TEST(MagmaSystemAbi, Buffer)
-{
-    TestConnection test;
-    test.Buffer();
 }
 
 TEST(MagmaSystemAbi, WaitRendering)

@@ -11,12 +11,15 @@ config("platform_include_config") {
 source_set("buffer") {
   public_configs = [ ":platform_include_config" ]
 
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
   sources = [
     "platform_buffer.h",
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
     "magenta:buffer",
   ]
 }
