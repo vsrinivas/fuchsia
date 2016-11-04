@@ -5,67 +5,44 @@
 #ifndef APPS_MODULAR_SRC_USER_RUNNER_STORY_STORAGE_IMPL_H_
 #define APPS_MODULAR_SRC_USER_RUNNER_STORY_STORAGE_IMPL_H_
 
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <memory>
 
-#include "apps/modular/services/story/story.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
-#include "lib/ftl/macros.h"
+#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/src/user_runner/transaction.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
 
 namespace modular {
 
-// A memory only implementation of storage for story data. We use
-// until Ledger doesn't crash anymore;
-// https://fuchsia.atlassian.net/browse/LE-46.
+// An optionally memory only implementation of storage for story data.
+// If |story_page| is not bound, story data are just kept in memory.
+// This is useful when ledger is broken. TODO(mesch): Eventually
+// in-memory storage can be removed from here.
 class StoryStorageImpl : public StoryStorage {
  public:
   using Storage = std::unordered_map<std::string, StoryDataPtr>;
 
   StoryStorageImpl(std::shared_ptr<Storage> storage,
+                   ledger::PagePtr story_page,
                    const fidl::String& key,
-                   fidl::InterfaceRequest<StoryStorage> request)
-      : binding_(this, std::move(request)), key_(key), storage_(storage) {
-    FTL_LOG(INFO) << "StoryStorageImpl() " << key_;
-  }
+                   fidl::InterfaceRequest<StoryStorage> request);
 
-  ~StoryStorageImpl() override {
-    FTL_LOG(INFO) << "~StoryStorageImpl() " << key_;
-  }
+  ~StoryStorageImpl() override;
 
  private:
-  void ReadStoryData(const ReadStoryDataCallback& cb) override {
-    FTL_LOG(INFO) << "StoryStorageImpl::ReadStoryData() " << key_;
-
-    // story_page_->GetSnapshot(GetProxy(&story_page_snapshot_),
-    //                            [](ledger::Status status) {});
-    // story_page_snapshot_->Get(
-    //     to_array("story_data"),
-    //     [this, done](ledger::Status status, ledger::ValuePtr value) {
-    //       if (value) {
-    //         data_->Deserialize(value->get_bytes().data(),
-    //                            value->get_bytes().size());
-    //       }
-    //       done();
-    //     });
-
-    if (storage_->find(key_) != storage_->end()) {
-      cb(storage_->find(key_)->second->Clone());
-    } else {
-      cb(nullptr);
-    }
-  }
-
-  void WriteStoryData(StoryDataPtr data) override {
-    FTL_LOG(INFO) << "StoryStorageImpl::WriteStoryData() " << key_;
-    storage_->emplace(std::make_pair(key_, std::move(data)));
-  }
+  void ReadStoryData(const ReadStoryDataCallback& cb) override;
+  void WriteStoryData(StoryDataPtr data) override;
 
   StrongBinding<StoryStorage> binding_;
   const std::string key_;
   std::shared_ptr<Storage> storage_;
+  ledger::PagePtr story_page_;
+  TransactionContainer transaction_container_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

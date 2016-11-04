@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
@@ -36,15 +37,9 @@ class StoryProviderImpl : public StoryProvider {
       const fidl::String& story_id,
       std::function<void(StoryInfoPtr story_info)> story_info_callback);
 
-  // Used to obtain a ledger page for the given story identified by
-  // its ledger page ID.
-  void GetStoryPage(
-      fidl::Array<uint8_t> story_page_id,
-      std::function<void(fidl::InterfaceHandle<ledger::Page> story_page)>
-          story_page_callback);
-
-  // Used by StoryControllerImpl to write story meta-data to the ledger. Used
-  // after calling |Stop| or when the |Story| pipe is closed.
+  // Used by StoryControllerImpl to write story meta-data to the
+  // ledger. Used after calling |Stop| or when the |Story| pipe is
+  // closed.
   void WriteStoryInfo(StoryInfoPtr story_info);
 
   // Used by CreateStory() to write story meta-data to the ledger.
@@ -53,6 +48,7 @@ class StoryProviderImpl : public StoryProvider {
   // Used by StoryControllerImpl.
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
+  ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
 
  private:
   // |StoryProvider|
@@ -78,7 +74,7 @@ class StoryProviderImpl : public StoryProvider {
   ledger::LedgerPtr ledger_;
 
   std::unordered_set<std::string> story_ids_;
-  std::unique_ptr<TransactionContainer> transaction_container_;
+  TransactionContainer transaction_container_;
   std::shared_ptr<Storage> storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);

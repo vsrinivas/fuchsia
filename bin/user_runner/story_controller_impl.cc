@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/user_runner/story_controller_impl.h"
 
+#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 #include "apps/modular/lib/app/connect.h"
@@ -18,12 +19,12 @@ StoryControllerImpl::StoryControllerImpl(
     fidl::InterfaceRequest<StoryController> story_controller_request)
     : story_info_(std::move(story_info)),
       story_provider_impl_(story_provider_impl),
-      storage_(story_provider_impl_->storage()),
       application_context_(application_context),
       binding_(this, std::move(story_controller_request)),
       module_watcher_binding_(this),
       link_changed_binding_(this) {
-  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id
+                << " " << to_string(story_info_->story_page_id);
 }
 
 StoryControllerImpl::~StoryControllerImpl() {
@@ -113,7 +114,10 @@ void StoryControllerImpl::StartStoryRunner(
   runner_->Initialize(std::move(resolver_factory));
 
   StoryStoragePtr story_storage;
-  new StoryStorageImpl(storage_, story_info_->id, GetProxy(&story_storage));
+  new StoryStorageImpl(
+      story_provider_impl_->storage(),
+      story_provider_impl_->GetStoryPage(story_info_->story_page_id),
+      story_info_->id, GetProxy(&story_storage));
   runner_->StartStory(std::move(story_storage), GetProxy(&story_));
 
   story_->CreateLink("root", GetProxy(&root_));
@@ -142,6 +146,11 @@ void StoryControllerImpl::TearDownStoryRunner() {
   // TODO(mesch): Here we need an actual call back when the Story is
   // down.
 
+  // NOTE(mesch): For now we need to reset all handles we have on the
+  // story, especially on links in the story, such that the
+  // story data gets written to the ledger.
+  root_.reset();
+  link_changed_binding_.Close();
   module_.reset();
   story_.reset();
   runner_.reset();

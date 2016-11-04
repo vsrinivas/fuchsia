@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/strong_binding.h"

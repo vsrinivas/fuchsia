@@ -15,6 +15,7 @@ executable("user_runner") {
     "story_controller_impl.h",
     "story_provider_impl.cc",
     "story_provider_impl.h",
+    "story_storage_impl.cc",
     "story_storage_impl.h",
     "transaction.cc",
     "transaction.h",

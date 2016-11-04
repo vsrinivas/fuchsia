@@ -31,8 +31,8 @@ ModuleControllerImpl::ModuleControllerImpl(
     : story_(story),
       binding_(this, std::move(module_controller)),
       module_(std::move(module)) {
+  FTL_LOG(INFO) << "ModuleControllerImpl " << this;
   story_->Add(this);
-  FTL_LOG(INFO) << "ModuleControllerImpl";
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {
@@ -60,6 +60,10 @@ StoryHost::StoryHost(StoryImpl* const impl, fidl::InterfaceRequest<Story> story)
       primary_(true) {
   FTL_LOG(INFO) << "StoryHost() primary " << this;
   impl_->Add(this);
+
+  binding_.set_connection_error_handler([this]() {
+    FTL_LOG(INFO) << "StoryHost() " << this << " connection closed";
+  });
 }
 
 StoryHost::StoryHost(StoryImpl* const impl,
@@ -222,21 +226,25 @@ StoryPage::StoryPage(fidl::InterfaceHandle<StoryStorage> story_storage)
 };
 
 StoryPage::~StoryPage() {
-  FTL_LOG(INFO) << "~StoryPage()";
+  FTL_LOG(INFO) << "~StoryPage() " << this << " begin";
 
   // TODO(mesch): We should write on every link change, not just at
   // the end.
   story_storage_->WriteStoryData(std::move(data_));
+
+  FTL_LOG(INFO) << "~StoryPage() " << this << " end";
 }
 
 void StoryPage::Init(std::function<void()> done) {
-  FTL_LOG(INFO) << "StoryPage::Init() " << to_string(id_);
+  FTL_LOG(INFO) << "StoryPage::Init() " << this
+                << to_string(id_) << " start";
 
   story_storage_->ReadStoryData(
       ftl::MakeCopyable([this, done](StoryDataPtr data) {
         if (!data.is_null()) {
           data_ = std::move(data);
         }
+        FTL_LOG(INFO) << "StoryPage::Init() " << this << to_string(id_) << " done";
         done();
       }));
 }
@@ -249,14 +257,15 @@ void StoryPage::MaybeReadLink(const fidl::String& name,
       (*docs_map)[doc->docid] = doc->Clone();
     }
   }
-  FTL_LOG(INFO) << "StoryPage::MaybeReadlink() " << to_string(id_) << " name "
+  FTL_LOG(INFO) << "StoryPage::MaybeReadlink() " << to_string(id_) << " "
                 << name << " docs " << *docs_map;
 }
 
 void StoryPage::WriteLink(const fidl::String& name,
                           const FidlDocMap& docs_map) {
-  FTL_LOG(INFO) << "StoryPage::WriteLink() " << to_string(id_) << " name "
-                << name << " docs " << docs_map;
+  FTL_LOG(INFO) << "StoryPage::WriteLink() " << to_string(id_)
+                << " name " << name
+                << " docs " << docs_map;
 
   auto i = data_->links.find(name);
   if (i == data_->links.end()) {
