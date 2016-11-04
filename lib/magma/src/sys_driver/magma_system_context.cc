@@ -15,7 +15,7 @@ bool MagmaSystemContext::ExecuteCommandBuffer(magma_system_command_buffer* cmd_b
 {
 
     // used to validate that handles are not duplicated
-    std::unordered_set<uint32_t> handle_set;
+    std::unordered_set<uint32_t> id_set;
 
     // used to keep resources in scope until msd_context_execute_command_buffer returns
     std::vector<std::shared_ptr<MagmaSystemBuffer>> system_resources;
@@ -31,21 +31,17 @@ bool MagmaSystemContext::ExecuteCommandBuffer(magma_system_command_buffer* cmd_b
 
     // validate exec resources
     for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
-        uint32_t handle = cmd_buf->resources[i].buffer_handle;
-
-        uint64_t id;
-        if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
-            return DRETF(false, "ExecuteCommandBuffer: batch buffer handle invalid");
+        uint64_t id = cmd_buf->resources[i].buffer_handle;
 
         auto buf = owner_->LookupBufferForContext(id);
         if (!buf)
             return DRETF(false, "ExecuteCommandBuffer: exec resource has invalid buffer handle");
 
-        auto iter = handle_set.find(handle);
-        if (iter != handle_set.end())
+        auto iter = id_set.find(id);
+        if (iter != id_set.end())
             return DRETF(false, "ExecuteCommandBuffer: duplicate exec resource");
 
-        handle_set.insert(handle);
+        id_set.insert(id);
         system_resources.push_back(buf);
         msd_resources.push_back(buf->msd_buf());
     }
