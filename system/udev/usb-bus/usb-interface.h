@@ -16,12 +16,12 @@ typedef struct {
     usb_hci_protocol_t* hci_protocol;
     uint32_t device_id;
 
-    usb_interface_descriptor_t* interface_desc;
-    size_t interface_desc_length;
+    usb_descriptor_header_t* descriptor;
+    size_t descriptor_length;
     // descriptors for currently active endpoints
     usb_endpoint_descriptor_t* active_endpoints[USB_MAX_EPS];
 
-    mx_device_prop_t props[7];
+    mx_device_prop_t props[10];
 
     list_node_t node;
 } usb_interface_t;
@@ -38,6 +38,11 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
                                      usb_device_descriptor_t* device_descriptor,
                                      usb_interface_descriptor_t* interface_desc,
                                      size_t interface_desc_length);
+
+mx_status_t usb_device_add_interface_association(usb_device_t* device,
+                                                 usb_device_descriptor_t* device_desc,
+                                                 usb_interface_assoc_descriptor_t* assoc_desc,
+                                                 size_t assoc_desc_length);
 
 void usb_device_remove_interfaces(usb_device_t* device);
 

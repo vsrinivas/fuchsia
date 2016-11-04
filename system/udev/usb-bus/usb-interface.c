@@ -35,12 +35,12 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
     case IOCTL_USB_GET_DESCRIPTORS_SIZE: {
         int* reply = out_buf;
         if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
-        *reply = intf->interface_desc_length;
+        *reply = intf->descriptor_length;
         return sizeof(*reply);
     }
     case IOCTL_USB_GET_DESCRIPTORS: {
-        void* descriptors = intf->interface_desc;
-        size_t desc_length = intf->interface_desc_length;
+        void* descriptors = intf->descriptor;
+        size_t desc_length = intf->descriptor_length;
         if (out_len < desc_length) return ERR_BUFFER_TOO_SMALL;
         memcpy(out_buf, descriptors, desc_length);
         return desc_length;
@@ -54,7 +54,7 @@ static ssize_t usb_interface_ioctl(mx_device_t* device, uint32_t op,
 static mx_status_t usb_interface_release(mx_device_t* device) {
     usb_interface_t* intf = get_usb_interface(device);
 
-    free(intf->interface_desc);
+    free(intf->descriptor);
     free(intf);
 
     return NO_ERROR;
@@ -90,8 +90,8 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     mx_status_t status = NO_ERROR;
 
     // iterate through our descriptors to find which endpoints should be active
-    usb_descriptor_header_t* header = (usb_descriptor_header_t *)intf->interface_desc;
-    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->interface_desc_length);
+    usb_descriptor_header_t* header = intf->descriptor;
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->descriptor_length);
 
     bool enable_endpoints = false;
     while (header < end) {
@@ -136,11 +136,11 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     intf->hci_device = device->hci_device;
     intf->hci_protocol = device->hci_protocol;
     intf->device_id = device->device_id;
-    intf->interface_desc = interface_desc;
-    intf->interface_desc_length = interface_desc_length;
+    intf->descriptor = (usb_descriptor_header_t *)interface_desc;
+    intf->descriptor_length = interface_desc_length;
 
     char name[20];
-    snprintf(name, sizeof(name), "usb-dev-%03d-%d", device->device_id, interface_desc->bInterfaceNumber);
+    snprintf(name, sizeof(name), "usb-dev-%03d-i-%d", device->device_id, interface_desc->bInterfaceNumber);
 
     device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
     intf->device.protocol_id = MX_PROTOCOL_USB;
@@ -150,15 +150,12 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     intf->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_INTERFACE };
     intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
     intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
-    if (device_desc->bDeviceClass != 0) {
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_desc->bDeviceClass };
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_desc->bDeviceSubClass };
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_desc->bDeviceProtocol };
-    } else {
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, interface_desc->bInterfaceClass };
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, interface_desc->bInterfaceSubClass };
-        intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, interface_desc->bInterfaceProtocol };
-    }
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_desc->bDeviceClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_desc->bDeviceSubClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_desc->bDeviceProtocol };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, interface_desc->bInterfaceClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, interface_desc->bInterfaceSubClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, interface_desc->bInterfaceProtocol };
     intf->device.props = intf->props;
     intf->device.prop_count = count;
 
@@ -176,6 +173,65 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     return status;
 }
 
+mx_status_t usb_device_add_interface_association(usb_device_t* device,
+                                                 usb_device_descriptor_t* device_desc,
+                                                 usb_interface_assoc_descriptor_t* assoc_desc,
+                                                 size_t assoc_desc_length) {
+    usb_interface_t* intf = calloc(1, sizeof(usb_interface_t));
+    if (!intf)
+        return ERR_NO_MEMORY;
+
+    intf->hci_device = device->hci_device;
+    intf->hci_protocol = device->hci_protocol;
+    intf->device_id = device->device_id;
+    intf->descriptor = (usb_descriptor_header_t *)assoc_desc;
+    intf->descriptor_length = assoc_desc_length;
+
+    char name[20];
+    snprintf(name, sizeof(name), "usb-dev-%03d-ia-%d", device->device_id, assoc_desc->iFunction);
+
+    device_init(&intf->device, &_driver_usb_interface, name, &usb_interface_proto);
+    intf->device.protocol_id = MX_PROTOCOL_USB;
+
+    int count = 0;
+    intf->props[count++] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_USB };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_DEVICE_TYPE, 0, USB_DEVICE_TYPE_INTERFACE };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_VID, 0, device_desc->idVendor };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PID, 0, device_desc->idProduct };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_CLASS, 0, device_desc->bDeviceClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_SUBCLASS, 0, device_desc->bDeviceSubClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_PROTOCOL, 0, device_desc->bDeviceProtocol };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_CLASS, 0, assoc_desc->bFunctionClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_SUBCLASS, 0, assoc_desc->bFunctionSubClass };
+    intf->props[count++] = (mx_device_prop_t){ BIND_USB_IFC_PROTOCOL, 0, assoc_desc->bFunctionProtocol };
+    intf->device.props = intf->props;
+    intf->device.prop_count = count;
+
+    usb_descriptor_header_t* header = intf->descriptor;
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->descriptor_length);
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
+            if (intf_desc->bAlternateSetting == 0) {
+                mx_status_t status = usb_interface_configure_endpoints(intf, intf_desc->bInterfaceNumber, 0);
+                if (status != NO_ERROR) return status;
+            }
+        }
+        header = NEXT_DESCRIPTOR(header);
+    }
+
+    // need to do this first so usb_device_set_interface() can be called from driver bind
+    list_add_head(&device->children, &intf->node);
+    mx_status_t status = device_add(&intf->device, &device->device);
+    if (status != NO_ERROR) {
+        list_delete(&intf->node);
+        free(assoc_desc);
+        free(intf);
+    }
+    return status;
+}
+
+
 void usb_device_remove_interfaces(usb_device_t* device) {
     usb_interface_t* intf;
     while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
@@ -189,8 +245,8 @@ uint32_t usb_interface_get_device_id(mx_device_t* device) {
 }
 
 bool usb_interface_contains_interface(usb_interface_t* intf, uint8_t interface_id) {
-    usb_descriptor_header_t* header = (usb_descriptor_header_t *)intf->interface_desc;
-    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->interface_desc_length);
+    usb_descriptor_header_t* header = intf->descriptor;
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->descriptor_length);
 
     while (header < end) {
         if (header->bDescriptorType == USB_DT_INTERFACE) {

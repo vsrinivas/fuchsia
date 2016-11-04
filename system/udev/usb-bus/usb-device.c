@@ -153,7 +153,40 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
     usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)config + le16toh(config->wTotalLength));
 
     while (header < end) {
-        if (header->bDescriptorType == USB_DT_INTERFACE) {
+        if (header->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+            usb_interface_assoc_descriptor_t* assoc_desc = (usb_interface_assoc_descriptor_t*)header;
+            int interface_count = assoc_desc->bInterfaceCount;
+
+            // find end of this interface association
+            usb_descriptor_header_t* next = NEXT_DESCRIPTOR(assoc_desc);
+            while (next < end) {
+                if (next->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+                    break;
+                } else if (next->bDescriptorType == USB_DT_INTERFACE) {
+                    usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)next;
+
+                    if (test_intf->bAlternateSetting == 0) {
+                        if (interface_count == 0) {
+                            break;
+                        }
+                        interface_count--;
+                    }
+                }
+                next = NEXT_DESCRIPTOR(next);
+            }
+
+            size_t length = (void *)next - (void *)assoc_desc;
+            usb_interface_assoc_descriptor_t* assoc_copy = malloc(length);
+            if (!assoc_copy) return ERR_NO_MEMORY;
+            memcpy(assoc_copy, assoc_desc, length);
+
+            mx_status_t status = usb_device_add_interface_association(parent, device_desc, assoc_copy, length);
+            if (status != NO_ERROR) {
+                result = status;
+            }
+
+            header = next;
+        } else if (header->bDescriptorType == USB_DT_INTERFACE) {
             usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
             // find end of current interface descriptor
             usb_descriptor_header_t* next = NEXT_DESCRIPTOR(intf_desc);

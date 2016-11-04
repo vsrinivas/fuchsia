@@ -69,6 +69,7 @@ __BEGIN_CDECLS;
 #define USB_DT_DEVICE_QUALIFIER            0x06
 #define USB_DT_OTHER_SPEED_CONFIG          0x07
 #define USB_DT_INTERFACE_POWER             0x08
+#define USB_DT_INTERFACE_ASSOCIATION       0x0b
 #define USB_DT_HID                         0x21
 #define USB_DT_HIDREPORT                   0x22
 #define USB_DT_HIDPHYSICAL                 0x23
@@ -200,5 +201,16 @@ typedef struct {
     uint16_t wReserved;
     uint16_t wBytesPerInterval;
 } __attribute__ ((packed)) usb_ss_isoch_ep_comp_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_INTERFACE_ASSOCIATION
+    uint8_t bFirstInterface;
+    uint8_t bInterfaceCount;
+    uint8_t bFunctionClass;
+    uint8_t bFunctionSubClass;
+    uint8_t bFunctionProtocol;
+    uint8_t iFunction;
+} __attribute__ ((packed)) usb_interface_assoc_descriptor_t;
 
 __END_CDECLS;
