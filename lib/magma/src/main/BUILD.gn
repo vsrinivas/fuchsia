@@ -5,10 +5,7 @@
 import("//magma/gnbuild/magma.gni")
 
 declare_args() {
-  unit_test = true
-  vkreadback_test = false
-  glreadback_test = false
-  spinning_cube_test = false
+  magma_indriver_test = ""
 }
 
 source_set("main") {
@@ -19,6 +16,7 @@ source_set("main") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
+    "$mesa_build_root:magma_vulkan",
   ]
 
   libs = [
@@ -41,31 +39,45 @@ source_set("test_driver") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/helper:platform_device_helper",
+    "$mesa_build_root:magma_vulkan",
   ]
 
   defines = []
 
-  if (unit_test) {
-    defines += [ "MAGMA_UNIT_TESTS=1" ]
+  if (magma_indriver_test == "msd_unit_tests") {
+    # Don't create the device, let the unit tests create and destroy it.
+    defines += [ "MAGMA_CREATE_DEVICE=0" ]
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_gtest.cc" ]
     deps += [
       "$magma_build_root/tests/unit_tests:magma_platform_tests",
       "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
+      "$msd_gtest_target",
       "//third_party/gtest",
     ]
-  }
-  if (glreadback_test) {
+  } else if (magma_indriver_test == "sys_abi_tests") {
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_gtest.cc" ]
+    deps += [
+      "$magma_build_root/tests/unit_tests:sys_abi_conformance_tests",
+      "//third_party/gtest",
+    ]
+  } else if (magma_indriver_test == "glreadback") {
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_readback.cc" ]
+    deps -= [ "$mesa_build_root:magma_vulkan" ]
     deps += [ "$magma_build_root/tests/gpureadback" ]
-    defines += [ "MAGMA_GLREADBACK_TEST=1" ]
-  } else if (spinning_cube_test) {
+  } else if (magma_indriver_test == "spinning_cube") {
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_spinning_cube.cc" ]
+    deps -= [ "$mesa_build_root:magma_vulkan" ]
     deps += [ "$magma_build_root/tests/spinning_cube" ]
-    defines += [ "MAGMA_SPINNING_CUBE_TEST=1" ]
-  } else {
-    # Not building gl, always build vulkan
-    deps += [ "$mesa_build_root:magma_vulkan" ]
-  }
-  if (vkreadback_test) {
+  } else if (magma_indriver_test == "vkreadback") {
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_vkreadback.cc" ]
     deps += [ "$magma_build_root/tests/vkreadback" ]
-    defines += [ "MAGMA_VKREADBACK_TEST=1" ]
+  } else {
+    assert(false)
   }
 
   libs = [

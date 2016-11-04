@@ -26,31 +26,15 @@ int devhost_start(void);
 #include "magma_util/sleep.h"
 #include "sys_driver/magma_driver.h"
 
-#if MAGMA_UNIT_TESTS
-#include "helper/platform_device_helper.h"
-#include "gtest/gtest.h"
-#endif
-
-#if MAGMA_VKREADBACK_TEST
-extern "C" {
-#include "vkreadback/vkreadback.h"
-}
-#endif
-
-#if MAGMA_GLREADBACK_TEST
-extern "C" {
-#include <gpureadback.h>
-#include "vkreadback/vkreadback.h"
-}
-#endif
-
-#if MAGMA_SPINNING_CUBE_TEST
-extern "C" {
-#include "test_spinning_cube.h"
-}
-#endif
-
 #define MAGMA_START 1
+
+#ifndef MAGMA_CREATE_DEVICE
+#define MAGMA_CREATE_DEVICE 1
+#endif
+
+#if MAGMA_INDRIVER_TEST
+void magma_indriver_test(mx_device_t* device);
+#endif
 
 #define INTEL_I915_VID (0x8086)
 #define INTEL_I915_BROADWELL_DID (0x1616)
@@ -300,12 +284,11 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
 
     static int magma_hook(void* param)
 {
-
     xprintf("magma_hook start\n");
 
     auto dev = reinterpret_cast<intel_i915_device_t*>(param);
 
-#if !MAGMA_UNIT_TESTS
+#if MAGMA_CREATE_DEVICE
     // create and add the gpu device
     dev->magma_driver = MagmaDriver::Create();
     if (!dev->magma_driver)
@@ -320,34 +303,12 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
     }
 
     xprintf("Created device %p\n", dev->magma_system_device);
-
-#if MAGMA_GLREADBACK_TEST
-    xprintf("running magma glreadback tests\n");
-    test_gpu_readback();
 #endif
 
-#if MAGMA_VKREADBACK_TEST
-    xprintf("running magma vkreadback tests\n");
-    test_vk_readback();
+#if MAGMA_INDRIVER_TEST
+    xprintf("running magma indriver test\n");
+    magma_indriver_test(dev->parent_device);
 #endif
-
-#if MAGMA_SPINNING_CUBE_TEST
-    xprintf("running magma spinning cube test\n");
-    test_spinning_cube();
-#endif
-
-#else
-    xprintf("running magma unit tests\n");
-    xprintf("dev->parent_device: %p\n", dev->parent_device);
-    TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(dev->parent_device));
-    int argc = 1;
-    char* argv[] = {(char*)"driver_main", nullptr};
-    testing::InitGoogleTest(&argc, argv);
-    xprintf("running all tests\n");
-    xprintf("[DRV START=]\n");
-    (void)RUN_ALL_TESTS();
-    xprintf("[DRV END===]\n[==========]\n");
-#endif // MAGMA_UNIT_TESTS
 
     xprintf("magma_hook finish\n");
 
