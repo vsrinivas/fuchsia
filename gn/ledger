@@ -20,14 +20,6 @@
             "bootfs_path": "test/gcs_unittests"
         },
         {
-            "binary": "ledger_abax",
-            "bootfs_path": "apps/ledger_abax"
-        },
-        {
-            "binary": "ledger_abax_apptests",
-            "bootfs_path": "apps/ledger_abax_apptests"
-        },
-        {
             "binary": "ledger_codex",
             "bootfs_path": "apps/ledger"
         },
