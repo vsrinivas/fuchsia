@@ -1,0 +1,24 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/fidl/fidl.gni")
+
+fidl("views") {
+  sources = [
+    "view_associates.fidl",
+    "view_containers.fidl",
+    "view_manager.fidl",
+    "view_properties.fidl",
+    "view_provider.fidl",
+    "view_token.fidl",
+    "view_tree_token.fidl",
+    "view_trees.fidl",
+    "views.fidl",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/composition",
+    "//apps/mozart/services/geometry",
+  ]
+}

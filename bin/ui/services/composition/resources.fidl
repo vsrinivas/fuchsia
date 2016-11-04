@@ -1,0 +1,39 @@
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "apps/mozart/services/composition/image.fidl";
+import "apps/mozart/services/composition/scene_token.fidl";
+import "apps/mozart/services/geometry/geometry.fidl";
+
+// Resources are references to foreign objects which are being imported into
+// the scene graph, such as images and other scenes.  Each resource must be
+// given a locally unique identifier when it is bound to the scene.
+union Resource {
+  SceneResource scene;
+  ImageResource image;
+};
+
+// Scene resource declaration.
+//
+// Binds a resource id to a scene given its scene token.
+//
+// If the scene referenced by the token becomes unavailable, the
+// |Scene.OnResourceUnavailable| event will be sent.
+struct SceneResource {
+  // The scene token of the referenced scene.
+  SceneToken scene_token;
+};
+
+// Image resource declaration.
+//
+// Binds a resource id to an image.
+//
+// TODO(jeffbrown): Associate a fence with the image to enable pipelining
+// and reuse of images.
+struct ImageResource {
+  // The image to associate with the resource.
+  Image image;
+};
