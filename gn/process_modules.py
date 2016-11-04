@@ -13,8 +13,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "..", "apps", "component_manager", "python")))
 
-from component_manifest import ComponentManifest, url_to_path
-
 class Amalgamation:
 
     def __init__(self):
@@ -40,6 +38,7 @@ class Amalgamation:
             self.files.append(file)
         for c in config.get("components", []):
             # See https://fuchsia.googlesource.com/component_manager/ for what a component is.
+            from component_manifest import ComponentManifest
             manifest = ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
             self.component_urls.append(manifest.url)
             for component_file in manifest.files().values():
