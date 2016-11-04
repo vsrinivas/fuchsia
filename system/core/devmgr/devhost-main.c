@@ -43,7 +43,7 @@ extern mx_driver_t _driver_dmctl;
 extern mx_handle_t _dmctl_handle;
 
 // FIXME(yky,teisenbe): remove when real acpi bus driver goes in
-extern mx_driver_t _driver_acpi;
+extern mx_driver_t _driver_acpi_root;
 
 static void init_driver(mx_driver_t* drv, bool for_root) {
         if ((drv->binding_size == 0) && (!for_root)) {
@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
     if (as_root) {
         driver_add(&_driver_dmctl);
         // FIXME(yky,teisenbe): remove when real acpi bus driver goes in
-        driver_add(&_driver_acpi);
+        driver_add(&_driver_acpi_root);
     }
     init_builtin_drivers(as_root);
     load_loadable_drivers("/system/lib/driver");

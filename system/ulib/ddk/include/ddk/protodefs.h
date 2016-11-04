@@ -24,6 +24,7 @@ DDK_PROTOCOL_DEF(BLUETOOTH_HCI,  'pBHC', "bt-hci")
 DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio")
 DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi")
 DDK_PROTOCOL_DEF(SOC,            'pSOC', "soc")
+DDK_PROTOCOL_DEF(ACPI_BUS,       'pABS', "acpi-bus")
 DDK_PROTOCOL_DEF(ACPI,           'pACP', "acpi")
 #undef DDK_PROTOCOL_DEF
 #endif

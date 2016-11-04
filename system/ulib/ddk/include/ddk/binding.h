@@ -86,6 +86,13 @@ __BEGIN_CDECLS;
 #define BIND_SOC_PID          0x0301
 #define BIND_SOC_DID          0x0302
 
+// ACPI binding variables at 0x04XX
+// The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2
+// properties to bind using the _HID. They are encoded in big endian order for
+// human readability. In the case of 7-byte _HID's, the 8th-byte shall be 0.
+#define BIND_ACPI_HID_0_3      0x0400 // char 0-3
+#define BIND_ACPI_HID_4_7      0x0401 // char 4-7
+
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This
 // binding will eventually be made via some sort of ACPI device enumeration.

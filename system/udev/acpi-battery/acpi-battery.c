@@ -139,7 +139,11 @@ mx_driver_t _driver_acpi_battery = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_acpi_battery, "acpi-battery", "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
-    // TODO(yky): match using hid when implemented
+#define ACPI_BATTERY_HID_0_3 0x504e5030 // "PNP0"
+#define ACPI_BATTERY_HID_4_7 0x43304100 // "C0A"
+
+MAGENTA_DRIVER_BEGIN(_driver_acpi_battery, "acpi-battery", "magenta", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
+    BI_MATCH_IF(NE, BIND_ACPI_HID_0_3, ACPI_BATTERY_HID_0_3),
+    BI_ABORT_IF(EQ, BIND_ACPI_HID_4_7, ACPI_BATTERY_HID_4_7),
 MAGENTA_DRIVER_END(_driver_acpi_battery)

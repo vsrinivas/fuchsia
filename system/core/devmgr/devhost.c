@@ -25,6 +25,8 @@
 
 #include <mxio/util.h>
 
+#include "acpi.h"
+
 static void devhost_io_init(void) {
     mx_handle_t h;
     if ((h = mx_log_create(MX_LOG_FLAG_DEVICE)) < 0) {
@@ -154,7 +156,11 @@ static mx_handle_t hrpc;
 static mx_handle_t hacpi;
 
 __EXPORT mx_handle_t devhost_get_hacpi(void) {
+#if ONLY_ONE_DEVHOST
+    return devmgr_acpi_clone();
+#else
     return hacpi;
+#endif
 }
 
 // Give core builtin drivers some control over where they publish
@@ -245,12 +251,11 @@ __EXPORT int devhost_cmdline(int argc, char** argv) {
         dev->props[1].value = strtoul(argv[3],NULL,10);
         dev->prop_count=2;
     } else if (!strcmp(argv[1], "acpi")) {
-        // FIXME(yky,teisenbe): this will only add the battery device. need to restructure
-        // the code to scan the acpi tree.
-        if ((status = devhost_init_acpidev(&dev)) < 0) {
-            printf("devhost: cannot init acpi device: %d\n", status);
+        if ((status = device_create(&dev, &root_driver, "acpi", &root_ops)) < 0) {
+            printf("devhost: cannot create ACPI bus device: %d\n", status);
             return -1;
         }
+        dev->protocol_id = MX_PROTOCOL_ACPI_BUS;
     } else {
         printf("devhost: unsupported mode: %s\n", argv[1]);
         return -1;
