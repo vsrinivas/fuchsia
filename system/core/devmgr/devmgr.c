@@ -115,21 +115,26 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         return NO_ERROR;
     }
 
+    // TODO(smklein): Pass block devices by handle, not pathname, since
+    // accessing devices by pathnames is inherently racy.
     if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
         // probe for partition table
         ioctl_device_bind(fd, "gpt", 4);
     } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
+        close(fd);
         launch_minfs(name);
     } else if ((data[510] == 0x55 && data[511] == 0xAA) && (data[38] == 0x29 ||
                                                             data[66] == 0x29)) {
         // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
         // 0x29 is the Boot Signature, but it is placed at either offset 38 or
         // 66 (depending on FAT type).
+        close(fd);
         launch_fat(name);
+    } else {
+        close(fd);
     }
 
-    close(fd);
     return NO_ERROR;
 }
 

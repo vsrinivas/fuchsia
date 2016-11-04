@@ -496,6 +496,12 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const cha
     if (dev->flags & DEV_FLAG_DEAD) {
         printf("device open: %p(%s) is dead!\n", dev, dev->name);
         return ERR_BAD_STATE;
+    } else if (dev->protocol_id == MX_PROTOCOL_BLOCK && dev->refcount > 1) {
+        // Block devices can only be opened by one client at a time.
+        // This prevents issues like mounting a filesystem multiple times on the
+        // same partition, or attempting to run fsck on a life system.
+        printf("device open: %p(%s) is already open\n", dev, dev->name);
+        return ERR_ALREADY_BOUND;
     }
     dev_ref_acquire(dev);
     mx_status_t r;
