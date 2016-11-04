@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <magenta/device/ioctl.h>
 #include <magenta/device/ioctl-wrapper.h>
+#include <magenta/types.h>
 
 #define MX_DISPLAY_FLAG_HW_FRAMEBUFFER (1 << 0)
 
