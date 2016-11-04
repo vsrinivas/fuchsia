@@ -4,14 +4,13 @@
 # found in the LICENSE file.
 
 import argparse
+import component_manifest
 import json
 import os
 import paths
-import urlparse
 import re
 import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "..", "apps", "component_manager", "python")))
+import urlparse
 
 class Amalgamation:
 
@@ -38,8 +37,7 @@ class Amalgamation:
             self.files.append(file)
         for c in config.get("components", []):
             # See https://fuchsia.googlesource.com/component_manager/ for what a component is.
-            from component_manifest import ComponentManifest
-            manifest = ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
+            manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
             self.component_urls.append(manifest.url)
             for component_file in manifest.files().values():
                 self.files.append({
