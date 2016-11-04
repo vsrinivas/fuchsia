@@ -72,33 +72,40 @@ char *trim(char *str) {
     return str;
 }
 
-fsentry *import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src) {
+int import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src, fsentry **entry) {
     fsentry *e;
     struct stat s;
 
     if (dst[0] == 0) {
         fprintf(stderr, "%s:%d: illegal filename\n", fn, lineno);
-        return NULL;
+        return -1;
     }
     if (stat(src, &s) < 0) {
         fprintf(stderr, "%s:%d: cannot stat '%s'\n", fn, lineno, src);
-        return NULL;
+        return -1;
     }
     if (s.st_size > INT32_MAX) {
         fprintf(stderr, "%s:%d: file too large '%s'\n", fn, lineno, src);
-        return NULL;
+        return -1;
+    } else if (s.st_size == 0) {
+        // TODO(tkilbourn): Add support for empty files, rather than dropping
+        // them.
+        fprintf(stderr, "Warning: %s:%d: file empty '%s'\n", fn, lineno, src);
+        *entry = NULL;
+        return 0;
     }
 
-    if ((e = calloc(1, sizeof(*e))) == NULL) return NULL;
+    if ((e = calloc(1, sizeof(*e))) == NULL) return -1;
     if ((e->name = strdup(dst)) == NULL) goto fail;
     if ((e->srcpath = strdup(src)) == NULL) goto fail;
     e->namelen = strlen(e->name) + 1;
     e->length = s.st_size;
-    return e;
+    *entry = e;
+    return 0;
 fail:
     free(e->name);
     free(e);
-    return NULL;
+    return -1;
 }
 
 fsentry *import_directory_entry(const char *dst, const char *src, struct stat *s) {
@@ -160,10 +167,11 @@ int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
         *eq++ = 0;
         char* dstfn = trim(line);
         char* srcfn = trim(eq);
-        if ((e = import_manifest_entry(fn, lineno, dstfn, srcfn)) == NULL) {
+        if (import_manifest_entry(fn, lineno, dstfn, srcfn, &e)) {
             return -1;
+        } else if (e != NULL) {
+            sz += add_entry(fs, e);
         }
-        sz += add_entry(fs, e);
     }
     fclose(fp);
     *hdrsz += sz;
