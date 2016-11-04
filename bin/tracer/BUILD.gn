@@ -1,0 +1,22 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+
+mojo_native_application("tracer") {
+  sources = [
+    "tracer_app.cc",
+  ]
+
+  deps = [
+    "//apps/tracing/services",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//lib/mtl/data_pipe",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
+  ]
+}

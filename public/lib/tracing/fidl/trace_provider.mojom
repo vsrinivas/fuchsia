@@ -1,0 +1,52 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module tracing;
+
+// The provider interface implemented by applications
+// (or by libraries they use) and registered with the TraceRegistry.
+// The Trace Manager calls into this interface to perform tracing.
+//
+// Invariant: At most one trace can be running at a time.  If the trace
+// provider receives an invalid request, it should close the connection.
+[ServiceName="tracing::TraceProvider"]
+interface TraceProvider {
+  // Starts tracing the specified categories into the provided VMO buffers,
+  // beginning with the |initial_buffer|.
+  //
+  // When double-buffering is enabled, the trace manager will provide a
+  // |next_buffer| into which the trace provider should continue to write
+  // traces without interruption when the |initial_buffer| becomes full.
+  //
+  // Each time the trace provider fills a buffer, it should set the
+  // |MX_SIGNAL_SIGNAL0| signal bit on that buffer to inform the trace manager
+  // that the buffer has filled up.  The trace manager may then copy the data
+  // out of the buffer, reset the signal bit, and call |RecycleBuffer| to
+  // let the trace provider know that it can reuse the buffer.
+  //
+  // If the trace provider fills all of its buffers before they can be recycled,
+  // it should stop tracing altogether.
+  Start(handle<shared_buffer> initial_buffer,
+    handle<shared_buffer>? next_buffer,
+    array<string> categories);
+
+  // Informs the provider that the trace manager has finished consuming the
+  // data in the previous buffer so it is now available to be reused.
+  //
+  // This should be called in response to receiving |MX_SIGNAL_SIGNAL0|
+  // on a prior buffer in order to ensure that tracing can continue
+  // uninterrupted.  This is essentially a double-buffering scheme.
+  //
+  // It is invalid for the trace manager to invoke this method unless the
+  // provider sent a signal indicating that the previous buffer was full.
+  //
+  // The trace provider should clear the buffer before recycling it.
+  RecycleBuffer();
+
+  // Stops tracing.
+  //
+  // The provider should invoke the callback once it has finished writing its
+  // traces and released the current and next buffers.
+  Stop() => ();
+};

@@ -2,61 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-
-source_set("lib") {
-  sources = [
-    "trace_provider_registry_impl.cc",
-    "trace_provider_registry_impl.h",
-    "trace_recorder_impl.cc",
-    "trace_recorder_impl.h",
-  ]
-
-  public_deps = [
-    "//lib/ftl",
-    "//lib/mtl/data_pipe",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/utility",
-    "//mojo/services/tracing/interfaces",
-  ]
-}
-
-mojo_native_application("tracing") {
-  sources = [
-    "tracing.cc",
-  ]
-
+group("tracing") {
   deps = [
-    ":lib",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/system",
-  ]
-}
-
-mojo_native_application("tracer") {
-  sources = [
-    "tracer.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/environment",
-    "//mojo/public/cpp/system",
-  ]
-}
-
-mojo_native_application("apps_tracing_unittests") {
-  testonly = true
-
-  sources = [
-    "trace_provider_registry_impl_unittest.cc",
-    "trace_recorder_impl_unittest.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/application:test_support_standalone",
+    "//apps/tracing/lib/trace_event",
+    "//apps/tracing/services",
+    "//apps/tracing/src/trace_manager",
+    "//apps/tracing/src/tracer",
   ]
 }
