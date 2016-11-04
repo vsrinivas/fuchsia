@@ -18,8 +18,6 @@ mojom("interfaces") {
   ]
 
   public_deps = [
-    "//mojo/services/framebuffer/interfaces",
     "//mojo/services/geometry/interfaces",
-    "//mojo/services/gpu/interfaces",
   ]
 }

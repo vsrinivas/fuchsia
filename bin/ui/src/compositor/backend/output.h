@@ -7,6 +7,7 @@
 
 #include <functional>
 
+#include "apps/mozart/services/composition/interfaces/renderers.mojom.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
@@ -45,11 +46,17 @@ class Output {
     ftl::TimeDelta presentation_latency;
   };
 
+  // Callback for receiving display information.
+  using DisplayCallback = std::function<void(mozart::DisplayInfoPtr)>;
+
   // Callback for receiving frame timing information.
   using FrameCallback = std::function<void(const FrameTiming&)>;
 
   Output() = default;
   virtual ~Output() = default;
+
+  // Gets display information when available.
+  virtual void GetDisplayInfo(DisplayCallback callback) = 0;
 
   // Schedules the next frame.
   // Invokes the callback when processing for the next frame is allowed to

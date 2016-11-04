@@ -4,6 +4,8 @@
 
 source_set("common") {
   sources = [
+    "backend/framebuffer.cc",
+    "backend/framebuffer.h",
     "backend/framebuffer_output.cc",
     "backend/framebuffer_output.h",
     "backend/output.h",
@@ -60,7 +62,6 @@ source_set("common") {
     "//mojo/public/c:MGL",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
-    "//mojo/services/framebuffer/interfaces",
     "//mojo/services/geometry/cpp",
     "//mojo/services/geometry/interfaces",
     "//mojo/system",

@@ -36,9 +36,6 @@ class LauncherApp : public mojo::ApplicationImplBase, public mozart::Launcher {
 
   void Launch(const mojo::String& application_url);
 
-  void DisplayInternal(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                       mojo::FramebufferInfoPtr framebuffer_info,
-                       mozart::ViewOwnerPtr view_owner);
   void OnLaunchTermination(uint32_t id);
 
   void OnCompositorConnectionError();
@@ -50,8 +47,6 @@ class LauncherApp : public mojo::ApplicationImplBase, public mozart::Launcher {
       launch_instances_;
 
   uint32_t next_id_;
-
-  mojo::FramebufferProviderPtr framebuffer_provider_;
 
   mozart::CompositorPtr compositor_;
   mozart::ViewManagerPtr view_manager_;

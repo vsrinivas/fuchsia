@@ -21,6 +21,12 @@ void RendererImpl::GetHitTester(
   hit_tester_bindings.AddBinding(this, hit_tester_request.Pass());
 }
 
+void RendererImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
+  engine_->GetDisplayInfo(state_, [callback](mozart::DisplayInfoPtr info) {
+    callback.Run(std::move(info));
+  });
+}
+
 void RendererImpl::SetRootScene(mozart::SceneTokenPtr scene_token,
                                 uint32_t scene_version,
                                 mojo::RectPtr viewport) {

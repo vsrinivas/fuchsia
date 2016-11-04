@@ -16,7 +16,6 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
 
 namespace launcher {
 
@@ -26,8 +25,6 @@ class LaunchInstance {
  public:
   LaunchInstance(mozart::Compositor* compositor,
                  mozart::ViewManager* view_manager,
-                 mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                 mojo::FramebufferInfoPtr framebuffer_info,
                  mozart::ViewOwnerPtr view_owner,
                  const ftl::Closure& shutdown_callback);
   ~LaunchInstance();
@@ -40,9 +37,8 @@ class LaunchInstance {
   mozart::Compositor* const compositor_;
   mozart::ViewManager* const view_manager_;
 
-  mojo::InterfaceHandle<mojo::Framebuffer> framebuffer_;
-  mojo::FramebufferInfoPtr framebuffer_info_;
-  mojo::Size framebuffer_size_;
+  mozart::RendererPtr renderer_;
+
   mojo::PointF mouse_coordinates_;
   mozart::ViewOwnerPtr root_view_owner_;
 

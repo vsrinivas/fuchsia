@@ -14,9 +14,10 @@ import "mojo/services/geometry/interfaces/geometry.mojom";
 //
 // Use |Compositor.CreateRenderer()| to create a renderer.
 interface Renderer {
+  // Gets information about the target display for rendering.
+  GetDisplayInfo() => (DisplayInfo display_info);
+
   // Sets the scene to be displayed by the renderer.
-  //
-  // The |size| specifies the size of the output.
   //
   // The |scene_token| specifies the scene which will be drawn as the
   // root of the scene graph.
@@ -43,4 +44,16 @@ interface Renderer {
   // Provides an interface which can be used to perform hit tests on the
   // contents of the renderer's scene graph.
   GetHitTester(HitTester& hit_tester);
+};
+
+// Provides information about the display that the renderer targets.
+struct DisplayInfo {
+  // The size of the display in pixels.
+  mojo.Size size;
+
+  // The ratio between the size of one display device pixel to the size
+  // of one logical pixel, assuming pixels are square.  This value changes
+  // in relation to display density and zoom level.
+  // Must be > 0.
+  float device_pixel_ratio = 1.0;
 };

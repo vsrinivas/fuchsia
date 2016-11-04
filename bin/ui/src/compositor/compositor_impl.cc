@@ -24,12 +24,9 @@ void CompositorImpl::CreateScene(
 }
 
 void CompositorImpl::CreateRenderer(
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info,
     mojo::InterfaceRequest<mozart::Renderer> renderer_request,
     const mojo::String& label) {
-  engine_->CreateRenderer(std::move(framebuffer), std::move(framebuffer_info),
-                          renderer_request.Pass(), label);
+  engine_->CreateRenderer(renderer_request.Pass(), label);
 }
 
 }  // namespace compositor

@@ -109,12 +109,8 @@ void CompositorEngine::DestroyScene(SceneState* scene_state) {
 }
 
 void CompositorEngine::CreateRenderer(
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info,
     mojo::InterfaceRequest<mozart::Renderer> renderer_request,
     const mojo::String& label) {
-  FTL_DCHECK(framebuffer);
-  FTL_DCHECK(framebuffer_info);
   uint32_t renderer_id = next_renderer_id_++;
   FTL_CHECK(renderer_id);
 
@@ -145,14 +141,13 @@ void CompositorEngine::CreateRenderer(
       });
 
   // Initialize the output.
-  static_cast<FramebufferOutput*>(renderer_state->output())
-      ->Initialize(std::move(framebuffer), std::move(framebuffer_info), [
-        weak = weak_factory_.GetWeakPtr(),
-        renderer_state_weak = renderer_state->GetWeakPtr()
-      ] {
-        if (weak)
-          weak->OnOutputError(renderer_state_weak);
-      });
+  static_cast<FramebufferOutput*>(renderer_state->output())->Initialize([
+    weak = weak_factory_.GetWeakPtr(),
+    renderer_state_weak = renderer_state->GetWeakPtr()
+  ] {
+    if (weak)
+      weak->OnOutputError(renderer_state_weak);
+  });
 
   // Add to registry.
   renderers_.push_back(renderer_state);
@@ -249,6 +244,14 @@ void CompositorEngine::ScheduleFrame(SceneState* scene_state,
     ScheduleFrameForRenderer(renderer,
                              Scheduler::SchedulingMode::kUpdateThenSnapshot);
   }
+}
+
+void CompositorEngine::GetDisplayInfo(RendererState* renderer_state,
+                                      DisplayCallback callback) {
+  FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
+  DVLOG(1) << "GetDisplayInfo: renderer=" << renderer_state;
+
+  renderer_state->output()->GetDisplayInfo(std::move(callback));
 }
 
 void CompositorEngine::SetRootScene(RendererState* renderer_state,

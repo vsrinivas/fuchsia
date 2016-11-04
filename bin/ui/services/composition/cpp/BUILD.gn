@@ -13,7 +13,6 @@ source_set("cpp") {
   public_deps = [
     "//apps/mozart/services/composition/interfaces",
     "//lib/ftl",
-    "//mojo/services/framebuffer/interfaces",
     "//mojo/services/geometry/cpp",
   ]
 }

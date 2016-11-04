@@ -111,30 +111,12 @@ void LauncherApp::Launch(const mojo::String& application_url) {
 
 void LauncherApp::Display(
     mojo::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
-  mojo::ConnectToService(shell(), "mojo:framebuffer",
-                         mojo::GetProxy(&framebuffer_provider_));
-  framebuffer_provider_->Create(
-      ftl::MakeCopyable([ this, handle = std::move(view_owner_handle) ](
-          mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-          mojo::FramebufferInfoPtr framebuffer_info) mutable {
-        FTL_CHECK(framebuffer);
-        FTL_CHECK(framebuffer_info);
+  mozart::ViewOwnerPtr view_owner =
+      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle));
 
-        mozart::ViewOwnerPtr view_owner =
-            mozart::ViewOwnerPtr::Create(std::move(handle));
-        DisplayInternal(std::move(framebuffer), std::move(framebuffer_info),
-                        std::move(view_owner));
-      }));
-}
-
-void LauncherApp::DisplayInternal(
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info,
-    mozart::ViewOwnerPtr view_owner) {
   const uint32_t next_id = next_id_++;
   std::unique_ptr<LaunchInstance> instance(new LaunchInstance(
-      compositor_.get(), view_manager_.get(), std::move(framebuffer),
-      std::move(framebuffer_info), std::move(view_owner),
+      compositor_.get(), view_manager_.get(), std::move(view_owner),
       [this, next_id] { OnLaunchTermination(next_id); }));
   instance->Launch();
   launch_instances_.emplace(next_id, std::move(instance));

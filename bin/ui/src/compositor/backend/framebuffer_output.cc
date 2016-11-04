@@ -5,13 +5,13 @@
 #include "apps/mozart/src/compositor/backend/framebuffer_output.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
-#include <mx/process.h>
-#include <mx/vmo.h>
-
 #include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/src/compositor/backend/framebuffer.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -36,24 +36,22 @@ constexpr ftl::TimeDelta kHardwareDisplayLatency =
 
 class FramebufferOutput::Rasterizer {
  public:
-  Rasterizer(FramebufferOutput* output,
-             mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-             mojo::FramebufferInfoPtr framebuffer_info);
+  explicit Rasterizer(FramebufferOutput* output);
   ~Rasterizer();
+
+  mozart::DisplayInfoPtr GetDisplayInfo();
 
   void DrawFrame(ftl::RefPtr<RenderFrame> frame,
                  uint32_t frame_number,
                  ftl::TimePoint submit_time);
 
  private:
+  bool Initialize();
+
   FramebufferOutput* output_;
 
-  mojo::FramebufferPtr framebuffer_;
-  mojo::FramebufferInfoPtr framebuffer_info_;
-  uintptr_t framebuffer_data_ = 0u;
+  std::unique_ptr<Framebuffer> framebuffer_;
   sk_sp<SkSurface> framebuffer_surface_;
-
-  bool awaiting_flush_ = false;
 };
 
 FramebufferOutput::FramebufferOutput()
@@ -69,24 +67,25 @@ FramebufferOutput::~FramebufferOutput() {
   }
 }
 
-void FramebufferOutput::Initialize(
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info,
-    ftl::Closure error_callback) {
+void FramebufferOutput::Initialize(ftl::Closure error_callback) {
   FTL_DCHECK(!rasterizer_);
 
   error_callback_ = error_callback;
 
   ftl::ManualResetWaitableEvent wait;
   rasterizer_thread_ = mtl::CreateThread(&rasterizer_task_runner_);
-  rasterizer_task_runner_->PostTask(ftl::MakeCopyable([
-    this, &wait, fb = std::move(framebuffer), fbi = std::move(framebuffer_info)
-  ]() mutable {
-    rasterizer_ =
-        std::make_unique<Rasterizer>(this, std::move(fb), std::move(fbi));
+  rasterizer_task_runner_->PostTask([this, &wait] {
+    rasterizer_ = std::make_unique<Rasterizer>(this);
     wait.Signal();
-  }));
+  });
   wait.Wait();
+}
+
+void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
+  FTL_DCHECK(rasterizer_);
+
+  rasterizer_task_runner_->PostTask(
+      [this, callback] { callback(rasterizer_->GetDisplayInfo()); });
 }
 
 void FramebufferOutput::ScheduleFrame(FrameCallback callback) {
@@ -178,80 +177,60 @@ void FramebufferOutput::RunScheduledFrameCallback() {
   callback(timing);
 }
 
-FramebufferOutput::Rasterizer::Rasterizer(
-    FramebufferOutput* output,
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info)
-    : output_(output),
-      framebuffer_(mojo::FramebufferPtr::Create(std::move(framebuffer))),
-      framebuffer_info_(std::move(framebuffer_info)) {
+FramebufferOutput::Rasterizer::Rasterizer(FramebufferOutput* output)
+    : output_(output) {
   FTL_DCHECK(output_);
-  FTL_DCHECK(framebuffer_);
-  FTL_DCHECK(framebuffer_info_);
 
+  if (!Initialize())
+    output_->PostErrorCallback();
+}
+
+bool FramebufferOutput::Rasterizer::Initialize() {
   TRACE_EVENT0("gfx", "InitializeRasterizer");
 
-  const uint32_t width = framebuffer_info_->size->width;
-  const uint32_t height = framebuffer_info_->size->height;
-  const size_t row_bytes = framebuffer_info_->row_bytes;
-  const size_t size = row_bytes * height;
-  mx_status_t status = mx::process::self().map_vm(
-      mx::vmo(framebuffer_info_->vmo.release().value()), 0, size,
-      &framebuffer_data_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-  if (status < 0) {
-    FTL_LOG(ERROR) << "Cannot map framebuffer: status=" << status;
-    output_->PostErrorCallback();
-    return;
+  framebuffer_ = Framebuffer::Open();
+  if (!framebuffer_) {
+    FTL_LOG(ERROR) << "Failed to open framebuffer";
+    return false;
   }
 
   SkColorType sk_color_type;
-  SkAlphaType sk_alpha_type;
-  sk_sp<SkColorSpace> sk_color_space;
-  switch (framebuffer_info_->format) {
-    case mojo::FramebufferFormat::RGB_565:
+  switch (framebuffer_->info().format) {
+    case MX_PIXEL_FORMAT_ARGB_8888:
+    case MX_PIXEL_FORMAT_RGB_x888:
+      sk_color_type = kBGRA_8888_SkColorType;
+      break;
+    case MX_PIXEL_FORMAT_RGB_565:
       sk_color_type = kRGB_565_SkColorType;
-      sk_alpha_type = kOpaque_SkAlphaType;
-      break;
-    case mojo::FramebufferFormat::ARGB_8888:   // little-endian packed 32-bit
-      sk_color_type = kBGRA_8888_SkColorType;  // ARGB word has BGRA byte order
-      sk_alpha_type = kPremul_SkAlphaType;
-      sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
-      break;
-    case mojo::FramebufferFormat::RGB_x888:    // little-endian packed 32-bit
-      sk_color_type = kBGRA_8888_SkColorType;  // xRGB word has BGRx byte order
-      sk_alpha_type = kOpaque_SkAlphaType;
-      sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
       break;
     default:
-      FTL_LOG(ERROR) << "Unknown color type: " << framebuffer_info_->format;
-      output_->PostErrorCallback();
-      return;
+      FTL_LOG(ERROR) << "Framebuffer has unsupported pixel format: "
+                     << framebuffer_->info().format;
+      return false;
   }
 
-  FTL_LOG(INFO) << "Initializing framebuffer: "
-                << "width=" << width << ", height=" << height
-                << ", row_bytes=" << row_bytes
-                << ", format=" << framebuffer_info_->format
-                << ", sk_color_type=" << sk_color_type
-                << ", sk_alpha_type=" << sk_alpha_type;
-
-  framebuffer_surface_ = SkSurface::MakeRasterDirect(
-      SkImageInfo::Make(width, height, sk_color_type, sk_alpha_type,
-                        sk_color_space),
-      reinterpret_cast<void*>(framebuffer_data_), row_bytes);
+  framebuffer_surface_ = mozart::MakeSkSurfaceFromVMO(
+      framebuffer_->vmo(),
+      SkImageInfo::Make(framebuffer_->info().width, framebuffer_->info().height,
+                        sk_color_type, kOpaque_SkAlphaType),
+      framebuffer_->info().stride * framebuffer_->info().pixelsize);
   if (!framebuffer_surface_) {
-    FTL_LOG(ERROR) << "Failed to initialize framebuffer";
-    output_->PostErrorCallback();
-    return;
+    FTL_LOG(ERROR) << "Failed to map framebuffer surface";
+    return false;
   }
+
+  return true;
 }
 
-FramebufferOutput::Rasterizer::~Rasterizer() {
-  if (framebuffer_data_) {
-    mx::process::self().unmap_vm(
-        framebuffer_data_,
-        framebuffer_info_->row_bytes * framebuffer_info_->size->height);
-  }
+FramebufferOutput::Rasterizer::~Rasterizer() {}
+
+mozart::DisplayInfoPtr FramebufferOutput::Rasterizer::GetDisplayInfo() {
+  auto result = mozart::DisplayInfo::New();
+  result->size = mojo::Size::New();
+  result->size->width = framebuffer_->info().width;
+  result->size->height = framebuffer_->info().height;
+  result->device_pixel_ratio = 1.f;  // TODO: don't hardcode this
+  return result;
 }
 
 void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
@@ -259,7 +238,6 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
                                               ftl::TimePoint submit_time) {
   TRACE_EVENT_ASYNC_BEGIN0("gfx", "DrawFrame", frame_number);
   FTL_DCHECK(frame);
-  FTL_DCHECK(!awaiting_flush_);
 
   ftl::TimePoint draw_time = ftl::TimePoint::Now();
 
@@ -267,16 +245,12 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
   frame->Draw(canvas);
   canvas->flush();
 
-  awaiting_flush_ = true;
-  framebuffer_->Flush([this, frame_number, submit_time, draw_time]() {
-    FTL_DCHECK(awaiting_flush_);
-    awaiting_flush_ = false;
+  framebuffer_->Flush();
 
-    ftl::TimePoint finish_time = ftl::TimePoint::Now();
-    output_->PostFrameFinishedFromRasterizer(frame_number, submit_time,
-                                             draw_time, finish_time);
-    TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
-  });
+  ftl::TimePoint finish_time = ftl::TimePoint::Now();
+  output_->PostFrameFinishedFromRasterizer(frame_number, submit_time, draw_time,
+                                           finish_time);
+  TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
 }
 
 }  // namespace compositor

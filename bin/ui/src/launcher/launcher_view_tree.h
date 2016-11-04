@@ -17,10 +17,9 @@ namespace launcher {
 class LauncherViewTree : public mozart::ViewTreeListener,
                          public mozart::ViewContainerListener {
  public:
-  LauncherViewTree(mozart::Compositor* compositor,
-                   mozart::ViewManager* view_manager,
-                   mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                   mojo::FramebufferInfoPtr framebuffer_info,
+  LauncherViewTree(mozart::ViewManager* view_manager,
+                   mozart::RendererPtr renderer,
+                   mozart::DisplayInfoPtr display_info,
                    mozart::ViewOwnerPtr root_view,
                    const ftl::Closure& shutdown_callback);
 
@@ -46,9 +45,9 @@ class LauncherViewTree : public mozart::ViewTreeListener,
 
   void Shutdown();
 
-  mozart::Compositor* compositor_;
   mozart::ViewManager* view_manager_;
-  mojo::Size framebuffer_size_;
+
+  mozart::DisplayInfoPtr display_info_;
 
   ftl::Closure shutdown_callback_;
 

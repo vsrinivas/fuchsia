@@ -22,9 +22,7 @@ class CompositorImpl : public mozart::Compositor {
   void CreateScene(mojo::InterfaceRequest<mozart::Scene> scene_request,
                    const mojo::String& label,
                    const CreateSceneCallback& callback) override;
-  void CreateRenderer(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                      mojo::FramebufferInfoPtr framebuffer_info,
-                      mojo::InterfaceRequest<mozart::Renderer> renderer_request,
+  void CreateRenderer(mojo::InterfaceRequest<mozart::Renderer> renderer_request,
                       const mojo::String& label) override;
 
   CompositorEngine* engine_;

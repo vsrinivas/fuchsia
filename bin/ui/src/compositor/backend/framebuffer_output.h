@@ -13,22 +13,19 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
-#include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
 
 namespace compositor {
 
-// Renderer backed by a Framebuffer.
-// TODO(jeffbrown): This renderer doesn't do any pipelining.
+// Renderer backed by a Framebuffer on a new virtual console.
 class FramebufferOutput : public Output {
  public:
   FramebufferOutput();
   ~FramebufferOutput() override;
 
-  void Initialize(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                  mojo::FramebufferInfoPtr framebuffer_info,
-                  ftl::Closure error_callback);
+  void Initialize(ftl::Closure error_callback);
 
   // |Output|:
+  void GetDisplayInfo(DisplayCallback callback) override;
   void ScheduleFrame(FrameCallback callback) override;
   void SubmitFrame(ftl::RefPtr<RenderFrame> frame) override;
 

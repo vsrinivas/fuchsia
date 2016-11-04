@@ -8,7 +8,6 @@ module mozart;
 import "apps/mozart/services/composition/interfaces/renderers.mojom";
 import "apps/mozart/services/composition/interfaces/scene_token.mojom";
 import "apps/mozart/services/composition/interfaces/scenes.mojom";
-import "mojo/services/framebuffer/interfaces/framebuffer.mojom";
 import "mojo/services/geometry/interfaces/geometry.mojom";
 
 // The compositor manages scenes and scene graph renderers.
@@ -42,18 +41,13 @@ interface Compositor {
   // To unregister the scene, simply close the |scene| message pipe.
   CreateScene(Scene& scene, string? label) => (SceneToken scene_token);
 
-  // Creates a scene graph renderer.
-  //
-  // The |framebuffer| and |framebuffer_info| describe the output
-  // framebuffer device.
+  // Creates a scene graph renderer to a new virtual console.
   //
   // The |label| is an optional name to associate with the renderer for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
   //
   // To destroy the renderer, simply close the |renderer| message pipe.
-  CreateRenderer(mojo.Framebuffer framebuffer,
-                 mojo.FramebufferInfo framebuffer_info,
-                 Renderer& renderer,
+  CreateRenderer(Renderer& renderer,
                  string? label);
 };

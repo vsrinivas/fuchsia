@@ -38,6 +38,5 @@ source_set("lib") {
     "//lib/mtl",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings:bindings",
-    "//mojo/services/framebuffer/interfaces",
   ]
 }

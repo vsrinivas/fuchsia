@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <string>
 #include <utility>
 
@@ -15,7 +16,6 @@
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
-#include "mojo/services/framebuffer/interfaces/framebuffer.mojom.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
@@ -31,24 +31,20 @@ class HelloApp : public mojo::ApplicationImplBase {
   ~HelloApp() override {}
 
   void OnInitialize() override {
-    mojo::ConnectToService(shell(), "mojo:framebuffer",
-                           mojo::GetProxy(&framebuffer_provider_));
-    framebuffer_provider_->Create([this](
-        mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-        mojo::FramebufferInfoPtr framebuffer_info) {
-      FTL_CHECK(framebuffer);
-      FTL_CHECK(framebuffer_info);
+    mojo::ConnectToService(shell(), "mojo:compositor_service",
+                           GetProxy(&compositor_));
+    compositor_->CreateRenderer(GetProxy(&renderer_),
+                                "Hello Compositor Renderer");
 
-      framebuffer_size_ = *framebuffer_info->size;
-      compositor_->CreateRenderer(
-          std::move(framebuffer), std::move(framebuffer_info),
-          GetProxy(&renderer_), "Hello Compositor Renderer");
+    renderer_->GetDisplayInfo([this](mozart::DisplayInfoPtr display_info) {
+      FTL_DCHECK(display_info);
+      display_info_ = std::move(display_info);
 
       compositor_->CreateScene(GetProxy(&scene_), "Hello Compositor Scene",
                                [this](mozart::SceneTokenPtr scene_token) {
                                  auto viewport = mojo::Rect::New();
-                                 viewport->width = framebuffer_size_.width;
-                                 viewport->height = framebuffer_size_.height;
+                                 viewport->width = display_info_->size->width;
+                                 viewport->height = display_info_->size->height;
                                  renderer_->SetRootScene(std::move(scene_token),
                                                          kSceneVersion,
                                                          std::move(viewport));
@@ -57,9 +53,6 @@ class HelloApp : public mojo::ApplicationImplBase {
       scene_->GetScheduler(mojo::GetProxy(&frame_scheduler_));
       ScheduleDraw();
     });
-
-    mojo::ConnectToService(shell(), "mojo:compositor_service",
-                           GetProxy(&compositor_));
   }
 
   void ScheduleDraw() {
@@ -70,16 +63,21 @@ class HelloApp : public mojo::ApplicationImplBase {
   }
 
   void Draw() {
+    FTL_DCHECK(display_info_);
     FTL_DCHECK(scene_);
 
     // Animate the position of the circle.
+    const mojo::Size& size = *display_info_->size;
     x_ += 40.0f * frame_tracker_.presentation_time_delta().ToSecondsF();
-    if (x_ >= framebuffer_size_.width)
+    y_ += 40.0f * frame_tracker_.presentation_time_delta().ToSecondsF();
+    if (x_ >= size.width)
       x_ = 0.0;
+    if (y_ >= size.height)
+      y_ = 0.0;
 
     // Draw the contents of the scene to a surface.
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface = mozart::MakeSkSurface(framebuffer_size_, &image);
+    sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
     FTL_CHECK(surface);
 
     SkCanvas* canvas = surface->getCanvas();
@@ -87,14 +85,14 @@ class HelloApp : public mojo::ApplicationImplBase {
     SkPaint paint;
     paint.setColor(0xFFFF00FF);
     paint.setAntiAlias(true);
-    canvas->drawCircle(x_, y_, 200.0f, paint);
+    canvas->drawCircle(x_, y_, std::min(size.width, size.height) / 10, paint);
     canvas->flush();
 
     // Update the scene contents.
     auto update = mozart::SceneUpdate::New();
     mojo::RectF bounds;
-    bounds.width = framebuffer_size_.width;
-    bounds.height = framebuffer_size_.height;
+    bounds.width = size.width;
+    bounds.height = size.height;
 
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
@@ -121,8 +119,7 @@ class HelloApp : public mojo::ApplicationImplBase {
   }
 
  private:
-  mojo::FramebufferProviderPtr framebuffer_provider_;
-  mojo::Size framebuffer_size_;
+  mozart::DisplayInfoPtr display_info_;
 
   mozart::CompositorPtr compositor_;
   mozart::RendererPtr renderer_;
@@ -130,8 +127,8 @@ class HelloApp : public mojo::ApplicationImplBase {
   mozart::FrameSchedulerPtr frame_scheduler_;
   mozart::FrameTracker frame_tracker_;
 
-  float x_ = 400.0f;
-  float y_ = 300.0f;
+  float x_ = 0.f;
+  float y_ = 0.f;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloApp);
 };

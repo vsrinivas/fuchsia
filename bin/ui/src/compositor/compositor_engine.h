@@ -29,6 +29,9 @@ class CompositorEngine {
   explicit CompositorEngine();
   ~CompositorEngine();
 
+  // Callback for receiving display information.
+  using DisplayCallback = std::function<void(mozart::DisplayInfoPtr)>;
+
   // COMPOSITOR REQUESTS
 
   // Registers a scene.
@@ -37,9 +40,7 @@ class CompositorEngine {
       const mojo::String& label);
 
   // Creates a scene graph renderer.
-  void CreateRenderer(mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-                      mojo::FramebufferInfoPtr framebuffer_info,
-                      mojo::InterfaceRequest<mozart::Renderer> renderer_request,
+  void CreateRenderer(mojo::InterfaceRequest<mozart::Renderer> renderer_request,
                       const mojo::String& label);
 
   // SCENE REQUESTS
@@ -59,6 +60,9 @@ class CompositorEngine {
   void ScheduleFrame(SceneState* scene_state, const FrameCallback& callback);
 
   // RENDERER REQUESTS
+
+  // Gets display information when available.
+  void GetDisplayInfo(RendererState* renderer_state, DisplayCallback callback);
 
   // Sets the root scene.
   // Destroys |renderer_state| if an error occurs.

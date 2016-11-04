@@ -5,7 +5,6 @@
 #include "apps/mozart/src/launcher/launcher_view_tree.h"
 
 #include "apps/mozart/glue/base/logging.h"
-#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
@@ -13,23 +12,19 @@
 
 namespace launcher {
 
-LauncherViewTree::LauncherViewTree(
-    mozart::Compositor* compositor,
-    mozart::ViewManager* view_manager,
-    mojo::InterfaceHandle<mojo::Framebuffer> framebuffer,
-    mojo::FramebufferInfoPtr framebuffer_info,
-    mozart::ViewOwnerPtr root_view,
-    const ftl::Closure& shutdown_callback)
-    : compositor_(compositor),
-      view_manager_(view_manager),
-      framebuffer_size_(*framebuffer_info->size),
+LauncherViewTree::LauncherViewTree(mozart::ViewManager* view_manager,
+                                   mozart::RendererPtr renderer,
+                                   mozart::DisplayInfoPtr display_info,
+                                   mozart::ViewOwnerPtr root_view,
+                                   const ftl::Closure& shutdown_callback)
+    : view_manager_(view_manager),
+      display_info_(std::move(display_info)),
       shutdown_callback_(shutdown_callback),
       view_tree_listener_binding_(this),
       view_container_listener_binding_(this) {
-  FTL_DCHECK(compositor_);
   FTL_DCHECK(view_manager_);
-  FTL_DCHECK(framebuffer);
-  FTL_DCHECK(framebuffer_info);
+  FTL_DCHECK(display_info_);
+  FTL_DCHECK(renderer);
 
   // Register the view tree.
   mozart::ViewTreeListenerPtr view_tree_listener;
@@ -57,10 +52,6 @@ LauncherViewTree::LauncherViewTree(
       [this] { OnInputDispatcherConnectionError(); });
 
   // Attach the renderer.
-  mozart::RendererPtr renderer;
-  compositor_->CreateRenderer(std::move(framebuffer),
-                              std::move(framebuffer_info), GetProxy(&renderer),
-                              "Launcher");
   view_tree_->SetRenderer(std::move(renderer));
   if (root_view) {
     root_was_set_ = true;
@@ -124,10 +115,10 @@ void LauncherViewTree::UpdateViewProperties() {
 
   auto properties = mozart::ViewProperties::New();
   properties->display_metrics = mozart::DisplayMetrics::New();
-  // TODO(mikejurka): Create a way to get pixel ratio from framebuffer
-  properties->display_metrics->device_pixel_ratio = 1.0;
+  properties->display_metrics->device_pixel_ratio =
+      display_info_->device_pixel_ratio;
   properties->view_layout = mozart::ViewLayout::New();
-  properties->view_layout->size = framebuffer_size_.Clone();
+  properties->view_layout->size = display_info_->size.Clone();
 
   view_container_->SetChildProperties(root_key_, mozart::kSceneVersionNone,
                                       std::move(properties));

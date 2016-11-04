@@ -34,6 +34,7 @@ class RendererImpl : public mozart::Renderer,
 
  private:
   // |Renderer|:
+  void GetDisplayInfo(const GetDisplayInfoCallback& callback) override;
   void SetRootScene(mozart::SceneTokenPtr scene_token,
                     uint32_t scene_version,
                     mojo::RectPtr viewport) override;
