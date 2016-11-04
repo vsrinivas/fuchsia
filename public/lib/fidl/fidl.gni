@@ -9,7 +9,6 @@
 # generators. Sever this, and have generators consume compiled output from an
 # intermediate file.
 
-import("build/fidl_source_set.gni")
 import("//build/dart/dart_package.gni")
 
 # Generate C++/JavaScript/Java/Python/Dart/Go source files from fidl files. The
@@ -44,7 +43,7 @@ template("fidl") {
   cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
-    generator_root = rebase_path("lib/fidl/compiler/legacy_generators", ".", fidl_root)
+    generator_root = rebase_path("//lib/fidl/compiler/legacy_generators")
     legacy_gen_path = rebase_path("$generator_root/legacy")
     fidl_tool = rebase_path("${root_out_dir}/fidl")
 
@@ -161,11 +160,11 @@ template("fidl") {
       script = "/usr/bin/env"
       inputs = generator_sources
       public_deps = [
-        rebase_path("lib/fidl/compiler:fidl", ".", fidl_root),
+        "//lib/fidl/compiler:fidl",
       ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
         deps = [
-          rebase_path("lib/fidl/compiler/interfaces:interfaces", ".", fidl_root),
+          "//lib/fidl/compiler/interfaces:interfaces",
         ]
       }
       sources = invoker.sources
@@ -180,8 +179,6 @@ template("fidl") {
         rebase_path("//", root_build_dir),
         "-I",
         rebase_path("//", root_build_dir),
-        "-I",
-        rebase_path(fidl_root, root_build_dir),
         "--output-dir",
         rebase_path(root_gen_dir),
         "--no-gen-imports",
@@ -233,16 +230,21 @@ template("fidl") {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
     }
+
     if (defined(invoker.testonly)) {
       testonly = invoker.testonly
     }
 
-    public_configs =
-        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+    public_configs =[
+      "//lib/fidl/build/config:fidl_source",
+    ]
 
-    public_deps =
-        rebase_path([ "lib/fidl/cpp/bindings" ], ".", fidl_root)
+    public_deps = [
+      "//lib/fidl/cpp/bindings",
+    ]
+
     public_deps += cpp_public_deps
+
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
       data = process_file_template(invoker.sources, generator_js_outputs)
@@ -257,14 +259,19 @@ template("fidl") {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
     }
+
     if (defined(invoker.testonly)) {
       testonly = invoker.testonly
     }
 
-    public_configs =
-        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+    public_configs = [
+      "//lib/fidl/build/config:fidl_source",
+    ]
 
-    public_deps = rebase_path([ "lib/fidl/cpp/bindings" ], ".", fidl_root)
+    public_deps = [
+      "//lib/fidl/cpp/bindings",
+    ]
+
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sync_sources_target_name}" ]
@@ -280,16 +287,19 @@ template("fidl") {
     if (defined(invoker.visibility)) {
       visibility = invoker.visibility
     }
+
     if (defined(invoker.testonly)) {
       testonly = invoker.testonly
     }
 
-    public_configs =
-        rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+    public_configs = [
+      "//lib/fidl/build/config:fidl_source",
+    ]
 
-    public_deps = rebase_path([ "lib/fidl/cpp/bindings:serialization" ],
-                              ".",
-                              fidl_root)
+    public_deps = [
+      "//lib/fidl/cpp/bindings:serialization",
+    ]
+
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
@@ -321,7 +331,7 @@ template("fidl") {
   }
 
   action("${target_name}_python") {
-    script = rebase_path("lib/fidl/build/zip.py", ".", fidl_root)
+    script = "//lib/fidl/build/zip.py"
 
     deps = []
     zip_inputs = []
@@ -381,14 +391,13 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-common.h",
                 "{{source_gen_dir}}/{{source_file_part}}-internal.h",
               ])
-      public_configs =
-          rebase_path([ "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+      public_configs = [
+        "//lib/fidl/build/config:fidl_source",
+      ]
       deps = [
         ":$generator_target_name",
-        rebase_path( "lib/fidl/cpp/bindings" , ".", fidl_root),
-        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
-                    ".",
-                    fidl_root),
+        "//lib/fidl/cpp/bindings",
+        "//lib/fidl/compiler/interfaces:interfaces__generator",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -409,14 +418,13 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}.h",
                 "{{source_gen_dir}}/{{source_file_part}}.cc",
               ])
-      public_configs =
-          rebase_path([ "lib/fidl/cpp/bindings:bindings_config", "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+      public_configs = [
+        "//lib/fidl/cpp/bindings:bindings_config",
+      ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
-                    ".",
-                    fidl_root),
+        "//lib/fidl/compiler/interfaces:interfaces__generator",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -437,14 +445,14 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-sync.cc",
                 "{{source_gen_dir}}/{{source_file_part}}-sync.h",
               ])
-      public_configs =
-          rebase_path([ "lib/fidl/cpp/bindings:bindings_config", "lib/fidl/build/config:fidl_source" ], ".", fidl_root)
+      public_configs = [
+        "//lib/fidl/cpp/bindings:bindings_config",
+        "//lib/fidl/build/config:fidl_source",
+      ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        rebase_path("lib/fidl/compiler/interfaces:interfaces__generator",
-                    ".",
-                    fidl_root),
+        "//lib/fidl/compiler/interfaces:interfaces__generator",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes

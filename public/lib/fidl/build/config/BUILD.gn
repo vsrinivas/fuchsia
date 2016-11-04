@@ -2,14 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../fidl_source_set.gni")
-
 config("fidl_source") {
   include_dirs = [
-    # Include paths are specified relative to fuchsia root.
-    fidl_root,
-
-    # The same goes for files generated from fidls.
-    root_gen_dir + fidl_root,
+    root_gen_dir,
   ]
 }
