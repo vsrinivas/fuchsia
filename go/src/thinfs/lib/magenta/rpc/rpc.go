@@ -58,7 +58,7 @@ func StartServer(path string, filesys fs.FileSystem) error {
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
 	if err := d.AddHandler(h, serverHandler, cookie); err != nil {
-		mx.HandleClose(h)
+		h.Close()
 		return err
 	}
 	vfs.dispatcher = d
@@ -75,8 +75,8 @@ func (vfs *ThinVFS) CreateHandle(obj interface{}) (mx.Handle, error) {
 
 	var serverHandler rio.ServerHandler = mxioServer
 	if err := vfs.dispatcher.AddHandler(h[0], serverHandler, vfs.allocateCookie(obj)); err != nil {
-		mx.HandleClose(h[0])
-		mx.HandleClose(h[1])
+		h[0].Close()
+		h[1].Close()
 		return 0, err
 	}
 	return h[1], nil
@@ -391,7 +391,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 	// Discard any arriving handles
 	for i := 0; i < int(msg.Hcount); i++ {
-		mx.HandleClose(msg.Handle[i])
+		msg.Handle[i].Close()
 	}
 
 	// Determine if the object we're acting on is a directory or a file
