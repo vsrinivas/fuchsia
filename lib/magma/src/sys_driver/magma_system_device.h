@@ -6,12 +6,12 @@
 #define _MAGMA_SYSTEM_DEVICE_H_
 
 #include "magma_system_connection.h"
-#include "magma_system_display.h"
 #include "msd.h"
 #include "platform_connection.h"
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
 
@@ -20,20 +20,15 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
     return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
 }
 
-class MagmaSystemDevice : public MagmaSystemConnection::Owner, public MagmaSystemDisplay::Owner {
+class MagmaSystemDevice : public MagmaSystemConnection::Owner {
 public:
-    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev)
-        : msd_dev_(std::move(msd_dev)), display_(new MagmaSystemDisplay(this))
-    {
-    }
+    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
-    bool Open(msd_client_id client_id, uint32_t* connection_handle_out);
+    bool Open(msd_client_id client_id, uint32_t capabilities, uint32_t* connection_handle_out);
     bool Close(msd_client_id client_id);
 
-    // Gets the display interface for this device. This will only return a valid pointer once
-    std::unique_ptr<MagmaSystemDisplay> OpenDisplay() { return std::move(display_); }
 
     msd_device* msd_dev() { return msd_dev_.get(); }
 
@@ -51,8 +46,7 @@ public:
 
 private:
     msd_device_unique_ptr_t msd_dev_;
-    std::unique_ptr<MagmaSystemDisplay> display_;
-    std::unordered_map<msd_client_id, std::unique_ptr<magma::PlatformConnection>> connection_map_;
+    std::vector<std::unique_ptr<magma::PlatformConnection>> connections_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
 };
 

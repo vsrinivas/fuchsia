@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+#define MAGMA_SYSTEM_CAPABILITY_RENDERING 1
+#define MAGMA_SYSTEM_CAPABILITY_DISPLAY 2
+
 // a relocation entry that informs the system driver how to patch GPU virtual addresses
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with
 // the GPU virtual address of the 32 bit word at target_offset in target_buffer.

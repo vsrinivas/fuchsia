@@ -44,24 +44,24 @@ public:
         if (!buffer->duplicate_handle(&duplicate_handle))
             return DRETF(false, "failed to get duplicate_handle");
 
-        uint64_t id;
-        if (!connection_->delegate()->ImportBuffer(duplicate_handle, &id))
+        uint64_t buffer_id;
+        if (!connection_->delegate()->ImportBuffer(duplicate_handle, &buffer_id))
             SetError(-EINVAL);
-        DASSERT(id == buffer->id());
+        DASSERT(buffer_id == buffer->id());
 
-        buffer_map_.insert(std::make_pair(id, std::move(buffer)));
+        buffer_map_.insert(std::make_pair(buffer_id, std::move(buffer)));
         return true;
     }
 
-    // Destroys the buffer with |id| within this connection
-    // returns false if the buffer with |id| has not been imported
-    bool ReleaseBuffer(uint64_t id) override
+    // Destroys the buffer with |buffer_id| within this connection
+    // returns false if the buffer with |buffer_id| has not been imported
+    bool ReleaseBuffer(uint64_t buffer_id) override
     {
-        auto iter = buffer_map_.find(id);
+        auto iter = buffer_map_.find(buffer_id);
         if (iter == buffer_map_.end())
             return DRETF(false, "attempting to release invalid buffer handle");
 
-        if (!connection_->delegate()->ReleaseBuffer(id))
+        if (!connection_->delegate()->ReleaseBuffer(buffer_id))
             SetError(-EINVAL);
 
         buffer_map_.erase(iter);
@@ -69,11 +69,11 @@ public:
         return true;
     }
 
-    // Returns the PlatformBuffer for |id|
-    // Returns nullptr if |id| is invalid
-    PlatformBuffer* LookupBuffer(uint64_t id) override
+    // Returns the PlatformBuffer for |buffer_id|
+    // Returns nullptr if |buffer_id| is invalid
+    PlatformBuffer* LookupBuffer(uint64_t buffer_id) override
     {
-        auto iter = buffer_map_.find(id);
+        auto iter = buffer_map_.find(buffer_id);
         if (iter == buffer_map_.end())
             return DRETP(nullptr, "attempting to lookup invalid buffer handle");
         return iter->second.get();
@@ -120,6 +120,12 @@ public:
     void WaitRendering(uint64_t buffer_id) override
     {
         connection_->delegate()->WaitRendering(buffer_id);
+    }
+
+    void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
+                  void* data) override
+    {
+        connection_->delegate()->PageFlip(buffer_id, callback, data);
     }
 
 private:

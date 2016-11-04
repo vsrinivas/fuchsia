@@ -21,12 +21,12 @@ public:
 
     // Imports a buffer for use in the system driver
     virtual bool ImportBuffer(std::unique_ptr<PlatformBuffer> buffer) = 0;
-    // Destroys the buffer with |id| within this connection
-    // returns false if |id| has not been imported
-    virtual bool ReleaseBuffer(uint64_t id) = 0;
-    // Returns the PlatformBuffer for |id|
-    // Returns nullptr if |id| is invalid
-    virtual PlatformBuffer* LookupBuffer(uint64_t id) = 0;
+    // Destroys the buffer with |buffer_id| within this connection
+    // returns false if |buffer_id| has not been imported
+    virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
+    // Returns the PlatformBuffer for |buffer_id|
+    // Returns nullptr if |buffer_id| is invalid
+    virtual PlatformBuffer* LookupBuffer(uint64_t buffer_id) = 0;
 
     // Creates a context and returns the context id
     virtual void CreateContext(uint32_t* context_id_out) = 0;
@@ -39,8 +39,11 @@ public:
                                       uint32_t context_id) = 0;
 
     // Blocks until all gpu work currently queued that references the buffer
-    // with |id| has completed.
+    // with |buffer_id| has completed.
     virtual void WaitRendering(uint64_t buffer_id) = 0;
+
+    virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
+                          void* data) = 0;
 
     static PlatformIpcConnection* cast(magma_system_connection* connection)
     {
@@ -60,15 +63,18 @@ class PlatformConnection {
 public:
     class Delegate {
     public:
-        virtual bool ImportBuffer(uint32_t handle, uint64_t* id_out) = 0;
-        virtual bool ReleaseBuffer(uint64_t id) = 0;
+        virtual bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
+        virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
 
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;
+
         virtual bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
                                           uint32_t context_id) = 0;
+        virtual bool WaitRendering(uint64_t buffer_id) = 0;
 
-        virtual bool WaitRendering(uint64_t id) = 0;
+        virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
+                              void* data) = 0;
     };
 
     static std::unique_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);

@@ -24,7 +24,7 @@ private:
 
 class TestConnection : public TestBase {
 public:
-    TestConnection() { connection_ = magma_system_open(fd()); }
+    TestConnection() { connection_ = magma_system_open(fd(), MAGMA_SYSTEM_CAPABILITY_RENDERING); }
 
     ~TestConnection()
     {

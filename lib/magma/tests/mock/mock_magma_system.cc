@@ -5,7 +5,10 @@
 #include "magma_system.h"
 #include "magma_util/dlog.h"
 
-magma_system_connection* magma_system_open(int32_t fd) { return new magma_system_connection(); }
+magma_system_connection* magma_system_open(int32_t fd, uint32_t capabilities)
+{
+    return new magma_system_connection();
+}
 
 void magma_system_close(magma_system_connection* connection) { delete connection; }
 

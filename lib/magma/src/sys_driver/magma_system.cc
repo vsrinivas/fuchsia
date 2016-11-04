@@ -19,7 +19,7 @@ static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
 
 MagmaSystemDevice* MagmaDriver::g_device;
 
-magma_system_connection* magma_system_open(int fd)
+magma_system_connection* magma_system_open(int fd, uint32_t capabilities)
 {
     uint32_t device_handle;
     int ioctl_ret = mxio_ioctl(fd, 1, NULL, 0, &device_handle, sizeof(device_handle));
@@ -35,7 +35,7 @@ magma_system_connection* magma_system_open(int fd)
     msd_client_id client_id = get_client_id();
 
     uint32_t connection_handle;
-    if (!dev->Open(client_id, &connection_handle))
+    if (!dev->Open(client_id, capabilities, &connection_handle))
         return DRETP(nullptr, "failed to open device");
 
     // Here we release ownership of the connection to the client
@@ -86,8 +86,8 @@ int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, u
     if (!buf->duplicate_handle(handle_out))
         return DRET(-EINVAL);
 
-    bool result = magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(buf));
-    DASSERT(result);
+    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(buf)))
+        return DRET(-EINVAL);
 
     return 0;
 }
@@ -102,6 +102,31 @@ void magma_system_free(magma_system_connection* connection, uint32_t handle)
 
     // Workaround for MA-108: must close the duplicated handle
     magma::PlatformBuffer::Import(handle).reset();
+}
+
+int32_t magma_system_import(magma_system_connection* connection, uint32_t token,
+                            uint32_t* handle_out)
+{
+    uint64_t id;
+    if (!magma::PlatformBuffer::IdFromHandle(token, &id))
+        return DRET(-EINVAL);
+
+    auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
+    if (!buf) {
+        // if we dont have the buffer already create it
+        auto new_buf = magma::PlatformBuffer::Import(token);
+        if (!new_buf)
+            return DRET(-EINVAL);
+        if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(new_buf)))
+            return DRET(-EINVAL);
+        buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
+        DASSERT(buf);
+    }
+
+    if (!buf->duplicate_handle(handle_out))
+        return -EINVAL;
+
+    return 0;
 }
 
 int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,
@@ -184,67 +209,7 @@ void magma_system_wait_rendering(magma_system_connection* connection, uint32_t h
     magma::PlatformIpcConnection::cast(connection)->WaitRendering(id);
 }
 
-///////////////////////////////////////////////////////////////////////////////////
-
-int32_t g_display_error;
-
-magma_system_display* magma_system_display_open(int32_t fd)
-{
-    uint32_t device_handle;
-    int ioctl_ret = mxio_ioctl(fd, 1, NULL, 0, &device_handle, sizeof(device_handle));
-    if (ioctl_ret < 0)
-        return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
-
-    if (device_handle != 0xdeadbeef)
-        return DRETP(nullptr, "Unexpected device_handle");
-
-    MagmaSystemDevice* dev = MagmaDriver::GetDevice();
-    DASSERT(dev);
-
-    auto display = dev->OpenDisplay();
-    if (!display)
-        return DRETP(nullptr, "failed to open display");
-
-    g_display_error = 0;
-
-    // Here we release ownership of the display to the client
-    return display.release();
-}
-
-void magma_system_display_close(magma_system_display* display) { delete display; }
-
-int32_t magma_system_display_get_error(struct magma_system_display* display)
-{
-    int32_t result = g_display_error;
-    g_display_error = 0;
-    return result;
-}
-
-// Not part of the magma_system_abi.
-void magma_system_display_set_error(int32_t error)
-{
-    if (g_display_error == 0)
-        g_display_error = error;
-}
-
-int32_t magma_system_display_import_buffer(magma_system_display* display, uint32_t token,
-                                           uint32_t* handle_out)
-{
-    uint64_t id;
-    if (!MagmaSystemDisplay::cast(display)->ImportBuffer(token, &id))
-        return DRET(-EINVAL);
-
-    auto buf = MagmaSystemDisplay::cast(display)->LookupBuffer(id);
-    if (!buf)
-        return DRET(-EINVAL);
-
-    if (!buf->platform_buffer()->duplicate_handle(handle_out))
-        return -EINVAL;
-
-    return 0;
-}
-
-void magma_system_display_page_flip(magma_system_display* display, uint32_t handle,
+void magma_system_display_page_flip(magma_system_connection* connection, uint32_t handle,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
     uint64_t id;
@@ -254,12 +219,5 @@ void magma_system_display_page_flip(magma_system_display* display, uint32_t hand
         return;
     }
 
-    auto buf = MagmaSystemDisplay::cast(display)->LookupBuffer(id);
-    if (!buf) {
-        DLOG("Attempting to page flip with invalid buffer");
-        callback(-EINVAL, data);
-        return;
-    }
-
-    MagmaSystemDisplay::cast(display)->PageFlip(buf, callback, data);
+    magma::PlatformIpcConnection::cast(connection)->PageFlip(id, callback, data);
 }

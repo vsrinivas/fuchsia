@@ -8,21 +8,23 @@
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
-bool MagmaSystemDevice::Open(msd_client_id client_id, uint32_t* connection_handle_out)
+bool MagmaSystemDevice::Open(msd_client_id client_id, uint32_t capabilities,
+                             uint32_t* connection_handle_out)
 {
+    // at least one bit must be one and it must be one of the 2 least significant bits
+    if (!capabilities ||
+        (capabilities & ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)))
+        return DRETF(false, "attempting to open connection to device with invalid capabilities");
+
     msd_connection* msd_connection = msd_device_open(msd_dev(), client_id);
     if (!msd_connection)
         return DRETF(false, "msd_device_open failed");
 
-    auto iter = connection_map_.find(client_id);
-    if (iter != connection_map_.end())
-        return DRETF(false, "connection already open for client_id 0x%lx", client_id);
-
-    auto connection = magma::PlatformConnection::Create(std::unique_ptr<MagmaSystemConnection>(
-        new MagmaSystemConnection(this, MsdConnectionUniquePtr(msd_connection))));
+    auto connection = magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
+        this, MsdConnectionUniquePtr(msd_connection), capabilities));
 
     *connection_handle_out = connection->GetHandle();
-    connection_map_.insert(std::make_pair(client_id, std::move(connection)));
+    connections_.push_back(std::move(connection));
 
     return true;
 }

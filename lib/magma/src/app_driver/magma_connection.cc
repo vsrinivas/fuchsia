@@ -6,7 +6,7 @@
 
 MagmaConnection* MagmaConnection::Open(int32_t fd, int batch_size)
 {
-    auto sys_connection = magma_system_open(fd);
+    auto sys_connection = magma_system_open(fd, MAGMA_SYSTEM_CAPABILITY_RENDERING);
     if (!sys_connection) {
         DLOG("magma_system_open failed");
         return nullptr;

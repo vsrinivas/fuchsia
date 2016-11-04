@@ -17,16 +17,12 @@ source_set("sys_driver") {
     "magma_system.cc",
     "magma_system_buffer.cc",
     "magma_system_buffer.h",
-    "magma_system_buffer_manager.cc",
-    "magma_system_buffer_manager.h",
     "magma_system_connection.cc",
     "magma_system_connection.h",
     "magma_system_context.cc",
     "magma_system_context.h",
     "magma_system_device.cc",
     "magma_system_device.h",
-    "magma_system_display.cc",
-    "magma_system_display.h",
   ]
 
   deps = [
