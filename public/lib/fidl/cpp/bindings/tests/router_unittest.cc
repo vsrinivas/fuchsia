@@ -8,9 +8,10 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
 #include "lib/fidl/cpp/bindings/internal/router.h"
-#include "lib/fidl/cpp/bindings/tests/message_queue.h"
+#include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/utility/run_loop.h"
+#include "lib/ftl/time/time_delta.h"
 
 namespace fidl {
 namespace test {
@@ -126,23 +127,22 @@ class RouterTest : public testing::Test {
  public:
   RouterTest() {}
 
-  void SetUp() override { CreateMessagePipe(nullptr, &handle0_, &handle1_); }
+  void SetUp() override {
+    mx::channel::create(0, &handle0_, &handle1_);
+  }
 
   void TearDown() override {}
 
-  void PumpMessages() { loop_.RunUntilIdle(); }
+  void PumpMessages() { WaitForAsyncWaiter(); }
 
  protected:
   mx::channel handle0_;
   mx::channel handle1_;
-
- private:
-  RunLoop loop_;
 };
 
 TEST_F(RouterTest, BasicRequestResponse) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -181,8 +181,8 @@ TEST_F(RouterTest, BasicRequestResponse) {
 }
 
 TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -193,8 +193,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
-  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -211,8 +211,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
-  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -223,8 +223,8 @@ TEST_F(RouterTest, BasicRequestResponse_Synchronous) {
 }
 
 TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   ResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -232,21 +232,21 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   Message request;
   AllocRequestMessage(1, "hello", &request);
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(0));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router1.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
   MessageQueue message_queue;
   router0.AcceptWithResponder(&request, new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
-  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router1.WaitForIncomingMessage(0));
-  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router1.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
   EXPECT_FALSE(router0.encountered_error());
   EXPECT_FALSE(router1.encountered_error());
 
@@ -263,8 +263,8 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
   router0.AcceptWithResponder(&request2,
                               new MessageAccumulator(&message_queue));
 
-  router1.WaitForIncomingMessage(MX_TIME_INFINITE);
-  router0.WaitForIncomingMessage(MX_TIME_INFINITE);
+  router1.WaitForIncomingMessage(ftl::TimeDelta::Max());
+  router0.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   EXPECT_FALSE(message_queue.IsEmpty());
 
@@ -275,8 +275,8 @@ TEST_F(RouterTest, BasicRequestResponse_SynchronousTimeout) {
 }
 
 TEST_F(RouterTest, RequestWithNoReceiver) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   // Without an incoming receiver set on router1, we expect router0 to observe
   // an error as a result of sending a message.
@@ -297,8 +297,8 @@ TEST_F(RouterTest, RequestWithNoReceiver) {
 // Tests Router using the LazyResponseGenerator. The responses will not be
 // sent until after the requests have been accepted.
 TEST_F(RouterTest, LazyResponses) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -352,8 +352,8 @@ TEST_F(RouterTest, LazyResponses) {
 // sending a response, then we close the Pipe as a way of signaling an error
 // condition to the caller.
 TEST_F(RouterTest, MissingResponses) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -394,8 +394,8 @@ TEST_F(RouterTest, MissingResponses) {
 // condition to the caller.
 // Tests that timeout-0 calls still work and signal an error.
 TEST_F(RouterTest, MissingResponses_Timeout) {
-  internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-  internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+  internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+  internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
   LazyResponseGenerator generator;
   router1.set_incoming_receiver(&generator);
@@ -418,7 +418,7 @@ TEST_F(RouterTest, MissingResponses_Timeout) {
   // Check that no response was received.
   EXPECT_TRUE(message_queue.IsEmpty());
 
-  EXPECT_FALSE(router0.WaitForIncomingMessage(0));
+  EXPECT_FALSE(router0.WaitForIncomingMessage(ftl::TimeDelta::Zero()));
   EXPECT_TRUE(router0.encountered_error());
 
   PumpMessages();
@@ -434,8 +434,8 @@ TEST_F(RouterTest, LateResponse) {
 
   LazyResponseGenerator generator;
   {
-    internal::Router router0(handle0_.Pass(), internal::MessageValidatorList());
-    internal::Router router1(handle1_.Pass(), internal::MessageValidatorList());
+    internal::Router router0(std::move(handle0_), internal::MessageValidatorList());
+    internal::Router router1(std::move(handle1_), internal::MessageValidatorList());
 
     router1.set_incoming_receiver(&generator);
 

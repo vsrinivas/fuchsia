@@ -12,7 +12,7 @@
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/strong_binding.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/interfaces/bindings/tests/versioning_test_service.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/versioning_test_service.fidl.h"
 
 namespace fidl {
 namespace test {

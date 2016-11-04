@@ -39,6 +39,8 @@ class {{class_name}}_{{method.name}}_ForwardToCallback
   {{class_name}}_{{method.name}}_ForwardToCallback(
       const {{class_name}}::{{method.name}}Callback& callback)
       : callback_(callback) {
+    FTL_DCHECK(callback_) << "Supplied response callback handler must not be "
+                             " empty for {{class_name}}.{{method.name}}";
   }
   bool Accept(::fidl::Message* message) override;
  private:

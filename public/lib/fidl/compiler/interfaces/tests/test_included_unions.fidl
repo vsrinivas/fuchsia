@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="_mojo_for_test_only"]
-module mojo.test;
+[DartPackage="_fidl_for_test_only"]
+module fidl.test;
 
 union IncludedUnion {
   int8 a;

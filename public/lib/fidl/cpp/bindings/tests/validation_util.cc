@@ -16,7 +16,7 @@ namespace validation_util {
 
 std::string GetValidationDataPath(const std::string& root,
                                   const std::string& suffix) {
-  return "mojo/public/interfaces/bindings/tests/data/validation/" + root +
+  return "lib/fidl/compiler/interfaces/tests/data/validation/" + root +
          suffix;
 }
 

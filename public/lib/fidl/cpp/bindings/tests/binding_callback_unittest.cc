@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mx/channel.h>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "mojo/public/cpp/system/message_pipe.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/sample_interfaces.mojom.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
 // The tests in this file are designed to test the interaction between a
-// Callback and its associated Binding. If a Callback is deleted before
+// std::function and its associated Binding. If a std::function is deleted before
 // being used we DCHECK fail--unless the associated Binding has already
 // been closed or deleted. This contract must be explained to the Mojo
 // application developer. For example it is the developer's responsibility to
-// ensure that the Binding is destroyed before an unused Callback is destroyed.
+// ensure that the Binding is destroyed before an unused std::function is destroyed.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -25,13 +26,13 @@ namespace fidl {
 namespace test {
 namespace {
 
-// A Runnable object that saves the last value it sees via the
+// A callable object that saves the last value it sees via the
 // provided int32_t*. Used on the client side.
 class ValueSaver {
  public:
   explicit ValueSaver(int32_t* last_value_seen)
       : last_value_seen_(last_value_seen) {}
-  void Run(int32_t x) const { *last_value_seen_ = x; }
+  void operator()(int32_t x) const { *last_value_seen_ = x; }
 
  private:
   int32_t* const last_value_seen_;
@@ -39,12 +40,12 @@ class ValueSaver {
 
 // An implementation of sample::Provider used on the server side.
 // It only implements one of the methods: EchoInt().
-// All it does is save the values and Callbacks it sees.
+// All it does is save the values and callbacks it sees.
 class InterfaceImpl : public sample::Provider {
  public:
   InterfaceImpl()
       : last_server_value_seen_(0),
-        callback_saved_(new Callback<void(int32_t)>()) {}
+        callback_saved_(new std::function<void(int32_t)>()) {}
 
   ~InterfaceImpl() override {
     if (callback_saved_) {
@@ -56,7 +57,7 @@ class InterfaceImpl : public sample::Provider {
   // of |EchoInt()|.
   bool RunCallback() {
     if (callback_saved_) {
-      callback_saved_->Run(last_server_value_seen_);
+      (*callback_saved_)(last_server_value_seen_);
       return true;
     }
     return false;
@@ -71,30 +72,30 @@ class InterfaceImpl : public sample::Provider {
   // sample::Provider implementation
 
   // Saves its two input values in member variables and does nothing else.
-  void EchoInt(int32_t x, const Callback<void(int32_t)>& callback) override {
+  void EchoInt(int32_t x, const std::function<void(int32_t)>& callback) override {
     last_server_value_seen_ = x;
     *callback_saved_ = callback;
   }
 
   void EchoString(const String& a,
-                  const Callback<void(String)>& callback) override {
+                  const std::function<void(String)>& callback) override {
     FTL_CHECK(false) << "Not implemented.";
   }
 
   void EchoStrings(const String& a,
                    const String& b,
-                   const Callback<void(String, String)>& callback) override {
+                   const std::function<void(String, String)>& callback) override {
     FTL_CHECK(false) << "Not implemented.";
   }
 
   void EchoMessagePipeHandle(
       mx::channel a,
-      const Callback<void(mx::channel)>& callback) override {
+      const std::function<void(mx::channel)>& callback) override {
     FTL_CHECK(false) << "Not implemented.";
   }
 
   void EchoEnum(sample::Enum a,
-                const Callback<void(sample::Enum)>& callback) override {
+                const std::function<void(sample::Enum)>& callback) override {
     FTL_CHECK(false) << "Not implemented.";
   }
 
@@ -104,7 +105,7 @@ class InterfaceImpl : public sample::Provider {
 
  private:
   int32_t last_server_value_seen_;
-  Callback<void(int32_t)>* callback_saved_;
+  std::function<void(int32_t)>* callback_saved_;
 };
 
 class BindingCallbackTest : public testing::Test {
@@ -115,10 +116,7 @@ class BindingCallbackTest : public testing::Test {
   int32_t last_client_callback_value_seen_;
   sample::ProviderPtr interface_ptr_;
 
-  void PumpMessages() { loop_.RunUntilIdle(); }
-
- private:
-  RunLoop loop_;
+  void PumpMessages() { WaitForAsyncWaiter(); }
 };
 
 // Tests that the InterfacePtr and the Binding can communicate with each
@@ -140,7 +138,7 @@ TEST_F(BindingCallbackTest, Basic) {
   EXPECT_EQ(7, server_impl.last_server_value_seen());
   EXPECT_EQ(0, last_client_callback_value_seen_);
 
-  // Now run the Callback.
+  // Now run the std::function.
   server_impl.RunCallback();
   PumpMessages();
 

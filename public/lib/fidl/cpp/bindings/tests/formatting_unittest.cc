@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/formatting.h"
 #include "lib/fidl/cpp/bindings/map.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace test {

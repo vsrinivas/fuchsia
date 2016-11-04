@@ -7,14 +7,15 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/minimal_interface.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
 namespace fidl {
+namespace test {
 namespace {
 
-class MinimalInterfaceImpl : public test::MinimalInterface {
+class MinimalInterfaceImpl : public MinimalInterface {
  public:
   MinimalInterfaceImpl() {}
 
@@ -30,24 +31,22 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
 
 // Tests all of the functionality of BindingSet.
 TEST(BindingSetTest, FullLifeCycle) {
-  RunLoop loop;
-
   // Create 10 InterfacePtrs and MinimalInterfaceImpls.
   const size_t kNumObjects = 10;
-  InterfacePtr<test::MinimalInterface> interface_pointers[kNumObjects];
+  InterfacePtr<MinimalInterface> interface_pointers[kNumObjects];
   MinimalInterfaceImpl impls[kNumObjects];
 
   // Create 10 channels, bind everything together, and add the
   // bindings to binding_set.
-  BindingSet<test::MinimalInterface> binding_set;
+  BindingSet<MinimalInterface> binding_set;
   EXPECT_EQ(0u, binding_set.size());
   for (size_t i = 0; i < kNumObjects; i++) {
     if (i % 2 == 0)
       binding_set.AddBinding(&impls[i], GetProxy(&interface_pointers[i]));
     else
       interface_pointers[i] =
-          fidl::InterfacePtr<test::MinimalInterface>::Create(
-              binding_set.AddBinding(&impls[i]).Pass());
+          fidl::InterfacePtr<MinimalInterface>::Create(
+              binding_set.AddBinding(&impls[i]));
   }
   EXPECT_EQ(kNumObjects, binding_set.size());
 
@@ -57,12 +56,12 @@ TEST(BindingSetTest, FullLifeCycle) {
   }
 
   // Invoke method foo() on all 10 InterfacePointers.
-  for (InterfacePtr<test::MinimalInterface>& ptr : interface_pointers) {
+  for (InterfacePtr<MinimalInterface>& ptr : interface_pointers) {
     ptr->Message();
   }
 
   // Check that now all call counts are one.
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   for (const auto& impl : impls) {
     EXPECT_EQ(1, impl.call_count());
   }
@@ -74,14 +73,14 @@ TEST(BindingSetTest, FullLifeCycle) {
   }
 
   // Check that the set contains only five elements now.
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   EXPECT_EQ(kNumObjects / 2, binding_set.size());
 
   // Invoke method foo() on the second five InterfacePointers.
   for (size_t i = kNumObjects / 2; i < kNumObjects; i++) {
     interface_pointers[i]->Message();
   }
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
 
   // Check that now the first five counts are still 1 but the second five
   // counts are two.
@@ -98,7 +97,7 @@ TEST(BindingSetTest, FullLifeCycle) {
   for (size_t i = kNumObjects / 2; i < kNumObjects; i++) {
     interface_pointers[i]->Message();
   }
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
 
   // Check that the call counts are the same as before.
   for (size_t i = 0; i < kNumObjects; i++) {
@@ -108,4 +107,5 @@ TEST(BindingSetTest, FullLifeCycle) {
 }
 
 }  // namespace
+}  // namespace test
 }  // namespace fidl

@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "mojo/public/interfaces/bindings/tests/sample_interfaces.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
 
 using sample::SampleInterface;
 using sample::SampleInterface_SampleMethod1_Params;

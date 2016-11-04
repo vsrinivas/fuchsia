@@ -23,7 +23,7 @@
 #include "mojo/public/cpp/system/message_pipe.h"
 #include "mojo/public/cpp/test_support/test_support.h"
 #include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/validation_test_interfaces.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/validation_test_interfaces.fidl.h"
 
 namespace fidl {
 

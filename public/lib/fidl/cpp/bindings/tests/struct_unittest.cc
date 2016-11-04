@@ -6,11 +6,12 @@
 
 #include <type_traits>
 
+#include <mx/channel.h>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
-#include "mojo/public/cpp/system/message_pipe.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -45,8 +46,9 @@ MultiVersionStructPtr MakeMultiVersionStruct() {
   output->f_array[0] = 10;
   output->f_array[1] = 9;
   output->f_array[2] = 8;
-  MessagePipe pipe;
-  output->f_message_pipe = pipe.handle0.Pass();
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  output->f_message_pipe = std::move(handle0);
   output->f_int16 = 42;
 
   return output;
@@ -63,7 +65,7 @@ U SerializeAndDeserialize(T input) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(input.get(), &buf, &data));
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   // Set the subsequent area to a special value, so that we can find out if we
@@ -135,7 +137,7 @@ TEST(StructTest, Clone) {
   // NoDefaultFieldValues contains handles, so Clone() is not available, but
   // NoDefaultFieldValuesPtr should still compile.
   NoDefaultFieldValuesPtr no_default_field_values(NoDefaultFieldValues::New());
-  EXPECT_FALSE(no_default_field_values->f13.is_valid());
+  EXPECT_FALSE(no_default_field_values->f13);
 }
 
 // Serialization test of a struct with no pointer or handle members.
@@ -287,7 +289,7 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_int32 = 123;
 
     MultiVersionStructPtr output =
-        SerializeAndDeserialize<MultiVersionStructPtr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -301,7 +303,7 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_rect = MakeRect(5);
 
     MultiVersionStructPtr output =
-        SerializeAndDeserialize<MultiVersionStructPtr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -317,7 +319,7 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_string = "hello";
 
     MultiVersionStructPtr output =
-        SerializeAndDeserialize<MultiVersionStructPtr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -341,7 +343,7 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_array[2] = 8;
 
     MultiVersionStructPtr output =
-        SerializeAndDeserialize<MultiVersionStructPtr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -355,8 +357,9 @@ TEST(StructTest, Versioning_OldToNew) {
     input->f_array[0] = 10;
     input->f_array[1] = 9;
     input->f_array[2] = 8;
-    MessagePipe pipe;
-    input->f_message_pipe = pipe.handle0.Pass();
+    mx::channel handle0, handle1;
+    mx::channel::create(0, &handle0, &handle1);
+    input->f_message_pipe = std::move(handle0);
 
     MultiVersionStructPtr expected_output(MultiVersionStruct::New());
     expected_output->f_int32 = 123;
@@ -367,12 +370,12 @@ TEST(StructTest, Versioning_OldToNew) {
     expected_output->f_array[1] = 9;
     expected_output->f_array[2] = 8;
     // Save the raw handle value separately so that we can compare later.
-    MojoHandle expected_handle = input->f_message_pipe.get().value();
+    mx_handle_t expected_handle = input->f_message_pipe.get();
 
     MultiVersionStructPtr output =
-        SerializeAndDeserialize<MultiVersionStructPtr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructPtr>(std::move(input));
     EXPECT_TRUE(output);
-    EXPECT_EQ(expected_handle, output->f_message_pipe.get().value());
+    EXPECT_EQ(expected_handle, output->f_message_pipe.get());
     output->f_message_pipe.reset();
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -391,12 +394,12 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_array[1] = 9;
     expected_output->f_array[2] = 8;
     // Save the raw handle value separately so that we can compare later.
-    MojoHandle expected_handle = input->f_message_pipe.get().value();
+    mx_handle_t expected_handle = input->f_message_pipe.get();
 
     MultiVersionStructV7Ptr output =
-        SerializeAndDeserialize<MultiVersionStructV7Ptr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructV7Ptr>(std::move(input));
     EXPECT_TRUE(output);
-    EXPECT_EQ(expected_handle, output->f_message_pipe.get().value());
+    EXPECT_EQ(expected_handle, output->f_message_pipe.get());
     output->f_message_pipe.reset();
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -413,7 +416,7 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_array[2] = 8;
 
     MultiVersionStructV5Ptr output =
-        SerializeAndDeserialize<MultiVersionStructV5Ptr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructV5Ptr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -426,7 +429,7 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_string = "hello";
 
     MultiVersionStructV3Ptr output =
-        SerializeAndDeserialize<MultiVersionStructV3Ptr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructV3Ptr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -438,7 +441,7 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_rect = MakeRect(5);
 
     MultiVersionStructV1Ptr output =
-        SerializeAndDeserialize<MultiVersionStructV1Ptr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructV1Ptr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }
@@ -449,7 +452,7 @@ TEST(StructTest, Versioning_NewToOld) {
     expected_output->f_int32 = 123;
 
     MultiVersionStructV0Ptr output =
-        SerializeAndDeserialize<MultiVersionStructV0Ptr>(input.Pass());
+        SerializeAndDeserialize<MultiVersionStructV0Ptr>(std::move(input));
     EXPECT_TRUE(output);
     EXPECT_TRUE(output->Equals(*expected_output));
   }

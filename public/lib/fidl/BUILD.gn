@@ -9,6 +9,6 @@ group("fidl") {
   deps = [
     "examples",
     "compiler/interfaces",
-    "compiler/interfaces/tests:test_interfaces"
+    "cpp/bindings/tests:lib_fidl_cpp_tests",
   ]
 }

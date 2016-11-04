@@ -6,9 +6,8 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/validation_errors.h"
-#include "mojo/public/cpp/system/message_pipe.h"
-#include "mojo/public/interfaces/bindings/tests/rect.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/rect.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -64,12 +63,12 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
   EXPECT_EQ(24u, handle_struct.GetSerializedSize());
 
   // + 8 bytes for initialized array, 0-sized array.
-  handle_struct.array_h = fidl::Array<fidl::mx::channel>::New(0);
+  handle_struct.array_h = fidl::Array<mx::channel>::New(0);
   EXPECT_EQ(32u, handle_struct.GetSerializedSize());
 
   // + 4 bytes for array of size 1.
   // + 4 more bytes to make the array serialization 8-byte aligned.
-  handle_struct.array_h = fidl::Array<fidl::mx::channel>::New(1);
+  handle_struct.array_h = fidl::Array<mx::channel>::New(1);
   EXPECT_EQ(16u, GetSerializedSize_(handle_struct.array_h));
   EXPECT_EQ(40u, handle_struct.GetSerializedSize());
 }
@@ -103,7 +102,7 @@ TEST_F(StructSerializationAPITest, BasicStructSerialization) {
 
     size_t bytes_written = 0;
     EXPECT_FALSE(nd.Serialize(buf, sizeof(buf), &bytes_written));
-    EXPECT_EQ(160UL, bytes_written);
+    EXPECT_EQ(192UL, bytes_written);
     // The Serialize() shouldn't get around to reserving space for the |f23|
     // array field.
     EXPECT_LT(bytes_written, nd.GetSerializedSize());
@@ -127,7 +126,7 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
   {
     SCOPED_TRACE("Uninitialized required Handle in an Array");
     HandleStruct handle_struct;
-    handle_struct.array_h = Array<fidl::mx::channel>::New(1);
+    handle_struct.array_h = Array<mx::channel>::New(1);
     // This won't die (i.e., we don't need to EXPECT_DEATH) because the handle
     // is invalid, so should be serializable.  Instead, we live with a
     // serialization error for an invalid handle.
@@ -141,9 +140,11 @@ TEST_F(StructSerializationAPITest, HandlesSerialization) {
   // We shouldn't be able to serialize a valid handle.
   {
     SCOPED_TRACE("Serializing a Handle");
+    mx::channel handle0, handle1;
+    mx::channel::create(0, &handle0, &handle1);
     HandleStruct handle_struct;
-    handle_struct.h = MessagePipe().handle0.Pass();
-    handle_struct.array_h = Array<fidl::mx::channel>::New(0);
+    handle_struct.h = std::move(handle0);
+    handle_struct.array_h = Array<mx::channel>::New(0);
     EXPECT_DEATH_IF_SUPPORTED(
         {
           SerializeAndDeserialize(&handle_struct,

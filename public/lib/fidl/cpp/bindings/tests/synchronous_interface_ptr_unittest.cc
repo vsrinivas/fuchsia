@@ -11,11 +11,10 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/math_calculator.mojom-sync.h"
-#include "mojo/public/interfaces/bindings/tests/math_calculator.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/scoping.mojom-sync.h"
-#include "mojo/public/interfaces/bindings/tests/scoping.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/math_calculator.fidl-sync.h"
+#include "lib/fidl/compiler/interfaces/tests/math_calculator.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/scoping.fidl-sync.h"
+#include "lib/fidl/compiler/interfaces/tests/scoping.fidl.h"
 
 namespace fidl {
 namespace test {

@@ -114,6 +114,15 @@ struct IsWrappedHandle<WrappedHandle> {
   static const bool value = true;
 };
 
+static_assert(internal::IsWrappedHandle<WrappedHandle>::value,
+    "|struct WrappedHandle| must be a valid handle encoding.");
+static_assert(!internal::IsWrappedHandle<int>::value,
+    "|int| must be a valid handle encoding.");
+static_assert(!internal::IsWrappedHandle<mx_handle_t>::value,
+    "|mx_handle_t| must be a valid handle encoding.");
+static_assert(!internal::IsWrappedHandle<mx::channel>::value,
+    "|mx::channel| must be a valid handle encoding.");
+
 // TODO(vardhan): Replace RemoveStructPtr<> and UnwrapStructPtr<> with
 // specializations of std::pointer_traits<> on [Inlined]StructPtr<>.
 template <typename T>

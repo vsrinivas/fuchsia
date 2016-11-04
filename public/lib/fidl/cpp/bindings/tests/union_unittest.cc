@@ -14,10 +14,10 @@
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
 #include "lib/fidl/cpp/bindings/internal/map_serialization.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "mojo/public/cpp/test_support/test_utils.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/test_unions.mojom.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_utils.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/test_unions.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -163,7 +163,7 @@ TEST(UnionTest, PodValidation) {
   fidl::internal::FixedBufferForTesting buf(size);
   auto* data = internal::PodUnion_Data::New(&buf);
   SerializeUnion_(pod.get(), &buf, &data);
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -328,7 +328,7 @@ TEST(UnionTest, StringSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(pod1.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -448,7 +448,7 @@ TEST(UnionTest, PodUnionInArrayValidation) {
   fidl::internal::ArrayValidateParams validate_params(0, false, nullptr);
   SerializeArray_(&array, &buf, &data, &validate_params);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -529,7 +529,7 @@ TEST(UnionTest, Serialization_UnionOfObjects) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(obj_struct.get(), &buf, &data));
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -552,7 +552,7 @@ TEST(UnionTest, Validation_UnionsInStruct) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -579,7 +579,7 @@ TEST(UnionTest, Validation_PodUnionInStruct_Failure) {
             Serialize_(small_struct.get(), &buf, &data));
   data->pod_union.tag = static_cast<internal::PodUnion_Data::PodUnion_Tag>(100);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -623,7 +623,7 @@ TEST(UnionTest, Validation_NullableUnion) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -660,7 +660,7 @@ TEST(UnionTest, Validation_NullableObjectUnion) {
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(small_struct.get(), &buf, &data));
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -742,7 +742,7 @@ TEST(UnionTest, StructInUnionGetterSetterPasser) {
   dummy->f_int8 = 8;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_dummy(dummy.Pass());
+  obj->set_f_dummy(std::move(dummy));
 
   EXPECT_EQ(8, obj->get_f_dummy()->f_int8);
 }
@@ -752,7 +752,7 @@ TEST(UnionTest, StructInUnionSerialization) {
   dummy->f_int8 = 8;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_dummy(dummy.Pass());
+  obj->set_f_dummy(std::move(dummy));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(32U, size);
@@ -761,7 +761,7 @@ TEST(UnionTest, StructInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -775,7 +775,7 @@ TEST(UnionTest, StructInUnionValidation) {
   dummy->f_int8 = 8;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_dummy(dummy.Pass());
+  obj->set_f_dummy(std::move(dummy));
 
   size_t size = GetSerializedSize_(obj);
 
@@ -783,7 +783,7 @@ TEST(UnionTest, StructInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -800,7 +800,7 @@ TEST(UnionTest, StructInUnionValidationNonNullable) {
   DummyStructPtr dummy(nullptr);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_dummy(dummy.Pass());
+  obj->set_f_dummy(std::move(dummy));
 
   size_t size = GetSerializedSize_(obj);
 
@@ -808,7 +808,7 @@ TEST(UnionTest, StructInUnionValidationNonNullable) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -825,7 +825,7 @@ TEST(UnionTest, StructInUnionValidationNullable) {
   DummyStructPtr dummy(nullptr);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_nullable(dummy.Pass());
+  obj->set_f_nullable(std::move(dummy));
 
   size_t size = GetSerializedSize_(obj);
 
@@ -833,7 +833,7 @@ TEST(UnionTest, StructInUnionValidationNullable) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -852,7 +852,7 @@ TEST(UnionTest, ArrayInUnionGetterSetter) {
   array[1] = 9;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_array_int8(array.Pass());
+  obj->set_f_array_int8(std::move(array));
 
   EXPECT_EQ(8, obj->get_f_array_int8()[0]);
   EXPECT_EQ(9, obj->get_f_array_int8()[1]);
@@ -864,7 +864,7 @@ TEST(UnionTest, ArrayInUnionSerialization) {
   array[1] = 9;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_array_int8(array.Pass());
+  obj->set_f_array_int8(std::move(array));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(32U, size);
@@ -873,7 +873,7 @@ TEST(UnionTest, ArrayInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -890,14 +890,14 @@ TEST(UnionTest, ArrayInUnionValidation) {
   array[1] = 9;
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_array_int8(array.Pass());
+  obj->set_f_array_int8(std::move(array));
 
   size_t size = GetSerializedSize_(obj);
   fidl::internal::FixedBufferForTesting buf(size);
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -917,7 +917,7 @@ TEST(UnionTest, MapInUnionGetterSetter) {
   map.insert("two", 2);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_map_int8(map.Pass());
+  obj->set_f_map_int8(std::move(map));
 
   EXPECT_EQ(1, obj->get_f_map_int8()["one"]);
   EXPECT_EQ(2, obj->get_f_map_int8()["two"]);
@@ -929,7 +929,7 @@ TEST(UnionTest, MapInUnionSerialization) {
   map.insert("two", 2);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_map_int8(map.Pass());
+  obj->set_f_map_int8(std::move(map));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(112U, size);
@@ -938,7 +938,7 @@ TEST(UnionTest, MapInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -955,7 +955,7 @@ TEST(UnionTest, MapInUnionValidation) {
   map.insert("two", 2);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_map_int8(map.Pass());
+  obj->set_f_map_int8(std::move(map));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(112U, size);
@@ -964,7 +964,7 @@ TEST(UnionTest, MapInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_TRUE(handles.empty());
 
@@ -983,7 +983,7 @@ TEST(UnionTest, UnionInUnionGetterSetter) {
   pod->set_f_int8(10);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_pod_union(pod.Pass());
+  obj->set_f_pod_union(std::move(pod));
 
   EXPECT_EQ(10, obj->get_f_pod_union()->get_f_int8());
 }
@@ -993,7 +993,7 @@ TEST(UnionTest, UnionInUnionSerialization) {
   pod->set_f_int8(10);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_pod_union(pod.Pass());
+  obj->set_f_pod_union(std::move(pod));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(32U, size);
@@ -1002,7 +1002,7 @@ TEST(UnionTest, UnionInUnionSerialization) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   data->DecodePointersAndHandles(&handles);
 
@@ -1016,7 +1016,7 @@ TEST(UnionTest, UnionInUnionValidation) {
   pod->set_f_int8(10);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_pod_union(pod.Pass());
+  obj->set_f_pod_union(std::move(pod));
 
   size_t size = GetSerializedSize_(obj);
   EXPECT_EQ(32U, size);
@@ -1025,7 +1025,7 @@ TEST(UnionTest, UnionInUnionValidation) {
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1041,14 +1041,14 @@ TEST(UnionTest, UnionInUnionValidationNonNullable) {
   PodUnionPtr pod(nullptr);
 
   ObjectUnionPtr obj(ObjectUnion::New());
-  obj->set_f_pod_union(pod.Pass());
+  obj->set_f_pod_union(std::move(pod));
 
   size_t size = GetSerializedSize_(obj);
 
   fidl::internal::FixedBufferForTesting buf(size);
   auto* data = internal::ObjectUnion_Data::New(&buf);
   SerializeUnion_(obj.get(), &buf, &data);
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1064,16 +1064,16 @@ TEST(UnionTest, HandleInUnionGetterSetter) {
   mx::channel pipe0;
   mx::channel pipe1;
 
-  CreateMessagePipe(nullptr, &pipe0, &pipe1);
+  mx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_message_pipe(pipe1.Pass());
+  handle->set_f_message_pipe(std::move(pipe1));
 
   std::string golden("hello world");
-  WriteTextMessage(pipe0.get(), golden);
+  WriteTextMessage(pipe0, golden);
 
   std::string actual;
-  ReadTextMessage(handle->get_f_message_pipe().get(), &actual);
+  ReadTextMessage(handle->get_f_message_pipe(), &actual);
 
   EXPECT_EQ(golden, actual);
 }
@@ -1082,10 +1082,10 @@ TEST(UnionTest, HandleInUnionSerialization) {
   mx::channel pipe0;
   mx::channel pipe1;
 
-  CreateMessagePipe(nullptr, &pipe0, &pipe1);
+  mx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_message_pipe(pipe1.Pass());
+  handle->set_f_message_pipe(std::move(pipe1));
 
   size_t size = GetSerializedSize_(handle);
   EXPECT_EQ(16U, size);
@@ -1094,7 +1094,7 @@ TEST(UnionTest, HandleInUnionSerialization) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_EQ(1U, handles.size());
   data->DecodePointersAndHandles(&handles);
@@ -1103,10 +1103,10 @@ TEST(UnionTest, HandleInUnionSerialization) {
   Deserialize_(data, handle2.get());
 
   std::string golden("hello world");
-  WriteTextMessage(pipe0.get(), golden);
+  WriteTextMessage(pipe0, golden);
 
   std::string actual;
-  ReadTextMessage(handle2->get_f_message_pipe().get(), &actual);
+  ReadTextMessage(handle2->get_f_message_pipe(), &actual);
 
   EXPECT_EQ(golden, actual);
 }
@@ -1115,10 +1115,10 @@ TEST(UnionTest, HandleInUnionValidation) {
   mx::channel pipe0;
   mx::channel pipe1;
 
-  CreateMessagePipe(nullptr, &pipe0, &pipe1);
+  mx::channel::create(0, &pipe0, &pipe1);
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_message_pipe(pipe1.Pass());
+  handle->set_f_message_pipe(std::move(pipe1));
 
   size_t size = GetSerializedSize_(handle);
   EXPECT_EQ(16U, size);
@@ -1127,7 +1127,7 @@ TEST(UnionTest, HandleInUnionValidation) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1142,7 +1142,7 @@ TEST(UnionTest, HandleInUnionValidation) {
 TEST(UnionTest, HandleInUnionValidationNull) {
   mx::channel pipe;
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_message_pipe(pipe.Pass());
+  handle->set_f_message_pipe(std::move(pipe));
 
   size_t size = GetSerializedSize_(handle);
   EXPECT_EQ(16U, size);
@@ -1151,7 +1151,7 @@ TEST(UnionTest, HandleInUnionValidationNull) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
 
   void* raw_buf = buf.Leak();
@@ -1172,36 +1172,35 @@ class SmallCacheImpl : public SmallCache {
  private:
   void SetIntValue(int64_t int_value) override { int_value_ = int_value; }
   void GetIntValue(const GetIntValueCallback& callback) override {
-    callback.Run(int_value_);
+    callback(int_value_);
   }
 
   int64_t int_value_;
 };
 
 TEST(UnionTest, InterfaceInUnion) {
-  RunLoop run_loop;
+  ClearAsyncWaiter();
   SmallCacheImpl impl;
   SmallCachePtr ptr;
   Binding<SmallCache> bindings(&impl, GetProxy(&ptr));
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_small_cache(ptr.Pass());
+  handle->set_f_small_cache(std::move(ptr));
 
   auto small_cache =
       SmallCachePtr::Create(std::move(handle->get_f_small_cache()));
   small_cache->SetIntValue(10);
-  run_loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   EXPECT_EQ(10, impl.int_value());
 }
 
 TEST(UnionTest, InterfaceInUnionSerialization) {
-  RunLoop run_loop;
   SmallCacheImpl impl;
   SmallCachePtr ptr;
   Binding<SmallCache> bindings(&impl, GetProxy(&ptr));
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_small_cache(ptr.Pass());
+  handle->set_f_small_cache(std::move(ptr));
   size_t size = GetSerializedSize_(handle);
   EXPECT_EQ(16U, size);
 
@@ -1209,7 +1208,7 @@ TEST(UnionTest, InterfaceInUnionSerialization) {
   auto* data = internal::HandleUnion_Data::New(&buf);
   SerializeUnion_(handle.get(), &buf, &data);
 
-  std::vector<Handle> handles;
+  std::vector<mx_handle_t> handles;
   data->EncodePointersAndHandles(&handles);
   EXPECT_EQ(1U, handles.size());
   data->DecodePointersAndHandles(&handles);
@@ -1220,7 +1219,7 @@ TEST(UnionTest, InterfaceInUnionSerialization) {
   auto small_cache =
       SmallCachePtr::Create(std::move(handle2->get_f_small_cache()));
   small_cache->SetIntValue(10);
-  run_loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   EXPECT_EQ(10, impl.int_value());
 }
 
@@ -1231,12 +1230,12 @@ class UnionInterfaceImpl : public UnionInterface {
 
  private:
   void Echo(PodUnionPtr in, const EchoCallback& callback) override {
-    callback.Run(in.Pass());
+    callback(std::move(in));
   }
 };
 
 TEST(UnionTest, UnionInInterface) {
-  RunLoop run_loop;
+  ClearAsyncWaiter();
   UnionInterfaceImpl impl;
   UnionInterfacePtr ptr;
   Binding<UnionInterface> bindings(&impl, GetProxy(&ptr));
@@ -1244,9 +1243,9 @@ TEST(UnionTest, UnionInInterface) {
   PodUnionPtr pod(PodUnion::New());
   pod->set_f_int16(16);
 
-  ptr->Echo(pod.Pass(),
+  ptr->Echo(std::move(pod),
             [](PodUnionPtr out) { EXPECT_EQ(16, out->get_f_int16()); });
-  run_loop.RunUntilIdle();
+  WaitForAsyncWaiter();
 }
 
 }  // namespace test

@@ -7,9 +7,11 @@
 #include <string>
 #include <utility>
 
+#include <mx/datapipe.h>
+
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/interfaces/bindings/tests/sample_service.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 
 namespace fidl {
 
@@ -52,26 +54,21 @@ FooPtr MakeFoo() {
     bar->beta = base + 20;
     bar->gamma = base + 40;
     bar->type = type;
-    extra_bars[i] = bar.Pass();
+    extra_bars[i] = std::move(bar);
   }
 
   auto data = fidl::Array<uint8_t>::New(10);
   for (size_t i = 0; i < data.size(); ++i)
     data[i] = static_cast<uint8_t>(data.size() - i);
 
-  auto input_streams = fidl::Array<fidl::ScopedDataPipeConsumerHandle>::New(2);
-  auto output_streams = fidl::Array<fidl::ScopedDataPipeProducerHandle>::New(2);
+  auto input_streams = fidl::Array<mx::datapipe_consumer>::New(2);
+  auto output_streams = fidl::Array<mx::datapipe_producer>::New(2);
   for (size_t i = 0; i < input_streams.size(); ++i) {
-    MojoCreateDataPipeOptions options;
-    options.struct_size = sizeof(MojoCreateDataPipeOptions);
-    options.flags = MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE;
-    options.element_num_bytes = 1;
-    options.capacity_num_bytes = 1024;
-    fidl::ScopedDataPipeProducerHandle producer;
-    fidl::ScopedDataPipeConsumerHandle consumer;
-    fidl::CreateDataPipe(&options, &producer, &consumer);
-    input_streams[i] = consumer.Pass();
-    output_streams[i] = producer.Pass();
+    mx::datapipe_producer producer;
+    mx::datapipe_consumer consumer;
+    mx::datapipe<void>::create(1, 1024, 0, &producer, &consumer);
+    input_streams[i] = std::move(consumer);
+    output_streams[i] = std::move(producer);
   }
 
   auto array_of_array_of_bools = fidl::Array<fidl::Array<bool>>::New(2);
@@ -79,10 +76,11 @@ FooPtr MakeFoo() {
     auto array_of_bools = fidl::Array<bool>::New(2);
     for (size_t j = 0; j < 2; ++j)
       array_of_bools[j] = j;
-    array_of_array_of_bools[i] = array_of_bools.Pass();
+    array_of_array_of_bools[i] = std::move(array_of_bools);
   }
 
-  fidl::MessagePipe pipe;
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
   FooPtr foo(Foo::New());
   foo->name = name;
   foo->x = 1;
@@ -90,13 +88,13 @@ FooPtr MakeFoo() {
   foo->a = false;
   foo->b = true;
   foo->c = false;
-  foo->bar = bar.Pass();
-  foo->extra_bars = extra_bars.Pass();
-  foo->data = data.Pass();
-  foo->source = pipe.handle1.Pass();
-  foo->input_streams = input_streams.Pass();
-  foo->output_streams = output_streams.Pass();
-  foo->array_of_array_of_bools = array_of_array_of_bools.Pass();
+  foo->bar = std::move(bar);
+  foo->extra_bars = std::move(extra_bars);
+  foo->data = std::move(data);
+  foo->source = std::move(handle1);
+  foo->input_streams = std::move(input_streams);
+  foo->output_streams = std::move(output_streams);
+  foo->array_of_array_of_bools = std::move(array_of_array_of_bools);
 
   return foo;
 }
@@ -177,9 +175,9 @@ void Print(int depth, const char* name, uint8_t value) {
 template <typename H>
 void Print(int depth,
            const char* name,
-           const fidl::ScopedHandleBase<H>& value) {
+           const mx::handle<H>& value) {
   PrintSpacer(depth);
-  std::cout << name << ": 0x" << std::hex << value.get().value() << std::endl;
+  std::cout << name << ": 0x" << std::hex << value.get() << std::endl;
 }
 
 void Print(int depth, const char* name, const fidl::String& str) {
@@ -277,7 +275,7 @@ class ServiceImpl : public Service {
       auto portptr = PortPtr::Create(std::move(port));
       Print(depth, "port", portptr.get());
     }
-    callback.Run(5);
+    callback(5);
   }
 
   void GetPort(fidl::InterfaceRequest<Port> port_request) override {}
@@ -330,8 +328,8 @@ TEST(BindingsSampleTest, Basic) {
   CheckFoo(*foo);
 
   PortPtr port;
-  service->Frobinate(foo.Pass(), Service::BazOptions::EXTRA, std::move(port),
-                     Service::FrobinateCallback());
+  service->Frobinate(std::move(foo), Service::BazOptions::EXTRA,
+                     std::move(port), [](uint32_t){});
 
   delete service;
 }

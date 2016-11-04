@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="_mojo_for_test_only",
- JavaPackage="org.chromium.mojo.bindings.test.fidl.mojo"]
-module mojo.test;
+module fidl.test;
 
 struct StructA {
   uint64 i;

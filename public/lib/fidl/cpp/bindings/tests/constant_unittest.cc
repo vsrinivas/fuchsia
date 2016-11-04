@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "mojo/public/interfaces/bindings/tests/test_constants.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/test_constants.fidl.h"
 
 namespace fidl {
 namespace test {

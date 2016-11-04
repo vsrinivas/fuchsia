@@ -7,10 +7,11 @@
 #include "lib/fidl/cpp/bindings/internal/array_internal.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/fixed_buffer.h"
-#include "lib/fidl/cpp/bindings/tests/container_test_util.h"
-#include "lib/fidl/cpp/bindings/tests/iterator_test_util.h"
-#include "mojo/public/interfaces/bindings/tests/test_arrays.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
+#include "lib/fidl/cpp/bindings/tests/util/iterator_test_util.h"
+#include "lib/fidl/compiler/interfaces/tests/test_arrays.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
+#include "lib/ftl/arraysize.h"
 
 namespace fidl {
 namespace test {
@@ -77,40 +78,45 @@ TEST(ArrayTest, Bool) {
   }
 }
 
+
 // Tests that Array<mx::channel> supports transferring handles.
 TEST(ArrayTest, Handle) {
-  MessagePipe pipe;
+  mx::channel handle0;
+  mx::channel handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  
   auto handles = Array<mx::channel>::New(2);
-  handles[0] = pipe.handle0.Pass();
-  handles[1].reset(pipe.handle1.release());
+  handles[0] = std::move(handle0);
+  handles[1].reset(handle1.release());
 
-  EXPECT_FALSE(pipe.handle0.is_valid());
-  EXPECT_FALSE(pipe.handle1.is_valid());
+  EXPECT_FALSE(handle0);
+  EXPECT_FALSE(handle1);
 
-  Array<mx::channel> handles2 = handles.Pass();
-  EXPECT_TRUE(handles2[0].is_valid());
-  EXPECT_TRUE(handles2[1].is_valid());
+  Array<mx::channel> handles2 = std::move(handles);
+  EXPECT_TRUE(handles2[0]);
+  EXPECT_TRUE(handles2[1]);
 
-  mx::channel pipe_handle = handles2[0].Pass();
-  EXPECT_TRUE(pipe_handle.is_valid());
-  EXPECT_FALSE(handles2[0].is_valid());
+  mx::channel pipe_handle = std::move(handles2[0]);
+  EXPECT_TRUE(pipe_handle);
+  EXPECT_FALSE(handles2[0]);
 }
 
 // Tests that Array<mx::channel> supports closing handles.
 TEST(ArrayTest, HandlesAreClosed) {
-  MessagePipe pipe;
-  MojoHandle pipe0_value = pipe.handle0.get().value();
-  MojoHandle pipe1_value = pipe.handle0.get().value();
+  mx::channel handle0;
+  mx::channel handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  mx_handle_t handle0_val = handle0.get();
 
   {
     auto handles = Array<mx::channel>::New(2);
-    handles[0] = pipe.handle0.Pass();
-    handles[1].reset(pipe.handle0.release());
+    handles[0] = std::move(handle0);
+    handles[1].reset(handle1.get());
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, MojoClose(pipe0_value));
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, MojoClose(pipe1_value));
+  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle0_val));
+  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle1.get()));
 }
 
 TEST(ArrayTest, Clone) {
@@ -174,7 +180,7 @@ TEST(ArrayTest, Clone) {
   {
     // Test that array of handles still works although Clone() is not available.
     auto array = Array<mx::channel>::New(10);
-    EXPECT_FALSE(array[0].is_valid());
+    EXPECT_FALSE(array[0]);
   }
 }
 
@@ -222,7 +228,7 @@ TEST(ArrayTest, Serialization_ArrayOfArrayOfPOD) {
     auto inner = Array<int32_t>::New(4);
     for (size_t i = 0; i < inner.size(); ++i)
       inner[i] = static_cast<int32_t>(i + (j * 10));
-    array[j] = inner.Pass();
+    array[j] = std::move(inner);
   }
 
   size_t size = GetSerializedSize_(array);
@@ -259,12 +265,12 @@ TEST(ArrayTest, Serialization_ArrayOfScopedEnum) {
       TestEnum::E2, TestEnum::E2, TestEnum::E2, TestEnum::E0,
   };
 
-  auto array = Array<TestEnum>::New(MOJO_ARRAYSIZE(TEST_VALS));
+  auto array = Array<TestEnum>::New(arraysize(TEST_VALS));
   for (size_t i = 0; i < array.size(); ++i)
     array[i] = TEST_VALS[i];
 
   size_t size = GetSerializedSize_(array);
-  EXPECT_EQ(8U + (MOJO_ARRAYSIZE(TEST_VALS) * sizeof(int32_t)), size);
+  EXPECT_EQ(8U + (arraysize(TEST_VALS) * sizeof(int32_t)), size);
 
   FixedBufferForTesting buf(size);
   Array_Data<int32_t>* data = nullptr;
@@ -274,7 +280,7 @@ TEST(ArrayTest, Serialization_ArrayOfScopedEnum) {
   Array<TestEnum> array2;
   Deserialize_(data, &array2);
 
-  EXPECT_EQ(MOJO_ARRAYSIZE(TEST_VALS), array2.size());
+  EXPECT_EQ(arraysize(TEST_VALS), array2.size());
   for (size_t i = 0; i < array2.size(); ++i)
     EXPECT_EQ(TEST_VALS[i], array2[i]);
 }
@@ -334,13 +340,16 @@ TEST(ArrayTest, Serialization_ArrayOfString) {
 
 // Tests serializing and deserializing an Array<Handle>.
 TEST(ArrayTest, Serialization_ArrayOfHandle) {
-  auto array = Array<ScopedHandleBase<mx_handle_t>>::New(4);
-  MessagePipe p0;
-  MessagePipe p1;
+  auto array = Array<mx::handle<void>>::New(4);
+  mx::channel p0_h0, p0_h1;
+  mx::channel p1_h0, p1_h1;
+  mx::channel::create(0, &p0_h0, &p0_h1);
+  mx::channel::create(0, &p1_h0, &p1_h1);
+
   // array[0] is left invalid.
-  array[1] = p0.handle1.Pass();
-  array[2] = p1.handle0.Pass();
-  array[3] = p1.handle1.Pass();
+  array[1] = std::move(p0_h1);
+  array[2] = std::move(p1_h0);
+  array[3] = std::move(p1_h1);
 
   size_t size = GetSerializedSize_(array);
   EXPECT_EQ(8U               // array header
@@ -349,7 +358,7 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
 
   // We're going to reuse this buffer.. twice.
   FixedBufferForTesting buf(size * 3);
-  Array_Data<mx_handle_t>* data = nullptr;
+  Array_Data<fidl::internal::WrappedHandle>* data = nullptr;
 
   // 1.  Serialization should fail on non-nullable invalid Handle.
   ArrayValidateParams validate_params(4, false, nullptr);
@@ -357,31 +366,26 @@ TEST(ArrayTest, Serialization_ArrayOfHandle) {
             SerializeArray_(&array, &buf, &data, &validate_params));
 
   // We failed trying to transfer the first handle, so the rest are left valid.
-  EXPECT_FALSE(array[0].is_valid());
-  EXPECT_TRUE(array[1].is_valid());
-  EXPECT_TRUE(array[2].is_valid());
-  EXPECT_TRUE(array[3].is_valid());
+  EXPECT_FALSE(array[0]);
+  EXPECT_TRUE(array[1]);
+  EXPECT_TRUE(array[2]);
+  EXPECT_TRUE(array[3]);
 
   // 2.  Serialization should pass on nullable invalid Handle.
   ArrayValidateParams validate_params_nullable(4, true, nullptr);
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             SerializeArray_(&array, &buf, &data, &validate_params_nullable));
 
-  EXPECT_FALSE(array[0].is_valid());
-  EXPECT_FALSE(array[1].is_valid());
-  EXPECT_FALSE(array[2].is_valid());
-  EXPECT_FALSE(array[3].is_valid());
+  EXPECT_FALSE(array[0]);
+  EXPECT_FALSE(array[1]);
+  EXPECT_FALSE(array[2]);
+  EXPECT_FALSE(array[3]);
 
   Deserialize_(data, &array);
-  EXPECT_FALSE(array[0].is_valid());
-  EXPECT_TRUE(array[1].is_valid());
-  EXPECT_TRUE(array[2].is_valid());
-  EXPECT_TRUE(array[3].is_valid());
-}
-
-TEST(ArrayTest, Serialization_StructWithArraysOfHandles) {
-  StructWithHandles handles_struct;
-  MessagePipe handle_pair_0;
+  EXPECT_FALSE(array[0]);
+  EXPECT_TRUE(array[1]);
+  EXPECT_TRUE(array[2]);
+  EXPECT_TRUE(array[3]);
 }
 
 // Test serializing and deserializing an Array<InterfacePtr>.
@@ -400,28 +404,28 @@ TEST(ArrayTest, Serialization_ArrayOfInterfacePtr) {
   EXPECT_EQ(
       fidl::internal::ValidationError::UNEXPECTED_INVALID_HANDLE,
       SerializeArray_(&iface_array, &buf, &output, &validate_non_nullable));
-  EXPECT_FALSE(iface_array[0].is_valid());
+  EXPECT_FALSE(iface_array[0]);
 
   // 2.  Invalid InterfacePtr should pass if array elements are nullable.
   ArrayValidateParams validate_nullable(1, true, nullptr);
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             SerializeArray_(&iface_array, &buf, &output, &validate_nullable));
-  EXPECT_FALSE(iface_array[0].is_valid());
+  EXPECT_FALSE(iface_array[0]);
 
   // 3.  Should serialize successfully if InterfacePtr is valid.
   TestInterfacePtr iface_ptr;
   auto iface_req = GetProxy(&iface_ptr);
 
-  iface_array[0] = iface_ptr.Pass();
-  EXPECT_TRUE(iface_array[0].is_valid());
+  iface_array[0] = std::move(iface_ptr);
+  EXPECT_TRUE(iface_array[0]);
 
   EXPECT_EQ(
       fidl::internal::ValidationError::NONE,
       SerializeArray_(&iface_array, &buf, &output, &validate_non_nullable));
-  EXPECT_FALSE(iface_array[0].is_valid());
+  EXPECT_FALSE(iface_array[0]);
 
   Deserialize_(output, &iface_array);
-  EXPECT_TRUE(iface_array[0].is_valid());
+  EXPECT_TRUE(iface_array[0]);
 }
 
 // Test serializing and deserializing a struct with an Array<> of another struct
@@ -471,17 +475,17 @@ TEST(ArrayTest, Serialization_StructWithArrayOfInterfacePtr) {
   auto iface_req = GetProxy(&iface_ptr);
 
   StructWithInterfacePtr iface_struct(StructWithInterface::New());
-  iface_struct->iptr = iface_ptr.Pass();
+  iface_struct->iptr = std::move(iface_ptr);
 
-  struct_arr_iface.structs_array[0] = iface_struct.Pass();
-  ASSERT_TRUE(struct_arr_iface.structs_array[0]->iptr.is_valid());
+  struct_arr_iface.structs_array[0] = std::move(iface_struct);
+  ASSERT_TRUE(struct_arr_iface.structs_array[0]->iptr);
   EXPECT_EQ(fidl::internal::ValidationError::NONE,
             Serialize_(&struct_arr_iface, &buf, &struct_arr_iface_data));
 
-  EXPECT_FALSE(struct_arr_iface.structs_array[0]->iptr.is_valid());
+  EXPECT_FALSE(struct_arr_iface.structs_array[0]->iptr);
 
   Deserialize_(struct_arr_iface_data, &struct_arr_iface);
-  EXPECT_TRUE(struct_arr_iface.structs_array[0]->iptr.is_valid());
+  EXPECT_TRUE(struct_arr_iface.structs_array[0]->iptr);
 }
 
 // Test serializing and deserializing a struct with an Array<> of interface
@@ -678,7 +682,7 @@ TEST(ArrayTest, PushBack_MoveOnly) {
   for (size_t i = 0; i < capacity; i++) {
     MoveOnlyType value;
     value_ptrs.push_back(value.ptr());
-    array.push_back(value.Pass());
+    array.push_back(std::move(value));
     ASSERT_EQ(i + 1, array.size());
     ASSERT_EQ(i + 1, value_ptrs.size());
     EXPECT_EQ(array.size() + 1, MoveOnlyType::num_instances());
@@ -690,7 +694,7 @@ TEST(ArrayTest, PushBack_MoveOnly) {
   {
     MoveOnlyType value;
     value_ptrs.push_back(value.ptr());
-    array.push_back(value.Pass());
+    array.push_back(std::move(value));
     EXPECT_EQ(array.size() + 1, MoveOnlyType::num_instances());
   }
   ASSERT_EQ(capacity + 1, array.size());

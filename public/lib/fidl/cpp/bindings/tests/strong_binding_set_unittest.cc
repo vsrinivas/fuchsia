@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/minimal_interface.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
 namespace fidl {
 namespace {

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace test {
-
 namespace {
 
 RectPtr CreateRect() {
@@ -84,7 +83,7 @@ TEST(EqualsTest, EqualsMap) {
   n1->rects.push_back(CreateRect());
 
   Map<std::string, NamedRegionPtr> m1;
-  m1.insert("foo", n1.Pass());
+  m1.insert("foo", std::move(n1));
 
   decltype(m1) m2;
   EXPECT_FALSE(m1.Equals(m2));

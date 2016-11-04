@@ -6,7 +6,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "mojo/public/cpp/test_support/test_support.h"
 #include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/ping_service.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/ping_service.fidl.h"
 
 namespace fidl {
 namespace {

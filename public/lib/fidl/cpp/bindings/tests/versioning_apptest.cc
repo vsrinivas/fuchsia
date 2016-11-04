@@ -5,7 +5,7 @@
 #include "mojo/public/cpp/application/application_test_base.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/interfaces/bindings/tests/versioning_test_client.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/versioning_test_client.fidl.h"
 
 namespace fidl {
 namespace test {

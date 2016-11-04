@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
 
+#include <limits>
+
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
 #include "lib/ftl/logging.h"
 
@@ -24,7 +26,8 @@ BoundsChecker::BoundsChecker(const void* data,
     FTL_DCHECK(false) << "Not reached";
     data_end_ = data_begin_;
   }
-  if (handle_end_ < num_handles) {
+  if (handle_end_ < num_handles ||
+      num_handles > std::numeric_limits<int32_t>::max()) {
     // Assigning |num_handles| to |handle_end_| overflowed.
     // It shouldn't happen but if it does, set the handle index range to empty.
     FTL_DCHECK(false) << "Not reached";
@@ -46,15 +49,17 @@ bool BoundsChecker::ClaimMemory(const void* position, uint32_t num_bytes) {
 }
 
 bool BoundsChecker::ClaimHandle(WrappedHandle encoded_handle) {
-  uint32_t index = encoded_handle.value;
-  if (index == static_cast<uint32_t>(kEncodedInvalidHandleValue))
+  int32_t index = encoded_handle.value;
+  if (index == static_cast<int32_t>(kEncodedInvalidHandleValue))
     return true;
 
-  if (index < handle_begin_ || index >= handle_end_)
+  if (index < 0 ||
+      static_cast<uint32_t>(index) < handle_begin_ ||
+      static_cast<uint32_t>(index) >= handle_end_)
     return false;
 
   // |index| + 1 shouldn't overflow, because |index| is not the max value of
-  // uint32_t (it is less than |handle_end_|).
+  // int32_t (it is less than |handle_end_|).
   handle_begin_ = index + 1;
   return true;
 }

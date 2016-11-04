@@ -6,12 +6,14 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/bindings_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 #include "lib/fidl/cpp/bindings/internal/bounds_checker.h"
-#include "mojo/public/cpp/system/handle.h"
 
 namespace fidl {
 namespace test {
 namespace {
+
+using fidl::internal::WrappedHandle;
 
 const void* ToPtr(uintptr_t ptr) {
   return reinterpret_cast<const void*>(ptr);
@@ -33,15 +35,18 @@ TEST(BoundsCheckerTest, ConstructorRangeOverflow) {
   if (sizeof(size_t) > sizeof(uint32_t)) {
     // Test handle index range overflow.
     size_t num_handles =
-        static_cast<size_t>(std::numeric_limits<uint32_t>::max()) + 5;
+        static_cast<size_t>(std::numeric_limits<int32_t>::max()) + 5;
+
+    // This should overflow the # of handles, and effectively reject claiming
+    // any valid handle.
     internal::BoundsChecker checker(ToPtr(0), 0, num_handles);
 
-    EXPECT_FALSE(checker.ClaimHandle(Handle(0)));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{0}));
     EXPECT_FALSE(
-        checker.ClaimHandle(Handle(std::numeric_limits<uint32_t>::max() - 1)));
+        checker.ClaimHandle(WrappedHandle{std::numeric_limits<int32_t>::max()}));
 
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(internal::kEncodedInvalidHandleValue)));
+        checker.ClaimHandle(WrappedHandle{internal::kEncodedInvalidHandleValue}));
   }
 }
 #endif
@@ -113,51 +118,50 @@ TEST(BoundsCheckerTest, ClaimHandle) {
     internal::BoundsChecker checker(ToPtr(0), 0, 10);
 
     // Basics.
-    EXPECT_TRUE(checker.ClaimHandle(Handle(0)));
-    EXPECT_FALSE(checker.ClaimHandle(Handle(0)));
+    EXPECT_TRUE(checker.ClaimHandle(WrappedHandle{0}));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{0}));
 
-    EXPECT_TRUE(checker.ClaimHandle(Handle(9)));
-    EXPECT_FALSE(checker.ClaimHandle(Handle(10)));
+    EXPECT_TRUE(checker.ClaimHandle(WrappedHandle{9}));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{10}));
 
     // Should fail because it is smaller than the max index that has been
     // claimed.
-    EXPECT_FALSE(checker.ClaimHandle(Handle(8)));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{8}));
 
     // Should return true for invalid handle.
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(internal::kEncodedInvalidHandleValue)));
+        checker.ClaimHandle(WrappedHandle{internal::kEncodedInvalidHandleValue}));
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(internal::kEncodedInvalidHandleValue)));
+        checker.ClaimHandle(WrappedHandle{internal::kEncodedInvalidHandleValue}));
   }
 
   {
     // No handle to claim.
     internal::BoundsChecker checker(ToPtr(0), 0, 0);
 
-    EXPECT_FALSE(checker.ClaimHandle(Handle(0)));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{0}));
 
     // Should still return true for invalid handle.
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(internal::kEncodedInvalidHandleValue)));
+        checker.ClaimHandle(WrappedHandle{internal::kEncodedInvalidHandleValue}));
   }
 
   {
     // Test the case that |num_handles| is the same value as
     // |internal::kEncodedInvalidHandleValue|.
-    EXPECT_EQ(internal::kEncodedInvalidHandleValue,
-              std::numeric_limits<uint32_t>::max());
+    EXPECT_EQ(internal::kEncodedInvalidHandleValue, static_cast<int32_t>(-1));
     internal::BoundsChecker checker(ToPtr(0), 0,
-                                    std::numeric_limits<uint32_t>::max());
+                                    std::numeric_limits<int32_t>::max());
 
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(std::numeric_limits<uint32_t>::max() - 1)));
+        checker.ClaimHandle(WrappedHandle{std::numeric_limits<int32_t>::max() - 1}));
     EXPECT_FALSE(
-        checker.ClaimHandle(Handle(std::numeric_limits<uint32_t>::max() - 1)));
-    EXPECT_FALSE(checker.ClaimHandle(Handle(0)));
+        checker.ClaimHandle(WrappedHandle{std::numeric_limits<int32_t>::max() - 1}));
+    EXPECT_FALSE(checker.ClaimHandle(WrappedHandle{0}));
 
     // Should still return true for invalid handle.
     EXPECT_TRUE(
-        checker.ClaimHandle(Handle(internal::kEncodedInvalidHandleValue)));
+        checker.ClaimHandle(WrappedHandle{internal::kEncodedInvalidHandleValue}));
   }
 }
 

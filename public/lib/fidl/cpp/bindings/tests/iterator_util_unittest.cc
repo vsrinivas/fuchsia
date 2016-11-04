@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/iterator_util.h"
 #include "lib/fidl/cpp/bindings/map.h"
-#include "lib/fidl/cpp/bindings/tests/iterator_test_util.h"
+#include "lib/fidl/cpp/bindings/tests/util/iterator_test_util.h"
 
 namespace fidl {
 namespace test {

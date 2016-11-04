@@ -27,9 +27,10 @@ void AllocMessage(const std::string& text, Message* message) {
 
 // Simple success case.
 TEST(SynchronousConnectorTest, Basic) {
-  MessagePipe pipe;
-  internal::SynchronousConnector connector0(std::move(pipe.handle0));
-  internal::SynchronousConnector connector1(std::move(pipe.handle1));
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  internal::SynchronousConnector connector0(std::move(handle0));
+  internal::SynchronousConnector connector1(std::move(handle1));
 
   const std::string kText("hello world");
   Message message;
@@ -47,11 +48,12 @@ TEST(SynchronousConnectorTest, Basic) {
 
 // Writing to a closed pipe should fail.
 TEST(SynchronousConnectorTest, WriteToClosedPipe) {
-  MessagePipe pipe;
-  internal::SynchronousConnector connector0(std::move(pipe.handle0));
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  internal::SynchronousConnector connector0(std::move(handle0));
 
   // Close the other end of the pipe.
-  pipe.handle1.reset();
+  handle1.reset();
 
   Message message;
   EXPECT_FALSE(connector0.Write(&message));
@@ -59,11 +61,12 @@ TEST(SynchronousConnectorTest, WriteToClosedPipe) {
 
 // Reading from a closed pipe should fail (while waiting on it).
 TEST(SynchronousConnectorTest, ReadFromClosedPipe) {
-  MessagePipe pipe;
-  internal::SynchronousConnector connector0(std::move(pipe.handle0));
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  internal::SynchronousConnector connector0(std::move(handle0));
 
   // Close the other end of the pipe.
-  pipe.handle1.reset();
+  handle1.reset();
 
   Message message;
   EXPECT_FALSE(connector0.BlockingRead(&message));

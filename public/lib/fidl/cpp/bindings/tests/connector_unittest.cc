@@ -10,10 +10,11 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/internal/connector.h"
 #include "lib/fidl/cpp/bindings/internal/message_builder.h"
-#include "lib/fidl/cpp/bindings/tests/message_queue.h"
+#include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
+#include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/utility/run_loop.h"
 
 namespace fidl {
 namespace test {
@@ -23,9 +24,9 @@ class ConnectorTest : public testing::Test {
  public:
   ConnectorTest() {}
 
-  void SetUp() override { CreateMessagePipe(nullptr, &handle0_, &handle1_); }
+  void SetUp() override { mx::channel::create(0, &handle0_, &handle1_); }
 
-  void TearDown() override {}
+  void TearDown() override { ClearAsyncWaiter(); }
 
   void AllocMessage(const char* text, Message* message) {
     size_t payload_size = strlen(text) + 1;  // Plus null terminator.
@@ -35,15 +36,13 @@ class ConnectorTest : public testing::Test {
     builder.message()->MoveTo(message);
   }
 
-  void PumpMessages() { loop_.RunUntilIdle(); }
+  void PumpMessages() { WaitForAsyncWaiter(); }
 
  protected:
   mx::channel handle0_;
   mx::channel handle1_;
 
  private:
-  RunLoop loop_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(ConnectorTest);
 };
 
@@ -67,8 +66,8 @@ class MessageAccumulator : public MessageReceiver {
 };
 
 TEST_F(ConnectorTest, Basic) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char kText[] = "hello world";
 
@@ -93,8 +92,8 @@ TEST_F(ConnectorTest, Basic) {
 }
 
 TEST_F(ConnectorTest, Basic_Synchronous) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char kText[] = "hello world";
 
@@ -106,7 +105,7 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  connector1.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -119,8 +118,8 @@ TEST_F(ConnectorTest, Basic_Synchronous) {
 }
 
 TEST_F(ConnectorTest, Basic_EarlyIncomingReceiver) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
@@ -145,12 +144,12 @@ TEST_F(ConnectorTest, Basic_EarlyIncomingReceiver) {
 }
 
 TEST_F(ConnectorTest, Basic_TwoMessages) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(kText); ++i) {
+  for (size_t i = 0; i < arraysize(kText); ++i) {
     Message message;
     AllocMessage(kText[i], &message);
 
@@ -162,7 +161,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
 
   PumpMessages();
 
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(kText); ++i) {
+  for (size_t i = 0; i < arraysize(kText); ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
     Message message_received;
@@ -175,12 +174,12 @@ TEST_F(ConnectorTest, Basic_TwoMessages) {
 }
 
 TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(kText); ++i) {
+  for (size_t i = 0; i < arraysize(kText); ++i) {
     Message message;
     AllocMessage(kText[i], &message);
 
@@ -190,7 +189,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
   MessageAccumulator accumulator;
   connector1.set_incoming_receiver(&accumulator);
 
-  connector1.WaitForIncomingMessage(MX_TIME_INFINITE);
+  connector1.WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   ASSERT_FALSE(accumulator.IsEmpty());
 
@@ -205,7 +204,7 @@ TEST_F(ConnectorTest, Basic_TwoMessages_Synchronous) {
 }
 
 TEST_F(ConnectorTest, WriteToClosedPipe) {
-  internal::Connector connector0(handle0_.Pass());
+  internal::Connector connector0(std::move(handle0_));
 
   const char kText[] = "hello world";
 
@@ -232,16 +231,17 @@ TEST_F(ConnectorTest, WriteToClosedPipe) {
 }
 
 TEST_F(ConnectorTest, MessageWithHandles) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char kText[] = "hello world";
 
   Message message1;
   AllocMessage(kText, &message1);
 
-  MessagePipe pipe;
-  message1.mutable_handles()->push_back(pipe.handle0.release());
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  message1.mutable_handles()->push_back(handle0.release());
 
   connector0.Accept(&message1);
 
@@ -266,12 +266,12 @@ TEST_F(ConnectorTest, MessageWithHandles) {
   // Now send a message to the transferred handle and confirm it's sent through
   // to the orginal pipe.
   mx::channel smph;
-  smph.reset(message_received.handles()->front().value());
-  message_received.mutable_handles()->front() = Handle();
+  smph.reset(message_received.handles()->front());
+  message_received.mutable_handles()->front() = MX_HANDLE_INVALID;
   // |smph| now owns this handle.
 
-  internal::Connector connector_received(smph.Pass());
-  internal::Connector connector_original(pipe.handle1.Pass());
+  internal::Connector connector_received(std::move(smph));
+  internal::Connector connector_original(std::move(handle1));
 
   Message message2;
   AllocMessage(kText, &message2);
@@ -290,10 +290,10 @@ TEST_F(ConnectorTest, MessageWithHandles) {
 }
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithError) {
-  internal::Connector connector0(handle0_.Pass());
+  internal::Connector connector0(std::move(handle0_));
   // Close the other end of the pipe.
   handle1_.reset();
-  ASSERT_FALSE(connector0.WaitForIncomingMessage(MX_TIME_INFINITE));
+  ASSERT_FALSE(connector0.WaitForIncomingMessage(ftl::TimeDelta::Max()));
 }
 
 class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
@@ -314,8 +314,8 @@ class ConnectorDeletingMessageAccumulator : public MessageAccumulator {
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector* connector1 = new internal::Connector(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector* connector1 = new internal::Connector(std::move(handle1_));
 
   const char kText[] = "hello world";
 
@@ -327,7 +327,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithDeletion) {
   ConnectorDeletingMessageAccumulator accumulator(&connector1);
   connector1->set_incoming_receiver(&accumulator);
 
-  connector1->WaitForIncomingMessage(MX_TIME_INFINITE);
+  connector1->WaitForIncomingMessage(ftl::TimeDelta::Max());
 
   ASSERT_FALSE(connector1);
   ASSERT_FALSE(accumulator.IsEmpty());
@@ -350,7 +350,7 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
       return false;
     number_of_calls_++;
     if (number_of_calls_ == 1) {
-      return connector_->WaitForIncomingMessage(MX_TIME_INFINITE);
+      return connector_->WaitForIncomingMessage(ftl::TimeDelta::Max());
     }
     return true;
   }
@@ -365,12 +365,12 @@ class ReentrantMessageAccumulator : public MessageAccumulator {
 };
 
 TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   const char* kText[] = {"hello", "world"};
 
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(kText); ++i) {
+  for (size_t i = 0; i < arraysize(kText); ++i) {
     Message message;
     AllocMessage(kText[i], &message);
 
@@ -382,7 +382,7 @@ TEST_F(ConnectorTest, WaitForIncomingMessageWithReentrancy) {
 
   PumpMessages();
 
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(kText); ++i) {
+  for (size_t i = 0; i < arraysize(kText); ++i) {
     ASSERT_FALSE(accumulator.IsEmpty());
 
     Message message_received;
@@ -411,8 +411,7 @@ class NoTaskStarvationReplier : public MessageReceiver {
     uint32_t name = message->name();
 
     if (name >= 10u) {
-      RunLoop::current()->PostDelayedTask([]() { RunLoop::current()->Quit(); },
-                                          0);
+      return true;
     }
 
     // We don't necessarily expect the quit task to be processed immediately,
@@ -443,8 +442,8 @@ class NoTaskStarvationReplier : public MessageReceiver {
 // TODO(vtl): This test currently fails. See the discussion on issue #604
 // (https://github.com/domokit/mojo/issues/604).
 TEST_F(ConnectorTest, DISABLED_NoTaskStarvation) {
-  internal::Connector connector0(handle0_.Pass());
-  internal::Connector connector1(handle1_.Pass());
+  internal::Connector connector0(std::move(handle0_));
+  internal::Connector connector1(std::move(handle1_));
 
   // The replier will bounce messages to |connector0|, and will receiver
   // messages from |connector1|.
@@ -458,7 +457,7 @@ TEST_F(ConnectorTest, DISABLED_NoTaskStarvation) {
 
   PumpMessages();
 
-  EXPECT_GE(replier.num_accepted(), 10u);
+  EXPECT_GE(replier.num_accepted(), 9u);
 }
 
 }  // namespace

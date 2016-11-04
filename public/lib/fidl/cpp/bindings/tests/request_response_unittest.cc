@@ -4,10 +4,10 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "mojo/public/cpp/test_support/test_utils.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/sample_import.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/sample_interfaces.mojom.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_utils.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_import.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -16,35 +16,35 @@ namespace {
 class ProviderImpl : public sample::Provider {
  public:
   explicit ProviderImpl(InterfaceRequest<sample::Provider> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {}
 
   void EchoString(const String& a,
-                  const Callback<void(String)>& callback) override {
-    Callback<void(String)> callback_copy;
+                  const std::function<void(String)>& callback) override {
+    std::function<void(String)> callback_copy;
     // Make sure operator= is used.
     callback_copy = callback;
-    callback_copy.Run(a);
+    callback_copy(a);
   }
 
   void EchoStrings(const String& a,
                    const String& b,
-                   const Callback<void(String, String)>& callback) override {
-    callback.Run(a, b);
+                   const std::function<void(String, String)>& callback) override {
+    callback(a, b);
   }
 
   void EchoMessagePipeHandle(
       mx::channel a,
-      const Callback<void(mx::channel)>& callback) override {
-    callback.Run(a.Pass());
+      const std::function<void(mx::channel)>& callback) override {
+    callback(std::move(a));
   }
 
   void EchoEnum(sample::Enum a,
-                const Callback<void(sample::Enum)>& callback) override {
-    callback.Run(a);
+                const std::function<void(sample::Enum)>& callback) override {
+    callback(a);
   }
 
   void EchoInt(int32_t a, const EchoIntCallback& callback) override {
-    callback.Run(a);
+    callback(a);
   }
 
   Binding<sample::Provider> binding_;
@@ -53,8 +53,8 @@ class ProviderImpl : public sample::Provider {
 class StringRecorder {
  public:
   explicit StringRecorder(std::string* buf) : buf_(buf) {}
-  void Run(const String& a) const { *buf_ = a; }
-  void Run(const String& a, const String& b) const {
+  void operator()(const String& a) const { *buf_ = a; }
+  void operator()(const String& a, const String& b) const {
     *buf_ = a.get() + b.get();
   }
 
@@ -65,7 +65,7 @@ class StringRecorder {
 class EnumRecorder {
  public:
   explicit EnumRecorder(sample::Enum* value) : value_(value) {}
-  void Run(sample::Enum a) const { *value_ = a; }
+  void operator()(sample::Enum a) const { *value_ = a; }
 
  private:
   sample::Enum* value_;
@@ -74,7 +74,7 @@ class EnumRecorder {
 class MessagePipeWriter {
  public:
   explicit MessagePipeWriter(const char* text) : text_(text) {}
-  void Run(mx::channel handle) const { WriteTextMessage(handle.get(), text_); }
+  void operator()(mx::channel handle) const { WriteTextMessage(handle, text_); }
 
  private:
   std::string text_;
@@ -82,12 +82,9 @@ class MessagePipeWriter {
 
 class RequestResponseTest : public testing::Test {
  public:
-  ~RequestResponseTest() override { loop_.RunUntilIdle(); }
-
-  void PumpMessages() { loop_.RunUntilIdle(); }
-
- private:
-  RunLoop loop_;
+  ~RequestResponseTest() override {}
+  void TearDown() override { ClearAsyncWaiter(); }
+  void PumpMessages() { WaitForAsyncWaiter(); }
 };
 
 TEST_F(RequestResponseTest, EchoString) {
@@ -119,14 +116,15 @@ TEST_F(RequestResponseTest, EchoMessagePipeHandle) {
   sample::ProviderPtr provider;
   ProviderImpl provider_impl(GetProxy(&provider));
 
-  MessagePipe pipe2;
-  provider->EchoMessagePipeHandle(pipe2.handle1.Pass(),
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
+  provider->EchoMessagePipeHandle(std::move(handle1),
                                   MessagePipeWriter("hello"));
 
   PumpMessages();
 
   std::string value;
-  ReadTextMessage(pipe2.handle0.get(), &value);
+  ReadTextMessage(handle0, &value);
 
   EXPECT_EQ(std::string("hello"), value);
 }

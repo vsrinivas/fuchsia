@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <functional>
 #include <utility>
+
+#include <mx/datapipe.h>
+#include <magenta/syscalls/datapipe.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/test_support/test_utils.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/sample_factory.mojom.h"
+#include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_utils.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_factory.fidl.h"
 
 namespace fidl {
 namespace test {
@@ -21,7 +25,7 @@ const char kText2[] = "world";
 class StringRecorder {
  public:
   explicit StringRecorder(std::string* buf) : buf_(buf) {}
-  void Run(const String& a) const { *buf_ = a.To<std::string>(); }
+  void operator()(const String& a) const { *buf_ = a.To<std::string>(); }
 
  private:
   std::string* buf_;
@@ -31,7 +35,7 @@ class ImportedInterfaceImpl : public imported::ImportedInterface {
  public:
   explicit ImportedInterfaceImpl(
       InterfaceRequest<imported::ImportedInterface> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {}
 
   void DoSomething() override { do_something_count_++; }
 
@@ -46,75 +50,77 @@ int ImportedInterfaceImpl::do_something_count_ = 0;
 class SampleNamedObjectImpl : public sample::NamedObject {
  public:
   explicit SampleNamedObjectImpl(InterfaceRequest<sample::NamedObject> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {
+    binding_.set_connection_error_handler([this](){ delete this; });
+  }
   void SetName(const fidl::String& name) override { name_ = name; }
 
-  void GetName(const fidl::Callback<void(fidl::String)>& callback) override {
-    callback.Run(name_);
+  void GetName(const std::function<void(fidl::String)>& callback) override {
+    callback(name_);
   }
 
  private:
   std::string name_;
-  StrongBinding<sample::NamedObject> binding_;
+  Binding<sample::NamedObject> binding_;
 };
 
 class SampleFactoryImpl : public sample::Factory {
  public:
   explicit SampleFactoryImpl(InterfaceRequest<sample::Factory> request)
-      : binding_(this, request.Pass()) {}
+      : binding_(this, std::move(request)) {}
 
   void DoStuff(sample::RequestPtr request,
                mx::channel pipe,
                const DoStuffCallback& callback) override {
     std::string text1;
-    if (pipe.is_valid())
-      EXPECT_TRUE(ReadTextMessage(pipe.get(), &text1));
+    if (pipe)
+      EXPECT_TRUE(ReadTextMessage(pipe, &text1));
 
     std::string text2;
-    if (request->pipe.is_valid()) {
-      EXPECT_TRUE(ReadTextMessage(request->pipe.get(), &text2));
+    if (request->pipe) {
+      EXPECT_TRUE(ReadTextMessage(request->pipe, &text2));
 
       // Ensure that simply accessing request->pipe does not close it.
-      EXPECT_TRUE(request->pipe.is_valid());
+      EXPECT_TRUE(request->pipe);
     }
 
     mx::channel pipe0;
     if (!text2.empty()) {
-      CreateMessagePipe(nullptr, &pipe0, &pipe1_);
-      EXPECT_TRUE(WriteTextMessage(pipe1_.get(), text2));
+      mx::channel::create(0, &pipe0, &pipe1_);
+      EXPECT_TRUE(WriteTextMessage(pipe1_, text2));
     }
 
     sample::ResponsePtr response(sample::Response::New());
     response->x = 2;
-    response->pipe = pipe0.Pass();
-    callback.Run(response.Pass(), text1);
+    response->pipe = std::move(pipe0);
+    callback(std::move(response), text1);
 
     if (request->obj)
       imported::ImportedInterfacePtr::Create(std::move(request->obj))
           ->DoSomething();
   }
 
-  void DoStuff2(ScopedDataPipeConsumerHandle pipe,
+  void DoStuff2(mx::datapipe_consumer pipe,
                 const DoStuff2Callback& callback) override {
     // Read the data from the pipe, writing the response (as a string) to
     // DidStuff2().
-    ASSERT_TRUE(pipe.is_valid());
-    uint32_t data_size = 0;
-    ASSERT_EQ(NO_ERROR, ReadDataRaw(pipe.get(), nullptr, &data_size,
-                                    MOJO_READ_DATA_FLAG_QUERY));
+    ASSERT_TRUE(pipe);
+    mx_size_t data_size = 0u;
+    ASSERT_EQ(NO_ERROR, pipe.read(MX_DATAPIPE_READ_FLAG_QUERY, nullptr, 0,
+              &data_size));
     ASSERT_NE(0, static_cast<int>(data_size));
     char data[64];
     ASSERT_LT(static_cast<int>(data_size), 64);
-    ASSERT_EQ(NO_ERROR, ReadDataRaw(pipe.get(), data, &data_size,
-                                    MOJO_READ_DATA_FLAG_ALL_OR_NONE));
+    ASSERT_EQ(NO_ERROR, pipe.read(MX_DATAPIPE_READ_FLAG_ALL_OR_NONE, data,
+              data_size, &data_size));
 
-    callback.Run(data);
+    callback(data);
   }
 
   void CreateNamedObject(
       InterfaceRequest<sample::NamedObject> object_request) override {
     EXPECT_TRUE(object_request.is_pending());
-    new SampleNamedObjectImpl(object_request.Pass());
+    new SampleNamedObjectImpl(std::move(object_request));
   }
 
   // These aren't called or implemented, but exist here to test that the
@@ -122,11 +128,11 @@ class SampleFactoryImpl : public sample::Factory {
   // interfaces.
   void RequestImportedInterface(
       InterfaceRequest<imported::ImportedInterface> imported,
-      const fidl::Callback<void(InterfaceRequest<imported::ImportedInterface>)>&
+      const std::function<void(InterfaceRequest<imported::ImportedInterface>)>&
           callback) override {}
   void TakeImportedInterface(
       InterfaceHandle<imported::ImportedInterface> imported,
-      const fidl::Callback<void(InterfaceHandle<imported::ImportedInterface>)>&
+      const std::function<void(InterfaceHandle<imported::ImportedInterface>)>&
           callback) override {}
 
  private:
@@ -136,34 +142,31 @@ class SampleFactoryImpl : public sample::Factory {
 
 class HandlePassingTest : public testing::Test {
  public:
-  void TearDown() override { PumpMessages(); }
+  void TearDown() override { ClearAsyncWaiter(); }
 
-  void PumpMessages() { loop_.RunUntilIdle(); }
-
- private:
-  RunLoop loop_;
+  void PumpMessages() { WaitForAsyncWaiter(); }
 };
 
 struct DoStuffCallback {
   DoStuffCallback(bool* got_response, std::string* got_text_reply)
       : got_response(got_response), got_text_reply(got_text_reply) {}
 
-  void Run(sample::ResponsePtr response, const String& text_reply) const {
+  void operator()(sample::ResponsePtr response, const String& text_reply) const {
     *got_text_reply = text_reply;
 
-    if (response->pipe.is_valid()) {
+    if (response->pipe) {
       std::string text2;
-      EXPECT_TRUE(ReadTextMessage(response->pipe.get(), &text2));
+      EXPECT_TRUE(ReadTextMessage(response->pipe, &text2));
 
       // Ensure that simply accessing response.pipe does not close it.
-      EXPECT_TRUE(response->pipe.is_valid());
+      EXPECT_TRUE(response->pipe);
 
       EXPECT_EQ(std::string(kText2), text2);
 
       // Do some more tests of handle passing:
-      mx::channel p = response->pipe.Pass();
-      EXPECT_TRUE(p.is_valid());
-      EXPECT_FALSE(response->pipe.is_valid());
+      mx::channel p = std::move(response->pipe);
+      EXPECT_TRUE(p);
+      EXPECT_FALSE(response->pipe);
     }
 
     *got_response = true;
@@ -177,23 +180,25 @@ TEST_F(HandlePassingTest, Basic) {
   sample::FactoryPtr factory;
   SampleFactoryImpl factory_impl(GetProxy(&factory));
 
-  MessagePipe pipe0;
-  EXPECT_TRUE(WriteTextMessage(pipe0.handle1.get(), kText1));
+  mx::channel pipe0_handle0, pipe0_handle1;
+  mx::channel::create(0, &pipe0_handle0, &pipe0_handle1);
+  EXPECT_TRUE(WriteTextMessage(pipe0_handle1, kText1));
 
-  MessagePipe pipe1;
-  EXPECT_TRUE(WriteTextMessage(pipe1.handle1.get(), kText2));
+  mx::channel pipe1_handle0, pipe1_handle1;
+  mx::channel::create(0, &pipe1_handle0, &pipe1_handle1);
+  EXPECT_TRUE(WriteTextMessage(pipe1_handle1, kText2));
 
   imported::ImportedInterfacePtr imported;
   ImportedInterfaceImpl imported_impl(GetProxy(&imported));
 
   sample::RequestPtr request(sample::Request::New());
   request->x = 1;
-  request->pipe = pipe1.handle0.Pass();
-  request->obj = imported.Pass();
+  request->pipe = std::move(pipe1_handle0);
+  request->obj = std::move(imported);
   bool got_response = false;
   std::string got_text_reply;
   DoStuffCallback cb(&got_response, &got_text_reply);
-  factory->DoStuff(request.Pass(), pipe0.handle0.Pass(), cb);
+  factory->DoStuff(std::move(request), std::move(pipe0_handle0), cb);
 
   EXPECT_FALSE(*cb.got_response);
   int count_before = ImportedInterfaceImpl::do_something_count();
@@ -227,7 +232,7 @@ struct DoStuff2Callback {
   DoStuff2Callback(bool* got_response, std::string* got_text_reply)
       : got_response(got_response), got_text_reply(got_text_reply) {}
 
-  void Run(const String& text_reply) const {
+  void operator()(const String& text_reply) const {
     *got_response = true;
     *got_text_reply = text_reply;
   }
@@ -243,24 +248,21 @@ TEST_F(HandlePassingTest, DataPipe) {
 
   // Writes a string to a data pipe and passes the data pipe (consumer) to the
   // factory.
-  ScopedDataPipeProducerHandle producer_handle;
-  ScopedDataPipeConsumerHandle consumer_handle;
-  MojoCreateDataPipeOptions options = {sizeof(MojoCreateDataPipeOptions),
-                                       MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE,
-                                       1, 1024};
-  ASSERT_EQ(NO_ERROR,
-            CreateDataPipe(&options, &producer_handle, &consumer_handle));
+  mx::datapipe_producer producer_handle;
+  mx::datapipe_consumer consumer_handle;
+  ASSERT_EQ(NO_ERROR, mx::datapipe<void>::create(1, 1024, 0, &producer_handle,
+                                                 &consumer_handle));
   std::string expected_text_reply = "got it";
   // +1 for \0.
-  uint32_t data_size = static_cast<uint32_t>(expected_text_reply.size() + 1);
+  mx_size_t data_size = static_cast<mx_size_t>(expected_text_reply.size() + 1);
   ASSERT_EQ(NO_ERROR,
-            WriteDataRaw(producer_handle.get(), expected_text_reply.c_str(),
-                         &data_size, MOJO_WRITE_DATA_FLAG_ALL_OR_NONE));
+            producer_handle.write(MX_DATAPIPE_READ_FLAG_ALL_OR_NONE,
+                expected_text_reply.c_str(), data_size, &data_size));
 
   bool got_response = false;
   std::string got_text_reply;
   DoStuff2Callback cb(&got_response, &got_text_reply);
-  factory->DoStuff2(consumer_handle.Pass(), cb);
+  factory->DoStuff2(std::move(consumer_handle), cb);
 
   EXPECT_FALSE(*cb.got_response);
 
@@ -274,42 +276,27 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
   sample::FactoryPtr factory;
   SampleFactoryImpl factory_impl(GetProxy(&factory));
 
-  MessagePipe extra_pipe;
+  mx::channel handle0, handle1;
+  mx::channel::create(0, &handle0, &handle1);
 
-  MojoHandle handle0_value = extra_pipe.handle0.get().value();
-  MojoHandle handle1_value = extra_pipe.handle1.get().value();
+  mx_handle_t handle0_value = handle0.get();
+  mx_handle_t handle1_value = handle1.get();
 
   {
     auto pipes = Array<mx::channel>::New(2);
-    pipes[0] = extra_pipe.handle0.Pass();
-    pipes[1] = extra_pipe.handle1.Pass();
+    pipes[0] = std::move(handle0);
+    pipes[1] = std::move(handle1);
 
     sample::RequestPtr request(sample::Request::New());
-    request->more_pipes = pipes.Pass();
+    request->more_pipes = std::move(pipes);
 
     factory->DoStuff(std::move(request), mx::channel(),
-                     sample::Factory::DoStuffCallback());
+                     [](sample::ResponsePtr, const String&){});
   }
 
   // We expect the pipes to have been closed.
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, MojoClose(handle0_value));
-  EXPECT_EQ(MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, MojoClose(handle1_value));
-}
-
-TEST_F(HandlePassingTest, IsWrappedHandle) {
-  // Validate that fidl::internal::IsWrappedHandle<> works as expected since
-  // this.
-  // template is key to ensuring that we don't leak handles.
-  EXPECT_TRUE(internal::IsWrappedHandle<Handle>::value);
-  EXPECT_TRUE(internal::IsWrappedHandle<MessagePipeHandle>::value);
-  EXPECT_TRUE(internal::IsWrappedHandle<DataPipeConsumerHandle>::value);
-  EXPECT_TRUE(internal::IsWrappedHandle<DataPipeProducerHandle>::value);
-  EXPECT_TRUE(internal::IsWrappedHandle<SharedBufferHandle>::value);
-
-  // Basic sanity checks...
-  EXPECT_FALSE(internal::IsWrappedHandle<int>::value);
-  EXPECT_FALSE(internal::IsWrappedHandle<sample::FactoryPtr>::value);
-  EXPECT_FALSE(internal::IsWrappedHandle<String>::value);
+  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle0_value));
+  EXPECT_EQ(ERR_BAD_HANDLE, mx_handle_close(handle1_value));
 }
 
 TEST_F(HandlePassingTest, CreateNamedObject) {
@@ -321,7 +308,7 @@ TEST_F(HandlePassingTest, CreateNamedObject) {
 
   InterfaceRequest<sample::NamedObject> object1_request = GetProxy(&object1);
   EXPECT_TRUE(object1_request.is_pending());
-  factory->CreateNamedObject(object1_request.Pass());
+  factory->CreateNamedObject(std::move(object1_request));
   EXPECT_FALSE(object1_request.is_pending());  // We've passed the request.
 
   ASSERT_TRUE(object1);

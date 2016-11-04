@@ -17,7 +17,7 @@ ValidationErrorObserverForTesting* g_validation_error_observer = nullptr;
 }  // namespace
 
 // TODO(vardhan):  There are golden files
-// (mojo/public/interfaces/bindings/tests/data/validation/*expected) with these
+// (lib/fidl/compiler/interfaces/tests/data/validation/*expected) with these
 // strings shared between languages, so changing them here requires changing
 // them in all languages, along with the golden files.
 const char* ValidationErrorToString(ValidationError error) {

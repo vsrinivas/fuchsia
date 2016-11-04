@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/bindings/tests/message_queue.h"
+#include "lib/fidl/cpp/bindings/tests/util/message_queue.h"
 
 #include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"

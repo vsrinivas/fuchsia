@@ -6,18 +6,19 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/minimal_interface.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/minimal_interface.fidl.h"
 
 namespace fidl {
+namespace test {
 namespace {
 
-class MinimalInterfaceImpl : public test::MinimalInterface {
+class MinimalInterfaceImpl : public MinimalInterface {
  public:
   explicit MinimalInterfaceImpl(
-      InterfaceRequest<test::MinimalInterface> request)
-      : binding_(this, request.Pass()) {}
+      InterfaceRequest<MinimalInterface> request)
+      : binding_(this, std::move(request)) {}
 
   void Message() override { call_count_++; }
 
@@ -26,7 +27,7 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
   int call_count() { return call_count_; }
 
  private:
-  Binding<test::MinimalInterface> binding_;
+  Binding<MinimalInterface> binding_;
   int call_count_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MinimalInterfaceImpl);
@@ -34,11 +35,9 @@ class MinimalInterfaceImpl : public test::MinimalInterface {
 
 // Tests all of the functionality of InterfacePtrSet.
 TEST(InterfacePtrSetTest, FullLifeCycle) {
-  RunLoop loop;
-
   // Create 10 InterfacePtrs.
   const size_t kNumObjects = 10;
-  InterfacePtr<test::MinimalInterface> intrfc_ptrs[kNumObjects];
+  InterfacePtr<MinimalInterface> intrfc_ptrs[kNumObjects];
 
   // Create 10 MinimalInterfaceImpls and 10 channels and bind them all
   // together.
@@ -48,10 +47,10 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
   }
 
   // Move all 10 InterfacePtrs into the set.
-  InterfacePtrSet<test::MinimalInterface> intrfc_ptr_set;
+  InterfacePtrSet<MinimalInterface> intrfc_ptr_set;
   EXPECT_EQ(0u, intrfc_ptr_set.size());
-  for (InterfacePtr<test::MinimalInterface>& ptr : intrfc_ptrs) {
-    intrfc_ptr_set.AddInterfacePtr(ptr.Pass());
+  for (InterfacePtr<MinimalInterface>& ptr : intrfc_ptrs) {
+    intrfc_ptr_set.AddInterfacePtr(std::move(ptr));
   }
   EXPECT_EQ(kNumObjects, intrfc_ptr_set.size());
 
@@ -62,32 +61,32 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
 
   // Invoke ForAllPtrs().
   size_t num_invocations = 0;
-  intrfc_ptr_set.ForAllPtrs([&num_invocations](test::MinimalInterface* dummy) {
+  intrfc_ptr_set.ForAllPtrs([&num_invocations](MinimalInterface* dummy) {
     dummy->Message();
     num_invocations++;
   });
   EXPECT_EQ(kNumObjects, num_invocations);
 
   // Check that now all call counts are one.
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   for (const std::unique_ptr<MinimalInterfaceImpl>& impl : impls) {
     EXPECT_EQ(1, impl->call_count());
   }
 
-  // Close the first 5 channels. This will (after RunUntilIdle) cause
+  // Close the first 5 channels. This will (after WaitForAsyncWaiter) cause
   // connection errors on the closed pipes which will cause the first five
   // objects to be removed.
   for (size_t i = 0; i < kNumObjects / 2; i++) {
     impls[i]->CloseMessagePipe();
   }
   EXPECT_EQ(kNumObjects, intrfc_ptr_set.size());
-  loop.RunUntilIdle();
+  WaitForAsyncWaiter();
   EXPECT_EQ(kNumObjects / 2, intrfc_ptr_set.size());
 
   // Invoke ForAllPtrs again on the remaining five pointers
   intrfc_ptr_set.ForAllPtrs(
-      [](test::MinimalInterface* dummy) { dummy->Message(); });
-  loop.RunUntilIdle();
+      [](MinimalInterface* dummy) { dummy->Message(); });
+  WaitForAsyncWaiter();
 
   // Check that now the first five counts are still 1 but the second five
   // counts are two.
@@ -101,8 +100,8 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
 
   // Invoke ForAllPtrs() again.
   intrfc_ptr_set.ForAllPtrs(
-      [](test::MinimalInterface* dummy) { dummy->Message(); });
-  loop.RunUntilIdle();
+      [](MinimalInterface* dummy) { dummy->Message(); });
+  WaitForAsyncWaiter();
 
   // Check that the counts are the same as last time.
   for (size_t i = 0; i < kNumObjects; i++) {
@@ -113,4 +112,5 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
 }
 
 }  // namespace
+}  // namespace test
 }  // namespace fidl

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+#include "lib/fidl/compiler/interfaces/tests/rect.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/internal/array_serialization.h"
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
@@ -11,8 +12,8 @@
 #include "lib/fidl/cpp/bindings/internal/validate_params.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
-#include "lib/fidl/cpp/bindings/tests/container_test_util.h"
-#include "mojo/public/interfaces/bindings/tests/rect.mojom.h"
+#include "lib/fidl/cpp/bindings/tests/util/container_test_util.h"
+#include "lib/ftl/arraysize.h"
 
 namespace fidl {
 namespace test {
@@ -90,7 +91,7 @@ TEST(MapTest, TestIndexOperatorMoveOnly) {
     const char* key = kStringIntData[i].string_data;
     auto array = Array<int32_t>::New(1);
     array[0] = kStringIntData[i].int_data;
-    map[key] = array.Pass();
+    map[key] = std::move(array);
     EXPECT_TRUE(map);
   }
 
@@ -111,7 +112,7 @@ TEST(MapTest, ConstructedFromArray) {
     values[i] = kStringIntData[i].int_data;
   }
 
-  Map<String, int> map(keys.Pass(), values.Pass());
+  Map<String, int> map(std::move(keys), std::move(values));
 
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
     EXPECT_EQ(kStringIntData[i].int_data,
@@ -154,7 +155,7 @@ TEST(MapTest, Insert_MoveOnly) {
     const char* key = kStringIntData[i].string_data;
     MoveOnlyType value;
     value_ptrs.push_back(value.ptr());
-    map.insert(key, value.Pass());
+    map.insert(key, std::move(value));
     ASSERT_EQ(i + 1, map.size());
     ASSERT_EQ(i + 1, value_ptrs.size());
     EXPECT_EQ(map.size() + 1, MoveOnlyType::num_instances());
@@ -180,7 +181,7 @@ TEST(MapTest, IndexOperator_MoveOnly) {
     const char* key = kStringIntData[i].string_data;
     MoveOnlyType value;
     value_ptrs.push_back(value.ptr());
-    map[key] = value.Pass();
+    map[key] = std::move(value);
     ASSERT_EQ(i + 1, map.size());
     ASSERT_EQ(i + 1, value_ptrs.size());
     EXPECT_EQ(map.size() + 1, MoveOnlyType::num_instances());
@@ -228,7 +229,7 @@ TEST(MapTest, MapArrayClone) {
   for (size_t i = 0; i < kStringIntDataSize; ++i) {
     Array<String> s;
     s.push_back(kStringIntData[i].string_data);
-    m.insert(kStringIntData[i].string_data, s.Pass());
+    m.insert(kStringIntData[i].string_data, std::move(s));
   }
 
   Map<String, Array<String>> m2 = m.Clone();
@@ -265,7 +266,7 @@ TEST(MapTest, ArrayOfMap) {
     auto map_value = Array<bool>::New(2);
     map_value[0] = false;
     map_value[1] = true;
-    array[0].insert("hello world", map_value.Pass());
+    array[0].insert("hello world", std::move(map_value));
 
     size_t size = GetSerializedSize_(array);
     FixedBufferForTesting buf(size);
@@ -298,10 +299,10 @@ TEST(MapTest, Serialization_MapWithScopedEnumKeys) {
   };
   static const uint32_t TEST_VALS[] = {17, 29, 5, 61};
 
-  ASSERT_EQ(MOJO_ARRAYSIZE(TEST_KEYS), MOJO_ARRAYSIZE(TEST_VALS));
+  ASSERT_EQ(arraysize(TEST_KEYS), arraysize(TEST_VALS));
 
   Map<TestEnum, uint32_t> test_map;
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(TEST_KEYS); ++i) {
+  for (size_t i = 0; i < arraysize(TEST_KEYS); ++i) {
     test_map[TEST_KEYS[i]] = TEST_VALS[i];
   }
 
@@ -340,10 +341,10 @@ TEST(MapTest, Serialization_MapWithScopedEnumVals) {
       TestEnum::E0, TestEnum::E2, TestEnum::E1, TestEnum::E3,
   };
 
-  ASSERT_EQ(MOJO_ARRAYSIZE(TEST_KEYS), MOJO_ARRAYSIZE(TEST_VALS));
+  ASSERT_EQ(arraysize(TEST_KEYS), arraysize(TEST_VALS));
 
   Map<uint32_t, TestEnum> test_map;
-  for (size_t i = 0; i < MOJO_ARRAYSIZE(TEST_KEYS); ++i) {
+  for (size_t i = 0; i < arraysize(TEST_KEYS); ++i) {
     test_map[TEST_KEYS[i]] = TEST_VALS[i];
   }
 

@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/waiter/default.h"
-#include "mojo/public/interfaces/bindings/tests/test_structs.mojom.h"
+#include "lib/fidl/compiler/interfaces/tests/test_structs.fidl.h"
 
 namespace fidl {
 namespace {

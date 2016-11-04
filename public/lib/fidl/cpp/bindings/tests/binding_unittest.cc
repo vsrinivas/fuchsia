@@ -6,14 +6,14 @@
 // (fidl::StrongBinding).
 
 #include "gtest/gtest.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_interfaces.fidl.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/strong_binding.h"
+#include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/utility/run_loop.h"
-#include "mojo/public/interfaces/bindings/tests/sample_interfaces.mojom.h"
-#include "mojo/public/interfaces/bindings/tests/sample_service.mojom.h"
 
 namespace fidl {
+namespace test {
 namespace {
 
 class BindingTestBase : public testing::Test {
@@ -21,11 +21,11 @@ class BindingTestBase : public testing::Test {
   BindingTestBase() {}
   ~BindingTestBase() override {}
 
-  RunLoop& loop() { return loop_; }
+  void TearDown() override { ClearAsyncWaiter(); }
+
+  void PumpMessages() { WaitForAsyncWaiter(); }
 
  private:
-  RunLoop loop_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(BindingTestBase);
 };
 
@@ -44,7 +44,7 @@ class ServiceImpl : public sample::Service {
                  BazOptions options,
                  fidl::InterfaceHandle<sample::Port> port,
                  const FrobinateCallback& callback) override {
-    callback.Run(1);
+    callback(1);
   }
   void GetPort(InterfaceRequest<sample::Port> port) override {}
 
@@ -63,11 +63,11 @@ TEST_F(BindingTest, Close) {
   auto request = GetProxy(&ptr);
   ptr.set_connection_error_handler([&called]() { called = true; });
   ServiceImpl impl;
-  Binding<sample::Service> binding(&impl, request.Pass());
+  Binding<sample::Service> binding(&impl, std::move(request));
 
   binding.Close();
   EXPECT_FALSE(called);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_TRUE(called);
 }
 
@@ -82,23 +82,23 @@ TEST_F(BindingTest, DestroyClosesMessagePipe) {
   bool called = false;
   auto called_cb = [&called](int32_t result) { called = true; };
   {
-    Binding<sample::Service> binding(&impl, request.Pass());
+    Binding<sample::Service> binding(&impl, std::move(request));
     ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                    called_cb);
-    loop().RunUntilIdle();
+    PumpMessages();
     EXPECT_TRUE(called);
     EXPECT_FALSE(encountered_error);
   }
   // Now that the Binding is out of scope we should detect an error on the other
   // end of the pipe.
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_TRUE(encountered_error);
 
   // And calls should fail.
   called = false;
   ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                  called_cb);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_FALSE(called);
 }
 
@@ -113,7 +113,7 @@ TEST_F(BindingTest, ConnectionError) {
     binding.set_connection_error_handler([&called]() { called = true; });
     ptr.reset();
     EXPECT_FALSE(called);
-    loop().RunUntilIdle();
+    PumpMessages();
     EXPECT_TRUE(called);
     // We want to make sure that it isn't called again during destruction.
     called = false;
@@ -130,13 +130,13 @@ TEST_F(BindingTest, CloseDoesntCallConnectionErrorHandler) {
   bool called = false;
   binding.set_connection_error_handler([&called]() { called = true; });
   binding.Close();
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_FALSE(called);
 
   // We can also close the other end, and the error handler still won't be
   // called.
   ptr.reset();
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_FALSE(called);
 }
 
@@ -144,7 +144,7 @@ class ServiceImplWithBinding : public ServiceImpl {
  public:
   ServiceImplWithBinding(bool* was_deleted,
                          InterfaceRequest<sample::Service> request)
-      : ServiceImpl(was_deleted), binding_(this, request.Pass()) {
+      : ServiceImpl(was_deleted), binding_(this, std::move(request)) {
     binding_.set_connection_error_handler([this]() { delete this; });
   }
 
@@ -162,7 +162,7 @@ TEST_F(BindingTest, SelfDeleteOnConnectionError) {
   new ServiceImplWithBinding(&was_deleted, GetProxy(&ptr));
   ptr.reset();
   EXPECT_FALSE(was_deleted);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_TRUE(was_deleted);
 }
 
@@ -176,7 +176,7 @@ TEST_F(BindingTest, Unbind) {
   auto called_cb = [&called](int32_t result) { called = true; };
   ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                  called_cb);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_TRUE(called);
 
   called = false;
@@ -185,16 +185,16 @@ TEST_F(BindingTest, Unbind) {
   // All calls should fail when not bound...
   ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                  called_cb);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_FALSE(called);
 
   called = false;
-  binding.Bind(request.Pass());
+  binding.Bind(std::move(request));
   EXPECT_TRUE(binding.is_bound());
   // ...and should succeed again when the rebound.
   ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                  called_cb);
-  loop().RunUntilIdle();
+  PumpMessages();
   EXPECT_TRUE(called);
 }
 
@@ -206,7 +206,7 @@ class IntegerAccessorImpl : public sample::IntegerAccessor {
  private:
   // sample::IntegerAccessor implementation.
   void GetInteger(const GetIntegerCallback& callback) override {
-    callback.Run(1, sample::Enum::VALUE);
+    callback(1, sample::Enum::VALUE);
   }
   void SetInteger(int64_t data, sample::Enum type) override {}
 
@@ -220,118 +220,6 @@ TEST_F(BindingTest, SetInterfaceHandleVersion) {
   EXPECT_EQ(3u, handle.version());
 }
 
-// StrongBindingTest -----------------------------------------------------------
-
-using StrongBindingTest = BindingTestBase;
-
-// Tests that destroying a fidl::StrongBinding closes the bound channel
-// handle but does *not* destroy the implementation object.
-TEST_F(StrongBindingTest, DestroyClosesMessagePipe) {
-  bool encountered_error = false;
-  bool was_deleted = false;
-  ServiceImpl impl(&was_deleted);
-  sample::ServicePtr ptr;
-  auto request = GetProxy(&ptr);
-  ptr.set_connection_error_handler(
-      [&encountered_error]() { encountered_error = true; });
-  bool called = false;
-  auto called_cb = [&called](int32_t result) { called = true; };
-  {
-    StrongBinding<sample::Service> binding(&impl, request.Pass());
-    ptr->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
-                   called_cb);
-    loop().RunUntilIdle();
-    EXPECT_TRUE(called);
-    EXPECT_FALSE(encountered_error);
-  }
-  // Now that the StrongBinding is out of scope we should detect an error on the
-  // other end of the pipe.
-  loop().RunUntilIdle();
-  EXPECT_TRUE(encountered_error);
-  // But destroying the StrongBinding doesn't destroy the object.
-  ASSERT_FALSE(was_deleted);
-}
-
-class ServiceImplWithStrongBinding : public ServiceImpl {
- public:
-  ServiceImplWithStrongBinding(bool* was_deleted,
-                               InterfaceRequest<sample::Service> request)
-      : ServiceImpl(was_deleted), binding_(this, request.Pass()) {}
-
-  StrongBinding<sample::Service>& binding() { return binding_; }
-
- private:
-  StrongBinding<sample::Service> binding_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceImplWithStrongBinding);
-};
-
-// Tests the typical case, where the implementation object owns the
-// StrongBinding (and should be destroyed on connection error).
-TEST_F(StrongBindingTest, ConnectionErrorDestroysImpl) {
-  sample::ServicePtr ptr;
-  bool was_deleted = false;
-  // Will delete itself.
-  new ServiceImplWithBinding(&was_deleted, GetProxy(&ptr));
-
-  loop().RunUntilIdle();
-  EXPECT_FALSE(was_deleted);
-
-  ptr.reset();
-  EXPECT_FALSE(was_deleted);
-  loop().RunUntilIdle();
-  EXPECT_TRUE(was_deleted);
-}
-
-// Tests that even when the implementation object owns the StrongBinding, that
-// the implementation can still be deleted (which should result in the message
-// pipe being closed). Also checks that the connection error handler doesn't get
-// called.
-TEST_F(StrongBindingTest, ExplicitDeleteImpl) {
-  bool ptr_error_handler_called = false;
-  sample::ServicePtr ptr;
-  auto request = GetProxy(&ptr);
-  ptr.set_connection_error_handler(
-      [&ptr_error_handler_called]() { ptr_error_handler_called = true; });
-  bool was_deleted = false;
-  ServiceImplWithStrongBinding* impl =
-      new ServiceImplWithStrongBinding(&was_deleted, request.Pass());
-  bool binding_error_handler_called = false;
-  impl->binding().set_connection_error_handler(
-      [&binding_error_handler_called]() {
-        binding_error_handler_called = true;
-      });
-
-  loop().RunUntilIdle();
-  EXPECT_FALSE(ptr_error_handler_called);
-  EXPECT_FALSE(was_deleted);
-
-  delete impl;
-  EXPECT_FALSE(ptr_error_handler_called);
-  EXPECT_TRUE(was_deleted);
-  was_deleted = false;  // It shouldn't be double-deleted!
-  loop().RunUntilIdle();
-  EXPECT_TRUE(ptr_error_handler_called);
-  EXPECT_FALSE(was_deleted);
-
-  EXPECT_FALSE(binding_error_handler_called);
-}
-
-// Tests that StrongBinding::Close() compiles.
-TEST_F(BindingTest, StrongBindingCloseCompile) {
-  ServiceImpl impl;
-  sample::ServicePtr ptr;
-  StrongBinding<sample::Service> binding(&impl, GetProxy(&ptr));
-  binding.Close();
-}
-
-// Tests that StrongBinding::Unbind() compiles.
-TEST_F(BindingTest, StrongBindingUnbindCompile) {
-  ServiceImpl impl;
-  sample::ServicePtr ptr;
-  StrongBinding<sample::Service> binding(&impl, GetProxy(&ptr));
-  binding.Unbind();
-}
-
 }  // namespace
+}  // namespace test
 }  // namespace fidl
