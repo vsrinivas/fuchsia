@@ -19,8 +19,13 @@ shared_library("test") {
   deps = [
     "$magma_build_root/src/main:test_driver",
     "src",
-    "tests",
   ]
+}
+
+group("gtest") {
+  testonly = true
+  
+  deps = [ "tests/unit_tests:msd_unit_tests" ]
 }
 
 # This config allows inclusion of headers via relative paths
