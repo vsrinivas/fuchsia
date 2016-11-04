@@ -130,7 +130,7 @@ class InterfacePtr {
   // This method may only be called after the InterfacePtr has been bound to a
   // message pipe.
   bool WaitForIncomingResponse() {
-    return internal_state_.WaitForIncomingResponse(MX_TIME_INFINITE);
+    return internal_state_.WaitForIncomingResponse(ftl::TimeDelta::Max());
   }
 
   // Blocks the current thread until the next incoming response callback
