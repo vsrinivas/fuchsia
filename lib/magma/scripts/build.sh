@@ -29,8 +29,8 @@ indriver_test=msd_unit_tests;
 #indriver_test=spinning_cube;
 #indriver_test=vkreadback;
 
-autorun_magma_app_tests=false;
-autorun_magma_sys_tests=false;
+autorun_magma_app_tests=true;
+autorun_magma_sys_tests=true;
 
 $tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="is_debug=$debug magma_indriver_test=\"$indriver_test\""
 
