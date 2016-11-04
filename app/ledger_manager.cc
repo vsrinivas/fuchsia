@@ -4,6 +4,10 @@
 
 #include "apps/ledger/app/ledger_manager.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "apps/ledger/app/constants.h"
 #include "apps/ledger/app/page_utils.h"
 #include "apps/ledger/glue/crypto/rand.h"
@@ -24,48 +28,55 @@ storage::PageId RandomId() {
 
 }  // namespace
 
-// Container for a PageManager that keeps tracks of in-flight callbacks and
-// fires them when the PageManager is available.
+// Container for a PageManager that keeps tracks of in-flight page requests and
+// callbacks and fires them when the PageManager is available.
 class LedgerManager::PageManagerContainer {
  public:
   PageManagerContainer() : status_(Status::OK) {}
   ~PageManagerContainer() {
-    for (const auto& callback : callbacks_) {
-      callback(Status::INTERNAL_ERROR, nullptr);
+    for (const auto& request : requests_) {
+      request.second(Status::INTERNAL_ERROR);
     }
   }
 
-  // Keeps track of |callback| and fires it when a PageManager is available or
-  // an error occurs.
-  void GetPage(std::function<void(Status, PagePtr)>&& callback) {
+  // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
+  // when a PageManager is available or an error occurs.
+  void BindPage(mojo::InterfaceRequest<Page> page_request,
+                std::function<void(Status)>&& callback) {
     if (status_ != Status::OK) {
-      callback(status_, nullptr);
+      callback(status_);
       return;
     }
     if (page_manager_) {
-      callback(status_, page_manager_->GetPagePtr());
+      page_manager_->BindPage(std::move(page_request));
+      callback(status_);
       return;
     }
-    callbacks_.push_back(std::move(callback));
+    requests_.push_back(
+        std::make_pair(std::move(page_request), std::move(callback)));
   }
 
   // Sets the PageManager or the error status for the container. This notifies
-  // all awaiting callbacks.
+  // all awaiting callbacks and binds all pages in case of success.
   void SetPageManager(Status status,
                       std::unique_ptr<PageManager> page_manager) {
     FTL_DCHECK(status != Status::OK || page_manager);
     status_ = status;
     page_manager_ = std::move(page_manager);
-    for (const auto& callback : callbacks_) {
-      callback(status_, page_manager_ ? page_manager_->GetPagePtr() : nullptr);
+    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+      if (page_manager_)
+        page_manager_->BindPage(std::move(it->first));
+      it->second(status_);
     }
-    callbacks_.clear();
+    requests_.clear();
   }
 
  private:
   std::unique_ptr<PageManager> page_manager_;
   Status status_;
-  std::vector<std::function<void(Status, PagePtr)>> callbacks_;
+  std::vector<
+      std::pair<mojo::InterfaceRequest<Page>, std::function<void(Status)>>>
+      requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
@@ -75,40 +86,40 @@ LedgerManager::LedgerManager(std::unique_ptr<storage::LedgerStorage> storage)
 
 LedgerManager::~LedgerManager() {}
 
-LedgerPtr LedgerManager::GetLedgerPtr() {
-  LedgerPtr ledger;
-  bindings_.AddBinding(&ledger_impl_, GetProxy(&ledger));
-  return ledger;
+void LedgerManager::BindLedger(mojo::InterfaceRequest<Ledger> ledger_request) {
+  bindings_.AddBinding(&ledger_impl_, std::move(ledger_request));
 }
 
-void LedgerManager::CreatePage(std::function<void(Status, PagePtr)> callback) {
+void LedgerManager::CreatePage(mojo::InterfaceRequest<Page> page_request,
+                               std::function<void(Status)> callback) {
   storage::PageId page_id = RandomId();
   std::unique_ptr<storage::PageStorage> page_storage;
 
   storage::Status status = storage_->CreatePageStorage(page_id, &page_storage);
   if (status != storage::Status::OK) {
-    callback(Status::INTERNAL_ERROR, nullptr);
+    callback(Status::INTERNAL_ERROR);
     return;
   }
 
   PageManagerContainer* container = AddPageManagerContainer(page_id);
   container->SetPageManager(
       Status::OK, NewPageManager(std::move(page_id), std::move(page_storage)));
-  container->GetPage(std::move(callback));
+  container->BindPage(std::move(page_request), std::move(callback));
 }
 
 void LedgerManager::GetPage(convert::ExtendedStringView page_id,
                             CreateIfNotFound create_if_not_found,
-                            std::function<void(Status, PagePtr)> callback) {
+                            mojo::InterfaceRequest<Page> page_request,
+                            std::function<void(Status)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {
-    it->second->GetPage(std::move(callback));
+    it->second->BindPage(std::move(page_request), std::move(callback));
     return;
   }
 
   PageManagerContainer* container = AddPageManagerContainer(page_id);
-  container->GetPage(std::move(callback));
+  container->BindPage(std::move(page_request), std::move(callback));
 
   storage_->GetPageStorage(
       page_id,

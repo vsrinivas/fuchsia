@@ -17,11 +17,9 @@ PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
 
 PageManager::~PageManager() {}
 
-PagePtr PageManager::GetPagePtr() {
-  PagePtr page;
-
+void PageManager::BindPage(mojo::InterfaceRequest<Page> page_request) {
   pages_.push_back(std::make_unique<BoundInterface<Page, PageImpl>>(
-      GetProxy(&page), this, page_storage_.get()));
+      std::move(page_request), this, page_storage_.get()));
   auto* binding = &pages_.back()->binding;
   // Remove the binding and delete the impl on connection error.
   binding->set_connection_error_handler([this, binding] {
@@ -37,17 +35,15 @@ PagePtr PageManager::GetPagePtr() {
       on_empty_callback_();
     }
   });
-
-  return page;
 }
 
-PageSnapshotPtr PageManager::GetPageSnapshotPtr(
-    std::unique_ptr<storage::CommitContents> contents) {
-  PageSnapshotPtr snapshot;
-
+void PageManager::BindPageSnapshot(
+    std::unique_ptr<storage::CommitContents> contents,
+    mojo::InterfaceRequest<PageSnapshot> snapshot_request) {
   snapshots_.push_back(
       std::make_unique<BoundInterface<PageSnapshot, PageSnapshotImpl>>(
-          GetProxy(&snapshot), page_storage_.get(), std::move(contents)));
+          std::move(snapshot_request), page_storage_.get(),
+          std::move(contents)));
   auto* binding = &snapshots_.back()->binding;
   // Remove the binding and delete the impl on connection error.
   binding->set_connection_error_handler([this, binding] {
@@ -64,8 +60,6 @@ PageSnapshotPtr PageManager::GetPageSnapshotPtr(
       on_empty_callback_();
     }
   });
-
-  return snapshot;
 }
 
 }  // namespace ledger

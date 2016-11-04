@@ -29,6 +29,7 @@ class LedgerFactoryImpl : public LedgerFactory {
  private:
   // LedgerFactory:
   void GetLedger(IdentityPtr identity,
+                 mojo::InterfaceRequest<Ledger> ledger_request,
                  const GetLedgerCallback& callback) override;
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

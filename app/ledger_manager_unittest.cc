@@ -90,36 +90,39 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   FakeLedgerStorage* storage_ptr = storage.get();
   LedgerManager ledger_manager(std::move(storage));
 
-  LedgerPtr ledger = ledger_manager.GetLedgerPtr();
+  LedgerPtr ledger;
+  ledger_manager.BindLedger(GetProxy(&ledger));
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 
-  ledger->NewPage(
-      [this](Status, mojo::InterfaceHandle<Page>) { message_loop_.QuitNow(); });
+  PagePtr page;
+  ledger->NewPage(GetProxy(&page), [this](Status) { message_loop_.QuitNow(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
+  page.reset();
   storage_ptr->ClearCalls();
 
-  ledger->GetRootPage(
-      [this](Status, mojo::InterfaceHandle<Page>) { message_loop_.QuitNow(); });
+  ledger->GetRootPage(GetProxy(&page),
+                      [this](Status) { message_loop_.QuitNow(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
+  page.reset();
   storage_ptr->ClearCalls();
 
   storage::PageId id = RandomId();
-  ledger->GetPage(
-      convert::ToArray(id),
-      [this](Status, mojo::InterfaceHandle<Page>) { message_loop_.QuitNow(); });
+  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+                  [this](Status) { message_loop_.QuitNow(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
+  page.reset();
   storage_ptr->ClearCalls();
 
   ledger->DeletePage(convert::ToArray(id),
@@ -139,7 +142,8 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
       std::make_unique<LedgerManager>(
           std::make_unique<FakeLedgerStorage>(message_loop_.task_runner()));
 
-  LedgerPtr ledger = ledger_manager->GetLedgerPtr();
+  LedgerPtr ledger;
+  ledger_manager->BindLedger(GetProxy(&ledger));
   bool ledger_closed = false;
   ledger.set_connection_error_handler([this, &ledger_closed] {
     ledger_closed = true;
@@ -157,20 +161,24 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
       std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
   FakeLedgerStorage* storage_ptr = storage.get();
   LedgerManager ledger_manager(std::move(storage));
-  LedgerPtr ledger = ledger_manager.GetLedgerPtr();
+  LedgerPtr ledger;
+  ledger_manager.BindLedger(GetProxy(&ledger));
+  PagePtr page;
   storage::PageId id = RandomId();
 
   uint8_t calls = 0;
-  ledger->GetPage(convert::ToArray(id),
-                  [this, &calls](Status, mojo::InterfaceHandle<Page>) {
+  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+                  [this, &calls](Status) {
                     calls++;
                     message_loop_.QuitNow();
                   });
-  ledger->GetPage(convert::ToArray(id),
-                  [this, &calls](Status, mojo::InterfaceHandle<Page>) {
+  page.reset();
+  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+                  [this, &calls](Status) {
                     calls++;
                     message_loop_.QuitNow();
                   });
+  page.reset();
   message_loop_.Run();
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());

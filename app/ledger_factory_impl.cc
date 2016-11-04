@@ -41,17 +41,18 @@ LedgerFactoryImpl::~LedgerFactoryImpl() {}
 
 // GetLedger(Identity identity) => (Status status, Ledger? ledger);
 void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
+                                  mojo::InterfaceRequest<Ledger> ledger_request,
                                   const GetLedgerCallback& callback) {
-  LedgerPtr ledger;
   if (identity->user_id.size() == 0 || identity->app_id.size() == 0) {
-    callback.Run(Status::AUTHENTICATION_ERROR, nullptr);
+    callback.Run(Status::AUTHENTICATION_ERROR);
     return;
   }
 
   // If we have the ledger manager ready, just bind to its impl.
   auto it = ledger_managers_.find(identity);
   if (it != ledger_managers_.end()) {
-    callback.Run(Status::OK, it->second->GetLedgerPtr());
+    it->second->BindLedger(std::move(ledger_request));
+    callback.Run(Status::OK);
     return;
   }
 
@@ -65,7 +66,8 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
   auto ret = ledger_managers_.insert(std::make_pair(
       std::move(identity),
       std::make_unique<LedgerManager>(std::move(ledger_storage))));
-  callback.Run(Status::OK, ret.first->second->GetLedgerPtr());
+  ret.first->second->BindLedger(std::move(ledger_request));
+  callback.Run(Status::OK);
 }
 
 }  // namespace ledger

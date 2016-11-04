@@ -41,7 +41,7 @@ class PageImplTest : public ::testing::Test {
     manager_.reset(new PageManager(std::move(fake_storage), [] {}));
     binding_.reset(
         new mojo::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
-    page_ptr_ = manager_->GetPagePtr();
+    manager_->BindPage(GetProxy(&page_ptr_));
   }
 
   storage::PageId page_id1_;
@@ -442,15 +442,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
-  auto callback_getsnapshot = [this, &snapshot](
-      Status status,
-      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+  auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
     message_loop_.QuitNow();
   };
-  page_ptr_->GetSnapshot(callback_getsnapshot);
+  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
   mojo::Array<EntryPtr> actual_entries;
@@ -490,15 +486,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   page_ptr_->Commit(callback_statusok);
   message_loop_.Run();
 
-  auto callback_getsnapshot = [this, &snapshot](
-      Status status,
-      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+  auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
     message_loop_.QuitNow();
   };
-  page_ptr_->GetSnapshot(callback_getsnapshot);
+  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
   mojo::Array<mojo::Array<uint8_t>> actual_keys;
@@ -528,15 +520,11 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
-  auto callback_getsnapshot = [this, &snapshot](
-      Status status,
-      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+  auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
     message_loop_.QuitNow();
   };
-  page_ptr_->GetSnapshot(callback_getsnapshot);
+  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -569,15 +557,11 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
                           Priority::EAGER, callback_put);
   message_loop_.Run();
 
-  auto callback_getsnapshot = [this, &snapshot](
-      Status status,
-      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+  auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
     message_loop_.QuitNow();
   };
-  page_ptr_->GetSnapshot(callback_getsnapshot);
+  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -609,15 +593,11 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
-  auto callback_getsnapshot = [this, &snapshot](
-      Status status,
-      mojo::InterfaceHandle<ledger::PageSnapshot> snapshot_handle) {
+  auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
     message_loop_.QuitNow();
   };
-  page_ptr_->GetSnapshot(callback_getsnapshot);
+  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
   Status status;

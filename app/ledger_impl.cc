@@ -19,28 +19,28 @@ LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
 
 LedgerImpl::~LedgerImpl() {}
 
-// GetRootPage() => (Status status, Page? page);
-void LedgerImpl::GetRootPage(const GetRootPageCallback& callback) {
+// GetRootPage(Page& page) => (Status status);
+void LedgerImpl::GetRootPage(mojo::InterfaceRequest<Page> page_request,
+                             const GetRootPageCallback& callback) {
   delegate_->GetPage(kRootPageId, Delegate::CreateIfNotFound::YES,
-                     [callback](Status status, PagePtr page) {
-                       callback.Run(status, std::move(page));
-                     });
+                     std::move(page_request),
+                     [callback](Status status) { callback.Run(status); });
 }
 
-// GetPage(array<uint8> id) => (Status status, Page? page);
+// GetPage(array<uint8> id, Page& page) => (Status status);
 void LedgerImpl::GetPage(mojo::Array<uint8_t> id,
+                         mojo::InterfaceRequest<Page> page_request,
                          const GetPageCallback& callback) {
   delegate_->GetPage(id, Delegate::CreateIfNotFound::NO,
-                     [callback](Status status, PagePtr page) {
-                       callback.Run(status, std::move(page));
-                     });
+                     std::move(page_request),
+                     [callback](Status status) { callback.Run(status); });
 }
 
-// NewPage() => (Status status, Page? page);
-void LedgerImpl::NewPage(const NewPageCallback& callback) {
-  delegate_->CreatePage([callback](Status status, PagePtr page) {
-    callback.Run(status, std::move(page));
-  });
+// NewPage(Page& page) => (Status status);
+void LedgerImpl::NewPage(mojo::InterfaceRequest<Page> page_request,
+                         const NewPageCallback& callback) {
+  delegate_->CreatePage(std::move(page_request),
+                        [callback](Status status) { callback.Run(status); });
 }
 
 // DeletePage(array<uint8> id) => (Status status);

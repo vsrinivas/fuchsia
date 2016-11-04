@@ -49,7 +49,8 @@ class PageImpl : public Page {
   // Page:
   void GetId(const GetIdCallback& callback) override;
 
-  void GetSnapshot(const GetSnapshotCallback& callback) override;
+  void GetSnapshot(mojo::InterfaceRequest<PageSnapshot> snapshot_request,
+                   const GetSnapshotCallback& callback) override;
 
   void Watch(mojo::InterfaceHandle<PageWatcher> watcher,
              const WatchCallback& callback) override;

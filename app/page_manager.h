@@ -47,14 +47,14 @@ class PageManager {
               ftl::Closure on_empty_callback);
   ~PageManager();
 
-  // Creates a new PageImpl managed by this PageManager, and returns a proxy
-  // bound to it.
-  PagePtr GetPagePtr();
+  // Creates a new PageImpl managed by this PageManager, and binds it to the
+  // request.
+  void BindPage(mojo::InterfaceRequest<Page> page_request);
 
-  // Creates a new PageSnapshotImpl managed by this PageManager, and returns a
-  // proxy bound to it.
-  PageSnapshotPtr GetPageSnapshotPtr(
-      std::unique_ptr<storage::CommitContents> contents);
+  // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
+  // the request.
+  void BindPageSnapshot(std::unique_ptr<storage::CommitContents> contents,
+                        mojo::InterfaceRequest<PageSnapshot> snapshot_request);
 
  private:
   std::unique_ptr<storage::PageStorage> page_storage_;

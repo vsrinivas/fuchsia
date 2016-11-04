@@ -38,21 +38,21 @@ struct Identity {
 [ServiceName="ledger::LedgerFactory"]
 interface LedgerFactory {
   // Creates a new Ledger for the current client if it doesn't already exist.
-  GetLedger(Identity identity) => (Status status, Ledger? ledger);
+  GetLedger(Identity identity, Ledger& ledger_request) => (Status status);
 };
 
 interface Ledger {
   // This is used to bootstrap a namespace. This page allows the client to keep
   // track of new pages. The identifier of the root page is guaranteed to be
   // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  GetRootPage() => (Status status, Page? page);
+  GetRootPage(Page& page_request) => (Status status);
 
-  // Returns the page with the given identifier or an error if the page doesn't
-  // exist. It is allowed to connect to the same page multiple times.
-  GetPage(array<uint8, 16> id) => (Status status, Page? page);
+  // Retrieves the page with the given identifier.  It is allowed to connect to
+  // the same page multiple times.
+  GetPage(array<uint8, 16> id, Page& page_request) => (Status status);
 
-  // Creates a new page and returns it.
-  NewPage() => (Status status, Page? page);
+  // Creates a new page.
+  NewPage(Page& page_request) => (Status status);
 
   // Deletes the page with the given id.
   DeletePage(array<uint8, 16> id) => (Status status);
@@ -94,9 +94,9 @@ interface Page {
   // Returns the identifier for the page.
   GetId() => (array<uint8, 16> id);
 
-  // Returns a snapshot of the page. Read operations can only be performed on a
+  // Creates a snapshot of the page. Read operations can only be performed on a
   // snapshot.
-  GetSnapshot() => (Status status, PageSnapshot? snapshot);
+  GetSnapshot(PageSnapshot& snapshot_request) => (Status status);
 
   // Starts watching the page.
   Watch(PageWatcher watcher) => (Status status);

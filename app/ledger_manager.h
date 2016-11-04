@@ -31,13 +31,15 @@ class LedgerManager : public LedgerImpl::Delegate {
   ~LedgerManager();
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
-  LedgerPtr GetLedgerPtr();
+  void BindLedger(mojo::InterfaceRequest<Ledger> ledger_request);
 
   // LedgerImpl::Delegate:
-  void CreatePage(std::function<void(Status, PagePtr)> callback) override;
+  void CreatePage(mojo::InterfaceRequest<Page> page_request,
+                  std::function<void(Status)> callback) override;
   void GetPage(convert::ExtendedStringView page_id,
                CreateIfNotFound create_if_not_found,
-               std::function<void(Status, PagePtr)> callback) override;
+               mojo::InterfaceRequest<Page> page_request,
+               std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
 
  private:

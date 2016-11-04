@@ -43,8 +43,10 @@ void PageImpl::GetId(const GetIdCallback& callback) {
   callback.Run(convert::ToArray(storage_->GetId()));
 }
 
-// GetSnapshot() => (Status status, PageSnapshot? snapshot);
-void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
+// GetSnapshot(PageSnapshot& snapshot) => (Status status);
+void PageImpl::GetSnapshot(
+    mojo::InterfaceRequest<PageSnapshot> snapshot_request,
+    const GetSnapshotCallback& callback) {
   // TODO(etiennej): Commit implicit transactions when we have those.
   storage::CommitId commit_id;
   if (!journal_) {
@@ -55,10 +57,12 @@ void PageImpl::GetSnapshot(const GetSnapshotCallback& callback) {
   std::unique_ptr<const storage::Commit> commit;
   storage::Status status = storage_->GetCommit(commit_id, &commit);
   if (status != storage::Status::OK) {
-    callback.Run(PageUtils::ConvertStatus(status), nullptr);
+    callback.Run(PageUtils::ConvertStatus(status));
     return;
   }
-  callback.Run(Status::OK, manager_->GetPageSnapshotPtr(commit->GetContents()));
+  manager_->BindPageSnapshot(commit->GetContents(),
+                             std::move(snapshot_request));
+  callback.Run(Status::OK);
 }
 
 // Watch(PageWatcher watcher) => (Status status);

@@ -24,12 +24,14 @@ class LedgerImpl : public Ledger {
     Delegate() {}
     ~Delegate() {}
 
-    virtual void CreatePage(std::function<void(Status, PagePtr)> callback) = 0;
+    virtual void CreatePage(mojo::InterfaceRequest<Page> page_request,
+                            std::function<void(Status)> callback) = 0;
 
     enum class CreateIfNotFound { YES, NO };
     virtual void GetPage(convert::ExtendedStringView page_id,
                          CreateIfNotFound create_if_not_found,
-                         std::function<void(Status, PagePtr)> callback) = 0;
+                         mojo::InterfaceRequest<Page> page_request,
+                         std::function<void(Status)> callback) = 0;
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 
@@ -43,10 +45,13 @@ class LedgerImpl : public Ledger {
 
  private:
   // Ledger:
-  void GetRootPage(const GetRootPageCallback& callback) override;
+  void GetRootPage(mojo::InterfaceRequest<Page> page_request,
+                   const GetRootPageCallback& callback) override;
   void GetPage(mojo::Array<uint8_t> id,
+               mojo::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void NewPage(const NewPageCallback& callback) override;
+  void NewPage(mojo::InterfaceRequest<Page> page_request,
+               const NewPageCallback& callback) override;
   void DeletePage(mojo::Array<uint8_t> id,
                   const DeletePageCallback& callback) override;
 

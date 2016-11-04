@@ -55,12 +55,8 @@ mojo::Array<uint8_t> PageGetId(PagePtr* page) {
 
 PageSnapshotPtr PageGetSnapshot(PagePtr* page) {
   PageSnapshotPtr snapshot;
-  (*page)->GetSnapshot([&snapshot](
-      Status status, mojo::InterfaceHandle<PageSnapshot> snapshot_handle) {
-    EXPECT_EQ(Status::OK, status);
-    snapshot =
-        mojo::InterfacePtr<PageSnapshot>::Create(std::move(snapshot_handle));
-  });
+  (*page)->GetSnapshot(GetProxy(&snapshot),
+                       [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   return snapshot;
 }
@@ -156,12 +152,8 @@ LedgerPtr LedgerApplicationTest::GetTestLedger() {
   IdentityPtr identity = Identity::New();
   identity->user_id = RandomArray(1);
   identity->app_id = RandomArray(1);
-  ledger_factory_->GetLedger(
-      std::move(identity),
-      [&status, &ledger](Status s, mojo::InterfaceHandle<Ledger> l) {
-        status = s;
-        ledger = std::move(l);
-      });
+  ledger_factory_->GetLedger(std::move(identity), GetProxy(&ledger),
+                             [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_factory_.WaitForIncomingResponse());
 
   EXPECT_EQ(Status::OK, status);
@@ -172,10 +164,7 @@ PagePtr LedgerApplicationTest::GetTestPage() {
   mojo::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->NewPage([&status, &page](Status s, mojo::InterfaceHandle<Page> p) {
-    status = s;
-    page = std::move(p);
-  });
+  ledger_->NewPage(GetProxy(&page), [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
@@ -195,11 +184,8 @@ PagePtr LedgerApplicationTest::GetPage(const mojo::Array<uint8_t>& page_id,
   mojo::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->GetPage(page_id.Clone(),
-                   [&status, &page](Status s, mojo::InterfaceHandle<Page> p) {
-                     status = s;
-                     page = std::move(p);
-                   });
+  ledger_->GetPage(page_id.Clone(), GetProxy(&page),
+                   [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
 
@@ -232,8 +218,8 @@ TEST_F(LedgerApplicationTest, GetLedger) {
 
 TEST_F(LedgerApplicationTest, GetRootPage) {
   Status status;
-  ledger_->GetRootPage(
-      [&status](Status s, mojo::InterfaceHandle<Page> p) { status = s; });
+  PagePtr page;
+  ledger_->GetRootPage(GetProxy(&page), [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 }
@@ -300,11 +286,8 @@ TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
   // Create a page on the first connection.
   PagePtr page;
   Status status;
-  ledger_connection_1->NewPage(
-      [&status, &page](Status s, mojo::InterfaceHandle<Page> p) {
-        status = s;
-        page = PagePtr::Create(std::move(p));
-      });
+  ledger_connection_1->NewPage(GetProxy(&page),
+                               [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
