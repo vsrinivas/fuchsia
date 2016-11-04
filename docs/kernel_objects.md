@@ -3,22 +3,31 @@
 [TOC]
 
 Magenta is a object-based kernel. User mode code almost exclusively interacts
-with OS resources via object handles which map kernel objects to processes.
+with OS resources via object handles. A handle can be thought of as an active
+session with a specific OS subsystem scoped to a particular resource.
 
-## Kernel objects in progress
+Magenta actively manages the following resources:
+
++ processor time
++ memory
++ device-io memory
++ interrupts
++ signaling and waiting
+
+## Kernel objects for applications
 
 + [Process](objects/process.md)
 + [Thread](objects/thread.md)
 + [Event](objects/event.md)
 + [Channel](objects/channel.md)
-+ [Interrupt request](objects/interrupt_request.md)
 + [VMObject](objects/vm_object.md)
++ [Port](objects/port.md)
++ [Futex](objects/futex.md)
++ [Waitset](objects/waitset.md)
 
-## Kernel objects planned
+## Kernel objects for drivers
 
-+ Data pipe
-+ Job
-+ IOPort
++ [Interrupt request](objects/interrupt_request.md)
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the

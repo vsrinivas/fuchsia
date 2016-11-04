@@ -14,5 +14,6 @@ TODO
 
 ## SEE ALSO
 
-[channel_read](../syscalls/channel_read.md),
-[channel_write](../syscalls/channel_write.md).
+[channel_create](../syscalls/channel_create.md)
+[channel_read](../syscalls/channel_read.md)
+[channel_write](../syscalls/channel_write.md)

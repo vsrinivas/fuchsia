@@ -35,5 +35,4 @@ This page is a non-comprehensive index of the magenta documentation.
 + [Process Objects](docs/objects/process.md)
 + [Thread Objects](docs/objects/thread.md)
 + [Handles](docs/handles.md)
-+ [Futexes](docs/futex.md)
 + [System Calls](docs/syscalls.md)

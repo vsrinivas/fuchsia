@@ -2,7 +2,7 @@
 
 ## NAME
 
-thread - Thread abstraction
+thread - runnable / computation entity
 
 ## SYNOPSIS
 
@@ -26,4 +26,6 @@ the entrypoint or by calling `sys_thread_exit()`.
 
 ## SEE ALSO
 
-TODO (add links to thread syscall docs)
+[thread_create](../syscalls/thread_create.md)
+[thread_start](../syscalls/thread_start.md)
+[thread_exit](../syscalls/thread_exit.md)
