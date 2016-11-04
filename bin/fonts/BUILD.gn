@@ -10,9 +10,10 @@ executable("fonts") {
   ]
 
   deps = [
+    "services",
     "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
-    "services",
+    "//third_party/rapidjson",
   ]
 }
