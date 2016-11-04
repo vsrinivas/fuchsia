@@ -4,11 +4,13 @@
 
 #include "apps/modular/application_manager/application_environment_impl.h"
 
+#include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mx/process.h>
 #include <mxio/util.h>
+#include <unistd.h>
 
 #include <utility>
 
@@ -17,16 +19,16 @@
 namespace modular {
 namespace {
 
+constexpr char kFuchsiaMagic[] = "#!fuchsia ";
+constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
+constexpr size_t kMaxShebangLength = 2048;
+
 constexpr size_t kSubprocessHandleCount = 2;
 
 mx::process CreateProcess(
-    const std::string& url,
+    const std::string& path,
     fidl::InterfaceHandle<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services) {
-  std::string path = GetPathFromURL(url);
-  if (path.empty())
-    return mx::process();
-
   const char* path_arg = path.c_str();
 
   mx_handle_t handles[kSubprocessHandleCount]{
@@ -53,6 +55,28 @@ mx::process CreateProcess(
                                                  environ, count, handles, ids);
 
   return result < 0 ? mx::process() : mx::process(result);
+}
+
+bool HasShebang(const std::string& path,
+                ftl::UniqueFD* result_fd,
+                std::string* runner) {
+  ftl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  if (!fd.is_valid())
+    return false;
+  std::string shebang(kMaxShebangLength, '\0');
+  ssize_t count = read(fd.get(), &shebang[0], shebang.length());
+  if (count == -1)
+    return false;
+  if (shebang.find(kFuchsiaMagic) != 0)
+    return false;
+  size_t newline = shebang.find('\n', kFuchsiaMagicLength);
+  if (newline == std::string::npos)
+    return false;
+  if (lseek(fd.get(), 0, SEEK_SET) == -1)
+    return false;
+  *result_fd = std::move(fd);
+  *runner = shebang.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
+  return true;
 }
 
 }  // namespace
@@ -119,8 +143,60 @@ void ApplicationEnvironmentImpl::CreateApplication(
   fidl::InterfaceHandle<ServiceProvider> environment_services;
   host_->GetApplicationEnvironmentServices(url,
                                            GetProxy(&environment_services));
+
+  std::string path = GetPathFromURL(url);
+  if (path.empty()) {
+    // TODO(abarth): Support URL schemes other than file:// by querying the host
+    // for an application runner.
+    FTL_LOG(ERROR) << "Cannot run " << url
+                   << " because the scheme is not supported.";
+    return;
+  }
+
+  ftl::UniqueFD fd;
+  std::string runner;
+  if (HasShebang(path, &fd, &runner)) {
+    // We create the entry in |runners_| before calling ourselves recursively
+    // to detect cycles.
+    auto it = runners_.emplace(runner, nullptr);
+    if (it.second) {
+      ServiceProviderPtr runner_services;
+      ApplicationControllerPtr runner_controller;
+      CreateApplication(runner, fidl::GetProxy(&runner_services),
+                        fidl::GetProxy(&runner_controller));
+
+      runner_controller.set_connection_error_handler(
+          [this, runner]() { runners_.erase(runner); });
+
+      it.first->second = std::make_unique<ApplicationRunnerHolder>(
+          std::move(runner_services), std::move(runner_controller));
+    } else if (!it.first->second) {
+      // There was a cycle in the runner graph.
+      FTL_LOG(ERROR) << "Cannot run " << url << " with " << runner
+                     << " because of a cycle in the runner graph.";
+      return;
+    }
+
+    ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
+    startup_info->environment_services = std::move(environment_services);
+    startup_info->outgoing_services = std::move(services);
+    startup_info->url = url;
+    it.first->second->StartApplication(std::move(fd), std::move(startup_info),
+                                       std::move(controller));
+    return;
+  }
+
+  CreateApplicationWithProcess(path, std::move(environment_services),
+                               std::move(services), std::move(controller));
+}
+
+void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
+    const std::string& path,
+    fidl::InterfaceHandle<ServiceProvider> environment_services,
+    fidl::InterfaceRequest<ServiceProvider> services,
+    fidl::InterfaceRequest<ApplicationController> controller) {
   mx::process process =
-      CreateProcess(url, std::move(environment_services), std::move(services));
+      CreateProcess(path, std::move(environment_services), std::move(services));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process));

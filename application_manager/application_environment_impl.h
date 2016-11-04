@@ -8,11 +8,12 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/ftl/macros.h"
 #include "apps/modular/application_manager/application_controller_impl.h"
 #include "apps/modular/application_manager/application_environment_controller_impl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "apps/modular/application_manager/application_runner_holder.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace modular {
 
@@ -62,6 +63,12 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
       fidl::InterfaceRequest<ApplicationController> controller) override;
 
  private:
+  void CreateApplicationWithProcess(
+      const std::string& path,
+      fidl::InterfaceHandle<ServiceProvider> environment_services,
+      fidl::InterfaceRequest<ServiceProvider> services,
+      fidl::InterfaceRequest<ApplicationController> controller);
+
   fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
   fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
@@ -75,6 +82,9 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   std::unordered_map<ApplicationControllerImpl*,
                      std::unique_ptr<ApplicationControllerImpl>>
       applications_;
+
+  std::unordered_map<std::string, std::unique_ptr<ApplicationRunnerHolder>>
+      runners_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentImpl);
 };

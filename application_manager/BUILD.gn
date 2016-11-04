@@ -12,6 +12,8 @@ executable("application_manager") {
     "application_environment_controller_impl.h",
     "application_environment_impl.cc",
     "application_environment_impl.h",
+    "application_runner_holder.cc",
+    "application_runner_holder.h",
     "main.cc",
     "root_environment_host.cc",
     "root_environment_host.h",
