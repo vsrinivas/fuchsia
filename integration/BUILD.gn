@@ -12,7 +12,9 @@ mojo_native_application("integration") {
   deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
-    "//mojo/public/cpp/application:test_support_standalone",
+    "//lib/mtl",
+    "//lib/mtl:test",
+    "//mojo/public/cpp/application:test_support",
   ]
 }
 
@@ -61,10 +63,10 @@ source_set("common") {
 
   deps = [
     "//apps/maxwell:debug",
+    "//lib/mtl",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/application:test_support",
     "//mojo/public/cpp/bindings:utility",
-    "//mojo/public/cpp/utility",
     "//third_party/gtest",
   ]
 }

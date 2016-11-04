@@ -6,10 +6,9 @@
 
 #include <thread>
 
-#include "mojo/public/cpp/utility/run_loop.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 using namespace maxwell;
-using namespace mojo;
 
 void Yield() {
   // To sleep successfully we need to both yield the thread and process Mojo
@@ -21,7 +20,8 @@ void Yield() {
   //
   // If we don't run the message loop, we never receive IPCs.
   std::this_thread::sleep_for(1ns);
-  RunLoop::current()->RunUntilIdle();
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  mtl::MessageLoop::GetCurrent()->Run();
 }
 
 Predicate operator&&(const Predicate& a, const Predicate& b) {

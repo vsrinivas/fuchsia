@@ -4,9 +4,13 @@
 
 #include "apps/maxwell/debug.h"
 
+#include "lib/mtl/tasks/message_loop.h"
+
 namespace maxwell {
 
 const char DebugSupport::kTestApp[] = "mojo:maxwell_test";
+
+void DebugSupport::Kill() { mtl::MessageLoop::GetCurrent()->QuitNow(); }
 
 void DebugSupport::AddService(
     mojo::Shell* shell,

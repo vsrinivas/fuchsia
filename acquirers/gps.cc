@@ -9,7 +9,8 @@
 #include "apps/maxwell/interfaces/context_engine.mojom.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/utility/run_loop.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/ftl/time/time_delta.h"
 
 #include "apps/maxwell/debug.h"
 
@@ -22,12 +23,10 @@ namespace {
 
 using mojo::ApplicationImplBase;
 using mojo::Binding;
-using mojo::RunLoop;
 
 using namespace maxwell::context_engine;
 
-#define ONE_MOJO_SECOND 1000000
-#define GPS_UPDATE_PERIOD ONE_MOJO_SECOND
+constexpr ftl::TimeDelta kGpsUpdatePeriod = ftl::TimeDelta::FromSeconds(1);
 #define KEEP_ALIVE_TICKS 3
 #define HAS_SUBSCRIBERS -1
 
@@ -94,8 +93,8 @@ class GpsAcquirerImpl : public GpsAcquirer,
       return;
     }
 
-    RunLoop::current()->PostDelayedTask([this] { PublishingTick(); },
-                                        GPS_UPDATE_PERIOD);
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [this] { PublishingTick(); }, kGpsUpdatePeriod);
   }
 
   Binding<ContextPublisherController> ctl_;

@@ -15,7 +15,8 @@ executable("context_engine") {
     "//apps/maxwell:bound_set",
     "//apps/maxwell:debug",
     "//apps/maxwell/interfaces",
-    "//mojo/public/cpp/application:standalone",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
     "//mojo/system",
   ]

@@ -9,7 +9,6 @@
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/public/cpp/utility/run_loop.h"
 
 namespace maxwell {
 
@@ -23,7 +22,7 @@ class DebugSupport : public Debug {
  public:
   virtual ~DebugSupport() {}
 
-  void Kill() override { mojo::RunLoop::current()->Quit(); }
+  void Kill() override;
 
   // This method is intended to be called from a Mojo OnAcceptConnection
   // implementation to add the Debug and TestParent instrumentation services to

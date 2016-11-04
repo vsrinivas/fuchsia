@@ -24,8 +24,8 @@ executable("carmen_sandiego") {
     "//apps/maxwell:debug",
     "//apps/maxwell/acquirers:gps",
     "//apps/maxwell/interfaces",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/utility:utility",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
     "//mojo/system",
   ]
 }
@@ -45,8 +45,8 @@ executable("ideas") {
   deps = [
     "//apps/maxwell:debug",
     "//apps/maxwell/interfaces",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/utility:utility",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
     "//mojo/system",
   ]
 }

@@ -19,8 +19,8 @@ executable("gps") {
   deps = [
     "//apps/maxwell:debug",
     "//apps/maxwell/interfaces",
-    "//mojo/public/cpp/application:standalone",
-    "//mojo/public/cpp/utility:utility",
+    "//lib/mtl",
+    "//mojo/public/cpp/application",
     "//mojo/system",
   ]
 }
