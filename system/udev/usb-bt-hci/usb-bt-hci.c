@@ -8,6 +8,7 @@
 #include <ddk/common/usb.h>
 #include <ddk/protocol/bluetooth-hci.h>
 #include <magenta/listnode.h>
+#include <magenta/device/bt-hci.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,6 +223,26 @@ static bluetooth_hci_protocol_t hci_proto = {
     .get_acl_pipe = hci_get_acl_pipe,
 };
 
+static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len) {
+    switch (op) {
+    case IOCTL_BT_HCI_GET_CONTROL_PIPE: {
+        mx_handle_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        *reply = hci_get_control_pipe(device);
+        return sizeof(*reply);
+    }
+    case IOCTL_BT_HCI_GET_ACL_PIPE: {
+        mx_handle_t* reply = out_buf;
+        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
+        *reply = hci_get_acl_pipe(device);
+        return sizeof(*reply);
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static void hci_unbind(mx_device_t* device) {
     hci_t* hci = get_hci(device);
     device_remove(&hci->device);
@@ -251,6 +272,7 @@ static mx_status_t hci_release(mx_device_t* device) {
 }
 
 static mx_protocol_device_t hci_device_proto = {
+    .ioctl = hci_ioctl,
     .unbind = hci_unbind,
     .release = hci_release,
 };

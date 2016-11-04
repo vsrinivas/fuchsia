@@ -32,6 +32,7 @@
 #define IOCTL_FAMILY_AUDIO          0x19
 #define IOCTL_FAMILY_MIDI           0x1A
 #define IOCTL_FAMILY_KTRACE         0x1B
+#define IOCTL_FAMILY_BT_HCI         0x1C
 
 // IOCTL constructor
 // --K-FFNN
