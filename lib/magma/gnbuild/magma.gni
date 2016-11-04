@@ -9,4 +9,6 @@ declare_args() {
   msd_intel_gen_build_root = "//driver/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   boringssl_build_root = "//third_party/boringssl"
+  # Placeholder for mako module once it's available
+  magma_python_path = ":"
 }
