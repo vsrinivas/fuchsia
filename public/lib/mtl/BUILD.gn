@@ -28,12 +28,12 @@ executable("mtl_unittests") {
     "shared_buffer/strings_unittest.cc",
     "shared_buffer/vector_unittest.cc",
     "tasks/message_loop_unittest.cc",
-    "test/run_all_unittests.cc",
     "threading/create_thread_unittest.cc",
   ]
 
   deps = [
     ":mtl",
+    "//lib/mtl/test",
     "//third_party/gtest",
   ]
 }
