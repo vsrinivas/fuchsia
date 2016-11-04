@@ -378,7 +378,7 @@ static mx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         return xhci_rh_get_descriptor(request_type, rh, value, index, le16toh(setup->wLength), txn);
     } else if ((request_type & ~USB_DIR_MASK) == (USB_TYPE_CLASS | USB_RECIP_PORT)) {
         // index is 1-based port number
-        if (index < 1 || index >= rh->num_ports) {
+        if (index < 1 || index > rh->num_ports) {
             txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
             return NO_ERROR;
         }
