@@ -17,8 +17,8 @@ mx_status_t mx_waitset_wait(mx_handle_t waitset_handle,
 
 ## DESCRIPTION
 
-**waitset_wait**() waits until one of its entries has a result to report (is
-satisfied, has become unsatisfiable, or was "cancelled") or the specified
+**waitset_wait**() waits until one of its entries has a result to report
+(waited for bits are pending or the handle was closed) or the specified
 *timeout* has elapsed.
 
 *waitset_handle* must have the **MX_RIGHT_READ** right.
@@ -50,6 +50,9 @@ to the entry's handle's observed signals at some point shortly before
 to report from one of the wait set's entries before the timeout elapsed. Only on
 success are *count* and *results* written to.
 
+It is possible for *count* to be 0 on success if the condition that woke the
+waiter becomes untrue during a very small window.
+
 On failure, an error value is returned. In particular, **ERR_TIMED_OUT** is
 returned if *timeout* elapses with no results to report.
 
@@ -58,6 +61,8 @@ returned if *timeout* elapses with no results to report.
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 **ERR_BAD_HANDLE**  *waitset_handle* is not a valid handle.
+
+**ERR_HANDLE_CLOSED** The *waitset_handle* was closed while waiting on it.
 
 **ERR_WRONG_TYPE**  *waitset_handle* is not a handle to a wait set.
 

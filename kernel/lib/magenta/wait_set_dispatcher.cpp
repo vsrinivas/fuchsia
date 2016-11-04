@@ -127,6 +127,11 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
 
         DEBUG_ASSERT(wait_set_->num_triggered_entries_ > 0u);
         wait_set_->num_triggered_entries_--;
+
+        if ((wait_set_->num_triggered_entries_ == 0) &&
+            (!wait_set_->cancelled_)) {
+            event_unsignal(&wait_set_->event_);
+        }
     }
     return false;
 }
@@ -170,8 +175,7 @@ bool WaitSetDispatcher::Entry::Trigger_NoLock() {
     wait_set_->triggered_entries_.push_back(this);
     wait_set_->num_triggered_entries_++;
     if (was_empty) {
-        cond_broadcast(&wait_set_->cv_);
-        return !!wait_set_->waiter_count_;
+        return event_signal(&wait_set_->event_, true) > 0;
     }
 
     return false;
@@ -221,7 +225,7 @@ WaitSetDispatcher::~WaitSetDispatcher() {
     state_tracker_.RemoveObserver(this);
 
     // Note these can't be destroyed until we've called RemoveObserver() on the remaining entries.
-    cond_destroy(&cv_);
+    event_destroy(&event_);
 }
 
 status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle) {
@@ -302,26 +306,28 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
                                  uint32_t* num_results,
                                  mx_waitset_result_t* results,
                                  uint32_t* max_results) {
-    AutoLock lock(&mutex_);
 
     lk_time_t lk_timeout = mx_time_to_lk(timeout);
-    status_t result = NO_ERROR;
-    if (!num_triggered_entries_ && !cancelled_) {
-        result = (lk_timeout == INFINITE_TIME) ? DoWaitInfinite_NoLock()
-                                               : DoWaitTimeout_NoLock(lk_timeout);
-    } // Else the condition is already satisfied.
+    status_t result = event_wait_timeout(&event_, lk_timeout, true);
 
     if (result != NO_ERROR && result != ERR_TIMED_OUT) {
         DEBUG_ASSERT(result == ERR_INTERRUPTED);
         return result;
     }
 
+    AutoLock lock(&mutex_);
+
     // Always prefer to give results over timed out, but prefer "cancelled" over everything.
     if (cancelled_)
         return ERR_HANDLE_CLOSED;
+
     if (!num_triggered_entries_) {
-        DEBUG_ASSERT(result == ERR_TIMED_OUT);
-        return ERR_TIMED_OUT;
+        // It's *possible* that we woke due to something triggering
+        // that managed to untrigger between our wakeup and processing
+        // these under the lock
+        *max_results = 0;
+        *num_results = 0;
+        return result;
     }
 
     if (num_triggered_entries_ < *num_results)
@@ -333,7 +339,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 
         results[i].cookie = it->GetKey();
         if (it->GetHandle_NoLock()) {
-            // Not cancelled: satisfied or unsatisfiable.
+            // Not cancelled
             results[i].status = NO_ERROR;
             results[i].observed = it->GetSignalsState_NoLock();
         } else {
@@ -350,7 +356,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 
 WaitSetDispatcher::WaitSetDispatcher()
     : StateObserver(), state_tracker_(false) {
-    cond_init(&cv_);
+    event_init(&event_, false, 0);
 
     // This is just so we can observe our own handle's cancellation.
     state_tracker_.AddObserver(this);
@@ -363,38 +369,5 @@ bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove) {
     AutoLock lock(&mutex_);
     cancelled_ = true;
-    cond_broadcast(&cv_);
-    return waiter_count_ > 0u;
-}
-
-status_t WaitSetDispatcher::DoWaitInfinite_NoLock() {
-    DEBUG_ASSERT(mutex_.IsHeld());
-    DEBUG_ASSERT(!num_triggered_entries_ && !cancelled_);
-
-    for (;;) {
-        status_t result = cond_wait_timeout(&cv_, mutex_.GetInternal(), INFINITE_TIME);
-        if (num_triggered_entries_ || cancelled_ || result != NO_ERROR)
-            return result;
-    }
-}
-
-status_t WaitSetDispatcher::DoWaitTimeout_NoLock(lk_time_t timeout) {
-    DEBUG_ASSERT(mutex_.IsHeld());
-    DEBUG_ASSERT(!num_triggered_entries_ && !cancelled_);
-
-    // Calculate an absolute deadline.
-    lk_time_t now = current_time();
-    lk_time_t deadline = timeout_to_deadline(now, timeout);
-    if (deadline == INFINITE_TIME)
-        return DoWaitInfinite_NoLock();
-
-    for (;;) {
-        status_t result = cond_wait_timeout(&cv_, mutex_.GetInternal(), deadline - now);
-        if (num_triggered_entries_ || cancelled_ || result != NO_ERROR)
-            return result;
-
-        now = current_time();
-        if (now >= deadline)
-            return ERR_TIMED_OUT;
-    }
+    return event_signal(&event_, false) > 0;
 }

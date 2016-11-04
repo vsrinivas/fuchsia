@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include <kernel/cond.h>
+#include <kernel/event.h>
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
@@ -149,22 +149,15 @@ private:
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle, bool* should_remove) final;
 
-    // These do the wait on |cv_|. They do *not* check the condition first.
-    status_t DoWaitInfinite_NoLock();
-    status_t DoWaitTimeout_NoLock(lk_time_t timeout);
-
     // We are *not* waitable, but we need to observe handle "cancellation".
     StateTracker state_tracker_;
 
     // WARNING: No other locks may be taken under |mutex_|.
     Mutex mutex_;  // Protects the following members.
 
-    // Associated to |mutex_|. This should be signaled (broadcast) when |triggered_entries_| becomes
+    // This should be signaled (broadcast) when |triggered_entries_| becomes
     // nonempty or |cancelled_| becomes set.
-    cond_t cv_;
-    // We count the number of waiters, so we can provide a slightly fake value about whether we
-    // awoke anyone or not when we signal |cv_| (since |cond_broadcast()| doesn't tell us anything).
-    size_t waiter_count_ = 0u;
+    event_t event_;
 
     // Whether our (only) handle has been cancelled.
     // TODO(vtl): If we ever allow wait set handles to be duplicated, we'll have to do much more
