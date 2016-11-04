@@ -18,15 +18,14 @@ class WaitEvent;
 
 class WaitStateObserver final : public StateObserver {
 public:
-    WaitStateObserver() : StateObserver(IrqDisposition::IRQ_SAFE) { }
+    WaitStateObserver() : StateObserver() { }
     ~WaitStateObserver();
 
     // This should be called under the handle table lock. If this succeeds, End() must be called
     // (before the WaitEvent is destroyed).
     mx_status_t Begin(WaitEvent* event,
                       Handle* handle,
-                      mx_signals_t watched_signals,
-                      uint64_t context);
+                      mx_signals_t watched_signals);
 
     // This should *not* be called under the handle table lock.
     mx_signals_t End();
@@ -38,8 +37,7 @@ private:
     // StateObserver implementation:
     bool OnInitialize(mx_signals_t initial_state) final;
     bool OnStateChange(mx_signals_t new_state) final;
-    bool OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) final;
-    void OnDidCancel() final {}
+    bool OnCancel(Handle* handle, bool* should_remove) final;
 
     bool MaybeSignal(mx_signals_t signals);
 
@@ -47,6 +45,5 @@ private:
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
     mx_signals_t wakeup_reasons_;
-    uint64_t context_ = 0u;
     mxtl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };

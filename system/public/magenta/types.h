@@ -78,6 +78,8 @@ typedef uint32_t mx_signals_t;
 #define MX_USER_SIGNAL_6            ((mx_signals_t)1u << 30)
 #define MX_USER_SIGNAL_7            ((mx_signals_t)1u << 31)
 
+#define MX_SIGNAL_HANDLE_CLOSED     MX_OBJECT_SIGNAL_23
+
 // Event
 #define MX_EVENT_SIGNAL_SIGNALED    MX_OBJECT_SIGNAL_3
 #define MX_EVENT_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_3)

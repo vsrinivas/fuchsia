@@ -19,14 +19,12 @@ WaitStateObserver::~WaitStateObserver() {
 
 mx_status_t WaitStateObserver::Begin(WaitEvent* event,
                                      Handle* handle,
-                                     mx_signals_t watched_signals,
-                                     uint64_t context) {
+                                     mx_signals_t watched_signals) {
     DEBUG_ASSERT(!dispatcher_);
 
     event_ = event;
     handle_ = handle;
     watched_signals_ = watched_signals;
-    context_ = context;
     dispatcher_ = handle->dispatcher();
     wakeup_reasons_ = 0u;
 
@@ -72,18 +70,22 @@ bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
     return MaybeSignal(new_state);
 }
 
-bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) {
-    DEBUG_ASSERT(!*should_remove);  // We'll leave it at its default value, which should be false.
+bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove) {
     DEBUG_ASSERT(dispatcher_);
 
-    return (handle == handle_) ? event_->Signal(WaitEvent::Result::CANCELLED, context_) : false;
+    if (handle == handle_) {
+        wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
+        return event_->Signal() > 0;
+    } else {
+        return false;
+    }
 }
 
 bool WaitStateObserver::MaybeSignal(mx_signals_t state) {
     DEBUG_ASSERT(dispatcher_);
 
     if (state & watched_signals_)
-        return event_->Signal(WaitEvent::Result::SATISFIED, context_);
+        return event_->Signal() > 0;
 
     return false;
 }

@@ -51,7 +51,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
             return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-        result = wait_state_observer.Begin(&event, handle, signals, 0u);
+        result = wait_state_observer.Begin(&event, handle, signals);
         if (result != NO_ERROR)
             return result;
     }
@@ -73,7 +73,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         if (t == 0)
             t = 1u;
 
-        result = WaitEvent::ResultToStatus(event.Wait(t, nullptr));
+        result = event.Wait(t);
     } else {
         result = ERR_TIMED_OUT;
     }
@@ -89,6 +89,9 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         if (_observed.copy_to_user(signals_state) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
+
+    if (signals_state & MX_SIGNAL_HANDLE_CLOSED)
+        return ERR_HANDLE_CLOSED;
 
     return result;
 }
@@ -139,8 +142,7 @@ mx_status_t sys_handle_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
                 break;
             }
 
-            result = wait_state_observers[num_added].Begin(&event, handle, items[num_added].waitfor,
-                                                           static_cast<uint64_t>(num_added));
+            result = wait_state_observers[num_added].Begin(&event, handle, items[num_added].waitfor);
             if (result != NO_ERROR)
                 break;
         }
@@ -156,20 +158,22 @@ mx_status_t sys_handle_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
         if (t == 0u)
             t = 1u;
 
-        uint64_t context = -1;
-        WaitEvent::Result wait_event_result = event.Wait(t, &context);
-        result = WaitEvent::ResultToStatus(wait_event_result);
+        result = event.Wait(t);
     } else {
         result = ERR_TIMED_OUT;
     }
 
     // Regardless of wait outcome, we must call End().
+    mx_signals_t combined = 0;
     for (size_t ix = 0; ix != count; ++ix) {
-        items[ix].pending = wait_state_observers[ix].End();
+        combined |= (items[ix].pending = wait_state_observers[ix].End());
     }
 
     if (_items.copy_array_to_user(items.get(), count) != NO_ERROR)
         return ERR_INVALID_ARGS;
+
+    if (combined & MX_SIGNAL_HANDLE_CLOSED)
+        return ERR_HANDLE_CLOSED;
 
     return result;
 }

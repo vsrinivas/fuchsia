@@ -32,32 +32,20 @@ void StateTracker::RemoveObserver(StateObserver* observer) {
 
 void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
-    StateObserver* observer = nullptr;
-
-    mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> did_cancel_list;
 
     {
         AutoLock lock(&lock_);
         for (auto it = observers_.begin(); it != observers_.end();) {
             bool should_remove = false;
-            bool call_did_cancel = false;
-            awoke_threads = it->OnCancel(handle, &should_remove, &call_did_cancel) || awoke_threads;
+            awoke_threads = it->OnCancel(handle, &should_remove) || awoke_threads;
             if (should_remove) {
                 auto to_remove = it;
                 ++it;
-                observer = observers_.erase(to_remove);
-                if (call_did_cancel)
-                    did_cancel_list.push_front(observer);
+                observers_.erase(to_remove);
             } else {
                 ++it;
             }
         }
-    }
-
-    while (!did_cancel_list.is_empty()) {
-        auto observer = did_cancel_list.pop_front();
-        if (observer)
-            observer->OnDidCancel();
     }
 
     if (awoke_threads)

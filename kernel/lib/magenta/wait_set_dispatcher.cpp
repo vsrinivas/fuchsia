@@ -88,8 +88,7 @@ mx_signals_t WaitSetDispatcher::Entry::GetSignalsState_NoLock() const {
 }
 
 WaitSetDispatcher::Entry::Entry(mx_signals_t watched_signals, uint64_t cookie)
-    : StateObserver(IrqDisposition::IRQ_UNSAFE),
-      watched_signals_(watched_signals), cookie_(cookie) {}
+    : StateObserver(), watched_signals_(watched_signals), cookie_(cookie) {}
 
 bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state) {
     AutoLock lock(&wait_set_->mutex_);
@@ -133,8 +132,7 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
 }
 
 bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
-                                        bool* should_remove,
-                                        bool* call_did_cancel) {
+                                        bool* should_remove) {
     AutoLock lock(&wait_set_->mutex_);
 
     if (state_ == State::REMOVED) {
@@ -142,10 +140,6 @@ bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
         // inside RemoveEntry(), just before the call to RemoveObserver() -- so there's no need for
         // us to remove ourself from the StateTracker's observer list.
         DEBUG_ASSERT(!*should_remove);
-        // |*call_did_cancel| should be false by default. The OnDidCancel() callback is
-        // is done outside the state tracker lock so WaitSetDispatcher could have been destroyed
-        // by the time it runs.
-        DEBUG_ASSERT(!*call_did_cancel);
         return false;
     }
 
@@ -355,8 +349,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 }
 
 WaitSetDispatcher::WaitSetDispatcher()
-    : StateObserver(IrqDisposition::IRQ_UNSAFE),
-      state_tracker_(false) {
+    : StateObserver(), state_tracker_(false) {
     cond_init(&cv_);
 
     // This is just so we can observe our own handle's cancellation.
@@ -367,10 +360,7 @@ bool WaitSetDispatcher::OnInitialize(mx_signals_t initial_state) { return false;
 
 bool WaitSetDispatcher::OnStateChange(mx_signals_t new_state) { return false; }
 
-bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove, bool* call_did_cancel) {
-    DEBUG_ASSERT(!*should_remove);  // We'll leave |*should_remove| at its default, which is false.
-    DEBUG_ASSERT(!*call_did_cancel);
-
+bool WaitSetDispatcher::OnCancel(Handle* handle, bool* should_remove) {
     AutoLock lock(&mutex_);
     cancelled_ = true;
     cond_broadcast(&cv_);
