@@ -25,8 +25,6 @@ Highlights: [mojom api](api), [documentation](docs).
 
 Full contents:
 
- - [abax](abax) is a partial implementation of the Ledger interface, without
-   persistance or sync
  - [api](api) is the Ledger interface
  - [cloud_provider](cloud_provider) encapsulates the features provided by the
    cloud that enable cloud sync
