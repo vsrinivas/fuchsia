@@ -8,7 +8,7 @@ source_set("single_service_application") {
   ]
 
   deps = [
-    "//mojo/public/cpp/application:standalone",
+    "//mojo/public/cpp/application",
   ]
 }
 
