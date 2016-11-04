@@ -9,7 +9,7 @@
 
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
-#include "mojo/services/icu_data/cpp/constants.h"
+#include "apps/icu_data/lib/constants.h"
 
 namespace icu_data {
 namespace {
@@ -54,32 +54,30 @@ bool ICUDataProviderImpl::LoadData() {
 }
 
 void ICUDataProviderImpl::AddBinding(
-    mojo::InterfaceRequest<mojo::ICUDataProvider> request) {
+    fidl::InterfaceRequest<ICUDataProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void ICUDataProviderImpl::ICUDataWithSha1(
-    const mojo::String& sha1hash,
+    const fidl::String& sha1hash,
     const ICUDataWithSha1Callback& callback) {
   if (!icu_data_vmo_) {
-    callback.Run(nullptr);
+    callback(nullptr);
     return;
   }
 
   if (sha1hash != kDataHash) {
-    callback.Run(nullptr);
+    callback(nullptr);
     return;
   }
 
-  mx::vmo vmo;
-  if (icu_data_vmo_.duplicate(kICUDataRights, &vmo) < 0) {
-    callback.Run(nullptr);
+  auto data = ICUData::New();
+  if (icu_data_vmo_.duplicate(kICUDataRights, &data->vmo) < 0) {
+    callback(nullptr);
     return;
   }
 
-  auto data = mojo::ICUData::New();
-  data->vmo.reset(mojo::Handle(vmo.release()));
-  callback.Run(std::move(data));
+  callback(std::move(data));
 }
 
 }  // namespace icu_data

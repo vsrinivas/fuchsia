@@ -10,15 +10,10 @@ executable("icu_data_provider") {
   ]
 
   deps = [
+    "//apps/modular/lib/app",
     "//lib/ftl",
     "//lib/mtl",
-    "//magenta/system/ulib/mx",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/services/icu_data/cpp",
-    "//mojo/services/icu_data/interfaces",
-    "//mojo/system",
+    "services",
+    "lib",
   ]
-
-  libs = [ "magenta" ]
 }

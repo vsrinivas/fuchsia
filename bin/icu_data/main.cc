@@ -2,49 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
-
 #include <utility>
 
 #include "apps/icu_data/icu_data_provider_impl.h"
-#include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/system/macros.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace icu_data {
 
-class App : public mojo::ApplicationImplBase {
-public:
-  App() = default;
-  ~App() override = default;
-
-private:
-  // |ApplicationImplBase| override:
-  void OnInitialize() override {
+class App {
+ public:
+  App() : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     if (!icu_data_.LoadData())
-      mojo::TerminateApplication(MOJO_RESULT_UNAVAILABLE);
-  }
-
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl *service_provider_impl) override {
-    service_provider_impl->AddService<mojo::ICUDataProvider>(
-        [this](const mojo::ConnectionContext &connection_context,
-               mojo::InterfaceRequest<mojo::ICUDataProvider> request) {
+      exit(ERR_UNAVAILABLE);
+    context_->outgoing_services()->AddService<ICUDataProvider>(
+        [this](fidl::InterfaceRequest<ICUDataProvider> request) {
           icu_data_.AddBinding(std::move(request));
         });
-    return true;
   }
 
+ private:
+  std::unique_ptr<modular::ApplicationContext> context_;
   ICUDataProviderImpl icu_data_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(App);
+  FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-} // namespace icu_data
+}  // namespace icu_data
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   icu_data::App app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

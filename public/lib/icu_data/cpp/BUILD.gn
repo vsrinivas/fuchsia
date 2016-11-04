@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("generate_icu_constants") {
+  script = "generate_icu_constants.py"
+
+  inputs = [
+    "$root_build_dir/icudtl.dat",
+  ]
+
+  outputs = [
+    "$root_gen_dir/apps/icu_data/lib/constants.cc",
+  ]
+
+  args = rebase_path(inputs + outputs, root_build_dir)
+
+  deps = [
+    "//third_party/icu:icudata",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "$root_gen_dir/apps/icu_data/lib/constants.cc",
+    "constants.h",
+    "icu_data.cc",
+    "icu_data.h",
+  ]
+
+  deps = [
+    "//apps/icu_data/services",
+    "//apps/modular/services/application",
+    "//third_party/icu",
+    ":generate_icu_constants",
+  ]
+}

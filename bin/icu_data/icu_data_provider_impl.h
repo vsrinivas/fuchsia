@@ -7,12 +7,13 @@
 
 #include <mx/vmo.h>
 
-#include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/icu_data/interfaces/icu_data.mojom.h"
+#include "apps/icu_data/services/icu_data.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace icu_data {
 
-class ICUDataProviderImpl : public mojo::ICUDataProvider {
+class ICUDataProviderImpl : public ICUDataProvider {
  public:
   ICUDataProviderImpl();
   ~ICUDataProviderImpl() override;
@@ -20,18 +21,18 @@ class ICUDataProviderImpl : public mojo::ICUDataProvider {
   // Return whether this function was able to successfully load the ICU data
   bool LoadData();
 
-  void AddBinding(mojo::InterfaceRequest<mojo::ICUDataProvider> request);
+  void AddBinding(fidl::InterfaceRequest<ICUDataProvider> request);
 
  private:
   // |ICUData| implementation:
-  void ICUDataWithSha1(const mojo::String& request,
+  void ICUDataWithSha1(const fidl::String& request,
                        const ICUDataWithSha1Callback& callback) override;
 
-  mojo::BindingSet<mojo::ICUDataProvider> bindings_;
+  fidl::BindingSet<ICUDataProvider> bindings_;
 
   mx::vmo icu_data_vmo_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ICUDataProviderImpl);
 };
 
 }  // namespace icu_data
