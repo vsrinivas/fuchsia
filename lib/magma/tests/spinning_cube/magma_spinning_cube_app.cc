@@ -187,11 +187,11 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
 
         printf("got buffer_handle 0x%x for fb %d\n", fb_buffer_handle, i);
 
-        magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_buffer_handle),
-                                           &(fb_[i].fb_handle));
+        magma_system_import(magma_display_, static_cast<uint32_t>(fb_buffer_handle),
+                            &(fb_[i].fb_handle));
 
-        if (magma_system_display_get_error(magma_display_) != 0) {
-            fprintf(stderr, "magma_system_display_import_buffer failed\n");
+        if (magma_system_get_error(magma_display_) != 0) {
+            fprintf(stderr, "magma_system_import failed\n");
             return false;
         }
   }
@@ -201,7 +201,7 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
 
 bool MagmaSpinningCubeApp::InitDisplay()
 {
-    magma_display_ = magma_system_display_open(fd_);
+    magma_display_ = magma_system_open(fd_, MAGMA_SYSTEM_CAPABILITY_DISPLAY);
     if (!magma_display_) {
         fprintf(stderr, "magma_system_display_open returned null\n");
         return false;
@@ -209,7 +209,7 @@ bool MagmaSpinningCubeApp::InitDisplay()
     return true;
 }
 
-void MagmaSpinningCubeApp::CleanupDisplay() { magma_system_display_close(magma_display_); }
+void MagmaSpinningCubeApp::CleanupDisplay() { magma_system_close(magma_display_); }
 
 void MagmaSpinningCubeApp::CleanupFramebuffer() {
 

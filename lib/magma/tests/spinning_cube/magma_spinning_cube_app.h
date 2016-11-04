@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "magma_system_display_abi.h"
+#include "magma_system.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
@@ -68,5 +68,5 @@ private:
     bool last_touch_valid_ = false;
     std::chrono::high_resolution_clock::time_point last_touch_timestamp_;
 
-    magma_system_display* magma_display_ = nullptr;
+    magma_system_connection* magma_display_ = nullptr;
 };
