@@ -20,6 +20,15 @@ namespace mxtl {
 // by a type (such as a mxtl::RefPtr) that begins manipulation of the reference
 // count. If the reference count ever reaches zero, the object's lifetime is
 // over and it should be destroyed (Release() returns true if this is the case).
+//
+// You might be wondering about the unused |T| template parameter. It exists so
+// that the base class of the derived object is a unique type. Without being a
+// template then you can have many unrelated classes which can be implicitly
+// upcasted to RefCounted* which is an undesirable situation for a mixin class
+// like this one. Specially because the destructor is not virtual. The same is
+// not possible via internal::RefCountedBase since the ctor and dtor are
+// protected.
+//
 template <typename T>
 class RefCounted : public internal::RefCountedBase {
 public:
