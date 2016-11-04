@@ -25,33 +25,33 @@ void magma_system_create_context(magma_system_connection* connection, uint32_t* 
 
 void magma_system_destroy_context(magma_system_connection* connection, uint32_t context_id) {}
 
-uint32_t next_handle;
+uint32_t next_buffer_id;
 int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           uint32_t* handle_out)
+                           uint32_t* buffer_id_out)
 {
     *size_out = size;
-    *handle_out = ++next_handle;
+    *buffer_id_out = ++next_buffer_id;
     return 0;
 }
 
-void magma_system_free(magma_system_connection* connection, uint32_t handle) {}
+void magma_system_free(magma_system_connection* connection, uint32_t buffer_id) {}
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t handle,
+void magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t buffer_id,
                                   uint32_t tiling_mode)
 {
 }
 
-int32_t magma_system_map(magma_system_connection* connection, uint32_t handle, void** paddr)
+int32_t magma_system_map(magma_system_connection* connection, uint32_t buffer_id, void** paddr)
 {
     return 0;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, uint32_t handle, void* addr)
+int32_t magma_system_unmap(magma_system_connection* connection, uint32_t buffer_id, void* addr)
 {
     return 0;
 }
 
-void magma_system_set_domain(magma_system_connection* connection, uint32_t handle,
+void magma_system_set_domain(magma_system_connection* connection, uint32_t buffer_id,
                              uint32_t read_domains, uint32_t write_domain)
 {
 }
@@ -62,12 +62,10 @@ void magma_system_submit_command_buffer(struct magma_system_connection* connecti
 {
 }
 
-void magma_system_wait_rendering(magma_system_connection* connection, uint32_t handle)
-{
-}
+void magma_system_wait_rendering(magma_system_connection* connection, uint32_t buffer_id) {}
 
-int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,
-                            uint32_t* token_out)
+int32_t magma_system_export(magma_system_connection* connection, uint32_t buffer_id,
+                            uint32_t* buffer_handle_out)
 {
     return 0;
 }

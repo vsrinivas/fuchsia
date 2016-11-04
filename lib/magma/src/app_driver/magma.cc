@@ -76,12 +76,12 @@ magma_buffer* magma_bo_gem_create_from_prime(magma_connection* connection, int32
 int32_t magma_bo_gem_export_to_prime(magma_buffer* bo, int32_t* prime_fd)
 {
     DLOG("magma_bo_gem_export_to_prime '%s'\n", MagmaBuffer::cast(bo)->Name());
-    uint32_t token;
-    bool success = MagmaBuffer::cast(bo)->Export(&token);
+    uint32_t buffer_handle;
+    bool success = MagmaBuffer::cast(bo)->Export(&buffer_handle);
     if (!success)
         return DRET(-EINVAL);
 
-    *prime_fd = static_cast<int32_t>(token);
+    *prime_fd = static_cast<int32_t>(buffer_handle);
 
     return 0;
 }

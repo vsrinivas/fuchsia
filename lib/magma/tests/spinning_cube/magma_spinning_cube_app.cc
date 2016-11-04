@@ -179,15 +179,15 @@ bool MagmaSpinningCubeApp::InitFramebuffer() {
             return false;
         }
 
-        int32_t fb_token = gbm_bo_get_fd(fb_[i].bo);
-        if (fb_token < 0) {
-            fprintf(stderr, "gbm_bo_get_fd returned %d\n", fb_token);
+        int32_t fb_buffer_handle = gbm_bo_get_fd(fb_[i].bo);
+        if (fb_buffer_handle < 0) {
+            fprintf(stderr, "gbm_bo_get_fd returned %d\n", fb_buffer_handle);
             return false;
         }
 
-        printf("got token 0x%x for fb %d\n", fb_token, i);
+        printf("got buffer_handle 0x%x for fb %d\n", fb_buffer_handle, i);
 
-        magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_token),
+        magma_system_display_import_buffer(magma_display_, static_cast<uint32_t>(fb_buffer_handle),
                                            &(fb_[i].fb_handle));
 
         if (magma_system_display_get_error(magma_display_) != 0) {

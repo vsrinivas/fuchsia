@@ -41,9 +41,10 @@ bool MagmaBuffer::Alloc(uint64_t size)
     return true;
 }
 
-bool MagmaBuffer::Export(uint32_t* token_out)
+bool MagmaBuffer::Export(uint32_t* buffer_handle_out)
 {
-    return DRETF(connection_->ExportBufferObject(this, token_out), "Failed to export buffer");
+    return DRETF(connection_->ExportBufferObject(this, buffer_handle_out),
+                 "Failed to export buffer");
 }
 
 void MagmaBuffer::SetTilingMode(uint32_t tiling_mode)

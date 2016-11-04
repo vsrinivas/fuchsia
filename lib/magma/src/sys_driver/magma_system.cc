@@ -76,14 +76,14 @@ void magma_system_destroy_context(magma_system_connection* connection, uint32_t 
 }
 
 int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           uint32_t* handle_out)
+                           uint32_t* buffer_id_out)
 {
     auto buf = magma::PlatformBuffer::Create(size);
     if (!buf)
         return DRET(-ENOMEM);
 
     *size_out = buf->size();
-    if (!buf->duplicate_handle(handle_out))
+    if (!buf->duplicate_handle(buffer_id_out))
         return DRET(-EINVAL);
 
     if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(buf)))
@@ -92,10 +92,10 @@ int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, u
     return 0;
 }
 
-void magma_system_free(magma_system_connection* connection, uint32_t handle)
+void magma_system_free(magma_system_connection* connection, uint32_t buffer_id)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id))
         return;
 
     magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(id);
@@ -104,17 +104,17 @@ void magma_system_free(magma_system_connection* connection, uint32_t handle)
     magma::PlatformBuffer::Import(handle).reset();
 }
 
-int32_t magma_system_import(magma_system_connection* connection, uint32_t token,
-                            uint32_t* handle_out)
+int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
+                            uint32_t* buffer_id_out)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(token, &id))
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_handle, &id))
         return DRET(-EINVAL);
 
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
     if (!buf) {
         // if we dont have the buffer already create it
-        auto new_buf = magma::PlatformBuffer::Import(token);
+        auto new_buf = magma::PlatformBuffer::Import(buffer_handle);
         if (!new_buf)
             return DRET(-EINVAL);
         if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(new_buf)))
@@ -123,39 +123,39 @@ int32_t magma_system_import(magma_system_connection* connection, uint32_t token,
         DASSERT(buf);
     }
 
-    if (!buf->duplicate_handle(handle_out))
+    if (!buf->duplicate_handle(buffer_id_out))
         return -EINVAL;
 
     return 0;
 }
 
-int32_t magma_system_export(magma_system_connection* connection, uint32_t handle,
-                            uint32_t* token_out)
+int32_t magma_system_export(magma_system_connection* connection, uint32_t buffer_id,
+                            uint32_t* buffer_handle_out)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id))
         return DRET(-EINVAL);
 
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
     if (!buf)
         return DRET(-EINVAL);
 
-    if (!buf->duplicate_handle(token_out))
+    if (!buf->duplicate_handle(buffer_handle_out))
         return DRET(-EINVAL);
 
     return 0;
 }
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t handle,
+void magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t buffer_id,
                                   uint32_t tiling_mode)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
-int32_t magma_system_map(magma_system_connection* connection, uint32_t handle, void** addr_out)
+int32_t magma_system_map(magma_system_connection* connection, uint32_t buffer_id, void** addr_out)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id))
         return DRET(-EINVAL);
 
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
@@ -168,10 +168,10 @@ int32_t magma_system_map(magma_system_connection* connection, uint32_t handle, v
     return 0;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, uint32_t handle, void* addr)
+int32_t magma_system_unmap(magma_system_connection* connection, uint32_t buffer_id, void* addr)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id))
         return DRET(-EINVAL);
 
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
@@ -184,7 +184,7 @@ int32_t magma_system_unmap(magma_system_connection* connection, uint32_t handle,
     return 0;
 }
 
-void magma_system_set_domain(magma_system_connection* connection, uint32_t handle,
+void magma_system_set_domain(magma_system_connection* connection, uint32_t buffer_id,
                              uint32_t read_domains, uint32_t write_domain)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
@@ -198,22 +198,22 @@ void magma_system_submit_command_buffer(struct magma_system_connection* connecti
         ->ExecuteCommandBuffer(command_buffer, context_id);
 }
 
-void magma_system_wait_rendering(magma_system_connection* connection, uint32_t handle)
+void magma_system_wait_rendering(magma_system_connection* connection, uint32_t buffer_id)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id)) {
-        DLOG("IdFromHandle failed: 0x%x", handle);
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id)) {
+        DLOG("IdFromHandle failed: 0x%x", buffer_id);
         return;
     }
 
     magma::PlatformIpcConnection::cast(connection)->WaitRendering(id);
 }
 
-void magma_system_display_page_flip(magma_system_connection* connection, uint32_t handle,
+void magma_system_display_page_flip(magma_system_connection* connection, uint32_t buffer_id,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
     uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(handle, &id)) {
+    if (!magma::PlatformBuffer::IdFromHandle(buffer_id, &id)) {
         DLOG("Attempting to page flip with invalid buffer");
         callback(-EINVAL, data);
         return;

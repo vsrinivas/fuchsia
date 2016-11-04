@@ -27,7 +27,7 @@ public:
     bool Unmap();
     void WaitRendering();
     bool References(MagmaBuffer* target);
-    bool Export(uint32_t* token_out);
+    bool Export(uint32_t* buffer_handle_out);
 
     MagmaConnection* connection() { return connection_; }
 

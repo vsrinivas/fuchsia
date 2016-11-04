@@ -205,11 +205,11 @@ TEST(MagmaSystemConnection, PageFlip)
     // should still be unable to page flip buffer because it hasnt been exported to display
     magma_system_display_page_flip(display.get(), buf_handle, &callback, test_invalid.get());
 
-    uint32_t token;
+    uint32_t buffer_handle;
     uint32_t imported_handle;
-    magma_system_export(connection.get(), buf_handle, &token);
+    magma_system_export(connection.get(), buf_handle, &buffer_handle);
     EXPECT_EQ(magma_system_get_error(connection.get()), 0);
-    magma_system_import(display.get(), token, &imported_handle);
+    magma_system_import(display.get(), buffer_handle, &imported_handle);
     EXPECT_EQ(magma_system_get_error(display.get()), 0);
 
     // should be ok to page flip now
