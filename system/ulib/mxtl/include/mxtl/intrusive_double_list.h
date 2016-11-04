@@ -26,7 +26,7 @@
 //
 // Under the hood, the state of a DoublyLinkedList<> contains a single raw
 // pointer to the object which is the head of the list, or nullptr if the list
-// is empty.  Each object on the list has a DoubleLinkedListNodeState<> which
+// is empty.  Each object on the list has a DoublyLinkedListNodeState<> which
 // contains one raw pointer (prev) and one managed pointer (next) which are
 // arranged in a ring.  The tail of a non-empty list can be found in O(k) time
 // by following the prev pointer of the head node of the list.
