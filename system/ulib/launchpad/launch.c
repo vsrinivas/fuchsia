@@ -42,7 +42,7 @@ mx_handle_t launchpad_launch_with_job(mx_handle_t job,
 static mx_handle_t mxio_job = MX_HANDLE_INVALID;
 static mtx_t mxio_job_mutex = MTX_INIT;
 
-static mx_handle_t get_mxio_job(void) {
+mx_handle_t get_mxio_job(void) {
     mtx_lock(&mxio_job_mutex);
     if (mxio_job == MX_HANDLE_INVALID)
         mxio_job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));

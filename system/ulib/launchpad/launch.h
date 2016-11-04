@@ -14,4 +14,7 @@
 mx_handle_t finish_launch(launchpad_t* lp, mx_status_t status,
                           mx_handle_t handles[], uint32_t handle_count);
 
+// Retrive and cache the job handle passed via mxio_get_startup_handle().
+mx_handle_t get_mxio_job(void);
+
 #pragma GCC visibility pop

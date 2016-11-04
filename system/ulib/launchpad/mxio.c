@@ -67,7 +67,7 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
         name = filename;
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    mx_handle_t job = get_mxio_job();
     if (job > 0)
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 
