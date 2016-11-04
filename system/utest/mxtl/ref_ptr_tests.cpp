@@ -40,6 +40,16 @@ bool RefCallCounter::Release() {
 static_assert(mxtl::is_standard_layout<mxtl::RefPtr<RefCallCounter>>::value,
               "mxtl::RefPtr<T>'s should have a standard layout.");
 
+struct Base : public RefCallCounter {
+};
+
+struct Derived : public Base {
+};
+
+static void pass_base_rval_ref(mxtl::RefPtr<Base>&& ptr) { }
+static void pass_base_lval_ref(const mxtl::RefPtr<Base>& ptr) { }
+static void pass_base_copy(mxtl::RefPtr<Base> ptr) { }
+
 static bool ref_ptr_test() {
     BEGIN_TEST;
     using RefCallPtr = mxtl::RefPtr<RefCallCounter>;
@@ -143,9 +153,57 @@ static bool ref_ptr_compare_test() {
     END_TEST;
 }
 
+static bool ref_ptr_upcast_test() {
+    BEGIN_TEST;
+
+    {
+        Derived der;
+        mxtl::RefPtr<Derived> foo(&der);
+        EXPECT_TRUE(static_cast<bool>(foo), "");
+        EXPECT_EQ(der.add_ref_calls(), 1, "");
+        EXPECT_EQ(der.release_calls(), 0, "");
+
+        mxtl::RefPtr<Base> bar(foo);
+        EXPECT_TRUE(static_cast<bool>(foo), "");
+        EXPECT_TRUE(static_cast<bool>(bar), "");
+        EXPECT_EQ(der.add_ref_calls(), 2, "");
+        EXPECT_EQ(der.release_calls(), 0, "");
+
+        mxtl::RefPtr<Base> baz(mxtl::move(foo));
+        EXPECT_FALSE(static_cast<bool>(foo), "");
+        EXPECT_TRUE(static_cast<bool>(bar), "");
+        EXPECT_TRUE(static_cast<bool>(baz), "");
+        EXPECT_EQ(der.add_ref_calls(), 2, "");
+        EXPECT_EQ(der.release_calls(), 0, "");
+
+        foo.reset(&der);
+        pass_base_lval_ref(foo);
+        EXPECT_EQ(der.add_ref_calls(), 4, "");
+        EXPECT_EQ(der.release_calls(), 1, "");
+
+        pass_base_copy(foo);
+        EXPECT_EQ(der.add_ref_calls(), 5, "");
+        EXPECT_EQ(der.release_calls(), 2, "");
+
+        pass_base_rval_ref(mxtl::move(foo));
+        EXPECT_EQ(der.add_ref_calls(), 5, "");
+        EXPECT_EQ(der.release_calls(), 3, "");
+
+        foo.reset();
+        bar.reset();
+        baz.reset();
+        EXPECT_EQ(der.add_ref_calls(), 5, "");
+        EXPECT_EQ(der.release_calls(), 5, "");
+
+    }
+
+    END_TEST;
+}
+
 } //namespace
 
 BEGIN_TEST_CASE(ref_ptr_tests)
 RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
 RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
+RUN_NAMED_TEST("Ref Pointer Upcast", ref_ptr_upcast_test)
 END_TEST_CASE(ref_ptr_tests);

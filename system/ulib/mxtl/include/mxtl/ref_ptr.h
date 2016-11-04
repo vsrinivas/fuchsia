@@ -29,10 +29,9 @@ inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
 //
 // Except for initial construction (see below), this generally adheres to a
 // subset of the interface for std::shared_ptr<>. Unlike std::shared_ptr<> this
-// type does not support conversions between different pointer types, vending
-// weak pointers, introspecting the reference count, or any operations that
-// would result in allocating memory (unless T::AddRef or T::Release allocate
-// memory).
+// type does not support vending weak pointers, introspecting the reference
+// count, or any operations that would result in allocating memory (unless
+// T::AddRef or T::Release allocate memory).
 //
 // Construction:  To create a RefPtr around a freshly created object, use the
 // AdoptRef free function at the bottom of this header. To construct a RefPtr to
@@ -50,10 +49,11 @@ public:
         if (ptr_) ptr_->AddRef();
     }
 
-    // Copy
-    RefPtr(const RefPtr& r) : ptr_(r.ptr_) {
-        if (ptr_) ptr_->AddRef();
-    }
+    // Copy (normal and implicit convertible)
+    RefPtr(const RefPtr& r) : RefPtr(r.ptr_) { }
+
+    template <typename OtherType>
+    RefPtr(const RefPtr<OtherType>& r) : RefPtr(r.ptr_) { }
 
     // Assignment
     RefPtr& operator=(const RefPtr& r) {
@@ -65,10 +65,16 @@ public:
         return *this;
     }
 
-    // Move
+    // Move (normal and implicit convertible)
     RefPtr(RefPtr&& r) : ptr_(r.ptr_) {
         r.ptr_ = nullptr;
     }
+
+    template <typename OtherType>
+    RefPtr(RefPtr<OtherType>&& r) : ptr_(r.ptr_) {
+        r.ptr_ = nullptr;
+    }
+
     // Move assignment
     RefPtr& operator=(RefPtr&& r) {
         mxtl::move(r).swap(*this);
