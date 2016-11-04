@@ -1,0 +1,38 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module fonts;
+
+enum FontSlant {
+  UPRIGHT,
+  ITALIC,
+};
+
+struct FontRequest {
+  // For example, "Roboto".
+  string family;
+
+  // For example, 400 is normal, 700 is bold.
+  uint32 weight = 400;
+
+  // Numeric values matching OS/2 & Windows Metrics usWidthClass table.
+  // https://www.microsoft.com/typography/otspec/os2.htm
+  // For example, 5 is normal.
+  uint32 width = 5;
+
+  FontSlant slant = FontSlant.UPRIGHT;
+};
+
+struct FontData {
+  handle<shared_buffer> vmo;
+};
+
+struct FontResponse {
+  FontData data;
+};
+
+[ServiceName="fonts::FontProvider"]
+interface FontProvider {
+  GetFont(FontRequest request) => (FontResponse? response);
+};

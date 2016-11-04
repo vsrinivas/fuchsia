@@ -2,48 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
-
 #include <utility>
 
 #include "apps/fonts/font_provider_impl.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/system/macros.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace fonts {
 
-class App : public mojo::ApplicationImplBase {
+class App {
  public:
-  App() = default;
-  ~App() override = default;
-
- private:
-  // |ApplicationImplBase| override:
-  void OnInitialize() override {
+  App() : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
-      mojo::TerminateApplication(MOJO_RESULT_UNAVAILABLE);
-  }
-
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
-    service_provider_impl->AddService<mojo::FontProvider>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<mojo::FontProvider> request) {
+      exit(ERR_UNAVAILABLE);
+    context_->outgoing_services()->AddService<FontProvider>(
+        [this](fidl::InterfaceRequest<FontProvider> request) {
           font_provider_.AddBinding(std::move(request));
         });
-    return true;
   }
 
+ private:
+  std::unique_ptr<modular::ApplicationContext> context_;
   FontProviderImpl font_provider_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(App);
+  FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace fonts
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   fonts::App app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

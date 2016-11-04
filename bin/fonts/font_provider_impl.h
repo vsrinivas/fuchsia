@@ -4,12 +4,13 @@
 
 #include <mx/vmo.h>
 
-#include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/services/ui/fonts/interfaces/font_provider.mojom.h"
+#include "apps/fonts/services/font_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace fonts {
 
-class FontProviderImpl : public mojo::FontProvider {
+class FontProviderImpl : public FontProvider {
  public:
   FontProviderImpl();
   ~FontProviderImpl() override;
@@ -18,19 +19,19 @@ class FontProviderImpl : public mojo::FontProvider {
   // persistent storage.
   bool LoadFonts();
 
-  void AddBinding(mojo::InterfaceRequest<mojo::FontProvider> request);
+  void AddBinding(fidl::InterfaceRequest<FontProvider> request);
 
  private:
   // |FontProvider| implementation:
-  void GetFont(mojo::FontRequestPtr request,
+  void GetFont(FontRequestPtr request,
                const GetFontCallback& callback) override;
 
-  mojo::BindingSet<mojo::FontProvider> bindings_;
+  fidl::BindingSet<FontProvider> bindings_;
 
   // TODO(abarth): We should support more than one font.
   mx::vmo roboto_regular_vmo_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(FontProviderImpl);
 };
 
 }  // namespace fonts

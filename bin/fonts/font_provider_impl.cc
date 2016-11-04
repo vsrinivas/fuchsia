@@ -50,30 +50,28 @@ bool FontProviderImpl::LoadFonts() {
 }
 
 void FontProviderImpl::AddBinding(
-    mojo::InterfaceRequest<mojo::FontProvider> request) {
+    fidl::InterfaceRequest<FontProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void FontProviderImpl::GetFont(mojo::FontRequestPtr request,
+void FontProviderImpl::GetFont(FontRequestPtr request,
                                const GetFontCallback& callback) {
   if (!roboto_regular_vmo_) {
-    callback.Run(nullptr);
+    callback(nullptr);
     return;
   }
 
   // TODO(abarth): Use the data from |request| to select a font instead of
   // spamming Roboto-Regular.
-  mx::vmo vmo;
-  if (roboto_regular_vmo_.duplicate(kFontDataRights, &vmo) < 0) {
-    callback.Run(nullptr);
+  auto data = FontData::New();
+  if (roboto_regular_vmo_.duplicate(kFontDataRights, &data->vmo) < 0) {
+    callback(nullptr);
     return;
   }
 
-  auto data = mojo::FontData::New();
-  data->vmo.reset(mojo::Handle(vmo.release()));
-  auto response = mojo::FontResponse::New();
+  auto response = FontResponse::New();
   response->data = std::move(data);
-  callback.Run(std::move(response));
+  callback(std::move(response));
 }
 
 }  // namespace fonts
