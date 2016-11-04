@@ -76,8 +76,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
                 // just copy the header
                 tocopy = sizeof(info.hdr);
             } else {
-                bool waitable = dispatcher->get_state_tracker() &&
-                            dispatcher->get_state_tracker()->is_waitable();
+                bool waitable = dispatcher->get_state_tracker() != nullptr;
 
                 // copy the header and the record
                 info.rec.koid = dispatcher->get_koid();

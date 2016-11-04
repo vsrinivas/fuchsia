@@ -27,7 +27,7 @@ status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dis
 }
 
 EventDispatcher::EventDispatcher(uint32_t options)
-        : state_tracker_(true, 0u) {}
+        : state_tracker_(0u) {}
 
 EventDispatcher::~EventDispatcher() {}
 

@@ -232,7 +232,7 @@ WaitSetDispatcher::~WaitSetDispatcher() {
 
 status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* handle) {
     auto state_tracker = handle->dispatcher()->get_state_tracker();
-    if (!state_tracker || !state_tracker->is_waitable())
+    if (!state_tracker)
         return ERR_NOT_SUPPORTED;
 
     auto e = entry.get();

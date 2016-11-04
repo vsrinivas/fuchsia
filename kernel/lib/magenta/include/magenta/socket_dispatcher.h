@@ -68,7 +68,7 @@ private:
     status_t HalfCloseOther();
 
     const uint32_t flags_;
-    NonIrqStateTracker state_tracker_;
+    StateTracker state_tracker_;
 
     // The |lock_| protects all members below.
     Mutex lock_;

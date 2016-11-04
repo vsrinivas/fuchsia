@@ -9,42 +9,12 @@
 #include <kernel/auto_lock.h>
 #include <magenta/wait_event.h>
 
-namespace internal {
-
-// "storage" for constexpr members of trait classes.
-constexpr bool NonIrqStateTrackerTraits::SignalableFromIrq;
-constexpr bool IrqStateTrackerTraits::SignalableFromIrq;
-
-// Forced instantiation of the two types of state trackers.
-template class StateTrackerImpl<NonIrqStateTrackerTraits>;
-template class StateTrackerImpl<IrqStateTrackerTraits>;
-
-template <typename Traits>
-mx_status_t StateTrackerImpl<Traits>::AddObserver(StateObserver* observer) {
+mx_status_t StateTracker::AddObserver(StateObserver* observer) {
     DEBUG_ASSERT(observer != nullptr);
 
     bool awoke_threads = false;
     {
         AutoLock lock(&lock_);
-
-        // State trackers which can be signaled from IRQ context currenty have
-        // some restrictions which must be enforced.
-        //
-        // 1) StateObservers of these StateTrackers must be "irq safe", meaning
-        //    that they are guaranteed to perform no operations during their
-        //    OnStateChange implementation which would be illegal to perform
-        //    in an IRQ context.
-        // 2) StateTrackers which can be signaled from IRQ context are only
-        //    permitted to have one observer (at most) at a time.  This is to
-        //    prevent the posibility of needing to perform an unbound number of
-        //    wakeup operations when the IRQ signals the state tracker.
-        if (Traits::SignalableFromIrq) {
-            if (!observer->irq_safe())
-                return ERR_INVALID_ARGS;
-
-            if (!observers_.is_empty())
-                return ERR_BAD_STATE;
-        }
 
         observers_.push_front(observer);
         awoke_threads = observer->OnInitialize(signals_);
@@ -54,15 +24,13 @@ mx_status_t StateTrackerImpl<Traits>::AddObserver(StateObserver* observer) {
     return NO_ERROR;
 }
 
-template <typename Traits>
-void StateTrackerImpl<Traits>::RemoveObserver(StateObserver* observer) {
+void StateTracker::RemoveObserver(StateObserver* observer) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(observer != nullptr);
     observers_.erase(*observer);
 }
 
-template <typename Traits>
-void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
+void StateTracker::Cancel(Handle* handle) {
     bool awoke_threads = false;
     StateObserver* observer = nullptr;
 
@@ -96,24 +64,10 @@ void StateTrackerImpl<Traits>::Cancel(Handle* handle) {
         thread_preempt(false);
 }
 
-template <typename Traits>
-void StateTrackerImpl<Traits>::UpdateState(mx_signals_t clear_mask,
-                                           mx_signals_t set_mask) {
-    if (UpdateStateInternal(clear_mask, set_mask)) {
-        thread_preempt(false);
-    }
-}
-
-template <typename Traits>
-mx_signals_t StateTrackerImpl<Traits>::GetSignalsState() {
-    AutoLock lock(&lock_);
-    return signals_;
-}
-
-template <typename Traits>
-bool StateTrackerImpl<Traits>::UpdateStateInternal(mx_signals_t clear_mask,
-                                                   mx_signals_t set_mask) {
+void StateTracker::UpdateState(mx_signals_t clear_mask,
+                               mx_signals_t set_mask) {
     bool awoke_threads = false;
+
     {
         AutoLock lock(&lock_);
 
@@ -122,14 +76,14 @@ bool StateTrackerImpl<Traits>::UpdateStateInternal(mx_signals_t clear_mask,
         signals_ |= set_mask;
 
         if (previous_signals == signals_)
-            return false;
+            return;
 
         for (auto& observer : observers_) {
             awoke_threads = observer.OnStateChange(signals_) || awoke_threads;
         }
     }
 
-    return awoke_threads;
+    if (awoke_threads) {
+        thread_preempt(false);
+    }
 }
-
-}  // namespace internal

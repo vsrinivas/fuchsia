@@ -46,6 +46,6 @@ private:
     Mutex lock_;
     bool dispatcher_alive_[2];
     MessageList messages_[2];
-    NonIrqStateTracker state_tracker_[2];
+    StateTracker state_tracker_[2];
     mxtl::unique_ptr<PortClient> iopc_[2];
 };

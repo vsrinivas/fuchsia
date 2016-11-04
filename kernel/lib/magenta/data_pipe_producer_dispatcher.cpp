@@ -44,6 +44,7 @@ StateTracker* DataPipeProducerDispatcher::get_state_tracker() {
     return pipe_->get_producer_state_tracker();
 }
 
+
 mx_status_t DataPipeProducerDispatcher::Write(user_array<const void> buffer,
                                               bool all_or_none,
                                               mx_size_t* size_written) {

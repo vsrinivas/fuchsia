@@ -63,7 +63,7 @@ status_t EventPairDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask)
 }
 
 EventPairDispatcher::EventPairDispatcher()
-        : state_tracker_(true, 0u),
+        : state_tracker_(0u),
           other_koid_(0ull) {}
 
 void EventPairDispatcher::Init(EventPairDispatcher* other) {

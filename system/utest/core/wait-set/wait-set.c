@@ -106,9 +106,6 @@ bool wait_set_bad_add_remove_test(void) {
     EXPECT_EQ(mx_waitset_remove(ws, cookie1), NO_ERROR, "");
     EXPECT_EQ(mx_waitset_remove(ws, cookie1), ERR_NOT_FOUND, "");
 
-    // Wait sets aren't waitable.
-    EXPECT_EQ(mx_waitset_add(ws, cookie2, ws, 0u), ERR_NOT_SUPPORTED, "");
-
     // TODO(vtl): Test that both handles are properly tested for rights.
 
     EXPECT_EQ(mx_handle_close(ws), NO_ERROR, "");

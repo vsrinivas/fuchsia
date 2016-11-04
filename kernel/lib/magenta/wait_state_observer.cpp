@@ -31,7 +31,7 @@ mx_status_t WaitStateObserver::Begin(WaitEvent* event,
     wakeup_reasons_ = 0u;
 
     auto state_tracker = dispatcher_->get_state_tracker();
-    mx_status_t result = (state_tracker && state_tracker->is_waitable())
+    mx_status_t result = (state_tracker != nullptr)
             ? state_tracker->AddObserver(this) : ERR_NOT_SUPPORTED;
 
     if (result != NO_ERROR)

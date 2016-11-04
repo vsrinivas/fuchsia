@@ -130,7 +130,7 @@ private:
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
 
-    NonIrqStateTracker state_tracker_;
+    StateTracker state_tracker_;
 
     // A thread-level exception port for this thread.
     mxtl::RefPtr<ExceptionPort> exception_port_;

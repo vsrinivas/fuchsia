@@ -36,7 +36,7 @@ UserThread::UserThread(mxtl::RefPtr<ProcessDispatcher> process,
                        uint32_t flags)
     : koid_(MX_KOID_INVALID),
       process_(mxtl::move(process)),
-      state_tracker_(true, 0u) {
+      state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 }
 

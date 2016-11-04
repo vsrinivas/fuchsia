@@ -69,7 +69,7 @@ private:
         char* vad_start = 0u;
         mx_size_t expected = 0u;
         mxtl::RefPtr<VmAspace> aspace;
-        NonIrqStateTracker state_tracker;
+        StateTracker state_tracker;
     };
 
     DataPipe(mx_size_t element_size, mx_size_t capacity);

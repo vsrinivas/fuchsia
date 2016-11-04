@@ -30,7 +30,7 @@ private:
     explicit EventPairDispatcher();
     void Init(EventPairDispatcher* other);
 
-    NonIrqStateTracker state_tracker_;
+    StateTracker state_tracker_;
 
     // Set in Init(); never changes otherwise.
     mx_koid_t other_koid_;

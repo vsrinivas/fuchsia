@@ -156,7 +156,7 @@ private:
     status_t DoWaitTimeout_NoLock(lk_time_t timeout);
 
     // We are *not* waitable, but we need to observe handle "cancellation".
-    NonIrqStateTracker state_tracker_;
+    StateTracker state_tracker_;
 
     // WARNING: No other locks may be taken under |mutex_|.
     Mutex mutex_;  // Protects the following members.
