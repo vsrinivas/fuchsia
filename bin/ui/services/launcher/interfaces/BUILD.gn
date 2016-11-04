@@ -8,4 +8,7 @@ mojom("interfaces") {
   sources = [
     "launcher.mojom",
   ]
+  deps = [
+    "//apps/mozart/services/views/interfaces",
+  ]
 }

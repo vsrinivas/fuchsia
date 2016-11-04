@@ -5,8 +5,8 @@
 [DartPackage="mozart_services"]
 module mozart;
 
-import "mojo/services/geometry/interfaces/geometry.mojom";
 import "apps/mozart/services/input/interfaces/input_event_constants.mojom";
+import "mojo/services/geometry/interfaces/geometry.mojom";
 
 struct KeyData {
   // The chromium event key code; these values are from the ui/ KeyCode enum,
