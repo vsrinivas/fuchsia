@@ -19,35 +19,34 @@ pub use magenta_sys::MX_TIME_INFINITE;
 #[repr(i32)]
 // Auto-generated using tools/gen_status.py
 pub enum Status {
-    NoErr = 0,
-    Internal = -1,
-    NotSupported = -2,
-    NoResources = -5,
-    NoMemory = -4,
-    InvalidArgs = -10,
-    WrongType = -54,
-    BadSyscall = -11,
-    BadHandle = -12,
-    OutOfRange = -13,
-    BufferTooSmall = -14,
-    BadState = -20,
-    NotFound = -3,
-    AlreadyExists = -15,
-    AlreadyBound = -16,
-    TimedOut = -23,
-    HandleClosed = -24,
-    RemoteClosed = -25,
-    ShouldWait = -27,
-    AccessDenied = -30,
-    Io = -40,
-    IoRefused = -41,
-    IoDataIntegrity = -42,
-    IoDataLoss = -43,
-    BadPath = -50,
-    NotDir = -51,
-    NotFile = -52,
-    RecurseTooDeep = -53,
-    UserBase = -16384,
+    NoError = 0,
+    ErrInternal = -1,
+    ErrNotSupported = -2,
+    ErrNoResources = -5,
+    ErrNoMemory = -4,
+    ErrInvalidArgs = -10,
+    ErrWrongType = -54,
+    ErrBadSyscall = -11,
+    ErrBadHandle = -12,
+    ErrOutOfRange = -13,
+    ErrBufferTooSmall = -14,
+    ErrBadState = -20,
+    ErrNotFound = -3,
+    ErrAlreadyExists = -15,
+    ErrAlreadyBound = -16,
+    ErrTimedOut = -23,
+    ErrHandleClosed = -24,
+    ErrRemoteClosed = -25,
+    ErrUnavailable = -26,
+    ErrShouldWait = -27,
+    ErrAccessDenied = -30,
+    ErrIo = -40,
+    ErrIoRefused = -41,
+    ErrIoDataIntegrity = -42,
+    ErrIoDataLoss = -43,
+    ErrBadPath = -50,
+    ErrNotDir = -51,
+    ErrNotFile = -52,
 
     /// Any mx_status_t not in the set above will map to the following:
     UnknownOther = -32768,
@@ -58,35 +57,34 @@ impl Status {
     fn from_raw(raw: sys::mx_status_t) -> Self {
         match raw {
             // Auto-generated using tools/gen_status.py
-            sys::NO_ERR => Status::NoErr,
-            sys::ERR_INTERNAL => Status::Internal,
-            sys::ERR_NOT_SUPPORTED => Status::NotSupported,
-            sys::ERR_NO_RESOURCES => Status::NoResources,
-            sys::ERR_NO_MEMORY => Status::NoMemory,
-            sys::ERR_INVALID_ARGS => Status::InvalidArgs,
-            sys::ERR_WRONG_TYPE => Status::WrongType,
-            sys::ERR_BAD_SYSCALL => Status::BadSyscall,
-            sys::ERR_BAD_HANDLE => Status::BadHandle,
-            sys::ERR_OUT_OF_RANGE => Status::OutOfRange,
-            sys::ERR_BUFFER_TOO_SMALL => Status::BufferTooSmall,
-            sys::ERR_BAD_STATE => Status::BadState,
-            sys::ERR_NOT_FOUND => Status::NotFound,
-            sys::ERR_ALREADY_EXISTS => Status::AlreadyExists,
-            sys::ERR_ALREADY_BOUND => Status::AlreadyBound,
-            sys::ERR_TIMED_OUT => Status::TimedOut,
-            sys::ERR_HANDLE_CLOSED => Status::HandleClosed,
-            sys::ERR_REMOTE_CLOSED => Status::RemoteClosed,
-            sys::ERR_SHOULD_WAIT => Status::ShouldWait,
-            sys::ERR_ACCESS_DENIED => Status::AccessDenied,
-            sys::ERR_IO => Status::Io,
-            sys::ERR_IO_REFUSED => Status::IoRefused,
-            sys::ERR_IO_DATA_INTEGRITY => Status::IoDataIntegrity,
-            sys::ERR_IO_DATA_LOSS => Status::IoDataLoss,
-            sys::ERR_BAD_PATH => Status::BadPath,
-            sys::ERR_NOT_DIR => Status::NotDir,
-            sys::ERR_NOT_FILE => Status::NotFile,
-            sys::ERR_RECURSE_TOO_DEEP => Status::RecurseTooDeep,
-            sys::ERR_USER_BASE => Status::UserBase,
+            sys::NO_ERROR => Status::NoError,
+            sys::ERR_INTERNAL => Status::ErrInternal,
+            sys::ERR_NOT_SUPPORTED => Status::ErrNotSupported,
+            sys::ERR_NO_RESOURCES => Status::ErrNoResources,
+            sys::ERR_NO_MEMORY => Status::ErrNoMemory,
+            sys::ERR_INVALID_ARGS => Status::ErrInvalidArgs,
+            sys::ERR_WRONG_TYPE => Status::ErrWrongType,
+            sys::ERR_BAD_SYSCALL => Status::ErrBadSyscall,
+            sys::ERR_BAD_HANDLE => Status::ErrBadHandle,
+            sys::ERR_OUT_OF_RANGE => Status::ErrOutOfRange,
+            sys::ERR_BUFFER_TOO_SMALL => Status::ErrBufferTooSmall,
+            sys::ERR_BAD_STATE => Status::ErrBadState,
+            sys::ERR_NOT_FOUND => Status::ErrNotFound,
+            sys::ERR_ALREADY_EXISTS => Status::ErrAlreadyExists,
+            sys::ERR_ALREADY_BOUND => Status::ErrAlreadyBound,
+            sys::ERR_TIMED_OUT => Status::ErrTimedOut,
+            sys::ERR_HANDLE_CLOSED => Status::ErrHandleClosed,
+            sys::ERR_REMOTE_CLOSED => Status::ErrRemoteClosed,
+            sys::ERR_UNAVAILABLE => Status::ErrUnavailable,
+            sys::ERR_SHOULD_WAIT => Status::ErrShouldWait,
+            sys::ERR_ACCESS_DENIED => Status::ErrAccessDenied,
+            sys::ERR_IO => Status::ErrIo,
+            sys::ERR_IO_REFUSED => Status::ErrIoRefused,
+            sys::ERR_IO_DATA_INTEGRITY => Status::ErrIoDataIntegrity,
+            sys::ERR_IO_DATA_LOSS => Status::ErrIoDataLoss,
+            sys::ERR_BAD_PATH => Status::ErrBadPath,
+            sys::ERR_NOT_DIR => Status::ErrNotDir,
+            sys::ERR_NOT_FILE => Status::ErrNotFile,
             _ => Status::UnknownOther,
         }
     }
@@ -105,17 +103,35 @@ pub enum ChannelOpts {
     ReplyChannel = sys::MX_CHANNEL_CREATE_REPLY_CHANNEL,
 }
 
-pub struct SignalsState(sys::mx_signals_state_t);
+#[repr(u32)]
+pub enum WaitSetOpts {
+    Default = 0,
+}
 
-impl SignalsState {
-    pub fn satisfied(&self) -> Signals {
-        self.0.satisfied
-    }
+#[repr(u32)]
+pub enum VmoOpts {
+    Default = 0,
+}
 
-    pub fn satisfiable(&self) -> Signals {
-        self.0.satisfiable
+impl Default for WaitSetOpts {
+    fn default() -> Self {
+        WaitSetOpts::Default
     }
 }
+
+impl Default for VmoOpts {
+    fn default() -> Self {
+        VmoOpts::Default
+    }
+}
+
+#[repr(C)]
+pub struct WaitItem<'a> {
+    handle: HandleRef<'a>,
+    waitfor: Signals,
+    pending: Signals,
+}
+
 
 #[repr(u32)]
 pub enum ClockId {
@@ -159,16 +175,13 @@ impl<'a> HandleRef<'a> {
         }
     }
 
-    fn wait(&self, signals: Signals, timeout: Time) -> Result<SignalsState, Status> {
+    fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         let handle = self.handle;
-        let mut state = sys::mx_signals_state_t {
-            satisfied: sys::mx_signals_t::empty(),
-            satisfiable: sys::mx_signals_t::empty(),
-        };
+        let mut pending = sys::mx_signals_t::empty();
         let status = unsafe {
-            sys::mx_handle_wait_one(handle, signals, timeout, &mut state)
+            sys::mx_handle_wait_one(handle, signals, timeout, &mut pending)
         };
-        into_result(status, || SignalsState(state))
+        into_result(status, || pending)
     }
 }
 
@@ -184,7 +197,7 @@ pub trait HandleBase: Sized {
             Self::from_handle(handle))
     }
 
-    fn wait(&self, signals: Signals, timeout: Time) -> Result<SignalsState, Status> {
+    fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         self.get_ref().wait(signals, timeout)
     }
 
@@ -202,28 +215,20 @@ fn handle_drop(handle: sys::mx_handle_t) {
     let _ = unsafe { sys::mx_handle_close(handle) };
 }
 
-/// Wait on multiple handles. The three arrays given must all be the same size.
-/// The success return values is the index of the first handle that satisfied the
-/// wait, and a bool that is true when the handle was closed.
+/// Wait on multiple handles.
+/// The success return value is a bool indicating whether one or more of the
+/// provided handle references was closed during the wait.
 ///
 /// See: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_many.md
-pub fn handle_wait_many(handles: &[HandleRef], signals: &[Signals], timeout: Time,
-    result: &mut [SignalsState]) -> Result<(usize, bool), Status>
+pub fn handle_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, Status>
 {
-    if handles.len() != signals.len() || handles.len() != result.len() {
-        return Err(Status::InvalidArgs);
-    }
-    let len = try!(handles.len().value_into().map_err(|_| Status::OutOfRange));
-    let mut result_index = 0;
-    let status = unsafe { sys::mx_handle_wait_many(len,
-        handles.as_ptr() as *const sys::mx_handle_t,
-        signals.as_ptr() as *const sys::mx_signals_t,
-        timeout, &mut result_index,
-        result.as_mut_ptr() as *mut sys::mx_signals_state_t) };
+    let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
+    let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
+    let status = unsafe { sys::mx_handle_wait_many( items_ptr, len, timeout) };
     if status == sys::ERR_HANDLE_CLOSED {
-        return Ok((result_index as usize, true))
+        return Ok((true))
     }
-    into_result(status, || (result_index as usize, false))
+    into_result(status, || false)
 }
 
 // An untyped handle
@@ -301,8 +306,8 @@ impl Channel {
             opts: u32) -> Result<(), Status>
     {
         unsafe {
-            let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::OutOfRange));
-            let n_handles = try!(handles.len().value_into().map_err(|_| Status::OutOfRange));
+            let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
+            let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
             let status = sys::mx_channel_write(handle, opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::mx_handle_t, n_handles);
             into_result(status, || {
@@ -420,17 +425,18 @@ impl HandleBase for WaitSet {
 }
 
 impl WaitSet {
-    pub fn create() -> Result<WaitSet, Status> {
-        let status = unsafe { sys::mx_waitset_create() };
+    pub fn create(options: WaitSetOpts) -> Result<WaitSet, Status> {
+        let mut handle = 0;
+        let status = unsafe { sys::mx_waitset_create(options as u32, &mut handle) };
         into_result(status, ||
-            WaitSet::from_handle(Handle(status)))
+            WaitSet::from_handle(Handle(handle)))
     }
 
-    pub fn add<H>(&self, handle: &H, signals: Signals, cookie: u64) -> Result<(), Status>
+    pub fn add<H>(&self, handle: &H, cookie: u64, signals: Signals) -> Result<(), Status>
         where H: HandleBase
     {
         let status = unsafe {
-            sys::mx_waitset_add(self.raw_handle(), handle.raw_handle(), signals, cookie)
+            sys::mx_waitset_add(self.raw_handle(), cookie, handle.raw_handle(), signals)
         };
         into_result(status, || ())
     }
@@ -440,24 +446,23 @@ impl WaitSet {
         into_result(status, || ())
     }
 
-    // Make sure `results` has enough capacity. Return value is max number of results,
-    // possibly useful for increasing capacity.
+    // The caller must make sure `results` has enough capacity. If the length is
+    // equal to the capacity on return, that may be interpreted as a sign that
+    // the capacity should be expanded.
     pub fn wait(&self, timeout: Time, results: &mut Vec<WaitSetResult>)
-        -> Result<usize, Status>
+        -> Result<(), Status>
     {
         unsafe {
-            let mut num_results = size_to_u32_sat(results.capacity());
-            let mut max_results = 0;
+            let mut count = size_to_u32_sat(results.capacity());
             let status = sys::mx_waitset_wait(self.raw_handle(), timeout,
-                &mut num_results,
                 results.as_mut_ptr() as *mut sys::mx_waitset_result_t,
-                &mut max_results);
-            if status != sys::NO_ERR {
+                &mut count);
+            if status != sys::NO_ERROR {
                 results.clear();
                 return Err(Status::from_raw(status));
             }
-            results.set_len(num_results as usize);
-            Ok(max_results as usize)
+            results.set_len(count as usize);
+            Ok(())
         }
     }
 }
@@ -469,12 +474,12 @@ impl WaitSetResult {
         self.0.cookie
     }
 
-    pub fn wait_result(&self) -> Status {
-        Status::from_raw(self.0.wait_result)
+    pub fn status(&self) -> Status {
+        Status::from_raw(self.0.status)
     }
 
-    pub fn signals_state(&self) -> SignalsState {
-        SignalsState(self.0.signals_state)
+    pub fn observed(&self) -> Signals {
+        self.0.observed
     }
 }
 
@@ -493,33 +498,28 @@ impl HandleBase for Vmo {
 }
 
 impl Vmo {
-    pub fn create(size: u64) -> Result<Vmo, Status> {
-        let status = unsafe { sys::mx_vmo_create(size) };
+    pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
+        let mut handle = 0;
+        let status = unsafe { sys::mx_vmo_create(size, options as u32, &mut handle) };
         into_result(status, ||
-            Vmo::from_handle(Handle(status)))
+            Vmo::from_handle(Handle(handle)))
     }
 
     pub fn read(&self, data: &mut [u8], offset: u64) -> Result<usize, Status> {
         unsafe {
-            let ssize = sys::mx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
-                offset, data.len());
-            if ssize < 0 {
-                Err(Status::from_raw(ssize as sys::mx_status_t))
-            } else {
-                Ok(ssize as usize)
-            }
+            let mut actual = 0;
+            let status = sys::mx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
+                offset, data.len(), &mut actual);
+            into_result(status, || actual)
         }
     }
 
     pub fn write(&self, data: &[u8], offset: u64) -> Result<usize, Status> {
         unsafe {
-            let ssize = sys::mx_vmo_write(self.raw_handle(), data.as_ptr(),
-                offset, data.len());
-            if ssize < 0 {
-                Err(Status::from_raw(ssize as sys::mx_status_t))
-            } else {
-                Ok(ssize as usize)
-            }
+            let mut actual = 0;
+            let status = sys::mx_vmo_write(self.raw_handle(), data.as_ptr(),
+                offset, data.len(), &mut actual);
+            into_result(status, || actual)
         }
     }
 
@@ -558,14 +558,14 @@ mod tests {
     #[test]
     fn vmo_size() {
         let size = 16 * 1024 * 1024;
-        let vmo = Vmo::create(size).unwrap();
+        let vmo = Vmo::create(size, VmoOpts::Default).unwrap();
         assert_eq!(size as u64, vmo.get_size().unwrap());
     }
 
     #[test]
     fn vmo_read_write() {
         let mut vec1 = vec![0; 16];
-        let vmo = Vmo::create(vec1.len() as u64).unwrap();
+        let vmo = Vmo::create(vec1.len() as u64, VmoOpts::Default).unwrap();
         vmo.write(b"abcdef", 0).unwrap();
         assert_eq!(16, vmo.read(&mut vec1, 0).unwrap());
         assert_eq!(b"abcdef", &vec1[0..6]);
