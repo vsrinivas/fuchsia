@@ -10,6 +10,14 @@
     ],
     "resources": [
         {
+            "bootfs_path": "data/fonts/manifest.json",
+            "file": "apps/fonts/manifest.json"
+        },
+        {
+            "bootfs_path": "data/fonts/MaterialIcons-Regular.ttf",
+            "file": "apps/fonts/third_party/material/MaterialIcons-Regular.ttf"
+        },
+        {
             "bootfs_path": "data/fonts/Roboto-Regular.ttf",
             "file": "apps/fonts/third_party/roboto/Roboto-Regular.ttf"
         }
