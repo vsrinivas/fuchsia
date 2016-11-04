@@ -99,27 +99,49 @@ bool Connector::Accept(Message* message) {
 }
 
 // static
-void Connector::CallOnHandleReady(mx_status_t result, void* closure) {
+void Connector::CallOnHandleReady(mx_status_t result,
+                                  mx_signals_t pending,
+                                  void* closure) {
   Connector* self = static_cast<Connector*>(closure);
-  self->OnHandleReady(result);
+  self->OnHandleReady(result, pending);
 }
 
-void Connector::OnHandleReady(mx_status_t result) {
+void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
   FTL_CHECK(async_wait_id_ != 0);
   async_wait_id_ = 0;
   if (result != NO_ERROR) {
     NotifyError();
     return;
   }
-  ReadAllAvailableMessages();
-  // At this point, this object might have been deleted. Return.
+  FTL_DCHECK(!error_);
+
+  if (pending & MX_SIGNAL_READABLE) {
+    // If the channel is readable, we drain one message out of the channel and
+    // then return to the event loop to avoid starvation.
+
+    // Return immediately if |this| was destroyed. Do not touch any members!
+    mx_status_t rv;
+    if (!ReadSingleMessage(&rv))
+      return;
+
+    // If we get ERR_REMOTE_CLOSED (or another error), we'll already have
+    // notified the error and likely been destroyed.
+    FTL_DCHECK(rv == NO_ERROR || rv == ERR_SHOULD_WAIT);
+    WaitToReadMore();
+
+  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+    // Notice that we don't notify an error until we've drained all the messages
+    // out of the channel.
+    NotifyError();
+    // We're likely to be destroyed at this point.
+  }
 }
 
 void Connector::WaitToReadMore() {
   FTL_CHECK(!async_wait_id_);
-  async_wait_id_ =
-      waiter_->AsyncWait(message_pipe_.get(), MX_SIGNAL_READABLE,
-                         MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
+  async_wait_id_ = waiter_->AsyncWait(
+      message_pipe_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
 }
 
 bool Connector::ReadSingleMessage(mx_status_t* read_result) {
@@ -152,21 +174,6 @@ bool Connector::ReadSingleMessage(mx_status_t* read_result) {
     return false;
   }
   return true;
-}
-
-void Connector::ReadAllAvailableMessages() {
-  while (!error_) {
-    mx_status_t rv;
-
-    // Return immediately if |this| was destroyed. Do not touch any members!
-    if (!ReadSingleMessage(&rv))
-      return;
-
-    if (rv == ERR_SHOULD_WAIT) {
-      WaitToReadMore();
-      break;
-    }
-  }
 }
 
 void Connector::CancelWait() {

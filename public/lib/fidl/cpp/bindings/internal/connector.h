@@ -82,16 +82,15 @@ class Connector : public MessageReceiver {
   mx_handle_t handle() const { return message_pipe_.get(); }
 
  private:
-  static void CallOnHandleReady(mx_status_t result, void* closure);
-  void OnHandleReady(mx_status_t result);
+  static void CallOnHandleReady(mx_status_t result,
+                                mx_signals_t pending,
+                                void* closure);
+  void OnHandleReady(mx_status_t result, mx_signals_t pending);
 
   void WaitToReadMore();
 
   // Returns false if |this| was destroyed during message dispatch.
   FTL_WARN_UNUSED_RESULT bool ReadSingleMessage(mx_status_t* read_result);
-
-  // |this| can be destroyed during message dispatch.
-  void ReadAllAvailableMessages();
 
   void NotifyError();
 

@@ -46,21 +46,31 @@ bool SynchronousConnector::BlockingRead(Message* received_msg) {
   FTL_DCHECK(handle_);
   FTL_DCHECK(received_msg);
 
-  mx_status_t rv =
-      handle_.wait_one(MX_SIGNAL_READABLE, MX_TIME_INFINITE, nullptr);
+  mx_signals_t pending;
+  mx_status_t rv = handle_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                    MX_TIME_INFINITE, &pending);
 
   if (rv != NO_ERROR) {
     FTL_LOG(WARNING) << "Failed waiting for a response. error = " << rv;
     return false;
   }
 
-  rv = ReadMessage(handle_, received_msg);
-  if (rv != NO_ERROR) {
-    FTL_LOG(WARNING) << "Failed reading the response message. error = " << rv;
+  if (pending & MX_SIGNAL_READABLE) {
+    rv = ReadMessage(handle_, received_msg);
+    if (rv != NO_ERROR) {
+      FTL_LOG(WARNING) << "Failed reading the response message. error = " << rv;
+      return false;
+    }
+    return true;
+  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+    // There aren't any more messages to read out of the channel and the peer is
+    // closed.
     return false;
   }
 
-  return true;
+  FTL_NOTREACHED()
+      << "Failed to receive one of the expected signals. pending = " << pending;
+  return false;
 }
 
 }  // namespace internal

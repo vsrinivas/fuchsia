@@ -12,7 +12,9 @@ typedef uint64_t FidlAsyncWaitID;
 static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
               "uintptr_t larger than uint64_t!");
 
-typedef void (*FidlAsyncWaitCallback)(mx_status_t result, void* closure);
+typedef void (*FidlAsyncWaitCallback)(mx_status_t result,
+                                      mx_signals_t pending,
+                                      void* closure);
 
 // Functions for asynchronously waiting (and cancelling asynchronous waits) on a
 // handle.
