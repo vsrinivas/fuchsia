@@ -188,6 +188,17 @@ static int do_list_device(int fd, bool verbose, const char* devname, int depth, 
                 printf("          bDescriptorType         %d\n", desc->bDescriptorType);
                 printf("          wReserved               %d\n", le16toh(desc->wReserved));
                 printf("          wBytesPerInterval       %d\n", le16toh(desc->wBytesPerInterval));
+            } else if (header->bDescriptorType == USB_DT_INTERFACE_ASSOCIATION) {
+                usb_interface_assoc_descriptor_t* desc = (usb_interface_assoc_descriptor_t *)header;
+                printf("    Interface Association Descriptor:\n");
+                printf("      bLength                     %d\n", desc->bLength);
+                printf("      bDescriptorType             %d\n", desc->bDescriptorType);
+                printf("      bFirstInterface             %d\n", desc->bFirstInterface);
+                printf("      bInterfaceCount             %d\n", desc->bInterfaceCount);
+                printf("      bFunctionClass              %d\n", desc->bFunctionClass);
+                printf("      bFunctionSubClass           %d\n", desc->bFunctionSubClass);
+                printf("      bFunctionProtocol           %d\n", desc->bFunctionProtocol);
+                printf("      iFunction                   %d\n", desc->iFunction);
             } else {
                 // FIXME - support other descriptor types
                 printf("      Unknown Descriptor:\n");
