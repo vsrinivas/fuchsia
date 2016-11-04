@@ -78,7 +78,7 @@ mx_status_t ReadMessage(const mx::channel& handle, Message* message) {
   uint32_t num_handles = 0;
   mx_status_t rv =
       handle.read(0, nullptr, 0, &num_bytes, nullptr, 0, &num_handles);
-  if (rv != ERR_NO_MEMORY)
+  if (rv != ERR_BUFFER_TOO_SMALL)
     return rv;
 
   message->AllocUninitializedData(num_bytes);
