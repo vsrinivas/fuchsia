@@ -5,6 +5,9 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_WATCHER_H_
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_WATCHER_H_
 
+#include "apps/ledger/src/storage/public/commit.h"
+#include "apps/ledger/src/storage/public/types.h"
+
 namespace storage {
 
 class CommitWatcher {

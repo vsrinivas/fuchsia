@@ -38,8 +38,6 @@ class PageImplTest : public ::testing::Test {
     fake_storage_ = fake_storage.get();
 
     manager_.reset(new PageManager(std::move(fake_storage), [] {}));
-    binding_.reset(
-        new fidl::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
     manager_->BindPage(GetProxy(&page_ptr_));
   }
 
@@ -54,9 +52,6 @@ class PageImplTest : public ::testing::Test {
   storage::ObjectId AddObjectToStorage(const std::string& value_string);
 
  private:
-  std::unique_ptr<PageImpl> page_impl_;
-  std::unique_ptr<fidl::Binding<Page>> binding_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
 
@@ -616,5 +611,74 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
   EXPECT_TRUE(mtl::StringFromVmo(buffer, &content));
   EXPECT_EQ("small", content);
 }
+
+TEST_F(PageImplTest, ParallelPut) {
+  PagePtr page_ptr2;
+  manager_->BindPage(GetProxy(&page_ptr2));
+
+  std::string key("some_key");
+  std::string value1("a small value");
+  std::string value2("another value");
+
+  PageSnapshotPtr snapshot1;
+  PageSnapshotPtr snapshot2;
+
+  auto callback_simple = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->StartTransaction(callback_simple);
+  message_loop_.Run();
+
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value1),
+                 callback_simple);
+  message_loop_.Run();
+
+  page_ptr2->StartTransaction(callback_simple);
+  message_loop_.Run();
+
+  page_ptr2->Put(convert::ToArray(key), convert::ToArray(value2),
+                 callback_simple);
+  message_loop_.Run();
+
+  page_ptr_->Commit(callback_simple);
+  message_loop_.Run();
+  page_ptr2->Commit(callback_simple);
+  message_loop_.Run();
+
+  auto callback_getsnapshot = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  };
+  page_ptr_->GetSnapshot(GetProxy(&snapshot1), callback_getsnapshot);
+  message_loop_.Run();
+  page_ptr2->GetSnapshot(GetProxy(&snapshot2), callback_getsnapshot);
+  message_loop_.Run();
+
+  std::string actual_value1;
+  auto callback_getvalue1 = [this, &actual_value1](Status status,
+                                                   ValuePtr returned_value) {
+    EXPECT_EQ(Status::OK, status);
+    actual_value1 = convert::ToString(returned_value->get_bytes());
+    message_loop_.QuitNow();
+  };
+  snapshot1->Get(convert::ToArray(key), callback_getvalue1);
+  message_loop_.Run();
+
+  std::string actual_value2;
+  auto callback_getvalue2 = [this, &actual_value2](Status status,
+                                                   ValuePtr returned_value) {
+    EXPECT_EQ(Status::OK, status);
+    actual_value2 = convert::ToString(returned_value->get_bytes());
+    message_loop_.QuitNow();
+  };
+  snapshot2->Get(convert::ToArray(key), callback_getvalue2);
+  message_loop_.Run();
+
+  // The two snapshots should have different contents.
+  EXPECT_EQ(value1, actual_value1);
+  EXPECT_EQ(value2, actual_value2);
+}
+
 }  // namespace
 }  // namespace ledger

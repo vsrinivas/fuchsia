@@ -6,9 +6,43 @@
 
 #include <algorithm>
 
+#include "apps/ledger/src/app/branch_tracker.h"
 #include "lib/ftl/logging.h"
 
 namespace ledger {
+// Holds a page and its watchers. A page and its watchers are tracking the same
+// branch of the commit tree.
+class PageManager::PageHolder {
+ public:
+  PageHolder(PageManager* manager,
+             storage::PageStorage* storage,
+             fidl::InterfaceRequest<Page> request,
+             std::function<void(PageHolder*)> on_empty_callback)
+      : tracker_(storage),
+        interface_(
+            std::make_unique<BoundInterface<Page, PageImpl>>(std::move(request),
+                                                             manager,
+                                                             storage,
+                                                             &tracker_)),
+        on_empty_callback_(on_empty_callback) {
+    // Remove the binding and delete the impl on connection error.
+    interface_->binding.set_connection_error_handler([this] {
+      FTL_DCHECK(interface_);
+      interface_.reset();
+
+      if (watchers_.empty()) {
+        on_empty_callback_(this);
+      }
+    });
+  }
+
+ private:
+  BranchTracker tracker_;
+  std::unique_ptr<BoundInterface<Page, PageImpl>> interface_;
+  std::vector<PageWatcherPtr> watchers_;
+
+  std::function<void(PageHolder*)> on_empty_callback_;
+};
 
 PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
                          ftl::Closure on_empty_callback)
@@ -18,23 +52,21 @@ PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
 PageManager::~PageManager() {}
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
-  pages_.push_back(std::make_unique<BoundInterface<Page, PageImpl>>(
-      std::move(page_request), this, page_storage_.get()));
-  auto* binding = &pages_.back()->binding;
-  // Remove the binding and delete the impl on connection error.
-  binding->set_connection_error_handler([this, binding] {
-    auto it = std::find_if(
-        pages_.begin(), pages_.end(),
-        [binding](const std::unique_ptr<BoundInterface<Page, PageImpl>>& page) {
-          return (&page->binding == binding);
-        });
-    FTL_DCHECK(it != pages_.end());
-    pages_.erase(it);
+  pages_.push_back(std::make_unique<PageHolder>(
+      this, page_storage_.get(), std::move(page_request),
+      [this](PageHolder* holder) {
+        auto it = std::find_if(
+            pages_.begin(), pages_.end(),
+            [holder](const std::unique_ptr<PageHolder>& page_holder) {
+              return (page_holder.get() == holder);
+            });
+        FTL_DCHECK(it != pages_.end());
+        pages_.erase(it);
 
-    if (pages_.empty() && snapshots_.empty()) {
-      on_empty_callback_();
-    }
-  });
+        if (pages_.empty() && snapshots_.empty()) {
+          on_empty_callback_();
+        }
+      }));
 }
 
 void PageManager::BindPageSnapshot(

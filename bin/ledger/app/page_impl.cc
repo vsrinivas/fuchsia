@@ -19,23 +19,12 @@
 
 namespace ledger {
 
-PageImpl::PageImpl(PageManager* manager, storage::PageStorage* storage)
-    : manager_(manager), storage_(storage) {}
+PageImpl::PageImpl(PageManager* manager,
+                   storage::PageStorage* storage,
+                   BranchTracker* branch_tracker)
+    : manager_(manager), storage_(storage), branch_tracker_(branch_tracker) {}
 
 PageImpl::~PageImpl() {}
-
-storage::CommitId PageImpl::GetLocalBranchHeadCommit() {
-  std::vector<storage::CommitId> commit_ids;
-  // TODO(etiennej): Fail more nicely.
-  FTL_CHECK(storage_->GetHeadCommitIds(&commit_ids) == storage::Status::OK);
-  FTL_DCHECK(commit_ids.size() > 0);
-  if (commit_ids.size() == 1) {
-    return commit_ids[0];
-  }
-  // TODO(etiennej): Make sure we stay on the same branch. We can do it
-  // inefficiently here, or maybe storage can keep some additional data for us?
-  return commit_ids[0];
-}
 
 // GetId() => (array<uint8> id);
 void PageImpl::GetId(const GetIdCallback& callback) {
@@ -49,7 +38,7 @@ void PageImpl::GetSnapshot(
   // TODO(etiennej): Commit implicit transactions when we have those.
   storage::CommitId commit_id;
   if (!journal_) {
-    commit_id = GetLocalBranchHeadCommit();
+    commit_id = branch_tracker_->GetBranchHeadId();
   } else {
     commit_id = journal_parent_commit_;
   }
@@ -83,7 +72,7 @@ void PageImpl::RunInTransaction(
   // TODO(etiennej): Add a change batching strategy for operations outside
   // transactions. Currently, we create a commit for every change; we would
   // like to group changes that happen "close enough" together in one commit.
-  storage::CommitId commit_id = GetLocalBranchHeadCommit();
+  storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
   std::unique_ptr<storage::Journal> journal;
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::IMPLICIT, &journal);
@@ -114,6 +103,9 @@ void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
         [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
           return journal_ptr == journal.get();
         }));
+    if (status == storage::Status::OK) {
+      branch_tracker_->SetBranchHead(commit_id);
+    }
     callback(PageUtils::ConvertStatus(status));
   });
 }
@@ -228,7 +220,7 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
     callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
     return;
   }
-  storage::CommitId commit_id = GetLocalBranchHeadCommit();
+  storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::EXPLICIT, &journal_);
   journal_parent_commit_ = commit_id;

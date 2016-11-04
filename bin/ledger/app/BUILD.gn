@@ -16,6 +16,8 @@ source_set("lib") {
   sources = [
     "constants.cc",
     "constants.h",
+    "branch_tracker.h",
+    "branch_tracker.cc",
     "ledger_factory_impl.cc",
     "ledger_factory_impl.h",
     "ledger_impl.cc",

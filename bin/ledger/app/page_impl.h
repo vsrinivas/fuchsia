@@ -9,6 +9,7 @@
 #include <string>
 
 #include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -22,15 +23,12 @@ class PageManager;
 // An implementation of the |Page| interface.
 class PageImpl : public Page {
  public:
-  PageImpl(PageManager* manager, storage::PageStorage* storage);
+  PageImpl(PageManager* manager,
+           storage::PageStorage* storage,
+           BranchTracker* branch_tracker);
   ~PageImpl() override;
 
  private:
-  // Returns the current page head commit. If the page has multiple head
-  // commits, returns the head ahead of the last locally created or presented
-  // commit. If multiple heads match this criteria, returns one arbitrarily.
-  storage::CommitId GetLocalBranchHeadCommit();
-
   void PutInCommit(convert::ExtendedStringView key,
                    storage::ObjectIdView value,
                    storage::KeyPriority priority,
@@ -93,6 +91,7 @@ class PageImpl : public Page {
 
   PageManager* manager_;
   storage::PageStorage* storage_;
+  BranchTracker* branch_tracker_;
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;
   std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;

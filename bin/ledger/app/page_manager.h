@@ -57,12 +57,13 @@ class PageManager {
                         fidl::InterfaceRequest<PageSnapshot> snapshot_request);
 
  private:
+  class PageHolder;
   std::unique_ptr<storage::PageStorage> page_storage_;
 
   // TODO(ppi): switch to something like a (Strong)BindingSet when they grow
   // facilities to notify the client when the bindings shut down, so that we can
   // implement |on_empty_callback|.
-  std::vector<std::unique_ptr<BoundInterface<Page, PageImpl>>> pages_;
+  std::vector<std::unique_ptr<PageHolder>> pages_;
   std::vector<std::unique_ptr<BoundInterface<PageSnapshot, PageSnapshotImpl>>>
       snapshots_;
 
