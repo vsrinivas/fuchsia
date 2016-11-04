@@ -24,7 +24,15 @@ Packet::Packet(int64_t pts,
 }
 
 int64_t Packet::GetPts(TimelineRate pts_rate) {
-  return (pts_rate == pts_rate_) ? pts() : (pts() * (pts_rate / pts_rate_));
+  // We're asking for an inexact product here, because, in some cases,
+  // pts_rate / pts_rate_ can't be represented exactly as a TimelineRate.
+  // Using this approach produces small errors in the resulting pts in those
+  // cases.
+  // TODO(dalesat): Do the 128-bit calculation required to do this exactly.
+  return (pts_rate == pts_rate_)
+             ? pts()
+             : (pts() *
+                TimelineRate::Product(pts_rate, pts_rate_.Inverse(), false));
 }
 
 void Packet::SetPtsRate(TimelineRate pts_rate) {

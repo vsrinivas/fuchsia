@@ -266,7 +266,13 @@ void MediaPacketConsumerBase::SetPacketPtsRate(const MediaPacketPtr& packet) {
   TimelineRate original_rate(packet->pts_rate_ticks, packet->pts_rate_seconds);
 
   if (original_rate != pts_rate_) {
-    packet->pts = packet->pts * (pts_rate_ / original_rate);
+    // We're asking for an inexact product here, because, in some cases,
+    // pts_rate_ / original_rate can't be represented exactly as a TimelineRate.
+    // Using this approach produces small errors in the resulting pts in those
+    // cases.
+    // TODO(dalesat): Do the 128-bit calculation required to do this exactly.
+    packet->pts = packet->pts * TimelineRate::Product(
+                                    pts_rate_, original_rate.Inverse(), false);
     packet->pts_rate_ticks = pts_rate_.subject_delta();
     packet->pts_rate_seconds = pts_rate_.reference_delta();
   }
