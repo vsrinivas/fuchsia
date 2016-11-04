@@ -7,7 +7,7 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-magenta_build_dir=$fuchsia_root/magenta/build-magenta-pc-x86-64
+magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
 sysroot_path=$fuchsia_root/out/sysroot
 bootfs_output_dir=$fuchsia_root/out/Debug
 build_dir=$1
