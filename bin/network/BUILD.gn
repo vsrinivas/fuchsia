@@ -50,6 +50,7 @@ source_set("sources") {
 
   deps = [
     "//apps/network/interfaces",
+    "//apps/network/services",
     "//lib/ftl",
     "//third_party/boringssl:boringssl",
     "//mojo/public/cpp/application",

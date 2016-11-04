@@ -1,0 +1,18 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//lib/fidl/fidl.gni")
+
+fidl("services") {
+  sources = [
+    "http_header.fidl",
+    "net_address.fidl",
+    "network_error.fidl",
+    "network_service.fidl",
+    "url_body.fidl",
+    "url_loader.fidl",
+    "url_request.fidl",
+    "url_response.fidl",
+  ]
+}
