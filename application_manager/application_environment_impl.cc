@@ -24,9 +24,9 @@ mx::process CreateProcess(
     fidl::InterfaceHandle<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services) {
   std::string path = GetPathFromURL(url);
-  if (path.empty()) {
+  if (path.empty())
     return mx::process();
-  }
+
   const char* path_arg = path.c_str();
 
   mx_handle_t handles[kSubprocessHandleCount]{
@@ -38,12 +38,19 @@ mx::process CreateProcess(
       MX_HND_TYPE_INCOMING_SERVICES, MX_HND_TYPE_OUTGOING_SERVICES,
   };
 
+  size_t count = 0;
+  while (count < kSubprocessHandleCount) {
+    if (handles[count] == MX_HANDLE_INVALID)
+      break;
+    ++count;
+  }
+
   // TODO(abarth): We shouldn't pass stdin, stdout, stderr, or the file system
   // when launching Mojo applications. We probably shouldn't pass environ, but
   // currently this is very useful as a way to tell the loader in the child
   // process to print out load addresses so we can understand crashes.
-  mx_handle_t result = launchpad_launch_mxio_etc(
-      path_arg, 1, &path_arg, environ, kSubprocessHandleCount, handles, ids);
+  mx_handle_t result = launchpad_launch_mxio_etc(path_arg, 1, &path_arg,
+                                                 environ, count, handles, ids);
 
   return result < 0 ? mx::process() : mx::process(result);
 }
