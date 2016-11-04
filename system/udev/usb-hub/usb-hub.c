@@ -189,10 +189,15 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, usb_port_status
             status->wPortStatus, status->wPortChange);
 
     if (status->wPortChange & USB_PORT_CONNECTION) {
+        // Handle race condition where device is quickly disconnected and reconnected.
+        // This happens when Android devices switch USB configurations.
+        // In this case, any change to the connect state should trigger a disconnect
+        // before handling a connect event.
+        if (usb_hub_is_port_enabled(hub, port)) {
+            usb_hub_port_disconnected(hub, port);
+        }
         if (status->wPortStatus & USB_PORT_CONNECTION) {
             usb_hub_port_connected(hub, port);
-        } else {
-            usb_hub_port_disconnected(hub, port);
         }
     } else if (status->wPortChange & USB_PORT_ENABLE) {
         if (status->wPortStatus & USB_PORT_ENABLE) {
