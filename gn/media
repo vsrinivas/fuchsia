@@ -38,10 +38,6 @@
         {
             "binary": "media_util_apptests",
             "bootfs_path": "apps/media_util_apptests"
-        },
-        {
-            "binary": "video_player",
-            "bootfs_path": "apps/video_player"
         }
     ]
 }
