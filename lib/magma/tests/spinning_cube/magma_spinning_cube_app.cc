@@ -261,7 +261,8 @@ bool MagmaSpinningCubeApp::Draw(float time_delta_s)
     cube_->Draw();
     glFlush();
 
-    magma_system_display_page_flip(magma_display_, fb_[curr_buf_].fb_handle, &pageflip_callback,
+    uint32_t prev_buf = (curr_buf_ + (bufcount_ - 1)) % bufcount_;
+    magma_system_display_page_flip(magma_display_, fb_[prev_buf].fb_handle, &pageflip_callback,
                                    cube_);
 
     curr_buf_ = (curr_buf_ + 1) % bufcount_;
