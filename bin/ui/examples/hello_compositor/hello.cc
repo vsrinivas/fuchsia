@@ -4,35 +4,33 @@
 
 #include <algorithm>
 #include <string>
+#include <memory>
 #include <utility>
 
-#include <mojo/system/main.h>
-
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
-namespace {
+namespace examples {
 
 constexpr uint32_t kSceneVersion = 1u;
 constexpr uint32_t kContentImageResourceId = 1u;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
-class HelloApp : public mojo::ApplicationImplBase {
+class HelloApp {
  public:
-  HelloApp() {}
-  ~HelloApp() override {}
-
-  void OnInitialize() override {
-    mojo::ConnectToService(shell(), "mojo:compositor_service",
-                           GetProxy(&compositor_));
+  HelloApp()
+      : application_context_(
+            modular::ApplicationContext::CreateFromStartupInfo()) {
+    compositor_ =
+        application_context_->ConnectToEnvironmentService<mozart::Compositor>();
     compositor_->CreateRenderer(GetProxy(&renderer_),
                                 "Hello Compositor Renderer");
 
@@ -42,7 +40,7 @@ class HelloApp : public mojo::ApplicationImplBase {
 
       compositor_->CreateScene(GetProxy(&scene_), "Hello Compositor Scene",
                                [this](mozart::SceneTokenPtr scene_token) {
-                                 auto viewport = mojo::Rect::New();
+                                 auto viewport = mozart::Rect::New();
                                  viewport->width = display_info_->size->width;
                                  viewport->height = display_info_->size->height;
                                  renderer_->SetRootScene(std::move(scene_token),
@@ -50,7 +48,7 @@ class HelloApp : public mojo::ApplicationImplBase {
                                                          std::move(viewport));
                                });
 
-      scene_->GetScheduler(mojo::GetProxy(&frame_scheduler_));
+      scene_->GetScheduler(fidl::GetProxy(&frame_scheduler_));
       ScheduleDraw();
     });
   }
@@ -67,7 +65,7 @@ class HelloApp : public mojo::ApplicationImplBase {
     FTL_DCHECK(scene_);
 
     // Animate the position of the circle.
-    const mojo::Size& size = *display_info_->size;
+    const mozart::Size& size = *display_info_->size;
     x_ += 40.0f * frame_tracker_.presentation_time_delta().ToSecondsF();
     y_ += 40.0f * frame_tracker_.presentation_time_delta().ToSecondsF();
     if (x_ >= size.width)
@@ -90,23 +88,24 @@ class HelloApp : public mojo::ApplicationImplBase {
 
     // Update the scene contents.
     auto update = mozart::SceneUpdate::New();
-    mojo::RectF bounds;
+    mozart::RectF bounds;
     bounds.width = size.width;
     bounds.height = size.height;
 
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
     content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId, content_resource.Pass());
+    update->resources.insert(kContentImageResourceId,
+                             std::move(content_resource));
 
     auto root_node = mozart::Node::New();
     root_node->op = mozart::NodeOp::New();
     root_node->op->set_image(mozart::ImageNodeOp::New());
     root_node->op->get_image()->content_rect = bounds.Clone();
     root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-    update->nodes.insert(kRootNodeId, root_node.Pass());
+    update->nodes.insert(kRootNodeId, std::move(root_node));
 
-    scene_->Update(update.Pass());
+    scene_->Update(std::move(update));
 
     // Publish the updated scene contents.
     auto metadata = mozart::SceneMetadata::New();
@@ -119,10 +118,11 @@ class HelloApp : public mojo::ApplicationImplBase {
   }
 
  private:
-  mozart::DisplayInfoPtr display_info_;
+  std::unique_ptr<modular::ApplicationContext> application_context_;
 
   mozart::CompositorPtr compositor_;
   mozart::RendererPtr renderer_;
+  mozart::DisplayInfoPtr display_info_;
   mozart::ScenePtr scene_;
   mozart::FrameSchedulerPtr frame_scheduler_;
   mozart::FrameTracker frame_tracker_;
@@ -133,9 +133,15 @@ class HelloApp : public mojo::ApplicationImplBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(HelloApp);
 };
 
-}  // namespace
+}  // namespace examples
 
-MojoResult MojoMain(MojoHandle request) {
-  HelloApp app;
-  return mojo::RunApplication(request, &app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  std::unique_ptr<examples::HelloApp> app;
+  loop.task_runner()->PostTask(
+      [&app] { app = std::make_unique<examples::HelloApp>(); });
+
+  loop.Run();
+  return 0;
 }
