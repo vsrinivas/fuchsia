@@ -13,7 +13,7 @@
 namespace fonts {
 namespace {
 
-constexpr char kRobotoPath[] = "/boot/data/fonts/Roboto-Regular.ttf";
+constexpr char kRobotoPath[] = "/system/data/fonts/Roboto-Regular.ttf";
 constexpr mx_rights_t kFontDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
 
