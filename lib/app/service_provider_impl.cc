@@ -8,25 +8,23 @@
 
 namespace modular {
 
-ServiceProviderImpl::ServiceProviderImpl() : binding_(this) {}
+ServiceProviderImpl::ServiceProviderImpl() {}
 
 ServiceProviderImpl::ServiceProviderImpl(
-    fidl::InterfaceRequest<ServiceProvider> request)
-    : binding_(this) {
-  if (request.is_pending())
-    Bind(std::move(request));
+    fidl::InterfaceRequest<ServiceProvider> request) {
+  AddBinding(std::move(request));
 }
 
 ServiceProviderImpl::~ServiceProviderImpl() = default;
 
-void ServiceProviderImpl::Bind(
+void ServiceProviderImpl::AddBinding(
     fidl::InterfaceRequest<ServiceProvider> request) {
-  binding_.Bind(std::move(request));
+  if (request)
+    bindings_.AddBinding(this, std::move(request));
 }
 
 void ServiceProviderImpl::Close() {
-  if (binding_.is_bound())
-    binding_.Close();
+  bindings_.CloseAllBindings();
 }
 
 void ServiceProviderImpl::AddServiceForName(ServiceConnector connector,

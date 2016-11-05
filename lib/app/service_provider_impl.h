@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -47,8 +47,9 @@ class ServiceProviderImpl : public ServiceProvider {
   ~ServiceProviderImpl() override;
 
   // Binds this service provider implementation to the given interface request.
-  // This may only be called if this object is unbound.
-  void Bind(fidl::InterfaceRequest<ServiceProvider> request);
+  // Multiple bindings may be added.  They are automatically removed when closed
+  // remotely.
+  void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -98,7 +99,7 @@ class ServiceProviderImpl : public ServiceProvider {
   void ConnectToService(const fidl::String& service_name,
                         mx::channel client_handle) override;
 
-  fidl::Binding<ServiceProvider> binding_;
+  fidl::BindingSet<ServiceProvider> bindings_;
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
