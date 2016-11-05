@@ -75,7 +75,7 @@ public:
     {
         auto iter = buffer_map_.find(buffer_id);
         if (iter == buffer_map_.end())
-            return DRETP(nullptr, "attempting to lookup invalid buffer handle");
+            return nullptr;
         return iter->second.get();
     }
 
