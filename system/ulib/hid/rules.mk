@@ -13,7 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hid.c \
     $(LOCAL_DIR)/keymaps.c \
 
-MODULE_EXPORT := hid
+MODULE_EXPORT := so
 MODULE_SO_NAME := hid
 
 MODULE_LIBS := \

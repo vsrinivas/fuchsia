@@ -56,6 +56,12 @@ MODULE_SHORTNAME = $(call modname-make-short,$(MODULE))
 
 MODULE_BUILDDIR := $(call TOBUILDDIR,$(MODULE_SHORTNAME))
 
+# MODULE_NAME is used to generate installed names
+# it defaults to being derived from the MODULE directory
+ifeq ($(MODULE_NAME),)
+MODULE_NAME := $(basename $(notdir $(MODULE)))
+endif
+
 #$(info module $(MODULE))
 #$(info MODULE_SRCDIR $(MODULE_SRCDIR))
 #$(info MODULE_BUILDDIR $(MODULE_BUILDDIR))

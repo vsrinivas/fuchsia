@@ -121,27 +121,33 @@ endif
 
 # if the SYSROOT build feature is enabled, we will package
 # up exported libraries, their headers, etc
+#
+# MODULE_EXPORT may contain "a" to export the static library
+# MODULE_EXPORT may contain "so" to export the shared library
 ifeq ($(ENABLE_BUILD_SYSROOT),true)
 ifeq ($(MODULE_TYPE),userlib)
 
+ifneq ($(filter so,$(MODULE_EXPORT)),)
 ifneq ($(MODULE_SO_NAME),)
+$(info EXPORT $(MODULE) shared)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
 endif
+endif
 
-ifneq ($(MODULE_EXPORT),)
-ifneq ($(MODULE_EXPORT),system)
-TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_EXPORT).a
+ifneq ($(filter a,$(MODULE_EXPORT)),)
+$(info EXPORT $(MODULE) static)
+TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
 endif
-endif
 
 # only install headers for exported libraries
-ifneq ($(MODULE_EXPORT)$(MODULE_SO_NAME),)
+ifneq ($(MODULE_EXPORT),)
+$(info EXPORT $(MODULE) include)
 # for now, unify all headers in one pile
 # TODO: ddk, etc should be packaged separately
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include

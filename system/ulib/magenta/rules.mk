@@ -28,6 +28,7 @@ endif
 
 # This gets an ABI stub installed in sysroots, but the DSO never gets
 # installed on disk because it's delivered magically by the kernel.
+MODULE_EXPORT := so
 MODULE_SO_NAME := magenta
 MODULE_SO_INSTALL_NAME := -
 

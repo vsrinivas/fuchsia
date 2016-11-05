@@ -25,7 +25,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
 
-MODULE_EXPORT := mxio
+MODULE_EXPORT := so
 
 MODULE_SO_NAME := mxio
 MODULE_LIBS := ulib/magenta ulib/musl

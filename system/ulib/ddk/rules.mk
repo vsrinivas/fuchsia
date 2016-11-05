@@ -19,6 +19,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := ulib/hexdump
 
-MODULE_EXPORT := ddk
+MODULE_EXPORT := a
 
 include make/module.mk

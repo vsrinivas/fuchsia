@@ -5,9 +5,6 @@
 # all drivers have a so name so they get installed
 
 ifeq ($(MODULE_SO_NAME),)
-ifeq ($(MODULE_NAME),)
-MODULE_NAME := $(basename $(notdir $(MODULE)))
-endif
 MODULE_SO_NAME := $(MODULE_NAME)
 endif
 

@@ -11,7 +11,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/rle-bitmap.cpp
 
-MODULE_EXPORT := bitmap
 MODULE_SO_NAME := bitmap
 
 MODULE_LIBS := \

@@ -8,7 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_EXPORT := mxtl
 MODULE_SO_NAME := mxtl
 
 MODULE_SRCS += \

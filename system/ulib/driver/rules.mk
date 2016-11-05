@@ -10,6 +10,7 @@ MODULE_NAME := driver
 
 MODULE_TYPE := userlib
 
+MODULE_EXPORT := so
 MODULE_SO_NAME := driver
 
 MODULE_COMPILEFLAGS := -fvisibility=hidden

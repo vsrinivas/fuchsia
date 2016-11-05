@@ -18,11 +18,6 @@ endif
 $(foreach d,$(MODULE_LIBS),$(call modname-require-short,$(d)))
 $(foreach d,$(MODULE_STATIC_LIBS),$(call modname-require-short,$(d)))
 
-# track the requested install name of the module
-ifeq ($(MODULE_NAME),)
-MODULE_NAME := $(basename $(notdir $(MODULE)))
-endif
-
 MODULE_USERAPP_OBJECT := $(patsubst %.mod.o,%.elf,$(MODULE_OBJECT))
 ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)

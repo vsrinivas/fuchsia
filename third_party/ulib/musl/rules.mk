@@ -1227,6 +1227,7 @@ MODULE_STATIC_LIBS := ulib/runtime
 # At link time and in DT_SONAME, musl is known as libc.so.  But the
 # (only) place it needs to be installed at runtime is where the
 # PT_INTERP strings embedded in executables point, which is ld.so.1.
+MODULE_EXPORT := so
 MODULE_SO_NAME := c
 MODULE_SO_INSTALL_NAME := lib/$(USER_SHARED_INTERP)
 

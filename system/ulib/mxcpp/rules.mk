@@ -9,7 +9,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS = $(LOCAL_DIR)/new.cpp \
               $(LOCAL_DIR)/pure_virtual.cpp
 
-MODULE_EXPORT := mxcpp
 MODULE_SO_NAME := mxcpp
 
 MODULE_LIBS += ulib/musl
