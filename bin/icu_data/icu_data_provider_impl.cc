@@ -14,7 +14,7 @@
 namespace icu_data {
 namespace {
 
-constexpr char kICUDataPath[] = "/boot/data/icu_data/icudtl.dat";
+constexpr char kICUDataPath[] = "/system/data/icu_data/icudtl.dat";
 constexpr mx_rights_t kICUDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
 
