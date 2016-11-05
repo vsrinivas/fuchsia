@@ -11,6 +11,7 @@ group("mtl") {
     "//lib/mtl/shared_buffer",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
+    "//lib/mtl/vmo",
     "//lib/mtl/waiter",
   ]
 
@@ -28,6 +29,8 @@ executable("mtl_unittests") {
     "shared_buffer/strings_unittest.cc",
     "shared_buffer/vector_unittest.cc",
     "tasks/message_loop_unittest.cc",
+    "vmo/strings_unittest.cc",
+    "vmo/vector_unittest.cc",
     "threading/create_thread_unittest.cc",
   ]
 
