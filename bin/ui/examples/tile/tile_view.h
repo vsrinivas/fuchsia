@@ -7,57 +7,36 @@
 
 #include <map>
 #include <memory>
-#include <vector>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/mozart/examples/tile/tile_params.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {
 
-struct TileParams {
-  enum class VersionMode {
-    kAny,    // specify |kSceneVersionNone|
-    kExact,  // specify exact version
-  };
-  enum class CombinatorMode {
-    kMerge,          // use merge combinator
-    kPrune,          // use prune combinator
-    kFallbackFlash,  // use fallback combinator with red flash
-    kFallbackDim,    // use fallback combinator with old content dimmed
-  };
-  enum class OrientationMode {
-    kHorizontal,
-    kVertical,
-  };
-
-  TileParams();
-  ~TileParams();
-
-  VersionMode version_mode = VersionMode::kAny;
-  CombinatorMode combinator_mode = CombinatorMode::kPrune;
-  OrientationMode orientation_mode = OrientationMode::kHorizontal;
-
-  std::vector<std::string> view_urls;
-};
-
 class TileView : public mozart::BaseView {
  public:
-  TileView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-           mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+  TileView(mozart::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+           modular::ApplicationLauncher* application_launcher,
            const TileParams& tile_params);
 
   ~TileView() override;
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url, uint32_t key);
+    explicit ViewData(const std::string& url,
+                      uint32_t key,
+                      modular::ApplicationControllerPtr controller);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
+    modular::ApplicationControllerPtr controller;
 
-    mojo::RectF layout_bounds;
+    mozart::RectF layout_bounds;
     mozart::ViewPropertiesPtr view_properties;
     mozart::ViewInfoPtr view_info;
     uint32_t scene_version = 1u;
@@ -73,6 +52,7 @@ class TileView : public mozart::BaseView {
   void ConnectViews();
   void UpdateScene();
 
+  modular::ApplicationLauncher* application_launcher_;
   TileParams params_;
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 

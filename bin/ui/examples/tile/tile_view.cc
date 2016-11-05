@@ -4,9 +4,10 @@
 
 #include "apps/mozart/examples/tile/tile_view.h"
 
+#include "apps/modular/lib/app/connect.h"
+#include "apps/mozart/services/geometry/cpp/geometry_util.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/services/geometry/cpp/geometry_util.h"
 
 namespace examples {
 
@@ -23,15 +24,12 @@ constexpr uint32_t kViewFallbackDimLayerNodeIdOffset = 3;
 constexpr uint32_t kViewFallbackDimSceneNodeIdOffset = 4;
 }  // namespace
 
-TileParams::TileParams() {}
-
-TileParams::~TileParams() {}
-
-TileView::TileView(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    const TileParams& params)
-    : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Tile"),
+TileView::TileView(mozart::ViewManagerPtr view_manager,
+                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                   modular::ApplicationLauncher* application_launcher,
+                   const TileParams& params)
+    : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
+      application_launcher_(application_launcher),
       params_(params) {
   ConnectViews();
 }
@@ -41,18 +39,25 @@ TileView::~TileView() {}
 void TileView::ConnectViews() {
   uint32_t child_key = 0;
   for (const auto& url : params_.view_urls) {
-    // Start connecting to the view provider.
-    mozart::ViewProviderPtr provider;
-    mojo::ConnectToService(app_connector(), url, mojo::GetProxy(&provider));
+    modular::ServiceProviderPtr services;
+    modular::ApplicationControllerPtr controller;
+    auto launch_info = modular::ApplicationLaunchInfo::New();
+    launch_info->url = url;
+    launch_info->services = GetProxy(&services);
+    application_launcher_->CreateApplication(std::move(launch_info),
+                                             GetProxy(&controller));
+    auto provider =
+        modular::ConnectToService<mozart::ViewProvider>(services.get());
 
-    FTL_LOG(INFO) << "Connecting to view: child_key=" << child_key
+    FTL_LOG(INFO) << "Launching view: child_key=" << child_key
                   << ", url=" << url;
     mozart::ViewOwnerPtr child_view_owner;
-    provider->CreateView(mojo::GetProxy(&child_view_owner), nullptr);
+    provider->CreateView(fidl::GetProxy(&child_view_owner), nullptr);
 
-    GetViewContainer()->AddChild(child_key, child_view_owner.Pass());
-    views_.emplace(std::make_pair(
-        child_key, std::unique_ptr<ViewData>(new ViewData(url, child_key))));
+    GetViewContainer()->AddChild(child_key, std::move(child_view_owner));
+    views_.emplace(
+        std::make_pair(child_key, std::unique_ptr<ViewData>(new ViewData(
+                                      url, child_key, std::move(controller)))));
 
     child_key++;
   }
@@ -64,7 +69,7 @@ void TileView::OnChildAttached(uint32_t child_key,
   FTL_DCHECK(it != views_.end());
 
   ViewData* view_data = it->second.get();
-  view_data->view_info = child_view_info.Pass();
+  view_data->view_info = std::move(child_view_info);
   Invalidate();
 }
 
@@ -86,7 +91,7 @@ void TileView::OnLayout() {
 
   // Layout all children in a row.
   if (!views_.empty()) {
-    const mojo::Size& size = *properties()->view_layout->size;
+    const mozart::Size& size = *properties()->view_layout->size;
     const bool vertical =
         (params_.orientation_mode == TileParams::OrientationMode::kVertical);
 
@@ -120,7 +125,7 @@ void TileView::OnLayout() {
 
       auto view_properties = mozart::ViewProperties::New();
       view_properties->view_layout = mozart::ViewLayout::New();
-      view_properties->view_layout->size = mojo::Size::New();
+      view_properties->view_layout->size = mozart::Size::New();
       view_properties->view_layout->size->width =
           view_data->layout_bounds.width;
       view_properties->view_layout->size->height =
@@ -132,7 +137,7 @@ void TileView::OnLayout() {
       view_data->view_properties = view_properties.Clone();
       view_data->scene_version++;
       GetViewContainer()->SetChildProperties(
-          it->first, view_data->scene_version, view_properties.Pass());
+          it->first, view_data->scene_version, std::move(view_properties));
     }
   }
 }
@@ -157,7 +162,7 @@ void TileView::OnDraw() {
     const uint32_t container_node_id =
         kViewNodeIdBase + view_data.key * kViewNodeIdSpacing;
 
-    mojo::RectF extent;
+    mozart::RectF extent;
     extent.width = view_data.layout_bounds.width;
     extent.height = view_data.layout_bounds.height;
 
@@ -166,7 +171,7 @@ void TileView::OnDraw() {
     // fallback behavior in case the view is not available.
     auto container_node = mozart::Node::New();
     container_node->content_clip = extent.Clone();
-    container_node->content_transform = mojo::Transform::New();
+    container_node->content_transform = mozart::Transform::New();
     SetTranslationTransform(container_node->content_transform.get(),
                             view_data.layout_bounds.x,
                             view_data.layout_bounds.y, 0.f);
@@ -177,7 +182,7 @@ void TileView::OnDraw() {
       scene_resource->set_scene(mozart::SceneResource::New());
       scene_resource->get_scene()->scene_token =
           view_data.view_info->scene_token.Clone();
-      update->resources.insert(scene_resource_id, scene_resource.Pass());
+      update->resources.insert(scene_resource_id, std::move(scene_resource));
 
       const uint32_t scene_node_id = container_node_id + kViewSceneNodeIdOffset;
       auto scene_node = mozart::Node::New();
@@ -186,7 +191,7 @@ void TileView::OnDraw() {
       scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
       if (params_.version_mode == TileParams::VersionMode::kExact)
         scene_node->op->get_scene()->scene_version = view_data.scene_version;
-      update->nodes.insert(scene_node_id, scene_node.Pass());
+      update->nodes.insert(scene_node_id, std::move(scene_node));
       container_node->child_node_ids.push_back(scene_node_id);
     }
 
@@ -205,7 +210,7 @@ void TileView::OnDraw() {
       color_node->op->get_rect()->color = mozart::Color::New();
       color_node->op->get_rect()->color->red = 255;
       color_node->op->get_rect()->color->alpha = 255;
-      update->nodes.insert(color_node_id, color_node.Pass());
+      update->nodes.insert(color_node_id, std::move(color_node));
       container_node->child_node_ids.push_back(color_node_id);
     } else if (params_.combinator_mode ==
                TileParams::CombinatorMode::kFallbackDim) {
@@ -228,29 +233,31 @@ void TileView::OnDraw() {
         scene_node->op = mozart::NodeOp::New();
         scene_node->op->set_scene(mozart::SceneNodeOp::New());
         scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
-        update->nodes.insert(scene_node_id, scene_node.Pass());
+        update->nodes.insert(scene_node_id, std::move(scene_node));
         dim_node->child_node_ids.push_back(scene_node_id);
       }
 
-      update->nodes.insert(dim_node_id, dim_node.Pass());
+      update->nodes.insert(dim_node_id, std::move(dim_node));
       container_node->child_node_ids.push_back(dim_node_id);
     }
 
     // Add the container.
-    update->nodes.insert(container_node_id, container_node.Pass());
+    update->nodes.insert(container_node_id, std::move(container_node));
     root_node->child_node_ids.push_back(container_node_id);
   }
 
   // Add the root node.
-  update->nodes.insert(kRootNodeId, root_node.Pass());
-  scene()->Update(update.Pass());
+  update->nodes.insert(kRootNodeId, std::move(root_node));
+  scene()->Update(std::move(update));
 
   // Publish the scene.
   scene()->Publish(CreateSceneMetadata());
 }
 
-TileView::ViewData::ViewData(const std::string& url, uint32_t key)
-    : url(url), key(key) {}
+TileView::ViewData::ViewData(const std::string& url,
+                             uint32_t key,
+                             modular::ApplicationControllerPtr controller)
+    : url(url), key(key), controller(std::move(controller)) {}
 
 TileView::ViewData::~ViewData() {}
 

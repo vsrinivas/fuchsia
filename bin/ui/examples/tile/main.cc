@@ -2,12 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include "apps/mozart/examples/tile/tile_view.h"
+#include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "lib/ftl/command_line.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/examples/tile/tile_app.h"
-#include "mojo/public/cpp/application/run_application.h"
+int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  examples::TileParams params;
+  if (!params.Parse(command_line)) {
+    FTL_LOG(ERROR) << "Missing or invalid URL parameters.  See README.";
+    return 1;
+  }
 
-MojoResult MojoMain(MojoHandle application_request) {
-  examples::TileApp tile_app;
-  return mojo::RunApplication(application_request, &tile_app);
+  mtl::MessageLoop loop;
+
+  mozart::ViewProviderApp app(
+      [&params](mozart::ViewContext view_context) {
+        return std::make_unique<examples::TileView>(
+            std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request),
+            view_context.application_context->launcher().get(), params);
+      },
+      loop.task_runner());
+
+  loop.Run();
+  return 0;
 }
