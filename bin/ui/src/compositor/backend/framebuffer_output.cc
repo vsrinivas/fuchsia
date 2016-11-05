@@ -226,7 +226,7 @@ FramebufferOutput::Rasterizer::~Rasterizer() {}
 
 mozart::DisplayInfoPtr FramebufferOutput::Rasterizer::GetDisplayInfo() {
   auto result = mozart::DisplayInfo::New();
-  result->size = mojo::Size::New();
+  result->size = mozart::Size::New();
   result->size->width = framebuffer_->info().width;
   result->size->height = framebuffer_->info().height;
   result->device_pixel_ratio = 1.f;  // TODO: don't hardcode this

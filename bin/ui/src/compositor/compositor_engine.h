@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/frame_info.h"
 #include "apps/mozart/src/compositor/graph/universe.h"
 #include "apps/mozart/src/compositor/renderer_state.h"
@@ -36,12 +36,12 @@ class CompositorEngine {
 
   // Registers a scene.
   mozart::SceneTokenPtr CreateScene(
-      mojo::InterfaceRequest<mozart::Scene> scene_request,
-      const mojo::String& label);
+      fidl::InterfaceRequest<mozart::Scene> scene_request,
+      const fidl::String& label);
 
   // Creates a scene graph renderer.
-  void CreateRenderer(mojo::InterfaceRequest<mozart::Renderer> renderer_request,
-                      const mojo::String& label);
+  void CreateRenderer(fidl::InterfaceRequest<mozart::Renderer> renderer_request,
+                      const fidl::String& label);
 
   // SCENE REQUESTS
 
@@ -69,7 +69,7 @@ class CompositorEngine {
   void SetRootScene(RendererState* renderer_state,
                     mozart::SceneTokenPtr scene_token,
                     uint32_t scene_version,
-                    mojo::RectPtr viewport);
+                    mozart::RectPtr viewport);
 
   // Removes the root scene.
   // Destroys |renderer_state| if an error occurs.
@@ -81,7 +81,7 @@ class CompositorEngine {
 
   // Performs a hit test.
   void HitTest(RendererState* renderer_state,
-               mojo::PointFPtr point,
+               mozart::PointFPtr point,
                const mozart::HitTester::HitTestCallback& callback);
 
  private:

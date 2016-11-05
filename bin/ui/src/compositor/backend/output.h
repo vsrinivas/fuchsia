@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/mozart/services/composition/interfaces/renderers.mojom.h"
+#include "apps/mozart/services/composition/renderers.fidl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"

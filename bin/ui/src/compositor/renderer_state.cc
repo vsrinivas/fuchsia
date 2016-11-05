@@ -24,7 +24,7 @@ RendererState::~RendererState() {}
 
 bool RendererState::SetRootScene(SceneState* scene,
                                  uint32_t version,
-                                 const mojo::Rect& viewport) {
+                                 const mozart::Rect& viewport) {
   FTL_DCHECK(scene);
 
   if (root_scene_ != scene || root_scene_version_ != version ||

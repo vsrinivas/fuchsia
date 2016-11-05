@@ -41,14 +41,14 @@ bool Contains(const SkRect& bounds, const SkPoint& point) {
 
 Node::Node(uint32_t node_id,
            std::unique_ptr<TransformPair> content_transform,
-           mojo::RectFPtr content_clip,
+           mozart::RectFPtr content_clip,
            mozart::HitTestBehaviorPtr hit_test_behavior,
            Combinator combinator,
            const std::vector<uint32_t>& child_node_ids)
     : node_id_(node_id),
       content_transform_(std::move(content_transform)),
-      content_clip_(content_clip.Pass()),
-      hit_test_behavior_(hit_test_behavior.Pass()),
+      content_clip_(std::move(content_clip)),
+      hit_test_behavior_(std::move(hit_test_behavior)),
       combinator_(combinator),
       child_node_ids_(child_node_ids) {}
 
@@ -236,7 +236,7 @@ bool Node::HitTest(const SceneContent* content,
                    const Snapshot* snapshot,
                    const SkPoint& parent_point,
                    const SkMatrix44& global_to_parent_transform,
-                   mojo::Array<mozart::HitPtr>* hits) const {
+                   fidl::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -269,7 +269,7 @@ bool Node::HitTestInner(const SceneContent* content,
                         const Snapshot* snapshot,
                         const SkPoint& local_point,
                         const SkMatrix44& global_to_local_transform,
-                        mojo::Array<mozart::HitPtr>* hits) const {
+                        fidl::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -295,7 +295,7 @@ bool Node::HitTestSelf(const SceneContent* content,
                        const Snapshot* snapshot,
                        const SkPoint& local_point,
                        const SkMatrix44& global_to_local_transform,
-                       mojo::Array<mozart::HitPtr>* hits) const {
+                       fidl::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -313,24 +313,24 @@ bool Node::HitTestSelf(const SceneContent* content,
   hit->set_node(mozart::NodeHit::New());
   hit->get_node()->node_id = node_id_;
   hit->get_node()->transform =
-      mojo::ConvertTo<mojo::TransformPtr>(global_to_local_transform);
-  hits->push_back(hit.Pass());
+      fidl::ConvertTo<mozart::TransformPtr>(global_to_local_transform);
+  hits->push_back(std::move(hit));
   return hit_test_behavior_->visibility ==
          mozart::HitTestBehavior::Visibility::OPAQUE;
 }
 
 RectNode::RectNode(uint32_t node_id,
                    std::unique_ptr<TransformPair> content_transform,
-                   mojo::RectFPtr content_clip,
+                   mozart::RectFPtr content_clip,
                    mozart::HitTestBehaviorPtr hit_test_behavior,
                    Combinator combinator,
                    const std::vector<uint32_t>& child_node_ids,
-                   const mojo::RectF& content_rect,
+                   const mozart::RectF& content_rect,
                    const mozart::Color& color)
     : Node(node_id,
            std::move(content_transform),
-           content_clip.Pass(),
-           hit_test_behavior.Pass(),
+           std::move(content_clip),
+           std::move(hit_test_behavior),
            combinator,
            child_node_ids),
       content_rect_(content_rect),
@@ -354,24 +354,24 @@ void RectNode::PaintInner(const SceneContent* content,
 
 ImageNode::ImageNode(uint32_t node_id,
                      std::unique_ptr<TransformPair> content_transform,
-                     mojo::RectFPtr content_clip,
+                     mozart::RectFPtr content_clip,
                      mozart::HitTestBehaviorPtr hit_test_behavior,
                      Combinator combinator,
                      const std::vector<uint32_t>& child_node_ids,
-                     const mojo::RectF& content_rect,
-                     mojo::RectFPtr image_rect,
+                     const mozart::RectF& content_rect,
+                     mozart::RectFPtr image_rect,
                      uint32_t image_resource_id,
                      mozart::BlendPtr blend)
     : Node(node_id,
            std::move(content_transform),
-           content_clip.Pass(),
-           hit_test_behavior.Pass(),
+           std::move(content_clip),
+           std::move(hit_test_behavior),
            combinator,
            child_node_ids),
       content_rect_(content_rect),
-      image_rect_(image_rect.Pass()),
+      image_rect_(std::move(image_rect)),
       image_resource_id_(image_resource_id),
-      blend_(blend.Pass()) {}
+      blend_(std::move(blend)) {}
 
 ImageNode::~ImageNode() {}
 
@@ -409,7 +409,7 @@ void ImageNode::PaintInner(const SceneContent* content,
 
 SceneNode::SceneNode(uint32_t node_id,
                      std::unique_ptr<TransformPair> content_transform,
-                     mojo::RectFPtr content_clip,
+                     mozart::RectFPtr content_clip,
                      mozart::HitTestBehaviorPtr hit_test_behavior,
                      Combinator combinator,
                      const std::vector<uint32_t>& child_node_ids,
@@ -417,8 +417,8 @@ SceneNode::SceneNode(uint32_t node_id,
                      uint32_t scene_version)
     : Node(node_id,
            std::move(content_transform),
-           content_clip.Pass(),
-           hit_test_behavior.Pass(),
+           std::move(content_clip),
+           std::move(hit_test_behavior),
            combinator,
            child_node_ids),
       scene_resource_id_(scene_resource_id),
@@ -466,7 +466,7 @@ bool SceneNode::HitTestInner(const SceneContent* content,
                              const Snapshot* snapshot,
                              const SkPoint& local_point,
                              const SkMatrix44& global_to_local_transform,
-                             mojo::Array<mozart::HitPtr>* hits) const {
+                             fidl::Array<mozart::HitPtr>* hits) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
   FTL_DCHECK(hits);
@@ -484,28 +484,28 @@ bool SceneNode::HitTestInner(const SceneContent* content,
       snapshot, local_point, global_to_local_transform, &scene_hit);
   if (scene_hit) {
     auto hit = mozart::Hit::New();
-    hit->set_scene(scene_hit.Pass());
-    hits->push_back(hit.Pass());
+    hit->set_scene(std::move(scene_hit));
+    hits->push_back(std::move(hit));
   }
   return opaque;
 }
 
 LayerNode::LayerNode(uint32_t node_id,
                      std::unique_ptr<TransformPair> content_transform,
-                     mojo::RectFPtr content_clip,
+                     mozart::RectFPtr content_clip,
                      mozart::HitTestBehaviorPtr hit_test_behavior,
                      Combinator combinator,
                      const std::vector<uint32_t>& child_node_ids,
-                     const mojo::RectF& layer_rect,
+                     const mozart::RectF& layer_rect,
                      mozart::BlendPtr blend)
     : Node(node_id,
            std::move(content_transform),
-           content_clip.Pass(),
-           hit_test_behavior.Pass(),
+           std::move(content_clip),
+           std::move(hit_test_behavior),
            combinator,
            child_node_ids),
       layer_rect_(layer_rect),
-      blend_(blend.Pass()) {}
+      blend_(std::move(blend)) {}
 
 LayerNode::~LayerNode() {}
 

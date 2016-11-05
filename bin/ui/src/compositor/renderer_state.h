@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "apps/mozart/src/compositor/frame_dispatcher.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
@@ -45,13 +45,13 @@ class RendererState {
   // Gets the root scene, may be null if none set yet.
   SceneState* root_scene() { return root_scene_; }
   uint32_t root_scene_version() { return root_scene_version_; }
-  const mojo::Rect& root_scene_viewport() { return root_scene_viewport_; }
+  const mozart::Rect& root_scene_viewport() { return root_scene_viewport_; }
 
   // Sets the root scene.
   // If a change occurred, clears the current snapshot and returns true.
   bool SetRootScene(SceneState* scene,
                     uint32_t version,
-                    const mojo::Rect& viewport);
+                    const mozart::Rect& viewport);
 
   // Removes the root scene.
   // If a change occurred, clears the current snapshot and returns true.
@@ -90,7 +90,7 @@ class RendererState {
 
   SceneState* root_scene_ = nullptr;
   uint32_t root_scene_version_ = mozart::kSceneVersionNone;
-  mojo::Rect root_scene_viewport_;
+  mozart::Rect root_scene_viewport_;
 
   ftl::RefPtr<const Snapshot> visible_snapshot_;
   ftl::RefPtr<const Snapshot> current_snapshot_;

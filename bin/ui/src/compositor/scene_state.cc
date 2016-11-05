@@ -8,7 +8,7 @@ namespace compositor {
 
 SceneState::SceneState(mozart::SceneTokenPtr scene_token,
                        const std::string& label)
-    : scene_token_(scene_token.Pass()),
+    : scene_token_(std::move(scene_token)),
       scene_def_(SceneLabel(scene_token_->value, label)),
       weak_factory_(this) {
   FTL_DCHECK(scene_token_);

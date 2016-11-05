@@ -10,35 +10,35 @@ namespace compositor {
 
 SceneImpl::SceneImpl(CompositorEngine* engine,
                      SceneState* state,
-                     mojo::InterfaceRequest<mozart::Scene> scene_request)
+                     fidl::InterfaceRequest<mozart::Scene> scene_request)
     : engine_(engine),
       state_(state),
-      scene_binding_(this, scene_request.Pass()) {}
+      scene_binding_(this, std::move(scene_request)) {}
 
 SceneImpl::~SceneImpl() {}
 
 void SceneImpl::SetListener(
-    mojo::InterfaceHandle<mozart::SceneListener> listener) {
+    fidl::InterfaceHandle<mozart::SceneListener> listener) {
   engine_->SetListener(state_,
                        mozart::SceneListenerPtr::Create(std::move(listener)));
 }
 
 void SceneImpl::Update(mozart::SceneUpdatePtr update) {
-  engine_->Update(state_, update.Pass());
+  engine_->Update(state_, std::move(update));
 }
 
 void SceneImpl::Publish(mozart::SceneMetadataPtr metadata) {
-  engine_->Publish(state_, metadata.Pass());
+  engine_->Publish(state_, std::move(metadata));
 }
 
 void SceneImpl::GetScheduler(
-    mojo::InterfaceRequest<mozart::FrameScheduler> scheduler_request) {
-  scheduler_bindings_.AddBinding(this, scheduler_request.Pass());
+    fidl::InterfaceRequest<mozart::FrameScheduler> scheduler_request) {
+  scheduler_bindings_.AddBinding(this, std::move(scheduler_request));
 }
 
 void SceneImpl::ScheduleFrame(const ScheduleFrameCallback& callback) {
   engine_->ScheduleFrame(state_, [callback](mozart::FrameInfoPtr info) {
-    callback.Run(std::move(info));
+    callback(std::move(info));
   });
 }
 

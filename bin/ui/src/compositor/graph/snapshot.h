@@ -9,12 +9,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/hit_tests.fidl.h"
+#include "apps/mozart/services/composition/scheduling.fidl.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 
 namespace compositor {
 
@@ -65,11 +65,11 @@ class Snapshot : public ftl::RefCountedThreadSafe<Snapshot> {
   // Paints the content of the snapshot to produce a frame to be rendered.
   // Only valid if |!is_blocked()|.
   ftl::RefPtr<RenderFrame> Paint(const RenderFrame::Metadata& metadata,
-                                 const mojo::Rect& viewport) const;
+                                 const mozart::Rect& viewport) const;
 
   // Performs a hit test at the specified point, populating the result.
   // Only valid if |!is_blocked()|.
-  void HitTest(const mojo::PointF& point, mozart::HitTestResult* result) const;
+  void HitTest(const mozart::PointF& point, mozart::HitTestResult* result) const;
 
   // Returns true if the specified node was blocked from rendering.
   // Only valid if |!is_blocked()|.

@@ -5,14 +5,14 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_SCENE_IMPL_H_
 #define APPS_MOZART_SRC_COMPOSITOR_SCENE_IMPL_H_
 
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
+#include "apps/mozart/services/composition/scheduling.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "apps/mozart/src/compositor/scene_state.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace compositor {
 
@@ -22,7 +22,7 @@ class SceneImpl : public mozart::Scene, public mozart::FrameScheduler {
  public:
   SceneImpl(CompositorEngine* engine,
             SceneState* state,
-            mojo::InterfaceRequest<mozart::Scene> scene_request);
+            fidl::InterfaceRequest<mozart::Scene> scene_request);
   ~SceneImpl() override;
 
   void set_connection_error_handler(const ftl::Closure& handler) {
@@ -32,10 +32,10 @@ class SceneImpl : public mozart::Scene, public mozart::FrameScheduler {
  private:
   // |Scene|:
   void SetListener(
-      mojo::InterfaceHandle<mozart::SceneListener> listener) override;
+      fidl::InterfaceHandle<mozart::SceneListener> listener) override;
   void Update(mozart::SceneUpdatePtr update) override;
   void Publish(mozart::SceneMetadataPtr metadata) override;
-  void GetScheduler(mojo::InterfaceRequest<mozart::FrameScheduler>
+  void GetScheduler(fidl::InterfaceRequest<mozart::FrameScheduler>
                         scheduler_request) override;
 
   // |FrameScheduler|:
@@ -43,8 +43,8 @@ class SceneImpl : public mozart::Scene, public mozart::FrameScheduler {
 
   CompositorEngine* const engine_;
   SceneState* const state_;
-  mojo::Binding<mozart::Scene> scene_binding_;
-  mojo::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
+  fidl::Binding<mozart::Scene> scene_binding_;
+  fidl::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneImpl);
 };

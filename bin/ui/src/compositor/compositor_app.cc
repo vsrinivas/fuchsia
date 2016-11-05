@@ -5,27 +5,24 @@
 #include "apps/mozart/src/compositor/compositor_app.h"
 
 #include "apps/mozart/src/compositor/compositor_impl.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
+#include "lib/ftl/logging.h"
 
 namespace compositor {
 
-CompositorApp::CompositorApp() {}
+CompositorApp::CompositorApp()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()),
+      engine_(new CompositorEngine()) {
+  FTL_DCHECK(application_context_);
+
+  application_context_->outgoing_services()->AddService<mozart::Compositor>(
+      [this](fidl::InterfaceRequest<mozart::Compositor> request) {
+        compositor_bindings_.AddBinding(
+            std::make_unique<CompositorImpl>(engine_.get()),
+            std::move(request));
+      });
+}
 
 CompositorApp::~CompositorApp() {}
-
-void CompositorApp::OnInitialize() {
-  engine_.reset(new CompositorEngine());
-}
-
-bool CompositorApp::OnAcceptConnection(
-    mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mozart::Compositor>(
-      [this](const mojo::ConnectionContext& connection_context,
-             mojo::InterfaceRequest<mozart::Compositor> compositor_request) {
-        compositor_bindings_.AddBinding(new CompositorImpl(engine_.get()),
-                                        compositor_request.Pass());
-      });
-  return true;
-}
 
 }  // namespace compositor

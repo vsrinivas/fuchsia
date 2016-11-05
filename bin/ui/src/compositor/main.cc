@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include <memory>
 
 #include "apps/mozart/src/compositor/compositor_app.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-MojoResult MojoMain(MojoHandle application_request) {
-  compositor::CompositorApp compositor_app;
-  return mojo::RunApplication(application_request, &compositor_app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  std::unique_ptr<compositor::CompositorApp> app;
+  loop.task_runner()->PostTask(
+      [&app] { app = std::make_unique<compositor::CompositorApp>(); });
+
+  loop.Run();
+  return 0;
 }

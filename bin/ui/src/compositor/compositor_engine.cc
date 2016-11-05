@@ -27,7 +27,7 @@ namespace {
 const int32_t kMaxViewportWidth = 65536;
 const int32_t kMaxViewportHeight = 65536;
 
-std::string SanitizeLabel(const mojo::String& label) {
+std::string SanitizeLabel(const fidl::String& label) {
   return label.get().substr(0, mozart::Compositor::kLabelMaxLength);
 }
 }  // namespace
@@ -39,8 +39,8 @@ CompositorEngine::CompositorEngine()
 CompositorEngine::~CompositorEngine() {}
 
 mozart::SceneTokenPtr CompositorEngine::CreateScene(
-    mojo::InterfaceRequest<mozart::Scene> scene_request,
-    const mojo::String& label) {
+    fidl::InterfaceRequest<mozart::Scene> scene_request,
+    const fidl::String& label) {
   auto scene_token = mozart::SceneToken::New();
   scene_token->value = next_scene_token_value_++;
   FTL_CHECK(scene_token->value);
@@ -48,9 +48,9 @@ mozart::SceneTokenPtr CompositorEngine::CreateScene(
 
   // Create the state and bind implementation to it.
   SceneState* scene_state =
-      new SceneState(scene_token.Pass(), SanitizeLabel(label));
+      new SceneState(std::move(scene_token), SanitizeLabel(label));
   SceneImpl* scene_impl =
-      new SceneImpl(this, scene_state, scene_request.Pass());
+      new SceneImpl(this, scene_state, std::move(scene_request));
   scene_state->set_scene_impl(scene_impl);
   ftl::Closure error_handler = [this, scene_state] {
     OnSceneConnectionError(scene_state);
@@ -109,8 +109,8 @@ void CompositorEngine::DestroyScene(SceneState* scene_state) {
 }
 
 void CompositorEngine::CreateRenderer(
-    mojo::InterfaceRequest<mozart::Renderer> renderer_request,
-    const mojo::String& label) {
+    fidl::InterfaceRequest<mozart::Renderer> renderer_request,
+    const fidl::String& label) {
   uint32_t renderer_id = next_renderer_id_++;
   FTL_CHECK(renderer_id);
 
@@ -118,7 +118,7 @@ void CompositorEngine::CreateRenderer(
   RendererState* renderer_state = new RendererState(
       renderer_id, SanitizeLabel(label), std::make_unique<FramebufferOutput>());
   RendererImpl* renderer_impl =
-      new RendererImpl(this, renderer_state, renderer_request.Pass());
+      new RendererImpl(this, renderer_state, std::move(renderer_request));
   renderer_state->set_renderer_impl(renderer_impl);
   renderer_impl->set_connection_error_handler(
       [this, renderer_state] { OnRendererConnectionError(renderer_state); });
@@ -177,7 +177,7 @@ void CompositorEngine::SetListener(SceneState* scene_state,
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(1) << "SetSceneListener: scene=" << scene_state;
 
-  scene_state->set_scene_listener(listener.Pass());
+  scene_state->set_scene_listener(std::move(listener));
 }
 
 void CompositorEngine::Update(SceneState* scene_state,
@@ -185,7 +185,7 @@ void CompositorEngine::Update(SceneState* scene_state,
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
   DVLOG(1) << "Update: scene=" << scene_state << ", update=" << update;
 
-  scene_state->scene_def()->EnqueueUpdate(update.Pass());
+  scene_state->scene_def()->EnqueueUpdate(std::move(update));
 }
 
 void CompositorEngine::Publish(SceneState* scene_state,
@@ -197,7 +197,7 @@ void CompositorEngine::Publish(SceneState* scene_state,
     metadata = mozart::SceneMetadata::New();
   ftl::TimePoint presentation_time = ftl::TimePoint::FromEpochDelta(
       ftl::TimeDelta::FromNanoseconds(metadata->presentation_time));
-  scene_state->scene_def()->EnqueuePublish(metadata.Pass());
+  scene_state->scene_def()->EnqueuePublish(std::move(metadata));
 
   // Implicitly schedule fresh snapshots.
   InvalidateScene(scene_state);
@@ -257,7 +257,7 @@ void CompositorEngine::GetDisplayInfo(RendererState* renderer_state,
 void CompositorEngine::SetRootScene(RendererState* renderer_state,
                                     mozart::SceneTokenPtr scene_token,
                                     uint32_t scene_version,
-                                    mojo::RectPtr viewport) {
+                                    mozart::RectPtr viewport) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(scene_token);
   FTL_DCHECK(viewport);
@@ -315,7 +315,7 @@ void CompositorEngine::ScheduleFrame(RendererState* renderer_state,
 
 void CompositorEngine::HitTest(
     RendererState* renderer_state,
-    mojo::PointFPtr point,
+    mozart::PointFPtr point,
     const mozart::HitTester::HitTestCallback& callback) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(point);
@@ -328,7 +328,7 @@ void CompositorEngine::HitTest(
     renderer_state->visible_snapshot()->HitTest(*point, result.get());
   }
 
-  callback.Run(result.Pass());
+  callback(std::move(result));
 }
 
 bool CompositorEngine::ResolveSceneReference(

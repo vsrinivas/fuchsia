@@ -25,12 +25,12 @@ SceneDef::~SceneDef() {}
 
 void SceneDef::EnqueueUpdate(mozart::SceneUpdatePtr update) {
   FTL_DCHECK(update);
-  pending_updates_.push_back(update.Pass());
+  pending_updates_.push_back(std::move(update));
 }
 
 void SceneDef::EnqueuePublish(mozart::SceneMetadataPtr metadata) {
   FTL_DCHECK(metadata);
-  pending_publications_.emplace_back(new Publication(metadata.Pass()));
+  pending_publications_.emplace_back(new Publication(std::move(metadata)));
   pending_updates_.swap(pending_publications_.back()->updates);
 }
 
@@ -60,7 +60,7 @@ SceneDef::Disposition SceneDef::Present(
   uint32_t version = pending_publications_[end - 1]->metadata->version;
   for (size_t index = 0; index < end; ++index) {
     for (auto& update : pending_publications_[index]->updates) {
-      if (!ApplyUpdate(update.Pass(), resolver, unavailable_sender, err))
+      if (!ApplyUpdate(std::move(update), resolver, unavailable_sender, err))
         return Disposition::kFailed;
     }
   }
@@ -101,8 +101,9 @@ bool SceneDef::ApplyUpdate(mozart::SceneUpdatePtr update,
     uint32_t resource_id = it.GetKey();
     mozart::ResourcePtr& resource_decl = it.GetValue();
     if (resource_decl) {
-      ftl::RefPtr<const Resource> resource = CreateResource(
-          resource_id, resource_decl.Pass(), resolver, unavailable_sender, err);
+      ftl::RefPtr<const Resource> resource =
+          CreateResource(resource_id, std::move(resource_decl), resolver,
+                         unavailable_sender, err);
       if (!resource)
         return false;
       resources_[resource_id] = std::move(resource);
@@ -119,7 +120,8 @@ bool SceneDef::ApplyUpdate(mozart::SceneUpdatePtr update,
     uint32_t node_id = it.GetKey();
     mozart::NodePtr& node_decl = it.GetValue();
     if (node_decl) {
-      ftl::RefPtr<const Node> node = CreateNode(node_id, node_decl.Pass(), err);
+      ftl::RefPtr<const Node> node =
+          CreateNode(node_id, std::move(node_decl), err);
       if (!node)
         return false;
       nodes_[node_id] = std::move(node);
@@ -190,17 +192,17 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(uint32_t node_id,
     content_transform.reset(
         new TransformPair(node_decl->content_transform.To<SkMatrix44>()));
   }
-  mojo::RectFPtr content_clip = node_decl->content_clip.Pass();
+  mozart::RectFPtr content_clip = std::move(node_decl->content_clip);
   mozart::HitTestBehaviorPtr hit_test_behavior =
-      node_decl->hit_test_behavior.Pass();
+      std::move(node_decl->hit_test_behavior);
   const mozart::Node::Combinator combinator = node_decl->combinator;
   const std::vector<uint32_t>& child_node_ids =
       node_decl->child_node_ids.storage();
 
   if (!node_decl->op) {
     return ftl::MakeRefCounted<Node>(
-        node_id, std::move(content_transform), content_clip.Pass(),
-        hit_test_behavior.Pass(), combinator, child_node_ids);
+        node_id, std::move(content_transform), std::move(content_clip),
+        std::move(hit_test_behavior), combinator, child_node_ids);
   }
 
   if (node_decl->op->is_rect()) {
@@ -208,26 +210,26 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(uint32_t node_id,
     FTL_DCHECK(rect_node_decl->content_rect);
     FTL_DCHECK(rect_node_decl->color);
 
-    const mojo::RectF& content_rect = *rect_node_decl->content_rect;
+    const mozart::RectF& content_rect = *rect_node_decl->content_rect;
     const mozart::Color& color = *rect_node_decl->color;
-    return ftl::MakeRefCounted<RectNode>(node_id, std::move(content_transform),
-                                         content_clip.Pass(),
-                                         hit_test_behavior.Pass(), combinator,
-                                         child_node_ids, content_rect, color);
+    return ftl::MakeRefCounted<RectNode>(
+        node_id, std::move(content_transform), std::move(content_clip),
+        std::move(hit_test_behavior), combinator, child_node_ids, content_rect,
+        color);
   }
 
   if (node_decl->op->is_image()) {
     auto& image_node_decl = node_decl->op->get_image();
     FTL_DCHECK(image_node_decl->content_rect);
 
-    const mojo::RectF& content_rect = *image_node_decl->content_rect;
-    mojo::RectFPtr image_rect = image_node_decl->image_rect.Pass();
+    const mozart::RectF& content_rect = *image_node_decl->content_rect;
+    mozart::RectFPtr image_rect = std::move(image_node_decl->image_rect);
     const uint32_t image_resource_id = image_node_decl->image_resource_id;
-    mozart::BlendPtr blend = image_node_decl->blend.Pass();
+    mozart::BlendPtr blend = std::move(image_node_decl->blend);
     return ftl::MakeRefCounted<ImageNode>(
-        node_id, std::move(content_transform), content_clip.Pass(),
-        hit_test_behavior.Pass(), combinator, child_node_ids, content_rect,
-        image_rect.Pass(), image_resource_id, blend.Pass());
+        node_id, std::move(content_transform), std::move(content_clip),
+        std::move(hit_test_behavior), combinator, child_node_ids, content_rect,
+        std::move(image_rect), image_resource_id, std::move(blend));
   }
 
   if (node_decl->op->is_scene()) {
@@ -236,21 +238,21 @@ ftl::RefPtr<const Node> SceneDef::CreateNode(uint32_t node_id,
     const uint32_t scene_resource_id = scene_node_decl->scene_resource_id;
     const uint32_t scene_version = scene_node_decl->scene_version;
     return ftl::MakeRefCounted<SceneNode>(
-        node_id, std::move(content_transform), content_clip.Pass(),
-        hit_test_behavior.Pass(), combinator, child_node_ids, scene_resource_id,
-        scene_version);
+        node_id, std::move(content_transform), std::move(content_clip),
+        std::move(hit_test_behavior), combinator, child_node_ids,
+        scene_resource_id, scene_version);
   }
 
   if (node_decl->op->is_layer()) {
     auto& layer_node_decl = node_decl->op->get_layer();
     FTL_DCHECK(layer_node_decl->layer_rect);
 
-    const mojo::RectF& layer_rect = *layer_node_decl->layer_rect;
-    mozart::BlendPtr blend = layer_node_decl->blend.Pass();
+    const mozart::RectF& layer_rect = *layer_node_decl->layer_rect;
+    mozart::BlendPtr blend = std::move(layer_node_decl->blend);
     return ftl::MakeRefCounted<LayerNode>(
-        node_id, std::move(content_transform), content_clip.Pass(),
-        hit_test_behavior.Pass(), combinator, child_node_ids, layer_rect,
-        blend.Pass());
+        node_id, std::move(content_transform), std::move(content_clip),
+        std::move(hit_test_behavior), combinator, child_node_ids, layer_rect,
+        std::move(blend));
   }
 
   err << "Unsupported node op type: node_id=" << node_id
@@ -285,7 +287,7 @@ const Resource* SceneDef::Collector::FindResource(uint32_t resource_id) const {
 }
 
 SceneDef::Publication::Publication(mozart::SceneMetadataPtr metadata)
-    : metadata(metadata.Pass()) {
+    : metadata(std::move(metadata)) {
   FTL_DCHECK(this->metadata);
 }
 

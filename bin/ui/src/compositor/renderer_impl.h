@@ -7,13 +7,13 @@
 
 #include <functional>
 
-#include "apps/mozart/services/composition/interfaces/renderers.mojom.h"
+#include "apps/mozart/services/composition/renderers.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "apps/mozart/src/compositor/renderer_state.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace compositor {
 
@@ -25,7 +25,7 @@ class RendererImpl : public mozart::Renderer,
  public:
   RendererImpl(CompositorEngine* engine,
                RendererState* state,
-               mojo::InterfaceRequest<mozart::Renderer> renderer_request);
+               fidl::InterfaceRequest<mozart::Renderer> renderer_request);
   ~RendererImpl() override;
 
   void set_connection_error_handler(const ftl::Closure& handler) {
@@ -37,24 +37,24 @@ class RendererImpl : public mozart::Renderer,
   void GetDisplayInfo(const GetDisplayInfoCallback& callback) override;
   void SetRootScene(mozart::SceneTokenPtr scene_token,
                     uint32_t scene_version,
-                    mojo::RectPtr viewport) override;
+                    mozart::RectPtr viewport) override;
   void ClearRootScene() override;
-  void GetScheduler(mojo::InterfaceRequest<mozart::FrameScheduler>
+  void GetScheduler(fidl::InterfaceRequest<mozart::FrameScheduler>
                         scheduler_request) override;
   void GetHitTester(
-      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request) override;
+      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request) override;
 
   // |FrameScheduler|:
   void ScheduleFrame(const ScheduleFrameCallback& callback) override;
 
   // |HitTester|:
-  void HitTest(mojo::PointFPtr point, const HitTestCallback& callback) override;
+  void HitTest(mozart::PointFPtr point, const HitTestCallback& callback) override;
 
   CompositorEngine* const engine_;
   RendererState* const state_;
-  mojo::Binding<mozart::Renderer> renderer_binding_;
-  mojo::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
-  mojo::BindingSet<mozart::HitTester> hit_tester_bindings;
+  fidl::Binding<mozart::Renderer> renderer_binding_;
+  fidl::BindingSet<mozart::FrameScheduler> scheduler_bindings_;
+  fidl::BindingSet<mozart::HitTester> hit_tester_bindings;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RendererImpl);
 };

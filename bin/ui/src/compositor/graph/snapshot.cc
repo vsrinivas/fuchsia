@@ -23,7 +23,7 @@ bool Snapshot::HasDependency(const mozart::SceneToken& scene_token) const {
 }
 
 ftl::RefPtr<RenderFrame> Snapshot::Paint(const RenderFrame::Metadata& metadata,
-                                         const mojo::Rect& viewport) const {
+                                         const mozart::Rect& viewport) const {
   FTL_DCHECK(!is_blocked());
   FTL_DCHECK(root_scene_content_);
 
@@ -36,7 +36,7 @@ ftl::RefPtr<RenderFrame> Snapshot::Paint(const RenderFrame::Metadata& metadata,
                                           recorder.finishRecordingAsPicture());
 }
 
-void Snapshot::HitTest(const mojo::PointF& point,
+void Snapshot::HitTest(const mozart::PointF& point,
                        mozart::HitTestResult* result) const {
   FTL_DCHECK(result);
   FTL_DCHECK(!is_blocked());

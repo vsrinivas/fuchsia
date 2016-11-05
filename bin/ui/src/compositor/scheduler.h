@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/scheduling.fidl.h"
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "apps/mozart/src/compositor/frame_info.h"
 #include "lib/ftl/macros.h"

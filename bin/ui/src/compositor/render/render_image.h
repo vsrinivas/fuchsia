@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_IMAGE_H_
 #define APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_IMAGE_H_
 
-#include "apps/mozart/services/composition/interfaces/resources.mojom.h"
+#include "apps/mozart/services/composition/resources.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "third_party/skia/include/core/SkImage.h"

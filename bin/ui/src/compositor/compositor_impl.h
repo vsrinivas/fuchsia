@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_COMPOSITOR_IMPL_H_
 #define APPS_MOZART_SRC_COMPOSITOR_COMPOSITOR_IMPL_H_
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "lib/ftl/macros.h"
 
@@ -19,11 +19,11 @@ class CompositorImpl : public mozart::Compositor {
 
  private:
   // |Compositor|:
-  void CreateScene(mojo::InterfaceRequest<mozart::Scene> scene_request,
-                   const mojo::String& label,
+  void CreateScene(fidl::InterfaceRequest<mozart::Scene> scene_request,
+                   const fidl::String& label,
                    const CreateSceneCallback& callback) override;
-  void CreateRenderer(mojo::InterfaceRequest<mozart::Renderer> renderer_request,
-                      const mojo::String& label) override;
+  void CreateRenderer(fidl::InterfaceRequest<mozart::Renderer> renderer_request,
+                      const fidl::String& label) override;
 
   CompositorEngine* engine_;
 

@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/src/compositor/frame_dispatcher.h"
 #include "apps/mozart/src/compositor/graph/scene_def.h"
 #include "lib/ftl/macros.h"
@@ -34,7 +34,7 @@ class SceneState {
   // Gets or sets the scene listener interface.
   mozart::SceneListener* scene_listener() { return scene_listener_.get(); }
   void set_scene_listener(mozart::SceneListenerPtr listener) {
-    scene_listener_ = listener.Pass();
+    scene_listener_ = std::move(listener);
   }
 
   // Sets the associated scene implementation and takes ownership of it.

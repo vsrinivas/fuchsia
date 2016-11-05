@@ -9,29 +9,29 @@ namespace compositor {
 RendererImpl::RendererImpl(
     CompositorEngine* engine,
     RendererState* state,
-    mojo::InterfaceRequest<mozart::Renderer> renderer_request)
+    fidl::InterfaceRequest<mozart::Renderer> renderer_request)
     : engine_(engine),
       state_(state),
-      renderer_binding_(this, renderer_request.Pass()) {}
+      renderer_binding_(this, std::move(renderer_request)) {}
 
 RendererImpl::~RendererImpl() {}
 
 void RendererImpl::GetHitTester(
-    mojo::InterfaceRequest<mozart::HitTester> hit_tester_request) {
-  hit_tester_bindings.AddBinding(this, hit_tester_request.Pass());
+    fidl::InterfaceRequest<mozart::HitTester> hit_tester_request) {
+  hit_tester_bindings.AddBinding(this, std::move(hit_tester_request));
 }
 
 void RendererImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   engine_->GetDisplayInfo(state_, [callback](mozart::DisplayInfoPtr info) {
-    callback.Run(std::move(info));
+    callback(std::move(info));
   });
 }
 
 void RendererImpl::SetRootScene(mozart::SceneTokenPtr scene_token,
                                 uint32_t scene_version,
-                                mojo::RectPtr viewport) {
-  engine_->SetRootScene(state_, scene_token.Pass(), scene_version,
-                        viewport.Pass());
+                                mozart::RectPtr viewport) {
+  engine_->SetRootScene(state_, std::move(scene_token), scene_version,
+                        std::move(viewport));
 }
 
 void RendererImpl::ClearRootScene() {
@@ -39,19 +39,19 @@ void RendererImpl::ClearRootScene() {
 }
 
 void RendererImpl::GetScheduler(
-    mojo::InterfaceRequest<mozart::FrameScheduler> scheduler_request) {
-  scheduler_bindings_.AddBinding(this, scheduler_request.Pass());
+    fidl::InterfaceRequest<mozart::FrameScheduler> scheduler_request) {
+  scheduler_bindings_.AddBinding(this, std::move(scheduler_request));
 }
 
 void RendererImpl::ScheduleFrame(const ScheduleFrameCallback& callback) {
   engine_->ScheduleFrame(state_, [callback](mozart::FrameInfoPtr info) {
-    callback.Run(std::move(info));
+    callback(std::move(info));
   });
 }
 
-void RendererImpl::HitTest(mojo::PointFPtr point,
+void RendererImpl::HitTest(mozart::PointFPtr point,
                            const HitTestCallback& callback) {
-  engine_->HitTest(state_, point.Pass(), callback);
+  engine_->HitTest(state_, std::move(point), callback);
 }
 
 }  // namespace compositor

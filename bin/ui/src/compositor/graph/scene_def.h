@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/src/compositor/graph/nodes.h"
 #include "apps/mozart/src/compositor/graph/resources.h"
 #include "apps/mozart/src/compositor/graph/scene_content.h"

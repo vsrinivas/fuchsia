@@ -2,49 +2,49 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom-sync.h"
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom-sync.h"
+#include "apps/mozart/services/composition/compositor.fidl-sync.h"
+#include "apps/mozart/services/composition/scheduling.fidl-sync.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/synchronous_interface_ptr.h"
-#include "mojo/services/gpu/interfaces/context_provider.mojom.h"
-#include "mojo/services/native_viewport/interfaces/native_viewport.mojom.h"
+#include "lib/fidl/cpp/application/application_test_base.h"
+#include "lib/fidl/cpp/application/connect.h"
+#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "mojo/services/gpu/context_provider.fidl.h"
+#include "mojo/services/native_viewport/native_viewport.fidl.h"
 
 namespace test {
 
-using SynchronousCompositorPtr = mojo::SynchronousInterfacePtr<Compositor>;
+using SynchronousCompositorPtr = fidl::SynchronousInterfacePtr<Compositor>;
 
 using SynchronousFrameSchedulerPtr =
-    mojo::SynchronousInterfacePtr<FrameScheduler>;
+    fidl::SynchronousInterfacePtr<FrameScheduler>;
 
-class SchedulingTest : public mojo::test::ApplicationTestBase {
+class SchedulingTest : public fidl::test::ApplicationTestBase {
  public:
   SchedulingTest() {}
 
  protected:
   void SetUp() override {
-    mojo::test::ApplicationTestBase::SetUp();
+    fidl::test::ApplicationTestBase::SetUp();
 
-    mojo::ConnectToService(shell(), "mojo:native_viewport_service",
+    fidl::ConnectToService(shell(), "mojo:native_viewport_service",
                            GetProxy(&viewport_));
-    auto size = mojo::Size::New();
+    auto size = mozart::Size::New();
     size->width = 320;
     size->height = 640;
-    auto configuration = mojo::SurfaceConfiguration::New();
-    viewport_->Create(size.Pass(), configuration.Pass(),
-                      [](mojo::ViewportMetricsPtr metrics) {
+    auto configuration = fidl::SurfaceConfiguration::New();
+    viewport_->Create(std::move(size), std::move(configuration),
+                      [](fidl::ViewportMetricsPtr metrics) {
 
                       });
     viewport_->Show();
 
-    mojo::ContextProviderPtr context_provider;
+    fidl::ContextProviderPtr context_provider;
     viewport_->GetContextProvider(GetProxy(&context_provider));
 
-    mojo::ConnectToService(shell(), "mojo:compositor_service",
-                           mojo::GetSynchronousProxy(&compositor_));
-    compositor_->CreateRenderer(context_provider.Pass(),
-                                mojo::GetProxy(&renderer_), "SchedulingTest");
+    fidl::ConnectToService(shell(), "mojo:compositor_service",
+                           fidl::GetSynchronousProxy(&compositor_));
+    compositor_->CreateRenderer(std::move(context_provider),
+                                fidl::GetProxy(&renderer_), "SchedulingTest");
   }
 
   void TestScheduler(SynchronousFrameSchedulerPtr scheduler) {
@@ -68,7 +68,7 @@ class SchedulingTest : public mojo::test::ApplicationTestBase {
     EXPECT_GT(frame_info->presentation_time, frame_info->publish_deadline);
   }
 
-  mojo::NativeViewportPtr viewport_;
+  fidl::NativeViewportPtr viewport_;
   SynchronousCompositorPtr compositor_;
   RendererPtr renderer_;
 
@@ -80,8 +80,8 @@ namespace {
 
 TEST_F(SchedulingTest, RendererScheduler) {
   SynchronousFrameSchedulerPtr scheduler;
-  renderer_->GetScheduler(mojo::GetSynchronousProxy(&scheduler));
-  TestScheduler(scheduler.Pass());
+  renderer_->GetScheduler(fidl::GetSynchronousProxy(&scheduler));
+  TestScheduler(std::move(scheduler));
 }
 
 // Test what happens when a scene is not attached to a renderer.
@@ -90,12 +90,12 @@ TEST_F(SchedulingTest, RendererScheduler) {
 TEST_F(SchedulingTest, OrphanedSceneScheduler) {
   ScenePtr scene;
   SceneTokenPtr scene_token;
-  compositor_->CreateScene(mojo::GetProxy(&scene), "SchedulingTest",
+  compositor_->CreateScene(fidl::GetProxy(&scene), "SchedulingTest",
                            &scene_token);
 
   SynchronousFrameSchedulerPtr scheduler;
-  scene->GetScheduler(mojo::GetSynchronousProxy(&scheduler));
-  TestScheduler(scheduler.Pass());
+  scene->GetScheduler(fidl::GetSynchronousProxy(&scheduler));
+  TestScheduler(std::move(scheduler));
 }
 
 // Test what happens when a scene is attached to a renderer.
@@ -104,18 +104,18 @@ TEST_F(SchedulingTest, OrphanedSceneScheduler) {
 TEST_F(SchedulingTest, RootSceneScheduler) {
   ScenePtr scene;
   SceneTokenPtr scene_token;
-  compositor_->CreateScene(mojo::GetProxy(&scene), "SchedulingTest",
+  compositor_->CreateScene(fidl::GetProxy(&scene), "SchedulingTest",
                            &scene_token);
 
-  auto viewport = mojo::Rect::New();
+  auto viewport = mozart::Rect::New();
   viewport->width = 1;
   viewport->height = 1;
-  renderer_->SetRootScene(scene_token.Pass(), kSceneVersionNone,
-                          viewport.Pass());
+  renderer_->SetRootScene(std::move(scene_token), kSceneVersionNone,
+                          std::move(viewport));
 
   SynchronousFrameSchedulerPtr scheduler;
-  scene->GetScheduler(mojo::GetSynchronousProxy(&scheduler));
-  TestScheduler(scheduler.Pass());
+  scene->GetScheduler(fidl::GetSynchronousProxy(&scheduler));
+  TestScheduler(std::move(scheduler));
 }
 
 }  // namespace

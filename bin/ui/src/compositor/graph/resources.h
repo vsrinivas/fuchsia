@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_GRAPH_RESOURCES_H_
 #define APPS_MOZART_SRC_COMPOSITOR_GRAPH_RESOURCES_H_
 
-#include "apps/mozart/services/composition/interfaces/resources.mojom.h"
+#include "apps/mozart/services/composition/resources.fidl.h"
 #include "apps/mozart/src/compositor/render/render_image.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"

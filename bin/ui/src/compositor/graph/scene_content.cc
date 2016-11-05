@@ -46,7 +46,7 @@ bool SceneContent::HitTest(const Snapshot* snapshot,
   if (!root)
     return false;
 
-  mojo::Array<mozart::HitPtr> hits;
+  fidl::Array<mozart::HitPtr> hits;
   bool opaque = root->HitTest(this, snapshot, scene_point,
                               global_to_scene_transform, &hits);
   if (hits.size()) {
@@ -54,8 +54,8 @@ bool SceneContent::HitTest(const Snapshot* snapshot,
     scene_hit->scene_token = mozart::SceneToken::New();
     scene_hit->scene_token->value = label_.token();
     scene_hit->scene_version = version_;
-    scene_hit->hits = hits.Pass();
-    *out_scene_hit = scene_hit.Pass();
+    scene_hit->hits = std::move(hits);
+    *out_scene_hit = std::move(scene_hit);
   }
   return opaque;
 }

@@ -7,28 +7,27 @@
 
 #include <memory>
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace compositor {
 
+class CompositorImpl;
+
 // Compositor application entry point.
-class CompositorApp : public mojo::ApplicationImplBase {
+class CompositorApp {
  public:
   CompositorApp();
-  ~CompositorApp() override;
+  ~CompositorApp();
 
  private:
-  // |ApplicationImplBase|:
-  void OnInitialize() override;
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override;
-
-  mojo::StrongBindingSet<mozart::Compositor> compositor_bindings_;
+  std::unique_ptr<modular::ApplicationContext> application_context_;
   std::unique_ptr<CompositorEngine> engine_;
+  fidl::BindingSet<mozart::Compositor, std::unique_ptr<CompositorImpl>>
+      compositor_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CompositorApp);
 };
