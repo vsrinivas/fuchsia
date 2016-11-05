@@ -259,7 +259,7 @@ bool MagmaSpinningCubeApp::Draw(float time_delta_s)
     glBindFramebuffer(GL_FRAMEBUFFER, fb_[curr_buf_].fb);
     cube_->UpdateForTimeDelta(time_delta_s);
     cube_->Draw();
-    glFinish();
+    glFlush();
 
     magma_system_display_page_flip(magma_display_, fb_[curr_buf_].fb_handle, &pageflip_callback,
                                    cube_);
