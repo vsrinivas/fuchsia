@@ -16,7 +16,7 @@ namespace modular {
 // The configuration file should be specified as:
 // {
 //   "initial-apps": [
-//     "file:/boot/apps/device_runner"
+//     "file:/system/apps/device_runner"
 //   ]
 // }
 

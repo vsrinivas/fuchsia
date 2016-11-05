@@ -20,7 +20,7 @@
 using namespace modular;
 
 constexpr char kDefaultConfigPath[] =
-    "/boot/data/application_manager/startup.config";
+    "/system/data/application_manager/startup.config";
 
 static void LoadStartupConfig(StartupConfig* config,
                               const std::string& config_path) {
