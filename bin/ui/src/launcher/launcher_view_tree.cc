@@ -4,11 +4,11 @@
 
 #include "apps/mozart/src/launcher/launcher_view_tree.h"
 
+#include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
 
 namespace launcher {
 
@@ -28,26 +28,26 @@ LauncherViewTree::LauncherViewTree(mozart::ViewManager* view_manager,
 
   // Register the view tree.
   mozart::ViewTreeListenerPtr view_tree_listener;
-  view_tree_listener_binding_.Bind(mojo::GetProxy(&view_tree_listener));
-  view_manager_->CreateViewTree(mojo::GetProxy(&view_tree_),
+  view_tree_listener_binding_.Bind(fidl::GetProxy(&view_tree_listener));
+  view_manager_->CreateViewTree(fidl::GetProxy(&view_tree_),
                                 std::move(view_tree_listener), "LauncherTree");
   view_tree_.set_connection_error_handler(
       [this] { OnViewTreeConnectionError(); });
 
   // Prepare the view container for the root.
-  view_tree_->GetContainer(mojo::GetProxy(&view_container_));
+  view_tree_->GetContainer(fidl::GetProxy(&view_container_));
   view_container_.set_connection_error_handler(
       [this] { OnViewTreeConnectionError(); });
   mozart::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(
-      mojo::GetProxy(&view_container_listener));
+      fidl::GetProxy(&view_container_listener));
   view_container_->SetListener(std::move(view_container_listener));
 
   // Get view tree services.
-  mojo::ServiceProviderPtr view_tree_service_provider;
-  view_tree_->GetServiceProvider(mojo::GetProxy(&view_tree_service_provider));
-  mojo::ConnectToService<mozart::InputDispatcher>(
-      view_tree_service_provider.get(), mojo::GetProxy(&input_dispatcher_));
+  modular::ServiceProviderPtr view_tree_service_provider;
+  view_tree_->GetServiceProvider(fidl::GetProxy(&view_tree_service_provider));
+  input_dispatcher_ = modular::ConnectToService<mozart::InputDispatcher>(
+      view_tree_service_provider.get());
   input_dispatcher_.set_connection_error_handler(
       [this] { OnInputDispatcherConnectionError(); });
 
@@ -90,7 +90,7 @@ void LauncherViewTree::OnChildAttached(
     DVLOG(1) << "OnChildAttached: child_view_info=" << child_view_info;
     root_view_info_ = std::move(child_view_info);
   }
-  callback.Run();
+  callback();
 }
 
 void LauncherViewTree::OnChildUnavailable(
@@ -100,13 +100,13 @@ void LauncherViewTree::OnChildUnavailable(
     FTL_LOG(ERROR) << "Root view terminated unexpectedly.";
     Shutdown();
   }
-  callback.Run();
+  callback();
 }
 
 void LauncherViewTree::OnRendererDied(const OnRendererDiedCallback& callback) {
   FTL_LOG(ERROR) << "Renderer died unexpectedly.";
   Shutdown();
-  callback.Run();
+  callback();
 }
 
 void LauncherViewTree::UpdateViewProperties() {

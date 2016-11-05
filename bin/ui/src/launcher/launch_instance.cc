@@ -8,17 +8,18 @@
 #include "apps/mozart/src/launcher/launcher_view_tree.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
 
 namespace launcher {
 
 LaunchInstance::LaunchInstance(mozart::Compositor* compositor,
                                mozart::ViewManager* view_manager,
                                mozart::ViewOwnerPtr view_owner,
+                               modular::ApplicationControllerPtr controller,
                                const ftl::Closure& shutdown_callback)
     : compositor_(compositor),
       view_manager_(view_manager),
       root_view_owner_(std::move(view_owner)),
+      controller_(std::move(controller)),
       shutdown_callback_(shutdown_callback),
       input_reader_(&input_interpreter_) {
   FTL_DCHECK(compositor_);

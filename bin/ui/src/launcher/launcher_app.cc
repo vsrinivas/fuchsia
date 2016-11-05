@@ -4,144 +4,231 @@
 
 #include "apps/mozart/src/launcher/launcher_app.h"
 
-#include "apps/mozart/glue/base/logging.h"
-#include "apps/mozart/glue/base/trace_event.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/closure.h"
+#include "apps/fonts/services/font_provider.fidl.h"
+#include "apps/modular/lib/app/connect.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
 
 namespace launcher {
+namespace {
+// TODO(jeffbrown): Don't hardcode this.
+constexpr const char* kCompositorUrl = "file:///system/apps/compositor_service";
+constexpr const char* kViewManagerUrl =
+    "file:///system/apps/view_manager_service";
+constexpr const char* kInputManagerUrl =
+    "file:///system/apps/input_manager_service";
+constexpr const char* kFontProviderUrl = "file:///system/apps/fonts";
+}
 
-LauncherApp::LauncherApp() : next_id_(0u) {}
+LauncherApp::LauncherApp(const ftl::CommandLine& command_line)
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()),
+      env_host_binding_(this) {
+  FTL_DCHECK(application_context_);
+
+  // Parse arguments.
+  std::string option;
+  command_line.GetOptionValue("view_associate_urls", &option);
+  view_associate_urls_ = ftl::SplitStringCopy(option, ",", ftl::kKeepWhitespace,
+                                              ftl::kSplitWantAll);
+  if (view_associate_urls_.empty()) {
+    // TODO(jeffbrown): Don't hardcode this.
+    view_associate_urls_.push_back(kInputManagerUrl);
+  }
+
+  // Set up environment for the programs the launcher will run.
+  modular::ApplicationEnvironmentHostPtr env_host;
+  env_host_binding_.Bind(GetProxy(&env_host));
+  application_context_->environment()->CreateNestedEnvironment(
+      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_));
+  env_->GetApplicationLauncher(GetProxy(&env_launcher_));
+  RegisterServices();
+
+  // Launch program with arguments supplied on command-line.
+  const auto& positional_args = command_line.positional_args();
+  if (!positional_args.empty()) {
+    fidl::String url = positional_args[0];
+    fidl::Array<fidl::String> arguments;
+    for (size_t i = 1; i < positional_args.size(); ++i)
+      arguments.push_back(positional_args[i]);
+    Launch(std::move(url), std::move(arguments));
+  }
+}
 
 LauncherApp::~LauncherApp() {}
 
-void LauncherApp::OnInitialize() {
-  auto command_line = ftl::CommandLineFromIteratorsWithArgv0(
-      url(), args().begin(), args().end());
+void LauncherApp::GetApplicationEnvironmentServices(
+    const fidl::String& url,
+    fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
+  env_services_.AddBinding(std::move(environment_services));
+}
 
-  TRACE_EVENT0("launcher", __func__);
+void LauncherApp::RegisterServices() {
+  env_services_.AddService<mozart::Compositor>([this](
+      fidl::InterfaceRequest<mozart::Compositor> request) {
+    FTL_DLOG(INFO) << "Servicing compositor service request";
+    InitCompositor();
+    modular::ConnectToService(compositor_services_.get(), std::move(request));
+  });
 
-  InitCompositor();
-  InitViewManager();
-  std::string view_associate_urls;
-  command_line.GetOptionValue("view_associate_urls", &view_associate_urls);
-  // If view_associate_urls is empty, a default set of ViewAssociates is
-  // launched
-  InitViewAssociates(view_associate_urls);
+  env_services_.AddService<mozart::ViewManager>([this](
+      fidl::InterfaceRequest<mozart::ViewManager> request) {
+    FTL_DLOG(INFO) << "Servicing view manager service request";
+    InitViewManager();
+    modular::ConnectToService(view_manager_services_.get(), std::move(request));
+  });
 
-  for (const auto& arg : command_line.positional_args()) {
-    Launch(arg);
-  }
+  env_services_.AddService<modular::ApplicationEnvironment>(
+      [this](fidl::InterfaceRequest<modular::ApplicationEnvironment> request) {
+        // TODO(jeffbrown): The fact we have to handle this here suggests that
+        // the application protocol should change so as to pass the environment
+        // as an initial rather than incoming services so we're not trying
+        // to ask the incoming services for the environment.
+        FTL_DLOG(INFO) << "Servicing application environment request";
+        env_->Duplicate(std::move(request));
+      });
+
+  RegisterSingletonService(fonts::FontProvider::Name_, kFontProviderUrl);
+
+  env_services_.SetDefaultServiceConnector([this](std::string service_name,
+                                                  mx::channel channel) {
+    FTL_DLOG(INFO) << "Servicing default service request for " << service_name;
+    application_context_->environment_services()->ConnectToService(
+        service_name, std::move(channel));
+  });
+}
+
+void LauncherApp::RegisterSingletonService(std::string service_name,
+                                           std::string url) {
+  env_services_.AddServiceForName(
+      ftl::MakeCopyable([
+        this, service_name, url, services = modular::ServiceProviderPtr()
+      ](mx::channel client_handle) mutable {
+        FTL_DLOG(INFO) << "Servicing singleton service request for "
+                       << service_name;
+        if (!services) {
+          auto launch_info = modular::ApplicationLaunchInfo::New();
+          launch_info->url = url;
+          launch_info->services = GetProxy(&services);
+          env_launcher_->CreateApplication(std::move(launch_info), nullptr);
+        }
+        services->ConnectToService(service_name, std::move(client_handle));
+      }),
+      service_name);
 }
 
 void LauncherApp::InitCompositor() {
-  mojo::ConnectToService(shell(), "mojo:compositor_service",
-                         GetProxy(&compositor_));
-  compositor_.set_connection_error_handler(
-      [this] { OnCompositorConnectionError(); });
+  if (compositor_)
+    return;
+
+  auto launch_info = modular::ApplicationLaunchInfo::New();
+  launch_info->url = kCompositorUrl;
+  launch_info->services = GetProxy(&compositor_services_);
+  env_launcher_->CreateApplication(std::move(launch_info), nullptr);
+  modular::ConnectToService(compositor_services_.get(), GetProxy(&compositor_));
+  compositor_.set_connection_error_handler([] {
+    FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
+    exit(1);
+  });
 }
 
 void LauncherApp::InitViewManager() {
-  mojo::ConnectToService(shell(), "mojo:view_manager_service",
-                         GetProxy(&view_manager_));
-  view_manager_.set_connection_error_handler(
-      [this] { OnViewManagerConnectionError(); });
-}
+  if (view_manager_)
+    return;
 
-void LauncherApp::InitViewAssociates(
-    const std::string& associate_urls_command_line_param) {
-  // Build up the list of ViewAssociates we are going to start
-  auto associate_urls =
-      ftl::SplitStringCopy(associate_urls_command_line_param, ",",
-                           ftl::kKeepWhitespace, ftl::kSplitWantAll);
+  auto launch_info = modular::ApplicationLaunchInfo::New();
+  launch_info->url = kViewManagerUrl;
+  launch_info->services = GetProxy(&view_manager_services_);
+  env_launcher_->CreateApplication(std::move(launch_info), nullptr);
+  modular::ConnectToService(view_manager_services_.get(),
+                            GetProxy(&view_manager_));
+  view_manager_.set_connection_error_handler([] {
+    FTL_LOG(ERROR) << "Exiting due to view manager connection error.";
+    exit(1);
+  });
 
-  // If there's nothing we got from the command line, use our own list
-  if (associate_urls.empty()) {
-    // TODO(jeffbrown): Replace this hardcoded list.
-    associate_urls.push_back("mojo:input_manager_service");
-  }
+  // Launch view associated.
+  for (const auto& url : view_associate_urls_) {
+    FTL_DLOG(INFO) << "Starting view associate " << url;
 
-  view_associate_owners_.reserve(associate_urls.size());
-
-  // Connect to ViewAssociates.
-  for (const auto& url : associate_urls) {
     // Connect to the ViewAssociate.
-    DVLOG(2) << "Connecting to ViewAssociate " << url;
-    mozart::ViewAssociatePtr view_associate;
-    mojo::ConnectToService(shell(), url, GetProxy(&view_associate));
+    modular::ServiceProviderPtr view_associate_services;
+    auto view_associate_launch_info = modular::ApplicationLaunchInfo::New();
+    view_associate_launch_info->url = url;
+    view_associate_launch_info->services = GetProxy(&view_associate_services);
+    env_launcher_->CreateApplication(std::move(view_associate_launch_info),
+                                     nullptr);
+    auto view_associate = modular::ConnectToService<mozart::ViewAssociate>(
+        view_associate_services.get());
 
     // Wire up the associate to the ViewManager.
     mozart::ViewAssociateOwnerPtr view_associate_owner;
     view_manager_->RegisterViewAssociate(std::move(view_associate),
                                          GetProxy(&view_associate_owner), url);
-
-    view_associate_owner.set_connection_error_handler(
-        [this] { OnViewAssociateConnectionError(); });
-
+    view_associate_owner.set_connection_error_handler([url] {
+      FTL_LOG(ERROR) << "Exiting due to view associate connection error: url="
+                     << url;
+      exit(1);
+    });
     view_associate_owners_.push_back(std::move(view_associate_owner));
   }
   view_manager_->FinishedRegisteringViewAssociates();
 }
 
-bool LauncherApp::OnAcceptConnection(
-    mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<Launcher>(
-      [this](const mojo::ConnectionContext& connection_context,
-             mojo::InterfaceRequest<Launcher> launcher_request) {
-        bindings_.AddBinding(this, std::move(launcher_request));
-      });
-  return true;
-}
+void LauncherApp::Launch(fidl::String url,
+                         fidl::Array<fidl::String> arguments) {
+  FTL_LOG(INFO) << "Launching " << url;
 
-void LauncherApp::Launch(const mojo::String& application_url) {
-  DVLOG(1) << "Launching " << application_url;
+  modular::ServiceProviderPtr services;
+  modular::ApplicationControllerPtr controller;
+  auto launch_info = modular::ApplicationLaunchInfo::New();
+  launch_info->url = std::move(url);
+  launch_info->arguments = std::move(arguments);
+  launch_info->services = GetProxy(&services);
+  env_launcher_->CreateApplication(std::move(launch_info),
+                                   GetProxy(&controller));
 
-  mojo::InterfacePtr<mozart::ViewProvider> view_provider;
-  mojo::ConnectToService(shell(), application_url, GetProxy(&view_provider));
-  mojo::InterfaceHandle<mozart::ViewOwner> view_owner;
-  view_provider->CreateView(mojo::GetProxy(&view_owner), nullptr);
-  Display(std::move(view_owner));
+  fidl::InterfacePtr<mozart::ViewProvider> view_provider;
+  modular::ConnectToService(services.get(), GetProxy(&view_provider));
+
+  fidl::InterfaceHandle<mozart::ViewOwner> view_owner;
+  view_provider->CreateView(fidl::GetProxy(&view_owner), nullptr);
+
+  DisplayInternal(std::move(view_owner), std::move(controller));
 }
 
 void LauncherApp::Display(
-    mojo::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
+    fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
+  DisplayInternal(std::move(view_owner_handle), nullptr);
+}
+
+void LauncherApp::DisplayInternal(
+    fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle,
+    modular::ApplicationControllerPtr controller) {
   mozart::ViewOwnerPtr view_owner =
       mozart::ViewOwnerPtr::Create(std::move(view_owner_handle));
 
+  InitCompositor();
+  InitViewManager();
+
   const uint32_t next_id = next_id_++;
-  std::unique_ptr<LaunchInstance> instance(new LaunchInstance(
-      compositor_.get(), view_manager_.get(), std::move(view_owner),
-      [this, next_id] { OnLaunchTermination(next_id); }));
+  std::unique_ptr<LaunchInstance> instance(
+      new LaunchInstance(compositor_.get(), view_manager_.get(),
+                         std::move(view_owner), std::move(controller),
+                         [this, next_id] { OnLaunchTermination(next_id); }));
   instance->Launch();
   launch_instances_.emplace(next_id, std::move(instance));
 }
 
 void LauncherApp::OnLaunchTermination(uint32_t id) {
   launch_instances_.erase(id);
+
   if (launch_instances_.empty()) {
-    mojo::TerminateApplication(MOJO_RESULT_OK);
+    FTL_LOG(INFO) << "Last launched view terminated, exiting launcher.";
+    exit(0);
   }
 }
-
-void LauncherApp::OnCompositorConnectionError() {
-  FTL_LOG(ERROR) << "Exiting due to compositor connection error.";
-  mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
-}
-
-void LauncherApp::OnViewManagerConnectionError() {
-  FTL_LOG(ERROR) << "Exiting due to view manager connection error.";
-  mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
-}
-
-void LauncherApp::OnViewAssociateConnectionError() {
-  FTL_LOG(ERROR) << "Exiting due to view associate connection error.";
-  mojo::TerminateApplication(MOJO_RESULT_UNKNOWN);
-};
 
 }  // namespace launcher

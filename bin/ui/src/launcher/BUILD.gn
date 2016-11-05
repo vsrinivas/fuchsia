@@ -4,39 +4,28 @@
 
 executable("launcher") {
   sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//mojo/system",
-  ]
-}
-
-# Library that allows the service code to be included directly into the
-# embedding shell.
-source_set("lib") {
-  sources = [
     "launch_instance.cc",
     "launch_instance.h",
     "launcher_app.cc",
     "launcher_app.h",
     "launcher_view_tree.cc",
     "launcher_view_tree.h",
+    "main.cc",
   ]
 
-  public_deps = [
+  deps = [
+    "//apps/fonts/services",
+    "//apps/modular/lib/app",
     "//apps/mozart/glue/base",
+    "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
-    "//apps/mozart/services/composition/interfaces",
-    "//apps/mozart/services/input/interfaces",
-    "//apps/mozart/services/launcher/interfaces",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/launcher",
+    "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
-    "//apps/mozart/services/views/interfaces",
     "//apps/mozart/src/input_reader",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings:bindings",
+    "//lib/fidl/cpp/bindings",
   ]
 }

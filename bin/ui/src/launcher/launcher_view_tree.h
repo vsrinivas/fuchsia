@@ -5,12 +5,12 @@
 #ifndef APPS_MOZART_SRC_LAUNCHER_LAUNCHER_VIEW_TREE_H_
 #define APPS_MOZART_SRC_LAUNCHER_LAUNCHER_VIEW_TREE_H_
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/input/input_dispatcher.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace launcher {
 
@@ -51,8 +51,8 @@ class LauncherViewTree : public mozart::ViewTreeListener,
 
   ftl::Closure shutdown_callback_;
 
-  mojo::Binding<mozart::ViewTreeListener> view_tree_listener_binding_;
-  mojo::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<mozart::ViewTreeListener> view_tree_listener_binding_;
+  fidl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
 
   mozart::ViewTreePtr view_tree_;
   mozart::ViewContainerPtr view_container_;

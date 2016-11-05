@@ -7,15 +7,16 @@
 
 #include <memory>
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
+#include "apps/modular/services/application/application_controller.fidl.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/input/input_events.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/mozart/src/input_reader/input_interpreter.h"
 #include "apps/mozart/src/input_reader/input_reader.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace launcher {
 
@@ -26,6 +27,7 @@ class LaunchInstance {
   LaunchInstance(mozart::Compositor* compositor,
                  mozart::ViewManager* view_manager,
                  mozart::ViewOwnerPtr view_owner,
+                 modular::ApplicationControllerPtr controller,
                  const ftl::Closure& shutdown_callback);
   ~LaunchInstance();
 
@@ -39,8 +41,9 @@ class LaunchInstance {
 
   mozart::RendererPtr renderer_;
 
-  mojo::PointF mouse_coordinates_;
+  mozart::PointF mouse_coordinates_;
   mozart::ViewOwnerPtr root_view_owner_;
+  modular::ApplicationControllerPtr controller_;
 
   ftl::Closure shutdown_callback_;
 

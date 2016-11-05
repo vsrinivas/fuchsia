@@ -2,12 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include <memory>
 
 #include "apps/mozart/src/launcher/launcher_app.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/ftl/command_line.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-MojoResult MojoMain(MojoHandle application_request) {
-  launcher::LauncherApp launcher_app;
-  return mojo::RunApplication(application_request, &launcher_app);
+int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  mtl::MessageLoop loop;
+
+  std::unique_ptr<launcher::LauncherApp> app;
+  loop.task_runner()->PostTask([&app, &command_line] {
+    app = std::make_unique<launcher::LauncherApp>(command_line);
+  });
+
+  loop.Run();
+  return 0;
 }
