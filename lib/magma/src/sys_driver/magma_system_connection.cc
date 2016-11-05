@@ -143,15 +143,13 @@ void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback
                                      void* data)
 {
     if (!has_display_capability_) {
-        DLOG("Attempting to pageflip without display capability");
-        callback(-EINVAL, data);
+        callback(DRET_MSG(-EINVAL, "Attempting to pageflip without display capability"), data);
         return;
     }
 
     auto buf = LookupBuffer(id);
     if (!buf) {
-        DLOG("Attempting to page flip with invalid buffer");
-        callback(-EINVAL, data);
+        callback(DRET_MSG(-EINVAL, "Attempting to page flip with invalid buffer"), data);
         return;
     }
 
