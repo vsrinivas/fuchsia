@@ -12,7 +12,7 @@ MockViewInspector::MockViewInspector() {}
 
 MockViewInspector::~MockViewInspector() {
   for (const auto& pair : hit_tester_callbacks_)
-    pair.second.Run(false);
+    pair.second(false);
 }
 
 void MockViewInspector::SetHitTester(uint32_t view_tree_token_value,
@@ -26,7 +26,7 @@ void MockViewInspector::SetHitTester(uint32_t view_tree_token_value,
 
   auto pair = hit_tester_callbacks_.equal_range(view_tree_token_value);
   for (auto it = pair.first; it != pair.second; ++it)
-    it->second.Run(hit_tester != nullptr);
+    it->second(hit_tester != nullptr);
   hit_tester_callbacks_.erase(pair.first, pair.second);
 }
 
@@ -39,7 +39,7 @@ void MockViewInspector::SetSceneMapping(uint32_t scene_token_value,
   FTL_DCHECK(scene_token_value);
 
   if (view_token)
-    scene_mappings_.emplace(scene_token_value, view_token.Pass());
+    scene_mappings_.emplace(scene_token_value, std::move(view_token));
   else
     scene_mappings_.erase(scene_mappings_.find(scene_token_value),
                           scene_mappings_.end());
@@ -47,7 +47,7 @@ void MockViewInspector::SetSceneMapping(uint32_t scene_token_value,
 
 void MockViewInspector::GetHitTester(
     ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<HitTester> hit_tester_request,
+    fidl::InterfaceRequest<HitTester> hit_tester_request,
     const GetHitTesterCallback& callback) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(view_tree_token->value);
@@ -57,21 +57,21 @@ void MockViewInspector::GetHitTester(
 
   auto it = hit_testers_.find(view_tree_token->value);
   if (it == hit_testers_.end()) {
-    callback.Run(false);
+    callback(false);
     return;
   }
 
-  hit_tester_bindings_.AddBinding(it->second, hit_tester_request.Pass());
+  hit_tester_bindings_.AddBinding(it->second, std::move(hit_tester_request));
   hit_tester_callbacks_.emplace(view_tree_token->value, callback);
 }
 
-void MockViewInspector::ResolveScenes(mojo::Array<SceneTokenPtr> scene_tokens,
+void MockViewInspector::ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
                                       const ResolveScenesCallback& callback) {
   FTL_DCHECK(!scene_tokens.is_null());
 
   scene_lookups_++;
 
-  mojo::Array<ViewTokenPtr> view_tokens;
+  fidl::Array<ViewTokenPtr> view_tokens;
   view_tokens.resize(scene_tokens.size());
   for (size_t i = 0; i < scene_tokens.size(); i++) {
     FTL_DCHECK(scene_tokens[i]);
@@ -81,7 +81,7 @@ void MockViewInspector::ResolveScenes(mojo::Array<SceneTokenPtr> scene_tokens,
       view_tokens[i] = it->second.Clone();
   }
 
-  callback.Run(view_tokens.Pass());
+  callback(std::move(view_tokens));
 }
 
 }  // namespace mozart

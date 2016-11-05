@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-
 source_set("view_associate_framework") {
   sources = [
     "resolved_hits.cc",
@@ -15,13 +13,13 @@ source_set("view_associate_framework") {
   ]
 
   deps = [
+    "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
-    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
-    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
-    "//mojo/public/cpp/bindings",
-    "//mojo/services/geometry/interfaces",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
@@ -35,11 +33,11 @@ source_set("mocks") {
 
   deps = [
     ":view_associate_framework",
-    "//apps/mozart/services/composition/interfaces",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/composition",
+    "//apps/mozart/services/views",
     "//lib/ftl",
-    "//mojo/public/cpp/bindings",
-    "//mojo/services/geometry/interfaces",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
@@ -59,12 +57,12 @@ source_set("mocks") {
 #     ":view_associate_framework",
 #     ":mocks",
 #     "//lib/ftl",
-#     "//apps/mozart/services/composition/interfaces",
-#     "//apps/mozart/services/views/interfaces",
-#     "//mojo/public/cpp/application",
-#     "//mojo/public/cpp/application:test_support",
-#     "//mojo/public/cpp/bindings:callback",
-#     "//mojo/services/geometry/interfaces",
+#     "//apps/mozart/services/composition",
+#     "//apps/mozart/services/views",
+#     "//lib/fidl/cpp/application",
+#     "//lib/fidl/cpp/application:test_support",
+#     "//lib/fidl/cpp/bindings:callback",
+#     "//apps/mozart/services/geometry",
 #     "//third_party/gtest",
 #   ]
 # }

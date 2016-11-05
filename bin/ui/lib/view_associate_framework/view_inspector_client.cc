@@ -13,8 +13,8 @@
 namespace mozart {
 
 ViewInspectorClient::ViewInspectorClient(
-    mojo::InterfaceHandle<ViewInspector> view_inspector)
-    : view_inspector_(ViewInspectorPtr::Create(view_inspector.Pass())) {
+    fidl::InterfaceHandle<ViewInspector> view_inspector)
+    : view_inspector_(ViewInspectorPtr::Create(std::move(view_inspector))) {
   FTL_DCHECK(view_inspector_);
 }
 
@@ -25,28 +25,28 @@ void ViewInspectorClient::ResolveHits(HitTestResultPtr hit_test_result,
   FTL_DCHECK(hit_test_result);
 
   std::unique_ptr<ResolvedHits> resolved_hits(
-      new ResolvedHits(hit_test_result.Pass()));
+      new ResolvedHits(std::move(hit_test_result)));
 
   if (resolved_hits->result()->root) {
-    mojo::Array<SceneTokenPtr> missing_scene_tokens;
+    fidl::Array<SceneTokenPtr> missing_scene_tokens;
     ResolveSceneHit(resolved_hits->result()->root.get(), resolved_hits.get(),
                     &missing_scene_tokens);
     if (missing_scene_tokens.size()) {
       // TODO(jeffbrown): Ideally we would set the capacity of the array
-      // here since we know it upfront but mojo::Array doesn't support this.
-      mojo::Array<uint32_t> missing_scene_token_values;
+      // here since we know it upfront but fidl::Array doesn't support this.
+      fidl::Array<uint32_t> missing_scene_token_values;
       for (const auto& token : missing_scene_tokens.storage())
         missing_scene_token_values.push_back(token->value);
 
-      std::function<void(mojo::Array<ViewTokenPtr>)> resolved_scenes =
+      std::function<void(fidl::Array<ViewTokenPtr>)> resolved_scenes =
           ftl::MakeCopyable([
             this, hits = std::move(resolved_hits),
             token_values = std::move(missing_scene_token_values), callback
-          ](mojo::Array<ViewTokenPtr> view_tokens) mutable {
+          ](fidl::Array<ViewTokenPtr> view_tokens) mutable {
             OnScenesResolved(std::move(hits), std::move(token_values), callback,
-                             view_tokens.Pass());
+                             std::move(view_tokens));
           });
-      view_inspector_->ResolveScenes(missing_scene_tokens.Pass(),
+      view_inspector_->ResolveScenes(std::move(missing_scene_tokens),
                                      resolved_scenes);
       return;
     }
@@ -58,7 +58,7 @@ void ViewInspectorClient::ResolveHits(HitTestResultPtr hit_test_result,
 void ViewInspectorClient::ResolveSceneHit(
     const SceneHit* scene_hit,
     ResolvedHits* resolved_hits,
-    mojo::Array<SceneTokenPtr>* missing_scene_tokens) {
+    fidl::Array<SceneTokenPtr>* missing_scene_tokens) {
   FTL_DCHECK(scene_hit);
   FTL_DCHECK(scene_hit->scene_token);
   FTL_DCHECK(resolved_hits);
@@ -91,9 +91,9 @@ void ViewInspectorClient::ResolveSceneHit(
 
 void ViewInspectorClient::OnScenesResolved(
     std::unique_ptr<ResolvedHits> resolved_hits,
-    mojo::Array<uint32_t> missing_scene_token_values,
+    fidl::Array<uint32_t> missing_scene_token_values,
     const ResolvedHitsCallback& callback,
-    mojo::Array<ViewTokenPtr> view_tokens) {
+    fidl::Array<ViewTokenPtr> view_tokens) {
   FTL_DCHECK(resolved_hits);
   FTL_DCHECK(missing_scene_token_values);
   FTL_DCHECK(view_tokens);
@@ -103,7 +103,7 @@ void ViewInspectorClient::OnScenesResolved(
     const uint32_t scene_token_value = missing_scene_token_values[i];
     resolved_scene_cache_.emplace(scene_token_value, view_tokens[i].Clone());
     if (view_tokens[i])
-      resolved_hits->AddMapping(scene_token_value, view_tokens[i].Pass());
+      resolved_hits->AddMapping(scene_token_value, std::move(view_tokens[i]));
   }
 
   callback(std::move(resolved_hits));

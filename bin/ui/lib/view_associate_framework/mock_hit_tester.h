@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
+#include "apps/mozart/services/composition/hit_tests.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {
@@ -18,13 +18,14 @@ class MockHitTester : public HitTester {
   ~MockHitTester() override;
 
   // Sets the next hit test result.
-  void SetNextResult(mojo::PointFPtr point, HitTestResultPtr result);
+  void SetNextResult(PointFPtr point, HitTestResultPtr result);
 
   // |HitTester|
-  void HitTest(mojo::PointFPtr point, const HitTestCallback& callback) override;
+  void HitTest(PointFPtr point,
+               const HitTestCallback& callback) override;
 
  private:
-  mojo::PointFPtr point_;
+  PointFPtr point_;
   HitTestResultPtr result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MockHitTester);

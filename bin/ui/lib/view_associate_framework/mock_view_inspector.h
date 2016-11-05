@@ -7,9 +7,9 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace mozart {
 
@@ -38,14 +38,14 @@ class MockViewInspector : public ViewInspector {
 
   // |ViewInspector|
   void GetHitTester(ViewTreeTokenPtr view_tree_token,
-                    mojo::InterfaceRequest<HitTester> hit_tester_request,
+                    fidl::InterfaceRequest<HitTester> hit_tester_request,
                     const GetHitTesterCallback& callback) override;
-  void ResolveScenes(mojo::Array<SceneTokenPtr> scene_tokens,
+  void ResolveScenes(fidl::Array<SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
 
  private:
   std::unordered_map<uint32_t, HitTester*> hit_testers_;
-  mojo::BindingSet<HitTester> hit_tester_bindings_;
+  fidl::BindingSet<HitTester> hit_tester_bindings_;
   std::unordered_multimap<uint32_t, GetHitTesterCallback> hit_tester_callbacks_;
 
   std::unordered_map<uint32_t, ViewTokenPtr> scene_mappings_;

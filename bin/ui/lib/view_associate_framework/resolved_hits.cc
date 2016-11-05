@@ -10,7 +10,8 @@
 
 namespace mozart {
 
-ResolvedHits::ResolvedHits(HitTestResultPtr result) : result_(result.Pass()) {
+ResolvedHits::ResolvedHits(HitTestResultPtr result)
+    : result_(std::move(result)) {
   FTL_DCHECK(result_);
 }
 
@@ -21,7 +22,7 @@ void ResolvedHits::AddMapping(uint32_t scene_token_value,
   FTL_DCHECK(scene_token_value);
   FTL_DCHECK(view_token);
 
-  auto pair = map_.emplace(scene_token_value, view_token.Pass());
+  auto pair = map_.emplace(scene_token_value, std::move(view_token));
   FTL_DCHECK(pair.second);
 }
 

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/mozart/lib/view_associate_framework/resolved_hits.h"
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -19,7 +19,7 @@ namespace mozart {
 class ViewInspectorClient
     : public ftl::RefCountedThreadSafe<ViewInspectorClient> {
  public:
-  ViewInspectorClient(mojo::InterfaceHandle<ViewInspector> view_inspector);
+  ViewInspectorClient(fidl::InterfaceHandle<ViewInspector> view_inspector);
 
   ViewInspector* view_inspector() { return view_inspector_.get(); }
 
@@ -35,11 +35,11 @@ class ViewInspectorClient
 
   void ResolveSceneHit(const SceneHit* scene_hit,
                        ResolvedHits* resolved_hits,
-                       mojo::Array<SceneTokenPtr>* missing_scene_tokens);
+                       fidl::Array<SceneTokenPtr>* missing_scene_tokens);
   void OnScenesResolved(std::unique_ptr<ResolvedHits> resolved_hits,
-                        mojo::Array<uint32_t> missing_scene_token_values,
+                        fidl::Array<uint32_t> missing_scene_token_values,
                         const ResolvedHitsCallback& callback,
-                        mojo::Array<ViewTokenPtr> view_tokens);
+                        fidl::Array<ViewTokenPtr> view_tokens);
 
   ViewInspectorPtr view_inspector_;
 

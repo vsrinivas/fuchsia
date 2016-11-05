@@ -12,24 +12,24 @@ MockHitTester::MockHitTester() {}
 
 MockHitTester::~MockHitTester() {}
 
-void MockHitTester::SetNextResult(mojo::PointFPtr point,
+void MockHitTester::SetNextResult(PointFPtr point,
                                   HitTestResultPtr result) {
   FTL_DCHECK(point);
   FTL_DCHECK(result);
 
-  point_ = point.Pass();
-  result_ = result.Pass();
+  point_ = std::move(point);
+  result_ = std::move(result);
 }
 
-void MockHitTester::HitTest(mojo::PointFPtr point,
+void MockHitTester::HitTest(PointFPtr point,
                             const HitTestCallback& callback) {
   FTL_DCHECK(point);
 
   if (point.Equals(point_)) {
     point_.reset();
-    callback.Run(result_.Pass());
+    callback(std::move(result_));
   } else {
-    callback.Run(HitTestResult::New());
+    callback(HitTestResult::New());
   }
 }
 

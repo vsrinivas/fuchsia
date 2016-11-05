@@ -9,7 +9,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace mozart {
@@ -26,7 +26,7 @@ class ResolvedHits {
 
   // The hit test result, not null unless |TakeResult| was called.
   const HitTestResult* result() const { return result_.get(); }
-  HitTestResultPtr TakeResult() { return result_.Pass(); }
+  HitTestResultPtr TakeResult() { return std::move(result_); }
 
   // A map from scene token value to view token containing all scenes which
   // could be resolved.

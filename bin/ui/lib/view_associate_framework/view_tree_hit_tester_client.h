@@ -8,8 +8,8 @@
 #include <queue>
 
 #include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
-#include "apps/mozart/services/composition/interfaces/hit_tests.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/composition/hit_tests.fidl.h"
+#include "apps/mozart/services/views/view_trees.fidl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
@@ -29,7 +29,7 @@ class ViewTreeHitTesterClient
 
   // Performs a hit test for the specified point then invokes the callback.
   // Note: May invoke the callback immediately if no remote calls were required.
-  void HitTest(mojo::PointFPtr point, const ResolvedHitsCallback& callback);
+  void HitTest(PointFPtr point, const ResolvedHitsCallback& callback);
 
   // Sets a callback to invoke when the hit tester changes.
   void set_hit_tester_changed_callback(const ftl::Closure& callback) {

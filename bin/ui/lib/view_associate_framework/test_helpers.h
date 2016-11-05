@@ -7,7 +7,7 @@
 
 #include <utility>
 
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace test {
@@ -18,15 +18,15 @@ void Capture(const ftl::Closure& quit, T* out, T value) {
   quit();
 }
 
-inline mojo::PointFPtr MakePointF(float x, float y) {
-  auto result = mojo::PointF::New();
+inline mozart::PointFPtr MakePointF(float x, float y) {
+  auto result = mozart::PointF::New();
   result->x = x;
   result->y = y;
   return result.Pass();
 }
 
-inline mojo::TransformPtr MakeDummyTransform(float x) {
-  auto result = mojo::Transform::New();
+inline mozart::TransformPtr MakeDummyTransform(float x) {
+  auto result = mozart::Transform::New();
   result->matrix.resize(16u);
   result->matrix[0] = x;
   return result.Pass();
@@ -46,7 +46,7 @@ inline mozart::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
 
 inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
     mozart::SceneTokenPtr scene_token,
-    mojo::TransformPtr transform) {
+    mozart::TransformPtr transform) {
   auto result = mozart::HitTestResult::New();
   result->root = mozart::SceneHit::New();
   result->root->scene_token = scene_token.Pass();

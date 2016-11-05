@@ -11,20 +11,20 @@
 #include "apps/mozart/lib/view_associate_framework/test_helpers.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+#include "lib/fidl/cpp/application/application_test_base.h"
 #include "third_party/gtest/include/gtest/gtest.h"
 
 namespace test {
 
-class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
+class ViewTreeHitTesterClientTest : public fidl::test::ApplicationTestBase {
  public:
   ViewTreeHitTesterClientTest() : view_inspector_binding_(&view_inspector_) {}
   ~ViewTreeHitTesterClientTest() override {}
 
   void SetUp() override {
-    mojo::test::ApplicationTestBase::SetUp();
+    fidl::test::ApplicationTestBase::SetUp();
 
-    mojo::InterfaceHandle<mozart::ViewInspector> view_inspector;
+    fidl::InterfaceHandle<mozart::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
     view_inspector_client_ =
         ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
@@ -37,7 +37,7 @@ class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
   }
 
  protected:
-  void HitTest(mojo::PointFPtr point,
+  void HitTest(mozart::PointFPtr point,
                scoped_ptr<mozart::ResolvedHits>* resolved_hits) {
     base::RunLoop loop;
     view_tree_hit_tester_client_->HitTest(
@@ -47,7 +47,7 @@ class ViewTreeHitTesterClientTest : public mojo::test::ApplicationTestBase {
   }
 
   mozart::MockViewInspector view_inspector_;
-  mojo::Binding<mozart::ViewInspector> view_inspector_binding_;
+  fidl::Binding<mozart::ViewInspector> view_inspector_binding_;
   ftl::RefPtr<mozart::ViewInspectorClient> view_inspector_client_;
 
   mozart::ViewTreeTokenPtr view_tree_token_;

@@ -9,20 +9,20 @@
 #include "base/bind.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+#include "lib/fidl/cpp/application/application_test_base.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace test {
 
-class ViewInspectorClientTest : public mojo::test::ApplicationTestBase {
+class ViewInspectorClientTest : public fidl::test::ApplicationTestBase {
  public:
   ViewInspectorClientTest() : view_inspector_binding_(&view_inspector_) {}
   ~ViewInspectorClientTest() override {}
 
   void SetUp() override {
-    mojo::test::ApplicationTestBase::SetUp();
+    fidl::test::ApplicationTestBase::SetUp();
 
-    mojo::InterfaceHandle<mozart::ViewInspector> view_inspector;
+    fidl::InterfaceHandle<mozart::ViewInspector> view_inspector;
     view_inspector_binding_.Bind(&view_inspector);
     view_inspector_client_ =
         ftl::MakeRefCounted<mozart::ViewInspectorClient>(view_inspector.Pass());
@@ -40,7 +40,7 @@ class ViewInspectorClientTest : public mojo::test::ApplicationTestBase {
   }
 
   mozart::MockViewInspector view_inspector_;
-  mojo::Binding<mozart::ViewInspector> view_inspector_binding_;
+  fidl::Binding<mozart::ViewInspector> view_inspector_binding_;
   scoped_refptr<mozart::ViewInspectorClient> view_inspector_client_;
 
  private:

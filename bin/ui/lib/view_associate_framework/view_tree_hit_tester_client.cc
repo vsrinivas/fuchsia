@@ -13,7 +13,7 @@ ViewTreeHitTesterClient::ViewTreeHitTesterClient(
     const ftl::RefPtr<ViewInspectorClient>& view_inspector_client,
     ViewTreeTokenPtr view_tree_token)
     : view_inspector_client_(view_inspector_client),
-      view_tree_token_(view_tree_token.Pass()),
+      view_tree_token_(std::move(view_tree_token)),
       weak_factory_(this) {
   FTL_DCHECK(view_inspector_client_);
   FTL_DCHECK(view_tree_token_);
@@ -23,7 +23,7 @@ ViewTreeHitTesterClient::ViewTreeHitTesterClient(
 
 ViewTreeHitTesterClient::~ViewTreeHitTesterClient() {}
 
-void ViewTreeHitTesterClient::HitTest(mojo::PointFPtr point,
+void ViewTreeHitTesterClient::HitTest(PointFPtr point,
                                       const ResolvedHitsCallback& callback) {
   if (!hit_tester_) {
     callback(nullptr);
@@ -35,8 +35,8 @@ void ViewTreeHitTesterClient::HitTest(mojo::PointFPtr point,
   // assumption.
   pending_callbacks_.push(callback);
 
-  hit_tester_->HitTest(point.Pass(), [this](HitTestResultPtr result) {
-    OnHitTestResult(result.Pass());
+  hit_tester_->HitTest(std::move(point), [this](HitTestResultPtr result) {
+    OnHitTestResult(std::move(result));
   });
 }
 
@@ -44,7 +44,7 @@ void ViewTreeHitTesterClient::OnHitTestResult(HitTestResultPtr result) {
   FTL_DCHECK(result);
   FTL_DCHECK(!pending_callbacks_.empty());
 
-  view_inspector_client_->ResolveHits(result.Pass(),
+  view_inspector_client_->ResolveHits(std::move(result),
                                       pending_callbacks_.front());
   pending_callbacks_.pop();
 }
@@ -53,7 +53,7 @@ void ViewTreeHitTesterClient::UpdateHitTester() {
   FTL_DCHECK(!hit_tester_);
 
   view_inspector_client_->view_inspector()->GetHitTester(
-      view_tree_token_.Clone(), mojo::GetProxy(&hit_tester_),
+      view_tree_token_.Clone(), fidl::GetProxy(&hit_tester_),
       [ this, weak = weak_factory_.GetWeakPtr() ](bool renderer_changed) {
         if (weak)
           weak->OnHitTesterInvalidated(renderer_changed);
