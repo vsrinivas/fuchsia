@@ -10,6 +10,8 @@
 
 #include <kernel/auto_lock.h>
 
+#include <lib/ktrace.h>
+
 #include <magenta/port_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>

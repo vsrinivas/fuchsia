@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
+
+#include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
 #include <magenta/magenta.h>

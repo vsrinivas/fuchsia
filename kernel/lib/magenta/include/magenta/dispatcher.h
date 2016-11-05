@@ -9,8 +9,6 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <lib/ktrace.h>
-
 #include <magenta/handle.h>
 #include <magenta/port_client.h>
 #include <magenta/magenta.h>
@@ -54,11 +52,7 @@ class StateTracker;
 class Dispatcher : public mxtl::RefCounted<Dispatcher> {
 public:
     Dispatcher();
-    virtual ~Dispatcher() {
-#if WITH_LIB_KTRACE
-        ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
-#endif
-    }
+    virtual ~Dispatcher();
 
     mx_koid_t get_koid() const { return koid_; }
 

@@ -7,8 +7,10 @@
 #include <magenta/dispatcher.h>
 
 #include <arch/ops.h>
+#include <lib/ktrace.h>
 
-static mx_koid_t global_koid = 255ULL;
+// The first 1K koids are reserved.
+static mx_koid_t global_koid = 1024ULL;
 
 mx_koid_t Dispatcher::GenerateKernelObjectId() {
     return atomic_add_u64(&global_koid, 1ULL);
@@ -17,6 +19,12 @@ mx_koid_t Dispatcher::GenerateKernelObjectId() {
 Dispatcher::Dispatcher()
     : koid_(GenerateKernelObjectId()),
       handle_count_(0u) {
+}
+
+Dispatcher::~Dispatcher() {
+#if WITH_LIB_KTRACE
+    ktrace(TAG_OBJECT_DELETE, (uint32_t)koid_, 0, 0, 0);
+#endif
 }
 
 void Dispatcher::add_handle() {
