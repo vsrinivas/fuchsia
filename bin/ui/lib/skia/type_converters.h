@@ -5,83 +5,83 @@
 #ifndef APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
 #define APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_
 
-#include "mojo/public/cpp/bindings/type_converter.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/fidl/cpp/bindings/type_converter.h"
 #include "third_party/skia/include/core/SkMatrix.h"
 #include "third_party/skia/include/core/SkMatrix44.h"
 #include "third_party/skia/include/core/SkPoint.h"
 #include "third_party/skia/include/core/SkRRect.h"
 #include "third_party/skia/include/core/SkRect.h"
 
-// The TypeConverter template is defined in the mojo namespace.
-namespace mojo {
+// The TypeConverter template is defined in the fidl namespace.
+namespace fidl {
 
 template <>
-struct TypeConverter<SkIPoint, mojo::Point> {
-  static SkIPoint Convert(const mojo::Point& input);
+struct TypeConverter<SkIPoint, mozart::Point> {
+  static SkIPoint Convert(const mozart::Point& input);
 };
 template <>
-struct TypeConverter<mojo::Point, SkIPoint> {
-  static mojo::Point Convert(const SkIPoint& input);
-};
-
-template <>
-struct TypeConverter<SkPoint, mojo::PointF> {
-  static SkPoint Convert(const mojo::PointF& input);
-};
-template <>
-struct TypeConverter<mojo::PointF, SkPoint> {
-  static mojo::PointF Convert(const SkPoint& input);
+struct TypeConverter<mozart::Point, SkIPoint> {
+  static mozart::Point Convert(const SkIPoint& input);
 };
 
 template <>
-struct TypeConverter<SkIRect, mojo::Rect> {
-  static SkIRect Convert(const mojo::Rect& input);
+struct TypeConverter<SkPoint, mozart::PointF> {
+  static SkPoint Convert(const mozart::PointF& input);
 };
 template <>
-struct TypeConverter<mojo::Rect, SkIRect> {
-  static mojo::Rect Convert(const SkIRect& input);
-};
-
-template <>
-struct TypeConverter<SkRect, mojo::RectF> {
-  static SkRect Convert(const mojo::RectF& input);
-};
-template <>
-struct TypeConverter<mojo::RectF, SkRect> {
-  static mojo::RectF Convert(const SkRect& input);
+struct TypeConverter<mozart::PointF, SkPoint> {
+  static mozart::PointF Convert(const SkPoint& input);
 };
 
 template <>
-struct TypeConverter<SkRRect, mojo::RRectF> {
-  static SkRRect Convert(const mojo::RRectF& input);
+struct TypeConverter<SkIRect, mozart::Rect> {
+  static SkIRect Convert(const mozart::Rect& input);
 };
 template <>
-struct TypeConverter<mojo::RRectF, SkRRect> {
-  static mojo::RRectF Convert(const SkRRect& input);
+struct TypeConverter<mozart::Rect, SkIRect> {
+  static mozart::Rect Convert(const SkIRect& input);
+};
+
+template <>
+struct TypeConverter<SkRect, mozart::RectF> {
+  static SkRect Convert(const mozart::RectF& input);
+};
+template <>
+struct TypeConverter<mozart::RectF, SkRect> {
+  static mozart::RectF Convert(const SkRect& input);
+};
+
+template <>
+struct TypeConverter<SkRRect, mozart::RRectF> {
+  static SkRRect Convert(const mozart::RRectF& input);
+};
+template <>
+struct TypeConverter<mozart::RRectF, SkRRect> {
+  static mozart::RRectF Convert(const SkRRect& input);
 };
 
 // Note: This transformation is lossy since Transform is 4x4 whereas
 // SkMatrix is only 3x3 so we drop the 3rd row and column.
 template <>
-struct TypeConverter<SkMatrix, mojo::TransformPtr> {
-  static SkMatrix Convert(const mojo::TransformPtr& input);
+struct TypeConverter<SkMatrix, mozart::TransformPtr> {
+  static SkMatrix Convert(const mozart::TransformPtr& input);
 };
 template <>
-struct TypeConverter<mojo::TransformPtr, SkMatrix> {
-  static mojo::TransformPtr Convert(const SkMatrix& input);
+struct TypeConverter<mozart::TransformPtr, SkMatrix> {
+  static mozart::TransformPtr Convert(const SkMatrix& input);
 };
 
 // Note: This transformation is lossless.
 template <>
-struct TypeConverter<SkMatrix44, mojo::TransformPtr> {
-  static SkMatrix44 Convert(const mojo::TransformPtr& input);
+struct TypeConverter<SkMatrix44, mozart::TransformPtr> {
+  static SkMatrix44 Convert(const mozart::TransformPtr& input);
 };
 template <>
-struct TypeConverter<mojo::TransformPtr, SkMatrix44> {
-  static mojo::TransformPtr Convert(const SkMatrix44& input);
+struct TypeConverter<mozart::TransformPtr, SkMatrix44> {
+  static mozart::TransformPtr Convert(const SkMatrix44& input);
 };
 
-}  // namespace mojo
+}  // namespace fidl
 
 #endif  // APPS_MOZART_LIB_SKIA_TYPE_CONVERTERS_H_

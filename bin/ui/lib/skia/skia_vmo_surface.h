@@ -7,7 +7,7 @@
 
 #include <mx/vmo.h>
 
-#include "apps/mozart/services/composition/interfaces/image.mojom.h"
+#include "apps/mozart/services/composition/image.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/core/SkSize.h"
@@ -26,7 +26,7 @@ sk_sp<SkSurface> MakeSkSurface(const SkISize& size, ImagePtr* out_image);
 // Creates a new |SkSurface| backed by an image which is mapped read/write.
 // Uses native pixel format and given size.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurface(const mojo::Size& size, ImagePtr* out_image);
+sk_sp<SkSurface> MakeSkSurface(const Size& size, ImagePtr* out_image);
 
 // Makes an |SkSurface| object backed by a virtual memory object which is
 // mapped read/write.  Does not take ownership of the handle.

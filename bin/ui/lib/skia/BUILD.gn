@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("skia") {
+  public_deps = [
+    ":fonts",
+    ":type_converters",
+    ":vmo",
+  ]
+}
+
 source_set("fonts") {
   sources = [
     "skia_font_loader.cc",
@@ -11,10 +19,8 @@ source_set("fonts") {
   deps = [
     ":type_converters",
     ":vmo",
+    "//apps/fonts/services",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/interfaces/application",
-    "//mojo/services/ui/fonts/interfaces",
     "//third_party/skia",
   ]
 }
@@ -26,7 +32,7 @@ source_set("type_converters") {
   ]
 
   public_deps = [
-    "//mojo/services/geometry/interfaces",
+    "//apps/mozart/services/geometry",
     "//third_party/skia",
   ]
 }
@@ -42,7 +48,7 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/composition",
     "//lib/ftl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",

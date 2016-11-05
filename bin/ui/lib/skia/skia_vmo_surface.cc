@@ -115,14 +115,14 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
     return nullptr;
 
   auto image = Image::New();
-  image->size = mojo::Size::New();
+  image->size = Size::New();
   image->size->width = info.width();
   image->size->height = info.height();
   image->stride = row_bytes;
   image->pixel_format = pixel_format;
   image->alpha_format = alpha_format;
   image->color_space = color_space;
-  image->buffer.reset(mojo::SharedBufferHandle(vmo.release()));
+  image->buffer = std::move(vmo);
 
   *out_image = std::move(image);
   return surface;
@@ -135,7 +135,7 @@ sk_sp<SkSurface> MakeSkSurface(const SkISize& size, ImagePtr* out_image) {
       out_image);
 }
 
-sk_sp<SkSurface> MakeSkSurface(const mojo::Size& size, ImagePtr* out_image) {
+sk_sp<SkSurface> MakeSkSurface(const Size& size, ImagePtr* out_image) {
   return MakeSkSurface(SkISize::Make(size.width, size.height), out_image);
 }
 

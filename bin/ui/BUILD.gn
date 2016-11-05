@@ -12,6 +12,7 @@ group("mozart") {
     "//apps/mozart/examples/spinning_square",
     "//apps/mozart/examples/tile",
     "//apps/mozart/glue/base",
+    "//apps/mozart/lib/skia",
     "//apps/mozart/lib/view_associate_framework",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/composition",

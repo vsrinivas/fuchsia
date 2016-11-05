@@ -4,40 +4,42 @@
 
 #include "apps/mozart/lib/skia/type_converters.h"
 
-namespace mojo {
+namespace fidl {
 
-SkIPoint TypeConverter<SkIPoint, mojo::Point>::Convert(
-    const mojo::Point& input) {
+SkIPoint TypeConverter<SkIPoint, mozart::Point>::Convert(
+    const mozart::Point& input) {
   return SkIPoint::Make(input.x, input.y);
 }
 
-mojo::Point TypeConverter<mojo::Point, SkIPoint>::Convert(
+mozart::Point TypeConverter<mozart::Point, SkIPoint>::Convert(
     const SkIPoint& input) {
-  mojo::Point output;
+  mozart::Point output;
   output.x = input.x();
   output.y = input.y();
   return output;
 }
 
-SkPoint TypeConverter<SkPoint, mojo::PointF>::Convert(
-    const mojo::PointF& input) {
+SkPoint TypeConverter<SkPoint, mozart::PointF>::Convert(
+    const mozart::PointF& input) {
   return SkPoint::Make(input.x, input.y);
 }
 
-mojo::PointF TypeConverter<mojo::PointF, SkPoint>::Convert(
+mozart::PointF TypeConverter<mozart::PointF, SkPoint>::Convert(
     const SkPoint& input) {
-  mojo::PointF output;
+  mozart::PointF output;
   output.x = input.x();
   output.y = input.y();
   return output;
 }
 
-SkIRect TypeConverter<SkIRect, mojo::Rect>::Convert(const mojo::Rect& input) {
+SkIRect TypeConverter<SkIRect, mozart::Rect>::Convert(
+    const mozart::Rect& input) {
   return SkIRect::MakeXYWH(input.x, input.y, input.width, input.height);
 }
 
-mojo::Rect TypeConverter<mojo::Rect, SkIRect>::Convert(const SkIRect& input) {
-  mojo::Rect output;
+mozart::Rect TypeConverter<mozart::Rect, SkIRect>::Convert(
+    const SkIRect& input) {
+  mozart::Rect output;
   output.x = input.x();
   output.y = input.y();
   output.width = input.width();
@@ -45,12 +47,14 @@ mojo::Rect TypeConverter<mojo::Rect, SkIRect>::Convert(const SkIRect& input) {
   return output;
 }
 
-SkRect TypeConverter<SkRect, mojo::RectF>::Convert(const mojo::RectF& input) {
+SkRect TypeConverter<SkRect, mozart::RectF>::Convert(
+    const mozart::RectF& input) {
   return SkRect::MakeXYWH(input.x, input.y, input.width, input.height);
 }
 
-mojo::RectF TypeConverter<mojo::RectF, SkRect>::Convert(const SkRect& input) {
-  mojo::RectF output;
+mozart::RectF TypeConverter<mozart::RectF, SkRect>::Convert(
+    const SkRect& input) {
+  mozart::RectF output;
   output.x = input.x();
   output.y = input.y();
   output.width = input.width();
@@ -58,8 +62,8 @@ mojo::RectF TypeConverter<mojo::RectF, SkRect>::Convert(const SkRect& input) {
   return output;
 }
 
-SkRRect TypeConverter<SkRRect, mojo::RRectF>::Convert(
-    const mojo::RRectF& input) {
+SkRRect TypeConverter<SkRRect, mozart::RRectF>::Convert(
+    const mozart::RRectF& input) {
   SkVector radii[4] = {
       {input.top_left_radius_x, input.top_left_radius_y},
       {input.top_right_radius_x, input.top_right_radius_y},
@@ -71,9 +75,9 @@ SkRRect TypeConverter<SkRRect, mojo::RRectF>::Convert(
   return output;
 }
 
-mojo::RRectF TypeConverter<mojo::RRectF, SkRRect>::Convert(
+mozart::RRectF TypeConverter<mozart::RRectF, SkRRect>::Convert(
     const SkRRect& input) {
-  mojo::RRectF output;
+  mozart::RRectF output;
   output.x = input.rect().x();
   output.y = input.rect().y();
   output.width = input.rect().width();
@@ -89,8 +93,8 @@ mojo::RRectF TypeConverter<mojo::RRectF, SkRRect>::Convert(
   return output;
 }
 
-SkMatrix TypeConverter<SkMatrix, mojo::TransformPtr>::Convert(
-    const mojo::TransformPtr& input) {
+SkMatrix TypeConverter<SkMatrix, mozart::TransformPtr>::Convert(
+    const mozart::TransformPtr& input) {
   if (!input)
     return SkMatrix::I();
 
@@ -102,10 +106,10 @@ SkMatrix TypeConverter<SkMatrix, mojo::TransformPtr>::Convert(
   return output;
 }
 
-mojo::TransformPtr TypeConverter<mojo::TransformPtr, SkMatrix>::Convert(
+mozart::TransformPtr TypeConverter<mozart::TransformPtr, SkMatrix>::Convert(
     const SkMatrix& input) {
   // Expand 3x3 to 4x4.
-  auto output = mojo::Transform::New();
+  auto output = mozart::Transform::New();
   output->matrix.resize(16u);
   output->matrix[0] = input[0];
   output->matrix[1] = input[1];
@@ -123,11 +127,11 @@ mojo::TransformPtr TypeConverter<mojo::TransformPtr, SkMatrix>::Convert(
   output->matrix[13] = input[7];
   output->matrix[14] = 0.f;
   output->matrix[15] = input[8];
-  return output.Pass();
+  return output;
 }
 
-SkMatrix44 TypeConverter<SkMatrix44, mojo::TransformPtr>::Convert(
-    const mojo::TransformPtr& input) {
+SkMatrix44 TypeConverter<SkMatrix44, mozart::TransformPtr>::Convert(
+    const mozart::TransformPtr& input) {
   if (!input)
     return SkMatrix44::I();
 
@@ -136,12 +140,12 @@ SkMatrix44 TypeConverter<SkMatrix44, mojo::TransformPtr>::Convert(
   return output;
 }
 
-mojo::TransformPtr TypeConverter<mojo::TransformPtr, SkMatrix44>::Convert(
+mozart::TransformPtr TypeConverter<mozart::TransformPtr, SkMatrix44>::Convert(
     const SkMatrix44& input) {
-  auto output = mojo::Transform::New();
+  auto output = mozart::Transform::New();
   output->matrix.resize(16u);
   input.asRowMajorf(output->matrix.data());
-  return output.Pass();
+  return output;
 }
 
-}  // namespace mojo
+}  // namespace fidl

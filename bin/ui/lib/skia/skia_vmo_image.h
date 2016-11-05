@@ -7,7 +7,7 @@
 
 #include <mx/vmo.h>
 
-#include "apps/mozart/services/composition/interfaces/image.mojom.h"
+#include "apps/mozart/services/composition/image.fidl.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 

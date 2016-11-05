@@ -56,7 +56,7 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image) {
 
   SkColorType sk_color_type;
   switch (image->pixel_format) {
-    case mozart::Image::PixelFormat::B8G8R8A8:
+    case Image::PixelFormat::B8G8R8A8:
       sk_color_type = kBGRA_8888_SkColorType;
       break;
     default:
@@ -66,13 +66,13 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image) {
 
   SkAlphaType sk_alpha_type;
   switch (image->alpha_format) {
-    case mozart::Image::AlphaFormat::OPAQUE:
+    case Image::AlphaFormat::OPAQUE:
       sk_alpha_type = kOpaque_SkAlphaType;
       break;
-    case mozart::Image::AlphaFormat::PREMULTIPLIED:
+    case Image::AlphaFormat::PREMULTIPLIED:
       sk_alpha_type = kPremul_SkAlphaType;
       break;
-    case mozart::Image::AlphaFormat::NON_PREMULTIPLIED:
+    case Image::AlphaFormat::NON_PREMULTIPLIED:
       sk_alpha_type = kUnpremul_SkAlphaType;
       break;
     default:
@@ -82,7 +82,7 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image) {
 
   sk_sp<SkColorSpace> sk_color_space;
   switch (image->color_space) {
-    case mozart::Image::ColorSpace::SRGB:
+    case Image::ColorSpace::SRGB:
       sk_color_space = SkColorSpace::NewNamed(SkColorSpace::kSRGB_Named);
       break;
     default:
@@ -91,7 +91,7 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image) {
   }
 
   return MakeSkImageFromVMO(
-      mx::vmo(image->buffer.release().value()),
+      std::move(image->buffer),
       SkImageInfo::Make(image->size->width, image->size->height, sk_color_type,
                         sk_alpha_type, sk_color_space),
       image->stride);

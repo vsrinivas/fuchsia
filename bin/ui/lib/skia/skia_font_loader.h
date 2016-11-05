@@ -7,31 +7,30 @@
 
 #include <functional>
 
+#include "apps/fonts/services/font_provider.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/interfaces/application/application_connector.mojom.h"
-#include "mojo/services/ui/fonts/interfaces/font_provider.mojom.h"
 #include "third_party/skia/include/core/SkTypeface.h"
 
 namespace mozart {
 
-// Loads fonts from the system font provider.
+// Loads fonts from a font provider.
 class SkiaFontLoader {
  public:
   using FontCallback = std::function<void(sk_sp<SkTypeface>)>;
 
-  SkiaFontLoader(mojo::ApplicationConnector* connector);
+  SkiaFontLoader(fonts::FontProviderPtr font_provider);
   ~SkiaFontLoader();
 
   // Loads the requested font and invokes the callback when done.
   // If the request fails, the callback will receive a null typeface.
-  void LoadFont(mojo::FontRequestPtr request, const FontCallback& callback);
+  void LoadFont(fonts::FontRequestPtr request, const FontCallback& callback);
 
   // Loads the default font and invokes the callback when done.
   // If the request fails, the callback will receive a null typeface.
   void LoadDefaultFont(const FontCallback& callback);
 
  private:
-  mojo::FontProviderPtr font_provider_;
+  fonts::FontProviderPtr font_provider_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SkiaFontLoader);
 };
