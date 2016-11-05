@@ -62,6 +62,9 @@ class InterfaceRequest {
   // Indicates whether the request currently contains a valid message pipe.
   bool is_pending() const { return !!handle_; }
 
+  // Tests as true if pending, false if not.
+  explicit operator bool() const { return is_pending(); }
+
   // Removes the message pipe from the request and returns it.
   mx::channel PassMessagePipe() { return std::move(handle_); }
 
