@@ -8,13 +8,13 @@
 #include <queue>
 
 #include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
-#include "apps/mozart/services/input/interfaces/input_dispatcher.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/input/input_dispatcher.fidl.h"
+#include "apps/mozart/services/views/view_trees.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 
 namespace input_manager {
 
@@ -26,7 +26,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
  public:
   InputDispatcherImpl(InputAssociate* associate,
                       mozart::ViewTreeTokenPtr view_tree_token,
-                      mojo::InterfaceRequest<mozart::InputDispatcher> request);
+                      fidl::InterfaceRequest<mozart::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
   const mozart::ViewTreeToken* view_tree_token() const {
@@ -50,9 +50,9 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
 
   // TODO(jeffbrown): This hack is just for scaffolding.  Redesign later.
   mozart::ViewTokenPtr focused_view_token_;
-  mojo::TransformPtr focused_view_transform_;
+  mozart::TransformPtr focused_view_transform_;
 
-  mojo::Binding<mozart::InputDispatcher> binding_;
+  fidl::Binding<mozart::InputDispatcher> binding_;
 
   ftl::WeakPtrFactory<InputDispatcherImpl> weak_factory_;
 

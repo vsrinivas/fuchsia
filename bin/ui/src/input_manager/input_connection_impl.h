@@ -5,11 +5,11 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_INPUT_CONNECTION_IMPL_H_
 
-#include "apps/mozart/services/input/interfaces/input_connection.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/input/input_connection.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace input_manager {
 
@@ -21,7 +21,7 @@ class InputConnectionImpl : public mozart::InputConnection {
  public:
   InputConnectionImpl(InputAssociate* associate,
                       mozart::ViewTokenPtr view_token,
-                      mojo::InterfaceRequest<mozart::InputConnection> request);
+                      fidl::InterfaceRequest<mozart::InputConnection> request);
   ~InputConnectionImpl() override;
 
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
@@ -31,7 +31,7 @@ class InputConnectionImpl : public mozart::InputConnection {
 
   // |mozart::InputConnection|
   void SetListener(
-      mojo::InterfaceHandle<mozart::InputListener> listener) override;
+      fidl::InterfaceHandle<mozart::InputListener> listener) override;
 
  private:
   void OnEventFinished(bool handled);
@@ -40,7 +40,7 @@ class InputConnectionImpl : public mozart::InputConnection {
   mozart::ViewTokenPtr view_token_;
   mozart::InputListenerPtr listener_;
 
-  mojo::Binding<mozart::InputConnection> binding_;
+  fidl::Binding<mozart::InputConnection> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };

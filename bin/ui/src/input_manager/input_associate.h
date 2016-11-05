@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include "apps/mozart/lib/view_associate_framework/view_inspector_client.h"
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 #include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
 #include "lib/ftl/macros.h"
@@ -29,16 +29,14 @@ class InputAssociate : public mozart::ViewAssociate {
   }
 
   // |ViewAssociate|:
-  void Connect(mojo::InterfaceHandle<mozart::ViewInspector> inspector,
+  void Connect(fidl::InterfaceHandle<mozart::ViewInspector> inspector,
                const ConnectCallback& callback) override;
-  void ConnectToViewService(
-      mozart::ViewTokenPtr view_token,
-      const mojo::String& service_name,
-      mojo::ScopedMessagePipeHandle client_handle) override;
-  void ConnectToViewTreeService(
-      mozart::ViewTreeTokenPtr view_tree_token,
-      const mojo::String& service_name,
-      mojo::ScopedMessagePipeHandle client_handle) override;
+  void ConnectToViewService(mozart::ViewTokenPtr view_token,
+                            const fidl::String& service_name,
+                            mx::channel client_handle) override;
+  void ConnectToViewTreeService(mozart::ViewTreeTokenPtr view_tree_token,
+                                const fidl::String& service_name,
+                                mx::channel client_handle) override;
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
@@ -51,10 +49,10 @@ class InputAssociate : public mozart::ViewAssociate {
  private:
   void CreateInputConnection(
       mozart::ViewTokenPtr view_token,
-      mojo::InterfaceRequest<mozart::InputConnection> request);
+      fidl::InterfaceRequest<mozart::InputConnection> request);
   void CreateInputDispatcher(
       mozart::ViewTreeTokenPtr view_tree_token,
-      mojo::InterfaceRequest<mozart::InputDispatcher> request);
+      fidl::InterfaceRequest<mozart::InputDispatcher> request);
 
   ftl::RefPtr<mozart::ViewInspectorClient> inspector_;
   std::unordered_map<uint32_t, std::unique_ptr<InputConnectionImpl>>

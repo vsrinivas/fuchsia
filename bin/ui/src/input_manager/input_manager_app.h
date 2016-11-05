@@ -5,26 +5,25 @@
 #ifndef APPS_MOZART_SRC_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 #define APPS_MOZART_SRC_INPUT_MANAGER_INPUT_MANAGER_APP_H_
 
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace input_manager {
 
+class InputAssociate;
+
 // Input manager application entry point.
-class InputManagerApp : public mojo::ApplicationImplBase {
+class InputManagerApp {
  public:
   InputManagerApp();
-  ~InputManagerApp() override;
+  ~InputManagerApp();
 
  private:
-  // |ApplicationImplBase|:
-  void OnInitialize() override;
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override;
-
-  mojo::StrongBindingSet<mozart::ViewAssociate> input_associates_;
+  std::unique_ptr<modular::ApplicationContext> application_context_;
+  fidl::BindingSet<mozart::ViewAssociate, std::unique_ptr<InputAssociate>>
+      associate_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputManagerApp);
 };

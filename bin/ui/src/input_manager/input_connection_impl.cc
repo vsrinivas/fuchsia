@@ -12,10 +12,10 @@ namespace input_manager {
 InputConnectionImpl::InputConnectionImpl(
     InputAssociate* associate,
     mozart::ViewTokenPtr view_token,
-    mojo::InterfaceRequest<mozart::InputConnection> request)
+    fidl::InterfaceRequest<mozart::InputConnection> request)
     : associate_(associate),
-      view_token_(view_token.Pass()),
-      binding_(this, request.Pass()) {
+      view_token_(std::move(view_token)),
+      binding_(this, std::move(request)) {
   FTL_DCHECK(associate_);
   FTL_DCHECK(view_token_);
   binding_.set_connection_error_handler(
@@ -31,7 +31,7 @@ void InputConnectionImpl::DeliverEvent(mozart::EventPtr event) {
     return;
   }
 
-  listener_->OnEvent(event.Pass(),
+  listener_->OnEvent(std::move(event),
                      [this](bool handled) { OnEventFinished(handled); });
 }
 
@@ -40,7 +40,7 @@ void InputConnectionImpl::OnEventFinished(bool handled) {
 }
 
 void InputConnectionImpl::SetListener(
-    mojo::InterfaceHandle<mozart::InputListener> listener) {
+    fidl::InterfaceHandle<mozart::InputListener> listener) {
   listener_ = mozart::InputListenerPtr::Create(std::move(listener));
 }
 

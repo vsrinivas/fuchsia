@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include <memory>
 
 #include "apps/mozart/src/input_manager/input_manager_app.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-MojoResult MojoMain(MojoHandle application_request) {
-  input_manager::InputManagerApp input_manager_app;
-  return mojo::RunApplication(application_request, &input_manager_app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  std::unique_ptr<input_manager::InputManagerApp> app;
+  loop.task_runner()->PostTask(
+      [&app] { app = std::make_unique<input_manager::InputManagerApp>(); });
+
+  loop.Run();
+  return 0;
 }

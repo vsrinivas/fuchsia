@@ -6,17 +6,17 @@
 
 #include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
+#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/services/geometry/cpp/geometry_util.h"
 
 namespace input_manager {
 namespace {
-void TransformEvent(const mojo::Transform& transform, mozart::Event* event) {
+void TransformEvent(const mozart::Transform& transform, mozart::Event* event) {
   if (!event->pointer_data)
     return;
-  mojo::PointF point;
+  mozart::PointF point;
   point.x = event->pointer_data->x;
   point.y = event->pointer_data->y;
   point = TransformPoint(transform, point);
@@ -28,13 +28,13 @@ void TransformEvent(const mojo::Transform& transform, mozart::Event* event) {
 InputDispatcherImpl::InputDispatcherImpl(
     InputAssociate* associate,
     mozart::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mozart::InputDispatcher> request)
+    fidl::InterfaceRequest<mozart::InputDispatcher> request)
     : associate_(associate),
-      view_tree_token_(view_tree_token.Pass()),
+      view_tree_token_(std::move(view_tree_token)),
       hit_tester_(ftl::MakeRefCounted<mozart::ViewTreeHitTesterClient>(
           associate_->inspector(),
           view_tree_token_.Clone())),
-      binding_(this, request.Pass()),
+      binding_(this, std::move(request)),
       weak_factory_(this) {
   FTL_DCHECK(associate_);
   FTL_DCHECK(view_tree_token_);
@@ -48,7 +48,7 @@ InputDispatcherImpl::~InputDispatcherImpl() {}
 void InputDispatcherImpl::DispatchEvent(mozart::EventPtr event) {
   FTL_DCHECK(event);
 
-  pending_events_.push(event.Pass());
+  pending_events_.push(std::move(event));
   if (pending_events_.size() == 1u)
     ProcessNextEvent();
 }
@@ -60,7 +60,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
     const mozart::Event* event = pending_events_.front().get();
     if (event->action == mozart::EventType::POINTER_DOWN) {
       FTL_DCHECK(event->pointer_data);
-      auto point = mojo::PointF::New();
+      auto point = mozart::PointF::New();
       point->x = event->pointer_data->x;
       point->y = event->pointer_data->y;
       DVLOG(1) << "HitTest: point=" << point;
@@ -69,10 +69,10 @@ void InputDispatcherImpl::ProcessNextEvent() {
         if (weak)
           weak->OnHitTestResult(std::move(resolved_hits));
       };
-      hit_tester_->HitTest(point.Pass(), hit_result_callback);
+      hit_tester_->HitTest(std::move(point), hit_result_callback);
       return;
     }
-    DeliverEvent(pending_events_.front().Pass());
+    DeliverEvent(std::move(pending_events_.front()));
     pending_events_.pop();
   } while (!pending_events_.empty());
 }
@@ -80,7 +80,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
 void InputDispatcherImpl::DeliverEvent(mozart::EventPtr event) {
   if (focused_view_token_) {
     TransformEvent(*focused_view_transform_, event.get());
-    associate_->DeliverEvent(focused_view_token_.get(), event.Pass());
+    associate_->DeliverEvent(focused_view_token_.get(), std::move(event));
   }
 }
 
@@ -103,7 +103,7 @@ void InputDispatcherImpl::OnHitTestResult(
         if (it != resolved_hits->map().end()) {
           focused_view_token_ = it->second.Clone();
           focused_view_transform_ =
-              scene->hits[0]->get_node()->transform.Pass();
+              std::move(scene->hits[0]->get_node()->transform);
         }
         break;
       }
@@ -115,7 +115,7 @@ void InputDispatcherImpl::OnHitTestResult(
   DVLOG(1) << "OnHitTestResult: focused_view_token_=" << focused_view_token_
            << ", focused_view_transform_=" << focused_view_transform_;
 
-  DeliverEvent(pending_events_.front().Pass());
+  DeliverEvent(std::move(pending_events_.front()));
   pending_events_.pop();
 
   if (!pending_events_.empty()) {

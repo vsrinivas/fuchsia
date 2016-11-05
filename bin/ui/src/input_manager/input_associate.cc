@@ -26,9 +26,9 @@ InputAssociate::InputAssociate() {}
 InputAssociate::~InputAssociate() {}
 
 void InputAssociate::Connect(
-    mojo::InterfaceHandle<mozart::ViewInspector> inspector,
+    fidl::InterfaceHandle<mozart::ViewInspector> inspector,
     const ConnectCallback& callback) {
-  FTL_DCHECK(inspector);  // checked by mojom
+  FTL_DCHECK(inspector);  // checked by fidl
 
   input_connections_by_view_token_.clear();
   input_dispatchers_by_view_tree_token_.clear();
@@ -38,38 +38,37 @@ void InputAssociate::Connect(
   auto info = mozart::ViewAssociateInfo::New();
   info->view_service_names.push_back(mozart::InputConnection::Name_);
   info->view_tree_service_names.push_back(mozart::InputDispatcher::Name_);
-  callback.Run(info.Pass());
+  callback(std::move(info));
 }
 
-void InputAssociate::ConnectToViewService(
-    mozart::ViewTokenPtr view_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {
-  FTL_DCHECK(view_token);  // checked by mojom
+void InputAssociate::ConnectToViewService(mozart::ViewTokenPtr view_token,
+                                          const fidl::String& service_name,
+                                          mx::channel client_handle) {
+  FTL_DCHECK(view_token);  // checked by fidl
 
   if (service_name == mozart::InputConnection::Name_) {
-    CreateInputConnection(
-        view_token.Pass(),
-        mojo::InterfaceRequest<mozart::InputConnection>(client_handle.Pass()));
+    CreateInputConnection(std::move(view_token),
+                          fidl::InterfaceRequest<mozart::InputConnection>(
+                              std::move(client_handle)));
   }
 }
 
 void InputAssociate::ConnectToViewTreeService(
     mozart::ViewTreeTokenPtr view_tree_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {
-  FTL_DCHECK(view_tree_token);  // checked by mojom
+    const fidl::String& service_name,
+    mx::channel client_handle) {
+  FTL_DCHECK(view_tree_token);  // checked by fidl
 
   if (service_name == mozart::InputDispatcher::Name_) {
-    CreateInputDispatcher(
-        view_tree_token.Pass(),
-        mojo::InterfaceRequest<mozart::InputDispatcher>(client_handle.Pass()));
+    CreateInputDispatcher(std::move(view_tree_token),
+                          fidl::InterfaceRequest<mozart::InputDispatcher>(
+                              std::move(client_handle)));
   }
 }
 
 void InputAssociate::CreateInputConnection(
     mozart::ViewTokenPtr view_token,
-    mojo::InterfaceRequest<mozart::InputConnection> request) {
+    fidl::InterfaceRequest<mozart::InputConnection> request) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(request.is_pending());
   DVLOG(1) << "CreateInputConnection: view_token=" << view_token;
@@ -77,8 +76,8 @@ void InputAssociate::CreateInputConnection(
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
       view_token_value,
-      std::unique_ptr<InputConnectionImpl>(
-          new InputConnectionImpl(this, view_token.Pass(), request.Pass())));
+      std::unique_ptr<InputConnectionImpl>(new InputConnectionImpl(
+          this, std::move(view_token), std::move(request))));
 }
 
 void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {
@@ -94,7 +93,7 @@ void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {
 
 void InputAssociate::CreateInputDispatcher(
     mozart::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mozart::InputDispatcher> request) {
+    fidl::InterfaceRequest<mozart::InputDispatcher> request) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(request.is_pending());
   DVLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
@@ -103,7 +102,7 @@ void InputAssociate::CreateInputDispatcher(
   input_dispatchers_by_view_tree_token_.emplace(
       view_tree_token_value,
       std::unique_ptr<InputDispatcherImpl>(new InputDispatcherImpl(
-          this, view_tree_token.Pass(), request.Pass())));
+          this, std::move(view_tree_token), std::move(request))));
 }
 
 void InputAssociate::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
@@ -132,7 +131,7 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
     return;
   }
 
-  it->second->DeliverEvent(event.Pass());
+  it->second->DeliverEvent(std::move(event));
 }
 
 }  // namespace input_manager

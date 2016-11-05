@@ -5,27 +5,22 @@
 #include "apps/mozart/src/input_manager/input_manager_app.h"
 
 #include "apps/mozart/src/input_manager/input_associate.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
+#include "lib/ftl/logging.h"
 
 namespace input_manager {
 
-InputManagerApp::InputManagerApp() {}
+InputManagerApp::InputManagerApp()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()) {
+  FTL_DCHECK(application_context_);
+
+  application_context_->outgoing_services()->AddService<mozart::ViewAssociate>(
+      [this](fidl::InterfaceRequest<mozart::ViewAssociate> request) {
+        associate_bindings_.AddBinding(std::make_unique<InputAssociate>(),
+                                       std::move(request));
+      });
+}
 
 InputManagerApp::~InputManagerApp() {}
-
-void InputManagerApp::OnInitialize() {
-  // TODO(mikejurka): Initialize logging and tracing.
-}
-
-bool InputManagerApp::OnAcceptConnection(
-    mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mozart::ViewAssociate>([this](
-      const mojo::ConnectionContext& connection_context,
-      mojo::InterfaceRequest<mozart::ViewAssociate> view_associate_request) {
-    input_associates_.AddBinding(new InputAssociate(),
-                                 view_associate_request.Pass());
-  });
-  return true;
-}
 
 }  // namespace input_manager
