@@ -4,14 +4,14 @@
 
 # List of unittest binaries.
 unittests = [
-    '/boot/test/cloud_provider_unittests',
-    '/boot/test/convert_unittests',
-    '/boot/test/firebase_unittests',
-    '/boot/test/gcs_unittests',
-    '/boot/test/ledger_codex_unittests',
-    '/boot/test/ledger_glue_unittests',
-    '/boot/test/storage_btree_unittests',
-    '/boot/test/storage_unittests',
+    '/system/test/cloud_provider_unittests',
+    '/system/test/convert_unittests',
+    '/system/test/firebase_unittests',
+    '/system/test/gcs_unittests',
+    '/system/test/ledger_codex_unittests',
+    '/system/test/ledger_glue_unittests',
+    '/system/test/storage_btree_unittests',
+    '/system/test/storage_unittests',
 ]
 
 # List of apptest binaries.
