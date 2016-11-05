@@ -36,6 +36,16 @@ class ApplicationContext {
 
   const ApplicationLauncherPtr& launcher() const { return launcher_; }
 
+  // Helper for connecting to a service provided by the environment.
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
+      const std::string& interface_name = Interface::Name_) {
+    fidl::InterfacePtr<Interface> interface_ptr;
+    environment_services_->ConnectToService(
+        interface_name, GetProxy(&interface_ptr).PassMessagePipe());
+    return interface_ptr;
+  }
+
  private:
   ServiceProviderPtr environment_services_;
   ServiceProviderImpl outgoing_services_;
