@@ -6,7 +6,7 @@
 #define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_VIEW_MANAGER_TEST_BASE_H_
 
 #include "base/bind.h"
-#include "mojo/public/cpp/application/application_test_base.h"
+#include "lib/fidl/cpp/application/application_test_base.h"
 
 namespace view_manager {
 namespace test {
@@ -20,7 +20,7 @@ const base::TimeDelta kDefaultMessageDelay =
     KickMessageLoop();                 \
   }
 
-class ViewManagerTestBase : public mojo::test::ApplicationTestBase {
+class ViewManagerTestBase : public fidl::test::ApplicationTestBase {
  public:
   ViewManagerTestBase();
   ~ViewManagerTestBase() override;

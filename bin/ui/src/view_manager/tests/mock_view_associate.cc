@@ -11,23 +11,23 @@ MockViewAssociate::MockViewAssociate() {}
 MockViewAssociate::~MockViewAssociate() {}
 
 void MockViewAssociate::Connect(
-    mojo::InterfaceHandle<mozart::ViewInspector> inspector,
+    fidl::InterfaceHandle<mozart::ViewInspector> inspector,
     const ConnectCallback& callback) {
   connect_invokecount++;
 
   auto info = mozart::ViewAssociateInfo::New();
-  callback.Run(info.Pass());
+  callback(std::move(info));
 }
 
 void MockViewAssociate::ConnectToViewService(
     mozart::ViewTokenPtr view_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {}
+    const fidl::String& service_name,
+    mx::channel client_handle) {}
 
 void MockViewAssociate::ConnectToViewTreeService(
     mozart::ViewTreeTokenPtr view_tree_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {}
+    const fidl::String& service_name,
+    mx::channel client_handle) {}
 
 }  // namespace test
 }  // namespace view_manager

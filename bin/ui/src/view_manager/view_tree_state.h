@@ -11,11 +11,11 @@
 #include <unordered_map>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace view_manager {
 
@@ -38,7 +38,7 @@ class ViewTreeState : public ViewContainerState {
 
   ViewTreeState(ViewRegistry* registry,
                 mozart::ViewTreeTokenPtr view_tree_token,
-                mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+                fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
                 mozart::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
@@ -76,7 +76,7 @@ class ViewTreeState : public ViewContainerState {
   // The request will be satisfied by the current renderer if possible.
   // The callback will be invoked when the renderer changes.
   void RequestHitTester(
-      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
+      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
       const mozart::ViewInspector::GetHitTesterCallback& callback);
 
   // Gets or sets flags describing the invalidation state of the view tree.
@@ -103,7 +103,7 @@ class ViewTreeState : public ViewContainerState {
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewTreeImpl> impl_;
-  mojo::Binding<mozart::ViewTree> view_tree_binding_;
+  fidl::Binding<mozart::ViewTree> view_tree_binding_;
 
   mozart::RendererPtr renderer_;
   mozart::FrameSchedulerPtr frame_scheduler_;

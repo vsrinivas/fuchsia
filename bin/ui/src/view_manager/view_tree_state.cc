@@ -16,14 +16,14 @@ namespace view_manager {
 ViewTreeState::ViewTreeState(
     ViewRegistry* registry,
     mozart::ViewTreeTokenPtr view_tree_token,
-    mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+    fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
     mozart::ViewTreeListenerPtr view_tree_listener,
     const std::string& label)
-    : view_tree_token_(view_tree_token.Pass()),
-      view_tree_listener_(view_tree_listener.Pass()),
+    : view_tree_token_(std::move(view_tree_token)),
+      view_tree_listener_(std::move(view_tree_listener)),
       label_(label),
       impl_(new ViewTreeImpl(registry, this)),
-      view_tree_binding_(impl_.get(), view_tree_request.Pass()),
+      view_tree_binding_(impl_.get(), std::move(view_tree_request)),
       weak_factory_(this) {
   FTL_DCHECK(view_tree_token_);
   FTL_DCHECK(view_tree_listener_);
@@ -41,7 +41,7 @@ ViewTreeState::~ViewTreeState() {
 }
 
 void ViewTreeState::SetRenderer(mozart::RendererPtr renderer) {
-  renderer_ = renderer.Pass();
+  renderer_ = std::move(renderer);
   frame_scheduler_.reset();
   if (renderer_)
     renderer_->GetScheduler(GetProxy(&frame_scheduler_));
@@ -56,17 +56,17 @@ ViewStub* ViewTreeState::GetRoot() const {
 }
 
 void ViewTreeState::RequestHitTester(
-    mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
+    fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
     const mozart::ViewInspector::GetHitTesterCallback& callback) {
   FTL_DCHECK(hit_tester_request.is_pending());
   if (renderer_)
-    renderer_->GetHitTester(hit_tester_request.Pass());
+    renderer_->GetHitTester(std::move(hit_tester_request));
   pending_hit_tester_callbacks_.push_back(callback);
 }
 
 void ViewTreeState::ClearHitTesterCallbacks(bool renderer_changed) {
   for (const auto& callback : pending_hit_tester_callbacks_)
-    callback.Run(renderer_changed);
+    callback(renderer_changed);
   pending_hit_tester_callbacks_.clear();
 }
 

@@ -17,10 +17,10 @@ class PendingViewOwnerTransferState {
  public:
   PendingViewOwnerTransferState(
       std::unique_ptr<ViewStub> view_stub,
-      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request)
+      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request)
       : view_stub_(std::move(view_stub)),
-        transferred_view_owner_request_(transferred_view_owner_request.Pass()) {
-  }
+        transferred_view_owner_request_(
+            std::move(transferred_view_owner_request)) {}
 
   ~PendingViewOwnerTransferState() {}
 
@@ -28,11 +28,11 @@ class PendingViewOwnerTransferState {
   std::unique_ptr<ViewStub> view_stub_;
 
   // The |ViewOwner| we want to transfer ownership to.
-  mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request_;
+  fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request_;
 };
 
 ViewStub::ViewStub(ViewRegistry* registry,
-                   mojo::InterfaceHandle<mozart::ViewOwner> owner)
+                   fidl::InterfaceHandle<mozart::ViewOwner> owner)
     : registry_(registry),
       owner_(mozart::ViewOwnerPtr::Create(std::move(owner))),
       weak_factory_(this) {
@@ -42,7 +42,7 @@ ViewStub::ViewStub(ViewRegistry* registry,
   owner_.set_connection_error_handler([this] { OnViewResolved(nullptr); });
 
   owner_->GetToken([this](mozart::ViewTokenPtr view_token) {
-    OnViewResolved(view_token.Pass());
+    OnViewResolved(std::move(view_token));
   });
 }
 
@@ -66,7 +66,7 @@ void ViewStub::AttachView(ViewState* state, mozart::ScenePtr stub_scene) {
 
   state_ = state;
   state_->set_view_stub(this);
-  stub_scene_ = stub_scene.Pass();
+  stub_scene_ = std::move(stub_scene);
   SetTreeForChildrenOfView(state_, tree_);
 }
 
@@ -75,7 +75,7 @@ void ViewStub::SetProperties(uint32_t scene_version,
   FTL_DCHECK(!is_unavailable());
 
   scene_version_ = scene_version;
-  properties_ = properties.Pass();
+  properties_ = std::move(properties);
 }
 
 void ViewStub::SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token) {
@@ -84,7 +84,7 @@ void ViewStub::SetStubSceneToken(mozart::SceneTokenPtr stub_scene_token) {
   FTL_DCHECK(stub_scene_);
   FTL_DCHECK(!stub_scene_token_);
 
-  stub_scene_token_ = stub_scene_token.Pass();
+  stub_scene_token_ = std::move(stub_scene_token);
 }
 
 ViewState* ViewStub::ReleaseView() {
@@ -154,8 +154,9 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
     owner_.reset();
 
     registry_->TransferViewOwner(
-        view_token.Pass(),
-        pending_view_owner_transfer_->transferred_view_owner_request_.Pass());
+        std::move(view_token),
+        std::move(
+            pending_view_owner_transfer_->transferred_view_owner_request_));
 
     // We don't have any |view_state| resolved to us now, but |ReleaseView| will
     // still mark us as unavailable and clear properties
@@ -167,13 +168,13 @@ void ViewStub::OnViewResolved(mozart::ViewTokenPtr view_token) {
   } else {
     FTL_DCHECK(owner_);
     owner_.reset();
-    registry_->OnViewResolved(this, view_token.Pass());
+    registry_->OnViewResolved(this, std::move(view_token));
   }
 }
 
 void ViewStub::TransferViewOwnerWhenViewResolved(
     std::unique_ptr<ViewStub> view_stub,
-    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+    fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(!container());  // Make sure we've been removed from the view tree
   FTL_DCHECK(!pending_view_owner_transfer_);
 
@@ -181,7 +182,7 @@ void ViewStub::TransferViewOwnerWhenViewResolved(
   // of the view instead of calling |ViewRegistry.OnViewResolved|.
   // Save the necessary state in |pending_view_owner_transfer_|
   pending_view_owner_transfer_.reset(new PendingViewOwnerTransferState(
-      std::move(view_stub), transferred_view_owner_request.Pass()));
+      std::move(view_stub), std::move(transferred_view_owner_request)));
 
   // TODO(mikejurka): should we have an error handler on
   // transferred_view_owner_request_?

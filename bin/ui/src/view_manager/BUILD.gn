@@ -11,8 +11,6 @@ executable("view_manager") {
 
   deps = [
     ":lib",
-    "//mojo/system",
-    "//lib/mtl",
   ]
 }
 
@@ -41,16 +39,16 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//apps/modular/lib/app",
     "//apps/mozart/glue/base",
+    "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
-    "//apps/mozart/services/composition/interfaces",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
-    "//apps/mozart/services/views/interfaces",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings:bindings",
-    "//mojo/services/geometry/cpp",
-    "//mojo/system",
+    "//lib/mtl",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
@@ -72,8 +70,7 @@ source_set("lib") {
 #     ":common",
 #     "//base",
 #     "//apps/mozart/lib/view_framework/associates:mocks",
-#     "//mojo/application:test_support",
-#     "//mojo/public/cpp/bindings",
-#     "//mojo/public/cpp/bindings:bindings",
+#     "//lib/fidl/cpp/bindings",
+#     "//lib/fidl/cpp/bindings:bindings",
 #   ]
 # }

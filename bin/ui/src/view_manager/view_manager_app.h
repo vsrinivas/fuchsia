@@ -7,33 +7,27 @@
 
 #include <memory>
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace view_manager {
 
+class ViewManagerImpl;
+
 // View manager application entry point.
-class ViewManagerApp : public mojo::ApplicationImplBase {
+class ViewManagerApp {
  public:
   ViewManagerApp();
-  ~ViewManagerApp() override;
+  ~ViewManagerApp();
 
  private:
-  // |ApplicationImplBase|:
-  void OnInitialize() override;
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override;
-
-  void OnCompositorConnectionError();
-
-  void Shutdown();
-
-  mojo::StrongBindingSet<mozart::ViewManager> view_managers_;
+  std::unique_ptr<modular::ApplicationContext> application_context_;
   std::unique_ptr<ViewRegistry> registry_;
+  fidl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>
+      view_manager_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };

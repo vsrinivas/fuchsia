@@ -9,11 +9,11 @@
 #include <string>
 
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace view_manager {
 
@@ -48,7 +48,7 @@ class ViewState : public ViewContainerState {
 
   ViewState(ViewRegistry* registry,
             mozart::ViewTokenPtr view_token,
-            mojo::InterfaceRequest<mozart::View> view_request,
+            fidl::InterfaceRequest<mozart::View> view_request,
             mozart::ViewListenerPtr view_listener,
             const std::string& label);
   ~ViewState() override;
@@ -73,7 +73,7 @@ class ViewState : public ViewContainerState {
   // The current scene token, or null if none.
   const mozart::SceneTokenPtr& scene_token() { return scene_token_; }
   void set_scene_token(mozart::SceneTokenPtr scene_token) {
-    scene_token_ = scene_token.Pass();
+    scene_token_ = std::move(scene_token);
   }
 
   // Gets the scene version the view was asked to produce.
@@ -98,7 +98,7 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void BindOwner(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();
@@ -116,8 +116,8 @@ class ViewState : public ViewContainerState {
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewImpl> impl_;
-  mojo::Binding<mozart::View> view_binding_;
-  mojo::Binding<mozart::ViewOwner> owner_binding_;
+  fidl::Binding<mozart::View> view_binding_;
+  fidl::Binding<mozart::ViewOwner> owner_binding_;
 
   ViewStub* view_stub_ = nullptr;
 

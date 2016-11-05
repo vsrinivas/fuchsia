@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCK_VIEW_ASSOCIATE_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_TESTS_MOCK_VIEW_ASSOCIATE_H_
 
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
 
 namespace view_manager {
 namespace test {
@@ -16,18 +16,18 @@ class MockViewAssociate : public mozart::ViewAssociate {
   MockViewAssociate();
   ~MockViewAssociate() override;
 
-  void Connect(mojo::InterfaceHandle<mozart::ViewInspector> inspector,
+  void Connect(fidl::InterfaceHandle<mozart::ViewInspector> inspector,
                const ConnectCallback& callback) override;
 
   void ConnectToViewService(
       mozart::ViewTokenPtr view_token,
-      const mojo::String& service_name,
-      mojo::ScopedMessagePipeHandle client_handle) override;
+      const fidl::String& service_name,
+      mx::channel client_handle) override;
 
   void ConnectToViewTreeService(
       mozart::ViewTreeTokenPtr view_tree_token,
-      const mojo::String& service_name,
-      mojo::ScopedMessagePipeHandle client_handle) override;
+      const fidl::String& service_name,
+      mx::channel client_handle) override;
 
   int connect_invokecount = 0;
 };

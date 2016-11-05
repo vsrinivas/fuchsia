@@ -10,12 +10,11 @@
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
 
 namespace view_manager {
 
 template <typename T>
-static bool Contains(const mojo::Array<T>& array, const T& value) {
+static bool Contains(const fidl::Array<T>& array, const T& value) {
   return std::find(array.storage().cbegin(), array.storage().cend(), value) !=
          array.storage().cend();
 }
@@ -27,19 +26,19 @@ ViewAssociateTable::~ViewAssociateTable() {}
 void ViewAssociateTable::RegisterViewAssociate(
     mozart::ViewInspector* inspector,
     mozart::ViewAssociatePtr associate,
-    mojo::InterfaceRequest<mozart::ViewAssociateOwner>
+    fidl::InterfaceRequest<mozart::ViewAssociateOwner>
         view_associate_owner_request,
-    const mojo::String& label) {
+    const fidl::String& label) {
   FTL_DCHECK(inspector);
   FTL_DCHECK(associate.is_bound());
 
   std::string sanitized_label =
       label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
-  associates_.emplace_back(
-      new AssociateData(sanitized_label, associate.Pass(), this, inspector));
+  associates_.emplace_back(new AssociateData(
+      sanitized_label, std::move(associate), this, inspector));
   AssociateData* data = associates_.back().get();
 
-  data->BindOwner(view_associate_owner_request.Pass());
+  data->BindOwner(std::move(view_associate_owner_request));
 
   // Set it to use our error handler.
   data->associate.set_connection_error_handler(
@@ -51,9 +50,11 @@ void ViewAssociateTable::RegisterViewAssociate(
   // Connect the associate to our view inspector.
   mozart::ViewInspectorPtr inspector_ptr;
   data->inspector_binding.Bind(GetProxy(&inspector_ptr));
-  data->associate->Connect(inspector_ptr.Pass(), [
+  data->associate->Connect(std::move(inspector_ptr), [
     this, index = pending_connection_count_
-  ](mozart::ViewAssociateInfoPtr info) { OnConnected(index, info.Pass()); });
+  ](mozart::ViewAssociateInfoPtr info) {
+    OnConnected(index, std::move(info));
+  });
 
   // Wait for the associate to connect to our view inspector.
   pending_connection_count_++;
@@ -66,14 +67,13 @@ void ViewAssociateTable::FinishedRegisteringViewAssociates() {
   CompleteDeferredWorkIfReady();
 }
 
-void ViewAssociateTable::ConnectToViewService(
-    mozart::ViewTokenPtr view_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {
+void ViewAssociateTable::ConnectToViewService(mozart::ViewTokenPtr view_token,
+                                              const fidl::String& service_name,
+                                              mx::channel client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
     deferred_work_.push_back(ftl::MakeCopyable([
-      this, token = view_token.Pass(), service_name,
-      handle = client_handle.Pass()
+      this, token = std::move(view_token), service_name,
+      handle = std::move(client_handle)
     ]() mutable {
       ConnectToViewService(std::move(token), service_name, std::move(handle));
     }));
@@ -87,8 +87,8 @@ void ViewAssociateTable::ConnectToViewService(
                << ", service_name=" << service_name
                << ", associate_label=" << data->label;
       FTL_DCHECK(data->associate);
-      data->associate->ConnectToViewService(view_token.Pass(), service_name,
-                                            client_handle.Pass());
+      data->associate->ConnectToViewService(std::move(view_token), service_name,
+                                            std::move(client_handle));
       return;
     }
   }
@@ -131,12 +131,12 @@ void ViewAssociateTable::OnAssociateOwnerConnectionError(
 
 void ViewAssociateTable::ConnectToViewTreeService(
     mozart::ViewTreeTokenPtr view_tree_token,
-    const mojo::String& service_name,
-    mojo::ScopedMessagePipeHandle client_handle) {
+    const fidl::String& service_name,
+    mx::channel client_handle) {
   if (waiting_to_register_associates_ || pending_connection_count_) {
     deferred_work_.push_back(ftl::MakeCopyable([
-      this, token = view_tree_token.Pass(), service_name,
-      handle = client_handle.Pass()
+      this, token = std::move(view_tree_token), service_name,
+      handle = std::move(client_handle)
     ]() mutable {
       ConnectToViewTreeService(std::move(token), service_name,
                                std::move(handle));
@@ -152,7 +152,7 @@ void ViewAssociateTable::ConnectToViewTreeService(
                << ", associate_label=" << data->label;
       FTL_DCHECK(data->associate);
       data->associate->ConnectToViewTreeService(
-          view_tree_token.Pass(), service_name, client_handle.Pass());
+          std::move(view_tree_token), service_name, std::move(client_handle));
       return;
     }
   }
@@ -170,7 +170,7 @@ void ViewAssociateTable::OnConnected(uint32_t index,
 
   DVLOG(1) << "Connected to view associate: label=" << associates_[index]->label
            << ", info=" << info;
-  associates_[index]->info = info.Pass();
+  associates_[index]->info = std::move(info);
 
   pending_connection_count_--;
   CompleteDeferredWorkIfReady();
@@ -196,16 +196,16 @@ ViewAssociateTable::AssociateData::AssociateData(
     mozart::ViewAssociateOwner* associate_owner_impl,
     mozart::ViewInspector* inspector)
     : label(label),
-      associate(associate.Pass()),
+      associate(std::move(associate)),
       associate_owner(associate_owner_impl),
       inspector_binding(inspector) {}
 
 ViewAssociateTable::AssociateData::~AssociateData() {}
 
 void ViewAssociateTable::AssociateData::BindOwner(
-    mojo::InterfaceRequest<mozart::ViewAssociateOwner>
+    fidl::InterfaceRequest<mozart::ViewAssociateOwner>
         view_associate_owner_request) {
-  associate_owner.Bind(view_associate_owner_request.Pass());
+  associate_owner.Bind(std::move(view_associate_owner_request));
 }
 
 }  // namespace view_manager

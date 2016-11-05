@@ -8,10 +8,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/views/view_trees.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/view_associate_table.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
 #include "apps/mozart/src/view_manager/view_state.h"
@@ -34,22 +34,22 @@ class ViewRegistry : public mozart::ViewInspector {
   // VIEW MANAGER REQUESTS
 
   // Creates a view and returns its ViewToken.
-  void CreateView(mojo::InterfaceRequest<mozart::View> view_request,
-                  mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+  void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
+                  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
-                  const mojo::String& label);
+                  const fidl::String& label);
 
   // Creates a view tree.
   void CreateViewTree(
-      mojo::InterfaceRequest<mozart::ViewTree> view_tree_request,
+      fidl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       mozart::ViewTreeListenerPtr view_tree_listener,
-      const mojo::String& label);
+      const fidl::String& label);
 
   void RegisterViewAssociate(
       mozart::ViewInspector* view_inspector,
       mozart::ViewAssociatePtr view_associate,
-      mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
-      const mojo::String& label);
+      fidl::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
+      const fidl::String& label);
 
   void FinishedRegisteringViewAssociates();
 
@@ -58,14 +58,14 @@ class ViewRegistry : public mozart::ViewInspector {
   void OnViewResolved(ViewStub* view_stub, mozart::ViewTokenPtr view_token);
   void TransferViewOwner(
       mozart::ViewTokenPtr view_token,
-      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // VIEW REQUESTS
 
   // Creates a scene for the view, replacing its current scene.
   // Destroys |view_state| if an error occurs.
   void CreateScene(ViewState* view_state,
-                   mojo::InterfaceRequest<mozart::Scene> scene);
+                   fidl::InterfaceRequest<mozart::Scene> scene);
 
   // Invalidates a view.
   // Destroys |view_state| if an error occurs.
@@ -89,14 +89,14 @@ class ViewRegistry : public mozart::ViewInspector {
   // Destroys |container_state| if an error occurs.
   void AddChild(ViewContainerState* container_state,
                 uint32_t child_key,
-                mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner);
+                fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
   void RemoveChild(
       ViewContainerState* container_state,
       uint32_t child_key,
-      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // Sets a child's properties.
   // Destroys |container_state| if an error occurs.
@@ -114,23 +114,23 @@ class ViewRegistry : public mozart::ViewInspector {
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewService(ViewState* view_state,
-                            const mojo::String& service_name,
-                            mojo::ScopedMessagePipeHandle client_handle);
+                            const fidl::String& service_name,
+                            mx::channel client_handle);
 
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewTreeService(ViewTreeState* tree_state,
-                                const mojo::String& service_name,
-                                mojo::ScopedMessagePipeHandle client_handle);
+                                const fidl::String& service_name,
+                                mx::channel client_handle);
 
   // VIEW INSPECTOR REQUESTS
 
   void GetHitTester(
       mozart::ViewTreeTokenPtr view_tree_token,
-      mojo::InterfaceRequest<mozart::HitTester> hit_tester_request,
+      fidl::InterfaceRequest<mozart::HitTester> hit_tester_request,
       const GetHitTesterCallback& callback) override;
 
-  void ResolveScenes(mojo::Array<mozart::SceneTokenPtr> scene_tokens,
+  void ResolveScenes(fidl::Array<mozart::SceneTokenPtr> scene_tokens,
                      const ResolveScenesCallback& callback) override;
 
  private:
@@ -149,7 +149,7 @@ class ViewRegistry : public mozart::ViewInspector {
   void HijackView(ViewState* view_state);
   void TransferOrUnregisterViewStub(
       std::unique_ptr<ViewStub> view_stub,
-      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
   // INVALIDATION
 

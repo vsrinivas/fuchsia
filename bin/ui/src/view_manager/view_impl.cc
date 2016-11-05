@@ -15,21 +15,21 @@ ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
 ViewImpl::~ViewImpl() {}
 
 void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
-  callback.Run(state_->view_token()->Clone());
+  callback(state_->view_token()->Clone());
 }
 
 void ViewImpl::GetServiceProvider(
-    mojo::InterfaceRequest<mojo::ServiceProvider> service_provider_request) {
-  service_provider_bindings_.AddBinding(this, service_provider_request.Pass());
+    fidl::InterfaceRequest<modular::ServiceProvider> service_provider_request) {
+  service_provider_bindings_.AddBinding(this, std::move(service_provider_request));
 }
 
-void ViewImpl::CreateScene(mojo::InterfaceRequest<mozart::Scene> scene) {
-  registry_->CreateScene(state_, scene.Pass());
+void ViewImpl::CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) {
+  registry_->CreateScene(state_, std::move(scene));
 }
 
 void ViewImpl::GetContainer(
-    mojo::InterfaceRequest<mozart::ViewContainer> view_container_request) {
-  container_bindings_.AddBinding(this, view_container_request.Pass());
+    fidl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
+  container_bindings_.AddBinding(this, std::move(view_container_request));
 }
 
 void ViewImpl::Invalidate() {
@@ -37,22 +37,22 @@ void ViewImpl::Invalidate() {
 }
 
 void ViewImpl::SetListener(
-    mojo::InterfaceHandle<mozart::ViewContainerListener> listener) {
+    fidl::InterfaceHandle<mozart::ViewContainerListener> listener) {
   state_->set_view_container_listener(
       mozart::ViewContainerListenerPtr::Create(std::move(listener)));
 }
 
 void ViewImpl::AddChild(
     uint32_t child_key,
-    mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
-  registry_->AddChild(state_, child_key, child_view_owner.Pass());
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
+  registry_->AddChild(state_, child_key, std::move(child_view_owner));
 }
 
 void ViewImpl::RemoveChild(
     uint32_t child_key,
-    mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+    fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
-                         transferred_view_owner_request.Pass());
+                         std::move(transferred_view_owner_request));
 }
 
 void ViewImpl::SetChildProperties(
@@ -60,16 +60,16 @@ void ViewImpl::SetChildProperties(
     uint32_t child_scene_version,
     mozart::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key, child_scene_version,
-                                child_view_properties.Pass());
+                                std::move(child_view_properties));
 }
 
 void ViewImpl::FlushChildren(uint32_t flush_token) {
   registry_->FlushChildren(state_, flush_token);
 }
 
-void ViewImpl::ConnectToService(const mojo::String& service_name,
-                                mojo::ScopedMessagePipeHandle client_handle) {
-  registry_->ConnectToViewService(state_, service_name, client_handle.Pass());
+void ViewImpl::ConnectToService(const fidl::String& service_name,
+                                mx::channel client_handle) {
+  registry_->ConnectToViewService(state_, service_name, std::move(client_handle));
 }
 
 }  // namespace view_manager

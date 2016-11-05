@@ -5,9 +5,9 @@
 #ifndef APPS_MOZART_SRC_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
-#include "apps/mozart/services/views/interfaces/view_trees.mojom.h"
+#include "apps/mozart/services/views/view_trees.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace view_manager {
 
@@ -18,7 +18,7 @@ class ViewTreeState;
 // This object is owned by its associated ViewTreeState.
 class ViewTreeImpl : public mozart::ViewTree,
                      public mozart::ViewContainer,
-                     public mojo::ServiceProvider {
+                     public modular::ServiceProvider {
  public:
   ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state);
   ~ViewTreeImpl() override;
@@ -27,19 +27,19 @@ class ViewTreeImpl : public mozart::ViewTree,
   // |ViewTree|:
   void GetToken(const GetTokenCallback& callback) override;
   void GetServiceProvider(
-      mojo::InterfaceRequest<mojo::ServiceProvider> service_provider) override;
-  void SetRenderer(mojo::InterfaceHandle<mozart::Renderer> renderer) override;
-  void GetContainer(mojo::InterfaceRequest<mozart::ViewContainer>
+      fidl::InterfaceRequest<modular::ServiceProvider> service_provider) override;
+  void SetRenderer(fidl::InterfaceHandle<mozart::Renderer> renderer) override;
+  void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
 
   // |ViewContainer|:
   void SetListener(
-      mojo::InterfaceHandle<mozart::ViewContainerListener> listener) override;
+      fidl::InterfaceHandle<mozart::ViewContainerListener> listener) override;
   void AddChild(
       uint32_t child_key,
-      mojo::InterfaceHandle<mozart::ViewOwner> child_view_owner) override;
+      fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) override;
   void RemoveChild(uint32_t child_key,
-                   mojo::InterfaceRequest<mozart::ViewOwner>
+                   fidl::InterfaceRequest<mozart::ViewOwner>
                        transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
@@ -47,14 +47,14 @@ class ViewTreeImpl : public mozart::ViewTree,
       mozart::ViewPropertiesPtr child_view_properties) override;
   void FlushChildren(uint32_t flush_token) override;
 
-  // |mojo::ServiceProvider|:
-  void ConnectToService(const mojo::String& service_name,
-                        mojo::ScopedMessagePipeHandle client_handle) override;
+  // |modular::ServiceProvider|:
+  void ConnectToService(const fidl::String& service_name,
+                        mx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewTreeState* const state_;
-  mojo::BindingSet<mojo::ServiceProvider> service_provider_bindings_;
-  mojo::BindingSet<mozart::ViewContainer> container_bindings_;
+  fidl::BindingSet<modular::ServiceProvider> service_provider_bindings_;
+  fidl::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);
 };

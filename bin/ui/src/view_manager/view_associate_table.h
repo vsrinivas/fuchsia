@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace view_manager {
 
@@ -29,18 +29,18 @@ class ViewAssociateTable : public mozart::ViewAssociateOwner {
   void RegisterViewAssociate(
       mozart::ViewInspector* inspector,
       mozart::ViewAssociatePtr associate,
-      mojo::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
-      const mojo::String& label);
+      fidl::InterfaceRequest<mozart::ViewAssociateOwner> view_associate_owner,
+      const fidl::String& label);
 
   void FinishedRegisteringViewAssociates();
 
   // Connects to services offered by the view associates.
   void ConnectToViewService(mozart::ViewTokenPtr view_token,
-                            const mojo::String& service_name,
-                            mojo::ScopedMessagePipeHandle client_handle);
+                            const fidl::String& service_name,
+                            mx::channel client_handle);
   void ConnectToViewTreeService(mozart::ViewTreeTokenPtr view_tree_token,
-                                const mojo::String& service_name,
-                                mojo::ScopedMessagePipeHandle client_handle);
+                                const fidl::String& service_name,
+                                mx::channel client_handle);
 
   void OnConnected(uint32_t index, mozart::ViewAssociateInfoPtr info);
 
@@ -54,14 +54,14 @@ class ViewAssociateTable : public mozart::ViewAssociateOwner {
                   mozart::ViewInspector* inspector);
     ~AssociateData();
 
-    void BindOwner(mojo::InterfaceRequest<mozart::ViewAssociateOwner>
+    void BindOwner(fidl::InterfaceRequest<mozart::ViewAssociateOwner>
                        view_associate_owner_request);
 
     const std::string label;
     mozart::ViewAssociatePtr associate;
-    mojo::Binding<mozart::ViewAssociateOwner> associate_owner;
+    fidl::Binding<mozart::ViewAssociateOwner> associate_owner;
     mozart::ViewAssociateInfoPtr info;
-    mojo::Binding<mozart::ViewInspector> inspector_binding;
+    fidl::Binding<mozart::ViewInspector> inspector_binding;
   };
 
   bool RemoveAssociateData(AssociateData* associate_data, std::string& label);

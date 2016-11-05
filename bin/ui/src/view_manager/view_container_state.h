@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/mozart/services/views/interfaces/view_containers.mojom.h"
+#include "apps/mozart/services/views/view_containers.fidl.h"
 #include "apps/mozart/src/view_manager/view_stub.h"
 #include "lib/ftl/macros.h"
 
@@ -34,7 +34,7 @@ class ViewContainerState {
   }
   void set_view_container_listener(
       mozart::ViewContainerListenerPtr view_container_listener) {
-    view_container_listener_ = view_container_listener.Pass();
+    view_container_listener_ = std::move(view_container_listener);
   }
 
   // The map of children, indexed by child key.

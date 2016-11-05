@@ -14,14 +14,14 @@ namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
                      mozart::ViewTokenPtr view_token,
-                     mojo::InterfaceRequest<mozart::View> view_request,
+                     fidl::InterfaceRequest<mozart::View> view_request,
                      mozart::ViewListenerPtr view_listener,
                      const std::string& label)
-    : view_token_(view_token.Pass()),
-      view_listener_(view_listener.Pass()),
+    : view_token_(std::move(view_token)),
+      view_listener_(std::move(view_listener)),
       label_(label),
       impl_(new ViewImpl(registry, this)),
-      view_binding_(impl_.get(), view_request.Pass()),
+      view_binding_(impl_.get(), std::move(view_request)),
       owner_binding_(impl_.get()),
       weak_factory_(this) {
   FTL_DCHECK(view_token_);
@@ -43,13 +43,13 @@ ViewState::~ViewState() {}
 void ViewState::IssueProperties(mozart::ViewPropertiesPtr properties) {
   issued_scene_version_++;
   FTL_CHECK(issued_scene_version_);
-  issued_properties_ = properties.Pass();
+  issued_properties_ = std::move(properties);
 }
 
 void ViewState::BindOwner(
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   FTL_DCHECK(!owner_binding_.is_bound());
-  owner_binding_.Bind(view_owner_request.Pass());
+  owner_binding_.Bind(std::move(view_owner_request));
 }
 
 void ViewState::ReleaseOwner() {

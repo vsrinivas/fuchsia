@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
 #include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/application/connect.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace view_manager {
 namespace test {
@@ -19,7 +19,7 @@ class MockViewListener : public mozart::ViewListener {
 
   void OnInvalidation(mozart::ViewInvalidationPtr invalidation,
                       const OnInvalidationCallback& callback) override {
-    callback.Run();
+    callback();
   }
 };
 
@@ -32,8 +32,8 @@ class ViewManagerTest : public ViewManagerTestBase {
     ViewManagerTestBase::SetUp();
 
     // Connect to view manager
-    mojo::ConnectToService(shell(), "mojo:view_manager_service",
-                           mojo::GetProxy(&view_manager_));
+    fidl::ConnectToService(shell(), "mojo:view_manager_service",
+                           fidl::GetProxy(&view_manager_));
   }
 
  protected:
@@ -51,14 +51,14 @@ TEST_F(ViewManagerTest, CreateAView) {
   // Create and bind a mock view listener
   mozart::ViewListenerPtr view_listener;
   MockViewListener mock_view_listener;
-  mojo::Binding<mozart::ViewListener> view_listener_binding(
-      &mock_view_listener, mojo::GetProxy(&view_listener));
+  fidl::Binding<mozart::ViewListener> view_listener_binding(
+      &mock_view_listener, fidl::GetProxy(&view_listener));
 
   // Create a view
   mozart::ViewPtr view;
   mozart::ViewOwnerPtr view_owner;
-  view_manager_->CreateView(mojo::GetProxy(&view), mojo::GetProxy(&view_owner),
-                            view_listener.Pass(), "test_view");
+  view_manager_->CreateView(fidl::GetProxy(&view), fidl::GetProxy(&view_owner),
+                            std::move(view_listener), "test_view");
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
@@ -77,38 +77,38 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
   mozart::ViewListenerPtr parent_view_listener;
   MockViewListener parent_mock_view_listener;
-  mojo::Binding<mozart::ViewListener> child_view_listener_binding(
-      &parent_mock_view_listener, mojo::GetProxy(&parent_view_listener));
+  fidl::Binding<mozart::ViewListener> child_view_listener_binding(
+      &parent_mock_view_listener, fidl::GetProxy(&parent_view_listener));
 
   // Create a parent view
   mozart::ViewPtr parent_view;
   mozart::ViewOwnerPtr parent_view_owner;
-  view_manager_->CreateView(mojo::GetProxy(&parent_view),
-                            mojo::GetProxy(&parent_view_owner),
-                            parent_view_listener.Pass(), "parent_test_view");
+  view_manager_->CreateView(fidl::GetProxy(&parent_view),
+                            fidl::GetProxy(&parent_view_owner),
+                            std::move(parent_view_listener), "parent_test_view");
 
   mozart::ViewContainerPtr parent_view_container;
-  parent_view->GetContainer(mojo::GetProxy(&parent_view_container));
+  parent_view->GetContainer(fidl::GetProxy(&parent_view_container));
 
   // Create and bind a mock view listener for a child view
   mozart::ViewListenerPtr child_view_listener;
   MockViewListener child_mock_view_listener;
-  mojo::Binding<mozart::ViewListener> parent_view_listener_binding(
-      &child_mock_view_listener, mojo::GetProxy(&child_view_listener));
+  fidl::Binding<mozart::ViewListener> parent_view_listener_binding(
+      &child_mock_view_listener, fidl::GetProxy(&child_view_listener));
 
   // Create a child view
   mozart::ViewPtr child_view;
   mozart::ViewOwnerPtr child_view_owner;
-  view_manager_->CreateView(mojo::GetProxy(&child_view),
-                            mojo::GetProxy(&child_view_owner),
-                            child_view_listener.Pass(), "test_view");
+  view_manager_->CreateView(fidl::GetProxy(&child_view),
+                            fidl::GetProxy(&child_view_owner),
+                            std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
-  parent_view_container->AddChild(0, child_view_owner.Pass());
+  parent_view_container->AddChild(0, std::move(child_view_owner));
 
   // Remove the view from the parent
   mozart::ViewOwnerPtr new_child_view_owner;
-  parent_view_container->RemoveChild(0, mojo::GetProxy(&new_child_view_owner));
+  parent_view_container->RemoveChild(0, fidl::GetProxy(&new_child_view_owner));
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
   // since the view hasn't had enough time to be resolved
@@ -128,17 +128,17 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
 TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
   // Create and bind a MockViewAssociate
-  mojo::InterfaceHandle<mozart::ViewAssociate> associate;
+  fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
-  mojo::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, mojo::GetProxy(&associate));
+  fidl::Binding<mozart::ViewAssociate> view_associate_binding(
+      &mock_view_associate, fidl::GetProxy(&associate));
 
   // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
   // should be called back
   EXPECT_EQ(0, mock_view_associate.connect_invokecount);
   mozart::ViewAssociateOwnerPtr view_associate_owner;
-  view_manager_->RegisterViewAssociate(associate.Pass(),
-                                       mojo::GetProxy(&view_associate_owner),
+  view_manager_->RegisterViewAssociate(std::move(associate),
+                                       fidl::GetProxy(&view_associate_owner),
                                        "test_view_associate");
 
   KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
@@ -152,17 +152,17 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
 
   {
     // Create and bind a MockViewAssociate
-    mojo::InterfaceHandle<mozart::ViewAssociate> associate;
+    fidl::InterfaceHandle<mozart::ViewAssociate> associate;
     MockViewAssociate mock_view_associate;
-    mojo::Binding<mozart::ViewAssociate> view_associate_binding(
-        &mock_view_associate, mojo::GetProxy(&associate));
+    fidl::Binding<mozart::ViewAssociate> view_associate_binding(
+        &mock_view_associate, fidl::GetProxy(&associate));
 
     // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
     // should be called back
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
-    view_manager_->RegisterViewAssociate(associate.Pass(),
-                                         mojo::GetProxy(&view_associate_owner),
+    view_manager_->RegisterViewAssociate(std::move(associate),
+                                         fidl::GetProxy(&view_associate_owner),
                                          "test_view_associate_xyz");
 
     // set a callback for errors
@@ -188,10 +188,10 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
 
 TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
   // Create and bind a MockViewAssociate
-  mojo::InterfaceHandle<mozart::ViewAssociate> associate;
+  fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
-  mojo::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, mojo::GetProxy(&associate));
+  fidl::Binding<mozart::ViewAssociate> view_associate_binding(
+      &mock_view_associate, fidl::GetProxy(&associate));
 
   // set a callback for errors
   int connection_error_callback_invokecount = 0;
@@ -208,8 +208,8 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
     // should be called back
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
-    view_manager_->RegisterViewAssociate(associate.Pass(),
-                                         mojo::GetProxy(&view_associate_owner),
+    view_manager_->RegisterViewAssociate(std::move(associate),
+                                         fidl::GetProxy(&view_associate_owner),
                                          "test_view_associate_xyz");
 
     KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);

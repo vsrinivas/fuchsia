@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
@@ -43,7 +43,7 @@ class ViewStub {
   // Invokes |ViewRegistry.OnViewResolved| when the token is obtained
   // from the owner or passes nullptr if an error occurs.
   ViewStub(ViewRegistry* registry,
-           mojo::InterfaceHandle<mozart::ViewOwner> owner);
+           fidl::InterfaceHandle<mozart::ViewOwner> owner);
   ~ViewStub();
 
   ftl::WeakPtr<ViewStub> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -124,7 +124,7 @@ class ViewStub {
   // be transferred
   void TransferViewOwnerWhenViewResolved(
       std::unique_ptr<ViewStub> view_stub,
-      mojo::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
 
  private:
   void SetTreeRecursively(ViewTreeState* tree);

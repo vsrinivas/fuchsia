@@ -5,8 +5,8 @@
 #include "apps/mozart/src/view_manager/view_associate_table.h"
 
 #include "apps/mozart/lib/view_framework/associates/mock_view_inspector.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/tests/mock_view_associate.h"
 #include "apps/mozart/src/view_manager/tests/view_manager_test_base.h"
 
@@ -35,16 +35,16 @@ TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
     // Create and bind a MockViewAssociate
     mozart::ViewAssociatePtr associate;
     MockViewAssociate mock_view_associate;
-    mojo::Binding<mozart::ViewAssociate> view_associate_binding(
-        &mock_view_associate, mojo::GetProxy(&associate));
+    fidl::Binding<mozart::ViewAssociate> view_associate_binding(
+        &mock_view_associate, fidl::GetProxy(&associate));
 
     // call ViewAssociateTable::RegisterViewAssociate
     EXPECT_EQ((size_t)0, view_associate_table.associate_count());
 
     mozart::ViewAssociateOwnerPtr view_associate_owner;
     view_associate_table.RegisterViewAssociate(
-        &mock_view_inspector, associate.Pass(),
-        mojo::GetProxy(&view_associate_owner), "test_view_associate");
+        &mock_view_inspector, std::move(associate),
+        fidl::GetProxy(&view_associate_owner), "test_view_associate");
     KICK_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 1);
     EXPECT_EQ((size_t)1, view_associate_table.associate_count());
   }
