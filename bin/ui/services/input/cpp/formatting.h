@@ -7,8 +7,8 @@
 
 #include <iosfwd>
 
-#include "apps/mozart/services/input/interfaces/input_event_constants.mojom.h"
-#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
+#include "apps/mozart/services/input/input_event_constants.fidl.h"
+#include "apps/mozart/services/input/input_events.fidl.h"
 
 namespace mozart {
 

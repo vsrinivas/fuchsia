@@ -9,7 +9,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/input/interfaces",
+    "//apps/mozart/services/input",
     "//lib/ftl",
   ]
 }

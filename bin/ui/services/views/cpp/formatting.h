@@ -8,10 +8,10 @@
 #include <iosfwd>
 
 #include "apps/mozart/services/composition/cpp/formatting.h"
-#include "apps/mozart/services/views/interfaces/view_associates.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "mojo/public/cpp/bindings/formatting.h"
-#include "mojo/services/geometry/cpp/formatting.h"
+#include "apps/mozart/services/geometry/cpp/formatting.h"
+#include "apps/mozart/services/views/view_associates.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace mozart {
 

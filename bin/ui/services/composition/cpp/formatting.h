@@ -5,10 +5,10 @@
 #ifndef APPS_MOZART_SERVICES_COMPOSITION_CPP_FORMATTING_H_
 #define APPS_MOZART_SERVICES_COMPOSITION_CPP_FORMATTING_H_
 
-#include "apps/mozart/services/composition/interfaces/compositor.mojom.h"
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
-#include "mojo/public/cpp/bindings/formatting.h"
-#include "mojo/services/geometry/cpp/formatting.h"
+#include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/composition/scheduling.fidl.h"
+#include "apps/mozart/services/geometry/cpp/formatting.h"
+#include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace mozart {
 

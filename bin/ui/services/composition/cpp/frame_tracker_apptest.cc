@@ -4,18 +4,14 @@
 
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 
+#include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_test_base.h"
 
 namespace test {
 
-class FrameTrackerTest : public mojo::test::ApplicationTestBase {
+class FrameTrackerTest : public ::testing::Test {
  public:
-  FrameTrackerTest() {}
-  ~FrameTrackerTest() override {}
-
- protected:
-  mozart::FrameTracker frame_tracker_;
+  FrameTrackerTest() = default;
 
   void Update(int64_t base_time,
               uint64_t presentation_interval,
@@ -32,7 +28,9 @@ class FrameTrackerTest : public mojo::test::ApplicationTestBase {
         ftl::TimePoint::FromEpochDelta(ftl::TimeDelta::FromNanoseconds(now)));
   }
 
- private:
+ protected:
+  mozart::FrameTracker frame_tracker_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(FrameTrackerTest);
 };
 

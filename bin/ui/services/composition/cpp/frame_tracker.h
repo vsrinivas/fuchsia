@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SERVICES_COMPOSITION_CPP_FRAME_TRACKER_H_
 #define APPS_MOZART_SERVICES_COMPOSITION_CPP_FRAME_TRACKER_H_
 
-#include "apps/mozart/services/composition/interfaces/scheduling.mojom.h"
+#include "apps/mozart/services/composition/scheduling.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"

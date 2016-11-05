@@ -79,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, const Image& value) {
             << ", pixel_format=" << &value.pixel_format
             << ", alpha_format=" << &value.alpha_format
             << ", color_space=" << &value.color_space
-            << ", buffer=" << value.buffer.get().value() << "}";
+            << ", buffer=" << value.buffer.get() << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const Image::PixelFormat* value) {
