@@ -27,6 +27,12 @@ class ServiceProviderImpl : public ServiceProvider {
   // just channels) specified by service name to service implementations.
   using ServiceConnector = std::function<void(mx::channel)>;
 
+  // |DefaultServiceConnector| is the default last resort service connector
+  // which is called when the service provider does not recognize a particular
+  // service name.  This may be used to implement service provider delegation
+  // or more complex name-based service resolution strategies.
+  using DefaultServiceConnector = std::function<void(std::string, mx::channel)>;
+
   // A |InterfaceRequestHandler<Interface>| is simply a function that
   // handles an interface request for |Interface|. If it determines that the
   // request should be "accepted", then it should "connect" ("take ownership
@@ -94,6 +100,22 @@ class ServiceProviderImpl : public ServiceProvider {
     RemoveServiceForName(service_name);
   }
 
+  // Sets the default service connector which is called when the service
+  // provider does not recognize a particular service name.  This may be used to
+  // implement service provider delegation or more complex name-based service
+  // resolution strategies.
+  //
+  // Calling this function replaces any value set previously by
+  // |SetDefaultServiceConnector| or |SetDefaultServiceProvider|.
+  void SetDefaultServiceConnector(DefaultServiceConnector connector);
+
+  // Like |SetDefaultServiceConnector| but delegates requests to another
+  // service provider.
+  //
+  // Calling this function replaces any value set previously by
+  // |SetDefaultServiceConnector| or |SetDefaultServiceProvider|.
+  void SetDefaultServiceProvider(modular::ServiceProviderPtr provider);
+
  private:
   // Overridden from |ServiceProvider|:
   void ConnectToService(const fidl::String& service_name,
@@ -102,6 +124,7 @@ class ServiceProviderImpl : public ServiceProvider {
   fidl::BindingSet<ServiceProvider> bindings_;
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
+  DefaultServiceConnector default_service_connector_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
