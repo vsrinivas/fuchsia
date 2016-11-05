@@ -48,17 +48,25 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
   if (error_)
     return false;
 
-  mx_status_t rv = message_pipe_.wait_one(MX_SIGNAL_READABLE,
-                                          timeout.ToNanoseconds(), nullptr);
+  mx_signals_t pending = MX_SIGNAL_NONE;
+  mx_status_t rv =
+      message_pipe_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                             timeout.ToNanoseconds(), &pending);
   if (rv == ERR_SHOULD_WAIT || rv == ERR_TIMED_OUT)
     return false;
   if (rv != NO_ERROR) {
     NotifyError();
     return false;
   }
-  bool ok = ReadSingleMessage(&rv);
-  FTL_ALLOW_UNUSED_LOCAL(ok);
-  return (rv == NO_ERROR);
+  if (pending & MX_SIGNAL_READABLE) {
+    bool ok = ReadSingleMessage(&rv);
+    FTL_ALLOW_UNUSED_LOCAL(ok);
+    return (rv == NO_ERROR);
+  }
+
+  FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
+  NotifyError();
+  return false;
 }
 
 bool Connector::Accept(Message* message) {
