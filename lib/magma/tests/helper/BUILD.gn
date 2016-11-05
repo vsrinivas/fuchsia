@@ -26,6 +26,7 @@ source_set("command_buffer_helper") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/sys_driver",
   ]
 }

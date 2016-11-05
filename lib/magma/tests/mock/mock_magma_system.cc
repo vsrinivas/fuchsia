@@ -109,8 +109,7 @@ void magma_system_set_domain(magma_system_connection* connection, uint32_t buffe
 }
 
 void magma_system_submit_command_buffer(struct magma_system_connection* connection,
-                                        struct magma_system_command_buffer* command_buffer,
-                                        uint32_t context_id)
+                                        uint32_t command_buffer_id, uint32_t context_id)
 {
 }
 

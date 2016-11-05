@@ -72,7 +72,7 @@ void msd_buffer_destroy(msd_buffer* buf)
         return g_bufmgr->DestroyBuffer(MsdMockBuffer::cast(buf));
 }
 
-int32_t msd_context_execute_command_buffer(msd_context* ctx, magma_system_command_buffer* cmd_buf,
+int32_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
                                            msd_buffer** exec_resources)
 {
     return MsdMockContext::cast(ctx)->ExecuteCommandBuffer(cmd_buf, exec_resources);

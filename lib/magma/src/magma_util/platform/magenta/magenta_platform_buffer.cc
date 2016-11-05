@@ -131,18 +131,19 @@ public:
         DASSERT(magma::is_page_aligned(size));
         pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
 
-        bool success = OpaquePlatformBuffer::IdFromHandle(handle_, &koid_);
+        bool success = PlatformBuffer::IdFromHandle(handle_, &koid_);
         DASSERT(success);
     }
 
     ~MagentaPlatformBuffer() override
     {
-        UnmapCpu();
+        if (map_count_ > 0)
+            UnmapCpu();
         ReleasePages();
         mx_handle_close(handle_);
     }
 
-    // OpaquePlatformBuffer implementation
+    // PlatformBuffer implementation
     uint64_t size() override { return size_; }
 
     uint64_t id() override { return koid_; }
@@ -179,42 +180,48 @@ private:
     uint64_t size_;
     uint64_t koid_;
     void* virt_addr_{};
+    uint32_t map_count_ = 0;
     std::unique_ptr<PinCountSparseArray> pin_count_array_;
     std::map<uint32_t, void*> mapped_pages_;
 };
 
 bool MagentaPlatformBuffer::MapCpu(void** addr_out)
 {
-    if (virt_addr_) {
-        *addr_out = virt_addr_;
-        return true;
+    if (map_count_ == 0) {
+        DASSERT(!virt_addr_);
+        uintptr_t ptr;
+        mx_status_t status = mx_process_map_vm(mx_process_self(), handle_, 0, size(), &ptr,
+                                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+        if (status != NO_ERROR)
+            return DRETF(false, "failed to map vmo");
+
+        virt_addr_ = reinterpret_cast<void*>(ptr);
     }
 
-    uintptr_t ptr;
-    mx_status_t status = mx_process_map_vm(mx_process_self(), handle_, 0, size(), &ptr,
-                                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-    if (status != NO_ERROR)
-        return DRETF(false, "failed to map vmo");
-
-    virt_addr_ = reinterpret_cast<void*>(ptr);
-    DLOG("mapped vmo got %p", virt_addr_);
-
     *addr_out = virt_addr_;
+    map_count_++;
+
+    DLOG("mapped vmo %p got %p, map_count_ = %u", this, virt_addr_, map_count_);
+
     return true;
 }
 
 bool MagentaPlatformBuffer::UnmapCpu()
 {
-    if (virt_addr_) {
-        mx_status_t status =
-            mx_process_unmap_vm(mx_process_self(), reinterpret_cast<uintptr_t>(virt_addr_), 0);
-        if (status != NO_ERROR)
-            DRETF(false, "failed to unmap vmo: %d", status);
-
-        virt_addr_ = nullptr;
+    DLOG("UnmapCpu vmo %p, map_count_ %u", this, map_count_);
+    if (map_count_) {
+        map_count_--;
+        if (map_count_ == 0) {
+            DLOG("map_count 0 unmapping vmo %p", this);
+            mx_status_t status =
+                mx_process_unmap_vm(mx_process_self(), reinterpret_cast<uintptr_t>(virt_addr_), 0);
+            virt_addr_ = nullptr;
+            if (status != NO_ERROR)
+                DRETF(false, "failed to unmap vmo: %d", status);
+        }
         return true;
     }
-    return false;
+    return DRETF(false, "attempting to unmap buffer that isnt mapped\n");
 }
 
 bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)
@@ -357,7 +364,7 @@ bool MagentaPlatformBuffer::MapPageBus(uint32_t page_index, uint64_t* addr_out)
 
 bool MagentaPlatformBuffer::UnmapPageBus(uint32_t page_index) { return true; }
 
-bool OpaquePlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
+bool PlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
 {
     mx_info_handle_basic_t info;
     mx_size_t info_size = 0;

@@ -5,9 +5,11 @@
 #ifndef _MOCK_MSD_H_
 #define _MOCK_MSD_H_
 
+#include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_buffer.h"
+#include <errno.h>
 #include <memory>
 #include <vector>
 
@@ -31,6 +33,8 @@ public:
         return static_cast<MsdMockBuffer*>(buf);
     }
 
+    magma::PlatformBuffer* platform_buffer() { return platform_buf_.get(); }
+
 private:
     std::unique_ptr<magma::PlatformBuffer> platform_buf_;
     static const uint32_t kMagic = 0x6d6b6266; // "mkbf" (Mock Buffer)
@@ -38,15 +42,27 @@ private:
 
 class MsdMockConnection;
 
+class MsdMockCommandBuffer : public magma::CommandBuffer {
+public:
+    MsdMockCommandBuffer(MsdMockBuffer* buffer) : buffer_(buffer) {}
+
+    magma::PlatformBuffer* platform_buffer() override { return buffer_->platform_buffer(); }
+private:
+    MsdMockBuffer* buffer_;
+};
+
 class MsdMockContext : public msd_context {
 public:
     MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
     virtual ~MsdMockContext();
 
-    int32_t ExecuteCommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources)
+    int32_t ExecuteCommandBuffer(msd_buffer* cmd_buf_in, msd_buffer** exec_resources)
     {
+        auto cmd_buf = MsdMockCommandBuffer(MsdMockBuffer::cast(cmd_buf_in));
+        if (!cmd_buf.Initialize())
+            return DRET_MSG(-EINVAL, "failed to Initialize command buffer");
         last_submitted_exec_resources_.clear();
-        for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+        for (uint32_t i = 0; i < cmd_buf.num_resources(); i++) {
             last_submitted_exec_resources_.push_back(MsdMockBuffer::cast(exec_resources[i]));
         }
         return 0;

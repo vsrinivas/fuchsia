@@ -35,23 +35,22 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidBatchBufferIndex)
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidExecResourceHandle)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_cmd_buf()->resources[0].buffer_handle = 0xdeadbeef;
+    cmd_buf->abi_resources()[0].buffer_handle = 0xdeadbeef;
     EXPECT_FALSE(cmd_buf->Execute());
 }
 
 TEST(MagmaSystemContext, ExecuteCommandBuffer_DuplicateExecResourceHandle)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_cmd_buf()->resources[1].buffer_handle =
-        cmd_buf->abi_cmd_buf()->resources[0].buffer_handle;
+    cmd_buf->abi_resources()[1].buffer_handle = cmd_buf->abi_resources()[0].buffer_handle;
     EXPECT_FALSE(cmd_buf->Execute());
 }
 
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationOffset)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    for (uint32_t i = 0; i < cmd_buf->abi_cmd_buf()->resources[0].num_relocations; i++) {
-        cmd_buf->abi_cmd_buf()->resources[0].relocations[i].offset =
+    for (uint32_t i = 0; i < cmd_buf->abi_resources()[0].num_relocations; i++) {
+        cmd_buf->abi_relocations()[i].offset =
             CommandBufferHelper::kBufferSize - sizeof(uint32_t) + 1; // smallest invalid offset
     }
     EXPECT_FALSE(cmd_buf->Execute());
@@ -60,7 +59,7 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationOffset)
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetBufferIndex)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_cmd_buf()->resources[0].relocations[0].target_resource_index =
+    cmd_buf->abi_relocations()[0].target_resource_index =
         CommandBufferHelper::kNumResources; // smallest invalid value
     EXPECT_FALSE(cmd_buf->Execute());
 }
@@ -68,8 +67,8 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetBufferIndex
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetOffset)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    for (uint32_t i = 0; i < cmd_buf->abi_cmd_buf()->resources[0].num_relocations; i++) {
-        cmd_buf->abi_cmd_buf()->resources[0].relocations[i].target_offset =
+    for (uint32_t i = 0; i < cmd_buf->abi_resources()[0].num_relocations; i++) {
+        cmd_buf->abi_relocations()[i].target_offset =
             CommandBufferHelper::kBufferSize - sizeof(uint32_t) + 1; // smallest invalid offset
     }
     EXPECT_FALSE(cmd_buf->Execute());

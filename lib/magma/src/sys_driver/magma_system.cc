@@ -174,12 +174,11 @@ void magma_system_set_domain(magma_system_connection* connection, uint32_t buffe
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
-void magma_system_submit_command_buffer(struct magma_system_connection* connection,
-                                        struct magma_system_command_buffer* command_buffer,
-                                        uint32_t context_id)
+void magma_system_submit_command_buffer(magma_system_connection* connection,
+                                        uint32_t command_buffer_id, uint32_t context_id)
 {
     magma::PlatformIpcConnection::cast(connection)
-        ->ExecuteCommandBuffer(command_buffer, context_id);
+        ->ExecuteCommandBuffer(command_buffer_id, context_id);
 }
 
 void magma_system_wait_rendering(magma_system_connection* connection, uint32_t buffer_id)

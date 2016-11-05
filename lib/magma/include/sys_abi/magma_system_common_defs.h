@@ -34,14 +34,12 @@ struct magma_system_exec_resource {
     uint32_t num_relocations;
     uint64_t offset;
     uint64_t length;
-    struct magma_system_relocation_entry* relocations;
 };
 
 // A batch buffer to be executed plus the resources required to execute it
 struct magma_system_command_buffer {
     uint32_t batch_buffer_resource_index; // resource index of the batch buffer to execute
     uint32_t num_resources;
-    struct magma_system_exec_resource* resources;
 };
 
 // callback type for magma_system_pageflip and msd_device_pageflip

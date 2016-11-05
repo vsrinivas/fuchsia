@@ -68,11 +68,14 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
     return iter->second.get();
 }
 
-bool MagmaSystemConnection::ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
-                                                 uint32_t context_id)
+bool MagmaSystemConnection::ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id)
 {
     if (!has_render_capability_)
         return DRETF(false, "Attempting to execute a command buffer without render capability");
+
+    auto command_buffer = LookupBuffer(command_buffer_id);
+    if (!command_buffer)
+        return DRETF(false, "Attempting to execute invalid command buffer id");
 
     auto context = LookupContext(context_id);
     if (!context)

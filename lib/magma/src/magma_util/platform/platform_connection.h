@@ -35,8 +35,7 @@ public:
 
     virtual int32_t GetError() = 0;
 
-    virtual void ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
-                                      uint32_t context_id) = 0;
+    virtual void ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) = 0;
 
     // Blocks until all gpu work currently queued that references the buffer
     // with |buffer_id| has completed.
@@ -69,8 +68,7 @@ public:
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;
 
-        virtual bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer,
-                                          uint32_t context_id) = 0;
+        virtual bool ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) = 0;
         virtual bool WaitRendering(uint64_t buffer_id) = 0;
 
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,

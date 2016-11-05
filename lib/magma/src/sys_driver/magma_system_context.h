@@ -30,7 +30,7 @@ public:
     {
     }
 
-    bool ExecuteCommandBuffer(magma_system_command_buffer* command_buffer);
+    bool ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer);
 
 private:
     msd_context* msd_ctx() { return msd_ctx_.get(); }

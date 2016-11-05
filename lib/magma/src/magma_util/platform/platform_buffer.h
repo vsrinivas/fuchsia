@@ -10,9 +10,12 @@
 
 namespace magma {
 
-class OpaquePlatformBuffer {
+class PlatformBuffer {
 public:
-    virtual ~OpaquePlatformBuffer() {}
+    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
+    static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
+
+    virtual ~PlatformBuffer() {}
 
     // returns the size of the buffer
     virtual uint64_t size() = 0;
@@ -24,14 +27,6 @@ public:
     virtual bool duplicate_handle(uint32_t* handle_out) = 0;
 
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
-};
-
-class PlatformBuffer : public OpaquePlatformBuffer {
-public:
-    static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
-    static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
-
-    virtual ~PlatformBuffer() override {}
 
     virtual bool MapCpu(void** addr_out) = 0;
     virtual bool UnmapCpu() = 0;

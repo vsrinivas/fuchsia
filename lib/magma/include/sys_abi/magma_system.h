@@ -51,9 +51,11 @@ int32_t magma_system_unmap(struct magma_system_connection* connection, uint32_t 
 void magma_system_set_domain(struct magma_system_connection* connection, uint32_t buffer_id,
                              uint32_t read_domains, uint32_t write_domain);
 
+// Executes a command buffer.
+// Note that the buffer referred to by |command_buffer_id| must contain a valid
+// magma_system_command_buffer and all associated data structures
 void magma_system_submit_command_buffer(struct magma_system_connection* connection,
-                                        struct magma_system_command_buffer* command_buffer,
-                                        uint32_t context_id);
+                                        uint32_t command_buffer_id, uint32_t context_id);
 
 void magma_system_wait_rendering(struct magma_system_connection* connection, uint32_t buffer_id);
 

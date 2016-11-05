@@ -11,6 +11,12 @@
 // a class to create and own the command buffer were trying to execute
 class CommandBufferHelper {
 public:
+    ~CommandBufferHelper()
+    {
+        bool success = buffer_->platform_buffer()->UnmapCpu();
+        DASSERT(success);
+    }
+
     static std::unique_ptr<CommandBufferHelper>
     Create(magma::PlatformDevice* platform_device = nullptr)
     {
@@ -40,17 +46,6 @@ public:
             std::move(msd_drv), std::move(dev), std::move(connection), ctx));
     }
 
-    ~CommandBufferHelper()
-    {
-        for (uint32_t i = 0; i < abi_cmd_buf_->num_resources; i++) {
-            delete abi_cmd_buf_->resources[i].relocations;
-        }
-        delete abi_cmd_buf_->resources;
-        delete abi_cmd_buf_;
-    }
-
-    magma_system_command_buffer* abi_cmd_buf() { return abi_cmd_buf_; }
-
     static constexpr uint32_t kNumResources = 3;
     static constexpr uint32_t kBufferSize = 4096;
 
@@ -58,14 +53,30 @@ public:
     std::vector<msd_buffer*>& msd_resources() { return msd_resources_; }
     msd_context* ctx() { return ctx_->msd_ctx(); }
     MagmaSystemDevice* dev() { return dev_.get(); }
+    MagmaSystemBuffer* buffer() { return buffer_.get(); }
+
+    magma_system_command_buffer* abi_cmd_buf()
+    {
+        bool success = buffer_->platform_buffer()->MapCpu(&buffer_data_);
+        DASSERT(success);
+
+        DASSERT(buffer_data_);
+        return reinterpret_cast<magma_system_command_buffer*>(buffer_data_);
+    }
+    magma_system_exec_resource* abi_resources()
+    {
+        return reinterpret_cast<magma_system_exec_resource*>(abi_cmd_buf() + 1);
+    }
+    magma_system_relocation_entry* abi_relocations()
+    {
+        return reinterpret_cast<magma_system_relocation_entry*>(abi_resources() + kNumResources);
+    }
 
     bool Execute()
     {
-        if (!ctx_->ExecuteCommandBuffer(abi_cmd_buf()))
+        if (!ctx_->ExecuteCommandBuffer(buffer_))
             return false;
-        if (msd_connection_wait_rendering(
-                connection_->msd_connection(),
-                msd_resources_[abi_cmd_buf_->batch_buffer_resource_index]) != 0)
+        if (msd_connection_wait_rendering(connection_->msd_connection(), msd_resources_[0]) != 0)
             return false;
         return true;
     }
@@ -76,15 +87,24 @@ private:
         : msd_drv_(std::move(msd_drv)), dev_(std::move(dev)), connection_(std::move(connection)),
           ctx_(ctx)
     {
+        uint64_t buffer_size = sizeof(magma_system_command_buffer) +
+                               sizeof(magma_system_exec_resource) * kNumResources +
+                               sizeof(magma_system_relocation_entry) * (kNumResources - 1);
 
-        abi_cmd_buf_ = new magma_system_command_buffer();
-        abi_cmd_buf_->batch_buffer_resource_index = 0;
-        abi_cmd_buf_->num_resources = kNumResources;
-        abi_cmd_buf_->resources = new magma_system_exec_resource[kNumResources];
+        buffer_ = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(buffer_size));
+        DASSERT(buffer_);
 
+        DLOG("CommandBuffer backing buffer: %p", buffer_->platform_buffer());
+
+        bool success = buffer_->platform_buffer()->MapCpu(&buffer_data_);
+        DASSERT(success);
+        DASSERT(buffer_data_);
+
+        abi_cmd_buf()->batch_buffer_resource_index = 0;
+        abi_cmd_buf()->num_resources = kNumResources;
         // batch buffer
         {
-            auto batch_buf = &abi_cmd_buf_->resources[0];
+            auto batch_buf = &abi_resources()[0];
             auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
             DASSERT(buffer);
             uint32_t duplicate_handle;
@@ -97,9 +117,8 @@ private:
             batch_buf->offset = 0;
             batch_buf->length = buffer->platform_buffer()->size();
             batch_buf->num_relocations = kNumResources - 1;
-            batch_buf->relocations = new magma_system_relocation_entry[batch_buf->num_relocations];
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
-                auto relocation = &batch_buf->relocations[i];
+                auto relocation = &abi_relocations()[i];
                 relocation->offset =
                     kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
                 relocation->target_resource_index = i;
@@ -111,7 +130,7 @@ private:
 
         // relocated buffers
         for (uint32_t i = 1; i < kNumResources; i++) {
-            auto resource = &abi_cmd_buf_->resources[i];
+            auto resource = &abi_resources()[i];
             auto buffer = MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(kBufferSize));
             DASSERT(buffer);
             uint32_t duplicate_handle;
@@ -124,7 +143,6 @@ private:
             resource->offset = 0;
             resource->length = buffer->platform_buffer()->size();
             resource->num_relocations = 0;
-            resource->relocations = nullptr;
         }
 
         for (auto resource : resources_)
@@ -135,9 +153,11 @@ private:
     std::unique_ptr<MagmaSystemDevice> dev_;
     std::unique_ptr<MagmaSystemConnection> connection_;
     MagmaSystemContext* ctx_; // owned by the connection
-    std::unique_ptr<CommandBufferHelper> cmd_buf_;
 
-    magma_system_command_buffer* abi_cmd_buf_;
+    std::shared_ptr<MagmaSystemBuffer> buffer_;
+    // mapped address of buffer_, do not free
+    void* buffer_data_ = nullptr;
+
     std::vector<MagmaSystemBuffer*> resources_;
     std::vector<msd_buffer*> msd_resources_;
 };

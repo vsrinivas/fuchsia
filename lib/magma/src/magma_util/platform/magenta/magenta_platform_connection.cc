@@ -108,10 +108,9 @@ public:
         return result;
     }
 
-    void ExecuteCommandBuffer(struct magma_system_command_buffer* command_buffer,
-                              uint32_t context_id) override
+    void ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) override
     {
-        if (!connection_->delegate()->ExecuteCommandBuffer(command_buffer, context_id)) {
+        if (!connection_->delegate()->ExecuteCommandBuffer(command_buffer_id, context_id)) {
             SetError(-EINVAL);
             return;
         }
