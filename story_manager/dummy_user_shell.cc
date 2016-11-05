@@ -19,7 +19,9 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/sleep.h"
+#include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "mojo/public/cpp/application/application_impl_base.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/application/connect.h"
@@ -27,7 +29,6 @@
 #include "mojo/public/cpp/application/service_provider_impl.h"
 #include "mojo/public/cpp/bindings/interface_ptr_set.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/utility/run_loop.h"
 #include "mojo/public/interfaces/application/service_provider.mojom.h"
 
 namespace modular {
@@ -97,13 +98,13 @@ class DummyUserShellImpl : public UserShell,
     // we don't know when the story is fully torn down and written to
     // ledger. We just wait for 10 seconds and resume it then.
     FTL_LOG(INFO) << "DummyUserShell::OnStop() WAIT for 10s";
-    mojo::RunLoop::current()->PostDelayedTask(
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() {
           FTL_LOG(INFO) << "DummyUserShell::OnStop() DONE WAIT for 10s";
           child_view_key_++;
           ResumeStory();
         },
-        1e10);
+        ftl::TimeDelta::FromSeconds(10));
   }
 
   // |StoryWatcher|
@@ -113,13 +114,13 @@ class DummyUserShellImpl : public UserShell,
 
     // When the story is done, we start the next one.
     FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 10s";
-    mojo::RunLoop::current()->PostDelayedTask(
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this]() {
           FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 10s";
           child_view_key_++;
           CreateStory(kFlutterModuleUrl);
         },
-        1e10);
+        ftl::TimeDelta::FromSeconds(10));
   }
 
   // |mozart::BaseView|
