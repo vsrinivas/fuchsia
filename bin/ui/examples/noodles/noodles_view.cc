@@ -13,7 +13,6 @@
 #include "apps/mozart/examples/noodles/rasterizer.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -41,9 +40,9 @@ void Lissajous(SkPath* path, double ax, double ay, int wx, int wy, double p) {
 }  // namespace
 
 NoodlesView::NoodlesView(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-    : BaseView(std::move(app_connector),
+    mozart::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+    : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "Noodles"),
       frame_queue_(std::make_shared<FrameQueue>()),
@@ -52,24 +51,22 @@ NoodlesView::NoodlesView(
   rasterizer_thread_ = mtl::CreateThread(&rasterizer_task_runner_);
 
   rasterizer_task_runner_->PostTask(ftl::MakeCopyable([
-    d = rasterizer_delegate_.get(),
-    connector = mojo::DuplicateApplicationConnector(BaseView::app_connector()),
-    scene = TakeScene().PassInterfaceHandle()
-  ]() mutable {
-    d->CreateRasterizer(std::move(connector), std::move(scene));
-  }));
+    d = rasterizer_delegate_.get(), scene = TakeScene().PassInterfaceHandle()
+  ]() mutable { d->CreateRasterizer(std::move(scene)); }));
 }
 
 NoodlesView::~NoodlesView() {
-  // Ensure destruction happens on the correct thread.
-  rasterizer_task_runner_->PostTask(
-      ftl::MakeCopyable([d = std::move(rasterizer_delegate_)]{}));
+  rasterizer_task_runner_->PostTask([this] {
+    rasterizer_delegate_.reset();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
+  });
+  rasterizer_thread_.join();
 }
 
 void NoodlesView::OnDraw() {
   FTL_DCHECK(properties());
 
-  const mojo::Size& size = *properties()->view_layout->size;
+  const mozart::Size& size = *properties()->view_layout->size;
 
   // Update the animation.
   alpha_ += frame_tracker().presentation_time_delta().ToSecondsF();
@@ -96,7 +93,7 @@ sk_sp<SkPicture> NoodlesView::CreatePicture() {
     wy_ = rand() % 9 + 1;
   }
 
-  const mojo::Size& size = *properties()->view_layout->size;
+  const mozart::Size& size = *properties()->view_layout->size;
   SkPictureRecorder recorder;
   SkCanvas* canvas = recorder.beginRecording(size.width, size.height);
 
@@ -145,11 +142,9 @@ NoodlesView::RasterizerDelegate::RasterizerDelegate(
 NoodlesView::RasterizerDelegate::~RasterizerDelegate() {}
 
 void NoodlesView::RasterizerDelegate::CreateRasterizer(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> connector_info,
-    mojo::InterfaceHandle<mozart::Scene> scene_info) {
-  rasterizer_.reset(new Rasterizer(
-      mojo::ApplicationConnectorPtr::Create(std::move(connector_info)),
-      mozart::ScenePtr::Create(std::move(scene_info))));
+    fidl::InterfaceHandle<mozart::Scene> scene_info) {
+  rasterizer_.reset(
+      new Rasterizer(mozart::ScenePtr::Create(std::move(scene_info))));
 }
 
 void NoodlesView::RasterizerDelegate::PublishNextFrame() {

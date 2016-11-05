@@ -24,8 +24,8 @@ class Rasterizer;
 
 class NoodlesView : public mozart::BaseView {
  public:
-  NoodlesView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-              mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  NoodlesView(mozart::ViewManagerPtr view_manager,
+              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~NoodlesView() override;
 
@@ -57,9 +57,7 @@ class NoodlesView : public mozart::BaseView {
     explicit RasterizerDelegate(const std::shared_ptr<FrameQueue>& frame_queue);
     ~RasterizerDelegate();
 
-    void CreateRasterizer(
-        mojo::InterfaceHandle<mojo::ApplicationConnector> connector_info,
-        mojo::InterfaceHandle<mozart::Scene> scene_info);
+    void CreateRasterizer(fidl::InterfaceHandle<mozart::Scene> scene_info);
 
     void PublishNextFrame();
 

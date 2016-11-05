@@ -8,4 +8,4 @@ For the purposes of this example, the content consists of a Lissajous figure.
 
 ## USAGE
 
-  $ mojo:launcher mojo:noodles_view
+  $ file:///system/apps/launcher file:///system/apps/noodles_view

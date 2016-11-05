@@ -11,10 +11,12 @@
 
 namespace examples {
 
-Frame::Frame(const mojo::Size& size,
+Frame::Frame(const mozart::Size& size,
              sk_sp<SkPicture> picture,
              mozart::SceneMetadataPtr scene_metadata)
-    : size_(size), picture_(picture), scene_metadata_(scene_metadata.Pass()) {
+    : size_(size),
+      picture_(picture),
+      scene_metadata_(std::move(scene_metadata)) {
   FTL_DCHECK(picture_);
 }
 

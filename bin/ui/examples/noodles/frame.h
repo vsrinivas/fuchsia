@@ -5,9 +5,9 @@
 #ifndef APPS_MOZART_EXAMPLES_NOODLES_FRAME_H_
 #define APPS_MOZART_EXAMPLES_NOODLES_FRAME_H_
 
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 
 class SkCanvas;
@@ -20,21 +20,21 @@ namespace examples {
 // the rasterizer's thread to be drawn.
 class Frame {
  public:
-  Frame(const mojo::Size& size,
+  Frame(const mozart::Size& size,
         sk_sp<SkPicture> picture,
         mozart::SceneMetadataPtr scene_metadata);
   ~Frame();
 
-  const mojo::Size& size() { return size_; }
+  const mozart::Size& size() { return size_; }
 
   mozart::SceneMetadataPtr TakeSceneMetadata() {
-    return scene_metadata_.Pass();
+    return std::move(scene_metadata_);
   }
 
   void Paint(SkCanvas* canvas);
 
  private:
-  mojo::Size size_;
+  mozart::Size size_;
   sk_sp<SkPicture> picture_;
   mozart::SceneMetadataPtr scene_metadata_;
 

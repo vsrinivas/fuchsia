@@ -7,9 +7,8 @@
 
 #include <memory>
 
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/interfaces/application/application_connector.mojom.h"
 
 namespace examples {
 
@@ -20,7 +19,7 @@ class Frame;
 // correct message loop by the view.
 class Rasterizer {
  public:
-  Rasterizer(mojo::ApplicationConnectorPtr connector, mozart::ScenePtr scene);
+  Rasterizer(mozart::ScenePtr scene);
 
   ~Rasterizer();
 
