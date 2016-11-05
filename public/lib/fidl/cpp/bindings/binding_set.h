@@ -19,36 +19,43 @@ namespace fidl {
 
 // Use this class to manage a set of bindings each of which is
 // owned by the pipe it is bound to.
-template <typename Interface>
+//
+// The implementation type of the binding is also parameterized, allowing
+// the use of smart pointer types such as |std::unique_ptr<>| to reference
+// the implementation.
+template <typename Interface, typename ImplPtr = Interface*>
 class BindingSet {
  public:
+  using Binding = ::fidl::Binding<Interface, ImplPtr>;
+
   BindingSet() {}
   ~BindingSet() { CloseAllBindings(); }
 
   // Adds a binding to the list and arranges for it to be removed when
   // a connection error occurs.  Does not take ownership of |impl|, which
   // must outlive the binding set.
-  void AddBinding(Interface* impl, InterfaceRequest<Interface> request) {
-    bindings_.emplace_back(new Binding<Interface>(impl, std::move(request)));
+  void AddBinding(ImplPtr impl, InterfaceRequest<Interface> request) {
+    bindings_.emplace_back(
+        new Binding(std::forward<ImplPtr>(impl), std::move(request)));
     auto* binding = bindings_.back().get();
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_connection_error_handler(
-        std::bind(&BindingSet<Interface>::RemoveOnError, this, binding));
+        std::bind(&BindingSet::RemoveOnError, this, binding));
   }
 
   // Adds a binding to the list and arranges for it to be removed when
   // a connection error occurs.  Does not take ownership of |impl|, which
   // must outlive the binding set.
-  InterfaceHandle<Interface> AddBinding(Interface* impl) {
-    bindings_.emplace_back(new Binding<Interface>(impl));
+  InterfaceHandle<Interface> AddBinding(ImplPtr impl) {
+    bindings_.emplace_back(new Binding(std::forward<ImplPtr>(impl)));
     auto* binding = bindings_.back().get();
     InterfaceHandle<Interface> interface;
     binding->Bind(&interface);
     // Set the connection error handler for the newly added Binding to be a
     // function that will erase it from the vector.
     binding->set_connection_error_handler(
-        std::bind(&BindingSet<Interface>::RemoveOnError, this, binding));
+        std::bind(&BindingSet::RemoveOnError, this, binding));
 
     return std::move(interface);
   }
@@ -58,17 +65,16 @@ class BindingSet {
   size_t size() const { return bindings_.size(); }
 
  private:
-  void RemoveOnError(Binding<Interface>* binding) {
-    auto it =
-        std::find_if(bindings_.begin(), bindings_.end(),
-                     [binding](const std::unique_ptr<Binding<Interface>>& b) {
-                       return (b.get() == binding);
-                     });
+  void RemoveOnError(Binding* binding) {
+    auto it = std::find_if(bindings_.begin(), bindings_.end(),
+                           [binding](const std::unique_ptr<Binding>& b) {
+                             return (b.get() == binding);
+                           });
     assert(it != bindings_.end());
     bindings_.erase(it);
   }
 
-  std::vector<std::unique_ptr<Binding<Interface>>> bindings_;
+  std::vector<std::unique_ptr<Binding>> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
 };

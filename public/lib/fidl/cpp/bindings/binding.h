@@ -52,21 +52,27 @@ namespace fidl {
 // implementation runs on. If writing library code that has to work on different
 // types of threads callers may need to provide different waiter
 // implementations.
-template <typename Interface>
+//
+// The implementation type of the binding is also parameterized, allowing
+// the use of smart pointer types such as |std::unique_ptr<>| to reference
+// the implementation.
+template <typename Interface, typename ImplPtr = Interface*>
 class Binding {
  public:
   // Constructs an incomplete binding that will use the implementation |impl|.
   // The binding may be completed with a subsequent call to the |Bind| method.
   // Does not take ownership of |impl|, which must outlive the binding.
-  explicit Binding(Interface* impl) : impl_(impl) { stub_.set_sink(impl_); }
+  explicit Binding(ImplPtr impl) : impl_(std::forward<ImplPtr>(impl)) {
+    stub_.set_sink(this->impl());
+  }
 
   // Constructs a completed binding of message pipe |handle| to implementation
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
   // See class comment for definition of |waiter|.
-  Binding(Interface* impl,
+  Binding(ImplPtr impl,
           mx::channel handle,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
-      : Binding(impl) {
+      : Binding(std::forward<ImplPtr>(impl)) {
     Bind(std::move(handle), waiter);
   }
 
@@ -76,10 +82,10 @@ class Binding {
   // of the parameters. |impl| must outlive the binding. |ptr| only needs to
   // last until the constructor returns. See class comment for definition of
   // |waiter|.
-  Binding(Interface* impl,
+  Binding(ImplPtr impl,
           InterfaceHandle<Interface>* interface_handle,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
-      : Binding(impl) {
+      : Binding(std::forward<ImplPtr>(impl)) {
     Bind(interface_handle, waiter);
   }
 
@@ -87,10 +93,10 @@ class Binding {
   // |request|, taking ownership of the endpoint. Does not take ownership of
   // |impl|, which must outlive the binding. See class comment for definition of
   // |waiter|.
-  Binding(Interface* impl,
+  Binding(ImplPtr impl,
           InterfaceRequest<Interface> request,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
-      : Binding(impl) {
+      : Binding(std::forward<ImplPtr>(impl)) {
     Bind(request.PassMessagePipe(), waiter);
   }
 
@@ -180,7 +186,7 @@ class Binding {
 
   // Returns the interface implementation that was previously specified. Caller
   // does not take ownership.
-  Interface* impl() { return impl_; }
+  Interface* impl() { return &*impl_; }
 
   // Indicates whether the binding has been completed (i.e., whether a message
   // pipe has been bound to the implementation).
@@ -201,7 +207,7 @@ class Binding {
  private:
   std::unique_ptr<internal::Router> internal_router_;
   typename Interface::Stub_ stub_;
-  Interface* impl_;
+  ImplPtr impl_;
   ftl::Closure connection_error_handler_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Binding);
