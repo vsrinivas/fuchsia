@@ -12,6 +12,5 @@ executable("print_input") {
     "//apps/mozart/src/input_reader",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/system",
   ]
 }

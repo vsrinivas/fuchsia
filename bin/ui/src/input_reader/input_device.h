@@ -15,8 +15,6 @@
 
 #include "apps/mozart/src/input_reader/input_descriptor.h"
 #include "apps/mozart/src/input_reader/input_report.h"
-#include "mojo/public/c/include/mojo/system/handle.h"
-#include "mojo/public/cpp/system/handle.h"
 
 namespace mozart {
 namespace input {

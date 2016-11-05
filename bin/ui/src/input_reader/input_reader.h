@@ -14,7 +14,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
-#include "mojo/public/cpp/system/handle.h"
 
 namespace mozart {
 namespace input {

@@ -28,7 +28,7 @@ void InputInterpreter::UnregisterDevice(const InputDevice* device) {
   devices_.erase(device);
 }
 
-void InputInterpreter::RegisterDisplay(mojo::Size dimension) {
+void InputInterpreter::RegisterDisplay(mozart::Size dimension) {
   display_size_ = dimension;
 }
 

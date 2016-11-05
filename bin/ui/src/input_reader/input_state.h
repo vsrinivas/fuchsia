@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
+#include "apps/mozart/services/input/input_events.fidl.h"
 #include "apps/mozart/src/input_reader/input_report.h"
 
 namespace mozart {
@@ -36,7 +36,7 @@ class MouseState {
  public:
   void Update(const MouseReport& report,
               const MouseDescriptor& descriptor,
-              mojo::Size display_size,
+              mozart::Size display_size,
               OnEventCallback callback);
 
  private:
@@ -48,14 +48,14 @@ class MouseState {
                  OnEventCallback callback);
 
   uint8_t buttons_ = 0;
-  mojo::PointF position_;
+  mozart::PointF position_;
 };
 
 class StylusState {
  public:
   void Update(const StylusReport& report,
               const StylusDescriptor& descriptor,
-              mojo::Size display_size,
+              mozart::Size display_size,
               OnEventCallback callback);
 
  private:
@@ -67,7 +67,7 @@ class TouchscreenState {
  public:
   void Update(const TouchReport& report,
               const TouchscreenDescriptor& descriptor,
-              mojo::Size display_size,
+              mozart::Size display_size,
               OnEventCallback callback);
 
  private:

@@ -19,7 +19,6 @@
 #include "apps/mozart/src/input_reader/input_report.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
-#include "mojo/public/cpp/system/handle.h"
 
 namespace mozart {
 namespace input {

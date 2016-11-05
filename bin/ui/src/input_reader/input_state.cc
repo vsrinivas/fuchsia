@@ -8,7 +8,7 @@
 #include "lib/ftl/time/time_point.h"
 
 namespace {
-// The input event mojom is currently defined to expect some number
+// The input event fidl is currently defined to expect some number
 // of milliseconds.
 int64_t InputEventTimestampNow() {
   return ftl::TimePoint::Now().ToEpochDelta().ToMilliseconds();
@@ -185,7 +185,7 @@ void MouseState::SendEvent(float rel_x,
 
 void MouseState::Update(const MouseReport& report,
                         const MouseDescriptor& descriptor,
-                        mojo::Size display_size,
+                        mozart::Size display_size,
                         OnEventCallback callback) {
   uint64_t now = InputEventTimestampNow();
   uint8_t pressed = (report.buttons ^ buttons_) & report.buttons;
@@ -241,7 +241,7 @@ void MouseState::Update(const MouseReport& report,
 
 void StylusState::Update(const StylusReport& report,
                          const StylusDescriptor& descriptor,
-                         mojo::Size display_size,
+                         mozart::Size display_size,
                          OnEventCallback callback) {
   const bool previous_stylus_down = stylus_down_;
   stylus_down_ = report.is_down;
@@ -297,7 +297,7 @@ void StylusState::Update(const StylusReport& report,
 
 void TouchscreenState::Update(const TouchReport& report,
                               const TouchscreenDescriptor& descriptor,
-                              mojo::Size display_size,
+                              mozart::Size display_size,
                               OnEventCallback callback) {
   std::vector<mozart::PointerData> old_pointers = pointers_;
   pointers_.clear();

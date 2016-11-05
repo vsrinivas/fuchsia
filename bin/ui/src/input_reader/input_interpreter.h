@@ -8,7 +8,7 @@
 #include <map>
 #include <vector>
 
-#include "apps/mozart/services/input/interfaces/input_events.mojom.h"
+#include "apps/mozart/services/input/input_events.fidl.h"
 #include "apps/mozart/src/input_reader/input_device.h"
 #include "apps/mozart/src/input_reader/input_report.h"
 #include "apps/mozart/src/input_reader/input_state.h"
@@ -21,7 +21,7 @@ using OnEventCallback = std::function<void(mozart::EventPtr event)>;
 class InputInterpreter {
  public:
   void RegisterCallback(OnEventCallback callback);
-  void RegisterDisplay(mojo::Size dimension);
+  void RegisterDisplay(mozart::Size dimension);
   void RegisterDevice(const InputDevice* device);
   void UnregisterDevice(const InputDevice* device);
   void OnReport(const InputDevice* device, InputReport::ReportType type);
@@ -29,7 +29,7 @@ class InputInterpreter {
  private:
   std::vector<OnEventCallback> callbacks_;
   std::map<const InputDevice*, DeviceState> devices_;
-  mojo::Size display_size_;
+  mozart::Size display_size_;
 };
 
 }  // namespace input
