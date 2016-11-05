@@ -12,12 +12,21 @@
 
 namespace modular {
 
+// Helper for using a |ServiceProvider|'s |ConnectToService()| that creates
+// a new channel and returns a fully-typed interface pointer (and can use
+// the default interface name).
+template <typename Interface>
+inline fidl::InterfacePtr<Interface> ConnectToService(
+    ServiceProvider* service_provider,
+    const std::string& interface_name = Interface::Name_) {
+  fidl::InterfacePtr<Interface> interface_ptr;
+  service_provider->ConnectToService(
+      interface_name, GetProxy(&interface_ptr).PassMessagePipe());
+  return interface_ptr;
+}
+
 // Helper for using a |ServiceProvider|'s |ConnectToService()| that takes a
-// fully-typed interface request (and can use the default interface name). Note
-// that this can be used in conjunction with |GetProxy()|, etc. E.g.:
-//
-//   FooPtr foo;
-//   modular::ConnectToService(service_provider, fidl::GetProxy(&foo));
+// fully-typed interface request (and can use the default interface name).
 template <typename Interface>
 inline void ConnectToService(
     ServiceProvider* service_provider,
