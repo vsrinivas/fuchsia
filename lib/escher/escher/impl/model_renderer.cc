@@ -128,12 +128,13 @@ MeshPtr ModelRenderer::CreateRectangle() {
   // TODO: create rectangle, not triangle.
   MeshSpec spec;
   spec.flags |= MeshAttributeFlagBits::kPosition;
-  spec.flags |= MeshAttributeFlagBits::kColor;
+  spec.flags |= MeshAttributeFlagBits::kUV;
 
-  ModelData::ColorVertex v0{vec2(0.f, 0.f), vec3(1.0, 0.0, 0.0)};
-  ModelData::ColorVertex v1{vec2(1.f, 0.f), vec3(0.0, 0.0, 1.0)};
-  ModelData::ColorVertex v2{vec2(1.f, 1.f), vec3(0.0, 1.0, 0.0)};
-  ModelData::ColorVertex v3{vec2(0.f, 1.f), vec3(0.0, 1.0, 0.0)};
+  // In each vertex, the first vec2 is position and the second is UV coords.
+  ModelData::PerVertex v0{vec2(0.f, 0.f), vec2(0.f, 0.f)};
+  ModelData::PerVertex v1{vec2(1.f, 0.f), vec2(1.f, 0.f)};
+  ModelData::PerVertex v2{vec2(1.f, 1.f), vec2(1.f, 1.f)};
+  ModelData::PerVertex v3{vec2(0.f, 1.f), vec2(0.f, 1.f)};
 
   MeshBuilderPtr builder = mesh_manager_->NewMeshBuilder(spec, 4, 6);
   return builder->AddVertex(v0)
@@ -152,7 +153,7 @@ MeshPtr ModelRenderer::CreateRectangle() {
 MeshPtr ModelRenderer::CreateCircle() {
   MeshSpec spec;
   spec.flags |= MeshAttributeFlagBits::kPosition;
-  spec.flags |= MeshAttributeFlagBits::kColor;
+  spec.flags |= MeshAttributeFlagBits::kUV;
 
   return TessellateCircle(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
 }

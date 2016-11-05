@@ -9,8 +9,10 @@
 namespace escher {
 namespace impl {
 
-// TODO: for now, there is only 1 material, so the PipelineSpec doesn't
+// TODO: For now, there is only 1 material, so the PipelineSpec doesn't
 // bother to mention anything about it.
+// TODO: Rename (ModelPipelineSpec?).  This is the spec for a particular kind of
+// pipeline; there  will be other pipelines that are not created this way.
 struct PipelineSpec {
   MeshSpec mesh_spec;
 

@@ -211,19 +211,9 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttributeFlagBits::kColor) {
+  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = 1;
-    attribute.binding = 0;
-    attribute.format = vk::Format::eR32G32B32Sfloat;
-    attribute.offset = stride;
-
-    stride += sizeof(vec3);
-    impl->attributes.push_back(attribute);
-  }
-  if (spec.flags & MeshAttributeFlagBits::kUV) {
-    vk::VertexInputAttributeDescription attribute;
-    attribute.location = 2;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32G32Sfloat;
     attribute.offset = stride;
@@ -231,9 +221,9 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+  if (spec.flags & MeshAttributeFlagBits::kUV) {
     vk::VertexInputAttributeDescription attribute;
-    attribute.location = 3;
+    attribute.location = 2;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32G32Sfloat;
     attribute.offset = stride;
@@ -249,8 +239,8 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   // TODO: We currenty hardcode support for a single mesh layout.
   FTL_CHECK(spec.flags ==
             (MeshAttributeFlags(MeshAttributeFlagBits::kPosition) |
-             MeshAttributeFlagBits::kColor));
-  FTL_CHECK(stride == 5 * sizeof(float));
+             MeshAttributeFlagBits::kUV));
+  FTL_CHECK(stride == 4 * sizeof(float));
 
   ptr = impl.get();
   spec_cache_[spec] = std::move(impl);

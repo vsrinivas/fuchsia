@@ -46,10 +46,10 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
     // TODO: Only pos/color vertices are currently supported.
     MeshSpec supported_spec;
     supported_spec.flags |= MeshAttributeFlagBits::kPosition;
-    supported_spec.flags |= MeshAttributeFlagBits::kColor;
+    supported_spec.flags |= MeshAttributeFlagBits::kUV;
     FTL_DCHECK(spec == supported_spec);
   }
-  impl::ModelData::ColorVertex vertex{vec2(0.0, 0.0), vec3(1.0, 1.0, 1.0)};
+  impl::ModelData::PerVertex vertex{vec2(0.0, 0.0), vec2(0.0, 0.0)};
 
   // Generate vertex positions.
   const float radian_step = 2 * M_PI / circle_vertex_count;
@@ -57,7 +57,10 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
     float radians = i * radian_step;
     float x = sin(radians) * radius + center.x;
     float y = cos(radians) * radius + center.y;
+    float u = sin(radians) * 0.5f + 0.5f;
+    float v = cos(radians) * 0.5f + 0.5f;
     vertex.position = vec2(x, y);
+    vertex.uv = vec2(u, v);
     builder->AddVertex(vertex);
   }
 

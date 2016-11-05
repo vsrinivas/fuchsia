@@ -33,9 +33,9 @@ class ModelData {
     vec4 color;
   };
 
-  struct ColorVertex {
+  struct PerVertex {
     vec2 position;
-    vec3 color;
+    vec2 uv;
   };
 
   ModelData(vk::Device device, GpuAllocator* allocator);

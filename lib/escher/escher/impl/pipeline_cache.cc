@@ -21,9 +21,10 @@ constexpr char g_vertex_src[] = R"GLSL(
   #extension GL_ARB_separate_shader_objects : enable
 
   layout(location = 0) in vec2 inPosition;
-  layout(location = 1) in vec3 inColor;
+  layout(location = 2) in vec2 inUV;
 
   layout(location = 0) out vec3 fragColor;
+  layout(location = 1) out vec2 fragUV;
 
   layout(set = 1, binding = 0) uniform PerObject {
     mat4 transform;
@@ -31,15 +32,15 @@ constexpr char g_vertex_src[] = R"GLSL(
   };
 
   out gl_PerVertex {
-      vec4 gl_Position;
+    vec4 gl_Position;
   };
 
   void main() {
-      // Halfway between min and max depth.
-      gl_Position = transform * vec4(inPosition, 0, 1);
-      // Divide by 25 to convert 'Material Stage' depth to range 0-1.
-      gl_Position.z *= 0.04;
-      fragColor = inColor;  // deprecated
+    // Halfway between min and max depth.
+    gl_Position = transform * vec4(inPosition, 0, 1);
+    // Divide by 25 to convert 'Material Stage' depth to range 0-1.
+    gl_Position.z *= 0.04;
+    fragUV = inUV;
   }
   )GLSL";
 
@@ -48,6 +49,7 @@ constexpr char g_fragment_src[] = R"GLSL(
   #extension GL_ARB_separate_shader_objects : enable
 
   layout(location = 0) in vec3 inColor;
+  layout(location = 1) in vec2 inUV;
 
   layout(set = 0, binding = 0) uniform PerModel {
     vec4 brightness;
@@ -61,7 +63,7 @@ constexpr char g_fragment_src[] = R"GLSL(
   layout(location = 0) out vec4 outColor;
 
   void main() {
-      outColor = brightness * color;
+    outColor = brightness * inUV.x * color;
   }
   )GLSL";
 

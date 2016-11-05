@@ -15,14 +15,12 @@ enum class MeshAttributeFlagBits {
   // vec2.  Position of the vertex, to be transformed by model-view-projection
   // (MVP) matrix.
   kPosition = 1,
-  // vec2.  Per-vertex color.
-  kColor = 1 << 1,
-  // vec2.  UV surface parameterization, often used as texture coordinates.
-  kUV = 1 << 2,
   // vec2.  Scalable position offset.  If this is present, add (some scaled
   // version of) this to the position attribute before multiplying by the
   // MVP matrix.
-  kPositionOffset = 1 << 3,
+  kPositionOffset = 1 << 1,
+  // vec2.  UV surface parameterization, often used as texture coordinates.
+  kUV = 1 << 2,
 };
 
 using MeshAttributeFlags = vk::Flags<MeshAttributeFlagBits, uint32_t>;
