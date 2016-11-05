@@ -4,7 +4,7 @@
 
 module maxwell.suggestion_engine;
 
-import "suggestion_display.mojom";
+import "suggestion_display.fidl";
 
 // A service and supporting structures enabling Agents to contribute Proposals
 // to the Suggestion engine.

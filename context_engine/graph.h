@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 #include "apps/maxwell/bound_set.h"
 
@@ -15,9 +15,9 @@ namespace maxwell {
 namespace context_engine {
 
 // The context graph consists of component nodes and data nodes. Component nodes
-// represent Mojo components, such as acquirers, agents, and modules. Data nodes
-// represent the data they publish and consume. Edges in the graph represent
-// dataflow.
+// represent Fuchsia components, such as acquirers, agents, and modules. Data
+// nodes represent the data they publish and consume. Edges in the graph
+// represent dataflow.
 //
 // TODO(rosswang): Use dataflow edges for traversal to enable coupled type
 // conversion and attributed lookup.
@@ -25,7 +25,7 @@ namespace context_engine {
 
 class DataNode;
 
-// ComponentNode represents a Mojo component, such as an acquirer, agent, or
+// ComponentNode represents a Fuchsia component, such as an acquirer, agent, or
 // module, in the context graph. It tracks data attribution (which data are
 // published and consumed by which components).
 //
@@ -47,7 +47,7 @@ class ComponentNode {
   std::unordered_map<std::string, std::unordered_map<std::string, DataNode>>
       outputs_;
 
-  MOJO_MOVE_ONLY_TYPE(ComponentNode);
+  FIDL_MOVE_ONLY_TYPE(ComponentNode);
 };
 
 // DataNode represents a top-level schema'd datum.
@@ -67,12 +67,12 @@ class DataNode : public ContextPublisherLink {
         publisher_(this),
         subscribers_(this) {}
 
-  void Update(const mojo::String& json_value) override;
+  void Update(const fidl::String& json_value) override;
   void Subscribe(ContextSubscriberLinkPtr link);
 
   void SetPublisher(
-      mojo::InterfaceHandle<ContextPublisherController> controller,
-      mojo::InterfaceRequest<ContextPublisherLink> link);
+      fidl::InterfaceHandle<ContextPublisherController> controller,
+      fidl::InterfaceRequest<ContextPublisherLink> link);
 
   const std::string label;
   const std::string schema;
@@ -93,10 +93,10 @@ class DataNode : public ContextPublisherLink {
   std::string json_value_;
 
   ContextPublisherControllerPtr publisher_controller_;
-  mojo::Binding<ContextPublisherLink> publisher_;
+  fidl::Binding<ContextPublisherLink> publisher_;
   SubscriberSet subscribers_;
 
-  MOJO_MOVE_ONLY_TYPE(DataNode);
+  FIDL_MOVE_ONLY_TYPE(DataNode);
 };
 
 inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label,

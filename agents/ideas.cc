@@ -4,15 +4,12 @@
 
 #include "apps/maxwell/agents/ideas.h"
 
-#include <mojo/system/main.h>
 #include <rapidjson/document.h>
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "apps/maxwell/interfaces/proposal_manager.mojom.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
-
-#include "apps/maxwell/debug.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/maxwell/services/proposal_manager.fidl.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 using maxwell::agents::IdeasAgent;
 
@@ -20,36 +17,26 @@ constexpr char IdeasAgent::kIdeaId[];
 
 namespace {
 
-using mojo::ApplicationImplBase;
-using mojo::Binding;
-using mojo::InterfaceHandle;
-
 using namespace maxwell::context_engine;
 using namespace maxwell::suggestion_engine;
-using namespace rapidjson;
 
-class IdeasAgentImpl : public IdeasAgent,
-                       public maxwell::DebuggableApp,
-                       public ContextSubscriberLink {
+class IdeasAgentImpl : public IdeasAgent, public ContextSubscriberLink {
  public:
-  IdeasAgentImpl() : in_(this) {}
-
-  void OnInitialize() override {
-    ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx_));
-
-    ContextSubscriberLinkPtr in_ptr;
-    in_.Bind(GetProxy(&in_ptr));
-    cx_->Subscribe("/location/region", "json:string",
-                   in_ptr.PassInterfaceHandle());
-
-    ConnectToService(shell(), "mojo:suggestion_engine", GetProxy(&out_));
+  IdeasAgentImpl()
+      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
+        cx_(app_ctx_->ConnectToEnvironmentService<SuggestionAgentClient>()),
+        in_(this),
+        out_(app_ctx_->ConnectToEnvironmentService<ProposalManager>()) {
+    fidl::InterfaceHandle<ContextSubscriberLink> in_handle;
+    in_.Bind(GetProxy(&in_handle));
+    cx_->Subscribe("/location/region", "json:string", std::move(in_handle));
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
-    MOJO_LOG(INFO) << "OnUpdate from " << update->source << ": "
-                   << update->json_value;
+    FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
+                  << update->json_value;
 
-    Document d;
+    rapidjson::Document d;
     d.Parse(update->json_value.data());
 
     if (d.IsString()) {
@@ -69,7 +56,7 @@ class IdeasAgentImpl : public IdeasAgent,
       } else {
         ProposalPtr p = Proposal::New();
         p->id = kIdeaId;
-        p->on_selected = mojo::Array<ActionPtr>::New(0);
+        p->on_selected = fidl::Array<ActionPtr>::New(0);
         SuggestionDisplayPropertiesPtr d = SuggestionDisplayProperties::New();
 
         d->icon = "";
@@ -85,14 +72,18 @@ class IdeasAgentImpl : public IdeasAgent,
   }
 
  private:
+  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+
   SuggestionAgentClientPtr cx_;
-  Binding<ContextSubscriberLink> in_;
+  fidl::Binding<ContextSubscriberLink> in_;
   ProposalManagerPtr out_;
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   IdeasAgentImpl app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

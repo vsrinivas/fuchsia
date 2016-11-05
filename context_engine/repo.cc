@@ -18,7 +18,7 @@ void Repo::Index(DataNode* data_node) {
         query->schema == data_node->schema) {
       // TODO(rosswang): notify matches for open-ended queries; switch
       // listener for singleton-result queries
-      data_node->Subscribe(query->subscriber.Pass());
+      data_node->Subscribe(std::move(query->subscriber));
       query = queries_.erase(query);
     } else {
       ++query;
@@ -31,13 +31,13 @@ void Repo::Query(const string& label,
                  ContextSubscriberLinkPtr subscriber) {
   auto repo_by_schema = by_label_and_schema_.find(label);
   if (repo_by_schema == by_label_and_schema_.end()) {
-    queries_.emplace(label, schema, subscriber.Pass());
+    queries_.emplace(label, schema, std::move(subscriber));
   } else {
     auto result = repo_by_schema->second.find(schema);
     if (result == repo_by_schema->second.end()) {
-      queries_.emplace(label, schema, subscriber.Pass());
+      queries_.emplace(label, schema, std::move(subscriber));
     } else {
-      result->second->Subscribe(subscriber.Pass());
+      result->second->Subscribe(std::move(subscriber));
     }
   }
 }

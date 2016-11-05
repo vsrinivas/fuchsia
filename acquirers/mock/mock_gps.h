@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "lib/fidl/services/application/shell.fidl.h"
 
 #include "apps/maxwell/acquirers/gps.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 namespace acquirers {
@@ -16,7 +16,7 @@ namespace acquirers {
 class MockGps : public GpsAcquirer,
                 public context_engine::ContextPublisherController {
  public:
-  MockGps(mojo::Shell* shell);
+  MockGps(fidl::Shell* shell);
   void Publish(float latitude, float longitude);
   void OnHasSubscribers() override;
   void OnNoSubscribers() override;
@@ -24,7 +24,7 @@ class MockGps : public GpsAcquirer,
   bool has_subscribers() const { return has_subscribers_; }
 
  private:
-  mojo::Binding<context_engine::ContextPublisherController> ctl_;
+  fidl::Binding<context_engine::ContextPublisherController> ctl_;
   context_engine::ContextPublisherLinkPtr out_;
   bool has_subscribers_ = false;
 };

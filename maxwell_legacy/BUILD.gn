@@ -9,6 +9,7 @@ group("maxwell") {
     "acquirers",
     "agents",
     "context_engine",
+
     # "integration",
     "suggestion_engine",
   ]
@@ -20,7 +21,7 @@ source_set("bound_set") {
   ]
 
   deps = [
-    "//mojo/public/cpp/bindings:core",
+    "//apps/modular/lib/app",
   ]
 }
 

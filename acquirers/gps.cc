@@ -4,15 +4,12 @@
 
 #include "apps/maxwell/acquirers/gps.h"
 
-#include <mojo/system/main.h>
-
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
-
-#include "apps/maxwell/debug.h"
 
 using maxwell::acquirers::GpsAcquirer;
 
@@ -21,37 +18,30 @@ constexpr char GpsAcquirer::kSchema[];
 
 namespace {
 
-using mojo::ApplicationImplBase;
-using mojo::Binding;
-
 using namespace maxwell::context_engine;
 
 constexpr ftl::TimeDelta kGpsUpdatePeriod = ftl::TimeDelta::FromSeconds(1);
 #define KEEP_ALIVE_TICKS 3
 #define HAS_SUBSCRIBERS -1
 
-class GpsAcquirerImpl : public GpsAcquirer,
-                        public maxwell::DebuggableApp,
-                        public ContextPublisherController {
+class GpsAcquirerImpl : public GpsAcquirer, public ContextPublisherController {
  public:
-  GpsAcquirerImpl() : ctl_(this) {}
-
-  void OnInitialize() override {
+  GpsAcquirerImpl()
+      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
+        ctl_(this) {
     srand(time(NULL));
 
-    ContextAcquirerClientPtr cx;
-    ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx));
+    auto cx = app_ctx_->ConnectToEnvironmentService<ContextAcquirerClient>();
 
-    ContextPublisherControllerPtr ctl_ptr;
-    ctl_.Bind(GetProxy(&ctl_ptr));
+    fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
+    ctl_.Bind(GetProxy(&ctl_handle));
 
-    cx->Publish(kLabel, kSchema, ctl_ptr.PassInterfaceHandle(),
-                GetProxy(&out_));
+    cx->Publish(kLabel, kSchema, std::move(ctl_handle), GetProxy(&out_));
   }
 
   void OnHasSubscribers() override {
     if (!tick_keep_alive_) {
-      MOJO_LOG(INFO) << "GPS on";
+      FTL_LOG(INFO) << "GPS on";
       tick_keep_alive_ = HAS_SUBSCRIBERS;
       PublishingTick();
     } else {
@@ -61,8 +51,8 @@ class GpsAcquirerImpl : public GpsAcquirer,
 
   void OnNoSubscribers() override {
     tick_keep_alive_ = KEEP_ALIVE_TICKS;
-    MOJO_LOG(INFO) << "GPS subscribers lost; keeping GPS on for "
-                   << KEEP_ALIVE_TICKS << " seconds";
+    FTL_LOG(INFO) << "GPS subscribers lost; keeping GPS on for "
+                  << KEEP_ALIVE_TICKS << " seconds";
   }
 
  private:
@@ -75,7 +65,7 @@ class GpsAcquirerImpl : public GpsAcquirer,
     json << "{ \"lat\": " << rand() % 18001 / 100. - 90
          << ", \"lng\": " << rand() % 36001 / 100. - 180 << " }";
 
-    MOJO_LOG(INFO) << "Update by acquirers/gps: " << json.str();
+    FTL_LOG(INFO) << "Update by acquirers/gps: " << json.str();
 
     out_->Update(json.str());
   }
@@ -88,23 +78,27 @@ class GpsAcquirerImpl : public GpsAcquirer,
     PublishLocation();
 
     if (!tick_keep_alive_) {
-      MOJO_LOG(INFO) << "GPS off";
+      FTL_LOG(INFO) << "GPS off";
       out_->Update(NULL);
       return;
     }
 
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] { PublishingTick(); }, kGpsUpdatePeriod);
+        [this] { PublishingTick(); }, kGpsUpdatePeriod);
   }
 
-  Binding<ContextPublisherController> ctl_;
+  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+
+  fidl::Binding<ContextPublisherController> ctl_;
   ContextPublisherLinkPtr out_;
   int tick_keep_alive_;
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   GpsAcquirerImpl app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

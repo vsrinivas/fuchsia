@@ -11,11 +11,8 @@ executable("suggestion_engine") {
 
   deps = [
     "//apps/maxwell:bound_set",
-    "//apps/maxwell:debug",
-    "//apps/maxwell/interfaces",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/system",
+    "//apps/maxwell/services",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
   ]
 }

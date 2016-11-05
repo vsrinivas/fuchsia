@@ -8,62 +8,64 @@
 
 #include <vector>
 
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 
 namespace maxwell {
 
+// General implementation intended to cover InterfacePtr.
 template <typename T>
-T Identity(T t) {
+T GetFidlType(T t) {
   return t;
 }
 
+// "Specialization" (overload) covering unique_ptr.
 template <typename T>
-T* Unwrap(std::unique_ptr<T>* p) {
+T* GetFidlType(std::unique_ptr<T>* p) {
   return p->get();
 }
 
 // General implementation intended to cover Binding and StrongBinding.
-template <typename MojoType, typename UniqueType = MojoType*>
-UniqueType Identify(MojoType* binding) {
+template <typename FidlType, typename UniqueType = FidlType*>
+UniqueType Identify(FidlType* binding) {
   return binding;
 }
 
 // "Specialization" (overload) covering InterfacePtr.
 template <typename Interface, typename UniqueType = Interface*>
-UniqueType Identify(mojo::InterfacePtr<Interface>* ip) {
+UniqueType Identify(fidl::InterfacePtr<Interface>* ip) {
   return ip->get();
 }
 
 // An extensible/derivable InterfacePtrSet/(Strong)BindingSet that contains a
-// collection of objects of type T that contain MojoTypes (e.g. InterfacePtr,
+// collection of objects of type T that contain FidlTypes (e.g. InterfacePtr,
 // Binding, or StrongBinding). Elements are automatically removed from the
 // collection and destroyed when their associated MessagePipe experiences a
 // connection error. When the set is destroyed all of the MessagePipes will be
 // closed.
 //
-// Unlike the Mojo library InterfacePtrSet and (Strong)BindingSet, this class
-// does not prevent further mutations to the underlying Mojo type. For well-
-// defined behavior, the Mojo types should not be modified after being added to
+// Unlike the Fidl library InterfacePtrSet and (Strong)BindingSet, this class
+// does not prevent further mutations to the underlying Fidl type. For well-
+// defined behavior, the Fidl types should not be modified after being added to
 // the set.
 //
 // Template parameters:
-// * MojoType - the Mojo type governing each element of the collection, e.g.
+// * FidlType - the Fidl type governing each element of the collection, e.g.
 //  InterfacePtr, Binding, or StrongBinding
 // * T - the element type of the collection
-// * GetMojoType - a function that extracts the MojoType from an element of the
+// * GetFidlType - a function that extracts the FidlType from an element of the
 //  collection. Defaults to the identity function, which only works if T =
-//  MojoType.
-// * UniqueType - a type that uniquely identifies a MojoType in the collection.
+//  FidlType.
+// * UniqueType - a type that uniquely identifies a FidlType in the collection.
 //  For InterfacePtrs, this is a pointer to the interface. For bindings, this is
 //  the pointer to the binding.
-// * Identify - a function that derives a UniqueType from a MojoType. Defaults
+// * Identify - a function that derives a UniqueType from a FidlType. Defaults
 //  behave as described at UniqueType.
-template <typename MojoType,
-          typename T = MojoType,
-          MojoType* GetMojoType(T*) = Identity,
+template <typename FidlType,
+          typename T = FidlType,
+          FidlType* GetFidlType(T*) = GetFidlType,
           typename UniqueType = void*,
-          UniqueType Identify(MojoType*) = Identify>
+          UniqueType Identify(FidlType*) = Identify>
 class BoundSet {
  public:
   typedef typename std::vector<T>::iterator iterator;
@@ -75,7 +77,7 @@ class BoundSet {
   T* emplace(_Args&&... __args) {
     elements_.emplace_back(std::forward<_Args>(__args)...);
     T* const c = &elements_.back();
-    MojoType* const m = GetMojoType(c);
+    FidlType* const m = GetFidlType(c);
     assert(m->is_bound());
     UniqueType const id = Identify(m);
     // Set the connection error handler for the newly added item to be a
@@ -108,7 +110,7 @@ class BoundSet {
  private:
   iterator Find(UniqueType id) {
     return std::find_if(elements_.begin(), elements_.end(), [this, id](T& e) {
-      return Identify(GetMojoType(&e)) == id;
+      return Identify(GetFidlType(&e)) == id;
     });
   }
 
@@ -120,21 +122,25 @@ class BoundSet {
 // Since InterfacePtr itself is a movable type, the thing that uniquely
 // identifies the InterfacePtr we wish to erase is its Interface*.
 template <typename Interface,
-          typename T = mojo::InterfacePtr<Interface>,
-          mojo::InterfacePtr<Interface>* GetMojoType(T*) = Identity>
+          typename T = fidl::InterfacePtr<Interface>,
+          fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
 using BoundPtrSet =
-    BoundSet<mojo::InterfacePtr<Interface>, T, GetMojoType, Interface*>;
+    BoundSet<fidl::InterfacePtr<Interface>, T, GetFidlType, Interface*>;
+
+// Convenience alias of BoundSet to handle non-movable FIDL types, like Bindings
+// (and the mythical StrongBinding).
+//
+// Note that the default T here must be a unique_ptr rather than the FIDL type
+// itself since these FIDL types are not movable.
+template <typename FidlType,
+          typename T = std::unique_ptr<FidlType>,
+          FidlType* GetFidlType(T*) = GetFidlType>
+using BoundNonMovableSet = BoundSet<FidlType, T, GetFidlType, FidlType*>;
 
 // Convenience alias of BoundSet to handle Binding containers.
-//
-// Note that the default T here must be a unique_ptr rather than the Binding
-// itself since Bindings are not movable.
 template <typename Interface,
-          typename T = std::unique_ptr<mojo::Binding<Interface>>,
-          mojo::Binding<Interface>* GetMojoType(T*) = Unwrap>
-using BindingSet = BoundSet<mojo::Binding<Interface>,
-                            T,
-                            GetMojoType,
-                            mojo::Binding<Interface>*>;
+          typename T = std::unique_ptr<fidl::Binding<Interface>>,
+          fidl::Binding<Interface>* GetFidlType(T*) = GetFidlType>
+using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
 
 }  // namespace maxwell

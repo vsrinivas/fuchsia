@@ -9,18 +9,15 @@ namespace context_engine {
 
 void DataNode::SubscriberSet::OnConnectionError(
     ContextSubscriberLink* interface_ptr) {
-  MOJO_LOG(VERBOSE) << "Subscription to " << node_->label << " lost";
-
   BoundPtrSet<ContextSubscriberLink>::OnConnectionError(interface_ptr);
 
   // Notify if this was the last subscriber.
   if (node_->subscribers_.empty() && node_->publisher_controller_) {
-    MOJO_LOG(VERBOSE) << "No more subscribers to " << node_->label;
     node_->publisher_controller_->OnNoSubscribers();
   }
 }
 
-void DataNode::Update(const mojo::String& json_value) {
+void DataNode::Update(const fidl::String& json_value) {
   json_value_ = json_value;
 
   ContextUpdate update;
@@ -39,7 +36,7 @@ void DataNode::Subscribe(ContextSubscriberLinkPtr link) {
     ContextUpdatePtr update = ContextUpdate::New();
     update->source = component_->url;
     update->json_value = json_value_;
-    link->OnUpdate(update.Pass());
+    link->OnUpdate(std::move(update));
   }
 
   // Notify if this is the first subscriber.
@@ -47,26 +44,26 @@ void DataNode::Subscribe(ContextSubscriberLinkPtr link) {
     publisher_controller_->OnHasSubscribers();
   }
 
-  subscribers_.emplace(link.Pass());
+  subscribers_.emplace(std::move(link));
 }
 
 void DataNode::SetPublisher(
-    mojo::InterfaceHandle<ContextPublisherController> controller_handle,
-    mojo::InterfaceRequest<ContextPublisherLink> link_request) {
+    fidl::InterfaceHandle<ContextPublisherController> controller_handle,
+    fidl::InterfaceRequest<ContextPublisherLink> link_request) {
   if (controller_handle) {
     ContextPublisherControllerPtr controller =
-        ContextPublisherControllerPtr::Create(controller_handle.Pass());
+        ContextPublisherControllerPtr::Create(std::move(controller_handle));
 
     // Immediately notify if there are already subscribers.
     if (!subscribers_.empty())
       controller->OnHasSubscribers();
 
-    publisher_controller_ = controller.Pass();
+    publisher_controller_ = std::move(controller);
   } else {
     publisher_controller_.reset();
   }
 
-  publisher_.Bind(link_request.Pass());
+  publisher_.Bind(std::move(link_request));
 }
 
 }  // namespace context_engine

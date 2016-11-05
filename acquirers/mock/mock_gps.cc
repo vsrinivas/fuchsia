@@ -4,7 +4,7 @@
 
 #include "apps/maxwell/acquirers/mock/mock_gps.h"
 
-#include "mojo/public/cpp/application/connect.h"
+#include "lib/fidl/cpp/application/connect.h"
 
 namespace maxwell {
 namespace acquirers {
@@ -14,7 +14,7 @@ constexpr char GpsAcquirer::kSchema[];
 
 using namespace maxwell::context_engine;
 
-MockGps::MockGps(mojo::Shell* shell) : ctl_(this) {
+MockGps::MockGps(fidl::Shell* shell) : ctl_(this) {
   ContextAcquirerClientPtr cx;
   ConnectToService(shell, "mojo:context_engine", GetProxy(&cx));
 

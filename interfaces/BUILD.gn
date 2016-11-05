@@ -6,22 +6,6 @@ import("//mojo/public/tools/bindings/mojom.gni")
 
 mojom("interfaces") {
   sources = [
-    "context_engine.mojom",
     "debug.mojom",
-    "proposal_manager.mojom",
-    "suggestion_display.mojom",
-    "suggestion_manager.mojom",
-  ]
-}
-
-source_set("formatting") {
-  sources = [
-    "formatting.cc",
-    "formatting.h",
-  ]
-
-  deps = [
-    ":interfaces",
-    "//mojo/public/cpp/environment",
   ]
 }

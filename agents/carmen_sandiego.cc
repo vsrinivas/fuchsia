@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
 #include <rapidjson/document.h>
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/maxwell/acquirers/gps.h"
-#include "apps/maxwell/debug.h"
 
 using maxwell::acquirers::GpsAcquirer;
 
@@ -19,29 +17,23 @@ constexpr char GpsAcquirer::kSchema[];
 
 namespace {
 
-using mojo::ApplicationImplBase;
-using mojo::Binding;
-using mojo::InterfaceHandle;
-
 using namespace maxwell::context_engine;
-using namespace rapidjson;
 
-class CarmenSandiego : public maxwell::DebuggableApp,
-                       public ContextPublisherController,
+class CarmenSandiego : public ContextPublisherController,
                        public ContextSubscriberLink {
  public:
-  CarmenSandiego() : ctl_(this), in_(this) {}
-
-  void OnInitialize() override {
-    ConnectToService(shell(), "mojo:context_engine", GetProxy(&cx_));
-
-    ContextPublisherControllerPtr ctl_ptr;
-    ctl_.Bind(GetProxy(&ctl_ptr));
+  CarmenSandiego()
+      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
+        cx_(app_ctx_->ConnectToEnvironmentService<ContextAgentClient>()),
+        ctl_(this),
+        in_(this) {
+    fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
+    ctl_.Bind(GetProxy(&ctl_handle));
     // TODO(rosswang): V0 does not support semantic differentiation by source,
     // so the labels have to be explicitly different. In the future, these could
     // all be refinements on "location"
-    cx_->Publish("/location/region", "json:string",
-                 ctl_ptr.PassInterfaceHandle(), GetProxy(&out_));
+    cx_->Publish("/location/region", "json:string", std::move(ctl_handle),
+                 GetProxy(&out_));
   }
 
   void OnHasSubscribers() override {
@@ -57,12 +49,12 @@ class CarmenSandiego : public maxwell::DebuggableApp,
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
-    MOJO_LOG(INFO) << "OnUpdate from " << update->source << ": "
-                   << update->json_value;
+    FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
+                  << update->json_value;
 
     std::string hlloc = "somewhere";
 
-    Document d;
+    rapidjson::Document d;
     d.Parse(update->json_value.data());
 
     if (d.IsObject()) {
@@ -86,15 +78,19 @@ class CarmenSandiego : public maxwell::DebuggableApp,
   }
 
  private:
+  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+
   ContextAgentClientPtr cx_;
-  Binding<ContextPublisherController> ctl_;
-  Binding<ContextSubscriberLink> in_;
+  fidl::Binding<ContextPublisherController> ctl_;
+  fidl::Binding<ContextSubscriberLink> in_;
   ContextPublisherLinkPtr out_;
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   CarmenSandiego app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
 
 #include "apps/maxwell/context_engine/graph.h"
 
@@ -18,7 +18,7 @@ struct SimpleQuery {
   SimpleQuery(const std::string& label,
               const std::string& schema,
               ContextSubscriberLinkPtr subscriber)
-      : label(label), schema(schema), subscriber(subscriber.Pass()) {}
+      : label(label), schema(schema), subscriber(std::move(subscriber)) {}
 
   std::string label;
   std::string schema;
@@ -76,7 +76,7 @@ class Repo {
   // know how well we can optimize this.
   QuerySet queries_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(Repo);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Repo);
 };
 
 }  // namespace context_engine

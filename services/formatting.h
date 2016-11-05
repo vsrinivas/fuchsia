@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "apps/maxwell/interfaces/suggestion_manager.mojom.h"
-#include "mojo/public/cpp/bindings/formatting.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/maxwell/services/suggestion_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace maxwell {
 namespace context_engine {
 
 std::ostream& operator<<(std::ostream& os, const ContextUpdate& o);
+
 }  // namespace context_engine
 
 namespace suggestion_engine {

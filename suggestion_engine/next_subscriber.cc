@@ -16,7 +16,7 @@ void NextSubscriber::SetResultCount(int32_t count) {
 
   if (target != prev) {
     if (target > prev) {
-      mojo::Array<SuggestionPtr> delta;
+      fidl::Array<SuggestionPtr> delta;
       for (size_t i = prev; i < target; i++) {
         delta.push_back((*ranked_suggestions_)[i]->Clone());
       }

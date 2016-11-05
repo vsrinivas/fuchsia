@@ -2,24 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include "apps/maxwell/services/context_engine.fidl.h"
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/maxwell/debug.h"
 #include "apps/maxwell/context_engine/graph.h"
 #include "apps/maxwell/context_engine/repo.h"
 
 namespace {
 
-using mojo::ConnectionContext;
-using mojo::InterfaceHandle;
-using mojo::InterfaceRequest;
-using mojo::StrongBindingSet;
+using fidl::InterfaceHandle;
+using fidl::InterfaceRequest;
 
 using namespace maxwell::context_engine;
 
@@ -29,13 +23,13 @@ class ContextPublisherClient : public virtual Interface {
   ContextPublisherClient(ComponentNode* component, Repo* repo)
       : component_(component), repo_(repo) {}
 
-  void Publish(const mojo::String& label,
-               const mojo::String& schema,
+  void Publish(const fidl::String& label,
+               const fidl::String& schema,
                InterfaceHandle<ContextPublisherController> controller,
                InterfaceRequest<ContextPublisherLink> link) override {
     DataNode* output = component_->EmplaceDataNode(label, schema);
     repo_->Index(output);
-    output->SetPublisher(controller.Pass(), link.Pass());
+    output->SetPublisher(std::move(controller), std::move(link));
   }
 
  private:
@@ -50,17 +44,17 @@ class ContextSubscriberClient : public virtual Interface {
   virtual ~ContextSubscriberClient() {}
 
   // TODO(rosswang): additional backpressure modes. For now, just do
-  // on-backpressure-buffer, which is the default for Mojo. When we add
+  // on-backpressure-buffer, which is the default for Mx. When we add
   // backpressure, we'll probably add a callback, or add a reactive pull API.
   // TODO(rosswang): open-ended subscribe; right now, we just choose the first
   // match and ignore all others.
-  virtual void Subscribe(const mojo::String& label,
-                         const mojo::String& schema,
+  virtual void Subscribe(const fidl::String& label,
+                         const fidl::String& schema,
                          InterfaceHandle<ContextSubscriberLink> link_handle) {
     ContextSubscriberLinkPtr link =
-        ContextSubscriberLinkPtr::Create(link_handle.Pass());
+        ContextSubscriberLinkPtr::Create(std::move(link_handle));
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
-    repo_->Query(label, schema, link.Pass());
+    repo_->Query(label, schema, std::move(link));
   }
 
  private:
@@ -81,54 +75,67 @@ class ContextAgentClientImpl
 typedef ContextSubscriberClient<SuggestionAgentClient>
     SuggestionAgentClientImpl;
 
-class ContextEngineApp : public mojo::ApplicationImplBase {
+class ContextEngineApp : public ContextEngine {
  public:
-  ContextEngineApp() {}
+  ContextEngineApp()
+      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()) {
+    app_ctx_->outgoing_services()->AddService<ContextEngine>(
+        [this](InterfaceRequest<ContextEngine> request) {
+          provider_bindings_.AddBinding(this, std::move(request));
+        });
+  }
 
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
-    // TODO(rosswang): Lifecycle management for ComponentNodes (and graph
-    // structure in general). Right now, they are immortal. In the future, we'll
-    // probably want to give the client class ownership.
-    service_provider_impl->AddService<ContextAcquirerClient>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<ContextAcquirerClient> request) {
-          caq_clients_.AddBinding(
-              new ContextAcquirerClientImpl(
-                  new ComponentNode(connection_context.remote_url), &repo_),
-              request.Pass());
-        });
-    service_provider_impl->AddService<ContextAgentClient>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<ContextAgentClient> request) {
-          cag_clients_.AddBinding(
-              new ContextAgentClientImpl(
-                  new ComponentNode(connection_context.remote_url), &repo_),
-              request.Pass());
-        });
-    service_provider_impl->AddService<SuggestionAgentClient>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<SuggestionAgentClient> request) {
-          sag_clients_.AddBinding(new SuggestionAgentClientImpl(&repo_),
-                                  request.Pass());
-        });
-    debug_.AddService(shell(), service_provider_impl);
-    return true;
+  void RegisterContextAcquirer(
+      const fidl::String& url,
+      InterfaceRequest<ContextAcquirerClient> client) override {
+    RegisterClient(&caq_clients_, std::make_unique<ContextAcquirerClientImpl>(
+                                      new ComponentNode(url), &repo_),
+                   std::move(client));
+  }
+
+  void RegisterContextAgent(
+      const fidl::String& url,
+      InterfaceRequest<ContextAgentClient> client) override {
+    RegisterClient(&cag_clients_, std::make_unique<ContextAgentClientImpl>(
+                                      new ComponentNode(url), &repo_),
+                   std::move(client));
+  }
+
+  void RegisterSuggestionAgent(
+      const fidl::String& url,
+      InterfaceRequest<SuggestionAgentClient> client) override {
+    RegisterClient(&sag_clients_,
+                   std::make_unique<SuggestionAgentClientImpl>(&repo_),
+                   std::move(client));
   }
 
  private:
-  maxwell::DebugSupport debug_;
-  Repo repo_;
-  StrongBindingSet<ContextAcquirerClient> caq_clients_;
-  StrongBindingSet<ContextAgentClient> cag_clients_;
-  StrongBindingSet<SuggestionAgentClient> sag_clients_;
+  template <class Interface>
+  using UptrBindingSet =
+      fidl::BindingSet<Interface, std::unique_ptr<Interface>>;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(ContextEngineApp);
+  // Although Impl is a bit redundant, including it allows the compiler to
+  // infer type args.
+  template <class Interface, class Impl>
+  void RegisterClient(UptrBindingSet<Interface>* bindings,
+                      std::unique_ptr<Impl> impl,
+                      InterfaceRequest<Interface> client) {
+    bindings->AddBinding(std::move(impl), std::move(client));
+  }
+
+  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  Repo repo_;
+  fidl::BindingSet<ContextEngine> provider_bindings_;
+  UptrBindingSet<ContextAcquirerClient> caq_clients_;
+  UptrBindingSet<ContextAgentClient> cag_clients_;
+  UptrBindingSet<SuggestionAgentClient> sag_clients_;
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   ContextEngineApp app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

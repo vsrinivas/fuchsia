@@ -4,7 +4,7 @@
 
 module maxwell.suggestion_engine;
 
-import "suggestion_display.mojom";
+import "suggestion_display.fidl";
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based

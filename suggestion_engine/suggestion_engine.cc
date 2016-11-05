@@ -3,32 +3,25 @@
 // found in the LICENSE file.
 
 #include <unordered_map>
-#include <mojo/system/main.h>
 
-#include "apps/maxwell/interfaces/proposal_manager.mojom.h"
-#include "apps/maxwell/interfaces/suggestion_manager.mojom.h"
+#include "apps/maxwell/services/suggestion_engine.fidl.h"
 
 #include "apps/maxwell/bound_set.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/maxwell/debug.h"
 #include "apps/maxwell/suggestion_engine/next_subscriber.h"
 
 namespace {
 
-using mojo::Binding;
-using mojo::ConnectionContext;
-using mojo::InterfaceHandle;
-using mojo::InterfaceRequest;
+using fidl::Binding;
+using fidl::InterfaceHandle;
+using fidl::InterfaceRequest;
 
 using namespace maxwell::suggestion_engine;
 
-class SuggestionEngine : public SuggestionManager {
+class SuggestionEngineImpl : public SuggestionEngine, public SuggestionManager {
  public:
   // SuggestionManager
 
@@ -50,24 +43,29 @@ class SuggestionEngine : public SuggestionManager {
     // TODO(rosswang): no ask handlers yet
   }
 
-  void NotifyInteraction(const mojo::String& suggestion_uuid,
+  void NotifyInteraction(const fidl::String& suggestion_uuid,
                          SuggestionInteractionPtr interaction) override {
-    MOJO_LOG(INFO) << (interaction->type == SuggestionInteractionType::SELECTED
-                           ? "Accepted"
-                           : "Dismissed")
-                   << " suggestion " << suggestion_uuid << ")";
+    FTL_LOG(INFO) << (interaction->type == SuggestionInteractionType::SELECTED
+                          ? "Accepted"
+                          : "Dismissed")
+                  << " suggestion " << suggestion_uuid << ")";
   }
 
   // end SuggestionManager
 
-  void GetProposalManager(const std::string& component,
-                          InterfaceRequest<ProposalManager> request) {
-    auto& source = sources_[component];
-    if (!source)  // create if it didn't already exist
-      source.reset(new SourceEntry(this, component));
+  // SuggestionEngine
 
-    source->AddBinding(std::move(request));
+  void RegisterSuggestionAgent(
+      const fidl::String& url,
+      InterfaceRequest<ProposalManager> proposal_manager) override {
+    auto& source = sources_[url];
+    if (!source)  // create if it didn't already exist
+      source.reset(new SourceEntry(this, url));
+
+    source->AddBinding(std::move(proposal_manager));
   }
+
+  // end SuggestionEngine
 
  private:
   // SourceEntry tracks proposals and their resulting suggestions from a single
@@ -75,7 +73,7 @@ class SuggestionEngine : public SuggestionManager {
   // long as any proposals or publisher bindings exist.
   class SourceEntry : public ProposalManager {
    public:
-    SourceEntry(SuggestionEngine* suggestinator,
+    SourceEntry(SuggestionEngineImpl* suggestinator,
                 const std::string& component_url)
         : suggestinator_(suggestinator),
           component_url_(component_url),
@@ -95,7 +93,7 @@ class SuggestionEngine : public SuggestionManager {
         OnChangeProposal(*proposal, suggestion);
     }
 
-    void Remove(const mojo::String& proposal_id) override {
+    void Remove(const fidl::String& proposal_id) override {
       const auto it = suggestions_.find(proposal_id);
 
       if (it != suggestions_.end()) {
@@ -169,7 +167,7 @@ class SuggestionEngine : public SuggestionManager {
 
     void EraseSelf() { suggestinator_->sources_.erase(component_url_); }
 
-    SuggestionEngine* const suggestinator_;
+    SuggestionEngineImpl* const suggestinator_;
     const std::string component_url_;
     std::unordered_map<std::string, Suggestion> suggestions_;
     BindingSet bindings_;
@@ -185,42 +183,33 @@ class SuggestionEngine : public SuggestionManager {
       next_subscribers_;
 };
 
-constexpr char kSysUiUrl[] = "mojo:maxwell_test";
-
-class SuggestionEngineApp : public mojo::ApplicationImplBase {
+class SuggestionEngineApp {
  public:
-  SuggestionEngineApp() {}
-
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
-    service_provider_impl->AddService<ProposalManager>(
-        [this](const ConnectionContext& connection_context,
-               InterfaceRequest<ProposalManager> request) {
-          suggestinator_.GetProposalManager(connection_context.remote_url,
-                                            std::move(request));
+  SuggestionEngineApp()
+      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()) {
+    app_ctx_->outgoing_services()->AddService<SuggestionEngine>(
+        [this](InterfaceRequest<SuggestionEngine> request) {
+          admin_bindings_.AddBinding(&suggestinator_, std::move(request));
         });
-    service_provider_impl->AddService<SuggestionManager>([this](
-        const ConnectionContext& connection_context,
-        InterfaceRequest<SuggestionManager> request) {
-      if (connection_context.remote_url == kSysUiUrl) {
-        suggestion_bindings_.AddBinding(&suggestinator_, std::move(request));
-      }
-    });
-    debug_.AddService(shell(), service_provider_impl);
-    return true;
+    app_ctx_->outgoing_services()->AddService<SuggestionManager>(
+        [this](InterfaceRequest<SuggestionManager> request) {
+          suggestion_bindings_.AddBinding(&suggestinator_, std::move(request));
+        });
   }
 
  private:
-  maxwell::DebugSupport debug_;
-  SuggestionEngine suggestinator_;
-  mojo::BindingSet<SuggestionManager> suggestion_bindings_;
+  std::unique_ptr<modular::ApplicationContext> app_ctx_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineApp);
+  SuggestionEngineImpl suggestinator_;
+  fidl::BindingSet<SuggestionEngine> admin_bindings_;
+  fidl::BindingSet<SuggestionManager> suggestion_bindings_;
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   SuggestionEngineApp app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

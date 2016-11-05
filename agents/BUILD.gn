@@ -21,12 +21,10 @@ executable("carmen_sandiego") {
   ]
 
   deps = [
-    "//apps/maxwell:debug",
     "//apps/maxwell/acquirers:gps",
-    "//apps/maxwell/interfaces",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
-    "//mojo/system",
+    "//apps/maxwell/services",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
   ]
 }
 
@@ -43,10 +41,8 @@ executable("ideas") {
   ]
 
   deps = [
-    "//apps/maxwell:debug",
-    "//apps/maxwell/interfaces",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
-    "//mojo/system",
+    "//apps/maxwell/services",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
   ]
 }
