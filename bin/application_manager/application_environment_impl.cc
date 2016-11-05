@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <magenta/processargs.h>
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <mx/process.h>
 #include <mxio/util.h>
@@ -53,8 +54,13 @@ mx::process CreateProcess(
   // process to print out load addresses so we can understand crashes.
   mx_handle_t result = launchpad_launch_mxio_etc(path_arg, 1, &path_arg,
                                                  environ, count, handles, ids);
-
-  return result < 0 ? mx::process() : mx::process(result);
+  if (result < 0) {
+    auto status = static_cast<mx_status_t>(result);
+    FTL_LOG(ERROR) << "Cannot run executable " << path_arg << " due to error "
+                   << status << " (" << mx_status_get_string(status) << ")";
+    return mx::process();
+  }
+  return mx::process(result);
 }
 
 bool HasShebang(const std::string& path,
