@@ -659,7 +659,7 @@ static void send_debug_command(const char* cmd) {
     close(fd);
 }
 
-static void mojo_launch(const char* url) {
+static void app_launch(const char* url) {
     int fd = open("/dev/class/misc/dmctl", O_WRONLY);
     if (fd >= 0) {
         int r = write(fd, url, strlen(url));
@@ -690,8 +690,8 @@ void execline(char* line) {
         line[len] = 0;
     }
 
-    if (!strncmp(line, "mojo:", 5)) {
-        mojo_launch(line);
+    if (!strncmp(line, "mojo:", 5) || !strncmp(line, "file:", 5)) {
+        app_launch(line);
         return;
     }
 

@@ -132,7 +132,7 @@ static void init_builtin_drivers(bool for_root) {
     }
 }
 
-static mx_handle_t mojo_launcher;
+static mx_handle_t app_launcher;
 
 extern driver_api_t devhost_api;
 
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
         // it, it will fail later.
         devmgr_init_pcie();
     }
-    mojo_launcher = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
+    app_launcher = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
     if ((r = devhost_cmdline(argc, argv)) < 0) {
         return r;
     }
@@ -244,7 +244,10 @@ mx_status_t devmgr_control(const char* cmd) {
         return NO_ERROR;
     }
     if (!strncmp(cmd, "mojo:", 5)) {
-        return mx_channel_write(mojo_launcher, 0, cmd, strlen(cmd), NULL, 0);
+        return mx_channel_write(app_launcher, 0, cmd, strlen(cmd), NULL, 0);
+    }
+    if (!strncmp(cmd, "file:", 5)) {
+        return mx_channel_write(app_launcher, 0, cmd, strlen(cmd), NULL, 0);
     }
     const char* ps0prefix = "acpi-ps0:";
     if (!strncmp(cmd, ps0prefix, strlen(ps0prefix))) {
