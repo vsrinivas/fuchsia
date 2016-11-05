@@ -1,58 +1,35 @@
-// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 
-#include "mojo/public/cpp/application/service_provider_impl.h"
+#include "lib/ftl/logging.h"
 
 namespace mozart {
 
-class ViewProviderApp::DelegatingViewProvider : public ViewProvider {
- public:
-  DelegatingViewProvider(ViewProviderApp* app,
-                         const std::string& view_provider_url)
-      : app_(app), view_provider_url_(view_provider_url) {}
+ViewProviderApp::ViewProviderApp(
+    ViewFactory factory,
+    const ftl::RefPtr<ftl::TaskRunner>& task_runner)
+    : factory_(factory),
+      application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()),
+      weak_ptr_factory_(this) {
+  FTL_DCHECK(task_runner);
 
-  ~DelegatingViewProvider() override {}
-
- private:
-  // |ViewProvider|:
-  void CreateView(
-      mojo::InterfaceRequest<ViewOwner> view_owner_request,
-      mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
-    app_->CreateView(this, view_provider_url_, view_owner_request.Pass(),
-                     services.Pass());
-  }
-
-  ViewProviderApp* app_;
-  std::string view_provider_url_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(DelegatingViewProvider);
-};
-
-ViewProviderApp::ViewProviderApp() {}
+  task_runner->PostTask([weak = weak_ptr_factory_.GetWeakPtr()] {
+    if (weak)
+      weak->Start();
+  });
+}
 
 ViewProviderApp::~ViewProviderApp() {}
 
-bool ViewProviderApp::OnAcceptConnection(
-    mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<ViewProvider>(
-      [this](const mojo::ConnectionContext& connection_context,
-             mojo::InterfaceRequest<ViewProvider> view_provider_request) {
-        bindings_.AddBinding(
-            new DelegatingViewProvider(this, connection_context.connection_url),
-            view_provider_request.Pass());
-      });
-  return true;
-}
+void ViewProviderApp::Start() {
+  FTL_DCHECK(!service_);
 
-void ViewProviderApp::CreateView(
-    DelegatingViewProvider* provider,
-    const std::string& view_provider_url,
-    mojo::InterfaceRequest<ViewOwner> view_owner_request,
-    mojo::InterfaceRequest<mojo::ServiceProvider> services) {
-  CreateView(view_provider_url, view_owner_request.Pass(), services.Pass());
+  service_.reset(
+      new ViewProviderService(application_context_.get(), std::move(factory_)));
 }
 
 }  // namespace mozart

@@ -5,41 +5,22 @@
 #ifndef APPS_MOZART_LIB_VIEW_FRAMEWORK_INPUT_HANDLER_H_
 #define APPS_MOZART_LIB_VIEW_FRAMEWORK_INPUT_HANDLER_H_
 
-#include "apps/mozart/services/input/interfaces/input_connection.mojom.h"
+#include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/mozart/services/input/input_connection.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/interfaces/application/service_provider.mojom.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace mozart {
 
 // Holds an |InputConnection| and sets its |InputListener|.
 //
-// This class is intended to be included as a member of a View that wants to
-// receive input using the following pattern.
-//
-// class MyView : public BaseView, public InputListener {
-//  public:
-//   MyView(mojo::ApplicationImpl* app_impl,
-//          const ViewProvider::CreateViewCallback&
-//              create_view_callback)
-//          : BaseView(app_impl, "MyView", create_view_callback),
-//            input_handler_(GetViewServiceProvider(), this) {}
-//   ~MyView() override {}
-//
-//  private:
-//   // |InputListener|:
-//   void OnEvent(EventPtr event,
-//                const OnEventCallback& callback) override;
-//
-//   InputHandler input_handler_;
-//
-//   FTL_DISALLOW_COPY_AND_ASSIGN(MyView);
-// };
+// This class is intended to be included as a member of a View to help
+// decode input events.
 class InputHandler {
  public:
   // Creates an input connection for the view with the associated
   // service provider.
-  InputHandler(mojo::ServiceProvider* service_provider,
+  InputHandler(modular::ServiceProvider* service_provider,
                InputListener* listener);
   ~InputHandler();
 
@@ -47,7 +28,7 @@ class InputHandler {
   InputConnection* connection() { return connection_.get(); }
 
  private:
-  mojo::Binding<InputListener> listener_binding_;
+  fidl::Binding<InputListener> listener_binding_;
   InputConnectionPtr connection_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputHandler);

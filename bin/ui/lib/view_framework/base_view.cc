@@ -7,32 +7,28 @@
 #include "apps/mozart/glue/base/trace_event.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
-#include "mojo/public/cpp/application/connect.h"
 
 namespace mozart {
 
-BaseView::BaseView(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<ViewOwner> view_owner_request,
-    const std::string& label)
-    : app_connector_(
-          mojo::ApplicationConnectorPtr::Create(app_connector.Pass())),
+BaseView::BaseView(ViewManagerPtr view_manager,
+                   fidl::InterfaceRequest<ViewOwner> view_owner_request,
+                   const std::string& label)
+    : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
       view_container_listener_binding_(this) {
-  FTL_DCHECK(app_connector_);
-  ConnectToService(app_connector_.get(), "mojo:view_manager_service",
-                   GetProxy(&view_manager_));
+  FTL_DCHECK(view_manager_);
+  FTL_DCHECK(view_owner_request);
 
   ViewListenerPtr view_listener;
   view_listener_binding_.Bind(GetProxy(&view_listener));
-  view_manager_->CreateView(GetProxy(&view_), view_owner_request.Pass(),
-                            view_listener.Pass(), label);
+  view_manager_->CreateView(GetProxy(&view_), std::move(view_owner_request),
+                            std::move(view_listener), label);
   view_->CreateScene(GetProxy(&scene_));
 }
 
 BaseView::~BaseView() {}
 
-mojo::ServiceProvider* BaseView::GetViewServiceProvider() {
+modular::ServiceProvider* BaseView::GetViewServiceProvider() {
   if (!view_service_provider_)
     view_->GetServiceProvider(GetProxy(&view_service_provider_));
   return view_service_provider_.get();
@@ -43,9 +39,13 @@ ViewContainer* BaseView::GetViewContainer() {
     view_->GetContainer(GetProxy(&view_container_));
     ViewContainerListenerPtr view_container_listener;
     view_container_listener_binding_.Bind(GetProxy(&view_container_listener));
-    view_container_->SetListener(view_container_listener.Pass());
+    view_container_->SetListener(std::move(view_container_listener));
   }
   return view_container_.get();
+}
+
+void BaseView::SetReleaseHandler(ftl::Closure callback) {
+  view_listener_binding_.set_connection_error_handler(callback);
 }
 
 SceneMetadataPtr BaseView::CreateSceneMetadata() const {
@@ -112,7 +112,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
     OnDraw();
   }
 
-  callback.Run();
+  callback();
 }
 
 void BaseView::OnChildAttached(uint32_t child_key,
@@ -121,15 +121,15 @@ void BaseView::OnChildAttached(uint32_t child_key,
   FTL_DCHECK(child_view_info);
 
   TRACE_EVENT1("ui", "OnChildAttached", "child_key", child_key);
-  OnChildAttached(child_key, child_view_info.Pass());
-  callback.Run();
+  OnChildAttached(child_key, std::move(child_view_info));
+  callback();
 }
 
 void BaseView::OnChildUnavailable(uint32_t child_key,
                                   const OnChildUnavailableCallback& callback) {
   TRACE_EVENT1("ui", "OnChildUnavailable", "child_key", child_key);
   OnChildUnavailable(child_key);
-  callback.Run();
+  callback();
 }
 
 }  // namespace mozart

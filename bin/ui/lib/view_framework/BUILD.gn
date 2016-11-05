@@ -8,31 +8,30 @@ source_set("view_framework") {
     "base_view.h",
     "input_handler.cc",
     "input_handler.h",
-    "view_provider_app.cc",
-    "view_provider_app.h",
   ]
 
   public_deps = [
+    "//apps/modular/services/application",
+    "//apps/modular/lib/app",
     "//apps/mozart/glue/base",
     "//apps/mozart/services/composition/cpp",
-    "//apps/mozart/services/composition/interfaces",
-    "//apps/mozart/services/input/interfaces",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/services/composition",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/views",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/interfaces/application",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
-source_set("content") {
+source_set("view_provider") {
   sources = [
-    "content_viewer_app.cc",
-    "content_viewer_app.h",
+    "view_provider_app.cc",
+    "view_provider_app.h",
+    "view_provider_service.cc",
+    "view_provider_service.h",
   ]
 
   public_deps = [
     ":view_framework",
-    "//mojo/services/content_handler/interfaces",
   ]
 }

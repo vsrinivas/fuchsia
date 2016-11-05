@@ -15,8 +15,8 @@ namespace examples {
 
 class ShapesView : public mozart::BaseView {
  public:
-  ShapesView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-             mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  ShapesView(mozart::ViewManagerPtr view_manager,
+             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   ~ShapesView() override;
 
@@ -24,7 +24,7 @@ class ShapesView : public mozart::BaseView {
   // |BaseView|:
   void OnDraw() override;
 
-  void DrawContent(const mojo::Size& size, SkCanvas* canvas);
+  void DrawContent(const mozart::Size& size, SkCanvas* canvas);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ShapesView);
 };

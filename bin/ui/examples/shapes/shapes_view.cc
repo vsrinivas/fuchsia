@@ -17,9 +17,11 @@ constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 }  // namespace
 
 ShapesView::ShapesView(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-    : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Shapes") {}
+    mozart::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+    : BaseView(std::move(view_manager),
+               std::move(view_owner_request),
+               "Shapes") {}
 
 ShapesView::~ShapesView() {}
 
@@ -28,9 +30,9 @@ void ShapesView::OnDraw() {
 
   auto update = mozart::SceneUpdate::New();
 
-  const mojo::Size& size = *properties()->view_layout->size;
+  const mozart::Size& size = *properties()->view_layout->size;
   if (size.width > 0 && size.height > 0) {
-    mojo::RectF bounds;
+    mozart::RectF bounds;
     bounds.width = size.width;
     bounds.height = size.height;
 
@@ -43,7 +45,8 @@ void ShapesView::OnDraw() {
     auto content_resource = mozart::Resource::New();
     content_resource->set_image(mozart::ImageResource::New());
     content_resource->get_image()->image = std::move(image);
-    update->resources.insert(kContentImageResourceId, content_resource.Pass());
+    update->resources.insert(kContentImageResourceId,
+                             std::move(content_resource));
 
     // Add a root node to the scene graph to draw the image resource to
     // the screen such that it fills the entire view.
@@ -52,20 +55,20 @@ void ShapesView::OnDraw() {
     root_node->op->set_image(mozart::ImageNodeOp::New());
     root_node->op->get_image()->content_rect = bounds.Clone();
     root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-    update->nodes.insert(kRootNodeId, root_node.Pass());
+    update->nodes.insert(kRootNodeId, std::move(root_node));
   } else {
     auto root_node = mozart::Node::New();
-    update->nodes.insert(kRootNodeId, root_node.Pass());
+    update->nodes.insert(kRootNodeId, std::move(root_node));
   }
 
   // Submit the scene update.
-  scene()->Update(update.Pass());
+  scene()->Update(std::move(update));
 
   // Publish the scene update, taking care to supply the expected scene version.
   scene()->Publish(CreateSceneMetadata());
 }
 
-void ShapesView::DrawContent(const mojo::Size& size, SkCanvas* canvas) {
+void ShapesView::DrawContent(const mozart::Size& size, SkCanvas* canvas) {
   canvas->clear(SK_ColorCYAN);
 
   SkPaint paint;

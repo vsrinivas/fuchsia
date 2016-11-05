@@ -7,35 +7,31 @@
 
 #include <string>
 
+#include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
-#include "apps/mozart/services/composition/interfaces/scenes.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_manager.mojom.h"
-#include "apps/mozart/services/views/interfaces/views.mojom.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/views.fidl.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/interfaces/application/application_connector.mojom.h"
-#include "mojo/public/interfaces/application/service_provider.mojom.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
 
 namespace mozart {
 
 // Abstract base implementation of a view for simple applications.
 // Subclasses must handle layout and provide content for the scene by
-// implementing the methods of the |ViewListener| mojom interface.
+// implementing the methods of the |ViewListener| fidl interface.
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
 class BaseView : public ViewListener, public ViewContainerListener {
  public:
-  BaseView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-           mojo::InterfaceRequest<ViewOwner> view_owner_request,
+  BaseView(ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<ViewOwner> view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
-
-  // Gets the application implementation object provided at creation time.
-  mojo::ApplicationConnector* app_connector() { return app_connector_.get(); }
 
   // Gets the view manager.
   ViewManager* view_manager() { return view_manager_.get(); }
@@ -44,7 +40,7 @@ class BaseView : public ViewListener, public ViewContainerListener {
   View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
-  mojo::ServiceProvider* GetViewServiceProvider();
+  modular::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
   ViewContainer* GetViewContainer();
@@ -55,7 +51,7 @@ class BaseView : public ViewListener, public ViewContainerListener {
 
   // Takes the scene from the view.
   // This is useful if the scene will be rendered by a separate component.
-  ScenePtr TakeScene() { return scene_.Pass(); }
+  ScenePtr TakeScene() { return std::move(scene_); }
 
   // Gets the currently requested scene version.
   // This information is updated before processing each invalidation.
@@ -69,6 +65,13 @@ class BaseView : public ViewListener, public ViewContainerListener {
   // Gets the frame tracker which maintains timing information for this view.
   // This information is updated before processing each invalidation.
   const FrameTracker& frame_tracker() const { return frame_tracker_; }
+
+  // Sets a callback which is invoked when the view's owner releases the
+  // view causing the view manager to unregister it.
+  //
+  // This should be used to implement cleanup policies to release resources
+  // associated with the view (including the object itself).
+  void SetReleaseHandler(ftl::Closure callback);
 
   // Creates scene metadata initialized using the scene version and
   // current frame's presentation time.
@@ -133,13 +136,12 @@ class BaseView : public ViewListener, public ViewContainerListener {
   void OnChildUnavailable(uint32_t child_key,
                           const OnChildUnavailableCallback& callback) override;
 
-  mojo::ApplicationConnectorPtr app_connector_;
-
-  mojo::StrongBinding<ViewListener> view_listener_binding_;
-  mojo::Binding<ViewContainerListener> view_container_listener_binding_;
   ViewManagerPtr view_manager_;
+  fidl::Binding<ViewListener> view_listener_binding_;
+  fidl::Binding<ViewContainerListener> view_container_listener_binding_;
+
   ViewPtr view_;
-  mojo::ServiceProviderPtr view_service_provider_;
+  modular::ServiceProviderPtr view_service_provider_;
   ViewContainerPtr view_container_;
   ScenePtr scene_;
   FrameTracker frame_tracker_;
