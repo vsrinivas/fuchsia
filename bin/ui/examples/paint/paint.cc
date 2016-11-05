@@ -4,20 +4,18 @@
 
 #include <hid/usages.h>
 #include <math.h>
-#include <mojo/system/main.h>
 
 #include <algorithm>
 #include <map>
 #include <string>
 
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkPath.h"
@@ -32,9 +30,11 @@ constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 class PaintView : public mozart::BaseView, public mozart::InputListener {
  public:
-  PaintView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-            mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Paint"),
+  PaintView(mozart::ViewManagerPtr view_manager,
+            fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : BaseView(std::move(view_manager),
+                 std::move(view_owner_request),
+                 "Paint"),
         input_handler_(GetViewServiceProvider(), this) {}
 
   ~PaintView() override {}
@@ -96,7 +96,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
       }
     }
 
-    callback.Run(handled);
+    callback(handled);
     Invalidate();
   }
 
@@ -106,9 +106,9 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 
     auto update = mozart::SceneUpdate::New();
 
-    const mojo::Size& size = *properties()->view_layout->size;
+    const mozart::Size& size = *properties()->view_layout->size;
     if (size.width > 0 && size.height > 0) {
-      mojo::RectF bounds;
+      mozart::RectF bounds;
       bounds.width = size.width;
       bounds.height = size.height;
 
@@ -123,7 +123,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
       content_resource->set_image(mozart::ImageResource::New());
       content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
-                               content_resource.Pass());
+                               std::move(content_resource));
 
       auto root_node = mozart::Node::New();
       root_node->hit_test_behavior = mozart::HitTestBehavior::New();
@@ -131,18 +131,18 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
       root_node->op->set_image(mozart::ImageNodeOp::New());
       root_node->op->get_image()->content_rect = bounds.Clone();
       root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     } else {
       auto root_node = mozart::Node::New();
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     }
 
     // Publish the updated scene contents.
-    scene()->Update(update.Pass());
+    scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
   }
 
-  void DrawContent(SkCanvas* canvas, const mojo::Size& size) {
+  void DrawContent(SkCanvas* canvas, const mozart::Size& size) {
     canvas->clear(SK_ColorWHITE);
 
     SkPaint paint;
@@ -172,26 +172,19 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   FTL_DISALLOW_COPY_AND_ASSIGN(PaintView);
 };
 
-class PaintApp : public mozart::ViewProviderApp {
- public:
-  PaintApp() {}
-  ~PaintApp() override {}
-
-  void CreateView(
-      const std::string& connection_url,
-      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
-    new PaintView(mojo::CreateApplicationConnector(shell()),
-                  view_owner_request.Pass());
-  }
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(PaintApp);
-};
-
 }  // namespace examples
 
-MojoResult MojoMain(MojoHandle application_request) {
-  examples::PaintApp app;
-  return mojo::RunApplication(application_request, &app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  mozart::ViewProviderApp app(
+      [](mozart::ViewContext view_context) {
+        return std::make_unique<examples::PaintView>(
+            std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request));
+      },
+      loop.task_runner());
+
+  loop.Run();
+  return 0;
 }
