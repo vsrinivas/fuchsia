@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
 #include <unistd.h>
 
 #include <string>
 
+#include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
+#include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
-#include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
@@ -53,11 +52,14 @@ constexpr SkScalar kMargin = 15;
 
 class JankView : public mozart::BaseView, public mozart::InputListener {
  public:
-  JankView(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-           mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(app_connector.Pass(), view_owner_request.Pass(), "Jank"),
+  JankView(mozart::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+           fonts::FontProviderPtr font_provider)
+      : BaseView(std::move(view_manager),
+                 std::move(view_owner_request),
+                 "Jank"),
         input_handler_(GetViewServiceProvider(), this),
-        font_loader_(BaseView::app_connector()) {
+        font_loader_(std::move(font_provider)) {
     font_loader_.LoadDefaultFont([this](sk_sp<SkTypeface> typeface) {
       FTL_CHECK(typeface);  // TODO(jeffbrown): Fail gracefully.
 
@@ -84,7 +86,7 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
           OnClick(kButtons[index]);
       }
     }
-    callback.Run(false);
+    callback(false);
   }
 
   // |BaseView|:
@@ -96,9 +98,9 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
 
     auto update = mozart::SceneUpdate::New();
 
-    const mojo::Size& size = *properties()->view_layout->size;
+    const mozart::Size& size = *properties()->view_layout->size;
     if (size.width > 0 && size.height > 0) {
-      mojo::RectF bounds;
+      mozart::RectF bounds;
       bounds.width = size.width;
       bounds.height = size.height;
 
@@ -111,7 +113,7 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
       content_resource->set_image(mozart::ImageResource::New());
       content_resource->get_image()->image = std::move(image);
       update->resources.insert(kContentImageResourceId,
-                               content_resource.Pass());
+                               std::move(content_resource));
 
       auto root_node = mozart::Node::New();
       root_node->hit_test_behavior = mozart::HitTestBehavior::New();
@@ -119,13 +121,13 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
       root_node->op->set_image(mozart::ImageNodeOp::New());
       root_node->op->get_image()->content_rect = bounds.Clone();
       root_node->op->get_image()->image_resource_id = kContentImageResourceId;
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     } else {
       auto root_node = mozart::Node::New();
-      update->nodes.insert(kRootNodeId, root_node.Pass());
+      update->nodes.insert(kRootNodeId, std::move(root_node));
     }
 
-    scene()->Update(update.Pass());
+    scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
 
     Invalidate();
@@ -201,26 +203,21 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
   FTL_DISALLOW_COPY_AND_ASSIGN(JankView);
 };
 
-class JankApp : public mozart::ViewProviderApp {
- public:
-  JankApp() {}
-  ~JankApp() override {}
-
-  void CreateView(
-      const std::string& connection_url,
-      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      mojo::InterfaceRequest<mojo::ServiceProvider> services) override {
-    new JankView(mojo::CreateApplicationConnector(shell()),
-                 view_owner_request.Pass());
-  }
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(JankApp);
-};
-
 }  // namespace examples
 
-MojoResult MojoMain(MojoHandle application_request) {
-  examples::JankApp jank_app;
-  return mojo::RunApplication(application_request, &jank_app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  mozart::ViewProviderApp app(
+      [](mozart::ViewContext view_context) {
+        return std::make_unique<examples::JankView>(
+            std::move(view_context.view_manager),
+            std::move(view_context.view_owner_request),
+            view_context.application_context
+                ->ConnectToEnvironmentService<fonts::FontProvider>());
+      },
+      loop.task_runner());
+
+  loop.Run();
+  return 0;
 }

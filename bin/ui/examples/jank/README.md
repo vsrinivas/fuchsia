@@ -6,4 +6,4 @@ various functions such as stalling or crashing the app.
 
 ## USAGE
 
-  $ mojo:launcher mojo:jank_view
+  $ file:///system/apps/launcher file:///system/apps/jank_view

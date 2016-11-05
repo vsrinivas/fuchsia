@@ -12,18 +12,13 @@ executable("jank") {
   deps = [
     "//apps/mozart/lib/skia:fonts",
     "//apps/mozart/lib/skia:vmo",
-    "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/composition/interfaces",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/composition",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/c:system",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/system",
-    "//mojo/public/cpp/utility",
-    "//mojo/services/geometry/interfaces",
-    "//mojo/system",
+    "//lib/fidl/cpp/bindings",
     "//third_party/skia",
   ]
 }
