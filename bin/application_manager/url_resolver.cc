@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/application_manager/url_resolver.h"
+#include "apps/modular/src/application_manager/url_resolver.h"
 
 namespace modular {
 namespace {

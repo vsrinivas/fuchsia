@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/application_manager/application_controller_impl.h"
+#include "apps/modular/src/application_manager/application_controller_impl.h"
 
 #include <utility>
 
-#include "apps/modular/application_manager/application_environment_impl.h"
+#include "apps/modular/src/application_manager/application_environment_impl.h"
 #include "lib/ftl/functional/closure.h"
 
 namespace modular {

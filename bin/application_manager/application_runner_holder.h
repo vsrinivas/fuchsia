@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
-#define APPS_MODULAR_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
+#ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
+#define APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
 
 #include "apps/modular/services/application/application_controller.fidl.h"
 #include "apps/modular/services/application/application_runner.fidl.h"
@@ -33,4 +33,4 @@ class ApplicationRunnerHolder {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
+#endif  // APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_

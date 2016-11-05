@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/application_manager/application_runner_holder.h"
+#include "apps/modular/src/application_manager/application_runner_holder.h"
 
 #include <mx/vmo.h>
 #include <sys/stat.h>

@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/modular/application_manager/root_environment_host.h"
-#include "apps/modular/application_manager/startup_config.h"
+#include "apps/modular/src/application_manager/root_environment_host.h"
+#include "apps/modular/src/application_manager/startup_config.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"

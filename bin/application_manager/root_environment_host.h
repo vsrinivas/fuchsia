@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_
-#define APPS_MODULAR_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_
+#ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_
+#define APPS_MODULAR_SRC_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_
 
 #include <memory>
 
-#include "apps/modular/application_manager/application_environment_impl.h"
+#include "apps/modular/src/application_manager/application_environment_impl.h"
 #include "apps/modular/services/application/application_environment_host.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -46,4 +46,4 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_
+#endif  // APPS_MODULAR_SRC_APPLICATION_MANAGER_ROOT_ENVIRONMENT_HOST_H_

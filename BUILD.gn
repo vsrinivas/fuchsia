@@ -8,11 +8,11 @@ group("all") {
 
 group("modular") {
   deps = [
-    "application_manager",
     "device_runner:all",
     "examples:all",
     "lib/app",
     "services:all",
+    "src/application_manager",
     "story_manager:all",
     "story_runner:all",
   ]
