@@ -195,9 +195,8 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
     if (!WaitRendering(buffer)) {
-        DLOG("WaitRendering failed");
         if (callback)
-            (*callback)(-ETIMEDOUT, data);
+            (*callback)(DRET_MSG(-ETIMEDOUT, "WaitRendering failed"), data);
         return;
     }
 
@@ -214,9 +213,8 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     if (!mapping) {
         mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
         if (!mapping) {
-            DLOG("Couldn't map buffer to gtt");
             if (callback)
-                (*callback)(-ENOMEM, data);
+                (*callback)(DRET_MSG(-ENOMEM, "Couldn't map buffer to gtt"), data);
             return;
         }
     }
