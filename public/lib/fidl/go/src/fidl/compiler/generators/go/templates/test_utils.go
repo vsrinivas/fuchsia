@@ -7,29 +7,28 @@ package templates
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"go/format"
 	"strings"
 	"testing"
-
-	"fidl/compiler/generators/go/gofmt"
 )
 
 func check(t *testing.T, expected string, template string, input interface{}) {
-	buffer := &bytes.Buffer{}
-	if err := goFileTmpl.ExecuteTemplate(buffer, template, input); err != nil {
-		t.Fatalf("Template execution error(%s):%s\n", template, err)
+	out, err := format.Source([]byte(expected))
+	if err != nil {
+		t.Fatalf("formatting expected results failed: %v: %s", err, expected)
+	}
+	expected = string(out)
+
+	buf := new(bytes.Buffer)
+	if err := goFileTmpl.ExecuteTemplate(buf, template, input); err != nil {
+		t.Fatalf("template execution error: %v: on source %s", err, template)
 	}
 
-	expected, err := gofmt.FormatFragment(expected)
+	out, err = format.Source(buf.Bytes())
 	if err != nil {
-		log.Panicf("Formatting error (expected): %s\n", err)
+		t.Fatalf("Formatting failed: %s\n%s\n", err, buf.Bytes())
 	}
-
-	src := buffer.String()
-	actual, err := gofmt.FormatFragment(src)
-	if err != nil {
-		t.Fatalf("Formatting failed: %s\n%s\n", err, src)
-	}
+	actual := string(out)
 
 	if expected != actual {
 		errorMsg := fmt.Sprintf("Failed check: Expected\n%s\nActual\n%s\n", expected, actual)

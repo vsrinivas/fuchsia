@@ -6,33 +6,39 @@ package templates
 
 import (
 	"bytes"
+	"fmt"
+	"go/format"
+	"io"
 	"io/ioutil"
 	"text/template"
 
-	"fidl/compiler/generators/go/gofmt"
 	"fidl/compiler/generators/go/translator"
 )
 
 // goFileTmpl is the template object for a go file.
 var goFileTmpl *template.Template
 
-// ExecuteTemplates accepts a translator.TmplFile and returns the formatted
+// Execute accepts a translator.TmplFile and returns the formatted
 // source code for the go bindings.
-func ExecuteTemplates(tmplFile *translator.TmplFile, funcMap template.FuncMap) string {
-	buffer := &bytes.Buffer{}
+func Execute(wr io.Writer, tmplFile *translator.TmplFile, funcMap template.FuncMap) error {
+	buf := new(bytes.Buffer)
 	goFileTmpl.Funcs(funcMap)
-	if err := goFileTmpl.ExecuteTemplate(buffer, "FileTemplate", tmplFile); err != nil {
+	if err := goFileTmpl.ExecuteTemplate(buf, "FileTemplate", tmplFile); err != nil {
 		panic(err)
 	}
 
-	unformatted := buffer.String()
-	src, err := gofmt.FormatGoFile(unformatted)
-
+	src, err := format.Source(buf.Bytes())
 	if err != nil {
-		ioutil.WriteFile("/tmp/unformatted.go", buffer.Bytes(), 0666)
-		panic(err)
+		f, err2 := ioutil.TempFile("", "fidl-unformatted.go-")
+		errout := f.Name() + ".go"
+		if err2 == nil {
+			f.Close()
+			ioutil.WriteFile(errout, buf.Bytes(), 0664)
+		}
+		return fmt.Errorf("fidl: could not format %s: %v", errout, err)
 	}
-	return src
+	_, err = wr.Write(src)
+	return err
 }
 
 func init() {
