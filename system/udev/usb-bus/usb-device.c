@@ -12,6 +12,9 @@
 #include "usb-interface.h"
 #include "util.h"
 
+static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
+                                             usb_configuration_descriptor_t* config);
+
 static mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id, uint8_t alt_setting) {
     usb_interface_t* intf;
     list_for_every_entry(&device->children, intf, usb_interface_t, node) {
@@ -40,6 +43,39 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
         }
     }
     return NULL;
+}
+
+static mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
+    int num_configurations = dev->device_desc.bNumConfigurations;
+    usb_configuration_descriptor_t* config_desc = NULL;
+    int config_index = -1;
+
+    // validate config and get the new current_config_index
+    for (int i = 0; i < num_configurations; i++) {
+        usb_configuration_descriptor_t* desc = dev->config_descs[i];
+        if (desc->bConfigurationValue == config) {
+            config_desc = desc;
+            config_index = i;
+            break;
+        }
+    }
+    if (!config_desc) return ERR_INVALID_ARGS;
+
+    // set configuration
+    mx_status_t status = usb_device_control(dev->hci_device, dev->device_id,
+                             USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
+                             USB_REQ_SET_CONFIGURATION, config, 0,
+                             NULL, 0);
+    if (status < 0) {
+        printf("set configuration failed\n");
+        return status;
+    }
+
+    dev->current_config_index = config_index;
+
+    // tear down and recreate the subdevices for our interfaces
+    usb_device_remove_interfaces(dev);
+    return usb_device_add_interfaces(dev, config_desc);
 }
 
 static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
@@ -155,7 +191,7 @@ static ssize_t usb_device_ioctl(mx_device_t* device, uint32_t op,
         if (in_len != sizeof(int)) return ERR_INVALID_ARGS;
         int config = *((int *)in_buf);
         printf("IOCTL_USB_SET_CONFIGURATION %d\n", config);
-        return ERR_NOT_SUPPORTED;
+        return usb_device_set_configuration(dev, config);
     }
     default:
         return ERR_NOT_SUPPORTED;
@@ -195,8 +231,8 @@ static mx_driver_t _driver_usb_device = {
 #define NEXT_DESCRIPTOR(header) ((usb_descriptor_header_t*)((void*)header + header->bLength))
 
 static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
-                                             usb_device_descriptor_t* device_desc,
                                              usb_configuration_descriptor_t* config) {
+    usb_device_descriptor_t* device_desc = &parent->device_desc;
     mx_status_t result = NO_ERROR;
 
     // Iterate through interfaces in first configuration and create devices for them
@@ -371,7 +407,7 @@ mx_status_t usb_device_add(mx_device_t* hci_device, usb_hci_protocol_t* hci_prot
         goto error_exit;
     }
 
-    return usb_device_add_interfaces(dev, device_desc, configs[0]);
+    return usb_device_add_interfaces(dev, configs[0]);
 
 error_exit:
     if (configs) {
