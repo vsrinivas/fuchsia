@@ -58,13 +58,13 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   // ApplicationLauncher implementation:
 
   void CreateApplication(
-      const fidl::String& url,
-      fidl::InterfaceRequest<ServiceProvider> services,
+      ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller) override;
 
  private:
   void CreateApplicationWithProcess(
       const std::string& path,
+      fidl::Array<fidl::String> arguments,
       fidl::InterfaceHandle<ServiceProvider> environment_services,
       fidl::InterfaceRequest<ServiceProvider> services,
       fidl::InterfaceRequest<ApplicationController> controller);

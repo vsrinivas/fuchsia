@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -16,7 +17,8 @@ namespace modular {
 // The configuration file should be specified as:
 // {
 //   "initial-apps": [
-//     "file:/system/apps/device_runner"
+//     "file:///system/apps/app_without_args",
+//     [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
 //   ]
 // }
 
@@ -27,10 +29,10 @@ class StartupConfig {
 
   bool Parse(const std::string& string);
 
-  std::vector<std::string> TakeInitialApps();
+  std::vector<ApplicationLaunchInfoPtr> TakeInitialApps();
 
  private:
-  std::vector<std::string> initial_apps_;
+  std::vector<ApplicationLaunchInfoPtr> initial_apps_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StartupConfig);
 };

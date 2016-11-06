@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
   if (config_path.empty() && positional_args.empty())
     config_path = kDefaultConfigPath;
 
-  std::vector<std::string> initial_apps;
+  std::vector<ApplicationLaunchInfoPtr> initial_apps;
   if (!config_path.empty()) {
     StartupConfig config;
     LoadStartupConfig(&config, config_path);
@@ -52,10 +52,11 @@ int main(int argc, char** argv) {
   }
 
   if (!positional_args.empty()) {
-    // TODO(alhaad): This implementation passes all the command-line arguments
-    // to the initial application. Having an '--args-for' option is desirable.
-    std::string initial_app = positional_args[0];
-    initial_apps.push_back(initial_app);
+    auto launch_info = ApplicationLaunchInfo::New();
+    launch_info->url = positional_args[0];
+    for (size_t i = 1; i < positional_args.size(); ++i)
+      launch_info->arguments.push_back(positional_args[i]);
+    initial_apps.push_back(std::move(launch_info));
   }
 
   // TODO(jeffbrown): If there's already a running instance of
@@ -72,8 +73,8 @@ int main(int argc, char** argv) {
 
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {
-      for (const std::string& app : initial_apps) {
-        root.environment()->CreateApplication(app, nullptr, nullptr);
+      for (auto& launch_info : initial_apps) {
+        root.environment()->CreateApplication(std::move(launch_info), nullptr);
       }
     });
   }

@@ -32,17 +32,31 @@ bool StartupConfig::Parse(const std::string& string) {
     const auto& value = inital_apps_it->value;
     if (!value.IsArray())
       return false;
-    for (const auto& application_name : value.GetArray()) {
-      if (!application_name.IsString())
+    for (const auto& application : value.GetArray()) {
+      auto launch_info = ApplicationLaunchInfo::New();
+      if (application.IsString()) {
+        launch_info->url = application.GetString();
+      } else if (application.IsArray()) {
+        const auto& array = application.GetArray();
+        if (array.Empty() || !array[0].IsString())
+          return false;
+        launch_info->url = array[0].GetString();
+        for (size_t i = 1; i < array.Size(); ++i) {
+          if (!array[i].IsString())
+            return false;
+          launch_info->arguments.push_back(array[i].GetString());
+        }
+      } else {
         return false;
-      initial_apps_.push_back(application_name.GetString());
+      }
+      initial_apps_.push_back(std::move(launch_info));
     }
   }
 
   return true;
 }
 
-std::vector<std::string> StartupConfig::TakeInitialApps() {
+std::vector<ApplicationLaunchInfoPtr> StartupConfig::TakeInitialApps() {
   return std::move(initial_apps_);
 }
 

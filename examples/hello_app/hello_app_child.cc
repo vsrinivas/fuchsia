@@ -30,7 +30,7 @@ class HelloAppChild : public Hello {
  private:
   // |examples::Hello| implementation:
   void Say(const fidl::String& request, const SayCallback& callback) override {
-    callback((request.get() == "hello") ? "app" : "WAT");
+    callback((request.get() == "hello") ? "hola!" : "adios!");
   }
 
   std::unique_ptr<modular::ApplicationContext> context_;

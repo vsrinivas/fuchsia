@@ -28,6 +28,7 @@ constexpr size_t kSubprocessHandleCount = 2;
 
 mx::process CreateProcess(
     const std::string& path,
+    fidl::Array<fidl::String> arguments,
     fidl::InterfaceHandle<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services) {
   const char* path_arg = path.c_str();
@@ -48,12 +49,18 @@ mx::process CreateProcess(
     ++count;
   }
 
+  std::vector<const char*> argv;
+  argv.reserve(arguments.size() + 1);
+  argv.push_back(path_arg);
+  for (const auto& argument : arguments)
+    argv.push_back(argument.get().c_str());
+
   // TODO(abarth): We shouldn't pass stdin, stdout, stderr, or the file system
   // when launching Mojo applications. We probably shouldn't pass environ, but
   // currently this is very useful as a way to tell the loader in the child
   // process to print out load addresses so we can understand crashes.
-  mx_handle_t result = launchpad_launch_mxio_etc(path_arg, 1, &path_arg,
-                                                 environ, count, handles, ids);
+  mx_handle_t result = launchpad_launch_mxio_etc(
+      path_arg, argv.size(), argv.data(), environ, count, handles, ids);
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
     FTL_LOG(ERROR) << "Cannot run executable " << path_arg << " due to error "
@@ -143,18 +150,17 @@ void ApplicationEnvironmentImpl::Duplicate(
 }
 
 void ApplicationEnvironmentImpl::CreateApplication(
-    const fidl::String& url,
-    fidl::InterfaceRequest<ServiceProvider> services,
+    modular::ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   fidl::InterfaceHandle<ServiceProvider> environment_services;
-  host_->GetApplicationEnvironmentServices(url,
+  host_->GetApplicationEnvironmentServices(launch_info->url,
                                            GetProxy(&environment_services));
 
-  std::string path = GetPathFromURL(url);
+  std::string path = GetPathFromURL(launch_info->url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
     // for an application runner.
-    FTL_LOG(ERROR) << "Cannot run " << url
+    FTL_LOG(ERROR) << "Cannot run " << launch_info->url
                    << " because the scheme is not supported.";
     return;
   }
@@ -168,7 +174,10 @@ void ApplicationEnvironmentImpl::CreateApplication(
     if (it.second) {
       ServiceProviderPtr runner_services;
       ApplicationControllerPtr runner_controller;
-      CreateApplication(runner, fidl::GetProxy(&runner_services),
+      auto runner_launch_info = ApplicationLaunchInfo::New();
+      runner_launch_info->url = runner;
+      runner_launch_info->services = fidl::GetProxy(&runner_services);
+      CreateApplication(std::move(runner_launch_info),
                         fidl::GetProxy(&runner_controller));
 
       runner_controller.set_connection_error_handler(
@@ -178,31 +187,35 @@ void ApplicationEnvironmentImpl::CreateApplication(
           std::move(runner_services), std::move(runner_controller));
     } else if (!it.first->second) {
       // There was a cycle in the runner graph.
-      FTL_LOG(ERROR) << "Cannot run " << url << " with " << runner
+      FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with " << runner
                      << " because of a cycle in the runner graph.";
       return;
     }
 
     ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
+    startup_info->url = launch_info->url;
+    startup_info->arguments = std::move(launch_info->arguments);
     startup_info->environment_services = std::move(environment_services);
-    startup_info->outgoing_services = std::move(services);
-    startup_info->url = url;
+    startup_info->outgoing_services = std::move(launch_info->services);
     it.first->second->StartApplication(std::move(fd), std::move(startup_info),
                                        std::move(controller));
     return;
   }
 
-  CreateApplicationWithProcess(path, std::move(environment_services),
-                               std::move(services), std::move(controller));
+  CreateApplicationWithProcess(
+      path, std::move(launch_info->arguments), std::move(environment_services),
+      std::move(launch_info->services), std::move(controller));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     const std::string& path,
+    fidl::Array<fidl::String> arguments,
     fidl::InterfaceHandle<ServiceProvider> environment_services,
     fidl::InterfaceRequest<ServiceProvider> services,
     fidl::InterfaceRequest<ApplicationController> controller) {
   mx::process process =
-      CreateProcess(path, std::move(environment_services), std::move(services));
+      CreateProcess(path, std::move(arguments), std::move(environment_services),
+                    std::move(services));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process));

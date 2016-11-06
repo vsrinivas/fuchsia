@@ -21,8 +21,10 @@ class HelloAppParent {
  public:
   HelloAppParent()
       : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
-    context_->launcher()->CreateApplication("file:///boot/apps/hello_app_child",
-                                            fidl::GetProxy(&child_services_),
+    auto launch_info = modular::ApplicationLaunchInfo::New();
+    launch_info->url = "file:///system/apps/hello_app_child";
+    launch_info->services = fidl::GetProxy(&child_services_);
+    context_->launcher()->CreateApplication(std::move(launch_info),
                                             fidl::GetProxy(&child_));
 
     modular::ConnectToService(child_services_.get(), fidl::GetProxy(&hello_));
