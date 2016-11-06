@@ -1331,7 +1331,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
             break;
         }
         items[nvalid].handle = h;
-        items[nvalid].pending = sigs;
+        items[nvalid].waitfor = sigs;
         nvalid++;
     }
 
