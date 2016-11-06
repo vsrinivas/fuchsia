@@ -1246,14 +1246,16 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
         }
         items[nvalid].handle = h;
         items[nvalid].waitfor = sigs;
+        items[nvalid].pending = 0;
         nvalid++;
     }
 
     int nfds = 0;
     if (r == NO_ERROR && nvalid > 0) {
         mx_time_t tmo = (timeout >= 0) ? MX_MSEC(timeout) : MX_TIME_INFINITE;
-
-        if ((r = mx_handle_wait_many(items, nvalid, tmo)) == NO_ERROR) {
+        r = mx_handle_wait_many(items, nvalid, tmo);
+        // pending signals could be reported on ERR_TIMED_OUT case as well
+        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
             nfds_t j = 0; // j counts up on a valid entry
 
             for (nfds_t i = 0; i < n; i++) {
@@ -1284,7 +1286,7 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
         }
     }
 
-    return (r == NO_ERROR) ? nfds : (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
+    return (r == NO_ERROR || r == ERR_TIMED_OUT) ? nfds : ERROR(r);
 }
 
 int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
@@ -1332,6 +1334,7 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
         }
         items[nvalid].handle = h;
         items[nvalid].waitfor = sigs;
+        items[nvalid].pending = 0;
         nvalid++;
     }
 
@@ -1339,8 +1342,9 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     if (r == NO_ERROR && nvalid > 0) {
         mx_time_t tmo = (tv == NULL) ? MX_TIME_INFINITE :
             MX_SEC(tv->tv_sec) + MX_USEC(tv->tv_usec);
-
-        if ((r = mx_handle_wait_many(items, nvalid, tmo)) == NO_ERROR) {
+        r = mx_handle_wait_many(items, nvalid, tmo);
+        // pending signals could be reported on ERR_TIMED_OUT case as well
+        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
             int j = 0; // j counts up on a valid entry
 
             for (int fd = 0; fd < n; fd++) {
@@ -1352,7 +1356,6 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
                 if (j < nvalid) {
                     uint32_t events = 0;
                     io->ops->wait_end(io, items[j].pending, &events);
-
                     if (rfds && FD_ISSET(fd, rfds)) {
                         if (events & EPOLLIN) {
                             nfds++;
@@ -1396,5 +1399,5 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
         }
     }
 
-    return (r == NO_ERROR) ? nfds : (r == ERR_TIMED_OUT) ? 0 : ERROR(r);
+    return (r == NO_ERROR || r == ERR_TIMED_OUT) ? nfds : ERROR(r);
 }
