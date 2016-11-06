@@ -32,10 +32,12 @@ TEST(CommandLineTest, Basic) {
   EXPECT_EQ("arg2", cl.positional_args()[1]);
   EXPECT_EQ("arg3", cl.positional_args()[2]);
 
+  EXPECT_TRUE(cl.HasOption("flag1"));
   EXPECT_TRUE(cl.HasOption("flag1", nullptr));
   size_t index = static_cast<size_t>(-1);
   EXPECT_TRUE(cl.HasOption("flag2", &index));
   EXPECT_EQ(1u, index);
+  EXPECT_FALSE(cl.HasOption("flag3"));
   EXPECT_FALSE(cl.HasOption("flag3", nullptr));
 
   std::string value = "nonempty";

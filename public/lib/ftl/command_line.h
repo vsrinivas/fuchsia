@@ -107,7 +107,7 @@ class CommandLine final {
   // Returns true if this command line has the option |name| (and if |index| is
   // non-null, sets |*index| to the index of the *last* occurrence of the given
   // option in |options()|) and false if not.
-  bool HasOption(const std::string& name, size_t* index) const;
+  bool HasOption(const std::string& name, size_t* index = nullptr) const;
 
   // Gets the value of the option |name|. Returns true (and sets |*value|) on
   // success and false (leaving |*value| alone) on failure.
