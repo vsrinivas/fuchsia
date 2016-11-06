@@ -4,6 +4,7 @@
 
 #include "apps/fonts/font_provider_impl.h"
 
+#include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <utility>
 
@@ -35,13 +36,16 @@ bool FontProviderImpl::LoadFonts() {
   mx_status_t rv = mx::vmo::create(data.size(), 0, &roboto_regular_vmo_);
   if (rv < 0) {
     roboto_regular_vmo_.reset();
-    FTL_LOG(ERROR) << "Failed to create VMO for Roboto.";
+    FTL_LOG(ERROR) << "Failed to create VMO for Roboto: "
+                   << mx_status_get_string(rv);
     return false;
   }
 
-  rv = roboto_regular_vmo_.write(data.data(), 0, data.size(), nullptr);
+  mx_size_t actual = 0;
+  rv = roboto_regular_vmo_.write(data.data(), 0, data.size(), &actual);
   if (rv < 0) {
-    FTL_LOG(ERROR) << "Failed to write data to VMO for Roboto.";
+    FTL_LOG(ERROR) << "Failed to write data to VMO for Roboto: "
+                   << mx_status_get_string(rv);
     roboto_regular_vmo_.reset();
     return false;
   }
