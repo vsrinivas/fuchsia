@@ -54,7 +54,7 @@ Run:
 
 ```
 ./configure --enable-rustbuild --target=x86_64-unknown-fuchsia
-python src/bootstrap/bootstrap.py --stage 1 --target=x86_64-unknown-fuchsia
+./x.py build --stage 1 --target=x86_64-unknown-fuchsia
 ```
 
 You should now have a working Rust compiler under `build/x86_64-apple-darwin/stage1/bin/rustc`
@@ -112,7 +112,7 @@ bin/mx_toy=${YOUR_CRATE_ROOT}/target/x86_64-unknown-fuchsia/debug/examples/mx_to
 Then, rebuild the bootfs (in your fuchsia root as cwd):
 
 ```
-./out/build-magenta/tools/mkbootfs  -o ./out/debug-x86-64/user.bootfs out/debug-x86-64/gen/packages/gn/user.bootfs.manifest
+./out/build-magenta/tools/mkbootfs -o ./out/debug-x86-64/user.bootfs out/debug-x86-64/gen/packages/gn/user.bootfs.manifest
 ```
 
 Now you can start the system, and run your binary:
