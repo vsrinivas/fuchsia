@@ -8,8 +8,8 @@
             "bootfs_path": "lib/libmojo.so"
         },
         {
-            "binary": "application_manager",
-            "bootfs_path": "bin/application_manager"
+            "binary": "mojo_application_manager",
+            "bootfs_path": "bin/mojo_application_manager"
         },
         {
             "binary": "mojo_public_c_bindings_unittests",
