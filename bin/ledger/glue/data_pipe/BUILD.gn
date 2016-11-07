@@ -12,6 +12,8 @@ source_set("data_pipe") {
   ]
 
   public_deps = [
+    "//lib/fidl/c/waiter",
+    "//lib/fidl/cpp/waiter",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]
