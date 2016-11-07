@@ -7,6 +7,7 @@
 #include <ddk/protocol/device.h>
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
+#include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
@@ -50,12 +51,35 @@ static bool switch_to_first_vc(void) {
     return v ? strcmp(v, "true") != 0 : true;
 }
 
+// Mount a handle to a remote filesystem on a directory.
+// Any future requests made through the path at "where" will be transmitted to
+// the handle returned from this function.
+static mx_handle_t mount_remote_handle(const char* where) {
+    int fd;
+    if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
+        return MX_HANDLE_INVALID;
+    }
+    mx_handle_t h;
+    if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
+        close(fd);
+        return MX_HANDLE_INVALID;
+    }
+    close(fd);
+    return h;
+}
+
 static void launch_minfs(const char* device_name) {
+    mx_handle_t h = mount_remote_handle("/data");
+    if (h == MX_HANDLE_INVALID) {
+        printf("devmgr: Failed to mount remote handle handle at '/data'\n");
+        return;
+    }
     char device_path[MXIO_MAX_FILENAME + 64];
     snprintf(device_path, sizeof(device_path), "/dev/class/block/%s", device_name);
     const char* argv[] = { "/boot/bin/minfs", device_path, "mount", "/data" };
     printf("devmgr: /dev/class/block/%s: minfs?\n", device_name);
-    devmgr_launch(svcs_job_handle, "minfs:/data", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "minfs:/data", sizeof(argv)/sizeof(argv[0]),
+                  argv, -1, h, MX_HND_TYPE_USER0);
 }
 
 static void launch_fat(const char* device_name) {
