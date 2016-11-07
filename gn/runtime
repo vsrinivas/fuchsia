@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/modular/src/application_manager"
+    ],
+    "binaries": [
+        {
+            "binary": "application_manager",
+            "bootfs_path": "bin/application_manager"
+        }
+    ]
+}
