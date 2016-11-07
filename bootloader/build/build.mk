@@ -22,6 +22,20 @@ out/%.o: %.c
 	@echo compiling: $@
 	$(QUIET)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
 
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+
+define _efi_app
+ALL	+= out/$1.efi
+APPS	+= out/$1.efi
+DEPS	+= $3
+out/$1.efi: $2 $(EFI_CRT0) out/xefi.lib
+	@mkdir -p $$(dir $$@)
+	@echo linking: $$@
+	$(QUIET)$(EFI_LD) /out:$$@ $(EFI_LDFLAGS) $2 $(EFI_LIBS)
+endef
+
+else
+
 out/%.efi: out/%.so
 	@mkdir -p $(dir $@)
 	@echo building: $@
@@ -44,6 +58,8 @@ out/$1.so: $2 $(EFI_CRT0) out/libxefi.a
 	    exit 1;\
 	fi
 endef
+
+endif
 
 efi_app = $(eval $(call _efi_app,$(strip $1),\
 $(patsubst %.c,out/%.o,$2),\

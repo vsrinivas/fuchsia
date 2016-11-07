@@ -4,10 +4,37 @@
 
 ARCH		:= x86_64
 
+USE_CLANG ?= false
+
 # Temporary ugliness until we integrate gigaboot build into magenta build
 LK_ROOT         := ..
 LKMAKEROOT      := $(LK_ROOT)
 -include $(LK_ROOT)/prebuilt/config.mk
+
+-include local.mk
+include $(LK_ROOT)/kernel/make/macros.mk
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+
+FUCHSIA_ROOT    := $(LK_ROOT)/..
+
+EFI_TOOLCHAIN	:= $(FUCHSIA_ROOT)/buildtools/toolchain/clang+llvm-x86_64-linux/bin/
+EFI_CC		:= $(EFI_TOOLCHAIN)clang
+EFI_LD		:= $(EFI_TOOLCHAIN)lld-link
+EFI_READELF	:= $(EFI_TOOLCHAIN)llvm-readobj
+EFI_OBJCOPY	:= $(EFI_TOOLCHAIN)objcopy
+EFI_AR		:= $(EFI_TOOLCHAIN)llvm-lib
+EFI_NM		:= $(EFI_TOOLCHAIN)llvm-nm
+
+EFI_CFLAGS	:= -fPIE -fshort-wchar -fno-stack-protector -mno-red-zone --target=x86_64-windows-msvc
+EFI_CFLAGS	+= -Wall -std=c99
+EFI_CFLAGS	+= -ffreestanding -nostdinc -Iinclude -Isrc
+EFI_CFLAGS      += -I$(LK_ROOT)/system/public
+
+EFI_LDFLAGS	:= /subsystem:efi_application /entry:efi_main /libpath:out
+EFI_LIBS	:= /defaultlib:xefi
+
+else
 
 EFI_TOOLCHAIN	:= $(LK_ROOT)/prebuilt/$(ARCH_x86_64_TOOLCHAIN_PREFIX)
 EFI_CC		:= $(EFI_TOOLCHAIN)gcc
@@ -28,6 +55,8 @@ EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie
 EFI_LDFLAGS	+= -Lout
 
 EFI_LIBS	:= -lxefi
+
+endif
 
 what_to_build::	all
 
@@ -68,6 +97,12 @@ out/libxefi.a: $(LIB_OBJS)
 	@echo archiving: $@
 	$(QUIET)rm -f $@
 	$(QUIET)$(EFI_AR) rc $@ $^
+
+out/xefi.lib: $(LIB_OBJS)
+	@mkdir -p $(dir $@)
+	@echo archiving: $@
+	$(QUIET)rm -f $@
+	$(QUIET)$(EFI_AR) /out:$@ $^
 
 out/BOOTx64.EFI: $(APP)
 	@mkdir -p $(dir $@)
