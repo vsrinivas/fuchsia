@@ -15,6 +15,7 @@ group("ledger") {
     "//apps/ledger/firebase",
     "//apps/ledger/gcs",
     "//apps/ledger/glue",
+    "//apps/ledger/services",
     "//apps/ledger/storage",
   ]
 }
