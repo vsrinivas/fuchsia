@@ -68,18 +68,18 @@ func StartServer(path string, filesys fs.FileSystem) error {
 
 // Makes a new pipe, registering one end with the 'mxioServer', and returning the other end
 func (vfs *ThinVFS) CreateHandle(obj interface{}) (mx.Handle, error) {
-	h, err := mx.MsgPipeCreate(0)
+	h0, h1, err := mx.NewChannel(0)
 	if err != nil {
 		return 0, err
 	}
 
 	var serverHandler rio.ServerHandler = mxioServer
-	if err := vfs.dispatcher.AddHandler(h[0], serverHandler, vfs.allocateCookie(obj)); err != nil {
-		h[0].Close()
-		h[1].Close()
+	if err := vfs.dispatcher.AddHandler(h0, serverHandler, vfs.allocateCookie(obj)); err != nil {
+		h0.Close()
+		h1.Close()
 		return 0, err
 	}
-	return h[1], nil
+	return h1, nil
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
