@@ -9,8 +9,8 @@
 
 #include "apps/mozart/services/composition/image.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
-#include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/core/SkSize.h"
+#include "third_party/skia/include/core/SkSurface.h"
 
 namespace mozart {
 

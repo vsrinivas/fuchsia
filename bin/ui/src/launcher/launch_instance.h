@@ -14,9 +14,9 @@
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/mozart/src/input_reader/input_interpreter.h"
 #include "apps/mozart/src/input_reader/input_reader.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace launcher {
 

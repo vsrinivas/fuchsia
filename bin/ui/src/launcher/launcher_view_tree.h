@@ -8,9 +8,9 @@
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace launcher {
 

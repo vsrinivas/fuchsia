@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "apps/mozart/src/compositor/frame_dispatcher.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"

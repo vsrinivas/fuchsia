@@ -10,8 +10,8 @@
 
 #include <mutex>
 
-#include "lib/ftl/macros.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
 #include "magenta/device/ktrace.h"
 
 namespace ktrace {

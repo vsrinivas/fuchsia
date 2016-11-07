@@ -8,13 +8,13 @@
 #include <queue>
 
 #include "apps/mozart/lib/view_associate_framework/view_tree_hit_tester_client.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace input_manager {
 

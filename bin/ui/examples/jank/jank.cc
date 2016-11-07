@@ -7,11 +7,11 @@
 #include <string>
 
 #include "apps/modular/lib/app/connect.h"
+#include "apps/mozart/lib/skia/skia_font_loader.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
-#include "apps/mozart/lib/skia/skia_font_loader.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"

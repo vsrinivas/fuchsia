@@ -7,9 +7,9 @@
 
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/macros.h"
 
 namespace input_manager {
 

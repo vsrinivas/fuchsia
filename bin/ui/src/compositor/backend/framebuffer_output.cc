@@ -9,11 +9,11 @@
 #include <utility>
 
 #include "apps/mozart/glue/base/trace_event.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/src/compositor/backend/framebuffer.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
-#include "lib/ftl/logging.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 #include "third_party/skia/include/core/SkCanvas.h"

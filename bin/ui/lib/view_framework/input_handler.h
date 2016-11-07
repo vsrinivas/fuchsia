@@ -7,8 +7,8 @@
 
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/macros.h"
 
 namespace mozart {
 

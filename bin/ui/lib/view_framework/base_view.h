@@ -12,10 +12,10 @@
 #include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
 
 namespace mozart {
 

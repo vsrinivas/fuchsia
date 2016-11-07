@@ -9,10 +9,10 @@
 #include "apps/mozart/services/composition/scheduling.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
 #include "apps/mozart/src/compositor/scene_state.h"
-#include "lib/ftl/functional/closure.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/functional/closure.h"
+#include "lib/ftl/macros.h"
 
 namespace compositor {
 

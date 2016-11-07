@@ -10,8 +10,8 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/src/compositor/compositor_engine.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace compositor {
 

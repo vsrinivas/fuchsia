@@ -9,9 +9,9 @@
 #include "apps/mozart/lib/view_associate_framework/mock_hit_tester.h"
 #include "apps/mozart/lib/view_associate_framework/mock_view_inspector.h"
 #include "apps/mozart/lib/view_associate_framework/test_helpers.h"
+#include "lib/fidl/cpp/application/application_test_base.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/fidl/cpp/application/application_test_base.h"
 #include "third_party/gtest/include/gtest/gtest.h"
 
 namespace test {

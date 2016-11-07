@@ -8,8 +8,8 @@
 #include <unordered_map>
 
 #include "apps/mozart/services/views/view_associates.fidl.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace mozart {
 

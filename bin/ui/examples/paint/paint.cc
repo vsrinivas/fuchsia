@@ -9,10 +9,10 @@
 #include <map>
 #include <string>
 
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
-#include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

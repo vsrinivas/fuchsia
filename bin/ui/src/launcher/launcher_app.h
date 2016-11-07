@@ -9,15 +9,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/modular/services/application/application_controller.fidl.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
+#include "apps/modular/services/application/application_controller.fidl.h"
+#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/mozart/services/launcher/launcher.fidl.h"
 #include "apps/mozart/src/launcher/launch_instance.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace launcher {
 

@@ -4,8 +4,8 @@
 
 #include "apps/mozart/src/compositor/render/render_image.h"
 
-#include "lib/ftl/logging.h"
 #include "apps/mozart/lib/skia/skia_vmo_image.h"
+#include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkPixmap.h"
 

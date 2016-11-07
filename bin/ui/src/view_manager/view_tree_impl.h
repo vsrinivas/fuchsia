@@ -6,8 +6,8 @@
 #define APPS_MOZART_SRC_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
 #include "apps/mozart/services/views/view_trees.fidl.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
 namespace view_manager {
 

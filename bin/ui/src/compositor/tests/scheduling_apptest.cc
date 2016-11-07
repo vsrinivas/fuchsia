@@ -4,10 +4,10 @@
 
 #include "apps/mozart/services/composition/compositor.fidl-sync.h"
 #include "apps/mozart/services/composition/scheduling.fidl-sync.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/application/application_test_base.h"
 #include "lib/fidl/cpp/application/connect.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/ftl/macros.h"
 #include "mojo/services/gpu/context_provider.fidl.h"
 #include "mojo/services/native_viewport/native_viewport.fidl.h"
 

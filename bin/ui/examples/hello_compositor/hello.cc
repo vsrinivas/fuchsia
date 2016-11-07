@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <algorithm>
-#include <string>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
-#include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
+#include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 #include "lib/mtl/tasks/message_loop.h"

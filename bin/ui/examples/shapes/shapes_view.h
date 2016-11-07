@@ -5,8 +5,8 @@
 #ifndef APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 #define APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 
-#include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
+#include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
 class SkCanvas;

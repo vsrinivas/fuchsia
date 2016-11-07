@@ -13,9 +13,9 @@
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/src/view_manager/view_container_state.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace view_manager {
 

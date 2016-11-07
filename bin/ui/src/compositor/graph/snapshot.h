@@ -11,10 +11,10 @@
 
 #include "apps/mozart/services/composition/hit_tests.fidl.h"
 #include "apps/mozart/services/composition/scheduling.fidl.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
-#include "apps/mozart/services/geometry/geometry.fidl.h"
 
 namespace compositor {
 
