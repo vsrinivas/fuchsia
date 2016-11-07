@@ -16,8 +16,11 @@ ApplicationContext::ApplicationContext(
     : environment_services_(
           ServiceProviderPtr::Create(std::move(environment_services))),
       outgoing_services_(std::move(outgoing_services)) {
-  ConnectToService(environment_services_.get(), fidl::GetProxy(&environment_));
-  environment_->GetApplicationLauncher(fidl::GetProxy(&launcher_));
+  if (environment_services_) {
+    ConnectToService(environment_services_.get(),
+                     fidl::GetProxy(&environment_));
+    environment_->GetApplicationLauncher(fidl::GetProxy(&launcher_));
+  }
 }
 
 ApplicationContext::~ApplicationContext() = default;
