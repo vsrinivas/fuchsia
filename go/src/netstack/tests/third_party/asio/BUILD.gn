@@ -13,3 +13,17 @@ executable("async_client") {
     "//third_party/asio",
   ]
 }
+
+executable("async_https") {
+  testonly = true
+
+  sources = [
+    "async_https.cpp",
+  ]
+
+  deps = [
+    "//third_party/asio",
+    "//third_party/boringssl:crypto",
+    "//third_party/boringssl:ssl",
+  ]
+}

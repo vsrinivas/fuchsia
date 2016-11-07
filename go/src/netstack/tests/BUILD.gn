@@ -6,11 +6,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//apps/netstack/tests/third_party/asio:async_client",
     "//apps/netstack/tests/sockettest",
     "//apps/netstack/tests/sockettest:epolltest",
     "//apps/netstack/tests/sockettest:nbiotest",
     "//apps/netstack/tests/sockettest:polltest",
     "//apps/netstack/tests/sockettest:selecttest",
+    "//apps/netstack/tests/third_party/asio:async_client",
+    "//apps/netstack/tests/third_party/asio:async_https",
   ]
 }
