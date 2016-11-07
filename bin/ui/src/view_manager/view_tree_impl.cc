@@ -65,9 +65,8 @@ void ViewTreeImpl::FlushChildren(uint32_t flush_token) {
   registry_->FlushChildren(state_, flush_token);
 }
 
-void ViewTreeImpl::ConnectToService(
-    const fidl::String& service_name,
-    mx::channel client_handle) {
+void ViewTreeImpl::ConnectToService(const fidl::String& service_name,
+                                    mx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));
 }

@@ -21,8 +21,7 @@ class MockHitTester : public HitTester {
   void SetNextResult(PointFPtr point, HitTestResultPtr result);
 
   // |HitTester|
-  void HitTest(PointFPtr point,
-               const HitTestCallback& callback) override;
+  void HitTest(PointFPtr point, const HitTestCallback& callback) override;
 
  private:
   PointFPtr point_;

@@ -69,7 +69,8 @@ class Snapshot : public ftl::RefCountedThreadSafe<Snapshot> {
 
   // Performs a hit test at the specified point, populating the result.
   // Only valid if |!is_blocked()|.
-  void HitTest(const mozart::PointF& point, mozart::HitTestResult* result) const;
+  void HitTest(const mozart::PointF& point,
+               mozart::HitTestResult* result) const;
 
   // Returns true if the specified node was blocked from rendering.
   // Only valid if |!is_blocked()|.

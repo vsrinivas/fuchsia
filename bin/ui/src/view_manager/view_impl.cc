@@ -20,7 +20,8 @@ void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
 
 void ViewImpl::GetServiceProvider(
     fidl::InterfaceRequest<modular::ServiceProvider> service_provider_request) {
-  service_provider_bindings_.AddBinding(this, std::move(service_provider_request));
+  service_provider_bindings_.AddBinding(this,
+                                        std::move(service_provider_request));
 }
 
 void ViewImpl::CreateScene(fidl::InterfaceRequest<mozart::Scene> scene) {
@@ -69,7 +70,8 @@ void ViewImpl::FlushChildren(uint32_t flush_token) {
 
 void ViewImpl::ConnectToService(const fidl::String& service_name,
                                 mx::channel client_handle) {
-  registry_->ConnectToViewService(state_, service_name, std::move(client_handle));
+  registry_->ConnectToViewService(state_, service_name,
+                                  std::move(client_handle));
 }
 
 }  // namespace view_manager

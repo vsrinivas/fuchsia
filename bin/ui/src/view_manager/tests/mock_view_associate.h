@@ -19,15 +19,13 @@ class MockViewAssociate : public mozart::ViewAssociate {
   void Connect(fidl::InterfaceHandle<mozart::ViewInspector> inspector,
                const ConnectCallback& callback) override;
 
-  void ConnectToViewService(
-      mozart::ViewTokenPtr view_token,
-      const fidl::String& service_name,
-      mx::channel client_handle) override;
+  void ConnectToViewService(mozart::ViewTokenPtr view_token,
+                            const fidl::String& service_name,
+                            mx::channel client_handle) override;
 
-  void ConnectToViewTreeService(
-      mozart::ViewTreeTokenPtr view_tree_token,
-      const fidl::String& service_name,
-      mx::channel client_handle) override;
+  void ConnectToViewTreeService(mozart::ViewTreeTokenPtr view_tree_token,
+                                const fidl::String& service_name,
+                                mx::channel client_handle) override;
 
   int connect_invokecount = 0;
 };

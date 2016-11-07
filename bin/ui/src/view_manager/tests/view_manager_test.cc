@@ -83,9 +83,9 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Create a parent view
   mozart::ViewPtr parent_view;
   mozart::ViewOwnerPtr parent_view_owner;
-  view_manager_->CreateView(fidl::GetProxy(&parent_view),
-                            fidl::GetProxy(&parent_view_owner),
-                            std::move(parent_view_listener), "parent_test_view");
+  view_manager_->CreateView(
+      fidl::GetProxy(&parent_view), fidl::GetProxy(&parent_view_owner),
+      std::move(parent_view_listener), "parent_test_view");
 
   mozart::ViewContainerPtr parent_view_container;
   parent_view->GetContainer(fidl::GetProxy(&parent_view_container));

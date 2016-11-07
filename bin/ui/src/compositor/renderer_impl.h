@@ -48,7 +48,8 @@ class RendererImpl : public mozart::Renderer,
   void ScheduleFrame(const ScheduleFrameCallback& callback) override;
 
   // |HitTester|:
-  void HitTest(mozart::PointFPtr point, const HitTestCallback& callback) override;
+  void HitTest(mozart::PointFPtr point,
+               const HitTestCallback& callback) override;
 
   CompositorEngine* const engine_;
   RendererState* const state_;

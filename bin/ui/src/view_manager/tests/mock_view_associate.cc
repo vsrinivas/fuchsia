@@ -19,10 +19,9 @@ void MockViewAssociate::Connect(
   callback(std::move(info));
 }
 
-void MockViewAssociate::ConnectToViewService(
-    mozart::ViewTokenPtr view_token,
-    const fidl::String& service_name,
-    mx::channel client_handle) {}
+void MockViewAssociate::ConnectToViewService(mozart::ViewTokenPtr view_token,
+                                             const fidl::String& service_name,
+                                             mx::channel client_handle) {}
 
 void MockViewAssociate::ConnectToViewTreeService(
     mozart::ViewTreeTokenPtr view_tree_token,

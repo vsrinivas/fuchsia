@@ -26,8 +26,8 @@ class ViewTreeImpl : public mozart::ViewTree,
  private:
   // |ViewTree|:
   void GetToken(const GetTokenCallback& callback) override;
-  void GetServiceProvider(
-      fidl::InterfaceRequest<modular::ServiceProvider> service_provider) override;
+  void GetServiceProvider(fidl::InterfaceRequest<modular::ServiceProvider>
+                              service_provider) override;
   void SetRenderer(fidl::InterfaceHandle<mozart::Renderer> renderer) override;
   void GetContainer(fidl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;

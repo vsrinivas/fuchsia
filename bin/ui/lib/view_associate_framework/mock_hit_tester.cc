@@ -12,8 +12,7 @@ MockHitTester::MockHitTester() {}
 
 MockHitTester::~MockHitTester() {}
 
-void MockHitTester::SetNextResult(PointFPtr point,
-                                  HitTestResultPtr result) {
+void MockHitTester::SetNextResult(PointFPtr point, HitTestResultPtr result) {
   FTL_DCHECK(point);
   FTL_DCHECK(result);
 
@@ -21,8 +20,7 @@ void MockHitTester::SetNextResult(PointFPtr point,
   result_ = std::move(result);
 }
 
-void MockHitTester::HitTest(PointFPtr point,
-                            const HitTestCallback& callback) {
+void MockHitTester::HitTest(PointFPtr point, const HitTestCallback& callback) {
   FTL_DCHECK(point);
 
   if (point.Equals(point_)) {
