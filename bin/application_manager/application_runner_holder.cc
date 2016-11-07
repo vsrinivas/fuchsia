@@ -22,7 +22,7 @@ mx::vmo CopyToVMO(int fd) {
   size_t size = st.st_size;
 
   mx::vmo result;
-  if (!mx::vmo::create(size, 0, &result))
+  if (mx::vmo::create(size, 0, &result) != NO_ERROR)
     return mx::vmo();
 
   constexpr size_t kBufferSize = 1 << 16;
@@ -48,8 +48,8 @@ ApplicationRunnerHolder::ApplicationRunnerHolder(
     ServiceProviderPtr services,
     ApplicationControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
-  services->ConnectToService(ApplicationRunner::Name_,
-                             fidl::GetProxy(&runner_).PassMessagePipe());
+  services_->ConnectToService(ApplicationRunner::Name_,
+                              fidl::GetProxy(&runner_).PassMessagePipe());
 }
 
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;

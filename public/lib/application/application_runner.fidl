@@ -69,5 +69,5 @@ interface ApplicationRunner {
   // application to be started.
   StartApplication(ApplicationPackage application,
                    ApplicationStartupInfo startup_info,
-                   ApplicationController& controller);
+                   ApplicationController&? controller);
 };
