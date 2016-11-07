@@ -35,16 +35,24 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // If a FutexWake() operation could occur between them, a userland mutex
     // operation built on top of futexes would have a race condition that
     // could miss wakeups.
-    AutoLock lock(lock_);
+    lock_.Acquire();
 
     UserThread* t = UserThread::GetCurrent();
-    if (t->state() == UserThread::State::DYING || t->state() == UserThread::State::DEAD)
+    if (t->state() == UserThread::State::DYING || t->state() == UserThread::State::DEAD) {
+        lock_.Release();
         return ERR_BAD_STATE;
+    }
 
     int value;
     status_t result = value_ptr.copy_from_user(&value);
-    if (result != NO_ERROR) return result;
-    if (value != current_value) return ERR_BAD_STATE;
+    if (result != NO_ERROR) {
+        lock_.Release();
+        return result;
+    }
+    if (value != current_value) {
+        lock_.Release();
+        return ERR_BAD_STATE;
+    }
 
     node = t->futex_node();
     node->set_hash_key(futex_key);
@@ -52,12 +60,14 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
 
     QueueNodesLocked(node);
 
-    // Block current thread
+    // Block current thread.  This releases lock_ and does not reacquire it.
     result = node->BlockThread(&lock_, timeout);
     if (result == NO_ERROR) {
         // All the work necessary for removing us from the hash table was done by FutexWake()
         return NO_ERROR;
     }
+
+    AutoLock lock(lock_);
     // If we got a timeout, we need to remove the thread's node from the
     // wait queue, since FutexWake() didn't do that.
     if (UnqueueNodeLocked(node)) {

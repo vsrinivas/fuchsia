@@ -29,7 +29,9 @@ void cond_destroy(cond_t *cond)
     THREAD_UNLOCK(state);
 }
 
-status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
+static status_t cond_wait_timeout_internal(cond_t *cond, mutex_t *mutex,
+                                           lk_time_t timeout,
+                                           bool reclaim_mutex)
 {
     DEBUG_ASSERT(cond->magic == COND_MAGIC);
     DEBUG_ASSERT(mutex->magic == MUTEX_MAGIC);
@@ -44,11 +46,23 @@ status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
 
     status_t result = wait_queue_block(&cond->wait, timeout);
 
-    mutex_acquire_timeout_internal(mutex, INFINITE_TIME);
+    if (reclaim_mutex)
+        mutex_acquire_timeout_internal(mutex, INFINITE_TIME);
 
     THREAD_UNLOCK(state);
 
     return result;
+}
+
+status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
+{
+    return cond_wait_timeout_internal(cond, mutex, timeout, true);
+}
+
+status_t cond_wait_timeout_without_reclaim(cond_t *cond, mutex_t *mutex,
+                                           lk_time_t timeout)
+{
+    return cond_wait_timeout_internal(cond, mutex, timeout, false);
 }
 
 void cond_signal(cond_t *cond)

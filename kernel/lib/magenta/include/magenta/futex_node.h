@@ -38,8 +38,6 @@ public:
                                      uintptr_t old_hash_key,
                                      uintptr_t new_hash_key);
 
-    // block the current thread, releasing the given mutex while the thread
-    // is blocked
     status_t BlockThread(Mutex* mutex, mx_time_t timeout);
 
     void WakeKilledThread();
