@@ -29,4 +29,6 @@ source_set("sys_driver") {
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
   ]
+
+  libs = [ "mxio" ]
 }
