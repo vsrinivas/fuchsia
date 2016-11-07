@@ -8,15 +8,15 @@ group("ledger") {
   deps = [
     ":tests",
     "//apps/ledger/api",
-    "//apps/ledger/app",
-    "//apps/ledger/cloud_provider",
-    "//apps/ledger/convert",
-    "//apps/ledger/fake_network_service",
-    "//apps/ledger/firebase",
-    "//apps/ledger/gcs",
-    "//apps/ledger/glue",
     "//apps/ledger/services",
-    "//apps/ledger/storage",
+    "//apps/ledger/src/app",
+    "//apps/ledger/src/cloud_provider",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/fake_network_service",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
+    "//apps/ledger/src/glue",
+    "//apps/ledger/src/storage",
   ]
 }
 
@@ -24,8 +24,8 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//apps/ledger/firebase:unittests",
-    "//apps/ledger/gcs:unittests",
-    "//apps/ledger/glue:unittests",
+    "//apps/ledger/src/firebase:unittests",
+    "//apps/ledger/src/gcs:unittests",
+    "//apps/ledger/src/glue:unittests",
   ]
 }

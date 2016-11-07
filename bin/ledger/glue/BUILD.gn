@@ -1,0 +1,35 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("glue") {
+  sources = [
+    "crypto/base64.cc",
+    "crypto/base64.h",
+    "crypto/hash.cc",
+    "crypto/hash.h",
+    "crypto/rand.cc",
+    "crypto/rand.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/boringssl",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+
+  output_name = "ledger_glue_unittests"
+
+  sources = [
+    "data_pipe/data_pipe_writer_unittest.cc",
+  ]
+
+  deps = [
+    "//apps/ledger/src/glue/data_pipe",
+    "//apps/ledger/src/test",
+    "//third_party/gtest",
+  ]
+}

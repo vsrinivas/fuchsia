@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//mojo/public/mojo_application.gni")
+
+group("fake") {
+  testonly = true
+
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "fake_commit.cc",
+    "fake_commit.h",
+    "fake_journal.cc",
+    "fake_journal.h",
+    "fake_journal_delegate.cc",
+    "fake_journal_delegate.h",
+    "fake_page_storage.cc",
+    "fake_page_storage.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/storage/public",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/glue",
+    "//lib/mtl",
+    "//mojo/public/cpp/system",
+  ]
+}
