@@ -54,30 +54,30 @@ class DeviceRunnerImpl : public DeviceRunner {
 
     // TODO(alhaad): Once we have a better understanding of lifecycle
     // management, revisit this.
-    ConnectToService(shell_, "mojo:story_manager", GetProxy(&story_manager_));
+    ConnectToService(shell_, "mojo:user_runner", GetProxy(&user_runner_));
 
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
     identity->user_id = UserIdentityArray(username);
     // |app_id| must not be null so it will pass mojo validation and must not
     // be empty or we'll get ledger::Status::AUTHENTICATION_ERROR when
-    // StoryManagerImpl calls GetLedger().
+    // UserRunner calls GetLedger().
     // TODO(jimbe): When there's support from the Ledger, open the user here,
     // then pass down a handle that is restricted from opening other users.
     identity->app_id = Array<uint8_t>::New(1);
 
-    story_manager_->Launch(
+    user_runner_->Launch(
         std::move(identity), std::move(view_owner_request), [](bool success) {
-          FTL_LOG(INFO) << "DeviceRunnerImpl::Login() StoryManager.Launch()";
+          FTL_LOG(INFO) << "DeviceRunnerImpl::Login() UserRunner.Launch()";
         });
   }
 
   Shell* const shell_;
   StrongBinding<DeviceRunner> binding_;
 
-  // Interface pointer to the |StoryManager| handle exposed by the Story
-  // Manager. Currently, we maintain a single instance which means that
-  // subsequent logins override previous ones.
-  InterfacePtr<StoryManager> story_manager_;
+  // Interface pointer to the |UserRunner| handle exposed by the User Runner.
+  // Currently, we maintain a single instance which means that subsequent
+  // logins override previous ones.
+  InterfacePtr<UserRunner> user_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerImpl);
 };

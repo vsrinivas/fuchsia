@@ -10,7 +10,7 @@
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/story_runner.mojom.h"
 #include "apps/modular/services/user/user_runner.mojom.h"
-#include "apps/modular/story_manager/session_storage_impl.h"
+#include "apps/modular/user_runner/session_storage_impl.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"

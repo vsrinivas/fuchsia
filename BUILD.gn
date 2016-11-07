@@ -13,7 +13,7 @@ group("modular") {
     "lib/app",
     "services:all",
     "src/application_manager",
-    #"story_manager:all",
     "story_runner:all",
+    #"user_runner:all",
   ]
 }

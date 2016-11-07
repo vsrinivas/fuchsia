@@ -9,8 +9,8 @@
 #include <unordered_set>
 
 #include "apps/modular/services/user/user_runner.mojom.h"
-#include "apps/modular/story_manager/transaction.h"
-#include "apps/modular/story_manager/session_storage_impl.h"
+#include "apps/modular/user_runner/transaction.h"
+#include "apps/modular/user_runner/session_storage_impl.h"
 #include "lib/ftl/macros.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_request.h"

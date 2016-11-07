@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/story_manager/story_provider_impl.h"
+#include "apps/modular/user_runner/story_provider_impl.h"
 
 #include "apps/modular/mojo/array_to_string.h"
-#include "apps/modular/story_manager/story_impl.h"
+#include "apps/modular/user_runner/story_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "mojo/public/cpp/application/connect.h"
 #include "mojo/public/cpp/bindings/array.h"

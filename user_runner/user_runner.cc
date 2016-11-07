@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the story manager mojo app.
+// Implementation of the user runner mojo app.
 
 #include <mojo/system/main.h>
 
 #include "apps/modular/mojo/single_service_application.h"
 #include "apps/modular/services/user/user_runner.mojom.h"
 #include "apps/modular/services/user/user_shell.mojom.h"
-#include "apps/modular/story_manager/story_provider_impl.h"
+#include "apps/modular/user_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
 #include "apps/mozart/services/views/interfaces/view_token.mojom.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -77,22 +77,22 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-class StoryManagerImpl : public StoryManager {
+class UserRunnerImpl : public UserRunner {
  public:
-  StoryManagerImpl(InterfaceHandle<ApplicationConnector> app_connector,
-                   InterfaceRequest<StoryManager> story_manager_request)
-      : binding_(this, std::move(story_manager_request)) {
+  UserRunnerImpl(InterfaceHandle<ApplicationConnector> app_connector,
+                 InterfaceRequest<UserRunner> user_runner_request)
+      : binding_(this, std::move(user_runner_request)) {
     app_connector_.Bind(std::move(app_connector));
   }
 
-  ~StoryManagerImpl() override = default;
+  ~UserRunnerImpl() override = default;
 
  private:
-  // |StoryManager|:
+  // |UserRunner|:
   void Launch(StructPtr<ledger::Identity> identity,
               InterfaceRequest<mozart::ViewOwner> view_owner_request,
               const LaunchCallback& callback) override {
-    FTL_LOG(INFO) << "StoryManagerImpl::Launch()";
+    FTL_LOG(INFO) << "UserRunnerImpl::Launch()";
 
     // Establish connection with Ledger.
     ConnectToService(app_connector_.get(), "mojo:ledger",
@@ -106,7 +106,7 @@ class StoryManagerImpl : public StoryManager {
           ledger = std::move(ledger)
         ](ledger::Status status) mutable {
           if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "StoryManagerImpl::Launch():"
+            FTL_LOG(ERROR) << "UserRunnerImpl::Launch():"
                            << " LedgerFactory.GetLedger() failed:"
                            << " " << LedgerStatusToString(status) << ".";
             callback.Run(false);
@@ -145,21 +145,21 @@ class StoryManagerImpl : public StoryManager {
   }
 
   InterfacePtr<ApplicationConnector> app_connector_;
-  StrongBinding<StoryManager> binding_;
+  StrongBinding<UserRunner> binding_;
   InterfacePtrSet<mozart::ViewProvider> user_shell_ptrs_;
 
   InterfacePtr<UserShell> user_shell_;
 
   InterfacePtr<ledger::LedgerFactory> ledger_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryManagerImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
 
 }  // namespace modular
 
 MojoResult MojoMain(MojoHandle application_request) {
-  modular::SingleServiceApplication<modular::StoryManager,
-                                    modular::StoryManagerImpl>
+  modular::SingleServiceApplication<modular::UserRunner,
+                                    modular::UserRunnerImpl>
       app;
   return mojo::RunApplication(application_request, &app);
 }

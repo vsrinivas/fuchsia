@@ -5,16 +5,16 @@
 group("all") {
   deps = [
     ":dummy_user_shell",
-    ":story_manager",
+    ":user_runner",
   ]
 }
 
-executable("story_manager") {
+executable("user_runner") {
   sources = [
     "session_storage_impl.h",
     "story_impl.cc",
     "story_impl.h",
-    "story_manager.cc",
+    "user_runner.cc",
     "story_provider_impl.cc",
     "story_provider_impl.h",
     "transaction.cc",

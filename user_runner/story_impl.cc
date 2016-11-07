@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/story_manager/story_impl.h"
+#include "apps/modular/user_runner/story_impl.h"
 
-#include "apps/modular/story_manager/story_provider_impl.h"
+#include "apps/modular/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 #include "mojo/public/cpp/application/connect.h"
 

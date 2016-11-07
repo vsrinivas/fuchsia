@@ -7,13 +7,13 @@ module modular;
 import "apps/ledger/api/ledger.mojom";
 import "apps/mozart/services/views/interfaces/view_token.mojom";
 
-// For use by Device Runner to launch a new Story Manager per user.
-[ServiceName="modular.StoryManager"]
-interface StoryManager {
-  // Launches a story manager instance for a user identified by
+// For use by Device Runner to launch a new User Runner per user.
+[ServiceName="modular.UserRunner"]
+interface UserRunner {
+  // Launches a user runner instance for a user identified by
   // |user_id|. Returns false if there is a problem with |user_id| or
   // |Launch| has already been called. If successful, connects to the
-  // view associated with this story manager instance.
+  // view associated with this user runner instance.
   Launch(ledger.Identity user_id, mozart.ViewOwner& view_owner) =>
       (bool success);
 };
@@ -74,8 +74,8 @@ interface StoryWatcher {
 // For use by SysUi to create a new story by URL and to get a list of
 // previously run stories which can be resumed. If |StoryProvider| is
 // closed, all associated |Story| objects will have an undefined
-// behavior. TODO(mesch): Actually they will crash because the story
-// manager impl gets deleted and the story impl still accesses it.
+// behavior. TODO(mesch): Actually they will crash because the user
+// runner impl gets deleted and the story impl still accesses it.
 // Apply same pattern as for Session/Module/Link here.
 interface StoryProvider {
   // Creates a new story by running the module at |url|.
