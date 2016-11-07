@@ -10,9 +10,7 @@
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  std::unique_ptr<compositor::CompositorApp> app;
-  loop.task_runner()->PostTask(
-      [&app] { app = std::make_unique<compositor::CompositorApp>(); });
+  compositor::CompositorApp app;
 
   loop.Run();
   return 0;

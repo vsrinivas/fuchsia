@@ -12,10 +12,7 @@ int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   mtl::MessageLoop loop;
 
-  std::unique_ptr<launcher::LauncherApp> app;
-  loop.task_runner()->PostTask([&app, &command_line] {
-    app = std::make_unique<launcher::LauncherApp>(command_line);
-  });
+  launcher::LauncherApp app(command_line);
 
   loop.Run();
   return 0;

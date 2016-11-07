@@ -10,8 +10,6 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/mozart/lib/view_framework/view_provider_service.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
 
 namespace mozart {
 
@@ -20,18 +18,12 @@ namespace mozart {
 // This is only intended to be used for simple example programs.
 class ViewProviderApp {
  public:
-  explicit ViewProviderApp(ViewFactory factory,
-                           const ftl::RefPtr<ftl::TaskRunner>& task_runner);
+  explicit ViewProviderApp(ViewFactory factory);
   ~ViewProviderApp();
 
  private:
-  void Start();
-
-  ViewFactory factory_;
   std::unique_ptr<modular::ApplicationContext> application_context_;
-  std::unique_ptr<ViewProviderService> service_;
-
-  ftl::WeakPtrFactory<ViewProviderApp> weak_ptr_factory_;
+  ViewProviderService service_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);
 };

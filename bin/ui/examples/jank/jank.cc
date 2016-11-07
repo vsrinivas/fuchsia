@@ -208,15 +208,13 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  mozart::ViewProviderApp app(
-      [](mozart::ViewContext view_context) {
-        return std::make_unique<examples::JankView>(
-            std::move(view_context.view_manager),
-            std::move(view_context.view_owner_request),
-            view_context.application_context
-                ->ConnectToEnvironmentService<fonts::FontProvider>());
-      },
-      loop.task_runner());
+  mozart::ViewProviderApp app([](mozart::ViewContext view_context) {
+    return std::make_unique<examples::JankView>(
+        std::move(view_context.view_manager),
+        std::move(view_context.view_owner_request),
+        view_context.application_context
+            ->ConnectToEnvironmentService<fonts::FontProvider>());
+  });
 
   loop.Run();
   return 0;

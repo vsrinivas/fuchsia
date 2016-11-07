@@ -10,9 +10,7 @@
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  std::unique_ptr<view_manager::ViewManagerApp> app;
-  loop.task_runner()->PostTask(
-      [&app] { app = std::make_unique<view_manager::ViewManagerApp>(); });
+  view_manager::ViewManagerApp app;
 
   loop.Run();
   return 0;

@@ -10,9 +10,7 @@
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  std::unique_ptr<input_manager::InputManagerApp> app;
-  loop.task_runner()->PostTask(
-      [&app] { app = std::make_unique<input_manager::InputManagerApp>(); });
+  input_manager::InputManagerApp app;
 
   loop.Run();
   return 0;

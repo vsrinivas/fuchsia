@@ -17,14 +17,12 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
 
-  mozart::ViewProviderApp app(
-      [&params](mozart::ViewContext view_context) {
-        return std::make_unique<examples::TileView>(
-            std::move(view_context.view_manager),
-            std::move(view_context.view_owner_request),
-            view_context.application_context->launcher().get(), params);
-      },
-      loop.task_runner());
+  mozart::ViewProviderApp app([&params](mozart::ViewContext view_context) {
+    return std::make_unique<examples::TileView>(
+        std::move(view_context.view_manager),
+        std::move(view_context.view_owner_request),
+        view_context.application_context->launcher().get(), params);
+  });
 
   loop.Run();
   return 0;

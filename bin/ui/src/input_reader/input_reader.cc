@@ -25,7 +25,7 @@ namespace mozart {
 namespace input {
 
 InputReader::InputReader(InputInterpreter* interpreter)
-    : interpreter_(interpreter) {}
+    : interpreter_(interpreter), main_loop_(mtl::MessageLoop::GetCurrent()) {}
 
 InputReader::~InputReader() {
   if (input_directory_key_) {
@@ -90,8 +90,6 @@ void InputReader::MonitorDirectory() {
 }
 
 void InputReader::Start() {
-  main_loop_ = mtl::MessageLoop::GetCurrent();
-
   // Check content of /dev/input and add handle to monitor changes
   main_loop_->task_runner()->PostTask([this] { MonitorDirectory(); });
 }

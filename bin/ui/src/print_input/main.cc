@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   interpreter.RegisterCallback(
       [](mozart::EventPtr event) { FTL_LOG(INFO) << *(event.get()); });
   mozart::input::InputReader reader(&interpreter);
-  message_loop.task_runner()->PostTask([&reader] { reader.Start(); });
+  reader.Start();
 
   message_loop.Run();
   return 0;

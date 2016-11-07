@@ -138,9 +138,7 @@ class HelloApp {
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  std::unique_ptr<examples::HelloApp> app;
-  loop.task_runner()->PostTask(
-      [&app] { app = std::make_unique<examples::HelloApp>(); });
+  examples::HelloApp app;
 
   loop.Run();
   return 0;

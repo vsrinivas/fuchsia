@@ -177,13 +177,11 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  mozart::ViewProviderApp app(
-      [](mozart::ViewContext view_context) {
-        return std::make_unique<examples::PaintView>(
-            std::move(view_context.view_manager),
-            std::move(view_context.view_owner_request));
-      },
-      loop.task_runner());
+  mozart::ViewProviderApp app([](mozart::ViewContext view_context) {
+    return std::make_unique<examples::PaintView>(
+        std::move(view_context.view_manager),
+        std::move(view_context.view_owner_request));
+  });
 
   loop.Run();
   return 0;
