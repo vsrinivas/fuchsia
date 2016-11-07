@@ -17,9 +17,8 @@ namespace modular {
 
 using document_store::Document;
 using document_store::DocumentPtr;
-using document_store::Property;
-using document_store::PropertyPtr;
 using document_store::Value;
+using document_store::ValuePtr;
 
 using modular::DocumentEditor;
 using modular::MojoDocMap;
@@ -54,42 +53,6 @@ struct SharedLinkImplData {
 
   MOJO_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
 };
-
-namespace {
-
-using DocIndex =
-    std::map<std::pair<const std::string&, const std::string&>, Value*>;
-
-DocIndex IndexDocIdToDocMap(const MojoDocMap& docs_map) {
-  DocIndex index;
-  for (auto doc_it = docs_map.cbegin(); doc_it != docs_map.cend(); ++doc_it) {
-    Array<PropertyPtr>& props =
-        const_cast<Array<PropertyPtr>&>(doc_it.GetValue()->properties);
-
-    for (auto& p : props) {
-      index[std::make_pair(doc_it.GetKey(), p->property)] = p->value.get();
-    }
-  }
-
-  return index;
-}
-
-bool Equal(const MojoDocMap& docs_map1, const MojoDocMap& docs_map2) {
-  if (docs_map1.size() != docs_map2.size()) {
-    return false;
-  }
-
-  DocIndex index1 = IndexDocIdToDocMap(docs_map1);
-  DocIndex index2 = IndexDocIdToDocMap(docs_map2);
-
-  return std::equal(
-      index1.begin(), index1.end(), index2.begin(),
-      [](const DocIndex::value_type& p1, const DocIndex::value_type& p2) {
-        return p1.first == p2.first && p1.second->Equals(*p2.second);
-      });
-}
-
-}  // namespace
 
 LinkImpl::LinkImpl(std::shared_ptr<SessionPage> page,
                    const mojo::String& name,
@@ -204,11 +167,15 @@ void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
       dirty = true;
     } else {
       // Docid does exist. Add or update the individual properties.
-      for (auto& p : add_doc.second->properties) {
-        Value* v = editor.GetValue(p->property);
-        if (!v || !v->Equals(*p->value)) {
+      auto& new_props = add_doc.second->properties;
+      for (auto it = new_props.begin(); it != new_props.end(); ++it) {
+        const std::string& new_key = it.GetKey();
+        ValuePtr& new_value = it.GetValue();
+
+        Value* old_value = editor.GetValue(new_key);
+        if (!old_value || !new_value->Equals(*old_value)) {
           dirty = true;
-          editor.SetProperty(std::move(p));
+          editor.SetProperty(new_key, std::move(new_value));
         }
       }
       editor.TakeDocument(&shared_->docs_map[editor.docid()]);
@@ -226,7 +193,7 @@ void LinkImpl::SetAllDocuments(MojoDocMap new_docs) {
   FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() " << shared_->name << " "
                 << new_docs;
 
-  bool dirty = !Equal(new_docs, shared_->docs_map);
+  bool dirty = !new_docs.Equals(shared_->docs_map);
   if (dirty) {
     shared_->docs_map.Swap(&new_docs);
     DatabaseChanged(shared_->docs_map);

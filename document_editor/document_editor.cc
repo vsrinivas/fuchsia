@@ -15,8 +15,6 @@ namespace modular {
 
 using document_store::Document;
 using document_store::DocumentPtr;
-using document_store::Property;
-using document_store::PropertyPtr;
 using document_store::Statement;
 using document_store::StatementPtr;
 using document_store::Value;
@@ -34,9 +32,9 @@ DocumentEditor::DocumentEditor(Document* const doc) : doc_(doc) {}
 
 DocumentEditor::DocumentEditor(const std::string& docid) {
   newdoc_ = Document::New();
-  newdoc_->properties = MojoPropertyArray::New(0);
   newdoc_->docid = docid;
   doc_ = newdoc_.get();
+  doc_->properties.mark_non_null();
 }
 
 void DocumentEditor::Reset() {
@@ -45,11 +43,11 @@ void DocumentEditor::Reset() {
 }
 
 Value* DocumentEditor::GetValue(const std::string& property) {
-  for (auto& p : doc_->properties) {
-    if (p->property == property)
-      return p->value.get();
-  }
-  return nullptr;
+  auto p = doc_->properties.find(property);
+  if (p == doc_->properties.end())
+    return nullptr;
+
+  return p.GetValue().get();
 }
 
 bool DocumentEditor::Edit(const std::string& docid, MojoDocMap* const docs) {
@@ -77,47 +75,17 @@ void DocumentEditor::Insert(MojoDocMap* const docs) {
   (*docs)[newdoc_->docid] = std::move(newdoc_);
 }
 
-DocumentEditor& DocumentEditor::SetProperty(PropertyPtr new_property) {
-  for (auto& p : doc_->properties) {
-    if (p->property == new_property->property) {
-      // Note: it's valid for new_property->value to be null.
-      std::swap(p, new_property);
-      return *this;
-    }
-  }
-  doc_->properties.push_back(std::move(new_property));
-  return *this;
-}
-
 DocumentEditor& DocumentEditor::SetProperty(const std::string& property_label,
                                             StructPtr<Value> value) {
-  auto property = document_store::Property::New();
-  property->property = property_label;
-  property->value = std::move(value);
-  SetProperty(std::move(property));
+  doc_->properties[property_label] = std::move(value);
   return *this;
-}
-
-void DocumentEditor::RemoveProperty(const Property& del_property) {
-  for (auto& p : doc_->properties) {
-    if (p->Equals(del_property)) {
-      int last = doc_->properties.size() - 1;
-      std::swap(p, doc_->properties[last]);
-      doc_->properties.resize(last);
-      return;
-    }
-  }
 }
 
 void DocumentEditor::RemoveProperty(const std::string& property_label) {
-  std::vector<PropertyPtr> vec;
-  doc_->properties.Swap(&vec);
-  auto it = std::remove_if(vec.begin(), vec.end(),
-                           [&property_label](const PropertyPtr& p) {
-                             return (p->property == property_label);
-                           });
-  vec.erase(it, vec.end());
-  doc_->properties.Swap(&vec);
+  std::map<MojoPropertyMap::KeyType, MojoPropertyMap::ValueType> props;
+  doc_->properties.Swap(&props);
+  props.erase(property_label);
+  doc_->properties.Swap(&props);
 }
 
 ValuePtr DocumentEditor::NewIntValue(int64_t int_val) {
@@ -144,14 +112,12 @@ ValuePtr DocumentEditor::NewIriValue(const std::string& iri) {
   return value;
 }
 
-std::ostream& operator<<(std::ostream& os, const MojoPropertyArray& props) {
+std::ostream& operator<<(std::ostream& os, const MojoPropertyMap& props) {
   if (props.size() == 0)
     os << std::endl << "  (No properties)";
-  // Cast away const because there's no "const" member function of begin() for
-  // the range-based for loop, nor is there a cbegin().
-  for (const auto& prop : const_cast<MojoPropertyArray&>(props)) {
-    Value* v = prop->value.get();
-    os << std::endl << "  " << prop->property << ": " << v;
+  for (auto it = props.cbegin(); it != props.cend(); ++it) {
+    Value* v = it.GetValue().get();
+    os << std::endl << "  " << it.GetKey() << ": " << v;
   }
   return os;
 }

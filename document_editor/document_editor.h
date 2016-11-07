@@ -14,7 +14,7 @@ namespace modular {
 
 using MojoDocMap = mojo::Map<mojo::String, document_store::DocumentPtr>;
 using DocMap = std::map<mojo::String, document_store::DocumentPtr>;
-using MojoPropertyArray = mojo::Array<document_store::PropertyPtr>;
+using MojoPropertyMap = mojo::Map<mojo::String, document_store::ValuePtr>;
 
 // Wrapper class to make it easier to work with Document objects and all
 // of the nested StructPtr's. This class will evolve to support:
@@ -59,15 +59,14 @@ class DocumentEditor {
   // Add the given property to the Document. Duplicates are currently not
   // ignored. Multiple properties of the same property name are theoretically
   // allowed, but are not currently handled.
-  DocumentEditor& SetProperty(document_store::PropertyPtr property);
-
   DocumentEditor& SetProperty(const std::string& property_label,
                               document_store::ValuePtr value);
 
   // Remove the given label/value from the Document. Both the property name
   // and the value must be matched, otherwise do nothing.
   // The Document may have no properties when this function completes.
-  void RemoveProperty(const document_store::Property& property);
+  void RemoveProperty(const std::string& property_label,
+                      document_store::ValuePtr value);
 
   // Remove all instances of the given property from the Document.
   // Do nothing if there property is not found.
