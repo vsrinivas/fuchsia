@@ -142,14 +142,6 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }
 
-ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
 int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }

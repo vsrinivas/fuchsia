@@ -366,3 +366,52 @@ int setsockopt(int fd, int level, int optname, const void* optval,
     mxio_release(io);
     return STATUS(r);
 }
+
+ssize_t send(int fd, const void* buf, size_t len, int flags) {
+    // TODO: support flags
+    return write(fd, buf, len);
+}
+
+ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
+    // TODO: support flags and control messages
+    //       make this atomic for datagrams
+    ssize_t total = 0;
+    for (int i = 0; i < msg->msg_iovlen; i++) {
+        struct iovec *iov = &msg->msg_iov[i];
+        if (iov->iov_len <= 0) {
+            return ERRNO(EINVAL);
+        }
+        ssize_t n = write(fd, iov->iov_base, iov->iov_len);
+        if (n < 0) {
+            return -1;
+        }
+        total += n;
+        if ((size_t)n != iov->iov_len) {
+            break;
+        }
+    }
+    return total;
+}
+
+ssize_t recv(int fd, void* buf, size_t len, int flags) {
+    // TODO: support flags
+    return read(fd, buf, len);
+}
+
+ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
+    // TODO: support flags and control messages
+    ssize_t total = 0;
+    for (int i = 0; i < msg->msg_iovlen; i++) {
+        struct iovec *iov = &msg->msg_iov[i];
+        ssize_t n = read(fd, iov->iov_base, iov->iov_len);
+        if (n < 0) {
+            return -1;
+        }
+        total += n;
+        if ((size_t)n != iov->iov_len) {
+            break;
+        }
+    }
+    return total;
+}
+
