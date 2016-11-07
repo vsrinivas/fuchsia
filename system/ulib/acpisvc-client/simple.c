@@ -24,12 +24,16 @@ static mx_status_t wait_for_message(
     void** response, size_t* len,
     mx_handle_t* handles, size_t* num_handles) {
 
+    mx_signals_t pending;
     mx_status_t status = mx_handle_wait_one(h,
-                                            MX_SIGNAL_READABLE,
+                                            MX_SIGNAL_READABLE|MX_SIGNAL_PEER_CLOSED,
                                             MX_TIME_INFINITE,
-                                            NULL);
+                                            &pending);
     if (status != NO_ERROR) {
         return status;
+    }
+    if (pending & MX_SIGNAL_PEER_CLOSED) {
+        return ERR_REMOTE_CLOSED;
     }
 
     uint32_t rsp_len = 0;
