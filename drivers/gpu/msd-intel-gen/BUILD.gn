@@ -4,11 +4,15 @@
 
 import("//magma/gnbuild/magma.gni")
 
+shared_ldflags = "-Wl,--no-undefined"
+
 shared_library("msd-intel-gen") {
   deps = [
     "$magma_build_root/src/main",
     "src",
   ]
+
+  ldflags = [ "$shared_ldflags" ]
 }
 
 shared_library("test") {
@@ -20,12 +24,16 @@ shared_library("test") {
     "$magma_build_root/src/main:test_driver",
     "src",
   ]
+
+  ldflags = [ "$shared_ldflags" ]
 }
 
 group("gtest") {
   testonly = true
-  
-  deps = [ "tests/unit_tests:msd_unit_tests" ]
+
+  deps = [
+    "tests/unit_tests:msd_unit_tests",
+  ]
 }
 
 # This config allows inclusion of headers via relative paths
