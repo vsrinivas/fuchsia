@@ -282,6 +282,11 @@ include make/recurse.mk
 # host tools
 include system/tools/build.mk
 
+# bootloader (x86-64 only for now)
+ifeq ($(ARCH),x86)
+include bootloader/build.mk
+endif
+
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
 	@echo generating $@
