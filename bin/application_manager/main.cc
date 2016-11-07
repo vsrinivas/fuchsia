@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apps/modular/src/application_manager/command_listener.h"
 #include "apps/modular/src/application_manager/root_environment_host.h"
 #include "apps/modular/src/application_manager/startup_config.h"
 #include "lib/ftl/command_line.h"
@@ -77,6 +78,14 @@ int main(int argc, char** argv) {
         root.environment()->CreateApplication(std::move(launch_info), nullptr);
       }
     });
+  }
+
+  std::unique_ptr<CommandListener> command_listener;
+  mx::channel command_channel(
+      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_LAUNCHER));
+  if (command_channel) {
+    command_listener.reset(
+        new CommandListener(root.environment(), std::move(command_channel)));
   }
 
   message_loop.Run();

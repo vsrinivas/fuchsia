@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 executable("application_manager") {
-  output_name = "new_application_manager"
-
   sources = [
     "application_controller_impl.cc",
     "application_controller_impl.h",
@@ -14,6 +12,8 @@ executable("application_manager") {
     "application_environment_impl.h",
     "application_runner_holder.cc",
     "application_runner_holder.h",
+    "command_listener.cc",
+    "command_listener.h",
     "main.cc",
     "root_environment_host.cc",
     "root_environment_host.h",
