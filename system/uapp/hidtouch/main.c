@@ -285,14 +285,14 @@ int main(int argc, char* argv[]) {
     if (ret < 0) {
         printf("could not set active console: %zd\n", ret);
         // not a fatal error
-        printf("press f1/f2 to switch consoles\n");
+        printf("press Alt-Tab to switch consoles\n");
     }
 
     clear_screen((void*)fbo, &fb);
     while (1) {
         ssize_t r = read(touchfd, buf, max_rpt_sz);
         if (r < 0) {
-            printf("touchscreen read error: %zd\n", r);
+            printf("touchscreen read error: %zd (errno=%d)\n", r, errno);
             break;
         }
         if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
@@ -302,6 +302,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    free(buf);
     free(rpt_desc);
     close(touchfd);
     _mx_process_unmap_vm(mx_process_self(), fbo, size);

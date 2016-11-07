@@ -223,9 +223,9 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
     if (hid->root->num_reports > 1) {
         ssize_t r = mx_hid_fifo_peek(&hid->fifo, &rpt_id);
         if (r < 1) {
-            printf("error reading hid device: fifo empty!\n");
+            // fifo is empty
             mtx_unlock(&hid->fifo.lock);
-            return ERR_BAD_STATE;
+            return ERR_SHOULD_WAIT;
         }
     }
     xfer = hid_get_report_size_by_id(hid->root, rpt_id, INPUT_REPORT_INPUT);
@@ -255,7 +255,7 @@ static ssize_t hid_read_instance(mx_device_t* dev, void* buf, size_t count, mx_o
         device_state_clr(&hid->dev, DEV_STATE_READABLE);
     }
     mtx_unlock(&hid->fifo.lock);
-    return r;
+    return r ? r : (ssize_t)ERR_SHOULD_WAIT;
 }
 
 static ssize_t hid_ioctl_instance(mx_device_t* dev, uint32_t op,

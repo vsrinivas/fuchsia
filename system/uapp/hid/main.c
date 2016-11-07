@@ -193,6 +193,7 @@ static int hid_input_thread(void* arg) {
         mtx_lock(&print_lock);
         printf("read returned %d\n", r);
         if (r < 0) {
+            printf("read errno=%d\n", errno);
             mtx_unlock(&print_lock);
             break;
         }
