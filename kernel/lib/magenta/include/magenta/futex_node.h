@@ -25,8 +25,13 @@ public:
     FutexNode(const FutexNode &) = delete;
     FutexNode& operator=(const FutexNode &) = delete;
 
+    bool IsInQueue() const;
+    void SetAsSingletonList();
+
     // adds a list of nodes to our tail
     void AppendList(FutexNode* head);
+
+    static FutexNode* RemoveNodeFromList(FutexNode* list_head, FutexNode* node);
 
     static FutexNode* RemoveFromHead(FutexNode* list_head,
                                      uint32_t count,
@@ -42,22 +47,6 @@ public:
     // wakes the list of threads starting with node |head|
     static void WakeThreads(FutexNode* head);
 
-    FutexNode* next() const {
-        return next_;
-    }
-
-    void set_next(FutexNode* node) {
-        next_ = node;
-    }
-
-    FutexNode* tail() const {
-        return tail_;
-    }
-
-    void set_tail(FutexNode* tail) {
-        tail_ = tail;
-    }
-
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;
     }
@@ -67,6 +56,11 @@ public:
     static size_t GetHash(uintptr_t key) { return (key >> 3); }
 
 private:
+    static void RelinkAsAdjacent(FutexNode* node1, FutexNode* node2);
+    static void SpliceNodes(FutexNode* node1, FutexNode* node2);
+
+    void MarkAsNotInQueue();
+
     // hash_key_ contains the futex address.  This field has two roles:
     //  * It is used by FutexWait() to determine which queue to remove the
     //    thread from when a wait operation times out.
@@ -78,10 +72,11 @@ private:
     // condition variable used for blocking our containing thread on
     cond_t condvar_;
 
-    // for list of threads blocked on a futex
-    FutexNode* next_;
-
-    // tail node of the node list
-    // only valid if this node is the list head
-    FutexNode* tail_;
+    // queue_prev_ and queue_next_ are used for maintaining a circular
+    // doubly-linked list of threads that are waiting on one futex address.
+    //  * When the list contains only this node, queue_prev_ and
+    //    queue_next_ both point back to this node.
+    //  * When the thread is not waiting on a futex, queue_next_ is null.
+    FutexNode* queue_prev_ = nullptr;
+    FutexNode* queue_next_ = nullptr;
 };

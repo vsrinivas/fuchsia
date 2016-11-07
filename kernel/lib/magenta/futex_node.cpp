@@ -12,7 +12,7 @@
 
 #define LOCAL_TRACE 0
 
-FutexNode::FutexNode() : next_(nullptr), tail_(nullptr) {
+FutexNode::FutexNode() {
     LTRACE_ENTRY;
 
     cond_init(&condvar_);
@@ -24,12 +24,43 @@ FutexNode::~FutexNode() {
     cond_destroy(&condvar_);
 }
 
+bool FutexNode::IsInQueue() const {
+    DEBUG_ASSERT((queue_next_ == nullptr) == (queue_prev_ == nullptr));
+    return queue_next_ != nullptr;
+}
+
+void FutexNode::SetAsSingletonList() {
+    DEBUG_ASSERT(!IsInQueue());
+    queue_prev_ = this;
+    queue_next_ = this;
+}
+
 void FutexNode::AppendList(FutexNode* head) {
-    // tail of blocked thread list must be non-null and must have null next_ pointer
-    DEBUG_ASSERT(tail_ != nullptr);
-    DEBUG_ASSERT(tail_->next_ == nullptr);
-    tail_->next_ = head;
-    tail_ = head->tail();
+    SpliceNodes(this, head);
+}
+
+// This removes |node| from the list whose first node is |list_head|.  This
+// returns the new list head, or nullptr if the list has become empty.
+FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
+                                         FutexNode* node) {
+    if (node->queue_next_ == node) {
+        DEBUG_ASSERT(node->queue_prev_ == node);
+        // This list is a singleton, so after removing the node, the list
+        // becomes empty.
+        list_head = nullptr;
+    } else {
+        if (node == list_head) {
+            // This node is the list head, so adjust the list head to be
+            // the next node.
+            list_head = node->queue_next_;
+        }
+
+        // Remove the node from the list.
+        node->queue_next_->queue_prev_ = node->queue_prev_;
+        node->queue_prev_->queue_next_ = node->queue_next_;
+    }
+    node->MarkAsNotInQueue();
+    return list_head;
 }
 
 // This removes up to |count| nodes from |list_head|.  It returns the new
@@ -46,20 +77,23 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
     ASSERT(count != 0);
 
     FutexNode* node = list_head;
-    FutexNode* last = nullptr;
-    for (uint32_t i = 0; i < count && node != nullptr; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         DEBUG_ASSERT(node->GetKey() == old_hash_key);
         // For requeuing, update the key so that FutexWait() can remove the
         // thread from its current queue if the wait operation times out.
         node->set_hash_key(new_hash_key);
 
-        last = node;
-        node = node->next_;
+        node = node->queue_next_;
+        if (node == list_head) {
+            // We have reached the end of the list, so we are removing all
+            // the entries from the list.  Return an empty list of
+            // remaining nodes.
+            return nullptr;
+        }
     }
 
-    if (node != nullptr) node->tail_ = list_head->tail_;
-    last->next_ = nullptr;
-    list_head->tail_ = last;
+    // Split the list into two lists.
+    SpliceNodes(list_head, node);
     return node;
 }
 
@@ -74,8 +108,39 @@ void FutexNode::WakeKilledThread() {
 }
 
 void FutexNode::WakeThreads(FutexNode* head) {
-    while (head != nullptr) {
-        cond_signal(&head->condvar_);
-        head = head->next_;
-    }
+    if (!head)
+        return;
+    FutexNode* node = head;
+    do {
+        FutexNode* next = node->queue_next_;
+        cond_signal(&node->condvar_);
+        node->MarkAsNotInQueue();
+        node = next;
+    } while (node != head);
+}
+
+// Set |node1| and |node2|'s list pointers so that |node1| is immediately
+// before |node2| in the linked list.
+void FutexNode::RelinkAsAdjacent(FutexNode* node1, FutexNode* node2) {
+    node1->queue_next_ = node2;
+    node2->queue_prev_ = node1;
+}
+
+// If |node1| and |node2| are separate lists, this combines them into one
+// list.  If |node1| and |node2| are different nodes in the same list, this
+// splits them into two separate lists.  (This operation happens to be a
+// self-inverse.)
+void FutexNode::SpliceNodes(FutexNode* node1, FutexNode* node2) {
+    FutexNode* node1_prev = node1->queue_prev_;
+    FutexNode* node2_prev = node2->queue_prev_;
+    RelinkAsAdjacent(node1_prev, node2);
+    RelinkAsAdjacent(node2_prev, node1);
+}
+
+void FutexNode::MarkAsNotInQueue() {
+    queue_next_ = nullptr;
+    // Unsetting queue_prev_ stops us from following an outdated pointer in
+    // case we make a mistake with list manipulation.  Otherwise, it is
+    // only required by the assertion in IsInQueue().
+    queue_prev_ = nullptr;
 }

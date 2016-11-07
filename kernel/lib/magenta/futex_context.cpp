@@ -48,8 +48,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
 
     node = t->futex_node();
     node->set_hash_key(futex_key);
-    node->set_next(nullptr);
-    node->set_tail(node);
+    node->SetAsSingletonList();
 
     QueueNodesLocked(node);
 
@@ -218,45 +217,19 @@ void FutexContext::QueueNodesLocked(FutexNode* head) {
 bool FutexContext::UnqueueNodeLocked(FutexNode* node) {
     DEBUG_ASSERT(lock_.IsHeld());
 
+    if (!node->IsInQueue())
+        return false;
+
     // Note: When UnqueueNode() is called from FutexWait(), it might be
     // tempting to reuse the futex key that was passed to FutexWait().
     // However, that could be out of date if the thread was requeued by
     // FutexRequeue(), so we need to re-get the hash table key here.
     uintptr_t futex_key = node->GetKey();
 
-    auto list_head_iter = futex_table_.find(futex_key);
-    if (list_head_iter.IsValid()) {
-        FutexNode& list_head = *list_head_iter;
-        FutexNode* test = &list_head;
-        FutexNode* prev = nullptr;
-        while (test) {
-            DEBUG_ASSERT(test->GetKey() == futex_key);
-            FutexNode* next = test->next();
-            if (test == node) {
-                if (prev) {
-                    // unlink from linked list
-                    prev->set_next(next);
-                    if (!next) {
-                        // We have removed the last element, so we need to
-                        // update the tail pointer.
-                        list_head.set_tail(prev);
-                    }
-                } else {
-                    // reset head of futex
-                    futex_table_.erase(futex_key);
-                    if (next) {
-                        next->set_tail(list_head.tail());
-                        DEBUG_ASSERT(next->GetKey() == futex_key);
-                        futex_table_.insert(next);
-                    }
-                }
-                // The node was found and removed.
-                return true;
-            }
-            prev = test;
-            test = next;
-        }
-    }
-    // The node was not found and so didn't need to be removed.
-    return false;
+    FutexNode* old_head = futex_table_.erase(futex_key);
+    DEBUG_ASSERT(old_head);
+    FutexNode* new_head = FutexNode::RemoveNodeFromList(old_head, node);
+    if (new_head)
+        futex_table_.insert(new_head);
+    return true;
 }
