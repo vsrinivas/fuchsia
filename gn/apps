@@ -5,7 +5,8 @@
         "//apps/document_store",
         "//apps/logging",
         "//apps/maxwell",
-        "//apps/modular"
+        "//apps/modular",
+        "//apps/modular/examples/hello_app"
     ],
     "binaries": [
         {
@@ -45,10 +46,17 @@
             "bootfs_path": "apps/dummy_device_shell"
         },
         {
+            "binary": "hello_app_child",
+            "bootfs_path": "apps/hello_app_child"
+        },
+        {
+            "binary": "hello_app_parent",
+            "bootfs_path": "apps/hello_app_parent"
+        },
+        {
             "binary": "hello_dart.dartx",
             "bootfs_path": "apps/hello_dart.dartx"
         },
-
         {
             "binary": "logging",
             "bootfs_path": "apps/logging"
