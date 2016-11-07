@@ -13,7 +13,7 @@ DataPipeDrainerClient::DataPipeDrainerClient() : drainer_(this) {}
 DataPipeDrainerClient::~DataPipeDrainerClient() {}
 
 void DataPipeDrainerClient::Start(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     const std::function<void(std::string)>& callback) {
   callback_ = callback;
   drainer_.Start(std::move(source));

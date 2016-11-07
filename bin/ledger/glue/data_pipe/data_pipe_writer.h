@@ -8,38 +8,37 @@
 #include <memory>
 #include <string>
 
-#include <mojo/environment/async_waiter.h>
-
+#include "lib/fidl/c/waiter/async_waiter.h"
+#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/environment/environment.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace glue {
 
 // Deletes itself when the data pipe is closed or the write is completed.
 class DataPipeWriter {
  public:
-  DataPipeWriter(const MojoAsyncWaiter* waiter =
-                     mojo::Environment::GetDefaultAsyncWaiter());
+  DataPipeWriter(const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
   ~DataPipeWriter();
 
-  void Start(const std::string& data,
-             mojo::ScopedDataPipeProducerHandle destination);
+  void Start(const std::string& data, mx::datapipe_producer destination);
 
  private:
   void WriteData();
   void WaitForPipe();
-  static void WaitComplete(void* context, MojoResult result);
+  static void WaitComplete(mx_status_t result,
+                           mx_signals_t pending,
+                           void* context);
   void Done();
 
   void* buffer_ = nullptr;
-  uint32_t buffer_size_ = 0u;
+  mx_size_t buffer_size_ = 0u;
   std::string data_;
   // Position of the next byte in |data_| to be written.
   size_t offset_ = 0u;
-  mojo::ScopedDataPipeProducerHandle destination_;
-  const MojoAsyncWaiter* waiter_;
-  MojoAsyncWaitID wait_id_ = 0;
+  mx::datapipe_producer destination_;
+  const FidlAsyncWaiter* waiter_;
+  FidlAsyncWaitID wait_id_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeWriter);
 };

@@ -180,6 +180,7 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
                   });
   page.reset();
   message_loop_.Run();
+  message_loop_.Run();
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());

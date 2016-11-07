@@ -7,7 +7,6 @@
 #include "apps/ledger/src/app/ledger_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
-#include "mojo/public/cpp/application/connect.h"
 
 namespace ledger {
 
@@ -41,10 +40,10 @@ LedgerFactoryImpl::~LedgerFactoryImpl() {}
 
 // GetLedger(Identity identity) => (Status status, Ledger? ledger);
 void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
-                                  mojo::InterfaceRequest<Ledger> ledger_request,
+                                  fidl::InterfaceRequest<Ledger> ledger_request,
                                   const GetLedgerCallback& callback) {
   if (identity->user_id.size() == 0 || identity->app_id.size() == 0) {
-    callback.Run(Status::AUTHENTICATION_ERROR);
+    callback(Status::AUTHENTICATION_ERROR);
     return;
   }
 
@@ -52,7 +51,7 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
   auto it = ledger_managers_.find(identity);
   if (it != ledger_managers_.end()) {
     it->second->BindLedger(std::move(ledger_request));
-    callback.Run(Status::OK);
+    callback(Status::OK);
     return;
   }
 
@@ -67,7 +66,7 @@ void LedgerFactoryImpl::GetLedger(IdentityPtr identity,
       std::move(identity),
       std::make_unique<LedgerManager>(std::move(ledger_storage))));
   ret.first->second->BindLedger(std::move(ledger_request));
-  callback.Run(Status::OK);
+  callback(Status::OK);
 }
 
 }  // namespace ledger

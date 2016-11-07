@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/ledger/src/gcs/cloud_storage.h"
-#include "apps/network/interfaces/network_service.mojom.h"
+#include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace gcs {
@@ -17,7 +17,7 @@ namespace gcs {
 class CloudStorageImpl : public CloudStorage {
  public:
   CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                   mojo::NetworkServicePtr network_service,
+                   network::NetworkServicePtr network_service,
                    const std::string& bucket_name);
   ~CloudStorageImpl() override;
 
@@ -31,24 +31,24 @@ class CloudStorageImpl : public CloudStorage {
 
  private:
   void Request(
-      mojo::URLRequestPtr request,
-      const std::function<void(Status status, mojo::URLResponsePtr response)>&
-          callback);
+      network::URLRequestPtr request,
+      const std::function<void(Status status,
+                               network::URLResponsePtr response)>& callback);
   void OnResponse(
-      const std::function<void(Status status, mojo::URLResponsePtr response)>&
-          callback,
-      mojo::URLLoader* url_loader,
-      mojo::URLResponsePtr response);
+      const std::function<void(Status status,
+                               network::URLResponsePtr response)>& callback,
+      network::URLLoader* url_loader,
+      network::URLResponsePtr response);
 
   void OnDownloadResponseReceived(const std::string& destination,
                                   const std::function<void(Status)>& callback,
                                   Status status,
-                                  mojo::URLResponsePtr response);
+                                  network::URLResponsePtr response);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  mojo::NetworkServicePtr network_service_;
+  network::NetworkServicePtr network_service_;
   std::string bucket_name_;
-  std::vector<mojo::URLLoaderPtr> loaders_;
+  std::vector<network::URLLoaderPtr> loaders_;
 };
 
 }  // gcs

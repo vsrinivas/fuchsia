@@ -10,14 +10,14 @@
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/mtl/shared_buffer/strings.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
 namespace {
 Status ToBuffer(convert::ExtendedStringView value,
                 int64_t offset,
                 int64_t max_size,
-                mojo::ScopedSharedBufferHandle* buffer) {
+                mx::vmo* buffer) {
   size_t start = value.size();
   // Valid indices are between -N and N-1.
   if (offset >= -static_cast<int64_t>(value.size()) &&
@@ -26,8 +26,7 @@ Status ToBuffer(convert::ExtendedStringView value,
   }
   size_t length = max_size < 0 ? value.size() : max_size;
 
-  bool result =
-      mtl::SharedBufferFromString(value.substr(start, length), buffer);
+  bool result = mtl::VmoFromString(value.substr(start, length), buffer);
   return result ? Status::OK : Status::UNKNOWN_ERROR;
 }
 
@@ -90,7 +89,7 @@ void PageUtils::GetReferenceAsValuePtr(
           return;
         }
 
-        mojo::ScopedSharedBufferHandle buffer;
+        mx::vmo buffer;
         Status buffer_status = ToBuffer(data, 0, -1, &buffer);
         if (buffer_status != Status::OK) {
           callback(buffer_status, nullptr);
@@ -107,18 +106,18 @@ void PageUtils::GetPartialReferenceAsBuffer(
     convert::ExtendedStringView reference_id,
     int64_t offset,
     int64_t max_size,
-    std::function<void(Status, mojo::ScopedSharedBufferHandle)> callback) {
+    std::function<void(Status, mx::vmo)> callback) {
   GetReferenceAsStringView(
       storage, reference_id,
       [offset, max_size, callback](Status status, ftl::StringView data) {
         if (status != Status::OK) {
-          callback(status, mojo::ScopedSharedBufferHandle());
+          callback(status, mx::vmo());
           return;
         }
-        mojo::ScopedSharedBufferHandle buffer;
+        mx::vmo buffer;
         Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
         if (buffer_status != Status::OK) {
-          callback(buffer_status, mojo::ScopedSharedBufferHandle());
+          callback(buffer_status, mx::vmo());
           return;
         }
         callback(Status::OK, std::move(buffer));

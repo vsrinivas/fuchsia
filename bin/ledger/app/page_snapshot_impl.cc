@@ -89,21 +89,21 @@ PageSnapshotImpl::PageSnapshotImpl(
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
-                                  mojo::Array<uint8_t> token,
+void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
+                                  fidl::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
   ftl::RefPtr<Waiter<const storage::Object>> waiter(
       ftl::AdoptRef(new Waiter<const storage::Object>()));
-  mojo::Array<EntryPtr> entries = mojo::Array<EntryPtr>::New(0);
+  fidl::Array<EntryPtr> entries = fidl::Array<EntryPtr>::New(0);
 
   while (it->Valid() &&
          convert::ExtendedStringView((*it)->key).substr(0, key_prefix.size()) ==
              convert::ExtendedStringView(key_prefix)) {
     EntryPtr entry = Entry::New();
     entry->key = convert::ToArray((*it)->key);
-    entries.push_back(entry.Pass());
+    entries.push_back(std::move(entry));
 
     page_storage_->GetObject(
         (*it)->object_id,
@@ -124,7 +124,7 @@ void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
 
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
-          callback.Run(Status::IO_ERROR, nullptr, nullptr);
+          callback(Status::IO_ERROR, nullptr, nullptr);
           return;
         }
 
@@ -133,24 +133,24 @@ void PageSnapshotImpl::GetEntries(mojo::Array<uint8_t> key_prefix,
 
           storage::Status read_status = results[i]->GetData(&object_contents);
           if (read_status != storage::Status::OK) {
-            callback.Run(Status::IO_ERROR, nullptr, nullptr);
+            callback(Status::IO_ERROR, nullptr, nullptr);
             return;
           }
 
           entry_list[i]->value = convert::ToArray(object_contents);
         }
-        callback.Run(Status::OK, std::move(entry_list), nullptr);
+        callback(Status::OK, std::move(entry_list), nullptr);
       });
   waiter->Finalize(result_callback);
 }
 
-void PageSnapshotImpl::GetKeys(mojo::Array<uint8_t> key_prefix,
-                               mojo::Array<uint8_t> token,
+void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
+                               fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
-  mojo::Array<mojo::Array<uint8_t>> keys =
-      mojo::Array<mojo::Array<uint8_t>>::New(0);
+  fidl::Array<fidl::Array<uint8_t>> keys =
+      fidl::Array<fidl::Array<uint8_t>>::New(0);
 
   while (it->Valid() &&
          convert::ExtendedStringView((*it)->key).substr(0, key_prefix.size()) ==
@@ -158,26 +158,23 @@ void PageSnapshotImpl::GetKeys(mojo::Array<uint8_t> key_prefix,
     keys.push_back(convert::ToArray((*it)->key));
     it->Next();
   }
-  callback.Run(Status::OK, keys.Pass(), nullptr);
+  callback(Status::OK, std::move(keys), nullptr);
 }
 
-void PageSnapshotImpl::Get(mojo::Array<uint8_t> key,
+void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key);
   if (!it->Valid() ||
       convert::ExtendedStringView((*it)->key) !=
           convert::ExtendedStringView(key)) {
-    callback.Run(Status::KEY_NOT_FOUND, nullptr);
+    callback(Status::KEY_NOT_FOUND, nullptr);
     return;
   }
-  PageUtils::GetReferenceAsValuePtr(page_storage_, (*it)->object_id,
-                                    [callback](Status status, ValuePtr value) {
-                                      callback.Run(status, std::move(value));
-                                    });
+  PageUtils::GetReferenceAsValuePtr(page_storage_, (*it)->object_id, callback);
 }
 
-void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
+void PageSnapshotImpl::GetPartial(fidl::Array<uint8_t> key,
                                   int64_t offset,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
@@ -186,14 +183,11 @@ void PageSnapshotImpl::GetPartial(mojo::Array<uint8_t> key,
   if (!it->Valid() ||
       convert::ExtendedStringView((*it)->key) !=
           convert::ExtendedStringView(key)) {
-    callback.Run(Status::KEY_NOT_FOUND, mojo::ScopedSharedBufferHandle());
+    callback(Status::KEY_NOT_FOUND, mx::vmo());
     return;
   }
-  PageUtils::GetPartialReferenceAsBuffer(
-      page_storage_, (*it)->object_id, offset, max_size,
-      [callback](ledger::Status status, mojo::ScopedSharedBufferHandle handle) {
-        callback.Run(status, std::move(handle));
-      });
+  PageUtils::GetPartialReferenceAsBuffer(page_storage_, (*it)->object_id,
+                                         offset, max_size, callback);
 }
 
 }  // namespace ledger

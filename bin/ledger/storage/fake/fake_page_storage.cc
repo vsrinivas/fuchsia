@@ -11,7 +11,7 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/fidl_data_pipe/strings.h"
 
 namespace storage {
 namespace fake {
@@ -131,18 +131,18 @@ Status FakePageStorage::MarkObjectSynced(ObjectIdView object_id) {
 
 void FakePageStorage::AddObjectFromSync(
     ObjectIdView object_id,
-    mojo::ScopedDataPipeConsumerHandle data,
+    mx::datapipe_consumer data,
     size_t size,
     const std::function<void(Status)>& callback) {
   callback(Status::NOT_IMPLEMENTED);
 }
 
 void FakePageStorage::AddObjectFromLocal(
-    mojo::ScopedDataPipeConsumerHandle data,
+    mx::datapipe_consumer data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   std::string value;
-  mtl::BlockingCopyToString(std::move(data), &value);
+  mtl::FidlBlockingCopyToString(std::move(data), &value);
   if (size >= 0 && value.size() != static_cast<size_t>(size)) {
     callback(Status::IO_ERROR, "");
     return;

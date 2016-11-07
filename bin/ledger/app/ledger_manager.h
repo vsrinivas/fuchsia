@@ -13,9 +13,9 @@
 #include "apps/ledger/src/app/ledger_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
 
 namespace ledger {
 
@@ -31,14 +31,14 @@ class LedgerManager : public LedgerImpl::Delegate {
   ~LedgerManager();
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
-  void BindLedger(mojo::InterfaceRequest<Ledger> ledger_request);
+  void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
 
   // LedgerImpl::Delegate:
-  void CreatePage(mojo::InterfaceRequest<Page> page_request,
+  void CreatePage(fidl::InterfaceRequest<Page> page_request,
                   std::function<void(Status)> callback) override;
   void GetPage(convert::ExtendedStringView page_id,
                CreateIfNotFound create_if_not_found,
-               mojo::InterfaceRequest<Page> page_request,
+               fidl::InterfaceRequest<Page> page_request,
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
 
@@ -55,7 +55,7 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   std::unique_ptr<storage::LedgerStorage> storage_;
   LedgerImpl ledger_impl_;
-  mojo::BindingSet<Ledger> bindings_;
+  fidl::BindingSet<Ledger> bindings_;
 
   // Mapping from page id to the manager of that page.
   std::map<storage::PageId,

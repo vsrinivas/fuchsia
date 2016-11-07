@@ -5,32 +5,32 @@
 #ifndef APPS_LEDGER_SRC_FAKE_NETWORK_SERVICE_FAKE_URL_LOADER_H_
 #define APPS_LEDGER_SRC_FAKE_NETWORK_SERVICE_FAKE_URL_LOADER_H_
 
-#include "apps/network/interfaces/url_loader.mojom.h"
+#include "apps/network/services/url_loader.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
 namespace fake_network_service {
 
 // Url loader that stores the url request for inspection in |request_received|,
 // and returns response indicated in |response_to_return|. |response_to_return|
 // is moved out in ::Start().
-class FakeURLLoader : public mojo::URLLoader {
+class FakeURLLoader : public network::URLLoader {
  public:
-  FakeURLLoader(mojo::InterfaceRequest<mojo::URLLoader> message_pipe,
-                mojo::URLResponsePtr response_to_return,
-                mojo::URLRequestPtr* request_received);
+  FakeURLLoader(fidl::InterfaceRequest<network::URLLoader> message_pipe,
+                network::URLResponsePtr response_to_return,
+                network::URLRequestPtr* request_received);
   ~FakeURLLoader() override;
 
   // URLLoader:
-  void Start(mojo::URLRequestPtr request,
+  void Start(network::URLRequestPtr request,
              const StartCallback& callback) override;
   void FollowRedirect(const FollowRedirectCallback& callback) override;
   void QueryStatus(const QueryStatusCallback& callback) override;
 
  private:
-  mojo::Binding<mojo::URLLoader> binding_;
-  mojo::URLResponsePtr response_to_return_;
-  mojo::URLRequestPtr* request_received_;
+  fidl::Binding<network::URLLoader> binding_;
+  network::URLResponsePtr response_to_return_;
+  network::URLRequestPtr* request_received_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeURLLoader);
 };

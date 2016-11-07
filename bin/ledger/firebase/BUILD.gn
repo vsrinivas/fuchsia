@@ -17,7 +17,7 @@ source_set("firebase") {
 
   public_deps = [
     "//apps/ledger/src/convert",
-    "//apps/network/interfaces:interfaces_cpp_sources",
+    "//apps/network/services:services_cpp_sources",
     "//third_party/rapidjson",
   ]
 
@@ -26,7 +26,6 @@ source_set("firebase") {
     "//apps/ledger/src/glue/data_pipe",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/system",
   ]
 }
 
@@ -45,10 +44,10 @@ executable("unittests") {
     ":firebase",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/fake_network_service",
+    "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/test",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/system:libmojo",
     "//third_party/gtest",
   ]
 }

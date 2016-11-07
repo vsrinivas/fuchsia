@@ -12,8 +12,8 @@
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
 
 namespace ledger {
 
@@ -41,7 +41,7 @@ class LedgerManager::PageManagerContainer {
 
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
-  void BindPage(mojo::InterfaceRequest<Page> page_request,
+  void BindPage(fidl::InterfaceRequest<Page> page_request,
                 std::function<void(Status)>&& callback) {
     if (status_ != Status::OK) {
       callback(status_);
@@ -75,7 +75,7 @@ class LedgerManager::PageManagerContainer {
   std::unique_ptr<PageManager> page_manager_;
   Status status_;
   std::vector<
-      std::pair<mojo::InterfaceRequest<Page>, std::function<void(Status)>>>
+      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
@@ -86,11 +86,11 @@ LedgerManager::LedgerManager(std::unique_ptr<storage::LedgerStorage> storage)
 
 LedgerManager::~LedgerManager() {}
 
-void LedgerManager::BindLedger(mojo::InterfaceRequest<Ledger> ledger_request) {
+void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
   bindings_.AddBinding(&ledger_impl_, std::move(ledger_request));
 }
 
-void LedgerManager::CreatePage(mojo::InterfaceRequest<Page> page_request,
+void LedgerManager::CreatePage(fidl::InterfaceRequest<Page> page_request,
                                std::function<void(Status)> callback) {
   storage::PageId page_id = RandomId();
   std::unique_ptr<storage::PageStorage> page_storage;
@@ -109,7 +109,7 @@ void LedgerManager::CreatePage(mojo::InterfaceRequest<Page> page_request,
 
 void LedgerManager::GetPage(convert::ExtendedStringView page_id,
                             CreateIfNotFound create_if_not_found,
-                            mojo::InterfaceRequest<Page> page_request,
+                            fidl::InterfaceRequest<Page> page_request,
                             std::function<void(Status)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
   auto it = page_managers_.find(page_id);

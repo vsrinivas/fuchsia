@@ -9,20 +9,21 @@
 #include <utility>
 
 #include "apps/ledger/src/fake_network_service/fake_network_service.h"
-#include "apps/network/interfaces/network_service.mojom.h"
+#include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/fidl_data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace gcs {
 namespace {
 
-mojo::HttpHeaderPtr GetHeader(const mojo::Array<mojo::HttpHeaderPtr>& headers,
-                              const std::string& header_name) {
+network::HttpHeaderPtr GetHeader(
+    const fidl::Array<network::HttpHeaderPtr>& headers,
+    const std::string& header_name) {
   for (const auto& header : headers.storage()) {
     if (header->name == header_name) {
       return header.Clone();
@@ -41,7 +42,7 @@ class CloudStorageImplTest : public ::testing::Test {
   void SetUp() override {
     ::testing::Test::SetUp();
 
-    mojo::NetworkServicePtr fake_network_service;
+    network::NetworkServicePtr fake_network_service;
     fake_network_service_.reset(new fake_network_service::FakeNetworkService(
         GetProxy(&fake_network_service)));
 
@@ -54,12 +55,13 @@ class CloudStorageImplTest : public ::testing::Test {
   void SetResponse(const std::string& body,
                    int64_t content_length,
                    uint32_t status_code) {
-    mojo::URLResponsePtr server_response = mojo::URLResponse::New();
-    server_response->body = mojo::URLBody::New();
-    server_response->body->set_stream(mtl::WriteStringToConsumerHandle(body));
+    network::URLResponsePtr server_response = network::URLResponse::New();
+    server_response->body = network::URLBody::New();
+    server_response->body->set_stream(
+        mtl::FidlWriteStringToConsumerHandle(body));
     server_response->status_code = status_code;
 
-    mojo::HttpHeaderPtr content_length_header = mojo::HttpHeader::New();
+    network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
     content_length_header->name = "content-length";
     content_length_header->value = ftl::NumberToString(content_length);
 
@@ -103,12 +105,12 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("PUT", fake_network_service_->GetRequest()->method);
   EXPECT_TRUE(fake_network_service_->GetRequest()->body->is_stream());
   std::string sent_content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(
+  EXPECT_TRUE(mtl::FidlBlockingCopyToString(
       std::move(fake_network_service_->GetRequest()->body->get_stream()),
       &sent_content));
   EXPECT_EQ(content, sent_content);
 
-  mojo::HttpHeaderPtr content_length_header =
+  network::HttpHeaderPtr content_length_header =
       GetHeader(fake_network_service_->GetRequest()->headers, "content-length");
   EXPECT_TRUE(content_length_header);
   unsigned content_length;
@@ -116,7 +118,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
                                            &content_length));
   EXPECT_EQ(content.size(), content_length);
 
-  mojo::HttpHeaderPtr if_generation_match_header =
+  network::HttpHeaderPtr if_generation_match_header =
       GetHeader(fake_network_service_->GetRequest()->headers,
                 "x-goog-if-generation-match");
   EXPECT_TRUE(if_generation_match_header);

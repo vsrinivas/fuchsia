@@ -13,8 +13,8 @@ source_set("fake_network_service") {
   ]
 
   deps = [
-    "//apps/network/interfaces:interfaces_cpp_sources",
+    "//apps/network/services:services_cpp_sources",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//mojo/public/cpp/bindings:core",
   ]
 }

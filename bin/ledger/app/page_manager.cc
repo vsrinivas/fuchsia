@@ -17,7 +17,7 @@ PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
 
 PageManager::~PageManager() {}
 
-void PageManager::BindPage(mojo::InterfaceRequest<Page> page_request) {
+void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
   pages_.push_back(std::make_unique<BoundInterface<Page, PageImpl>>(
       std::move(page_request), this, page_storage_.get()));
   auto* binding = &pages_.back()->binding;
@@ -39,7 +39,7 @@ void PageManager::BindPage(mojo::InterfaceRequest<Page> page_request) {
 
 void PageManager::BindPageSnapshot(
     std::unique_ptr<storage::CommitContents> contents,
-    mojo::InterfaceRequest<PageSnapshot> snapshot_request) {
+    fidl::InterfaceRequest<PageSnapshot> snapshot_request) {
   snapshots_.push_back(
       std::make_unique<BoundInterface<PageSnapshot, PageSnapshotImpl>>(
           std::move(snapshot_request), page_storage_.get(),

@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "apps/ledger/src/fake_network_service/fake_url_loader.h"
-#include "apps/network/interfaces/network_service.mojom.h"
+#include "apps/network/services/network_service.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
 namespace fake_network_service {
 
@@ -19,44 +19,44 @@ namespace fake_network_service {
 // passed to any url loader and set the response that url loaders need to
 // return. Response is moved out when url request starts, and needs to be set
 // each time.
-class FakeNetworkService : public mojo::NetworkService {
+class FakeNetworkService : public network::NetworkService {
  public:
-  FakeNetworkService(mojo::InterfaceRequest<NetworkService> request);
+  FakeNetworkService(fidl::InterfaceRequest<NetworkService> request);
   ~FakeNetworkService() override;
 
-  mojo::URLRequest* GetRequest() { return request_received_.get(); }
+  network::URLRequest* GetRequest() { return request_received_.get(); }
 
-  void SetResponse(mojo::URLResponsePtr response) {
+  void SetResponse(network::URLResponsePtr response) {
     response_to_return_ = std::move(response);
   }
 
   // NetworkService:
-  void CreateURLLoader(mojo::InterfaceRequest<mojo::URLLoader> loader) override;
-  void GetCookieStore(mojo::ScopedMessagePipeHandle cookie_store) override;
-  void CreateWebSocket(mojo::ScopedMessagePipeHandle socket) override;
+  void CreateURLLoader(
+      fidl::InterfaceRequest<network::URLLoader> loader) override;
+  void GetCookieStore(mx::channel cookie_store) override;
+  void CreateWebSocket(mx::channel socket) override;
   void CreateTCPBoundSocket(
-      mojo::NetAddressPtr local_address,
-      mojo::ScopedMessagePipeHandle bound_socket,
+      network::NetAddressPtr local_address,
+      mx::channel bound_socket,
       const CreateTCPBoundSocketCallback& callback) override;
   void CreateTCPConnectedSocket(
-      mojo::NetAddressPtr remote_address,
-      mojo::ScopedDataPipeConsumerHandle send_stream,
-      mojo::ScopedDataPipeProducerHandle receive_stream,
-      mojo::ScopedMessagePipeHandle client_socket,
+      network::NetAddressPtr remote_address,
+      mx::datapipe_consumer send_stream,
+      mx::datapipe_producer receive_stream,
+      mx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override;
-  void CreateUDPSocket(mojo::ScopedMessagePipeHandle socket) override;
-  void CreateHttpServer(mojo::NetAddressPtr local_address,
-                        mojo::ScopedMessagePipeHandle delegate,
+  void CreateUDPSocket(mx::channel socket) override;
+  void CreateHttpServer(network::NetAddressPtr local_address,
+                        mx::channel delegate,
                         const CreateHttpServerCallback& callback) override;
-  void RegisterURLLoaderInterceptor(
-      mojo::ScopedMessagePipeHandle factory) override;
-  void CreateHostResolver(mojo::ScopedMessagePipeHandle host_resolver) override;
+  void RegisterURLLoaderInterceptor(mx::channel factory) override;
+  void CreateHostResolver(mx::channel host_resolver) override;
 
  private:
-  mojo::Binding<NetworkService> binding_;
+  fidl::Binding<NetworkService> binding_;
   std::vector<std::unique_ptr<FakeURLLoader>> loaders_;
-  mojo::URLRequestPtr request_received_;
-  mojo::URLResponsePtr response_to_return_;
+  network::URLRequestPtr request_received_;
+  network::URLResponsePtr response_to_return_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkService);
 };

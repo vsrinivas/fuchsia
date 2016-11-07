@@ -14,8 +14,8 @@
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/firebase/watch_client.h"
-#include "apps/network/interfaces/network_service.mojom.h"
-#include "apps/network/interfaces/url_loader.mojom.h"
+#include "apps/network/services/network_service.fidl.h"
+#include "apps/network/services/url_loader.fidl.h"
 
 #include <rapidjson/document.h>
 
@@ -30,7 +30,7 @@ class FirebaseImpl : public Firebase {
   // |prefix| is a url prefix against which all requests will be made, without a
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
-  FirebaseImpl(mojo::NetworkServicePtr network_service,
+  FirebaseImpl(network::NetworkServicePtr network_service,
                const std::string& db_id,
                const std::string& prefix);
   ~FirebaseImpl() override;
@@ -65,10 +65,10 @@ class FirebaseImpl : public Firebase {
 
   void OnResponse(
       const std::function<void(Status status, std::string response)>& callback,
-      mojo::URLLoader* url_loader,
-      mojo::URLResponsePtr response);
+      network::URLLoader* url_loader,
+      network::URLResponsePtr response);
 
-  void OnStream(WatchClient* watch_client, mojo::URLResponsePtr response);
+  void OnStream(WatchClient* watch_client, network::URLResponsePtr response);
 
   void OnStreamComplete(WatchClient* watch_client);
 
@@ -77,12 +77,12 @@ class FirebaseImpl : public Firebase {
                      const std::string& event,
                      const std::string& data);
 
-  const mojo::NetworkServicePtr network_service_;
+  const network::NetworkServicePtr network_service_;
   // Api url against which requests are made, without a trailing slash.
   const std::string api_url_;
 
   struct RequestData;
-  std::map<mojo::URLLoader*, std::unique_ptr<RequestData>> request_data_;
+  std::map<network::URLLoader*, std::unique_ptr<RequestData>> request_data_;
 
   struct WatchData;
   std::map<WatchClient*, std::unique_ptr<WatchData>> watch_data_;

@@ -10,11 +10,12 @@
 #include <rapidjson/document.h>
 
 #include "apps/ledger/src/fake_network_service/fake_network_service.h"
-#include "apps/network/interfaces/network_service.mojom.h"
+#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/fidl_data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
@@ -29,7 +30,7 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    mojo::NetworkServicePtr fake_network_service;
+    network::NetworkServicePtr fake_network_service;
     fake_network_service_.reset(new fake_network_service::FakeNetworkService(
         GetProxy(&fake_network_service)));
 
@@ -72,17 +73,16 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
 
   void OnDone() override { message_loop_.QuitNow(); }
 
-  void SetPipeResponse(mojo::ScopedDataPipeConsumerHandle body,
-                       uint32_t status_code) {
-    mojo::URLResponsePtr server_response = mojo::URLResponse::New();
-    server_response->body = mojo::URLBody::New();
+  void SetPipeResponse(mx::datapipe_consumer body, uint32_t status_code) {
+    network::URLResponsePtr server_response = network::URLResponse::New();
+    server_response->body = network::URLBody::New();
     server_response->body->set_stream(std::move(body));
     server_response->status_code = status_code;
     fake_network_service_->SetResponse(std::move(server_response));
   }
 
   void SetStringResponse(const std::string& body, uint32_t status_code) {
-    SetPipeResponse(mtl::WriteStringToConsumerHandle(body), status_code);
+    SetPipeResponse(mtl::FidlWriteStringToConsumerHandle(body), status_code);
   }
 
   std::unique_ptr<fake_network_service::FakeNetworkService>
@@ -384,11 +384,12 @@ TEST_F(FirebaseImplTest, UnWatch) {
       "event: put\n"
       "data: {\"path\":\"/\",\"data\":\"Alice\"}\n"
       "\n");
-  mojo::DataPipe data_pipe;
+  glue::DataPipe data_pipe;
   SetPipeResponse(std::move(data_pipe.consumer_handle), 200);
   firebase_->Watch("/", "", this);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(
+      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
   message_loop_.Run();
 
@@ -398,7 +399,8 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, auth_revoked_count_);
   EXPECT_EQ(0u, error_count_);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(
+      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
   message_loop_.Run();
 
@@ -411,7 +413,8 @@ TEST_F(FirebaseImplTest, UnWatch) {
   // Unregister the watch client and make sure that we are not notified about
   // the next event.
   firebase_->UnWatch(this);
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(
+      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
 
   // TODO(ppi): how to avoid the wait?

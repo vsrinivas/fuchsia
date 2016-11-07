@@ -6,7 +6,8 @@
 
 #include <utility>
 
-#include "apps/ledger/src/glue/data_pipe//data_pipe_drainer_client.h"
+#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -17,7 +18,7 @@ namespace {
 
 TEST(DataPipeWriter, WriteAndRead) {
   mtl::MessageLoop message_loop;
-  mojo::DataPipe data_pipe;
+  glue::DataPipe data_pipe;
   DataPipeWriter* writer = new DataPipeWriter();
   writer->Start("bazinga\n", std::move(data_pipe.producer_handle));
 
@@ -35,7 +36,7 @@ TEST(DataPipeWriter, WriteAndRead) {
 
 TEST(DataPipeWriter, ClientClosedTheirEnd) {
   mtl::MessageLoop message_loop;
-  mojo::DataPipe data_pipe;
+  glue::DataPipe data_pipe;
   DataPipeWriter* writer = new DataPipeWriter();
   data_pipe.consumer_handle.reset();
   writer->Start("bazinga\n", std::move(data_pipe.producer_handle));

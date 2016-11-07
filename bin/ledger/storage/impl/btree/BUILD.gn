@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-
 group("btree") {
   testonly = true
 
@@ -58,8 +56,8 @@ executable("unittests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//mojo/system:libmojo",
     "//third_party/gtest",
   ]
 }

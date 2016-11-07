@@ -11,20 +11,20 @@
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/closure.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
 
 namespace ledger {
 
 template <class Interface, class Impl>
 struct BoundInterface {
   template <class... Args>
-  BoundInterface(mojo::InterfaceRequest<Interface> request, Args&&... args)
+  BoundInterface(fidl::InterfaceRequest<Interface> request, Args&&... args)
       : impl(std::forward<Args>(args)...), binding(&impl, std::move(request)) {}
 
   Impl impl;
-  mojo::Binding<Interface> binding;
+  fidl::Binding<Interface> binding;
 };
 
 // Manages a ledger page.
@@ -49,12 +49,12 @@ class PageManager {
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
   // request.
-  void BindPage(mojo::InterfaceRequest<Page> page_request);
+  void BindPage(fidl::InterfaceRequest<Page> page_request);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
   void BindPageSnapshot(std::unique_ptr<storage::CommitContents> contents,
-                        mojo::InterfaceRequest<PageSnapshot> snapshot_request);
+                        fidl::InterfaceRequest<PageSnapshot> snapshot_request);
 
  private:
   std::unique_ptr<storage::PageStorage> page_storage_;

@@ -11,9 +11,9 @@
 namespace fake_network_service {
 
 FakeURLLoader::FakeURLLoader(
-    mojo::InterfaceRequest<mojo::URLLoader> message_pipe,
-    mojo::URLResponsePtr response_to_return,
-    mojo::URLRequestPtr* request_received)
+    fidl::InterfaceRequest<network::URLLoader> message_pipe,
+    network::URLResponsePtr response_to_return,
+    network::URLRequestPtr* request_received)
     : binding_(this, std::move(message_pipe)),
       response_to_return_(std::move(response_to_return)),
       request_received_(request_received) {
@@ -22,11 +22,11 @@ FakeURLLoader::FakeURLLoader(
 
 FakeURLLoader::~FakeURLLoader() {}
 
-void FakeURLLoader::Start(mojo::URLRequestPtr request,
+void FakeURLLoader::Start(network::URLRequestPtr request,
                           const StartCallback& callback) {
   FTL_DCHECK(response_to_return_);
   *request_received_ = std::move(request);
-  callback.Run(std::move(response_to_return_));
+  callback(std::move(response_to_return_));
 }
 
 void FakeURLLoader::FollowRedirect(const FollowRedirectCallback& callback) {}

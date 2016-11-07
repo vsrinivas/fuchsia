@@ -14,12 +14,11 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/strings.h"
-#include "lib/mtl/shared_buffer/strings.h"
+#include "lib/mtl/fidl_data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/callback.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
 namespace {
@@ -40,7 +39,7 @@ class PageImplTest : public ::testing::Test {
 
     manager_.reset(new PageManager(std::move(fake_storage), [] {}));
     binding_.reset(
-        new mojo::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
+        new fidl::Binding<Page>(page_impl_.get(), GetProxy(&page_ptr_)));
     manager_->BindPage(GetProxy(&page_ptr_));
   }
 
@@ -56,7 +55,7 @@ class PageImplTest : public ::testing::Test {
 
  private:
   std::unique_ptr<PageImpl> page_impl_;
-  std::unique_ptr<mojo::Binding<Page>> binding_;
+  std::unique_ptr<fidl::Binding<Page>> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
@@ -66,7 +65,7 @@ storage::ObjectId PageImplTest::AddObjectToStorage(
   storage::ObjectId object_id;
   // FakeStorage is synchronous.
   fake_storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
+      mtl::FidlWriteStringToConsumerHandle(value_string), value_string.size(),
       [&object_id](storage::Status status,
                    storage::ObjectId returned_object_id) {
         EXPECT_EQ(storage::Status::OK, status);
@@ -76,7 +75,7 @@ storage::ObjectId PageImplTest::AddObjectToStorage(
 }
 
 TEST_F(PageImplTest, GetId) {
-  page_ptr_->GetId([this](mojo::Array<uint8_t> page_id) {
+  page_ptr_->GetId([this](fidl::Array<uint8_t> page_id) {
     EXPECT_EQ(page_id1_, convert::ToString(page_id));
     message_loop_.QuitNow();
   });
@@ -337,7 +336,7 @@ TEST_F(PageImplTest, CreateReference) {
   Status status;
   ReferencePtr reference;
   page_ptr_->CreateReference(
-      value.size(), mtl::WriteStringToConsumerHandle(value),
+      value.size(), mtl::FidlWriteStringToConsumerHandle(value),
       [this, &status, &reference](Status received_status,
                                   ReferencePtr received_reference) {
         status = received_status;
@@ -388,7 +387,7 @@ TEST_F(PageImplTest, GetLargeReference) {
   message_loop_.Run();
   EXPECT_TRUE(value->is_buffer());
   std::string content;
-  EXPECT_TRUE(mtl::StringFromSharedBuffer(value->get_buffer(), &content));
+  EXPECT_TRUE(mtl::StringFromVmo(value->get_buffer(), &content));
   EXPECT_EQ(value_string, content);
 }
 
@@ -398,18 +397,17 @@ TEST_F(PageImplTest, GetPartialReference) {
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id);
 
-  mojo::ScopedSharedBufferHandle buffer;
+  mx::vmo buffer;
   page_ptr_->GetPartialReference(
       std::move(reference), 2, 5,
-      [this, &buffer](Status status,
-                      mojo::ScopedSharedBufferHandle received_buffer) {
+      [this, &buffer](Status status, mx::vmo received_buffer) {
         EXPECT_EQ(Status::OK, status);
         buffer = std::move(received_buffer);
         message_loop_.QuitNow();
       });
   message_loop_.Run();
   std::string content;
-  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
+  EXPECT_TRUE(mtl::StringFromVmo(buffer, &content));
   EXPECT_EQ("small", content);
 }
 
@@ -449,10 +447,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
-  mojo::Array<EntryPtr> actual_entries;
+  fidl::Array<EntryPtr> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-      Status status, mojo::Array<EntryPtr> entries,
-      mojo::Array<uint8_t> next_token) {
+      Status status, fidl::Array<EntryPtr> entries,
+      fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_entries = std::move(entries);
@@ -495,10 +493,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
 
-  mojo::Array<mojo::Array<uint8_t>> actual_keys;
+  fidl::Array<fidl::Array<uint8_t>> actual_keys;
   auto callback_getkeys = [this, &actual_keys](
-      Status status, mojo::Array<mojo::Array<uint8_t>> keys,
-      mojo::Array<uint8_t> next_token) {
+      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
+      fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_keys = std::move(keys);
@@ -580,8 +578,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   EXPECT_FALSE(actual_value->is_bytes());
   EXPECT_TRUE(actual_value->is_buffer());
   std::string content;
-  EXPECT_TRUE(
-      mtl::StringFromSharedBuffer(actual_value->get_buffer(), &content));
+  EXPECT_TRUE(mtl::StringFromVmo(actual_value->get_buffer(), &content));
   EXPECT_EQ(value_string, content);
 }
 
@@ -605,19 +602,18 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
   message_loop_.Run();
 
   Status status;
-  mojo::ScopedSharedBufferHandle buffer;
-  snapshot->GetPartial(
-      convert::ToArray(key), 2, 5,
-      [this, &status, &buffer](Status received_status,
-                               mojo::ScopedSharedBufferHandle received_buffer) {
-        status = received_status;
-        buffer = std::move(received_buffer);
-        message_loop_.QuitNow();
-      });
+  mx::vmo buffer;
+  snapshot->GetPartial(convert::ToArray(key), 2, 5,
+                       [this, &status, &buffer](Status received_status,
+                                                mx::vmo received_buffer) {
+                         status = received_status;
+                         buffer = std::move(received_buffer);
+                         message_loop_.QuitNow();
+                       });
   message_loop_.Run();
   EXPECT_EQ(Status::OK, status);
   std::string content;
-  EXPECT_TRUE(mtl::StringFromSharedBuffer(buffer, &content));
+  EXPECT_TRUE(mtl::StringFromVmo(buffer, &content));
   EXPECT_EQ("small", content);
 }
 }  // namespace

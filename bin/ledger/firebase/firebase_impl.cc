@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
 #include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
 #include "apps/ledger/src/glue/data_pipe/data_pipe_writer.h"
 #include "lib/ftl/logging.h"
@@ -15,19 +16,19 @@ namespace firebase {
 
 namespace {
 
-mojo::URLRequestPtr MakeRequest(const std::string& url,
-                                const std::string& method,
-                                const std::string& message) {
-  mojo::URLRequestPtr request(mojo::URLRequest::New());
+network::URLRequestPtr MakeRequest(const std::string& url,
+                                   const std::string& method,
+                                   const std::string& message) {
+  network::URLRequestPtr request(network::URLRequest::New());
   request->url = url;
   request->method = method;
   request->auto_follow_redirects = true;
   if (!message.empty()) {
-    mojo::DataPipe data_pipe;
+    glue::DataPipe data_pipe;
     // Deletes itself.
     glue::DataPipeWriter* writer = new glue::DataPipeWriter();
     writer->Start(message, std::move(data_pipe.producer_handle));
-    request->body = mojo::URLBody::New();
+    request->body = network::URLBody::New();
     request->body->set_stream(std::move(data_pipe.consumer_handle));
   }
   return request;
@@ -39,7 +40,7 @@ struct FirebaseImpl::RequestData {
   RequestData();
   ~RequestData();
 
-  mojo::URLLoaderPtr url_loader;
+  network::URLLoaderPtr url_loader;
   std::unique_ptr<glue::DataPipeDrainerClient> drainer;
 };
 
@@ -50,7 +51,7 @@ struct FirebaseImpl::WatchData {
   WatchData();
   ~WatchData();
 
-  mojo::URLLoaderPtr url_loader;
+  network::URLLoaderPtr url_loader;
   std::unique_ptr<EventStream> event_stream;
   std::unique_ptr<glue::DataPipeDrainerClient> drainer;
 };
@@ -58,7 +59,7 @@ struct FirebaseImpl::WatchData {
 FirebaseImpl::WatchData::WatchData() {}
 FirebaseImpl::WatchData::~WatchData() {}
 
-FirebaseImpl::FirebaseImpl(mojo::NetworkServicePtr network_service,
+FirebaseImpl::FirebaseImpl(network::NetworkServicePtr network_service,
                            const std::string& db_id,
                            const std::string& prefix)
     : network_service_(std::move(network_service)),
@@ -113,18 +114,18 @@ void FirebaseImpl::Delete(const std::string& key,
 void FirebaseImpl::Watch(const std::string& key,
                          const std::string& query,
                          WatchClient* watch_client) {
-  mojo::URLLoaderPtr url_loader;
+  network::URLLoaderPtr url_loader;
   network_service_->CreateURLLoader(GetProxy(&url_loader));
-  mojo::URLRequestPtr request =
+  network::URLRequestPtr request =
       MakeRequest(BuildRequestUrl(key, query), "GET", "");
 
-  auto accept_header = mojo::HttpHeader::New();
+  auto accept_header = network::HttpHeader::New();
   accept_header->name = "Accept";
   accept_header->value = "text/event-stream";
   request->headers.push_back(std::move(accept_header));
 
   url_loader->Start(std::move(request),
-                    [this, watch_client](mojo::URLResponsePtr response) {
+                    [this, watch_client](network::URLResponsePtr response) {
                       OnStream(watch_client, std::move(response));
                     });
   watch_data_[watch_client] = std::unique_ptr<WatchData>(new WatchData());
@@ -168,13 +169,13 @@ void FirebaseImpl::Request(
     const std::string& method,
     const std::string& message,
     const std::function<void(Status status, std::string response)>& callback) {
-  mojo::URLLoaderPtr url_loader;
+  network::URLLoaderPtr url_loader;
   network_service_->CreateURLLoader(GetProxy(&url_loader));
-  mojo::URLRequestPtr request = MakeRequest(url, method, message);
+  network::URLRequestPtr request = MakeRequest(url, method, message);
 
-  mojo::URLLoader* url_loader_ptr = url_loader.get();
+  network::URLLoader* url_loader_ptr = url_loader.get();
   url_loader->Start(std::move(request), [this, callback, url_loader_ptr](
-                                            mojo::URLResponsePtr response) {
+                                            network::URLResponsePtr response) {
     OnResponse(callback, url_loader_ptr, std::move(response));
   });
   request_data_[url_loader.get()] =
@@ -184,8 +185,8 @@ void FirebaseImpl::Request(
 
 void FirebaseImpl::OnResponse(
     const std::function<void(Status status, std::string response)>& callback,
-    mojo::URLLoader* url_loader,
-    mojo::URLResponsePtr response) {
+    network::URLLoader* url_loader,
+    network::URLResponsePtr response) {
   // No need to hang onto the URLLoaderPtr anymore.
   request_data_[url_loader]->url_loader.reset();
 
@@ -224,7 +225,7 @@ void FirebaseImpl::OnResponse(
 }
 
 void FirebaseImpl::OnStream(WatchClient* watch_client,
-                            mojo::URLResponsePtr response) {
+                            network::URLResponsePtr response) {
   // No need to hang onto the URLLoaderPtr anymore.
   watch_data_[watch_client]->url_loader.reset();
 

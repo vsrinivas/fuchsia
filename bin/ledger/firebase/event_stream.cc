@@ -16,12 +16,12 @@ EventStream::EventStream() {}
 EventStream::~EventStream() {}
 
 void EventStream::Start(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     const std::function<EventCallback>& event_callback,
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;
   completion_callback_ = completion_callback;
-  drainer_.reset(new mtl::DataPipeDrainer(this));
+  drainer_.reset(new mtl::FidlDataPipeDrainer(this));
   drainer_->Start(std::move(source));
 }
 

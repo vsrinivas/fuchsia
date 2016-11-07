@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
@@ -37,7 +37,7 @@ class PageUtils {
       convert::ExtendedStringView reference_id,
       int64_t offset,
       int64_t max_size,
-      std::function<void(Status, mojo::ScopedSharedBufferHandle)> callback);
+      std::function<void(Status, mx::vmo)> callback);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageUtils);

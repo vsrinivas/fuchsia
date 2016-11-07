@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -49,31 +49,31 @@ class PageImpl : public Page {
   // Page:
   void GetId(const GetIdCallback& callback) override;
 
-  void GetSnapshot(mojo::InterfaceRequest<PageSnapshot> snapshot_request,
+  void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    const GetSnapshotCallback& callback) override;
 
-  void Watch(mojo::InterfaceHandle<PageWatcher> watcher,
+  void Watch(fidl::InterfaceHandle<PageWatcher> watcher,
              const WatchCallback& callback) override;
 
-  void Put(mojo::Array<uint8_t> key,
-           mojo::Array<uint8_t> value,
+  void Put(fidl::Array<uint8_t> key,
+           fidl::Array<uint8_t> value,
            const PutCallback& callback) override;
 
-  void PutWithPriority(mojo::Array<uint8_t> key,
-                       mojo::Array<uint8_t> value,
+  void PutWithPriority(fidl::Array<uint8_t> key,
+                       fidl::Array<uint8_t> value,
                        Priority priority,
                        const PutWithPriorityCallback& callback) override;
 
-  void PutReference(mojo::Array<uint8_t> key,
+  void PutReference(fidl::Array<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const PutReferenceCallback& callback) override;
 
-  void Delete(mojo::Array<uint8_t> key,
+  void Delete(fidl::Array<uint8_t> key,
               const DeleteCallback& callback) override;
 
   void CreateReference(int64_t size,
-                       mojo::ScopedDataPipeConsumerHandle data,
+                       mx::datapipe_consumer data,
                        const CreateReferenceCallback& callback) override;
 
   void GetReference(ReferencePtr reference,

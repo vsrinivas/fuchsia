@@ -9,11 +9,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_manager.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
 
 namespace ledger {
 
@@ -29,7 +28,7 @@ class LedgerFactoryImpl : public LedgerFactory {
  private:
   // LedgerFactory:
   void GetLedger(IdentityPtr identity,
-                 mojo::InterfaceRequest<Ledger> ledger_request,
+                 fidl::InterfaceRequest<Ledger> ledger_request,
                  const GetLedgerCallback& callback) override;
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

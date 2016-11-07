@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -24,7 +25,7 @@ class EventStreamTest : public ::testing::Test {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    mojo::DataPipe data_pipe;
+    glue::DataPipe data_pipe;
     producer_handle_ = std::move(data_pipe.producer_handle);
     event_stream_.reset(new EventStream());
     event_stream_->Start(std::move(data_pipe.consumer_handle),
@@ -48,7 +49,7 @@ class EventStreamTest : public ::testing::Test {
 
   void Done() { event_stream_->OnDataComplete(); }
 
-  mojo::ScopedDataPipeProducerHandle producer_handle_;
+  mx::datapipe_producer producer_handle_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
   std::vector<std::string> events_;

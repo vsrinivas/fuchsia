@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-
 group("fake") {
   testonly = true
 
@@ -31,7 +29,7 @@ source_set("lib") {
 
   deps = [
     "//apps/ledger/src/glue",
+    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
-    "//mojo/public/cpp/system",
   ]
 }

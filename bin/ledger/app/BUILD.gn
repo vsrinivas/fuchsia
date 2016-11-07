@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/mojo_application.gni")
-
 group("app") {
   testonly = true
 
   deps = [
-    ":apptests",
+#    ":apptests",
     ":ledger_app",
     ":unittests",
   ]
@@ -35,21 +33,18 @@ source_set("lib") {
   ]
 
   deps = [
-    "//apps/ledger/api",
+    "//apps/ledger/services",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings:utility",
-    "//mojo/public/cpp/system",
-    "//mojo/public/interfaces/application",
   ]
 }
 
-mojo_native_application("ledger_app") {
+executable("ledger_app") {
   output_name = "ledger_codex"
   sources = [
     "app.cc",
@@ -57,14 +52,14 @@ mojo_native_application("ledger_app") {
 
   deps = [
     ":lib",
-    "//apps/ledger/api",
+    "//apps/ledger/services",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
-    "//apps/network/interfaces",
+    "//apps/modular/lib/app",
+    "//apps/network/services",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings:utility",
   ]
 }
 
@@ -86,15 +81,14 @@ executable("unittests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/bindings:core",
-    "//mojo/system:libmojo",
     "//third_party/gtest",
   ]
 }
 
-mojo_native_application("apptests") {
+executable("apptests") {
   output_name = "ledger_codex_apptests"
 
   testonly = true
@@ -105,16 +99,14 @@ mojo_native_application("apptests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/api",
+    "//apps/ledger/services",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test",
+    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
-    "//lib/mtl/environment",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/application:test_support",
-    "//mojo/public/cpp/bindings:callback",
-    "//mojo/public/cpp/system",
+    "//third_party/gtest",
   ]
 
   data_deps = [

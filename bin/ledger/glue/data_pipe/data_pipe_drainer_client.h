@@ -10,17 +10,17 @@
 #include <string>
 
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/fidl_data_pipe/data_pipe_drainer.h"
 
 namespace glue {
 
-class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
+class DataPipeDrainerClient : public mtl::FidlDataPipeDrainer::Client {
  public:
   DataPipeDrainerClient();
 
   ~DataPipeDrainerClient() override;
 
-  void Start(mojo::ScopedDataPipeConsumerHandle source,
+  void Start(mx::datapipe_consumer source,
              const std::function<void(std::string)>& callback);
 
  private:
@@ -30,7 +30,7 @@ class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
 
   std::function<void(std::string)> callback_;
   std::string data_;
-  mtl::DataPipeDrainer drainer_;
+  mtl::FidlDataPipeDrainer drainer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainerClient);
 };

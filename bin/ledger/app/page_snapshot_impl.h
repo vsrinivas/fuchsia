@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -22,14 +22,14 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetEntries(mojo::Array<uint8_t> key_prefix,
-                  mojo::Array<uint8_t> token,
+  void GetEntries(fidl::Array<uint8_t> key_prefix,
+                  fidl::Array<uint8_t> token,
                   const GetEntriesCallback& callback) override;
-  void GetKeys(mojo::Array<uint8_t> key_prefix,
-               mojo::Array<uint8_t> token,
+  void GetKeys(fidl::Array<uint8_t> key_prefix,
+               fidl::Array<uint8_t> token,
                const GetKeysCallback& callback) override;
-  void Get(mojo::Array<uint8_t> key, const GetCallback& callback) override;
-  void GetPartial(mojo::Array<uint8_t> key,
+  void Get(fidl::Array<uint8_t> key, const GetCallback& callback) override;
+  void GetPartial(fidl::Array<uint8_t> key,
                   int64_t offset,
                   int64_t max_size,
                   const GetPartialCallback& callback) override;

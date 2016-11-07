@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/file_descriptor.h"
@@ -16,8 +18,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/data_pipe/files.h"
-#include "mojo/public/cpp/bindings/array.h"
+#include "lib/mtl/fidl_data_pipe/files.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace gcs {
@@ -26,8 +27,9 @@ namespace {
 
 const char kContentLengthHeader[] = "content-length";
 
-mojo::HttpHeaderPtr GetHeader(const mojo::Array<mojo::HttpHeaderPtr>& headers,
-                              const std::string& header_name) {
+network::HttpHeaderPtr GetHeader(
+    const fidl::Array<network::HttpHeaderPtr>& headers,
+    const std::string& header_name) {
   for (const auto& header : headers.storage()) {
     if (ftl::EqualsCaseInsensitiveASCII(header->name.get(), header_name)) {
       return header.Clone();
@@ -38,7 +40,7 @@ mojo::HttpHeaderPtr GetHeader(const mojo::Array<mojo::HttpHeaderPtr>& headers,
 
 void RunUploadFileCallback(const std::function<void(Status)>& callback,
                            Status status,
-                           mojo::URLResponsePtr response) {
+                           network::URLResponsePtr response) {
   // A precondition failure means the object already exist.
   if (response->status_code == 412) {
     callback(Status::OBJECT_ALREADY_EXIST);
@@ -76,7 +78,7 @@ void OnFileWritten(const std::string& destination,
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                   mojo::NetworkServicePtr network_service,
+                                   network::NetworkServicePtr network_service,
                                    const std::string& bucket_name)
     : task_runner_(std::move(task_runner)),
       network_service_(std::move(network_service)),
@@ -95,25 +97,25 @@ void CloudStorageImpl::UploadFile(const std::string& key,
 
   std::string url =
       "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
-  mojo::URLRequestPtr request(mojo::URLRequest::New());
+  network::URLRequestPtr request(network::URLRequest::New());
   request->url = url;
   request->method = "PUT";
   request->auto_follow_redirects = true;
 
   // Content-Length header.
-  mojo::HttpHeaderPtr content_length_header = mojo::HttpHeader::New();
+  network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
   content_length_header->name = kContentLengthHeader;
   content_length_header->value = ftl::NumberToString(file_size);
   request->headers.push_back(std::move(content_length_header));
 
   // x-goog-if-generation-match header. This ensures that files are never
   // overwritten.
-  mojo::HttpHeaderPtr generation_match_header = mojo::HttpHeader::New();
+  network::HttpHeaderPtr generation_match_header = network::HttpHeader::New();
   generation_match_header->name = "x-goog-if-generation-match";
   generation_match_header->value = "0";
   request->headers.push_back(std::move(generation_match_header));
 
-  mojo::DataPipe data_pipe;
+  glue::DataPipe data_pipe;
 
   ftl::UniqueFD fd(open(source.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
@@ -121,7 +123,7 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     return;
   }
 
-  mtl::CopyFromFileDescriptor(
+  mtl::FidlCopyFromFileDescriptor(
       std::move(fd), std::move(data_pipe.producer_handle), task_runner_,
       [](bool result, ftl::UniqueFD fd) {
         if (!result) {
@@ -132,11 +134,11 @@ void CloudStorageImpl::UploadFile(const std::string& key,
           FTL_LOG(ERROR) << "Error when reading the data.";
         }
       });
-  request->body = mojo::URLBody::New();
+  request->body = network::URLBody::New();
   request->body->set_stream(std::move(data_pipe.consumer_handle));
 
   Request(std::move(request), [callback](Status status,
-                                         mojo::URLResponsePtr response) {
+                                         network::URLResponsePtr response) {
     RunUploadFileCallback(std::move(callback), status, std::move(response));
   });
 }
@@ -147,42 +149,42 @@ void CloudStorageImpl::DownloadFile(
     const std::function<void(Status)>& callback) {
   std::string url =
       "https://storage-download.googleapis.com/" + bucket_name_ + "/" + key;
-  mojo::URLRequestPtr request(mojo::URLRequest::New());
+  network::URLRequestPtr request(network::URLRequest::New());
   request->url = url;
   request->method = "GET";
   request->auto_follow_redirects = true;
 
   Request(
       std::move(request), [this, destination, callback](
-                              Status status, mojo::URLResponsePtr response) {
+                              Status status, network::URLResponsePtr response) {
         OnDownloadResponseReceived(std::move(destination), std::move(callback),
                                    status, std::move(response));
       });
 }
 
 void CloudStorageImpl::Request(
-    mojo::URLRequestPtr request,
-    const std::function<void(Status status, mojo::URLResponsePtr response)>&
+    network::URLRequestPtr request,
+    const std::function<void(Status status, network::URLResponsePtr response)>&
         callback) {
-  mojo::URLLoaderPtr url_loader;
+  network::URLLoaderPtr url_loader;
   network_service_->CreateURLLoader(GetProxy(&url_loader));
-  mojo::URLLoader* url_loader_ptr = url_loader.get();
+  network::URLLoader* url_loader_ptr = url_loader.get();
 
-  url_loader->Start(request.Pass(), [this, callback, url_loader_ptr](
-                                        mojo::URLResponsePtr response) {
+  url_loader->Start(std::move(request), [this, callback, url_loader_ptr](
+                                            network::URLResponsePtr response) {
     OnResponse(std::move(callback), url_loader_ptr, std::move(response));
   });
   loaders_.push_back(std::move(url_loader));
 }
 
 void CloudStorageImpl::OnResponse(
-    const std::function<void(Status status, mojo::URLResponsePtr response)>&
+    const std::function<void(Status status, network::URLResponsePtr response)>&
         callback,
-    mojo::URLLoader* url_loader,
-    mojo::URLResponsePtr response) {
+    network::URLLoader* url_loader,
+    network::URLResponsePtr response) {
   // Clear loader.
   loaders_.erase(std::find_if(loaders_.begin(), loaders_.end(),
-                              [url_loader](const mojo::URLLoaderPtr& l) {
+                              [url_loader](const network::URLLoaderPtr& l) {
                                 return l.get() == url_loader;
                               }));
 
@@ -206,13 +208,13 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     const std::string& destination,
     const std::function<void(Status)>& callback,
     Status status,
-    mojo::URLResponsePtr response) {
+    network::URLResponsePtr response) {
   if (status != Status::OK) {
     callback(status);
     return;
   }
 
-  mojo::HttpHeaderPtr size_header =
+  network::HttpHeaderPtr size_header =
       GetHeader(response->headers, kContentLengthHeader);
   if (!size_header) {
     callback(Status::UNKNOWN_ERROR);
@@ -226,7 +228,7 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  mojo::URLBodyPtr body = std::move(response->body);
+  network::URLBodyPtr body = std::move(response->body);
   FTL_DCHECK(body->is_stream());
 
   ftl::UniqueFD fd(HANDLE_EINTR(creat(destination.c_str(), 0666)));
@@ -235,7 +237,7 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  mtl::CopyToFileDescriptor(
+  mtl::FidlCopyToFileDescriptor(
       std::move(body->get_stream()), std::move(fd), task_runner_,
       [destination, callback, expected_file_size](bool success,
                                                   ftl::UniqueFD fd) {

@@ -5,28 +5,21 @@
 #include <memory>
 #include <utility>
 
-#include <mojo/system/handle.h>
-#include <mojo/system/main.h>
+#include <errno.h>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_factory_impl.h"
-#include "apps/network/interfaces/network_service.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/network/services/network_service.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connection_context.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
 
 namespace ledger {
 
 namespace {
-
-const char kStoragePathArg[] = "--storage-path=";
-const size_t kStoragePathArgLength = sizeof(kStoragePathArg) - 1;
 
 const char kDefaultStoragePath[] = "/data/ledger";
 
@@ -38,55 +31,50 @@ const char kDefaultStoragePath[] = "/data/ledger";
 // individual ledger instances. It should not however hold long-lived objects
 // shared between ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App : public mojo::ApplicationImplBase {
+class App {
  public:
-  App() {}
-  ~App() override {}
+  App()
+      : application_context_(
+            modular::ApplicationContext::CreateFromStartupInfo()) {
+    FTL_DCHECK(application_context_);
 
- private:
-  void OnInitialize() override {
     storage_path_ = kDefaultStoragePath;
 
-    for (const std::string& arg : args()) {
-      if (arg.size() > kStoragePathArgLength &&
-          arg.substr(0, kStoragePathArgLength) == kStoragePathArg) {
-        storage_path_ = arg.substr(kStoragePathArgLength);
-        break;
-      }
-    }
+    // TODO(qsr): Look for arguments to setup another storage path.
 
     if (!files::IsDirectory(storage_path_) &&
         !files::CreateDirectory(storage_path_)) {
       FTL_LOG(ERROR) << "Unable to access " << storage_path_;
-      Terminate(MOJO_RESULT_PERMISSION_DENIED);
+      exit(EACCES);
       return;
     }
 
     factory_impl_.reset(new LedgerFactoryImpl(
         mtl::MessageLoop::GetCurrent()->task_runner(), storage_path_));
-  }
 
-  bool OnAcceptConnection(
-      mojo::ServiceProviderImpl* service_provider_impl) override {
-    service_provider_impl->AddService<LedgerFactory>(
-        [this](const mojo::ConnectionContext& connection_context,
-               mojo::InterfaceRequest<LedgerFactory> factory_request) {
-          factory_bindings_.AddBinding(factory_impl_.get(),
-                                       std::move(factory_request));
+    application_context_->outgoing_services()->AddService<LedgerFactory>(
+        [this](fidl::InterfaceRequest<LedgerFactory> request) {
+          factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    return true;
   }
+  ~App() {}
 
+ private:
+  std::unique_ptr<modular::ApplicationContext> application_context_;
   std::string storage_path_;
   std::unique_ptr<LedgerFactoryImpl> factory_impl_;
-  mojo::BindingSet<LedgerFactory> factory_bindings_;
+  fidl::BindingSet<LedgerFactory> factory_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 }  // namespace ledger
 
-MojoResult MojoMain(MojoHandle application_request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
   ledger::App app;
-  return mojo::RunApplication(application_request, &app);
+
+  loop.Run();
+  return 0;
 }

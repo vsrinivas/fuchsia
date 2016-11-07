@@ -9,13 +9,13 @@
 
 namespace convert {
 
-mojo::Array<uint8_t> ExtendedStringView::ToArray() {
-  mojo::Array<uint8_t> result = mojo::Array<uint8_t>::New(size());
+fidl::Array<uint8_t> ExtendedStringView::ToArray() {
+  fidl::Array<uint8_t> result = fidl::Array<uint8_t>::New(size());
   memcpy(result.data(), data(), size());
   return result;
 }
 
-mojo::Array<uint8_t> ToArray(ExtendedStringView value) {
+fidl::Array<uint8_t> ToArray(ExtendedStringView value) {
   return value.ToArray();
 }
 

@@ -54,11 +54,11 @@ class PageStorageImpl : public PageStorage {
       std::vector<std::unique_ptr<const Object>>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   void AddObjectFromSync(ObjectIdView object_id,
-                         mojo::ScopedDataPipeConsumerHandle data,
+                         mx::datapipe_consumer data,
                          size_t size,
                          const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
-      mojo::ScopedDataPipeConsumerHandle data,
+      mx::datapipe_consumer data,
       int64_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(

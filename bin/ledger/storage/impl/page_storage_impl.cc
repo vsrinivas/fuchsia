@@ -20,7 +20,7 @@
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/unique_fd.h"
-#include "lib/mtl/data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/fidl_data_pipe/data_pipe_drainer.h"
 
 namespace storage {
 
@@ -76,7 +76,7 @@ Status StagingToDestination(size_t expected_size,
 
 }  // namespace
 
-class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
+class PageStorageImpl::FileWriter : public mtl::FidlDataPipeDrainer::Client {
  public:
   FileWriter(const std::string& staging_dir, const std::string& object_dir)
       : staging_dir_(staging_dir),
@@ -93,7 +93,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     }
   }
 
-  void Start(mojo::ScopedDataPipeConsumerHandle source,
+  void Start(mx::datapipe_consumer source,
              int64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     expected_size_ = expected_size;
@@ -153,7 +153,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   const std::string& staging_dir_;
   const std::string& object_dir_;
   std::function<void(Status, const ObjectId&)> callback_;
-  mtl::DataPipeDrainer drainer_;
+  mtl::FidlDataPipeDrainer drainer_;
   std::string file_path_;
   ftl::UniqueFD fd_;
   glue::SHA256StreamingHash hash_;
@@ -346,14 +346,14 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
 
 void PageStorageImpl::AddObjectFromSync(
     ObjectIdView object_id,
-    mojo::ScopedDataPipeConsumerHandle data,
+    mx::datapipe_consumer data,
     size_t size,
     const std::function<void(Status)>& callback) {
   callback(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageImpl::AddObjectFromLocal(
-    mojo::ScopedDataPipeConsumerHandle data,
+    mx::datapipe_consumer data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/ledger/api/ledger.mojom.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
@@ -24,13 +24,13 @@ class LedgerImpl : public Ledger {
     Delegate() {}
     ~Delegate() {}
 
-    virtual void CreatePage(mojo::InterfaceRequest<Page> page_request,
+    virtual void CreatePage(fidl::InterfaceRequest<Page> page_request,
                             std::function<void(Status)> callback) = 0;
 
     enum class CreateIfNotFound { YES, NO };
     virtual void GetPage(convert::ExtendedStringView page_id,
                          CreateIfNotFound create_if_not_found,
-                         mojo::InterfaceRequest<Page> page_request,
+                         fidl::InterfaceRequest<Page> page_request,
                          std::function<void(Status)> callback) = 0;
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
@@ -45,18 +45,18 @@ class LedgerImpl : public Ledger {
 
  private:
   // Ledger:
-  void GetRootPage(mojo::InterfaceRequest<Page> page_request,
+  void GetRootPage(fidl::InterfaceRequest<Page> page_request,
                    const GetRootPageCallback& callback) override;
-  void GetPage(mojo::Array<uint8_t> id,
-               mojo::InterfaceRequest<Page> page_request,
+  void GetPage(fidl::Array<uint8_t> id,
+               fidl::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void NewPage(mojo::InterfaceRequest<Page> page_request,
+  void NewPage(fidl::InterfaceRequest<Page> page_request,
                const NewPageCallback& callback) override;
-  void DeletePage(mojo::Array<uint8_t> id,
+  void DeletePage(fidl::Array<uint8_t> id,
                   const DeletePageCallback& callback) override;
 
   void SetConflictResolverFactory(
-      mojo::InterfaceHandle<ConflictResolverFactory> factory,
+      fidl::InterfaceHandle<ConflictResolverFactory> factory,
       const SetConflictResolverFactoryCallback& callback) override;
 
   Delegate* const delegate_;

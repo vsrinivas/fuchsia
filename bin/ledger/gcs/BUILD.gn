@@ -10,12 +10,13 @@ source_set("gcs") {
   ]
 
   deps = [
+    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
-    "//mojo/public/cpp/bindings:serialization",
   ]
 
   public_deps = [
-    "//apps/network/interfaces:interfaces_cpp_sources",
+    "//apps/ledger/src/glue/data_pipe",
+    "//apps/network/services:services_cpp_sources",
     "//lib/ftl",
   ]
 }

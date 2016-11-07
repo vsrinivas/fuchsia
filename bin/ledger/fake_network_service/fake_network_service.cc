@@ -12,61 +12,58 @@
 namespace fake_network_service {
 
 FakeNetworkService::FakeNetworkService(
-    mojo::InterfaceRequest<NetworkService> request)
+    fidl::InterfaceRequest<NetworkService> request)
     : binding_(this, std::move(request)) {}
 
 FakeNetworkService::~FakeNetworkService() {}
 
 void FakeNetworkService::CreateURLLoader(
-    mojo::InterfaceRequest<mojo::URLLoader> loader) {
+    fidl::InterfaceRequest<network::URLLoader> loader) {
   FTL_DCHECK(response_to_return_);
   loaders_.push_back(std::unique_ptr<FakeURLLoader>(new FakeURLLoader(
       std::move(loader), std::move(response_to_return_), &request_received_)));
 }
 
-void FakeNetworkService::GetCookieStore(
-    mojo::ScopedMessagePipeHandle cookie_store) {
+void FakeNetworkService::GetCookieStore(mx::channel cookie_store) {
   FTL_DCHECK(false);
 }
 
-void FakeNetworkService::CreateWebSocket(mojo::ScopedMessagePipeHandle socket) {
+void FakeNetworkService::CreateWebSocket(mx::channel socket) {
   FTL_DCHECK(false);
 }
 
 void FakeNetworkService::CreateTCPBoundSocket(
-    mojo::NetAddressPtr local_address,
-    mojo::ScopedMessagePipeHandle bound_socket,
+    network::NetAddressPtr local_address,
+    mx::channel bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
   FTL_DCHECK(false);
 }
 
 void FakeNetworkService::CreateTCPConnectedSocket(
-    mojo::NetAddressPtr remote_address,
-    mojo::ScopedDataPipeConsumerHandle send_stream,
-    mojo::ScopedDataPipeProducerHandle receive_stream,
-    mojo::ScopedMessagePipeHandle client_socket,
+    network::NetAddressPtr remote_address,
+    mx::datapipe_consumer send_stream,
+    mx::datapipe_producer receive_stream,
+    mx::channel client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
   FTL_DCHECK(false);
 }
 
-void FakeNetworkService::CreateUDPSocket(mojo::ScopedMessagePipeHandle socket) {
+void FakeNetworkService::CreateUDPSocket(mx::channel socket) {
   FTL_DCHECK(false);
 }
 
 void FakeNetworkService::CreateHttpServer(
-    mojo::NetAddressPtr local_address,
-    mojo::ScopedMessagePipeHandle delegate,
+    network::NetAddressPtr local_address,
+    mx::channel delegate,
     const CreateHttpServerCallback& callback) {
   FTL_DCHECK(false);
 }
 
-void FakeNetworkService::RegisterURLLoaderInterceptor(
-    mojo::ScopedMessagePipeHandle factory) {
+void FakeNetworkService::RegisterURLLoaderInterceptor(mx::channel factory) {
   FTL_DCHECK(false);
 }
 
-void FakeNetworkService::CreateHostResolver(
-    mojo::ScopedMessagePipeHandle host_resolver) {
+void FakeNetworkService::CreateHostResolver(mx::channel host_resolver) {
   FTL_DCHECK(false);
 }
 

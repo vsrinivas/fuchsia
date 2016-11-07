@@ -13,7 +13,7 @@
 
 namespace glue {
 
-DataPipeWriter::DataPipeWriter(const MojoAsyncWaiter* waiter)
+DataPipeWriter::DataPipeWriter(const FidlAsyncWaiter* waiter)
     : waiter_(waiter) {}
 
 DataPipeWriter::~DataPipeWriter() {
@@ -23,44 +23,46 @@ DataPipeWriter::~DataPipeWriter() {
 }
 
 void DataPipeWriter::Start(const std::string& data,
-                           mojo::ScopedDataPipeProducerHandle destination) {
+                           mx::datapipe_producer destination) {
   data_ = data;
   destination_ = std::move(destination);
   WriteData();
 }
 
 void DataPipeWriter::WriteData() {
-  MojoResult rv_begin = mojo::BeginWriteDataRaw(
-      destination_.get(), &buffer_, &buffer_size_, MOJO_READ_DATA_FLAG_NONE);
-  if (rv_begin == MOJO_RESULT_OK) {
+  mx_status_t rv_begin = destination_.begin_write(
+      0u, reinterpret_cast<uintptr_t*>(&buffer_), &buffer_size_);
+  if (rv_begin == NO_ERROR) {
     size_t num_bytes =
         std::min(static_cast<size_t>(buffer_size_), data_.size() - offset_);
     memcpy(buffer_, &data_[offset_], num_bytes);
-    MojoResult rv_end = mojo::EndWriteDataRaw(destination_.get(), num_bytes);
-    FTL_DCHECK(rv_end == MOJO_RESULT_OK);
+    mx_status_t rv_end = destination_.end_write(num_bytes);
+    FTL_DCHECK(rv_end == NO_ERROR);
     offset_ += num_bytes;
     if (offset_ < data_.size()) {
       WaitForPipe();
     } else {
       Done();
     }
-  } else if (rv_begin == MOJO_RESULT_SHOULD_WAIT) {
+  } else if (rv_begin == ERR_SHOULD_WAIT) {
     WaitForPipe();
-  } else if (rv_begin == MOJO_RESULT_FAILED_PRECONDITION) {
+  } else if (rv_begin == ERR_REMOTE_CLOSED) {
     Done();
   } else {
-    FTL_DCHECK(false) << "Unhandled MojoResult: " << rv_begin;
+    FTL_DCHECK(false) << "Unhandled mx_status_t: " << rv_begin;
   }
 }
 
 void DataPipeWriter::WaitForPipe() {
-  wait_id_ = waiter_->AsyncWait(destination_.get().value(),
-                                MOJO_HANDLE_SIGNAL_WRITABLE,
-                                MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
+  wait_id_ = waiter_->AsyncWait(destination_.get(),
+                                MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                MX_TIME_INFINITE, &WaitComplete, this);
 }
 
 // static
-void DataPipeWriter::WaitComplete(void* context, MojoResult result) {
+void DataPipeWriter::WaitComplete(mx_status_t result,
+                                  mx_signals_t pending,
+                                  void* context) {
   DataPipeWriter* writer = static_cast<DataPipeWriter*>(context);
   writer->wait_id_ = 0;
   writer->WriteData();
