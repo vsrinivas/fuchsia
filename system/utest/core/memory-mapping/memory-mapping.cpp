@@ -47,7 +47,7 @@ bool address_space_limits_test() {
     mx_status_t status = mx_process_map_vm(
         mx_process_self(), vmo, 0, page_size, &addr,
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
-    EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
+    EXPECT_EQ(ERR_INVALID_ARGS, status, "vm_map");
 
     // Check that we can map at the next address down.  This helps to
     // verify that the previous check didn't fail for some unexpected

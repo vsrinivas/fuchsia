@@ -10,7 +10,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 #include <mxtl/array.h>
 #include <new.h>
 #include <unittest.h>
@@ -303,7 +303,10 @@ static bool vmm_tests(void* context) {
     }
 
     unittest_printf("allocating a vm address space object directly, allowing it to go out of scope\n");
-    { auto aspace = VmAspace::Create(0, "test aspace"); }
+    {
+        auto aspace = VmAspace::Create(0, "test aspace");
+        aspace->Destroy();
+    }
 
     unittest_printf("allocating a vm address space object directly, mapping somethign on it, "
                     "allowing it to go out of scope\n");

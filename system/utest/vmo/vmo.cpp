@@ -82,7 +82,7 @@ bool vmo_map_test() {
 
     mx_status_t status;
     mx_handle_t vmo;
-    uintptr_t ptr[5] = {};
+    uintptr_t ptr[3] = {};
 
     // allocate a vmo
     status = mx_vmo_create(4 * PAGE_SIZE, 0, &vmo);
@@ -105,41 +105,12 @@ bool vmo_map_test() {
     EXPECT_EQ(fixed, ptr[1], "map fixed address");
     //printf("mapped %#" PRIxPTR "\n", ptr[1]);
 
-    // map it in a spot starting at the fixed spot
-    ptr[2] = fixed;
-    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[2],
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_ALLOC_BASE);
-    EXPECT_EQ(NO_ERROR, status, "map");
-    EXPECT_LT(fixed, ptr[2], "map fixed base address");
-    //printf("mapped %#" PRIxPTR "\n", ptr[2]);
-    uintptr_t save = ptr[2];
-
-    // map it in a second spot starting at the fixed spot
-    ptr[3] = fixed;
-    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[3],
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_ALLOC_BASE);
-    EXPECT_EQ(NO_ERROR, status, "map");
-    EXPECT_LT(fixed, ptr[3], "map fixed base address");
-    //printf("mapped %#" PRIxPTR "\n", ptr[3]);
-
-    // unmap the second one
-    status = mx_process_unmap_vm(mx_process_self(), ptr[2], 0);
-    EXPECT_EQ(NO_ERROR, status, "unmap");
-
-    // map again, seeing if it'll fill the hole
-    ptr[2] = fixed;
-    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[2],
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_ALLOC_BASE);
-    EXPECT_EQ(NO_ERROR, status, "map");
-    EXPECT_EQ(save, ptr[2], "map fixed base address");
-    //printf("mapped %#" PRIxPTR "\n", ptr[2]);
-
     // try to map something completely out of range without any fixed mapping, should succeed
-    ptr[4] = UINTPTR_MAX;
-    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[4],
+    ptr[2] = UINTPTR_MAX;
+    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &ptr[2],
                 MX_VM_FLAG_PERM_READ);
     EXPECT_EQ(NO_ERROR, status, "map");
-    EXPECT_NEQ(0u, ptr[4], "map address");
+    EXPECT_NEQ(0u, ptr[2], "map address");
 
     // try to map something completely out of range fixed, should fail
     uintptr_t badptr = UINTPTR_MAX;
@@ -147,19 +118,15 @@ bool vmo_map_test() {
                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_FIXED);
     EXPECT_EQ(ERR_INVALID_ARGS, status, "map");
 
-    // try to base map something completely out of range fixed, should fail
-    badptr = UINTPTR_MAX;
-    status = mx_process_map_vm(mx_process_self(), vmo, 0, PAGE_SIZE, &badptr,
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_ALLOC_BASE);
-    EXPECT_EQ(ERR_INVALID_ARGS, status, "map");
-
     // cleanup
     status = mx_handle_close(vmo);
     EXPECT_EQ(NO_ERROR, status, "handle_close");
 
     for (auto p: ptr) {
-        status = mx_process_unmap_vm(mx_process_self(), p, 0);
-        EXPECT_EQ(NO_ERROR, status, "unmap");
+        if (p) {
+            status = mx_process_unmap_vm(mx_process_self(), p, 0);
+            EXPECT_EQ(NO_ERROR, status, "unmap");
+        }
     }
 
     END_TEST;

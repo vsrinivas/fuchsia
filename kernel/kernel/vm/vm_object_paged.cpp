@@ -13,7 +13,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
@@ -73,7 +73,7 @@ mxtl::RefPtr<VmObject> VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t 
     return vmo;
 }
 
-void VmObjectPaged::Dump(bool page_dump) {
+void VmObjectPaged::Dump(uint depth, bool page_dump) {
     if (magic_ != MAGIC) {
         printf("VmObjectPaged at %p has bad magic\n", this);
         return;
@@ -84,12 +84,18 @@ void VmObjectPaged::Dump(bool page_dump) {
     size_t count = 0;
     page_list_.ForEveryPage([&count](const auto p, uint64_t) { count++; });
 
-    printf("\t\tobject %p: ref %d size %#" PRIx64 ", %zu allocated pages\n", this, ref_count_debug(), size_,
+    for (uint i = 0; i < depth; ++i) {
+        printf("  ");
+    }
+    printf("object %p: ref %d size %#" PRIx64 ", %zu allocated pages\n", this, ref_count_debug(), size_,
            count);
 
     if (page_dump) {
-        auto f = [](const auto p, uint64_t offset) {
-            printf("\t\t\toffset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p, vm_page_to_paddr(p));
+        auto f = [depth](const auto p, uint64_t offset) {
+            for (uint i = 0; i < depth; ++i) {
+                printf("  ");
+            }
+            printf("  offset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p, vm_page_to_paddr(p));
         };
         page_list_.ForEveryPage(f);
     }

@@ -20,7 +20,7 @@
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
 
-class VmRegion;
+class VmMapping;
 
 // The base vm object that holds a range of bytes of data
 //
@@ -72,7 +72,7 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
-    virtual void Dump(bool page_dump = false) {}
+    virtual void Dump(uint depth = 0, bool page_dump = false) {}
 
 protected:
     // private constructor (use Create())
@@ -84,9 +84,9 @@ protected:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
-    // private apis used by the VmRegion class
+    // private apis used by the VmMapping class
     // get a pointer to a page at a given offset
-    friend class VmRegion;
+    friend class VmMapping;
 
     virtual vm_page_t* GetPageLocked(uint64_t offset) { return nullptr; }
 
@@ -113,8 +113,9 @@ protected:
 
     Mutex& lock() { return lock_; }
 
-    void AddRegionLocked(VmRegion* r);
-    void RemoveRegionLocked(VmRegion* r);
+    // TODO(teisenbe): Rename these to s/Region/Mapping/
+    void AddRegionLocked(VmMapping* r);
+    void RemoveRegionLocked(VmMapping* r);
 
     // magic value
     static const uint32_t MAGIC = 0x564d4f5f; // VMO_
@@ -122,7 +123,7 @@ protected:
 
     // members
     mutable Mutex lock_;
-    mxtl::DoublyLinkedList<VmRegion*> region_list_;
+    mxtl::DoublyLinkedList<VmMapping*> region_list_;
 };
 
 // the main VM object type, holding a list of pages
@@ -152,7 +153,7 @@ public:
 
     status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    void Dump(bool page_dump = false) override;
+    void Dump(uint depth = 0, bool page_dump = false) override;
 
     vm_page_t* GetPageLocked(uint64_t offset) override;
     vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override;
@@ -199,7 +200,7 @@ public:
 
     status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    void Dump(bool page_dump = false) override;
+    void Dump(uint depth = 0, bool page_dump = false) override;
 
     status_t GetPageLocked(uint64_t offset, paddr_t* pa) override;
     status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override;

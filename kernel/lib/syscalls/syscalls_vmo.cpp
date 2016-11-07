@@ -9,7 +9,7 @@
 #include <trace.h>
 
 #include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
@@ -242,6 +242,10 @@ mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, s
     if (!r)
         return ERR_INVALID_ARGS;
 
+    auto vm_mapping = r->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_INVALID_ARGS;
+
     uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_USER;
     switch (prot & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
     case MX_VM_FLAG_PERM_READ:
@@ -260,5 +264,5 @@ mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, s
         arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
 
-    return r->Protect(arch_mmu_flags);
+    return vm_mapping->Protect(arch_mmu_flags);
 }

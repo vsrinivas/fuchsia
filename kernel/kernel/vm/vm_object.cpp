@@ -13,7 +13,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <new.h>
@@ -35,13 +35,13 @@ VmObject::~VmObject() {
     magic_ = 0;
 }
 
-void VmObject::AddRegionLocked(VmRegion* r) {
+void VmObject::AddRegionLocked(VmMapping* r) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     region_list_.push_front(r);
 }
 
-void VmObject::RemoveRegionLocked(VmRegion* r) {
+void VmObject::RemoveRegionLocked(VmMapping* r) {
     DEBUG_ASSERT(lock_.IsHeld());
 
     region_list_.erase(*r);
@@ -71,7 +71,7 @@ static int cmd_vm_object(int argc, const cmd_args* argv) {
 
         VmObject* o = reinterpret_cast<VmObject*>(argv[2].u);
 
-        o->Dump(true);
+        o->Dump(0, true);
     } else {
         printf("unknown command\n");
         goto usage;

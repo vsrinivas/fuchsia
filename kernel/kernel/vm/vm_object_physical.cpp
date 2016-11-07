@@ -51,13 +51,16 @@ mxtl::RefPtr<VmObject> VmObjectPhysical::Create(paddr_t base, uint64_t size) {
     return vmo;
 }
 
-void VmObjectPhysical::Dump(bool page_dump) {
+void VmObjectPhysical::Dump(uint depth, bool page_dump) {
     if (magic_ != MAGIC) {
         printf("VmObjectPhysical at %p has bad magic\n", this);
         return;
     }
 
-    printf("\t\tobject %p: ref %d base %#" PRIxPTR " size %#" PRIx64 "\n", this, ref_count_debug(), base_,
+    for (uint i = 0; i < depth; ++i) {
+        printf("  ");
+    }
+    printf("object %p: ref %d base %#" PRIxPTR " size %#" PRIx64 "\n", this, ref_count_debug(), base_,
            size_);
 }
 

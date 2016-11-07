@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_address_region.h>
 #include <mxtl/deleter.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
@@ -17,7 +18,6 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
-class VmRegion;
 class VmObject;
 
 class VmAspace : public mxtl::DoublyLinkedListable<VmAspace*>, public mxtl::RefCounted<VmAspace> {
@@ -45,35 +45,7 @@ public:
     size_t size() const { return size_; }
     arch_aspace_t& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
-
-    // map a vm object at a given offset
-    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
-                       void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
-                       uint arch_mmu_flags);
-
-    // common routines, mostly used by internal kernel code
-
-    // create a blank map of vm address space
-    status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
-
-    // allocate a vm region mapping a physical range of memory
-    status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_log2,
-                           size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
-                           uint arch_mmu_flags);
-
-    // allocate a block of virtual memory
-    status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                   size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
-
-    // allocate a block of virtual memory with physically contiguous backing pages
-    status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
-                             size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
-
-    // return a pointer to a region based on virtual address
-    mxtl::RefPtr<VmRegion> FindRegion(vaddr_t vaddr);
-
-    // free the region at a given address
-    status_t FreeRegion(vaddr_t vaddr);
+    mxtl::RefPtr<VmAddressRegion> root_vmar() { return root_vmar_; }
 
     // destroy but not free the address space
     status_t Destroy();
@@ -88,9 +60,34 @@ public:
 
     size_t AllocatedPages() const;
 
-private:
-    using RegionTree = mxtl::WAVLTree<vaddr_t, mxtl::RefPtr<VmRegion>>;
+    // legacy functions to assist in the transition to VMARs
+    // These all assume a flat VMAR structure in which all VMOs are mapped
+    // as children of the root.
+    // TODO(teisenbe): remove uses of these in favor of new VMAR interfaces
 
+    status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
+                       void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
+                       uint arch_mmu_flags);
+    status_t ReserveSpace(const char* name, size_t size, vaddr_t vaddr);
+    status_t AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                           size_t min_alloc_gap, paddr_t paddr, uint vmm_flags,
+                           uint arch_mmu_flags);
+    status_t AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                             size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
+    status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
+                   size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
+    status_t FreeRegion(vaddr_t va);
+    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
+
+protected:
+    // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
+    // changes to the aspace.
+    friend class VmAddressRegionOrMapping;
+    friend class VmAddressRegion;
+    friend class VmMapping;
+    mutex_t& lock() { return lock_; }
+
+private:
     // can only be constructed via factory
     VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
 
@@ -105,15 +102,6 @@ private:
     status_t PageFault(vaddr_t va, uint flags);
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
 
-    // private internal routines
-    status_t AddRegion(const mxtl::RefPtr<VmRegion>& r);
-    vaddr_t AllocSpot(vaddr_t base, size_t size, uint8_t align_pow2, size_t min_alloc_gap,
-                      uint arch_mmu_flags);
-    mxtl::RefPtr<VmRegion> FindRegionLocked(vaddr_t vaddr);
-    bool CheckGap(const RegionTree::iterator& prev, const RegionTree::iterator& next, vaddr_t* pva,
-                  vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
-                  uint arch_mmu_flags);
-
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS
     uint32_t magic_ = MAGIC;
@@ -123,11 +111,13 @@ private:
     size_t size_;
     uint32_t flags_;
     char name_[32];
+    bool aspace_destroyed_ = false;
 
     mutable mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 
-    // ordered tree of regions
-    RegionTree regions_;
+    // root of virtual address space
+    // TODO(teisenbe): maybe embed this
+    mxtl::RefPtr<VmAddressRegion> root_vmar_;
 
     // architecturally specific part of the aspace
     arch_aspace_t arch_aspace_ = {};

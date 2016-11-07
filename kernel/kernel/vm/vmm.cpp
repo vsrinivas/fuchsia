@@ -12,7 +12,7 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <string.h>
@@ -72,7 +72,11 @@ status_t vmm_protect_region(vmm_aspace_t* _aspace, vaddr_t va, uint arch_mmu_fla
     if (!r)
         return ERR_NOT_FOUND;
 
-    return r->Protect(arch_mmu_flags);
+    auto vm_mapping = r->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NOT_FOUND;
+
+    return vm_mapping->Protect(arch_mmu_flags);
 }
 
 status_t vmm_free_region(vmm_aspace_t* _aspace, vaddr_t vaddr) {

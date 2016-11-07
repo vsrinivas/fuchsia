@@ -15,7 +15,7 @@
 
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_region.h>
+#include <kernel/vm/vm_address_region.h>
 
 #include <lib/console.h>
 #include <lib/user_copy.h>
@@ -158,11 +158,15 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     if (!region)
         return ERR_NO_MEMORY;
 
-    auto vmo = region->vmo();
+    auto vm_mapping = region->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NO_MEMORY;
+
+    auto vmo = vm_mapping->vmo();
     if (!vmo)
         return ERR_NO_MEMORY;
 
-    uint64_t offset = vaddr - region->base() + region->object_offset();
+    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t read = 0;
 
     status_t st = vmo->ReadUser(buffer, offset, len, &read);
@@ -197,11 +201,15 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     if (!region)
         return ERR_NO_MEMORY;
 
-    auto vmo = region->vmo();
+    auto vm_mapping = region->as_vm_mapping();
+    if (!vm_mapping)
+        return ERR_NO_MEMORY;
+
+    auto vmo = vm_mapping->vmo();
     if (!vmo)
         return ERR_NO_MEMORY;
 
-    uint64_t offset = vaddr - region->base() + region->object_offset();
+    uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t written = 0;
 
     status_t st = vmo->WriteUser(buffer, offset, len, &written);
