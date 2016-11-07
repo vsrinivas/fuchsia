@@ -11,8 +11,8 @@
     ],
     "binaries": [
         {
-            "binary": "flutter_content_handler",
-            "bootfs_path": "apps/flutter_content_handler"
+            "binary": "flutter_runner",
+            "bootfs_path": "apps/flutter_runner"
         },
         {
             "binary": "flutter_wtf_unittests",
