@@ -76,6 +76,10 @@ source_set("test_driver") {
     defines += [ "MAGMA_INDRIVER_TEST=1" ]
     sources += [ "driver_test_vkreadback.cc" ]
     deps += [ "$magma_build_root/tests/vkreadback" ]
+  } else if (magma_indriver_test == "vkcube") {
+    defines += [ "MAGMA_INDRIVER_TEST=1" ]
+    sources += [ "driver_test_vkcube.cc" ]
+    deps += [ "$magma_build_root/tests/vkcube" ]
   } else if (magma_indriver_test != "") {
     assert(false)
   }

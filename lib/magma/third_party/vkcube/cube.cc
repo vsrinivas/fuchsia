@@ -23,29 +23,24 @@
 * Author: Tony Barbour <tony@LunarG.com>
 */
 
-#define _GNU_SOURCE
+extern "C" {
+#include "vkcube.h"
+}
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <signal.h>
+
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #endif
 
-#ifdef _WIN32
-#pragma comment(linker, "/subsystem:windows")
-#define APP_NAME_STR_LEN 80
-#endif // _WIN32
-
-#ifdef ANDROID
-#include "vulkan_wrapper.h"
-#else
 #include <vulkan/vulkan.h>
-#endif
 
-#include <vulkan/vk_sdk_platform.h>
+//#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
 
 #define DEMO_TEXTURE_COUNT 1
@@ -69,30 +64,12 @@
 #define UNUSED
 #endif
 
-#ifdef _WIN32
-bool in_callback = false;
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        if (!demo->suppress_popups)                                            \
-            MessageBox(NULL, err_msg, err_class, MB_OK);                       \
-        exit(1);                                                               \
-    } while (0)
-
-#elif defined __ANDROID__
-#include <android/log.h>
-#define ERR_EXIT(err_msg, err_class)                                           \
-    do {                                                                       \
-        ((void)__android_log_print(ANDROID_LOG_INFO, "Cube", err_msg));        \
-        exit(1);                                                               \
-    } while (0)
-#else
 #define ERR_EXIT(err_msg, err_class)                                           \
     do {                                                                       \
         printf(err_msg);                                                       \
         fflush(stdout);                                                        \
         exit(1);                                                               \
     } while (0)
-#endif
 
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                               \
     {                                                                          \
@@ -131,10 +108,10 @@ struct texture_object {
     VkMemoryAllocateInfo mem_alloc;
     VkDeviceMemory mem;
     VkImageView view;
-    int32_t tex_width, tex_height;
+    uint32_t tex_width, tex_height;
 };
 
-static char *tex_files[] = {"lunarg.ppm"};
+static const char* tex_files[] = {"lunarg.ppm"};
 
 static int validation_error = 0;
 
@@ -268,11 +245,7 @@ BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
               uint64_t srcObject, size_t location, int32_t msgCode,
               const char *pLayerPrefix, const char *pMsg,
               void *pUserData) {
-#ifndef WIN32
-    raise(SIGTRAP);
-#else
-    DebugBreak();
-#endif
+    assert(false);
 
     return false;
 }
@@ -285,13 +258,7 @@ typedef struct {
 } SwapchainBuffers;
 
 struct demo {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-#define APP_NAME_STR_LEN 80
-    HINSTANCE connection;        // hInstance - Windows Instance
-    char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
-    HWND window;                 // hWnd - window handle
-    POINT minsize;               // minimum window size
-#elif defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR) | defined(VK_USE_PLATFORM_XCB_KHR)
     Display* display;
     Window xlib_window;
     Atom xlib_wm_delete_window;
@@ -300,15 +267,6 @@ struct demo {
     xcb_screen_t *screen;
     xcb_window_t xcb_window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_compositor *compositor;
-    struct wl_surface *window;
-    struct wl_shell *shell;
-    struct wl_shell_surface *shell_surface;
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    ANativeWindow* window;
 #endif
     VkSurfaceKHR surface;
     bool prepared;
@@ -332,10 +290,10 @@ struct demo {
 
     uint32_t enabled_extension_count;
     uint32_t enabled_layer_count;
-    char *extension_names[64];
-    char *enabled_layers[64];
+    const char* extension_names[64];
+    const char* enabled_layers[64];
 
-    int width, height;
+    uint32_t width, height;
     VkFormat format;
     VkColorSpaceKHR color_space;
 
@@ -453,36 +411,8 @@ dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
         validation_error = 1;
     }
 
-#ifdef _WIN32
-
-    in_callback = true;
-    struct demo *demo = (struct demo*) pUserData;
-    if (!demo->suppress_popups)
-        MessageBox(NULL, message, "Alert", MB_OK);
-    in_callback = false;
-
-#elif defined(ANDROID)
-
-    if (msgFlags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_WARN,  APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_ERROR, APP_SHORT_NAME, "%s", message);
-    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
-        __android_log_print(ANDROID_LOG_DEBUG, APP_SHORT_NAME, "%s", message);
-    } else {
-        __android_log_print(ANDROID_LOG_INFO,  APP_SHORT_NAME, "%s", message);
-    }
-
-#else
-
     printf("%s\n", message);
     fflush(stdout);
-
-#endif
 
     free(message);
 
@@ -951,7 +881,7 @@ static void demo_prepare_buffers(struct demo *demo) {
         desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
     }
 
-    VkSurfaceTransformFlagsKHR preTransform;
+    VkSurfaceTransformFlagBitsKHR preTransform;
     if (surfCapabilities.supportedTransforms &
         VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
@@ -1117,9 +1047,8 @@ static void demo_prepare_depth(struct demo *demo) {
 
 /* Load a ppm file into memory */
 bool loadTexture(const char *filename, uint8_t *rgba_data,
-                 VkSubresourceLayout *layout, int32_t *width, int32_t *height) {
-#ifdef __ANDROID__
-#include <lunarg.ppm.h>
+                 VkSubresourceLayout *layout, uint32_t *width, uint32_t *height) {
+#include "lunarg.ppm.h"
     char *cPtr;
     cPtr = (char*)lunarg_ppm;
     if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
@@ -1136,9 +1065,9 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
     }
     while(strncmp(cPtr++, "\n", 1));
 
-    for (int y = 0; y < *height; y++) {
+    for (uint32_t y = 0; y < *height; y++) {
         uint8_t *rowPtr = rgba_data;
-        for (int x = 0; x < *width; x++) {
+        for (uint32_t x = 0; x < *width; x++) {
             memcpy(rowPtr, cPtr, 3);
             rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
@@ -1148,52 +1077,6 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
     }
 
     return true;
-#else
-    FILE *fPtr = fopen(filename, "rb");
-    char header[256], *cPtr, *tmp;
-
-    if (!fPtr)
-        return false;
-
-    cPtr = fgets(header, 256, fPtr); // P6
-    if (cPtr == NULL || strncmp(header, "P6\n", 3)) {
-        fclose(fPtr);
-        return false;
-    }
-
-    do {
-        cPtr = fgets(header, 256, fPtr);
-        if (cPtr == NULL) {
-            fclose(fPtr);
-            return false;
-        }
-    } while (!strncmp(header, "#", 1));
-
-    sscanf(header, "%u %u", width, height);
-    if (rgba_data == NULL) {
-        fclose(fPtr);
-        return true;
-    }
-    tmp = fgets(header, 256, fPtr); // Format
-    (void)tmp;
-    if (cPtr == NULL || strncmp(header, "255\n", 3)) {
-        fclose(fPtr);
-        return false;
-    }
-
-    for (int y = 0; y < *height; y++) {
-        uint8_t *rowPtr = rgba_data;
-        for (int x = 0; x < *width; x++) {
-            size_t s = fread(rowPtr, 3, 1, fPtr);
-            (void)s;
-            rowPtr[3] = 255; /* Alpha of 1 */
-            rowPtr += 4;
-        }
-        rgba_data += layout->rowPitch;
-    }
-    fclose(fPtr);
-    return true;
-#endif
 }
 
 static void demo_prepare_texture_image(struct demo *demo, const char *filename,
@@ -1202,8 +1085,8 @@ static void demo_prepare_texture_image(struct demo *demo, const char *filename,
                                        VkImageUsageFlags usage,
                                        VkFlags required_props) {
     const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-    int32_t tex_width;
-    int32_t tex_height;
+    uint32_t tex_width;
+    uint32_t tex_height;
     VkResult U_ASSERT_ONLY err;
     bool U_ASSERT_ONLY pass;
 
@@ -1272,7 +1155,7 @@ static void demo_prepare_texture_image(struct demo *demo, const char *filename,
                           tex_obj->mem_alloc.allocationSize, 0, &data);
         assert(!err);
 
-        if (!loadTexture(filename, data, &layout, &tex_width, &tex_height)) {
+        if (!loadTexture(filename, reinterpret_cast<uint8_t*>(data), &layout, &tex_width, &tex_height)) {
             fprintf(stderr, "Error loading texture: %s\n", filename);
         }
 
@@ -1603,53 +1486,7 @@ static void demo_prepare_render_pass(struct demo *demo) {
     assert(!err);
 }
 
-//TODO: Merge shader reading
-#ifndef __ANDROID__
-static VkShaderModule
-demo_prepare_shader_module(struct demo *demo, const void *code, size_t size) {
-    VkShaderModule module;
-    VkShaderModuleCreateInfo moduleCreateInfo;
-    VkResult U_ASSERT_ONLY err;
-
-    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    moduleCreateInfo.pNext = NULL;
-
-    moduleCreateInfo.codeSize = size;
-    moduleCreateInfo.pCode = code;
-    moduleCreateInfo.flags = 0;
-    err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
-    assert(!err);
-
-    return module;
-}
-
-char *demo_read_spv(const char *filename, size_t *psize) {
-    long int size;
-    size_t U_ASSERT_ONLY retval;
-    void *shader_code;
-
-    FILE *fp = fopen(filename, "rb");
-    if (!fp)
-        return NULL;
-
-    fseek(fp, 0L, SEEK_END);
-    size = ftell(fp);
-
-    fseek(fp, 0L, SEEK_SET);
-
-    shader_code = malloc(size);
-    retval = fread(shader_code, size, 1, fp);
-    assert(retval == 1);
-
-    *psize = size;
-
-    fclose(fp);
-    return shader_code;
-}
-#endif
-
 static VkShaderModule demo_prepare_vs(struct demo *demo) {
-#ifdef __ANDROID__
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
@@ -1658,23 +1495,11 @@ static VkShaderModule demo_prepare_vs(struct demo *demo) {
     sh_info.pCode = cube_vert;
     VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->vert_shader_module);
     assert(!err);
-#else
-    void *vertShaderCode;
-    size_t size;
-
-    vertShaderCode = demo_read_spv("cube-vert.spv", &size);
-
-    demo->vert_shader_module =
-        demo_prepare_shader_module(demo, vertShaderCode, size);
-
-    free(vertShaderCode);
-#endif
 
     return demo->vert_shader_module;
 }
 
 static VkShaderModule demo_prepare_fs(struct demo *demo) {
-#ifdef __ANDROID__
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
@@ -1683,17 +1508,6 @@ static VkShaderModule demo_prepare_fs(struct demo *demo) {
     sh_info.pCode = cube_frag;
     VkResult U_ASSERT_ONLY err = vkCreateShaderModule(demo->device, &sh_info, NULL, &demo->frag_shader_module);
     assert(!err);
-#else
-    void *fragShaderCode;
-    size_t size;
-
-    fragShaderCode = demo_read_spv("cube-frag.spv", &size);
-
-    demo->frag_shader_module =
-        demo_prepare_shader_module(demo, fragShaderCode, size);
-
-    free(fragShaderCode);
-#endif
 
     return demo->frag_shader_module;
 }
@@ -2082,14 +1896,7 @@ static void demo_cleanup(struct demo *demo) {
     xcb_destroy_window(demo->connection, demo->xcb_window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    wl_shell_surface_destroy(demo->shell_surface);
-    wl_surface_destroy(demo->window);
-    wl_shell_destroy(demo->shell);
-    wl_compositor_destroy(demo->compositor);
-    wl_registry_destroy(demo->registry);
-    wl_display_disconnect(demo->display);
-#endif
+#endif    
 }
 
 static void demo_resize(struct demo *demo) {
@@ -2151,101 +1958,7 @@ static void demo_resize(struct demo *demo) {
 // On MS-Windows, make this a global, so it's available to WndProc()
 struct demo demo;
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-static void demo_run(struct demo *demo) {
-    if (!demo->prepared)
-        return;
-
-    demo_update_data_buffer(demo);
-    demo_draw(demo);
-    demo->curFrame++;
-    if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount) {
-        PostQuitMessage(validation_error);
-    }
-}
-
-// MS-Windows event handling function:
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(validation_error);
-        break;
-    case WM_PAINT:
-        // The validation callback calls MessageBox which can generate paint
-        // events - don't make more Vulkan calls if we got here from the
-        // callback
-        if (!in_callback) {
-            demo_run(&demo);
-        }
-        break;
-    case WM_GETMINMAXINFO:     // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
-        return 0;
-    case WM_SIZE:
-        // Resize the application to the new window size, except when
-        // it was minimized. Vulkan doesn't support images or swapchains
-        // with width=0 and height=0.
-        if (wParam != SIZE_MINIMIZED) {
-            demo.width = lParam & 0xffff;
-            demo.height = (lParam & 0xffff0000) >> 16;
-            demo_resize(&demo);
-        }
-        break;
-    default:
-        break;
-    }
-    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
-}
-
-static void demo_create_window(struct demo *demo) {
-    WNDCLASSEX win_class;
-
-    // Initialize the window class structure:
-    win_class.cbSize = sizeof(WNDCLASSEX);
-    win_class.style = CS_HREDRAW | CS_VREDRAW;
-    win_class.lpfnWndProc = WndProc;
-    win_class.cbClsExtra = 0;
-    win_class.cbWndExtra = 0;
-    win_class.hInstance = demo->connection; // hInstance
-    win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
-    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-    win_class.lpszMenuName = NULL;
-    win_class.lpszClassName = demo->name;
-    win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
-    // Register window class:
-    if (!RegisterClassEx(&win_class)) {
-        // It didn't work, so try to give a useful error:
-        printf("Unexpected error trying to start the application!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    // Create window with the registered class:
-    RECT wr = {0, 0, demo->width, demo->height};
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-    demo->window = CreateWindowEx(0,
-                                  demo->name,           // class name
-                                  demo->name,           // app name
-                                  WS_OVERLAPPEDWINDOW | // window style
-                                      WS_VISIBLE | WS_SYSMENU,
-                                  100, 100,           // x/y coords
-                                  wr.right - wr.left, // width
-                                  wr.bottom - wr.top, // height
-                                  NULL,               // handle to parent
-                                  NULL,               // handle to menu
-                                  demo->connection,   // hInstance
-                                  NULL);              // no extra parameters
-    if (!demo->window) {
-        // It didn't work, so try to give a useful error:
-        printf("Cannot create a window in which to draw!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    // Window client area size must be at least 1 pixel high, to prevent crash.
-    demo->minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-    demo->minsize.y = GetSystemMetrics(SM_CYMINTRACK)+1;
-}
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_KHR)
 static void demo_create_xlib_window(struct demo *demo) {
 
     demo->display = XOpenDisplay(NULL);
@@ -2338,6 +2051,7 @@ static void demo_run_xlib(struct demo *demo) {
     }
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
+
 #ifdef VK_USE_PLATFORM_XCB_KHR
 static void demo_handle_xcb_event(struct demo *demo,
                               const xcb_generic_event_t *event) {
@@ -2450,8 +2164,11 @@ static void demo_create_xcb_window(struct demo *demo) {
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
 // VK_USE_PLATFORM_XCB_KHR
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void demo_run(struct demo *demo) {
+#endif
+
+#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+static void demo_run_magma(struct demo *demo) 
+{
     while (!demo->quit) {
         demo_update_data_buffer(demo);
         demo_draw(demo);
@@ -2460,59 +2177,13 @@ static void demo_run(struct demo *demo) {
             demo->quit = true;
     }
 }
-
-static void handle_ping(void *data UNUSED,
-                        struct wl_shell_surface *shell_surface,
-                        uint32_t serial) {
-    wl_shell_surface_pong(shell_surface, serial);
-}
-
-static void handle_configure(void *data UNUSED,
-                             struct wl_shell_surface *shell_surface UNUSED,
-                             uint32_t edges UNUSED, int32_t width UNUSED,
-                             int32_t height UNUSED) {}
-
-static void handle_popup_done(void *data UNUSED,
-                              struct wl_shell_surface *shell_surface UNUSED) {}
-
-static const struct wl_shell_surface_listener shell_surface_listener = {
-    handle_ping, handle_configure, handle_popup_done};
-
-static void demo_create_window(struct demo *demo) {
-    demo->window = wl_compositor_create_surface(demo->compositor);
-    if (!demo->window) {
-        printf("Can not create wayland_surface from compositor!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    demo->shell_surface = wl_shell_get_shell_surface(demo->shell, demo->window);
-    if (!demo->shell_surface) {
-        printf("Can not get shell_surface from wayland_surface!\n");
-        fflush(stdout);
-        exit(1);
-    }
-    wl_shell_surface_add_listener(demo->shell_surface, &shell_surface_listener,
-                                  demo);
-    wl_shell_surface_set_toplevel(demo->shell_surface);
-    wl_shell_surface_set_title(demo->shell_surface, APP_SHORT_NAME);
-}
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-static void demo_run(struct demo *demo) {
-    if (!demo->prepared)
-        return;
-
-    demo_update_data_buffer(demo);
-    demo_draw(demo);
-    demo->curFrame++;
-}
-#endif
+#endif /**/
 
 /*
  * Return 1 (true) if all layer names specified in check_names
  * can be found in given layer properties.
  */
-static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
+static VkBool32 demo_check_layers(uint32_t check_count, const char **check_names,
                                   uint32_t layer_count,
                                   VkLayerProperties *layers) {
     for (uint32_t i = 0; i < check_count; i++) {
@@ -2536,15 +2207,15 @@ static void demo_init_vk(struct demo *demo) {
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     uint32_t validation_layer_count = 0;
-    char **instance_validation_layers = NULL;
+    const char **instance_validation_layers = NULL;
     demo->enabled_extension_count = 0;
     demo->enabled_layer_count = 0;
 
-    char *instance_validation_layers_alt1[] = {
+    const char *instance_validation_layers_alt1[] = {
         "VK_LAYER_LUNARG_standard_validation"
     };
 
-    char *instance_validation_layers_alt2[] = {
+    const char *instance_validation_layers_alt2[] = {
         "VK_LAYER_GOOGLE_threading",       "VK_LAYER_LUNARG_parameter_validation",
         "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_image",
         "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
@@ -2560,8 +2231,8 @@ static void demo_init_vk(struct demo *demo) {
 
         instance_validation_layers = instance_validation_layers_alt1;
         if (instance_layer_count > 0) {
-            VkLayerProperties *instance_layers =
-                    malloc(sizeof (VkLayerProperties) * instance_layer_count);
+            VkLayerProperties *instance_layers = reinterpret_cast<VkLayerProperties*>(
+                    malloc(sizeof (VkLayerProperties) * instance_layer_count));
             err = vkEnumerateInstanceLayerProperties(&instance_layer_count,
                     instance_layers);
             assert(!err);
@@ -2614,8 +2285,8 @@ static void demo_init_vk(struct demo *demo) {
     assert(!err);
 
     if (instance_extension_count > 0) {
-        VkExtensionProperties *instance_extensions =
-            malloc(sizeof(VkExtensionProperties) * instance_extension_count);
+        VkExtensionProperties *instance_extensions = reinterpret_cast<VkExtensionProperties*>(
+            malloc(sizeof(VkExtensionProperties) * instance_extension_count));
         err = vkEnumerateInstanceExtensionProperties(
             NULL, &instance_extension_count, instance_extensions);
         assert(!err);
@@ -2626,14 +2297,6 @@ static void demo_init_vk(struct demo *demo) {
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_SURFACE_EXTENSION_NAME;
             }
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-            if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-            }
-#endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
@@ -2649,22 +2312,6 @@ static void demo_init_vk(struct demo *demo) {
                 platformSurfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
-            }
-#endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-            }
-#endif
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-            if (!strcmp(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
-                        instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                demo->extension_names[demo->enabled_extension_count++] =
-                    VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
             }
 #endif
             if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
@@ -2690,33 +2337,9 @@ static void demo_init_vk(struct demo *demo) {
                  "vkCreateInstance Failure");
     }
     if (!platformSurfaceExtFound) {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#if defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-                 "the " VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
@@ -2794,7 +2417,7 @@ static void demo_init_vk(struct demo *demo) {
     assert(!err && gpu_count > 0);
 
     if (gpu_count > 0) {
-        VkPhysicalDevice *physical_devices = malloc(sizeof(VkPhysicalDevice) * gpu_count);
+        VkPhysicalDevice *physical_devices = reinterpret_cast<VkPhysicalDevice*>(malloc(sizeof(VkPhysicalDevice) * gpu_count));
         err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, physical_devices);
         assert(!err);
         /* For cube demo we just grab the first physical device */
@@ -2819,8 +2442,8 @@ static void demo_init_vk(struct demo *demo) {
     assert(!err);
 
     if (device_extension_count > 0) {
-        VkExtensionProperties *device_extensions =
-            malloc(sizeof(VkExtensionProperties) * device_extension_count);
+        VkExtensionProperties *device_extensions = reinterpret_cast<VkExtensionProperties*>(
+            malloc(sizeof(VkExtensionProperties) * device_extension_count));
         err = vkEnumerateDeviceExtensionProperties(
             demo->gpu, NULL, &device_extension_count, device_extensions);
         assert(!err);
@@ -2959,39 +2582,10 @@ static void demo_create_device(struct demo *demo) {
 }
 
 static void demo_init_vk_swapchain(struct demo *demo) {
-    VkResult U_ASSERT_ONLY err;
+    VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     uint32_t i;
 
-// Create a WSI surface for the window:
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    VkWin32SurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.hinstance = demo->connection;
-    createInfo.hwnd = demo->window;
-
-    err =
-        vkCreateWin32SurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
-    VkWaylandSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.display = demo->display;
-    createInfo.surface = demo->window;
-
-    err = vkCreateWaylandSurfaceKHR(demo->inst, &createInfo, NULL,
-                                    &demo->surface);
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-    VkAndroidSurfaceCreateInfoKHR createInfo;
-    createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    createInfo.pNext = NULL;
-    createInfo.flags = 0;
-    createInfo.window = (ANativeWindow*)(demo->window);
-
-    err = vkCreateAndroidSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#endif
+    // Create a WSI surface for the window:
     if (demo->use_xlib) {
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
         VkXlibSurfaceCreateInfoKHR createInfo;
@@ -3015,7 +2609,13 @@ static void demo_init_vk_swapchain(struct demo *demo) {
         createInfo.window = demo->xcb_window;
 
         err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo, NULL, &demo->surface);
-#endif
+#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+        VkMagmaSurfaceCreateInfoKHR createInfo = {
+            .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+        };  
+        err = vkCreateMagmaSurfaceKHR(demo->inst, &createInfo, nullptr, &demo->surface);
+#endif        
     }
     assert(!err);
 
@@ -3148,29 +2748,6 @@ static void demo_init_vk_swapchain(struct demo *demo) {
     vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR) && !defined(VK_USE_PLATFORM_XCB_KHR)
-static void registry_handle_global(void *data, struct wl_registry *registry,
-                                   uint32_t name, const char *interface,
-                                   uint32_t version UNUSED) {
-    struct demo *demo = data;
-    if (strcmp(interface, "wl_compositor") == 0) {
-        demo->compositor =
-            wl_registry_bind(registry, name, &wl_compositor_interface, 3);
-        /* Todo: When xdg_shell protocol has stablized, we should move wl_shell
-         * tp xdg_shell */
-    } else if (strcmp(interface, "wl_shell") == 0) {
-        demo->shell = wl_registry_bind(registry, name, &wl_shell_interface, 1);
-    }
-}
-
-static void registry_handle_global_remove(void *data UNUSED,
-                                          struct wl_registry *registry UNUSED,
-                                          uint32_t name UNUSED) {}
-
-static const struct wl_registry_listener registry_listener = {
-    registry_handle_global, registry_handle_global_remove};
-#endif
-
 static void demo_init_connection(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
     const xcb_setup_t *setup;
@@ -3191,19 +2768,6 @@ static void demo_init_connection(struct demo *demo) {
         xcb_screen_next(&iter);
 
     demo->screen = iter.data;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo->display = wl_display_connect(NULL);
-
-    if (demo->display == NULL) {
-        printf("Cannot find a compatible Vulkan installable client driver "
-               "(ICD).\nExiting ...\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    demo->registry = wl_display_get_registry(demo->display);
-    wl_registry_add_listener(demo->registry, &registry_listener, demo);
-    wl_display_dispatch(demo->display);
 #endif
 }
 
@@ -3223,7 +2787,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
         }
         if ((strcmp(argv[i], "--present_mode") == 0) &&
                 (i < argc - 1)) {
-            demo->presentMode = atoi(argv[i+1]);
+            demo->presentMode = static_cast<VkPresentModeKHR>(atoi(argv[i+1]));
             i++;
             continue;
         }
@@ -3252,9 +2816,6 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             continue;
         }
 
-#if defined(ANDROID)
-        ERR_EXIT("Usage: cube [--validate]\n", "Usage");
-#else
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                         "[--xlib] "
@@ -3268,7 +2829,6 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
                 VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR);
         fflush(stderr);
         exit(1);
-#endif
     }
 
     if (!demo->use_xlib)
@@ -3291,193 +2851,11 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
 }
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-// Include header required for parsing the command line options.
-#include <shellapi.h>
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
-                   int nCmdShow) {
-    MSG msg;   // message
-    bool done; // flag saying when app is complete
-    int argc;
-    char **argv;
-
-    // Use the CommandLine functions to get the command line arguments.
-    // Unfortunately, Microsoft outputs
-    // this information as wide characters for Unicode, and we simply want the
-    // Ascii version to be compatible
-    // with the non-Windows side.  So, we have to convert the information to
-    // Ascii character strings.
-    LPWSTR *commandLineArgs = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (NULL == commandLineArgs) {
-        argc = 0;
-    }
-
-    if (argc > 0) {
-        argv = (char **)malloc(sizeof(char *) * argc);
-        if (argv == NULL) {
-            argc = 0;
-        } else {
-            for (int iii = 0; iii < argc; iii++) {
-                size_t wideCharLen = wcslen(commandLineArgs[iii]);
-                size_t numConverted = 0;
-
-                argv[iii] = (char *)malloc(sizeof(char) * (wideCharLen + 1));
-                if (argv[iii] != NULL) {
-                    wcstombs_s(&numConverted, argv[iii], wideCharLen + 1,
-                               commandLineArgs[iii], wideCharLen + 1);
-                }
-            }
-        }
-    } else {
-        argv = NULL;
-    }
-
-    demo_init(&demo, argc, argv);
-
-    // Free up the items we had to allocate for the command line arguments.
-    if (argc > 0 && argv != NULL) {
-        for (int iii = 0; iii < argc; iii++) {
-            if (argv[iii] != NULL) {
-                free(argv[iii]);
-            }
-        }
-        free(argv);
-    }
-
-    demo.connection = hInstance;
-    strncpy(demo.name, "cube", APP_NAME_STR_LEN);
-    demo_create_window(&demo);
-    demo_init_vk_swapchain(&demo);
-
-    demo_prepare(&demo);
-
-    done = false; // initialize loop condition variable
-
-    // main message loop
-    while (!done) {
-        PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT) // check for a quit message
-        {
-            done = true; // if found, quit app
-        } else {
-            /* Translate and dispatch to event queue*/
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        RedrawWindow(demo.window, NULL, NULL, RDW_INTERNALPAINT);
-    }
-
-    demo_cleanup(&demo);
-
-    return (int)msg.wParam;
-}
-#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
-#include <android/log.h>
-#include <android_native_app_glue.h>
-#include "android_util.h"
-
-static bool initialized = false;
-static bool active = false;
-struct demo demo;
-
-static int32_t processInput(struct android_app* app, AInputEvent* event) {
-    return 0;
-}
-
-static void processCommand(struct android_app* app, int32_t cmd) {
-    switch(cmd) {
-        case APP_CMD_INIT_WINDOW: {
-            if (app->window) {
-                // We're getting a new window.  If the app is starting up, we
-                // need to initialize.  If the app has already been
-                // initialized, that means that we lost our previous window,
-                // which means that we have a lot of work to do.  At a minimum,
-                // we need to destroy the swapchain and surface associated with
-                // the old window, and create a new surface and swapchain.
-                // However, since there are a lot of other objects/state that
-                // is tied to the swapchain, it's easiest to simply cleanup and
-                // start over (i.e. use a brute-force approach of re-starting
-                // the app)
-                if (demo.prepared) {
-                    demo_cleanup(&demo);
-                }
-
-                // Parse Intents into argc, argv
-                // Use the following key to send arguments, i.e.
-                // --es args "--validate"
-                const char key[] = "args";
-                char* appTag = (char*) APP_SHORT_NAME;
-                int argc = 0;
-                char** argv = get_args(app, key, appTag, &argc);
-
-                __android_log_print(ANDROID_LOG_INFO, appTag, "argc = %i", argc);
-                for (int i = 0; i < argc; i++)
-                    __android_log_print(ANDROID_LOG_INFO, appTag, "argv[%i] = %s", i, argv[i]);
-
-                demo_init(&demo, argc, argv);
-
-                // Free the argv malloc'd by get_args
-                for (int i = 0; i < argc; i++)
-                    free(argv[i]);
-
-                demo.window = (void*)app->window;
-                demo_init_vk_swapchain(&demo);
-                demo_prepare(&demo);
-                initialized = true;
-            }
-            break;
-        }
-        case APP_CMD_GAINED_FOCUS: {
-            active = true;
-            break;
-        }
-        case APP_CMD_LOST_FOCUS: {
-            active = false;
-            break;
-        }
-    }
-}
-
-void android_main(struct android_app *app)
-{
-    app_dummy();
-
-#ifdef ANDROID
-    int vulkanSupport = InitVulkan();
-    if (vulkanSupport == 0)
-        return;
-#endif
-
-    demo.prepared = false;
-
-    app->onAppCmd = processCommand;
-    app->onInputEvent = processInput;
-
-    while(1) {
-        int events;
-        struct android_poll_source* source;
-        while (ALooper_pollAll(active ? 0 : -1, NULL, &events, (void**)&source) >= 0) {
-            if (source) {
-                source->process(app, source);
-            }
-
-            if (app->destroyRequested != 0) {
-                demo_cleanup(&demo);
-                return;
-            }
-        }
-        if (initialized && active) {
-            demo_run(&demo);
-        }
-    }
-
-}
-#else
-int main(int argc, char **argv) {
+int cube_main(int argc, char **argv) {
     struct demo demo;
 
     demo_init(&demo, argc, argv);
+
 #if defined(VK_USE_PLATFORM_XLIB_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
     if (demo.use_xlib)
         demo_create_xlib_window(&demo);
@@ -3487,8 +2865,6 @@ int main(int argc, char **argv) {
     demo_create_xcb_window(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     demo_create_xlib_window(&demo);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo_create_window(&demo);
 #endif
 
     demo_init_vk_swapchain(&demo);
@@ -3504,12 +2880,16 @@ int main(int argc, char **argv) {
     demo_run_xcb(&demo);
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
     demo_run_xlib(&demo);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    demo_run(&demo);
+#elif defined(VK_USE_PLATFORM_MAGMA_KHR)
+    demo_run_magma(&demo);
 #endif
 
     demo_cleanup(&demo);
 
     return validation_error;
 }
-#endif
+
+int test_vk_cube()
+{
+    return cube_main(0, nullptr);
+}

@@ -28,6 +28,7 @@ indriver_test=msd_unit_tests;
 #indriver_test=glreadback;
 #indriver_test=spinning_cube;
 #indriver_test=vkreadback;
+#indriver_test=vkcube;
 
 autorun_magma_app_tests=true;
 autorun_magma_sys_tests=true;
