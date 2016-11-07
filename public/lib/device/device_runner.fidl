@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/mozart/services/views/interfaces/view_token.mojom";
+import "apps/mozart/services/views/view_token.fidl";
 
 // Intended for use by Device Shell UI to provide user information to the
 // Device runner. Device runner will close the pipe and stop the Device Shell

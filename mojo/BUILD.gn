@@ -47,4 +47,3 @@ source_set("strong_binding") {
     "//lib/ftl",
   ]
 }
-

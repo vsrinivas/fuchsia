@@ -167,7 +167,9 @@ class StrongBinding {
   }
 
   void OnConnectionError() {
-    connection_error_handler_();
+    if (connection_error_handler_) {
+      connection_error_handler_();
+    }
     delete binding_.impl();
   }
 

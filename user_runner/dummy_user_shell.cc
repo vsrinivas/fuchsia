@@ -108,8 +108,9 @@ class DummyUserShellImpl : public UserShell,
   }
 
   // |mozart::BaseView|
-  void OnChildAttached(uint32_t child_key,
-                       fidl::StructPtr<mozart::ViewInfo> child_view_info) override {
+  void OnChildAttached(
+      uint32_t child_key,
+      fidl::StructPtr<mozart::ViewInfo> child_view_info) override {
     view_info_ = std::move(child_view_info);
     auto view_properties = mozart::ViewProperties::New();
     GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
@@ -173,7 +174,8 @@ class DummyUserShellImpl : public UserShell,
                   << to_string(story_info_->session_page_id)
                   << " is_running: " << story_info_->is_running;
 
-    story_provider_->ResumeStoryByInfo(story_info_->Clone(), fidl::GetProxy(&story_));
+    story_provider_->ResumeStoryByInfo(story_info_->Clone(),
+                                       fidl::GetProxy(&story_));
     InitStory();
   }
 

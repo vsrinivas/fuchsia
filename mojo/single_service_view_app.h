@@ -46,12 +46,13 @@ class ServiceProviderImpl : public ServiceProvider {
   // Presumably, if ConnectToService() is called multiple times, it
   // should always connect to the same service instance, but we
   // neither need nor support this right now.
-  void ConnectToService(const fidl::String& service_name, mx::channel pipe) override {
+  void ConnectToService(const fidl::String& service_name,
+                        mx::channel pipe) override {
     if (service_name == Service::Name_) {
-      new ServiceImpl(
-          application_context_->ConnectToEnvironmentService<mozart::ViewManager>(),
-          fidl::InterfaceRequest<Service>(std::move(pipe)),
-          std::move(view_owner_request_));
+      new ServiceImpl(application_context_
+                          ->ConnectToEnvironmentService<mozart::ViewManager>(),
+                      fidl::InterfaceRequest<Service>(std::move(pipe)),
+                      std::move(view_owner_request_));
     }
   }
 

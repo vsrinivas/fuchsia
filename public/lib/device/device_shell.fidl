@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/device/device_runner.mojom";
+import "apps/modular/services/device/device_runner.fidl";
 
 // This interface is meant to be implemented by a Device Shell so that
 // |DeviceRunner| could be passed to it on startup.
