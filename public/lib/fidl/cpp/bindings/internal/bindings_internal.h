@@ -220,8 +220,13 @@ struct WrapperTraits;
 
 template <typename T>
 struct IsHandleType {
-  static constexpr bool value = std::is_base_of<mx::handle<T>, T>::value;
+  static constexpr bool value = std::is_base_of<mx::handle<T>, T>::value ||
+                                IsSpecializationOf<mx::handle, T>::value;
 };
+static_assert(IsHandleType<mx::handle<void>>::value,
+              "mx::handle<void> should be considered a handle");
+static_assert(IsHandleType<mx::channel>::value,
+              "mx::channel should be considered a handle.");
 
 // Catch-all for all mojom types not specialized below.
 template <typename T>
@@ -252,13 +257,11 @@ struct WrapperTraits<InlinedStructPtr<U>, true, true> {
   using DataType = typename U::Data_;
 };
 // Structs, arrays, maps.
+// TODO(vardhan): Should we only support fidl types? (there are unittests that
+// mock types).
 template <typename P>
 struct WrapperTraits<P, true, false,
-                     typename std::enable_if<
-                         IsSpecializationOf<Array, P>::value ||
-                         IsSpecializationOf<Map, P>::value ||
-                         IsSpecializationOf<StructPtr, P>::value ||
-                         IsSpecializationOf<InlinedStructPtr, P>::value>::type> {
+    typename std::enable_if<!std::is_void<typename P::Data_>::value>::type> {
   using DataType = typename P::Data_*;
 };
 
