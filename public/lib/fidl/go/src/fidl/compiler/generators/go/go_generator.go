@@ -50,10 +50,17 @@ func stripExt(fileName string) string {
 }
 
 func genFile(fileName string, config common.GeneratorConfig) {
-	if err := os.MkdirAll(path.Dir(fileName), 0777); err != nil {
+	relFileName, err := filepath.Rel(config.SrcRootPath(), fileName)
+	if err != nil {
 		log.Fatal(err)
 	}
-	f, err := os.Create(fileName)
+	base := stripExt(filepath.Base(fileName))
+	out := filepath.Join(config.OutputDir(), filepath.Dir(relFileName), base, base+".core.go")
+
+	if err := os.MkdirAll(path.Dir(out), 0777); err != nil {
+		log.Fatal(err)
+	}
+	f, err := os.Create(out)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,6 +73,9 @@ func genFile(fileName string, config common.GeneratorConfig) {
 		"GenTypeInfo": config.GenTypeInfo,
 	}
 	if err := templates.Execute(f, fileTmpl, funcMap); err != nil {
+		log.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
 		log.Fatal(err)
 	}
 }
