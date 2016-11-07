@@ -56,7 +56,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // Block current thread
     result = node->BlockThread(&lock_, timeout);
     if (result == NO_ERROR) {
-        // All the work necessary for removing us from the hash table was be done by FutexWake()
+        // All the work necessary for removing us from the hash table was done by FutexWake()
         return NO_ERROR;
     }
     // If we got a timeout, we need to remove the thread's node from the
