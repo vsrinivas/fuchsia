@@ -47,13 +47,13 @@ func traversePath(n node.DirectoryNode, path string) (node.DirectoryNode, string
 			n.RLock()
 			newDir, err := traverseDirectory(n, component, fs.OpenFlagRead|fs.OpenFlagDirectory)
 			n.RUnlock()
-			n = newDir
 			if oldDirectoryID != -1 {
 				n.Metadata().Dcache.Release(uint32(oldDirectoryID))
 			}
 			if err != nil {
 				return nil, "", err
 			}
+			n = newDir
 			oldDirectoryID = int64(n.ID())
 		}
 	}

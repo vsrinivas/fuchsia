@@ -839,6 +839,9 @@ func TestRenameInvalid(t *testing.T) {
 			if err := bar.Rename(subdirname, subdirname+"/blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/baz/blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
+			} else if err := bar.Rename(subdirname, subdirname+"/blat/blah"); err != fs.ErrNotFound {
+				// bar/baz -> bar/baz/blat/blah
+				t.Fatal("Expected error: Subdirectory does not exist")
 			} else if err := bar.Rename(subdirname, "../"+dirname+"/"+subdirname+"/blat"); err != fs.ErrInvalidArgs {
 				// bar/baz -> bar/../bar/baz/blat
 				t.Fatal("Expected error: Should not be able to make a directory a subdirectory of itself")
