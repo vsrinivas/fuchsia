@@ -54,23 +54,23 @@ static bool switch_to_first_vc(void) {
 // Mount a handle to a remote filesystem on a directory.
 // Any future requests made through the path at "where" will be transmitted to
 // the handle returned from this function.
-static mx_handle_t mount_remote_handle(const char* where) {
+static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
     int fd;
     if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
         return MX_HANDLE_INVALID;
     }
-    mx_handle_t h;
-    if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
+    if (ioctl_devmgr_mount_fs(fd, h) != sizeof(mx_handle_t)) {
         close(fd);
         return MX_HANDLE_INVALID;
     }
     close(fd);
-    return h;
+    return NO_ERROR;
 }
 
 static void launch_minfs(const char* device_name) {
-    mx_handle_t h = mount_remote_handle("/data");
-    if (h == MX_HANDLE_INVALID) {
+    mx_handle_t h;
+    mx_status_t status = mount_remote_handle("/data", &h);
+    if (status != NO_ERROR) {
         printf("devmgr: Failed to mount remote handle handle at '/data'\n");
         return;
     }
@@ -91,17 +91,6 @@ static void launch_fat(const char* device_name) {
         printf("Could not open block device: %s\n", device_path_arg);
         return;
     }
-    snprintf(device_path_arg, sizeof(device_path_arg),
-             "-devicepath=/dev/class/block/%s", device_name);
-
-    static int fat_counter = 0;
-    char mount_path[MXIO_MAX_FILENAME + 64];
-    snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
-    mkdir(mount_path, 0755);
-
-    char mount_path_arg[MXIO_MAX_FILENAME + 64];
-    snprintf(mount_path_arg, sizeof(mount_path_arg), "-mountpath=%s", mount_path);
-
     // Use the GUID to avoid auto-mounting the EFI partition as writable
     char guid[40];
     ioctl_block_get_guid(fd, guid, sizeof(guid));
@@ -110,19 +99,32 @@ static void launch_fat(const char* device_name) {
         efi = true;
     }
     close(fd);
-
     char readonly_arg[64];
     snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s", efi ? "true" : "false");
+
+    snprintf(device_path_arg, sizeof(device_path_arg),
+             "-devicepath=/dev/class/block/%s", device_name);
+
+    static int fat_counter = 0;
+    char mount_path[MXIO_MAX_FILENAME + 64];
+    snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
+    mkdir(mount_path, 0755);
+    mx_handle_t h;
+    mx_status_t status = mount_remote_handle(mount_path, &h);
+    if (status != NO_ERROR) {
+        printf("devmgr: Failed to mount remote handle handle at '%s'\n", mount_path);
+        return;
+    }
 
     const char* argv[] = {
         "/system/bin/thinfs",
         device_path_arg,
-        mount_path_arg,
         readonly_arg,
         "mount",
     };
     printf("devmgr: /dev/class/block/%s: fatfs?\n", device_name);
-    devmgr_launch(svcs_job_handle, "fatfs:/volume", sizeof(argv)/sizeof(argv[0]), argv, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "fatfs:/volume",
+                  sizeof(argv)/sizeof(argv[0]), argv, -1, h, MX_HND_TYPE_USER0);
 }
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
