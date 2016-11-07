@@ -8,8 +8,8 @@
             "bootfs_path": "test/cloud_provider_unittests"
         },
         {
-            "binary": "ledger_callback_unittests",
-            "bootfs_path": "test/ledger_callback_unittests"
+            "binary": "cloud_sync_unittests",
+            "bootfs_path": "test/cloud_sync_unittests"
         },
         {
             "binary": "convert_unittests",
@@ -26,6 +26,10 @@
         {
             "binary": "ledger",
             "bootfs_path": "apps/ledger"
+        },
+        {
+            "binary": "ledger_callback_unittests",
+            "bootfs_path": "test/ledger_callback_unittests"
         },
         {
             "binary": "ledger_integration_tests",
