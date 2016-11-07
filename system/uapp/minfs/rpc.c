@@ -10,9 +10,10 @@
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
+#include <mxio/util.h>
 #include <mxio/vfs.h>
 
-#include <magenta/device/devmgr.h>
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
@@ -58,24 +59,7 @@ static mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags) {
     return h[1];
 }
 
-static mx_handle_t devmgr_connect(const char* where) {
-    int fd;
-    if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
-        error("minfs: cannot open '%s'\n", where);
-        return -1;
-    }
-    mx_handle_t h;
-    if (ioctl_devmgr_mount_fs(fd, &h) != sizeof(h)) {
-        close(fd);
-        error("minfs: failed to attach to '%s'\n", where);
-        return -1;
-    }
-    close(fd);
-    trace(RPC, "minfs: mounted at '%s'\n", where);
-    return h;
-}
-
-mx_handle_t vfs_rpc_server(vnode_t* vn, const char* where) {
+mx_handle_t vfs_rpc_server(vnode_t* vn) {
     iostate_t* ios;
     mx_status_t r;
 
@@ -88,8 +72,9 @@ mx_handle_t vfs_rpc_server(vnode_t* vn, const char* where) {
         return r;
     }
 
-    mx_handle_t h;
-    if ((h = devmgr_connect(where)) < 0) {
+    mx_handle_t h = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    if (h == MX_HANDLE_INVALID) {
+        error("minfs: Could not access startup handle to mount point\n");
         //TODO: proper cleanup when possible
         //mxio_dispatcher_destroy(&vfs_dispatcher);
         return h;

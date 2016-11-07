@@ -26,7 +26,7 @@ int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
     }
-    vfs_rpc_server(vn, argv[0]);
+    vfs_rpc_server(vn);
     return 0;
 }
 #else
@@ -119,7 +119,7 @@ struct {
     { "check",  do_minfs_check, O_RDONLY,         "check filesystem integrity"},
     { "fsck",   do_minfs_check, O_RDONLY,         "check filesystem integrity"},
 #ifdef __Fuchsia__
-    { "mount",  do_minfs_mount, O_RDWR,           "mount filesystem at a path" },
+    { "mount",  do_minfs_mount, O_RDWR,           "mount filesystem" },
 #else
     { "test",   do_minfs_test,  O_RDWR,           "run tests against filesystem" },
     { "cp",     do_cp,          O_RDWR,           "copy to/from fs" },

@@ -30,7 +30,7 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
 
 // VFS RPC Server (rpc.c)
 
-mx_handle_t vfs_rpc_server(vnode_t* vn, const char* where);
+mx_handle_t vfs_rpc_server(vnode_t* vn);
 
 
 // Allocation Bitmap (bitmap.c)
