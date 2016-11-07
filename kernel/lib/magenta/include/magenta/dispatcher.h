@@ -60,26 +60,24 @@ public:
 
     void remove_handle();
 
+    template <typename T>
+    T* get_specific() {
+        return (DispatchTag<T>::ID == get_type())? static_cast<T*>(this) : nullptr;
+    }
+
+    // Interface for derived classes.
+
     virtual mx_obj_type_t get_type() const = 0;
 
     virtual StateTracker* get_state_tracker() { return nullptr; }
+
+    virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask);
 
     virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return ERR_NOT_SUPPORTED; }
 
     virtual void on_zero_handles() { }
 
     virtual mx_koid_t get_inner_koid() const { return 0ULL; }
-
-    // Note that |set_mask| and |clear_mask| are *not* previously validated. Also note that they may
-    // "overlap", and that |clear_mask| should be cleared and then |set_mask| set.
-    virtual status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    template <typename T>
-    T* get_specific() {
-        return (DispatchTag<T>::ID == get_type())? static_cast<T*>(this) : nullptr;
-    }
 
 protected:
     static mx_koid_t GenerateKernelObjectId();

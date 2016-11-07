@@ -50,7 +50,7 @@ void EventPairDispatcher::on_zero_handles() {
     other_.reset();
 }
 
-status_t EventPairDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
+status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
     if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
         return ERR_INVALID_ARGS;
 

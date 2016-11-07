@@ -30,6 +30,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_SOCKET; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
+    status_t user_signal(uint32_t clear_mask, uint32_t set_mask) final;
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
@@ -40,8 +41,6 @@ public:
     mx_ssize_t Read(void* dest, mx_size_t len, bool from_user);
 
     void OnPeerZeroHandles();
-
-    status_t UserSignal(uint32_t clear_mask, uint32_t set_mask) final;
 
 private:
     class CBuf {

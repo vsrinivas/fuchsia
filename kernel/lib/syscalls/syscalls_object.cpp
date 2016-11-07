@@ -342,8 +342,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-    mx_status_t status = dispatcher->UserSignal(clear_mask, set_mask);
-    return (status == ERR_BAD_HANDLE) ? up->BadHandle(handle_value, ERR_BAD_HANDLE) : status;
+    return dispatcher->user_signal(clear_mask, set_mask);
 }
 
 // Given a kernel object with children objects, obtain a handle to the

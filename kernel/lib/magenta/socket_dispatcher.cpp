@@ -205,7 +205,7 @@ void SocketDispatcher::OnPeerZeroHandles() {
         iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
 }
 
-status_t SocketDispatcher::UserSignal(uint32_t clear_mask, uint32_t set_mask) {
+status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
 

@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/dispatcher.h>
+#include <magenta/state_tracker.h>
 
 #include <arch/ops.h>
 #include <lib/ktrace.h>
@@ -36,4 +37,16 @@ void Dispatcher::remove_handle() {
         atomic_fence_acquire();
         on_zero_handles();
     }
+}
+
+status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
+    auto state_tracker = get_state_tracker();
+    if (!state_tracker)
+        return ERR_NOT_SUPPORTED;
+
+    if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
+        return ERR_INVALID_ARGS;
+
+    state_tracker->UpdateState(clear_mask, set_mask);
+    return NO_ERROR;
 }
