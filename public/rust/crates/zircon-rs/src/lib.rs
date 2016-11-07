@@ -93,9 +93,12 @@ impl Status {
     // handling of UnknownOther would be tricky.
 }
 
-type Rights = sys::mx_rights_t;
+pub type Rights = sys::mx_rights_t;
 
-type Signals = sys::mx_signals_t;
+pub type Signals = sys::mx_signals_t;
+
+pub use magenta_sys::{MX_OBJECT_SIGNAL_0, MX_OBJECT_SIGNAL_1, MX_OBJECT_SIGNAL_2,
+    MX_OBJECT_SIGNAL_3, MX_OBJECT_SIGNAL_4, MX_OBJECT_SIGNAL_5};
 
 #[repr(u32)]
 pub enum ChannelOpts {
@@ -248,6 +251,12 @@ impl HandleBase for Handle {
 impl Drop for Handle {
     fn drop(&mut self) {
         handle_drop(self.0)
+    }
+}
+
+impl Handle {
+    pub unsafe fn from_raw(raw: sys::mx_handle_t) -> Handle {
+        Handle(raw)
     }
 }
 
