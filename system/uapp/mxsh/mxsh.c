@@ -551,6 +551,7 @@ mx_status_t command(int argc, char** argv, bool runbg) {
         }
         settitle(argv[0]);
         builtins[i].func(argc, argv);
+        fflush(stdout);
         settitle("mxsh");
         goto done_no_lp;
     }
