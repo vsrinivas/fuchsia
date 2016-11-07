@@ -243,14 +243,14 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 }
 
 func statShared(msg *rio.Msg, size int64, dir bool) mx.Status {
-	r := syscall.Stat_t{}
+	r := mxio.Vnattr{}
 	if dir {
-		r.Dev = syscall.S_IFDIR
+		r.Mode = syscall.S_IFDIR
 	} else {
-		r.Dev = syscall.S_IFREG
+		r.Mode = syscall.S_IFREG
 	}
 	r.Size = uint64(size)
-	*(*syscall.Stat_t)(unsafe.Pointer(&msg.Data[0])) = r
+	*(*mxio.Vnattr)(unsafe.Pointer(&msg.Data[0])) = r
 	msg.Datalen = uint32(unsafe.Sizeof(r))
 	return mx.Status(msg.Datalen)
 }
