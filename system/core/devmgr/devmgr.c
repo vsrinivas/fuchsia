@@ -27,8 +27,8 @@ static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
 
-static mx_handle_t mojo_launcher_child;
-mx_handle_t mojo_launcher;
+static mx_handle_t application_launcher_child;
+mx_handle_t application_launcher;
 
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
@@ -138,8 +138,8 @@ static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
 static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/application_manager" };
 
-void create_mojo_launcher_handles(void) {
-    mx_channel_create(0, &mojo_launcher, &mojo_launcher_child);
+void create_application_launcher_handles(void) {
+    mx_channel_create(0, &application_launcher, &application_launcher_child);
 }
 
 int service_starter(void* arg) {
@@ -150,11 +150,11 @@ int service_starter(void* arg) {
 
     devmgr_launch(svcs_job_handle, "mxsh:autorun", 2, argv_mxsh_autorun, -1, 0, 0);
 
-    if (mojo_launcher_child) {
-        devmgr_launch(svcs_job_handle, "mojo-app-manager", 2, argv_appmgr, -1,
-                      mojo_launcher_child,
+    if (application_launcher_child) {
+        devmgr_launch(svcs_job_handle, "application-manager", 1, argv_appmgr, -1,
+                      application_launcher_child,
                       MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0));
-        mojo_launcher_child = 0;
+        application_launcher_child = 0;
     }
 
     int dirfd;
@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
 
     start_console_shell();
 
-    create_mojo_launcher_handles();
+    create_application_launcher_handles();
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {

@@ -690,7 +690,7 @@ void execline(char* line) {
         line[len] = 0;
     }
 
-    if (!strncmp(line, "mojo:", 5) || !strncmp(line, "file:", 5)) {
+    if (!strncmp(line, "file:", 5)) {
         app_launch(line);
         return;
     }

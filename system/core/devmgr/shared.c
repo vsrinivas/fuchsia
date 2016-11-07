@@ -37,7 +37,7 @@ void devmgr_io_init(void) {
     mxio_bind_to_fd(logger, 1, 0);
 }
 
-extern mx_handle_t mojo_launcher;
+extern mx_handle_t application_launcher;
 
 void devmgr_launch_devhost(mx_handle_t job,
                            const char* name, int argc, char** argv,
@@ -72,9 +72,9 @@ void devmgr_launch_devhost(mx_handle_t job,
         hcount++;
     }
 #else
-    if (mojo_launcher > 0) {
+    if (application_launcher > 0) {
         ids[hcount] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER);
-        hnd[hcount] = mojo_launcher;
+        hnd[hcount] = application_launcher;
         if (hnd[hcount] > 0) {
             hcount++;
         }

@@ -27,7 +27,7 @@ static int mxc_motd(int argc, char** argv) {
            "Welcome to fuchsia.\n"
            "  · type 'help' for a list of builtin commands\n"
            "  · hit enter if you do not see a '>' prompt\n"
-           "  · launch applications from /boot/apps with 'mojo:$APP_NAME'\n"
+           "  · launch applications with 'file:///system/apps/$APP_NAME'\n"
            "-----------------------------------------------------------------\n");
     return 0;
 }
