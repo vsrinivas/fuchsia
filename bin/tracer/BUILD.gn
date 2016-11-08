@@ -12,7 +12,7 @@ mojo_native_application("tracer") {
   deps = [
     "//apps/tracing/services",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//lib/mtl/data_pipe",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",

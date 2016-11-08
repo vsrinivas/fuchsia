@@ -22,7 +22,7 @@ static_library("trace_event") {
 
   public_deps = [
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//apps/tracing/services",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
