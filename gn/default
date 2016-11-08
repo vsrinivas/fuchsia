@@ -19,6 +19,7 @@
         "libc-tests",
         "lua",
         "media",
+        "modular",
         "mojo",
         "mozart",
         "mtl",
