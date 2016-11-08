@@ -29,10 +29,6 @@
             "bootfs_path": "apps/dart_content_handler"
         },
         {
-            "binary": "device_runner",
-            "bootfs_path": "apps/device_runner"
-        },
-        {
             "binary": "document_store_factory",
             "bootfs_path": "apps/document_store"
         },
