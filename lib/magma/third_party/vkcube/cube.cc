@@ -1055,30 +1055,54 @@ static void demo_prepare_depth(struct demo *demo) {
 /* Load a ppm file into memory */
 bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout, uint32_t *width, uint32_t *height) {
-#include "lunarg.ppm.h"
-    char *cPtr;
-    cPtr = (char*)lunarg_ppm;
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
+// #include "lunarg.ppm.h"
+//     constexpr bool kDataIsAscii = false;
+//     const char* ppm = reinterpret_cast<const char*>(lunarg_ppm);
+//     const uint32_t len = lunarg_ppm_len;//sizeof(lunarg_ppm);
+
+#include "magma.ppm.h"
+    constexpr bool kDataIsAscii = true;
+    const char* ppm = magma_ppm;
+    const uint32_t len = sizeof(magma_ppm);
+
+    const char *cPtr = ppm;
+    if (cPtr >= (ppm + len) || (strncmp(cPtr, "P6\n", 3) && strncmp(cPtr, "P3\n", 3))) {
+        fprintf(stderr, "ppm invalid %x %x %x\n", cPtr[0], cPtr[1], cPtr[2]);
         return false;
     }
     while(strncmp(cPtr++, "\n", 1));
     sscanf(cPtr, "%u %u", width, height);
+
     if (rgba_data == NULL) {
         return true;
     }
     while(strncmp(cPtr++, "\n", 1));
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
+
+    if (cPtr >= (ppm + len) || strncmp(cPtr, "255\n", 4)) {
+        fprintf(stderr, "ppm invalid %x %x %x %x\n", cPtr[0], cPtr[1], cPtr[2], cPtr[3]);
         return false;
     }
+
     while(strncmp(cPtr++, "\n", 1));
 
     for (uint32_t y = 0; y < *height; y++) {
         uint8_t *rowPtr = rgba_data;
         for (uint32_t x = 0; x < *width; x++) {
-            memcpy(rowPtr, cPtr, 3);
+            if (kDataIsAscii) {
+                sscanf(cPtr, "%hhu ", &rowPtr[0]);
+                while(strncmp(cPtr++, " ", 1));
+                sscanf(cPtr, "%hhu ", &rowPtr[1]);
+                while(strncmp(cPtr++, " ", 1));
+                sscanf(cPtr, "%hhu ", &rowPtr[2]);
+                while(strncmp(cPtr++, " ", 1));
+                if (*cPtr == '\n')
+                    cPtr++;
+            } else {
+                memcpy(rowPtr, cPtr, 3);
+                cPtr += 3;
+            }
             rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
-            cPtr += 3;
         }
         rgba_data += layout->rowPitch;
     }
