@@ -136,15 +136,13 @@ void InputReader::OnDirectoryHandleReady(mx_handle_t handle,
 void InputReader::OnDeviceHandleReady(mx_handle_t handle,
                                       mx_signals_t pending) {
   InputDevice* device = devices_[handle].first.get();
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_USER_SIGNAL_0) {
     bool ret = device->Read([this, device](InputReport::ReportType type) {
       interpreter_->OnReport(device, type);
     });
     if (!ret) {
       DeviceRemoved(handle);
     }
-  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
-    DeviceRemoved(handle);
   }
 }
 
