@@ -13,6 +13,5 @@ source_set("cpp") {
     "//apps/mozart/services/composition",
     "//apps/mozart/services/views",
     "//lib/ftl",
-    "//mojo/services/geometry/cpp",
   ]
 }
