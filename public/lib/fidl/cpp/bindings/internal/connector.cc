@@ -50,7 +50,10 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
 
   mx_signals_t pending = MX_SIGNAL_NONE;
   mx_status_t rv = channel_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                                     timeout.ToNanoseconds(), &pending);
+                                     timeout == ftl::TimeDelta::Max()
+                                         ? MX_TIME_INFINITE
+                                         : timeout.ToNanoseconds(),
+                                     &pending);
   if (rv == ERR_SHOULD_WAIT || rv == ERR_TIMED_OUT)
     return false;
   if (rv != NO_ERROR) {
