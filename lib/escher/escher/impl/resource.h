@@ -11,7 +11,6 @@ namespace escher {
 namespace impl {
 
 class EscherImpl;
-class RenderFrame;
 
 // A Resource is a ref-counted object that is kept alive by the Escher
 // implementation as long as necessary (i.e. until all GPU submissions that

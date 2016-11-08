@@ -4,6 +4,9 @@
 
 #include "escher/impl/command_buffer.h"
 
+#include "escher/impl/mesh_impl.h"
+#include "escher/impl/resource.h"
+
 #include "ftl/macros.h"
 
 namespace escher {
@@ -40,8 +43,8 @@ bool CommandBuffer::Submit(vk::Queue queue) {
   submit_info.waitSemaphoreCount = wait_semaphores_for_submit_.size();
   submit_info.pWaitSemaphores = wait_semaphores_for_submit_.data();
   submit_info.pWaitDstStageMask = wait_semaphore_stages_.data();
-  submit_info.signalSemaphoreCount = wait_semaphores_for_submit_.size();
-  submit_info.pSignalSemaphores = wait_semaphores_for_submit_.data();
+  submit_info.signalSemaphoreCount = signal_semaphores_for_submit_.size();
+  submit_info.pSignalSemaphores = signal_semaphores_for_submit_.data();
 
   auto submit_result = queue.submit(1, &submit_info, fence_);
   if (submit_result != vk::Result::eSuccess) {
@@ -73,6 +76,27 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   }
 }
 
+void CommandBuffer::AddUsedResource(ResourcePtr resource) {
+  used_resources_.push_back(std::move(resource));
+}
+
+void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
+  AddUsedResource(mesh);
+
+  AddWaitSemaphore(mesh->TakeWaitSemaphore(),
+                   vk::PipelineStageFlagBits::eVertexInput);
+
+  auto mesh_impl = static_cast<MeshImpl*>(mesh.get());
+  vk::Buffer vbo = mesh_impl->vertex_buffer();
+  vk::DeviceSize vbo_offset = mesh_impl->vertex_buffer_offset();
+  uint32_t vbo_binding = mesh_impl->vertex_buffer_binding();
+  command_buffer_.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
+  command_buffer_.bindIndexBuffer(mesh_impl->index_buffer(),
+                                  mesh_impl->vertex_buffer_offset(),
+                                  vk::IndexType::eUint32);
+  command_buffer_.drawIndexed(mesh_impl->num_indices, 1, 0, 0, 0);
+}
+
 bool CommandBuffer::Retire() {
   if (!is_active_ && !is_submitted_) {
     // Submission failed, so proceed with cleanup.
@@ -87,6 +111,8 @@ bool CommandBuffer::Retire() {
   }
   is_active_ = is_submitted_ = false;
   device_.resetFences(1, &fence_);
+
+  used_resources_.clear();
 
   if (callback_) {
     callback_();

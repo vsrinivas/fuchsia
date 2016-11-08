@@ -4,9 +4,9 @@
 
 #include "escher/impl/model_data.h"
 
+#include "escher/impl/command_buffer.h"
 #include "escher/impl/gpu_allocator.h"
 #include "escher/impl/model_uniform_writer.h"
-#include "escher/impl/render_frame.h"
 #include "escher/impl/vulkan_utils.h"
 
 namespace escher {
@@ -53,10 +53,10 @@ vk::DescriptorSetLayout ModelData::NewPerObjectLayout() {
 }
 
 ModelUniformWriter* ModelData::GetWriterWithCapacity(
-    RenderFrame* frame,
+    CommandBuffer* command_buffer,
     size_t max_object_count,
     float overallocate_percent) {
-  auto ptr = writers_[frame].get();
+  auto ptr = writers_[command_buffer].get();
   if (!ptr || ptr->capacity() < max_object_count) {
     // Create a new writer with at least the required capacity.
     uint32_t capacity =
@@ -65,7 +65,7 @@ ModelUniformWriter* ModelData::GetWriterWithCapacity(
     auto writer = std::make_unique<ModelUniformWriter>(
         device_, allocator_, capacity, per_model_layout_, per_object_layout_);
     ptr = writer.get();
-    writers_[frame] = std::move(writer);
+    writers_[command_buffer] = std::move(writer);
   }
   ptr->BecomeWritable();
   return ptr;

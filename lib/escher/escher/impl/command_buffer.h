@@ -27,9 +27,6 @@ namespace impl {
 // returned to it when all GPU-work is finished.
 //
 // Not thread-safe.
-//
-// TODO: CommandBuffer was derived from RenderFrame, which it will probably
-// subsume (or be used by).
 class CommandBuffer {
  public:
   ~CommandBuffer();
@@ -46,6 +43,13 @@ class CommandBuffer {
   // During Submit(), these semaphores will be added to the vk::SubmitInfo.
   // No-op if semaphore is null.
   void AddSignalSemaphore(SemaphorePtr semaphore);
+
+  // These resources will be retained until the command-buffer is finished
+  // running on the GPU.
+  void AddUsedResource(ResourcePtr resource);
+
+  // TODO: is there a better place for this?  It's convenient for now.
+  void DrawMesh(const MeshPtr& mesh);
 
  private:
   friend class CommandBufferPool;
@@ -68,6 +72,8 @@ class CommandBuffer {
   vk::Device device_;
   vk::CommandBuffer command_buffer_;
   vk::Fence fence_;
+
+  std::vector<ResourcePtr> used_resources_;
 
   std::vector<SemaphorePtr> wait_semaphores_;
   std::vector<vk::PipelineStageFlags> wait_semaphore_stages_;

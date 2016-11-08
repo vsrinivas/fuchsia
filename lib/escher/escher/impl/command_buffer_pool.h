@@ -36,6 +36,11 @@ class CommandBufferPool {
 
  private:
   VulkanContext context_;
+  // TODO: access to |command_pool_| needs to be externally synchronized.  This
+  // includes implicit uses such as various vkCmd* calls (in other words, two
+  // separate CommandBuffers obtained from this pool cannot be recorded into
+  // concurrently).  See Vulkan Spec Sec 2.5 under "Implicit Externally
+  // Synchronized Parameters".
   vk::CommandPool pool_;
   std::queue<std::unique_ptr<CommandBuffer>> free_buffers_;
   std::queue<std::unique_ptr<CommandBuffer>> pending_buffers_;

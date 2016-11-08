@@ -64,8 +64,6 @@ static_library("escher") {
     "impl/pipeline.h",
     "impl/pipeline_cache.cc",
     "impl/pipeline_cache.h",
-    "impl/render_frame.cc",
-    "impl/render_frame.h",
     "impl/render_pass_manager.cc",
     "impl/render_pass_manager.h",
     "impl/resource.cc",

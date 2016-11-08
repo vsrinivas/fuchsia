@@ -37,6 +37,8 @@ typedef ftl::RefPtr<Renderer> RendererPtr;
 typedef ftl::RefPtr<Semaphore> SemaphorePtr;
 
 namespace impl {
+class CommandBuffer;
+class CommandBufferPool;
 class EscherImpl;
 class ImageCache;
 class MeshImpl;
@@ -44,7 +46,6 @@ class MeshManager;
 class ModelData;
 class ModelRenderer;
 class PipelineCache;
-class RenderFrame;
 class Resource;
 
 typedef ftl::RefPtr<Resource> ResourcePtr;

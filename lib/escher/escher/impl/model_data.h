@@ -14,9 +14,9 @@
 namespace escher {
 namespace impl {
 
+class CommandBuffer;
 class ModelUniformWriter;
 class GpuAllocator;
-class RenderFrame;
 
 class ModelData {
  public:
@@ -43,7 +43,7 @@ class ModelData {
 
   // Return a writer that has enough capacity to write the specified number of
   // PerObject structs (and a single PerModel struct).
-  ModelUniformWriter* GetWriterWithCapacity(RenderFrame* frame,
+  ModelUniformWriter* GetWriterWithCapacity(CommandBuffer* frame,
                                             size_t max_object_count,
                                             float overallocate_percent);
 
@@ -62,23 +62,23 @@ class ModelData {
   vk::DescriptorSetLayout per_model_layout_;
   vk::DescriptorSetLayout per_object_layout_;
 
-  // We associate a ModelUniformWriter with a particular RenderFrame.  This
-  // piggyback's on the reuse pattern established by Renderer/RenderFrame: a
-  // particular RenderFrame doesn't become available for reuse until all of its
-  // associated queue submissions have finished.  Therefore, if we see that a
-  // RenderFrame is being reused, we know that it's also safe to reuse the
+  // We associate a ModelUniformWriter with a particular CommandBuffer.  This
+  // piggyback's on the reuse pattern established by CommandBufferPool: a
+  // particular CommandBuffer doesn't become available for reuse until all of
+  // its associated queue submissions have finished.  Therefore, if we see that
+  // a CommandBuffer is being reused, we know that it's also safe to reuse the
   // corresponding ModelUniformWriter.
   // TODO: two possible alternatives:
-  //  1) Stash the writers as instance variables in the RenderFrame.  This is a
-  //     step toward bloating the RenderFrame, as new renderer sub-systems each
-  //     add their idiosyncratic data.
-  //  2) Add a callback mechanism to be notified when a RenderFrame is
+  //  1) Stash the writers as instance variables in the CommandBuffer.  This is
+  //     a step toward bloating the CommandBuffer, as new renderer sub-systems
+  //     each add their idiosyncratic data.
+  //  2) Add a callback mechanism to be notified when a CommandBuffer is
   //     successfully retired.  Compared with the current implementation, one
   //     benefit would be that there is no danger of "leaking" writers.  For
   //     example, if the Renderer implementation were to change to not recycle
-  //     RenderFrames, then each call to GetWriterWithCapacity() would result
+  //     CommandBuffers, then each call to GetWriterWithCapacity() would result
   //     in a new writer being created, and no writer ever destroyed.
-  std::map<RenderFrame*, std::unique_ptr<ModelUniformWriter>> writers_;
+  std::map<CommandBuffer*, std::unique_ptr<ModelUniformWriter>> writers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModelData);
 };

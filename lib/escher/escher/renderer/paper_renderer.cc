@@ -4,12 +4,12 @@
 
 #include "escher/renderer/paper_renderer.h"
 
+#include "escher/impl/command_buffer.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_renderer.h"
 #include "escher/impl/pipeline_cache.h"
-#include "escher/impl/render_frame.h"
 #include "escher/impl/render_pass_manager.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
@@ -125,18 +125,18 @@ void PaperRenderer::BeginModelRenderPass(const FramebufferPtr& framebuffer,
   command_buffer.setScissor(0, 1, &scissor);
 }
 
-void PaperRenderer::DrawFrame(Stage& stage,
-                              Model& model,
-                              const FramebufferPtr& framebuffer,
-                              const SemaphorePtr& frame_done,
-                              FrameRetiredCallback frame_retired_callback) {
-  impl::RenderFrame* render_frame =
-      BeginFrame(framebuffer, frame_done, std::move(frame_retired_callback));
-  vk::CommandBuffer command_buffer = render_frame->command_buffer();
+void PaperRenderer::DrawFrame(
+    Stage& stage,
+    Model& model,
+    const FramebufferPtr& framebuffer,
+    const SemaphorePtr& frame_done,
+    CommandBufferFinishedCallback command_buffer_finished_callback) {
+  impl::CommandBuffer* command_buffer = BeginFrame(
+      framebuffer, frame_done, std::move(command_buffer_finished_callback));
 
-  BeginModelRenderPass(framebuffer, command_buffer);
-  model_renderer_->Draw(stage, model, render_frame);
-  command_buffer.endRenderPass();
+  BeginModelRenderPass(framebuffer, command_buffer->get());
+  model_renderer_->Draw(stage, model, command_buffer);
+  command_buffer->get().endRenderPass();
 
   EndFrame();
 }

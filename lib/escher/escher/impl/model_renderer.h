@@ -20,7 +20,7 @@ class ModelRenderer {
                 ModelData* model_data,
                 PipelineCache* pipeline_cache);
   ~ModelRenderer();
-  void Draw(Stage& stage, Model& model, RenderFrame* render_frame);
+  void Draw(Stage& stage, Model& model, CommandBuffer* command_buffer);
 
  private:
   const MeshPtr& GetMeshForShape(const Shape& shape) const;

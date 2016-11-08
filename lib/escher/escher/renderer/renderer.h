@@ -14,7 +14,7 @@
 
 namespace escher {
 
-typedef std::function<void(SemaphorePtr)> FrameRetiredCallback;
+typedef std::function<void()> FrameRetiredCallback;
 
 class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
  public:
@@ -28,21 +28,16 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   // can only be provided by a concrete Renderer subclass.
   virtual FramebufferPtr NewFramebuffer(const ImagePtr& image) = 0;
 
-  // Do periodic housekeeping, such as moving non-longer-pending frames to
-  // |free_frames_|.
-  void Cleanup();
-
   const VulkanContext& vulkan_context() { return context_; }
 
  protected:
   explicit Renderer(impl::EscherImpl* escher);
   virtual ~Renderer();
 
-  // Initializes a RenderFrame, which is automatically placed onto the
-  // |pending_frames_| queue.
-  impl::RenderFrame* BeginFrame(const FramebufferPtr& framebuffer,
-                                const SemaphorePtr& frame_done,
-                                FrameRetiredCallback frame_retired_callback);
+  // Obtain a CommandBuffer, to record commands for the current frame.
+  impl::CommandBuffer* BeginFrame(const FramebufferPtr& framebuffer,
+                                  const SemaphorePtr& frame_done,
+                                  FrameRetiredCallback frame_retired_callback);
   void EndFrame();
 
   FramebufferPtr CreateFramebuffer(vk::Framebuffer,
@@ -54,17 +49,10 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   impl::EscherImpl* const escher_;
   const VulkanContext context_;
 
- private:
-  // TODO: access to |command_pool_| needs to be externally synchronized.  This
-  // includes implicit uses such as various vkCmd* calls.  The easiest way to
-  // guarantee this would be to create all primary/secondary buffers before
-  // BeginFrame() is called.  See Vulkan Spec Sec 2.5 under "Implicit Externally
-  // Synchronized Parameters".
-  vk::CommandPool command_pool_;
+  impl::CommandBufferPool* pool_;
+  impl::CommandBuffer* current_frame_;
 
-  impl::RenderFrame* current_frame_ = nullptr;
-  std::queue<std::unique_ptr<impl::RenderFrame>> free_frames_;
-  std::queue<std::unique_ptr<impl::RenderFrame>> pending_frames_;
+ private:
   uint64_t frame_number_ = 0;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);

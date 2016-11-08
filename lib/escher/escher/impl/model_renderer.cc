@@ -5,12 +5,12 @@
 #include "escher/impl/model_renderer.h"
 
 #include "escher/geometry/tessellation.h"
+#include "escher/impl/command_buffer.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/pipeline.h"
 #include "escher/impl/pipeline_cache.h"
-#include "escher/impl/render_frame.h"
 #include "escher/scene/model.h"
 #include "escher/scene/shape.h"
 #include "escher/scene/stage.h"
@@ -30,12 +30,14 @@ ModelRenderer::ModelRenderer(MeshManager* mesh_manager,
 
 ModelRenderer::~ModelRenderer() {}
 
-void ModelRenderer::Draw(Stage& stage, Model& model, RenderFrame* frame) {
-  vk::CommandBuffer command_buffer = frame->command_buffer();
+void ModelRenderer::Draw(Stage& stage,
+                         Model& model,
+                         CommandBuffer* command_buffer) {
+  vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
   auto& objects = model.objects();
   ModelUniformWriter* writer =
-      model_data_->GetWriterWithCapacity(frame, objects.size(), 0.2f);
+      model_data_->GetWriterWithCapacity(command_buffer, objects.size(), 0.2f);
 
   ModelData::PerModel per_model;
   per_model.brightness = vec4(vec3(stage.brightness()), 1.f);
@@ -66,7 +68,7 @@ void ModelRenderer::Draw(Stage& stage, Model& model, RenderFrame* frame) {
 
       per_object_bindings_.push_back(writer->WritePerObjectData(per_object));
     }
-    writer->Flush(command_buffer);
+    writer->Flush(vk_command_buffer);
   }
 
   // Do a second pass over the data, so that flushing the uniform writer above
@@ -89,21 +91,21 @@ void ModelRenderer::Draw(Stage& stage, Model& model, RenderFrame* frame) {
       pipeline = pipeline_cache_->GetPipeline(
           pipeline_spec, mesh_manager_->GetMeshSpecImpl(mesh->spec));
 
-      command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                  pipeline->pipeline());
+      vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                     pipeline->pipeline());
 
       // TODO: many pipeline will share the same layout so rebinding may not be
       // necessary.
-      writer->BindPerModelData(pipeline->pipeline_layout(), command_buffer);
+      writer->BindPerModelData(pipeline->pipeline_layout(), vk_command_buffer);
 
       previous_pipeline_spec = pipeline_spec;
     }
 
     // Bind the descriptor set, using the binding obtained in the first pass.
     writer->BindPerObjectData(per_object_bindings_[i],
-                              pipeline->pipeline_layout(), command_buffer);
+                              pipeline->pipeline_layout(), vk_command_buffer);
 
-    frame->DrawMesh(mesh);
+    command_buffer->DrawMesh(mesh);
   }
 
   per_object_bindings_.clear();
