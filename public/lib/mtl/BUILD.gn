@@ -4,16 +4,22 @@
 
 group("mtl") {
   public_deps = [
-    "//lib/mtl/application",
     "//lib/mtl/data_pipe",
-    "//lib/mtl/environment",
     "//lib/mtl/handles",
-    "//lib/mtl/legacy_data_pipe",
-    "//lib/mtl/shared_buffer",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
     "//lib/mtl/vmo",
     "//lib/mtl/waiter",
+  ]
+}
+
+group("mtl_with_mojo") {
+  public_deps = [
+    ":mtl",
+    "//lib/mtl/application",
+    "//lib/mtl/environment",
+    "//lib/mtl/legacy_data_pipe",
+    "//lib/mtl/shared_buffer",
   ]
 
   deps = [
@@ -37,7 +43,7 @@ executable("mtl_unittests") {
   ]
 
   deps = [
-    ":mtl",
+    ":mtl_with_mojo",
     "//lib/mtl/test",
     "//third_party/gtest",
   ]
