@@ -50,9 +50,14 @@ void EventPairDispatcher::on_zero_handles() {
     other_.reset();
 }
 
-status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
+status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
         return ERR_INVALID_ARGS;
+
+    if (!peer) {
+        state_tracker_.UpdateState(clear_mask, set_mask);
+        return NO_ERROR;
+    }
 
     AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.

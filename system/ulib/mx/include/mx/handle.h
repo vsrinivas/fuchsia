@@ -68,6 +68,10 @@ public:
         return mx_object_signal(get(), clear_mask, set_mask);
     }
 
+    mx_status_t signal_peer(uint32_t clear_mask, uint32_t set_mask) const {
+        return mx_object_signal_peer(get(), clear_mask, set_mask);
+    }
+
     mx_status_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
                          mx_size_t buffer_size, mx_size_t* return_size) const {
         mx_ssize_t result =

@@ -21,7 +21,7 @@ public:
     ~EventPairDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_EVENT_PAIR; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
-    status_t user_signal(uint32_t clear_mask, uint32_t set_mask) final;
+    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     void on_zero_handles() final;
     mx_koid_t get_inner_koid() const final { return other_koid_; }
 

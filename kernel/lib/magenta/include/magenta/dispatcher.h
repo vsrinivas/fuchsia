@@ -71,7 +71,7 @@ public:
 
     virtual StateTracker* get_state_tracker() { return nullptr; }
 
-    virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask);
+    virtual status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
 
     virtual status_t set_port_client(mxtl::unique_ptr<PortClient>) { return ERR_NOT_SUPPORTED; }
 

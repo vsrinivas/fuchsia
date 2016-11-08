@@ -378,7 +378,7 @@ static bool bind_sockets_test(void)
     EXPECT_EQ(ret, thrd_success, "");
 
     mx_io_packet_t io_pkt = {0};
-    status = mx_object_signal(socket0, 0u, MX_USER_SIGNAL_3);
+    status = mx_object_signal_peer(socket0, 0u, MX_USER_SIGNAL_3);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_port_wait(io_port, &io_pkt, sizeof(io_pkt));

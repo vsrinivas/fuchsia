@@ -205,9 +205,14 @@ void SocketDispatcher::OnPeerZeroHandles() {
         iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
 }
 
-status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
+status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
         return ERR_INVALID_ARGS;
+
+    if (!peer) {
+        state_tracker_.UpdateState(clear_mask, set_mask);
+        return NO_ERROR;
+    }
 
     mxtl::RefPtr<SocketDispatcher> other;
     {

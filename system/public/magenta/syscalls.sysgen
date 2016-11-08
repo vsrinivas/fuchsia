@@ -106,6 +106,10 @@ syscall object_signal
     (handle: mx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
     returns (mx_status_t);
 
+syscall object_signal_peer
+    (handle: mx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
+    returns (mx_status_t);
+
 syscall object_get_info
     (handle: mx_handle_t, topic: uint32_t, topic_size: uint16_t,
         buffer: any[buffer_size] OUT, buffer_size: mx_size_t,

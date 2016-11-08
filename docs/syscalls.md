@@ -13,7 +13,8 @@
 + object_get_info - obtain information about an object
 + object_get_property - read an object property
 + object_set_property - modify an object property
-+ [object_signal](syscalls/object_signal.md) - set or clear the user signals on a handle
++ [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
++ [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
 
 ## Threads
 + [thread_arch_prctl](syscalls/thread_arch_prctl.md) - deprecated

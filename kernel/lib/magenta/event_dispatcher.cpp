@@ -31,7 +31,10 @@ EventDispatcher::EventDispatcher(uint32_t options)
 
 EventDispatcher::~EventDispatcher() {}
 
-status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask) {
+status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+    if (peer)
+        return ERR_NOT_SUPPORTED;
+
     if ((set_mask & ~MX_EVENT_SIGNAL_MASK) || (clear_mask & ~MX_EVENT_SIGNAL_MASK))
         return ERR_INVALID_ARGS;
 

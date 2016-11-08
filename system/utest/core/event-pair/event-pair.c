@@ -59,7 +59,6 @@ static bool create_test(void) {
 
 static bool signal_test(void) {
     BEGIN_TEST;
-
     mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
     ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), NO_ERROR, "eventpair_create failed");
     ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
@@ -69,16 +68,41 @@ static bool signal_test(void) {
     check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
 
     EXPECT_EQ(mx_object_signal(h[0], 0u, MX_USER_SIGNAL_0), NO_ERROR, "object_signal failed");
+    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
+
+    EXPECT_EQ(mx_object_signal(h[0], MX_USER_SIGNAL_0, 0u), NO_ERROR, "object_signal failed");
+    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
+
+    EXPECT_EQ(mx_handle_close(h[0]), NO_ERROR, "failed to close event pair handle");
+    check_signals_state(h[1], MX_SIGNAL_PEER_CLOSED, MX_EPAIR_SIGNAL_MASK);
+    EXPECT_EQ(mx_handle_close(h[1]), NO_ERROR, "failed to close event pair handle");
+    END_TEST;
+}
+
+static bool signal_peer_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
+    ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), NO_ERROR, "eventpair_create failed");
+    ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
+    ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
+
+    check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
+    check_signals_state(h[1], 0u, MX_EPAIR_SIGNAL_MASK);
+
+    EXPECT_EQ(mx_object_signal_peer(h[0], 0u, MX_USER_SIGNAL_0), NO_ERROR, "object_signal failed");
     check_signals_state(h[0], 0u, MX_EPAIR_SIGNAL_MASK);
     check_signals_state(h[1], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
 
-    EXPECT_EQ(mx_object_signal(h[1], 0u, MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2), NO_ERROR,
+    EXPECT_EQ(mx_object_signal_peer(h[1], 0u, MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2), NO_ERROR,
               "object_signal failed");
     check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2,
                         MX_EPAIR_SIGNAL_MASK);
     check_signals_state(h[1], MX_USER_SIGNAL_0, MX_EPAIR_SIGNAL_MASK);
 
-    EXPECT_EQ(mx_object_signal(h[0], MX_USER_SIGNAL_0, MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4),
+    EXPECT_EQ(mx_object_signal_peer(h[0], MX_USER_SIGNAL_0, MX_USER_SIGNAL_3 | MX_USER_SIGNAL_4),
               NO_ERROR, "object_signal failed");
     check_signals_state(h[0], MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2,
                         MX_EPAIR_SIGNAL_MASK);
@@ -100,6 +124,7 @@ static bool signal_test(void) {
 BEGIN_TEST_CASE(event_pair_tests)
 RUN_TEST(create_test)
 RUN_TEST(signal_test)
+RUN_TEST(signal_peer_test)
 END_TEST_CASE(event_pair_tests)
 
 #ifndef BUILD_COMBINED_TESTS

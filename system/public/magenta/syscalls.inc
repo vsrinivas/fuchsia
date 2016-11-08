@@ -56,16 +56,18 @@ MAGENTA_SYSCALL_DEF(3, 4, 14, mx_status_t, handle_wait_many, USER_PTR(mx_wait_it
 // Generic object operations
 MAGENTA_SYSCALL_DEF(3, 3, 20, mx_status_t, object_signal, mx_handle_t handle,
                     uint32_t clear_mask, uint32_t set_mask)
-MAGENTA_SYSCALL_DEF(4, 4, 21, mx_status_t, object_get_property, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(3, 3, 21, mx_status_t, object_signal_peer, mx_handle_t handle,
+                    uint32_t clear_mask, uint32_t set_mask)
+MAGENTA_SYSCALL_DEF(4, 4, 22, mx_status_t, object_get_property, mx_handle_t handle,
                     uint32_t property, USER_PTR(void) value, mx_size_t size)
-MAGENTA_SYSCALL_DEF(4, 4, 22, mx_status_t, object_set_property, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(4, 4, 23, mx_status_t, object_set_property, mx_handle_t handle,
                     uint32_t property, USER_PTR(const void) value, mx_size_t size)
-MAGENTA_SYSCALL_DEF(6, 6, 23, mx_status_t, object_get_info, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(6, 6, 24, mx_status_t, object_get_info, mx_handle_t handle,
                     uint32_t topic, uint16_t topic_size, USER_PTR(void) buffer,
                     mx_size_t buffer_size, USER_PTR(mx_size_t) actual_size)
-MAGENTA_SYSCALL_DEF(4, 6, 24, mx_status_t, object_get_child, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(4, 6, 25, mx_status_t, object_get_child, mx_handle_t handle,
                     uint64_t koid, mx_rights_t rights, USER_PTR(mx_handle_t) out)
-MAGENTA_SYSCALL_DEF(4, 5, 25, mx_status_t, object_bind_exception_port,
+MAGENTA_SYSCALL_DEF(4, 5, 26, mx_status_t, object_bind_exception_port,
                     mx_handle_t object, mx_handle_t eport, uint64_t key, uint32_t options)
 
 // IPC: Channels

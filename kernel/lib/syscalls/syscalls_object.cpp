@@ -342,7 +342,22 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-    return dispatcher->user_signal(clear_mask, set_mask);
+    return dispatcher->user_signal(clear_mask, set_mask, false);
+}
+
+mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
+    LTRACEF("handle %d\n", handle_value);
+
+    auto up = ProcessDispatcher::GetCurrent();
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    uint32_t rights;
+
+    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
+        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
+        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
+
+    return dispatcher->user_signal(clear_mask, set_mask, true);
 }
 
 // Given a kernel object with children objects, obtain a handle to the
