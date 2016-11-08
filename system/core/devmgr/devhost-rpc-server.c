@@ -6,6 +6,7 @@
 #include "device-internal.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +29,9 @@
 
 #define MXDEBUG 0
 
+#define CAN_WRITE(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_WRONLY))
+#define CAN_READ(ios) (((03 & ios->flags) == O_RDWR) || ((03 & ios->flags) == O_RDONLY))
+
 mxio_dispatcher_t* devhost_rio_dispatcher;
 
 devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
@@ -43,13 +47,15 @@ devhost_iostate_t* create_devhost_iostate(mx_device_t* dev) {
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types);
 
 static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
-                                      mx_handle_t* handles, uint32_t* ids) {
+                                       uint32_t flags, mx_handle_t* handles,
+                                       uint32_t* ids) {
     mx_status_t r;
     devhost_iostate_t* newios;
 
     if ((newios = create_devhost_iostate(dev)) == NULL) {
         return ERR_NO_MEMORY;
     }
+    newios->flags = flags;
 
     mx_handle_t h0, h1;
     if ((r = mx_channel_create(0, &h0, &h1)) < 0) {
@@ -59,7 +65,7 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
     handles[0] = h0;
     ids[0] = MX_HND_TYPE_MXIO_REMOTE;
 
-    if ((r = device_openat(dev, &dev, path, 0)) < 0) {
+    if ((r = device_openat(dev, &dev, path, flags)) < 0) {
         printf("devhost_get_handles(%p:%s) open path='%s', r=%d\n",
                dev, dev->name, path ? path : "", r);
         goto fail1;
@@ -230,14 +236,19 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
     case MXRIO_CLONE: {
         uint32_t ids[VFS_MAX_HANDLES];
         mx_status_t r;
+        char* path = NULL;
+        uint32_t flags = arg;
         if (MXRIO_OP(msg->op) == MXRIO_OPEN) {
             xprintf("devhost_rio_handler() open dev %p name '%s' at '%s'\n",
                     dev, dev->name, (char*) msg->data);
-            r = devhost_get_handles(dev, (char*) msg->data, msg->handle, ids);
+            if (strcmp((char*)msg->data, ".")) {
+                path = (char*) msg->data;
+            }
         } else {
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
-            r = devhost_get_handles(dev, NULL, msg->handle, ids);
+            flags = ios->flags;
         }
+        r = devhost_get_handles(dev, path, flags, msg->handle, ids);
         if (r < 0) {
             return r;
         }
@@ -246,6 +257,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         return NO_ERROR;
     }
     case MXRIO_READ: {
+        if (!CAN_READ(ios)) {
+            return ERR_ACCESS_DENIED;
+        }
         mx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -255,6 +269,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         return r;
     }
     case MXRIO_READ_AT: {
+        if (!CAN_READ(ios)) {
+            return ERR_ACCESS_DENIED;
+        }
         mx_status_t r = do_sync_io(dev, IOTXN_OP_READ, msg->data, arg, msg->arg2.off);
         if (r >= 0) {
             msg->datalen = r;
@@ -262,6 +279,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         return r;
     }
     case MXRIO_WRITE: {
+        if (!CAN_WRITE(ios)) {
+            return ERR_ACCESS_DENIED;
+        }
         mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, ios->io_off);
         if (r >= 0) {
             ios->io_off += r;
@@ -270,6 +290,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         return r;
     }
     case MXRIO_WRITE_AT: {
+        if (!CAN_WRITE(ios)) {
+            return ERR_ACCESS_DENIED;
+        }
         mx_status_t r = do_sync_io(dev, IOTXN_OP_WRITE, msg->data, len, msg->arg2.off);
         return r;
     }

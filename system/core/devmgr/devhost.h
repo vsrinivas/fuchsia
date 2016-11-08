@@ -58,6 +58,7 @@ bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
 typedef struct devhost_iostate {
     mx_device_t* dev;
     size_t io_off;
+    uint32_t flags;
     mtx_t lock;
 } devhost_iostate_t;
 

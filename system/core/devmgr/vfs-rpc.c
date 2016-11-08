@@ -169,8 +169,8 @@ static mx_status_t _vfs_open(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
     if (type == 0) {
         // device is non-local, handle is the server that
         // can clone it for us, redirect the rpc to there
-        if ((r = txn_handoff_clone(msg->handle[0], rh)) < 0) {
-            printf("txn_handoff_clone() failed %d\n", r);
+        if ((r = txn_handoff_open(msg->handle[0], rh, ".", flags, mode)) < 0) {
+            printf("txn_handoff_open() failed %d\n", r);
             vn_release(vn);
             return r;
         }
