@@ -13,7 +13,7 @@ executable("suggestion_engine") {
     "//apps/maxwell:bound_set",
     "//apps/maxwell:debug",
     "//apps/maxwell/interfaces",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
     "//mojo/system",

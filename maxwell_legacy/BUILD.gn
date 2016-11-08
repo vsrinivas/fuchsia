@@ -32,7 +32,7 @@ source_set("debug") {
 
   deps = [
     "//apps/maxwell/interfaces",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/environment",
