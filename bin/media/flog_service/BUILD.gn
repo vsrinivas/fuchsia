@@ -21,7 +21,7 @@ executable("flog_service") {
     "//apps/media/interfaces/flog",
     "//apps/media/src/util",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",
     "//mojo/public/cpp/system",

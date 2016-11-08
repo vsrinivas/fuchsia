@@ -10,7 +10,7 @@ executable("audio_server") {
     "//apps/media/interfaces",
     "//apps/media/src/util",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
     "//mojo/system",
   ]

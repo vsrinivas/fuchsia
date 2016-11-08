@@ -23,7 +23,7 @@ source_set("util") {
     "//apps/media/cpp",
     "//apps/media/interfaces",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
   ]
 }

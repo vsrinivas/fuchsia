@@ -37,7 +37,7 @@ source_set("ffmpeg") {
     "//apps/media/src/framework",
     "//apps/media/src/util",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//third_party/ffmpeg",
   ]
 

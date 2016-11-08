@@ -53,7 +53,7 @@ executable("flog_viewer") {
     "//apps/media/interfaces",
     "//apps/media/interfaces/flog",
     "//lib/ftl",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/application",
     "//mojo/system",
   ]

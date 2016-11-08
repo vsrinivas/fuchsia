@@ -20,7 +20,7 @@ executable("video_player") {
     "//apps/media/interfaces",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/c:GLES2",
     "//mojo/public/cpp/application",
     "//mojo/public/cpp/bindings",

@@ -59,7 +59,7 @@ executable("apptests") {
 
   deps = [
     ":cpp",
-    "//lib/mtl",
+    "//lib/mtl:mtl_with_mojo",
     "//mojo/public/cpp/environment",
     "//mojo/public/cpp/system",
     "//mojo/system",
