@@ -38,6 +38,10 @@ extern "C" {
 #include <X11/Xutil.h>
 #endif
 
+#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+#include <chrono>
+#endif
+
 #include <vulkan/vulkan.h>
 
 //#include <vulkan/vk_sdk_platform.h>
@@ -2169,8 +2173,27 @@ static void demo_create_xcb_window(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
 static void demo_run_magma(struct demo *demo) 
 {
+    constexpr uint32_t kNumFrames = 60;
+    static const float kMsPerSec =
+        std::chrono::milliseconds(std::chrono::seconds(1)).count();
+
+    float total_ms = 0;
+    auto t0 = std::chrono::high_resolution_clock::now();
+
     while (!demo->quit) {
         demo_update_data_buffer(demo);
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = t1 - t0;
+        total_ms += elapsed.count();
+        t0 = t1;
+
+        if (demo->curFrame && (demo->curFrame % kNumFrames) == 0) {
+            printf("Framerate average for last %u frames: %f frames per second\n", kNumFrames,
+                   kNumFrames / (total_ms / kMsPerSec));
+            total_ms = 0;
+        }
+
         demo_draw(demo);
         demo->curFrame++;
         if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
