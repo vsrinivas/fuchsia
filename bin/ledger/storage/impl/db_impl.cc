@@ -4,11 +4,14 @@
 
 #include "apps/ledger/src/storage/impl/db_impl.h"
 
+#include <string>
+
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/strings/string_number_conversions.h"
 
 namespace storage {
 
@@ -21,13 +24,18 @@ constexpr ftl::StringView kCommitPrefix = "commits/";
 const size_t kJournalIdSize = 16;
 constexpr ftl::StringView kJournalPrefix = "journals/";
 constexpr ftl::StringView kImplicitJournalMetaPrefix = "journals/implicit/";
+constexpr ftl::StringView kJournalEntry = "entry/";
+constexpr ftl::StringView kJournalCounter = "counter/";
 const char kImplicitJournalIdPrefix = 'I';
 const char kExplicitJournalIdPrefix = 'E';
+const size_t kJournalEntryPrefixSize =
+    kJournalPrefix.size() + kJournalIdSize + 1 + kJournalEntry.size();
 // Journal values
 const char kJournalEntryAdd = 'A';
 constexpr ftl::StringView kJournalEntryDelete = "D";
 const char kJournalLazyEntry = 'L';
 const char kJournalEagerEntry = 'E';
+const size_t kJournalEntryAddPrefixSize = 2;
 
 constexpr ftl::StringView kUnsyncedCommitPrefix = "unsynced/commits/";
 constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
@@ -68,11 +76,11 @@ std::string GetImplicitJournalMetaKeyFor(const JournalId& journal_id) {
 }
 
 std::string GetJournalEntryPrefixFor(const JournalId& journal_id) {
-  return Concatenate({kJournalPrefix, journal_id});
+  return Concatenate({kJournalPrefix, journal_id, "/", kJournalEntry});
 }
 
 std::string GetJournalEntryKeyFor(const JournalId id, ftl::StringView key) {
-  return Concatenate({kJournalPrefix, id, "/", key});
+  return Concatenate({GetJournalEntryPrefixFor(id), key});
 }
 
 std::string GetJournalEntryValueFor(ftl::StringView value,
@@ -80,6 +88,23 @@ std::string GetJournalEntryValueFor(ftl::StringView value,
   char priority_byte =
       (priority == KeyPriority::EAGER) ? kJournalEagerEntry : kJournalLazyEntry;
   return Concatenate({{&kJournalEntryAdd, 1}, {&priority_byte, 1}, value});
+}
+
+Status ExtractObjectId(ftl::StringView db_value, ObjectId* id) {
+  if (db_value[0] == kJournalEntryDelete[0]) {
+    return Status::NOT_FOUND;
+  }
+  *id = db_value.substr(kJournalEntryAddPrefixSize).ToString();
+  return Status::OK;
+}
+
+std::string GetJournalCounterPrefixFor(const JournalId& id) {
+  return Concatenate({kJournalPrefix, id, "/", kJournalCounter});
+}
+
+std::string GetJournalCounterKeyFor(const JournalId& id,
+                                    ftl::StringView value) {
+  return Concatenate({GetJournalCounterPrefixFor(id), value});
 }
 
 std::string NewJournalId(JournalType journal_type) {
@@ -126,10 +151,8 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
     }
     change_.reset(new EntryChange());
 
-    static int journal_prefix_length =
-        kJournalPrefix.size() + kJournalIdSize + 1;
     leveldb::Slice key_slice = it_->key();
-    key_slice.remove_prefix(journal_prefix_length);
+    key_slice.remove_prefix(kJournalEntryPrefixSize);
     change_->entry.key = key_slice.ToString();
 
     leveldb::Slice value = it_->value();
@@ -139,7 +162,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
                                     ? KeyPriority::LAZY
                                     : KeyPriority::EAGER;
 
-      value.remove_prefix(2);
+      value.remove_prefix(kJournalEntryAddPrefixSize);
       change_->entry.object_id = value.ToString();
     } else {
       change_->deleted = true;
@@ -315,6 +338,17 @@ Status DbImpl::RemoveJournalEntry(const JournalId& journal_id,
   return Put(GetJournalEntryKeyFor(journal_id, key), kJournalEntryDelete);
 }
 
+Status DbImpl::GetJournalValue(const JournalId& journal_id,
+                               ftl::StringView key,
+                               std::string* value) {
+  std::string db_value;
+  Status s = Get(GetJournalEntryKeyFor(journal_id, key), &db_value);
+  if (s != Status::OK) {
+    return s;
+  }
+  return ExtractObjectId(db_value, value);
+}
+
 Status DbImpl::GetJournalEntries(
     const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
@@ -324,6 +358,37 @@ Status DbImpl::GetJournalEntries(
 
   entries->reset(new JournalEntryIterator(std::move(it), prefix));
   return Status::OK;
+}
+
+Status DbImpl::GetJournalValueCounter(const JournalId& journal_id,
+                                      ftl::StringView value,
+                                      int* counter) {
+  std::string counter_str;
+  Status s = Get(GetJournalCounterKeyFor(journal_id, value), &counter_str);
+  if (s == Status::NOT_FOUND) {
+    *counter = 0;
+    return Status::OK;
+  }
+  if (s != Status::OK) {
+    return s;
+  }
+  *counter = ftl::StringToNumber<int>(counter_str);
+  return Status::OK;
+}
+
+Status DbImpl::SetJournalValueCounter(const JournalId& journal_id,
+                                      ftl::StringView value,
+                                      int counter) {
+  FTL_DCHECK(counter >= 0);
+  if (counter == 0) {
+    return Delete(GetJournalCounterKeyFor(journal_id, value));
+  }
+  return Put(GetJournalCounterKeyFor(journal_id, value),
+             ftl::NumberToString(counter));
+}
+Status DbImpl::GetJournalValues(const JournalId& journal_id,
+                                std::vector<std::string>* values) {
+  return GetByPrefix(GetJournalCounterPrefixFor(journal_id), values);
 }
 
 Status DbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {

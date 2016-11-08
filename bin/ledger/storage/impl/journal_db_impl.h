@@ -7,8 +7,10 @@
 
 #include "apps/ledger/src/storage/public/journal.h"
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
@@ -54,6 +56,9 @@ class JournalDBImpl : public Journal {
                 const JournalId& id,
                 const CommitId& base);
 
+  Status UpdateValueCounter(ObjectIdView object_id,
+                            const std::function<int(int)>& operation);
+
   const JournalType type_;
   PageStorageImpl* const page_storage_;
   DB* const db_;
@@ -64,9 +69,9 @@ class JournalDBImpl : public Journal {
   // executed.
   bool valid_;
   // |failed_operation_| is true if any of the Put or Delete methods in this
-  // journal have failed. In this case, any operation on EXPLICIT journals other
-  // than rolling back will fail. IMPLICIT journals can still be commited even
-  // if some operations have failed.
+  // journal have failed. In this case, any operation on EXPLICIT journals
+  // other than rolling back will fail. IMPLICIT journals can still be commited
+  // even if some operations have failed.
   bool failed_operation_;
 };
 

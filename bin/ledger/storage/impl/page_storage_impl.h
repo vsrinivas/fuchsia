@@ -7,6 +7,8 @@
 
 #include "apps/ledger/src/storage/public/page_storage.h"
 
+#include <set>
+
 #include "apps/ledger/src/storage/impl/db_impl.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -28,6 +30,14 @@ class PageStorageImpl : public PageStorage {
   // Adds the given locally created |commit| in this |PageStorage|.
   void AddCommitFromLocal(std::unique_ptr<Commit> commit,
                           std::function<void(Status)> callback);
+
+  // Returns true if the given |object_id| is untracked, i.e. has been  created
+  // using |AddObjectFromLocal()|, but is not yet part of any commit. Untracked
+  // objects are invalid after the PageStorageImpl object is destroyed.
+  bool ObjectIsUntracked(ObjectIdView object_id);
+
+  // Marks the given object as tracked.
+  void MarkObjectTracked(ObjectIdView object_id);
 
   // PageStorage:
   PageId GetId() override;
@@ -86,6 +96,7 @@ class PageStorageImpl : public PageStorage {
   PageId page_id_;
   DbImpl db_;
   std::vector<CommitWatcher*> watchers_;
+  std::set<ObjectId, convert::StringViewComparator> untracked_objects_;
   std::string objects_dir_;
   std::string staging_dir_;
   std::vector<std::unique_ptr<FileWriter>> writers_;

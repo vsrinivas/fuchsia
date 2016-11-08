@@ -115,6 +115,11 @@ class FakeDbImpl : public DB {
                          KeyPriority priority) override {
     return Status::IO_ERROR;
   }
+  Status GetJournalValue(const JournalId& journal_id,
+                         ftl::StringView key,
+                         std::string* value) override {
+    return Status::IO_ERROR;
+  }
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override {
     return Status::IO_ERROR;
@@ -122,6 +127,20 @@ class FakeDbImpl : public DB {
   Status GetJournalEntries(
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override {
+    return Status::IO_ERROR;
+  }
+  Status GetJournalValueCounter(const JournalId& journal_id,
+                                ftl::StringView value,
+                                int* counter) override {
+    return Status::IO_ERROR;
+  }
+  Status SetJournalValueCounter(const JournalId& journal_id,
+                                ftl::StringView value,
+                                int counter) override {
+    return Status::IO_ERROR;
+  }
+  Status GetJournalValues(const JournalId& journal_id,
+                          std::vector<std::string>* values) override {
     return Status::IO_ERROR;
   }
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override {
@@ -227,6 +246,18 @@ class PageStorageTest : public ::testing::Test {
     EXPECT_FALSE(contents->Valid());
 
     return commit_id;
+  }
+
+  void TryAddFromLocal(const std::string& content,
+                       const ObjectId& expected_id) {
+    storage_->AddObjectFromLocal(
+        mtl::WriteStringToConsumerHandle(content), content.size(),
+        [this, &expected_id](Status returned_status, ObjectId object_id) {
+          EXPECT_EQ(Status::OK, returned_status);
+          EXPECT_EQ(expected_id, object_id);
+          message_loop_.QuitNow();
+        });
+    message_loop_.Run();
   }
 
   mtl::MessageLoop message_loop_;
@@ -474,6 +505,67 @@ TEST_F(PageStorageTest, GetObjectSynchronous) {
   ftl::StringView data;
   ASSERT_EQ(Status::OK, object->GetData(&data));
   EXPECT_EQ(content, convert::ToString(data));
+}
+
+TEST_F(PageStorageTest, UntrackedObjectsSimple) {
+  std::string content("Some data");
+
+  // The object is not yet created and its id should not be marked as untracked.
+  std::string object_id = glue::SHA256Hash(content.data(), content.size());
+  EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+
+  // After creating the object it should be marked as untracked.
+  TryAddFromLocal(content, object_id);
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+
+  // After adding the object in a commit it should not be untracked any more.
+  std::unique_ptr<Journal> journal;
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, journal->Put("key", object_id, KeyPriority::EAGER));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+  journal->Commit(
+      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+}
+
+TEST_F(PageStorageTest, UntrackedObjectsComplex) {
+  std::string values[] = {"Some data", "Some more data", "Even more data"};
+  std::string object_ids[3];
+  for (int i = 0; i < 3; ++i) {
+    object_ids[i] = glue::SHA256Hash(values[i].data(), values[i].size());
+    TryAddFromLocal(values[i], object_ids[i]);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[i]));
+  }
+
+  // Add a first commit containing object_ids[0].
+  std::unique_ptr<Journal> journal;
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, journal->Put("key0", object_ids[0], KeyPriority::LAZY));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[0]));
+  journal->Commit(
+      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[0]));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[1]));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[2]));
+
+  // Create a second commit. After calling Put for "key1" for the second time
+  // object_ids[1] is no longer part of this commit: it should remain untracked
+  // after committing.
+  journal.reset();
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK, journal->Put("key1", object_ids[1], KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK, journal->Put("key2", object_ids[2], KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK, journal->Put("key1", object_ids[2], KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK, journal->Put("key3", object_ids[0], KeyPriority::LAZY));
+  journal->Commit(
+      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+
+  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[0]));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[1]));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[2]));
 }
 
 TEST_F(PageStorageTest, CommitWatchers) {

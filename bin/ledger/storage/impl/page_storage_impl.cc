@@ -375,8 +375,9 @@ void PageStorageImpl::AddObjectFromLocal(
   };
 
   file_writer_ptr->Start(std::move(data), size, [
-    cleanup = std::move(cleanup), callback = std::move(callback)
+    this, cleanup = std::move(cleanup), callback = std::move(callback)
   ](Status status, ObjectId object_id) {
+    untracked_objects_.insert(object_id);
     callback(status, std::move(object_id));
     cleanup();
   });
@@ -483,6 +484,17 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
 
   callback(Status::OK);
   NotifyWatchers(*(commit.get()), source);
+}
+
+bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
+  return untracked_objects_.find(object_id) != untracked_objects_.end();
+}
+
+void PageStorageImpl::MarkObjectTracked(ObjectIdView object_id) {
+  auto it = untracked_objects_.find(object_id);
+  if (it != untracked_objects_.end()) {
+    untracked_objects_.erase(it);
+  }
 }
 
 }  // namespace storage

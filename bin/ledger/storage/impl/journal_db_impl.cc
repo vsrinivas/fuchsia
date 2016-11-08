@@ -59,28 +59,64 @@ JournalId JournalDBImpl::GetId() const {
   return id_;
 }
 
+Status JournalDBImpl::UpdateValueCounter(
+    ObjectIdView object_id,
+    const std::function<int(int)>& operation) {
+  // Update the counter fo untracked objects only.
+  if (!page_storage_->ObjectIsUntracked(object_id)) {
+    return Status::OK;
+  }
+  int counter;
+  Status s = db_->GetJournalValueCounter(id_, object_id, &counter);
+  if (s != Status::OK) {
+    return s;
+  }
+  int next_counter = operation(counter);
+  FTL_DCHECK(next_counter >= 0);
+  s = db_->SetJournalValueCounter(id_, object_id, next_counter);
+  return s;
+}
+
 Status JournalDBImpl::Put(convert::ExtendedStringView key,
                           ObjectIdView object_id,
                           KeyPriority priority) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
+  std::string prev_id;
+  Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
+
+  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
   Status s = db_->AddJournalEntry(id_, key, object_id, priority);
   if (s != Status::OK) {
     failed_operation_ = true;
+    return s;
   }
-  return s;
+  UpdateValueCounter(object_id, [](int counter) { return counter + 1; });
+  if (prev_entry_status == Status::OK) {
+    UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+  }
+  return batch->Execute();
 }
 
 Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
+  std::string prev_id;
+  Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
+
+  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
   Status s = db_->RemoveJournalEntry(id_, key);
   if (s != Status::OK) {
     failed_operation_ = true;
+    return s;
   }
-  return s;
+
+  if (prev_entry_status == Status::OK) {
+    UpdateValueCounter(prev_id, [](int counter) { return counter - 1; });
+  }
+  return batch->Execute();
 }
 
 void JournalDBImpl::Commit(
@@ -127,16 +163,42 @@ void JournalDBImpl::Commit(
             CommitImpl::FromContentAndParents(page_storage_, object_id,
                                               std::move(parents));
         ObjectId id = commit->GetId();
-        page_storage_->AddCommitFromLocal(std::move(commit),
-                                          [this, id, callback](Status status) {
-                                            db_->RemoveJournal(id_);
-                                            valid_ = false;
-                                            if (status != Status::OK) {
-                                              callback(status, "");
-                                            } else {
-                                              callback(status, id);
-                                            }
-                                          });
+
+        page_storage_->AddCommitFromLocal(
+            std::move(commit), [this, id, callback](Status status) {
+
+              valid_ = false;
+              if (status != Status::OK) {
+                callback(status, "");
+                return;
+              }
+              // Mark objects as unsynced.
+              std::vector<ObjectId> objects_to_sync;
+              status = db_->GetJournalValues(id_, &objects_to_sync);
+              if (status != Status::OK) {
+                callback(status, "");
+                return;
+              }
+              std::unique_ptr<DB::Batch> batch = db_->StartBatch();
+              for (const ObjectId& object_id : objects_to_sync) {
+                status = db_->MarkObjectIdUnsynced(object_id);
+                if (status != Status::OK) {
+                  callback(status, "");
+                  return;
+                }
+              }
+              status = batch->Execute();
+              if (status != Status::OK) {
+                callback(status, "");
+                return;
+              }
+              // Notify PageStorage that the objects are now tracked.
+              for (const ObjectId& object_id : objects_to_sync) {
+                page_storage_->MarkObjectTracked(object_id);
+              }
+              db_->RemoveJournal(id_);
+              callback(Status::OK, id);
+            });
       });
 }
 

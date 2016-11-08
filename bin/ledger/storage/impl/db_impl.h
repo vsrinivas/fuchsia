@@ -45,8 +45,19 @@ class DbImpl : public DB {
                          ftl::StringView key,
                          ftl::StringView value,
                          KeyPriority priority) override;
+  Status GetJournalValue(const JournalId& journal_id,
+                         ftl::StringView key,
+                         std::string* value) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
+  Status GetJournalValueCounter(const JournalId& journal_id,
+                                ftl::StringView value,
+                                int* counter) override;
+  Status SetJournalValueCounter(const JournalId& journal_id,
+                                ftl::StringView value,
+                                int counter) override;
+  Status GetJournalValues(const JournalId& journal_id,
+                          std::vector<std::string>* values) override;
   Status GetJournalEntries(
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
