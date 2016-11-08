@@ -74,6 +74,20 @@ void CloudProviderImpl::GetNotifications(
       });
 }
 
+void CloudProviderImpl::AddObject(ObjectIdView object_id,
+                                  mx::vmo data,
+                                  std::function<void(Status)> callback) {
+  FTL_NOTIMPLEMENTED();
+}
+
+void CloudProviderImpl::GetObject(
+    ObjectIdView object_id,
+    std::function<void(Status status,
+                       uint64_t size,
+                       mx::datapipe_consumer data)> callback) {
+  FTL_NOTIMPLEMENTED();
+}
+
 std::string CloudProviderImpl::GetLocation(const PageId& page_id) {
   return firebase::EncodeKey(app_id_) + "/" + firebase::EncodeKey(page_id);
 }

@@ -7,12 +7,15 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace cloud_provider {
 
 using AppId = std::string;
 using PageId = std::string;
 using NotificationId = std::string;
 using ObjectId = std::string;
+using ObjectIdView = ftl::StringView;
 using Data = std::string;
 
 enum class Status { OK, UNKNOWN_ERROR };

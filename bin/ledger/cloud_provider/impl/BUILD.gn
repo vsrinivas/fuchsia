@@ -23,6 +23,7 @@ source_set("impl") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/glue",
     "//lib/ftl",
+    "//magenta/system/ulib/mx",
   ]
 }
 

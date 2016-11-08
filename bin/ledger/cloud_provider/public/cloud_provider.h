@@ -14,6 +14,8 @@
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "lib/ftl/macros.h"
+#include "mx/datapipe.h"
+#include "mx/vmo.h"
 
 namespace cloud_provider {
 
@@ -71,6 +73,20 @@ class CloudProvider {
       const PageId& page_id,
       const std::string& min_timestamp,
       std::function<void(Status, const std::vector<Record>&)> callback) = 0;
+
+  // Uploads the given object to the cloud under the given id.
+  virtual void AddObject(ObjectIdView object_id,
+                         mx::vmo data,
+                         std::function<void(Status)> callback) = 0;
+
+  // Retrieves the object of the given id from the cloud. The size of the object
+  // is passed to the callback along with the data pipe handle, so that the
+  // client can verify that all data was streamed when draining the pipe.
+  virtual void GetObject(
+      ObjectIdView object_id,
+      std::function<void(Status status,
+                         uint64_t size,
+                         mx::datapipe_consumer data)> callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProvider);

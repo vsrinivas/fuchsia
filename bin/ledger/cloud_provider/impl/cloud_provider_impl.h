@@ -14,6 +14,8 @@
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
+#include "mx/datapipe.h"
+#include "mx/vmo.h"
 
 namespace cloud_provider {
 
@@ -37,6 +39,16 @@ class CloudProviderImpl : public CloudProvider {
                         const std::string& min_timestamp,
                         std::function<void(Status, const std::vector<Record>&)>
                             callback) override;
+
+  void AddObject(ObjectIdView object_id,
+                 mx::vmo data,
+                 std::function<void(Status)> callback) override;
+
+  void GetObject(
+      ObjectIdView object_id,
+      std::function<void(Status status,
+                         uint64_t size,
+                         mx::datapipe_consumer data)> callback) override;
 
  private:
   // Returns url location where notifications for the particular page are

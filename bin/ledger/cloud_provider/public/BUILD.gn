@@ -13,7 +13,8 @@ source_set("public") {
     "types.h",
   ]
 
-  deps = [
+  public_deps = [
     "//lib/ftl",
+    "//magenta/system/ulib/mx",
   ]
 }
