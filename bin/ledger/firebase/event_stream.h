@@ -12,7 +12,7 @@
 #include "apps/ledger/src/firebase/status.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
-#include "lib/mtl/fidl_data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/data_pipe/data_pipe_drainer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace firebase {
@@ -25,7 +25,7 @@ using CompletionCallback = void();
 
 // Data pipe drainer that parses a stream of Server-Sent Events.
 // Data format of the stream is specified in http://www.w3.org/TR/eventsource/.
-class EventStream : public mtl::FidlDataPipeDrainer::Client {
+class EventStream : public mtl::DataPipeDrainer::Client {
  public:
   EventStream();
   ~EventStream() override;
@@ -53,7 +53,7 @@ class EventStream : public mtl::FidlDataPipeDrainer::Client {
   std::string data_;
   std::string event_type_;
 
-  std::unique_ptr<mtl::FidlDataPipeDrainer> drainer_;
+  std::unique_ptr<mtl::DataPipeDrainer> drainer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EventStream);
 };

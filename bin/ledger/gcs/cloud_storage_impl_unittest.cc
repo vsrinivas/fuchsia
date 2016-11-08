@@ -15,7 +15,7 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace gcs {
@@ -57,8 +57,7 @@ class CloudStorageImplTest : public ::testing::Test {
                    uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
-    server_response->body->set_stream(
-        mtl::FidlWriteStringToConsumerHandle(body));
+    server_response->body->set_stream(mtl::WriteStringToConsumerHandle(body));
     server_response->status_code = status_code;
 
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
@@ -105,7 +104,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("PUT", fake_network_service_->GetRequest()->method);
   EXPECT_TRUE(fake_network_service_->GetRequest()->body->is_stream());
   std::string sent_content;
-  EXPECT_TRUE(mtl::FidlBlockingCopyToString(
+  EXPECT_TRUE(mtl::BlockingCopyToString(
       std::move(fake_network_service_->GetRequest()->body->get_stream()),
       &sent_content));
   EXPECT_EQ(content, sent_content);

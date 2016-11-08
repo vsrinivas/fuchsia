@@ -16,7 +16,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -65,7 +65,7 @@ storage::ObjectId PageImplTest::AddObjectToStorage(
   storage::ObjectId object_id;
   // FakeStorage is synchronous.
   fake_storage_->AddObjectFromLocal(
-      mtl::FidlWriteStringToConsumerHandle(value_string), value_string.size(),
+      mtl::WriteStringToConsumerHandle(value_string), value_string.size(),
       [&object_id](storage::Status status,
                    storage::ObjectId returned_object_id) {
         EXPECT_EQ(storage::Status::OK, status);
@@ -336,7 +336,7 @@ TEST_F(PageImplTest, CreateReference) {
   Status status;
   ReferencePtr reference;
   page_ptr_->CreateReference(
-      value.size(), mtl::FidlWriteStringToConsumerHandle(value),
+      value.size(), mtl::WriteStringToConsumerHandle(value),
       [this, &status, &reference](Status received_status,
                                   ReferencePtr received_reference) {
         status = received_status;

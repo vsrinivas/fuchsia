@@ -21,7 +21,7 @@ void EventStream::Start(
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;
   completion_callback_ = completion_callback;
-  drainer_.reset(new mtl::FidlDataPipeDrainer(this));
+  drainer_.reset(new mtl::DataPipeDrainer(this));
   drainer_->Start(std::move(source));
 }
 

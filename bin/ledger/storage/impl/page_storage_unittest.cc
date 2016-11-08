@@ -17,7 +17,7 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
@@ -377,7 +377,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::FidlWriteStringToConsumerHandle(content), content.size(),
+      mtl::WriteStringToConsumerHandle(content), content.size(),
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
@@ -397,7 +397,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
   std::string content("Some data");
   storage_->AddObjectFromLocal(
-      mtl::FidlWriteStringToConsumerHandle(content), -1,
+      mtl::WriteStringToConsumerHandle(content), -1,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         message_loop_.QuitNow();
@@ -409,7 +409,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
   std::string content("Some data");
 
   storage_->AddObjectFromLocal(
-      mtl::FidlWriteStringToConsumerHandle(content), 123,
+      mtl::WriteStringToConsumerHandle(content), 123,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.QuitNow();

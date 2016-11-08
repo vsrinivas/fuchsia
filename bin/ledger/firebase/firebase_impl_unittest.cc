@@ -15,7 +15,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
@@ -82,7 +82,7 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   }
 
   void SetStringResponse(const std::string& body, uint32_t status_code) {
-    SetPipeResponse(mtl::FidlWriteStringToConsumerHandle(body), status_code);
+    SetPipeResponse(mtl::WriteStringToConsumerHandle(body), status_code);
   }
 
   std::unique_ptr<fake_network_service::FakeNetworkService>
@@ -388,8 +388,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   SetPipeResponse(std::move(data_pipe.consumer_handle), 200);
   firebase_->Watch("/", "", this);
 
-  EXPECT_TRUE(
-      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
   message_loop_.Run();
 
@@ -399,8 +398,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, auth_revoked_count_);
   EXPECT_EQ(0u, error_count_);
 
-  EXPECT_TRUE(
-      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
   message_loop_.Run();
 
@@ -413,8 +411,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   // Unregister the watch client and make sure that we are not notified about
   // the next event.
   firebase_->UnWatch(this);
-  EXPECT_TRUE(
-      mtl::FidlBlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
 
   // TODO(ppi): how to avoid the wait?

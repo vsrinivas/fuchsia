@@ -15,7 +15,7 @@
 #include "apps/ledger/src/convert/convert.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/shared_buffer/strings.h"
 
 namespace ledger {
@@ -135,7 +135,7 @@ void PageImpl::PutWithPriority(fidl::Array<uint8_t> key,
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
   // until the pipe is drained.
   mx::datapipe_consumer data_pipe =
-      mtl::FidlWriteStringToConsumerHandle(convert::ToStringView(value));
+      mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
   storage_->AddObjectFromLocal(
       std::move(data_pipe), value.size(),
       ftl::MakeCopyable([ this, key = std::move(key), priority, callback ](

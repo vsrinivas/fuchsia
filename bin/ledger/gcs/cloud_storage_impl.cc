@@ -18,7 +18,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/fidl_data_pipe/files.h"
+#include "lib/mtl/data_pipe/files.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace gcs {
@@ -123,7 +123,7 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     return;
   }
 
-  mtl::FidlCopyFromFileDescriptor(
+  mtl::CopyFromFileDescriptor(
       std::move(fd), std::move(data_pipe.producer_handle), task_runner_,
       [](bool result, ftl::UniqueFD fd) {
         if (!result) {
@@ -237,7 +237,7 @@ void CloudStorageImpl::OnDownloadResponseReceived(
     return;
   }
 
-  mtl::FidlCopyToFileDescriptor(
+  mtl::CopyToFileDescriptor(
       std::move(body->get_stream()), std::move(fd), task_runner_,
       [destination, callback, expected_file_size](bool success,
                                                   ftl::UniqueFD fd) {

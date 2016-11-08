@@ -16,9 +16,9 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
-#include "lib/mtl/threading/create_thread.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/threading/create_thread.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace ledger {
@@ -536,7 +536,7 @@ TEST_F(LedgerApplicationTest, PageCreateReferenceNegativeSize) {
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(-1, mtl::FidlWriteStringToConsumerHandle(big_data),
+  page->CreateReference(-1, mtl::WriteStringToConsumerHandle(big_data),
                         [this](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::OK, status);
                         });
@@ -548,7 +548,7 @@ TEST_F(LedgerApplicationTest, PageCreateReferenceWrongSize) {
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(123, mtl::FidlWriteStringToConsumerHandle(big_data),
+  page->CreateReference(123, mtl::WriteStringToConsumerHandle(big_data),
                         [this](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::IO_ERROR, status);
                         });
@@ -563,7 +563,7 @@ TEST_F(LedgerApplicationTest, PageCreatePutLargeReference) {
   // Stream the data into the reference.
   ReferencePtr reference;
   page->CreateReference(big_data.size(),
-                        mtl::FidlWriteStringToConsumerHandle(big_data),
+                        mtl::WriteStringToConsumerHandle(big_data),
                         [this, &reference](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::OK, status);
                           reference = std::move(ref);
