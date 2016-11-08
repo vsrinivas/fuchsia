@@ -5,29 +5,24 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the session.
 
-#include <mojo/system/main.h>
-
-#include "apps/document_store/interfaces/document.mojom.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/services/story/story_runner.mojom.h"
+#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
+#include "apps/mozart/services/geometry/cpp/geometry_util.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/map.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/bindings/strong_binding_set.h"
-#include "mojo/public/cpp/system/macros.h"
-#include "mojo/services/geometry/cpp/geometry_util.h"
+#include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/map.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
@@ -57,17 +52,12 @@ constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
 using document_store::Document;
 using document_store::DocumentPtr;
 
-using mojo::ApplicationImplBase;
-using mojo::Array;
-using mojo::Binding;
-using mojo::ConnectionContext;
-using mojo::InterfaceHandle;
-using mojo::InterfacePtr;
-using mojo::InterfaceRequest;
-using mojo::ServiceProviderImpl;
-using mojo::Shell;
-using mojo::StrongBinding;
-using mojo::StructPtr;
+using fidl::Array;
+using fidl::Binding;
+using fidl::InterfaceHandle;
+using fidl::InterfacePtr;
+using fidl::InterfaceRequest;
+using fidl::StructPtr;
 
 using modular::DocumentEditor;
 using modular::Link;
@@ -77,6 +67,7 @@ using modular::ModuleController;
 using modular::ModuleWatcher;
 using modular::MojoDocMap;
 using modular::Session;
+using modular::StrongBinding;
 using modular::operator<<;
 
 // Implementation of the LinkChanged service that forwards each document
@@ -102,7 +93,7 @@ class LinkConnection : public LinkChanged {
   InterfacePtr<Link>& src_;
   InterfacePtr<Link>& dst_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
 class ModuleMonitor : public ModuleWatcher {
@@ -120,7 +111,7 @@ class ModuleMonitor : public ModuleWatcher {
  private:
   Binding<ModuleWatcher> binding_;
   InterfacePtr<Session>& session_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
 struct ViewData {
@@ -128,17 +119,18 @@ struct ViewData {
   const uint32_t key;
   StructPtr<mozart::ViewInfo> view_info;
   StructPtr<mozart::ViewProperties> view_properties;
-  mojo::RectF layout_bounds;
+  mozart::RectF layout_bounds;
   uint32_t scene_version = 1u;
 };
 
 // Module implementation that acts as a recipe.
 class RecipeImpl : public Module, public mozart::BaseView {
  public:
-  RecipeImpl(mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-             InterfaceRequest<Module> module_request,
-             mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(std::move(app_connector),
+  explicit RecipeImpl(
+      mozart::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<Module> module_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "RecipeImpl"),
         module_binding_(this, std::move(module_request)) {
@@ -165,7 +157,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
     FTL_LOG(INFO) << "recipe start module module1";
     InterfaceHandle<mozart::ViewOwner> module1_view;
-    session_->StartModule("mojo:example_module1",
+    session_->StartModule("file:///system/apps/example_module1",
                           std::move(module1_link_handle), GetProxy(&module1_),
                           GetProxy(&module1_view));
     GetViewContainer()->AddChild(0, std::move(module1_view));
@@ -174,7 +166,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
     FTL_LOG(INFO) << "recipe start module module2";
     InterfaceHandle<mozart::ViewOwner> module2_view;
-    session_->StartModule("mojo:example_module2",
+    session_->StartModule("file:///system/apps/example_module2",
                           std::move(module2_link_handle), GetProxy(&module2_),
                           GetProxy(&module2_view));
     GetViewContainer()->AddChild(1, std::move(module2_view));
@@ -198,7 +190,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
     // and Links from the previous execution that is continued here.
     // Is that really enough?
     module1_link_->Query(
-        [this](mojo::Map<mojo::String, document_store::DocumentPtr> value) {
+        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
           if (value.size() == 0) {
             // This must come last, otherwise LinkConnection gets a
             // notification of our own write because of the "send
@@ -244,7 +236,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
     FTL_DCHECK(properties());
     // Layout all children in a row.
     if (!views_.empty()) {
-      const mojo::Size& size = *properties()->view_layout->size;
+      const mozart::Size& size = *properties()->view_layout->size;
 
       uint32_t index = 0;
       uint32_t space = size.width;
@@ -269,7 +261,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
         auto view_properties = mozart::ViewProperties::New();
         view_properties->view_layout = mozart::ViewLayout::New();
-        view_properties->view_layout->size = mojo::Size::New();
+        view_properties->view_layout->size = mozart::Size::New();
         view_properties->view_layout->size->width =
             view_data->layout_bounds.width;
         view_properties->view_layout->size->height =
@@ -281,7 +273,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
         view_data->view_properties = view_properties.Clone();
         view_data->scene_version++;
         GetViewContainer()->SetChildProperties(
-            it->first, view_data->scene_version, view_properties.Pass());
+            it->first, view_data->scene_version, std::move(view_properties));
       }
     }
   }
@@ -307,7 +299,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
       const uint32_t container_node_id =
           kViewNodeIdBase + view_data.key * kViewNodeIdSpacing;
 
-      mojo::RectF extent;
+      mozart::RectF extent;
       extent.width = view_data.layout_bounds.width;
       extent.height = view_data.layout_bounds.height;
 
@@ -316,10 +308,10 @@ class RecipeImpl : public Module, public mozart::BaseView {
       // fallback behavior in case the view is not available.
       auto container_node = mozart::Node::New();
       container_node->content_clip = extent.Clone();
-      container_node->content_transform = mojo::Transform::New();
-      SetTranslationTransform(container_node->content_transform.get(),
-                              view_data.layout_bounds.x,
-                              view_data.layout_bounds.y, 0.f);
+      container_node->content_transform = mozart::Transform::New();
+      mozart::SetTranslationTransform(container_node->content_transform.get(),
+                                      view_data.layout_bounds.x,
+                                      view_data.layout_bounds.y, 0.f);
 
       // If we have the view, add it to the scene.
       if (view_data.view_info) {
@@ -327,7 +319,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
         scene_resource->set_scene(mozart::SceneResource::New());
         scene_resource->get_scene()->scene_token =
             view_data.view_info->scene_token.Clone();
-        update->resources.insert(scene_resource_id, scene_resource.Pass());
+        update->resources.insert(scene_resource_id, std::move(scene_resource));
 
         const uint32_t scene_node_id =
             container_node_id + kViewSceneNodeIdOffset;
@@ -335,18 +327,18 @@ class RecipeImpl : public Module, public mozart::BaseView {
         scene_node->op = mozart::NodeOp::New();
         scene_node->op->set_scene(mozart::SceneNodeOp::New());
         scene_node->op->get_scene()->scene_resource_id = scene_resource_id;
-        update->nodes.insert(scene_node_id, scene_node.Pass());
+        update->nodes.insert(scene_node_id, std::move(scene_node));
         container_node->child_node_ids.push_back(scene_node_id);
       }
 
       // Add the container.
-      update->nodes.insert(container_node_id, container_node.Pass());
+      update->nodes.insert(container_node_id, std::move(container_node));
       root_node->child_node_ids.push_back(container_node_id);
     }
 
     // Add the root node.
-    update->nodes.insert(kRootNodeId, root_node.Pass());
-    scene()->Update(update.Pass());
+    update->nodes.insert(kRootNodeId, std::move(root_node));
+    scene()->Update(std::move(update));
 
     // Publish the scene.
     scene()->Publish(CreateSceneMetadata());
@@ -368,12 +360,14 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
 };
 
 }  // namespace
 
-MojoResult MojoMain(MojoHandle application_request) {
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   modular::SingleServiceViewApp<modular::Module, RecipeImpl> app;
-  return mojo::RunApplication(application_request, &app);
+  loop.Run();
+  return 0;
 }

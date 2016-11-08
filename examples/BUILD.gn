@@ -20,18 +20,16 @@ executable("example_module1") {
   ]
 
   deps = [
-    "//apps/document_store/interfaces",
     "//apps/modular/document_editor",
+    "//apps/modular/lib/app",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/services/document",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
     "//apps/mozart/lib/skia:vmo",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/application",
-    "//mojo/system",
-    "//mojo/public/cpp/bindings:utility",
     "//third_party/skia",
   ]
 }
@@ -42,18 +40,16 @@ executable("example_module2") {
   ]
 
   deps = [
-    "//apps/document_store/interfaces",
     "//apps/modular/document_editor",
+    "//apps/modular/lib/app",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/services/document",
     "//apps/modular/services/story",
-    "//apps/mozart/lib/view_framework",
     "//apps/mozart/lib/skia:vmo",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/cpp/application",
-    "//mojo/system",
-    "//mojo/public/cpp/bindings:utility",
     "//third_party/skia",
   ]
 }
@@ -64,20 +60,15 @@ executable("example_recipe") {
   ]
 
   deps = [
-    "//apps/document_store/interfaces",
     "//apps/modular/document_editor",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
-    "//mojo/public/c:system",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/system",
-    "//mojo/system",
     "//third_party/skia",
   ]
 }
