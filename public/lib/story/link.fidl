@@ -9,11 +9,11 @@ module modular;
 
 import "apps/modular/services/document/document.fidl";
 
-// This interface is implemented by the story runner. The Session
+// This interface is implemented by the story runner. The Story
 // service instance acts as a factory for it.
 //
 // An instance of Link holds documents, expressed as an map of string to
-// document_store.Document. The document has individual properties that can
+// document_story.Document. The document has individual properties that can
 // be incrementally updated with AddDocuments() or overwritten in toto with
 // SetAllDocuments().
 // TODO(jimbe) Expand support for incremental operations (remove properties).
@@ -22,7 +22,7 @@ import "apps/modular/services/document/document.fidl";
 // Each module receives a handle to one instance of Link at startup.
 // This instance is shared with the module that requested the start of
 // the module. A module can create additional Link instances through
-// the Session handle that it also receives at startup. Why would it
+// the Story handle that it also receives at startup. Why would it
 // do that? For example to share the Link instance with modules it
 // requests to start in turn.
 //
@@ -45,7 +45,7 @@ import "apps/modular/services/document/document.fidl";
 // through the original handle, the watcher is notified of all such
 // changes.
 //
-// No service name: created by Session.
+// No service name: created by Story.
 //
 interface Link {
   // The Link contains a collection of Documents, which is empty when the Link

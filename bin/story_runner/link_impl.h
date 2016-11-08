@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
-#define MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
+#ifndef MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
+#define MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
 #include <unordered_map>
 
@@ -21,11 +21,11 @@
 namespace modular {
 
 struct SharedLinkImplData;
-class SessionPage;
+class StoryPage;
 
 // A Link is a mutable and observable value shared between modules.
 // When a module requests to run more modules using
-// Session::StartModule(), a Link instance is associated with each
+// Story::StartModule(), a Link instance is associated with each
 // such request, i.e. a Link instance is shared between at least two
 // modules. The same Link instance can be used in multiple
 // StartModule() requests, so it can be shared between more than two
@@ -39,7 +39,7 @@ class SessionPage;
 // common internal data object that holds the data
 // (SharedLinkImplData).
 //
-// The first such instance is created by SessionImpl::CreateLink()
+// The first such instance is created by StoryImpl::CreateLink()
 // using the New() method. Subsequent such instances associated with
 // the same shared data are created by LinkImpl::Dup(). The first
 // instance is called the primary instance. If the pipe to this
@@ -62,7 +62,7 @@ class LinkImpl : public Link {
   // Connect a new LinkImpl object on the heap. It manages its own lifetime.
   // If this pipe is closed, then everything will be torn down. In comparison,
   // handles created by Dup() do not affect other handles.
-  static void New(std::shared_ptr<SessionPage> page,
+  static void New(std::shared_ptr<StoryPage> page,
                   const fidl::String& name,
                   fidl::InterfaceRequest<Link> req);
 
@@ -71,7 +71,7 @@ class LinkImpl : public Link {
   // are private.
 
   // Called from New() by outside clients.
-  LinkImpl(std::shared_ptr<SessionPage> page,
+  LinkImpl(std::shared_ptr<StoryPage> page,
            const fidl::String& name,
            fidl::InterfaceRequest<Link> req);
 
@@ -101,4 +101,4 @@ class LinkImpl : public Link {
 
 }  // namespace modular
 
-#endif  // MOJO_APPS_MODULAR_STORY_RUNNER_LINK_H__
+#endif  // APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_

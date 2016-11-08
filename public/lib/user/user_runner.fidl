@@ -30,9 +30,9 @@ struct StoryInfo {
   // Whether this story is running on this device.
   bool is_running;
 
-  // Page id on the user's ledger which stores session information. It might be
-  // NULL until the session is being started.
-  array<uint8, 16>? session_page_id;
+  // Page id on the user's ledger which stores story information. It might be
+  // NULL until the story is being started.
+  array<uint8, 16>? story_page_id;
 };
 
 // Intended for use by SysUi to interact with a single story.
@@ -75,7 +75,7 @@ interface StoryWatcher {
 // closed, all associated |Story| objects will have an undefined
 // behavior. TODO(mesch): Actually they will crash because the user
 // runner impl gets deleted and the story impl still accesses it.
-// Apply same pattern as for Session/Module/Link here.
+// Apply same pattern as for Story/Module/Link here.
 interface StoryProvider {
   // Creates a new story by running the module at |url|. Gives control
   // over the newly created story through a StroyController.

@@ -8,26 +8,26 @@ import "apps/modular/services/document/document.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
-// This service is implemented by a mojo app that is meant to be run
-// in a story.
+// This service is implemented by an application that is meant to be
+// run in a story.
 //
-// The Session service implementation of the story runner when
-// requested through StartModule() runs the app, requests the Module
-// service it provides, and if it obtains one, calls Initialize().
+// The Story service implementation of the story runner when requested
+// through StartModule() runs the app, requests the Module service it
+// provides, and if it obtains one, calls Initialize().
 //
-// The arguments to Initialize() are a handle of the Session instance
+// The arguments to Initialize() are a handle of the Story instance
 // that created the Module, and a Link instance provided by the caller
 // of StartModule(). The Link instance can be used to exchange data
-// with the calling module. The Session service can be used to start
+// with the calling module. The Story service can be used to start
 // more Modules, and to create Link instances to share with those
 // Modules.
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
-  Initialize(Session session, Link link);
+  Initialize(Story story, Link link);
 };
 
 
-// A handle of this interface is held by the client of Session that
+// A handle of this interface is held by the client of Story that
 // requests the start of a module using StartModule().
 //
 // It can be used to register a watcher to be notified when the module
@@ -52,7 +52,7 @@ interface ModuleWatcher {
 // data.
 //
 // No service name: created by StoryRunner.
-interface Session {
+interface Story {
   // Creates a new Link instance. The Link instance can be shared with
   // a newly created Module by passing it to StartModule(). In order
   // to also retain a reference to the same Link instance, a duplicate
@@ -83,12 +83,12 @@ interface Session {
   StartModule(string query, Link link, ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
-  // The module holding this handle to the Session declares it's done
+  // The module holding this handle to the Story declares it's done
   // and wants to be torn down. This causes the story runner to take
   // down the Module instance this handle was passed to, and it
-  // notifies the Session client that requested this Module to be
-  // started. This causes Done() to be called on all the module
-  // watchers registered on this Module's ModuleController.
+  // notifies the ModuleController of the Story client that requested
+  // this Module to be started. This causes Done() to be called on all
+  // the module watchers registered on this Module's ModuleController.
   Done();
 };
 
@@ -99,12 +99,12 @@ interface Session {
 // experiment with session persistence. The abstraction might be
 // useful anyway, but is certain to change as persistence evolves.
 // TODO(mesch/jimbe): Use document store instead of ledger?
-interface SessionStorage {
-  ReadSessionData() => (SessionData? data);
-  WriteSessionData(SessionData data);
+interface StoryStorage {
+  ReadStoryData() => (StoryData? data);
+  WriteStoryData(StoryData data);
 };
 
-struct SessionData {
+struct StoryData {
   map<string, LinkData> links;
 };
 

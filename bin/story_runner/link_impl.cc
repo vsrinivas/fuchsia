@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/story_runner/link.h"
+#include "apps/modular/src/story_runner/link_impl.h"
 
 #include "apps/modular/services/document/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/src/story_runner/session.h"
+#include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/ftl/logging.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -26,7 +26,7 @@ using fidl::InterfacePtr;
 using fidl::InterfaceRequest;
 
 struct SharedLinkImplData {
-  SharedLinkImplData(std::shared_ptr<SessionPage> p, const fidl::String& n)
+  SharedLinkImplData(std::shared_ptr<StoryPage> p, const fidl::String& n)
       : name(n), page_(p) {
     // The document map is always valid, even when empty.
     docs_map.mark_non_null();
@@ -45,12 +45,12 @@ struct SharedLinkImplData {
   const fidl::String name;
 
  private:
-  std::shared_ptr<SessionPage> page_;
+  std::shared_ptr<StoryPage> page_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
 };
 
-LinkImpl::LinkImpl(std::shared_ptr<SessionPage> page,
+LinkImpl::LinkImpl(std::shared_ptr<StoryPage> page,
                    const fidl::String& name,
                    InterfaceRequest<Link> req)
     : shared_(new SharedLinkImplData(page, name)),
@@ -79,7 +79,7 @@ LinkImpl::~LinkImpl() {
   FTL_LOG(INFO) << "~LinkImpl() " << shared_->name;
 }
 
-void LinkImpl::New(std::shared_ptr<SessionPage> page,
+void LinkImpl::New(std::shared_ptr<StoryPage> page,
                    const fidl::String& name,
                    InterfaceRequest<Link> req) {
   new LinkImpl(page, name, std::move(req));

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the story runner mojo app and of all mojo
-// services it provides directly or transitively from other services.
+// Implementation of the story runner application and of all services
+// that it provides directly or transitively through other services.
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/story/session.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
-#include "apps/modular/src/story_runner/session.h"
+#include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -22,7 +22,7 @@ namespace modular {
 
 // The story runner service is the service directly provided by the
 // story runner app. It must be initialized with a resolver factory
-// and then allows to create a Session.
+// and then allows to create a Story.
 class StoryRunnerImpl : public StoryRunner {
  public:
   StoryRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
@@ -39,12 +39,12 @@ class StoryRunnerImpl : public StoryRunner {
     resolver_factory_.Bind(std::move(resolver_factory));
   }
 
-  void StartStory(fidl::InterfaceHandle<SessionStorage> session_storage,
-                  fidl::InterfaceRequest<Session> session) override {
+  void StartStory(fidl::InterfaceHandle<StoryStorage> story_storage,
+                  fidl::InterfaceRequest<Story> story) override {
     fidl::InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(application_context_, std::move(resolver),
-                    std::move(session_storage), std::move(session));
+    new StoryImpl(application_context_, std::move(resolver),
+                  std::move(story_storage), std::move(story));
   }
 
  private:

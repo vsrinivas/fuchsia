@@ -50,7 +50,7 @@ using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
 using modular::MojoDocMap;
-using modular::Session;
+using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
@@ -73,9 +73,9 @@ class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
 
   ~Module2Impl() override { FTL_LOG(INFO) << "~Module2Impl"; }
 
-  void Initialize(InterfaceHandle<Session> session,
+  void Initialize(InterfaceHandle<Story> story,
                   InterfaceHandle<Link> link) override {
-    session_.Bind(std::move(session));
+    story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
     InterfaceHandle<LinkChanged> watcher;
@@ -167,7 +167,7 @@ class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
   StrongBinding<Module> module_binding_;
   StrongBinding<LinkChanged> watcher_binding_;
 
-  InterfacePtr<Session> session_;
+  InterfacePtr<Story> story_;
   InterfacePtr<Link> link_;
 
   int tick_;

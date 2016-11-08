@@ -12,7 +12,7 @@ interface ResolverFactory {
 };
 
 // A service that takes an arbitrary query for a module (such as
-// passed to the StartModule() method of Session) and translates it
+// passed to the StartModule() method of Story) and translates it
 // into the URL of an executable mojo app. Right now the
 // implementation just passes through the query. Later this will
 // actually do something non trivial, for example involving the

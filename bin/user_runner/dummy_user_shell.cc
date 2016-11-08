@@ -156,8 +156,8 @@ class DummyUserShellImpl : public UserShell,
     story_controller_->GetInfo([this](fidl::StructPtr<StoryInfo> story_info) {
       FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
                     << " url: " << story_info->url << " id: " << story_info->id
-                    << " session_page_id: "
-                    << to_string(story_info->session_page_id)
+                    << " story_page_id: "
+                    << to_string(story_info->story_page_id)
                     << " is_running: " << story_info->is_running;
 
       // Retain the story info so we can resume it by ID.
@@ -170,8 +170,7 @@ class DummyUserShellImpl : public UserShell,
   void ResumeStory() {
     FTL_LOG(INFO) << "DummyUserShell::ResumeStory() "
                   << " url: " << story_info_->url << " id: " << story_info_->id
-                  << " session_page_id: "
-                  << to_string(story_info_->session_page_id)
+                  << " story_page_id: " << to_string(story_info_->story_page_id)
                   << " is_running: " << story_info_->is_running;
 
     story_provider_->ResumeStoryByInfo(story_info_->Clone(),

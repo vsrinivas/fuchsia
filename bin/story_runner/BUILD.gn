@@ -11,8 +11,8 @@ group("all") {
 
 executable("story_runner") {
   sources = [
-    "link.cc",
-    "session.cc",
+    "link_impl.cc",
+    "story_impl.cc",
     "story_runner.cc",
   ]
 

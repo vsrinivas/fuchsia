@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The Session is the context in which a story executes. It starts
-// modules and provides them with a handle to itself, so they can
-// start more modules. It also serves as the factory for Link
+// The Story service is the context in which a story executes. It
+// starts modules and provides them with a handle to itself, so they
+// can start more modules. It also serves as the factory for Link
 // instances, which are used to share data between modules.
 
-#ifndef APPS_MODULAR_STORY_RUNNER_SESSION_H__
-#define APPS_MODULAR_STORY_RUNNER_SESSION_H__
+#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
+#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
 
 #include <map>
 #include <string>
@@ -18,7 +18,7 @@
 #include "apps/modular/services/document/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/resolver.fidl.h"
-#include "apps/modular/services/story/session.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -31,18 +31,18 @@
 namespace modular {
 
 class ApplicationContext;
-class SessionHost;
-class SessionImpl;
-class SessionPage;
+class StoryHost;
+class StoryImpl;
+class StoryPage;
 
 // Implements the ModuleController interface, which is passed back to
-// the client that requested a module to be started this SessionHost
+// the client that requested a module to be started this StoryHost
 // is passed to on Initialize(). One instance of ModuleControllerImpl is
-// associated with each SessionHost instance.
+// associated with each StoryHost instance.
 class ModuleControllerImpl : public ModuleController {
  public:
   ModuleControllerImpl(
-      SessionHost* session,
+      StoryHost* story,
       fidl::InterfacePtr<Module> module,
       fidl::InterfaceRequest<ModuleController> module_controller);
   ~ModuleControllerImpl();
@@ -50,37 +50,37 @@ class ModuleControllerImpl : public ModuleController {
   // Implements ModuleController.
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
 
-  // Called by SessionHost. Closes the module handle and notifies
+  // Called by StoryHost. Closes the module handle and notifies
   // watchers.
   void Done();
 
  private:
-  SessionHost* const session_;
+  StoryHost* const story_;
   StrongBinding<ModuleController> binding_;
   fidl::InterfacePtr<Module> module_;
   std::vector<fidl::InterfacePtr<ModuleWatcher>> watchers_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };
 
-// SessionHost keeps a single connection from a client (i.e., a module
-// instance in the same session) to a SessionImpl together with
+// StoryHost keeps a single connection from a client (i.e., a module
+// instance in the same story) to a StoryImpl together with
 // pointers to all links created and modules started through this
-// connection. This allows to persist and recreate the session state
+// connection. This allows to persist and recreate the story state
 // correctly.
-class SessionHost : public Session {
+class StoryHost : public Story {
  public:
-  // Primary session host created when SessionImpl is created from story
+  // Primary story host created when StoryImpl is created from story
   // manager.
-  SessionHost(SessionImpl* impl, fidl::InterfaceRequest<Session> session);
+  StoryHost(StoryImpl* impl, fidl::InterfaceRequest<Story> story);
 
-  // Non-primary session host created for the module started by StartModule().
-  SessionHost(SessionImpl* impl,
-              fidl::InterfaceRequest<Session> session,
-              fidl::InterfacePtr<Module> module,
-              fidl::InterfaceRequest<ModuleController> module_controller);
-  ~SessionHost() override;
+  // Non-primary story host created for the module started by StartModule().
+  StoryHost(StoryImpl* impl,
+            fidl::InterfaceRequest<Story> story,
+            fidl::InterfacePtr<Module> module,
+            fidl::InterfaceRequest<ModuleController> module_controller);
+  ~StoryHost() override;
 
-  // Implements Session interface. Forwards to SessionImpl.
+  // Implements Story interface. Forwards to StoryImpl.
   void CreateLink(const fidl::String& name,
                   fidl::InterfaceRequest<Link> link) override;
   void StartModule(
@@ -95,26 +95,26 @@ class SessionHost : public Session {
   void Remove(ModuleControllerImpl* module_controller);
 
  private:
-  SessionImpl* const impl_;
-  StrongBinding<Session> binding_;
+  StoryImpl* const impl_;
+  StrongBinding<Story> binding_;
   ModuleControllerImpl* module_controller_;
   const bool primary_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(SessionHost);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryHost);
 };
 
-// The actual implementation of the Session service. Called from
-// SessionHost above.
-class SessionImpl {
+// The actual implementation of the Story service. Called from
+// StoryHost above.
+class StoryImpl {
  public:
-  SessionImpl(std::shared_ptr<ApplicationContext> application_context,
-              fidl::InterfaceHandle<Resolver> resolver,
-              fidl::InterfaceHandle<SessionStorage> session_storage,
-              fidl::InterfaceRequest<Session> session_request);
-  ~SessionImpl();
+  StoryImpl(std::shared_ptr<ApplicationContext> application_context,
+            fidl::InterfaceHandle<Resolver> resolver,
+            fidl::InterfaceHandle<StoryStorage> story_storage,
+            fidl::InterfaceRequest<Story> story_request);
+  ~StoryImpl();
 
-  // These methods are called by SessionHost.
-  void Add(SessionHost* client);
-  void Remove(SessionHost* client);
+  // These methods are called by StoryHost.
+  void Add(StoryHost* client);
+  void Remove(StoryHost* client);
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> link);
   void StartModule(const fidl::String& query,
                    fidl::InterfaceHandle<Link> link,
@@ -124,18 +124,18 @@ class SessionImpl {
  private:
   std::shared_ptr<ApplicationContext> application_context_;
   fidl::InterfacePtr<Resolver> resolver_;
-  std::shared_ptr<SessionPage> page_;
-  std::vector<SessionHost*> clients_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(SessionImpl);
+  std::shared_ptr<StoryPage> page_;
+  std::vector<StoryHost*> clients_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };
 
 // Shared owner of the connection to the ledger page. Shared between
-// the SessionImpl, and all LinkImpls, so the connection is around
-// until all Links are closed when the session shuts down.
-class SessionPage {
+// the StoryImpl, and all LinkImpls, so the connection is around
+// until all Links are closed when the story shuts down.
+class StoryPage {
  public:
-  SessionPage(fidl::InterfaceHandle<SessionStorage> session_storage);
-  ~SessionPage();
+  StoryPage(fidl::InterfaceHandle<StoryStorage> story_storage);
+  ~StoryPage();
 
   void Init(std::function<void()> done);
 
@@ -144,13 +144,13 @@ class SessionPage {
   void WriteLink(const fidl::String& name, const MojoDocMap& data);
 
  private:
-  fidl::InterfacePtr<SessionStorage> session_storage_;
-  fidl::StructPtr<SessionData> data_;
+  fidl::InterfacePtr<StoryStorage> story_storage_;
+  fidl::StructPtr<StoryData> data_;
   fidl::Array<uint8_t> id_;  // logging only
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(SessionPage);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryPage);
 };
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_STORY_RUNNER_SESSION_H__
+#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_

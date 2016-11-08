@@ -59,7 +59,7 @@ using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
 using modular::MojoDocMap;
-using modular::Session;
+using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
@@ -82,9 +82,9 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
 
   ~Module1Impl() override { FTL_LOG(INFO) << "~Module1Impl"; }
 
-  void Initialize(InterfaceHandle<Session> session,
+  void Initialize(InterfaceHandle<Story> story,
                   InterfaceHandle<Link> link) override {
-    session_.Bind(std::move(session));
+    story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
     InterfaceHandle<LinkChanged> watcher;
@@ -125,7 +125,7 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
     } else {
       // For the last iteration, test that Module2 removes the sender.
       FTL_DCHECK(sender == nullptr);
-      session_->Done();
+      story_->Done();
     }
 
     return updated;
@@ -186,7 +186,7 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
   StrongBinding<Module> module_binding_;
   StrongBinding<LinkChanged> watcher_binding_;
 
-  InterfacePtr<Session> session_;
+  InterfacePtr<Story> story_;
   InterfacePtr<Link> link_;
 
   // Used by |OnDraw()| to decide whether enough time has passed, so that the

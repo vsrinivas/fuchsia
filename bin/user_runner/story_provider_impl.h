@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_STORY_MANAGER_STORY_PROVIDER_STATE_H_
-#define APPS_MODULAR_STORY_MANAGER_STORY_PROVIDER_STATE_H_
+#ifndef APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_
+#define APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_
 
 #include <memory>
 #include <unordered_map>
@@ -11,7 +11,7 @@
 
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
-#include "apps/modular/src/user_runner/session_storage_impl.h"
+#include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -33,15 +33,15 @@ class StoryProviderImpl : public StoryProvider {
 
   // Obtains the StoryInfo for an existing story from the ledger.
   void GetStoryInfo(
-      const fidl::String& session_id,
+      const fidl::String& story_id,
       std::function<void(StoryInfoPtr story_info)> story_info_callback);
 
-  // Used to obtain a ledger page for the given session identified by
+  // Used to obtain a ledger page for the given story identified by
   // its ledger page ID.
-  void GetSessionPage(
-      fidl::Array<uint8_t> session_page_id,
-      std::function<void(fidl::InterfaceHandle<ledger::Page> session_page)>
-          session_page_callback);
+  void GetStoryPage(
+      fidl::Array<uint8_t> story_page_id,
+      std::function<void(fidl::InterfaceHandle<ledger::Page> story_page)>
+          story_page_callback);
 
   // Used by StoryControllerImpl to write story meta-data to the ledger. Used
   // after calling |Stop| or when the |Story| pipe is closed.
@@ -51,21 +51,24 @@ class StoryProviderImpl : public StoryProvider {
   void WriteStoryInfo(StoryInfoPtr story_info, std::function<void()> done);
 
   // Used by StoryControllerImpl.
-  using Storage = SessionStorageImpl::Storage;
+  using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
 
  private:
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
-                   fidl::InterfaceRequest<StoryController> story_controller_request) override;
+                   fidl::InterfaceRequest<StoryController>
+                       story_controller_request) override;
 
   // |StoryProvider|
   void ResumeStoryById(const fidl::String& story_id,
-                       fidl::InterfaceRequest<StoryController> story_controller_request) override;
+                       fidl::InterfaceRequest<StoryController>
+                           story_controller_request) override;
 
   // |StoryProvider|
   void ResumeStoryByInfo(fidl::StructPtr<StoryInfo> story_info,
-                         fidl::InterfaceRequest<StoryController> story_controller_request) override;
+                         fidl::InterfaceRequest<StoryController>
+                             story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
@@ -83,4 +86,4 @@ class StoryProviderImpl : public StoryProvider {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_STORY_MANAGER_STORY_PROVIDER_STATE_H_
+#endif  // APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_

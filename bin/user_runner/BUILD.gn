@@ -11,22 +11,22 @@ group("all") {
 
 executable("user_runner") {
   sources = [
-    "session_storage_impl.h",
     "story_controller_impl.cc",
     "story_controller_impl.h",
-    "user_runner.cc",
     "story_provider_impl.cc",
     "story_provider_impl.h",
+    "story_storage_impl.h",
     "transaction.cc",
     "transaction.h",
+    "user_runner.cc",
   ]
 
   deps = [
     "//apps/ledger/services",
     "//apps/modular/lib/app",
     "//apps/modular/mojo:array_to_string",
-    "//apps/modular/mojo:strong_binding",
     "//apps/modular/mojo:single_service_application",
+    "//apps/modular/mojo:strong_binding",
     "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/modular/services/user",

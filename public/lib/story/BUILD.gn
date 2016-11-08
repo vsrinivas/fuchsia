@@ -8,7 +8,7 @@ fidl("story") {
   sources = [
     "link.fidl",
     "resolver.fidl",
-    "session.fidl",
+    "story.fidl",
     "story_runner.fidl",
   ]
 

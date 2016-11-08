@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_STORY_MANAGER_TRANSACTION_H_
-#define APPS_MODULAR_STORY_MANAGER_TRANSACTION_H_
+#ifndef APPS_MODULAR_SRC_USER_RUNNER_TRANSACTION_H_
+#define APPS_MODULAR_SRC_USER_RUNNER_TRANSACTION_H_
 
 #include <memory>
 #include <vector>
@@ -77,4 +77,4 @@ class Transaction {
 
 }  // namespace modular
 
-#endif
+#endif  // APPS_MODULAR_SRC_USER_RUNNER_TRANSACTION_H_

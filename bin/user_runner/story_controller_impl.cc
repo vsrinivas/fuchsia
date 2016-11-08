@@ -56,7 +56,8 @@ void StoryControllerImpl::Stop() {
 }
 
 // |Story|
-void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) {
+void StoryControllerImpl::Watch(
+    fidl::InterfaceHandle<StoryWatcher> story_watcher) {
   FTL_LOG(INFO) << "StoryControllerImpl::Watch() " << story_info_->id;
   story_watchers_.emplace_back(
       StoryWatcherPtr::Create(std::move(story_watcher)));
@@ -83,7 +84,8 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
 
 void StoryControllerImpl::StartStoryRunner(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryControllerImpl::StartStoryRunner() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::StartStoryRunner() "
+                << story_info_->id;
 
   auto story_runner_launch_info = ApplicationLaunchInfo::New();
 
@@ -95,7 +97,6 @@ void StoryControllerImpl::StartStoryRunner(
       std::move(story_runner_launch_info), nullptr);
 
   ConnectToService(story_runner_app_services.get(), GetProxy(&runner_));
-
 
   auto resolver_launch_info = ApplicationLaunchInfo::New();
 
@@ -109,19 +110,18 @@ void StoryControllerImpl::StartStoryRunner(
   ResolverFactoryPtr resolver_factory;
   ConnectToService(resolver_app_services.get(), GetProxy(&resolver_factory));
 
-
   runner_->Initialize(std::move(resolver_factory));
 
-  SessionStoragePtr session_storage;
-  new SessionStorageImpl(storage_, story_info_->id, GetProxy(&session_storage));
-  runner_->StartStory(std::move(session_storage), GetProxy(&session_));
+  StoryStoragePtr story_storage;
+  new StoryStorageImpl(storage_, story_info_->id, GetProxy(&story_storage));
+  runner_->StartStory(std::move(story_storage), GetProxy(&story_));
 
-  session_->CreateLink("root", GetProxy(&root_));
+  story_->CreateLink("root", GetProxy(&root_));
 
   fidl::InterfaceHandle<Link> link;
   root_->Dup(GetProxy(&link));
-  session_->StartModule(story_info_->url, std::move(link), GetProxy(&module_),
-                        std::move(view_owner_request));
+  story_->StartModule(story_info_->url, std::move(link), GetProxy(&module_),
+                      std::move(view_owner_request));
 
   story_info_->is_running = true;
   story_provider_impl_->WriteStoryInfo(story_info_->Clone());
@@ -136,13 +136,14 @@ void StoryControllerImpl::StartStoryRunner(
 }
 
 void StoryControllerImpl::TearDownStoryRunner() {
-  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStoryRunner() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStoryRunner() "
+                << story_info_->id;
 
-  // TODO(mesch): Here we need an actual call back when the Session is
+  // TODO(mesch): Here we need an actual call back when the Story is
   // down.
 
   module_.reset();
-  session_.reset();
+  story_.reset();
   runner_.reset();
   module_watcher_binding_.Close();
 

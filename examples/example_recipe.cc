@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // A Module that serves as the recipe in the example story, i.e. that
-// creates other Modules in the session.
+// creates other Modules in the story.
 
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/mojo/single_service_view_app.h"
@@ -66,7 +66,7 @@ using modular::Module;
 using modular::ModuleController;
 using modular::ModuleWatcher;
 using modular::MojoDocMap;
-using modular::Session;
+using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
@@ -99,18 +99,18 @@ class LinkConnection : public LinkChanged {
 class ModuleMonitor : public ModuleWatcher {
  public:
   ModuleMonitor(InterfacePtr<ModuleController>& module_client,
-                InterfacePtr<Session>& session)
-      : binding_(this), session_(session) {
+                InterfacePtr<Story>& story)
+      : binding_(this), story_(story) {
     InterfaceHandle<ModuleWatcher> watcher;
     binding_.Bind(GetProxy(&watcher));
     module_client->Watch(std::move(watcher));
   }
 
-  void Done() override { session_->Done(); }
+  void Done() override { story_->Done(); }
 
  private:
   Binding<ModuleWatcher> binding_;
-  InterfacePtr<Session>& session_;
+  InterfacePtr<Story>& story_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
@@ -139,15 +139,15 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
   ~RecipeImpl() override { FTL_LOG(INFO) << "~RecipeImpl"; }
 
-  void Initialize(InterfaceHandle<Session> session,
+  void Initialize(InterfaceHandle<Story> story,
                   InterfaceHandle<Link> link) override {
     FTL_LOG(INFO) << "RecipeImpl::Initialize()";
 
-    session_.Bind(std::move(session));
+    story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
-    session_->CreateLink("module1", GetProxy(&module1_link_));
-    session_->CreateLink("module2", GetProxy(&module2_link_));
+    story_->CreateLink("module1", GetProxy(&module1_link_));
+    story_->CreateLink("module2", GetProxy(&module2_link_));
 
     InterfaceHandle<Link> module1_link_handle;  // To pass to StartModule().
     module1_link_->Dup(GetProxy(&module1_link_handle));
@@ -157,18 +157,18 @@ class RecipeImpl : public Module, public mozart::BaseView {
 
     FTL_LOG(INFO) << "recipe start module module1";
     InterfaceHandle<mozart::ViewOwner> module1_view;
-    session_->StartModule("file:///system/apps/example_module1",
-                          std::move(module1_link_handle), GetProxy(&module1_),
-                          GetProxy(&module1_view));
+    story_->StartModule("file:///system/apps/example_module1",
+                        std::move(module1_link_handle), GetProxy(&module1_),
+                        GetProxy(&module1_view));
     GetViewContainer()->AddChild(0, std::move(module1_view));
     views_.emplace(
         std::make_pair(0, std::unique_ptr<ViewData>(new ViewData(0))));
 
     FTL_LOG(INFO) << "recipe start module module2";
     InterfaceHandle<mozart::ViewOwner> module2_view;
-    session_->StartModule("file:///system/apps/example_module2",
-                          std::move(module2_link_handle), GetProxy(&module2_),
-                          GetProxy(&module2_view));
+    story_->StartModule("file:///system/apps/example_module2",
+                        std::move(module2_link_handle), GetProxy(&module2_),
+                        GetProxy(&module2_view));
     GetViewContainer()->AddChild(1, std::move(module2_view));
     views_.emplace(
         std::make_pair(1, std::unique_ptr<ViewData>(new ViewData(1))));
@@ -181,12 +181,12 @@ class RecipeImpl : public Module, public mozart::BaseView {
     connections_.emplace_back(new LinkConnection(module1_link_, link_));
     connections_.emplace_back(new LinkConnection(module2_link_, link_));
 
-    module_monitors_.emplace_back(new ModuleMonitor(module1_, session_));
-    module_monitors_.emplace_back(new ModuleMonitor(module2_, session_));
+    module_monitors_.emplace_back(new ModuleMonitor(module1_, story_));
+    module_monitors_.emplace_back(new ModuleMonitor(module2_, story_));
 
     // TODO(mesch): Good illustration of the remaining issue to
-    // restart a session: Here is how does this code look like when
-    // the Session is not new, but already contains existing Modules
+    // restart a story: Here is how does this code look like when
+    // the Story is not new, but already contains existing Modules
     // and Links from the previous execution that is continued here.
     // Is that really enough?
     module1_link_->Query(
@@ -347,7 +347,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
   StrongBinding<Module> module_binding_;
 
   InterfacePtr<Link> link_;
-  InterfacePtr<Session> session_;
+  InterfacePtr<Story> story_;
 
   InterfacePtr<ModuleController> module1_;
   InterfacePtr<Link> module1_link_;

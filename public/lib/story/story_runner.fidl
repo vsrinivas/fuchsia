@@ -4,15 +4,15 @@
 
 module modular;
 
-import "apps/modular/services/story/session.fidl";
+import "apps/modular/services/story/story.fidl";
 import "apps/modular/services/story/resolver.fidl";
 
 // The main service implemented by the story runner app. It is used to
-// configure the app with a resolver factory, and to create session
+// configure the app with a resolver factory, and to create story
 // instances (which then are configured with a Resolver instance each,
 // obtained from the resolver factory).
 [ServiceName="modular.StoryRunner"]  // Created by story-runner app.
 interface StoryRunner {
   Initialize(ResolverFactory resolver_factory);
-  StartStory(SessionStorage session_storage, Session& session);
+  StartStory(StoryStorage story_storage, Story& story);
 };
