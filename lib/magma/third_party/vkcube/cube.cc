@@ -827,6 +827,9 @@ static void demo_prepare_buffers(struct demo *demo) {
         swapchainExtent = surfCapabilities.currentExtent;
         demo->width = surfCapabilities.currentExtent.width;
         demo->height = surfCapabilities.currentExtent.height;
+
+        mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
+            (float)demo->width / (float)demo->height, 0.1f, 100.0f);
     }
 
     // The FIFO present mode is guaranteed by the spec to be supported
@@ -2862,16 +2865,18 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     demo->width = 500;
     demo->height = 500;
 
-    demo->spin_angle = 4.0f;
+    demo->spin_angle = 1.0f;
     demo->spin_increment = 0.2f;
     demo->pause = false;
 
+    // moved to after we know the window size
     mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
                        1.0f, 0.1f, 100.0f);
     mat4x4_look_at(demo->view_matrix, eye, origin, up);
     mat4x4_identity(demo->model_matrix);
 
-    demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
+    //Unclear why removing this fixes the winding order affecting face culling order.
+    //demo->projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
 }
 
 int cube_main(int argc, char **argv) {
