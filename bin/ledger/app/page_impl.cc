@@ -16,7 +16,6 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/strings.h"
-#include "lib/mtl/shared_buffer/strings.h"
 
 namespace ledger {
 
