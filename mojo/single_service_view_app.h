@@ -5,27 +5,29 @@
 #ifndef APPS_MODULAR_MOJO_SINGLE_SERVICE_VIEW_APP_H_
 #define APPS_MODULAR_MOJO_SINGLE_SERVICE_VIEW_APP_H_
 
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
+#include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/connection_context.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
+#include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/mojo/strong_binding.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 
+namespace single_service_view_app {
+
 template <class Service, class ServiceImpl>
-class ServiceProviderImpl : public mojo::ServiceProvider {
+class ServiceProviderImpl : public ServiceProvider {
  public:
   ServiceProviderImpl(
-      mojo::Shell* const shell,
-      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      mojo::InterfaceRequest<mojo::ServiceProvider> service_provider_request)
-      : shell_(shell),
+      std::shared_ptr<ApplicationContext> application_context,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<ServiceProvider> service_provider_request)
+      : application_context_(application_context),
         binding_(this, std::move(service_provider_request)),
         view_owner_request_(std::move(view_owner_request)) {}
 
@@ -44,18 +46,18 @@ class ServiceProviderImpl : public mojo::ServiceProvider {
   // Presumably, if ConnectToService() is called multiple times, it
   // should always connect to the same service instance, but we
   // neither need nor support this right now.
-  void ConnectToService(const mojo::String& service_name,
-                        mojo::ScopedMessagePipeHandle client_handle) override {
+  void ConnectToService(const fidl::String& service_name, mx::channel pipe) override {
     if (service_name == Service::Name_) {
-      new ServiceImpl(mojo::CreateApplicationConnector(shell_),
-                      mojo::InterfaceRequest<Service>(std::move(client_handle)),
-                      std::move(view_owner_request_));
+      new ServiceImpl(
+          application_context_->ConnectToEnvironmentService<mozart::ViewManager>(),
+          fidl::InterfaceRequest<Service>(std::move(pipe)),
+          std::move(view_owner_request_));
     }
   }
 
-  mojo::Shell* const shell_;
-  mojo::StrongBinding<mojo::ServiceProvider> binding_;
-  mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  std::shared_ptr<ApplicationContext> application_context_;
+  StrongBinding<ServiceProvider> binding_;
+  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
@@ -63,26 +65,29 @@ class ServiceProviderImpl : public mojo::ServiceProvider {
 template <class Service, class ServiceImpl>
 class ViewProviderImpl : public mozart::ViewProvider {
  public:
-  ViewProviderImpl(mojo::Shell* const shell,
-                   mojo::InterfaceRequest<mozart::ViewProvider> request)
-      : shell_(shell), binding_(this, std::move(request)) {}
+  ViewProviderImpl(std::shared_ptr<ApplicationContext> application_context,
+                   fidl::InterfaceRequest<mozart::ViewProvider> request)
+      : application_context_(application_context),
+        binding_(this, std::move(request)) {}
 
   ~ViewProviderImpl() override = default;
 
  private:
-  void CreateView(mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                  mojo::InterfaceRequest<mojo::ServiceProvider>
+  void CreateView(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  fidl::InterfaceRequest<ServiceProvider>
                       service_provider_request) override {
     new ServiceProviderImpl<Service, ServiceImpl>(
-        shell_, std::move(view_owner_request),
+        application_context_, std::move(view_owner_request),
         std::move(service_provider_request));
   }
 
-  mojo::Shell* const shell_;
-  mojo::StrongBinding<mozart::ViewProvider> binding_;
+  std::shared_ptr<modular::ApplicationContext> application_context_;
+  StrongBinding<mozart::ViewProvider> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ViewProviderImpl);
 };
+
+}  // namespace single_service_view_app
 
 // A common implementation for applications that implement the
 // |mozart::ViewProvider| service and provide (possibly multiple
@@ -91,22 +96,19 @@ class ViewProviderImpl : public mozart::ViewProvider {
 // owned by its clients and is expected to delete itself eventually
 // according to its service contract.
 template <class Service, class ServiceImpl>
-class SingleServiceViewApp : public mojo::ApplicationImplBase {
+class SingleServiceViewApp {
  public:
-  SingleServiceViewApp() = default;
-
-  ~SingleServiceViewApp() override = default;
-
- private:
-  bool OnAcceptConnection(mojo::ServiceProviderImpl* const s) override {
-    s->AddService<mozart::ViewProvider>([this](
-        const mojo::ConnectionContext& ctx,
-        mojo::InterfaceRequest<mozart::ViewProvider> request) {
-      new ViewProviderImpl<Service, ServiceImpl>(shell(), std::move(request));
-    });
-    return true;
+  SingleServiceViewApp()
+      : application_context_(ApplicationContext::CreateFromStartupInfo()) {
+    application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
+        [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
+          new single_service_view_app::ViewProviderImpl<Service, ServiceImpl>(
+              application_context_, std::move(request));
+        });
   }
 
+ private:
+  std::shared_ptr<modular::ApplicationContext> application_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(SingleServiceViewApp);
 };
 

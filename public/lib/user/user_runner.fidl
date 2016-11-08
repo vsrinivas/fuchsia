@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/ledger/api/ledger.mojom";
-import "apps/mozart/services/views/interfaces/view_token.mojom";
+import "apps/ledger/services/ledger.fidl";
+import "apps/mozart/services/views/view_token.fidl";
 
 // For use by Device Runner to launch a new User Runner per user.
 [ServiceName="modular.UserRunner"]

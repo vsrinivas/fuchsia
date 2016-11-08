@@ -5,39 +5,36 @@
 group("all") {
   deps = [
     ":dummy_user_shell",
-    ":user_runner",
+    #":user_runner",
   ]
 }
 
-executable("user_runner") {
-  sources = [
-    "session_storage_impl.h",
-    "story_impl.cc",
-    "story_impl.h",
-    "user_runner.cc",
-    "story_provider_impl.cc",
-    "story_provider_impl.h",
-    "transaction.cc",
-    "transaction.h",
-  ]
+# executable("user_runner") {
+#   sources = [
+#     "session_storage_impl.h",
+#     "story_impl.cc",
+#     "story_impl.h",
+#     "user_runner.cc",
+#     "story_provider_impl.cc",
+#     "story_provider_impl.h",
+#     "transaction.cc",
+#     "transaction.h",
+#   ]
 
-  deps = [
-    "//apps/document_store/interfaces",
-    "//apps/ledger/api",
-    "//apps/modular/mojo:array_to_string",
-    "//apps/modular/mojo:single_service_application",
-    "//apps/modular/services/story",
-    "//apps/modular/services/user",
-    "//apps/mozart/services/views/interfaces",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//mojo/public/c:system",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/interfaces/application:application_cpp_sources",
-    "//mojo/system",
-  ]
-}
+#   deps = [
+#     "//apps/ledger/services",
+#     "//apps/modular/lib/app",
+#     "//apps/modular/mojo:array_to_string",
+#     "//apps/modular/mojo:single_service_application",
+#     "//apps/modular/services/document",
+#     "//apps/modular/services/story",
+#     "//apps/modular/services/user",
+#     "//apps/mozart/services/views",
+#     "//lib/fidl/cpp/bindings",
+#     "//lib/ftl",
+#     "//lib/mtl",
+#   ]
+# }
 
 executable("dummy_user_shell") {
   sources = [
@@ -47,17 +44,14 @@ executable("dummy_user_shell") {
   deps = [
     "//apps/modular/mojo:array_to_string",
     "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/mojo:strong_binding",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
-    "//apps/mozart/services/views/interfaces",
+    "//apps/mozart/services/views",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//lib/mtl/tasks",
     "//lib/mtl",
-    "//mojo/public/c:system",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/utility:utility",
-    "//mojo/system",
+    "//lib/mtl/tasks",
   ]
 }
 

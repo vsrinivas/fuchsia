@@ -8,28 +8,24 @@
 
 #include <mojo/system/main.h>
 
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/mojo/array_to_string.h"
 #include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/services/user/user_runner.mojom.h"
-#include "apps/modular/services/user/user_shell.mojom.h"
+#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/services/user/user_runner.fidl.h"
+#include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
-#include "apps/mozart/services/views/interfaces/view_token.mojom.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/synchronization/sleep.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/interface_ptr_set.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/interfaces/application/service_provider.mojom.h"
 
 namespace modular {
 
@@ -39,27 +35,15 @@ constexpr char kFlutterModuleUrl[] = "mojo:example_module3.flx";
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewResourceIdBase = 100;
 
-using mojo::ApplicationImplBase;
-using mojo::Binding;
-using mojo::ConnectionContext;
-using mojo::GetProxy;
-using mojo::InterfaceHandle;
-using mojo::InterfacePtr;
-using mojo::InterfaceRequest;
-using mojo::ServiceProviderImpl;
-using mojo::Shell;
-using mojo::StrongBinding;
-using mojo::StructPtr;
-
 class DummyUserShellImpl : public UserShell,
                            public StoryWatcher,
                            public mozart::BaseView {
  public:
   explicit DummyUserShellImpl(
-      mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-      InterfaceRequest<UserShell> user_shell_request,
-      InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : BaseView(std::move(app_connector),
+      mozart::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<UserShell> user_shell_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "DummyUserShellImpl"),
         binding_(this, std::move(user_shell_request)),
@@ -70,7 +54,7 @@ class DummyUserShellImpl : public UserShell,
  private:
   // |UserShell|
   void SetStoryProvider(
-      InterfaceHandle<StoryProvider> story_provider) override {
+      fidl::InterfaceHandle<StoryProvider> story_provider) override {
     story_provider_.Bind(std::move(story_provider));
     CreateStory(kExampleRecipeUrl);
   }
@@ -125,7 +109,7 @@ class DummyUserShellImpl : public UserShell,
 
   // |mozart::BaseView|
   void OnChildAttached(uint32_t child_key,
-                       StructPtr<mozart::ViewInfo> child_view_info) override {
+                       fidl::StructPtr<mozart::ViewInfo> child_view_info) override {
     view_info_ = std::move(child_view_info);
     auto view_properties = mozart::ViewProperties::New();
     GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
@@ -165,10 +149,10 @@ class DummyUserShellImpl : public UserShell,
   }
 
  private:
-  void CreateStory(const mojo::String& url) {
+  void CreateStory(const fidl::String& url) {
     FTL_LOG(INFO) << "DummyUserShell::CreateStory() " << url;
-    story_provider_->CreateStory(url, GetProxy(&story_));
-    story_->GetInfo([this](StructPtr<StoryInfo> story_info) {
+    story_provider_->CreateStory(url, fidl::GetProxy(&story_));
+    story_->GetInfo([this](fidl::StructPtr<StoryInfo> story_info) {
       FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
                     << " url: " << story_info->url << " id: " << story_info->id
                     << " session_page_id: "
@@ -189,17 +173,17 @@ class DummyUserShellImpl : public UserShell,
                   << to_string(story_info_->session_page_id)
                   << " is_running: " << story_info_->is_running;
 
-    story_provider_->ResumeStoryByInfo(story_info_->Clone(), GetProxy(&story_));
+    story_provider_->ResumeStoryByInfo(story_info_->Clone(), fidl::GetProxy(&story_));
     InitStory();
   }
 
   void InitStory() {
-    mojo::InterfaceHandle<StoryWatcher> story_watcher;
-    story_watcher_binding_.Bind(GetProxy(&story_watcher));
+    fidl::InterfaceHandle<StoryWatcher> story_watcher;
+    story_watcher_binding_.Bind(fidl::GetProxy(&story_watcher));
     story_->Watch(std::move(story_watcher));
 
-    InterfaceHandle<mozart::ViewOwner> story_view;
-    story_->Start(GetProxy(&story_view));
+    fidl::InterfaceHandle<mozart::ViewOwner> story_view;
+    story_->Start(fidl::GetProxy(&story_view));
 
     // Embed the new story.
     GetViewContainer()->AddChild(child_view_key_, std::move(story_view));
@@ -208,13 +192,13 @@ class DummyUserShellImpl : public UserShell,
   void TearDownStory() { story_watcher_binding_.Close(); }
 
   StrongBinding<UserShell> binding_;
-  Binding<StoryWatcher> story_watcher_binding_;
-  InterfacePtr<StoryProvider> story_provider_;
-  InterfacePtr<Story> story_;
-  StructPtr<StoryInfo> story_info_;
+  fidl::Binding<StoryWatcher> story_watcher_binding_;
+  StoryProviderPtr story_provider_;
+  StoryPtr story_;
+  StoryInfoPtr story_info_;
   int data_count_ = 0;
 
-  StructPtr<mozart::ViewInfo> view_info_;
+  mozart::ViewInfoPtr view_info_;
   uint32_t child_view_key_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellImpl);
@@ -222,9 +206,10 @@ class DummyUserShellImpl : public UserShell,
 
 }  // namespace modular
 
-MojoResult MojoMain(MojoHandle application_request) {
-  FTL_LOG(INFO) << "dummy_user_shell main";
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   modular::SingleServiceViewApp<modular::UserShell, modular::DummyUserShellImpl>
       app;
-  return mojo::RunApplication(application_request, &app);
+  loop.Run();
+  return 0;
 }

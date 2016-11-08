@@ -18,10 +18,12 @@ source_set("single_service_view_app") {
   ]
 
   deps = [
-    "//apps/mozart/services/views/interfaces",
+    "//apps/modular/services/application",
+    "//apps/mozart/services/views",
+    "//apps/modular/lib/app",
+    "//apps/modular/mojo:strong_binding",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
