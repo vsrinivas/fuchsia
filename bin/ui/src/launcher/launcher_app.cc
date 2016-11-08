@@ -80,6 +80,12 @@ void LauncherApp::RegisterServices() {
     modular::ConnectToService(view_manager_services_.get(), std::move(request));
   });
 
+  env_services_.AddService<mozart::Launcher>(
+      [this](fidl::InterfaceRequest<mozart::Launcher> request) {
+        FTL_DLOG(INFO) << "Servicing launcher service request";
+        launcher_bindings_.AddBinding(this, std::move(request));
+      });
+
   env_services_.AddService<modular::ApplicationEnvironment>(
       [this](fidl::InterfaceRequest<modular::ApplicationEnvironment> request) {
         // TODO(jeffbrown): The fact we have to handle this here suggests that

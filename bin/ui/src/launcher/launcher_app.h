@@ -93,7 +93,7 @@ class LauncherApp : public modular::ApplicationEnvironmentHost,
   std::vector<std::string> view_associate_urls_;
   std::vector<mozart::ViewAssociateOwnerPtr> view_associate_owners_;
 
-  fidl::BindingSet<Launcher> bindings_;
+  fidl::BindingSet<Launcher> launcher_bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<LaunchInstance>>
       launch_instances_;
 
