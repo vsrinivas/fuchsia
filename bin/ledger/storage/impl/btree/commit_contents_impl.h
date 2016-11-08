@@ -28,8 +28,10 @@ class CommitContentsImpl : public CommitContents {
   std::unique_ptr<Iterator<const Entry>> find(
       convert::ExtendedStringView key) const override;
 
-  std::unique_ptr<Iterator<const EntryChange>> diff(
-      const CommitContents& other) const override;
+  void diff(
+      const CommitContents& other,
+      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+          callback) const override;
 
   ObjectId GetBaseObjectId() const override;
 

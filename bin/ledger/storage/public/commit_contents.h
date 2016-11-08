@@ -31,8 +31,10 @@ class CommitContents {
 
   // Returns an iterator over the difference between this object and other
   // object.
-  virtual std::unique_ptr<Iterator<const EntryChange>> diff(
-      const CommitContents& other) const = 0;
+  virtual void diff(
+      const CommitContents& other,
+      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+          callback) const = 0;
 
   // Returns the id of the root node.
   virtual ObjectId GetBaseObjectId() const = 0;

@@ -79,9 +79,11 @@ class FakeCommitContents : public CommitContents {
     return it;
   }
 
-  std::unique_ptr<Iterator<const EntryChange>> diff(
-      const CommitContents& other) const override {
-    return nullptr;
+  void diff(
+      const CommitContents& other,
+      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+          callback) const override {
+    callback(Status::NOT_IMPLEMENTED, nullptr);
   }
 
   ObjectId GetBaseObjectId() const override {

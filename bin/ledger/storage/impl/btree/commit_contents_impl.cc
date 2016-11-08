@@ -32,18 +32,26 @@ std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::find(
   return std::unique_ptr<Iterator<const Entry>>(std::move(it));
 }
 
-std::unique_ptr<Iterator<const EntryChange>> CommitContentsImpl::diff(
-    const CommitContents& other) const {
+void CommitContentsImpl::diff(
+    const CommitContents& other,
+    std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
+        callback) const {
   std::unique_ptr<const TreeNode> root;
-  // TODO(nellyv): Update API to return error Status. LE-39
-  FTL_CHECK(TreeNode::FromId(page_storage_, root_id_, &root) == Status::OK);
+  Status status = TreeNode::FromId(page_storage_, root_id_, &root);
+  if (status != Status::OK) {
+    callback(status, nullptr);
+    return;
+  }
 
   std::unique_ptr<const TreeNode> right;
-  FTL_CHECK(TreeNode::FromId(page_storage_, other.GetBaseObjectId(), &right) ==
-            Status::OK);
+  status = TreeNode::FromId(page_storage_, other.GetBaseObjectId(), &right);
+  if (status != Status::OK) {
+    callback(status, nullptr);
+    return;
+  }
 
-  return std::unique_ptr<DiffIterator>(
-      new DiffIterator(std::move(root), std::move(right)));
+  callback(Status::OK,
+           std::make_unique<DiffIterator>(std::move(root), std::move(right)));
 }
 
 ObjectId CommitContentsImpl::GetBaseObjectId() const {
