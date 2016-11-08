@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
@@ -223,11 +224,11 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		msg.SetOff(r)
 		return mx.ErrOk
 	case rio.OpStat:
-		size, _, _, err := f.Stat()
+		size, _, mtime, err := f.Stat()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
-		return statShared(msg, size, false)
+		return statShared(msg, size, mtime, false)
 	case rio.OpTruncate:
 		off := msg.Off()
 		if off < 0 {
@@ -235,14 +236,26 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		}
 		err := f.Truncate(uint64(off))
 		return errorToRIO(err)
+	case rio.OpSetAttr:
+		atime, mtime := getTimeShared(msg)
+		return errorToRIO(f.Touch(atime, mtime))
 	default:
-		println("ThinFS FILE UNKNOWN OP")
+		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
 		return mx.ErrNotSupported
 	}
 	return mx.ErrNotSupported
 }
 
-func statShared(msg *rio.Msg, size int64, dir bool) mx.Status {
+func getTimeShared(msg *rio.Msg) (time.Time, time.Time) {
+	var mtime time.Time
+	attr := *(*mxio.Vnattr)(unsafe.Pointer(&msg.Data[0]))
+	if (attr.Valid & mxio.AttrMtime) != 0 {
+		mtime = time.Unix(0, int64(attr.ModifyTime))
+	}
+	return time.Time{}, mtime
+}
+
+func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 	r := mxio.Vnattr{}
 	if dir {
 		r.Mode = syscall.S_IFDIR
@@ -250,6 +263,7 @@ func statShared(msg *rio.Msg, size int64, dir bool) mx.Status {
 		r.Mode = syscall.S_IFREG
 	}
 	r.Size = uint64(size)
+	r.ModifyTime = uint64(mtime.UnixNano())
 	*(*mxio.Vnattr)(unsafe.Pointer(&msg.Data[0])) = r
 	msg.Datalen = uint32(unsafe.Sizeof(r))
 	return mx.Status(msg.Datalen)
@@ -310,11 +324,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		vfs.freeCookie(cookie)
 		return errorToRIO(err)
 	case rio.OpStat:
-		size, _, _, err := dir.Stat()
+		size, _, mtime, err := dir.Stat()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
-		return statShared(msg, size, true)
+		return statShared(msg, size, mtime, true)
 	case rio.OpReaddir:
 		if dw.reading && len(dw.dirents) == 0 {
 			// The final read of 'readdir' must return zero
@@ -381,8 +395,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		default:
 			return mx.ErrNotSupported
 		}
+	case rio.OpSetAttr:
+		atime, mtime := getTimeShared(msg)
+		return errorToRIO(dir.Touch(atime, mtime))
 	default:
-		println("ThinFS DIR UNKNOWN OP")
+		println("ThinFS DIR UNKNOWN OP: ", msg.Op())
 		return mx.ErrNotSupported
 	}
 	return mx.ErrNotSupported
