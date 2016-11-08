@@ -29,11 +29,8 @@ namespace dart {
   V(MxChannel_Write, 5)            \
   V(MxChannel_Read, 5)             \
   V(MxChannel_QueryAndRead, 3)     \
-  V(MxTime_Get, 1)                 \
   V(MxHandle_Close, 1)             \
-  V(MxHandle_WaitOne, 3)           \
   V(MxHandle_RegisterFinalizer, 2) \
-  V(MxHandle_WaitMany, 3)          \
   V(MxHandleWatcher_SendControlData, 5)
 
 FIDL_NATIVE_LIST(DECLARE_FUNCTION);
@@ -81,10 +78,6 @@ static void SetNullReturn(Dart_NativeArguments arguments) {
 
 static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(ERR_INVALID_ARGS));
-}
-
-static bool ObservedSignalsAreValid(mx_status_t status) {
-  return status == NO_ERROR || status == ERR_TIMED_OUT;
 }
 
 #define CHECK_INTEGER_ARGUMENT(args, num, result, failure)       \
@@ -138,14 +131,6 @@ void MxHandle_RegisterFinalizer(Dart_NativeArguments arguments) {
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
 }
 
-void MxTime_Get(Dart_NativeArguments arguments) {
-  int64_t clock_id;
-  CHECK_INTEGER_ARGUMENT(arguments, 0, &clock_id, InvalidArgument);
-
-  mx_time_t time = mx_time_get(clock_id);
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(time));
-}
-
 void MxHandle_Close(Dart_NativeArguments arguments) {
   int64_t dart_handle;
   CHECK_INTEGER_ARGUMENT(arguments, 0, &dart_handle, InvalidArgument);
@@ -154,90 +139,6 @@ void MxHandle_Close(Dart_NativeArguments arguments) {
   mx_status_t rv = mx_handle_close(handle);
 
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(rv));
-}
-
-void MxHandle_WaitOne(Dart_NativeArguments arguments) {
-  int64_t handle = 0;
-  int64_t signals = 0;
-  int64_t deadline = 0;
-  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
-  CHECK_INTEGER_ARGUMENT(arguments, 1, &signals, InvalidArgument);
-  CHECK_INTEGER_ARGUMENT(arguments, 2, &deadline, InvalidArgument);
-
-  mx_signals_t observed;
-  mx_status_t rv = mx_handle_wait_one(
-      static_cast<mx_handle_t>(handle), static_cast<mx_signals_t>(signals),
-      static_cast<mx_time_t>(deadline), &observed);
-
-  // The return value is structured as a list of length 2:
-  // [0] mx_status_t
-  // [1] Observed mx_signals_t. (may be null)
-  Dart_Handle list = Dart_NewList(2);
-  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
-
-  if (ObservedSignalsAreValid(rv)) {
-    Dart_ListSetAt(list, 1, Dart_NewInteger(observed));
-  } else {
-    Dart_ListSetAt(list, 1, Dart_Null());
-  }
-  Dart_SetReturnValue(arguments, list);
-}
-
-void MxHandle_WaitMany(Dart_NativeArguments arguments) {
-  int64_t deadline = 0;
-  Dart_Handle dart_handles = Dart_GetNativeArgument(arguments, 0);
-  Dart_Handle dart_signals = Dart_GetNativeArgument(arguments, 1);
-  CHECK_INTEGER_ARGUMENT(arguments, 2, &deadline, InvalidArgument);
-
-  if (!Dart_IsList(dart_handles) || !Dart_IsList(dart_signals)) {
-    SetInvalidArgumentReturn(arguments);
-    return;
-  }
-
-  intptr_t handles_len = 0;
-  intptr_t signals_len = 0;
-  Dart_ListLength(dart_handles, &handles_len);
-  Dart_ListLength(dart_signals, &signals_len);
-  if (handles_len != signals_len) {
-    SetInvalidArgumentReturn(arguments);
-    return;
-  }
-
-  std::vector<mx_wait_item_t> items(handles_len);
-
-  for (int i = 0; i < handles_len; i++) {
-    Dart_Handle dart_handle = Dart_ListGetAt(dart_handles, i);
-    Dart_Handle dart_signal = Dart_ListGetAt(dart_signals, i);
-    if (!Dart_IsInteger(dart_handle) || !Dart_IsInteger(dart_signal)) {
-      SetInvalidArgumentReturn(arguments);
-      return;
-    }
-    int64_t handle = 0;
-    int64_t signal = 0;
-    Dart_IntegerToInt64(dart_handle, &handle);
-    Dart_IntegerToInt64(dart_signal, &signal);
-    items[i] = {static_cast<mx_handle_t>(handle),
-                static_cast<mx_signals_t>(signal), 0};
-  }
-
-  mx_status_t rv = mx_handle_wait_many(items.data(), handles_len,
-                                       static_cast<mx_time_t>(deadline));
-
-  // The return value is structured as a list of length 2:
-  // [0] mx_status_t
-  // [1] list of observed signals. (may be null)
-  Dart_Handle list = Dart_NewList(2);
-  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
-  if (ObservedSignalsAreValid(rv)) {
-    Dart_Handle observed_list = Dart_NewList(handles_len);
-    for (int i = 0; i < handles_len; i++) {
-      Dart_ListSetAt(observed_list, i, Dart_NewInteger(items[i].pending));
-    }
-    Dart_ListSetAt(list, 1, observed_list);
-  } else {
-    Dart_ListSetAt(list, 1, Dart_Null());
-  }
-  Dart_SetReturnValue(arguments, list);
 }
 
 void MxChannel_Create(Dart_NativeArguments arguments) {

@@ -73,13 +73,12 @@ _dart_reserved_words = [
 # an underscore ('_'), which is banned on names in mojom interfaces.
 _reserved_words = _dart_reserved_words + [
   "close",
-  "connectToService",
   "ctrl",
-  "fromEndpoint",
+  "fromChannel",
   "fromHandle",
   "fromMock",
   "impl",
-  "newFromEndpoint",
+  "newfromChannel",
   "responseOrError",
   "serviceDescription",
   "serviceName",
@@ -122,15 +121,15 @@ _kind_to_dart_decl_type = {
   mojom.UINT32:                "int",
   mojom.FLOAT:                 "double",
   mojom.HANDLE:                "core.Handle",
-  mojom.DCPIPE:                "core.DataPipeConsumer",
-  mojom.DPPIPE:                "core.DataPipeProducer",
-  mojom.MSGPIPE:               "core.ChannelEndpoint",
-  mojom.SHAREDBUFFER:          "core.SharedBuffer",
+  mojom.DCPIPE:                "core.Handle",
+  mojom.DPPIPE:                "core.Handle",
+  mojom.MSGPIPE:               "core.Channel",
+  mojom.SHAREDBUFFER:          "core.Handle",
   mojom.NULLABLE_HANDLE:       "core.Handle",
-  mojom.NULLABLE_DCPIPE:       "core.DataPipeConsumer",
-  mojom.NULLABLE_DPPIPE:       "core.DataPipeProducer",
-  mojom.NULLABLE_MSGPIPE:      "core.ChannelEndpoint",
-  mojom.NULLABLE_SHAREDBUFFER: "core.SharedBuffer",
+  mojom.NULLABLE_DCPIPE:       "core.Handle",
+  mojom.NULLABLE_DPPIPE:       "core.Handle",
+  mojom.NULLABLE_MSGPIPE:      "core.Channel",
+  mojom.NULLABLE_SHAREDBUFFER: "core.Handle",
   mojom.INT64:                 "int",
   mojom.UINT64:                "int",
   mojom.DOUBLE:                "double",
@@ -140,23 +139,23 @@ _kind_to_dart_decl_type = {
 
 _spec_to_decode_method = {
   mojom.BOOL.spec:                  'decodeBool',
-  mojom.DCPIPE.spec:                'decodeConsumerHandle',
+  mojom.DCPIPE.spec:                'decodeHandle',
   mojom.DOUBLE.spec:                'decodeDouble',
-  mojom.DPPIPE.spec:                'decodeProducerHandle',
+  mojom.DPPIPE.spec:                'decodeHandle',
   mojom.FLOAT.spec:                 'decodeFloat',
   mojom.HANDLE.spec:                'decodeHandle',
   mojom.INT16.spec:                 'decodeInt16',
   mojom.INT32.spec:                 'decodeInt32',
   mojom.INT64.spec:                 'decodeInt64',
   mojom.INT8.spec:                  'decodeInt8',
-  mojom.MSGPIPE.spec:               'decodeMessagePipeHandle',
-  mojom.NULLABLE_DCPIPE.spec:       'decodeConsumerHandle',
-  mojom.NULLABLE_DPPIPE.spec:       'decodeProducerHandle',
+  mojom.MSGPIPE.spec:               'decodeChannelHandle',
+  mojom.NULLABLE_DCPIPE.spec:       'decodeHandle',
+  mojom.NULLABLE_DPPIPE.spec:       'decodeHandle',
   mojom.NULLABLE_HANDLE.spec:       'decodeHandle',
-  mojom.NULLABLE_MSGPIPE.spec:      'decodeMessagePipeHandle',
-  mojom.NULLABLE_SHAREDBUFFER.spec: 'decodeSharedBufferHandle',
+  mojom.NULLABLE_MSGPIPE.spec:      'decodeChannelHandle',
+  mojom.NULLABLE_SHAREDBUFFER.spec: 'decodeHandle',
   mojom.NULLABLE_STRING.spec:       'decodeString',
-  mojom.SHAREDBUFFER.spec:          'decodeSharedBufferHandle',
+  mojom.SHAREDBUFFER.spec:          'decodeHandle',
   mojom.STRING.spec:                'decodeString',
   mojom.UINT16.spec:                'decodeUint16',
   mojom.UINT32.spec:                'decodeUint32',
@@ -166,23 +165,23 @@ _spec_to_decode_method = {
 
 _spec_to_encode_method = {
   mojom.BOOL.spec:                  'encodeBool',
-  mojom.DCPIPE.spec:                'encodeConsumerHandle',
+  mojom.DCPIPE.spec:                'encodeHandle',
   mojom.DOUBLE.spec:                'encodeDouble',
-  mojom.DPPIPE.spec:                'encodeProducerHandle',
+  mojom.DPPIPE.spec:                'encodeHandle',
   mojom.FLOAT.spec:                 'encodeFloat',
   mojom.HANDLE.spec:                'encodeHandle',
   mojom.INT16.spec:                 'encodeInt16',
   mojom.INT32.spec:                 'encodeInt32',
   mojom.INT64.spec:                 'encodeInt64',
   mojom.INT8.spec:                  'encodeInt8',
-  mojom.MSGPIPE.spec:               'encodeMessagePipeHandle',
-  mojom.NULLABLE_DCPIPE.spec:       'encodeConsumerHandle',
-  mojom.NULLABLE_DPPIPE.spec:       'encodeProducerHandle',
+  mojom.MSGPIPE.spec:               'encodeChannelHandle',
+  mojom.NULLABLE_DCPIPE.spec:       'encodeHandle',
+  mojom.NULLABLE_DPPIPE.spec:       'encodeHandle',
   mojom.NULLABLE_HANDLE.spec:       'encodeHandle',
-  mojom.NULLABLE_MSGPIPE.spec:      'encodeMessagePipeHandle',
-  mojom.NULLABLE_SHAREDBUFFER.spec: 'encodeSharedBufferHandle',
+  mojom.NULLABLE_MSGPIPE.spec:      'encodeChannelHandle',
+  mojom.NULLABLE_SHAREDBUFFER.spec: 'encodeHandle',
   mojom.NULLABLE_STRING.spec:       'encodeString',
-  mojom.SHAREDBUFFER.spec:          'encodeSharedBufferHandle',
+  mojom.SHAREDBUFFER.spec:          'encodeHandle',
   mojom.STRING.spec:                'encodeString',
   mojom.UINT16.spec:                'encodeUint16',
   mojom.UINT32.spec:                'encodeUint32',
@@ -347,13 +346,13 @@ def AppendDecodeParams(initial_params, kind, bit):
     else:
       params.append(GetDartTrueFalse(mojom.IsNullableKind(kind)))
   if mojom.IsInterfaceKind(kind):
-    params.append('%sProxy.newFromEndpoint' % GetDartType(kind))
+    params.append('%sProxy.newfromChannel' % GetDartType(kind))
   if mojom.IsArrayKind(kind) and mojom.IsInterfaceKind(kind.kind):
-    params.append('%sProxy.newFromEndpoint' % GetDartType(kind.kind))
+    params.append('%sProxy.newfromChannel' % GetDartType(kind.kind))
   if mojom.IsInterfaceRequestKind(kind):
-    params.append('%sStub.newFromEndpoint' % GetDartType(kind.kind))
+    params.append('%sStub.newfromChannel' % GetDartType(kind.kind))
   if mojom.IsArrayKind(kind) and mojom.IsInterfaceRequestKind(kind.kind):
-    params.append('%sStub.newFromEndpoint' % GetDartType(kind.kind.kind))
+    params.append('%sStub.newfromChannel' % GetDartType(kind.kind.kind))
   if mojom.IsArrayKind(kind):
     params.append(GetArrayExpectedLength(kind))
   return params

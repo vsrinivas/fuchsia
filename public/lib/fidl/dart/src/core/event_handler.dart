@@ -4,48 +4,36 @@
 
 part of core;
 
-/// The object passed to the handler's error handling function containing both
-/// the thrown error and the associated stack trace.
-class MojoEventHandlerError {
-  final Object error;
-  final StackTrace stacktrace;
+typedef void ErrorHandler(FidlEventHandlerError error);
 
-  MojoEventHandlerError(this.error, this.stacktrace);
-
-  @override
-  String toString() => error.toString();
-}
-
-typedef void ErrorHandler(MojoEventHandlerError e);
-
-class MojoEventHandler {
-  ChannelEndpoint _endpoint;
-  MojoEventSubscription _eventSubscription;
+class FidlEventHandler {
+  Channel _channel;
+  FidlEventSubscription _eventSubscription;
   bool _isOpen = false;
   bool _isInHandler = false;
   bool _isPeerClosed = false;
 
-  MojoEventHandler.fromEndpoint(ChannelEndpoint endpoint,
+  FidlEventHandler.fromChannel(Channel channel,
                                 {bool autoBegin: true})
-      : _endpoint = endpoint,
-        _eventSubscription = new MojoEventSubscription(endpoint.handle) {
+      : _channel = channel,
+        _eventSubscription = new FidlEventSubscription(channel.handle) {
     if (autoBegin) {
       beginHandlingEvents();
     }
   }
 
-  MojoEventHandler.fromHandle(Handle handle, {bool autoBegin: true})
-      : _endpoint = new ChannelEndpoint(handle),
-        _eventSubscription = new MojoEventSubscription(handle) {
+  FidlEventHandler.fromHandle(Handle handle, {bool autoBegin: true})
+      : _channel = new Channel(handle),
+        _eventSubscription = new FidlEventSubscription(handle) {
     if (autoBegin) {
       beginHandlingEvents();
     }
   }
 
-  MojoEventHandler.unbound();
+  FidlEventHandler.unbound();
 
   /// The event handler calls the [handleRead] method when the underlying Mojo
-  /// message pipe endpoint has a message available to be read. Implementers
+  /// message pipe channel has a message available to be read. Implementers
   /// should read, decode, and handle the message. If [handleRead] throws
   /// an exception derived from [Error], the exception will be thrown into the
   /// root zone, and the application will end. Otherwise, the exception object
@@ -53,7 +41,7 @@ class MojoEventHandler {
   /// not be propagated to the root zone.
   void handleRead() {}
 
-  /// Like [handleRead] but indicating that the underlying message pipe endpoint
+  /// Like [handleRead] but indicating that the underlying message pipe channel
   /// is ready for writing.
   void handleWrite() {}
 
@@ -61,18 +49,18 @@ class MojoEventHandler {
   /// Mojo library code. Other exceptions will be re-thrown.
   ErrorHandler onError;
 
-  ChannelEndpoint get endpoint => _endpoint;
+  Channel get channel => _channel;
   bool get isOpen => _isOpen;
   bool get isInHandler => _isInHandler;
-  bool get isBound => _endpoint != null;
+  bool get isBound => _channel != null;
   bool get isPeerClosed => _isPeerClosed;
 
-  void bind(ChannelEndpoint endpoint) {
+  void bind(Channel channel) {
     if (isBound) {
-      throw new FidlApiError("MojoEventHandler is already bound.");
+      throw new FidlApiError("FidlEventHandler is already bound.");
     }
-    _endpoint = endpoint;
-    _eventSubscription = new MojoEventSubscription(endpoint.handle);
+    _channel = channel;
+    _eventSubscription = new FidlEventSubscription(channel.handle);
     _isOpen = false;
     _isInHandler = false;
     _isPeerClosed = false;
@@ -80,10 +68,10 @@ class MojoEventHandler {
 
   void bindFromHandle(Handle handle) {
     if (isBound) {
-      throw new FidlApiError("MojoEventHandler is already bound.");
+      throw new FidlApiError("FidlEventHandler is already bound.");
     }
-    _endpoint = new ChannelEndpoint(handle);
-    _eventSubscription = new MojoEventSubscription(handle);
+    _channel = new Channel(handle);
+    _eventSubscription = new FidlEventSubscription(handle);
     _isOpen = false;
     _isInHandler = false;
     _isPeerClosed = false;
@@ -91,21 +79,21 @@ class MojoEventHandler {
 
   void beginHandlingEvents() {
     if (!isBound) {
-      throw new FidlApiError("MojoEventHandler is unbound.");
+      throw new FidlApiError("FidlEventHandler is unbound.");
     }
     if (_isOpen) {
-      throw new FidlApiError("MojoEventHandler is already handling events");
+      throw new FidlApiError("FidlEventHandler is already handling events");
     }
     _isOpen = true;
     _eventSubscription.subscribe(_tryHandleEvent);
   }
 
   /// [endHandlineEvents] unsubscribes from the underlying
-  /// [MojoEventSubscription].
+  /// [FidlEventSubscription].
   void endHandlingEvents() {
     if (!isBound || !_isOpen || _isInHandler) {
       throw new FidlApiError(
-          "MojoEventHandler was not handling events when instructed to end");
+          "FidlEventHandler was not handling events when instructed to end");
     }
     if (_isInHandler) {
       throw new FidlApiError(
@@ -117,30 +105,30 @@ class MojoEventHandler {
 
   /// [unbind] stops handling events, and returns the underlying
   /// [Channel]. The pipe can then be rebound to the same or different
-  /// [MojoEventHandler], or closed. [unbind] cannot be called from within
+  /// [FidlEventHandler], or closed. [unbind] cannot be called from within
   /// [handleRead] or [handleWrite].
-  ChannelEndpoint unbind() {
+  Channel unbind() {
     if (!isBound) {
       throw new FidlApiError(
-          "MojoEventHandler was not bound in call in unbind()");
+          "FidlEventHandler was not bound in call in unbind()");
     }
     if (_isOpen) {
       endHandlingEvents();
     }
     if (_isInHandler) {
       throw new FidlApiError(
-          "Cannot unbind a MojoEventHandler from inside a callback.");
+          "Cannot unbind a FidlEventHandler from inside a callback.");
     }
-    var boundEndpoint = _endpoint;
-    _endpoint = null;
+    var boundchannel = _channel;
+    _channel = null;
     _eventSubscription = null;
-    return boundEndpoint;
+    return boundchannel;
   }
 
   Future close({bool immediate: false}) {
     var result;
     _isOpen = false;
-    _endpoint = null;
+    _channel = null;
     if (_eventSubscription != null) {
       result = _eventSubscription
           ._close(immediate: immediate, local: _isPeerClosed)
@@ -152,8 +140,8 @@ class MojoEventHandler {
   }
 
   @override
-  String toString() => "MojoEventHandler("
-      "isOpen: $_isOpen, isBound: $isBound, endpoint: $_endpoint)";
+  String toString() => "FidlEventHandler("
+      "isOpen: $_isOpen, isBound: $isBound, channel: $_channel)";
 
   void _tryHandleEvent(int event) {
     // This callback is running in the handler for a RawReceivePort. All
@@ -169,18 +157,18 @@ class MojoEventHandler {
     } on Error catch (_) {
       // An Error exception from the core libraries is probably a programming
       // error that can't be handled. We rethrow the error so that
-      // MojoEventHandlers can't swallow it by mistake.
+      // FidlEventHandlers can't swallow it by mistake.
       rethrow;
     } catch (e, s) {
       close(immediate: true).then((_) {
         if (onError != null) {
-          onError(new MojoEventHandlerError(e, s));
+          onError(new FidlEventHandlerError(e, s));
         }
       });
     }
   }
 
-  void _handleEvent(int signalsReceived) {
+  void _handleEvent(int pendingSignals) {
     if (!_isOpen) {
       // The actual close of the underlying stream happens asynchronously
       // after the call to close. However, we start to ignore incoming events
@@ -188,13 +176,13 @@ class MojoEventHandler {
       return;
     }
     _isInHandler = true;
-    if (HandleSignals.isReadable(signalsReceived)) {
+    if ((pendingSignals & MX_SIGNAL_READABLE) != 0) {
       handleRead();
     }
-    if (HandleSignals.isWritable(signalsReceived)) {
+    if ((pendingSignals & MX_SIGNAL_WRITABLE) != 0) {
       handleWrite();
     }
-    _isPeerClosed = HandleSignals.isPeerClosed(signalsReceived) ||
+    _isPeerClosed = (pendingSignals & MX_SIGNAL_PEER_CLOSED) ||
         !_eventSubscription.enableSignals();
     _isInHandler = false;
     if (_isPeerClosed) {

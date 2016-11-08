@@ -15,7 +15,7 @@ class ChannelReadResult {
 
   String toString() {
     return "ChannelReadResult("
-        "status: ${MojoResult.string(status)}, bytesRead: $bytesRead, "
+        "status: ${getStringForStatus(status)}, bytesRead: $bytesRead, "
         "handlesRead: $handlesRead)";
   }
 }
@@ -34,7 +34,7 @@ class ChannelQueryAndReadState {
   ChannelQueryAndReadState();
 
   void queryAndRead(Handle handle, int flags) {
-    ChannelNatives.MojoQueryAndReadMessage(handle.h, flags, _result);
+    MxChannel.queryAndRead(handle.h, flags, _result);
 
     if (handlesLength == 0) {
       _handles = null;
@@ -53,7 +53,7 @@ class ChannelQueryAndReadState {
   }
 }
 
-class ChannelEndpoint {
+class Channel {
   static const int WRITE_FLAG_NONE = 0;
   static const int READ_FLAG_NONE = 0;
   static const int READ_FLAG_MAY_DISCARD = 1 << 0;
@@ -63,7 +63,7 @@ class ChannelEndpoint {
   Handle handle;
   int status;
 
-  ChannelEndpoint(this.handle);
+  Channel(this.handle);
 
   bool get ok => status == MojoResult.kOk;
 
@@ -93,7 +93,7 @@ class ChannelEndpoint {
     }
 
     // Do the call.
-    status = ChannelNatives.MojoWriteMessage(
+    status = MxChannel.write(
         handle.h, data, dataNumBytes, mojoHandles, flags);
     return status;
   }
@@ -126,7 +126,7 @@ class ChannelEndpoint {
     }
 
     // Do the call.
-    List result = ChannelNatives.MojoReadMessage(
+    List result = MxChannel.read(
         handle.h, data, dataNumBytes, mojoHandles, flags);
 
     if (result == null) {
@@ -172,20 +172,18 @@ class ChannelEndpoint {
     handle = null;
   }
 
-  String toString() => "ChannelEndpoint(handle: $handle, "
+  String toString() => "Channel(handle: $handle, "
       "status: ${MojoResult.string(status)})";
 }
 
-class ChannelPipe {
-  static const int FLAG_NONE = 0;
-
-  List<ChannelEndpoint> endpoints;
+class ChannelPair {
+  List<Channel> channels;
   int status;
 
-  ChannelPipe._() : status = MojoResult.kOk;
+  ChannelPair._() : status = NO_ERROR;
 
-  factory ChannelPipe([int flags = FLAG_NONE]) {
-    List result = ChannelNatives.MojoCreateMessagePipe(flags);
+  factory ChannelPair() {
+    List result = MxChannel.create(0);
     if (result == null) {
       return null;
     }
@@ -193,10 +191,10 @@ class ChannelPipe {
 
     Handle end1 = new Handle(result[1]);
     Handle end2 = new Handle(result[2]);
-    ChannelPipe pipe = new ChannelPipe._();
-    pipe.endpoints = new List(2);
-    pipe.endpoints[0] = new ChannelEndpoint(end1);
-    pipe.endpoints[1] = new ChannelEndpoint(end2);
+    ChannelPair pipe = new ChannelPair._();
+    pipe.channels = new List(2);
+    pipe.channels[0] = new Channel(end1);
+    pipe.channels[1] = new Channel(end2);
     pipe.status = result[0];
     return pipe;
   }

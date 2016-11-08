@@ -4,8 +4,8 @@
 
 part of core;
 
-class MojoEventSubscription {
-  // The underlying Mojo handle.
+class FidlEventSubscription {
+  // The underlying handle.
   Handle _handle;
 
   // The send port that we give to the handle watcher to notify us of handle
@@ -22,8 +22,8 @@ class MojoEventSubscription {
   // Whether subscribe() has been called.
   bool _isSubscribed;
 
-  MojoEventSubscription(Handle handle,
-      [int signals = HandleSignals.kPeerClosedReadable])
+  FidlEventSubscription(Handle handle,
+      [int signals = MX_SIGNALS_READABLE | MX_SIGNALS_PEER_CLOSED])
       : _handle = handle,
         _signals = signals,
         _isSubscribed = false {
@@ -32,8 +32,6 @@ class MojoEventSubscription {
     }
   }
 
-  bool get readyRead => _handle.readyRead;
-  bool get readyWrite => _handle.readyWrite;
   int get signals => _signals;
 
   Future close({bool immediate: false}) => _close(immediate: immediate);
@@ -45,10 +43,10 @@ class MojoEventSubscription {
     _receivePort = new RawReceivePort(handler);
     _sendPort = _receivePort.sendPort;
 
-    if (_signals != HandleSignals.kNone) {
-      int res = HandleWatcher.add(_handle.h, _sendPort, _signals);
-      if (res != MojoResult.kOk) {
-        throw new FidlInternalError("HandleWatcher add failed: $res");
+    if (_signals != 0) {
+      int status = HandleWatcher.add(_handle.h, _sendPort, _signals);
+      if (status != NO_ERROR) {
+        throw new FidlInternalError("HandleWatcher add failed: ${getStringForStatus(status)}");
       }
     }
     _isSubscribed = true;
@@ -59,23 +57,20 @@ class MojoEventSubscription {
       _signals = signals;
     }
     if (_isSubscribed) {
-      return HandleWatcher.add(_handle.h, _sendPort, _signals) ==
-          MojoResult.kOk;
+      return HandleWatcher.add(_handle.h, _sendPort, _signals) == NO_ERROR;
     }
     return false;
   }
 
-  bool enableReadEvents() =>
-      enableSignals(HandleSignals.kPeerClosedReadable);
-  bool enableWriteEvents() => enableSignals(HandleSignals.kWritable);
-  bool enableAllEvents() => enableSignals(HandleSignals.kReadWrite);
+  bool enableReadEvents() => enableSignals(MX_SIGNALS_READABLE | MX_SIGNALS_PEER_CLOSED);
+  bool enableWriteEvents() => enableSignals(MX_SIGNALS_WRITABLE | MX_SIGNALS_PEER_CLOSED);
 
   /// End the subscription by removing the handle from the handle watcher and
   /// closing the Dart port, but do not close the underlying handle. The handle
   /// can then be reused, or closed at a later time.
   void unsubscribe({bool immediate: false}) {
     if ((_handle == null) || !_isSubscribed || (_receivePort == null)) {
-      throw new FidlApiError("Cannont unsubscribe from a MojoEventSubscription "
+      throw new FidlApiError("Cannont unsubscribe from a FidlEventSubscription "
                              "that has not been subscribed to");
     }
     HandleWatcher.remove(_handle.h);

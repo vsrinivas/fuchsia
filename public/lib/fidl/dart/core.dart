@@ -5,17 +5,13 @@
 library core;
 
 import 'dart:async';
+import 'dart:fidl.internal';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'src/internal.dart';
-
-part 'src/buffer.dart';
-part 'src/data_pipe.dart';
-part 'src/event_handler.dart';
-part 'src/event_subscription.dart';
-part 'src/fill_data.dart';
-part 'src/handle.dart';
-part 'src/message_pipe.dart';
-part 'src/types.dart';
-part 'src/utils.dart';
+part 'src/core/channel.dart';
+part 'src/core/errors.dart';
+part 'src/core/event_handler.dart';
+part 'src/core/event_subscription.dart';
+part 'src/core/handle.dart';
+part 'src/core/types.dart';

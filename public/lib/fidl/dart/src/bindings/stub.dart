@@ -41,11 +41,11 @@ class Stub<T> implements FidlInterface<T> {
   }
 }
 
-abstract class StubMessageHandler extends core.MojoEventHandler
+abstract class StubMessageHandler extends core.FidlEventHandler
                                   implements FidlInterfaceControl {
-  StubMessageHandler.fromEndpoint(core.ChannelEndpoint endpoint,
+  StubMessageHandler.fromChannel(core.Channel channel,
                                   {bool autoBegin: true})
-      : super.fromEndpoint(endpoint, autoBegin: autoBegin);
+      : super.fromChannel(channel, autoBegin: autoBegin);
 
   StubMessageHandler.fromHandle(core.Handle handle, {bool autoBegin: true})
       : super.fromHandle(handle, autoBegin: autoBegin);
@@ -62,7 +62,7 @@ abstract class StubMessageHandler extends core.MojoEventHandler
 
   @override
   void handleRead() {
-    var result = endpoint.queryAndRead();
+    var result = channel.queryAndRead();
     if ((result.data == null) || (result.dataLength == 0)) {
       throw new FidlCodecError('Unexpected empty message or error: $result');
     }
@@ -87,13 +87,13 @@ abstract class StubMessageHandler extends core.MojoEventHandler
   /// Called by generated handleMessage functions in implementations.
   void sendResponse(Message response) {
     if (isOpen) {
-      endpoint.write(
+      channel.write(
           response.buffer, response.buffer.lengthInBytes, response.handles);
-      // FailedPrecondition is only used to indicate that the other end of
+      // ERR_BAD_STATE is only used to indicate that the other end of
       // the pipe has been closed. We can ignore the close here and wait for
       // the PeerClosed signal on the event stream.
-      assert((endpoint.status == core.MojoResult.kOk) ||
-          (endpoint.status == core.MojoResult.kFailedPrecondition));
+      assert((channel.status == core.NO_ERROR) ||
+          (channel.status == core.ERR_BAD_STATE));
     }
   }
 
@@ -112,9 +112,4 @@ abstract class StubMessageHandler extends core.MojoEventHandler
     var superString = super.toString();
     return "StubMessageHandler(${superString})";
   }
-
-  /// Returns a service description, which exposes the mojom type information
-  /// of the service being stubbed.
-  /// Note: The description is null or incomplete if type info is unavailable.
-  service_describer.ServiceDescription get description => null;
 }

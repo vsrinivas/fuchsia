@@ -49,8 +49,10 @@ class ArrayDataHeader {
 }
 
 class FidlCodecError {
-  String message;
+  final String message;
+
   FidlCodecError(this.message);
+
   String toString() => message;
 }
 
@@ -186,75 +188,63 @@ class Encoder {
 
   void encodeHandle(core.Handle value, int offset, bool nullable) {
     if ((value == null) || !value.isValid) {
-      encodeInvalideHandle(offset, nullable);
+      encodeInvalidHandle(offset, nullable);
     } else {
       encodeUint32(_buffer.handles.length, offset);
       _buffer.handles.add(value.pass());
     }
   }
 
-  void encodeMessagePipeHandle(
-          core.ChannelEndpoint value, int offset, bool nullable) =>
-      encodeHandle(value != null ? value.handle : null, offset, nullable);
-
-  void encodeConsumerHandle(
-          core.DataPipeConsumer value, int offset, bool nullable) =>
-      encodeHandle(value != null ? value.handle : null, offset, nullable);
-
-  void encodeProducerHandle(
-          core.DataPipeProducer value, int offset, bool nullable) =>
-      encodeHandle(value != null ? value.handle : null, offset, nullable);
-
-  void encodeSharedBufferHandle(
-          core.SharedBuffer value, int offset, bool nullable) =>
+  void encodeChannelHandle(
+          core.Channel value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeInterface(
-      FidlInterface mojoInterface, int offset, bool nullable) {
-    if (mojoInterface == null) {
-      encodeInvalideHandle(offset, nullable);
+      FidlInterface fidlInterface, int offset, bool nullable) {
+    if (fidlInterface == null) {
+      encodeInvalidHandle(offset, nullable);
       // Set the version field to 0.
       encodeUint32(0, offset + kSerializedHandleSize);
       return;
     }
-    if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.ChannelPipe();
-      mojoInterface.ctrl.bind(pipe.endpoints[0]);
-      encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);
+    if (!fidlInterface.ctrl.isBound) {
+      var pipe = new core.ChannelPair();
+      fidlInterface.ctrl.bind(pipe.channels[0]);
+      encodeChannelHandle(pipe.channels[1], offset, nullable);
       // Set the version to the version in the stub.
-      encodeUint32(mojoInterface.ctrl.version, offset + kSerializedHandleSize);
+      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
     } else {
-      if (!mojoInterface.ctrl.isOpen) {
+      if (!fidlInterface.ctrl.isOpen) {
         // Make sure that we are listening so that state for the proxy is
         // cleaned up when the message is sent and the handle is closed.
-        mojoInterface.ctrl.beginHandlingEvents();
+        fidlInterface.ctrl.beginHandlingEvents();
       }
-      encodeMessagePipeHandle(mojoInterface.ctrl.endpoint, offset, nullable);
+      encodeChannelHandle(fidlInterface.ctrl.channel, offset, nullable);
       // Set the version to the current version of the proxy.
-      encodeUint32(mojoInterface.ctrl.version, offset + kSerializedHandleSize);
+      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
     }
   }
 
   void encodeInterfaceRequest(
-      FidlInterface mojoInterface, int offset, bool nullable) {
-    if (mojoInterface == null) {
-      encodeInvalideHandle(offset, nullable);
+      FidlInterface fidlInterface, int offset, bool nullable) {
+    if (fidlInterface == null) {
+      encodeInvalidHandle(offset, nullable);
       return;
     }
-    if (!mojoInterface.ctrl.isBound) {
-      var pipe = new core.ChannelPipe();
-      mojoInterface.ctrl.bind(pipe.endpoints[0]);
-      mojoInterface.ctrl.beginHandlingEvents();
-      encodeMessagePipeHandle(pipe.endpoints[1], offset, nullable);
+    if (!fidlInterface.ctrl.isBound) {
+      var pipe = new core.ChannelPair();
+      fidlInterface.ctrl.bind(pipe.channels[0]);
+      fidlInterface.ctrl.beginHandlingEvents();
+      encodeChannelHandle(pipe.channels[1], offset, nullable);
     } else {
-      if (!mojoInterface.ctrl.isOpen) {
+      if (!fidlInterface.ctrl.isOpen) {
         // Make sure that we are listening so that state for the stub is
         // cleaned up when the message is sent and the handle is closed.
-        mojoInterface.ctrl.beginHandlingEvents();
+        fidlInterface.ctrl.beginHandlingEvents();
       }
-      encodeMessagePipeHandle(mojoInterface.ctrl.endpoint, offset, nullable);
+      encodeChannelHandle(fidlInterface.ctrl.channel, offset, nullable);
       // Set the version to the current version of the stub.
-      encodeUint32(mojoInterface.ctrl.version, offset + kSerializedHandleSize);
+      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
     }
   }
 
@@ -266,7 +256,7 @@ class Encoder {
     _buffer.buffer.setUint64(_base + offset, 0, Endianness.LITTLE_ENDIAN);
   }
 
-  void encodeInvalideHandle(int offset, bool nullable) {
+  void encodeInvalidHandle(int offset, bool nullable) {
     if (!nullable) {
       throw new FidlCodecError(
           'Cannot encode a null pointer for a non-nullable type');
@@ -441,30 +431,10 @@ class Encoder {
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeHandle(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeMessagePipeHandleArray(List<core.ChannelEndpoint> value,
+  void encodeChannelHandleArray(List<core.Channel> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper(
-          (e, v, o, n) => e.encodeMessagePipeHandle(v, o, n),
-          value,
-          offset,
-          kSerializedHandleSize,
-          nullability,
-          expectedLength);
-
-  void encodeConsumerHandleArray(List<core.DataPipeConsumer> value,
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayEncodeHelper((e, v, o, n) => e.encodeConsumerHandle(v, o, n),
-          value, offset, kSerializedHandleSize, nullability, expectedLength);
-
-  void encodeProducerHandleArray(List<core.DataPipeProducer> value,
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayEncodeHelper((e, v, o, n) => e.encodeProducerHandle(v, o, n),
-          value, offset, kSerializedHandleSize, nullability, expectedLength);
-
-  void encodeSharedBufferHandleArray(List<core.SharedBuffer> value,
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayEncodeHelper(
-          (e, v, o, n) => e.encodeSharedBufferHandle(v, o, n),
+          (e, v, o, n) => e.encodeChannelHandle(v, o, n),
           value,
           offset,
           kSerializedHandleSize,
@@ -488,8 +458,8 @@ class Encoder {
 
   static const Utf8Encoder _utf8Encoder = const Utf8Encoder();
 
-  static Uint8List _utf8OfString(String s) =>
-      (new Uint8List.fromList(_utf8Encoder.convert(s)));
+  static Uint8List _utf8OfString(String string) =>
+      (new Uint8List.fromList(_utf8Encoder.convert(string)));
 
   void encodeString(String value, int offset, bool nullable) {
     if (value == null) {
@@ -716,35 +686,26 @@ class Decoder {
     return _handles[index];
   }
 
-  core.ChannelEndpoint decodeMessagePipeHandle(
+  core.Channel decodeChannelHandle(
           int offset, bool nullable) =>
-      new core.ChannelEndpoint(decodeHandle(offset, nullable));
-
-  core.DataPipeConsumer decodeConsumerHandle(int offset, bool nullable) =>
-      new core.DataPipeConsumer(decodeHandle(offset, nullable));
-
-  core.DataPipeProducer decodeProducerHandle(int offset, bool nullable) =>
-      new core.DataPipeProducer(decodeHandle(offset, nullable));
-
-  core.SharedBuffer decodeSharedBufferHandle(int offset, bool nullable) =>
-      new core.SharedBuffer(decodeHandle(offset, nullable));
+      new core.Channel(decodeHandle(offset, nullable));
 
   FidlInterface decodeServiceInterface(
       int offset, bool nullable, Function clientFactory) {
-    var endpoint = decodeMessagePipeHandle(offset, nullable);
+    var channel = decodeChannelHandle(offset, nullable);
     var version = decodeUint32(offset + kSerializedHandleSize);
-    if (!endpoint.handle.isValid) {
+    if (!channel.handle.isValid) {
       return null;
     }
-    Proxy client = clientFactory(endpoint);
+    Proxy client = clientFactory(channel);
     client.ctrl._version = version;
     return client;
   }
 
   FidlInterface decodeInterfaceRequest(
       int offset, bool nullable, Function interfaceFactory) {
-    var endpoint = decodeMessagePipeHandle(offset, nullable);
-    return endpoint.handle.isValid ? interfaceFactory(endpoint) : null;
+    var channel = decodeChannelHandle(offset, nullable);
+    return channel.handle.isValid ? interfaceFactory(channel) : null;
   }
 
   Decoder decodePointer(int offset, bool nullable) {
@@ -1052,24 +1013,9 @@ class Decoder {
       _handleArrayDecodeHelper((d, o, n) => d.decodeHandle(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.DataPipeConsumer> decodeConsumerHandleArray(
+  List<core.Channel> decodeChannelHandleArray(
           int offset, int nullability, int expectedLength) =>
-      _handleArrayDecodeHelper((d, o, n) => d.decodeConsumerHandle(o, n),
-          offset, kSerializedHandleSize, nullability, expectedLength);
-
-  List<core.DataPipeProducer> decodeProducerHandleArray(
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayDecodeHelper((d, o, n) => d.decodeProducerHandle(o, n),
-          offset, kSerializedHandleSize, nullability, expectedLength);
-
-  List<core.ChannelEndpoint> decodeMessagePipeHandleArray(
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayDecodeHelper((d, o, n) => d.decodeMessagePipeHandle(o, n),
-          offset, kSerializedHandleSize, nullability, expectedLength);
-
-  List<core.SharedBuffer> decodeSharedBufferHandleArray(
-          int offset, int nullability, int expectedLength) =>
-      _handleArrayDecodeHelper((d, o, n) => d.decodeSharedBufferHandle(o, n),
+      _handleArrayDecodeHelper((d, o, n) => d.decodeChannelHandle(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
 
   List<Stub> decodeInterfaceRequestArray(int offset, int nullability,

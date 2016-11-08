@@ -4,12 +4,6 @@
 
 import 'package:lib.fidl.examples.interfaces/hello.fidl.dart';
 
-void main(List args, Object request) {
-  Hello h;
-  /*
-    Point p = new Point();
-    p.x = 1;
-    p.y = 2;
-    print('Point is $p');
-    */
+void main(List args) {
+  HelloProxy hello;
 }

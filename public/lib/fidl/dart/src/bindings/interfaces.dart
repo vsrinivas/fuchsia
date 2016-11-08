@@ -16,8 +16,8 @@ abstract class FidlInterface<T> {
 
 /// This interface is implemented by [ProxyMessageHandler] and
 /// [StubMessageHandler]. Most of the interface is inherited from, and
-/// ultimately implemented by [core.MojoEventHandler].
-abstract class FidlInterfaceControl implements core.MojoEventHandler {
+/// ultimately implemented by [core.FidlEventHandler].
+abstract class FidlInterfaceControl implements core.FidlEventHandler {
   String get serviceName;
   int get version;
 }

@@ -67,7 +67,7 @@ abstract class ServiceConnector {
   void connectToService(String url, Proxy proxy, [String serviceName]);
 }
 
-abstract class ProxyMessageHandler extends core.MojoEventHandler
+abstract class ProxyMessageHandler extends core.FidlEventHandler
     implements FidlInterfaceControl {
   HashMap<int, Function> _callbackMap = new HashMap<int, Function>();
   Completer _errorCompleter = new Completer();
@@ -76,8 +76,8 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
   int _version = 0;
   int _pendingCount = 0;
 
-  ProxyMessageHandler.fromEndpoint(core.ChannelEndpoint endpoint)
-      : super.fromEndpoint(endpoint);
+  ProxyMessageHandler.fromChannel(core.Channel channel)
+      : super.fromChannel(channel);
 
   ProxyMessageHandler.fromHandle(core.Handle handle)
       : super.fromHandle(handle);
@@ -97,16 +97,11 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
   /// call to [queryVersion] or [requireVersion] is made.
   int get version => _version;
 
-  /// Returns a service description, which exposes the mojom type information
-  /// of the service being proxied.
-  /// Note: The description is null or incomplete if type info is unavailable.
-  service_describer.ServiceDescription get description => null;
-
   @override
   void handleRead() {
-    var result = endpoint.queryAndRead();
+    var result = channel.queryAndRead();
     if ((result.data == null) || (result.dataLength == 0)) {
-      proxyError("Read from message pipe endpoint failed");
+      proxyError("Read from message pipe channel failed");
       return;
     }
     try {
@@ -148,10 +143,10 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
     }
     var header = new MessageHeader(name);
     var serviceMessage = message.serializeWithHeader(header);
-    endpoint.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
+    channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
         serviceMessage.handles);
-    if (endpoint.status != core.MojoResult.kOk) {
-      proxyError("Write to message pipe endpoint failed.");
+    if (channel.status != core.NO_ERROR) {
+      proxyError("Write to message pipe channel failed.");
     }
   }
 
@@ -170,14 +165,14 @@ abstract class ProxyMessageHandler extends core.MojoEventHandler
 
     var header = new MessageHeader.withRequestId(name, flags, id);
     var serviceMessage = message.serializeWithHeader(header);
-    endpoint.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
+    channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
         serviceMessage.handles);
 
-    if (endpoint.status == core.MojoResult.kOk) {
+    if (channel.status == core.NO_ERROR) {
       _callbackMap[id] = callback;
       _pendingCount++;
     } else {
-      proxyError("Write to message pipe endpoint failed: ${endpoint}");
+      proxyError("Write to message pipe channel failed: ${channel}");
     }
   }
 

@@ -11,13 +11,7 @@ class _OpenHandle {
   _OpenHandle(this.stack, {this.description});
 }
 
-class MxTimeNatives {
-  static int get(int clockId) native "MxTime_Get";
-
-  static int timerMillisecondClock() => getTimeTicksNow() ~/ (1000 * 1000);
-}
-
-class MxHandleNatives {
+class MxHandle {
   static HashMap<int, _OpenHandle> _openHandles = new HashMap();
 
   static void addOpenHandle(int handleToken, {String description}) {
@@ -68,18 +62,12 @@ class MxHandleNatives {
 
   static int close(int handleToken) native "MxHandle_Close";
 
-  static List waitOne(int handleToken, int signals, int deadline)
-      native "MxHandle_WaitOne";
-
-  static List waitMany(List<int> handleTokens, List<int> signals, int deadline)
-      native "MxHandle_WaitMany";
-
   // Called from the embedder's unhandled exception callback.
   // Returns the number of successfully closed handles.
   static int _closeOpenHandles() {
     int count = 0;
     _openHandles.forEach((int handle, _) {
-      if (MxHandleNatives.close(handle) == 0) {
+      if (MxHandle.close(handle) == 0) {
         count++;
       }
     });
@@ -88,7 +76,7 @@ class MxHandleNatives {
   }
 }
 
-class _MxHandleWatcherNatives {
+class _MxHandleWatcher {
   static int sendControlData(
       int controlHandle,
       int commandCode,
@@ -97,15 +85,15 @@ class _MxHandleWatcherNatives {
       int data) native "MxHandleWatcher_SendControlData";
 }
 
-class MxChannelNatives {
-  static List Create(int flags) native "MxChannel_Create";
+class MxChannel {
+  static List create(int flags) native "MxChannel_Create";
 
-  static int Write(int handleToken, ByteData data, int numBytes,
+  static int write(int handleToken, ByteData data, int numBytes,
       List<int> handles, int flags) native "MxChannel_Write";
 
-  static List Read(int handleToken, ByteData data, int numBytes,
+  static List read(int handleToken, ByteData data, int numBytes,
       List<int> handleTokens, int flags) native "MxChannel_Read";
 
-  static void QueryAndRead(int handleToken, int flags, List result)
+  static void queryAndRead(int handleToken, int flags, List result)
       native "MxChannel_QueryAndRead";
 }

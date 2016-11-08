@@ -53,18 +53,6 @@ abstract class {{interface|name}} {
     return _cachedServiceDescription;
   }
 
-  static {{interface|name}}Proxy connectToService(
-      bindings.ServiceConnector s, String url, [String serviceName]) {
-    {{interface|name}}Proxy p = new {{interface|name}}Proxy.unbound();
-    String name = serviceName ?? {{interface|name}}.serviceName;
-    if ((name == null) || name.isEmpty) {
-      throw new core.FidlApiError(
-          "If an interface has no ServiceName, then one must be provided.");
-    }
-    s.connectToService(url, p, name);
-    return p;
-  }
-
 {%- for method in interface.methods %}
 {%- if method.response_parameters == None %}
   void {{method|name}}(
@@ -97,10 +85,10 @@ abstract class {{interface|name}}Interface
   factory {{interface|name}}Interface([{{interface|name}} impl]) =>
       new {{interface|name}}Stub.unbound(impl);
 
-  factory {{interface|name}}Interface.fromEndpoint(
-      core.ChannelEndpoint endpoint,
+  factory {{interface|name}}Interface.fromChannel(
+      core.Channel endpoint,
       [{{interface|name}} impl]) =>
-      new {{interface|name}}Stub.fromEndpoint(endpoint, impl);
+      new {{interface|name}}Stub.fromChannel(endpoint, impl);
 
   factory {{interface|name}}Interface.fromMock(
       {{interface|name}} mock) =>
@@ -119,8 +107,8 @@ class _{{interface|name}}ProxyControl
     implements bindings.ProxyControl<{{interface|name}}> {
   {{interface|name}} impl;
 
-  _{{interface|name}}ProxyControl.fromEndpoint(
-      core.ChannelEndpoint endpoint) : super.fromEndpoint(endpoint);
+  _{{interface|name}}ProxyControl.fromChannel(
+      core.Channel endpoint) : super.fromChannel(endpoint);
 
   _{{interface|name}}ProxyControl.fromHandle(
       core.Handle handle) : super.fromHandle(handle);
@@ -167,9 +155,9 @@ class {{interface|name}}Proxy
     implements {{interface|name}},
                {{interface|name}}Interface,
                {{interface|name}}InterfaceRequest {
-  {{interface|name}}Proxy.fromEndpoint(
-      core.ChannelEndpoint endpoint)
-      : super(new _{{interface|name}}ProxyControl.fromEndpoint(endpoint));
+  {{interface|name}}Proxy.fromChannel(
+      core.Channel endpoint)
+      : super(new _{{interface|name}}ProxyControl.fromChannel(endpoint));
 
   {{interface|name}}Proxy.fromHandle(core.Handle handle)
       : super(new _{{interface|name}}ProxyControl.fromHandle(handle));
@@ -184,10 +172,10 @@ class {{interface|name}}Proxy
     return newMockedProxy;
   }
 
-  static {{interface|name}}Proxy newFromEndpoint(
-      core.ChannelEndpoint endpoint) {
+  static {{interface|name}}Proxy newfromChannel(
+      core.Channel endpoint) {
     assert(endpoint.setDescription("For {{interface|name}}Proxy"));
-    return new {{interface|name}}Proxy.fromEndpoint(endpoint);
+    return new {{interface|name}}Proxy.fromChannel(endpoint);
   }
 
 {% for method in interface.methods %}
@@ -276,9 +264,9 @@ class _{{interface|name}}StubControl
     implements bindings.StubControl<{{interface|name}}> {
   {{interface|name}} _impl;
 
-  _{{interface|name}}StubControl.fromEndpoint(
-      core.ChannelEndpoint endpoint, [{{interface|name}} impl])
-      : super.fromEndpoint(endpoint, autoBegin: impl != null) {
+  _{{interface|name}}StubControl.fromChannel(
+      core.Channel endpoint, [{{interface|name}} impl])
+      : super.fromChannel(endpoint, autoBegin: impl != null) {
     _impl = impl;
   }
 
@@ -361,7 +349,7 @@ class _{{interface|name}}StubControl
   }
 
   @override
-  void bind(core.ChannelEndpoint endpoint) {
+  void bind(core.Channel endpoint) {
     super.bind(endpoint);
     if (!isOpen && (_impl != null)) {
       beginHandlingEvents();
@@ -385,18 +373,18 @@ class {{interface|name}}Stub
   {{interface|name}}Stub.unbound([{{interface|name}} impl])
       : super(new _{{interface|name}}StubControl.unbound(impl));
 
-  {{interface|name}}Stub.fromEndpoint(
-      core.ChannelEndpoint endpoint, [{{interface|name}} impl])
-      : super(new _{{interface|name}}StubControl.fromEndpoint(endpoint, impl));
+  {{interface|name}}Stub.fromChannel(
+      core.Channel endpoint, [{{interface|name}} impl])
+      : super(new _{{interface|name}}StubControl.fromChannel(endpoint, impl));
 
   {{interface|name}}Stub.fromHandle(
       core.Handle handle, [{{interface|name}} impl])
       : super(new _{{interface|name}}StubControl.fromHandle(handle, impl));
 
-  static {{interface|name}}Stub newFromEndpoint(
-      core.ChannelEndpoint endpoint) {
+  static {{interface|name}}Stub newfromChannel(
+      core.Channel endpoint) {
     assert(endpoint.setDescription("For {{interface|name}}Stub"));
-    return new {{interface|name}}Stub.fromEndpoint(endpoint);
+    return new {{interface|name}}Stub.fromChannel(endpoint);
   }
 
 {% for method in interface.methods %}

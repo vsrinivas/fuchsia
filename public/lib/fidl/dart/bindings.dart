@@ -10,14 +10,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:lib.fidl.dart/core.dart' as core;
-import 'package:lib.fidl.compiler.interfaces/service_describer.fidl.dart'
-    as service_describer;
 
-part 'src/codec.dart';
-part 'src/enum.dart';
-part 'src/interfaces.dart';
-part 'src/message.dart';
-part 'src/proxy.dart';
-part 'src/struct.dart';
-part 'src/stub.dart';
-part 'src/union.dart';
+part 'src/bindings/codec.dart';
+part 'src/bindings/enum.dart';
+part 'src/bindings/interfaces.dart';
+part 'src/bindings/message.dart';
+part 'src/bindings/proxy.dart';
+part 'src/bindings/struct.dart';
+part 'src/bindings/stub.dart';
+part 'src/bindings/union.dart';

@@ -27,7 +27,7 @@ class HandleWatcher {
     if (localControlHandle == _kHandleInvalid) {
       return _kErrBadState;
     }
-    var result = _MxHandleWatcherNatives.sendControlData(
+    var result = _MxHandleWatcher.sendControlData(
         localControlHandle, command, handleOrDeadline, port, signals);
     return result;
   }

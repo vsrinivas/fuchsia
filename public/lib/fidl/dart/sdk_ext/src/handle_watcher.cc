@@ -150,7 +150,7 @@ void HandleWatcherThreadState::RemoveHandle(mx_handle_t handle) {
   auto it = handle_to_index_map_.find(handle);
 
   // Removal of a handle for an incoming event can race with the removal of
-  // a handle for an unsubscribe() call on the Dart MojoEventSubscription.
+  // a handle for an unsubscribe() call on the Dart FidlEventSubscription.
   // This is not an error, so we ignore attempts to remove a handle that is not
   // in the map.
   if (it == handle_to_index_map_.end()) {

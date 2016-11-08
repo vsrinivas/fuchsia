@@ -8,6 +8,5 @@ group("fidl") {
   deps = [
     "examples",
     "compiler/interfaces",
-    "examples/dart",
   ]
 }
