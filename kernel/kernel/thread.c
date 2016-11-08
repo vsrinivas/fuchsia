@@ -1395,7 +1395,7 @@ int wait_queue_wake_one(wait_queue_t *wait, bool reschedule, status_t wait_queue
  * @param wait_queue_error  The return value which the new thread will receive
  * from wait_queue_block().
  *
- * @return  The number of threads woken (zero or one)
+ * @return  The number of threads woken
  */
 int wait_queue_wake_all(wait_queue_t *wait, bool reschedule, status_t wait_queue_error)
 {
