@@ -5,7 +5,6 @@
         "//apps/document_store",
         "//apps/logging",
         "//apps/maxwell",
-        "//apps/modular",
         "//apps/modular/examples/hello_app"
     ],
     "binaries": [
@@ -68,10 +67,6 @@
         {
             "binary": "suggestion_engine",
             "bootfs_path": "apps/suggestion_engine"
-        },
-        {
-            "binary": "story_runner",
-            "bootfs_path": "apps/story_runner"
         }
     ]
 }
