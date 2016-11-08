@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/user_runner/story_impl.h"
+#include "apps/modular/src/user_runner/story_impl.h"
 
-#include "apps/modular/user_runner/story_provider_impl.h"
+#include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/application_context.h"
 
 namespace modular {
 
-StoryImpl::StoryImpl(
-    StoryInfoPtr story_info,
-    StoryProviderImpl* const story_provider_impl,
-    std::shared_ptr<ApplicationContext> application_context,
-    fidl::InterfaceRequest<Story> story_request)
+StoryImpl::StoryImpl(StoryInfoPtr story_info,
+                     StoryProviderImpl* const story_provider_impl,
+                     std::shared_ptr<ApplicationContext> application_context,
+                     fidl::InterfaceRequest<Story> story_request)
     : story_info_(std::move(story_info)),
       story_provider_impl_(story_provider_impl),
       storage_(story_provider_impl_->storage()),
@@ -96,7 +95,6 @@ void StoryImpl::StartStoryRunner(
 
   ConnectToService(story_runner_app_services.get(), GetProxy(&runner_));
 
-
   auto resolver_launch_info = ApplicationLaunchInfo::New();
 
   ServiceProviderPtr resolver_app_services;
@@ -108,7 +106,6 @@ void StoryImpl::StartStoryRunner(
 
   ResolverFactoryPtr resolver_factory;
   ConnectToService(resolver_app_services.get(), GetProxy(&resolver_factory));
-
 
   runner_->Initialize(std::move(resolver_factory));
 

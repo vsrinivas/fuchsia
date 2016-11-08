@@ -20,7 +20,8 @@ class ResolverImpl : public Resolver {
   ~ResolverImpl() override {}
 
  private:
-  void Resolve(const fidl::String& query, const ResolveCallback& callback) override {
+  void Resolve(const fidl::String& query,
+               const ResolveCallback& callback) override {
     callback(query);
   }
 

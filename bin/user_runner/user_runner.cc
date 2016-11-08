@@ -11,7 +11,7 @@
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/modular/user_runner/story_provider_impl.h"
+#include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -77,8 +77,8 @@ class UserRunnerImpl : public UserRunner {
     launch_info->services = GetProxy(&app_services);
     launch_info->url = "file:///system/apps/ledger";
 
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), nullptr);
+    application_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                        nullptr);
 
     ConnectToService(app_services.get(), GetProxy(&ledger_factory_));
 
@@ -103,8 +103,9 @@ class UserRunnerImpl : public UserRunner {
   }
 
   // Run the User shell and provide it the |StoryProvider| interface.
-  void StartUserShell(fidl::InterfaceHandle<ledger::Ledger> ledger,
-                      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  void StartUserShell(
+      fidl::InterfaceHandle<ledger::Ledger> ledger,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
     // First use ViewProvider service to plumb |view_owner_request| and get the
     // associated service provider.
     auto launch_info = ApplicationLaunchInfo::New();
@@ -113,8 +114,8 @@ class UserRunnerImpl : public UserRunner {
     launch_info->services = GetProxy(&app_services);
     launch_info->url = "file:///system/apps/dummy_user_shell";
 
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), nullptr);
+    application_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                        nullptr);
 
     mozart::ViewProviderPtr view_provider;
     ConnectToService(app_services.get(), GetProxy(&view_provider));
@@ -129,8 +130,8 @@ class UserRunnerImpl : public UserRunner {
     ConnectToService(view_services.get(), GetProxy(&user_shell_));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
-    new StoryProviderImpl(application_context_,
-                          std::move(ledger), GetProxy(&story_provider));
+    new StoryProviderImpl(application_context_, std::move(ledger),
+                          GetProxy(&story_provider));
 
     user_shell_->SetStoryProvider(std::move(story_provider));
   }
@@ -160,8 +161,6 @@ class UserRunnerApp {
   std::shared_ptr<ApplicationContext> application_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
 };
-
-
 
 }  // namespace modular
 

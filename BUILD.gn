@@ -8,12 +8,12 @@ group("all") {
 
 group("modular") {
   deps = [
-    "device_runner:all",
     "examples:all",
     "lib/app",
     "services:all",
     "src/application_manager",
-    "story_runner:all",
-    "user_runner:all",
+    "src/device_runner:all",
+    "src/story_runner:all",
+    "src/user_runner:all",
   ]
 }

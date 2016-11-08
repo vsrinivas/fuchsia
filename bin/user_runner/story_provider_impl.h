@@ -11,8 +11,8 @@
 
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
-#include "apps/modular/user_runner/session_storage_impl.h"
-#include "apps/modular/user_runner/transaction.h"
+#include "apps/modular/src/user_runner/session_storage_impl.h"
+#include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
@@ -32,9 +32,9 @@ class StoryProviderImpl : public StoryProvider {
   ~StoryProviderImpl() override = default;
 
   // Obtains the StoryInfo for an existing story from the ledger.
-  void GetStoryInfo(const fidl::String& session_id,
-                    std::function<void(StoryInfoPtr story_info)>
-                    story_info_callback);
+  void GetStoryInfo(
+      const fidl::String& session_id,
+      std::function<void(StoryInfoPtr story_info)> story_info_callback);
 
   // Used to obtain a ledger page for the given session identified by
   // its ledger page ID.
@@ -48,8 +48,7 @@ class StoryProviderImpl : public StoryProvider {
   void WriteStoryInfo(StoryInfoPtr story_info);
 
   // Used by CreateStory() to write story meta-data to the ledger.
-  void WriteStoryInfo(StoryInfoPtr story_info,
-                      std::function<void()> done);
+  void WriteStoryInfo(StoryInfoPtr story_info, std::function<void()> done);
 
   // Used by StoryImpl.
   using Storage = SessionStorageImpl::Storage;

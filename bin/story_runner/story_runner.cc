@@ -10,7 +10,7 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/session.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
-#include "apps/modular/story_runner/session.h"
+#include "apps/modular/src/story_runner/session.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -27,7 +27,8 @@ class StoryRunnerImpl : public StoryRunner {
  public:
   StoryRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
                   fidl::InterfaceRequest<StoryRunner> req)
-      : application_context_(application_context), binding_(this, std::move(req)) {
+      : application_context_(application_context),
+        binding_(this, std::move(req)) {
     FTL_LOG(INFO) << "StoryRunnerImpl()";
   }
 
@@ -42,8 +43,8 @@ class StoryRunnerImpl : public StoryRunner {
                   fidl::InterfaceRequest<Session> session) override {
     fidl::InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(application_context_, std::move(resolver), std::move(session_storage),
-                    std::move(session));
+    new SessionImpl(application_context_, std::move(resolver),
+                    std::move(session_storage), std::move(session));
   }
 
  private:
@@ -59,8 +60,7 @@ class StoryRunnerImpl : public StoryRunner {
 // parameter, so we don't reuse the template class here.
 class StoryRunnerApp {
  public:
-  StoryRunnerApp()
-      : context_(ApplicationContext::CreateFromStartupInfo()) {
+  StoryRunnerApp() : context_(ApplicationContext::CreateFromStartupInfo()) {
     FTL_LOG(INFO) << "StoryRunnerApp()";
     context_->outgoing_services()->AddService<StoryRunner>(
         [this](fidl::InterfaceRequest<StoryRunner> request) {

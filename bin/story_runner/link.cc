@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/story_runner/link.h"
+#include "apps/modular/src/story_runner/link.h"
 
 #include "apps/modular/services/document/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/story_runner/session.h"
+#include "apps/modular/src/story_runner/session.h"
 #include "lib/ftl/logging.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

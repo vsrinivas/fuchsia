@@ -12,7 +12,7 @@
 #include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
-#include "apps/modular/user_runner/session_storage_impl.h"
+#include "apps/modular/src/user_runner/session_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -24,11 +24,10 @@ class StoryProviderImpl;
 
 class StoryImpl : public Story, public ModuleWatcher, public LinkChanged {
  public:
-  static StoryImpl* New(
-      StoryInfoPtr story_info,
-      StoryProviderImpl* story_provider_impl,
-      std::shared_ptr<ApplicationContext> application_context,
-      fidl::InterfaceRequest<Story> story_request) {
+  static StoryImpl* New(StoryInfoPtr story_info,
+                        StoryProviderImpl* story_provider_impl,
+                        std::shared_ptr<ApplicationContext> application_context,
+                        fidl::InterfaceRequest<Story> story_request) {
     return new StoryImpl(std::move(story_info), story_provider_impl,
                          application_context, std::move(story_request));
   }

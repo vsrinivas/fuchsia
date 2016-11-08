@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/user_runner/story_provider_impl.h"
+#include "apps/modular/src/user_runner/story_provider_impl.h"
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/mojo/array_to_string.h"
 #include "apps/modular/mojo/strong_binding.h"
-#include "apps/modular/user_runner/story_impl.h"
+#include "apps/modular/src/user_runner/story_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/fidl/cpp/bindings/array.h"
 
@@ -212,9 +212,8 @@ class CreateStoryCall : public Transaction {
         story_info_->is_running = false;
 
         story_provider_impl_->WriteStoryInfo(story_info_->Clone(), [this]() {
-            StoryImpl::New(std::move(story_info_), story_provider_impl_,
-                           application_context_,
-                           std::move(story_request_));
+          StoryImpl::New(std::move(story_info_), story_provider_impl_,
+                         application_context_, std::move(story_request_));
           Done();
         });
       });
@@ -222,9 +221,9 @@ class CreateStoryCall : public Transaction {
   }
 
  private:
-  ledger::Ledger* const ledger_;                     // not owned
+  ledger::Ledger* const ledger_;  // not owned
   std::shared_ptr<ApplicationContext> application_context_;
-  StoryProviderImpl* const story_provider_impl_;     // not owned
+  StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String url_;
   const std::string story_id_;
   fidl::InterfaceRequest<Story> story_request_;
@@ -250,19 +249,18 @@ class ResumeStoryCall : public Transaction {
         story_provider_impl_(story_provider_impl),
         story_id_(story_id),
         story_request_(std::move(story_request)) {
-    story_provider_impl_->GetStoryInfo(story_id_, [this](
-                                                      StoryInfoPtr story_info) {
-      story_info_ = std::move(story_info);
-      ledger_->GetPage(
-          story_info_->session_page_id.Clone(), GetProxy(&session_page_),
-          [this](ledger::Status status) {
-            StoryImpl::New(std::move(story_info_), story_provider_impl_,
-                           application_context_,
-                           std::move(story_request_));
+    story_provider_impl_->GetStoryInfo(
+        story_id_, [this](StoryInfoPtr story_info) {
+          story_info_ = std::move(story_info);
+          ledger_->GetPage(
+              story_info_->session_page_id.Clone(), GetProxy(&session_page_),
+              [this](ledger::Status status) {
+                StoryImpl::New(std::move(story_info_), story_provider_impl_,
+                               application_context_, std::move(story_request_));
 
-            Done();
-          });
-    });
+                Done();
+              });
+        });
   }
 
   // Resumes a story given its full story info. Compared to the
@@ -283,17 +281,16 @@ class ResumeStoryCall : public Transaction {
                      GetProxy(&session_page_), [this](ledger::Status status) {
                        StoryImpl::New(
                            std::move(story_info_), story_provider_impl_,
-                           application_context_,
-                           std::move(story_request_));
+                           application_context_, std::move(story_request_));
 
                        Done();
                      });
   }
 
  private:
-  ledger::Ledger* const ledger_;                     // not owned
+  ledger::Ledger* const ledger_;  // not owned
   std::shared_ptr<ApplicationContext> application_context_;
-  StoryProviderImpl* const story_provider_impl_;     // not owned
+  StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String story_id_;
   fidl::InterfaceRequest<Story> story_request_;
 
@@ -371,8 +368,7 @@ StoryProviderImpl::StoryProviderImpl(
 
 void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
-    std::function<void(StoryInfoPtr story_info)>
-        story_info_callback) {
+    std::function<void(StoryInfoPtr story_info)> story_info_callback) {
   new GetStoryInfoCall(transaction_container_.get(), ledger_.get(), story_id,
                        story_info_callback);
 }

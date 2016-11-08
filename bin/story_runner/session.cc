@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/story_runner/session.h"
+#include "apps/modular/src/story_runner/session.h"
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
@@ -13,7 +13,7 @@
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/session.fidl.h"
-#include "apps/modular/story_runner/link.h"
+#include "apps/modular/src/story_runner/link.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -135,10 +135,11 @@ void SessionHost::Remove(ModuleControllerImpl* const module_controller) {
   module_controller_ = nullptr;
 }
 
-SessionImpl::SessionImpl(std::shared_ptr<ApplicationContext> application_context,
-                         fidl::InterfaceHandle<Resolver> resolver,
-                         fidl::InterfaceHandle<SessionStorage> session_storage,
-                         fidl::InterfaceRequest<Session> req)
+SessionImpl::SessionImpl(
+    std::shared_ptr<ApplicationContext> application_context,
+    fidl::InterfaceHandle<Resolver> resolver,
+    fidl::InterfaceHandle<SessionStorage> session_storage,
+    fidl::InterfaceRequest<Session> req)
     : application_context_(application_context),
       page_(new SessionPage(std::move(session_storage))) {
   FTL_LOG(INFO) << "SessionImpl()";
