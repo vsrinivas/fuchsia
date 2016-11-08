@@ -260,8 +260,9 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
   return Status::OK;
 }
 
-Status PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit) {
-  return AddCommit(std::move(commit), ChangeSource::LOCAL);
+void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
+                                         std::function<void(Status)> callback) {
+  AddCommit(std::move(commit), ChangeSource::LOCAL, callback);
 }
 
 Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
@@ -271,7 +272,10 @@ Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
   if (!commit) {
     return Status::FORMAT_ERROR;
   }
-  return AddCommit(std::move(commit), ChangeSource::SYNC);
+  Status status;
+  AddCommit(std::move(commit), ChangeSource::SYNC,
+            [&status](Status commit_status) { status = commit_status; });
+  return status;
 }
 
 Status PageStorageImpl::StartCommit(const CommitId& commit_id,
@@ -437,27 +441,31 @@ void PageStorageImpl::NotifyWatchers(const Commit& commit,
   }
 }
 
-Status PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
-                                  ChangeSource source) {
+void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
+                                ChangeSource source,
+                                std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
   Status s =
       db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
 
   if (source == ChangeSource::LOCAL) {
     s = db_.MarkCommitIdUnsynced(commit->GetId());
     if (s != Status::OK) {
-      return s;
+      callback(s);
+      return;
     }
   }
 
   // Update heads.
   s = db_.AddHead(commit->GetId());
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
 
   // TODO(nellyv): Here we assume that commits arrive in order. Change this to
@@ -469,11 +477,12 @@ Status PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
 
   s = batch->Execute();
   if (s != Status::OK) {
-    return s;
+    callback(s);
+    return;
   }
 
+  callback(Status::OK);
   NotifyWatchers(*(commit.get()), source);
-  return Status::OK;
 }
 
 }  // namespace storage

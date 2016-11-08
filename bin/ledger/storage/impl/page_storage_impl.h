@@ -26,7 +26,8 @@ class PageStorageImpl : public PageStorage {
   Status Init();
 
   // Adds the given locally created |commit| in this |PageStorage|.
-  Status AddCommitFromLocal(std::unique_ptr<Commit> commit);
+  void AddCommitFromLocal(std::unique_ptr<Commit> commit,
+                          std::function<void(Status)> callback);
 
   // PageStorage:
   PageId GetId() override;
@@ -73,7 +74,9 @@ class PageStorageImpl : public PageStorage {
  private:
   class FileWriter;
 
-  Status AddCommit(std::unique_ptr<const Commit> commit, ChangeSource source);
+  void AddCommit(std::unique_ptr<const Commit> commit,
+                 ChangeSource source,
+                 std::function<void(Status)> callback);
 
   // Notifies the registered watchers with the given |commit|.
   void NotifyWatchers(const Commit& commit, ChangeSource source);

@@ -127,14 +127,16 @@ void JournalDBImpl::Commit(
             CommitImpl::FromContentAndParents(page_storage_, object_id,
                                               std::move(parents));
         ObjectId id = commit->GetId();
-        status = page_storage_->AddCommitFromLocal(std::move(commit));
-        db_->RemoveJournal(id_);
-        valid_ = false;
-        if (status != Status::OK) {
-          callback(status, "");
-        } else {
-          callback(status, id);
-        }
+        page_storage_->AddCommitFromLocal(std::move(commit),
+                                          [this, id, callback](Status status) {
+                                            db_->RemoveJournal(id_);
+                                            valid_ = false;
+                                            if (status != Status::OK) {
+                                              callback(status, "");
+                                            } else {
+                                              callback(status, id);
+                                            }
+                                          });
       });
 }
 

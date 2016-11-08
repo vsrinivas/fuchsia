@@ -252,7 +252,8 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   std::string storage_bytes = commit->GetStorageBytes();
 
   // Search for a commit that exist and check the content.
-  EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
+  storage_->AddCommitFromLocal(
+      std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
   std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
@@ -289,7 +290,8 @@ TEST_F(PageStorageTest, SyncCommits) {
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
 
-  EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
+  storage_->AddCommitFromLocal(
+      std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
   EXPECT_EQ(1u, commits.size());
   EXPECT_EQ(storage_bytes, commits[0]->GetStorageBytes());
@@ -312,7 +314,8 @@ TEST_F(PageStorageTest, HeadCommits) {
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
 
-  EXPECT_EQ(Status::OK, storage_->AddCommitFromLocal(std::move(commit)));
+  storage_->AddCommitFromLocal(
+      std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&heads));
   EXPECT_EQ(1u, heads.size());
   EXPECT_EQ(id, heads[0]);
@@ -501,6 +504,30 @@ TEST_F(PageStorageTest, CommitWatchers) {
   EXPECT_EQ(expected, watcher.last_commit_id);
   EXPECT_EQ(ChangeSource::SYNC, watcher.last_source);
   EXPECT_EQ(1, watcher2.commit_count);
+}
+
+TEST_F(PageStorageTest, OrderOfCommitWatch) {
+  FakeCommitWatcher watcher;
+  storage_->AddCommitWatcher(&watcher);
+
+  std::unique_ptr<Journal> journal;
+  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
+                                              JournalType::EXPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key1", RandomId(kObjectIdSize), KeyPriority::EAGER));
+
+  ObjectId commit_id;
+  journal->Commit(
+      [this, &commit_id, &watcher](Status status, const CommitId& id) {
+        EXPECT_EQ(Status::OK, status);
+        commit_id = id;
+        // We should get the callback before the watchers.
+        EXPECT_EQ(0, watcher.commit_count);
+      });
+
+  EXPECT_EQ(1, watcher.commit_count);
+  EXPECT_EQ(commit_id, watcher.last_commit_id);
+  EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
 }
 
 }  // namespace
