@@ -37,12 +37,7 @@ typedef struct wait_queue {
 /* NOTE: must be inside critical section when using these */
 void wait_queue_init(wait_queue_t *wait);
 
-/*
- * release all the threads on this wait queue with a return code of ERR_INTERNAL
- * the caller must assure that no other threads are operating on the wait queue during or
- * after the call.
- */
-void wait_queue_destroy(wait_queue_t *, bool reschedule);
+void wait_queue_destroy(wait_queue_t *);
 
 /*
  * block on a wait queue.

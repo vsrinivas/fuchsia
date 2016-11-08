@@ -53,7 +53,7 @@ void mutex_destroy(mutex_t *m)
 #endif
     m->magic = 0;
     m->count = 0;
-    wait_queue_destroy(&m->wait, true);
+    wait_queue_destroy(&m->wait);
     THREAD_UNLOCK(state);
 }
 

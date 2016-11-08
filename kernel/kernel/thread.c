@@ -1442,18 +1442,24 @@ int wait_queue_wake_all(wait_queue_t *wait, bool reschedule, status_t wait_queue
 }
 
 /**
- * @brief  Free all resources allocated in wait_queue_init()
+ * @brief  Tear down a wait queue
  *
- * If any threads were waiting on this queue, they are all woken.
+ * This panics if any threads were waiting on this queue, because that
+ * would indicate a race condition for most uses of wait queues.  If a
+ * thread is currently waiting, it could have been scheduled later, in
+ * which case it would have called wait_queue_block() on an invalid wait
+ * queue.
  */
-void wait_queue_destroy(wait_queue_t *wait, bool reschedule)
+void wait_queue_destroy(wait_queue_t *wait)
 {
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(list_is_empty(&wait->list));
 
-    wait_queue_wake_all(wait, reschedule, ERR_INTERNAL);
+    if (!list_is_empty(&wait->list)) {
+        panic("wait_queue_destroy() called on non-empty wait_queue_t\n");
+    }
+
     wait->magic = 0;
 }
 

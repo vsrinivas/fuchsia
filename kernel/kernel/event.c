@@ -61,7 +61,7 @@ void event_destroy(event_t *e)
     e->magic = 0;
     e->signaled = false;
     e->flags = 0;
-    wait_queue_destroy(&e->wait, true);
+    wait_queue_destroy(&e->wait);
 
     THREAD_UNLOCK(state);
 }

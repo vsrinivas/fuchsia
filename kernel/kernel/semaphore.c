@@ -20,7 +20,7 @@ void sem_destroy(semaphore_t *sem)
 {
     THREAD_LOCK(state);
     sem->count = 0;
-    wait_queue_destroy(&sem->wait, true);
+    wait_queue_destroy(&sem->wait);
     THREAD_UNLOCK(state);
 }
 

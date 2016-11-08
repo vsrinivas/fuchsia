@@ -24,7 +24,7 @@ void cond_destroy(cond_t *cond)
     THREAD_LOCK(state);
 
     cond->magic = 0;
-    wait_queue_destroy(&cond->wait, true);
+    wait_queue_destroy(&cond->wait);
 
     THREAD_UNLOCK(state);
 }
