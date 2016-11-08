@@ -7,7 +7,7 @@
 
 module modular;
 
-import "apps/document_store/interfaces/document.mojom";
+import "apps/modular/services/document/document.fidl";
 
 // This interface is implemented by the story runner. The Session
 // service instance acts as a factory for it.

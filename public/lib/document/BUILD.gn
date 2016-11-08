@@ -4,16 +4,8 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("story") {
+fidl("document") {
   sources = [
-    "link.fidl",
-    "resolver.fidl",
-    "session.fidl",
-    "story_runner.fidl",
-  ]
-
-  deps = [
-    "//apps/mozart/services/views",
-    "//apps/modular/services/document",
+    "document.fidl",
   ]
 }

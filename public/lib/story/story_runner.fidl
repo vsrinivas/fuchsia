@@ -4,8 +4,8 @@
 
 module modular;
 
-import "apps/modular/services/story/session.mojom";
-import "apps/modular/services/story/resolver.mojom";
+import "apps/modular/services/story/session.fidl";
+import "apps/modular/services/story/resolver.fidl";
 
 // The main service implemented by the story runner app. It is used to
 // configure the app with a resolver factory, and to create session
