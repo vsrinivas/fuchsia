@@ -33,7 +33,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
                                                             0,
                                                             model_data_.get())),
       model_renderer_(
-          std::make_unique<impl::ModelRenderer>(escher->mesh_manager(),
+          std::make_unique<impl::ModelRenderer>(escher,
                                                 model_data_.get(),
                                                 pipeline_cache_.get())) {}
 
@@ -58,7 +58,7 @@ FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& image) {
   view_create_info.format = image->format();
   view_create_info.subresourceRange.aspectMask =
       vk::ImageAspectFlagBits::eColor;
-  view_create_info.image = image->image();
+  view_create_info.image = image->get();
   vk::ImageView image_view =
       ESCHER_CHECKED_VK_RESULT(device.createImageView(view_create_info));
 
@@ -66,7 +66,7 @@ FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& image) {
   view_create_info.format = depth_format_;
   view_create_info.subresourceRange.aspectMask =
       vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
-  view_create_info.image = depth_image->image();
+  view_create_info.image = depth_image->get();
   vk::ImageView depth_image_view =
       ESCHER_CHECKED_VK_RESULT(device.createImageView(view_create_info));
 
@@ -94,7 +94,7 @@ void PaperRenderer::BeginModelRenderPass(const FramebufferPtr& framebuffer,
 
   vk::ClearValue clear_values[2];
   clear_values[0] =
-      vk::ClearColorValue(std::array<float, 4>{{0.f, 1.f, 0.f, 1.f}});
+      vk::ClearColorValue(std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}});
   clear_values[1] = vk::ClearDepthStencilValue{1.f, 0};
 
   vk::RenderPassBeginInfo info;

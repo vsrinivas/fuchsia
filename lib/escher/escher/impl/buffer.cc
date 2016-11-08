@@ -62,6 +62,7 @@ Buffer::Buffer(Buffer&& other)
 }
 
 Buffer::~Buffer() {
+  FTL_DCHECK(!mapped_);
   // TODO: register vk::Buffer for destruction somewhere.
   if (device_) {
     device_.destroyBuffer(buffer_);
@@ -78,7 +79,8 @@ uint8_t* Buffer::Map() {
 
 void Buffer::Unmap() {
   if (mapped_) {
-    // TODO: only flush if the coherent bit isn't set.
+    // TODO: only flush if the coherent bit isn't set; also see
+    // ImageCache::Image::Unmap().
     vk::MappedMemoryRange range;
     range.memory = mem_->base();
     range.offset = mem_->offset();

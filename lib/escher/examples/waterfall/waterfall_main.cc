@@ -9,9 +9,11 @@
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
 #include "escher/geometry/types.h"
+#include "escher/material/material.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
+#include "escher/util/image_loader.h"
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
@@ -62,12 +64,19 @@ int main(int argc, char** argv) {
     uint64_t first_frame_microseconds;
 
     // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
+
+    auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
+        escher::NewCheckerboardImage(&escher, 16, 16), vulkan_context.device);
+
+    auto yellow = ftl::MakeRefCounted<escher::Material>();
+    yellow->set_color(vec3(0.937f, 0.886f, 0.184f));
+    auto purple = ftl::MakeRefCounted<escher::Material>(checkerboard);
+    purple->set_color(vec3(0.588f, 0.239f, 0.729f));
+
     escher::Object circle(
-        escher::Object::NewCircle(vec2(512.f, 512.f), 256.f, 5.f, nullptr));
-    circle.set_color(vec3(1.f, 0.f, 0.f));
+        escher::Object::NewCircle(vec2(512.f, 512.f), 256.f, 5.f, yellow));
     escher::Object rectangle(escher::Object::NewRect(
-        vec2(12.f, 400.f), vec2(1000.f, 100.f), 6.f, nullptr));
-    rectangle.set_color(vec3(0.f, 0.f, 1.f));
+        vec2(12.f, 300.f), vec2(1000.f, 300.f), 6.f, purple));
 
     std::vector<escher::Object> objects{circle, rectangle};
     escher::Model model(objects);

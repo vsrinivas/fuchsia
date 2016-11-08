@@ -6,6 +6,7 @@
 
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/resource.h"
+#include "escher/renderer/image.h"
 
 #include "ftl/macros.h"
 
@@ -96,6 +97,72 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
                                   mesh_impl->vertex_buffer_offset(),
                                   vk::IndexType::eUint32);
   command_buffer_.drawIndexed(mesh_impl->num_indices, 1, 0, 0, 0);
+}
+
+void CommandBuffer::CopyImage(ImagePtr src_image,
+                              ImagePtr dst_image,
+                              vk::ImageLayout src_layout,
+                              vk::ImageLayout dst_layout,
+                              vk::ImageCopy* region) {
+  command_buffer_.copyImage(src_image->get(), src_layout, dst_image->get(),
+                            dst_layout, 1, region);
+  AddUsedResource(std::move(src_image));
+  AddUsedResource(std::move(dst_image));
+}
+
+void CommandBuffer::TransitionImageLayout(ImagePtr image,
+                                          vk::ImageLayout old_layout,
+                                          vk::ImageLayout new_layout) {
+  vk::ImageMemoryBarrier barrier;
+  barrier.oldLayout = old_layout;
+  barrier.newLayout = new_layout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image->get();
+
+  if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+    if (image->HasStencilComponent()) {
+      barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+    }
+  } else {
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+  }
+
+  // TODO: assert that image only has one level.
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  if (old_layout == vk::ImageLayout::ePreinitialized &&
+      new_layout == vk::ImageLayout::eTransferSrcOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+  } else if (old_layout == vk::ImageLayout::ePreinitialized &&
+             new_layout == vk::ImageLayout::eTransferDstOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+  } else if (old_layout == vk::ImageLayout::eTransferDstOptimal &&
+             new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+  } else if (old_layout == vk::ImageLayout::eUndefined &&
+             new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+                            vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+  } else {
+    FTL_LOG(ERROR) << "Unsupported layout transition from: "
+                   << to_string(old_layout) << " to: " << to_string(new_layout);
+    FTL_DCHECK(false);
+    return;
+  }
+  command_buffer_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
+                                  vk::PipelineStageFlagBits::eTopOfPipe,
+                                  vk::DependencyFlags(), 0, nullptr, 0, nullptr,
+                                  1, &barrier);
+
+  AddUsedResource(std::move(image));
 }
 
 bool CommandBuffer::Retire() {

@@ -17,14 +17,19 @@ class Image : public impl::Resource {
   // this image object has been destroyed, because it may be e.g. retained by
   // Escher until no active submissions are using it.
   Image(vk::Image image, vk::Format format, uint32_t width, uint32_t height);
-  ~Image();
+  ~Image() override;
 
-  vk::Image image() const { return image_; }
+  vk::Image get() const { return image_; }
   vk::Format format() const { return format_; }
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
   bool HasStencilComponent() const;
+
+  // TODO: These no-ops will no longer be necessary when this class is merged
+  // with the "impl" class (impl::ImageCache::Image).
+  virtual uint8_t* Map() { return nullptr; };
+  virtual void Unmap(){};
 
  private:
   vk::Image image_;

@@ -6,18 +6,15 @@
 
 namespace escher {
 
-Object::Object(const Shape& shape, const Material* material)
-    : shape_(shape), material_(material) {
-  // TODO: add support for materials.
-  FTL_DCHECK(!material);
-}
+Object::Object(const Shape& shape, const MaterialPtr& material)
+    : shape_(shape), material_(material) {}
 
 Object::~Object() {}
 
 Object Object::NewRect(const vec2& position,
                        const vec2& size,
                        float z,
-                       const Material* material) {
+                       const MaterialPtr& material) {
   Object obj(Shape(Shape::Type::kRect), material);
   obj.position_ = vec3(position, z);
   obj.size_ = size;
@@ -27,7 +24,7 @@ Object Object::NewRect(const vec2& position,
 Object Object::NewCircle(const vec2& center,
                          float radius,
                          float z,
-                         const Material* material) {
+                         const MaterialPtr& material) {
   Object obj(Shape(Shape::Type::kCircle), material);
   obj.position_ = vec3(center.x - radius, center.y - radius, z);
   obj.size_ = vec2(radius * 2.f, radius * 2.f);

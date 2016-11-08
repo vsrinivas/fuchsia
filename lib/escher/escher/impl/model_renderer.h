@@ -7,6 +7,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_uniform_writer.h"
+#include "escher/renderer/texture.h"
 #include "escher/shape/mesh.h"
 
 namespace escher {
@@ -14,9 +15,10 @@ namespace impl {
 
 class ModelData;
 
+// ModelRenderer is a subcomponent used by PaperRenderer.
 class ModelRenderer {
  public:
-  ModelRenderer(MeshManager* mesh_manager,
+  ModelRenderer(EscherImpl* escher,
                 ModelData* model_data,
                 PipelineCache* pipeline_cache);
   ~ModelRenderer();
@@ -35,8 +37,12 @@ class ModelRenderer {
   MeshPtr CreateRectangle();
   MeshPtr CreateCircle();
 
+  static TexturePtr CreateWhiteTexture(EscherImpl* escher);
+
   MeshPtr rectangle_;
   MeshPtr circle_;
+
+  TexturePtr white_texture_;
 };
 
 }  // namespace impl

@@ -36,11 +36,11 @@ std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
 }
 
 // Constructor helper.
-std::unique_ptr<MeshManager> NewMeshManager(CommandBufferPool* regular_pool,
+std::unique_ptr<MeshManager> NewMeshManager(CommandBufferPool* main_pool,
                                             CommandBufferPool* transfer_pool,
                                             GpuAllocator* allocator) {
   return std::make_unique<MeshManager>(
-      transfer_pool ? transfer_pool : regular_pool, allocator);
+      transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
 }  // namespace
@@ -54,9 +54,9 @@ EscherImpl::EscherImpl(const VulkanContext& context,
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
       image_cache_(std::make_unique<ImageCache>(context.device,
                                                 context.physical_device,
-                                                context.queue,
-                                                gpu_allocator(),
-                                                command_buffer_pool())),
+                                                command_buffer_pool(),
+                                                transfer_command_buffer_pool(),
+                                                gpu_allocator())),
       mesh_manager_(NewMeshManager(command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),

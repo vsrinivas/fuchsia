@@ -38,16 +38,24 @@ vk::DescriptorSetLayout ModelData::NewPerModelLayout() {
 }
 
 vk::DescriptorSetLayout ModelData::NewPerObjectLayout() {
-  vk::DescriptorSetLayoutBinding binding;
-  binding.binding = 0;
-  binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-  binding.descriptorCount = 1;
-  binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
-  binding.stageFlags |= vk::ShaderStageFlagBits::eVertex;
+  vk::DescriptorSetLayoutBinding bindings[2];
+  auto& uniform_binding = bindings[0];
+  auto& texture_binding = bindings[1];
+
+  uniform_binding.binding = 0;
+  uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+  uniform_binding.descriptorCount = 1;
+  uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
+  uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eVertex;
+
+  texture_binding.binding = 1;
+  texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+  texture_binding.descriptorCount = 1;
+  texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
   vk::DescriptorSetLayoutCreateInfo info;
-  info.bindingCount = 1;
-  info.pBindings = &binding;
+  info.bindingCount = 2;
+  info.pBindings = bindings;
 
   return ESCHER_CHECKED_VK_RESULT(device_.createDescriptorSetLayout(info));
 }

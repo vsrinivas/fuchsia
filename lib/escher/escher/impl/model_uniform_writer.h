@@ -33,7 +33,9 @@ class ModelUniformWriter {
   // difference: binding the data requires passing the token obtained when the
   // data was written.
   typedef uint32_t PerObjectBinding;
-  PerObjectBinding WritePerObjectData(const ModelData::PerObject& per_object);
+  PerObjectBinding WritePerObjectData(const ModelData::PerObject& per_object,
+                                      vk::ImageView texture,
+                                      vk::Sampler sampler);
   void BindPerObjectData(PerObjectBinding binding,
                          vk::PipelineLayout pipeline_layout,
                          vk::CommandBuffer command_buffer);

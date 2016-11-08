@@ -12,15 +12,22 @@ namespace impl {
 namespace {
 
 vk::DescriptorPool CreateDescriptorPool(vk::Device device, uint32_t capacity) {
-  vk::DescriptorPoolSize pool_size;
-  pool_size = pool_size = vk::DescriptorPoolSize();
-  pool_size.type = vk::DescriptorType::eUniformBuffer;
-  pool_size.descriptorCount = capacity + 1;
+  vk::DescriptorPoolSize pool_sizes[] = {vk::DescriptorPoolSize(),
+                                         vk::DescriptorPoolSize()};
+  pool_sizes[0].type = vk::DescriptorType::eUniformBuffer;
+  pool_sizes[0].descriptorCount = capacity + 1;
+  pool_sizes[1].type = vk::DescriptorType::eCombinedImageSampler;
+  pool_sizes[1].descriptorCount = capacity;
 
+  // TODO: GDC 2016 "Vulkan Fast Paths" presentation suggests not to use
+  // eFreeDescriptorSet, which might result in fragmentation.  Actually,
+  // this flag is probably unnecessary, since I only free the sets in the
+  // destructor.  I'm not sure what to do instead... could it be as simple as
+  // calling resetDescriptorPool() immediately before destroyDescriptorPool()?
   vk::DescriptorPoolCreateInfo pool_info;
   pool_info.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-  pool_info.poolSizeCount = 1;
-  pool_info.pPoolSizes = &pool_size;
+  pool_info.poolSizeCount = 2;
+  pool_info.pPoolSizes = pool_sizes;
   pool_info.maxSets = capacity + 1;
 
   return ESCHER_CHECKED_VK_RESULT(device.createDescriptorPool(pool_info));
@@ -78,26 +85,26 @@ ModelUniformWriter::ModelUniformWriter(
   {
     vk::DescriptorBufferInfo info;
     info.buffer = uniforms_.buffer();
-    info.offset = 0;
 
     vk::WriteDescriptorSet write;
-    write.dstBinding = 0;
     write.dstArrayElement = 0;
     write.descriptorCount = 1;
+    write.descriptorType = vk::DescriptorType::eUniformBuffer;
     write.pBufferInfo = &info;
 
     // Per-Model.
     info.range = sizeof(ModelData::PerModel);
+    info.offset = 0;
     write.dstSet = per_model_descriptor_set_;
-    write.descriptorType = vk::DescriptorType::eUniformBuffer;
+    write.dstBinding = ModelData::PerModel::kDescriptorSetUniformBinding;
     device_.updateDescriptorSets(1, &write, 0, nullptr);
 
     // Per-Object.
     info.range = sizeof(ModelData::PerObject);
-    write.descriptorType = vk::DescriptorType::eUniformBuffer;
     for (size_t i = 0; i < per_object_descriptor_sets_.size(); ++i) {
-      write.dstSet = per_object_descriptor_sets_[i];
       info.offset = (i + 1) * kMinUniformBufferOffsetAlignment;
+      write.dstSet = per_object_descriptor_sets_[i];
+      write.dstBinding = ModelData::PerObject::kDescriptorSetUniformBinding;
       device_.updateDescriptorSets(1, &write, 0, nullptr);
     }
   }
@@ -118,11 +125,29 @@ void ModelUniformWriter::WritePerModelData(
 }
 
 ModelUniformWriter::PerObjectBinding ModelUniformWriter::WritePerObjectData(
-    const ModelData::PerObject& per_object) {
+    const ModelData::PerObject& per_object,
+    vk::ImageView texture,
+    vk::Sampler sampler) {
+  // Write the uniforms to the buffer.
   FTL_DCHECK(write_index_ < capacity_);
   auto ptr = reinterpret_cast<ModelData::PerObject*>(
       &uniforms_.Map()[(write_index_ + 1) * kMinUniformBufferOffsetAlignment]);
   ptr[0] = per_object;
+
+  // Update the texture.
+  vk::DescriptorImageInfo image_info;
+  image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  image_info.imageView = texture;
+  image_info.sampler = sampler;
+  vk::WriteDescriptorSet write;
+  write.dstSet = per_object_descriptor_sets_[write_index_];
+  write.dstBinding = ModelData::PerObject::kDescriptorSetSamplerBinding;
+  write.dstArrayElement = 0;
+  write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+  write.descriptorCount = 1;
+  write.pImageInfo = &image_info;
+  device_.updateDescriptorSets(1, &write, 0, nullptr);
+
   return write_index_++;
 }
 
@@ -135,6 +160,18 @@ void ModelUniformWriter::Flush(vk::CommandBuffer command_buffer) {
 // TODO: there should be a barrier similar to the following, but it cannot
 // happen within a render-pass.  To address this, ModelRenderer::Draw() should
 // be split into Prepare() and Draw() methods.
+// TODO: for a variety of reasons (see below) we may want to use an individual
+// buffer for each PerObject data.  If we do this, then we might wish to use
+// a global memory barrier rather than setting barriers for each buffer
+// individually.  Reasons to use an individual buffer:
+//   - we're now wasting a lot of space due to kMinUniformBufferOffsetAlignment.
+//   - would make it easier to have per-pipeline descriptor sets, as follows.
+//     Each pipeline could be associated with pools for PerModel/PerObject/etc.
+//     data (these pools could be shared with other pipelines that use the
+//     same descriptor-set layouts... note that two pipelines might share the
+//     same same PerModel pool, but have different PerObject pools).  Each pool
+//     entry would contain a descriptor set, but also a uniform buffer and any
+//     other useful data (e.g. samplers).
 #if 0
   uint32_t flushed_size = (write_index_ + 1) * kMinUniformBufferOffsetAlignment;
   vk::BufferMemoryBarrier barrier;
@@ -166,10 +203,10 @@ void ModelUniformWriter::BecomeWritable() {
 void ModelUniformWriter::BindPerModelData(vk::PipelineLayout pipeline_layout,
                                           vk::CommandBuffer command_buffer) {
   FTL_DCHECK(!is_writable_);
-  command_buffer.bindDescriptorSets(
-      vk::PipelineBindPoint::eGraphics, pipeline_layout,
-      ModelData::PerModel::kDescriptorSetBindIndex, 1,
-      &per_model_descriptor_set_, 0, nullptr);
+  command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                    pipeline_layout,
+                                    ModelData::PerModel::kDescriptorSetIndex, 1,
+                                    &per_model_descriptor_set_, 0, nullptr);
 }
 
 void ModelUniformWriter::BindPerObjectData(PerObjectBinding binding,
@@ -178,7 +215,7 @@ void ModelUniformWriter::BindPerObjectData(PerObjectBinding binding,
   FTL_DCHECK(!is_writable_);
   command_buffer.bindDescriptorSets(
       vk::PipelineBindPoint::eGraphics, pipeline_layout,
-      ModelData::PerObject::kDescriptorSetBindIndex, 1,
+      ModelData::PerObject::kDescriptorSetIndex, 1,
       &(per_object_descriptor_sets_[binding]), 0, nullptr);
 }
 

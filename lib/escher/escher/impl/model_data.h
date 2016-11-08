@@ -20,14 +20,24 @@ class GpuAllocator;
 
 class ModelData {
  public:
+  // Describes per-model data accessible by shaders.
   struct PerModel {
-    static constexpr uint32_t kDescriptorSetBindIndex = 0;
+    // layout(set = 0, ...)
+    static constexpr uint32_t kDescriptorSetIndex = 0;
+    // layout(set = 0, binding = 0) uniform PerObject { ... }
+    static constexpr uint32_t kDescriptorSetUniformBinding = 0;
 
     vec4 brightness;
   };
 
+  // Describes per-object data accessible by shaders.
   struct PerObject {
-    static constexpr uint32_t kDescriptorSetBindIndex = 1;
+    // layout(set = 1, ...)
+    static constexpr uint32_t kDescriptorSetIndex = 1;
+    // layout(set = 1, binding = 0) uniform PerObject { ... }
+    static constexpr uint32_t kDescriptorSetUniformBinding = 0;
+    // layout(set = 1, binding = 1) sampler2D PerObjectSampler;
+    static constexpr uint32_t kDescriptorSetSamplerBinding = 1;
 
     mat4 transform;
     vec4 color;

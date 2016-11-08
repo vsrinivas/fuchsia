@@ -4,6 +4,7 @@
 
 #include "escher/escher.h"
 #include "escher/impl/escher_impl.h"
+#include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/renderer/paper_renderer.h"
@@ -21,6 +22,11 @@ MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
                                       size_t max_index_count) {
   return impl_->mesh_manager()->NewMeshBuilder(spec, max_vertex_count,
                                                max_index_count);
+}
+
+// Return new Image containing the provided pixels.
+ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
+  return impl_->image_cache()->NewRgbaImage(width, height, bytes);
 }
 
 PaperRendererPtr Escher::NewPaperRenderer() {

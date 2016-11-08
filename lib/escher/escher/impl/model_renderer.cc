@@ -6,26 +6,31 @@
 
 #include "escher/geometry/tessellation.h"
 #include "escher/impl/command_buffer.h"
+#include "escher/impl/escher_impl.h"
+#include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/pipeline.h"
 #include "escher/impl/pipeline_cache.h"
+#include "escher/renderer/image.h"
 #include "escher/scene/model.h"
 #include "escher/scene/shape.h"
 #include "escher/scene/stage.h"
+#include "escher/util/image_loader.h"
 
 namespace escher {
 namespace impl {
 
-ModelRenderer::ModelRenderer(MeshManager* mesh_manager,
+ModelRenderer::ModelRenderer(EscherImpl* escher,
                              ModelData* model_data,
                              PipelineCache* pipeline_cache)
-    : mesh_manager_(mesh_manager),
+    : mesh_manager_(escher->mesh_manager()),
       model_data_(model_data),
       pipeline_cache_(pipeline_cache) {
   rectangle_ = CreateRectangle();
   circle_ = CreateCircle();
+  white_texture_ = CreateWhiteTexture(escher);
 }
 
 ModelRenderer::~ModelRenderer() {}
@@ -43,6 +48,12 @@ void ModelRenderer::Draw(Stage& stage,
   per_model.brightness = vec4(vec3(stage.brightness()), 1.f);
   writer->WritePerModelData(per_model);
 
+  // TODO: temporary hack... this is a way to allow objects to be drawn with
+  // color only... if the object's material doesn't have a texture, then this
+  // 1-pixel pure-white texture is used.
+  vk::ImageView default_image_view = white_texture_->image_view();
+  vk::Sampler default_sampler = white_texture_->sampler();
+
   // Write per-object uniforms, and collect a list of bindings that can be
   // used once the uniforms have been flushed to the GPU.
   FTL_DCHECK(per_object_bindings_.empty());
@@ -57,6 +68,7 @@ void ModelRenderer::Draw(Stage& stage,
     auto& translate_x = per_object.transform[3][0];
     auto& translate_y = per_object.transform[3][1];
     auto& translate_z = per_object.transform[3][2];
+    auto& color = per_object.color;
     for (const Object& o : objects) {
       // Push uniforms for scale/translation and color.
       scale_x = o.width() * kHalfWidthRecip;
@@ -64,9 +76,35 @@ void ModelRenderer::Draw(Stage& stage,
       translate_x = o.position().x * kHalfWidthRecip - 1.f;
       translate_y = o.position().y * kHalfHeightRecip - 1.f;
       translate_z = o.position().z;
-      per_object.color = vec4(o.color(), 1.f);  // always opaque
+      color = vec4(o.material()->color(), 1.f);  // always opaque
 
-      per_object_bindings_.push_back(writer->WritePerObjectData(per_object));
+      // Find the texture to use, either the object's material's texture, or
+      // the default texture if the material doesn't have one.
+      vk::ImageView image_view;
+      vk::Sampler sampler;
+      if (auto& texture = o.material()->texture()) {
+        image_view = o.material()->image_view();
+        sampler = o.material()->sampler();
+        command_buffer->AddUsedResource(texture);
+        // TODO: it would be nice if Resource::TakeWaitSemaphore() were virtual
+        // so that we could say texture->TakeWaitSemaphore(), instead of needing
+        // to know that the image is really the thing that we might need to wait
+        // for.  Another approach would be for the Texture constructor to say
+        // SetWaitSemaphore(image->TakeWaitSemaphore()), but this isn't a
+        // bulletproof solution... what if someone else made a Texture with the
+        // same image, and used that one first.  Of course, in general we want
+        // lighter-weight synchronization such as events or barriers... need to
+        // revisit this whole topic.
+        command_buffer->AddWaitSemaphore(
+            texture->image()->TakeWaitSemaphore(),
+            vk::PipelineStageFlagBits::eFragmentShader);
+      } else {
+        image_view = default_image_view;
+        sampler = default_sampler;
+      }
+
+      per_object_bindings_.push_back(
+          writer->WritePerObjectData(per_object, image_view, sampler));
     }
     writer->Flush(vk_command_buffer);
   }
@@ -156,6 +194,15 @@ MeshPtr ModelRenderer::CreateCircle() {
   spec.flags |= MeshAttributeFlagBits::kUV;
 
   return TessellateCircle(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
+}
+
+TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
+  uint8_t channels[4];
+  channels[0] = channels[1] = channels[2] = channels[3] = 255;
+
+  auto image = escher->image_cache()->NewRgbaImage(1, 1, channels);
+  return ftl::MakeRefCounted<Texture>(std::move(image),
+                                      escher->vulkan_context().device);
 }
 
 }  // namespace impl

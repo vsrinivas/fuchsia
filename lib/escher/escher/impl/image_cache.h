@@ -26,20 +26,23 @@ class ImageCache {
   // queue and CommandBufferPool are used to schedule image layout transitions.
   ImageCache(vk::Device device,
              vk::PhysicalDevice physical_device,
-             vk::Queue queue,
-             GpuAllocator* allocator,
-             CommandBufferPool* command_buffer_pool);
+             CommandBufferPool* main_pool,
+             CommandBufferPool* transfer_pool,
+             GpuAllocator* allocator);
   ~ImageCache();
-  ImagePtr NewImage(const vk::ImageCreateInfo& info);
+  ImagePtr NewImage(const vk::ImageCreateInfo& info,
+                    vk::MemoryPropertyFlags memory_flags);
 
   ImagePtr GetDepthImage(vk::Format format, uint32_t width, uint32_t height);
 
-  // Performs a layout transition.  See section 11.4 of the Vulkan spec.
-  void TransitionImageLayout(const ImagePtr& image,
-                             vk::ImageLayout old_layout,
-                             vk::ImageLayout new_layout);
+  // Return new Image containing the provided pixels.  Use transfer queue to
+  // efficiently transfer image data to GPU.
+  ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
 
  private:
+  // TODO: merge this with base Image class.  I now think that the correct
+  // approach is not to reuse "high-level" objects such as images and buffers,
+  // but instead to intelligently manage the underlying memory.
   class Image : public escher::Image {
    public:
     Image(vk::Image image,
@@ -50,9 +53,13 @@ class ImageCache {
           ImageCache* cache);
     ~Image();
 
+    uint8_t* Map() override;
+    void Unmap() override;
+
    private:
     ImageCache* cache_;
-    GpuMemPtr memory_;
+    GpuMemPtr mem_;
+    void* mapped_ = nullptr;
 
     FTL_DISALLOW_COPY_AND_ASSIGN(Image);
   };
@@ -61,9 +68,11 @@ class ImageCache {
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
-  vk::Queue queue_;
+  vk::Queue main_queue_;
+  vk::Queue transfer_queue_;
+  CommandBufferPool* main_command_buffer_pool_;
+  CommandBufferPool* transfer_command_buffer_pool_;
   GpuAllocator* allocator_;
-  CommandBufferPool* command_buffer_pool_;
   uint32_t image_count_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ImageCache);

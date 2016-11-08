@@ -51,8 +51,23 @@ class CommandBuffer {
   // running on the GPU.
   void AddUsedResource(ResourcePtr resource);
 
-  // TODO: is there a better place for this?  It's convenient for now.
+  // Bind index/vertex buffers and write draw command.
+  // Retain mesh in used_resources.
   void DrawMesh(const MeshPtr& mesh);
+
+  // Copy pixels from one image to another.  No image barriers or other
+  // synchronization is used.  Retain both images in used_resources.
+  void CopyImage(ImagePtr src_image,
+                 ImagePtr dst_image,
+                 vk::ImageLayout src_layout,
+                 vk::ImageLayout dst_layout,
+                 vk::ImageCopy* region);
+
+  // Transition the image between the two layouts; see section 11.4 of the
+  // Vulkan spec.  Retain image in used_resources.
+  void TransitionImageLayout(ImagePtr image,
+                             vk::ImageLayout old_layout,
+                             vk::ImageLayout new_layout);
 
  private:
   friend class CommandBufferPool;

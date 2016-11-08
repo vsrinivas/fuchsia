@@ -13,25 +13,27 @@ namespace impl {
 
 ImageCache::ImageCache(vk::Device device,
                        vk::PhysicalDevice physical_device,
-                       vk::Queue queue,
-                       GpuAllocator* allocator,
-                       CommandBufferPool* command_buffer_pool)
+                       CommandBufferPool* main_pool,
+                       CommandBufferPool* transfer_pool,
+                       GpuAllocator* allocator)
     : device_(device),
       physical_device_(physical_device),
-      queue_(queue),
-      allocator_(allocator),
-      command_buffer_pool_(command_buffer_pool) {}
+      main_queue_(main_pool->queue()),
+      transfer_queue_(transfer_pool->queue()),
+      main_command_buffer_pool_(main_pool),
+      transfer_command_buffer_pool_(transfer_pool),
+      allocator_(allocator) {}
 
 ImageCache::~ImageCache() {
   FTL_CHECK(image_count_ == 0);
 }
 
-ftl::RefPtr<Image> ImageCache::NewImage(const vk::ImageCreateInfo& info) {
+ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& info,
+                              vk::MemoryPropertyFlags memory_flags) {
   vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(info));
 
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
-  GpuMemPtr memory =
-      allocator_->Allocate(reqs, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  GpuMemPtr memory = allocator_->Allocate(reqs, memory_flags);
 
   vk::Result result =
       device_.bindImageMemory(image, memory->base(), memory->offset());
@@ -42,9 +44,9 @@ ftl::RefPtr<Image> ImageCache::NewImage(const vk::ImageCreateInfo& info) {
                             info.extent.height, std::move(memory), this));
 }
 
-ftl::RefPtr<Image> ImageCache::GetDepthImage(vk::Format format,
-                                             uint32_t width,
-                                             uint32_t height) {
+ImagePtr ImageCache::GetDepthImage(vk::Format format,
+                                   uint32_t width,
+                                   uint32_t height) {
   vk::ImageCreateInfo info;
   info.imageType = vk::ImageType::e2D;
   info.format = format;
@@ -55,66 +57,93 @@ ftl::RefPtr<Image> ImageCache::GetDepthImage(vk::Format format,
   info.tiling = vk::ImageTiling::eOptimal;
   info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
   info.initialLayout = vk::ImageLayout::eUndefined;
+  info.sharingMode = vk::SharingMode::eExclusive;
 
-  auto image = NewImage(info);
-  TransitionImageLayout(image, vk::ImageLayout::eUndefined,
-                        vk::ImageLayout::eDepthStencilAttachmentOptimal);
+  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+  auto command_buffer = main_command_buffer_pool_->GetCommandBuffer();
+  command_buffer->TransitionImageLayout(
+      image, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eDepthStencilAttachmentOptimal);
+  command_buffer->Submit(main_queue_, nullptr);
+
   return image;
 }
 
-void ImageCache::TransitionImageLayout(const ImagePtr& image,
-                                       vk::ImageLayout old_layout,
-                                       vk::ImageLayout new_layout) {
-  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
+ImagePtr ImageCache::NewRgbaImage(uint32_t width,
+                                  uint32_t height,
+                                  uint8_t* pixels) {
+  // Create a command-buffer that will copy the pixels to the final image.
+  // Do this first because it may free up memory that was used by previous
+  // uploads (when finished command-buffers release any resources that they
+  // were retaining).
+  auto command_buffer = transfer_command_buffer_pool_->GetCommandBuffer();
+  SemaphorePtr semaphore = Semaphore::New(device_);
+  command_buffer->AddSignalSemaphore(semaphore);
 
-  vk::ImageMemoryBarrier barrier;
-  barrier.oldLayout = old_layout;
-  barrier.newLayout = new_layout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = image->image();
+  // Create the "transfer source" Image.
+  vk::ImageCreateInfo info;
+  info.imageType = vk::ImageType::e2D;
+  info.format = vk::Format::eR8G8B8A8Unorm;
+  info.extent = vk::Extent3D{width, height, 1};
+  info.mipLevels = 1;
+  info.arrayLayers = 1;
+  info.samples = vk::SampleCountFlagBits::e1;
+  info.tiling = vk::ImageTiling::eLinear;
+  info.usage = vk::ImageUsageFlagBits::eTransferSrc;
+  info.initialLayout = vk::ImageLayout::ePreinitialized;
+  info.sharingMode = vk::SharingMode::eExclusive;
+  // TODO: potential performance gains by not using eHostCoherent.  Probably
+  // negligible.  Would involve flushing the data after unmapping it below.
+  auto src_image =
+      NewImage(info, vk::MemoryPropertyFlagBits::eHostVisible |
+                         vk::MemoryPropertyFlagBits::eHostCoherent);
 
-  if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-    if (image->HasStencilComponent()) {
-      barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-    }
-  } else {
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-  }
+  // Create the image that will be returned from this function.
+  info.tiling = vk::ImageTiling::eOptimal;
+  info.usage =
+      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  auto dst_image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  dst_image->SetWaitSemaphore(std::move(semaphore));
 
-  barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = 1;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
+  // Copy the pixels into the "transfer source" image.
+  uint8_t* mapped = src_image->Map();
+  memcpy(mapped, pixels, width * height * 4);
+  src_image->Unmap();
 
-  if (old_layout == vk::ImageLayout::ePreinitialized &&
-      new_layout == vk::ImageLayout::eTransferSrcOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-  } else if (old_layout == vk::ImageLayout::ePreinitialized &&
-             new_layout == vk::ImageLayout::eTransferDstOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-  } else if (old_layout == vk::ImageLayout::eTransferDstOptimal &&
-             new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-  } else if (old_layout == vk::ImageLayout::eUndefined &&
-             new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
-                            vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-  } else {
-    FTL_LOG(ERROR) << "Unsupported layout transition from: "
-                   << to_string(old_layout) << " to: " << to_string(new_layout);
-    FTL_DCHECK(false);
-    return;
-  }
-  command_buffer->get().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                                        vk::PipelineStageFlagBits::eTopOfPipe,
-                                        vk::DependencyFlags(), 0, nullptr, 0,
-                                        nullptr, 1, &barrier);
-  command_buffer->Submit(queue_, nullptr);
+  // Write image-copy command, and submit the command buffer.  No barrier is
+  // required since we have added a "wait semaphore" to dst_image.
+  // TODO: if we weren't using a transfer-only queue, it would be more efficient
+  // to use a barrier than a semaphore.
+  vk::ImageSubresourceLayers subresource;
+  subresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  subresource.baseArrayLayer = 0;
+  subresource.mipLevel = 0;
+  subresource.layerCount = 1;
+  vk::ImageCopy region;
+  region.srcSubresource = subresource;
+  region.dstSubresource = subresource;
+  region.srcOffset = vk::Offset3D{0, 0, 0};
+  region.dstOffset = vk::Offset3D{0, 0, 0};
+  region.extent.width = width;
+  region.extent.height = height;
+  region.extent.depth = 1;
+
+  command_buffer->TransitionImageLayout(src_image,
+                                        vk::ImageLayout::ePreinitialized,
+                                        vk::ImageLayout::eTransferSrcOptimal);
+  command_buffer->TransitionImageLayout(dst_image,
+                                        vk::ImageLayout::ePreinitialized,
+                                        vk::ImageLayout::eTransferDstOptimal);
+  command_buffer->CopyImage(std::move(src_image), dst_image,
+                            vk::ImageLayout::eTransferSrcOptimal,
+                            vk::ImageLayout::eTransferDstOptimal, &region);
+  command_buffer->TransitionImageLayout(
+      dst_image, vk::ImageLayout::eTransferDstOptimal,
+      vk::ImageLayout::eShaderReadOnlyOptimal);
+  command_buffer->Submit(transfer_queue_, nullptr);
+
+  return dst_image;
 }
 
 void ImageCache::DestroyImage(vk::Image image, vk::Format format) {
@@ -130,10 +159,35 @@ ImageCache::Image::Image(vk::Image image,
                          ImageCache* cache)
     : escher::Image(image, format, width, height),
       cache_(cache),
-      memory_(std::move(memory)) {}
+      mem_(std::move(memory)) {}
 
 ImageCache::Image::~Image() {
-  cache_->DestroyImage(image(), format());
+  FTL_DCHECK(!mapped_);
+  cache_->DestroyImage(get(), format());
+}
+
+uint8_t* ImageCache::Image::Map() {
+  if (!mapped_) {
+    mapped_ = ESCHER_CHECKED_VK_RESULT(
+        cache_->device_.mapMemory(mem_->base(), mem_->offset(), mem_->size()));
+  }
+  return reinterpret_cast<uint8_t*>(mapped_);
+}
+
+void ImageCache::Image::Unmap() {
+  if (mapped_) {
+    vk::Device device = cache_->device_;
+
+    // TODO: only flush if the coherent bit isn't set; also see Buffer::Unmap().
+    vk::MappedMemoryRange range;
+    range.memory = mem_->base();
+    range.offset = mem_->offset();
+    range.size = mem_->size();
+    device.flushMappedMemoryRanges(1, &range);
+
+    device.unmapMemory(mem_->base());
+    mapped_ = nullptr;
+  }
 }
 
 }  // namespace impl

@@ -30,6 +30,9 @@ class Escher : public MeshBuilderFactory {
                                 size_t max_vertex_count,
                                 size_t max_index_count) override;
 
+  // Return new Image containing the provided pixels.
+  ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
+
   PaperRendererPtr NewPaperRenderer();
 
  private:

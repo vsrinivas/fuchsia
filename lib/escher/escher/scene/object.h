@@ -21,32 +21,28 @@ class Object {
   const Shape& shape() const { return shape_; }
 
   // The material with which to fill the shape.
-  const Material* material() const { return material_; }
+  const MaterialPtr& material() const { return material_; }
 
   static Object NewRect(const vec2& position,
                         const vec2& size,
                         float z,
-                        const Material* material);
+                        const MaterialPtr& material);
   static Object NewCircle(const vec2& center,
                           float radius,
                           float z,
-                          const Material* material);
-
-  const vec3& color() const { return color_; }
-  void set_color(const vec3& color) { color_ = color; }
+                          const MaterialPtr& material);
 
   float width() const { return size_.x; }
   float height() const { return size_.y; }
   const vec3& position() const { return position_; }
 
  private:
-  Object(const Shape& shape, const Material* material);
+  Object(const Shape& shape, const MaterialPtr& material);
 
   Shape shape_;
-  const Material* material_;
+  MaterialPtr material_;
   vec3 position_;
   vec2 size_;
-  vec3 color_;
 };
 
 }  // namespace escher

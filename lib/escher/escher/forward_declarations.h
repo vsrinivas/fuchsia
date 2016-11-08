@@ -25,6 +25,7 @@ class Renderer;
 class Semaphore;
 class Shape;
 class Stage;
+class Texture;
 struct VulkanContext;
 struct VulkanSwapchain;
 
@@ -35,6 +36,7 @@ typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;
 typedef ftl::RefPtr<PaperRenderer> PaperRendererPtr;
 typedef ftl::RefPtr<Renderer> RendererPtr;
 typedef ftl::RefPtr<Semaphore> SemaphorePtr;
+typedef ftl::RefPtr<Texture> TexturePtr;
 
 namespace impl {
 class CommandBuffer;
