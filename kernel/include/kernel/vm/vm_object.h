@@ -13,6 +13,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <mxtl/array.h>
+#include <mxtl/deleter.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
@@ -79,7 +80,7 @@ protected:
 
     // private destructor, only called from refptr
     virtual ~VmObject();
-    friend mxtl::RefPtr<VmObject>;
+    friend mxtl::default_delete<VmObject>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 

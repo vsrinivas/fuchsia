@@ -14,8 +14,9 @@
 #include <magenta/dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
 #include <magenta/syscalls/pci.h>
-#include <sys/types.h>
+#include <mxtl/deleter.h>
 #include <mxtl/intrusive_single_list.h>
+#include <sys/types.h>
 
 class PciInterruptDispatcher;
 
@@ -37,7 +38,7 @@ public:
         bool claimed() const { return claimed_; }
 
       private:
-        friend class mxtl::RefPtr<PciDeviceWrapper>;
+        friend class mxtl::default_delete<PciDeviceWrapper>;
 
         struct CachePolicyRef {
             uint     ref_count;

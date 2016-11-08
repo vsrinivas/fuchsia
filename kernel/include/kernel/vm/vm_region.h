@@ -10,6 +10,7 @@
 #include <kernel/mutex.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_page_list.h>
+#include <mxtl/deleter.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
@@ -63,7 +64,7 @@ private:
     VmRegion(VmAspace& aspace, vaddr_t base, size_t size, mxtl::RefPtr<VmObject> vmo,
              uint64_t offset, uint arch_mmu_flags, const char* name);
 
-    friend mxtl::RefPtr<VmRegion>;
+    friend mxtl::default_delete<VmRegion>;
     ~VmRegion();
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmRegion);
