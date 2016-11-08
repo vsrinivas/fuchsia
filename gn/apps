@@ -37,10 +37,6 @@
             "bootfs_path": "apps/document_store_test"
         },
         {
-            "binary": "dummy_device_shell",
-            "bootfs_path": "apps/dummy_device_shell"
-        },
-        {
             "binary": "hello_app_child",
             "bootfs_path": "apps/hello_app_child"
         },
@@ -55,10 +51,6 @@
         {
             "binary": "logging",
             "bootfs_path": "apps/logging"
-        },
-        {
-            "binary": "resolver",
-            "bootfs_path": "apps/resolver"
         },
         {
             "binary": "suggestion_engine",

@@ -9,6 +9,10 @@
             "bootfs_path": "apps/device_runner"
         },
         {
+            "binary": "dummy_device_shell",
+            "bootfs_path": "apps/dummy_device_shell"
+        },
+        {
             "binary": "dummy_user_shell",
             "bootfs_path": "apps/dummy_user_shell"
         },
@@ -27,6 +31,10 @@
         {
             "binary": "example_recipe",
             "bootfs_path": "apps/example_recipe"
+        },
+        {
+            "binary": "resolver",
+            "bootfs_path": "apps/resolver"
         },
         {
             "binary": "story_runner",
