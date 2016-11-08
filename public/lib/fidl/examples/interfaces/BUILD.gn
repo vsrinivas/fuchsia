@@ -2,6 +2,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("interfaces") {
   sources = [
-    "hello.fidl"
+    "hello.fidl",
+    "geometry.fidl",
   ]
 }

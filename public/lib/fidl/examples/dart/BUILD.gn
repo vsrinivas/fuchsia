@@ -7,7 +7,6 @@ group("dart") {
 dart_app("hello_fidl_dart") {
   main_dart = "hello_fidl_dart.dart"
   deps = [
-    "//lib/fidl/compiler/interfaces:interfaces_dart",
     "//lib/fidl/examples/interfaces:interfaces_dart",
     "//lib/fidl/dart",
   ]

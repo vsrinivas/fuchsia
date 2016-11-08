@@ -9,21 +9,21 @@ library {{module.name|dot_to_underscore}};
 {%- if needs_dart_async %}
 import 'dart:async';
 {%- endif %}
-{%- if should_gen_mojom_types %}
+{%- if should_gen_fidl_types %}
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 {%- endif %}
 
-{%- if module.structs or module.unions or module.interfaces or module.enums or should_gen_mojom_types%}
+{%- if module.structs or module.unions or module.interfaces or module.enums or should_gen_fidl_types%}
 import 'package:lib.fidl.dart/bindings.dart' as bindings;
 {%- endif %}
 {%- if module.interfaces or has_handles %}
 import 'package:lib.fidl.dart/core.dart' as core;
 {%- endif %}
-{%- if should_gen_mojom_types %}
-{{mojom_types_import}}
+{%- if should_gen_fidl_types %}
+{{fidl_types_import}}
 {%- endif %}
 {{service_describer_import}}
 

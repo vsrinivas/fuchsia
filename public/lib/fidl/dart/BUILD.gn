@@ -8,8 +8,7 @@ dart_package("dart") {
   package_name = "lib.fidl.dart"
 
   deps = [
-#    "//mojo/public/interfaces/application:application_dart",
-#    "//mojo/public/interfaces/bindings:bindings_dart",
+    "//lib/fidl/compiler/interfaces:interfaces_dart"
   ]
 }
 
