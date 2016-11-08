@@ -454,30 +454,13 @@ def ParseStringAttribute(attribute):
   assert isinstance(attribute, basestring)
   return attribute
 
-def GetPackage(ignore_package_annotations, module):
-  if ignore_package_annotations:
-    if module.path.startswith('/'):
-      raise Exception('Uh oh, path %s looks absolute' % module.path)
-    return os.path.dirname(module.path).replace('/', '.')
-  else:
-    if module.attributes and 'DartPackage' in module.attributes:
-      package = ParseStringAttribute(module.attributes['DartPackage'])
-      package = package.strip()
-      if package != '':
-        return package
-    return module.namespace
+def GetPackage(module):
+  if module.path.startswith('/'):
+    raise Exception('Uh oh, path %s looks absolute' % module.path)
+  return os.path.dirname(module.path).replace('/', '.')
 
-def GetImportUri(ignore_package_annotations, module):
-  if ignore_package_annotations:
-      return os.path.join(GetPackage(ignore_package_annotations, module), module.name)
-  else:
-      if module.attributes and 'DartPackage' in module.attributes:
-          package = GetPackage(ignore_package_annotations, module);
-          elements = module.namespace.split('.')
-          elements.append("%s" % module.name)
-          return os.path.join(package, *elements)
-      else:
-          return os.path.join(module.namespace, module.name)
+def GetImportUri(module):
+  return os.path.join(GetPackage(module), module.name)
 
 def RaiseHelper(msg):
     raise Exception(msg)
@@ -531,16 +514,10 @@ class Generator(generator.Generator):
     needs_dart_async = any(any(method.response_parameters is not None
                                for method in interface.methods)
                            for interface in self.GetInterfaces())
-    if self.ignore_package_annotations:
-      service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
-        _service_describer_pkg_short
-      fidl_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
-        _fidl_types_pkg_short
-    else:
-      service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
-              _service_describer_pkg_short
-      fidl_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
-              _fidl_types_pkg_short
+    service_describer_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
+      _service_describer_pkg_short
+    fidl_types_pkg = "package:lib.fidl.compiler.interfaces/%s.fidl.dart" % \
+      _fidl_types_pkg_short
 
     parameters = {
       "namespace": self.module.namespace,
@@ -591,59 +568,15 @@ class Generator(generator.Generator):
 
   def GenerateFiles(self, args):
     self.should_gen_fidl_types = "--generate_type_info" in args
-    self.ignore_package_annotations = "--dart_ignore-package-annotations" in args
 
     elements = self.module.namespace.split('.')
     elements.append("%s.dart" % self.module.name)
 
     lib_module = self.GenerateLibModule(args)
 
-    package_name = GetPackage(self.ignore_package_annotations, self.module)
-    if self.ignore_package_annotations:
-      gen_path = self.MatchMojomFilePath("%s.dart" % self.module.name)
-      self.Write(lib_module, gen_path)
-    else:
-      # List of packages with checked in bindings.
-      # TODO(johnmccutchan): Stop generating bindings as part of build system
-      # and then remove this.
-      packages_with_checked_in_bindings = [
-        '_mojo_for_test_only',
-        'mojo',
-        'mojo_apptest',
-        'mojo_services',
-        'mojo_sdk',
-        'mojom',
-      ]
-      if not (package_name in packages_with_checked_in_bindings):
-        pkg_path = os.path.join("dart-pkg", package_name, "lib", *elements)
-        self.Write(lib_module, pkg_path)
-
-      gen_path = os.path.join("dart-gen", package_name, "lib", *elements)
-      full_gen_path = os.path.join(self.output_dir, gen_path)
-      self.Write(lib_module, gen_path)
-
-      link = self.MatchMojomFilePath("%s.dart" % self.module.name)
-      full_link_path = os.path.join(self.output_dir, link)
-      try:
-        os.unlink(full_link_path)
-      except OSError, exc:
-        # If the file does not exist, ignore the error.
-        if errno.ENOENT == exc.errno:
-          pass
-        else:
-          raise
-      fileutil.EnsureDirectoryExists(os.path.dirname(full_link_path))
-      try:
-        if sys.platform == "win32":
-          shutil.copy(full_gen_path, full_link_path)
-        else:
-          os.symlink(full_gen_path, full_link_path)
-      except OSError as e:
-        # Errno 17 is file already exists. If the link fails because file already
-        # exists assume another instance of this script tried to create the same
-        # file and continue on.
-        if e.errno != 17:
-          raise e
+    package_name = GetPackage(self.module)
+    gen_path = self.MatchMojomFilePath("%s.dart" % self.module.name)
+    self.Write(lib_module, gen_path)
 
   def GetImports(self, args):
     used_imports = self.GetUsedImports(self.module)
@@ -663,7 +596,7 @@ class Generator(generator.Generator):
       each_import["unique_name"] = unique_name + '_fidl'
       counter += 1
 
-      each_import["rebased_path"] = GetImportUri(self.ignore_package_annotations, each_import['module'])
+      each_import["rebased_path"] = GetImportUri(each_import['module'])
     return sorted(used_imports.values(), key=lambda x: x['rebased_path'])
 
   def GetImportedInterfaces(self):

@@ -57,16 +57,6 @@ class Proxy<T> implements FidlInterface<T> {
   }
 }
 
-/// Generated Proxy classes have a factory Proxy.connectToService which takes
-/// a ServiceConnector, a url, and optionally a service name and returns a
-/// bound Proxy. For example, every class extending the Application base class
-/// in package:mojo/application.dart inherits an implementation of the
-/// ServiceConnector interface.
-abstract class ServiceConnector {
-  /// Connects [proxy] to the service called [serviceName] that lives at [url].
-  void connectToService(String url, Proxy proxy, [String serviceName]);
-}
-
 abstract class ProxyMessageHandler extends core.FidlEventHandler
     implements FidlInterfaceControl {
   HashMap<int, Function> _callbackMap = new HashMap<int, Function>();

@@ -29,6 +29,7 @@ namespace dart {
   V(MxChannel_Write, 5)            \
   V(MxChannel_Read, 5)             \
   V(MxChannel_QueryAndRead, 3)     \
+  V(MxTime_Get, 1)                 \
   V(MxHandle_Close, 1)             \
   V(MxHandle_RegisterFinalizer, 2) \
   V(MxHandleWatcher_SendControlData, 5)
@@ -129,6 +130,14 @@ void MxHandle_RegisterFinalizer(Dart_NativeArguments arguments) {
       handle_instance, reinterpret_cast<void*>(callback_peer),
       sizeof(CloserCallbackPeer), HandleCloserCallback);
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
+}
+
+void MxTime_Get(Dart_NativeArguments arguments) {
+  int64_t clock_id;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &clock_id, InvalidArgument);
+
+  mx_time_t time = mx_time_get(clock_id);
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(time));
 }
 
 void MxHandle_Close(Dart_NativeArguments arguments) {

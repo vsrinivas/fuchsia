@@ -4,6 +4,13 @@
 
 part of internal;
 
+class MxTime {
+  static int _get(int clockId) native "MxTime_Get";
+
+  // Clock ID zero is MX_CLOCK_MONOTONIC.
+  static int timerMillisecondClock() => _get(0) ~/ (1000 * 1000);
+}
+
 // Data associated with an open handle.
 class _OpenHandle {
   final StackTrace stack;
@@ -96,4 +103,12 @@ class MxChannel {
 
   static void queryAndRead(int handleToken, int flags, List result)
       native "MxChannel_QueryAndRead";
+}
+
+int _environmentHandle;
+int _outgoingServices;
+
+class MxStartupInfo {
+  static int environment => _environmentHandle;
+  static int outgoingServices => outgoingServices;
 }
