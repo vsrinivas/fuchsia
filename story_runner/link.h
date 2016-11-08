@@ -7,16 +7,16 @@
 
 #include <unordered_map>
 
-#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/services/document/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
-#include "apps/modular/services/story/link.mojom.h"
+#include "apps/modular/services/story/link.fidl.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/bindings/interface_ptr_set.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/struct_ptr.h"
 
 namespace modular {
 
@@ -55,16 +55,16 @@ class LinkImpl : public Link {
   void AddDocuments(MojoDocMap docs) override;
   void SetAllDocuments(MojoDocMap docs) override;
   void Query(const QueryCallback& callback) override;
-  void Watch(mojo::InterfaceHandle<LinkChanged> watcher) override;
-  void WatchAll(mojo::InterfaceHandle<LinkChanged> watcher) override;
-  void Dup(mojo::InterfaceRequest<Link> dup) override;
+  void Watch(fidl::InterfaceHandle<LinkChanged> watcher) override;
+  void WatchAll(fidl::InterfaceHandle<LinkChanged> watcher) override;
+  void Dup(fidl::InterfaceRequest<Link> dup) override;
 
   // Connect a new LinkImpl object on the heap. It manages its own lifetime.
   // If this pipe is closed, then everything will be torn down. In comparison,
   // handles created by Dup() do not affect other handles.
   static void New(std::shared_ptr<SessionPage> page,
-                  const mojo::String& name,
-                  mojo::InterfaceRequest<Link> req);
+                  const fidl::String& name,
+                  fidl::InterfaceRequest<Link> req);
 
  private:
   // LinkImpl may not be constructed on the stack, so the constructors
@@ -72,16 +72,16 @@ class LinkImpl : public Link {
 
   // Called from New() by outside clients.
   LinkImpl(std::shared_ptr<SessionPage> page,
-           const mojo::String& name,
-           mojo::InterfaceRequest<Link> req);
+           const fidl::String& name,
+           fidl::InterfaceRequest<Link> req);
 
   // Called from Dup().
-  LinkImpl(mojo::InterfaceRequest<Link> req, SharedLinkImplData* shared);
+  LinkImpl(fidl::InterfaceRequest<Link> req, SharedLinkImplData* shared);
 
   // For use by the binding error handler.
   void RemoveImpl();
 
-  void AddWatcher(mojo::InterfaceHandle<LinkChanged> watcher,
+  void AddWatcher(fidl::InterfaceHandle<LinkChanged> watcher,
                   const bool self_notify);
   void NotifyWatchers(const MojoDocMap& docs, const bool self_notify);
   void DatabaseChanged(const MojoDocMap& docs);
@@ -89,12 +89,12 @@ class LinkImpl : public Link {
   // |shared_| is owned (and eventually deleted) by the LinkImpl
   // instance that created it, aka the primary instance.
   SharedLinkImplData* const shared_;
-  mojo::Binding<Link> binding_;
+  fidl::Binding<Link> binding_;
 
   // These watchers do not want self notifications.
-  mojo::InterfacePtrSet<LinkChanged> watchers_;
+  fidl::InterfacePtrSet<LinkChanged> watchers_;
   // These watchers want all notifications.
-  mojo::InterfacePtrSet<LinkChanged> all_watchers_;
+  fidl::InterfacePtrSet<LinkChanged> all_watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };

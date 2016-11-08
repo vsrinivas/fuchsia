@@ -4,28 +4,30 @@
 
 #include "apps/modular/story_runner/session.h"
 
-#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/mojo/array_to_string.h"
-#include "apps/modular/services/story/link.mojom.h"
-#include "apps/modular/services/story/resolver.mojom.h"
-#include "apps/modular/services/story/session.mojom.h"
+#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/resolver.fidl.h"
+#include "apps/modular/services/story/session.fidl.h"
 #include "apps/modular/story_runner/link.h"
-#include "apps/mozart/services/views/interfaces/view_provider.mojom.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/struct_ptr.h"
-#include "mojo/public/interfaces/application/service_provider.mojom.h"
 
 namespace modular {
 
 ModuleControllerImpl::ModuleControllerImpl(
     SessionHost* const session,
-    mojo::InterfacePtr<Module> module,
-    mojo::InterfaceRequest<ModuleController> module_controller)
+    fidl::InterfacePtr<Module> module,
+    fidl::InterfaceRequest<ModuleController> module_controller)
     : session_(session),
       binding_(this, std::move(module_controller)),
       module_(std::move(module)) {
@@ -46,13 +48,13 @@ void ModuleControllerImpl::Done() {
   }
 }
 
-void ModuleControllerImpl::Watch(mojo::InterfaceHandle<ModuleWatcher> watcher) {
+void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
   watchers_.push_back(
-      mojo::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
+      fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
 }
 
 SessionHost::SessionHost(SessionImpl* const impl,
-                         mojo::InterfaceRequest<Session> session)
+                         fidl::InterfaceRequest<Session> session)
     : impl_(impl),
       binding_(this, std::move(session)),
       module_controller_(nullptr),
@@ -63,9 +65,9 @@ SessionHost::SessionHost(SessionImpl* const impl,
 
 SessionHost::SessionHost(
     SessionImpl* const impl,
-    mojo::InterfaceRequest<Session> session,
-    mojo::InterfacePtr<Module> module,
-    mojo::InterfaceRequest<ModuleController> module_controller)
+    fidl::InterfaceRequest<Session> session,
+    fidl::InterfacePtr<Module> module,
+    fidl::InterfaceRequest<ModuleController> module_controller)
     : impl_(impl),
       binding_(this, std::move(session)),
       module_controller_(nullptr),
@@ -102,17 +104,17 @@ SessionHost::~SessionHost() {
   }
 }
 
-void SessionHost::CreateLink(const mojo::String& name,
-                             mojo::InterfaceRequest<Link> link) {
+void SessionHost::CreateLink(const fidl::String& name,
+                             fidl::InterfaceRequest<Link> link) {
   FTL_LOG(INFO) << "SessionHost::CreateLink() " << name;
   impl_->CreateLink(name, std::move(link));
 }
 
 void SessionHost::StartModule(
-    const mojo::String& query,
-    mojo::InterfaceHandle<Link> link,
-    mojo::InterfaceRequest<ModuleController> module_controller,
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    const fidl::String& query,
+    fidl::InterfaceHandle<Link> link,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionHost::StartModule() " << query;
   impl_->StartModule(query, std::move(link), std::move(module_controller),
                      std::move(view_owner));
@@ -133,11 +135,12 @@ void SessionHost::Remove(ModuleControllerImpl* const module_controller) {
   module_controller_ = nullptr;
 }
 
-SessionImpl::SessionImpl(mojo::Shell* const shell,
-                         mojo::InterfaceHandle<Resolver> resolver,
-                         mojo::InterfaceHandle<SessionStorage> session_storage,
-                         mojo::InterfaceRequest<Session> req)
-    : shell_(shell), page_(new SessionPage(std::move(session_storage))) {
+SessionImpl::SessionImpl(std::shared_ptr<ApplicationContext> application_context,
+                         fidl::InterfaceHandle<Resolver> resolver,
+                         fidl::InterfaceHandle<SessionStorage> session_storage,
+                         fidl::InterfaceRequest<Session> req)
+    : application_context_(application_context),
+      page_(new SessionPage(std::move(session_storage))) {
   FTL_LOG(INFO) << "SessionImpl()";
   resolver_.Bind(std::move(resolver));
 
@@ -165,39 +168,45 @@ void SessionImpl::Remove(SessionHost* const client) {
   clients_.erase(f);
 }
 
-void SessionImpl::CreateLink(const mojo::String& name,
-                             mojo::InterfaceRequest<Link> link) {
+void SessionImpl::CreateLink(const fidl::String& name,
+                             fidl::InterfaceRequest<Link> link) {
   LinkImpl::New(page_, name, std::move(link));
 }
 
 void SessionImpl::StartModule(
-    const mojo::String& query,
-    mojo::InterfaceHandle<Link> link,
-    mojo::InterfaceRequest<ModuleController> module_controller,
-    mojo::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    const fidl::String& query,
+    fidl::InterfaceHandle<Link> link,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   FTL_LOG(INFO) << "SessionImpl::StartModule()";
   resolver_->Resolve(
       query, ftl::MakeCopyable([
         this, link = std::move(link),
         module_controller = std::move(module_controller),
         view_owner = std::move(view_owner)
-      ](mojo::String module_url) mutable {
+      ](fidl::String module_url) mutable {
         FTL_LOG(INFO) << "SessionImpl::StartModule() resolver callback";
 
-        mojo::InterfacePtr<mozart::ViewProvider> view_provider;
-        mojo::ConnectToService(shell_, module_url,
-                               mojo::GetProxy(&view_provider));
+        ApplicationLaunchInfoPtr launch_info = ApplicationLaunchInfo::New();
 
-        mojo::InterfacePtr<mojo::ServiceProvider> service_provider;
+        ServiceProviderPtr app_services;
+        launch_info->services = GetProxy(&app_services);
+
+        application_context_->launcher()->CreateApplication(
+            std::move(launch_info), nullptr);
+
+        mozart::ViewProviderPtr view_provider;
+        ConnectToService(app_services.get(), fidl::GetProxy(&view_provider));
+
+        ServiceProviderPtr view_services;
         view_provider->CreateView(std::move(view_owner),
-                                  mojo::GetProxy(&service_provider));
+                                  fidl::GetProxy(&view_services));
 
-        mojo::InterfacePtr<Module> module;
-        service_provider->ConnectToService(Module::Name_,
-                                           GetProxy(&module).PassMessagePipe());
+        ModulePtr module;
+        ConnectToService(view_services.get(), fidl::GetProxy(&module));
 
-        mojo::InterfaceHandle<Session> self;
-        mojo::InterfaceRequest<Session> self_req = GetProxy(&self);
+        fidl::InterfaceHandle<Session> self;
+        fidl::InterfaceRequest<Session> self_req = GetProxy(&self);
 
         module->Initialize(std::move(self), std::move(link));
 
@@ -206,7 +215,7 @@ void SessionImpl::StartModule(
       }));
 }
 
-SessionPage::SessionPage(mojo::InterfaceHandle<SessionStorage> session_storage)
+SessionPage::SessionPage(fidl::InterfaceHandle<SessionStorage> session_storage)
     : data_(SessionData::New()) {
   FTL_LOG(INFO) << "SessionPage()";
   data_->links.mark_non_null();
@@ -233,8 +242,8 @@ void SessionPage::Init(std::function<void()> done) {
       }));
 }
 
-void SessionPage::MaybeReadLink(const mojo::String& name,
-                                MojoDocMap* const docs_map) const {
+void SessionPage::MaybeReadLink(const fidl::String& name,
+                                MojoDocMap* const docs_map) {
   auto i = data_->links.find(name);
   if (i != data_->links.end()) {
     for (const auto& doc : i.GetValue()->docs) {
@@ -245,7 +254,7 @@ void SessionPage::MaybeReadLink(const mojo::String& name,
                 << name << " docs " << *docs_map;
 }
 
-void SessionPage::WriteLink(const mojo::String& name,
+void SessionPage::WriteLink(const fidl::String& name,
                             const MojoDocMap& docs_map) {
   FTL_LOG(INFO) << "SessionPage::WriteLink() " << to_string(id_) << " name "
                 << name << " docs " << docs_map;

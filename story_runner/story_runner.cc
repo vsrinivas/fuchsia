@@ -5,21 +5,18 @@
 // Implementation of the story runner mojo app and of all mojo
 // services it provides directly or transitively from other services.
 
-#include <mojo/system/main.h>
-
-#include "apps/modular/services/story/session.mojom.h"
-#include "apps/modular/services/story/story_runner.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/modular/services/story/session.fidl.h"
+#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/story_runner/session.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
-#include "mojo/public/cpp/system/macros.h"
-#include "mojo/public/interfaces/application/shell.mojom.h"
+#include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -28,60 +25,59 @@ namespace modular {
 // and then allows to create a Session.
 class StoryRunnerImpl : public StoryRunner {
  public:
-  StoryRunnerImpl(mojo::Shell* const shell,
-                  mojo::InterfaceRequest<StoryRunner> req)
-      : shell_(shell), binding_(this, std::move(req)) {
+  StoryRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
+                  fidl::InterfaceRequest<StoryRunner> req)
+      : application_context_(application_context), binding_(this, std::move(req)) {
     FTL_LOG(INFO) << "StoryRunnerImpl()";
   }
 
   ~StoryRunnerImpl() override { FTL_LOG(INFO) << "~StoryRunnerImpl()"; }
 
   void Initialize(
-      mojo::InterfaceHandle<ResolverFactory> resolver_factory) override {
+      fidl::InterfaceHandle<ResolverFactory> resolver_factory) override {
     resolver_factory_.Bind(std::move(resolver_factory));
   }
 
-  void StartStory(mojo::InterfaceHandle<SessionStorage> session_storage,
-                  mojo::InterfaceRequest<Session> session) override {
-    mojo::InterfaceHandle<Resolver> resolver;
+  void StartStory(fidl::InterfaceHandle<SessionStorage> session_storage,
+                  fidl::InterfaceRequest<Session> session) override {
+    fidl::InterfaceHandle<Resolver> resolver;
     resolver_factory_->GetResolver(GetProxy(&resolver));
-    new SessionImpl(shell_, std::move(resolver), std::move(session_storage),
+    new SessionImpl(application_context_, std::move(resolver), std::move(session_storage),
                     std::move(session));
   }
 
  private:
-  mojo::Shell* const shell_;
-  mojo::InterfacePtr<ResolverFactory> resolver_factory_;
-  mojo::StrongBinding<StoryRunner> binding_;
-  MOJO_DISALLOW_COPY_AND_ASSIGN(StoryRunnerImpl);
+  std::shared_ptr<ApplicationContext> application_context_;
+  fidl::InterfacePtr<ResolverFactory> resolver_factory_;
+  StrongBinding<StoryRunner> binding_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerImpl);
 };
 
-// The StoryRunner mojo app provides instances of the implementation
-// of the StoryRunner service. It is a single service app, but the
-// service impl takes the shell as additional constructor parameter,
-// so we don't reuse the template class here.
-class StoryRunnerApp : public mojo::ApplicationImplBase {
+// The StoryRunnerApp provides instances of the implementation of the
+// StoryRunner service. It is a single service app, but the service
+// impl takes the application launcher as additional constructor
+// parameter, so we don't reuse the template class here.
+class StoryRunnerApp {
  public:
-  StoryRunnerApp() {}
-  ~StoryRunnerApp() override {}
-
-  bool OnAcceptConnection(mojo::ServiceProviderImpl* const s) override {
-    s->AddService<StoryRunner>([this](const mojo::ConnectionContext& ctx,
-                                      mojo::InterfaceRequest<StoryRunner> req) {
-      new StoryRunnerImpl(shell(), std::move(req));
-    });
-
-    return true;
+  StoryRunnerApp()
+      : context_(ApplicationContext::CreateFromStartupInfo()) {
+    FTL_LOG(INFO) << "StoryRunnerApp()";
+    context_->outgoing_services()->AddService<StoryRunner>(
+        [this](fidl::InterfaceRequest<StoryRunner> request) {
+          new StoryRunnerImpl(context_, std::move(request));
+        });
   }
 
  private:
-  MOJO_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
+  std::shared_ptr<ApplicationContext> context_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
 };
 
 }  // namespace modular
 
-MojoResult MojoMain(MojoHandle request) {
-  FTL_LOG(INFO) << "story-runner main";
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
   modular::StoryRunnerApp app;
-  return mojo::RunApplication(request, &app);
+  loop.Run();
+  return 0;
 }

@@ -11,7 +11,7 @@
 
 namespace modular {
 
-std::string to_string(const fidl::Array<uint8_t>& data) {
+std::string to_string(fidl::Array<uint8_t>& data) {
   std::string ret;
   ret.reserve(data.size());
 

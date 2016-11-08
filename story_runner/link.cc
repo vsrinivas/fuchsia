@@ -4,14 +4,14 @@
 
 #include "apps/modular/story_runner/link.h"
 
-#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/services/document/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
-#include "apps/modular/services/story/link.mojom.h"
+#include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/story_runner/session.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
-#include "mojo/public/cpp/bindings/interface_ptr.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 
@@ -20,17 +20,13 @@ using document_store::DocumentPtr;
 using document_store::Value;
 using document_store::ValuePtr;
 
-using modular::DocumentEditor;
-using modular::MojoDocMap;
-using modular::operator<<;
-
-using mojo::Array;
-using mojo::InterfaceHandle;
-using mojo::InterfacePtr;
-using mojo::InterfaceRequest;
+using fidl::Array;
+using fidl::InterfaceHandle;
+using fidl::InterfacePtr;
+using fidl::InterfaceRequest;
 
 struct SharedLinkImplData {
-  SharedLinkImplData(std::shared_ptr<SessionPage> p, const mojo::String& n)
+  SharedLinkImplData(std::shared_ptr<SessionPage> p, const fidl::String& n)
       : name(n), page_(p) {
     // The document map is always valid, even when empty.
     docs_map.mark_non_null();
@@ -46,16 +42,16 @@ struct SharedLinkImplData {
 
   MojoDocMap docs_map;
   std::vector<std::unique_ptr<LinkImpl>> impls;
-  const mojo::String name;
+  const fidl::String name;
 
  private:
   std::shared_ptr<SessionPage> page_;
 
-  MOJO_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
+  FTL_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
 };
 
 LinkImpl::LinkImpl(std::shared_ptr<SessionPage> page,
-                   const mojo::String& name,
+                   const fidl::String& name,
                    InterfaceRequest<Link> req)
     : shared_(new SharedLinkImplData(page, name)),
       binding_(this, std::move(req)) {
@@ -84,13 +80,13 @@ LinkImpl::~LinkImpl() {
 }
 
 void LinkImpl::New(std::shared_ptr<SessionPage> page,
-                   const mojo::String& name,
+                   const fidl::String& name,
                    InterfaceRequest<Link> req) {
   new LinkImpl(page, name, std::move(req));
 }
 
 void LinkImpl::Query(const LinkImpl::QueryCallback& callback) {
-  callback.Run(shared_->docs_map.Clone());
+  callback(shared_->docs_map.Clone());
 }
 
 void LinkImpl::Watch(InterfaceHandle<LinkChanged> watcher) {

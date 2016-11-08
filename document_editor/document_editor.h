@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
-#define MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
+#ifndef APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
+#define APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
 
 #include <map>
 
@@ -109,4 +109,4 @@ fidl::StructPtr<document_store::Statement> NewStatement(
     fidl::StructPtr<document_store::Value> value);
 }
 
-#endif  // MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__
+#endif  // APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__

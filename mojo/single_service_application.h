@@ -18,13 +18,12 @@ template <class Service, class ServiceImpl>
 class SingleServiceApplication {
  public:
   SingleServiceApplication()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
           new ServiceImpl(std::move(request));
         });
-
-  ~SingleServiceApplication() override = default;
+  }
 
  private:
   std::unique_ptr<modular::ApplicationContext> context_;
