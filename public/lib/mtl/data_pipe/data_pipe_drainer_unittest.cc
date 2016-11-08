@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/system/data_pipe.h"
-#include "gtest/gtest.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 namespace {

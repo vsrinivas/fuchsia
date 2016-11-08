@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "lib/mtl/fidl_data_pipe/data_pipe_drainer.h"
-#include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/legacy_data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/legacy_data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mx/datapipe.h"
+#include "mojo/public/cpp/system/data_pipe.h"
+#include "gtest/gtest.h"
 
 namespace mtl {
 namespace {
 
-class Client : public FidlDataPipeDrainer::Client {
+class Client : public LegacyDataPipeDrainer::Client {
  public:
   Client(const std::function<void()>& callback) : callback_(callback) {}
   ~Client() override {}
@@ -28,11 +28,11 @@ class Client : public FidlDataPipeDrainer::Client {
   std::function<void()> callback_;
 };
 
-TEST(FidlDataPipeDrainer, ReadData) {
+TEST(LegacyDataPipeDrainer, ReadData) {
   MessageLoop message_loop;
   Client client([&message_loop]() { message_loop.QuitNow(); });
-  FidlDataPipeDrainer drainer(&client);
-  drainer.Start(mtl::FidlWriteStringToConsumerHandle("Hello"));
+  LegacyDataPipeDrainer drainer(&client);
+  drainer.Start(mtl::LegacyWriteStringToConsumerHandle("Hello"));
   message_loop.Run();
   EXPECT_EQ("Hello", client.GetValue());
 }

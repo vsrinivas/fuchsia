@@ -4,7 +4,6 @@
 
 #include "lib/mtl/data_pipe/files.h"
 
-#include <mojo/system/result.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -12,9 +11,9 @@
 #include <limits>
 #include <utility>
 
+#include "lib/fidl/c/waiter/async_waiter.h"
+#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/ftl/files/file_descriptor.h"
-#include "mojo/public/cpp/environment/async_waiter.h"
-#include "mojo/public/cpp/environment/environment.h"
 
 namespace mtl {
 namespace {
@@ -23,7 +22,7 @@ namespace {
 
 class CopyToFileHandler {
  public:
-  CopyToFileHandler(mojo::ScopedDataPipeConsumerHandle source,
+  CopyToFileHandler(mx::datapipe_consumer source,
                     ftl::UniqueFD destination,
                     ftl::RefPtr<ftl::TaskRunner> task_runner,
                     const std::function<void(bool, ftl::UniqueFD)>& callback);
@@ -32,21 +31,23 @@ class CopyToFileHandler {
   ~CopyToFileHandler();
 
   void SendCallback(bool value);
-  void OnHandleReady(MojoResult result);
-  static void WaitComplete(void* context, MojoResult result);
+  void OnHandleReady(mx_status_t result);
+  static void WaitComplete(mx_status_t result,
+                           mx_signals_t pending,
+                           void* context);
 
-  mojo::ScopedDataPipeConsumerHandle source_;
+  mx::datapipe_consumer source_;
   ftl::UniqueFD destination_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::function<void(bool, ftl::UniqueFD)> callback_;
-  const MojoAsyncWaiter* waiter_;
-  MojoAsyncWaitID wait_id_;
+  const FidlAsyncWaiter* waiter_;
+  FidlAsyncWaitID wait_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CopyToFileHandler);
 };
 
 CopyToFileHandler::CopyToFileHandler(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     ftl::UniqueFD destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool, ftl::UniqueFD)>& callback)
@@ -54,9 +55,9 @@ CopyToFileHandler::CopyToFileHandler(
       destination_(std::move(destination)),
       task_runner_(std::move(task_runner)),
       callback_(callback),
-      waiter_(mojo::Environment::GetDefaultAsyncWaiter()),
+      waiter_(fidl::GetDefaultAsyncWaiter()),
       wait_id_(0) {
-  task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+  task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
 }
 
 CopyToFileHandler::~CopyToFileHandler() {}
@@ -69,38 +70,40 @@ void CopyToFileHandler::SendCallback(bool value) {
   callback(value, std::move(destination));
 }
 
-void CopyToFileHandler::OnHandleReady(MojoResult result) {
-  if (result == MOJO_RESULT_OK) {
+void CopyToFileHandler::OnHandleReady(mx_status_t result) {
+  if (result == NO_ERROR) {
     const void* buffer = nullptr;
-    uint32_t size = 0;
-    result = BeginReadDataRaw(source_.get(), &buffer, &size,
-                              MOJO_READ_DATA_FLAG_NONE);
-    if (result == MOJO_RESULT_OK) {
+    mx_size_t size = 0;
+    result =
+        source_.begin_read(0u, reinterpret_cast<uintptr_t*>(&buffer), &size);
+    if (result == NO_ERROR) {
       bool write_success = ftl::WriteFileDescriptor(
           destination_.get(), static_cast<const char*>(buffer), size);
-      result = EndReadDataRaw(source_.get(), size);
-      if (!write_success || result != MOJO_RESULT_OK) {
+      result = source_.end_read(size);
+      if (!write_success || result != NO_ERROR) {
         SendCallback(false);
       } else {
-        task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+        task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
       }
       return;
     }
   }
-  if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
+  if (result == ERR_REMOTE_CLOSED) {
     SendCallback(true);
     return;
   }
-  if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
-    wait_id_ =
-        waiter_->AsyncWait(source_.get().value(), MOJO_HANDLE_SIGNAL_READABLE,
-                           MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
+  if (result == ERR_SHOULD_WAIT) {
+    wait_id_ = waiter_->AsyncWait(source_.get(),
+                                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                  MX_TIME_INFINITE, &WaitComplete, this);
     return;
   }
   SendCallback(false);
 }
 
-void CopyToFileHandler::WaitComplete(void* context, MojoResult result) {
+void CopyToFileHandler::WaitComplete(mx_status_t result,
+                                     mx_signals_t pending,
+                                     void* context) {
   CopyToFileHandler* handler = static_cast<CopyToFileHandler*>(context);
   handler->wait_id_ = 0;
   handler->OnHandleReady(result);
@@ -111,7 +114,7 @@ void CopyToFileHandler::WaitComplete(void* context, MojoResult result) {
 class CopyFromFileHandler {
  public:
   CopyFromFileHandler(ftl::UniqueFD source,
-                      mojo::ScopedDataPipeProducerHandle destination,
+                      mx::datapipe_producer destination,
                       ftl::RefPtr<ftl::TaskRunner> task_runner,
                       const std::function<void(bool, ftl::UniqueFD)>& callback);
 
@@ -119,31 +122,33 @@ class CopyFromFileHandler {
   ~CopyFromFileHandler();
 
   void SendCallback(bool value);
-  void OnHandleReady(MojoResult result);
-  static void WaitComplete(void* context, MojoResult result);
+  void OnHandleReady(mx_status_t result);
+  static void WaitComplete(mx_status_t result,
+                           mx_signals_t pending,
+                           void* context);
 
   ftl::UniqueFD source_;
-  mojo::ScopedDataPipeProducerHandle destination_;
+  mx::datapipe_producer destination_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::function<void(bool, ftl::UniqueFD)> callback_;
-  const MojoAsyncWaiter* waiter_;
-  MojoAsyncWaitID wait_id_;
+  const FidlAsyncWaiter* waiter_;
+  FidlAsyncWaitID wait_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CopyFromFileHandler);
 };
 
 CopyFromFileHandler::CopyFromFileHandler(
     ftl::UniqueFD source,
-    mojo::ScopedDataPipeProducerHandle destination,
+    mx::datapipe_producer destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool, ftl::UniqueFD)>& callback)
     : source_(std::move(source)),
       destination_(std::move(destination)),
       task_runner_(std::move(task_runner)),
       callback_(callback),
-      waiter_(mojo::Environment::GetDefaultAsyncWaiter()),
+      waiter_(fidl::GetDefaultAsyncWaiter()),
       wait_id_(0) {
-  task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+  task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
 }
 
 CopyFromFileHandler::~CopyFromFileHandler() {}
@@ -156,39 +161,40 @@ void CopyFromFileHandler::SendCallback(bool value) {
   callback(value, std::move(source));
 }
 
-void CopyFromFileHandler::OnHandleReady(MojoResult result) {
-  if (result == MOJO_RESULT_OK) {
+void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
+  if (result == NO_ERROR) {
     void* buffer = nullptr;
-    uint32_t size = 0;
-    result = BeginWriteDataRaw(destination_.get(), &buffer, &size,
-                               MOJO_WRITE_DATA_FLAG_NONE);
-    if (result == MOJO_RESULT_OK) {
+    mx_size_t size = 0;
+    result = destination_.begin_write(0u, reinterpret_cast<uintptr_t*>(&buffer),
+                                      &size);
+    if (result == NO_ERROR) {
       FTL_DCHECK(size < static_cast<uint32_t>(std::numeric_limits<int>::max()));
       ssize_t bytes_read = ftl::ReadFileDescriptor(
           source_.get(), static_cast<char*>(buffer), size);
-      result = EndWriteDataRaw(destination_.get(),
-                               std::max<ssize_t>(0l, bytes_read));
-      if (bytes_read == -1 || result != MOJO_RESULT_OK) {
+      result = destination_.end_write(std::max<ssize_t>(0l, bytes_read));
+      if (bytes_read < 0 || result != NO_ERROR) {
         SendCallback(false);
-      } else if (bytes_read < size) {
+      } else if (static_cast<mx_size_t>(bytes_read) < size) {
         // Reached EOF. Stop the process.
         SendCallback(true);
       } else {
-        task_runner_->PostTask([this]() { OnHandleReady(MOJO_RESULT_OK); });
+        task_runner_->PostTask([this]() { OnHandleReady(NO_ERROR); });
       }
       return;
     }
   }
-  if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
-    wait_id_ = waiter_->AsyncWait(
-        destination_.get().value(), MOJO_HANDLE_SIGNAL_WRITABLE,
-        MOJO_DEADLINE_INDEFINITE, &WaitComplete, this);
+  if (result == ERR_SHOULD_WAIT) {
+    wait_id_ = waiter_->AsyncWait(destination_.get(),
+                                  MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                  MX_TIME_INFINITE, &WaitComplete, this);
     return;
   }
   SendCallback(false);
 }
 
-void CopyFromFileHandler::WaitComplete(void* context, MojoResult result) {
+void CopyFromFileHandler::WaitComplete(mx_status_t result,
+                                       mx_signals_t pending,
+                                       void* context) {
   CopyFromFileHandler* handler = static_cast<CopyFromFileHandler*>(context);
   handler->wait_id_ = 0;
   handler->OnHandleReady(result);
@@ -197,7 +203,7 @@ void CopyFromFileHandler::WaitComplete(void* context, MojoResult result) {
 }  // namespace
 
 void CopyToFileDescriptor(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     ftl::UniqueFD destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool, ftl::UniqueFD)>& callback) {
@@ -207,7 +213,7 @@ void CopyToFileDescriptor(
 
 void CopyFromFileDescriptor(
     ftl::UniqueFD source,
-    mojo::ScopedDataPipeProducerHandle destination,
+    mx::datapipe_producer destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool, ftl::UniqueFD)>& callback) {
   new CopyFromFileHandler(std::move(source), std::move(destination),

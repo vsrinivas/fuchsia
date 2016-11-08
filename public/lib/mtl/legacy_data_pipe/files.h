@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_DATA_PIPE_FILES_H_
-#define LIB_MTL_DATA_PIPE_FILES_H_
+#ifndef LIB_MTL_LEGACY_DATA_PIPE_FILES_H_
+#define LIB_MTL_LEGACY_DATA_PIPE_FILES_H_
 
 #include <stdio.h>
 
@@ -11,15 +11,15 @@
 
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mx/datapipe.h"
+#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace mtl {
 
 // Asynchronously copies data from source to the destination file descriptor.
 // The given |callback| is run upon completion. File writes and |callback| will
 // be scheduled on the given |task_runner|.
-void FidlCopyToFileDescriptor(
-    mx::datapipe_consumer source,
+void LegacyCopyToFileDescriptor(
+    mojo::ScopedDataPipeConsumerHandle source,
     ftl::UniqueFD destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, ftl::UniqueFD /*destination*/)>&
@@ -28,13 +28,13 @@ void FidlCopyToFileDescriptor(
 // Asynchronously copies data from source file to the destination. The given
 // |callback| is run upon completion. File reads and |callback| will be
 // scheduled to the given |task_runner|.
-void FidlCopyFromFileDescriptor(
+void LegacyCopyFromFileDescriptor(
     ftl::UniqueFD source,
-    mx::datapipe_producer destination,
+    mojo::ScopedDataPipeProducerHandle destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, ftl::UniqueFD /*source*/)>&
         callback);
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_DATA_PIPE_FILES_H_
+#endif  // LIB_MTL_LEGACY_DATA_PIPE_FILES_H_

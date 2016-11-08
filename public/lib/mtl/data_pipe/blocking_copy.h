@@ -7,12 +7,12 @@
 
 #include <functional>
 
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 
 bool BlockingCopyFrom(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes);
 
 }  // namespace mtl

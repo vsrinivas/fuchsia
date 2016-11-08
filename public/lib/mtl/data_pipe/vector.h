@@ -7,14 +7,14 @@
 
 #include <vector>
 
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 
 // Copies the data from |source| into |contents| and returns true on success and
 // false on error. In case of I/O error, |contents| holds the data that could
 // be read from source before the error occurred.
-bool BlockingCopyToVector(mojo::ScopedDataPipeConsumerHandle source,
+bool BlockingCopyToVector(mx::datapipe_consumer source,
                           std::vector<char>* contents);
 
 }  // namespace mtl

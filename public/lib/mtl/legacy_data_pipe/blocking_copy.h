@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_DATA_PIPE_BLOCKING_COPY_H_
-#define LIB_MTL_DATA_PIPE_BLOCKING_COPY_H_
+#ifndef LIB_MTL_LEGACY_DATA_PIPE_BLOCKING_COPY_H_
+#define LIB_MTL_LEGACY_DATA_PIPE_BLOCKING_COPY_H_
 
 #include <functional>
 
-#include "mx/datapipe.h"
+#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace mtl {
 
-bool FidlBlockingCopyFrom(
-    mx::datapipe_consumer source,
+bool LegacyBlockingCopyFrom(
+    mojo::ScopedDataPipeConsumerHandle source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes);
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_DATA_PIPE_BLOCKING_COPY_H_
+#endif  // LIB_MTL_LEGACY_DATA_PIPE_BLOCKING_COPY_H_

@@ -11,7 +11,7 @@
 
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 
@@ -19,7 +19,7 @@ namespace mtl {
 // The given |callback| is run upon completion. File writes and |callback| will
 // be scheduled on the given |task_runner|.
 void CopyToFileDescriptor(
-    mojo::ScopedDataPipeConsumerHandle source,
+    mx::datapipe_consumer source,
     ftl::UniqueFD destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, ftl::UniqueFD /*destination*/)>&
@@ -30,7 +30,7 @@ void CopyToFileDescriptor(
 // scheduled to the given |task_runner|.
 void CopyFromFileDescriptor(
     ftl::UniqueFD source,
-    mojo::ScopedDataPipeProducerHandle destination,
+    mx::datapipe_producer destination,
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     const std::function<void(bool /*success*/, ftl::UniqueFD /*source*/)>&
         callback);

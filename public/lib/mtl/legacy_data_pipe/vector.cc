@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/mtl/fidl_data_pipe/vector.h"
+#include "lib/mtl/legacy_data_pipe/vector.h"
 
 #include <utility>
 
 #include "lib/ftl/logging.h"
-#include "lib/mtl/fidl_data_pipe/blocking_copy.h"
+#include "lib/mtl/legacy_data_pipe/blocking_copy.h"
 
 namespace mtl {
 
-bool FidlBlockingCopyToVector(mx::datapipe_consumer source,
-                              std::vector<char>* result) {
+bool LegacyBlockingCopyToVector(mojo::ScopedDataPipeConsumerHandle source,
+                                std::vector<char>* result) {
   FTL_CHECK(result);
   result->clear();
-  return FidlBlockingCopyFrom(
+  return LegacyBlockingCopyFrom(
       std::move(source), [result](const void* buffer, uint32_t num_bytes) {
         const char* chars = static_cast<const char*>(buffer);
         result->insert(result->end(), chars, chars + num_bytes);

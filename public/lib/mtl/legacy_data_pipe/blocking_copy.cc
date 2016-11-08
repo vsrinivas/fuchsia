@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/mtl/fidl_data_pipe/blocking_copy.h"
+#include "lib/mtl/legacy_data_pipe/blocking_copy.h"
+
+#include <mojo/system/result.h>
 
 #include "lib/ftl/logging.h"
-#include "mx/datapipe.h"
+#include "mojo/public/cpp/system/wait.h"
 
 #ifndef __Fuchsia__
 #error "Fuchsia is the only supported target platform for this code."
@@ -13,15 +15,15 @@
 
 namespace mtl {
 
-bool FidlBlockingCopyFrom(
-    mx::datapipe_consumer source,
+bool LegacyBlockingCopyFrom(
+    mojo::ScopedDataPipeConsumerHandle source,
     const std::function<size_t(const void*, uint32_t)>& write_bytes) {
   for (;;) {
-    void* buffer;
-    mx_size_t num_bytes = 0;
-    mx_status_t result = source.begin_read(
-        0u, reinterpret_cast<uintptr_t*>(&buffer), &num_bytes);
-    if (result == NO_ERROR) {
+    const void* buffer = nullptr;
+    uint32_t num_bytes = 0;
+    MojoResult result = mojo::BeginReadDataRaw(
+        source.get(), &buffer, &num_bytes, MOJO_READ_DATA_FLAG_NONE);
+    if (result == MOJO_RESULT_OK) {
       size_t bytes_written = write_bytes(buffer, num_bytes);
       if (bytes_written < num_bytes) {
         FTL_LOG(ERROR) << "write_bytes callback wrote fewer bytes ("
@@ -29,23 +31,23 @@ bool FidlBlockingCopyFrom(
                        << num_bytes
                        << ") in BlockingCopyFrom (pipe closed? out of disk "
                           "space?)";
-        // No need to call end_read(), since |source| will be closed.
+        // No need to call EndReadDataRaw(), since |source| will be closed.
         return false;
       }
-      result = source.end_read(num_bytes);
-      if (result != NO_ERROR) {
-        FTL_LOG(ERROR) << "end_read error (" << result
+      result = mojo::EndReadDataRaw(source.get(), num_bytes);
+      if (result != MOJO_RESULT_OK) {
+        FTL_LOG(ERROR) << "EndReadDataRaw error (" << result
                        << ") in BlockingCopyFrom";
         return false;
       }
-    } else if (result == ERR_SHOULD_WAIT) {
-      result = source.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                               MX_TIME_INFINITE, nullptr);
-      if (result != NO_ERROR) {
+    } else if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
+      result = mojo::Wait(source.get(), MOJO_HANDLE_SIGNAL_READABLE,
+                          MOJO_DEADLINE_INDEFINITE, nullptr);
+      if (result != MOJO_RESULT_OK) {
         // If the producer handle was closed, then treat as EOF.
-        return result == ERR_REMOTE_CLOSED;
+        return result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION;
       }
-    } else if (result == ERR_REMOTE_CLOSED) {
+    } else if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
       // If the producer handle was closed, then treat as EOF.
       return true;
     } else {

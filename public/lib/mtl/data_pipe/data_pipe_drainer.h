@@ -5,11 +5,10 @@
 #ifndef LIB_MTL_DATA_PIPE_DATA_PIPE_DRAINER_H_
 #define LIB_MTL_DATA_PIPE_DATA_PIPE_DRAINER_H_
 
-#include <mojo/environment/async_waiter.h>
-
+#include "lib/fidl/c/waiter/async_waiter.h"
+#include "lib/fidl/cpp/waiter/default.h"
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/environment/environment.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 
@@ -24,22 +23,24 @@ class DataPipeDrainer {
     virtual ~Client() {}
   };
 
-  DataPipeDrainer(Client* client,
-                  const MojoAsyncWaiter* waiter =
-                      mojo::Environment::GetDefaultAsyncWaiter());
+  DataPipeDrainer(
+      Client* client,
+      const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
   ~DataPipeDrainer();
 
-  void Start(mojo::ScopedDataPipeConsumerHandle source);
+  void Start(mx::datapipe_consumer source);
 
  private:
   void ReadData();
   void WaitForData();
-  static void WaitComplete(void* context, MojoResult result);
+  static void WaitComplete(mx_status_t result,
+                           mx_signals_t pending,
+                           void* context);
 
   Client* client_;
-  mojo::ScopedDataPipeConsumerHandle source_;
-  const MojoAsyncWaiter* waiter_;
-  MojoAsyncWaitID wait_id_;
+  mx::datapipe_consumer source_;
+  const FidlAsyncWaiter* waiter_;
+  FidlAsyncWaitID wait_id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainer);
 };

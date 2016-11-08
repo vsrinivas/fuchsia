@@ -11,7 +11,7 @@
 
 namespace mtl {
 
-bool BlockingCopyToVector(mojo::ScopedDataPipeConsumerHandle source,
+bool BlockingCopyToVector(mx::datapipe_consumer source,
                           std::vector<char>* result) {
   FTL_CHECK(result);
   result->clear();

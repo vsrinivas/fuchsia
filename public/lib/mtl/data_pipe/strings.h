@@ -8,24 +8,21 @@
 #include <string>
 
 #include "lib/ftl/strings/string_view.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 namespace mtl {
 
 // Copies the data from |source| into |contents| and returns true on success and
 // false on error. In case of I/O error, |contents| holds the data that could
 // be read from source before the error occurred.
-bool BlockingCopyToString(mojo::ScopedDataPipeConsumerHandle source,
-                          std::string* contents);
+bool BlockingCopyToString(mx::datapipe_consumer source, std::string* contents);
 
-bool BlockingCopyFromString(
-    ftl::StringView source,
-    const mojo::ScopedDataPipeProducerHandle& destination);
+bool BlockingCopyFromString(ftl::StringView source,
+                            const mx::datapipe_producer& destination);
 
 // Copies the string |contents| to a temporary data pipe and returns the
 // consumer handle.
-mojo::ScopedDataPipeConsumerHandle WriteStringToConsumerHandle(
-    ftl::StringView source);
+mx::datapipe_consumer WriteStringToConsumerHandle(ftl::StringView source);
 
 }  // namespace mtl
 

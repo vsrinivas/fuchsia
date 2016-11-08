@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("fidl_data_pipe") {
+source_set("legacy_data_pipe") {
   sources = [
     "blocking_copy.cc",
     "blocking_copy.h",
@@ -17,9 +17,9 @@ source_set("fidl_data_pipe") {
   ]
 
   public_deps = [
-    "//lib/fidl/c/waiter",
-    "//lib/fidl/cpp/waiter",
     "//lib/ftl",
-    "//magenta/system/ulib/mx",
+    "//mojo/public/c:environment",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
   ]
 }
