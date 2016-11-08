@@ -182,7 +182,7 @@
                                         &{{output}}->{{name}});
 {%-     elif kind|is_interface_request_kind %}
   {{output}}->{{name}} =
-    ::fidl::internal::WrappedHandle{ {{input_field}}.PassMessagePipe().release() };
+    ::fidl::internal::WrappedHandle{ {{input_field}}.PassChannel().release() };
 {%-     else %}
   {{output}}->{{name}} =
     ::fidl::internal::WrappedHandle{ {{input_field}}.release() };

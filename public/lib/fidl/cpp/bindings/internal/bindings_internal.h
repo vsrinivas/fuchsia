@@ -230,12 +230,16 @@ static_assert(IsHandleType<mx::channel>::value,
 
 // Catch-all for all mojom types not specialized below.
 template <typename T>
-struct WrapperTraits<T, false, false,
+struct WrapperTraits<T,
+                     false,
+                     false,
                      typename std::enable_if<!IsHandleType<T>::value>::type> {
   using DataType = T;
 };
 template <typename H>
-struct WrapperTraits<H, true, false,
+struct WrapperTraits<H,
+                     true,
+                     false,
                      typename std::enable_if<IsHandleType<H>::value>::type> {
   using DataType = WrappedHandle;
 };
@@ -260,7 +264,10 @@ struct WrapperTraits<InlinedStructPtr<U>, true, true> {
 // TODO(vardhan): Should we only support fidl types? (there are unittests that
 // mock types).
 template <typename P>
-struct WrapperTraits<P, true, false,
+struct WrapperTraits<
+    P,
+    true,
+    false,
     typename std::enable_if<!std::is_void<typename P::Data_>::value>::type> {
   using DataType = typename P::Data_*;
 };
@@ -281,14 +288,13 @@ struct ValueTraits<T,
 };
 
 template <typename T>
-struct ValueTraits<T,
-                   typename std::enable_if<IsHandleType<T>::value>::type> {
+struct ValueTraits<T, typename std::enable_if<IsHandleType<T>::value>::type> {
   static bool Equals(const T& a, const T& b) {
     return (&a == &b) || (!a && !b);
   }
 };
 
-// |InterfaceHandle|s hold message pipes uniquely, so they can only be equal if
+// |InterfaceHandle|s hold channels uniquely, so they can only be equal if
 // they're the same object or are both "invalid".
 template <typename I>
 struct ValueTraits<InterfaceHandle<I>> {
@@ -297,7 +303,7 @@ struct ValueTraits<InterfaceHandle<I>> {
   }
 };
 
-// |InterfaceRequest|s hold message pipes uniquely, so they can only be equal if
+// |InterfaceRequest|s hold channels uniquely, so they can only be equal if
 // they're the same object or are both "invalid".
 template <typename I>
 struct ValueTraits<InterfaceRequest<I>> {

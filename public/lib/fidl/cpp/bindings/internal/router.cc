@@ -25,11 +25,11 @@ class ResponderThunk : public MessageReceiverWithStatus {
       // but did not send a response.
       Router* router = router_.value();
       if (router) {
-        // We close the pipe here as a way of signaling to the calling
+        // We close the channel here as a way of signaling to the calling
         // application that an error condition occurred. Without this the
         // calling application would have no way of knowing it should stop
         // waiting for a response.
-        router->CloseMessagePipe();
+        router->CloseChannel();
       }
     }
   }
@@ -72,12 +72,12 @@ bool Router::HandleIncomingMessageThunk::Accept(Message* message) {
 
 // ----------------------------------------------------------------------------
 
-Router::Router(mx::channel message_pipe,
+Router::Router(mx::channel channel,
                MessageValidatorList validators,
                const FidlAsyncWaiter* waiter)
     : thunk_(this),
       validators_(std::move(validators)),
-      connector_(std::move(message_pipe), waiter),
+      connector_(std::move(channel), waiter),
       weak_self_(this),
       incoming_receiver_(nullptr),
       next_request_id_(0),
@@ -143,8 +143,8 @@ bool Router::HandleIncomingMessage(Message* message) {
     }
 
     // If we receive a request expecting a response when the client is not
-    // listening, then we have no choice but to tear down the pipe.
-    connector_.CloseMessagePipe();
+    // listening, then we have no choice but to tear down the channel.
+    connector_.CloseChannel();
   } else if (message->has_flag(kMessageIsResponse)) {
     uint64_t request_id = message->request_id();
     ResponderMap::iterator it = responders_.find(request_id);

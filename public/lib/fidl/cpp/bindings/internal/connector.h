@@ -19,22 +19,22 @@ namespace fidl {
 namespace internal {
 
 // The Connector class is responsible for performing read/write operations on a
-// MessagePipe. It writes messages it receives through the MessageReceiver
+// channel. It writes messages it receives through the MessageReceiver
 // interface that it subclasses, and it forwards messages it reads through the
 // MessageReceiver interface assigned as its incoming receiver.
 //
-// NOTE: MessagePipe I/O is non-blocking.
+// NOTE: Channel I/O is non-blocking.
 //
 class Connector : public MessageReceiver {
  public:
-  // The Connector takes ownership of |message_pipe|.
-  explicit Connector(mx::channel message_pipe,
+  // The Connector takes ownership of |channel|.
+  explicit Connector(mx::channel channel,
                      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Connector() override;
 
-  // Sets the receiver to handle messages read from the message pipe.  The
-  // Connector will read messages from the pipe regardless of whether or not an
-  // incoming receiver has been set.
+  // Sets the receiver to handle messages read from the channel.  The
+  // Connector will read messages from the channel regardless of whether or not
+  // an incoming receiver has been set.
   void set_incoming_receiver(MessageReceiver* receiver) {
     incoming_receiver_ = receiver;
   }
@@ -47,30 +47,31 @@ class Connector : public MessageReceiver {
   }
 
   // Sets the error handler to receive notifications when an error is
-  // encountered while reading from the pipe or waiting to read from the pipe.
+  // encountered while reading from the channel or waiting to read from the
+  // channel.
   void set_connection_error_handler(const ftl::Closure& error_handler) {
     connection_error_handler_ = error_handler;
   }
 
-  // Returns true if an error was encountered while reading from the pipe or
-  // waiting to read from the pipe.
+  // Returns true if an error was encountered while reading from the channel or
+  // waiting to read from the channel.
   bool encountered_error() const { return error_; }
 
-  // Closes the pipe, triggering the error state. Connector is put into a
+  // Closes the channel, triggering the error state. Connector is put into a
   // quiescent state.
-  void CloseMessagePipe();
+  void CloseChannel();
 
-  // Releases the pipe, not triggering the error state. Connector is put into
+  // Releases the channel, not triggering the error state. Connector is put into
   // a quiescent state.
-  mx::channel PassMessagePipe();
+  mx::channel PassChannel();
 
-  // Is the connector bound to a MessagePipe handle?
-  bool is_valid() const { return !!message_pipe_; }
+  // Is the connector bound to a channel?
+  bool is_valid() const { return !!channel_; }
 
-  // Waits for the next message on the pipe, blocking until one arrives,
+  // Waits for the next message on the channel, blocking until one arrives,
   // |timeout| elapses, or an error happens. Returns |true| if a message has
   // been delivered, |false| otherwise.
-  // When returning |false| closes the message pipe, unless the reason for
+  // When returning |false| closes the channel, unless the reason for
   // for returning |false| was |ERR_SHOULD_WAIT| or
   // |ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.
@@ -79,7 +80,7 @@ class Connector : public MessageReceiver {
   // MessageReceiver implementation:
   bool Accept(Message* message) override;
 
-  mx_handle_t handle() const { return message_pipe_.get(); }
+  mx_handle_t handle() const { return channel_.get(); }
 
  private:
   static void CallOnHandleReady(mx_status_t result,
@@ -100,7 +101,7 @@ class Connector : public MessageReceiver {
   ftl::Closure connection_error_handler_;
   const FidlAsyncWaiter* waiter_;
 
-  mx::channel message_pipe_;
+  mx::channel channel_;
   MessageReceiver* incoming_receiver_;
 
   FidlAsyncWaitID async_wait_id_;

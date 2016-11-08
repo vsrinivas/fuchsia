@@ -196,7 +196,7 @@ class AImpl : public A {
 };
 
 // Test that, for synchronous method calls that don't have return args, the
-// bindings return right away, leaving the messages in the message pipe while
+// bindings return right away, leaving the messages in the channel while
 // closing their end.
 TEST_F(SynchronousInterfacePtrTest, Scoping) {
   SynchronousInterfacePtr<A> a;

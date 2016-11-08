@@ -78,7 +78,7 @@ class InterfacePtrState {
   // shouldn't be reused.
   InterfaceHandle<Interface> PassInterfaceHandle() {
     return InterfaceHandle<Interface>(
-        router_ ? router_->PassMessagePipe() : std::move(handle_), version_);
+        router_ ? router_->PassChannel() : std::move(handle_), version_);
   }
 
   bool is_bound() const { return (bool)handle_ || router_; }
@@ -130,7 +130,7 @@ class InterfacePtrState {
   Router* router_;
 
   // |proxy_| and |router_| are not initialized until read/write with the
-  // message pipe handle is needed. |handle_| and |waiter_| are valid between
+  // channel handle is needed. |handle_| and |waiter_| are valid between
   // the Bind() call and the initialization of |proxy_| and |router_|.
   mx::channel handle_;
   const FidlAsyncWaiter* waiter_;

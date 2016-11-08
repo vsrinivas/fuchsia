@@ -13,9 +13,9 @@ namespace internal {
 
 // ----------------------------------------------------------------------------
 
-Connector::Connector(mx::channel message_pipe, const FidlAsyncWaiter* waiter)
+Connector::Connector(mx::channel channel, const FidlAsyncWaiter* waiter)
     : waiter_(waiter),
-      message_pipe_(std::move(message_pipe)),
+      channel_(std::move(channel)),
       incoming_receiver_(nullptr),
       async_wait_id_(0),
       error_(false),
@@ -23,7 +23,7 @@ Connector::Connector(mx::channel message_pipe, const FidlAsyncWaiter* waiter)
       enforce_errors_from_incoming_receiver_(true),
       destroyed_flag_(nullptr) {
   // Even though we don't have an incoming receiver, we still want to monitor
-  // the message pipe to know if is closed or encounters an error.
+  // the channel to know if is closed or encounters an error.
   WaitToReadMore();
 }
 
@@ -34,14 +34,14 @@ Connector::~Connector() {
   CancelWait();
 }
 
-void Connector::CloseMessagePipe() {
+void Connector::CloseChannel() {
   CancelWait();
-  message_pipe_.reset();
+  channel_.reset();
 }
 
-mx::channel Connector::PassMessagePipe() {
+mx::channel Connector::PassChannel() {
   CancelWait();
-  return std::move(message_pipe_);
+  return std::move(channel_);
 }
 
 bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
@@ -49,9 +49,8 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
     return false;
 
   mx_signals_t pending = MX_SIGNAL_NONE;
-  mx_status_t rv =
-      message_pipe_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-                             timeout.ToNanoseconds(), &pending);
+  mx_status_t rv = channel_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                     timeout.ToNanoseconds(), &pending);
   if (rv == ERR_SHOULD_WAIT || rv == ERR_TIMED_OUT)
     return false;
   if (rv != NO_ERROR) {
@@ -73,17 +72,17 @@ bool Connector::Accept(Message* message) {
   if (error_)
     return false;
 
-  FTL_CHECK(message_pipe_);
+  FTL_CHECK(channel_);
   if (drop_writes_)
     return true;
 
-  mx_status_t rv = message_pipe_.write(
-      0, message->data(), message->data_num_bytes(),
-      message->mutable_handles()->empty()
-          ? nullptr
-          : reinterpret_cast<const mx_handle_t*>(
-                &message->mutable_handles()->front()),
-      static_cast<uint32_t>(message->mutable_handles()->size()));
+  mx_status_t rv =
+      channel_.write(0, message->data(), message->data_num_bytes(),
+                     message->mutable_handles()->empty()
+                         ? nullptr
+                         : reinterpret_cast<const mx_handle_t*>(
+                               &message->mutable_handles()->front()),
+                     static_cast<uint32_t>(message->mutable_handles()->size()));
 
   switch (rv) {
     case NO_ERROR:
@@ -92,15 +91,15 @@ bool Connector::Accept(Message* message) {
       message->mutable_handles()->clear();
       break;
     case ERR_BAD_STATE:
-      // There's no point in continuing to write to this pipe since the other
+      // There's no point in continuing to write to this channel since the other
       // end is gone. Avoid writing any future messages. Hide write failures
       // from the caller since we'd like them to continue consuming any backlog
-      // of incoming messages before regarding the message pipe as closed.
+      // of incoming messages before regarding the channel as closed.
       drop_writes_ = true;
       break;
     default:
       // This particular write was rejected, presumably because of bad input.
-      // The pipe is not necessarily in a bad state.
+      // The channel is not necessarily in a bad state.
       return false;
   }
   return true;
@@ -148,7 +147,7 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
 void Connector::WaitToReadMore() {
   FTL_CHECK(!async_wait_id_);
   async_wait_id_ = waiter_->AsyncWait(
-      message_pipe_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      channel_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
       MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
 }
 
@@ -161,8 +160,8 @@ bool Connector::ReadSingleMessage(mx_status_t* read_result) {
   bool* previous_destroyed_flag = destroyed_flag_;
   destroyed_flag_ = &was_destroyed_during_dispatch;
 
-  mx_status_t rv = ReadAndDispatchMessage(message_pipe_, incoming_receiver_,
-                                          &receiver_result);
+  mx_status_t rv =
+      ReadAndDispatchMessage(channel_, incoming_receiver_, &receiver_result);
   if (read_result)
     *read_result = rv;
 
@@ -194,7 +193,7 @@ void Connector::CancelWait() {
 
 void Connector::NotifyError() {
   error_ = true;
-  CloseMessagePipe();
+  CloseChannel();
   if (connection_error_handler_)
     connection_error_handler_();
 }

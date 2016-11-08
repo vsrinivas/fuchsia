@@ -23,9 +23,9 @@
 
 namespace fidl {
 
-// Represents the binding of an interface implementation to a message pipe.
-// When the |Binding| object is destroyed, the binding between the message pipe
-// and the interface is torn down and the message pipe is closed, leaving the
+// Represents the binding of an interface implementation to a channel.
+// When the |Binding| object is destroyed, the binding between the channel
+// and the interface is torn down and the channel is closed, leaving the
 // interface implementation in an unbound state.
 //
 // Example:
@@ -66,7 +66,7 @@ class Binding {
     stub_.set_sink(this->impl());
   }
 
-  // Constructs a completed binding of message pipe |handle| to implementation
+  // Constructs a completed binding of channel |handle| to implementation
   // |impl|. Does not take ownership of |impl|, which must outlive the binding.
   // See class comment for definition of |waiter|.
   Binding(ImplPtr impl,
@@ -76,7 +76,7 @@ class Binding {
     Bind(std::move(handle), waiter);
   }
 
-  // Constructs a completed binding of |impl| to a new message pipe, passing the
+  // Constructs a completed binding of |impl| to a new channel, passing the
   // client end to |ptr|, which takes ownership of it. The caller is expected to
   // pass |ptr| on to the client of the service. Does not take ownership of any
   // of the parameters. |impl| must outlive the binding. |ptr| only needs to
@@ -89,7 +89,7 @@ class Binding {
     Bind(interface_handle, waiter);
   }
 
-  // Constructs a completed binding of |impl| to the message pipe endpoint in
+  // Constructs a completed binding of |impl| to the channel endpoint in
   // |request|, taking ownership of the endpoint. Does not take ownership of
   // |impl|, which must outlive the binding. See class comment for definition of
   // |waiter|.
@@ -97,10 +97,10 @@ class Binding {
           InterfaceRequest<Interface> request,
           const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter())
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(request.PassMessagePipe(), waiter);
+    Bind(request.PassChannel(), waiter);
   }
 
-  // Tears down the binding, closing the message pipe and leaving the interface
+  // Tears down the binding, closing the channel and leaving the interface
   // implementation unbound.
   ~Binding() {}
 
@@ -127,7 +127,7 @@ class Binding {
   }
 
   // Completes a binding that was constructed with only an interface
-  // implementation by creating a new message pipe, binding one end of it to the
+  // implementation by creating a new channel, binding one end of it to the
   // previously specified implementation, and passing the other to |ptr|, which
   // takes ownership of it. The caller is expected to pass |ptr| on to the
   // eventual client of the service. Does not take ownership of |ptr|. See
@@ -143,16 +143,16 @@ class Binding {
   }
 
   // Completes a binding that was constructed with only an interface
-  // implementation by removing the message pipe endpoint from |request| and
+  // implementation by removing the channel endpoint from |request| and
   // binding it to the previously specified implementation. See class comment
   // for definition of |waiter|.
   void Bind(InterfaceRequest<Interface> request,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
-    Bind(request.PassMessagePipe(), waiter);
+    Bind(request.PassChannel(), waiter);
   }
 
   // Blocks the calling thread until either a call arrives on the previously
-  // bound message pipe, the timeout is exceeded, or an error occurs. Returns
+  // bound channel, the timeout is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
   bool WaitForIncomingMethodCall(
       ftl::TimeDelta timeout = ftl::TimeDelta::Max()) {
@@ -160,26 +160,25 @@ class Binding {
     return internal_router_->WaitForIncomingMessage(timeout);
   }
 
-  // Closes the message pipe that was previously bound. Put this object into a
-  // state where it can be rebound to a new pipe.
+  // Closes the channel that was previously bound. Put this object into a
+  // state where it can be rebound to a new channel.
   void Close() {
     FTL_DCHECK(internal_router_);
     internal_router_.reset();
   }
 
-  // Unbinds the underlying pipe from this binding and returns it so it can be
-  // used in another context, such as on another thread or with a different
+  // Unbinds the underlying channel from this binding and returns it so it can
+  // be used in another context, such as on another thread or with a different
   // implementation. Put this object into a state where it can be rebound to a
-  // new pipe.
+  // new channel.
   InterfaceRequest<Interface> Unbind() {
-    auto request =
-        InterfaceRequest<Interface>(internal_router_->PassMessagePipe());
+    auto request = InterfaceRequest<Interface>(internal_router_->PassChannel());
     internal_router_.reset();
     return request;
   }
 
   // Sets an error handler that will be called if a connection error occurs on
-  // the bound message pipe.
+  // the bound channel.
   void set_connection_error_handler(const ftl::Closure& error_handler) {
     connection_error_handler_ = error_handler;
   }
@@ -188,8 +187,8 @@ class Binding {
   // does not take ownership.
   Interface* impl() { return &*impl_; }
 
-  // Indicates whether the binding has been completed (i.e., whether a message
-  // pipe has been bound to the implementation).
+  // Indicates whether the binding has been completed (i.e., whether a channel
+  // has been bound to the implementation).
   bool is_bound() const { return !!internal_router_; }
 
   // Returns the value of the handle currently bound to this Binding which can

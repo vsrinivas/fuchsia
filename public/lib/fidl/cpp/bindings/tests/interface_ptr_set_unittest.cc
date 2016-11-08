@@ -40,7 +40,7 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
   const size_t kNumObjects = 10;
   InterfacePtr<test::MinimalInterface> intrfc_ptrs[kNumObjects];
 
-  // Create 10 MinimalInterfaceImpls and 10 message pipes and bind them all
+  // Create 10 MinimalInterfaceImpls and 10 channels and bind them all
   // together.
   std::unique_ptr<MinimalInterfaceImpl> impls[kNumObjects];
   for (size_t i = 0; i < kNumObjects; i++) {
@@ -74,7 +74,7 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
     EXPECT_EQ(1, impl->call_count());
   }
 
-  // Close the first 5 message pipes. This will (after RunUntilIdle) cause
+  // Close the first 5 channels. This will (after RunUntilIdle) cause
   // connection errors on the closed pipes which will cause the first five
   // objects to be removed.
   for (size_t i = 0; i < kNumObjects / 2; i++) {

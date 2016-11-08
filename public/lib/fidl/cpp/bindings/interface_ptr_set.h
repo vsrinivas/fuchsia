@@ -15,15 +15,15 @@ namespace fidl {
 
 // An InterfacePtrSet contains a collection of InterfacePtrs
 // that are automatically removed from the collection and destroyed
-// when their associated MessagePipe experiences a connection error.
-// When the set is destroyed all of the MessagePipes will be closed.
+// when their associated channel experiences a connection error.
+// When the set is destroyed all of the channels will be closed.
 template <typename Interface>
 class InterfacePtrSet {
  public:
   InterfacePtrSet() {}
   ~InterfacePtrSet() { CloseAll(); }
 
-  // |ptr| must be bound to a message pipe.
+  // |ptr| must be bound to a channel.
   void AddInterfacePtr(InterfacePtr<Interface> ptr) {
     assert(ptr.is_bound());
     ptrs_.emplace_back(std::move(ptr));
@@ -52,7 +52,7 @@ class InterfacePtrSet {
     }
   }
 
-  // Closes the MessagePipe associated with each of the InterfacePtrs in
+  // Closes the channel associated with each of the InterfacePtrs in
   // this set and clears the set.
   void CloseAll() {
     for (auto& it : ptrs_) {
