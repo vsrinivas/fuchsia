@@ -8,7 +8,7 @@ source_set("single_service_application") {
   ]
 
   deps = [
-    "//mojo/public/cpp/application",
+    "//apps/modular/lib/app",
   ]
 }
 
@@ -31,7 +31,7 @@ source_set("array_to_string") {
   ]
 
   deps = [
-    "//mojo/public/cpp/bindings",
+    "//lib/fidl/cpp/bindings",
   ]
 }
 
@@ -45,3 +45,4 @@ source_set("strong_binding") {
     "//lib/ftl",
   ]
 }
+

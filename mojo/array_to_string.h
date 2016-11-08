@@ -7,11 +7,11 @@
 
 #include <string>
 
-#include "mojo/public/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/array.h"
 
 namespace modular {
 
-std::string to_string(const mojo::Array<uint8_t>& data) {
+std::string to_string(const fidl::Array<uint8_t>& data) {
   std::string ret;
   ret.reserve(data.size());
 
@@ -22,8 +22,8 @@ std::string to_string(const mojo::Array<uint8_t>& data) {
   return ret;
 }
 
-mojo::Array<uint8_t> to_array(const std::string& val) {
-  mojo::Array<uint8_t> ret;
+fidl::Array<uint8_t> to_array(const std::string& val) {
+  fidl::Array<uint8_t> ret;
   for (char c : val) {
     ret.push_back(c);
   }
