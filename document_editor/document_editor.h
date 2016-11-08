@@ -7,14 +7,14 @@
 
 #include <map>
 
-#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/services/document/document.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
 
-using MojoDocMap = mojo::Map<mojo::String, document_store::DocumentPtr>;
-using DocMap = std::map<mojo::String, document_store::DocumentPtr>;
-using MojoPropertyMap = mojo::Map<mojo::String, document_store::ValuePtr>;
+using MojoDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
+using DocMap = std::map<fidl::String, document_store::DocumentPtr>;
+using MojoPropertyMap = fidl::Map<fidl::String, document_store::ValuePtr>;
 
 // Wrapper class to make it easier to work with Document objects and all
 // of the nested StructPtr's. This class will evolve to support:
@@ -35,7 +35,7 @@ class DocumentEditor {
   // Clear the internal pointer and release the document, if any.
   void Reset();
 
-  const mojo::String& docid() { return doc_->docid; }
+  const fidl::String& docid() { return doc_->docid; }
 
   // Find the given document from the map and prepare to edit it. The Document
   // is not removed from the map. Returns false if the map does not contain
@@ -103,10 +103,10 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os, document_store::Value* v);
 
 // Create a StatementPtr based on the given triple.
-mojo::StructPtr<document_store::Statement> NewStatement(
+fidl::StructPtr<document_store::Statement> NewStatement(
     const std::string& docid,
     const std::string& property,
-    mojo::StructPtr<document_store::Value> value);
+    fidl::StructPtr<document_store::Value> value);
 }
 
 #endif  // MOJO_APPS_MODULAR_DOCUMENT_EDITOR_DOCUMENT_EDITOR_H__

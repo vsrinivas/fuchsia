@@ -8,7 +8,7 @@
 #include <ostream>
 #include <vector>
 
-#include "apps/document_store/interfaces/document.mojom.h"
+#include "apps/modular/services/document/document.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {
@@ -20,11 +20,11 @@ using document_store::StatementPtr;
 using document_store::Value;
 using document_store::ValuePtr;
 
-using mojo::InterfaceHandle;
-using mojo::InterfacePtr;
-using mojo::InterfaceRequest;
-using mojo::String;
-using mojo::StructPtr;
+using fidl::InterfaceHandle;
+using fidl::InterfacePtr;
+using fidl::InterfaceRequest;
+using fidl::String;
+using fidl::StructPtr;
 
 DocumentEditor::DocumentEditor() {}
 
