@@ -2,43 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_NETWORK_URL_LOADER_IMPL_H_
-#define MOJO_SERVICES_NETWORK_URL_LOADER_IMPL_H_
+#ifndef APPS_NETWORK_URL_LOADER_IMPL_H_
+#define APPS_NETWORK_URL_LOADER_IMPL_H_
 
-#include "apps/network/interfaces/url_loader.mojom.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/network/services/url_loader.fidl.h"
 
-namespace mojo {
+#include "lib/fidl/cpp/bindings/binding.h"
+
+namespace network {
 
 class URLLoaderImpl : public URLLoader {
  public:
-  URLLoaderImpl(InterfaceRequest<URLLoader> request);
+  URLLoaderImpl(fidl::InterfaceRequest<URLLoader> request);
   ~URLLoaderImpl() override;
 
   // Called when the associated NetworkContext is going away.
   void Cleanup();
 
  private:
-  template<typename T> class HTTPClient;
+  template <typename T>
+  class HTTPClient;
+
+  using Callback = std::function<void(network::URLResponsePtr)>;
 
   // URLLoader methods:
-  void Start(URLRequestPtr request,
-             const Callback<void(URLResponsePtr)>& callback) override;
-  void FollowRedirect(const Callback<void(URLResponsePtr)>& callback) override;
-  void QueryStatus(const Callback<void(URLLoaderStatusPtr)>& callback) override;
+  void Start(URLRequestPtr request, const Callback& callback) override;
+  void FollowRedirect(const Callback& callback) override;
+  void QueryStatus(const QueryStatusCallback& callback) override;
 
-  void OnConnectionError();
   void SendError(int error_code);
   void FollowRedirectInternal();
   void SendResponse(URLResponsePtr response);
   void StartInternal(URLRequestPtr request);
 
-  Callback<void(URLResponsePtr)> callback_;
+  Callback callback_;
   // bool auto_follow_redirects_;
   URLLoaderStatusPtr last_status_;
-  Binding<URLLoader> binding_;
+  fidl::Binding<URLLoader> binding_;
 };
 
-}  // namespace mojo
+}  // namespace network
 
-#endif  // MOJO_SERVICES_NETWORK_URL_LOADER_IMPL_H_
+#endif  // APPS_NETWORK_URL_LOADER_IMPL_H_

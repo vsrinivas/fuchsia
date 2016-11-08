@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_NETWORK_NET_ERRORS_H_
-#define MOJO_SERVICES_NETWORK_NET_ERRORS_H_
+#ifndef APPS_NETWORK_NET_ERRORS_H_
+#define APPS_NETWORK_NET_ERRORS_H_
 
 #include <string>
 
-namespace net {
+namespace network {
 
 enum Error {
   // No error.
   OK = 0,
 
-#define NET_ERROR(label, value) ERR_ ## label = value,
+#define NET_ERROR(label, value) NETWORK_ERR_##label = value,
 #include "apps/network/net_error_list.h"
 #undef NET_ERROR
 };
@@ -21,9 +21,9 @@ enum Error {
 // Returns a textual representation of the error code for logging purposes.
 std::string ErrorToString(int error);
 
-// Same as above, but leaves off the leading "net::".
+// Same as above, but leaves off the leading "network::".
 std::string ErrorToShortString(int error);
 
-}  // namespace net
+}  // namespace network
 
-#endif /* MOJO_SERVICES_NETWORK_NET_ERRORS_H_ */
+#endif  // APPS_NETWORK_NET_ERRORS_H_

@@ -2,32 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_NETWORK_UPLOAD_ELEMENT_READER_H_
-#define MOJO_SERVICES_NETWORK_UPLOAD_ELEMENT_READER_H_
+#ifndef APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
+#define APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
 
 #include "lib/ftl/macros.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include "mx/datapipe.h"
 
 #include <array>
 
-namespace mojo {
+namespace network {
 
 class UploadElementReader {
  public:
   static constexpr size_t BUFSIZE = 1024;
 
-  UploadElementReader(ScopedDataPipeConsumerHandle pipe);
+  UploadElementReader(mx::datapipe_consumer pipe);
   ~UploadElementReader();
 
-  MojoResult ReadAll(std::ostream *os);
+  mx_status_t ReadAll(std::ostream* os);
 
  private:
-  ScopedDataPipeConsumerHandle pipe_;
+  mx::datapipe_consumer pipe_;
   std::array<char, BUFSIZE> buf_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
 };
 
-}  // namespace mojo
+}  // namespace network
 
-#endif  // MOJO_SERVICES_NETWORK_UPLOAD_ELEMENT_READER_H_
+#endif  // APPS_NETWORK_UPLOAD_ELEMENT_READER_H_

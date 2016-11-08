@@ -4,71 +4,75 @@
 
 #include "network_service_impl.h"
 
+#include <utility>
+
 #include "apps/network/net_adapters.h"
 #include "apps/network/net_errors.h"
 #include "apps/network/network_service_impl.h"
 #include "apps/network/url_loader_impl.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
 
-namespace mojo {
+namespace network {
 
-NetworkServiceImpl::NetworkServiceImpl(InterfaceRequest<NetworkService> request)
-    : binding_(this, request.Pass()) {
+NetworkServiceImpl::NetworkServiceImpl() = default;
+
+NetworkServiceImpl::~NetworkServiceImpl() = default;
+
+void NetworkServiceImpl::AddBinding(
+    fidl::InterfaceRequest<NetworkService> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
-NetworkServiceImpl::~NetworkServiceImpl() {
+void NetworkServiceImpl::CreateURLLoader(
+                                         fidl::InterfaceRequest<URLLoader> loader) {
+    auto impl = std::make_unique<URLLoaderImpl>(std::move(loader));
+    url_loader_bindings_.AddBinding(std::move(impl));
 }
 
-void NetworkServiceImpl::CreateURLLoader(InterfaceRequest<URLLoader> loader) {
-}
-
-void NetworkServiceImpl::GetCookieStore(ScopedMessagePipeHandle cookie_store) {
+void NetworkServiceImpl::GetCookieStore(mx::channel cookie_store) {
   FTL_NOTIMPLEMENTED();
 }
 
-void NetworkServiceImpl::CreateWebSocket(ScopedMessagePipeHandle socket) {
+void NetworkServiceImpl::CreateWebSocket(mx::channel socket) {
   FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateTCPBoundSocket(
     NetAddressPtr local_address,
-    ScopedMessagePipeHandle bound_socket,
+    mx::channel bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
   FTL_NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
+  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
 void NetworkServiceImpl::CreateTCPConnectedSocket(
     NetAddressPtr remote_address,
-    ScopedDataPipeConsumerHandle send_stream,
-    ScopedDataPipeProducerHandle receive_stream,
-    ScopedMessagePipeHandle client_socket,
+    mx::datapipe_consumer send_stream,
+    mx::datapipe_producer receive_stream,
+    mx::channel client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
   FTL_NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
+  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
-void NetworkServiceImpl::CreateUDPSocket(ScopedMessagePipeHandle request) {
+void NetworkServiceImpl::CreateUDPSocket(mx::channel request) {
   FTL_NOTIMPLEMENTED();
 }
 
 void NetworkServiceImpl::CreateHttpServer(
     NetAddressPtr local_address,
-    ScopedMessagePipeHandle delegate,
+    mx::channel delegate,
     const CreateHttpServerCallback& callback) {
   FTL_NOTIMPLEMENTED();
-  callback.Run(MakeNetworkError(net::ERR_NOT_IMPLEMENTED), nullptr);
+  callback(MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED), nullptr);
 }
 
-void NetworkServiceImpl::RegisterURLLoaderInterceptor(
-    ScopedMessagePipeHandle factory) {
+void NetworkServiceImpl::RegisterURLLoaderInterceptor(mx::channel factory) {
   FTL_NOTIMPLEMENTED();
 }
 
-void NetworkServiceImpl::CreateHostResolver(
-    ScopedMessagePipeHandle host_resolver) {
+void NetworkServiceImpl::CreateHostResolver(mx::channel host_resolver) {
   FTL_NOTIMPLEMENTED();
 }
 
-}  // namespace mojo
+}  // namespace network

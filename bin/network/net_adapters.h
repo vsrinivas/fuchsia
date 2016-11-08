@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_SERVICES_NETWORK_NET_ADAPTERS_H_
-#define MOJO_SERVICES_NETWORK_NET_ADAPTERS_H_
+#ifndef APPS_NETWORK_NET_ADAPTERS_H_
+#define APPS_NETWORK_NET_ADAPTERS_H_
 
-#include "mojo/public/interfaces/network/network_error.mojom.h"
+#include "apps/network/services/network_error.fidl.h"
 
-namespace mojo {
+namespace network {
 
-// Creates a new Mojo network error object from a net error code.
+// Creates a new network error object from a net error code.
 NetworkErrorPtr MakeNetworkError(int error_code);
 
-} // namespace mojo
+}  // namespace network
 
-#endif  // MOJO_SERVICES_NETWORK_NET_ADAPTERS_H_
+#endif  // APPS_NETWORK_NET_ADAPTERS_H_

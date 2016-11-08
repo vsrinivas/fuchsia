@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
+#include "lib/mtl/tasks/message_loop.h"
+#include "apps/network/network_service_delegate.h"
 
-#include "mojo/public/cpp/application/service_provider_impl.h"
-#include "mojo/public/cpp/application/run_application.h"
-
-#include "network_service_delegate.h"
-
-MojoResult MojoMain(MojoHandle shell_handle) {
-  NetworkServiceDelegate network_service_delegate;
-  return mojo::RunApplication(shell_handle, &network_service_delegate);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+  network::NetworkServiceDelegate delegate;
+  loop.Run();
+  return 0;
 }

@@ -5,14 +5,14 @@
 #include "apps/network/net_adapters.h"
 #include "apps/network/net_errors.h"
 
-namespace mojo {
+namespace network {
 
-mojo::NetworkErrorPtr MakeNetworkError(int error_code) {
-  mojo::NetworkErrorPtr error = NetworkError::New();
+NetworkErrorPtr MakeNetworkError(int error_code) {
+  NetworkErrorPtr error = NetworkError::New();
   error->code = error_code;
   if (error_code <= 0)
-    error->description = net::ErrorToString(error_code);
-  return error.Pass();
+    error->description = network::ErrorToString(error_code);
+  return error;
 }
 
-} // namespace mojo
+}  // namespace network

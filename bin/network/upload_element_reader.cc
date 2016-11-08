@@ -4,40 +4,35 @@
 
 #include "upload_element_reader.h"
 
-#include <mojo/system/result.h>
+#include <utility>
 
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/system/wait.h"
 
-namespace mojo {
+namespace network {
 
-UploadElementReader::UploadElementReader(ScopedDataPipeConsumerHandle pipe)
-  : pipe_(pipe.Pass()) {
-}
+UploadElementReader::UploadElementReader(mx::datapipe_consumer pipe)
+    : pipe_(std::move(pipe)) {}
 
 UploadElementReader::~UploadElementReader() {}
 
-MojoResult UploadElementReader::ReadAll(std::ostream *os) {
-  MojoResult result = MOJO_RESULT_OK;
+mx_status_t UploadElementReader::ReadAll(std::ostream* os) {
+  mx_status_t result = NO_ERROR;
 
   while (true) {
-    uint32_t num_bytes = buf_.size();
-    result = ReadDataRaw(pipe_.get(), (void*)buf_.data(),
-                         &num_bytes, MOJO_READ_DATA_FLAG_NONE);
-    if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
-      result = Wait(pipe_.get(),
-                    MOJO_HANDLE_SIGNAL_READABLE,
-                    MOJO_DEADLINE_INDEFINITE,
-                    nullptr);
-      if (result == MOJO_RESULT_OK)
-        continue; // retry now that the data pipe is ready
+    mx_size_t num_bytes = buf_.size();
+    result = pipe_.read(0u, buf_.data(), num_bytes, &num_bytes);
+    if (result == ERR_SHOULD_WAIT) {
+      result = pipe_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                              MX_TIME_INFINITE, nullptr);
+      if (result == NO_ERROR)
+        continue;  // retry now that the data pipe is ready
     }
 
-    if (result != MOJO_RESULT_OK) {
+    if (result != NO_ERROR) {
       // If the other end closes the data pipe,
-      // we get MOJO_SYSTEM_RESULT_FAILED_PRECONDITION.
-      if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION) {
-        result = MOJO_RESULT_OK;
+      // we get ERR_REMOTE_CLOSED.
+      if (result == ERR_REMOTE_CLOSED) {
+        result = NO_ERROR;
         break;
       }
       FTL_LOG(ERROR) << "UploadELementReader: result=" << result;
@@ -47,7 +42,7 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
     os->write(buf_.data(), num_bytes);
     if (!*os) {
       // TODO(toshik): better result code?
-      result = MOJO_SYSTEM_RESULT_RESOURCE_EXHAUSTED;
+      result = ERR_BUFFER_TOO_SMALL;
       FTL_LOG(ERROR) << "UploadElementReader: result=" << result;
       break;
     }
@@ -56,4 +51,4 @@ MojoResult UploadElementReader::ReadAll(std::ostream *os) {
   return result;
 }
 
-}  // namespace mojo
+}  // namespace network

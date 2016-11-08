@@ -4,30 +4,16 @@
 
 #include "apps/network/network_service_delegate.h"
 
-#include "mojo/public/cpp/application/service_provider_impl.h"
+namespace network {
 
-NetworkServiceDelegate::NetworkServiceDelegate() {}
+NetworkServiceDelegate::NetworkServiceDelegate()
+    : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  context_->outgoing_services()->AddService<NetworkService>(
+      [this](fidl::InterfaceRequest<NetworkService> request) {
+        network_provider_.AddBinding(std::move(request));
+      });
+}
 
 NetworkServiceDelegate::~NetworkServiceDelegate() {}
 
-void NetworkServiceDelegate::OnInitialize() {
-}
-
-bool NetworkServiceDelegate::OnAcceptConnection(
-    mojo::ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<mojo::NetworkService>(
-      [this](const mojo::ConnectionContext& connection_context,
-             mojo::InterfaceRequest<mojo::NetworkService> request) {
-        new mojo::NetworkServiceImpl(request.Pass());
-      });
-  return true;
-}
-
-void NetworkServiceDelegate::OnQuit() {
-}
-
-void NetworkServiceDelegate::Create(
-    const mojo::ConnectionContext& connection,
-    mojo::InterfaceRequest<mojo::NetworkService> request) {
-  new mojo::NetworkServiceImpl(request.Pass());
-}
+}  // namespace network

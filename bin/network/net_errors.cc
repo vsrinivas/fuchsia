@@ -6,10 +6,10 @@
 
 #include "lib/ftl/logging.h"
 
-namespace net {
+namespace network {
 
 std::string ErrorToString(int error) {
-  return "net::" + ErrorToShortString(error);
+  return "network::" + ErrorToShortString(error);
 }
 
 std::string ErrorToShortString(int error) {
@@ -19,16 +19,16 @@ std::string ErrorToShortString(int error) {
   const char* error_string;
   switch (error) {
 #define NET_ERROR(label, value) \
-  case ERR_ ## label: \
-    error_string = # label; \
+  case NETWORK_ERR_##label:     \
+    error_string = #label;      \
     break;
 #include "apps/network/net_error_list.h"
 #undef NET_ERROR
-  default:
-    FTL_NOTREACHED();
-    error_string = "<unknown>";
+    default:
+      FTL_NOTREACHED();
+      error_string = "<unknown>";
   }
-  return std::string("ERR_") + error_string;
+  return std::string("NETWORK_ERR_") + error_string;
 }
 
-}  // namespace net
+}  // namespace network

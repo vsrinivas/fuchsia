@@ -14,53 +14,41 @@
 #include "apps/network/net_adapters.h"
 #include "apps/network/net_errors.h"
 #include "lib/ftl/logging.h"
-#include "url/gurl.h"
+#include "lib/url/gurl.h"
 
-namespace mojo {
+namespace network {
 
-URLLoaderImpl::URLLoaderImpl(InterfaceRequest<URLLoader> request)
-  : binding_(this, request.Pass())
-{
-  binding_.set_connection_error_handler([this]() { OnConnectionError(); });
-}
+URLLoaderImpl::URLLoaderImpl(fidl::InterfaceRequest<URLLoader> request)
+    : binding_(this, std::move(request)) {}
 
-URLLoaderImpl::~URLLoaderImpl() {
-}
+URLLoaderImpl::~URLLoaderImpl() {}
 
 void URLLoaderImpl::Cleanup() {
   delete this;
 }
 
-void URLLoaderImpl::Start(URLRequestPtr request,
-                          const Callback<void(URLResponsePtr)>& callback) {
+void URLLoaderImpl::Start(URLRequestPtr request, const Callback& callback) {
   callback_ = callback;
-  StartInternal(request.Pass());
+  StartInternal(std::move(request));
 }
 
-void URLLoaderImpl::FollowRedirect(
-    const Callback<void(URLResponsePtr)>& callback) {
+void URLLoaderImpl::FollowRedirect(const Callback& callback) {
   FTL_NOTIMPLEMENTED();
   callback_ = callback;
-  SendError(net::ERR_NOT_IMPLEMENTED);
+  SendError(network::NETWORK_ERR_NOT_IMPLEMENTED);
 }
 
-void URLLoaderImpl::QueryStatus(
-    const Callback<void(URLLoaderStatusPtr)>& callback) {
+void URLLoaderImpl::QueryStatus(const QueryStatusCallback& callback) {
   URLLoaderStatusPtr status(URLLoaderStatus::New());
   FTL_NOTIMPLEMENTED();
-  status->error = MakeNetworkError(net::ERR_NOT_IMPLEMENTED);
-  callback.Run(status.Pass());
-}
-
-void URLLoaderImpl::OnConnectionError() {
-  /* TODO(toshik) */
-  binding_.Close();
+  status->error = MakeNetworkError(network::NETWORK_ERR_NOT_IMPLEMENTED);
+  callback(std::move(status));
 }
 
 void URLLoaderImpl::SendError(int error_code) {
   URLResponsePtr response(URLResponse::New());
   response->error = MakeNetworkError(error_code);
-  SendResponse(response.Pass());
+  SendResponse(std::move(response));
 }
 
 void URLLoaderImpl::FollowRedirectInternal() {
@@ -68,9 +56,9 @@ void URLLoaderImpl::FollowRedirectInternal() {
 }
 
 void URLLoaderImpl::SendResponse(URLResponsePtr response) {
-  Callback<void(URLResponsePtr)> callback;
+  Callback callback;
   std::swap(callback_, callback);
-  callback.Run(response.Pass());
+  callback(std::move(response));
 }
 
 void URLLoaderImpl::StartInternal(URLRequestPtr request) {
@@ -85,19 +73,20 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   }
 
   if (request->body) {
-    for (size_t i = 0; i < request->body.size(); ++i)
-      element_readers.push_back(
-          std::unique_ptr<UploadElementReader>(
-              new UploadElementReader(request->body[i].Pass())));
+    // TODO(kulakowski) Implement responses into a shared_buffer
+    if (request->body->is_stream()) {
+      element_readers.push_back(std::unique_ptr<UploadElementReader>(
+          new UploadElementReader(std::move(request->body->get_stream()))));
+    }
   }
 
   asio::io_service io_service;
   bool redirect = false;
 
-  GURL url(url_str);
+  url::GURL url(url_str);
   if (!url.is_valid()) {
     FTL_LOG(ERROR) << "url parse error";
-    SendError(net::ERR_INVALID_ARGUMENT);
+    SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
     return;
   }
 
@@ -113,10 +102,10 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       ctx.set_default_verify_paths();
 
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
-      MojoResult result = c.CreateRequest(url.host(), url.path(), method,
-                                          extra_headers, element_readers);
-      if (result != MOJO_RESULT_OK) {
-        SendError(net::ERR_INVALID_ARGUMENT);
+      mx_status_t result = c.CreateRequest(url.host(), url.path(), method,
+                                           extra_headers, element_readers);
+      if (result != NO_ERROR) {
+        SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
       c.Start(url.host(), url.has_port() ? url.port() : "https");
@@ -124,25 +113,25 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = GURL(c.redirect_location_);
+        url = url::GURL(c.redirect_location_);
         if (!url.is_valid()) {
           FTL_LOG(ERROR) << "url parse error";
-          SendError(net::ERR_INVALID_RESPONSE);
+          SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;
         }
       }
 #else
       FTL_LOG(INFO) << "https is not built-in. "
-        "please build with NETWORK_SERVICE_USE_HTTPS";
-      SendError(net::ERR_INVALID_ARGUMENT);
+                       "please build with NETWORK_SERVICE_USE_HTTPS";
+      SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;
 #endif
     } else if (url.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
-      MojoResult result = c.CreateRequest(url.host(), url.path(), method,
-                                          extra_headers, element_readers);
-      if (result != MOJO_RESULT_OK) {
-        SendError(net::ERR_INVALID_ARGUMENT);
+      mx_status_t result = c.CreateRequest(url.host(), url.path(), method,
+                                           extra_headers, element_readers);
+      if (result != NO_ERROR) {
+        SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
       c.Start(url.host(), url.has_port() ? url.port() : "http");
@@ -150,20 +139,20 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = GURL(c.redirect_location_);
+        url = url::GURL(c.redirect_location_);
         if (!url.is_valid()) {
           FTL_LOG(ERROR) << "url parse error";
-          SendError(net::ERR_INVALID_RESPONSE);
+          SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;
         }
       }
     } else {
       // unknown protocol
       FTL_LOG(ERROR) << "unknown protocol";
-      SendError(net::ERR_INVALID_ARGUMENT);
+      SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;
     }
   } while (redirect);
 }
 
-}  // namespace mojo
+}  // namespace network
