@@ -15,13 +15,15 @@
 FutexNode::FutexNode() {
     LTRACE_ENTRY;
 
-    cond_init(&condvar_);
+    wait_queue_ = WAIT_QUEUE_INITIAL_VALUE(wait_queue_);
 }
 
 FutexNode::~FutexNode() {
     LTRACE_ENTRY;
 
-    cond_destroy(&condvar_);
+    THREAD_LOCK(state);
+    wait_queue_destroy(&wait_queue_);
+    THREAD_UNLOCK(state);
 }
 
 bool FutexNode::IsInQueue() const {
@@ -103,12 +105,24 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) {
     lk_time_t t = mx_time_to_lk(timeout);
 
-    return cond_wait_timeout_without_reclaim(
-        &condvar_, mutex->GetInternal(), t);
+    THREAD_LOCK(state);
+
+    // We specifically want reschedule=false here, otherwise the
+    // combination of releasing the mutex and enqueuing the current thread
+    // would not be atomic, which would mean that we could miss wakeups.
+    mutex_release_internal(mutex->GetInternal(), /* reschedule= */ false);
+
+    status_t result = wait_queue_block(&wait_queue_, t);
+
+    THREAD_UNLOCK(state);
+
+    return result;
 }
 
 void FutexNode::WakeKilledThread() {
-    cond_signal(&condvar_);
+    THREAD_LOCK(state);
+    wait_queue_wake_one(&wait_queue_, true, NO_ERROR);
+    THREAD_UNLOCK(state);
 }
 
 void FutexNode::WakeThreads(FutexNode* head) {
@@ -117,7 +131,9 @@ void FutexNode::WakeThreads(FutexNode* head) {
     FutexNode* node = head;
     do {
         FutexNode* next = node->queue_next_;
-        cond_signal(&node->condvar_);
+        THREAD_LOCK(state);
+        wait_queue_wake_one(&node->wait_queue_, true, NO_ERROR);
+        THREAD_UNLOCK(state);
         node->MarkAsNotInQueue();
         node = next;
     } while (node != head);

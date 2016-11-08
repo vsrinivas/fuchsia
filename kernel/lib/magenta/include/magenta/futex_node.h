@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <kernel/cond.h>
 #include <kernel/mutex.h>
+#include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <list.h>
 #include <magenta/types.h>
@@ -67,8 +67,8 @@ private:
     //    intrusive SinglyLinkedLists).
     uintptr_t hash_key_;
 
-    // condition variable used for blocking our containing thread on
-    cond_t condvar_;
+    // Used for waking the thread corresponding to the FutexNode.
+    wait_queue_t wait_queue_;
 
     // queue_prev_ and queue_next_ are used for maintaining a circular
     // doubly-linked list of threads that are waiting on one futex address.
