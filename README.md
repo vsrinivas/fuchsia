@@ -16,5 +16,6 @@ semantic goals are satisfied and what services are employed.
 and build is done, you can start the TQ Framework flow by doing:
 
 ```sh
-mojo:device_runner
+file:///system/apps/device_runner  # Without graphical environment
+file:///system/apps/launcher file:///system/apps/device_runner # With graphical environment.
 ```
