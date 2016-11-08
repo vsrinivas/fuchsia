@@ -11,6 +11,8 @@ group("fake") {
 }
 
 source_set("lib") {
+  testonly = true
+
   sources = [
     "fake_commit.cc",
     "fake_commit.h",
