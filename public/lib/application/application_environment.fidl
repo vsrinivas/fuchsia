@@ -7,6 +7,7 @@ module modular;
 import "apps/modular/services/application/application_launcher.fidl";
 import "apps/modular/services/application/application_environment_controller.fidl";
 import "apps/modular/services/application/application_environment_host.fidl";
+import "apps/modular/services/application/service_provider.fidl";
 
 // An interface for managing a set of applications.
 //
@@ -38,6 +39,10 @@ interface ApplicationEnvironment {
   // environment services provided by this environment's
   // |ApplicationEnvironmentHost|.
   GetApplicationLauncher(ApplicationLauncher& launcher);
+
+  // Gets the services provided by this environment's
+  // |ApplicationEnvironmentHost|.
+  GetServices(ServiceProvider& services);
 
   // Creates another interface to this environment.
   Duplicate(ApplicationEnvironment& environment);

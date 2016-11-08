@@ -52,6 +52,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   void GetApplicationLauncher(
       fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
 
+  void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
+
   void Duplicate(
       fidl::InterfaceRequest<ApplicationEnvironment> environment) override;
 
@@ -65,7 +67,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   void CreateApplicationWithProcess(
       const std::string& path,
       fidl::Array<fidl::String> arguments,
-      fidl::InterfaceHandle<ServiceProvider> environment_services,
+      fidl::InterfaceHandle<ApplicationEnvironment> environment,
       fidl::InterfaceRequest<ServiceProvider> services,
       fidl::InterfaceRequest<ApplicationController> controller);
 

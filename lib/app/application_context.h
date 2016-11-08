@@ -16,27 +16,48 @@
 
 namespace modular {
 
+// Provides access to the application's environment and allows the application
+// to publish outgoing services back to its creator.
 class ApplicationContext {
  public:
-  ApplicationContext(
-      fidl::InterfaceHandle<ServiceProvider> environment_services,
-      fidl::InterfaceRequest<ServiceProvider> outgoing_services);
+  ApplicationContext(fidl::InterfaceHandle<ApplicationEnvironment> environment,
+                     fidl::InterfaceRequest<ServiceProvider> outgoing_services);
 
   ~ApplicationContext();
 
+  // Creates the application context from the process startup info.
+  //
+  // This function should be called once during process initialization to
+  // retrieve the handles supplied to the application by the application
+  // manager.
+  //
+  // The result is never null.
   static std::unique_ptr<ApplicationContext> CreateFromStartupInfo();
 
-  ServiceProvider* environment_services() const {
-    return environment_services_.get();
-  }
-
-  ServiceProviderImpl* outgoing_services() { return &outgoing_services_; }
-
+  // Gets the application's environment.
+  //
+  // May be null if the application does not have access to its environment.
   const ApplicationEnvironmentPtr& environment() const { return environment_; }
 
+  // Gets incoming services provided to the application by the host of
+  // its environment.
+  //
+  // May be null if the application does not have access to its environment.
+  const ServiceProviderPtr& environment_services() const {
+    return environment_services_;
+  }
+
+  // Gets the application launcher service provided to the application by
+  // its environment.
+  //
+  // May be null if the application does not have access to its environment.
   const ApplicationLauncherPtr& launcher() const { return launcher_; }
 
-  // Helper for connecting to a service provided by the environment.
+  // Gets a service provider implementation by which the application can
+  // provide outgoing services back to its creator.
+  ServiceProviderImpl* outgoing_services() { return &outgoing_services_; }
+
+  // Connects to a service provided by the application's environment.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
@@ -47,9 +68,9 @@ class ApplicationContext {
   }
 
  private:
-  ServiceProviderPtr environment_services_;
-  ServiceProviderImpl outgoing_services_;
   ApplicationEnvironmentPtr environment_;
+  ServiceProviderImpl outgoing_services_;
+  ServiceProviderPtr environment_services_;
   ApplicationLauncherPtr launcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);

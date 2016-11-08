@@ -27,7 +27,6 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
   // ApplicationEnvironmentHost implementation:
 
   void GetApplicationEnvironmentServices(
-      const fidl::String& url,
       fidl::InterfaceRequest<ServiceProvider> environment_services) override;
 
   // ServiceProvider implementation:

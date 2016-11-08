@@ -5,6 +5,7 @@
 module modular;
 
 import "apps/modular/services/application/application_controller.fidl";
+import "apps/modular/services/application/application_environment.fidl";
 import "apps/modular/services/application/service_provider.fidl";
 
 // Information given to applications at startup.
@@ -12,12 +13,8 @@ import "apps/modular/services/application/service_provider.fidl";
 // For ELF binaries, this information is provided in the initialization message
 // given to libc by launchpad.
 struct ApplicationStartupInfo {
-  // The services associated with the |ApplicationEnvironment| in which this
-  // application was created.
-  //
-  // Typically contains an implementation of the |ApplicationEnvironment|
-  // interface.
-  ServiceProvider environment_services;
+  // The application's environment.
+  ApplicationEnvironment environment;
 
   // The services provided by this application.
   //

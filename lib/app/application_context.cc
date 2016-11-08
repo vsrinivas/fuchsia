@@ -11,15 +11,13 @@
 namespace modular {
 
 ApplicationContext::ApplicationContext(
-    fidl::InterfaceHandle<ServiceProvider> environment_services,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ServiceProvider> outgoing_services)
-    : environment_services_(
-          ServiceProviderPtr::Create(std::move(environment_services))),
+    : environment_(ApplicationEnvironmentPtr::Create(std::move(environment))),
       outgoing_services_(std::move(outgoing_services)) {
-  if (environment_services_) {
-    ConnectToService(environment_services_.get(),
-                     fidl::GetProxy(&environment_));
-    environment_->GetApplicationLauncher(fidl::GetProxy(&launcher_));
+  if (environment_) {
+    environment_->GetServices(GetProxy(&environment_services_));
+    environment_->GetApplicationLauncher(GetProxy(&launcher_));
   }
 }
 
@@ -27,12 +25,15 @@ ApplicationContext::~ApplicationContext() = default;
 
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfo() {
-  mx_handle_t incoming = mxio_get_startup_handle(MX_HND_TYPE_INCOMING_SERVICES);
-  mx_handle_t outgoing = mxio_get_startup_handle(MX_HND_TYPE_OUTGOING_SERVICES);
+  mx_handle_t environment =
+      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_ENVIRONMENT);
+  mx_handle_t services =
+      mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
 
   return std::make_unique<ApplicationContext>(
-      fidl::InterfaceHandle<ServiceProvider>(mx::channel(incoming), 0u),
-      fidl::InterfaceRequest<ServiceProvider>(mx::channel(outgoing)));
+      fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
+                                                    0u),
+      fidl::InterfaceRequest<ServiceProvider>(mx::channel(services)));
 }
 
 }  // namespace modular

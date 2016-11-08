@@ -29,17 +29,17 @@ constexpr size_t kSubprocessHandleCount = 2;
 mx::process CreateProcess(
     const std::string& path,
     fidl::Array<fidl::String> arguments,
-    fidl::InterfaceHandle<ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ServiceProvider> outgoing_services) {
+    fidl::InterfaceHandle<ApplicationEnvironment> environment,
+    fidl::InterfaceRequest<ServiceProvider> services) {
   const char* path_arg = path.c_str();
 
   mx_handle_t handles[kSubprocessHandleCount]{
-      static_cast<mx_handle_t>(incoming_services.PassHandle().release()),
-      static_cast<mx_handle_t>(outgoing_services.PassMessagePipe().release()),
+      static_cast<mx_handle_t>(environment.PassHandle().release()),
+      static_cast<mx_handle_t>(services.PassMessagePipe().release()),
   };
 
   uint32_t ids[kSubprocessHandleCount] = {
-      MX_HND_TYPE_INCOMING_SERVICES, MX_HND_TYPE_OUTGOING_SERVICES,
+      MX_HND_TYPE_APPLICATION_ENVIRONMENT, MX_HND_TYPE_APPLICATION_SERVICES,
   };
 
   size_t count = 0;
@@ -144,6 +144,11 @@ void ApplicationEnvironmentImpl::GetApplicationLauncher(
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
+void ApplicationEnvironmentImpl::GetServices(
+    fidl::InterfaceRequest<ServiceProvider> services) {
+  host_->GetApplicationEnvironmentServices(std::move(services));
+}
+
 void ApplicationEnvironmentImpl::Duplicate(
     fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
@@ -152,10 +157,6 @@ void ApplicationEnvironmentImpl::Duplicate(
 void ApplicationEnvironmentImpl::CreateApplication(
     modular::ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  fidl::InterfaceHandle<ServiceProvider> environment_services;
-  host_->GetApplicationEnvironmentServices(launch_info->url,
-                                           GetProxy(&environment_services));
-
   std::string path = GetPathFromURL(launch_info->url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -195,27 +196,27 @@ void ApplicationEnvironmentImpl::CreateApplication(
     ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
     startup_info->url = launch_info->url;
     startup_info->arguments = std::move(launch_info->arguments);
-    startup_info->environment_services = std::move(environment_services);
+    startup_info->environment = environment_bindings_.AddBinding(this);
     startup_info->outgoing_services = std::move(launch_info->services);
     it.first->second->StartApplication(std::move(fd), std::move(startup_info),
                                        std::move(controller));
     return;
   }
 
-  CreateApplicationWithProcess(
-      path, std::move(launch_info->arguments), std::move(environment_services),
-      std::move(launch_info->services), std::move(controller));
+  CreateApplicationWithProcess(path, std::move(launch_info->arguments),
+                               environment_bindings_.AddBinding(this),
+                               std::move(launch_info->services),
+                               std::move(controller));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     const std::string& path,
     fidl::Array<fidl::String> arguments,
-    fidl::InterfaceHandle<ServiceProvider> environment_services,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ServiceProvider> services,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::process process =
-      CreateProcess(path, std::move(arguments), std::move(environment_services),
-                    std::move(services));
+  mx::process process = CreateProcess(
+      path, std::move(arguments), std::move(environment), std::move(services));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process));

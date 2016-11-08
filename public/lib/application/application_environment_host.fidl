@@ -15,12 +15,5 @@ interface ApplicationEnvironmentHost {
   //
   // Applications created in this environment will be given the
   // |environment_services| returned here.
-  //
-  // The |url| is the URL of the application being created. The host is allowed
-  // to take the |url| into account when determining which services to offer the
-  // newly created application.
-  //
-  // TODO(abarth): Replace |url| with a stronger notion of application identity
-  // once that exists.
-  GetApplicationEnvironmentServices(string url, ServiceProvider& environment_services);
+  GetApplicationEnvironmentServices(ServiceProvider& environment_services);
 };

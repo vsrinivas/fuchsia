@@ -20,7 +20,6 @@ RootEnvironmentHost::RootEnvironmentHost() : host_binding_(this) {
 RootEnvironmentHost::~RootEnvironmentHost() = default;
 
 void RootEnvironmentHost::GetApplicationEnvironmentServices(
-    const fidl::String& url,
     fidl::InterfaceRequest<ServiceProvider> environment_services) {
   service_provider_bindings_.AddBinding(this, std::move(environment_services));
 }
