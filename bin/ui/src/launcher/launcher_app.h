@@ -56,7 +56,6 @@ class LauncherApp : public modular::ApplicationEnvironmentHost,
  private:
   // |ApplicationEnvironmentHost|:
   void GetApplicationEnvironmentServices(
-      const fidl::String& url,
       fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
       override;
 

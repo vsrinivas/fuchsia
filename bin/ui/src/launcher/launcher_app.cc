@@ -60,7 +60,6 @@ LauncherApp::LauncherApp(const ftl::CommandLine& command_line)
 LauncherApp::~LauncherApp() {}
 
 void LauncherApp::GetApplicationEnvironmentServices(
-    const fidl::String& url,
     fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
   env_services_.AddBinding(std::move(environment_services));
 }
@@ -84,16 +83,6 @@ void LauncherApp::RegisterServices() {
       [this](fidl::InterfaceRequest<mozart::Launcher> request) {
         FTL_DLOG(INFO) << "Servicing launcher service request";
         launcher_bindings_.AddBinding(this, std::move(request));
-      });
-
-  env_services_.AddService<modular::ApplicationEnvironment>(
-      [this](fidl::InterfaceRequest<modular::ApplicationEnvironment> request) {
-        // TODO(jeffbrown): The fact we have to handle this here suggests that
-        // the application protocol should change so as to pass the environment
-        // as an initial rather than incoming services so we're not trying
-        // to ask the incoming services for the environment.
-        FTL_DLOG(INFO) << "Servicing application environment request";
-        env_->Duplicate(std::move(request));
       });
 
   RegisterSingletonService(fonts::FontProvider::Name_, kFontProviderUrl);
