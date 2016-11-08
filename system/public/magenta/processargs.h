@@ -100,11 +100,11 @@ struct mx_proc_args {
 // Handle types used by the device manager and device hosts
 #define MX_HND_TYPE_RESOURCE 0x20
 
-// Handle types used by the mojo application model
-#define MX_HND_TYPE_APPLICATION_REQUEST 0x100
+// Handle types used by the application model
+#define MX_HND_TYPE_APPLICATION_REQUEST 0x100 // deprecated
 #define MX_HND_TYPE_APPLICATION_LAUNCHER 0x101
-#define MX_HND_TYPE_INCOMING_SERVICES 0x102
-#define MX_HND_TYPE_OUTGOING_SERVICES 0x103
+#define MX_HND_TYPE_APPLICATION_ENVIRONMENT 0x102
+#define MX_HND_TYPE_APPLICATION_SERVICES 0x103
 
 // Message pipe for dynamic loader service
 #define MX_HND_TYPE_LOADER_SVC 0x200
