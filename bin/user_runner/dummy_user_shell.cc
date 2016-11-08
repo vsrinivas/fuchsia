@@ -69,7 +69,7 @@ class DummyUserShellImpl : public UserShell,
     // When some data has arrived, we stop the story.
     if (data_count_ % 5 == 0) {
       FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
-      story_->Stop();
+      story_controller_->Stop();
     }
   }
 
@@ -152,8 +152,8 @@ class DummyUserShellImpl : public UserShell,
  private:
   void CreateStory(const fidl::String& url) {
     FTL_LOG(INFO) << "DummyUserShell::CreateStory() " << url;
-    story_provider_->CreateStory(url, fidl::GetProxy(&story_));
-    story_->GetInfo([this](fidl::StructPtr<StoryInfo> story_info) {
+    story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
+    story_controller_->GetInfo([this](fidl::StructPtr<StoryInfo> story_info) {
       FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
                     << " url: " << story_info->url << " id: " << story_info->id
                     << " session_page_id: "
@@ -175,17 +175,17 @@ class DummyUserShellImpl : public UserShell,
                   << " is_running: " << story_info_->is_running;
 
     story_provider_->ResumeStoryByInfo(story_info_->Clone(),
-                                       fidl::GetProxy(&story_));
+                                       fidl::GetProxy(&story_controller_));
     InitStory();
   }
 
   void InitStory() {
     fidl::InterfaceHandle<StoryWatcher> story_watcher;
     story_watcher_binding_.Bind(fidl::GetProxy(&story_watcher));
-    story_->Watch(std::move(story_watcher));
+    story_controller_->Watch(std::move(story_watcher));
 
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
-    story_->Start(fidl::GetProxy(&story_view));
+    story_controller_->Start(fidl::GetProxy(&story_view));
 
     // Embed the new story.
     GetViewContainer()->AddChild(child_view_key_, std::move(story_view));
@@ -196,7 +196,7 @@ class DummyUserShellImpl : public UserShell,
   StrongBinding<UserShell> binding_;
   fidl::Binding<StoryWatcher> story_watcher_binding_;
   StoryProviderPtr story_provider_;
-  StoryPtr story_;
+  StoryControllerPtr story_controller_;
   StoryInfoPtr story_info_;
   int data_count_ = 0;
 

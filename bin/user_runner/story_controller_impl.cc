@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/user_runner/story_impl.h"
+#include "apps/modular/src/user_runner/story_controller_impl.h"
 
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
@@ -11,33 +11,34 @@
 
 namespace modular {
 
-StoryImpl::StoryImpl(StoryInfoPtr story_info,
-                     StoryProviderImpl* const story_provider_impl,
-                     std::shared_ptr<ApplicationContext> application_context,
-                     fidl::InterfaceRequest<Story> story_request)
+StoryControllerImpl::StoryControllerImpl(
+    StoryInfoPtr story_info,
+    StoryProviderImpl* const story_provider_impl,
+    std::shared_ptr<ApplicationContext> application_context,
+    fidl::InterfaceRequest<StoryController> story_controller_request)
     : story_info_(std::move(story_info)),
       story_provider_impl_(story_provider_impl),
       storage_(story_provider_impl_->storage()),
       application_context_(application_context),
-      binding_(this, std::move(story_request)),
+      binding_(this, std::move(story_controller_request)),
       module_watcher_binding_(this),
       link_changed_binding_(this) {
-  FTL_LOG(INFO) << "StoryImpl() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id;
 }
 
-StoryImpl::~StoryImpl() {
-  FTL_LOG(INFO) << "~StoryImpl() " << story_info_->id;
+StoryControllerImpl::~StoryControllerImpl() {
+  FTL_LOG(INFO) << "~StoryControllerImpl() " << story_info_->id;
 }
 
 // |Story|
-void StoryImpl::GetInfo(const GetInfoCallback& callback) {
+void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
   callback(story_info_->Clone());
 }
 
 // |Story|
-void StoryImpl::Start(
+void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryImpl::Start() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::Start() " << story_info_->id;
 
   if (story_info_->is_running) {
     return;
@@ -48,41 +49,41 @@ void StoryImpl::Start(
 }
 
 // |Story|
-void StoryImpl::Stop() {
-  FTL_LOG(INFO) << "StoryImpl::Stop() " << story_info_->id;
+void StoryControllerImpl::Stop() {
+  FTL_LOG(INFO) << "StoryControllerImpl::Stop() " << story_info_->id;
   TearDownStoryRunner();
   NotifyStoryWatchers(&StoryWatcher::OnStop);
 }
 
 // |Story|
-void StoryImpl::Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) {
-  FTL_LOG(INFO) << "StoryImpl::Watch() " << story_info_->id;
+void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) {
+  FTL_LOG(INFO) << "StoryControllerImpl::Watch() " << story_info_->id;
   story_watchers_.emplace_back(
       StoryWatcherPtr::Create(std::move(story_watcher)));
 }
 
 // |ModuleWatcher|
-void StoryImpl::Done() {
-  FTL_LOG(INFO) << "StoryImpl::Done() " << story_info_->id;
+void StoryControllerImpl::Done() {
+  FTL_LOG(INFO) << "StoryControllerImpl::Done() " << story_info_->id;
   TearDownStoryRunner();
   NotifyStoryWatchers(&StoryWatcher::OnDone);
 }
 
 // |LinkChanged|
-void StoryImpl::Notify(MojoDocMap docs) {
-  FTL_LOG(INFO) << "StoryImpl::Notify() " << story_info_->id;
+void StoryControllerImpl::Notify(MojoDocMap docs) {
+  FTL_LOG(INFO) << "StoryControllerImpl::Notify() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnData);
 }
 
-void StoryImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
+void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
   for (auto& story_watcher : story_watchers_) {
     (story_watcher.get()->*method)();
   }
 }
 
-void StoryImpl::StartStoryRunner(
+void StoryControllerImpl::StartStoryRunner(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryImpl::StartStoryRunner() " << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::StartStoryRunner() " << story_info_->id;
 
   auto story_runner_launch_info = ApplicationLaunchInfo::New();
 
@@ -95,6 +96,7 @@ void StoryImpl::StartStoryRunner(
 
   ConnectToService(story_runner_app_services.get(), GetProxy(&runner_));
 
+
   auto resolver_launch_info = ApplicationLaunchInfo::New();
 
   ServiceProviderPtr resolver_app_services;
@@ -106,6 +108,7 @@ void StoryImpl::StartStoryRunner(
 
   ResolverFactoryPtr resolver_factory;
   ConnectToService(resolver_app_services.get(), GetProxy(&resolver_factory));
+
 
   runner_->Initialize(std::move(resolver_factory));
 
@@ -132,8 +135,8 @@ void StoryImpl::StartStoryRunner(
   root_->Watch(std::move(link_changed));
 }
 
-void StoryImpl::TearDownStoryRunner() {
-  FTL_LOG(INFO) << "StoryImpl::TearDownStoryRunner() " << story_info_->id;
+void StoryControllerImpl::TearDownStoryRunner() {
+  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStoryRunner() " << story_info_->id;
 
   // TODO(mesch): Here we need an actual call back when the Session is
   // down.

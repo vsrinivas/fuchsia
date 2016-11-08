@@ -12,8 +12,8 @@ group("all") {
 executable("user_runner") {
   sources = [
     "session_storage_impl.h",
-    "story_impl.cc",
-    "story_impl.h",
+    "story_controller_impl.cc",
+    "story_controller_impl.h",
     "user_runner.cc",
     "story_provider_impl.cc",
     "story_provider_impl.h",

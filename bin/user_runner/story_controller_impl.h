@@ -22,26 +22,29 @@ namespace modular {
 class ApplicationContext;
 class StoryProviderImpl;
 
-class StoryImpl : public Story, public ModuleWatcher, public LinkChanged {
+class StoryControllerImpl : public StoryController, public ModuleWatcher, public LinkChanged {
  public:
-  static StoryImpl* New(StoryInfoPtr story_info,
-                        StoryProviderImpl* story_provider_impl,
-                        std::shared_ptr<ApplicationContext> application_context,
-                        fidl::InterfaceRequest<Story> story_request) {
-    return new StoryImpl(std::move(story_info), story_provider_impl,
-                         application_context, std::move(story_request));
+  static StoryControllerImpl* New(
+      StoryInfoPtr story_info,
+      StoryProviderImpl* story_provider_impl,
+      std::shared_ptr<ApplicationContext> application_context,
+      fidl::InterfaceRequest<StoryController> story_controller_request) {
+    return new StoryControllerImpl(std::move(story_info),
+                                   story_provider_impl,
+                                   application_context,
+                                   std::move(story_controller_request));
   }
 
-  ~StoryImpl() override;
+  ~StoryControllerImpl() override;
 
  private:  // factory support
   // Constructor is private to ensure (by way of New()) that instances
   // are created always with new. This is necessary because Done()
   // calls delete this.
-  StoryImpl(StoryInfoPtr story_info,
+  StoryControllerImpl(StoryInfoPtr story_info,
             StoryProviderImpl* story_provider_impl,
             std::shared_ptr<ApplicationContext> application_context,
-            fidl::InterfaceRequest<Story> story_request);
+            fidl::InterfaceRequest<StoryController> story_controller_request);
 
  private:  // virtual method implementations
   // |Story|
@@ -78,7 +81,7 @@ class StoryImpl : public Story, public ModuleWatcher, public LinkChanged {
   std::shared_ptr<SessionStorageImpl::Storage> storage_;
   std::shared_ptr<ApplicationContext> application_context_;
 
-  StrongBinding<Story> binding_;
+  StrongBinding<StoryController> binding_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::Binding<LinkChanged> link_changed_binding_;
 
@@ -89,7 +92,7 @@ class StoryImpl : public Story, public ModuleWatcher, public LinkChanged {
   LinkPtr root_;
   ModuleControllerPtr module_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };
 
 }  // namespace modular

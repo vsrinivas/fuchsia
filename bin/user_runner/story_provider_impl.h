@@ -20,7 +20,7 @@
 
 namespace modular {
 class ApplicationContext;
-class StoryImpl;
+class StoryControllerImpl;
 
 class StoryProviderImpl : public StoryProvider {
  public:
@@ -43,29 +43,29 @@ class StoryProviderImpl : public StoryProvider {
       std::function<void(fidl::InterfaceHandle<ledger::Page> session_page)>
           session_page_callback);
 
-  // Used by StoryImpl to write story meta-data to the ledger. Used
+  // Used by StoryControllerImpl to write story meta-data to the ledger. Used
   // after calling |Stop| or when the |Story| pipe is closed.
   void WriteStoryInfo(StoryInfoPtr story_info);
 
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryInfo(StoryInfoPtr story_info, std::function<void()> done);
 
-  // Used by StoryImpl.
+  // Used by StoryControllerImpl.
   using Storage = SessionStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
 
  private:
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
-                   fidl::InterfaceRequest<Story> story_request) override;
+                   fidl::InterfaceRequest<StoryController> story_controller_request) override;
 
   // |StoryProvider|
   void ResumeStoryById(const fidl::String& story_id,
-                       fidl::InterfaceRequest<Story> story_request) override;
+                       fidl::InterfaceRequest<StoryController> story_controller_request) override;
 
   // |StoryProvider|
   void ResumeStoryByInfo(fidl::StructPtr<StoryInfo> story_info,
-                         fidl::InterfaceRequest<Story> story_request) override;
+                         fidl::InterfaceRequest<StoryController> story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
