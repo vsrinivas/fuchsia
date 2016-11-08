@@ -18,7 +18,7 @@
 namespace fidl {
 
 // Use this class to manage a set of bindings each of which is
-// owned by the pipe it is bound to.
+// owned by the channel it is bound to.
 //
 // The implementation type of the binding is also parameterized, allowing
 // the use of smart pointer types such as |std::unique_ptr<>| to reference

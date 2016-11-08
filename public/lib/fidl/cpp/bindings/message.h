@@ -13,7 +13,7 @@
 
 namespace fidl {
 
-// Message is a holder for the data and handles to be sent over a MessagePipe.
+// Message is a holder for the data and handles to be sent over a channel.
 // Message owns its data and handles, but a consumer of Message is free to
 // mutate the data and handles. The message's data is comprised of a header
 // followed by payload.
@@ -113,20 +113,21 @@ class MessageReceiverWithResponder : public MessageReceiver {
 };
 
 // A MessageReceiver that is also able to provide status about the state
-// of the underlying MessagePipe to which it will be forwarding messages
+// of the underlying channel to which it will be forwarding messages
 // received via the |Accept()| call.
 class MessageReceiverWithStatus : public MessageReceiver {
  public:
   ~MessageReceiverWithStatus() override {}
 
-  // Returns |true| if this MessageReceiver is currently bound to a MessagePipe,
-  // the pipe has not been closed, and the pipe has not encountered an error.
+  // Returns |true| if this MessageReceiver is currently bound to a channel,
+  // the channel has not been closed, and the channel has not encountered an
+  // error.
   virtual bool IsValid() = 0;
 };
 
 // An alternative to MessageReceiverWithResponder for cases in which it
 // is necessary for the implementor of this interface to know about the status
-// of the MessagePipe which will carry the responses.
+// of the channel which will carry the responses.
 class MessageReceiverWithResponderStatus : public MessageReceiver {
  public:
   ~MessageReceiverWithResponderStatus() override {}
@@ -145,26 +146,18 @@ class MessageReceiverWithResponderStatus : public MessageReceiver {
       FTL_WARN_UNUSED_RESULT = 0;
 };
 
-// Read a single message from the pipe into the supplied |message|. |handle|
+// Read a single message from the channel into the supplied |message|. |handle|
 // must be valid. |message| must be non-null and empty (i.e., clear of any data
 // and handles).
-//
-// This method calls into |MojoReadMessage()| and propagates any errors it
-// produces. See mojo/public/c/include/mojo/system/message_pipe.h for a
-// description of its possible return values.
 //
 // NOTE: The message isn't validated and may be malformed!
 mx_status_t ReadMessage(const mx::channel& handle, Message* message);
 
-// Read a single message from the pipe and dispatch to the given receiver.
+// Read a single message from the channel and dispatch to the given receiver.
 // |handle| must be valid. |receiver| may be null, in which case the read
 // message is simply discarded. If |receiver| is not null, then
 // |receiver_result| should be non-null, and will be set the receiver's return
 // value.
-//
-// This method calls into |MojoReadMessage()| and propagates any errors it
-// produces. See mojo/public/c/include/mojo/system/message_pipe.h for a
-// description of its possible return values.
 mx_status_t ReadAndDispatchMessage(const mx::channel& handle,
                                    MessageReceiver* receiver,
                                    bool* receiver_result);

@@ -21,14 +21,14 @@
 namespace fidl {
 
 // A pointer to a local proxy of a remote Interface implementation. Uses a
-// message pipe to communicate with the remote implementation, and automatically
-// closes the pipe and deletes the proxy on destruction. The pointer must be
-// bound to a message pipe before the interface methods can be called.
+// channel to communicate with the remote implementation, and automatically
+// closes the channel and deletes the proxy on destruction. The pointer must be
+// bound to a channel before the interface methods can be called.
 //
 // This class is thread hostile, as is the local proxy it manages. All calls to
 // this class or the proxy should be from the same thread that created it. If
 // you need to move the proxy to a different thread, extract the
-// InterfaceHandle (containing just the message pipe and any version
+// InterfaceHandle (containing just the channel and any version
 // information) using PassInterfaceHandle(), pass it to a different thread, and
 // create and bind a new InterfacePtr from that thread.
 template <typename Interface>
@@ -43,7 +43,7 @@ class InterfacePtr {
     internal_state_.Swap(&other.internal_state_);
   }
 
-  // Takes over the binding of another InterfacePtr, and closes any message pipe
+  // Takes over the binding of another InterfacePtr, and closes any channel
   // already bound to this pointer.
   InterfacePtr& operator=(InterfacePtr&& other) {
     reset();
@@ -52,16 +52,16 @@ class InterfacePtr {
   }
 
   // Assigning nullptr to this class causes it to close the currently bound
-  // message pipe (if any) and returns the pointer to the unbound state.
+  // channel (if any) and returns the pointer to the unbound state.
   InterfacePtr& operator=(std::nullptr_t) {
     reset();
     return *this;
   }
 
-  // Closes the bound message pipe (if any) on destruction.
+  // Closes the bound channel (if any) on destruction.
   ~InterfacePtr() {}
 
-  // If |info| is valid (containing a valid message pipe handle), returns an
+  // If |info| is valid (containing a valid channel handle), returns an
   // InterfacePtr bound to it. Otherwise, returns an unbound InterfacePtr. The
   // specified |waiter| will be used as in the InterfacePtr::Bind() method.
   static InterfacePtr<Interface> Create(
@@ -75,10 +75,10 @@ class InterfacePtr {
 
   // Binds the InterfacePtr to a remote implementation of Interface. The
   // |waiter| is used for receiving notifications when there is data to read
-  // from the message pipe. For most callers, the default |waiter| will be
+  // from the channel. For most callers, the default |waiter| will be
   // sufficient.
   //
-  // Calling with an invalid |info| (containing an invalid message pipe handle)
+  // Calling with an invalid |info| (containing an invalid channel handle)
   // has the same effect as reset(). In this case, the InterfacePtr is not
   // considered as bound.
   void Bind(InterfaceHandle<Interface> info,
@@ -88,7 +88,7 @@ class InterfacePtr {
       internal_state_.Bind(std::move(info), waiter);
   }
 
-  // Returns whether or not this InterfacePtr is bound to a message pipe.
+  // Returns whether or not this InterfacePtr is bound to a channel.
   bool is_bound() const { return internal_state_.is_bound(); }
 
   // Returns a raw pointer to the local proxy. Caller does not take ownership.
@@ -103,7 +103,7 @@ class InterfacePtr {
   uint32_t version() const { return internal_state_.version(); }
 
   // If the remote side doesn't support the specified version, it will close its
-  // end of the message pipe asynchronously. This does nothing if it's already
+  // end of the channel asynchronously. This does nothing if it's already
   // known that the remote side supports the specified version, i.e., if
   // |version <= this->version()|.
   //
@@ -113,7 +113,7 @@ class InterfacePtr {
     internal_state_.RequireVersion(version);
   }
 
-  // Closes the bound message pipe (if any) and returns the pointer to the
+  // Closes the bound channel (if any) and returns the pointer to the
   // unbound state.
   void reset() {
     State doomed;
@@ -128,7 +128,7 @@ class InterfacePtr {
   // case of error.
   //
   // This method may only be called after the InterfacePtr has been bound to a
-  // message pipe.
+  // channel.
   bool WaitForIncomingResponse() {
     return internal_state_.WaitForIncomingResponse(ftl::TimeDelta::Max());
   }
@@ -139,12 +139,12 @@ class InterfacePtr {
   // if an error occurred, of if the timeout exceeded.
   //
   // This method may only be called after the InterfacePtr has been bound to a
-  // message pipe.
+  // channel.
   bool WaitForIncomingResponseWithTimeout(ftl::TimeDelta timeout) {
     return internal_state_.WaitForIncomingResponse(timeout);
   }
 
-  // Indicates whether the message pipe has encountered an error. If true,
+  // Indicates whether the channel has encountered an error. If true,
   // method calls made on this interface will be dropped (and may already have
   // been dropped).
   bool encountered_error() const { return internal_state_.encountered_error(); }
@@ -153,7 +153,7 @@ class InterfacePtr {
   // called from the thread that owns this InterfacePtr.
   //
   // This method may only be called after the InterfacePtr has been bound to a
-  // message pipe.
+  // channel.
   void set_connection_error_handler(const ftl::Closure& error_handler) {
     internal_state_.set_connection_error_handler(error_handler);
   }

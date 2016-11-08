@@ -18,37 +18,38 @@
 namespace fidl {
 namespace internal {
 
-// Router provides a way for sending messages over a MessagePipe, and re-routing
+// Router provides a way for sending messages over a channel, and re-routing
 // response messages back to the sender.
 class Router : public MessageReceiverWithResponder {
  public:
-  Router(mx::channel message_pipe,
+  Router(mx::channel channel,
          MessageValidatorList validators,
          const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter());
   ~Router() override;
 
-  // Sets the receiver to handle messages read from the message pipe that do
+  // Sets the receiver to handle messages read from the channel that do
   // not have the kMessageIsResponse flag set.
   void set_incoming_receiver(MessageReceiverWithResponderStatus* receiver) {
     incoming_receiver_ = receiver;
   }
 
   // Sets the error handler to receive notifications when an error is
-  // encountered while reading from the pipe or waiting to read from the pipe.
+  // encountered while reading from the channel or waiting to read from the
+  // channel.
   void set_connection_error_handler(const ftl::Closure& error_handler) {
     connector_.set_connection_error_handler(error_handler);
   }
 
-  // Returns true if an error was encountered while reading from the pipe or
-  // waiting to read from the pipe.
+  // Returns true if an error was encountered while reading from the channel or
+  // waiting to read from the channel.
   bool encountered_error() const { return connector_.encountered_error(); }
 
-  // Is the router bound to a MessagePipe handle?
+  // Is the router bound to a channel?
   bool is_valid() const { return connector_.is_valid(); }
 
-  void CloseMessagePipe() { connector_.CloseMessagePipe(); }
+  void CloseChannel() { connector_.CloseChannel(); }
 
-  mx::channel PassMessagePipe() { return connector_.PassMessagePipe(); }
+  mx::channel PassChannel() { return connector_.PassChannel(); }
 
   // MessageReceiver implementation:
   bool Accept(Message* message) override;
@@ -57,7 +58,7 @@ class Router : public MessageReceiverWithResponder {
 
   // Blocks the current thread until the first incoming method call, i.e.,
   // either a call to a client method or a callback method, or |timeout|.
-  // When returning |false| closes the message pipe, unless the reason for
+  // When returning |false| closes the channel, unless the reason for
   // for returning |false| was |ERR_SHOULD_WAIT| or
   // |ERR_TIMED_OUT|.
   // Use |encountered_error| to see if an error occurred.

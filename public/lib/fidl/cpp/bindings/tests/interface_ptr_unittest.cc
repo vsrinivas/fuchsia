@@ -497,7 +497,7 @@ TEST(StrongConnectorTest, Math) {
 
   {
     // Suppose this is instantiated in a process that has the other end of the
-    // message pipe.
+    // channel.
     MathCalculatorUI calculator_ui(calc.Pass());
 
     calculator_ui.Add(2.0);
@@ -564,7 +564,7 @@ TEST(WeakConnectorTest, Math) {
 
   {
     // Suppose this is instantiated in a process that has the other end of the
-    // message pipe.
+    // channel.
     MathCalculatorUI calculator_ui(calc.Pass());
 
     calculator_ui.Add(2.0);

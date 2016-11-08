@@ -31,8 +31,8 @@ namespace fidl {
 //
 // TODO(vardhan): Add support for InterfaceControlMessage methods.
 // TODO(vardhan): Message calls invoked on this class will return |false| if
-// there are any message pipe errors.  Should there be a better way to expose
-// underlying message pipe errors?
+// there are any channel errors.  Should there be a better way to expose
+// underlying channel errors?
 template <typename Interface>
 class SynchronousInterfacePtr {
  public:
@@ -41,11 +41,11 @@ class SynchronousInterfacePtr {
   SynchronousInterfacePtr(std::nullptr_t) : SynchronousInterfacePtr() {}
 
   // Takes over the binding of another SynchronousInterfacePtr, and closes any
-  // message pipe already bound to this pointer.
+  // channel already bound to this pointer.
   SynchronousInterfacePtr(SynchronousInterfacePtr&& other) = default;
 
   // Takes over the binding of another SynchronousInterfacePtr, and closes any
-  // message pipe already bound to this pointer.
+  // channel already bound to this pointer.
   SynchronousInterfacePtr& operator=(SynchronousInterfacePtr&& other) = default;
 
   static SynchronousInterfacePtr<Interface> Create(
@@ -53,7 +53,7 @@ class SynchronousInterfacePtr {
     return SynchronousInterfacePtr<Interface>(std::move(handle));
   }
 
-  // Closes the bound message pipe (if any).
+  // Closes the bound channel (if any).
   void reset() { *this = SynchronousInterfacePtr<Interface>(); }
 
   // Returns a raw pointer to the local proxy. Caller does not take ownership.
@@ -67,8 +67,7 @@ class SynchronousInterfacePtr {
   }
   typename Interface::Synchronous_& operator*() { return *operator->(); }
 
-  // Returns whether or not this SynchronousInterfacePtr is bound to a message
-  // pipe.
+  // Returns whether or not this SynchronousInterfacePtr is bound to a channel.
   bool is_bound() const { return connector_ && connector_->is_valid(); }
   explicit operator bool() const { return is_bound(); }
 
@@ -83,7 +82,7 @@ class SynchronousInterfacePtr {
   }
 
  private:
-  // We save the version_ here before we pass the underlying message pipe handle
+  // We save the version_ here before we pass the underlying channel handle
   // to |connector_|.
   uint32_t version_;
 
@@ -111,8 +110,8 @@ class SynchronousInterfacePtr {
   FIDL_MOVE_ONLY_TYPE(SynchronousInterfacePtr);
 };
 
-// Creates a new message pipe over which Interface is to be served. Binds the
-// specified SynchronousInterfacePtr to one end of the message pipe, and returns
+// Creates a new channel over which Interface is to be served. Binds the
+// specified SynchronousInterfacePtr to one end of the channel, and returns
 // an InterfaceRequest bound to the other. The SynchronousInterfacePtr should be
 // passed to the client, and the InterfaceRequest should be passed to whatever
 // will provide the implementation. Unlike InterfacePtr<>, invocations on

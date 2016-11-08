@@ -14,9 +14,9 @@ namespace fidl {
 namespace internal {
 
 // This class is responsible for performing synchronous read/write operations on
-// a MessagePipe. Notably, this interface allows us to make synchronous
+// a channel. Notably, this interface allows us to make synchronous
 // request/response operations on messages: write a message (that expects a
-// response message), wait on the message pipe, and read the response.
+// response message), wait on the channel, and read the response.
 class SynchronousConnector {
  public:
   explicit SynchronousConnector(mx::channel handle);
@@ -33,7 +33,7 @@ class SynchronousConnector {
 
   mx::channel PassHandle() { return std::move(handle_); }
 
-  // Returns true if the underlying MessagePipe is valid.
+  // Returns true if the underlying channel is valid.
   bool is_valid() const { return !!handle_; }
 
  private:

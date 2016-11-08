@@ -71,7 +71,7 @@ TEST_F(BindingTest, Close) {
   EXPECT_TRUE(called);
 }
 
-// Tests that destroying a fidl::Binding closes the bound message pipe handle.
+// Tests that destroying a fidl::Binding closes the bound channel handle.
 TEST_F(BindingTest, DestroyClosesMessagePipe) {
   bool encountered_error = false;
   ServiceImpl impl;
@@ -224,7 +224,7 @@ TEST_F(BindingTest, SetInterfaceHandleVersion) {
 
 using StrongBindingTest = BindingTestBase;
 
-// Tests that destroying a fidl::StrongBinding closes the bound message pipe
+// Tests that destroying a fidl::StrongBinding closes the bound channel
 // handle but does *not* destroy the implementation object.
 TEST_F(StrongBindingTest, DestroyClosesMessagePipe) {
   bool encountered_error = false;

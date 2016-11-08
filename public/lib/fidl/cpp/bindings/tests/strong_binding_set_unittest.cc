@@ -41,7 +41,7 @@ TEST(StrongBindingSetTest, FullLifeCycle) {
   MinimalInterfaceImpl* impls[kNumObjects];
   bool deleted_flags[kNumObjects] = {};
 
-  // Create 10 message pipes, bind everything together, and add the
+  // Create 10 channels, bind everything together, and add the
   // bindings to binding_set.
   StrongBindingSet<test::MinimalInterface> binding_set;
   EXPECT_EQ(0u, binding_set.size());
@@ -67,7 +67,7 @@ TEST(StrongBindingSetTest, FullLifeCycle) {
     EXPECT_EQ(1, impl->call_count());
   }
 
-  // Close the first 5 message pipes and destroy the first five
+  // Close the first 5 channels and destroy the first five
   // InterfacePtrs.
   for (size_t i = 0; i < kNumObjects / 2; i++) {
     intrfc_ptrs[i].reset();

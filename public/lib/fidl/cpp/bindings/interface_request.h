@@ -21,11 +21,11 @@ template <typename I>
 class InterfaceHandle;
 
 // Represents a request from a remote client for an implementation of Interface
-// over a specified message pipe. The implementor of the interface should
-// remove the message pipe by calling PassMessagePipe() and bind it to the
+// over a specified channel. The implementor of the interface should
+// remove the channel by calling PassChannel() and bind it to the
 // implementation. If this is not done, the InterfaceRequest will automatically
-// close the pipe on destruction. Can also represent the absence of a request
-// if the client did not provide a message pipe.
+// close the channel on destruction. Can also represent the absence of a request
+// if the client did not provide a channel.
 template <typename Interface>
 class InterfaceRequest {
  public:
@@ -34,11 +34,11 @@ class InterfaceRequest {
   InterfaceRequest() {}
   InterfaceRequest(std::nullptr_t) {}
 
-  // Constructs an InterfaceRequest from a message pipe handle (if |handle| is
+  // Constructs an InterfaceRequest from a channel handle (if |handle| is
   // not set, then this constructs an "empty" InterfaceRequest).
   explicit InterfaceRequest(mx::channel handle) : handle_(std::move(handle)) {}
 
-  // Takes the message pipe from another InterfaceRequest.
+  // Takes the channel from another InterfaceRequest.
   InterfaceRequest(InterfaceRequest&& other) {
     handle_ = std::move(other.handle_);
   }
@@ -48,25 +48,28 @@ class InterfaceRequest {
   }
 
   // Assigning to nullptr resets the InterfaceRequest to an empty state,
-  // closing the message pipe currently bound to it (if any).
+  // closing the channel currently bound to it (if any).
   InterfaceRequest& operator=(std::nullptr_t) {
     handle_.reset();
     return *this;
   }
 
-  // Binds the request to a message pipe over which Interface is to be
-  // requested.  If the request is already bound to a message pipe, the current
-  // message pipe will be closed.
+  // Binds the request to a channel over which Interface is to be
+  // requested.  If the request is already bound to a channel, the current
+  // channel will be closed.
   void Bind(mx::channel handle) { handle_ = std::move(handle); }
 
-  // Indicates whether the request currently contains a valid message pipe.
+  // Indicates whether the request currently contains a valid channel.
   bool is_pending() const { return !!handle_; }
 
   // Tests as true if pending, false if not.
   explicit operator bool() const { return is_pending(); }
 
-  // Removes the message pipe from the request and returns it.
-  mx::channel PassMessagePipe() { return std::move(handle_); }
+  // Removes the channel from the request and returns it.
+  mx::channel PassChannel() { return std::move(handle_); }
+
+  // TODO(abarth): Remove this method.
+  mx::channel PassMessagePipe() { return PassChannel(); }
 
  private:
   mx::channel handle_;
@@ -74,7 +77,7 @@ class InterfaceRequest {
   FIDL_MOVE_ONLY_TYPE(InterfaceRequest);
 };
 
-// Creates a new message pipe over which Interface is to be served, and one end
+// Creates a new channel over which Interface is to be served, and one end
 // into the supplied |handle| and the returns the other inside an
 // InterfaceRequest<>. The InterfaceHandle<> can be used to create a client
 // proxy (such as an InterfacePtr<> or SynchronousInterfacePtr<>).
@@ -91,14 +94,14 @@ InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
   return InterfaceRequest<Interface>(std::move(endpoint1));
 }
 
-// Creates a new message pipe over which Interface is to be served. Binds the
-// specified InterfacePtr to one end of the message pipe, and returns an
+// Creates a new channel over which Interface is to be served. Binds the
+// specified InterfacePtr to one end of the channel, and returns an
 // InterfaceRequest bound to the other. The InterfacePtr should be passed to
 // the client, and the InterfaceRequest should be passed to whatever will
 // provide the implementation. The implementation should typically be bound to
 // the InterfaceRequest using the Binding or StrongBinding classes. The client
 // may begin to issue calls even before an implementation has been bound, since
-// messages sent over the pipe will just queue up until they are consumed by
+// messages sent over the channel will just queue up until they are consumed by
 // the implementation.
 //
 // Example #1: Requesting a remote implementation of an interface.
