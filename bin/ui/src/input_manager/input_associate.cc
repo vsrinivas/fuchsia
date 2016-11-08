@@ -16,7 +16,7 @@ std::ostream& operator<<(std::ostream& os, const mozart::Event& value) {
   if (value.pointer_data)
     os << ", x=" << value.pointer_data->x << ", y=" << value.pointer_data->y;
   if (value.key_data)
-    os << ", key_code=" << value.key_data->key_code;
+    os << ", hid_usage=0x" << std::hex << value.key_data->hid_usage;
   return os << "}";
 }
 }  // namespace

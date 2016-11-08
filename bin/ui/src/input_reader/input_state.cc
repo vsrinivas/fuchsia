@@ -64,21 +64,9 @@ void KeyboardState::Update(const KeyboardReport& report,
     ev->time_stamp = now;
 
     ev->key_data = mozart::KeyData::New();
-    ev->key_data->key_code = 0;
-    ev->key_data->is_char = false;
-    ev->key_data->character = 0;
     ev->key_data->hid_usage = key;
-    ev->key_data->text = 0;
-    ev->key_data->unmodified_text = 0;
-
-    uint8_t ch = hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
-    if (ch) {
-      uint16_t character16 = static_cast<unsigned char>(ch);
-      ev->key_data->is_char = true;
-      ev->key_data->character = character16;
-      ev->key_data->text = character16;
-      ev->key_data->unmodified_text = character16;
-    }
+    ev->key_data->code_point =
+        hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
@@ -112,21 +100,9 @@ void KeyboardState::Update(const KeyboardReport& report,
     ev->time_stamp = now;
 
     ev->key_data = mozart::KeyData::New();
-    ev->key_data->key_code = 0;
-    ev->key_data->is_char = false;
-    ev->key_data->character = 0;
     ev->key_data->hid_usage = key;
-    ev->key_data->text = 0;
-    ev->key_data->unmodified_text = 0;
-
-    uint8_t ch = hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
-    if (ch) {
-      uint16_t character16 = static_cast<unsigned char>(ch);
-      ev->key_data->is_char = true;
-      ev->key_data->character = character16;
-      ev->key_data->text = character16;
-      ev->key_data->unmodified_text = character16;
-    }
+    ev->key_data->code_point =
+        hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:

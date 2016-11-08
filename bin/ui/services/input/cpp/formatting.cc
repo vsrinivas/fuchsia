@@ -11,8 +11,8 @@
 namespace mozart {
 
 std::ostream& operator<<(std::ostream& os, const KeyData& value) {
-  if (value.is_char) {
-    return os << "{character=" << value.character << "}";
+  if (value.code_point) {
+    return os << "{character=" << value.code_point << "}";
   } else {
     return os << "{hid=" << ftl::StringPrintf("0x%08X", value.hid_usage) << "}";
   }
