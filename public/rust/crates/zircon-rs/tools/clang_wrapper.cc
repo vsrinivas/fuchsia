@@ -176,8 +176,8 @@ int main(int argc, char** argv) {
     newargs.push_back(triple);
     newargs.push_back("--sysroot=" + sysroot);
   }
-  for (auto& it : args) {
-    newargs.push_back(it);
+  for (auto it = args.begin() + 1; it != args.end(); ++it) {
+    newargs.push_back(*it);
   }
   int status = DoExecv(newcmd, newargs);
   if (status != 0) {
