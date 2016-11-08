@@ -72,40 +72,33 @@ char *trim(char *str) {
     return str;
 }
 
-int import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src, fsentry **entry) {
+fsentry *import_manifest_entry(const char *fn, int lineno, const char *dst, const char *src) {
     fsentry *e;
     struct stat s;
 
     if (dst[0] == 0) {
         fprintf(stderr, "%s:%d: illegal filename\n", fn, lineno);
-        return -1;
+        return NULL;
     }
     if (stat(src, &s) < 0) {
         fprintf(stderr, "%s:%d: cannot stat '%s'\n", fn, lineno, src);
-        return -1;
+        return NULL;
     }
     if (s.st_size > INT32_MAX) {
         fprintf(stderr, "%s:%d: file too large '%s'\n", fn, lineno, src);
-        return -1;
-    } else if (s.st_size == 0) {
-        // TODO(tkilbourn): Add support for empty files, rather than dropping
-        // them.
-        fprintf(stderr, "Warning: %s:%d: file empty '%s'\n", fn, lineno, src);
-        *entry = NULL;
-        return 0;
+        return NULL;
     }
 
-    if ((e = calloc(1, sizeof(*e))) == NULL) return -1;
+    if ((e = calloc(1, sizeof(*e))) == NULL) return NULL;
     if ((e->name = strdup(dst)) == NULL) goto fail;
     if ((e->srcpath = strdup(src)) == NULL) goto fail;
     e->namelen = strlen(e->name) + 1;
     e->length = s.st_size;
-    *entry = e;
-    return 0;
+    return e;
 fail:
     free(e->name);
     free(e);
-    return -1;
+    return NULL;
 }
 
 fsentry *import_directory_entry(const char *dst, const char *src, struct stat *s) {
@@ -167,11 +160,10 @@ int import_manifest(const char *fn, unsigned *hdrsz, fs *fs) {
         *eq++ = 0;
         char* dstfn = trim(line);
         char* srcfn = trim(eq);
-        if (import_manifest_entry(fn, lineno, dstfn, srcfn, &e)) {
+        if ((e = import_manifest_entry(fn, lineno, dstfn, srcfn)) == NULL) {
             return -1;
-        } else if (e != NULL) {
-            sz += add_entry(fs, e);
         }
+        sz += add_entry(fs, e);
     }
     fclose(fp);
     *hdrsz += sz;
@@ -332,6 +324,10 @@ ssize_t compress_data(void* dst, const void* src, size_t len, void* cookie) {
 }
 
 ssize_t compress_file(void* dst, const char* fn, size_t len, void* cookie) {
+    if (len == 0) {
+        // Don't bother trying to compress empty files
+        return 0;
+    }
     int fdi;
     if ((fdi = open(fn, O_RDONLY)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", fn);
@@ -415,6 +411,7 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool c
     CHECK_WRITE(wrote = op->copy_data(dst, FSMAGIC, sizeof(FSMAGIC), cookie));
     dst += wrote;
 
+    fsentry* last_entry = NULL;
     for (e = fs->first; e != NULL; e = e->next) {
         uint32_t hdr[3];
         hdr[0] = e->namelen;
@@ -424,7 +421,10 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool c
         dst += wrote;
         CHECK_WRITE(wrote = op->copy_data(dst, e->name, e->namelen, cookie));
         dst += wrote;
+        last_entry = e;
     }
+    // Record length of last file
+    uint32_t last_length = last_entry ? last_entry->length : 0;
 
     // null terminator record
     CHECK_WRITE(wrote = op->copy_data(dst, fill, 12, cookie));
@@ -447,6 +447,13 @@ int export_userfs(const char *fn, fs *fs, unsigned hsz, uint64_t outsize, bool c
             CHECK_WRITE(wrote = op->copy_data(dst, fill, n, cookie));
             dst += wrote;
         }
+    }
+    // If the last entry has length zero, add an extra zero page at the end.
+    // This prevents the possibility of trying to read/map past the end of the
+    // bootfs at runtime.
+    if (last_length == 0) {
+        CHECK_WRITE(wrote = op->copy_data(dst, fill, sizeof(fill), cookie));
+        dst += wrote;
     }
 
     if (op->copy_finish) {
@@ -563,6 +570,7 @@ int main(int argc, char **argv) {
     hsz += 12;
 
     off = PAGEALIGN(hsz);
+    fsentry* last_entry = NULL;
     for (e = fs.first; e != NULL; e = e->next) {
         e->offset = off;
         off += PAGEALIGN(e->length);
@@ -570,6 +578,10 @@ int main(int argc, char **argv) {
             fprintf(stderr, "error: userfs too large\n");
             return -1;
         }
+        last_entry = e;
+    }
+    if (last_entry && last_entry->length == 0) {
+        off += sizeof(fill);
     }
     return export_userfs(output_file, &fs, hsz, off, compressed);
 }
