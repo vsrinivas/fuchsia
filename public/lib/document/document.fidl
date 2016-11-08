@@ -10,20 +10,11 @@ struct Statement {
   Value? value;
 };
 
-// Structure for a property and its value.
-struct Property {
-  // A |property| is almost always an IRI.
-  string property;
-
-  // The (optional) typed |value| of a property.
-  Value? value;
-};
-
 struct Document {
   string docid;
 
-  // Map from RDF |properties| to value lists.
-  array<Property> properties;
+  // Map from RDF key to value.
+  map<string, Value?> properties;
 };
 
 union Value {
