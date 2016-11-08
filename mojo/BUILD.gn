@@ -34,3 +34,14 @@ source_set("array_to_string") {
     "//mojo/public/cpp/bindings",
   ]
 }
+
+source_set("strong_binding") {
+  sources = [
+    "strong_binding.h",
+  ]
+
+  deps = [
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
