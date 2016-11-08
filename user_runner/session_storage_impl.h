@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <memory>
 
-#include "apps/modular/services/story/session.mojom.h"
-#include "mojo/public/cpp/bindings/interface_request.h"
-#include "mojo/public/cpp/bindings/strong_binding.h"
+#include "apps/modular/services/story/session.fidl.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "apps/modular/mojo/strong_binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/logging.h"
 
@@ -25,8 +25,8 @@ class SessionStorageImpl : public SessionStorage {
   using Storage = std::unordered_map<std::string, SessionDataPtr>;
 
   SessionStorageImpl(std::shared_ptr<Storage> storage,
-                     const mojo::String& key,
-                     mojo::InterfaceRequest<SessionStorage> request)
+                     const fidl::String& key,
+                     fidl::InterfaceRequest<SessionStorage> request)
       : binding_(this, std::move(request)), key_(key), storage_(storage) {
     FTL_LOG(INFO) << "SessionStorageImpl() " << key_;
   }
@@ -52,9 +52,9 @@ class SessionStorageImpl : public SessionStorage {
     //     });
 
     if (storage_->find(key_) != storage_->end()) {
-      cb.Run(storage_->find(key_)->second->Clone());
+      cb(storage_->find(key_)->second->Clone());
     } else {
-      cb.Run(nullptr);
+      cb(nullptr);
     }
   }
 
@@ -63,7 +63,7 @@ class SessionStorageImpl : public SessionStorage {
     storage_->emplace(std::make_pair(key_, std::move(data)));
   }
 
-  mojo::StrongBinding<SessionStorage> binding_;
+  StrongBinding<SessionStorage> binding_;
   const std::string key_;
   std::shared_ptr<Storage> storage_;
 

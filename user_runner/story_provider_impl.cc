@@ -4,11 +4,14 @@
 
 #include "apps/modular/user_runner/story_provider_impl.h"
 
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/mojo/array_to_string.h"
+#include "apps/modular/mojo/strong_binding.h"
 #include "apps/modular/user_runner/story_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/array.h"
 
 namespace modular {
 namespace {
@@ -56,11 +59,11 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
 
 class GetStoryInfoCall : public Transaction {
  public:
-  using Result = std::function<void(mojo::StructPtr<StoryInfo>)>;
+  using Result = std::function<void(StoryInfoPtr)>;
 
   GetStoryInfoCall(TransactionContainer* const container,
                    ledger::Ledger* const ledger,
-                   const mojo::String& story_id,
+                   const fidl::String& story_id,
                    Result result)
       : Transaction(container),
         ledger_(ledger),
@@ -109,23 +112,23 @@ class GetStoryInfoCall : public Transaction {
 
  private:
   ledger::Ledger* const ledger_;  // not owned
-  const mojo::String story_id_;
+  const fidl::String story_id_;
   Result result_;
 
-  mojo::InterfacePtr<ledger::Page> root_page_;
-  mojo::InterfacePtr<ledger::PageSnapshot> root_snapshot_;
-  mojo::StructPtr<StoryInfo> story_info_;
+  ledger::PagePtr root_page_;
+  ledger::PageSnapshotPtr root_snapshot_;
+  StoryInfoPtr story_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryInfoCall);
 };
 
 class GetSessionPageCall : public Transaction {
  public:
-  using Result = std::function<void(mojo::InterfacePtr<ledger::Page>)>;
+  using Result = std::function<void(ledger::PagePtr)>;
 
   GetSessionPageCall(TransactionContainer* const container,
                      ledger::Ledger* const ledger,
-                     mojo::Array<uint8_t> session_page_id,
+                     fidl::Array<uint8_t> session_page_id,
                      Result result)
       : Transaction(container),
         ledger_(ledger),
@@ -140,8 +143,8 @@ class GetSessionPageCall : public Transaction {
 
  private:
   ledger::Ledger* const ledger_;  // not owned
-  mojo::Array<uint8_t> session_page_id_;
-  mojo::InterfacePtr<ledger::Page> session_page_;
+  fidl::Array<uint8_t> session_page_id_;
+  ledger::PagePtr session_page_;
   Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GetSessionPageCall);
@@ -153,7 +156,7 @@ class WriteStoryInfoCall : public Transaction {
 
   WriteStoryInfoCall(TransactionContainer* const container,
                      ledger::Ledger* const ledger,
-                     mojo::StructPtr<StoryInfo> story_info,
+                     StoryInfoPtr story_info,
                      Result result)
       : Transaction(container),
         ledger_(ledger),
@@ -162,10 +165,10 @@ class WriteStoryInfoCall : public Transaction {
     ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
 
       const size_t size = story_info_->GetSerializedSize();
-      mojo::Array<uint8_t> value = mojo::Array<uint8_t>::New(size);
+      fidl::Array<uint8_t> value = fidl::Array<uint8_t>::New(size);
       story_info_->Serialize(value.data(), size);
 
-      const mojo::String& story_id = story_info_->id;
+      const fidl::String& story_id = story_info_->id;
       root_page_->PutWithPriority(to_array(story_id), std::move(value),
                                   ledger::Priority::EAGER,
                                   [this](ledger::Status status) {
@@ -177,8 +180,8 @@ class WriteStoryInfoCall : public Transaction {
 
  private:
   ledger::Ledger* const ledger_;  // not owned
-  mojo::StructPtr<StoryInfo> story_info_;
-  mojo::InterfacePtr<ledger::Page> root_page_;
+  StoryInfoPtr story_info_;
+  ledger::PagePtr root_page_;
   Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryInfoCall);
@@ -188,20 +191,20 @@ class CreateStoryCall : public Transaction {
  public:
   CreateStoryCall(TransactionContainer* const container,
                   ledger::Ledger* const ledger,
-                  mojo::ApplicationConnector* const app_connector,
+                  std::shared_ptr<ApplicationContext> application_context,
                   StoryProviderImpl* const story_provider_impl,
-                  const mojo::String& url,
+                  const fidl::String& url,
                   const std::string& story_id,
-                  mojo::InterfaceRequest<Story> story_request)
+                  fidl::InterfaceRequest<Story> story_request)
       : Transaction(container),
         ledger_(ledger),
-        app_connector_(app_connector),
+        application_context_(application_context),
         story_provider_impl_(story_provider_impl),
         url_(url),
         story_id_(story_id),
         story_request_(std::move(story_request)) {
     ledger_->NewPage(GetProxy(&session_page_), [this](ledger::Status status) {
-      session_page_->GetId([this](mojo::Array<uint8_t> session_page_id) {
+      session_page_->GetId([this](fidl::Array<uint8_t> session_page_id) {
         story_info_ = StoryInfo::New();
         story_info_->url = url_;
         story_info_->id = story_id_;
@@ -209,9 +212,9 @@ class CreateStoryCall : public Transaction {
         story_info_->is_running = false;
 
         story_provider_impl_->WriteStoryInfo(story_info_->Clone(), [this]() {
-          StoryImpl::New(std::move(story_info_), story_provider_impl_,
-                         mojo::DuplicateApplicationConnector(app_connector_),
-                         std::move(story_request_));
+            StoryImpl::New(std::move(story_info_), story_provider_impl_,
+                           application_context_,
+                           std::move(story_request_));
           Done();
         });
       });
@@ -220,14 +223,14 @@ class CreateStoryCall : public Transaction {
 
  private:
   ledger::Ledger* const ledger_;                     // not owned
-  mojo::ApplicationConnector* const app_connector_;  // not owned
+  std::shared_ptr<ApplicationContext> application_context_;
   StoryProviderImpl* const story_provider_impl_;     // not owned
-  const mojo::String url_;
+  const fidl::String url_;
   const std::string story_id_;
-  mojo::InterfaceRequest<Story> story_request_;
+  fidl::InterfaceRequest<Story> story_request_;
 
-  mojo::InterfacePtr<ledger::Page> session_page_;
-  mojo::StructPtr<StoryInfo> story_info_;
+  ledger::PagePtr session_page_;
+  StoryInfoPtr story_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
@@ -237,13 +240,13 @@ class ResumeStoryCall : public Transaction {
   // Resumes a story given only its ID.
   ResumeStoryCall(TransactionContainer* const container,
                   ledger::Ledger* const ledger,
-                  mojo::ApplicationConnector* const app_connector,
+                  std::shared_ptr<ApplicationContext> application_context,
                   StoryProviderImpl* const story_provider_impl,
-                  const mojo::String& story_id,
-                  mojo::InterfaceRequest<Story> story_request)
+                  const fidl::String& story_id,
+                  fidl::InterfaceRequest<Story> story_request)
       : Transaction(container),
         ledger_(ledger),
-        app_connector_(app_connector),
+        application_context_(application_context),
         story_provider_impl_(story_provider_impl),
         story_id_(story_id),
         story_request_(std::move(story_request)) {
@@ -254,7 +257,7 @@ class ResumeStoryCall : public Transaction {
           story_info_->session_page_id.Clone(), GetProxy(&session_page_),
           [this](ledger::Status status) {
             StoryImpl::New(std::move(story_info_), story_provider_impl_,
-                           mojo::DuplicateApplicationConnector(app_connector_),
+                           application_context_,
                            std::move(story_request_));
 
             Done();
@@ -266,13 +269,13 @@ class ResumeStoryCall : public Transaction {
   // variant above, this saves to obtain the story info first.
   ResumeStoryCall(TransactionContainer* const container,
                   ledger::Ledger* const ledger,
-                  mojo::ApplicationConnector* const app_connector,
+                  std::shared_ptr<ApplicationContext> const application_context,
                   StoryProviderImpl* const story_provider_impl,
-                  mojo::StructPtr<StoryInfo> story_info,
-                  mojo::InterfaceRequest<Story> story_request)
+                  StoryInfoPtr story_info,
+                  fidl::InterfaceRequest<Story> story_request)
       : Transaction(container),
         ledger_(ledger),
-        app_connector_(app_connector),
+        application_context_(application_context),
         story_provider_impl_(story_provider_impl),
         story_request_(std::move(story_request)),
         story_info_(std::move(story_info)) {
@@ -280,7 +283,7 @@ class ResumeStoryCall : public Transaction {
                      GetProxy(&session_page_), [this](ledger::Status status) {
                        StoryImpl::New(
                            std::move(story_info_), story_provider_impl_,
-                           mojo::DuplicateApplicationConnector(app_connector_),
+                           application_context_,
                            std::move(story_request_));
 
                        Done();
@@ -289,13 +292,13 @@ class ResumeStoryCall : public Transaction {
 
  private:
   ledger::Ledger* const ledger_;                     // not owned
-  mojo::ApplicationConnector* const app_connector_;  // not owned
+  std::shared_ptr<ApplicationContext> application_context_;
   StoryProviderImpl* const story_provider_impl_;     // not owned
-  const mojo::String story_id_;
-  mojo::InterfaceRequest<Story> story_request_;
+  const fidl::String story_id_;
+  fidl::InterfaceRequest<Story> story_request_;
 
-  mojo::StructPtr<StoryInfo> story_info_;
-  mojo::InterfacePtr<ledger::Page> session_page_;
+  StoryInfoPtr story_info_;
+  ledger::PagePtr session_page_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResumeStoryCall);
 };
@@ -313,23 +316,23 @@ class PreviousStoriesCall : public Transaction {
           GetProxy(&root_snapshot_), [this](ledger::Status status) {
             root_snapshot_->GetEntries(
                 nullptr, nullptr, [this](ledger::Status status,
-                                         mojo::Array<ledger::EntryPtr> entries,
-                                         mojo::Array<uint8_t> next_token) {
+                                         fidl::Array<ledger::EntryPtr> entries,
+                                         fidl::Array<uint8_t> next_token) {
                   // TODO(mesch): Account for possibly
                   // continuation here. That's not just a matter
                   // of repeatedly calling, but it needs to be
                   // wired up to the API, because a list that is
                   // too large to return from Ledger is also too
                   // large to return from StoryProvider.
-                  mojo::Array<mojo::String> story_ids;
+                  fidl::Array<fidl::String> story_ids;
                   for (auto& entry : entries) {
-                    mojo::StructPtr<StoryInfo> story_info = StoryInfo::New();
+                    StoryInfoPtr story_info = StoryInfo::New();
                     story_info->Deserialize(entry->value.data(),
                                             entry->value.size());
                     story_ids.push_back(story_info->id);
                   }
 
-                  result_.Run(std::move(story_ids));
+                  result_(std::move(story_ids));
                   Done();
                 });
           });
@@ -339,8 +342,8 @@ class PreviousStoriesCall : public Transaction {
  private:
   ledger::Ledger* const ledger_;  // not owned
   Result result_;
-  mojo::InterfacePtr<ledger::Page> root_page_;
-  mojo::InterfacePtr<ledger::PageSnapshot> root_snapshot_;
+  ledger::PagePtr root_page_;
+  ledger::PageSnapshotPtr root_snapshot_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PreviousStoriesCall);
 };
@@ -356,40 +359,40 @@ class PreviousStoriesCall : public Transaction {
 // metadata, because it crashes. Instead session data are kept in
 // memory.
 StoryProviderImpl::StoryProviderImpl(
-    mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-    mojo::InterfaceHandle<ledger::Ledger> ledger,
-    mojo::InterfaceRequest<StoryProvider> story_provider_request)
-    : binding_(this, std::move(story_provider_request)),
+    std::shared_ptr<ApplicationContext> application_context,
+    fidl::InterfaceHandle<ledger::Ledger> ledger,
+    fidl::InterfaceRequest<StoryProvider> story_provider_request)
+    : application_context_(application_context),
+      binding_(this, std::move(story_provider_request)),
       transaction_container_(new TransactionContainer),
       storage_(new Storage) {
-  app_connector_.Bind(std::move(app_connector));
   ledger_.Bind(std::move(ledger));
 }
 
 void StoryProviderImpl::GetStoryInfo(
-    const mojo::String& story_id,
-    std::function<void(mojo::StructPtr<StoryInfo> story_info)>
+    const fidl::String& story_id,
+    std::function<void(StoryInfoPtr story_info)>
         story_info_callback) {
   new GetStoryInfoCall(transaction_container_.get(), ledger_.get(), story_id,
                        story_info_callback);
 }
 
 void StoryProviderImpl::GetSessionPage(
-    mojo::Array<uint8_t> session_page_id,
-    std::function<void(mojo::InterfaceHandle<ledger::Page> session_page)>
+    fidl::Array<uint8_t> session_page_id,
+    std::function<void(fidl::InterfaceHandle<ledger::Page> session_page)>
         session_page_callback) {
   new GetSessionPageCall(transaction_container_.get(), ledger_.get(),
                          std::move(session_page_id), session_page_callback);
 }
 
-void StoryProviderImpl::WriteStoryInfo(mojo::StructPtr<StoryInfo> story_info) {
+void StoryProviderImpl::WriteStoryInfo(StoryInfoPtr story_info) {
   FTL_LOG(INFO) << "StoryProviderImpl::WriteStoryInfo() " << story_info->id;
 
   new WriteStoryInfoCall(transaction_container_.get(), ledger_.get(),
                          std::move(story_info), []() {});
 }
 
-void StoryProviderImpl::WriteStoryInfo(mojo::StructPtr<StoryInfo> story_info,
+void StoryProviderImpl::WriteStoryInfo(StoryInfoPtr story_info,
                                        std::function<void()> done) {
   FTL_LOG(INFO) << "StoryProviderImpl::WriteStoryInfo() " << story_info->id;
 
@@ -399,33 +402,33 @@ void StoryProviderImpl::WriteStoryInfo(mojo::StructPtr<StoryInfo> story_info,
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(
-    const mojo::String& url,
-    mojo::InterfaceRequest<Story> story_request) {
+    const fidl::String& url,
+    fidl::InterfaceRequest<Story> story_request) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "StoryProviderImpl::CreateStory() " << url << " "
                 << story_id;
   new CreateStoryCall(transaction_container_.get(), ledger_.get(),
-                      app_connector_.get(), this, url, story_id,
+                      application_context_, this, url, story_id,
                       std::move(story_request));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::ResumeStoryById(
-    const mojo::String& story_id,
-    mojo::InterfaceRequest<Story> story_request) {
+    const fidl::String& story_id,
+    fidl::InterfaceRequest<Story> story_request) {
   FTL_LOG(INFO) << "StoryProviderImpl::ResumeStoryById() " << story_id;
   new ResumeStoryCall(transaction_container_.get(), ledger_.get(),
-                      app_connector_.get(), this, story_id,
+                      application_context_, this, story_id,
                       std::move(story_request));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::ResumeStoryByInfo(
-    mojo::StructPtr<StoryInfo> story_info,
-    mojo::InterfaceRequest<Story> story_request) {
+    StoryInfoPtr story_info,
+    fidl::InterfaceRequest<Story> story_request) {
   FTL_LOG(INFO) << "StoryProviderImpl::ResumeStoryByInfo() " << story_info->id;
   new ResumeStoryCall(transaction_container_.get(), ledger_.get(),
-                      app_connector_.get(), this, std::move(story_info),
+                      application_context_, this, std::move(story_info),
                       std::move(story_request));
 }
 

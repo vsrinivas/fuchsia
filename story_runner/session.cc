@@ -187,10 +187,11 @@ void SessionImpl::StartModule(
       ](fidl::String module_url) mutable {
         FTL_LOG(INFO) << "SessionImpl::StartModule() resolver callback";
 
-        ApplicationLaunchInfoPtr launch_info = ApplicationLaunchInfo::New();
+        auto launch_info = ApplicationLaunchInfo::New();
 
         ServiceProviderPtr app_services;
         launch_info->services = GetProxy(&app_services);
+        launch_info->url = module_url;
 
         application_context_->launcher()->CreateApplication(
             std::move(launch_info), nullptr);
