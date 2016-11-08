@@ -21,6 +21,7 @@ import (
 	"syscall/mx/mxio"
 	"syscall/mx/mxio/dispatcher"
 	"syscall/mx/mxio/rio"
+	"syscall/mx/mxruntime"
 )
 
 type directoryWrapper struct {
@@ -39,8 +40,8 @@ type ThinVFS struct {
 
 var vfs *ThinVFS
 
-// Creates a new VFS and dispatcher, mount it at a path, and begin accepting RIO message on it.
-func StartServer(path string, filesys fs.FileSystem) error {
+// Creates a new VFS and dispatcher and begin accepting RIO message on it.
+func StartServer(filesys fs.FileSystem) error {
 	vfs = &ThinVFS{
 		files: make(map[int64]interface{}),
 		fs:    filesys,
@@ -51,10 +52,10 @@ func StartServer(path string, filesys fs.FileSystem) error {
 		return err
 	}
 
-	h, err := devmgrConnect(path)
-	if err != nil {
-		println("Failed to connect to devmgr")
-		return err
+	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
+	if h == 0 {
+		println("Invalid storage handle")
+		return errors.New("Invalid initial handle: Expected handle to vnode in HandlerUser0")
 	}
 	var serverHandler rio.ServerHandler = mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
@@ -425,27 +426,6 @@ func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 		return vfs.processOpDirectory(msg, obj, cookie)
 	}
 	return mx.ErrNotSupported
-}
-
-// Uses a custom ioctl to receive a handle from a point in the filesystem hierarchy, acting as a
-// mount.
-func devmgrConnect(path string) (mx.Handle, error) {
-	fd, err := syscall.Open(path, syscall.O_RDWR, 0666)
-	if err != nil {
-		println("Couldn't open path: ", err.Error())
-		return 0, err
-	}
-	defer syscall.Close(fd)
-	_, h, err := syscall.Ioctl(fd, mxio.IoctlDevmgrMountFS, nil)
-	if err != nil {
-		println("Couldn't call IOCTL: ", err.Error())
-		return 0, err
-	}
-	if len(h) != 1 {
-		println("Bad ioctl result: ", err.Error())
-		return 0, errors.New("Unexpected number of handles from devmgr")
-	}
-	return mx.Handle(h[0]), nil
 }
 
 // Allocates a unique identifier which can be used to access information about a RIO object

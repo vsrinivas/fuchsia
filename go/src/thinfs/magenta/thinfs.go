@@ -21,13 +21,12 @@ import (
 )
 
 var devicePathPtr = flag.String("devicepath", "", "Path to Block Device")
-var mountPathPtr = flag.String("mountpath", "", "Path to Mounted Filesystem")
 var readOnlyPtr = flag.Bool("readonly", false, "Determines if Filesystem is mounted as Read-Only")
 
 func parseArgs() (string, error) {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n")
-		fmt.Fprintf(os.Stderr, "	> %s [flags] {mount,unmount}\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "	> %s [flags] mount\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -37,15 +36,10 @@ func parseArgs() (string, error) {
 
 	switch flag.Arg(0) {
 	case "mount":
-		if *devicePathPtr == "" || *mountPathPtr == "" {
-			return "", errors.New("Mount requires block device path and mount path")
+		if *devicePathPtr == "" {
+			return "", errors.New("Mount requires block device path")
 		}
 		return "mount", nil
-	case "unmount":
-		if *mountPathPtr == "" {
-			return "", errors.New("Unmount requires path to mount point")
-		}
-		return "unmount", nil
 	default:
 		return "", errors.New("Invalid action")
 	}
@@ -84,12 +78,8 @@ func main() {
 		}
 
 		// Mount the filesystem
-		err = rpc.StartServer(*mountPathPtr, filesys)
+		err = rpc.StartServer(filesys)
 		filesys.Close()
-	case "unmount":
-		// TODO(smklein): Support unmount
-		println("Unmount is not yet supported")
-		os.Exit(1)
 	default:
 		println("Unsupported arg")
 		os.Exit(1)
