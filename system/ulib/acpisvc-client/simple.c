@@ -32,55 +32,59 @@ static mx_status_t wait_for_message(
     if (status != NO_ERROR) {
         return status;
     }
-    if (pending & MX_SIGNAL_PEER_CLOSED) {
-        return ERR_REMOTE_CLOSED;
-    }
-
-    uint32_t rsp_len = 0;
-    uint32_t num_handles_returned = 0;
-    status = mx_channel_read(h, 0, NULL, rsp_len, &rsp_len,
-            NULL, num_handles_returned, &num_handles_returned);
-    if (status != ERR_BUFFER_TOO_SMALL) {
-        return status;
-    }
-    if (rsp_len < sizeof(acpi_rsp_hdr_t)) {
-        return ERR_BAD_STATE;
-    }
-    if (num_handles_returned > MAX_RETURNED_HANDLES) {
-        return ERR_BAD_STATE;
-    }
-
-    acpi_rsp_hdr_t* rsp = malloc(rsp_len);
-    if (!rsp) {
-        return ERR_NO_MEMORY;
-    }
-
-    mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
-    status = mx_channel_read(h, 0, rsp, rsp_len, &rsp_len,
-            handles_returned, num_handles_returned, &num_handles_returned);
-    if (status != NO_ERROR) {
-        free(rsp);
-        return status;
-    }
-
-    if (rsp_len < sizeof(*rsp) ||
-        rsp->request_id != req_id ||
-        *num_handles < num_handles_returned) {
-
-        free(rsp);
-        for (uint32_t i = 0; i < num_handles_returned; ++i) {
-            mx_handle_close(handles_returned[i]);
+    if (pending & MX_SIGNAL_READABLE) {
+        uint32_t rsp_len = 0;
+        uint32_t num_handles_returned = 0;
+        status = mx_channel_read(h, 0, NULL, rsp_len, &rsp_len,
+                NULL, num_handles_returned, &num_handles_returned);
+        if (status != ERR_BUFFER_TOO_SMALL) {
+            return status;
         }
+        if (rsp_len < sizeof(acpi_rsp_hdr_t)) {
+            return ERR_BAD_STATE;
+        }
+        if (num_handles_returned > MAX_RETURNED_HANDLES) {
+            return ERR_BAD_STATE;
+        }
+
+        acpi_rsp_hdr_t* rsp = malloc(rsp_len);
+        if (!rsp) {
+            return ERR_NO_MEMORY;
+        }
+
+        mx_handle_t handles_returned[MAX_RETURNED_HANDLES];
+        status = mx_channel_read(h, 0, rsp, rsp_len, &rsp_len,
+                handles_returned, num_handles_returned, &num_handles_returned);
+        if (status != NO_ERROR) {
+            free(rsp);
+            return status;
+        }
+
+        if (rsp_len < sizeof(*rsp) ||
+                rsp->request_id != req_id ||
+                *num_handles < num_handles_returned) {
+
+            free(rsp);
+            for (uint32_t i = 0; i < num_handles_returned; ++i) {
+                mx_handle_close(handles_returned[i]);
+            }
+            return ERR_BAD_STATE;
+        }
+
+        *response = rsp;
+        *len = rsp_len;
+        *num_handles = num_handles_returned;
+        memcpy(handles, handles_returned,
+                sizeof(mx_handle_t) * num_handles_returned);
+
+        return NO_ERROR;
+    } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+        return ERR_REMOTE_CLOSED;
+    } else {
+        // Shouldn't happen; if status == NO_ERROR, then one of the signals
+        // should be pending.
         return ERR_BAD_STATE;
     }
-
-    *response = rsp;
-    *len = rsp_len;
-    *num_handles = num_handles_returned;
-    memcpy(handles, handles_returned,
-           sizeof(mx_handle_t) * num_handles_returned);
-
-    return NO_ERROR;
 }
 
 // Execute one round of the command-response protocol
