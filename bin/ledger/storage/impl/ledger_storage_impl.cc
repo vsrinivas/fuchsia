@@ -64,7 +64,7 @@ void LedgerStorageImpl::GetPageStorage(
     const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
-    task_runner_->PostTask([this, callback, page_id]() {
+    task_runner_->PostTask([ this, callback, page_id = page_id.ToString() ]() {
       std::unique_ptr<PageStorageImpl> result(
           new PageStorageImpl(task_runner_, GetPathFor(page_id), page_id));
       Status status = result->Init();

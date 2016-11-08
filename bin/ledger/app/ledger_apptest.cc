@@ -8,12 +8,16 @@
 #include <mojo/system/main.h>
 
 #include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/src/app/ledger_factory_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/fidl_data_pipe/strings.h"
+#include "lib/mtl/threading/create_thread.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -101,6 +105,19 @@ std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
   return result;
 }
 
+class LedgerFactoryContainer {
+ public:
+  LedgerFactoryContainer(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                         const std::string& path,
+                         fidl::InterfaceRequest<LedgerFactory> request)
+      : factory_impl_(task_runner, path),
+        factory_binding_(&factory_impl_, std::move(request)) {}
+  ~LedgerFactoryContainer() {}
+ private:
+  LedgerFactoryImpl factory_impl_;
+  fidl::Binding<LedgerFactory> factory_binding_;
+};
+
 class LedgerApplicationTest : public ::testing::Test {
  public:
   LedgerApplicationTest() {}
@@ -110,19 +127,22 @@ class LedgerApplicationTest : public ::testing::Test {
   // ::testing::Test:
   void SetUp() override {
     ::testing::Test::SetUp();
-    // ConnectToService(shell(), "mojo:ledger", GetProxy(&ledger_factory_));
+    thread_ = mtl::CreateThread(&task_runner_);
+    task_runner_->PostTask(ftl::MakeCopyable(
+        [ this, request = GetProxy(&ledger_factory_) ]() mutable {
+          factory_container_.reset(new LedgerFactoryContainer(
+              task_runner_, tmp_dir_.path(), std::move(request)));
+        }));
     ledger_ = GetTestLedger();
     std::srand(0);
   }
 
   void TearDown() override {
-    // Delete all pages used in the test.
-    for (auto& page_id : page_ids_) {
-      ledger_->DeletePage(std::move(page_id),
-                          [](Status status) { EXPECT_EQ(Status::OK, status); });
-      EXPECT_TRUE(ledger_.WaitForIncomingResponse());
-    }
-
+    task_runner_->PostTask([this]() {
+      mtl::MessageLoop::GetCurrent()->QuitNow();
+      factory_container_.reset();
+    });
+    thread_.join();
     ::testing::Test::TearDown();
   }
 
@@ -135,19 +155,18 @@ class LedgerApplicationTest : public ::testing::Test {
   LedgerPtr ledger_;
 
  private:
-  // Record ids of pages created for testing, so that we can delete them in
-  // TearDown() in a somewhat desperate attempt to clean up the files created
-  // for the test.
-  // TODO(ppi): Configure ledger.mojo so that it knows to write to TempScopedDir
-  // when run for testing and remove this accounting.
-  std::vector<fidl::Array<uint8_t>> page_ids_;
+  files::ScopedTempDir tmp_dir_;
+  std::unique_ptr<LedgerFactoryContainer> factory_container_;
+  mtl::MessageLoop loop_;
+  std::thread thread_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApplicationTest);
 };
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
   Status status;
-  fidl::InterfaceHandle<Ledger> ledger;
+  LedgerPtr ledger;
   IdentityPtr identity = Identity::New();
   identity->user_id = RandomArray(1);
   identity->app_id = RandomArray(1);
@@ -156,7 +175,7 @@ LedgerPtr LedgerApplicationTest::GetTestLedger() {
   EXPECT_TRUE(ledger_factory_.WaitForIncomingResponse());
 
   EXPECT_EQ(Status::OK, status);
-  return fidl::InterfacePtr<Ledger>::Create(std::move(ledger));
+  return ledger;
 }
 
 PagePtr LedgerApplicationTest::GetTestPage() {
@@ -167,29 +186,18 @@ PagePtr LedgerApplicationTest::GetTestPage() {
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
-  PagePtr page_ptr = fidl::InterfacePtr<Page>::Create(std::move(page));
-
-  fidl::Array<uint8_t> page_id;
-  page_ptr->GetId(
-      [&page_id](fidl::Array<uint8_t> id) { page_id = std::move(id); });
-  EXPECT_TRUE(page_ptr.WaitForIncomingResponse());
-  page_ids_.push_back(std::move(page_id));
-
-  return page_ptr;
+  return fidl::InterfacePtr<Page>::Create(std::move(page));
 }
 
 PagePtr LedgerApplicationTest::GetPage(const fidl::Array<uint8_t>& page_id,
                                        Status expected_status) {
-  fidl::InterfaceHandle<Page> page;
+  PagePtr page_ptr;
   Status status;
 
-  ledger_->GetPage(page_id.Clone(), GetProxy(&page),
+  ledger_->GetPage(page_id.Clone(), GetProxy(&page_ptr),
                    [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
-
-  PagePtr page_ptr = fidl::InterfacePtr<Page>::Create(std::move(page));
-  EXPECT_EQ(expected_status == Status::OK, page_ptr.get() != nullptr);
 
   return page_ptr;
 }
@@ -203,12 +211,6 @@ void LedgerApplicationTest::DeletePage(const fidl::Array<uint8_t>& page_id,
                       [&status, &page](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
-
-  page_ids_.erase(std::remove_if(page_ids_.begin(), page_ids_.end(),
-                                 [&page_id](const fidl::Array<uint8_t>& id) {
-                                   return id.Equals(page_id);
-                                 }),
-                  page_ids_.end());
 }
 
 TEST_F(LedgerApplicationTest, GetLedger) {
@@ -618,6 +620,38 @@ TEST_F(LedgerApplicationTest, PageSnapshotClosePageGet) {
                   EXPECT_EQ(status, Status::KEY_NOT_FOUND);
                 });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+}
+
+TEST_F(LedgerApplicationTest, PageGetById) {
+  PagePtr page = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page.reset();
+
+  page = GetPage(test_page_id, Status::OK);
+  page->GetId([&test_page_id, this](fidl::Array<uint8_t> page_id) {
+    EXPECT_EQ(convert::ToString(test_page_id), convert::ToString(page_id));
+  });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  ValuePtr value;
+  snapshot->Get(convert::ToArray("name"),
+                [&value, this](Status status, ValuePtr v) {
+                  EXPECT_EQ(status, Status::OK);
+                  value = std::move(v);
+                });
+  EXPECT_TRUE(snapshot.WaitForIncomingResponse());
+  EXPECT_TRUE(value->is_bytes());
+  EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
 }
 
 }  // namespace
