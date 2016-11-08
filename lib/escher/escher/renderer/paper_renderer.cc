@@ -125,20 +125,18 @@ void PaperRenderer::BeginModelRenderPass(const FramebufferPtr& framebuffer,
   command_buffer.setScissor(0, 1, &scissor);
 }
 
-void PaperRenderer::DrawFrame(
-    Stage& stage,
-    Model& model,
-    const FramebufferPtr& framebuffer,
-    const SemaphorePtr& frame_done,
-    CommandBufferFinishedCallback command_buffer_finished_callback) {
-  impl::CommandBuffer* command_buffer = BeginFrame(
-      framebuffer, frame_done, std::move(command_buffer_finished_callback));
+void PaperRenderer::DrawFrame(Stage& stage,
+                              Model& model,
+                              const FramebufferPtr& framebuffer,
+                              const SemaphorePtr& frame_done,
+                              FrameRetiredCallback frame_retired_callback) {
+  impl::CommandBuffer* command_buffer = BeginFrame(framebuffer, frame_done);
 
   BeginModelRenderPass(framebuffer, command_buffer->get());
   model_renderer_->Draw(stage, model, command_buffer);
   command_buffer->get().endRenderPass();
 
-  EndFrame();
+  EndFrame(std::move(frame_retired_callback));
 }
 
 }  // namespace escher

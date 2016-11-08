@@ -33,8 +33,11 @@ class CommandBuffer {
 
   vk::CommandBuffer get() const { return command_buffer_; }
 
-  // Return true if successful.
-  bool Submit(vk::Queue queue);
+  // Return true if successful.  The callback will be invoked after all commands
+  // have finished executing on the GPU (there is no guarantee about how long
+  // afterward: this depends on when the CommandBufferPool that owns this buffer
+  // calls Retire()).
+  bool Submit(vk::Queue queue, CommandBufferFinishedCallback callback);
 
   // During Submit(), these semaphores will be added to the vk::SubmitInfo.
   // No-op if semaphore is null.
@@ -54,19 +57,19 @@ class CommandBuffer {
  private:
   friend class CommandBufferPool;
 
-  // Called by CommandPool, which is responsible for eventually destroying the
-  // Vulkan command buffer and fence.  Submit() and Retire() use the fence to
-  // determine when the command buffer has finished executing on the GPU.
+  // Called by CommandBufferPool, which is responsible for eventually destroying
+  // the Vulkan command buffer and fence.  Submit() and Retire() use the fence
+  // to determine when the command buffer has finished executing on the GPU.
   CommandBuffer(vk::Device device,
                 vk::CommandBuffer command_buffer,
                 vk::Fence fence);
   vk::Fence fence() const { return fence_; }
 
-  // Called by CommandPool when obtained from it.
-  void Begin(CommandBufferFinishedCallback callback);
+  // Called by CommandBufferPool when this buffer is obtained from it.
+  void Begin();
 
-  // Called by CommandPool, to attempt to reset the buffer for reuse.  Return
-  // false and do nothing if the buffer's submission fence is not ready.
+  // Called by CommandBufferPool, to attempt to reset the buffer for reuse.
+  // Return false and do nothing if the buffer's submission fence is not ready.
   bool Retire();
 
   vk::Device device_;

@@ -15,10 +15,41 @@
 namespace escher {
 namespace impl {
 
+namespace {
+
+// Constructor helper.
+std::unique_ptr<CommandBufferPool> NewCommandBufferPool(
+    const VulkanContext& context) {
+  return std::make_unique<CommandBufferPool>(context.device, context.queue,
+                                             context.queue_family_index);
+}
+
+// Constructor helper.
+std::unique_ptr<CommandBufferPool> NewTransferCommandBufferPool(
+    const VulkanContext& context) {
+  if (!context.transfer_queue)
+    return nullptr;
+  else
+    return std::make_unique<CommandBufferPool>(
+        context.device, context.transfer_queue,
+        context.transfer_queue_family_index);
+}
+
+// Constructor helper.
+std::unique_ptr<MeshManager> NewMeshManager(CommandBufferPool* regular_pool,
+                                            CommandBufferPool* transfer_pool,
+                                            GpuAllocator* allocator) {
+  return std::make_unique<MeshManager>(
+      transfer_pool ? transfer_pool : regular_pool, allocator);
+}
+
+}  // namespace
+
 EscherImpl::EscherImpl(const VulkanContext& context,
                        const VulkanSwapchain& swapchain)
     : vulkan_context_(context),
-      command_buffer_pool_(std::make_unique<CommandBufferPool>(context)),
+      command_buffer_pool_(NewCommandBufferPool(context)),
+      transfer_command_buffer_pool_(NewTransferCommandBufferPool(context)),
       render_pass_manager_(std::make_unique<RenderPassManager>(context)),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
       image_cache_(std::make_unique<ImageCache>(context.device,
@@ -26,7 +57,9 @@ EscherImpl::EscherImpl(const VulkanContext& context,
                                                 context.queue,
                                                 gpu_allocator(),
                                                 command_buffer_pool())),
-      mesh_manager_(std::make_unique<MeshManager>(context, gpu_allocator())),
+      mesh_manager_(NewMeshManager(command_buffer_pool(),
+                                   transfer_command_buffer_pool(),
+                                   gpu_allocator())),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
   FTL_DCHECK(context.physical_device);
@@ -40,6 +73,8 @@ EscherImpl::~EscherImpl() {
   FTL_DCHECK(renderer_count_ == 0);
 
   command_buffer_pool_->Cleanup();
+  if (transfer_command_buffer_pool_)
+    transfer_command_buffer_pool_->Cleanup();
 
   vulkan_context_.device.waitIdle();
   mesh_manager_.reset();
@@ -48,6 +83,10 @@ EscherImpl::~EscherImpl() {
 
 CommandBufferPool* EscherImpl::command_buffer_pool() {
   return command_buffer_pool_.get();
+}
+
+CommandBufferPool* EscherImpl::transfer_command_buffer_pool() {
+  return transfer_command_buffer_pool_.get();
 }
 
 ImageCache* EscherImpl::image_cache() {

@@ -9,25 +9,27 @@
 namespace escher {
 namespace impl {
 
-CommandBufferPool::CommandBufferPool(const VulkanContext& context)
-    : context_(context) {
+CommandBufferPool::CommandBufferPool(vk::Device device,
+                                     vk::Queue queue,
+                                     uint32_t queue_family_index)
+    : device_(device), queue_(queue) {
+  FTL_DCHECK(device);
+  FTL_DCHECK(queue);
   vk::CommandPoolCreateInfo info;
   info.flags = vk::CommandPoolCreateFlagBits::eTransient |
                vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-  info.queueFamilyIndex = context_.queue_family_index;
-  pool_ = ESCHER_CHECKED_VK_RESULT(context_.device.createCommandPool(info));
+  info.queueFamilyIndex = queue_family_index;
+  pool_ = ESCHER_CHECKED_VK_RESULT(device_.createCommandPool(info));
 }
 
 CommandBufferPool::~CommandBufferPool() {
-  auto device = context_.device;
-
   Cleanup();
   if (!pending_buffers_.empty()) {
     // We didn't call waitIdle() above to avoid unnecessary blocking: there
     // may be other pools with pending buffers, and there is no need to wait
     // for them to finish if the initial call to Cleanup() successfully returns
     // all buffers to the free list.
-    device.waitIdle();
+    device_.waitIdle();
     Cleanup();
   }
   FTL_DCHECK(pending_buffers_.empty());
@@ -36,17 +38,16 @@ CommandBufferPool::~CommandBufferPool() {
   while (!free_buffers_.empty()) {
     auto& buf = free_buffers_.front();
     buffers_to_free.push_back(buf->get());
-    device.destroyFence(buf->fence());
+    device_.destroyFence(buf->fence());
     free_buffers_.pop();
   }
-  device.freeCommandBuffers(pool_,
-                            static_cast<uint32_t>(buffers_to_free.size()),
-                            buffers_to_free.data());
-  device.destroyCommandPool(pool_);
+  device_.freeCommandBuffers(pool_,
+                             static_cast<uint32_t>(buffers_to_free.size()),
+                             buffers_to_free.data());
+  device_.destroyCommandPool(pool_);
 }
 
-CommandBuffer* CommandBufferPool::GetCommandBuffer(
-    CommandBufferFinishedCallback callback) {
+CommandBuffer* CommandBufferPool::GetCommandBuffer() {
   // TODO: perhaps do when buffer is submitted?
   Cleanup();
 
@@ -58,20 +59,19 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer(
     info.level = vk::CommandBufferLevel::ePrimary;
     info.commandBufferCount = 1;
     auto allocated_vulkan_buffers =
-        ESCHER_CHECKED_VK_RESULT(context_.device.allocateCommandBuffers(info));
+        ESCHER_CHECKED_VK_RESULT(device_.allocateCommandBuffers(info));
 
-    vk::Fence fence = ESCHER_CHECKED_VK_RESULT(
-        context_.device.createFence(vk::FenceCreateInfo()));
+    vk::Fence fence =
+        ESCHER_CHECKED_VK_RESULT(device_.createFence(vk::FenceCreateInfo()));
 
-    buffer =
-        new CommandBuffer(context_.device, allocated_vulkan_buffers[0], fence);
+    buffer = new CommandBuffer(device_, allocated_vulkan_buffers[0], fence);
     pending_buffers_.push(std::unique_ptr<CommandBuffer>(buffer));
   } else {
     buffer = free_buffers_.front().get();
     pending_buffers_.push(std::move(free_buffers_.front()));
     free_buffers_.pop();
   }
-  buffer->Begin(std::move(callback));
+  buffer->Begin();
   return buffer;
 }
 

@@ -20,7 +20,10 @@ class CommandBuffer;
 // Not thread-safe.
 class CommandBufferPool {
  public:
-  CommandBufferPool(const VulkanContext& context);
+  // The CommandBufferPool does not take ownership of the device and queue.
+  CommandBufferPool(vk::Device device,
+                    vk::Queue queue,
+                    uint32_t queue_family_index);
 
   // If there are still any pending buffers, this will block until they are
   // finished.
@@ -29,13 +32,18 @@ class CommandBufferPool {
   // Get a ready-to-use CommandBuffer; a new one will be allocated if necessary.
   // If a callback is provided, it will be run at some time after the buffer
   // has finished running on the GPU.
-  CommandBuffer* GetCommandBuffer(CommandBufferFinishedCallback callback);
+  CommandBuffer* GetCommandBuffer();
 
   // Do periodic housekeeping.
   void Cleanup();
 
+  vk::Device device() const { return device_; }
+  vk::Queue queue() const { return queue_; }
+
  private:
-  VulkanContext context_;
+  vk::Device device_;
+  vk::Queue queue_;
+
   // TODO: access to |command_pool_| needs to be externally synchronized.  This
   // includes implicit uses such as various vkCmd* calls (in other words, two
   // separate CommandBuffers obtained from this pool cannot be recorded into

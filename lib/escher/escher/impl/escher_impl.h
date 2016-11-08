@@ -24,6 +24,7 @@ class EscherImpl {
   ~EscherImpl();
 
   CommandBufferPool* command_buffer_pool();
+  CommandBufferPool* transfer_command_buffer_pool();
   ImageCache* image_cache();
   RenderPassManager* render_pass_manager();
   MeshManager* mesh_manager();
@@ -39,6 +40,7 @@ class EscherImpl {
  private:
   VulkanContext vulkan_context_;
   std::unique_ptr<CommandBufferPool> command_buffer_pool_;
+  std::unique_ptr<CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<RenderPassManager> render_pass_manager_;
   std::unique_ptr<GpuAllocator> gpu_allocator_;
   std::unique_ptr<ImageCache> image_cache_;

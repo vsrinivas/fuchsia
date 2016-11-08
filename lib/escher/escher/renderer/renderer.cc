@@ -24,14 +24,12 @@ Renderer::~Renderer() {
   escher_->DecrementRendererCount();
 }
 
-impl::CommandBuffer* Renderer::BeginFrame(
-    const FramebufferPtr& framebuffer,
-    const SemaphorePtr& frame_done,
-    FrameRetiredCallback frame_retired_callback) {
+impl::CommandBuffer* Renderer::BeginFrame(const FramebufferPtr& framebuffer,
+                                          const SemaphorePtr& frame_done) {
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
   FTL_LOG(INFO) << "Beginning frame #" << frame_number_;
-  current_frame_ = pool_->GetCommandBuffer(frame_retired_callback);
+  current_frame_ = pool_->GetCommandBuffer();
 
   current_frame_->AddWaitSemaphore(
       framebuffer->TakeWaitSemaphore(),
@@ -42,9 +40,9 @@ impl::CommandBuffer* Renderer::BeginFrame(
   return current_frame_;
 }
 
-void Renderer::EndFrame() {
+void Renderer::EndFrame(FrameRetiredCallback frame_retired_callback) {
   FTL_DCHECK(current_frame_);
-  current_frame_->Submit(context_.queue);
+  current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
   current_frame_ = nullptr;
 }
 

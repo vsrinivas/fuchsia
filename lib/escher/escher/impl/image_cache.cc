@@ -65,7 +65,7 @@ ftl::RefPtr<Image> ImageCache::GetDepthImage(vk::Format format,
 void ImageCache::TransitionImageLayout(const ImagePtr& image,
                                        vk::ImageLayout old_layout,
                                        vk::ImageLayout new_layout) {
-  auto command_buffer = command_buffer_pool_->GetCommandBuffer(nullptr);
+  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
 
   vk::ImageMemoryBarrier barrier;
   barrier.oldLayout = old_layout;
@@ -114,7 +114,7 @@ void ImageCache::TransitionImageLayout(const ImagePtr& image,
                                         vk::PipelineStageFlagBits::eTopOfPipe,
                                         vk::DependencyFlags(), 0, nullptr, 0,
                                         nullptr, 1, &barrier);
-  command_buffer->Submit(queue_);
+  command_buffer->Submit(queue_, nullptr);
 }
 
 void ImageCache::DestroyImage(vk::Image image, vk::Format format) {

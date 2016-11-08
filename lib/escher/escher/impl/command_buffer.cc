@@ -22,17 +22,18 @@ CommandBuffer::~CommandBuffer() {
   // Owner is responsible for destroying command buffer and fence.
 }
 
-void CommandBuffer::Begin(CommandBufferFinishedCallback callback) {
+void CommandBuffer::Begin() {
   FTL_DCHECK(!is_active_ && !is_submitted_);
   is_active_ = true;
-  callback_ = std::move(callback);
   auto result = command_buffer_.begin(vk::CommandBufferBeginInfo());
   FTL_DCHECK(result == vk::Result::eSuccess);
 }
 
-bool CommandBuffer::Submit(vk::Queue queue) {
+bool CommandBuffer::Submit(vk::Queue queue,
+                           CommandBufferFinishedCallback callback) {
   FTL_DCHECK(is_active_ && !is_submitted_);
   is_submitted_ = true;
+  callback_ = std::move(callback);
 
   auto end_command_buffer_result = command_buffer_.end();
   FTL_DCHECK(end_command_buffer_result == vk::Result::eSuccess);

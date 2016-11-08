@@ -7,6 +7,7 @@
 #include <iterator>
 
 #include "escher/geometry/types.h"
+#include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/vulkan_context.h"
@@ -14,56 +15,21 @@
 namespace escher {
 namespace impl {
 
-MeshManager::MeshManager(const VulkanContext& context, GpuAllocator* allocator)
-    : device_(context.device),
-      queue_(context.queue),
-      transfer_queue_(context.transfer_queue),
+MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
+                         GpuAllocator* allocator)
+    : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
+      device_(command_buffer_pool->device()),
+      queue_(command_buffer_pool->queue()),
       builder_count_(0),
-      mesh_count_(0) {
-  FTL_DCHECK(queue_);
-  uint32_t queue_family_index = context.transfer_queue_family_index;
-  if (!transfer_queue_) {
-    transfer_queue_ = queue_;
-    queue_family_index = context.queue_family_index;
-  }
-
-  vk::CommandPoolCreateInfo info;
-  info.flags = vk::CommandPoolCreateFlagBits::eTransient;
-  info.queueFamilyIndex = queue_family_index;
-  command_pool_ = ESCHER_CHECKED_VK_RESULT(device_.createCommandPool(info));
-}
+      mesh_count_(0) {}
 
 MeshManager::~MeshManager() {
   FTL_DCHECK(builder_count_ == 0);
   FTL_DCHECK(mesh_count_ == 0);
-
-  UpdateBusyResources();
-
-  if (command_pool_) {
-    device_.destroyCommandPool(command_pool_);
-    command_pool_ = nullptr;
-  }
-}
-
-void MeshManager::UpdateBusyResources() {
-  while (!busy_resources_.empty()) {
-    auto& busy = busy_resources_.front();
-    if (vk::Result::eNotReady == device_.getFenceStatus(busy.fence)) {
-      // The first item in the queue is not finished, so neither are the rest.
-      break;
-    }
-    device_.destroyFence(busy.fence);
-    device_.freeCommandBuffers(command_pool_, busy.command_buffer);
-    free_staging_buffers_.push_back(std::move(busy.buffer1));
-    free_staging_buffers_.push_back(std::move(busy.buffer2));
-    busy_resources_.pop();
-  }
 }
 
 Buffer MeshManager::GetStagingBuffer(uint32_t size) {
-  UpdateBusyResources();
-
   auto it = free_staging_buffers_.begin();
   while (it != free_staging_buffers_.end()) {
     if (it->GetSize() > size) {
@@ -144,46 +110,28 @@ MeshPtr MeshManager::MeshBuilder::Build() {
                           vk::BufferUsageFlagBits::eTransferDst,
                       vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  vk::CommandBufferAllocateInfo allocate_info;
-  allocate_info.commandPool = manager_->command_pool_;
-  allocate_info.level = vk::CommandBufferLevel::ePrimary;
-  allocate_info.commandBufferCount = 1;
-  vk::CommandBuffer command_buffer =
-      ESCHER_CHECKED_VK_RESULT(device.allocateCommandBuffers(allocate_info))[0];
-  vk::Fence fence =
-      ESCHER_CHECKED_VK_RESULT(device.createFence(vk::FenceCreateInfo()));
-  SemaphorePtr semaphore = Semaphore::New(device);
+  auto command_buffer = manager_->command_buffer_pool_->GetCommandBuffer();
 
-  vk::CommandBufferBeginInfo begin_info;
-  begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-  auto begin_result = command_buffer.begin(begin_info);
-  FTL_CHECK(begin_result == vk::Result::eSuccess);
+  SemaphorePtr semaphore = Semaphore::New(device);
+  command_buffer->AddSignalSemaphore(semaphore);
 
   vk::BufferCopy region;
 
   region.size = vertex_staging_buffer_.GetSize();
-  command_buffer.copyBuffer(vertex_staging_buffer_.buffer(),
-                            vertex_buffer.buffer(), 1, &region);
+  command_buffer->get().copyBuffer(vertex_staging_buffer_.buffer(),
+                                   vertex_buffer.buffer(), 1, &region);
 
   region.size = index_staging_buffer_.GetSize();
-  command_buffer.copyBuffer(index_staging_buffer_.buffer(),
-                            index_buffer.buffer(), 1, &region);
+  command_buffer->get().copyBuffer(index_staging_buffer_.buffer(),
+                                   index_buffer.buffer(), 1, &region);
 
-  auto end_result = command_buffer.end();
-  FTL_CHECK(end_result == vk::Result::eSuccess);
-
-  vk::SubmitInfo submit_info;
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &command_buffer;
-  submit_info.signalSemaphoreCount = 1;
-  auto s = semaphore->value();
-  submit_info.pSignalSemaphores = &s;
-  auto submit_result = manager_->transfer_queue_.submit(1, &submit_info, fence);
-  FTL_CHECK(submit_result == vk::Result::eSuccess);
-
-  manager_->busy_resources_.push({fence, std::move(vertex_staging_buffer_),
-                                  std::move(index_staging_buffer_),
-                                  command_buffer});
+  // Keep this builder alive until submission has finished.
+  ftl::RefPtr<MeshBuilder> me(this);
+  command_buffer->Submit(manager_->queue_, [me{std::move(me)}]() {
+    auto& bufs = me->manager_->free_staging_buffers_;
+    bufs.push_back(std::move(me->vertex_staging_buffer_));
+    bufs.push_back(std::move(me->index_staging_buffer_));
+  });
 
   auto mesh = ftl::MakeRefCounted<MeshImpl>(
       spec_, vertex_count_, index_count_, manager_, std::move(vertex_buffer),

@@ -28,7 +28,7 @@ class GpuAllocator;
 // Not thread-safe.
 class MeshManager : public MeshBuilderFactory {
  public:
-  MeshManager(const VulkanContext& context, GpuAllocator* allocator);
+  MeshManager(CommandBufferPool* command_buffer_pool, GpuAllocator* allocator);
   ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
@@ -68,21 +68,11 @@ class MeshManager : public MeshBuilderFactory {
   void IncrementMeshCount() { ++mesh_count_; }
   void DecrementMeshCount() { --mesh_count_; }
 
+  CommandBufferPool* command_buffer_pool_;
+  GpuAllocator* allocator_;
   vk::Device device_;
   vk::Queue queue_;
-  vk::Queue transfer_queue_;
-  GpuAllocator* allocator_;
-
-  vk::CommandPool command_pool_;
-
-  struct BusyResources {
-    vk::Fence fence;
-    Buffer buffer1;
-    Buffer buffer2;
-    vk::CommandBuffer command_buffer;
-  };
   std::list<Buffer> free_staging_buffers_;
-  std::queue<BusyResources> busy_resources_;
 
   std::unordered_map<MeshSpec, std::unique_ptr<MeshSpecImpl>, MeshSpec::Hash>
       spec_cache_;

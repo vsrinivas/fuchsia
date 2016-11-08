@@ -36,9 +36,8 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
 
   // Obtain a CommandBuffer, to record commands for the current frame.
   impl::CommandBuffer* BeginFrame(const FramebufferPtr& framebuffer,
-                                  const SemaphorePtr& frame_done,
-                                  FrameRetiredCallback frame_retired_callback);
-  void EndFrame();
+                                  const SemaphorePtr& frame_done);
+  void EndFrame(FrameRetiredCallback frame_retired_callback);
 
   FramebufferPtr CreateFramebuffer(vk::Framebuffer,
                                    uint32_t width,
