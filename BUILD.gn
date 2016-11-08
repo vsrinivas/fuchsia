@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [":modular"]
+  deps = [":modular", "document_store"]
 }
 
 group("modular") {

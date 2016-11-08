@@ -1,0 +1,41 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("document_store") {
+  deps = [
+    ":document_store_factory",
+    ":document_store_test",
+  ]
+}
+
+executable("document_store_factory") {
+  sources = [
+    "document_store_factory.cc",
+  ]
+
+  deps = [
+    "//apps/modular/services/document_store",
+    "//apps/ledger/services",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//apps/modular/lib/app",
+    "//apps/modular/services/application:application_sync",
+  ]
+}
+
+executable("document_store_test") {
+  sources = [
+    "document_store_test.cc",
+  ]
+
+  deps = [
+    "//apps/ledger/services",
+    "//apps/ledger/services:services_sync",
+    "//apps/modular/lib/app",
+    "//apps/modular/services/application:application_sync",
+    "//apps/modular/services/document_store",
+    "//apps/modular/services/document_store:document_store_sync",
+    "//lib/mtl",
+  ]
+}

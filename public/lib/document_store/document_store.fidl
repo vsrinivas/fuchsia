@@ -1,0 +1,215 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module document_store;
+
+import "apps/ledger/services/ledger.fidl";
+import "apps/modular/services/document_store/document.fidl";
+
+// Response codes for document store operations.
+enum Status {
+  OK = 0,
+  PAGE_NOT_FOUND,
+  DOCUMENT_NOT_FOUND,
+  DOCUMENT_DATA_ERROR,
+  DOCUMENT_ALREADY_EXISTS,
+  TRANSACTION_ALREADY_IN_PROGRESS,
+  UNKNOWN_ERROR = -1,
+};
+
+[ServiceName="document_store.DocumentStoreFactory"]
+interface DocumentStoreFactory {
+  Initialize(ledger.Ledger ledger);
+  GetDocumentStore(array<uint8, 16> page_id) => (Status status, DocumentStore? document_store);
+
+  // Creates a new ledger Page and associates a DocumentStore with it.
+  NewDocumentStore() => (Status status, DocumentStore? document_store);
+
+  // Deletes the page associated with a DocumentStore.
+  DeleteDocumentStore(array<uint8, 16> page_id) => (Status status);
+};
+
+// Each DocumentStore is associated with a single ledger Page in which the
+// documents are stored.
+interface DocumentStore {
+  // Returns the page id associated with this document store.
+  GetId() => (array<uint8, 16> id);
+
+  Watch(DocumentStoreWatcher watcher) => (Status status);
+
+  // All queries and read operations must be run against a Snapshot.
+  GetSnapshot() => (Snapshot snapshot);
+
+  // Only one transaction can be in progress at a time.
+  // TODO(azani): Allow multiple simultaneous transactions.
+  BeginTransaction() => (Transaction transaction);
+
+  GetIndexManager(IndexManager& manager);
+};
+
+// A Transaction collects a set of changes on the document store and applies
+// them atomically.
+// Closing the pipe will roll back the transaction.
+interface Transaction {
+  // Adds the values in the specified document(s).
+  // 1) If the document does not yet exist, it is created with the specified
+  // values.
+  // 2) If the document already exists, values already stored are overwritten
+  // if specified in the document object, deleted if specified as null and
+  // left unchanged otherwise.
+  // TODO(azani): Consider how to handle large documents.
+  Add(array<Document> docs) => ();
+  AddOne(Document doc) => ();
+
+  // Equivalent to Delete followed by Add.
+  AddReplace(array<Document> docs) => ();
+  AddReplaceOne(Document doc) => ();
+
+  // Deletes the specified documents.
+  Delete(array<string> docids) => ();
+  DeleteOne(string docid) => ();
+
+  // NOTE: This will probably not work and need to be changed. We need it to
+  // handle multi-values and other things we are not worrying about today
+  // because this is scary.
+  ApplyStatementMutations(array<StatementMutation> mutations);
+
+  // Applies the changes to the document store if possible. A single status
+  // code is returned representing the first error encountered when attempting
+  // to apply the changes.
+  // TODO(azani): Consider resetting the Transaction upon commit.
+  Commit() => (Status status);
+};
+
+
+// A Snapshot is a frozen view of the DocumentStore.
+interface Snapshot {
+  Get(array<string> docids) => (Status status, array<Document> docs);
+  GetOne(string docid) => (Status status, Document? doc);
+
+  // |docids| is the list of IRIs (Internationalized Resource Identifier) of
+  // documents on the page that match the query.
+  ExecuteQuery(Query query) => (Status status, array<Document> docs);
+};
+
+// NOTE: Strawman only. Do not take seriously.
+interface IndexManager {
+  Add(Index index) => (uint64 index_id);
+
+  Remove(uint64 index_id);
+
+  Get(uint64 id) => (Index index);
+
+  GetAll() => (map<uint64, Index> indices);
+};
+
+struct Index {
+  array<Reference> sort_order;
+
+  // If |filter| is set, the index is defined only on documents that match the
+  // filter.
+  Filter? filter;
+};
+
+struct Query {
+  // If |properties| is null, all the properties associated with the document
+  // are populated. The document id is always populated.
+  array<string>? properties;
+  Filter? filter;
+
+  // Maximum number of results to return. Negative value means no maximum.
+  int64 max_results = -1;
+
+  // TODO(azani): Add sorting and paging.
+};
+
+union Filter {
+  array<Filter> and_op;
+  array<Filter> or_op;
+  Filter not_op;
+
+  // Filter matches if the label or whole reference chain exists.
+  Reference exists;
+
+  // Filter matches if the comparison is true.
+  Comparison eq;
+  Comparison lt;
+  Comparison lte;
+  Comparison gt;
+  Comparison gte;
+
+  SimpleFilter simple;
+};
+
+// If only |property| is set, matches any document which contain that property.
+// If |value| is also set, matches any document where the specified property
+// matches the specified value.
+struct SimpleFilter {
+  string property;
+  Value? value;
+};
+
+// Comparison allows queries to specify a comparison between two values.
+struct Comparison {
+  ValueOrRef value1;
+  ValueOrRef value2;
+};
+
+union ValueOrRef {
+  // |ref| refers to the value associated with the specified label.
+  Reference ref;
+
+  // |value| refers to a literal value specified by the client.
+  Value value;
+};
+
+// Reference allows queries to refer to labels on documents and chase references
+// to other documents.
+//
+// Examples:
+//
+// Referring to the label 'name' on an document.
+// { label: 'name' }
+//
+// Referring to the label 'zip' on the document whose id is contained in the
+// 'address' label.
+// { label: 'address', child: { label: 'zip' }}
+//
+// References can also be chained.
+// { label: 'employer',
+//   child: {
+//    label: 'address',
+//    child: { label: 'zip' }}}
+//
+struct Reference {
+  // A label on the document being considered.
+  string label;
+
+  // If |child| is null, the Reference is to the |label|.
+  // If |child| is not null, the value associated with |label| is assumed to be
+  // the IRI of another document. That document is the document being considered
+  // in |child|.
+  Reference? child;
+};
+
+// PLACEHOLDERS
+// What follows is not good enough and will likely need to be revised
+// substantially when it becomes in-scope. But for now, it serves merely as a
+// placeholder to facilitate discussion and let everyone know it's on our minds.
+
+// Interface to watch changes to a document store.
+interface DocumentStoreWatcher {
+  Update(Snapshot snapshot);
+};
+
+enum MutationType {
+  ADD,
+  DELETE,
+  UPDATE,
+};
+
+struct StatementMutation {
+  MutationType type;
+  Statement statement;
+};
