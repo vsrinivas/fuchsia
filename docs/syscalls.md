@@ -72,12 +72,12 @@
 + [futex_requeue](syscalls/futex_requeue.md)
 
 ## Virtual Memory Objects (VMOs)
-+ vmo_create - create a new vmo
-+ vmo_read - read from a vmo
-+ vmo_write - write to a vmo
-+ vmo_get_size - obtain the size of a vmo
-+ vmo_set_size - adjust the size of a vmo
-+ vmo_op_range
++ [vmo_create](syscalls/vmo_create.md) - create a new vmo
++ [vmo_read](syscalls/vmo_read.md) - read from a vmo
++ [vmo_write](syscalls/vmo_write.md) - write to a vmo
++ [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
++ [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
++ [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
 
 ## Cryptographically Secure RNG
 + [cprng_draw](syscalls/cprng_draw.md)
