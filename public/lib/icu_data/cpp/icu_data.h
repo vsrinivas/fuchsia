@@ -16,4 +16,4 @@ bool Release();
 
 }  // namespace icu_data
 
-#endif  // MOJO_SERVICES_ICU_DATA_CPP_ICU_DATA_H_
+#endif  // APPS_ICU_DATA_LIB_ICU_DATA_H_
