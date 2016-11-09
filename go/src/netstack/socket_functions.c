@@ -345,8 +345,8 @@ mx_status_t do_sigconn_w(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_w: events=0x%x\n", events);
   mx_status_t r =
-      mx_object_signal(ios->s, 0u, MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION);
-  debug_always("mx_object_signal(set) => %d\n", r);
+      mx_object_signal_peer(ios->s, 0u, MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION);
+  debug_always("mx_object_signal_peer(set) => %d\n", r);
   int val;
   socklen_t vallen = sizeof(val);
   int ret = net_getsockopt(ios->sockfd, SOL_SOCKET, SO_ERROR, &val, &vallen);
@@ -396,8 +396,8 @@ mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_r: events=0x%x\n", events);
   mx_status_t r =
-      mx_object_signal(ios->s, 0u, MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION);
-  debug_always("mx_object_signal(set) => %d\n", r);
+      mx_object_signal_peer(ios->s, 0u, MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION);
+  debug_always("mx_object_signal_peer(set) => %d\n", r);
   return NO_ERROR;
 }
 
@@ -413,8 +413,8 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_status_t r = mx_object_signal(ios->s, MX_SIGNAL_SIGNAL0, 0u);
-  debug_always("mx_object_signal(clear) => %d\n", r);
+  mx_status_t r = mx_object_signal_peer(ios->s, MX_SIGNAL_SIGNAL0, 0u);
+  debug_always("mx_object_signal_peer(clear) => %d\n", r);
   schedule_sigconn_r(ios);
 
   // TODO: share this code with socket()
