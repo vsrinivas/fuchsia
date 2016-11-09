@@ -11,7 +11,7 @@
 #include <string.h>
 #include <threads.h>
 
-static mtx_t mutex = MTX_INIT;
+static mtx_t g_mutex = MTX_INIT;
 
 static void xlog(const char* str) {
     uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
@@ -23,9 +23,9 @@ static int mutex_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300; times++) {
-        mtx_lock(&mutex);
+        mtx_lock(&g_mutex);
         mx_nanosleep(1000);
-        mtx_unlock(&mutex);
+        mtx_unlock(&g_mutex);
     }
 
     xlog("thread 1 done\n");
@@ -36,9 +36,9 @@ static int mutex_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150; times++) {
-        mtx_lock(&mutex);
+        mtx_lock(&g_mutex);
         mx_nanosleep(2000);
-        mtx_unlock(&mutex);
+        mtx_unlock(&g_mutex);
     }
 
     xlog("thread 2 done\n");
@@ -49,9 +49,9 @@ static int mutex_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100; times++) {
-        mtx_lock(&mutex);
+        mtx_lock(&g_mutex);
         mx_nanosleep(3000);
-        mtx_unlock(&mutex);
+        mtx_unlock(&g_mutex);
     }
 
     xlog("thread 3 done\n");
@@ -66,11 +66,11 @@ static int mutex_try_thread_1(void* arg) {
     xlog("thread 1 started\n");
 
     for (int times = 0; times < 300 || !got_lock_1; times++) {
-        int status = mtx_trylock(&mutex);
+        int status = mtx_trylock(&g_mutex);
         mx_nanosleep(1000);
         if (status == thrd_success) {
             got_lock_1 = true;
-            mtx_unlock(&mutex);
+            mtx_unlock(&g_mutex);
         }
     }
 
@@ -82,11 +82,11 @@ static int mutex_try_thread_2(void* arg) {
     xlog("thread 2 started\n");
 
     for (int times = 0; times < 150 || !got_lock_2; times++) {
-        int status = mtx_trylock(&mutex);
+        int status = mtx_trylock(&g_mutex);
         mx_nanosleep(2000);
         if (status == thrd_success) {
             got_lock_2 = true;
-            mtx_unlock(&mutex);
+            mtx_unlock(&g_mutex);
         }
     }
 
@@ -98,11 +98,11 @@ static int mutex_try_thread_3(void* arg) {
     xlog("thread 3 started\n");
 
     for (int times = 0; times < 100 || !got_lock_3; times++) {
-        int status = mtx_trylock(&mutex);
+        int status = mtx_trylock(&g_mutex);
         mx_nanosleep(3000);
         if (status == thrd_success) {
             got_lock_3 = true;
-            mtx_unlock(&mutex);
+            mtx_unlock(&g_mutex);
         }
     }
 
@@ -113,7 +113,7 @@ static int mutex_try_thread_3(void* arg) {
 static bool test_initializer(void) {
     BEGIN_TEST;
 
-    int ret = mtx_init(&mutex, mtx_timed);
+    int ret = mtx_init(&g_mutex, mtx_timed);
     ASSERT_EQ(ret, thrd_success, "failed to initialize mtx_t");
 
     END_TEST;
@@ -166,11 +166,81 @@ static bool test_static_initializer(void) {
     END_TEST;
 }
 
+typedef struct {
+    mtx_t mutex;
+    mx_handle_t start_event;
+    mx_handle_t done_event;
+} timeout_args;
+
+static int test_timeout_helper(void* ctx) {
+    timeout_args* args = ctx;
+    ASSERT_EQ(mtx_lock(&args->mutex), thrd_success, "f to lock");
+    // Inform the main thread that we have acquired the lock.
+    ASSERT_EQ(mx_object_signal(args->start_event, 0, MX_SIGNAL_SIGNALED), NO_ERROR,
+              "failed to signal");
+    // Wait until the main thread has completed its test.
+    ASSERT_EQ(mx_handle_wait_one(args->done_event, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "failed to wait");
+    ASSERT_EQ(mtx_unlock(&args->mutex), thrd_success, "failed to unlock");
+    return 0;
+}
+
+static bool test_timeout_elapsed(void) {
+    BEGIN_TEST;
+
+    const mx_time_t kRelativeDeadline = MX_MSEC(100);
+
+    timeout_args args;
+    ASSERT_EQ(thrd_success, mtx_init(&args.mutex, mtx_plain), "could not create mutex");
+    ASSERT_EQ(mx_event_create(0, &args.start_event), NO_ERROR, "could not create event");
+    ASSERT_EQ(mx_event_create(0, &args.done_event), NO_ERROR, "could not create event");
+
+    thrd_t helper;
+    ASSERT_EQ(thrd_create(&helper, test_timeout_helper, &args), thrd_success, "");
+    // Wait for the helper thread to acquire the lock.
+    ASSERT_EQ(mx_handle_wait_one(args.start_event, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL),
+              NO_ERROR, "failed to wait");
+
+    for (int i = 0; i < 5; ++i) {
+        mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+        struct timespec then = {
+            .tv_sec = now / MX_SEC(1),
+            .tv_nsec = now % MX_SEC(1),
+        };
+        then.tv_nsec += kRelativeDeadline;
+        if (then.tv_nsec > (long)MX_SEC(1)) {
+            then.tv_nsec -= MX_SEC(1);
+            then.tv_sec += 1;
+        }
+        int rc = mtx_timedlock(&args.mutex, &then);
+        ASSERT_EQ(rc, thrd_timedout, "wait should time out");
+        mx_time_t elapsed = mx_time_get(MX_CLOCK_MONOTONIC) - now;
+        if (elapsed < kRelativeDeadline) {
+            unittest_printf("\nelapsed %" PRIu64
+                            " < kRelativeDeadline: %" PRIu64 "\n",
+                            elapsed, kRelativeDeadline);
+            EXPECT_TRUE(false, "wait returned early");
+        }
+    }
+
+    // Inform the helper thread that we are done.
+    ASSERT_EQ(mx_object_signal(args.done_event, 0, MX_SIGNAL_SIGNALED),
+              NO_ERROR, "failed to signal");
+    ASSERT_EQ(thrd_join(helper, NULL), thrd_success, "failed to join");
+
+    mtx_destroy(&args.mutex);
+    ASSERT_EQ(mx_handle_close(args.start_event), NO_ERROR, "failed to close event");
+    ASSERT_EQ(mx_handle_close(args.done_event), NO_ERROR, "failed to close event");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(mtx_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_mutexes)
 RUN_TEST(test_try_mutexes)
 RUN_TEST(test_static_initializer)
+RUN_TEST(test_timeout_elapsed)
 END_TEST_CASE(mtx_tests)
 
 #ifndef BUILD_COMBINED_TESTS
