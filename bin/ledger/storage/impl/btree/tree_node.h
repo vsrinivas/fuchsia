@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_TREE_NODE_H_
 
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include "apps/ledger/src/convert/convert.h"
@@ -76,6 +77,7 @@ class TreeNode {
     Status Finish(size_t max_size,
                   Mutation* parent_mutation,
                   const std::string& max_key,
+                  std::unordered_set<ObjectId>* new_nodes,
                   ObjectId* new_root_id);
 
    private:

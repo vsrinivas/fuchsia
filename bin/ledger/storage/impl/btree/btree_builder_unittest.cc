@@ -76,13 +76,19 @@ TEST_F(BTreeBuilderTest, ApplyChangesFromEmpty) {
   std::vector<EntryChange> changes{
       EntryChange{entry1, false}, EntryChange{entry2, false},
       EntryChange{entry3, false}, EntryChange{entry4, false}};
+
+  // Expected layout (X is key "keyX"):
+  // [1, 2, 3, 4]
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
       &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
-      [&new_root_id](Status status, ObjectId obj_id) {
+      [&new_root_id](Status status, ObjectId obj_id,
+                     std::unordered_set<ObjectId>&& new_nodes) {
         EXPECT_EQ(Status::OK, status);
+        EXPECT_EQ(1u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         new_root_id = obj_id;
       });
 
@@ -132,12 +138,19 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
       EntryChange{golden_entries[10], false},
   };
   ObjectId new_root_id;
+  // Expected layout (XX is key "keyXX"):
+  //                 [03, 07]
+  //            /       |            \
+  // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
   BTreeBuilder::ApplyChanges(
       &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
-      [&new_root_id](Status status, ObjectId obj_id) {
+      [&new_root_id](Status status, ObjectId obj_id,
+                     std::unordered_set<ObjectId>&& new_nodes) {
         EXPECT_EQ(Status::OK, status);
+        EXPECT_EQ(4u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         new_root_id = obj_id;
       });
 
@@ -156,13 +169,21 @@ TEST_F(BTreeBuilderTest, ApplyChangesManyEntries) {
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
   golden_entries.insert(golden_entries.begin() + 8, new_entry);
 
+  // Expected layout (XX is key "keyXX"):
+  //                 [03, 07]
+  //            /       |            \
+  // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ObjectId new_root_id2;
   BTreeBuilder::ApplyChanges(
       &fake_storage_, new_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(new_change.begin(), new_change.end())),
-      [&new_root_id2](Status status, ObjectId obj_id) {
+      [&new_root_id2](Status status, ObjectId obj_id,
+                      std::unordered_set<ObjectId>&& new_nodes) {
         EXPECT_EQ(Status::OK, status);
+        // The root and the 3rd child have changed.
+        EXPECT_EQ(2u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         new_root_id2 = obj_id;
       });
 
@@ -209,29 +230,44 @@ TEST_F(BTreeBuilderTest, DeleteChanges) {
 
   std::vector<Entry> entries_to_delete{golden_entries[2], golden_entries[4]};
 
+  // Expected layout (XX is key "keyXX"):
+  //                 [03, 07]
+  //            /       |            \
+  // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ObjectId tmp_root_id;
   BTreeBuilder::ApplyChanges(
       &fake_storage_, root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(
           new EntryChangeIterator(changes.begin(), changes.end())),
-      [&tmp_root_id](Status status, ObjectId obj_id) {
+      [&tmp_root_id](Status status, ObjectId obj_id,
+                     std::unordered_set<ObjectId>&& new_nodes) {
         EXPECT_EQ(Status::OK, status);
+        EXPECT_EQ(4u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         tmp_root_id = obj_id;
       });
 
-  // Delete entries
+  // Delete entries.
   std::vector<EntryChange> delete_changes;
   for (size_t i = 0; i < entries_to_delete.size(); ++i) {
     delete_changes.push_back(EntryChange{entries_to_delete[i], true});
   }
-  FTL_DCHECK(delete_changes.size() == entries_to_delete.size());
+
+  // Expected layout (XX is key "keyXX"):
+  //            [03, 07]
+  //         /     |        \
+  // [00, 01]  [05, 06]    [071, 08, 09, 10]
   ObjectId new_root_id;
   BTreeBuilder::ApplyChanges(
       &fake_storage_, tmp_root_id, 4,
       std::unique_ptr<Iterator<const EntryChange>>(new EntryChangeIterator(
           delete_changes.begin(), delete_changes.end())),
-      [&new_root_id](Status status, ObjectId obj_id) {
+      [&new_root_id](Status status, ObjectId obj_id,
+                     std::unordered_set<ObjectId>&& new_nodes) {
         EXPECT_EQ(Status::OK, status);
+        // The root and the first 2 children have changed.
+        EXPECT_EQ(3u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         new_root_id = obj_id;
       });
 

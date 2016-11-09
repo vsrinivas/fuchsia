@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/public/commit.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace storage {
 
@@ -148,7 +149,8 @@ void JournalDBImpl::Commit(
 
   BTreeBuilder::ApplyChanges(
       page_storage_, base_commit->GetRootId(), node_size, std::move(entries),
-      [this, callback](Status status, ObjectId object_id) {
+      [this, callback](Status status, ObjectId object_id,
+                       std::unordered_set<ObjectId>&& new_nodes) {
         if (status != Status::OK) {
           callback(status, "");
           return;
@@ -165,8 +167,10 @@ void JournalDBImpl::Commit(
         ObjectId id = commit->GetId();
 
         page_storage_->AddCommitFromLocal(
-            std::move(commit), [this, id, callback](Status status) {
-
+            std::move(commit), ftl::MakeCopyable([
+              this, id = std::move(id), new_nodes = std::move(new_nodes),
+              callback
+            ](Status status) mutable {
               valid_ = false;
               if (status != Status::OK) {
                 callback(status, "");
@@ -179,7 +183,15 @@ void JournalDBImpl::Commit(
                 callback(status, "");
                 return;
               }
+              // Mark unsynced objects in a single batch.
               std::unique_ptr<DB::Batch> batch = db_->StartBatch();
+              for (const ObjectId& tree_node_id : new_nodes) {
+                status = db_->MarkObjectIdUnsynced(tree_node_id);
+                if (status != Status::OK) {
+                  callback(status, "");
+                  return;
+                }
+              }
               for (const ObjectId& object_id : objects_to_sync) {
                 status = db_->MarkObjectIdUnsynced(object_id);
                 if (status != Status::OK) {
@@ -198,7 +210,7 @@ void JournalDBImpl::Commit(
               }
               db_->RemoveJournal(id_);
               callback(Status::OK, id);
-            });
+            }));
       });
 }
 

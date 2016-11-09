@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_BTREE_BUILDER_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_BTREE_BUILDER_H_
 
+#include <unordered_set>
+
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/types.h"
 
@@ -12,13 +14,17 @@ namespace storage {
 
 class BTreeBuilder {
  public:
-  // Apply changes provided by |changes| to the BTree starting at |root_id|.
-  // |changes| must provide |EntryChange| objects sorted by their key.
-  static void ApplyChanges(PageStorage* page_storage,
-                           ObjectIdView root_id,
-                           size_t node_size,
-                           std::unique_ptr<Iterator<const EntryChange>> changes,
-                           std::function<void(Status, ObjectId)> callback);
+  // Applies changes provided by |changes| to the BTree starting at |root_id|.
+  // |changes| must provide |EntryChange| objects sorted by their key. The
+  // callback will provide the status of the operation, the id of the new root
+  // and the list of ids of all new nodes created after the changes.
+  static void ApplyChanges(
+      PageStorage* page_storage,
+      ObjectIdView root_id,
+      size_t node_size,
+      std::unique_ptr<Iterator<const EntryChange>> changes,
+      std::function<void(Status, ObjectId, std::unordered_set<ObjectId>&&)>
+          callback);
 
  private:
   // Recursively applies the changes starting from the given |node|.
@@ -26,6 +32,7 @@ class BTreeBuilder {
                              std::unique_ptr<const TreeNode> node,
                              size_t node_size,
                              const std::string& max_key,
+                             std::unordered_set<ObjectId>* new_nodes,
                              Iterator<const EntryChange>* changes,
                              TreeNode::Mutation* parent_mutation,
                              ObjectId* new_id);
@@ -35,6 +42,7 @@ class BTreeBuilder {
   static Status Merge(PageStorage* page_storage,
                       std::unique_ptr<const TreeNode> left,
                       std::unique_ptr<const TreeNode> right,
+                      std::unordered_set<ObjectId>* new_nodes,
                       ObjectId* new_id);
 };
 

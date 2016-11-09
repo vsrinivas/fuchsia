@@ -263,6 +263,7 @@ Status TreeNode::Mutation::Finish(ObjectId* new_id) {
 Status TreeNode::Mutation::Finish(size_t max_size,
                                   Mutation* parent_mutation,
                                   const std::string& max_key,
+                                  std::unordered_set<ObjectId>* new_nodes,
                                   ObjectId* new_root_id) {
   FinalizeEntriesChildren();
   // If we want N nodes, each with S entries, separated by 1 entry, then the
@@ -277,6 +278,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
     if (s != Status::OK) {
       return s;
     }
+    new_nodes->insert(new_id);
     if (parent_mutation) {
       parent_mutation->UpdateChildId(max_key, new_id);
     } else {
@@ -308,6 +310,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
     ObjectId new_id;
     FromEntries(node_.page_storage_, entries, children, &new_id);
     new_children.push_back(new_id);
+    new_nodes->insert(new_id);
 
     if (entries_.size() != 0) {
       // Save the pivot that needs to be moved up one level in the tree.
@@ -318,7 +321,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
 
   // All entries and children must have been allocated.
   FTL_DCHECK(entries_.size() == 0) << "Entries left: " << entries_.size();
-  FTL_DCHECK(children_.size() == 0) << "Entries left: " << entries_.size();
+  FTL_DCHECK(children_.size() == 0) << "Children left: " << children_.size();
 
   if (parent_mutation) {
     // Move the pivots to the parent node.
@@ -343,7 +346,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   for (size_t i = 0; i < new_entries.size(); ++i) {
     mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
   }
-  return mutation.Finish(max_size, parent_mutation, max_key, new_root_id);
+  return mutation.Finish(max_size, nullptr, max_key, new_nodes, new_root_id);
 }
 
 void TreeNode::Mutation::CopyUntil(std::string key) {
