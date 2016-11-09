@@ -12,9 +12,6 @@ mojo_native_application("integration") {
   deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
-    "//lib/mtl:mtl_with_mojo",
-    "//lib/mtl:test",
-    "//mojo/public/cpp/application:test_support",
   ]
 }
 
@@ -28,10 +25,9 @@ source_set("context_engine_test") {
   deps = [
     ":common",
     "//apps/maxwell/acquirers/mock:gps",
-    "//apps/maxwell/interfaces",
-    "//apps/maxwell/interfaces:formatting",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/application:test_support",
+    "//apps/maxwell/services",
+    "//apps/maxwell/services:formatting",
+    "//apps/modular/lib/app",
   ]
 }
 
@@ -46,10 +42,9 @@ source_set("suggestion_engine_test") {
     ":common",
     "//apps/maxwell/acquirers/mock:gps",
     "//apps/maxwell/agents:ideas",
-    "//apps/maxwell/interfaces",
-    "//apps/maxwell/interfaces:formatting",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/application:test_support",
+    "//apps/maxwell/services",
+    "//apps/maxwell/services:formatting",
+    "//apps/modular/lib/app",
   ]
 }
 
@@ -57,16 +52,19 @@ source_set("common") {
   testonly = true
 
   sources = [
+    "context_engine_test_base.h",
     "test.cc",
     "test.h",
   ]
 
   deps = [
-    "//apps/maxwell:debug",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/application:test_support",
-    "//mojo/public/cpp/bindings:utility",
+    "//apps/maxwell:agent_environment_host",
+    "//apps/maxwell/services",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+
+  public_deps = [
     "//third_party/gtest",
   ]
 }

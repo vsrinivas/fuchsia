@@ -31,7 +31,8 @@ class GpsAcquirerImpl : public GpsAcquirer, public ContextPublisherController {
         ctl_(this) {
     srand(time(NULL));
 
-    auto cx = app_ctx_->ConnectToEnvironmentService<ContextAcquirerClient>();
+    ContextAcquirerClientPtr cx =
+        app_ctx_->ConnectToEnvironmentService<ContextAcquirerClient>();
 
     fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
     ctl_.Bind(GetProxy(&ctl_handle));

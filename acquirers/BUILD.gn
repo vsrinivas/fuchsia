@@ -17,7 +17,6 @@ executable("gps") {
   ]
 
   deps = [
-    "//apps/maxwell:debug",
     "//apps/maxwell/services",
     "//apps/modular/lib/app",
     "//lib/mtl",

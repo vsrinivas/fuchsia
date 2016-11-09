@@ -2,26 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/integration/test.h"
-
 #include <unordered_map>
 
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "apps/maxwell/interfaces/proposal_manager.mojom.h"
-#include "apps/maxwell/interfaces/suggestion_manager.mojom.h"
-#include "apps/maxwell/interfaces/formatting.h"
-#include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/maxwell/services/suggestion_engine.fidl.h"
+#include "apps/maxwell/services/formatting.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 #include "apps/maxwell/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/agents/ideas.h"
+#include "apps/maxwell/integration/context_engine_test_base.h"
 
 using namespace maxwell::acquirers;
 using namespace maxwell::agents;
 using namespace maxwell::context_engine;
 using namespace maxwell::suggestion_engine;
-using namespace mojo;
+using namespace fidl;
 
 constexpr char IdeasAgent::kIdeaId[];
 
@@ -29,8 +25,8 @@ namespace {
 
 class TestListener : public SuggestionListener {
  public:
-  void OnAdd(mojo::Array<SuggestionPtr> suggestions) override {
-    MOJO_LOG(INFO) << "OnAdd(" << suggestions << ")";
+  void OnAdd(fidl::Array<SuggestionPtr> suggestions) override {
+    FTL_LOG(INFO) << "OnAdd(" << suggestions << ")";
     naive_suggestion_count_ += suggestions.size();
     for (auto& suggestion : suggestions)
       suggestions_[suggestion->uuid] = std::move(suggestion);
@@ -38,8 +34,8 @@ class TestListener : public SuggestionListener {
     EXPECT_EQ(naive_suggestion_count_, (signed)suggestions_.size());
   }
 
-  void OnRemove(const mojo::String& uuid) override {
-    MOJO_LOG(INFO) << "OnRemove(" << uuid << ")";
+  void OnRemove(const fidl::String& uuid) override {
+    FTL_LOG(INFO) << "OnRemove(" << uuid << ")";
     naive_suggestion_count_--;
     suggestions_.erase(uuid);
 
@@ -47,7 +43,7 @@ class TestListener : public SuggestionListener {
   }
 
   void OnRemoveAll() override {
-    MOJO_LOG(INFO) << "OnRemoveAll";
+    FTL_LOG(INFO) << "OnRemoveAll";
     naive_suggestion_count_ = 0;
     suggestions_.clear();
   }
@@ -69,10 +65,10 @@ class TestListener : public SuggestionListener {
 // context agent that publishes an int n
 class NPublisher {
  public:
-  NPublisher(Shell* shell) {
-    ContextAcquirerClientPtr cx;
-    ConnectToService(shell, "mojo:context_engine", GetProxy(&cx));
-    cx->Publish("n", "int", NULL, GetProxy(&pub_));
+  NPublisher(const ContextEnginePtr& context_engine) {
+    ContextAcquirerClientPtr out;
+    context_engine->RegisterContextAcquirer("NPublisher", GetProxy(&out));
+    out->Publish("n", "int", NULL, GetProxy(&pub_));
   }
 
   void Publish(int n) { pub_->Update(std::to_string(n)); }
@@ -83,16 +79,17 @@ class NPublisher {
 
 class Proposinator {
  public:
-  Proposinator(Shell* shell) {
-    ConnectToService(shell, "mojo:suggestion_engine", GetProxy(&pm_));
+  Proposinator(const SuggestionEnginePtr& suggestion_engine,
+               const fidl::String& url = "Proposinator") {
+    suggestion_engine->RegisterSuggestionAgent("Proposinator", GetProxy(&pm_));
   }
 
-  virtual ~Proposinator() {}
+  virtual ~Proposinator() = default;
 
   void Propose(const std::string& id) {
     ProposalPtr p = Proposal::New();
     p->id = id;
-    p->on_selected = mojo::Array<ActionPtr>::New(0);
+    p->on_selected = fidl::Array<ActionPtr>::New(0);
     SuggestionDisplayPropertiesPtr d = SuggestionDisplayProperties::New();
 
     d->icon = "";
@@ -114,8 +111,10 @@ class Proposinator {
 // maintains the number of proposals specified by the context field "n"
 class NProposals : public Proposinator, public ContextSubscriberLink {
  public:
-  NProposals(Shell* shell) : Proposinator(shell), link_binding_(this) {
-    ConnectToService(shell, "mojo:context_engine", GetProxy(&cx_));
+  NProposals(const ContextEnginePtr& context_engine,
+             const SuggestionEnginePtr& suggestion_engine)
+      : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
+    context_engine->RegisterSuggestionAgent("NProposals", GetProxy(&cx_));
 
     InterfaceHandle<ContextSubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
@@ -140,16 +139,15 @@ class NProposals : public Proposinator, public ContextSubscriberLink {
   int n_ = 0;
 };
 
-class SuggestionEngineTest : public DebuggableAppTestBase {
+class SuggestionEngineTest : public ContextEngineTestBase {
  public:
-  SuggestionEngineTest() : listener_binding_(&listener_) {}
-
- protected:
-  void SetUp() override {
-    DebuggableAppTestBase::SetUp();
-
-    StartComponent("mojo:context_engine");
-    ConnectToService("mojo:suggestion_engine", GetProxy(&suggestion_manager_));
+  SuggestionEngineTest() : listener_binding_(&listener_) {
+    modular::ServiceProviderPtr suggestion_engine_services =
+        StartEngine("file:///system/apps/suggestion_engine");
+    suggestion_engine_ = modular::ConnectToService<SuggestionEngine>(
+        suggestion_engine_services.get());
+    suggestion_manager_ = modular::ConnectToService<SuggestionManager>(
+        suggestion_engine_services.get());
 
     InterfaceHandle<SuggestionListener> listener_handle;
     listener_binding_.Bind(GetProxy(&listener_handle));
@@ -157,12 +155,28 @@ class SuggestionEngineTest : public DebuggableAppTestBase {
                                          GetProxy(&ctl_));
   }
 
+ protected:
   void SetResultCount(int count) { ctl_->SetResultCount(count); }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
   const Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
+
+  void StartSuggestionAgent(const std::string& url) {
+    auto env_host = std::make_unique<maxwell::AgentEnvironmentHost>();
+    env_host->AddService<SuggestionAgentClient>(
+        [this, url](fidl::InterfaceRequest<SuggestionAgentClient> request) {
+          cx_->RegisterSuggestionAgent(url, std::move(request));
+        });
+    env_host->AddService<ProposalManager>(
+        [this, url](fidl::InterfaceRequest<ProposalManager> request) {
+          suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
+        });
+    StartAgent(url, std::move(env_host));
+  }
+
+  SuggestionEnginePtr suggestion_engine_;
 
  private:
   SuggestionManagerPtr suggestion_manager_;
@@ -172,14 +186,12 @@ class SuggestionEngineTest : public DebuggableAppTestBase {
 };
 
 class ResultCountTest : public SuggestionEngineTest {
+ public:
+  ResultCountTest()
+      : pub_(new NPublisher(cx_)),
+        sub_(new NProposals(cx_, suggestion_engine_)) {}
+
  protected:
-  void SetUp() override {
-    SuggestionEngineTest::SetUp();
-
-    pub_ = std::unique_ptr<NPublisher>(new NPublisher(shell()));
-    sub_ = std::unique_ptr<NProposals>(new NProposals(shell()));
-  }
-
   // Publishes signals for n new suggestions to context.
   void PublishNewSignal(int n = 1) { pub_->Publish(n_ += n); }
 
@@ -253,9 +265,9 @@ TEST_F(ResultCountTest, MultiRemove) {
 // duplicate suggestion. Test that given two such ideas (via two GPS locations),
 // only the latest is kept.
 TEST_F(SuggestionEngineTest, Dedup) {
-  MockGps gps(shell());
-  StartComponent("mojo:agents/carmen_sandiego");
-  StartComponent("mojo:agents/ideas");
+  MockGps gps(cx_);
+  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
+  StartSuggestionAgent("file:///system/apps/agents/ideas");
 
   SetResultCount(10);
   gps.Publish(90, 0);
@@ -274,10 +286,10 @@ TEST_F(SuggestionEngineTest, Dedup) {
 // proposals). One agent is the mojo:agents/ideas process while the other is the
 // test itself (mojo:maxwell-test).
 TEST_F(SuggestionEngineTest, NamespacingPerAgent) {
-  MockGps gps(shell());
-  StartComponent("mojo:agents/carmen_sandiego");
-  StartComponent("mojo:agents/ideas");
-  Proposinator conflictinator(shell());
+  MockGps gps(cx_);
+  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
+  StartSuggestionAgent("file:///system/apps/agents/ideas");
+  Proposinator conflictinator(suggestion_engine_);
 
   SetResultCount(10);
   gps.Publish(90, 0);

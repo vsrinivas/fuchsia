@@ -2,20 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/integration/test.h"
-
-#include "apps/maxwell/interfaces/context_engine.mojom.h"
-#include "apps/maxwell/interfaces/formatting.h"
-#include "mojo/public/cpp/application/application_test_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/maxwell/services/context_engine.fidl.h"
+#include "apps/maxwell/services/formatting.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 #include "apps/maxwell/acquirers/mock/mock_gps.h"
+#include "apps/maxwell/integration/context_engine_test_base.h"
 
 using namespace maxwell;
 using namespace maxwell::acquirers;
 using namespace maxwell::context_engine;
-using namespace mojo;
+using namespace fidl;
 
 namespace {
 
@@ -24,11 +21,11 @@ class TestListener : public ContextSubscriberLink {
   TestListener() : binding_(this) {}
 
   void OnUpdate(ContextUpdatePtr update) override {
-    MOJO_LOG(INFO) << "OnUpdate(" << update << ")";
+    FTL_LOG(INFO) << "OnUpdate(" << update << ")";
     last_update_ = std::move(update);
   }
 
-  void WaitForUpdate() { binding_.WaitForIncomingMethodCall(kMojoDeadline); }
+  void WaitForUpdate() { binding_.WaitForIncomingMethodCall(kSignalDeadline); }
 
   ContextUpdatePtr PopLast() { return std::move(last_update_); }
 
@@ -44,55 +41,49 @@ class TestListener : public ContextSubscriberLink {
   Binding<ContextSubscriberLink> binding_;
 };
 
-class ContextEngineTest : public DebuggableAppTestBase {
+class ContextEngineTest : public ContextEngineTestBase {
+ public:
+  ContextEngineTest() {
+    cx_->RegisterSuggestionAgent("ContextEngineTest", GetProxy(&out_));
+  }
+
  protected:
-  void SetUp() override {
-    DebuggableAppTestBase::SetUp();
-    cx_debug_ = ConnectToDebuggableService(shell(), "mojo:context_engine",
-                                           GetProxy(&cx_));
-  }
-
-  void KillAllDependencies() override {
-    DebuggableAppTestBase::KillAllDependencies();
-    // TODO(rosswang): Remove this after app_mgr v2.
-    // Since agents and acquirers have an intrinsic dependency on Context
-    // Engine, if we were to start it normally in SetUp and use the default
-    // parallel kill, it would come back to haunt us, so we need to kill it
-    // again.
-    ConnectToService("mojo:context_engine", GetProxy(&cx_debug_));
-    cx_debug_->Kill();  // with a shotgun
-    WAIT_UNTIL(cx_debug_.encountered_error());
-    // cx_debug_.is_bound() (implicit bool) remains true
-  }
-
-  SuggestionAgentClientPtr cx_;
-
- private:
-  DebugPtr cx_debug_;
+  SuggestionAgentClientPtr out_;
 };
 
 }  // namespace
 
-TEST_F(ContextEngineTest, NoSpontaneousSubscription) {
-  MockGps gps(shell());
-  StartComponent("mojo:agents/carmen_sandiego");
+TEST_F(ContextEngineTest, DirectSubscription) {
+  MockGps gps(cx_);
+  {
+    TestListener listener;
+    out_->Subscribe(MockGps::kLabel, MockGps::kSchema,
+                    listener.PassBoundHandle());
+    ASYNC_CHECK(gps.has_subscribers());
+  }
+  ASYNC_CHECK(!gps.has_subscribers());
+}
+
+TEST_F(ContextEngineTest, NoSpontaneousTransitiveSubscription) {
+  MockGps gps(cx_);
+  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
 
   ASYNC_CHECK(!gps.has_subscribers());
 }
 
-TEST_F(ContextEngineTest, Subscription) {
-  MockGps gps(shell());
-  StartComponent("mojo:agents/carmen_sandiego");
+TEST_F(ContextEngineTest, TransitiveSubscription) {
+  MockGps gps(cx_);
+  StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   {
     TestListener listener;
-    cx_->Subscribe("/location/region", "json:string",
-                   listener.PassBoundHandle());
+    out_->Subscribe("/location/region", "json:string",
+                    listener.PassBoundHandle());
     ASYNC_CHECK(gps.has_subscribers());
 
     gps.Publish(90, 0);
     listener.WaitForUpdate();
     ContextUpdatePtr update = listener.PopLast();
-    EXPECT_EQ("mojo:agents/carmen_sandiego", update->source);
+    EXPECT_EQ("file:///system/apps/agents/carmen_sandiego", update->source);
     EXPECT_EQ("\"The Arctic\"", update->json_value);
 
     gps.Publish(-90, 0);
@@ -100,16 +91,16 @@ TEST_F(ContextEngineTest, Subscription) {
     update = listener.PopLast();
     EXPECT_EQ("\"Antarctica\"", update->json_value);
   }
-
   ASYNC_CHECK(!gps.has_subscribers());
 }
 
 TEST_F(ContextEngineTest, PublishAfterSubscribe) {
   TestListener listener;
-  cx_->Subscribe(MockGps::kLabel, MockGps::kSchema, listener.PassBoundHandle());
+  out_->Subscribe(MockGps::kLabel, MockGps::kSchema,
+                  listener.PassBoundHandle());
   Sleep();
 
-  MockGps gps(shell());
+  MockGps gps(cx_);
   ASYNC_CHECK(gps.has_subscribers());
 
   gps.Publish(90, 0);
@@ -118,22 +109,23 @@ TEST_F(ContextEngineTest, PublishAfterSubscribe) {
 }
 
 TEST_F(ContextEngineTest, SubscribeAfterPublish) {
-  MockGps gps(shell());
+  MockGps gps(cx_);
   gps.Publish(90, 0);
   Sleep();
 
   TestListener listener;
-  cx_->Subscribe(MockGps::kLabel, MockGps::kSchema, listener.PassBoundHandle());
+  out_->Subscribe(MockGps::kLabel, MockGps::kSchema,
+                  listener.PassBoundHandle());
   listener.WaitForUpdate();
   EXPECT_TRUE(listener.PopLast());
 }
 
 TEST_F(ContextEngineTest, MultipleSubscribers) {
-  MockGps gps(shell());
+  MockGps gps(cx_);
   TestListener listeners[2];
   for (auto& listener : listeners)
-    cx_->Subscribe(MockGps::kLabel, MockGps::kSchema,
-                   listener.PassBoundHandle());
+    out_->Subscribe(MockGps::kLabel, MockGps::kSchema,
+                    listener.PassBoundHandle());
 
   gps.Publish(90, 0);
   for (auto& listener : listeners) {

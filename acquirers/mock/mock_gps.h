@@ -5,7 +5,6 @@
 #pragma once
 
 #include "apps/maxwell/services/context_engine.fidl.h"
-#include "lib/fidl/services/application/shell.fidl.h"
 
 #include "apps/maxwell/acquirers/gps.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -16,7 +15,7 @@ namespace acquirers {
 class MockGps : public GpsAcquirer,
                 public context_engine::ContextPublisherController {
  public:
-  MockGps(fidl::Shell* shell);
+  MockGps(const context_engine::ContextEnginePtr& context_engine);
   void Publish(float latitude, float longitude);
   void OnHasSubscribers() override;
   void OnNoSubscribers() override;

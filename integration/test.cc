@@ -8,8 +8,6 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-using namespace maxwell;
-
 void Yield() {
   // To sleep successfully we need to both yield the thread and process Mojo
   // messages.
@@ -20,6 +18,7 @@ void Yield() {
   //
   // If we don't run the message loop, we never receive IPCs.
   std::this_thread::sleep_for(1ns);
+  // TODO(rosswang): This doesn't work; no messages are processed
   mtl::MessageLoop::GetCurrent()->PostQuitTask();
   mtl::MessageLoop::GetCurrent()->Run();
 }
@@ -38,4 +37,14 @@ Predicate operator!(const Predicate& a) {
 
 void Sleep() {
   Sleep(1s);
+}
+
+modular::ApplicationEnvironment* root_environment;
+
+int main(int argc, char** argv) {
+  mtl::MessageLoop loop;
+  auto app_ctx = modular::ApplicationContext::CreateFromStartupInfo();
+  root_environment = app_ctx->environment().get();
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

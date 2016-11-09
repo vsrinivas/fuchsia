@@ -51,7 +51,7 @@ void DataNode::SetPublisher(
     fidl::InterfaceHandle<ContextPublisherController> controller_handle,
     fidl::InterfaceRequest<ContextPublisherLink> link_request) {
   if (controller_handle) {
-    ContextPublisherControllerPtr controller =
+    auto controller =
         ContextPublisherControllerPtr::Create(std::move(controller_handle));
 
     // Immediately notify if there are already subscribers.
