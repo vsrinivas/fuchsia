@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [":modular", "document_store"]
+  deps = [
+    ":modular",
+  ]
 }
 
 group("modular") {
@@ -13,6 +15,7 @@ group("modular") {
     "services:all",
     "src/application_manager",
     "src/device_runner:all",
+    "src/document_store",
     "src/story_runner:all",
     "src/user_runner:all",
   ]

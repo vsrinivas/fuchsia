@@ -4,7 +4,7 @@
 #pragma once
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/modular/document_store/values.h"
+#include "apps/modular/src/document_store/values.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "lib/ftl/macros.h"
 

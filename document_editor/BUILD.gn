@@ -14,7 +14,7 @@ source_set("document_editor") {
   ]
 
   deps = [
-    "//apps/modular/services/document",
+    "//apps/modular/services/document_store",
     "//lib/ftl",
   ]
 }

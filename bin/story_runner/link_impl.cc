@@ -4,7 +4,7 @@
 
 #include "apps/modular/src/story_runner/link_impl.h"
 
-#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"

@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
-
 #include <functional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/modular/document_store/ledger.h"
-#include "apps/modular/document_store/snapshot.h"
-#include "apps/modular/document_store/transaction.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
 #include "apps/modular/services/document_store/document_store.fidl.h"
+#include "apps/modular/src/document_store/ledger.h"
+#include "apps/modular/src/document_store/snapshot.h"
+#include "apps/modular/src/document_store/transaction.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/functional/make_copyable.h"

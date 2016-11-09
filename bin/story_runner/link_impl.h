@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/ftl/macros.h"

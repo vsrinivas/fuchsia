@@ -9,7 +9,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"

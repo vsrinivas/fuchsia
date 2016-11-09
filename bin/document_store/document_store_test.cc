@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
-
 #include <sstream>
 #include <string>
 #include <utility>
 
 #include "apps/ledger/services/ledger.fidl-sync.h"
-#include "apps/modular/document_store/documents.h"
 #include "apps/modular/services/document_store/document_store.fidl-sync.h"
+#include "apps/modular/src/document_store/documents.h"
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"

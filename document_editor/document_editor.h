@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {

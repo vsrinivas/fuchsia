@@ -27,7 +27,7 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_application",
     "//apps/modular/lib/fidl:strong_binding",
-    "//apps/modular/services/document",
+    "//apps/modular/services/document_store",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
     "//apps/mozart/services/views",

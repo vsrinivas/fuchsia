@@ -7,7 +7,7 @@
 
 module modular;
 
-import "apps/modular/services/document/document.fidl";
+import "apps/modular/services/document_store/document.fidl";
 
 // This interface is implemented by the story runner. The Story
 // service instance acts as a factory for it.

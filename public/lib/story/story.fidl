@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/document/document.fidl";
+import "apps/modular/services/document_store/document.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 

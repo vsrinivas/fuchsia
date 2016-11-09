@@ -17,7 +17,7 @@
 
 #include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
-#include "apps/modular/services/document/document.fidl.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"

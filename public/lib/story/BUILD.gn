@@ -14,6 +14,6 @@ fidl("story") {
 
   deps = [
     "//apps/mozart/services/views",
-    "//apps/modular/services/document",
+    "//apps/modular/services/document_store",
   ]
 }
