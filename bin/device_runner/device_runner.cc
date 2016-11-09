@@ -26,6 +26,9 @@
 
 namespace modular {
 
+namespace {
+const char kAppId[] = "modular_device_runner";
+
 using fidl::Array;
 using fidl::GetProxy;
 using fidl::InterfaceHandle;
@@ -34,7 +37,7 @@ using fidl::InterfaceRequest;
 using fidl::String;
 using fidl::StructPtr;
 
-Array<uint8_t> UserIdentityArray(const std::string& username) {
+Array<uint8_t> StringToArray(const std::string& username) {
   Array<uint8_t> array = Array<uint8_t>::New(username.length());
   for (size_t i = 0; i < username.length(); i++) {
     array[i] = static_cast<uint8_t>(username[i]);
@@ -64,13 +67,13 @@ class DeviceRunnerImpl : public DeviceRunner {
     ConnectToService(services.get(), fidl::GetProxy(&user_runner_));
 
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
-    identity->user_id = UserIdentityArray(username);
+    identity->user_id = StringToArray(username);
     // |app_id| must not be null so it will pass mojo validation and must not
     // be empty or we'll get ledger::Status::AUTHENTICATION_ERROR when
     // UserRunner calls GetLedger().
     // TODO(jimbe): When there's support from the Ledger, open the user here,
     // then pass down a handle that is restricted from opening other users.
-    identity->app_id = Array<uint8_t>::New(1);
+    identity->app_id = StringToArray(kAppId);
 
     user_runner_->Launch(
         std::move(identity), std::move(view_owner_request), [](bool success) {
@@ -129,6 +132,7 @@ class DeviceRunnerApp {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
+}  // namespace
 }  // namespace modular
 
 int main(int argc, const char** argv) {
