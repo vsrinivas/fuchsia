@@ -1,4 +1,5 @@
 {
     "MaterialIcons": "/system/data/fonts/MaterialIcons-Regular.ttf",
-    "Roboto": "/system/data/fonts/Roboto-Regular.ttf"
+    "Roboto": "/system/data/fonts/Roboto-Regular.ttf",
+    "RobotoMono": "/system/data/fonts/RobotoMono-Regular.ttf"
 }
