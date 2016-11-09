@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/raw-bitmap-tests.cpp \
     $(LOCAL_DIR)/rle-bitmap-tests.cpp \
 
 MODULE_NAME := bitmap-test

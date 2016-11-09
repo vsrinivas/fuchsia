@@ -9,7 +9,8 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/rle-bitmap.cpp
+    $(LOCAL_DIR)/raw-bitmap.cpp \
+    $(LOCAL_DIR)/rle-bitmap.cpp \
 
 MODULE_SO_NAME := bitmap
 
