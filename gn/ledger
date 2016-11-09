@@ -8,6 +8,10 @@
             "bootfs_path": "test/cloud_provider_unittests"
         },
         {
+            "binary": "ledger_callback_unittests",
+            "bootfs_path": "test/ledger_callback_unittests"
+        },
+        {
             "binary": "convert_unittests",
             "bootfs_path": "test/convert_unittests"
         },
