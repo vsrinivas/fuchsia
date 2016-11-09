@@ -52,8 +52,8 @@ class LinkImpl : public Link {
   ~LinkImpl() override;
 
   // Implements Link interface.
-  void AddDocuments(MojoDocMap docs) override;
-  void SetAllDocuments(MojoDocMap docs) override;
+  void AddDocuments(FidlDocMap docs) override;
+  void SetAllDocuments(FidlDocMap docs) override;
   void Query(const QueryCallback& callback) override;
   void Watch(fidl::InterfaceHandle<LinkChanged> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkChanged> watcher) override;
@@ -83,8 +83,8 @@ class LinkImpl : public Link {
 
   void AddWatcher(fidl::InterfaceHandle<LinkChanged> watcher,
                   const bool self_notify);
-  void NotifyWatchers(const MojoDocMap& docs, const bool self_notify);
-  void DatabaseChanged(const MojoDocMap& docs);
+  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
+  void DatabaseChanged(const FidlDocMap& docs);
 
   // |shared_| is owned (and eventually deleted) by the LinkImpl
   // instance that created it, aka the primary instance.

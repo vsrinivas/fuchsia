@@ -40,7 +40,7 @@ struct SharedLinkImplData {
     page_->WriteLink(name, docs_map);
   }
 
-  MojoDocMap docs_map;
+  FidlDocMap docs_map;
   std::vector<std::unique_ptr<LinkImpl>> impls;
   const fidl::String name;
 
@@ -112,7 +112,7 @@ void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
   watcher_set.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-void LinkImpl::NotifyWatchers(const MojoDocMap& docs, const bool self_notify) {
+void LinkImpl::NotifyWatchers(const FidlDocMap& docs, const bool self_notify) {
   if (self_notify) {
     watchers_.ForAllPtrs([&docs](LinkChanged* const link_changed) {
       link_changed->Notify(docs.Clone());
@@ -123,7 +123,7 @@ void LinkImpl::NotifyWatchers(const MojoDocMap& docs, const bool self_notify) {
   });
 }
 
-void LinkImpl::DatabaseChanged(const MojoDocMap& docs) {
+void LinkImpl::DatabaseChanged(const FidlDocMap& docs) {
   for (auto& dst : shared_->impls) {
     bool self_notify = (dst.get() != this);
     dst->NotifyWatchers(docs, self_notify);
@@ -148,7 +148,7 @@ void LinkImpl::RemoveImpl() {
 //
 // TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
 // the call to SetAllDocument(). Need to find a way to improve this.
-void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
+void LinkImpl::AddDocuments(FidlDocMap mojo_add_docs) {
   FTL_LOG(INFO) << "LinkImpl::AddDocuments() " << shared_->name << " "
                 << mojo_add_docs;
   DocMap add_docs;
@@ -185,7 +185,7 @@ void LinkImpl::AddDocuments(MojoDocMap mojo_add_docs) {
   }
 }
 
-void LinkImpl::SetAllDocuments(MojoDocMap new_docs) {
+void LinkImpl::SetAllDocuments(FidlDocMap new_docs) {
   FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() " << shared_->name << " "
                 << new_docs;
 

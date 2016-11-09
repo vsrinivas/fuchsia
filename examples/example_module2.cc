@@ -46,10 +46,10 @@ using fidl::Map;
 using fidl::String;
 
 using modular::DocumentEditor;
+using modular::FidlDocMap;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
-using modular::MojoDocMap;
 using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
@@ -89,7 +89,7 @@ class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
   // through one link handle is not notified of changes requested
   // through the same handle. It's really the handle identity that
   // decides.
-  void Notify(MojoDocMap docs) override {
+  void Notify(FidlDocMap docs) override {
     FTL_LOG(INFO) << "Module2Impl::Notify() " << (int64_t)this << docs;
 
     DocumentEditor editor;

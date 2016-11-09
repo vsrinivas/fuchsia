@@ -53,10 +53,10 @@ using fidl::String;
 using fidl::StructPtr;
 
 using modular::DocumentEditor;
+using modular::FidlDocMap;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
-using modular::MojoDocMap;
 using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
@@ -91,7 +91,7 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
   }
 
   // See comments on Module2Impl in example-module2.cc.
-  void Notify(MojoDocMap docs) override {
+  void Notify(FidlDocMap docs) override {
     FTL_LOG(INFO) << "Module1Impl::Notify() " << (int64_t)this << docs;
     docs_ = std::move(docs);
 
@@ -190,7 +190,7 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkChanged {
   // Used by |OnDraw()| to decide whether enough time has passed, so that the
   // value can be sent back and a new frame drawn.
   ftl::TimePoint handoff_time_;
-  MojoDocMap docs_;
+  FidlDocMap docs_;
 
   // This is a counter that is incremented when a new value is received and used
   // to rotate a square.

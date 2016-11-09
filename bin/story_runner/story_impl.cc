@@ -242,7 +242,7 @@ void StoryPage::Init(std::function<void()> done) {
 }
 
 void StoryPage::MaybeReadLink(const fidl::String& name,
-                              MojoDocMap* const docs_map) {
+                              FidlDocMap* const docs_map) {
   auto i = data_->links.find(name);
   if (i != data_->links.end()) {
     for (const auto& doc : i.GetValue()->docs) {
@@ -254,7 +254,7 @@ void StoryPage::MaybeReadLink(const fidl::String& name,
 }
 
 void StoryPage::WriteLink(const fidl::String& name,
-                          const MojoDocMap& docs_map) {
+                          const FidlDocMap& docs_map) {
   FTL_LOG(INFO) << "StoryPage::WriteLink() " << to_string(id_) << " name "
                 << name << " docs " << docs_map;
 

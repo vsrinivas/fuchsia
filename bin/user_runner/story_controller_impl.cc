@@ -71,7 +71,7 @@ void StoryControllerImpl::Done() {
 }
 
 // |LinkChanged|
-void StoryControllerImpl::Notify(MojoDocMap docs) {
+void StoryControllerImpl::Notify(FidlDocMap docs) {
   FTL_LOG(INFO) << "StoryControllerImpl::Notify() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnData);
 }

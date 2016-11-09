@@ -60,12 +60,12 @@ using fidl::InterfaceRequest;
 using fidl::StructPtr;
 
 using modular::DocumentEditor;
+using modular::FidlDocMap;
 using modular::Link;
 using modular::LinkChanged;
 using modular::Module;
 using modular::ModuleController;
 using modular::ModuleWatcher;
-using modular::MojoDocMap;
 using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
@@ -81,7 +81,7 @@ class LinkConnection : public LinkChanged {
     src_->Watch(std::move(watcher));
   }
 
-  void Notify(MojoDocMap docs) override {
+  void Notify(FidlDocMap docs) override {
     FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
     if (docs.size() > 0) {
       dst_->SetAllDocuments(std::move(docs));
@@ -195,7 +195,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
             // This must come last, otherwise LinkConnection gets a
             // notification of our own write because of the "send
             // initial values" code.
-            MojoDocMap docs;
+            FidlDocMap docs;
             DocumentEditor(kDocId)
                 .SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue))
                 .SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1))

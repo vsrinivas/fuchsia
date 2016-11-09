@@ -140,8 +140,8 @@ class StoryPage {
   void Init(std::function<void()> done);
 
   // These methods are called by LinkImpl.
-  void MaybeReadLink(const fidl::String& name, MojoDocMap* data);
-  void WriteLink(const fidl::String& name, const MojoDocMap& data);
+  void MaybeReadLink(const fidl::String& name, FidlDocMap* data);
+  void WriteLink(const fidl::String& name, const FidlDocMap& data);
 
  private:
   fidl::InterfacePtr<StoryStorage> story_storage_;

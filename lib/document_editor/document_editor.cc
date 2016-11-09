@@ -50,7 +50,7 @@ Value* DocumentEditor::GetValue(const std::string& property) {
   return p.GetValue().get();
 }
 
-bool DocumentEditor::Edit(const std::string& docid, MojoDocMap* const docs) {
+bool DocumentEditor::Edit(const std::string& docid, FidlDocMap* const docs) {
   FTL_DCHECK(newdoc_.get() == nullptr);
   FTL_DCHECK(doc_ == nullptr);
   FTL_DCHECK(docs != nullptr);
@@ -69,7 +69,7 @@ void DocumentEditor::TakeDocument(document_store::DocumentPtr* const ptr) {
   *ptr = std::move(newdoc_);
 }
 
-void DocumentEditor::Insert(MojoDocMap* const docs) {
+void DocumentEditor::Insert(FidlDocMap* const docs) {
   FTL_DCHECK(newdoc_.get() != nullptr);
   FTL_DCHECK(docs != nullptr);
   (*docs)[newdoc_->docid] = std::move(newdoc_);
@@ -82,7 +82,7 @@ DocumentEditor& DocumentEditor::SetProperty(const std::string& property_label,
 }
 
 void DocumentEditor::RemoveProperty(const std::string& property_label) {
-  std::map<MojoPropertyMap::KeyType, MojoPropertyMap::ValueType> props;
+  std::map<FidlPropertyMap::KeyType, FidlPropertyMap::ValueType> props;
   doc_->properties.Swap(&props);
   props.erase(property_label);
   doc_->properties.Swap(&props);
@@ -112,7 +112,7 @@ ValuePtr DocumentEditor::NewIriValue(const std::string& iri) {
   return value;
 }
 
-std::ostream& operator<<(std::ostream& os, const MojoPropertyMap& props) {
+std::ostream& operator<<(std::ostream& os, const FidlPropertyMap& props) {
   if (props.size() == 0)
     os << std::endl << "  (No properties)";
   for (auto it = props.cbegin(); it != props.cend(); ++it) {
@@ -149,7 +149,7 @@ std::ostream& operator<<(std::ostream& os, Value* const v) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const MojoDocMap& docs) {
+std::ostream& operator<<(std::ostream& os, const FidlDocMap& docs) {
   if (docs.size() == 0)
     os << " NO DOCUMENTS";
   for (auto it = docs.cbegin(); it != docs.cend(); ++it) {

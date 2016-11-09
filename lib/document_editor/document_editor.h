@@ -12,9 +12,9 @@
 
 namespace modular {
 
-using MojoDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
+using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
 using DocMap = std::map<fidl::String, document_store::DocumentPtr>;
-using MojoPropertyMap = fidl::Map<fidl::String, document_store::ValuePtr>;
+using FidlPropertyMap = fidl::Map<fidl::String, document_store::ValuePtr>;
 
 // Wrapper class to make it easier to work with Document objects and all
 // of the nested StructPtr's. This class will evolve to support:
@@ -40,7 +40,7 @@ class DocumentEditor {
   // Find the given document from the map and prepare to edit it. The Document
   // is not removed from the map. Returns false if the map does not contain
   // the docid.
-  bool Edit(const std::string& docid, MojoDocMap* docs);
+  bool Edit(const std::string& docid, FidlDocMap* docs);
 
   // If this editor allocated a Document, then move it into |ptr|. The raw
   // pointer to the Document is retained, so the editor can still be used after
@@ -50,7 +50,7 @@ class DocumentEditor {
   // If this editor allocated a Document, then move it into |docs|. The raw
   // pointer to the Document is retained, so the editor can still be used after
   // this function is done. DCHECK if this editor did not allocate the Document.
-  void Insert(MojoDocMap* docs);
+  void Insert(FidlDocMap* docs);
 
   // Return the value for the given property, or nullptr if not found.
   // The result points directly into the property array and may be modified.
@@ -97,7 +97,7 @@ class DocumentEditor {
   FTL_DISALLOW_COPY_AND_ASSIGN(DocumentEditor);
 };
 
-std::ostream& operator<<(std::ostream& os, const MojoDocMap& docs);
+std::ostream& operator<<(std::ostream& os, const FidlDocMap& docs);
 std::ostream& operator<<(std::ostream& os,
                          const document_store::DocumentPtr& doc);
 std::ostream& operator<<(std::ostream& os, document_store::Value* v);

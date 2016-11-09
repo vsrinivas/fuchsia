@@ -66,7 +66,7 @@ class StoryControllerImpl : public StoryController,
   void Done() override;
 
   // |LinkChanged|
-  void Notify(MojoDocMap docs) override;
+  void Notify(FidlDocMap docs) override;
 
  private:
   void NotifyStoryWatchers(void (StoryWatcher::*method)());
