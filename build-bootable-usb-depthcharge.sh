@@ -17,53 +17,13 @@
 # This script produces a bootable USB drive, designed to boot using verified
 # boot.
 
-set -e
-shopt -s extglob
-
-# Convenience function for ending the script with some output.
-trap "exit 99" USR2
-TOP_PID=$$
-
-function die() {
-  echo "$*" >& 2
-  kill -USR2 $TOP_PID
-}
-
-# Function to attempt unmounting a mount point up to three times, sleeping
-# a couple of seconds between attempts.
-function umount_retry() {
-  set +e
-  TRIES=0
-  while (! sudo umount $1); do
-    ((TRIES++))
-    [[ ${TRIES} > 2 ]] && die "Unable to umount $0"
-    sleep 2
-  done
-  set -e
-}
+SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
+source "${SCRIPT_DIR}"/build-utils.sh
 
 function usage() {
   echo "$0 BLOCK_DEVICE ROOT_DIRECTORY [type]"
   echo "\"type\" is optional and can be \"dev\" or \"net\""
 }
-
-is_usb() {
-  if [ -n "$(type -path udevadm)" ]; then
-    udevadm info --query=all --name="${BLOCK_DEVICE}" | grep -q ID_BUS=usb
-   else
-    # For a usb device on the pixel2 we expect to see something like:
-    # /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/host5/target5:0:0/5:0:0:0
-    (cd /sys/block/$(basename "${BLOCK_DEVICE}")/device 2>/dev/null && pwd -P) | grep -q usb
-  fi
-}
-
-
-# Absolute path of where this script is stored.
-SCRIPT_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd)
-PATH="${SCRIPT_DIR}/../buildtools/toolchain/:${PATH}"
-VB_DIR="${SCRIPT_DIR}/../third_party/vboot_reference"
-DC_DIR="${SCRIPT_DIR}/../third_party/depthcharge"
-MX_DIR="${SCRIPT_DIR}/../magenta"
 
 # Grab some arguments, do some basic validation.
 [[ $# -eq 3 ]] || [[ $# -eq 2 ]] || (usage; die)
@@ -81,7 +41,7 @@ trap "rm -rf \"${KERNEL_IMAGE}\"" INT TERM EXIT
 
 # Do a sanity check on the block device: help prevent users from accidentally
 # destroying their workstations by checking whether this is a usb drive.
-if ! is_usb; then
+if ! is_usb "${BLOCK_DEVICE}"; then
   die "${BLOCK_DEVICE} is not a usb drive"
 fi
 
