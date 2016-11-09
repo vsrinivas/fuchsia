@@ -411,7 +411,7 @@ void HandleWatcherThreadState::Run() {
       continue;
     }
 
-    FTL_CHECK(result == NO_ERROR && result == ERR_TIMED_OUT)
+    FTL_CHECK(result == NO_ERROR || result == ERR_TIMED_OUT)
         << "mx_handle_wait_many returned unexpected result: " << result;
     ProcessWaitManyResults();
   }

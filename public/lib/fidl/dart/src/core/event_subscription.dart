@@ -23,7 +23,7 @@ class FidlEventSubscription {
   bool _isSubscribed;
 
   FidlEventSubscription(Handle handle,
-      [int signals = MX_SIGNALS_READABLE | MX_SIGNALS_PEER_CLOSED])
+      [int signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED])
       : _handle = handle,
         _signals = signals,
         _isSubscribed = false {
@@ -62,8 +62,8 @@ class FidlEventSubscription {
     return false;
   }
 
-  bool enableReadEvents() => enableSignals(MX_SIGNALS_READABLE | MX_SIGNALS_PEER_CLOSED);
-  bool enableWriteEvents() => enableSignals(MX_SIGNALS_WRITABLE | MX_SIGNALS_PEER_CLOSED);
+  bool enableReadEvents() => enableSignals(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+  bool enableWriteEvents() => enableSignals(MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED);
 
   /// End the subscription by removing the handle from the handle watcher and
   /// closing the Dart port, but do not close the underlying handle. The handle
@@ -88,7 +88,7 @@ class FidlEventSubscription {
       if (_isSubscribed && !local) {
         return _handleWatcherClose(immediate: immediate).then((result) {
           // If the handle watcher is gone, then close the handle ourselves.
-          if (result != MojoResult.kOk) {
+          if (result != NO_ERROR) {
             _localClose();
           }
         });
@@ -101,7 +101,7 @@ class FidlEventSubscription {
 
   Future _handleWatcherClose({bool immediate: false}) {
     assert(_handle != null);
-    HandleNatives.removeOpenHandle(_handle.h);
+    MxHandle.removeOpenHandle(_handle.h);
     return HandleWatcher.close(_handle.h, wait: !immediate).then((r) {
       if (_receivePort != null) {
         _receivePort.close();

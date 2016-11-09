@@ -105,10 +105,19 @@ class MxChannel {
       native "MxChannel_QueryAndRead";
 }
 
-int _environmentHandle;
+int _environment;
 int _outgoingServices;
 
 class MxStartupInfo {
-  static int environment => _environmentHandle;
-  static int outgoingServices => outgoingServices;
+  static int takeEnvironment() {
+    int handle = _environment;
+    _environment = null;
+    return handle;
+  }
+
+  static int takeOutgoingServices() {
+    int handle = _outgoingServices;
+    _outgoingServices = null;
+    return handle;
+  }
 }

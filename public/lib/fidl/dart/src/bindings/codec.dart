@@ -49,7 +49,7 @@ class ArrayDataHeader {
 }
 
 class FidlCodecError {
-  final String message;
+  String message;
 
   FidlCodecError(this.message);
 

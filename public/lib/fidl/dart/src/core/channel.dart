@@ -48,7 +48,7 @@ class ChannelQueryAndReadState {
 
   String toString() {
     return "ChannelQueryAndReadState("
-        "status: ${MojoResult.string(status)}, dataLength: $dataLength, "
+        "status: ${getStringForStatus(status)}, dataLength: $dataLength, "
         "handlesLength: $handlesLength)";
   }
 }
@@ -65,12 +65,12 @@ class Channel {
 
   Channel(this.handle);
 
-  bool get ok => status == MojoResult.kOk;
+  bool get ok => status == NO_ERROR;
 
   int write(ByteData data,
       [int numBytes = -1, List<Handle> handles = null, int flags = 0]) {
     if (handle == null) {
-      status = MojoResult.kInvalidArgument;
+      status = ERR_INVALID_ARGS;
       return status;
     }
 
@@ -79,7 +79,7 @@ class Channel {
     // If numBytes has the default value, use the full length of the data.
     int dataNumBytes = (numBytes == -1) ? dataLengthInBytes : numBytes;
     if (dataNumBytes > dataLengthInBytes) {
-      status = MojoResult.kInvalidArgument;
+      status = ERR_INVALID_ARGS;
       return status;
     }
 
@@ -101,7 +101,7 @@ class Channel {
   ChannelReadResult read(ByteData data,
       [int numBytes = -1, List<Handle> handles = null, int flags = 0]) {
     if (handle == null) {
-      status = MojoResult.kInvalidArgument;
+      status = ERR_INVALID_ARGS;
       return null;
     }
 
@@ -112,7 +112,7 @@ class Channel {
     } else {
       dataNumBytes = (numBytes == -1) ? data.lengthInBytes : numBytes;
       if (dataNumBytes > data.lengthInBytes) {
-        status = MojoResult.kInvalidArgument;
+        status = ERR_INVALID_ARGS;
         return null;
       }
     }
@@ -130,7 +130,7 @@ class Channel {
         handle.h, data, dataNumBytes, mojoHandles, flags);
 
     if (result == null) {
-      status = MojoResult.kInvalidArgument;
+      status = ERR_INVALID_ARGS;
       return null;
     }
 
@@ -151,14 +151,14 @@ class Channel {
   ChannelReadResult query() => read(null);
 
   bool setDescription(String description) =>
-      HandleNatives.setDescription(handle.h, description);
+      MxHandle.setDescription(handle.h, description);
 
   /// Warning: The object returned by this function, and the buffers inside of
   /// it are only valid until the next call to this function by the same
   /// isolate.
   ChannelQueryAndReadState queryAndRead([int flags = 0]) {
     if (handle == null) {
-      status = MojoResult.kInvalidArgument;
+      status = ERR_INVALID_ARGS;
       return null;
     }
 
@@ -173,7 +173,7 @@ class Channel {
   }
 
   String toString() => "Channel(handle: $handle, "
-      "status: ${MojoResult.string(status)})";
+      "status: ${getStringForStatus(status)})";
 }
 
 class ChannelPair {
