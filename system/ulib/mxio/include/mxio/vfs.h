@@ -8,8 +8,8 @@
 #include <magenta/listnode.h>
 #include <magenta/compiler.h>
 
-// ssize_t?
 #include <stdio.h>
+#include <unistd.h>  // ssize_t
 
 __BEGIN_CDECLS
 

@@ -17,7 +17,6 @@
 #define error(fmt...) fprintf(stderr, fmt)
 #define warn(fmt...) fprintf(stderr, fmt)
 
-
 #define BLOCK_FLAGS 0xF
 
 static int readblk(int fd, uint32_t bno, void* data) {
@@ -239,3 +238,11 @@ int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize,
     *out = bc;
     return 0;
 }
+
+#ifndef __Fuchsia__
+// This is used by the ioctl wrappers in magenta/device/device.h. It's not
+// called by host tools, so just satisfy the linker with a stub.
+ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {
+    return -1;
+}
+#endif
