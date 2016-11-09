@@ -156,21 +156,20 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
 
     if ((op != EPOLL_CTL_DEL && ep_event == NULL) || epfd == fd) {
         r = ERR_INVALID_ARGS;
-        goto fail_no_io;
-    }
-    if ((io = fd_to_io(epfd)) == NULL) {
-        r = ERR_BAD_HANDLE;
-        goto fail_no_io;
-    }
-    if (!(io->flags & MXIO_FLAG_EPOLL)) {
-        r = ERR_INVALID_ARGS;
         goto fail_no_epio;
     }
-    epio = (mxio_epoll_t*)io;
+    if ((epio = (mxio_epoll_t*)fd_to_io(epfd)) == NULL) {
+        r = ERR_BAD_HANDLE;
+        goto fail_no_epio;
+    }
+    if (!(epio->io.flags & MXIO_FLAG_EPOLL)) {
+        r = ERR_INVALID_ARGS;
+        goto fail_no_io;
+    }
 
     if ((io = fd_to_io(fd)) == NULL) {
         r = ERR_BAD_HANDLE;
-        goto end;
+        goto fail_no_io;
     }
 
     mxio_epoll_cookie_t* cookie;
@@ -234,9 +233,9 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* ep_event) {
 
  end:
     mxio_release(io);
- fail_no_epio:
-    mxio_release(&epio->io);
  fail_no_io:
+    mxio_release(&epio->io);
+ fail_no_epio:
     return STATUS(r);
 }
 
