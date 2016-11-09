@@ -1,0 +1,26 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef APPS_MOTERM_MOTERM_PARAMS_H_
+#define APPS_MOTERM_MOTERM_PARAMS_H_
+
+#include "lib/ftl/command_line.h"
+
+namespace moterm {
+
+constexpr char kDefaultShell[] = "/boot/bin/mxsh";
+
+struct MotermParams {
+  MotermParams();
+  ~MotermParams();
+
+  bool Parse(const ftl::CommandLine& command_line);
+
+  std::string command = kDefaultShell;
+  uint32_t font_size = 16;
+};
+
+}  // namespace moterm
+
+#endif  // APPS_MOTERM_MOTERM_PARAMS_H_
