@@ -507,7 +507,9 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const cha
         r = dev->ops->open(dev, out, flags);
     }
     DM_LOCK();
-    if (*out != dev) {
+    if (r < 0) {
+        dev_ref_release(dev);
+    } else if (*out != dev) {
         // open created a per-instance device for us
         dev_ref_release(dev);
 
