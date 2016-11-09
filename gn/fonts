@@ -20,6 +20,11 @@
         {
             "bootfs_path": "data/fonts/Roboto-Regular.ttf",
             "file": "apps/fonts/third_party/roboto/Roboto-Regular.ttf"
+        },
+        {
+            "bootfs_path": "data/fonts/RobotoMono-Regular.ttf",
+            "file": "apps/fonts/third_party/robotomono/RobotoMono-Regular.ttf"
         }
+
     ]
 }
