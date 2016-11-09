@@ -12,11 +12,13 @@
 #include <magenta/types.h>
 #include <sys/param.h>
 #include <assert.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdatomic.h>
 
 #include "sata.h"
 
@@ -45,6 +47,8 @@ typedef struct sata_device {
 
     mx_size_t sector_sz;
     mx_off_t capacity; // bytes
+
+    atomic_int writercount;
 } sata_device_t;
 
 #define get_sata_device(dev) containerof(dev, sata_device_t, device)
@@ -237,11 +241,35 @@ static mx_status_t sata_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+static inline bool is_writer(uint32_t flags) {
+    return (flags & O_RDWR || flags & O_WRONLY);
+}
+
+static mx_status_t sata_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    sata_device_t* device = get_sata_device(dev);
+    mx_status_t status = NO_ERROR;
+    if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
+        printf("SATA driver cannot open device as writable (open elsewhere)\n");
+        status = ERR_ALREADY_BOUND;
+    }
+    return status;
+}
+
+static mx_status_t sata_close(mx_device_t* dev, uint32_t flags) {
+    sata_device_t* device = get_sata_device(dev);
+    if (is_writer(flags)) {
+        atomic_fetch_sub(&device->writercount, 1);
+    }
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t sata_device_proto = {
     .ioctl = sata_ioctl,
     .iotxn_queue = sata_iotxn_queue,
     .get_size = sata_getsize,
     .release = sata_release,
+    .open = sata_open,
+    .close = sata_close,
 };
 
 mx_status_t sata_bind(mx_device_t* dev, int port) {
