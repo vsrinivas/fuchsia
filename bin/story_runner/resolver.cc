@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/lib/fidl/single_service_application.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/story/resolver.fidl.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/ftl/macros.h"
@@ -12,12 +12,18 @@
 
 namespace modular {
 
-class ResolverImpl : public Resolver {
+// Because the Resolver service doesn't have state or takes
+// parameters, the resolver app doesn't even create instances of it.
+// It only ever returns bindings to its sole instance.
+class ResolverApp : public Resolver {
  public:
-  explicit ResolverImpl(fidl::InterfaceRequest<Resolver> request)
-      : binding_(this, std::move(request)) {}
-
-  ~ResolverImpl() override {}
+  ResolverApp() :
+      application_context_(ApplicationContext::CreateFromStartupInfo()) {
+    application_context_->outgoing_services()->AddService<Resolver>(
+        [this](fidl::InterfaceRequest<Resolver> request) {
+          bindings_.AddBinding(this, std::move(request));
+        });
+  }
 
  private:
   void Resolve(const fidl::String& query,
@@ -25,33 +31,16 @@ class ResolverImpl : public Resolver {
     callback(query);
   }
 
-  StrongBinding<Resolver> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverImpl);
-};
-
-class ResolverFactoryImpl : public ResolverFactory {
- public:
-  ResolverFactoryImpl(fidl::InterfaceRequest<ResolverFactory> request)
-      : binding_(this, std::move(request)) {}
-
-  ~ResolverFactoryImpl() override = default;
-
- private:
-  void GetResolver(fidl::InterfaceRequest<Resolver> request) override {
-    new ResolverImpl(std::move(request));
-  }
-
-  StrongBinding<ResolverFactory> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverFactoryImpl);
+  fidl::BindingSet<Resolver> bindings_;
+  std::unique_ptr<ApplicationContext> application_context_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(ResolverApp);
 };
 
 }  // namespace modular
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceApplication<modular::ResolverFactory,
-                                    modular::ResolverFactoryImpl>
-      app;
+  modular::ResolverApp app;
   loop.Run();
   return 0;
 }

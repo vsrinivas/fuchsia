@@ -88,37 +88,36 @@ void StoryControllerImpl::StartStoryRunner(
   FTL_LOG(INFO) << "StoryControllerImpl::StartStoryRunner() "
                 << story_info_->id;
 
-  auto story_runner_launch_info = ApplicationLaunchInfo::New();
+  // NOTE(mesch): We start a new application for each of the services
+  // we need here. Instead, we could have started the application once
+  // at startup and just request a new service instance here.
 
+  auto story_runner_launch_info = ApplicationLaunchInfo::New();
   ServiceProviderPtr story_runner_app_services;
   story_runner_launch_info->services = GetProxy(&story_runner_app_services);
   story_runner_launch_info->url = "file:///system/apps/story_runner";
-
   application_context_->launcher()->CreateApplication(
       std::move(story_runner_launch_info), nullptr);
-
-  ConnectToService(story_runner_app_services.get(), GetProxy(&runner_));
+  StoryFactoryPtr story_factory;
+  ConnectToService(story_runner_app_services.get(), GetProxy(&story_factory));
 
   auto resolver_launch_info = ApplicationLaunchInfo::New();
-
   ServiceProviderPtr resolver_app_services;
   resolver_launch_info->services = GetProxy(&resolver_app_services);
   resolver_launch_info->url = "file:///system/apps/resolver";
-
   application_context_->launcher()->CreateApplication(
       std::move(resolver_launch_info), nullptr);
-
-  ResolverFactoryPtr resolver_factory;
-  ConnectToService(resolver_app_services.get(), GetProxy(&resolver_factory));
-
-  runner_->Initialize(std::move(resolver_factory));
+  ResolverPtr resolver;
+  ConnectToService(resolver_app_services.get(), GetProxy(&resolver));
 
   StoryStoragePtr story_storage;
   new StoryStorageImpl(
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_info_->story_page_id),
       story_info_->id, GetProxy(&story_storage));
-  runner_->StartStory(std::move(story_storage), GetProxy(&story_));
+
+  story_factory->CreateStory(std::move(resolver), std::move(story_storage),
+                             GetProxy(&story_));
 
   story_->CreateLink("root", GetProxy(&root_));
 
@@ -153,7 +152,6 @@ void StoryControllerImpl::TearDownStoryRunner() {
   link_changed_binding_.Close();
   module_.reset();
   story_.reset();
-  runner_.reset();
   module_watcher_binding_.Close();
 
   story_info_->is_running = false;

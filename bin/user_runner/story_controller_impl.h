@@ -87,7 +87,6 @@ class StoryControllerImpl : public StoryController,
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::Binding<LinkChanged> link_changed_binding_;
   std::vector<StoryWatcherPtr> story_watchers_;
-  StoryRunnerPtr runner_;
   StoryPtr story_;
   LinkPtr root_;
   ModuleControllerPtr module_;

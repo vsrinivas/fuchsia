@@ -20,56 +20,29 @@
 
 namespace modular {
 
-// The story runner service is the service directly provided by the
-// story runner app. It must be initialized with a resolver factory
-// and then allows to create a Story.
-class StoryRunnerImpl : public StoryRunner {
+// The StoryRunnerApp provides the StoryFactory service. The story
+// factory doesn't need separate instances because it doesn't have
+// state or parameters, so the StoryRunnerApp implements it directly.
+class StoryRunnerApp : public StoryFactory {
  public:
-  StoryRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
-                  fidl::InterfaceRequest<StoryRunner> req)
-      : application_context_(application_context),
-        binding_(this, std::move(req)) {
-    FTL_LOG(INFO) << "StoryRunnerImpl()";
-  }
-
-  ~StoryRunnerImpl() override { FTL_LOG(INFO) << "~StoryRunnerImpl()"; }
-
-  void Initialize(
-      fidl::InterfaceHandle<ResolverFactory> resolver_factory) override {
-    resolver_factory_.Bind(std::move(resolver_factory));
-  }
-
-  void StartStory(fidl::InterfaceHandle<StoryStorage> story_storage,
-                  fidl::InterfaceRequest<Story> story) override {
-    fidl::InterfaceHandle<Resolver> resolver;
-    resolver_factory_->GetResolver(GetProxy(&resolver));
-    new StoryImpl(application_context_, std::move(resolver),
-                  std::move(story_storage), std::move(story));
-  }
-
- private:
-  std::shared_ptr<ApplicationContext> application_context_;
-  fidl::InterfacePtr<ResolverFactory> resolver_factory_;
-  StrongBinding<StoryRunner> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerImpl);
-};
-
-// The StoryRunnerApp provides instances of the implementation of the
-// StoryRunner service. It is a single service app, but the service
-// impl takes the application launcher as additional constructor
-// parameter, so we don't reuse the template class here.
-class StoryRunnerApp {
- public:
-  StoryRunnerApp() : context_(ApplicationContext::CreateFromStartupInfo()) {
-    FTL_LOG(INFO) << "StoryRunnerApp()";
-    context_->outgoing_services()->AddService<StoryRunner>(
-        [this](fidl::InterfaceRequest<StoryRunner> request) {
-          new StoryRunnerImpl(context_, std::move(request));
+  StoryRunnerApp() :
+      application_context_(ApplicationContext::CreateFromStartupInfo()) {
+    application_context_->outgoing_services()->AddService<StoryFactory>(
+        [this](fidl::InterfaceRequest<StoryFactory> request) {
+          bindings_.AddBinding(this, std::move(request));
         });
   }
 
  private:
-  std::shared_ptr<ApplicationContext> context_;
+  void CreateStory(fidl::InterfaceHandle<Resolver> resolver,
+                   fidl::InterfaceHandle<StoryStorage> story_storage,
+                   fidl::InterfaceRequest<Story> story) override {
+    new StoryImpl(application_context_, std::move(resolver),
+                  std::move(story_storage), std::move(story));
+  }
+
+  fidl::BindingSet<StoryFactory> bindings_;
+  std::shared_ptr<ApplicationContext> application_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
 };
 
