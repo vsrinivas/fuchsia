@@ -8,7 +8,7 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"

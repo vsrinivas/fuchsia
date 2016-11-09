@@ -19,8 +19,8 @@ executable("story_runner") {
   deps = [
     "//apps/modular/document_editor",
     "//apps/modular/lib/app",
-    "//apps/modular/mojo:array_to_string",
-    "//apps/modular/mojo:strong_binding",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
@@ -36,8 +36,8 @@ executable("resolver") {
   ]
 
   deps = [
-    "//apps/modular/mojo:single_service_application",
-    "//apps/modular/mojo:strong_binding",
+    "//apps/modular/lib/fidl:single_service_application",
+    "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/story",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

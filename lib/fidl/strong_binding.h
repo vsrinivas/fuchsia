@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_MOJO_STRONG_BINDING_H_
-#define APPS_MODULAR_MOJO_STRONG_BINDING_H_
+#ifndef APPS_MODULAR_LIB_FIDL_STRONG_BINDING_H_
+#define APPS_MODULAR_LIB_FIDL_STRONG_BINDING_H_
 
 #include <assert.h>
 #include <mx/channel.h>
@@ -182,4 +182,4 @@ class StrongBinding {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_MOJO_STRONG_BINDING_H_
+#endif  // APPS_MODULAR_LIB_FIDL_STRONG_BINDING_H_

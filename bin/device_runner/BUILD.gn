@@ -16,7 +16,7 @@ executable("device_runner") {
 
   deps = [
     "//apps/modular/lib/app",
-    "//apps/modular/mojo:strong_binding",
+    "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/application",
     "//apps/modular/services/device",
     "//apps/modular/services/user",
@@ -33,8 +33,8 @@ executable("dummy_device_shell") {
   ]
 
   deps = [
-    "//apps/modular/mojo:single_service_view_app",
-    "//apps/modular/mojo:strong_binding",
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/device",
     "//apps/mozart/services/views",
     "//lib/ftl",

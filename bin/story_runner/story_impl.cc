@@ -6,7 +6,7 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/mojo/array_to_string.h"
+#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/document/document.fidl.h"

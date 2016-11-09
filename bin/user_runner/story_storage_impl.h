@@ -11,7 +11,7 @@
 
 #include "apps/modular/services/story/story.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/logging.h"
 

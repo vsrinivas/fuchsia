@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/mojo/single_service_application.h"
-#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/lib/fidl/single_service_application.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/story/resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

@@ -6,19 +6,17 @@
 // This takes |recipe_url| as a command line argument and passes it to the
 // Story Manager.
 
-#include <mojo/system/main.h>
-
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/mojo/array_to_string.h"
-#include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"

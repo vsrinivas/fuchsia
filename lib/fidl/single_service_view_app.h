@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_MOJO_SINGLE_SERVICE_VIEW_APP_H_
-#define APPS_MODULAR_MOJO_SINGLE_SERVICE_VIEW_APP_H_
+#ifndef APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_
+#define APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_
 
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/mojo/strong_binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 
@@ -115,4 +115,4 @@ class SingleServiceViewApp {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_MOJO_SINGLE_SERVICE_VIEW_APP_H_
+#endif  // APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_

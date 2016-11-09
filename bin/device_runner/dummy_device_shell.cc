@@ -7,10 +7,10 @@
 
 #include <memory>
 
+#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/device/device_runner.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
-#include "apps/modular/mojo/single_service_view_app.h"
-#include "apps/modular/mojo/strong_binding.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/ftl/logging.h"

@@ -22,7 +22,7 @@ executable("example_module1") {
   deps = [
     "//apps/modular/document_editor",
     "//apps/modular/lib/app",
-    "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
@@ -42,7 +42,7 @@ executable("example_module2") {
   deps = [
     "//apps/modular/document_editor",
     "//apps/modular/lib/app",
-    "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",
@@ -61,7 +61,7 @@ executable("example_recipe") {
 
   deps = [
     "//apps/modular/document_editor",
-    "//apps/modular/mojo:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:vmo",

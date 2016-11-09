@@ -6,7 +6,7 @@
 // that it provides directly or transitively through other services.
 
 #include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/mojo/strong_binding.h"
+#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
