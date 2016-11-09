@@ -20,20 +20,20 @@
             "bootfs_path": "test/gcs_unittests"
         },
         {
-            "binary": "ledger_codex",
+            "binary": "ledger",
             "bootfs_path": "apps/ledger"
         },
         {
-            "binary": "ledger_codex_apptests",
-            "bootfs_path": "apps/ledger_codex_apptests"
-        },
-        {
-            "binary": "ledger_codex_unittests",
-            "bootfs_path": "test/ledger_codex_unittests"
+            "binary": "ledger_integration_tests",
+            "bootfs_path": "test/ledger_integration_tests"
         },
         {
             "binary": "ledger_glue_unittests",
             "bootfs_path": "test/ledger_glue_unittests"
+        },
+        {
+            "binary": "ledger_unittests",
+            "bootfs_path": "test/ledger_unittests"
         },
         {
             "binary": "storage_unittests",
