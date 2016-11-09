@@ -6,9 +6,4 @@ import("//build/dart/dart_package.gni")
 
 dart_package("dart") {
   package_name = "lib.fidl.dart"
-
-  deps = [
-    "//lib/fidl/compiler/interfaces:interfaces_dart"
-  ]
 }
-

@@ -74,15 +74,8 @@ _dart_reserved_words = [
 _reserved_words = _dart_reserved_words + [
   "close",
   "ctrl",
-  "fromChannel",
-  "fromHandle",
-  "fromMock",
   "impl",
-  "newfromChannel",
-  "responseOrError",
-  "serviceDescription",
   "serviceName",
-  "unbound",
 ]
 
 _kind_to_dart_default_value = {
@@ -148,11 +141,11 @@ _spec_to_decode_method = {
   mojom.INT32.spec:                 'decodeInt32',
   mojom.INT64.spec:                 'decodeInt64',
   mojom.INT8.spec:                  'decodeInt8',
-  mojom.MSGPIPE.spec:               'decodeChannelHandle',
+  mojom.MSGPIPE.spec:               'decodeChannel',
   mojom.NULLABLE_DCPIPE.spec:       'decodeHandle',
   mojom.NULLABLE_DPPIPE.spec:       'decodeHandle',
   mojom.NULLABLE_HANDLE.spec:       'decodeHandle',
-  mojom.NULLABLE_MSGPIPE.spec:      'decodeChannelHandle',
+  mojom.NULLABLE_MSGPIPE.spec:      'decodeChannel',
   mojom.NULLABLE_SHAREDBUFFER.spec: 'decodeHandle',
   mojom.NULLABLE_STRING.spec:       'decodeString',
   mojom.SHAREDBUFFER.spec:          'decodeHandle',
@@ -174,11 +167,11 @@ _spec_to_encode_method = {
   mojom.INT32.spec:                 'encodeInt32',
   mojom.INT64.spec:                 'encodeInt64',
   mojom.INT8.spec:                  'encodeInt8',
-  mojom.MSGPIPE.spec:               'encodeChannelHandle',
+  mojom.MSGPIPE.spec:               'encodeChannel',
   mojom.NULLABLE_DCPIPE.spec:       'encodeHandle',
   mojom.NULLABLE_DPPIPE.spec:       'encodeHandle',
   mojom.NULLABLE_HANDLE.spec:       'encodeHandle',
-  mojom.NULLABLE_MSGPIPE.spec:      'encodeChannelHandle',
+  mojom.NULLABLE_MSGPIPE.spec:      'encodeChannel',
   mojom.NULLABLE_SHAREDBUFFER.spec: 'encodeHandle',
   mojom.NULLABLE_STRING.spec:       'encodeString',
   mojom.SHAREDBUFFER.spec:          'encodeHandle',
@@ -240,9 +233,9 @@ def DartDeclType(kind):
     value_type = DartDeclType(kind.value_kind)
     return "Map<"+ key_type + ", " + value_type + ">"
   if mojom.IsInterfaceKind(kind):
-    return ("%sInterface" % GetDartType(kind))
+    return ("bindings.InterfaceHandle<%s>" % GetDartType(kind))
   if mojom.IsInterfaceRequestKind(kind):
-    return ("%sInterfaceRequest" % GetDartType(kind.kind))
+    return ("bindings.InterfaceRequest<%s>" % GetDartType(kind.kind))
   if mojom.IsEnumKind(kind):
     return GetDartType(kind)
 
@@ -345,14 +338,6 @@ def AppendDecodeParams(initial_params, kind, bit):
       params.append(GetArrayNullabilityFlags(kind))
     else:
       params.append(GetDartTrueFalse(mojom.IsNullableKind(kind)))
-  if mojom.IsInterfaceKind(kind):
-    params.append('%sProxy.newfromChannel' % GetDartType(kind))
-  if mojom.IsArrayKind(kind) and mojom.IsInterfaceKind(kind.kind):
-    params.append('%sProxy.newfromChannel' % GetDartType(kind.kind))
-  if mojom.IsInterfaceRequestKind(kind):
-    params.append('%sStub.newfromChannel' % GetDartType(kind.kind))
-  if mojom.IsArrayKind(kind) and mojom.IsInterfaceRequestKind(kind.kind):
-    params.append('%sStub.newfromChannel' % GetDartType(kind.kind.kind))
   if mojom.IsArrayKind(kind):
     params.append(GetArrayExpectedLength(kind))
   return params
@@ -378,7 +363,7 @@ def DecodeMethod(kind, offset, bit):
     if mojom.IsInterfaceRequestKind(kind):
       return 'decodeInterfaceRequest'
     if mojom.IsInterfaceKind(kind):
-      return 'decodeServiceInterface'
+      return 'decodeInterfaceHandle'
     return _spec_to_decode_method[kind.spec]
   methodName = _DecodeMethodName(kind)
   params = AppendDecodeParams([ str(offset) ], kind, bit)
@@ -397,7 +382,7 @@ def EncodeMethod(kind, variable, offset, bit):
     if mojom.IsInterfaceRequestKind(kind):
       return 'encodeInterfaceRequest'
     if mojom.IsInterfaceKind(kind):
-      return 'encodeInterface'
+      return 'encodeInterfaceHandle'
     return _spec_to_encode_method[kind.spec]
   methodName = _EncodeMethodName(kind)
   params = AppendEncodeParams([ variable, str(offset) ], kind, bit)

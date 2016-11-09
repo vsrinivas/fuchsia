@@ -13,9 +13,8 @@ import 'package:lib.fidl.dart/core.dart' as core;
 
 part 'src/bindings/codec.dart';
 part 'src/bindings/enum.dart';
-part 'src/bindings/interfaces.dart';
+part 'src/bindings/futurized_proxy.dart';
+part 'src/bindings/interface.dart';
 part 'src/bindings/message.dart';
-part 'src/bindings/proxy.dart';
 part 'src/bindings/struct.dart';
-part 'src/bindings/stub.dart';
 part 'src/bindings/union.dart';

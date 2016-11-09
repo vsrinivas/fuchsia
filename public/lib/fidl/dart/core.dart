@@ -10,8 +10,8 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 part 'src/core/channel.dart';
+part 'src/core/channel_reader.dart';
 part 'src/core/errors.dart';
-part 'src/core/event_handler.dart';
-part 'src/core/event_subscription.dart';
+part 'src/core/handle_waiter.dart';
 part 'src/core/handle.dart';
 part 'src/core/types.dart';

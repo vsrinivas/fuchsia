@@ -1,4 +1,4 @@
-// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -150,7 +150,7 @@ void HandleWatcherThreadState::RemoveHandle(mx_handle_t handle) {
   auto it = handle_to_index_map_.find(handle);
 
   // Removal of a handle for an incoming event can race with the removal of
-  // a handle for an unsubscribe() call on the Dart FidlEventSubscription.
+  // a handle for an unsubscribe() call on the Dart HandleWaiter.
   // This is not an error, so we ignore attempts to remove a handle that is not
   // in the map.
   if (it == handle_to_index_map_.end()) {
@@ -406,7 +406,7 @@ void HandleWatcherThreadState::Run() {
     mx_status_t result = mx_handle_wait_many(wait_many_items_.data(),
                                              num_handles, WaitDeadline());
 
-    if (result == ERR_HANDLE_CLOSED) {
+    if (result == ERR_BAD_HANDLE) {
       PruneClosedHandles();
       continue;
     }

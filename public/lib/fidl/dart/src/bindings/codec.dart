@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -195,56 +195,27 @@ class Encoder {
     }
   }
 
-  void encodeChannelHandle(
-          core.Channel value, int offset, bool nullable) =>
+  void encodeChannel(core.Channel value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
-  void encodeInterface(
-      FidlInterface fidlInterface, int offset, bool nullable) {
-    if (fidlInterface == null) {
+  void encodeInterfaceHandle(
+      InterfaceHandle interfaceHandle, int offset, bool nullable) {
+    if (interfaceHandle == null) {
       encodeInvalidHandle(offset, nullable);
       // Set the version field to 0.
       encodeUint32(0, offset + kSerializedHandleSize);
-      return;
-    }
-    if (!fidlInterface.ctrl.isBound) {
-      var pipe = new core.ChannelPair();
-      fidlInterface.ctrl.bind(pipe.channels[0]);
-      encodeChannelHandle(pipe.channels[1], offset, nullable);
-      // Set the version to the version in the stub.
-      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
     } else {
-      if (!fidlInterface.ctrl.isOpen) {
-        // Make sure that we are listening so that state for the proxy is
-        // cleaned up when the message is sent and the handle is closed.
-        fidlInterface.ctrl.beginHandlingEvents();
-      }
-      encodeChannelHandle(fidlInterface.ctrl.channel, offset, nullable);
-      // Set the version to the current version of the proxy.
-      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
+      encodeChannel(interfaceHandle.passChannel(), offset, nullable);
+      encodeUint32(interfaceHandle.version, offset + kSerializedHandleSize);
     }
   }
 
   void encodeInterfaceRequest(
-      FidlInterface fidlInterface, int offset, bool nullable) {
-    if (fidlInterface == null) {
+      InterfaceRequest interfaceRequest, int offset, bool nullable) {
+    if (interfaceRequest == null) {
       encodeInvalidHandle(offset, nullable);
-      return;
-    }
-    if (!fidlInterface.ctrl.isBound) {
-      var pipe = new core.ChannelPair();
-      fidlInterface.ctrl.bind(pipe.channels[0]);
-      fidlInterface.ctrl.beginHandlingEvents();
-      encodeChannelHandle(pipe.channels[1], offset, nullable);
     } else {
-      if (!fidlInterface.ctrl.isOpen) {
-        // Make sure that we are listening so that state for the stub is
-        // cleaned up when the message is sent and the handle is closed.
-        fidlInterface.ctrl.beginHandlingEvents();
-      }
-      encodeChannelHandle(fidlInterface.ctrl.channel, offset, nullable);
-      // Set the version to the current version of the stub.
-      encodeUint32(fidlInterface.ctrl.version, offset + kSerializedHandleSize);
+      encodeChannel(interfaceRequest.passChannel(), offset, nullable);
     }
   }
 
@@ -431,10 +402,10 @@ class Encoder {
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeHandle(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeChannelHandleArray(List<core.Channel> value,
+  void encodeChannelArray(List<core.Channel> value,
           int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper(
-          (e, v, o, n) => e.encodeChannelHandle(v, o, n),
+          (e, v, o, n) => e.encodeChannel(v, o, n),
           value,
           offset,
           kSerializedHandleSize,
@@ -442,7 +413,7 @@ class Encoder {
           expectedLength);
 
   void encodeInterfaceRequestArray(
-          List<Proxy> value, int offset, int nullability, int expectedLength) =>
+          List<InterfaceRequest> value, int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper(
           (e, v, o, n) => e.encodeInterfaceRequest(v, o, n),
           value,
@@ -451,9 +422,9 @@ class Encoder {
           nullability,
           expectedLength);
 
-  void encodeInterfaceArray(
-          List<Stub> value, int offset, int nullability, int expectedLength) =>
-      _handleArrayEncodeHelper((e, v, o, n) => e.encodeInterface(v, o, n),
+  void encodeInterfaceHandleArray(
+          List<InterfaceHandle> value, int offset, int nullability, int expectedLength) =>
+      _handleArrayEncodeHelper((e, v, o, n) => e.encodeInterfaceHandle(v, o, n),
           value, offset, kSerializedInterfaceSize, nullability, expectedLength);
 
   static const Utf8Encoder _utf8Encoder = const Utf8Encoder();
@@ -686,26 +657,23 @@ class Decoder {
     return _handles[index];
   }
 
-  core.Channel decodeChannelHandle(
-          int offset, bool nullable) =>
+  core.Channel decodeChannel(int offset, bool nullable) =>
       new core.Channel(decodeHandle(offset, nullable));
 
-  FidlInterface decodeServiceInterface(
-      int offset, bool nullable, Function clientFactory) {
-    var channel = decodeChannelHandle(offset, nullable);
-    var version = decodeUint32(offset + kSerializedHandleSize);
+  InterfaceHandle decodeInterfaceHandle(int offset, bool nullable) {
+    final core.Channel channel = decodeChannel(offset, nullable);
+    final int version = decodeUint32(offset + kSerializedHandleSize);
     if (!channel.handle.isValid) {
       return null;
     }
-    Proxy client = clientFactory(channel);
-    client.ctrl._version = version;
-    return client;
+    return InterfaceHandle(channel, version);
   }
 
-  FidlInterface decodeInterfaceRequest(
-      int offset, bool nullable, Function interfaceFactory) {
-    var channel = decodeChannelHandle(offset, nullable);
-    return channel.handle.isValid ? interfaceFactory(channel) : null;
+  InterfaceRequest decodeInterfaceRequest(int offset, bool nullable) {
+    final core.Channel channel = decodeChannel(offset, nullable);
+    if (!channel.handle.isValid)
+      return null;
+    return new InterfaceRequest(channel);
   }
 
   Decoder decodePointer(int offset, bool nullable) {
@@ -1013,28 +981,30 @@ class Decoder {
       _handleArrayDecodeHelper((d, o, n) => d.decodeHandle(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.Channel> decodeChannelHandleArray(
+  List<core.Channel> decodeChannelArray(
           int offset, int nullability, int expectedLength) =>
-      _handleArrayDecodeHelper((d, o, n) => d.decodeChannelHandle(o, n),
+      _handleArrayDecodeHelper((d, o, n) => d.decodeChannel(o, n),
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  List<Stub> decodeInterfaceRequestArray(int offset, int nullability,
-          int expectedLength, Function interfaceFactory) =>
-      _handleArrayDecodeHelper(
-          (d, o, n) => d.decodeInterfaceRequest(o, n, interfaceFactory),
-          offset,
-          kSerializedHandleSize,
-          nullability,
-          expectedLength);
+  List<InterfaceRequest> decodeInterfaceRequestArray(
+      int offset, int nullability, int expectedLength) {
+    return _handleArrayDecodeHelper(
+        (d, o, n) => d.decodeInterfaceRequest(o, n),
+        offset,
+        kSerializedHandleSize,
+        nullability,
+        expectedLength);
+  }
 
-  List<Proxy> decodeServiceInterfaceArray(int offset, int nullability,
-          int expectedLength, Function clientFactory) =>
-      _handleArrayDecodeHelper(
-          (d, o, n) => d.decodeServiceInterface(o, n, clientFactory),
-          offset,
-          kSerializedInterfaceSize,
-          nullability,
-          expectedLength);
+  List<InterfaceHandle> decodeInterfaceHandleArray(
+      int offset, int nullability, int expectedLength) {
+    return _handleArrayDecodeHelper(
+        (d, o, n) => d.decodeInterfaceHandle(o, n),
+        offset,
+        kSerializedInterfaceSize,
+        nullability,
+        expectedLength);
+  }
 
   static const _utf8Decoder = const Utf8Decoder();
 

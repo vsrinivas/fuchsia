@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,9 +14,7 @@ class Handle {
     MxHandle.addOpenHandle(_h, description: description);
   }
 
-  Handle._internal(this._h);
-
-  Handle.invalid() : this._internal(MX_HANDLE_INVALID);
+  Handle.invalid() : _h = MX_HANDLE_INVALID;
 
   int close() {
     MxHandle.removeOpenHandle(_h);
@@ -34,16 +32,9 @@ class Handle {
     return "Handle($h)";
   }
 
-  bool operator ==(other) =>
-      (other is Handle) && (_h == other._h);
+  bool operator ==(other) => (other is Handle) && (_h == other._h);
 
   int get hashCode => _h.hashCode;
-
-  static bool registerFinalizer(FidlEventSubscription eventSubscription) {
-    int status = MxHandle.registerFinalizer(
-        eventSubscription, eventSubscription._handle.h);
-    return status == NO_ERROR;
-  }
 
   static bool reportLeakedHandles() => MxHandle.reportOpenHandles();
 }

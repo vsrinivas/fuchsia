@@ -8,50 +8,12 @@ const int _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name =
   {{ enum_def(enum, typepkg, package) }}
 {%-  endfor %}
 
-class _{{interface|name}}ServiceDescription implements {{descpkg}}ServiceDescription {
-{%- if should_gen_fidl_types and interface.service_name %}
-  void getTopLevelInterface(Function responder){
-    var interfaceTypeKey = getRuntimeTypeInfo().services["{{interface.service_name}}"];
-    var userDefinedType = getAllMojomTypeDefinitions()[interfaceTypeKey];
-    responder(userDefinedType.interfaceType);
-  }
-
-  void getTypeDefinition(String typeKey, Function responder) {
-    responder(getAllMojomTypeDefinitions()[typeKey]);
-  }
-
-  void getAllTypeDefinitions(Function responder) {
-    responder(getAllMojomTypeDefinitions());
-  }
-{%- else %}
-  void getTopLevelInterface(Function responder) {
-    responder(null);
-  }
-
-  void getTypeDefinition(String typeKey, Function responder) {
-    responder(null);
-  }
-
-  void getAllTypeDefinitions(Function responder) {
-    responder(null);
-  }
-{%- endif %}
-}
-
 abstract class {{interface|name}} {
 {%- if interface.service_name %}
-  static const String serviceName = "{{interface.service_name}}";
+  static const String serviceName = '{{interface.service_name}}';
 {%- else %}
   static const String serviceName = null;
 {%- endif %}
-
-  static {{descpkg}}ServiceDescription _cachedServiceDescription;
-  static {{descpkg}}ServiceDescription get serviceDescription {
-    if (_cachedServiceDescription == null) {
-      _cachedServiceDescription = new _{{interface|name}}ServiceDescription();
-    }
-    return _cachedServiceDescription;
-  }
 
 {%- for method in interface.methods %}
 {%- if method.response_parameters == None %}
@@ -79,57 +41,28 @@ abstract class {{interface|name}} {
 {%-   endfor %}
 }
 
-abstract class {{interface|name}}Interface
-    implements bindings.FidlInterface<{{interface|name}}>,
-               {{interface|name}} {
-  factory {{interface|name}}Interface([{{interface|name}} impl]) =>
-      new {{interface|name}}Stub.unbound(impl);
+class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
+    implements {{interface|name}} {
 
-  factory {{interface|name}}Interface.fromChannel(
-      core.Channel endpoint,
-      [{{interface|name}} impl]) =>
-      new {{interface|name}}Stub.fromChannel(endpoint, impl);
+  {{interface|name}}Proxy() : super(new bindings.ProxyController<{{interface|name}}>(
+      serviceName: {{interface|name}}.serviceName)) {
+    ctrl.onResponse = _handleResponse;
+  }
 
-  factory {{interface|name}}Interface.fromMock(
-      {{interface|name}} mock) =>
-      new {{interface|name}}Proxy.fromMock(mock);
-}
-
-abstract class {{interface|name}}InterfaceRequest
-    implements bindings.FidlInterface<{{interface|name}}>,
-               {{interface|name}} {
-  factory {{interface|name}}InterfaceRequest() =>
-      new {{interface|name}}Proxy.unbound();
-}
-
-class _{{interface|name}}ProxyControl
-    extends bindings.ProxyMessageHandler
-    implements bindings.ProxyControl<{{interface|name}}> {
-  {{interface|name}} impl;
-
-  _{{interface|name}}ProxyControl.fromChannel(
-      core.Channel endpoint) : super.fromChannel(endpoint);
-
-  _{{interface|name}}ProxyControl.fromHandle(
-      core.Handle handle) : super.fromHandle(handle);
-
-  _{{interface|name}}ProxyControl.unbound() : super.unbound();
-
-  String get serviceName => {{interface|name}}.serviceName;
-
-  void handleResponse(bindings.ServiceMessage message) {
+  void _handleResponse(bindings.ServiceMessage message) {
     switch (message.header.type) {
 {%- for method in interface.methods %}
 {%- if method.response_parameters != None %}
 {%- set response_struct = method.response_param_struct %}
       case _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name:
-        Function callback = getCallback(message);
-        if (callback != null) {
-          var r = {{response_struct|name}}.deserialize(
-              message.payload);
+        final Function callback = ctrl.getCallback(message);
+        if (callback == null) {
+          message.closeAllHandles();
+        } else {
+          final response = {{response_struct|name}}.deserialize(message.payload);
           callback(
             {%- for param in method.response_parameters -%}
-              r.{{param|name}} {% if not loop.last %}, {% endif %}
+              response.{{param|name}} {% if not loop.last %}, {% endif %}
             {%- endfor -%}
           );
         }
@@ -137,63 +70,21 @@ class _{{interface|name}}ProxyControl
 {%- endif %}
 {%- endfor %}
       default:
-        proxyError("Unexpected message type: ${message.header.type}");
-        close(immediate: true);
+        ctrl.proxyError('Unexpected message type: ${message.header.type}');
+        ctrl.close();
         break;
     }
   }
 
-  @override
-  String toString() {
-    var superString = super.toString();
-    return "_{{interface|name}}ProxyControl($superString)";
-  }
-}
-
-class {{interface|name}}Proxy
-    extends bindings.Proxy<{{interface|name}}>
-    implements {{interface|name}},
-               {{interface|name}}Interface,
-               {{interface|name}}InterfaceRequest {
-  {{interface|name}}Proxy.fromChannel(
-      core.Channel endpoint)
-      : super(new _{{interface|name}}ProxyControl.fromChannel(endpoint));
-
-  {{interface|name}}Proxy.fromHandle(core.Handle handle)
-      : super(new _{{interface|name}}ProxyControl.fromHandle(handle));
-
-  {{interface|name}}Proxy.unbound()
-      : super(new _{{interface|name}}ProxyControl.unbound());
-
-  factory {{interface|name}}Proxy.fromMock({{interface|name}} mock) {
-    {{interface|name}}Proxy newMockedProxy =
-        new {{interface|name}}Proxy.unbound();
-    newMockedProxy.impl = mock;
-    return newMockedProxy;
-  }
-
-  static {{interface|name}}Proxy newfromChannel(
-      core.Channel endpoint) {
-    assert(endpoint.setDescription("For {{interface|name}}Proxy"));
-    return new {{interface|name}}Proxy.fromChannel(endpoint);
-  }
-
 {% for method in interface.methods %}
 {%- if method.response_parameters == None %}
+  @override
   void {{method|name}}(
 {%- for parameter in method.parameters -%}
     {{parameter.kind|dart_type}} {{parameter|name}}{% if not loop.last %}, {% endif %}
 {%- endfor -%}
 {%- set request_struct = method.param_struct -%}
   ) {
-    if (impl != null) {
-      impl.{{method|name}}(
-{%- for parameter in method.parameters -%}
-        {{parameter|name}}{% if not loop.last %}, {% endif %}
-{%- endfor -%}
-      );
-      return;
-    }
     if (!ctrl.isBound) {
       ctrl.proxyError("The Proxy is closed.");
       return;
@@ -202,12 +93,12 @@ class {{interface|name}}Proxy
 {%- for parameter in method.parameters %}
     params.{{parameter|name}} = {{parameter|name}};
 {%- endfor %}
-    ctrl.sendMessage(params,
-        _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
+    ctrl.sendMessage(params, _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
   }
 {%- else %}
 {%- set request_struct = method.param_struct %}
 {%- set response_struct = method.response_param_struct %}
+  @override
   void {{method|name}}(
 {%- for parameter in method.parameters -%}
     {{parameter.kind|dart_type}} {{parameter|name}},
@@ -217,14 +108,6 @@ class {{interface|name}}Proxy
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
       {%- endfor -%}
     )) {
-    if (impl != null) {
-      impl.{{method|name}}(
-{%- for parameter in method.parameters -%}
-        {{parameter|name}},
-{%- endfor -%}
-         callback ?? bindings.DoNothingFunction.fn);
-      return;
-    }
     var params = new {{request_struct|name}}();
 {%- for parameter in method.parameters %}
     params.{{parameter|name}} = {{parameter|name}};
@@ -259,32 +142,14 @@ class {{interface|name}}Proxy
 {%- endfor %}
 }
 
-class _{{interface|name}}StubControl
-    extends bindings.StubMessageHandler
-    implements bindings.StubControl<{{interface|name}}> {
-  {{interface|name}} _impl;
+class {{interface|name}}Binding
+    extends bindings.Binding<{{interface|name}}> {
 
-  _{{interface|name}}StubControl.fromChannel(
-      core.Channel endpoint, [{{interface|name}} impl])
-      : super.fromChannel(endpoint, autoBegin: impl != null) {
-    _impl = impl;
-  }
-
-  _{{interface|name}}StubControl.fromHandle(
-      core.Handle handle, [{{interface|name}} impl])
-      : super.fromHandle(handle, autoBegin: impl != null) {
-    _impl = impl;
-  }
-
-  _{{interface|name}}StubControl.unbound([this._impl]) : super.unbound();
-
-  String get serviceName => {{interface|name}}.serviceName;
-
-{% for method in interface.methods %}
+{%- for method in interface.methods %}
 {%- if method.response_parameters != None %}
 {%- set response_struct = method.response_param_struct %}
   Function _{{response_struct|name|lower_camel}}Responder(
-      int requestId) {
+      bindings.MessageSink respond, int requestId) {
   return (
       {%- for param in method.response_parameters -%}
         {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
@@ -294,20 +159,18 @@ class _{{interface|name}}StubControl
       {%- for param in method.response_parameters %}
       result.{{param|name}} = {{param|name}};
       {%- endfor %}
-      sendResponse(buildResponseWithId(
-          result,
+      respond(result.serializeWithHeader(new bindings.MessageHeader.withRequestId(
           _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
-          requestId,
-          bindings.MessageHeader.kMessageIsResponse));
+          bindings.MessageHeader.kMessageIsResponse,
+          requestId)));
     };
   }
 {%- endif %}
 {%- endfor %}
 
-  void handleMessage(bindings.ServiceMessage message) {
-    if (_impl == null) {
-      throw new core.FidlApiError("$this has no implementation set");
-    }
+  @override
+  void handleMessage(bindings.ServiceMessage message,
+                     bindings.MessageSink respond) {
     switch (message.header.type) {
 {%- for method in interface.methods %}
 {%- set request_struct = method.param_struct %}
@@ -317,105 +180,27 @@ class _{{interface|name}}StubControl
             message.payload);
 {%- endif %}
 {%- if method.response_parameters == None %}
-        _impl.{{method|name}}(
+        impl.{{method|name}}(
           {%- for parameter in method.parameters -%}
               params.{{parameter|name}}{% if not loop.last %}, {% endif %}
           {%- endfor -%}
         );
 {%- else %}
 {%- set response_struct = method.response_param_struct %}
-        _impl.{{method|name}}(
+        impl.{{method|name}}(
           {%- for parameter in method.parameters -%}
               params.{{parameter|name}}, {% endfor -%}
-          _{{response_struct|name|lower_camel}}Responder(message.header.requestId));
+          _{{response_struct|name|lower_camel}}Responder(
+              respond, message.header.requestId));
 {%- endif %}
         break;
 {%- endfor %}
       default:
-        throw new bindings.FidlCodecError("Unexpected message name");
+        throw new bindings.FidlCodecError('Unexpected message name');
         break;
     }
   }
 
-  {{interface|name}} get impl => _impl;
-  set impl({{interface|name}} d) {
-    if (d == null) {
-      throw new core.FidlApiError("$this: Cannot set a null implementation");
-    }
-    if (isBound && (_impl == null)) {
-      beginHandlingEvents();
-    }
-    _impl = d;
-  }
-
   @override
-  void bind(core.Channel endpoint) {
-    super.bind(endpoint);
-    if (!isOpen && (_impl != null)) {
-      beginHandlingEvents();
-    }
-  }
-
-  @override
-  String toString() {
-    var superString = super.toString();
-    return "_{{interface|name}}StubControl($superString)";
-  }
-
   int get version => {{interface.version}};
-}
-
-class {{interface|name}}Stub
-    extends bindings.Stub<{{interface|name}}>
-    implements {{interface|name}},
-               {{interface|name}}Interface,
-               {{interface|name}}InterfaceRequest {
-  {{interface|name}}Stub.unbound([{{interface|name}} impl])
-      : super(new _{{interface|name}}StubControl.unbound(impl));
-
-  {{interface|name}}Stub.fromChannel(
-      core.Channel endpoint, [{{interface|name}} impl])
-      : super(new _{{interface|name}}StubControl.fromChannel(endpoint, impl));
-
-  {{interface|name}}Stub.fromHandle(
-      core.Handle handle, [{{interface|name}} impl])
-      : super(new _{{interface|name}}StubControl.fromHandle(handle, impl));
-
-  static {{interface|name}}Stub newfromChannel(
-      core.Channel endpoint) {
-    assert(endpoint.setDescription("For {{interface|name}}Stub"));
-    return new {{interface|name}}Stub.fromChannel(endpoint);
-  }
-
-{% for method in interface.methods %}
-{%- if method.response_parameters == None %}
-  void {{method|name}}(
-{%- for parameter in method.parameters -%}
-    {{parameter.kind|dart_type}} {{parameter|name}}{% if not loop.last %}, {% endif %}
-{%- endfor -%}
-  ) {
-    return impl.{{method|name}}(
-{%- for parameter in method.parameters -%}
-    {{parameter|name}}{% if not loop.last %}, {% endif %}
-{%- endfor -%}
-    );
-  }
-{%- else %}
-  void {{method|name}}(
-{%- for parameter in method.parameters -%}
-    {{parameter.kind|dart_type}} {{parameter|name}},
-{%- endfor -%}
-    void callback(
-      {%- for param in method.response_parameters -%}
-        {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
-      {%- endfor -%}
-    )) {
-    return impl.{{method|name}}(
-{%- for parameter in method.parameters -%}
-    {{parameter|name}},
-{%- endfor -%}
-    callback);
-  }
-{%- endif %}
-{%- endfor %}
 }

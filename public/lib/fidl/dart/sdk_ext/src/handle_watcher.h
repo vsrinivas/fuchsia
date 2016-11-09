@@ -1,4 +1,4 @@
-// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -170,7 +170,7 @@ class HandleWatcher {
 
   // Stops and joins the handle watcher thread at the other end of the
   // given channel handle.
-  static void Stop(mx_handle_t consumer_handle);
+  static void Stop(mx_handle_t producer_handle);
 
   // Stops and joins all handle watcher threads.
   static void StopAll();

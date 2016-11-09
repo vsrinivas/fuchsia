@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,9 +14,9 @@ class ChannelReadResult {
       : this(resultList[0], resultList[1], resultList[2]);
 
   String toString() {
-    return "ChannelReadResult("
-        "status: ${getStringForStatus(status)}, bytesRead: $bytesRead, "
-        "handlesRead: $handlesRead)";
+    return 'ChannelReadResult('
+        'status: ${getStringForStatus(status)}, bytesRead: $bytesRead, '
+        'handlesRead: $handlesRead)';
   }
 }
 
@@ -55,9 +55,9 @@ class ChannelQueryAndReadState {
   }
 
   String toString() {
-    return "ChannelQueryAndReadState("
-        "status: ${getStringForStatus(status)}, dataLength: $dataLength, "
-        "handlesLength: $handlesLength)";
+    return 'ChannelQueryAndReadState('
+        'status: ${getStringForStatus(status)}, dataLength: $dataLength, '
+        'handlesLength: $handlesLength)';
   }
 }
 
@@ -152,29 +152,40 @@ class Channel {
     handle = null;
   }
 
-  String toString() => "Channel(handle: $handle)";
+  String toString() => 'Channel($handle)';
 }
 
 class ChannelPair {
-  List<Channel> channels;
-  int status;
-
-  ChannelPair._() : status = NO_ERROR;
+  ChannelPair._({
+    this.status: NO_ERROR,
+    this.channel0,
+    this.channel1,
+  });
 
   factory ChannelPair() {
     List result = MxChannel.create(0);
-    if (result == null) {
-      return null;
-    }
     assert((result is List) && (result.length == 3));
 
-    Handle end1 = new Handle(result[1]);
-    Handle end2 = new Handle(result[2]);
-    ChannelPair pipe = new ChannelPair._();
-    pipe.channels = new List(2);
-    pipe.channels[0] = new Channel(end1);
-    pipe.channels[1] = new Channel(end2);
-    pipe.status = result[0];
-    return pipe;
+    return new ChannelPair._(
+      status: result[0],
+      channel0: new Channel(new Handle(result[1])),
+      channel1: new Channel(new Handle(result[2])),
+    );
+  }
+
+  final int status;
+  Channel channel0;
+  Channel channel1;
+
+  Channel passChannel0() {
+    final Channel result = channel0;
+    channel0 = null;
+    return result;
+  }
+
+  Channel passChannel1() {
+    final Channel result = channel1;
+    channel1 = null;
+    return result;
   }
 }

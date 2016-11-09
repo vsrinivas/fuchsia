@@ -75,11 +75,18 @@ class MessageHeader {
 }
 
 class Message {
+  Message(this.buffer, this.handles, this.dataLength, this.handlesLength);
+
   final ByteData buffer;
   final List<core.Handle> handles;
   final dataLength;
   final handlesLength;
-  Message(this.buffer, this.handles, this.dataLength, this.handlesLength);
+
+  void closeAllHandles() {
+    for (int i = 0; i < handles.length; ++i)
+      handles[i].close();
+  }
+
   String toString() =>
       "Message(numBytes=${dataLength}, numHandles=${handlesLength})";
 }
@@ -107,3 +114,6 @@ class ServiceMessage extends Message {
 
   String toString() => "ServiceMessage($header, $_payload)";
 }
+
+typedef void MessageSink(ServiceMessage message);
+typedef void MessageHandler(ServiceMessage message, MessageSink respond);

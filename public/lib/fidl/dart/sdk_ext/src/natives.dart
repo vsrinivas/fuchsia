@@ -1,4 +1,4 @@
-// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -26,10 +26,12 @@ class MxHandle {
     // We only remember a stack trace when in checked mode.
     assert((stack = StackTrace.current) != null);
     var openHandle = new _OpenHandle(stack, description: description);
+    // TODO(abarth): Should we assert that the handle isn't already in the map?
     _openHandles[handleToken] = openHandle;
   }
 
   static void removeOpenHandle(int handleToken) {
+    // TODO(abarth): Should we assert that the handle is in the map?
     _openHandles.remove(handleToken);
   }
 
