@@ -71,7 +71,7 @@ void StoryControllerImpl::Done() {
   NotifyStoryWatchers(&StoryWatcher::OnDone);
 }
 
-// |LinkChanged|
+// |LinkWatcher|
 void StoryControllerImpl::Notify(FidlDocMap docs) {
   FTL_LOG(INFO) << "StoryControllerImpl::Notify() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnData);
@@ -133,7 +133,7 @@ void StoryControllerImpl::StartStoryRunner(
   module_watcher_binding_.Bind(GetProxy(&module_watcher));
   module_->Watch(std::move(module_watcher));
 
-  fidl::InterfaceHandle<LinkChanged> link_changed;
+  fidl::InterfaceHandle<LinkWatcher> link_changed;
   link_changed_binding_.Bind(GetProxy(&link_changed));
   root_->Watch(std::move(link_changed));
 }

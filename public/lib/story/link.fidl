@@ -27,7 +27,7 @@ import "apps/modular/services/document_store/document.fidl";
 // requests to start in turn.
 //
 // A client of Link can set the Documents stored in the instance and
-// register a handler (an implementation of the LinkChanged interface)
+// register a handler (an implementation of the LinkWatcher interface)
 // to be notified of changes to Documents in the Link. A client may or may not
 // notified of changes it itself makes to the Link document, depending on
 // whether it registers with WatchAll() or Watch(), respectively. If the client
@@ -69,11 +69,11 @@ interface Link {
   // watcher will not be invoked for changes caused by calls made on this
   // handle. The Notify() callback method will be immediately invoked with
   // all documents in the Link, even if it's empty.
-  Watch(LinkChanged watcher);
+  Watch(LinkWatcher watcher);
 
   // Like Watch(), but the watcher is notified also of changes made
   // through the same handle as the watcher is registered on.
-  WatchAll(LinkChanged watcher);
+  WatchAll(LinkWatcher watcher);
 
   // Obtains another handle for the same Link instance. Can be used to
   // keep a reference to a Link instance and pass it as an argument to
@@ -88,6 +88,6 @@ interface Link {
 // notification.
 //
 // No service name: created by Module.
-interface LinkChanged {
+interface LinkWatcher {
   Notify(map<string, document_store.Document> docs);
 };

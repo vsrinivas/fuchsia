@@ -24,7 +24,7 @@ class StoryProviderImpl;
 
 class StoryControllerImpl : public StoryController,
                             public ModuleWatcher,
-                            public LinkChanged {
+                            public LinkWatcher {
  public:
   static StoryControllerImpl* New(
       StoryInfoPtr story_info,
@@ -65,7 +65,7 @@ class StoryControllerImpl : public StoryController,
   // |ModuleWatcher|
   void Done() override;
 
-  // |LinkChanged|
+  // |LinkWatcher|
   void Notify(FidlDocMap docs) override;
 
  private:
@@ -85,7 +85,7 @@ class StoryControllerImpl : public StoryController,
 
   StrongBinding<StoryController> binding_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
-  fidl::Binding<LinkChanged> link_changed_binding_;
+  fidl::Binding<LinkWatcher> link_changed_binding_;
   std::vector<StoryWatcherPtr> story_watchers_;
   StoryPtr story_;
   LinkPtr root_;

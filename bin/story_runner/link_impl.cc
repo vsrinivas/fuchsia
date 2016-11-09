@@ -89,17 +89,17 @@ void LinkImpl::Query(const LinkImpl::QueryCallback& callback) {
   callback(shared_->docs_map.Clone());
 }
 
-void LinkImpl::Watch(InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::Watch(InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), false);
 }
 
-void LinkImpl::WatchAll(InterfaceHandle<LinkChanged> watcher) {
+void LinkImpl::WatchAll(InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), true);
 }
 
-void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
+void LinkImpl::AddWatcher(InterfaceHandle<LinkWatcher> watcher,
                           const bool self_notify) {
-  InterfacePtr<LinkChanged> watcher_ptr;
+  InterfacePtr<LinkWatcher> watcher_ptr;
   watcher_ptr.Bind(std::move(watcher));
 
   // TODO(jimbe) We need to send an initial notification of state until
@@ -114,11 +114,11 @@ void LinkImpl::AddWatcher(InterfaceHandle<LinkChanged> watcher,
 
 void LinkImpl::NotifyWatchers(const FidlDocMap& docs, const bool self_notify) {
   if (self_notify) {
-    watchers_.ForAllPtrs([&docs](LinkChanged* const link_changed) {
+    watchers_.ForAllPtrs([&docs](LinkWatcher* const link_changed) {
       link_changed->Notify(docs.Clone());
     });
   }
-  all_watchers_.ForAllPtrs([&docs](LinkChanged* const link_changed) {
+  all_watchers_.ForAllPtrs([&docs](LinkWatcher* const link_changed) {
     link_changed->Notify(docs.Clone());
   });
 }

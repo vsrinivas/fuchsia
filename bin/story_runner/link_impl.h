@@ -55,8 +55,8 @@ class LinkImpl : public Link {
   void AddDocuments(FidlDocMap docs) override;
   void SetAllDocuments(FidlDocMap docs) override;
   void Query(const QueryCallback& callback) override;
-  void Watch(fidl::InterfaceHandle<LinkChanged> watcher) override;
-  void WatchAll(fidl::InterfaceHandle<LinkChanged> watcher) override;
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;
 
   // Connect a new LinkImpl object on the heap. It manages its own lifetime.
@@ -81,7 +81,7 @@ class LinkImpl : public Link {
   // For use by the binding error handler.
   void RemoveImpl();
 
-  void AddWatcher(fidl::InterfaceHandle<LinkChanged> watcher,
+  void AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
                   const bool self_notify);
   void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
   void DatabaseChanged(const FidlDocMap& docs);
@@ -92,9 +92,9 @@ class LinkImpl : public Link {
   fidl::Binding<Link> binding_;
 
   // These watchers do not want self notifications.
-  fidl::InterfacePtrSet<LinkChanged> watchers_;
+  fidl::InterfacePtrSet<LinkWatcher> watchers_;
   // These watchers want all notifications.
-  fidl::InterfacePtrSet<LinkChanged> all_watchers_;
+  fidl::InterfacePtrSet<LinkWatcher> all_watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };

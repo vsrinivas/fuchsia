@@ -48,15 +48,15 @@ using fidl::String;
 using modular::DocumentEditor;
 using modular::FidlDocMap;
 using modular::Link;
-using modular::LinkChanged;
+using modular::LinkWatcher;
 using modular::Module;
 using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
 // Module implementation that acts as a leaf module. It implements
-// both Module and the LinkChanged observer of its own Link.
-class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
+// both Module and the LinkWatcher observer of its own Link.
+class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
  public:
   explicit Module2Impl(
       mozart::ViewManagerPtr view_manager,
@@ -78,7 +78,7 @@ class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
-    InterfaceHandle<LinkChanged> watcher;
+    InterfaceHandle<LinkWatcher> watcher;
     watcher_binding_.Bind(&watcher);
     link_->Watch(std::move(watcher));
   }
@@ -165,7 +165,7 @@ class Module2Impl : public Module, public LinkChanged, public mozart::BaseView {
   }
 
   StrongBinding<Module> module_binding_;
-  StrongBinding<LinkChanged> watcher_binding_;
+  StrongBinding<LinkWatcher> watcher_binding_;
 
   InterfacePtr<Story> story_;
   InterfacePtr<Link> link_;

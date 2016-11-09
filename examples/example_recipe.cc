@@ -62,7 +62,7 @@ using fidl::StructPtr;
 using modular::DocumentEditor;
 using modular::FidlDocMap;
 using modular::Link;
-using modular::LinkChanged;
+using modular::LinkWatcher;
 using modular::Module;
 using modular::ModuleController;
 using modular::ModuleWatcher;
@@ -70,13 +70,13 @@ using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
-// Implementation of the LinkChanged service that forwards each document
+// Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
-class LinkConnection : public LinkChanged {
+class LinkConnection : public LinkWatcher {
  public:
   LinkConnection(InterfacePtr<Link>& src, InterfacePtr<Link>& dst)
       : src_binding_(this), src_(src), dst_(dst) {
-    InterfaceHandle<LinkChanged> watcher;
+    InterfaceHandle<LinkWatcher> watcher;
     src_binding_.Bind(GetProxy(&watcher));
     src_->Watch(std::move(watcher));
   }
@@ -89,7 +89,7 @@ class LinkConnection : public LinkChanged {
   }
 
  private:
-  Binding<LinkChanged> src_binding_;
+  Binding<LinkWatcher> src_binding_;
   InterfacePtr<Link>& src_;
   InterfacePtr<Link>& dst_;
 
