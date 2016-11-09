@@ -11,7 +11,7 @@ interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
   // most relevant to least relevant.
-  Resolve(string contract, document_store.Document? data) => (array<Result> results);
+  ResolveModules(string contract, document_store.Document? data) => (array<Result> results);
 };
 
 struct Result {
