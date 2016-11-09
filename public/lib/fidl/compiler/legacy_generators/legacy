@@ -32,7 +32,7 @@ def _ParseCLIArgs():
                       help="output directory for generated files")
   parser.add_argument("-g", "--generators", dest="generators_string",
                       metavar="GENERATORS",
-                      default="c++,dart,javascript,java,python",
+                      default="c++,dart,python",
                       help="comma-separated list of generators")
   parser.add_argument("-s", "--src-root-path", dest="src_root_path",
                       default=".",
@@ -87,12 +87,6 @@ def LoadGenerators(generators_string):
     elif generator_name_lower == "go":
       generator_py_name = os.path.join(generators_dir,
         "mojom_go_generator.py")
-    elif generator_name_lower == "javascript":
-      generator_py_name = os.path.join(generators_dir,
-        "mojom_js_generator.py")
-    elif generator_name_lower == "java":
-      generator_py_name = os.path.join(generators_dir,
-        "mojom_java_generator.py")
     elif generator_name_lower == "python":
       generator_py_name = os.path.join(generators_dir,
         "mojom_python_generator.py")
