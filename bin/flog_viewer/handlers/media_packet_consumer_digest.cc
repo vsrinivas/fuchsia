@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_consumer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -22,7 +21,7 @@ MediaPacketConsumerDigest::MediaPacketConsumerDigest(const std::string& format)
 
 MediaPacketConsumerDigest::~MediaPacketConsumerDigest() {}
 
-void MediaPacketConsumerDigest::HandleMessage(Message* message) {
+void MediaPacketConsumerDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -30,9 +29,8 @@ std::shared_ptr<Accumulator> MediaPacketConsumerDigest::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaPacketConsumerDigest::DemandSet(
-    mojo::media::MediaPacketDemandPtr demand) {
-  accumulator_->current_demand_ = demand.Pass();
+void MediaPacketConsumerDigest::DemandSet(media::MediaPacketDemandPtr demand) {
+  accumulator_->current_demand_ = std::move(demand);
   if (accumulator_->min_packets_outstanding_highest_ <
       accumulator_->current_demand_->min_packets_outstanding) {
     accumulator_->min_packets_outstanding_highest_ =
@@ -47,7 +45,7 @@ void MediaPacketConsumerDigest::Failed() {
 }
 
 void MediaPacketConsumerDigest::RespondingToGetDemandUpdate(
-    mojo::media::MediaPacketDemandPtr demand) {
+    media::MediaPacketDemandPtr demand) {
   accumulator_->get_demand_update_responses_ += 1;
 }
 
@@ -89,11 +87,10 @@ void MediaPacketConsumerDigest::CompletingFlush() {
   }
 }
 
-void MediaPacketConsumerDigest::PacketSupplied(
-    uint64_t label,
-    mojo::media::MediaPacketPtr packet,
-    uint64_t payload_address,
-    uint32_t packets_outstanding) {
+void MediaPacketConsumerDigest::PacketSupplied(uint64_t label,
+                                               media::MediaPacketPtr packet,
+                                               uint64_t payload_address,
+                                               uint32_t packets_outstanding) {
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter != accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Packet label reused";
@@ -102,8 +99,9 @@ void MediaPacketConsumerDigest::PacketSupplied(
   accumulator_->packets_.Add(packet->payload_size);
 
   accumulator_->outstanding_packets_.emplace(
-      label, MediaPacketConsumerAccumulator::Packet(
-                 label, packet.Pass(), payload_address, packets_outstanding));
+      label,
+      MediaPacketConsumerAccumulator::Packet(
+          label, std::move(packet), payload_address, packets_outstanding));
 }
 
 void MediaPacketConsumerDigest::ReturningPacket(uint64_t label,
@@ -192,4 +190,3 @@ void MediaPacketConsumerAccumulator::Print(std::ostream& os) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

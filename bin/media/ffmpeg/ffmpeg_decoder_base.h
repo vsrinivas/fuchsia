@@ -12,7 +12,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for ffmpeg-based decoders.
@@ -96,4 +95,3 @@ class FfmpegDecoderBase : public Decoder {
 };
 
 }  // namespace media
-}  // namespace mojo

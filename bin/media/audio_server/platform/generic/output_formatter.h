@@ -6,9 +6,8 @@
 
 #include <memory>
 
-#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/interfaces/media_types.fidl.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -70,4 +69,3 @@ class OutputFormatter {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

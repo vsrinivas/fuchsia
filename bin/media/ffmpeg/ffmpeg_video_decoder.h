@@ -7,7 +7,6 @@
 #include "apps/media/cpp/timeline_rate.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
-namespace mojo {
 namespace media {
 
 // Decoder implementation employing and ffmpeg video decoder.
@@ -59,4 +58,3 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -8,29 +8,28 @@
 
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/lib/array_serialization.h"
-#include "mojo/public/cpp/bindings/lib/string_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/array_serialization.h"
+#include "lib/fidl/cpp/bindings/internal/string_serialization.h"
 
-namespace mojo {
 namespace flog {
 
 // static
 std::shared_ptr<FlogReaderImpl> FlogReaderImpl::Create(
-    InterfaceRequest<FlogReader> request,
+    fidl::InterfaceRequest<FlogReader> request,
     uint32_t log_id,
     const std::string& label,
     std::shared_ptr<FlogDirectory> directory,
     FlogServiceImpl* owner) {
   return std::shared_ptr<FlogReaderImpl>(
-      new FlogReaderImpl(request.Pass(), log_id, label, directory, owner));
+      new FlogReaderImpl(std::move(request), log_id, label, directory, owner));
 }
 
-FlogReaderImpl::FlogReaderImpl(InterfaceRequest<FlogReader> request,
+FlogReaderImpl::FlogReaderImpl(fidl::InterfaceRequest<FlogReader> request,
                                uint32_t log_id,
                                const std::string& label,
                                std::shared_ptr<FlogDirectory> directory,
                                FlogServiceImpl* owner)
-    : FlogServiceImpl::Product<FlogReader>(this, request.Pass(), owner),
+    : FlogServiceImpl::Product<FlogReader>(this, std::move(request), owner),
       log_id_(log_id),
       fd_(directory->GetFile(log_id, label, false)) {
   FillReadBuffer(true);
@@ -43,7 +42,7 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
                                 uint32_t max_count,
                                 const GetEntriesCallback& callback) {
   if (fault_) {
-    callback.Run(Array<FlogEntryPtr>::New(0));
+    callback(fidl::Array<FlogEntryPtr>::New(0));
     return;
   }
 
@@ -54,33 +53,33 @@ void FlogReaderImpl::GetEntries(uint32_t start_index,
 
   while (current_entry_index_ < start_index) {
     if (!DiscardEntry()) {
-      callback.Run(Array<FlogEntryPtr>::New(0));
+      callback(fidl::Array<FlogEntryPtr>::New(0));
       return;
     }
   }
 
   FTL_DCHECK(current_entry_index_ == start_index);
 
-  Array<FlogEntryPtr> entries = Array<FlogEntryPtr>::New(max_count);
+  fidl::Array<FlogEntryPtr> entries = fidl::Array<FlogEntryPtr>::New(max_count);
 
   for (uint32_t i = 0; i < max_count; i++) {
     FlogEntryPtr entry = GetEntry();
     if (!entry) {
       if (fault_) {
-        callback.Run(Array<FlogEntryPtr>::New(0));
+        callback(fidl::Array<FlogEntryPtr>::New(0));
         return;
       }
 
       // Reached end-of-file.
       entries.resize(i);
-      callback.Run(entries.Pass());
+      callback(std::move(entries));
       return;
     }
 
-    entries[i] = entry.Pass();
+    entries[i] = std::move(entry);
   }
 
-  callback.Run(entries.Pass());
+  callback(std::move(entries));
 }
 
 bool FlogReaderImpl::DiscardEntry() {
@@ -89,7 +88,7 @@ bool FlogReaderImpl::DiscardEntry() {
   if (bytes_read < sizeof(message_size)) {
     if (bytes_read != 0) {
       FTL_DLOG(WARNING) << "FlogReaderImpl::DiscardEntry: FAULT: bytes_read < "
-                          "sizeof(message_size)";
+                           "sizeof(message_size)";
     }
     fault_ = bytes_read != 0;
     return false;
@@ -121,7 +120,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
   if (bytes_read < sizeof(message_size)) {
     if (bytes_read != 0) {
       FTL_DLOG(WARNING) << "FlogReaderImpl::GetEntry: FAULT: bytes_read < "
-                          "sizeof(message_size)";
+                           "sizeof(message_size)";
     }
     fault_ = bytes_read != 0;
     return nullptr;
@@ -133,7 +132,8 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
     return nullptr;
   }
 
-  std::unique_ptr<Message> message = std::unique_ptr<Message>(new Message());
+  std::unique_ptr<fidl::Message> message =
+      std::unique_ptr<fidl::Message>(new fidl::Message());
   message->AllocUninitializedData(message_size);
 
   bytes_read = ReadData(message_size, message->mutable_data());
@@ -149,7 +149,7 @@ FlogEntryPtr FlogReaderImpl::GetEntry() {
   // Use the stub to deserialize into entry_.
   stub_.Accept(message.get());
   FTL_DCHECK(entry_);
-  return entry_.Pass();
+  return std::move(entry_);
 }
 
 size_t FlogReaderImpl::ReadData(size_t data_size, void* data) {
@@ -222,32 +222,31 @@ FlogEntryPtr FlogReaderImpl::CreateEntry(int64_t time_us, uint32_t channel_id) {
 
 void FlogReaderImpl::LogChannelCreation(int64_t time_us,
                                         uint32_t channel_id,
-                                        const String& type_name,
+                                        const fidl::String& type_name,
                                         uint64_t subject_address) {
   entry_ = CreateEntry(time_us, channel_id);
   FlogChannelCreationEntryDetailsPtr details =
       FlogChannelCreationEntryDetails::New();
   details->type_name = type_name;
   details->subject_address = subject_address;
-  entry_->details->set_channel_creation(details.Pass());
+  entry_->details->set_channel_creation(std::move(details));
 }
 
 void FlogReaderImpl::LogChannelMessage(int64_t time_us,
                                        uint32_t channel_id,
-                                       mojo::Array<uint8_t> data) {
+                                       fidl::Array<uint8_t> data) {
   entry_ = CreateEntry(time_us, channel_id);
   FlogChannelMessageEntryDetailsPtr details =
       FlogChannelMessageEntryDetails::New();
-  details->data = data.Pass();
-  entry_->details->set_channel_message(details.Pass());
+  details->data = std::move(data);
+  entry_->details->set_channel_message(std::move(details));
 }
 
 void FlogReaderImpl::LogChannelDeletion(int64_t time_us, uint32_t channel_id) {
   entry_ = CreateEntry(time_us, channel_id);
   FlogChannelDeletionEntryDetailsPtr details =
       FlogChannelDeletionEntryDetails::New();
-  entry_->details->set_channel_deletion(details.Pass());
+  entry_->details->set_channel_deletion(std::move(details));
 }
 
 }  // namespace flog
-}  // namespace mojo

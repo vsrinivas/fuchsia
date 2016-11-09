@@ -8,10 +8,9 @@
 #include <iostream>
 
 #include "apps/media/tools/flog_viewer/formatting.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/message.h"
+#include "apps/modular/lib/app/connect.h"
+#include "lib/fidl/cpp/bindings/message.h"
 
-namespace mojo {
 namespace flog {
 
 // static
@@ -25,16 +24,17 @@ FlogViewer::FlogViewer() {}
 
 FlogViewer::~FlogViewer() {}
 
-void FlogViewer::Initialize(Shell* shell,
+void FlogViewer::Initialize(modular::ApplicationContext* application_context,
                             const std::function<void()>& terminate_callback) {
   terminate_callback_ = terminate_callback;
-  ConnectToService(shell, "mojo:flog_service", GetProxy(&service_));
+  service_ = application_context->ConnectToEnvironmentService<FlogService>();
 }
 
 void FlogViewer::ProcessLogs() {
   FTL_DCHECK(service_);
 
-  service_->GetLogDescriptions([this](Array<FlogDescriptionPtr> descriptions) {
+  service_->GetLogDescriptions([this](
+      fidl::Array<FlogDescriptionPtr> descriptions) {
     std::cout << std::endl;
     std::cout << "     id  label" << std::endl;
     std::cout << "-------- ---------------------------------------------"
@@ -65,7 +65,7 @@ void FlogViewer::ProcessLastLog(const std::string& label) {
   FTL_DCHECK(service_);
 
   service_->GetLogDescriptions(
-      [this, label](Array<FlogDescriptionPtr> descriptions) {
+      [this, label](fidl::Array<FlogDescriptionPtr> descriptions) {
         uint32_t last_id = 0;
 
         for (const FlogDescriptionPtr& description : descriptions) {
@@ -100,7 +100,7 @@ void FlogViewer::DeleteAllLogs() {
 void FlogViewer::ProcessEntries(uint32_t start_index) {
   FTL_DCHECK(reader_);
   reader_->GetEntries(start_index, kGetEntriesMaxCount,
-                      [this, start_index](Array<FlogEntryPtr> entries) {
+                      [this, start_index](fidl::Array<FlogEntryPtr> entries) {
                         uint32_t entry_index = start_index;
                         for (const FlogEntryPtr& entry : entries) {
                           ProcessEntry(entry_index, entry);
@@ -194,7 +194,7 @@ void FlogViewer::OnChannelMessage(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
     const FlogChannelMessageEntryDetailsPtr& details) {
-  Message message;
+  fidl::Message message;
   message.AllocUninitializedData(details->data.size());
   memcpy(message.mutable_data(), details->data.data(), details->data.size());
 
@@ -244,4 +244,3 @@ void FlogViewer::OnChannelDeleted(
 }
 
 }  // namespace flog
-}  // namespace mojo

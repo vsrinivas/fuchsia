@@ -12,7 +12,6 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -520,4 +519,3 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

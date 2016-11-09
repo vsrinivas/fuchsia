@@ -8,7 +8,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -43,4 +42,3 @@ PayloadAllocator* PayloadAllocator::GetDefault() {
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_CONSUMER_DIGEST_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_CONSUMER_DIGEST_H_
+#pragma once
 
 #include <unordered_map>
 
-#include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_consumer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/counted.h"
 #include "apps/media/tools/flog_viewer/tracked.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -22,7 +20,7 @@ class MediaPacketConsumerAccumulator;
 // Handler for MediaPacketConsumerChannel messages, digest format.
 class MediaPacketConsumerDigest
     : public ChannelHandler,
-      public mojo::media::logs::MediaPacketConsumerChannel {
+      public media::logs::MediaPacketConsumerChannel {
  public:
   MediaPacketConsumerDigest(const std::string& format);
 
@@ -32,18 +30,17 @@ class MediaPacketConsumerDigest
 
  protected:
   // ChannelHandler implementation.
-  void HandleMessage(Message* message) override;
+  void HandleMessage(fidl::Message* message) override;
 
  private:
   // MediaPacketConsumerChannel implementation.
-  void DemandSet(mojo::media::MediaPacketDemandPtr demand) override;
+  void DemandSet(media::MediaPacketDemandPtr demand) override;
 
   void Reset() override;
 
   void Failed() override;
 
-  void RespondingToGetDemandUpdate(
-      mojo::media::MediaPacketDemandPtr demand) override;
+  void RespondingToGetDemandUpdate(media::MediaPacketDemandPtr demand) override;
 
   void AddPayloadBufferRequested(uint32_t id, uint64_t size) override;
 
@@ -54,14 +51,14 @@ class MediaPacketConsumerDigest
   void CompletingFlush() override;
 
   void PacketSupplied(uint64_t label,
-                      mojo::media::MediaPacketPtr packet,
+                      media::MediaPacketPtr packet,
                       uint64_t payload_address,
                       uint32_t packets_outstanding) override;
 
   void ReturningPacket(uint64_t label, uint32_t packets_outstanding) override;
 
  private:
-  mojo::media::logs::MediaPacketConsumerChannelStub stub_;
+  media::logs::MediaPacketConsumerChannelStub stub_;
   std::shared_ptr<MediaPacketConsumerAccumulator> accumulator_;
 };
 
@@ -77,7 +74,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
  private:
   struct Packet {
     Packet(uint64_t label,
-           mojo::media::MediaPacketPtr packet,
+           media::MediaPacketPtr packet,
            uint64_t payload_address,
            uint32_t packets_outstanding)
         : label_(label),
@@ -85,7 +82,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
           payload_address_(payload_address),
           packets_outstanding_(packets_outstanding) {}
     uint64_t label_;
-    mojo::media::MediaPacket packet_;
+    media::MediaPacket packet_;
     uint64_t payload_address_;
     uint32_t packets_outstanding_;
   };
@@ -99,7 +96,7 @@ class MediaPacketConsumerAccumulator : public Accumulator {
   bool failed_ = false;
   uint64_t get_demand_update_responses_ = 0;
   Counted flush_requests_;
-  mojo::media::MediaPacketDemandPtr current_demand_;
+  media::MediaPacketDemandPtr current_demand_;
   uint32_t min_packets_outstanding_highest_ = 0;
 
   std::unordered_map<uint64_t, Packet> outstanding_packets_;
@@ -113,6 +110,3 @@ class MediaPacketConsumerAccumulator : public Accumulator {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PACKET_CONSUMER_DIGEST_H_

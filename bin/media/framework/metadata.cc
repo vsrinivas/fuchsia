@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/metadata.h"
 
-namespace mojo {
 namespace media {
 
 // static
@@ -37,4 +36,3 @@ Metadata::Metadata(uint64_t duration_ns,
 Metadata::~Metadata() {}
 
 }  // namespace media
-}  // namespace mojo

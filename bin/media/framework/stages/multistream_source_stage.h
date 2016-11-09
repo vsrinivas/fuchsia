@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/models/multistream_source.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 // A stage that hosts a MultistreamSource.
@@ -52,4 +51,3 @@ class MultistreamSourceStage : public Stage {
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 #include "apps/media/src/flog_service/flog_service_impl.h"
-#include "mojo/public/c/include/mojo/system/main.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-MojoResult MojoMain(MojoHandle application_request) {
-  mojo::flog::FlogServiceImpl flog_service_impl;
-  return mojo::RunApplication(application_request, &flog_service_impl);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  flog::FlogServiceImpl impl;
+
+  loop.Run();
+  return 0;
 }

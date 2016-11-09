@@ -6,7 +6,6 @@
 
 #include "apps/media/src/audio/gain.h"
 
-namespace mojo {
 namespace media {
 
 // Represents a linear audio level with underlying type T.
@@ -76,4 +75,3 @@ template <typename T>
 Level<T>::Level() : value_(Silence.value()) {}
 
 }  // namespace media
-}  // namespace mojo

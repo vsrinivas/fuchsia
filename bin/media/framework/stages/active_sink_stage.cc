@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/stages/active_sink_stage.h"
 
-namespace mojo {
 namespace media {
 
 ActiveSinkStage::ActiveSinkStage(std::shared_ptr<ActiveSink> sink)
@@ -77,4 +76,3 @@ void ActiveSinkStage::FlushOutput(size_t index) {
 }
 
 }  // namespace media
-}  // namespace mojo

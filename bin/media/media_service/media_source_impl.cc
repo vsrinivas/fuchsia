@@ -4,33 +4,32 @@
 
 #include "apps/media/src/media_service/media_source_impl.h"
 
+#include "apps/media/src/fidl/fidl_reader.h"
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/framework/formatting.h"
 #include "apps/media/src/media_service/conversion_pipeline_builder.h"
-#include "apps/media/src/mojo/mojo_reader.h"
-#include "apps/media/src/mojo/mojo_type_conversions.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
-    InterfaceHandle<SeekingReader> reader,
-    const Array<MediaTypeSetPtr>& allowed_media_types,
-    InterfaceRequest<MediaSource> request,
+    fidl::InterfaceHandle<SeekingReader> reader,
+    const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
+    fidl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
-      reader.Pass(), allowed_media_types, request.Pass(), owner));
+      std::move(reader), allowed_media_types, std::move(request), owner));
 }
 
 MediaSourceImpl::MediaSourceImpl(
-    InterfaceHandle<SeekingReader> reader,
-    const Array<MediaTypeSetPtr>& allowed_media_types,
-    InterfaceRequest<MediaSource> request,
+    fidl::InterfaceHandle<SeekingReader> reader,
+    const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
+    fidl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSource>(this, request.Pass(), owner),
+    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
       allowed_media_types_(allowed_media_types.Clone()) {
   FTL_DCHECK(reader);
 
@@ -42,10 +41,10 @@ MediaSourceImpl::MediaSourceImpl(
         MediaSourceStatusPtr status = MediaSourceStatus::New();
         status->metadata = metadata_.Clone();
         status->problem = problem_.Clone();
-        callback.Run(version, status.Pass());
+        callback(version, std::move(status));
       });
 
-  std::shared_ptr<Reader> reader_ptr = MojoReader::Create(reader.Pass());
+  std::shared_ptr<Reader> reader_ptr = FidlReader::Create(std::move(reader));
   if (!reader_ptr) {
     FTL_LOG(ERROR) << "couldn't create reader";
     // TODO(dalesat): Add problem reporting.
@@ -106,30 +105,30 @@ void MediaSourceImpl::ReportProblem(const std::string& type,
 
 void MediaSourceImpl::GetStreams(const GetStreamsCallback& callback) {
   init_complete_.When([this, callback]() {
-    Array<MediaSourceStreamDescriptorPtr> result =
-        Array<MediaSourceStreamDescriptorPtr>::New(streams_.size());
+    fidl::Array<MediaSourceStreamDescriptorPtr> result =
+        fidl::Array<MediaSourceStreamDescriptorPtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       MediaSourceStreamDescriptorPtr descriptor =
           MediaSourceStreamDescriptor::New();
       descriptor->index = i;
       descriptor->media_type = streams_[i]->media_type();
       descriptor->original_media_type = streams_[i]->original_media_type();
-      result[i] = descriptor.Pass();
+      result[i] = std::move(descriptor);
     }
-    callback.Run(result.Pass());
+    callback(std::move(result));
   });
 }
 
 void MediaSourceImpl::GetPacketProducer(
     uint32_t stream_index,
-    InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   RCHECK(init_complete_.occurred());
 
   if (stream_index >= streams_.size()) {
     return;
   }
 
-  streams_[stream_index]->GetPacketProducer(producer.Pass());
+  streams_[stream_index]->GetPacketProducer(std::move(producer));
 }
 
 void MediaSourceImpl::GetStatus(uint64_t version_last_seen,
@@ -141,7 +140,7 @@ void MediaSourceImpl::Prepare(const PrepareCallback& callback) {
   RCHECK(init_complete_.occurred());
 
   graph_.Prepare();
-  callback.Run();
+  callback();
   status_publisher_.SendUpdates();
 }
 
@@ -163,7 +162,7 @@ void MediaSourceImpl::Seek(int64_t position, const SeekCallback& callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, [this, callback]() {
-    task_runner_->PostTask([callback]() { callback.Run(); });
+    task_runner_->PostTask([callback]() { callback(); });
   });
 }
 
@@ -191,7 +190,7 @@ MediaSourceImpl::Stream::Stream(
     abort();
   }
 
-  producer_ = MojoPacketProducer::Create();
+  producer_ = FidlPacketProducer::Create();
   graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
 }
 
@@ -206,19 +205,18 @@ MediaTypePtr MediaSourceImpl::Stream::original_media_type() const {
 }
 
 void MediaSourceImpl::Stream::GetPacketProducer(
-    InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   FTL_DCHECK(producer_ != nullptr);
-  producer_->Bind(producer.Pass());
+  producer_->Bind(std::move(producer));
 }
 
 void MediaSourceImpl::Stream::FlushConnection(
-    const MojoPacketProducer::FlushConnectionCallback callback) {
+    const FidlPacketProducer::FlushConnectionCallback callback) {
   if (producer_ != nullptr) {
     producer_->FlushConnection(callback);
   } else {
-    callback.Run();
+    callback();
   }
 }
 
 }  // namespace media
-}  // namespace mojo

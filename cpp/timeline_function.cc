@@ -9,7 +9,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // static
@@ -31,10 +30,12 @@ TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
 
 }  // namespace media
 
-TimelineTransformPtr
-TypeConverter<TimelineTransformPtr, media::TimelineFunction>::Convert(
+namespace fidl {
+
+media::TimelineTransformPtr
+TypeConverter<media::TimelineTransformPtr, media::TimelineFunction>::Convert(
     const media::TimelineFunction& input) {
-  TimelineTransformPtr result = TimelineTransform::New();
+  media::TimelineTransformPtr result = media::TimelineTransform::New();
   result->reference_time = input.reference_time();
   result->subject_time = input.subject_time();
   result->reference_delta = input.reference_delta();
@@ -43,12 +44,12 @@ TypeConverter<TimelineTransformPtr, media::TimelineFunction>::Convert(
 }
 
 media::TimelineFunction
-TypeConverter<media::TimelineFunction, TimelineTransformPtr>::Convert(
-    const TimelineTransformPtr& input) {
+TypeConverter<media::TimelineFunction, media::TimelineTransformPtr>::Convert(
+    const media::TimelineTransformPtr& input) {
   return input ? media::TimelineFunction(
                      input->reference_time, input->subject_time,
                      input->reference_delta, input->subject_delta)
                : media::TimelineFunction();
 }
 
-}  // namespace mojo
+}  // namespace fidl

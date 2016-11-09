@@ -10,7 +10,6 @@
 #include "apps/media/src/audio/mixer_input.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // Mixes any number of inputs to output buffers.
@@ -76,4 +75,3 @@ class Mixer {
 };
 
 }  // namespace media
-}  // namespace mojo

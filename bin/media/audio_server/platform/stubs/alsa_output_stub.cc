@@ -4,7 +4,6 @@
 
 #include "apps/media/src/audio_server/fwd_decls.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -14,4 +13,3 @@ AudioOutputPtr CreateDefaultAlsaOutput(AudioOutputManager* manager) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

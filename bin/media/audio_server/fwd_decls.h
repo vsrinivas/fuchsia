@@ -7,7 +7,6 @@
 #include <memory>
 #include <set>
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -38,4 +37,3 @@ using AudioTrackToOutputLinkSet =
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

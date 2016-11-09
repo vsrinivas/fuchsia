@@ -11,7 +11,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace mojo {
 namespace media {
 
 // See services/media/framework/ostream.h for details.
@@ -109,4 +108,3 @@ struct AVFMT_AVOID_NEG_TSFlags {
 std::ostream& operator<<(std::ostream& os, AVFMT_AVOID_NEG_TSFlags value);
 
 }  // namespace media
-}  // namespace mojo

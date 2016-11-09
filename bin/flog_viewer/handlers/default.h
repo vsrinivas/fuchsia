@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_
+#pragma once
 
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -25,7 +23,7 @@ class Default : public ChannelHandler {
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(Message* message) override;
+  void HandleMessage(fidl::Message* message) override;
 
  private:
   bool terse_;
@@ -34,6 +32,3 @@ class Default : public ChannelHandler {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_DEFAULT_H_

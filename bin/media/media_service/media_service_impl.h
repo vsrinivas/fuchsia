@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "apps/media/interfaces/media_service.mojom.h"
+#include "apps/media/interfaces/media_service.fidl.h"
 #include "apps/media/src/util/factory_service_base.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 
-namespace mojo {
 namespace media {
 
 class MediaServiceImpl : public FactoryServiceBase, public MediaService {
@@ -17,43 +18,42 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
 
   ~MediaServiceImpl() override;
 
-  // ApplicationImplBase override.
-  void OnInitialize() override;
-
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override;
-
   // MediaService implementation.
-  void CreatePlayer(InterfaceHandle<SeekingReader> reader,
-                    InterfaceHandle<MediaRenderer> audio_renderer,
-                    InterfaceHandle<MediaRenderer> video_renderer,
-                    InterfaceRequest<MediaPlayer> player) override;
+  void CreatePlayer(fidl::InterfaceHandle<SeekingReader> reader,
+                    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+                    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+                    fidl::InterfaceRequest<MediaPlayer> player) override;
 
-  void CreateSource(InterfaceHandle<SeekingReader> reader,
-                    Array<MediaTypeSetPtr> allowed_media_types,
-                    InterfaceRequest<MediaSource> source) override;
+  void CreateSource(fidl::InterfaceHandle<SeekingReader> reader,
+                    fidl::Array<MediaTypeSetPtr> allowed_media_types,
+                    fidl::InterfaceRequest<MediaSource> source) override;
 
-  void CreateSink(InterfaceHandle<MediaRenderer> renderer,
+  void CreateSink(fidl::InterfaceHandle<MediaRenderer> renderer,
                   MediaTypePtr media_type,
-                  InterfaceRequest<MediaSink> sink) override;
+                  fidl::InterfaceRequest<MediaSink> sink) override;
 
-  void CreateDemux(InterfaceHandle<SeekingReader> reader,
-                   InterfaceRequest<MediaDemux> demux) override;
+  void CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,
+                   fidl::InterfaceRequest<MediaDemux> demux) override;
 
-  void CreateDecoder(MediaTypePtr input_media_type,
-                     InterfaceRequest<MediaTypeConverter> decoder) override;
+  void CreateDecoder(
+      MediaTypePtr input_media_type,
+      fidl::InterfaceRequest<MediaTypeConverter> decoder) override;
 
-  void CreateNetworkReader(const String& url,
-                           InterfaceRequest<SeekingReader> reader) override;
+  void CreateNetworkReader(
+      const fidl::String& url,
+      fidl::InterfaceRequest<SeekingReader> reader) override;
 
-  void CreateFileReader(const String& path,
-                        InterfaceRequest<SeekingReader> reader) override;
+  void CreateFileReader(const fidl::String& path,
+                        fidl::InterfaceRequest<SeekingReader> reader) override;
 
-  void CreateTimelineController(
-      InterfaceRequest<MediaTimelineController> timeline_controller) override;
+  void CreateTimelineController(fidl::InterfaceRequest<MediaTimelineController>
+                                    timeline_controller) override;
 
  private:
-  BindingSet<MediaService> bindings_;
+  std::unique_ptr<modular::ApplicationContext> application_context_;
+  fidl::BindingSet<MediaService> bindings_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
 };
 
 }  // namespace media
-}  // namespace mojo

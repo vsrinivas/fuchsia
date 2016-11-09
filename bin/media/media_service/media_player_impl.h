@@ -10,28 +10,27 @@
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/cpp/timeline_function.h"
-#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
-#include "apps/media/interfaces/media_service.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
-#include "apps/media/interfaces/seeking_reader.mojom.h"
-#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
+#include "apps/media/interfaces/media_service.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/interfaces/timeline_controller.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/callback_joiner.h"
-#include "apps/media/src/util/mojo_publisher.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/media/src/util/fidl_publisher.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that renders streams from an origin specified by URL.
+// Fidl agent that renders streams from an origin specified by URL.
 class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
-      InterfaceHandle<SeekingReader> reader,
-      InterfaceHandle<MediaRenderer> audio_renderer,
-      InterfaceHandle<MediaRenderer> video_renderer,
-      InterfaceRequest<MediaPlayer> request,
+      fidl::InterfaceHandle<SeekingReader> reader,
+      fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+      fidl::InterfaceHandle<MediaRenderer> video_renderer,
+      fidl::InterfaceRequest<MediaPlayer> request,
       MediaServiceImpl* owner);
 
   ~MediaPlayerImpl() override;
@@ -67,13 +66,13 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
     // problems.
     MediaPacketProducerPtr encoded_producer_;
     MediaPacketProducerPtr decoded_producer_;
-    InterfaceHandle<MediaRenderer> renderer_;
+    fidl::InterfaceHandle<MediaRenderer> renderer_;
   };
 
-  MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
-                  InterfaceHandle<MediaRenderer> audio_renderer,
-                  InterfaceHandle<MediaRenderer> video_renderer,
-                  InterfaceRequest<MediaPlayer> request,
+  MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                  fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+                  fidl::InterfaceHandle<MediaRenderer> video_renderer,
+                  fidl::InterfaceRequest<MediaPlayer> request,
                   MediaServiceImpl* owner);
 
   // Takes action based on current state.
@@ -104,7 +103,7 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       uint64_t version = MediaTimelineControlPoint::kInitialStatus,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
-  MediaServicePtr factory_;
+  MediaServicePtr media_service_;
   MediaDemuxPtr demux_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
@@ -136,15 +135,14 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   CallbackJoiner set_transform_joiner_;
   MediaMetadataPtr metadata_;
   ProblemPtr demux_problem_;
-  MojoPublisher<GetStatusCallback> status_publisher_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
 
   // The following fields are just temporaries used to solve lambda capture
   // problems.
-  InterfaceHandle<MediaRenderer> audio_renderer_;
-  InterfaceHandle<MediaRenderer> video_renderer_;
+  fidl::InterfaceHandle<MediaRenderer> audio_renderer_;
+  fidl::InterfaceHandle<MediaRenderer> video_renderer_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPlayerChannel, log_channel_);
 };
 
 }  // namespace media
-}  // namespace mojo

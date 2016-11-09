@@ -2,32 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
+import("//lib/fidl/fidl.gni")
 
-mojom("interfaces") {
+fidl("interfaces") {
   sources = [
-    "audio_server.mojom",
-    "audio_track.mojom",
-    "logs/media_decoder_channel.mojom",
-    "logs/media_demux_channel.mojom",
-    "logs/media_packet_consumer_channel.mojom",
-    "logs/media_packet_producer_channel.mojom",
-    "logs/media_player_channel.mojom",
-    "logs/media_sink_channel.mojom",
-    "media_common.mojom",
-    "media_demux.mojom",
-    "media_metadata.mojom",
-    "media_player.mojom",
-    "media_renderer.mojom",
-    "media_service.mojom",
-    "media_sink.mojom",
-    "media_source.mojom",
-    "media_transport.mojom",
-    "media_type_converter.mojom",
-    "media_types.mojom",
-    "problem.mojom",
-    "seeking_reader.mojom",
-    "timeline_controller.mojom",
-    "timelines.mojom",
+    "audio_server.fidl",
+    "audio_track.fidl",
+    "logs/media_decoder_channel.fidl",
+    "logs/media_demux_channel.fidl",
+    "logs/media_packet_consumer_channel.fidl",
+    "logs/media_packet_producer_channel.fidl",
+    "logs/media_player_channel.fidl",
+    "logs/media_sink_channel.fidl",
+    "media_common.fidl",
+    "media_demux.fidl",
+    "media_metadata.fidl",
+    "media_player.fidl",
+    "media_renderer.fidl",
+    "media_service.fidl",
+    "media_sink.fidl",
+    "media_source.fidl",
+    "media_transport.fidl",
+    "media_type_converter.fidl",
+    "media_types.fidl",
+    "problem.fidl",
+    "seeking_reader.fidl",
+    "timeline_controller.fidl",
+    "timelines.fidl",
   ]
 }

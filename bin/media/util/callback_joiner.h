@@ -6,10 +6,8 @@
 
 #include <memory>
 
-#include "mojo/public/cpp/bindings/callback.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // CallbackJoiner is used to take action after multiple 'child' operations are
@@ -72,10 +70,10 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
     FTL_DCHECK(counter_ != 0);
     --counter_;
     if (counter_ == 0) {
-      Callback<void()> join_callback;
+      std::function<void()> join_callback;
       join_callback = join_callback_;
-      join_callback_.reset();
-      join_callback.Run();
+      join_callback_ = nullptr;
+      join_callback();
     }
   }
 
@@ -96,10 +94,10 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   // immediately. If child operations are pending, the callback is copied. The
   // copy called later (and reset) when all child oeprations have completed.
   // Only one callback at a time can be registered with WhenJoined.
-  void WhenJoined(const Callback<void()>& join_callback) {
-    FTL_DCHECK(join_callback_.is_null());
+  void WhenJoined(const std::function<void()>& join_callback) {
+    FTL_DCHECK(!join_callback_);
     if (counter_ == 0) {
-      join_callback.Run();
+      join_callback();
     } else {
       join_callback_ = join_callback;
     }
@@ -108,15 +106,14 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   // Cancels a callback registered with WhenJoined if it hasn't run yet. The
   // return value indicates whether a callback was cancelled.
   bool Cancel() {
-    bool result = !join_callback_.is_null();
-    join_callback_.reset();
+    bool result = !!join_callback_;
+    join_callback_ = nullptr;
     return result;
   }
 
  private:
   size_t counter_ = 0;
-  Callback<void()> join_callback_;
+  std::function<void()> join_callback_;
 };
 
 }  // namespace media
-}  // namespace mojo

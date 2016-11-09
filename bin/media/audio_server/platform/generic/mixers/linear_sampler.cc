@@ -10,12 +10,9 @@
 #include "apps/media/src/audio_server/platform/generic/mixers/mixer_utils.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 namespace mixers {
-
-using utils::ScalerType;
 
 template <size_t DChCount, typename SType, size_t SChCount>
 class LinearSamplerImpl : public LinearSampler {
@@ -65,8 +62,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     int32_t* frac_src_offset,
     uint32_t frac_step_size,
     Gain::AScale amplitude_scale) {
-  using SR = utils::SrcReader<SType, SChCount, DChCount>;
-  using DM = utils::DstMixer<ScaleType, DoAccumulate>;
+  using SR = SrcReader<SType, SChCount, DChCount>;
+  using DM = DstMixer<ScaleType, DoAccumulate>;
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
@@ -249,4 +246,3 @@ MixerPtr LinearSampler::Select(const AudioMediaTypeDetailsPtr& src_format,
 }  // namespace mixers
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

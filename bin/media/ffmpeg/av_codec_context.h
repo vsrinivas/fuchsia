@@ -13,7 +13,6 @@ extern "C" {
 // Ffmeg defines this...undefine.
 #undef PixelFormat
 
-namespace mojo {
 namespace media {
 
 struct AVCodecContextDeleter {
@@ -40,4 +39,3 @@ AVPixelFormat AVPixelFormatFromPixelFormat(
     VideoStreamType::PixelFormat pixel_format);
 
 }  // namespace media
-}  // namespace mojo

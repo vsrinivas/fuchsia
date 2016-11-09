@@ -5,22 +5,21 @@
 #include <chrono>
 
 #include "apps/media/cpp/flog.h"
-#include "mojo/public/cpp/application/connect.h"
 
-namespace mojo {
 namespace flog {
 
 // static
-void Flog::Initialize(Shell* shell, const std::string& label) {
+void Flog::Initialize(modular::ApplicationContext* application_context,
+                      const std::string& label) {
   FTL_DCHECK(!logger_);
 
-  FlogServicePtr flog_service;
-  ConnectToService(shell, "mojo:flog_service", GetProxy(&flog_service));
+  FlogServicePtr flog_service =
+      application_context->ConnectToEnvironmentService<FlogService>();
   // TODO(dalesat): Need a thread-safe proxy.
 
   FlogLoggerPtr flog_logger;
   flog_service->CreateLogger(GetProxy(&flog_logger), label);
-  logger_ = flog_logger.Pass();
+  logger_ = std::move(flog_logger);
 }
 
 // static
@@ -36,14 +35,15 @@ void Flog::LogChannelCreation(uint32_t channel_id,
 }
 
 // static
-void Flog::LogChannelMessage(uint32_t channel_id, Message* message) {
+void Flog::LogChannelMessage(uint32_t channel_id, fidl::Message* message) {
   if (!logger_) {
     return;
   }
 
-  Array<uint8_t> array = Array<uint8_t>::New(message->data_num_bytes());
+  fidl::Array<uint8_t> array =
+      fidl::Array<uint8_t>::New(message->data_num_bytes());
   memcpy(array.data(), message->data(), message->data_num_bytes());
-  logger_->LogChannelMessage(GetTime(), channel_id, array.Pass());
+  logger_->LogChannelMessage(GetTime(), channel_id, std::move(array));
 }
 
 // static
@@ -78,16 +78,15 @@ FlogChannel::~FlogChannel() {
   Flog::LogChannelDeletion(id_);
 }
 
-bool FlogChannel::Accept(Message* message) {
+bool FlogChannel::Accept(fidl::Message* message) {
   Flog::LogChannelMessage(id_, message);
   return true;
 }
 
-bool FlogChannel::AcceptWithResponder(Message* message,
+bool FlogChannel::AcceptWithResponder(fidl::Message* message,
                                       MessageReceiver* responder) {
   FTL_DCHECK(false) << "Flog doesn't support messages with responses";
   abort();
 }
 
 }  // namespace flog
-}  // namespace mojo

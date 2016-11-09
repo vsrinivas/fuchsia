@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -48,7 +47,7 @@ MediaPlayerDigest::MediaPlayerDigest(const std::string& format)
 
 MediaPlayerDigest::~MediaPlayerDigest() {}
 
-void MediaPlayerDigest::HandleMessage(Message* message) {
+void MediaPlayerDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -57,7 +56,7 @@ std::shared_ptr<Accumulator> MediaPlayerDigest::GetAccumulator() {
 }
 
 void MediaPlayerDigest::ReceivedDemuxDescription(
-    Array<mojo::media::MediaTypePtr> stream_types) {
+    fidl::Array<media::MediaTypePtr> stream_types) {
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kInitial) {
     ReportProblem() << "ReceivedDemuxDescription out of sequence";
   } else {
@@ -68,7 +67,7 @@ void MediaPlayerDigest::ReceivedDemuxDescription(
     ReportProblem() << "Duplicate ReceivedDemuxDescription";
   }
 
-  accumulator_->stream_types_ = stream_types.Pass();
+  accumulator_->stream_types_ = std::move(stream_types);
 }
 
 void MediaPlayerDigest::StreamsPrepared() {
@@ -137,11 +136,11 @@ void MediaPlayerDigest::Seeking(int64_t position) {
     ReportProblem() << "Seeking out of sequence";
   }
 
-  if (accumulator_->target_position_ == kUnspecifiedTime) {
+  if (accumulator_->target_position_ == media::kUnspecifiedTime) {
     ReportProblem() << "Seeking with no SeekRequested";
   }
 
-  accumulator_->target_position_ = kUnspecifiedTime;
+  accumulator_->target_position_ = media::kUnspecifiedTime;
 }
 
 void MediaPlayerDigest::Priming() {
@@ -162,14 +161,14 @@ void MediaPlayerDigest::Flushing() {
 }
 
 void MediaPlayerDigest::SettingTimelineTransform(
-    TimelineTransformPtr timeline_transform) {
+    media::TimelineTransformPtr timeline_transform) {
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kPrimed &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kPlaying &&
       accumulator_->state_ != MediaPlayerAccumulator::State::kEndOfStream) {
     ReportProblem() << "SettingTimelineTransform out of sequence";
   }
 
-  accumulator_->timeline_transform_ = timeline_transform.Pass();
+  accumulator_->timeline_transform_ = std::move(timeline_transform);
 }
 
 MediaPlayerAccumulator::MediaPlayerAccumulator() {}
@@ -190,7 +189,7 @@ void MediaPlayerAccumulator::Print(std::ostream& os) {
        << ", currently in state " << state_ << std::endl;
   }
 
-  if (target_position_ != kUnspecifiedTime) {
+  if (target_position_ != media::kUnspecifiedTime) {
     os << begl << "SUSPENSE: seeking to position " << target_position_;
   }
 
@@ -200,4 +199,3 @@ void MediaPlayerAccumulator::Print(std::ostream& os) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

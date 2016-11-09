@@ -8,7 +8,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace mojo {
 namespace media {
 
 void InitFfmpeg() {
@@ -21,4 +20,3 @@ void InitFfmpeg() {
 }
 
 }  // namespace media
-}  // namespace mojo

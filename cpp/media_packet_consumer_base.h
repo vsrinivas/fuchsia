@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_MEDIA_PACKET_CONSUMER_BASE_H_
-#define APPS_MEDIA_CPP_MEDIA_PACKET_CONSUMER_BASE_H_
+#pragma once
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set.h"
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_consumer_channel.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/synchronization/thread_checker.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
 // Base class that implements MediaPacketConsumer.
@@ -60,7 +58,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   };
 
   // Binds to this MediaPacketConsumer.
-  void Bind(InterfaceRequest<MediaPacketConsumer> request);
+  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> request);
 
   // Determines if the consumer is bound to a message pipe.
   bool is_bound();
@@ -110,7 +108,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   void PullDemandUpdate(const PullDemandUpdateCallback& callback) final;
 
   void AddPayloadBuffer(uint32_t payload_buffer_id,
-                        ScopedSharedBufferHandle payload_buffer) final;
+                        mx::vmo payload_buffer) final;
 
   void RemovePayloadBuffer(uint32_t payload_buffer_id) final;
 
@@ -190,7 +188,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Does nothing if pts_rate_ is zero.
   void SetPacketPtsRate(const MediaPacketPtr& packet);
 
-  Binding<MediaPacketConsumer> binding_;
+  fidl::Binding<MediaPacketConsumer> binding_;
   MediaPacketDemand demand_;
   bool demand_update_required_ = false;
   bool returning_packet_ = false;
@@ -207,6 +205,3 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_MEDIA_PACKET_CONSUMER_BASE_H_

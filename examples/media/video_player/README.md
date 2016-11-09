@@ -8,7 +8,7 @@ create a video player.
 The video player currently uses a file reader only, so you'll need to have an
 accessible file. Here's an example command line:
 
-  $ mojo:launcher mojo:video_player?path=/volume/fat-0/big_buck_bunny.ogv
+  $ fidl:launcher fidl:video_player?path=/volume/fat-0/big_buck_bunny.ogv
 
 In the future, we'll support a network reader as well.
 

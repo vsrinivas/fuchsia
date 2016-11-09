@@ -14,7 +14,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -462,4 +461,3 @@ AvCodecContextPtr AvCodecContext::Create(const StreamType& stream_type) {
 }
 
 }  // namespace media
-}  // namespace mojo

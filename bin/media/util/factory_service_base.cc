@@ -6,8 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
-
 FactoryServiceBase::ProductBase::ProductBase(FactoryServiceBase* owner)
     : owner_(owner) {
   FTL_DCHECK(owner_);
@@ -15,8 +13,8 @@ FactoryServiceBase::ProductBase::ProductBase(FactoryServiceBase* owner)
 
 FactoryServiceBase::ProductBase::~ProductBase() {}
 
-FactoryServiceBase::FactoryServiceBase() {}
+FactoryServiceBase::FactoryServiceBase()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()) {}
 
 FactoryServiceBase::~FactoryServiceBase() {}
-
-}  // namespace mojo

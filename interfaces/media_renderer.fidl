@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/interfaces/media_transport.fidl";
+import "apps/media/interfaces/media_types.fidl";
+import "apps/media/interfaces/timeline_controller.fidl";
+
+// Models a service that renders content.
+interface MediaRenderer {
+  // Gets the list of supported media types.
+  GetSupportedMediaTypes() => (array<MediaTypeSet> supported_media_types);
+
+  // Sets the media type of the stream to be delivered.
+  SetMediaType(MediaType media_type);
+
+  // Gets the packet consumer for the stream to be delivered.
+  GetPacketConsumer(MediaPacketConsumer& packet_consumer);
+
+  // Requests the timeline control point for this output.
+  GetTimelineControlPoint(MediaTimelineControlPoint& timeline_control_point);
+};

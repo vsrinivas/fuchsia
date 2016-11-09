@@ -9,7 +9,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -137,4 +136,3 @@ OutputFormatterPtr OutputFormatter::Select(
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_demux_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_demux_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -21,12 +20,12 @@ MediaDemuxFull::MediaDemuxFull(const std::string& format)
 
 MediaDemuxFull::~MediaDemuxFull() {}
 
-void MediaDemuxFull::HandleMessage(Message* message) {
+void MediaDemuxFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
 void MediaDemuxFull::NewStream(uint32_t index,
-                               mojo::media::MediaTypePtr type,
+                               media::MediaTypePtr type,
                                uint64_t producer_address) {
   std::cout << entry() << "MediaDemux.NewStream" << std::endl;
   std::cout << indent;
@@ -39,4 +38,3 @@ void MediaDemuxFull::NewStream(uint32_t index,
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

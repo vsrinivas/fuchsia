@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_packet_consumer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_consumer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -21,12 +20,11 @@ MediaPacketConsumerFull::MediaPacketConsumerFull(const std::string& format)
 
 MediaPacketConsumerFull::~MediaPacketConsumerFull() {}
 
-void MediaPacketConsumerFull::HandleMessage(Message* message) {
+void MediaPacketConsumerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-void MediaPacketConsumerFull::DemandSet(
-    mojo::media::MediaPacketDemandPtr demand) {
+void MediaPacketConsumerFull::DemandSet(media::MediaPacketDemandPtr demand) {
   if (terse_) {
     return;
   }
@@ -45,7 +43,7 @@ void MediaPacketConsumerFull::Failed() {
 }
 
 void MediaPacketConsumerFull::RespondingToGetDemandUpdate(
-    mojo::media::MediaPacketDemandPtr demand) {
+    media::MediaPacketDemandPtr demand) {
   if (terse_) {
     return;
   }
@@ -83,7 +81,7 @@ void MediaPacketConsumerFull::CompletingFlush() {
 }
 
 void MediaPacketConsumerFull::PacketSupplied(uint64_t label,
-                                             mojo::media::MediaPacketPtr packet,
+                                             media::MediaPacketPtr packet,
                                              uint64_t payload_address,
                                              uint32_t packets_outstanding) {
   if (terse_) {
@@ -115,4 +113,3 @@ void MediaPacketConsumerFull::ReturningPacket(uint64_t label,
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

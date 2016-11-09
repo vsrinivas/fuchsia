@@ -7,7 +7,6 @@
 #include "apps/media/src/util/safe_clone.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 TextStreamType::TextStreamType(const std::string& encoding,
@@ -40,4 +39,3 @@ std::unique_ptr<StreamTypeSet> TextStreamTypeSet::Clone() const {
 }
 
 }  // namespace media
-}  // namespace mojo

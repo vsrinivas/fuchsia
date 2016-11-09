@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/interfaces/media_types.fidl.h"
 #include "apps/media/src/audio_server/platform/generic/mixer.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 namespace mixers {
@@ -25,4 +24,3 @@ class LinearSampler : public Mixer {
 }  // namespace mixers
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

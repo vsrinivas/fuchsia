@@ -10,7 +10,6 @@
 #include "apps/media/src/audio/gain.h"
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -69,4 +68,3 @@ TEST(LevelTest, ArbitraryValues) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

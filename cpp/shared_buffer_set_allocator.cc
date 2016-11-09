@@ -4,7 +4,6 @@
 
 #include "apps/media/cpp/shared_buffer_set_allocator.h"
 
-namespace mojo {
 namespace media {
 
 SharedBufferSetAllocator::SharedBufferSetAllocator() {}
@@ -42,9 +41,8 @@ void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
   }
 }
 
-bool SharedBufferSetAllocator::PollForBufferUpdate(
-    uint32_t* buffer_id_out,
-    ScopedSharedBufferHandle* handle_out) {
+bool SharedBufferSetAllocator::PollForBufferUpdate(uint32_t* buffer_id_out,
+                                                   mx::vmo* handle_out) {
   FTL_DCHECK(buffer_id_out != nullptr);
   FTL_DCHECK(handle_out != nullptr);
 
@@ -55,7 +53,7 @@ bool SharedBufferSetAllocator::PollForBufferUpdate(
   }
 
   *buffer_id_out = buffer_updates_.front().buffer_id_;
-  *handle_out = buffer_updates_.front().handle_.Pass();
+  *handle_out = std::move(buffer_updates_.front().vmo_);
 
   buffer_updates_.pop();
 
@@ -168,10 +166,10 @@ void SharedBufferSetAllocator::ReleaseSlicedRegion(const Locator& locator) {
 
 uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  MojoResult result = CreateNewBuffer(size * kSlicedBufferInitialSizeMultiplier,
-                                      &buffer_id, &handle);
-  if (result != MOJO_RESULT_OK) {
+  mx::vmo vmo;
+  mx_status_t status = CreateNewBuffer(
+      size * kSlicedBufferInitialSizeMultiplier, &buffer_id, &vmo);
+  if (status != NO_ERROR) {
     return kNullBufferId;
   }
 
@@ -185,7 +183,7 @@ uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
     buffer.allocator_.reset(new FifoAllocator(size));
   }
 
-  buffer_updates_.emplace(buffer_id, handle.Pass());
+  buffer_updates_.emplace(buffer_id, std::move(vmo));
 
   return buffer_id;
 }
@@ -210,10 +208,9 @@ SharedBufferSetAllocator::Buffer::Buffer() {}
 
 SharedBufferSetAllocator::Buffer::~Buffer() {}
 
-SharedBufferSetAllocator::BufferUpdate::BufferUpdate(
-    uint32_t buffer_id,
-    ScopedSharedBufferHandle handle)
-    : buffer_id_(buffer_id), handle_(handle.Pass()) {}
+SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id,
+                                                     mx::vmo vmo)
+    : buffer_id_(buffer_id), vmo_(std::move(vmo)) {}
 
 SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id)
     : buffer_id_(buffer_id) {}
@@ -221,4 +218,3 @@ SharedBufferSetAllocator::BufferUpdate::BufferUpdate(uint32_t buffer_id)
 SharedBufferSetAllocator::BufferUpdate::~BufferUpdate() {}
 
 }  // namespace media
-}  // namespace mojo

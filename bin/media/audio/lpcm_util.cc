@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/formatting.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // LpcmUtil implementation that processes samples of type T.
@@ -159,4 +158,3 @@ void LpcmUtilImpl<T>::Interleave(const void* in,
 }
 
 }  // namespace media
-}  // namespace mojo

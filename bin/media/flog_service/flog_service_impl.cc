@@ -7,18 +7,20 @@
 #include "apps/media/src/flog_service/flog_directory.h"
 #include "apps/media/src/flog_service/flog_logger_impl.h"
 #include "apps/media/src/flog_service/flog_reader_impl.h"
+#include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/app/service_provider_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
 
-namespace mojo {
 namespace flog {
 
-FlogServiceImpl::FlogServiceImpl() {}
+FlogServiceImpl::FlogServiceImpl()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()) {
+  application_context_->outgoing_services()->AddService<FlogService>(
+      [this](fidl::InterfaceRequest<FlogService> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
 
-FlogServiceImpl::~FlogServiceImpl() {}
-
-void FlogServiceImpl::OnInitialize() {
   directory_ = std::shared_ptr<FlogDirectory>(new FlogDirectory());
   directory_->GetExistingFiles([this](
       std::unique_ptr<std::map<uint32_t, std::string>> labels_by_id) {
@@ -34,34 +36,26 @@ void FlogServiceImpl::OnInitialize() {
   });
 }
 
-bool FlogServiceImpl::OnAcceptConnection(
-    ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<FlogService>(
-      [this](const ConnectionContext& connection_context,
-             InterfaceRequest<FlogService> flog_service_request) {
-        bindings_.AddBinding(this, flog_service_request.Pass());
-      });
-  return true;
-}
+FlogServiceImpl::~FlogServiceImpl() {}
 
-void FlogServiceImpl::CreateLogger(InterfaceRequest<FlogLogger> request,
-                                   const String& label) {
-  ready_.When(
-      ftl::MakeCopyable([ this, request = request.Pass(), label ]() mutable {
-        std::shared_ptr<FlogLoggerImpl> logger = FlogLoggerImpl::Create(
-            request.Pass(), ++last_allocated_log_id_, label, directory_, this);
-        AddProduct(logger);
-        log_labels_by_id_->insert(
-            std::make_pair(logger->id(), logger->label()));
-      }));
+void FlogServiceImpl::CreateLogger(fidl::InterfaceRequest<FlogLogger> request,
+                                   const fidl::String& label) {
+  ready_.When(ftl::MakeCopyable([
+    this, request = std::move(request), label
+  ]() mutable {
+    std::shared_ptr<FlogLoggerImpl> logger = FlogLoggerImpl::Create(
+        std::move(request), ++last_allocated_log_id_, label, directory_, this);
+    AddProduct(logger);
+    log_labels_by_id_->insert(std::make_pair(logger->id(), logger->label()));
+  }));
 }
 
 void FlogServiceImpl::GetLogDescriptions(
     const GetLogDescriptionsCallback& callback) {
   ready_.When([this, callback]() {
     FTL_DCHECK(log_labels_by_id_);
-    Array<FlogDescriptionPtr> descriptions =
-        Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
+    fidl::Array<FlogDescriptionPtr> descriptions =
+        fidl::Array<FlogDescriptionPtr>::New(log_labels_by_id_->size());
 
     size_t i = 0;
     for (std::pair<uint32_t, std::string> pair : *log_labels_by_id_) {
@@ -69,21 +63,21 @@ void FlogServiceImpl::GetLogDescriptions(
       description->log_id = pair.first;
       description->label = pair.second;
       description->open = false;
-      descriptions[i++] = description.Pass();
+      descriptions[i++] = std::move(description);
     }
 
-    callback.Run(descriptions.Pass());
+    callback(std::move(descriptions));
   });
 }
 
-void FlogServiceImpl::CreateReader(InterfaceRequest<FlogReader> reader,
+void FlogServiceImpl::CreateReader(fidl::InterfaceRequest<FlogReader> reader,
                                    uint32_t log_id) {
   ready_.When(
-      ftl::MakeCopyable([ this, reader = reader.Pass(), log_id ]() mutable {
+      ftl::MakeCopyable([ this, reader = std::move(reader), log_id ]() mutable {
         FTL_DCHECK(log_labels_by_id_);
         auto iter = log_labels_by_id_->find(log_id);
         AddProduct(FlogReaderImpl::Create(
-            reader.Pass(), log_id,
+            std::move(reader), log_id,
             iter == log_labels_by_id_->end() ? nullptr : iter->second,
             directory_, this));
       }));
@@ -115,4 +109,3 @@ void FlogServiceImpl::DeleteAllLogs() {
 }
 
 }  // namespace flog
-}  // namespace mojo

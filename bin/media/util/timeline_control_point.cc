@@ -9,10 +9,9 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace media {
 
-// For checking preconditions when handling mojo requests.
+// For checking preconditions when handling fidl requests.
 // Checks the condition, and, if it's false, resets and calls return.
 #define RCHECK(condition)                                             \
   if (!(condition)) {                                                 \
@@ -39,19 +38,19 @@ TimelineControlPoint::TimelineControlPoint()
               TimelineTransform::From(current_timeline_function_);
           status->end_of_stream = ReachedEndOfStream();
         }
-        callback.Run(version, status.Pass());
+        callback(version, std::move(status));
       });
 }
 
 TimelineControlPoint::~TimelineControlPoint() {}
 
 void TimelineControlPoint::Bind(
-    InterfaceRequest<MediaTimelineControlPoint> request) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
   if (control_point_binding_.is_bound()) {
     control_point_binding_.Close();
   }
 
-  control_point_binding_.Bind(request.Pass());
+  control_point_binding_.Bind(std::move(request));
 }
 
 void TimelineControlPoint::Reset() {
@@ -112,19 +111,19 @@ void TimelineControlPoint::GetStatus(uint64_t version_last_seen,
 }
 
 void TimelineControlPoint::GetTimelineConsumer(
-    InterfaceRequest<TimelineConsumer> timeline_consumer) {
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
     consumer_binding_.Close();
   }
 
-  consumer_binding_.Bind(timeline_consumer.Pass());
+  consumer_binding_.Bind(std::move(timeline_consumer));
 }
 
 void TimelineControlPoint::Prime(const PrimeCallback& callback) {
   if (prime_requested_callback_) {
     prime_requested_callback_(callback);
   } else {
-    callback.Run();
+    callback();
   }
 }
 
@@ -182,11 +181,11 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
 
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
-  if (!set_timeline_transform_callback_.is_null()) {
+  if (set_timeline_transform_callback_) {
     SetTimelineTransformCallback callback = set_timeline_transform_callback_;
-    set_timeline_transform_callback_.reset();
+    set_timeline_transform_callback_ = nullptr;
     task_runner_->PostTask(
-        [this, callback, completed]() { callback.Run(completed); });
+        [this, callback, completed]() { callback(completed); });
   }
 }
 
@@ -196,4 +195,3 @@ void TimelineControlPoint::PostReset() {
 }
 
 }  // namespace media
-}  // namespace mojo

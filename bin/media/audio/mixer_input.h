@@ -4,7 +4,6 @@
 
 #pragma once
 
-namespace mojo {
 namespace media {
 
 // Mixes a stream of packets into output buffers. This abstract base class
@@ -45,4 +44,3 @@ class MixerInput {
 };
 
 }  // namespace media
-}  // namespace mojo

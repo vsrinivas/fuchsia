@@ -6,11 +6,10 @@
 
 #include <limits>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/src/flog_service/flog_service_impl.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace flog {
 
 // FlogReader implementation.
@@ -19,7 +18,7 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
                        public FlogLogger {
  public:
   static std::shared_ptr<FlogReaderImpl> Create(
-      InterfaceRequest<FlogReader> request,
+      fidl::InterfaceRequest<FlogReader> request,
       uint32_t log_id,
       const std::string& label,
       std::shared_ptr<FlogDirectory> directory,
@@ -35,7 +34,7 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
  private:
   static const size_t kReadBufferSize = 16 * 1024;
 
-  FlogReaderImpl(InterfaceRequest<FlogReader> request,
+  FlogReaderImpl(fidl::InterfaceRequest<FlogReader> request,
                  uint32_t log_id,
                  const std::string& label,
                  std::shared_ptr<FlogDirectory> directory,
@@ -61,12 +60,12 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
   // FlogLogger implementation (called by stub_).
   void LogChannelCreation(int64_t time_us,
                           uint32_t channel_id,
-                          const String& type_name,
+                          const fidl::String& type_name,
                           uint64_t subject_address) override;
 
   void LogChannelMessage(int64_t time_us,
                          uint32_t channel_id,
-                         mojo::Array<uint8_t> data) override;
+                         fidl::Array<uint8_t> data) override;
 
   void LogChannelDeletion(int64_t time_us, uint32_t channel_id) override;
 
@@ -81,4 +80,3 @@ class FlogReaderImpl : public FlogServiceImpl::Product<FlogReader>,
 };
 
 }  // namespace flog
-}  // namespace mojo

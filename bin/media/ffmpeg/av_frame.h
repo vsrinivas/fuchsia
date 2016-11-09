@@ -8,7 +8,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavutil/frame.h"
 }
 
-namespace mojo {
 namespace media {
 namespace ffmpeg {
 
@@ -24,4 +23,3 @@ struct AvFrame {
 
 }  // namespace ffmpeg
 }  // namespace media
-}  // namespace mojo

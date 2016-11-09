@@ -6,12 +6,11 @@
 
 #include <set>
 
-#include "apps/media/interfaces/media_common.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/media_common.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -68,4 +67,3 @@ class AudioOutputManager {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

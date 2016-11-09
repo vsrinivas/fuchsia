@@ -19,7 +19,6 @@
 #include "apps/media/tools/flog_viewer/handlers/media_sink_digest.h"
 #include "apps/media/tools/flog_viewer/handlers/media_sink_full.h"
 
-namespace mojo {
 namespace flog {
 
 // static
@@ -88,7 +87,7 @@ ChannelHandler::~ChannelHandler() {}
 void ChannelHandler::HandleMessage(
     uint32_t entry_index,
     const FlogEntryPtr& entry,
-    Message* message,
+    fidl::Message* message,
     const ChannelLookupCallback& channel_lookup_callback) {
   entry_index_ = entry_index;
   entry_ = &entry;
@@ -112,4 +111,3 @@ std::shared_ptr<Channel> ChannelHandler::AsChannel(uint64_t subject_address) {
 }
 
 }  // namespace flog
-}  // namespace mojo

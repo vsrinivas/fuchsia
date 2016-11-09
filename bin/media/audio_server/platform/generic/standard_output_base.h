@@ -6,8 +6,8 @@
 
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/timeline.h"
-#include "apps/media/interfaces/media_common.mojom.h"
-#include "apps/media/interfaces/media_types.mojom.h"
+#include "apps/media/interfaces/media_common.fidl.h"
+#include "apps/media/interfaces/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_track_to_output_link.h"
 #include "apps/media/src/audio_server/gain.h"
@@ -15,7 +15,6 @@
 #include "apps/media/src/audio_server/platform/generic/output_formatter.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -131,4 +130,3 @@ class StandardOutputBase : public AudioOutput {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/payload_allocator.h"
 #include "apps/media/src/framework/refs.h"
 
-namespace mojo {
 namespace media {
 
 class Stage;
@@ -63,4 +62,3 @@ class Output {
 };
 
 }  // namespace media
-}  // namespace mojo

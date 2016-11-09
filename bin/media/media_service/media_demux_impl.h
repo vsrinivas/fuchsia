@@ -9,28 +9,27 @@
 #include <vector>
 
 #include "apps/media/cpp/flog.h"
-#include "apps/media/interfaces/logs/media_demux_channel.mojom.h"
-#include "apps/media/interfaces/media_demux.mojom.h"
-#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/interfaces/logs/media_demux_channel.fidl.h"
+#include "apps/media/interfaces/media_demux.fidl.h"
+#include "apps/media/interfaces/seeking_reader.fidl.h"
 #include "apps/media/src/demux/demux.h"
+#include "apps/media/src/fidl/fidl_packet_producer.h"
 #include "apps/media/src/framework/graph.h"
 #include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/mojo/mojo_packet_producer.h"
+#include "apps/media/src/util/fidl_publisher.h"
 #include "apps/media/src/util/incident.h"
-#include "apps/media/src/util/mojo_publisher.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that decodes a stream.
+// Fidl agent that decodes a stream.
 class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
                        public MediaDemux {
  public:
   static std::shared_ptr<MediaDemuxImpl> Create(
-      InterfaceHandle<SeekingReader> reader,
-      InterfaceRequest<MediaDemux> request,
+      fidl::InterfaceHandle<SeekingReader> reader,
+      fidl::InterfaceRequest<MediaDemux> request,
       MediaServiceImpl* owner);
 
   ~MediaDemuxImpl() override;
@@ -40,7 +39,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
 
   void GetPacketProducer(
       uint32_t stream_index,
-      InterfaceRequest<MediaPacketProducer> producer) override;
+      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
 
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
@@ -50,8 +49,8 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
   void Seek(int64_t position, const SeekCallback& callback) override;
 
  private:
-  MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
-                 InterfaceRequest<MediaDemux> request,
+  MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                 fidl::InterfaceRequest<MediaDemux> request,
                  MediaServiceImpl* owner);
 
   class Stream {
@@ -66,20 +65,21 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
     MediaTypePtr media_type() const;
 
     // Returns the stream's producer.
-    std::shared_ptr<MojoPacketProducer> producer() const { return producer_; }
+    std::shared_ptr<FidlPacketProducer> producer() const { return producer_; }
 
     // Binds the producer.
-    void BindPacketProducer(InterfaceRequest<MediaPacketProducer> producer);
+    void BindPacketProducer(
+        fidl::InterfaceRequest<MediaPacketProducer> producer);
 
     // Tells the producer to flush its connection.
     void FlushConnection(
-        const MojoPacketProducer::FlushConnectionCallback callback);
+        const FidlPacketProducer::FlushConnectionCallback callback);
 
    private:
     std::unique_ptr<StreamType> stream_type_;
     Graph* graph_;
     OutputRef output_;
-    std::shared_ptr<MojoPacketProducer> producer_;
+    std::shared_ptr<FidlPacketProducer> producer_;
   };
 
   // Handles the completion of demux initialization.
@@ -94,7 +94,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
   std::shared_ptr<Demux> demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;
-  MojoPublisher<GetStatusCallback> status_publisher_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
   MediaMetadataPtr metadata_;
   ProblemPtr problem_;
 
@@ -102,4 +102,3 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
 };
 
 }  // namespace media
-}  // namespace mojo

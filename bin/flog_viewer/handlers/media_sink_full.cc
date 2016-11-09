@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_sink_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_sink_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -21,12 +20,12 @@ MediaSinkFull::MediaSinkFull(const std::string& format)
 
 MediaSinkFull::~MediaSinkFull() {}
 
-void MediaSinkFull::HandleMessage(Message* message) {
+void MediaSinkFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-void MediaSinkFull::Config(mojo::media::MediaTypePtr input_type,
-                           mojo::media::MediaTypePtr output_type,
+void MediaSinkFull::Config(media::MediaTypePtr input_type,
+                           media::MediaTypePtr output_type,
                            uint64_t consumer_address,
                            uint64_t producer_address) {
   std::cout << entry() << "MediaSink.Config" << std::endl;
@@ -42,4 +41,3 @@ void MediaSinkFull::Config(mojo::media::MediaTypePtr input_type,
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

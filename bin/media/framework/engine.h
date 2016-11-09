@@ -14,7 +14,6 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
-namespace mojo {
 namespace media {
 
 //
@@ -148,4 +147,3 @@ class Engine {
 };
 
 }  // namespace media
-}  // namespace mojo

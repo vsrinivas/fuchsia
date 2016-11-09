@@ -6,7 +6,6 @@
 
 #include <cstdint>
 
-namespace mojo {
 namespace media {
 
 // Possible result values indicating success or type of failure.
@@ -20,4 +19,3 @@ enum class Result {
 };
 
 }  // namespace media
-}  // namespace mojo

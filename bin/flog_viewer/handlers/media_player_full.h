@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_FULL_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_FULL_H_
+#pragma once
 
-#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
 // Handler for MediaPlayerChannel messages.
 class MediaPlayerFull : public ChannelHandler,
-                        public mojo::media::logs::MediaPlayerChannel {
+                        public media::logs::MediaPlayerChannel {
  public:
   MediaPlayerFull(const std::string& format);
 
@@ -22,12 +20,12 @@ class MediaPlayerFull : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(Message* message) override;
+  void HandleMessage(fidl::Message* message) override;
 
  private:
   // MediaPlayerChannel implementation.
   void ReceivedDemuxDescription(
-      Array<mojo::media::MediaTypePtr> stream_types) override;
+      fidl::Array<media::MediaTypePtr> stream_types) override;
 
   void StreamsPrepared() override;
 
@@ -52,14 +50,11 @@ class MediaPlayerFull : public ChannelHandler,
   void Flushing() override;
 
   void SettingTimelineTransform(
-      TimelineTransformPtr timeline_transform) override;
+      media::TimelineTransformPtr timeline_transform) override;
 
-  mojo::media::logs::MediaPlayerChannelStub stub_;
+  media::logs::MediaPlayerChannelStub stub_;
   bool terse_;
 };
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_FULL_H_

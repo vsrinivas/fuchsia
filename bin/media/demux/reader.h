@@ -10,7 +10,6 @@
 
 #include "apps/media/src/framework/result.h"
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for objects that read raw data on behalf of demuxes.
@@ -39,4 +38,3 @@ class Reader {
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -29,7 +29,6 @@
 // that take pointers need to handle nullptr.
 //
 
-namespace mojo {
 namespace media {
 
 int ostream_indent_index();
@@ -96,4 +95,3 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 }
 
 }  // namespace media
-}  // namespace mojo

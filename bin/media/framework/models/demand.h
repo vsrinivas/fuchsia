@@ -4,7 +4,6 @@
 
 #pragma once
 
-namespace mojo {
 namespace media {
 
 // Expresses packet demand for signalling upstream in a graph.
@@ -22,4 +21,3 @@ enum class Demand {
 };
 
 }  // namespace media
-}  // namespace mojo

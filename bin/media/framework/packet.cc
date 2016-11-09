@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/payload_allocator.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 Packet::Packet(int64_t pts,
@@ -105,4 +104,3 @@ PacketPtr Packet::CreateEndOfStream(int64_t pts, TimelineRate pts_rate) {
 }
 
 }  // namespace media
-}  // namespace mojo

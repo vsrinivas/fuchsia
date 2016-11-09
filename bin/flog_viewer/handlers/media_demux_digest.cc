@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_demux_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_demux_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -42,7 +41,7 @@ MediaDemuxDigest::MediaDemuxDigest(const std::string& format)
 
 MediaDemuxDigest::~MediaDemuxDigest() {}
 
-void MediaDemuxDigest::HandleMessage(Message* message) {
+void MediaDemuxDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -51,7 +50,7 @@ std::shared_ptr<Accumulator> MediaDemuxDigest::GetAccumulator() {
 }
 
 void MediaDemuxDigest::NewStream(uint32_t index,
-                                 mojo::media::MediaTypePtr type,
+                                 media::MediaTypePtr type,
                                  uint64_t producer_address) {
   FTL_DCHECK(type);
 
@@ -63,7 +62,7 @@ void MediaDemuxDigest::NewStream(uint32_t index,
     ReportProblem() << "NewStream index " << index << " already in use";
   }
 
-  accumulator_->streams_[index].type_ = type.Pass();
+  accumulator_->streams_[index].type_ = std::move(type);
   accumulator_->streams_[index].producer_channel_ = AsChannel(producer_address);
   accumulator_->streams_[index].producer_channel_->SetHasParent();
 }
@@ -86,4 +85,3 @@ MediaDemuxAccumulator::Stream::~Stream() {}
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

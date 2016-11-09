@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_VIDEO_RENDERER_H_
-#define APPS_MEDIA_CPP_VIDEO_RENDERER_H_
+#pragma once
 
 #include <memory>
 #include <queue>
@@ -11,12 +10,11 @@
 #include "apps/media/cpp/media_packet_consumer_base.h"
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/video_converter.h"
-#include "apps/media/interfaces/media_renderer.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
+#include "apps/media/interfaces/media_renderer.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
 // Implements MediaRenderer for an app that wants to show video.
@@ -29,14 +27,14 @@ class VideoRenderer : public MediaPacketConsumerBase,
 
   ~VideoRenderer() override;
 
-  void Bind(InterfaceRequest<MediaRenderer> renderer_request);
+  void Bind(fidl::InterfaceRequest<MediaRenderer> renderer_request);
 
   // Get the size of the video to be rendered.
-  Size GetSize();
+  mozart::Size GetSize();
 
   // Gets an RGBA video frame corresponding to the specified reference time.
   void GetRgbaFrame(uint8_t* rgba_buffer,
-                    const Size& rgba_buffer_size,
+                    const mozart::Size& rgba_buffer_size,
                     int64_t reference_time);
 
  private:
@@ -46,10 +44,10 @@ class VideoRenderer : public MediaPacketConsumerBase,
 
   void SetMediaType(MediaTypePtr media_type) override;
 
-  void GetPacketConsumer(
-      InterfaceRequest<MediaPacketConsumer> packet_consumer_request) override;
+  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
+                             packet_consumer_request) override;
 
-  void GetTimelineControlPoint(InterfaceRequest<MediaTimelineControlPoint>
+  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
@@ -64,8 +62,8 @@ class VideoRenderer : public MediaPacketConsumerBase,
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
-  void GetTimelineConsumer(
-      InterfaceRequest<TimelineConsumer> timeline_consumer_request) override;
+  void GetTimelineConsumer(fidl::InterfaceRequest<TimelineConsumer>
+                               timeline_consumer_request) override;
 
   void Prime(const PrimeCallback& callback) override;
 
@@ -96,9 +94,9 @@ class VideoRenderer : public MediaPacketConsumerBase,
   // Calls the callback with the current status.
   void CompleteGetStatus(const GetStatusCallback& callback);
 
-  Binding<MediaRenderer> renderer_binding_;
-  Binding<MediaTimelineControlPoint> control_point_binding_;
-  Binding<TimelineConsumer> timeline_consumer_binding_;
+  fidl::Binding<MediaRenderer> renderer_binding_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;
@@ -112,6 +110,3 @@ class VideoRenderer : public MediaPacketConsumerBase,
 };
 
 }  // namespace media
-}  // namespace moj
-
-#endif  // APPS_MEDIA_CPP_VIDEO_RENDERER_H_

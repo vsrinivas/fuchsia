@@ -4,31 +4,30 @@
 
 #include "apps/media/src/media_service/media_sink_impl.h"
 
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/media_service/conversion_pipeline_builder.h"
-#include "apps/media/src/mojo/mojo_type_conversions.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
-    InterfaceHandle<MediaRenderer> renderer,
+    fidl::InterfaceHandle<MediaRenderer> renderer,
     MediaTypePtr media_type,
-    InterfaceRequest<MediaSink> request,
+    fidl::InterfaceRequest<MediaSink> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaSinkImpl>(new MediaSinkImpl(
-      renderer.Pass(), media_type.Pass(), request.Pass(), owner));
+      std::move(renderer), std::move(media_type), std::move(request), owner));
 }
 
-MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
+MediaSinkImpl::MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer,
                              MediaTypePtr media_type,
-                             InterfaceRequest<MediaSink> request,
+                             fidl::InterfaceRequest<MediaSink> request,
                              MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSink>(this, request.Pass(), owner),
-      consumer_(MojoPacketConsumer::Create()),
-      producer_(MojoPacketProducer::Create()),
-      renderer_(MediaRendererPtr::Create(renderer.Pass())) {
+    : MediaServiceImpl::Product<MediaSink>(this, std::move(request), owner),
+      consumer_(FidlPacketConsumer::Create()),
+      producer_(FidlPacketProducer::Create()),
+      renderer_(MediaRendererPtr::Create(std::move(renderer))) {
   FTL_DCHECK(renderer_);
   FTL_DCHECK(media_type);
 
@@ -48,7 +47,7 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
   input_stream_type_ = media_type.To<std::unique_ptr<StreamType>>();
 
   renderer_->GetSupportedMediaTypes([this, consumer_ref, producer_ref](
-      Array<MediaTypeSetPtr> supported_media_types) {
+      fidl::Array<MediaTypeSetPtr> supported_media_types) {
     std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
         supported_stream_types = supported_media_types.To<std::unique_ptr<
             std::vector<std::unique_ptr<media::StreamTypeSet>>>>();
@@ -77,7 +76,7 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
     renderer_->SetMediaType(MediaType::From(std::move(producer_stream_type)));
     MediaPacketConsumerPtr consumer;
     renderer_->GetPacketConsumer(GetProxy(&consumer));
-    producer_->Connect(consumer.Pass(), [this]() {
+    producer_->Connect(std::move(consumer), [this]() {
       graph_.Prepare();
       ready_.Occur();
     });
@@ -87,15 +86,14 @@ MediaSinkImpl::MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
 MediaSinkImpl::~MediaSinkImpl() {}
 
 void MediaSinkImpl::GetPacketConsumer(
-    InterfaceRequest<MediaPacketConsumer> consumer) {
-  consumer_->Bind(consumer.Pass());
+    fidl::InterfaceRequest<MediaPacketConsumer> consumer) {
+  consumer_->Bind(std::move(consumer));
 }
 
 void MediaSinkImpl::GetTimelineControlPoint(
-    InterfaceRequest<MediaTimelineControlPoint> req) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> req) {
   FTL_DCHECK(renderer_);
-  renderer_->GetTimelineControlPoint(req.Pass());
+  renderer_->GetTimelineControlPoint(std::move(req));
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -6,7 +6,6 @@
 
 #include "apps/media/src/framework/stages/util.h"
 
-namespace mojo {
 namespace media {
 
 ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
@@ -151,4 +150,3 @@ void ActiveMultistreamSourceStage::FlushOutput(size_t index) {
 }
 
 }  // namespace media
-}  // namespace mojo

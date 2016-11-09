@@ -1,0 +1,29 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fidl") {
+  sources = [
+    "fidl_formatting.cc",
+    "fidl_formatting.h",
+    "fidl_packet_consumer.cc",
+    "fidl_packet_consumer.h",
+    "fidl_packet_producer.cc",
+    "fidl_packet_producer.h",
+    "fidl_reader.cc",
+    "fidl_reader.h",
+    "fidl_type_conversions.cc",
+    "fidl_type_conversions.h",
+  ]
+
+  deps = [
+    "//apps/media/cpp",
+    "//apps/media/interfaces",
+    "//apps/media/src/demux",
+    "//apps/media/src/framework",
+    "//apps/media/src/util",
+    "//apps/network/services",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}

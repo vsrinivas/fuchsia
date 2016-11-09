@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_
-#define APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_
+#pragma once
 
 #include <limits>
 #include <map>
 #include <memory>
 #include <vector>
 
-#include "apps/media/cpp/mapped_shared_buffer.h"
-#include "mojo/public/cpp/system/buffer.h"
+#include <magenta/types.h>
+#include <mx/vmo.h>
 
-namespace mojo {
+#include "apps/media/cpp/mapped_shared_buffer.h"
+
 namespace media {
 
 // SharedBufferSet simplifies the use of multiple shared buffers by taking care
@@ -60,14 +60,14 @@ class SharedBufferSet {
   virtual ~SharedBufferSet();
 
   // Adds the indicated buffer.
-  MojoResult AddBuffer(uint32_t buffer_id, ScopedSharedBufferHandle handle);
+  mx_status_t AddBuffer(uint32_t buffer_id, mx::vmo vmo);
 
   // Creates a new buffer of the indicated size. If successful, delivers the
-  // buffer id assigned to the buffer and a handle to the buffer via
-  // |buffer_id_out| and |handle_out|.
-  MojoResult CreateNewBuffer(uint64_t size,
-                             uint32_t* buffer_id_out,
-                             ScopedSharedBufferHandle* handle_out);
+  // buffer id assigned to the buffer and a vmo to the buffer via
+  // |buffer_id_out| and |vmo_out|.
+  mx_status_t CreateNewBuffer(uint64_t size,
+                              uint32_t* buffer_id_out,
+                              mx::vmo* vmo_out);
 
   // Removes a buffer.
   void RemoveBuffer(uint32_t buffer_id);
@@ -98,6 +98,3 @@ class SharedBufferSet {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_SHARED_BUFFER_SET_H_

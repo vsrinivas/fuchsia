@@ -2,17 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 source_set("util") {
   sources = [
     "callback_joiner.cc",
     "callback_joiner.h",
     "factory_service_base.cc",
     "factory_service_base.h",
+    "fidl_publisher.h",
     "incident.cc",
     "incident.h",
-    "mojo_publisher.h",
     "priority_queue_of_unique_ptr.h",
     "safe_clone.h",
     "timeline_control_point.cc",
@@ -22,9 +20,9 @@ source_set("util") {
   deps = [
     "//apps/media/cpp",
     "//apps/media/interfaces",
+    "//apps/modular/lib/app",
     "//lib/ftl",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
+    "//lib/mtl",
   ]
 }
 
@@ -41,7 +39,6 @@ executable("apptests") {
 
   deps = [
     ":util",
-    "//mojo/system",
     "//third_party/gtest",
   ]
 }

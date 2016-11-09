@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 source_set("framework_create") {
   sources = [
     "decoder.cc",
@@ -14,7 +12,7 @@ source_set("framework_create") {
     "//apps/media/src/decode",
     "//apps/media/src/demux",
     "//apps/media/src/ffmpeg",
+    "//apps/media/src/fidl",
     "//apps/media/src/framework",
-    "//apps/media/src/mojo",
   ]
 }

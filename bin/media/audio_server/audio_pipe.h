@@ -7,10 +7,9 @@
 #include <memory>
 
 #include "apps/media/cpp/media_packet_consumer_base.h"
-#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/interfaces/timeline_controller.fidl.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -99,4 +98,3 @@ class AudioPipe : public MediaPacketConsumerBase {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

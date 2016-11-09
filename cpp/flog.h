@@ -2,33 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_FLOG_H_
-#define APPS_MEDIA_CPP_FLOG_H_
+#pragma once
 
 #include <atomic>
 #include <memory>
 #include <string>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/array.h"
-#include "mojo/public/cpp/bindings/message.h"
-#include "mojo/public/cpp/system/time.h"
 
-namespace mojo {
 namespace flog {
 
 //
 // FORMATTED LOGGING
 //
 // The Flog class and associated macros provide a means of logging 'formatted'
-// log messages serialized by Mojo. Flog uses an instance of FlogLogger to
+// log messages serialized by fidl. Flog uses an instance of FlogLogger to
 // log events to the FlogService. Messages pulled from the FlogService can be
-// deserialized using Mojo on behalf of log visualization and analysis tools.
+// deserialized using fidl on behalf of log visualization and analysis tools.
 //
-// Message logging is performed using a 'channel', which is bound to a Mojo
-// proxy for a particular interface. Mojo interfaces used for this purpose must
+// Message logging is performed using a 'channel', which is bound to a fidl
+// proxy for a particular interface. Fidl interfaces used for this purpose must
 // be request-only, meaning the constituent methods must not have responses.
 //
 // Assume that we've defined the following interface:
@@ -84,26 +81,27 @@ namespace flog {
 // the log label, usually the name of the service or application. Should be
 // called once on startup, usually in the OnInitialize override of the
 // ApplicationImplBase subclass.
-#define FLOG_INITIALIZE(shell, label) mojo::flog::Flog::Initialize(shell, label)
+#define FLOG_INITIALIZE(application_context, label) \
+  flog::Flog::Initialize(application_context, label)
 
 // Destroys the resources created by FLOG_INITIALIZE. Should be called once on
 // shutdown, usually in the destructor of the ApplicationImplBase subclass.
-#define FLOG_DESTROY() mojo::flog::Flog::Destroy()
+#define FLOG_DESTROY() flog::Flog::Destroy()
 
 // Declares a flog channel but does not initialize it. This is useful when the
 // declaration and definition must be separate.
 #define FLOG_CHANNEL_DECL(channel_type, channel_name) \
-  std::unique_ptr<mojo::flog::FlogProxy<channel_type>> channel_name
+  std::unique_ptr<flog::FlogProxy<channel_type>> channel_name
 
 // Defines a variable with the indicated name (|channel_name|) and the indicated
-// type (|channel_type|, which must be a mojo interface type). |subject_address|
+// type (|channel_type|, which must be a fidl interface type). |subject_address|
 // is provided to associate an address with the channel. Use FLOG_CHANNEL or
 // FLOG_INSTANCE_CHANNEL instead of this macro unless there is a need to be
 // specific about the subject. A |subject_address| value of 0 indicates there
 // is no subject address for the channel.
 #define FLOG_CHANNEL_WITH_SUBJECT(channel_type, channel_name, subject_address) \
   FLOG_CHANNEL_DECL(channel_type, channel_name) =                              \
-      mojo::flog::FlogProxy<channel_type>::Create(subject_address)
+      flog::FlogProxy<channel_type>::Create(subject_address)
 
 // Logs a channel message on the specified channel (a name previously declared
 // using FLOG_CHANNEL, FLOG_INSTANCE_CHANNEL, FLOG_CHANNEL_WITH_SUBJECT or
@@ -138,7 +136,8 @@ namespace flog {
 // Thread-safe logger for all channels in a given process.
 class Flog {
  public:
-  static void Initialize(Shell* shell, const std::string& label);
+  static void Initialize(modular::ApplicationContext* application_context,
+                         const std::string& label);
 
   // Deletes the flog logger singleton.
   static void Destroy() {
@@ -155,7 +154,7 @@ class Flog {
                                  uint64_t subject_address);
 
   // Logs a channel message.
-  static void LogChannelMessage(uint32_t channel_id, Message* message);
+  static void LogChannelMessage(uint32_t channel_id, fidl::Message* message);
 
   // Logs the deletion of a channel.
   static void LogChannelDeletion(uint32_t channel_id);
@@ -169,7 +168,7 @@ class Flog {
 };
 
 // Channel backing a FlogProxy.
-class FlogChannel : public MessageReceiverWithResponder {
+class FlogChannel : public fidl::MessageReceiverWithResponder {
  public:
   FlogChannel(const char* channel_type_name, uint64_t subject_address);
 
@@ -179,9 +178,9 @@ class FlogChannel : public MessageReceiverWithResponder {
   uint32_t id() const { return id_; }
 
   // MessageReceiverWithResponder implementation.
-  bool Accept(Message* message) override;
+  bool Accept(fidl::Message* message) override;
 
-  bool AcceptWithResponder(Message* message,
+  bool AcceptWithResponder(fidl::Message* message,
                            MessageReceiver* responder) override;
 
  private:
@@ -205,6 +204,3 @@ class FlogProxy : public T::Proxy_ {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_FLOG_H_

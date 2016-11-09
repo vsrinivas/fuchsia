@@ -15,7 +15,6 @@
 #include "apps/media/src/framework/stages/stage.h"
 #include "apps/media/src/framework/stages/transform_stage.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -205,4 +204,3 @@ class Graph {
 };
 
 }  // namespace media
-}  // namespace mojo

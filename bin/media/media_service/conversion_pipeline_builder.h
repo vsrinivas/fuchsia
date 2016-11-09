@@ -8,7 +8,6 @@
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/types/stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // Attempts to add transforms to the given pipeline to convert in_type to a
@@ -23,4 +22,3 @@ bool BuildConversionPipeline(
     std::unique_ptr<StreamType>* out_type);
 
 }  // namespace media
-}  // namespace mojo

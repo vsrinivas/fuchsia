@@ -5,14 +5,13 @@
 #pragma once
 
 #include "apps/media/cpp/timeline_function.h"
-#include "apps/media/interfaces/timeline_controller.mojom.h"
-#include "apps/media/src/util/mojo_publisher.h"
+#include "apps/media/interfaces/timeline_controller.fidl.h"
+#include "apps/media/src/util/fidl_publisher.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
 // MediaTimelineControlPoint implementation.
@@ -25,7 +24,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   ~TimelineControlPoint() override;
 
   // Binds to the control point. If a binding exists already, it is closed.
-  void Bind(InterfaceRequest<MediaTimelineControlPoint> request);
+  void Bind(fidl::InterfaceRequest<MediaTimelineControlPoint> request);
 
   // Determines whether the control point is currently bound.
   bool is_bound() { return control_point_binding_.is_bound(); }
@@ -52,7 +51,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
                  const GetStatusCallback& callback) override;
 
   void GetTimelineConsumer(
-      InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+      fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
   void Prime(const PrimeCallback& callback) override;
 
@@ -83,9 +82,9 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   // Unbinds from clients and resets to initial state.
   void PostReset() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  Binding<MediaTimelineControlPoint> control_point_binding_;
-  Binding<TimelineConsumer> consumer_binding_;
-  MojoPublisher<GetStatusCallback> status_publisher_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> consumer_binding_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
   PrimeRequestedCallback prime_requested_callback_;
 
   ftl::Mutex mutex_;
@@ -100,4 +99,3 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 };
 
 }  // namespace media
-}  // namespace mojo

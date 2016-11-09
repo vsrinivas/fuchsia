@@ -7,7 +7,6 @@
 #include <memory>
 #include <vector>
 
-namespace mojo {
 namespace media {
 
 template <typename T>
@@ -34,4 +33,3 @@ std::unique_ptr<std::vector<std::unique_ptr<T>>> SafeClone(
 }
 
 }  // namespace media
-}  // namespace mojo

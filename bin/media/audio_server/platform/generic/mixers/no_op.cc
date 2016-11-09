@@ -7,7 +7,6 @@
 #include "apps/media/src/audio_server/audio_track_impl.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 namespace mixers {
@@ -27,4 +26,3 @@ bool NoOp::Mix(int32_t* dst,
 }  // namespace mixers
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

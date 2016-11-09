@@ -8,7 +8,6 @@
 
 #include "apps/media/src/demux/demux.h"
 
-namespace mojo {
 namespace media {
 
 class FfmpegDemux : public Demux {
@@ -17,4 +16,3 @@ class FfmpegDemux : public Demux {
 };
 
 }  // namespace media
-}  // namespace mojo

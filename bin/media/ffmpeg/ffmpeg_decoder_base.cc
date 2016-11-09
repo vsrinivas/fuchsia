@@ -7,7 +7,6 @@
 #include "apps/media/src/ffmpeg/av_codec_context.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
@@ -103,4 +102,3 @@ void FfmpegDecoderBase::DecoderPacket::Release() {
 }
 
 }  // namespace media
-}  // namespace mojo

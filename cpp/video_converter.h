@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_VIDEO_CONVERTER_H_
-#define APPS_MEDIA_CPP_VIDEO_CONVERTER_H_
+#pragma once
 
 #include <memory>
 
 #include "apps/media/cpp/video_packet_layout.h"
-#include "mojo/services/geometry/interfaces/geometry.mojom.h"
+#include "apps/mozart/services/geometry/geometry.fidl.h"
 
-namespace mojo {
 namespace media {
 
 class VideoConverter {
@@ -24,7 +22,7 @@ class VideoConverter {
   void SetMediaType(const MediaTypePtr& media_type);
 
   // Get the size of the video.
-  Size GetSize();
+  mozart::Size GetSize();
 
   // Converts the frame in the payload into the provided RGBA buffer.
   void ConvertFrame(uint8_t* rgba_buffer,
@@ -50,6 +48,3 @@ class VideoConverter {
 };
 
 }  // namespace media
-}  // namespace moj
-
-#endif  // APPS_MEDIA_CPP_VIDEO_CONVERTER_H_

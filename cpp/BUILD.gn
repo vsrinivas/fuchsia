@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
-mojo_sdk_source_set("cpp") {
-  restrict_external_deps = false
+source_set("cpp") {
   sources = [
     "fifo_allocator.cc",
     "fifo_allocator.h",
@@ -37,10 +34,9 @@ mojo_sdk_source_set("cpp") {
   deps = [
     "//apps/media/interfaces",
     "//apps/media/interfaces/flog",
+    "//apps/modular/lib/app",
+    "//apps/mozart/services/geometry",
     "//lib/ftl",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/system",
-    "//mojo/services/geometry/interfaces",
   ]
 }
 
@@ -59,10 +55,7 @@ executable("apptests") {
 
   deps = [
     ":cpp",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/environment",
-    "//mojo/public/cpp/system",
-    "//mojo/system",
+    "//lib/mtl",
     "//third_party/gtest",
   ]
 }

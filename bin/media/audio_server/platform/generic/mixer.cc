@@ -10,7 +10,6 @@
 #include "apps/media/src/audio_server/platform/generic/mixers/point_sampler.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -50,4 +49,3 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

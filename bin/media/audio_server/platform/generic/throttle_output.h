@@ -6,7 +6,6 @@
 
 #include "apps/media/src/audio_server/platform/generic/standard_output_base.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -31,4 +30,3 @@ class ThrottleOutput : public StandardOutputBase {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

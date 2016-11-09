@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_
+#pragma once
 
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
-namespace mojo {
 namespace flog {
 
 class Channel {
@@ -70,6 +68,3 @@ class Channel {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_H_

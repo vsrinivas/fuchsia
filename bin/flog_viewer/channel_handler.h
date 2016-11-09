@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_HANDLER_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_HANDLER_H_
+#pragma once
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
+#include "lib/fidl/cpp/bindings/message.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/message.h"
 
-namespace mojo {
 namespace flog {
 
 class Channel;
@@ -39,7 +37,7 @@ class ChannelHandler {
   // Handles a channel message.
   void HandleMessage(uint32_t entry_index,
                      const FlogEntryPtr& entry,
-                     Message* message,
+                     fidl::Message* message,
                      const ChannelLookupCallback& channel_lookup_callback);
 
   // Gets the accumulator from the handler, if there is one. The default
@@ -49,7 +47,7 @@ class ChannelHandler {
  protected:
   ChannelHandler();
 
-  virtual void HandleMessage(Message* message) = 0;
+  virtual void HandleMessage(fidl::Message* message) = 0;
 
   std::ostream& ReportProblem() {
     FTL_DCHECK(entry_) << "ReportProblem called outside of HandleMessage";
@@ -76,6 +74,3 @@ class ChannelHandler {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_CHANNEL_HANDLER_H_

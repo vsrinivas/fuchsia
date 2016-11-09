@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
-namespace mojo {
 namespace media {
 
 // Sink that consumes packets asynchronously.
@@ -31,4 +30,3 @@ class ActiveSink : public Part {
 };
 
 }  // namespace media
-}  // namespace mojo

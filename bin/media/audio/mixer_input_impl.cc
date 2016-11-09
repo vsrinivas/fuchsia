@@ -4,7 +4,6 @@
 
 #include "apps/media/src/audio/mixer_input_impl.h"
 
-namespace mojo {
 namespace media {
 
 // MixerInputImpl<float, float, float> template specializations.
@@ -88,4 +87,3 @@ void MixerInputImpl<float, float, float>::Job::MixFade(
 }
 
 }  // namespace media
-}  // namespace mojo

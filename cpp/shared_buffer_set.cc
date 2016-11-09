@@ -4,18 +4,17 @@
 
 #include "apps/media/cpp/shared_buffer_set.h"
 
-#include "lib/ftl/logging.h"
-#include "mojo/public/cpp/system/handle.h"
+#include <mx/vmo.h>
 
-namespace mojo {
+#include "lib/ftl/logging.h"
+
 namespace media {
 
 SharedBufferSet::SharedBufferSet() {}
 
 SharedBufferSet::~SharedBufferSet() {}
 
-MojoResult SharedBufferSet::AddBuffer(uint32_t buffer_id,
-                                      ScopedSharedBufferHandle handle) {
+mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
   if (buffer_id >= buffers_.size()) {
     buffers_.resize(buffer_id + 1);
   } else {
@@ -23,35 +22,34 @@ MojoResult SharedBufferSet::AddBuffer(uint32_t buffer_id,
   }
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  MojoResult result = mapped_shared_buffer->InitFromHandle(handle.Pass());
+  mx_status_t status = mapped_shared_buffer->InitFromVmo(std::move(vmo));
 
-  if (result == MOJO_RESULT_OK) {
+  if (status == NO_ERROR) {
     AddBuffer(buffer_id, mapped_shared_buffer);
   }
 
-  return result;
+  return status;
 }
 
-MojoResult SharedBufferSet::CreateNewBuffer(
-    uint64_t size,
-    uint32_t* buffer_id_out,
-    ScopedSharedBufferHandle* handle_out) {
+mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
+                                             uint32_t* buffer_id_out,
+                                             mx::vmo* vmo_out) {
   FTL_DCHECK(size != 0);
   FTL_DCHECK(buffer_id_out != nullptr);
-  FTL_DCHECK(handle_out != nullptr);
+  FTL_DCHECK(vmo_out != nullptr);
 
   uint32_t buffer_id = AllocateBufferId();
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  MojoResult result = mapped_shared_buffer->InitNew(size);
+  mx_status_t status = mapped_shared_buffer->InitNew(size);
 
-  if (result == MOJO_RESULT_OK) {
+  if (status == NO_ERROR) {
     *buffer_id_out = buffer_id;
-    *handle_out = mapped_shared_buffer->GetDuplicateHandle();
+    *vmo_out = mapped_shared_buffer->GetDuplicateVmo();
     AddBuffer(buffer_id, mapped_shared_buffer);
   }
 
-  return result;
+  return status;
 }
 
 void SharedBufferSet::RemoveBuffer(uint32_t buffer_id) {
@@ -141,4 +139,3 @@ void SharedBufferSet::AddBuffer(uint32_t buffer_id,
 }
 
 }  // namespace media
-}  // namespace mojo

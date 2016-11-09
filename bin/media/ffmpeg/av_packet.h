@@ -9,7 +9,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace mojo {
 namespace media {
 namespace ffmpeg {
 
@@ -29,4 +28,3 @@ struct AvPacket {
 
 }  // namespace ffmpeg
 }  // namespace media
-}  // namespace mojo

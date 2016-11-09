@@ -10,8 +10,6 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
-namespace mojo {
-
 // The Incident class provides a facility for executing code as the consequence
 // of some occurrence. This can be useful for building state machines and
 // otherwise dealing with asynchronous operations.
@@ -75,10 +73,6 @@ class Incident {
     consequences_.clear();
   }
 
-  // Calls Occur. This method makes an Incident convertible to
-  // mojo::Callback<void()>.
-  void Run() { Occur(); }
-
  private:
   bool occurred_ = false;
   std::vector<std::function<void()>> consequences_;
@@ -134,14 +128,8 @@ class ThreadsafeIncident {
     consequences_.clear();
   }
 
-  // Calls Occur. This method makes an ThreadsafeIncident convertible to
-  // mojo::Callback<void()>.
-  void Run() { Occur(); }
-
  private:
   mutable ftl::Mutex mutex_;
   bool occurred_ FTL_GUARDED_BY(mutex_) = false;
   std::vector<std::function<void()>> consequences_ FTL_GUARDED_BY(mutex_);
 };
-
-}  // namespace mojo

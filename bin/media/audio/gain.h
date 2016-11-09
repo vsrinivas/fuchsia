@@ -6,7 +6,6 @@
 
 #include <limits>
 
-namespace mojo {
 namespace media {
 
 // Represents relative volume in logarithmic decibel units. Given two audio
@@ -41,4 +40,3 @@ struct Gain {
 };
 
 }  // namespace media
-}  // namespace mojo

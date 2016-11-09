@@ -6,12 +6,11 @@
 
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const InterfacePtr<T>& value) {
+std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
   if (!value.is_bound()) {
     return os << "<not bound>" << std::endl;
   } else {
@@ -19,9 +18,8 @@ std::ostream& operator<<(std::ostream& os, const InterfacePtr<T>& value) {
   }
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::MediaSourceStreamDescriptorPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::MediaSourceStreamDescriptorPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -35,8 +33,7 @@ std::ostream& operator<<(
   return os << outdent;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypePtr& value) {
+std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -58,7 +55,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeSetPtr& value) {
+                         const media::MediaTypeSetPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -74,7 +71,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeDetailsPtr& value) {
+                         const media::MediaTypeDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else if (value->has_unknown_tag()) {
@@ -100,7 +97,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeSetDetailsPtr& value) {
+                         const media::MediaTypeSetDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else if (value->has_unknown_tag()) {
@@ -126,7 +123,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::AudioMediaTypeDetailsPtr& value) {
+                         const media::AudioMediaTypeDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -142,9 +139,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << outdent;
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::AudioMediaTypeSetDetailsPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::AudioMediaTypeSetDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -165,7 +161,7 @@ std::ostream& operator<<(
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::VideoMediaTypeDetailsPtr& value) {
+                         const media::VideoMediaTypeDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -183,9 +179,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << outdent;
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::VideoMediaTypeSetDetailsPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::VideoMediaTypeSetDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -201,7 +196,7 @@ std::ostream& operator<<(
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::TextMediaTypeDetailsPtr& value) {
+                         const media::TextMediaTypeDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -215,7 +210,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::TextMediaTypeSetDetailsPtr& value) {
+                         const media::TextMediaTypeSetDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -228,9 +223,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << outdent;
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::SubpictureMediaTypeDetailsPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::SubpictureMediaTypeDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -243,9 +237,8 @@ std::ostream& operator<<(
   return os << outdent;
 }
 
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::SubpictureMediaTypeSetDetailsPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::SubpictureMediaTypeSetDetailsPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -258,7 +251,8 @@ std::ostream& operator<<(
   return os << outdent;
 }
 
-std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const media::TimelineTransformPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -274,8 +268,7 @@ std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value) {
   return os << outdent;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacketPtr& value) {
+std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   }
@@ -283,8 +276,7 @@ std::ostream& operator<<(std::ostream& os,
   return os << *value;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacket& value) {
+std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value) {
   os << std::endl;
   os << indent;
   os << begl << "pts: " << AsTime(value.pts) << std::endl;
@@ -298,7 +290,7 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacketDemandPtr& value) {
+                         const media::MediaPacketDemandPtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else {
@@ -315,7 +307,7 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os, AsTime value) {
   int64_t time = value.time_;
 
-  if (time == kUnspecifiedTime) {
+  if (time == media::kUnspecifiedTime) {
     return os << "unspecified";
   }
 
@@ -328,31 +320,31 @@ std::ostream& operator<<(std::ostream& os, AsTime value) {
             << time % 1000000000ll;
 }
 
-const char* StringFromMediaTypeMedium(mojo::media::MediaTypeMedium value) {
+const char* StringFromMediaTypeMedium(media::MediaTypeMedium value) {
   switch (value) {
-    case mojo::media::MediaTypeMedium::AUDIO:
+    case media::MediaTypeMedium::AUDIO:
       return "AUDIO";
-    case mojo::media::MediaTypeMedium::VIDEO:
+    case media::MediaTypeMedium::VIDEO:
       return "VIDEO";
-    case mojo::media::MediaTypeMedium::TEXT:
+    case media::MediaTypeMedium::TEXT:
       return "TEXT";
-    case mojo::media::MediaTypeMedium::SUBPICTURE:
+    case media::MediaTypeMedium::SUBPICTURE:
       return "SUBPICTURE";
   }
   return "UNKNOWN MEDIUM";
 }
 
-const char* StringFromAudioSampleFormat(mojo::media::AudioSampleFormat value) {
+const char* StringFromAudioSampleFormat(media::AudioSampleFormat value) {
   switch (value) {
-    case mojo::media::AudioSampleFormat::ANY:
+    case media::AudioSampleFormat::ANY:
       return "ANY";
-    case mojo::media::AudioSampleFormat::UNSIGNED_8:
+    case media::AudioSampleFormat::UNSIGNED_8:
       return "UNSIGNED_8";
-    case mojo::media::AudioSampleFormat::SIGNED_16:
+    case media::AudioSampleFormat::SIGNED_16:
       return "SIGNED_16";
-    case mojo::media::AudioSampleFormat::SIGNED_24_IN_32:
+    case media::AudioSampleFormat::SIGNED_24_IN_32:
       return "SIGNED_24_IN_32";
-    case mojo::media::AudioSampleFormat::FLOAT:
+    case media::AudioSampleFormat::FLOAT:
       return "FLOAT";
   }
   return "UNKNOWN FORMAT";
@@ -360,4 +352,3 @@ const char* StringFromAudioSampleFormat(mojo::media::AudioSampleFormat value) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

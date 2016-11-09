@@ -2,13 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 executable("video_player") {
   sources = [
     "main.cc",
-    "video_player_app.cc",
-    "video_player_app.h",
     "video_player_params.cc",
     "video_player_params.h",
     "video_player_view.cc",
@@ -19,13 +15,9 @@ executable("video_player") {
     "//apps/media/cpp",
     "//apps/media/interfaces",
     "//apps/mozart/lib/skia:vmo",
-    "//apps/mozart/lib/view_framework",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/c:GLES2",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/services/geometry/interfaces",
-    "//mojo/system",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/geometry/cpp",
+    "//lib/mtl",
     "//third_party/skia",
   ]
 }

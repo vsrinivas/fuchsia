@@ -4,7 +4,6 @@
 
 #include "apps/media/src/util/callback_joiner.h"
 
-namespace mojo {
 namespace media {
 
 CallbackJoiner::CallbackJoiner() {}
@@ -12,4 +11,3 @@ CallbackJoiner::CallbackJoiner() {}
 CallbackJoiner::~CallbackJoiner() {}
 
 }  // namespace media
-}  // namespace mojo

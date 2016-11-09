@@ -8,7 +8,6 @@
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/framework/formatting.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -328,4 +327,3 @@ bool BuildConversionPipeline(
 }
 
 }  // namespace media
-}  // namespace mojo

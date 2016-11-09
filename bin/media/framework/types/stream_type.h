@@ -12,7 +12,6 @@
 #include "apps/media/src/framework/types/bytes.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 class StreamType;
@@ -131,4 +130,3 @@ class StreamTypeSet {
 };
 
 }  // namespace media
-}  // namespace mojo

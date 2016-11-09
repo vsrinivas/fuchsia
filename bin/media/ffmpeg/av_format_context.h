@@ -11,7 +11,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace mojo {
 namespace media {
 
 struct AVFormatContextDeleter {
@@ -43,4 +42,3 @@ struct AvFormatContext {
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -4,7 +4,6 @@
 
 #pragma once
 
-namespace mojo {
 namespace media {
 
 // Host for a source, sink or transform.
@@ -17,4 +16,3 @@ class Part {
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/stages/stage.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 size_t PartRef::input_count() const {
@@ -94,4 +93,3 @@ bool OutputRef::valid() const {
 }
 
 }  // namespace media
-}  // namespace mojo

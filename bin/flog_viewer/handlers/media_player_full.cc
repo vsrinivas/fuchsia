@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -21,12 +20,12 @@ MediaPlayerFull::MediaPlayerFull(const std::string& format)
 
 MediaPlayerFull::~MediaPlayerFull() {}
 
-void MediaPlayerFull::HandleMessage(Message* message) {
+void MediaPlayerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
 void MediaPlayerFull::ReceivedDemuxDescription(
-    Array<mojo::media::MediaTypePtr> stream_types) {
+    fidl::Array<media::MediaTypePtr> stream_types) {
   std::cout << entry() << "MediaPlayer.ReceivedDemuxDescription" << std::endl;
   std::cout << indent;
   std::cout << begl << "stream_types: " << stream_types;
@@ -84,7 +83,7 @@ void MediaPlayerFull::Flushing() {
 }
 
 void MediaPlayerFull::SettingTimelineTransform(
-    TimelineTransformPtr timeline_transform) {
+    media::TimelineTransformPtr timeline_transform) {
   std::cout << entry() << "MediaPlayer.SettingTimelineTransform" << std::endl;
   std::cout << indent;
   std::cout << begl << "timeline_transform: " << timeline_transform;
@@ -93,4 +92,3 @@ void MediaPlayerFull::SettingTimelineTransform(
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

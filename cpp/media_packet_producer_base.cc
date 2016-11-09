@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 MediaPacketProducerBase::MediaPacketProducerBase() {
@@ -31,11 +30,11 @@ void MediaPacketProducerBase::Connect(
 
   FLOG(log_channel_, Connecting());
 
-  consumer_ = consumer.Pass();
+  consumer_ = std::move(consumer);
   consumer_.set_connection_error_handler([this]() { OnFailure(); });
 
   HandleDemandUpdate();
-  callback.Run();
+  callback();
 }
 
 void MediaPacketProducerBase::Reset() {
@@ -70,7 +69,7 @@ void MediaPacketProducerBase::FlushConsumer(
   consumer_->Flush([this, callback]() {
     flush_in_progress_ = false;
     FLOG(log_channel_, FlushCompleted());
-    callback.Run();
+    callback();
   });
 }
 
@@ -135,17 +134,17 @@ void MediaPacketProducerBase::ProducePacket(
 
   // Make sure the consumer is up-to-date with respect to buffers.
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  while (allocator_.PollForBufferUpdate(&buffer_id, &handle)) {
-    if (handle.is_valid()) {
-      consumer_->AddPayloadBuffer(buffer_id, handle.Pass());
+  mx::vmo vmo;
+  while (allocator_.PollForBufferUpdate(&buffer_id, &vmo)) {
+    if (vmo) {
+      consumer_->AddPayloadBuffer(buffer_id, std::move(vmo));
     } else {
       consumer_->RemovePayloadBuffer(buffer_id);
     }
   }
 
   consumer_->SupplyPacket(
-      media_packet.Pass(),
+      std::move(media_packet),
       [this, callback, label](MediaPacketDemandPtr demand) {
 #ifndef NDEBUG
         FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
@@ -208,7 +207,7 @@ void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {
 #ifndef NDEBUG
       FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
-      HandleDemandUpdate(demand.Pass());
+      HandleDemandUpdate(std::move(demand));
     });
   }
 }
@@ -243,4 +242,3 @@ void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
 }
 
 }  // namespace media
-}  // namespace mojo

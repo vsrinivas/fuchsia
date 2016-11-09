@@ -4,10 +4,8 @@
 
 #pragma once
 
-namespace mojo {
 namespace media {
 
 void InitFfmpeg();
 
 }  // namespace media
-}  // namespace mojo

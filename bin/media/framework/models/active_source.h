@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
-namespace mojo {
 namespace media {
 
 // Source that produces packets asynchronously.
@@ -33,4 +32,3 @@ class ActiveSource : public Part {
 };
 
 }  // namespace media
-}  // namespace mojo

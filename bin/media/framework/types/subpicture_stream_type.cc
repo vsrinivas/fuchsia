@@ -6,7 +6,6 @@
 
 #include "apps/media/src/util/safe_clone.h"
 
-namespace mojo {
 namespace media {
 
 SubpictureStreamType::SubpictureStreamType(
@@ -41,4 +40,3 @@ std::unique_ptr<StreamTypeSet> SubpictureStreamTypeSet::Clone() const {
 }
 
 }  // namespace media
-}  // namespace mojo

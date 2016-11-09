@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_DECODER_DIGEST_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_DECODER_DIGEST_H_
+#pragma once
 
 #include <vector>
 
-#include "apps/media/interfaces/logs/media_decoder_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_decoder_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -19,7 +17,7 @@ class MediaDecoderAccumulator;
 
 // Handler for MediaDecoderChannel messages, digest format.
 class MediaDecoderDigest : public ChannelHandler,
-                           public mojo::media::logs::MediaDecoderChannel {
+                           public media::logs::MediaDecoderChannel {
  public:
   MediaDecoderDigest(const std::string& format);
 
@@ -29,17 +27,17 @@ class MediaDecoderDigest : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(Message* message) override;
+  void HandleMessage(fidl::Message* message) override;
 
  private:
   // MediaDecoderChannel implementation.
-  void Config(mojo::media::MediaTypePtr input_type,
-              mojo::media::MediaTypePtr output_type,
+  void Config(media::MediaTypePtr input_type,
+              media::MediaTypePtr output_type,
               uint64_t consumer_address,
               uint64_t producer_address) override;
 
  private:
-  mojo::media::logs::MediaDecoderChannelStub stub_;
+  media::logs::MediaDecoderChannelStub stub_;
   std::shared_ptr<MediaDecoderAccumulator> accumulator_;
 };
 
@@ -53,8 +51,8 @@ class MediaDecoderAccumulator : public Accumulator {
   void Print(std::ostream& os) override;
 
  private:
-  mojo::media::MediaTypePtr input_type_;
-  mojo::media::MediaTypePtr output_type_;
+  media::MediaTypePtr input_type_;
+  media::MediaTypePtr output_type_;
   std::shared_ptr<Channel> consumer_channel_;
   std::shared_ptr<Channel> producer_channel_;
 
@@ -63,6 +61,3 @@ class MediaDecoderAccumulator : public Accumulator {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_DECODER_DIGEST_H_

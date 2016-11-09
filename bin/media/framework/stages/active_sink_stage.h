@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/models/active_sink.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 // A stage that hosts an ActiveSink.
@@ -48,4 +47,3 @@ class ActiveSinkStage : public Stage {
 };
 
 }  // namespace media
-}  // namespace mojo

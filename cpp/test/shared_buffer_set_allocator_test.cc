@@ -8,7 +8,6 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -17,16 +16,16 @@ static const uint64_t kLargeAlloc = 256 * 1024;
 
 uint32_t VerifyBufferAdd(SharedBufferSetAllocator* under_test) {
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
-  EXPECT_TRUE(handle.is_valid());
+  mx::vmo vmo;
+  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
+  EXPECT_TRUE(vmo);
   return buffer_id;
 }
 
 void VerifyNoBufferUpdate(SharedBufferSetAllocator* under_test) {
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &handle));
+  mx::vmo vmo;
+  EXPECT_FALSE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
 }
 
 void* AllocateRegion(SharedBufferSetAllocator* under_test,
@@ -66,10 +65,10 @@ void* AllocateRegion(SharedBufferSetAllocator* under_test,
 uint32_t VerifyBufferRemove(SharedBufferSetAllocator* under_test,
                             uint32_t expected_buffer_id) {
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &handle));
+  mx::vmo vmo;
+  EXPECT_TRUE(under_test->PollForBufferUpdate(&buffer_id, &vmo));
   EXPECT_EQ(expected_buffer_id, buffer_id);
-  EXPECT_FALSE(handle.is_valid());
+  EXPECT_FALSE(vmo);
   return buffer_id;
 }
 
@@ -124,9 +123,9 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
     void* region = under_test.AllocateRegion(kSmallAlloc);
 
     uint32_t buffer_id;
-    ScopedSharedBufferHandle handle;
-    if (under_test.PollForBufferUpdate(&buffer_id, &handle)) {
-      EXPECT_TRUE(handle.is_valid());
+    mx::vmo vmo;
+    if (under_test.PollForBufferUpdate(&buffer_id, &vmo)) {
+      EXPECT_TRUE(vmo);
       EXPECT_NE(first_buffer_id, buffer_id);
       second_buffer_id = buffer_id;
       SharedBufferSet::Locator locator = under_test.LocatorFromPtr(region);
@@ -160,4 +159,3 @@ TEST(SharedBufferSetAllocatorTest, ManySmallAllocations) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

@@ -6,12 +6,12 @@
 
 #include <vector>
 
-#include "apps/media/interfaces/seeking_reader.mojom.h"
-#include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/system/data_pipe.h"
+#include <mx/datapipe.h>
 
-namespace mojo {
+#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/logging.h"
+
 namespace media {
 
 // Fake SeekingReader that 'reads' a synthetic wav file.
@@ -30,7 +30,7 @@ class FakeWavReader : public SeekingReader {
   }
 
   // Binds the reader.
-  void Bind(InterfaceRequest<SeekingReader> request);
+  void Bind(fidl::InterfaceRequest<SeekingReader> request);
 
   // SeekingReader implementation.
   void Describe(const DescribeCallback& callback) override;
@@ -42,6 +42,7 @@ class FakeWavReader : public SeekingReader {
   static constexpr size_t kFormatChunkSize = 24;
   static constexpr size_t kDataChunkHeaderSize = 8;
   static constexpr size_t kChunkSizeDeficit = 8;
+  static constexpr mx_size_t kDatapipeCapacity = 65536;
 
   static constexpr uint64_t kDefaultSize = 64 * 1024;
   static constexpr uint16_t kAudioEncoding = 1;        // PCM
@@ -49,12 +50,13 @@ class FakeWavReader : public SeekingReader {
   static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
   static constexpr uint16_t kBitsPerSample = 16;       // 16-bit samples
 
-  // Callback function for WriteToProducerHandle's async wait.
-  static void WriteToProducerHandleStatic(void* reader_void_ptr,
-                                          MojoResult result);
+  // Callback function for WriteToProducer's async wait.
+  static void WriteToProducerStatic(mx_status_t status,
+                                    mx_signals_t pending,
+                                    void* closure);
 
-  // Writes data to producer_handle_ starting at postion_;
-  void WriteToProducerHandle();
+  // Writes data to datapipe_producer_ starting at postion_;
+  void WriteToProducer();
 
   // Writes the header to header_.
   void WriteHeader();
@@ -71,12 +73,11 @@ class FakeWavReader : public SeekingReader {
   // Gets the positionth byte of the file.
   uint8_t GetByte(size_t position);
 
-  Binding<SeekingReader> binding_;
+  fidl::Binding<SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
-  ScopedDataPipeProducerHandle producer_handle_;
+  mx::datapipe_producer datapipe_producer_;
   uint64_t position_;
 };
 
 }  // namespace media
-}  // namespace mojo

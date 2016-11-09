@@ -8,7 +8,6 @@
 
 #include "apps/media/src/framework/types/stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // Describes the type of a text stream.
@@ -49,4 +48,3 @@ class TextStreamTypeSet : public StreamTypeSet {
 };
 
 }  // namespace media
-}  // namespace mojo

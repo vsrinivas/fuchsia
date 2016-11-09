@@ -5,28 +5,27 @@
 #include "apps/media/src/media_service/media_demux_impl.h"
 
 #include "apps/media/src/demux/reader_cache.h"
-#include "apps/media/src/mojo/mojo_reader.h"
-#include "apps/media/src/mojo/mojo_type_conversions.h"
+#include "apps/media/src/fidl/fidl_reader.h"
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
-    InterfaceHandle<SeekingReader> reader,
-    InterfaceRequest<MediaDemux> request,
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::InterfaceRequest<MediaDemux> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
-      new MediaDemuxImpl(reader.Pass(), request.Pass(), owner));
+      new MediaDemuxImpl(std::move(reader), std::move(request), owner));
 }
 
-MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
-                               InterfaceRequest<MediaDemux> request,
+MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                               fidl::InterfaceRequest<MediaDemux> request,
                                MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaDemux>(this, request.Pass(), owner) {
+    : MediaServiceImpl::Product<MediaDemux>(this, std::move(request), owner) {
   FTL_DCHECK(reader);
 
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
@@ -37,10 +36,10 @@ MediaDemuxImpl::MediaDemuxImpl(InterfaceHandle<SeekingReader> reader,
         MediaDemuxStatusPtr status = MediaDemuxStatus::New();
         status->metadata = metadata_.Clone();
         status->problem = problem_.Clone();
-        callback.Run(version, status.Pass());
+        callback(version, std::move(status));
       });
 
-  std::shared_ptr<Reader> reader_ptr = MojoReader::Create(reader.Pass());
+  std::shared_ptr<Reader> reader_ptr = FidlReader::Create(std::move(reader));
   if (!reader_ptr) {
     ReportProblem(Problem::kProblemInternal, "couldn't create reader");
     return;
@@ -109,27 +108,28 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
 
 void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
-    Array<MediaTypePtr> result = Array<MediaTypePtr>::New(streams_.size());
+    fidl::Array<MediaTypePtr> result =
+        fidl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       MediaSourceStreamDescriptorPtr descriptor =
           MediaSourceStreamDescriptor::New();
       result[i] = streams_[i]->media_type();
     }
 
-    callback.Run(result.Pass());
+    callback(std::move(result));
   });
 }
 
 void MediaDemuxImpl::GetPacketProducer(
     uint32_t stream_index,
-    InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   RCHECK(init_complete_.occurred());
 
   if (stream_index >= streams_.size()) {
     return;
   }
 
-  streams_[stream_index]->BindPacketProducer(producer.Pass());
+  streams_[stream_index]->BindPacketProducer(std::move(producer));
 }
 
 void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
@@ -155,7 +155,7 @@ void MediaDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, [this, callback]() {
-    task_runner_->PostTask([callback]() { callback.Run(); });
+    task_runner_->PostTask([callback]() { callback(); });
   });
 }
 
@@ -166,7 +166,7 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
   FTL_DCHECK(stream_type_);
   FTL_DCHECK(graph);
 
-  producer_ = MojoPacketProducer::Create();
+  producer_ = FidlPacketProducer::Create();
   graph_->ConnectOutputToPart(output_, graph_->Add(producer_));
 }
 
@@ -177,16 +177,15 @@ MediaTypePtr MediaDemuxImpl::Stream::media_type() const {
 }
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
-    InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   FTL_DCHECK(producer_);
-  producer_->Bind(producer.Pass());
+  producer_->Bind(std::move(producer));
 }
 
 void MediaDemuxImpl::Stream::FlushConnection(
-    const MojoPacketProducer::FlushConnectionCallback callback) {
+    const FidlPacketProducer::FlushConnectionCallback callback) {
   FTL_DCHECK(producer_);
   producer_->FlushConnection(callback);
 }
 
 }  // namespace media
-}  // namespace mojo

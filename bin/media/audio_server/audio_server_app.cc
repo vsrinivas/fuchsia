@@ -5,41 +5,28 @@
 #include "apps/media/src/audio_server/audio_server_app.h"
 
 #include "apps/media/cpp/flog.h"
+#include "apps/media/src/audio_server/audio_server_impl.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/c/include/mojo/system/main.h"
-#include "mojo/public/cpp/application/run_application.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
-AudioServerApp::AudioServerApp() {}
+AudioServerApp::AudioServerApp()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()) {
+  FTL_DCHECK(application_context_);
+
+  FLOG_INITIALIZE(application_context_.get(), "audio_server");
+
+  application_context_->outgoing_services()->AddService<AudioServer>(
+      [this](fidl::InterfaceRequest<AudioServer> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+}
 
 AudioServerApp::~AudioServerApp() {
   FLOG_DESTROY();
 }
 
-void AudioServerApp::OnInitialize() {
-  FLOG_INITIALIZE(shell(), "audio_service");
-  server_impl_.Initialize();
-}
-
-bool AudioServerApp::OnAcceptConnection(
-    ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<AudioServer>(
-      [this](const ConnectionContext& connection_context,
-             InterfaceRequest<AudioServer> audio_server_request) {
-        bindings_.AddBinding(&server_impl_, audio_server_request.Pass());
-      });
-  return true;
-}
-
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo
-
-MojoResult MojoMain(MojoHandle app_request) {
-  mojo::media::audio::AudioServerApp audio_server_app;
-  return mojo::RunApplication(app_request, &audio_server_app);
-}

@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 FifoAllocator::FifoAllocator(uint64_t size) : front_(nullptr), free_(nullptr) {
@@ -216,4 +215,3 @@ void FifoAllocator::DeleteFrontToBack(Region* region) {
 }
 
 }  // namespace media
-}  // namespace mojo

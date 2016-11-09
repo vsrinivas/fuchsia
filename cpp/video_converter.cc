@@ -4,7 +4,6 @@
 
 #include "apps/media/cpp/video_converter.h"
 
-namespace mojo {
 namespace media {
 
 VideoConverter::VideoConverter() {
@@ -80,8 +79,8 @@ void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
   media_type_set_ = true;
 }
 
-Size VideoConverter::GetSize() {
-  Size size;
+mozart::Size VideoConverter::GetSize() {
+  mozart::Size size;
   if (media_type_set_) {
     size.width = layout_.width();
     size.height = layout_.height();
@@ -186,4 +185,3 @@ void VideoConverter::ConvertLine(uint32_t* dest_pixel,
 }
 
 }  // namespace media
-}  // namespace mojo

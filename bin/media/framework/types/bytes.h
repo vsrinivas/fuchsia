@@ -9,7 +9,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 class Bytes {
@@ -45,4 +44,3 @@ class Bytes {
 };
 
 }  // namespace media
-}  // namespace mojo

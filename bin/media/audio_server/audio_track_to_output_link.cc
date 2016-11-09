@@ -8,7 +8,6 @@
 #include "apps/media/src/audio_server/audio_track_impl.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -150,4 +149,3 @@ void AudioTrackToOutputLink::ReleaseQueue(const PacketQueuePtr& queue) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

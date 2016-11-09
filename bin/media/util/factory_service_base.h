@@ -7,12 +7,11 @@
 #include <memory>
 #include <unordered_set>
 
+#include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
+#include "lib/ftl/macros.h"
 
-namespace mojo {
-
-class FactoryServiceBase : public ApplicationImplBase {
+class FactoryServiceBase {
  public:
   // Provides common behavior for all objects created by the factory service.
   class ProductBase : public std::enable_shared_from_this<ProductBase> {
@@ -42,9 +41,9 @@ class FactoryServiceBase : public ApplicationImplBase {
 
    protected:
     Product(Interface* impl,
-            InterfaceRequest<Interface> request,
+            fidl::InterfaceRequest<Interface> request,
             FactoryServiceBase* owner)
-        : ProductBase(owner), binding_(impl, request.Pass()) {
+        : ProductBase(owner), binding_(impl, std::move(request)) {
       FTL_DCHECK(impl);
       binding_.set_connection_error_handler([this]() { ReleaseFromOwner(); });
     }
@@ -59,12 +58,19 @@ class FactoryServiceBase : public ApplicationImplBase {
     }
 
    private:
-    Binding<Interface> binding_;
+    fidl::Binding<Interface> binding_;
   };
 
   FactoryServiceBase();
 
-  ~FactoryServiceBase() override;
+  virtual ~FactoryServiceBase();
+
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
+      const std::string& interface_name = Interface::Name_) {
+    return application_context_->ConnectToEnvironmentService<Interface>(
+        interface_name);
+  }
 
  protected:
   template <typename ProductImpl>
@@ -73,10 +79,13 @@ class FactoryServiceBase : public ApplicationImplBase {
   }
 
  private:
+  std::unique_ptr<modular::ApplicationContext> application_context_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FactoryServiceBase);
 };
 
-// For use by products when handling mojo requests.
+// For use by products when handling fidl requests.
 // Checks the condition, and, if it's false, unbinds, releases from the owner
 // and calls return. Doesn't support stream arguments.
 // TODO(dalesat): Support stream arguments.
@@ -86,5 +95,3 @@ class FactoryServiceBase : public ApplicationImplBase {
     UnbindAndReleaseFromOwner();                                      \
     return;                                                           \
   }
-
-}  // namespace mojo

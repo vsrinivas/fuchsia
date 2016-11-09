@@ -10,7 +10,6 @@
 #include "apps/media/src/audio_server/audio_server_impl.h"
 #include "apps/media/src/audio_server/audio_track_impl.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -45,10 +44,10 @@ AudioPipe::~AudioPipe() {}
 
 void AudioPipe::PrimeRequested(
     const MediaTimelineControlPoint::PrimeCallback& cbk) {
-  if (!prime_callback_.is_null()) {
+  if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
     FTL_LOG(WARNING) << "multiple prime requests received";
-    prime_callback_.Run();
+    prime_callback_();
   }
   prime_callback_ = cbk;
   SetDemand(kDemandMinPacketsOutstanding);
@@ -113,12 +112,12 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
                          frame_count << AudioTrackImpl::PTS_FRACTIONAL_BITS,
                          start_pts, next_pts_, frame_count)));
 
-  if (!prime_callback_.is_null() &&
+  if (prime_callback_ &&
       supplied_packets_outstanding() >= kDemandMinPacketsOutstanding) {
     // Prime was requested. Call the callback to indicate priming is complete.
     // TODO(dalesat): Don't do this until low water mark is reached.
-    prime_callback_.Run();
-    prime_callback_.reset();
+    prime_callback_();
+    prime_callback_ = nullptr;
   }
 }
 
@@ -130,4 +129,3 @@ void AudioPipe::OnFlushRequested(const FlushCallback& cbk) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

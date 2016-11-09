@@ -9,7 +9,6 @@
 
 #include "apps/media/src/audio/gain.h"
 
-namespace mojo {
 namespace media {
 
 // Level<float> template specializations.
@@ -65,4 +64,3 @@ Gain Level<float>::ToGain() const {
 }
 
 }  // namespace media
-}  // namespace mojo

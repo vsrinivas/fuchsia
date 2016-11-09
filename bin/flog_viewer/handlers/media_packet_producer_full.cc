@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_producer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -21,7 +20,7 @@ MediaPacketProducerFull::MediaPacketProducerFull(const std::string& format)
 
 MediaPacketProducerFull::~MediaPacketProducerFull() {}
 
-void MediaPacketProducerFull::HandleMessage(Message* message) {
+void MediaPacketProducerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -81,7 +80,7 @@ void MediaPacketProducerFull::ReleasingPayloadBuffer(uint32_t index,
 }
 
 void MediaPacketProducerFull::DemandUpdated(
-    mojo::media::MediaPacketDemandPtr demand) {
+    media::MediaPacketDemandPtr demand) {
   if (terse_) {
     return;
   }
@@ -92,11 +91,10 @@ void MediaPacketProducerFull::DemandUpdated(
   std::cout << outdent;
 }
 
-void MediaPacketProducerFull::ProducingPacket(
-    uint64_t label,
-    mojo::media::MediaPacketPtr packet,
-    uint64_t payload_address,
-    uint32_t packets_outstanding) {
+void MediaPacketProducerFull::ProducingPacket(uint64_t label,
+                                              media::MediaPacketPtr packet,
+                                              uint64_t payload_address,
+                                              uint32_t packets_outstanding) {
   if (terse_) {
     return;
   }
@@ -128,4 +126,3 @@ void MediaPacketProducerFull::RetiringPacket(uint64_t label,
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

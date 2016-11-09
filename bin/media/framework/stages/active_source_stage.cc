@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/stages/active_source_stage.h"
 
-namespace mojo {
 namespace media {
 
 ActiveSourceStage::ActiveSourceStage(std::shared_ptr<ActiveSource> source)
@@ -103,4 +102,3 @@ void ActiveSourceStage::FlushOutput(size_t index) {
 }
 
 }  // namespace media
-}  // namespace mojo

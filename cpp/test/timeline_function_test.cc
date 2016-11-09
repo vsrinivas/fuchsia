@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -222,4 +221,3 @@ TEST(TimelineFunctionTest, Compose) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

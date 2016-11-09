@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/types/bytes.h"
 
-namespace mojo {
 namespace media {
 
 Bytes::Bytes(size_t size) : storage_(size) {}
@@ -16,4 +15,3 @@ std::unique_ptr<Bytes> Bytes::Clone() const {
 }
 
 }  // namespace media
-}  // namespace mojo

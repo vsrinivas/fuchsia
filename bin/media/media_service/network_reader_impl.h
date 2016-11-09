@@ -6,21 +6,21 @@
 
 #include <memory>
 
-#include "apps/media/interfaces/seeking_reader.mojom.h"
+#include "apps/media/interfaces/seeking_reader.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/incident.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/network/services/url_loader.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that reads from an HTTP service.
+// Fidl agent that reads from an HTTP service.
 class NetworkReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
                           public SeekingReader {
  public:
   static std::shared_ptr<NetworkReaderImpl> Create(
-      const String& url,
-      InterfaceRequest<SeekingReader> request,
+      const fidl::String& url,
+      fidl::InterfaceRequest<SeekingReader> request,
       MediaServiceImpl* owner);
 
   ~NetworkReaderImpl() override;
@@ -39,12 +39,12 @@ class NetworkReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   static constexpr uint32_t kStatusPartialContent = 206u;
   static constexpr uint32_t kStatusNotFound = 404u;
 
-  NetworkReaderImpl(const String& url,
-                    InterfaceRequest<SeekingReader> request,
+  NetworkReaderImpl(const fidl::String& url,
+                    fidl::InterfaceRequest<SeekingReader> request,
                     MediaServiceImpl* owner);
 
   std::string url_;
-  URLLoaderPtr url_loader_;
+  network::URLLoaderPtr url_loader_;
   MediaResult result_ = MediaResult::OK;
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
@@ -52,4 +52,3 @@ class NetworkReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
 };
 
 }  // namespace media
-}  // namespace mojo

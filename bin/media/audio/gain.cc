@@ -6,7 +6,6 @@
 
 #include <limits>
 
-namespace mojo {
 namespace media {
 
 // static
@@ -16,4 +15,3 @@ const Gain Gain::Silence = Gain(std::numeric_limits<float>::lowest());
 const Gain Gain::Unity = Gain(0.0f);
 
 }  // namespace media
-}  // namespace mojo

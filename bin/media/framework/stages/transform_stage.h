@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/models/transform.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 // A stage that hosts a Transform.
@@ -49,4 +48,3 @@ class TransformStage : public Stage {
 };
 
 }  // namespace media
-}  // namespace mojo

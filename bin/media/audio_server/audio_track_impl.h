@@ -9,15 +9,13 @@
 
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/audio_track.mojom.h"
-#include "apps/media/interfaces/media_renderer.mojom.h"
+#include "apps/media/interfaces/audio_track.fidl.h"
+#include "apps/media/interfaces/media_renderer.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 #include "apps/media/src/util/timeline_control_point.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/bindings/callback.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -29,8 +27,8 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
 
   ~AudioTrackImpl() override;
   static AudioTrackImplPtr Create(
-      InterfaceRequest<AudioTrack> track_request,
-      InterfaceRequest<MediaRenderer> renderer_request,
+      fidl::InterfaceRequest<AudioTrack> track_request,
+      fidl::InterfaceRequest<MediaRenderer> renderer_request,
       AudioServerImpl* owner);
 
   // Shutdown the audio track, unlinking it from all outputs, closing
@@ -56,8 +54,8 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
  private:
   friend class AudioPipe;
 
-  AudioTrackImpl(InterfaceRequest<AudioTrack> track_request,
-                 InterfaceRequest<MediaRenderer> renderer_request,
+  AudioTrackImpl(fidl::InterfaceRequest<AudioTrack> track_request,
+                 fidl::InterfaceRequest<MediaRenderer> renderer_request,
                  AudioServerImpl* owner);
 
   // Implementation of AudioTrack interface.
@@ -68,8 +66,8 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
       const GetSupportedMediaTypesCallback& callback) override;
   void SetMediaType(MediaTypePtr media_type) override;
   void GetPacketConsumer(
-      InterfaceRequest<MediaPacketConsumer> consumer_request) override;
-  void GetTimelineControlPoint(InterfaceRequest<MediaTimelineControlPoint>
+      fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) override;
+  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // Methods called by our AudioPipe.
@@ -84,8 +82,8 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
 
   AudioTrackImplWeakPtr weak_this_;
   AudioServerImpl* owner_;
-  Binding<AudioTrack> track_binding_;
-  Binding<MediaRenderer> renderer_binding_;
+  fidl::Binding<AudioTrack> track_binding_;
+  fidl::Binding<MediaRenderer> renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   TimelineRate frames_per_ns_;
@@ -98,4 +96,3 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

@@ -11,7 +11,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -216,4 +215,3 @@ void AudioOutput::Shutdown() {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

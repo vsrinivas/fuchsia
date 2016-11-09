@@ -7,15 +7,17 @@
 #include <list>
 #include <set>
 
-#include "apps/media/interfaces/audio_server.mojom.h"
-#include "apps/media/interfaces/audio_track.mojom.h"
+#include "apps/media/interfaces/audio_server.fidl.h"
+#include "apps/media/interfaces/audio_track.fidl.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/macros.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -27,8 +29,8 @@ class AudioServerImpl : public AudioServer {
   void Initialize();
 
   // AudioServer
-  void CreateTrack(InterfaceRequest<AudioTrack> track,
-                   InterfaceRequest<MediaRenderer> renderer) override;
+  void CreateTrack(fidl::InterfaceRequest<AudioTrack> track,
+                   fidl::InterfaceRequest<MediaRenderer> renderer) override;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // MediaPacked which was queued to an AudioTrack via. a media pipe.
@@ -36,7 +38,7 @@ class AudioServerImpl : public AudioServer {
   // TODO(johngro): This bouncing through thread contexts is inefficient and
   // will increase the latency requirements for clients (its going to take them
   // some extra time to discover that their media has been completely consumed).
-  // When mojo exposes a way to safely invoke interface method callbacks from
+  // When fidl exposes a way to safely invoke interface method callbacks from
   // threads other than the thread which executed the method itself, we will
   // want to switch to creating the callback message directly, instead of
   // indirecting through the server.
@@ -66,6 +68,9 @@ class AudioServerImpl : public AudioServer {
   void Shutdown();
   void DoPacketCleanup();
 
+  std::unique_ptr<modular::ApplicationContext> application_context_;
+  fidl::BindingSet<AudioServer> bindings_;
+
   // A reference to our message loop's task runner.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
@@ -83,8 +88,9 @@ class AudioServerImpl : public AudioServer {
       FTL_GUARDED_BY(cleanup_queue_mutex_);
   bool cleanup_scheduled_ FTL_GUARDED_BY(cleanup_queue_mutex_) = false;
   bool shutting_down_ = false;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(AudioServerImpl);
 };
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

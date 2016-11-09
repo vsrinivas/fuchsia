@@ -8,7 +8,6 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -68,4 +67,3 @@ bool ThrottleOutput::FinishMixJob(const MixJob& job) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

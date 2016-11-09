@@ -11,7 +11,6 @@
 #include "apps/media/src/audio_server/audio_track_to_output_link.h"
 #include "apps/media/src/audio_server/platform/generic/throttle_output.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -117,4 +116,3 @@ void AudioOutputManager::ScheduleMessageLoopTask(const ftl::Closure& task) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

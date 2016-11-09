@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/models/transform.h"
 #include "apps/media/src/framework/types/audio_stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // A transform that reformats samples.
@@ -20,4 +19,3 @@ class LpcmReformatter : public Transform {
 };
 
 }  // namespace media
-}  // namespace mojo

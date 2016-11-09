@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -285,4 +284,3 @@ TEST(SparseByteBufferTest, HoleHints) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

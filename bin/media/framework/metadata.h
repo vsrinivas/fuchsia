@@ -10,7 +10,6 @@
 #include "apps/media/src/util/safe_clone.h"
 #include "lib/ftl/macros.h"
 
-namespace mojo {
 namespace media {
 
 class Metadata;
@@ -69,4 +68,3 @@ class Metadata {
 };
 
 }  // namespace media
-}  // namespace mojo

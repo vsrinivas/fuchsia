@@ -11,7 +11,6 @@
 #include "apps/media/src/framework/payload_allocator.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 class Packet;
@@ -112,4 +111,3 @@ inline void PacketDeleter::operator()(Packet* ptr) const {
 }
 
 }  // namespace media
-}  // namespace mojo

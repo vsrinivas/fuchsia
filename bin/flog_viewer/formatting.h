@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_
+#pragma once
 
 #include <ostream>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 
 //
@@ -26,7 +25,6 @@
 // that take pointers need to handle nullptr.
 //
 
-namespace mojo {
 namespace flog {
 
 int ostream_indent_index();
@@ -69,6 +67,3 @@ std::ostream& operator<<(std::ostream& os, const Channel& value);
 std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value);
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_FORMATTING_H_

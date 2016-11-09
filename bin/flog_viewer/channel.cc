@@ -6,7 +6,6 @@
 
 #include "apps/media/tools/flog_viewer/formatting.h"
 
-namespace mojo {
 namespace flog {
 
 // static
@@ -67,4 +66,3 @@ void Channel::PrintAccumulator(std::ostream& os) const {
 }
 
 }  // namespace flog
-}  // namespace mojo

@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // static
@@ -294,4 +293,3 @@ void ReaderCache::Intake::Continue() {
 }
 
 }  // namespace media
-}  // namespace mojo

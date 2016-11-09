@@ -7,50 +7,49 @@
 #include <memory>
 
 #include "apps/media/cpp/flog.h"
-#include "apps/media/interfaces/logs/media_sink_channel.mojom.h"
-#include "apps/media/interfaces/media_sink.mojom.h"
-#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/interfaces/logs/media_sink_channel.fidl.h"
+#include "apps/media/interfaces/media_sink.fidl.h"
+#include "apps/media/interfaces/timeline_controller.fidl.h"
 #include "apps/media/src/decode/decoder.h"
+#include "apps/media/src/fidl/fidl_packet_consumer.h"
+#include "apps/media/src/fidl/fidl_packet_producer.h"
 #include "apps/media/src/framework/graph.h"
 #include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/mojo/mojo_packet_consumer.h"
-#include "apps/media/src/mojo/mojo_packet_producer.h"
 #include "apps/media/src/util/incident.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that consumes a stream and delivers it to a destination specified
+// Fidl agent that consumes a stream and delivers it to a destination specified
 // by URL.
 class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
                       public MediaSink {
  public:
   static std::shared_ptr<MediaSinkImpl> Create(
-      InterfaceHandle<MediaRenderer> renderer,
+      fidl::InterfaceHandle<MediaRenderer> renderer,
       MediaTypePtr media_type,
-      InterfaceRequest<MediaSink> request,
+      fidl::InterfaceRequest<MediaSink> request,
       MediaServiceImpl* owner);
 
   ~MediaSinkImpl() override;
 
   // MediaSink implementation.
   void GetPacketConsumer(
-      InterfaceRequest<MediaPacketConsumer> consumer) override;
+      fidl::InterfaceRequest<MediaPacketConsumer> consumer) override;
 
   void GetTimelineControlPoint(
-      InterfaceRequest<MediaTimelineControlPoint> req) override;
+      fidl::InterfaceRequest<MediaTimelineControlPoint> req) override;
 
  private:
-  MediaSinkImpl(InterfaceHandle<MediaRenderer> renderer,
+  MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer,
                 MediaTypePtr media_type,
-                InterfaceRequest<MediaSink> request,
+                fidl::InterfaceRequest<MediaSink> request,
                 MediaServiceImpl* owner);
 
   Incident ready_;
   Graph graph_;
-  std::shared_ptr<MojoPacketConsumer> consumer_;
-  std::shared_ptr<MojoPacketProducer> producer_;
+  std::shared_ptr<FidlPacketConsumer> consumer_;
+  std::shared_ptr<FidlPacketProducer> producer_;
   MediaRendererPtr renderer_;
   // The following fields are just temporaries used to solve lambda capture
   // problems.
@@ -60,4 +59,3 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
 };
 
 }  // namespace media
-}  // namespace mojo

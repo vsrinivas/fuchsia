@@ -11,7 +11,7 @@
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/video_renderer.h"
 #include "apps/media/examples/video_player/video_player_params.h"
-#include "apps/media/interfaces/media_player.mojom.h"
+#include "apps/media/interfaces/media_player.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "lib/ftl/macros.h"
@@ -21,10 +21,10 @@ namespace examples {
 
 class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
  public:
-  VideoPlayerView(
-      mojo::InterfaceHandle<mojo::ApplicationConnector> app_connector,
-      mojo::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      const VideoPlayerParams& params);
+  VideoPlayerView(mozart::ViewManagerPtr view_manager,
+                  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  modular::ApplicationContext* application_context,
+                  const VideoPlayerParams& params);
 
   ~VideoPlayerView() override;
 
@@ -48,30 +48,30 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   // Creates a node for the skia drawing.
   mozart::NodePtr MakeSkiaNode(
       uint32_t resource_id,
-      const mojo::RectF rect,
-      const std::function<void(const mojo::Size&, SkCanvas*)> content_drawer,
+      const mozart::RectF rect,
+      const std::function<void(const mozart::Size&, SkCanvas*)> content_drawer,
       const mozart::SceneUpdatePtr& update);
 
   // Draws the progress bar, etc, into the provided canvas.
-  void DrawSkiaContent(const mojo::Size& size, SkCanvas* canvas);
+  void DrawSkiaContent(const mozart::Size& size, SkCanvas* canvas);
 
   // Creates a node for the video.
-  mozart::NodePtr MakeVideoNode(mojo::TransformPtr transform,
+  mozart::NodePtr MakeVideoNode(mozart::TransformPtr transform,
                                 const mozart::SceneUpdatePtr& update);
 
   // Draws the video texture image and returns its resource. |presentation_time|
   // is in nanoseconds.
-  mozart::ResourcePtr DrawVideoTexture(const mojo::Size& size,
+  mozart::ResourcePtr DrawVideoTexture(const mozart::Size& size,
                                        int64_t presentation_time);
 
   // Ensures that buffer_ points to a buffer of the indicated size.
-  void EnsureBuffer(const mojo::Size& size);
+  void EnsureBuffer(const mozart::Size& size);
 
   // Handles a status update from the player. When called with the default
   // argument values, initiates status updates.
   void HandleStatusUpdates(
-      uint64_t version = mojo::media::MediaPlayer::kInitialStatus,
-      mojo::media::MediaPlayerStatusPtr status = nullptr);
+      uint64_t version = media::MediaPlayer::kInitialStatus,
+      media::MediaPlayerStatusPtr status = nullptr);
 
   // Toggles between play and pause.
   void TogglePlayPause();
@@ -89,15 +89,15 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   }
 
   mozart::InputHandler input_handler_;
-  mojo::media::MappedSharedBuffer buffer_;
-  mojo::Size buffer_size_;
-  mojo::media::VideoRenderer video_renderer_;
-  mojo::media::MediaPlayerPtr media_player_;
+  media::MappedSharedBuffer buffer_;
+  mozart::Size buffer_size_;
+  media::VideoRenderer video_renderer_;
+  media::MediaPlayerPtr media_player_;
   State previous_state_ = State::kPaused;
   State state_ = State::kPaused;
-  mojo::media::TimelineFunction timeline_function_;
-  mojo::media::MediaMetadataPtr metadata_;
-  mojo::RectF progress_bar_rect_;
+  media::TimelineFunction timeline_function_;
+  media::MediaMetadataPtr metadata_;
+  mozart::RectF progress_bar_rect_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
 

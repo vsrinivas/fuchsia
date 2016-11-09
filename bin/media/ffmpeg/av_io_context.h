@@ -15,7 +15,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
 
-namespace mojo {
 namespace media {
 
 struct AVIOContextDeleter {
@@ -94,4 +93,3 @@ class AvIoContextOpaque {
 };
 
 }  // namespace media
-}  // namespace mojo

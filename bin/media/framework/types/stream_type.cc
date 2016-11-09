@@ -7,11 +7,10 @@
 #include "apps/media/src/util/safe_clone.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
-// These must match the definitions in media_types.mojom. This is verfied by
-// the KnownEncodingsMatch function in mojo/mojo_type_conversion.cc. Changes
+// These must match the definitions in media_types.fidl. This is verfied by
+// the KnownEncodingsMatch function in fidl/fidl_type_conversion.cc. Changes
 // to this list should be reflected there.
 const char* StreamType::kAudioEncodingAac = "aac";
 const char* StreamType::kAudioEncodingAmrNb = "amrnb";
@@ -107,4 +106,3 @@ bool StreamTypeSet::IncludesEncoding(const std::string encoding) {
 }
 
 }  // namespace media
-}  // namespace mojo

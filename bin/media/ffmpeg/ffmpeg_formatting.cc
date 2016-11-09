@@ -12,7 +12,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavutil/dict.h"
 }
 
-namespace mojo {
 namespace media {
 
 const char* safe(const char* s) {
@@ -803,4 +802,3 @@ std::ostream& operator<<(std::ostream& os, const AVFormatContext* value) {
 }
 
 }  // namespace media
-}  // namespace mojo

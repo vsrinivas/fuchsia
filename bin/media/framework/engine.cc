@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/engine.h"
 
-namespace mojo {
 namespace media {
 
 Engine::Engine() {}
@@ -178,4 +177,3 @@ Stage* Engine::PopFromDemandBacklog() {
 }
 
 }  // namespace media
-}  // namespace mojo

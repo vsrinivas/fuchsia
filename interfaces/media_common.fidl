@@ -1,0 +1,27 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+enum MediaResult {
+  OK                     = 0,
+  UNKNOWN_ERROR          = -1,  // bucket -> UNKNOWN
+  INTERNAL_ERROR         = -2,  // bucket -> INTERNAL
+  NOT_IMPLEMENTED        = -3,  // bucket -> UNIMPLEMENTED
+  UNSUPPORTED_OPERATION  = -4,  // bucket -> UNIMPLEMENTED, FAILED_PRECON or
+                                //           INVALID_ARG, depending on reason
+  UNSUPPORTED_CONFIG     = -5,  // bucket -> FAILED_PRECON or INVALID_ARG, or
+                                //           RESOURCE_EXHAUSTED
+  INVALID_ARGUMENT       = -6,  // bucket -> INVALID_ARGUMENT
+  INSUFFICIENT_RESOURCES = -7,  // bucket -> RESOURCE_EXHAUSTED
+  BAD_STATE              = -8,  // bucket -> FAILED_PRECON
+  BUF_OVERFLOW           = -9,  // bucket -> RESOURCE_EXHAUSTED
+  FLUSHED                = -10, // bucket -> ABORTED or CANCELLED
+  BUSY                   = -11, // bucket -> BUSY
+  PROTOCOL_ERROR         = -12, // bucket -> FAILED_PRECON
+  ALREADY_EXISTS         = -13, // bucket -> ALREADY_EXISTS
+  NOT_FOUND              = -14, // bucket -> NOT_FOUND
+  SHUTTING_DOWN          = -15, // bucket -> FAILED_PRECON
+  CONNECTION_LOST        = -16, // bucket -> INTERNAL?
+};

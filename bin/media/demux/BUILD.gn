@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 source_set("demux") {
   sources = [
     "demux.h",
@@ -33,7 +31,6 @@ executable("apptests") {
 
   deps = [
     ":demux",
-    "//mojo/system",
     "//third_party/gtest",
   ]
 }

@@ -8,7 +8,6 @@
 #include "apps/media/src/framework/models/part.h"
 #include "apps/media/src/framework/packet.h"
 
-namespace mojo {
 namespace media {
 
 // Host for ActiveMultistreamSink.
@@ -43,4 +42,3 @@ class ActiveMultistreamSink : public Part {
 };
 
 }  // namespace media
-}  // namespace mojo

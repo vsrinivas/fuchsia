@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_
-#define APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_
+#pragma once
 
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/timelines.mojom.h"
+#include "apps/media/interfaces/timelines.fidl.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // TODO(dalesat): Consider always allowing inexact results.
@@ -129,16 +127,18 @@ inline TimelineFunction operator*(const TimelineFunction& bc,
 
 }  // namespace media
 
+namespace fidl {
+
 template <>
-struct TypeConverter<TimelineTransformPtr, media::TimelineFunction> {
-  static TimelineTransformPtr Convert(const media::TimelineFunction& input);
+struct TypeConverter<media::TimelineTransformPtr, media::TimelineFunction> {
+  static media::TimelineTransformPtr Convert(
+      const media::TimelineFunction& input);
 };
 
 template <>
-struct TypeConverter<media::TimelineFunction, TimelineTransformPtr> {
-  static media::TimelineFunction Convert(const TimelineTransformPtr& input);
+struct TypeConverter<media::TimelineFunction, media::TimelineTransformPtr> {
+  static media::TimelineFunction Convert(
+      const media::TimelineTransformPtr& input);
 };
 
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_TIMELINE_FUNCTION_H_
+}  // namespace fidl

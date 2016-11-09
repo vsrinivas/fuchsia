@@ -10,7 +10,6 @@
 #include "apps/media/src/framework/result.h"
 #include "apps/media/src/framework/types/stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for transforms that decode compressed media.
@@ -27,4 +26,3 @@ class Decoder : public Transform {
 };
 
 }  // namespace media
-}  // namespace mojo

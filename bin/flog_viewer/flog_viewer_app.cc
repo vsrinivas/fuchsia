@@ -8,24 +8,22 @@
 
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
-#include "mojo/public/c/include/mojo/system/main.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace flog {
 
-class FlogViewerApp : public ApplicationImplBase {
+class FlogViewerApp {
  public:
-  FlogViewerApp() {}
+  FlogViewerApp(int argc, const char** argv) {
+    ProcessArgs(argc, argv);
 
-  ~FlogViewerApp() override {}
+    std::unique_ptr<modular::ApplicationContext> application_context =
+        modular::ApplicationContext::CreateFromStartupInfo();
 
-  // ApplicationImplBase overrides.
-  void OnInitialize() override {
-    ProcessArgs(args());
-
-    viewer_.Initialize(shell(), [this]() { Terminate(MOJO_RESULT_OK); });
+    viewer_.Initialize(application_context.get(), []() {
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
 
     if (delete_all_logs_) {
       viewer_.DeleteAllLogs();
@@ -46,9 +44,9 @@ class FlogViewerApp : public ApplicationImplBase {
 
  private:
   // Processes arguments.
-  void ProcessArgs(const std::vector<std::string>& args) {
-    for (size_t i = 0; i < args.size(); ++i) {
-      const std::string& arg = args[i];
+  void ProcessArgs(int argc, const char** argv) {
+    for (int i = 0; i < argc; ++i) {
+      const std::string& arg = argv[i];
 
       std::string string_value;
       uint32_t numeric_value;
@@ -82,9 +80,7 @@ class FlogViewerApp : public ApplicationImplBase {
 
   void Usage() {
     std::cout << std::endl;
-    std::cout << "mojo/devtools/common/mojo_run "
-                 "\"https://core.mojoapps.io/flog_viewer.mojo <args>\""
-              << std::endl;
+    std::cout << "fidl:flog_viewer <args>\"" << std::endl;
     std::cout << "    <log id>                    process specified log"
               << std::endl;
     std::cout << "    --last=<label>              process last log with "
@@ -108,7 +104,8 @@ class FlogViewerApp : public ApplicationImplBase {
     std::cout << "Value lists are comma-separated (channel ids, log ids)."
               << std::endl;
     std::cout << std::endl;
-    Terminate(MOJO_RESULT_OK);
+
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
   bool MatchOption(const std::string& arg, const std::string& option) {
@@ -171,9 +168,12 @@ class FlogViewerApp : public ApplicationImplBase {
 };
 
 }  // namespace flog
-}  // namespace mojo
 
-MojoResult MojoMain(MojoHandle application_request) {
-  mojo::flog::FlogViewerApp flog_viewer_app;
-  return mojo::RunApplication(application_request, &flog_viewer_app);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  flog::FlogViewerApp app(argc, argv);
+
+  loop.Run();
+  return 0;
 }

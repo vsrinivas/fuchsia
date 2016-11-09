@@ -8,7 +8,6 @@
 
 #include "apps/media/src/framework/types/audio_stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // Helper class that performs various LPCM processing functions.
@@ -39,4 +38,3 @@ class LpcmUtil {
 };
 
 }  // namespace media
-}  // namespace mojo

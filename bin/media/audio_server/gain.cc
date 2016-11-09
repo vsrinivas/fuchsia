@@ -8,7 +8,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -29,4 +28,3 @@ void Gain::Set(float db_gain) {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

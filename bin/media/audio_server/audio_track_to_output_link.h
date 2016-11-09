@@ -13,7 +13,6 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -132,4 +131,3 @@ class AudioTrackToOutputLink {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

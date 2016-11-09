@@ -8,7 +8,6 @@
 
 #include "lib/ftl/files/unique_fd.h"
 
-namespace mojo {
 namespace flog {
 
 // Flog directory management.
@@ -44,4 +43,3 @@ class FlogDirectory {
 };
 
 }  // namespace flog
-}  // namespace mojo

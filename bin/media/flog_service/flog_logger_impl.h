@@ -7,20 +7,20 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/src/flog_service/flog_directory.h"
 #include "apps/media/src/flog_service/flog_service_impl.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/internal/router.h"
 
-namespace mojo {
 namespace flog {
 
 // FlogLogger implementation.
 class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
-                       private MessageReceiverWithResponderStatus {
+                       private fidl::MessageReceiverWithResponderStatus {
  public:
   static std::shared_ptr<FlogLoggerImpl> Create(
-      InterfaceRequest<FlogLogger> request,
+      fidl::InterfaceRequest<FlogLogger> request,
       uint32_t log_id,
       const std::string& label,
       std::shared_ptr<FlogDirectory> directory,
@@ -33,7 +33,7 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   const std::string& label() { return label_; }
 
  private:
-  FlogLoggerImpl(InterfaceRequest<FlogLogger> request,
+  FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
                  uint32_t log_id,
                  const std::string& label,
                  std::shared_ptr<FlogDirectory> directory,
@@ -42,16 +42,15 @@ class FlogLoggerImpl : public FlogServiceImpl::ProductBase,
   void WriteData(uint32_t data_size, const void* data);
 
   // MessageReceiverWithResponderStatus implementation.
-  bool Accept(Message* message) override;
+  bool Accept(fidl::Message* message) override;
 
-  bool AcceptWithResponder(Message* message,
-                           MessageReceiverWithStatus* responder) override;
+  bool AcceptWithResponder(fidl::Message* message,
+                           fidl::MessageReceiverWithStatus* responder) override;
 
   uint32_t id_;
   std::string label_;
-  std::unique_ptr<mojo::internal::Router> router_;
+  std::unique_ptr<fidl::internal::Router> router_;
   ftl::UniqueFD fd_;
 };
 
 }  // namespace flog
-}  // namespace mojo

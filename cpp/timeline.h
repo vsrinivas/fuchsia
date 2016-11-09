@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_TIMELINE_H_
-#define APPS_MEDIA_CPP_TIMELINE_H_
+#pragma once
 
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
-namespace mojo {
 namespace media {
 
 // Some helpful constants and static methods relating to timelines.
@@ -36,6 +34,3 @@ class Timeline {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_TIMELINE_H_

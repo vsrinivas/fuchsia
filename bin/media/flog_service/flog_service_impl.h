@@ -7,13 +7,12 @@
 #include <map>
 #include <memory>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/src/util/factory_service_base.h"
 #include "apps/media/src/util/incident.h"
 #include "apps/media/src/flog_service/flog_directory.h"
-#include "mojo/public/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
-namespace mojo {
 namespace flog {
 
 // FlogService implementation.
@@ -23,18 +22,13 @@ class FlogServiceImpl : public FactoryServiceBase, public FlogService {
 
   ~FlogServiceImpl() override;
 
-  // ApplicationImplBase overrides.
-  void OnInitialize() override;
-
-  bool OnAcceptConnection(ServiceProviderImpl* service_provider_impl) override;
-
   // FlogService implementation.
-  void CreateLogger(InterfaceRequest<FlogLogger> logger,
-                    const String& label) override;
+  void CreateLogger(fidl::InterfaceRequest<FlogLogger> logger,
+                    const fidl::String& label) override;
 
   void GetLogDescriptions(const GetLogDescriptionsCallback& callback) override;
 
-  void CreateReader(InterfaceRequest<FlogReader> reader,
+  void CreateReader(fidl::InterfaceRequest<FlogReader> reader,
                     uint32_t log_id) override;
 
   void DeleteLog(uint32_t log_id) override;
@@ -42,12 +36,12 @@ class FlogServiceImpl : public FactoryServiceBase, public FlogService {
   void DeleteAllLogs() override;
 
  private:
+  std::unique_ptr<modular::ApplicationContext> application_context_;
+  fidl::BindingSet<FlogService> bindings_;
   Incident ready_;
-  BindingSet<FlogService> bindings_;
   uint32_t last_allocated_log_id_ = 0;
   std::unique_ptr<std::map<uint32_t, std::string>> log_labels_by_id_;
   std::shared_ptr<FlogDirectory> directory_;
 };
 
 }  // namespace flog
-}  // namespace mojo

@@ -14,7 +14,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavutil/imgutils.h"
 }
 
-namespace mojo {
 namespace media {
 
 FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
@@ -191,4 +190,3 @@ void FfmpegVideoDecoder::ReleaseBufferForAvFrame(void* opaque,
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/engine.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 Input::Input() : prepared_(false) {}
@@ -46,4 +45,3 @@ void Input::Flush() {
 }
 
 }  // namespace media
-}  // namespace mojo

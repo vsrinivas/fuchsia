@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 #if defined(FLOG_ENABLED)
@@ -14,18 +13,23 @@ namespace media {
 namespace {
 
 // Gets the size of a shared buffer.
-uint64_t SizeOf(const ScopedSharedBufferHandle& handle) {
-  MojoBufferInformation info;
-  MojoResult result =
-      MojoGetBufferInformation(handle.get().value(), &info, sizeof(info));
-  return result == MOJO_RESULT_OK ? info.num_bytes : 0;
+uint64_t SizeOf(const mx::vmo& vmo) {
+  uint64_t size;
+  mx_status_t status = vmo.get_size(&size);
+
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
+    return 0;
+  }
+
+  return size;
 }
 
 }  // namespace
 
 #endif  // !defined(FLOG_ENABLED)
 
-// For checking preconditions when handling mojo requests.
+// For checking preconditions when handling fidl requests.
 // Checks the condition, and, if it's false, calls Fail and returns.
 #define RCHECK(condition, message) \
   if (!(condition)) {              \
@@ -53,11 +57,11 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 }
 
 void MediaPacketConsumerBase::Bind(
-    InterfaceRequest<MediaPacketConsumer> request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> request) {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
-  binding_.Bind(request.Pass());
+  binding_.Bind(std::move(request));
   binding_.set_connection_error_handler([this]() { Reset(); });
 }
 
@@ -100,7 +104,7 @@ void MediaPacketConsumerBase::Reset() {
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;
 
-  get_demand_update_callback_.reset();
+  get_demand_update_callback_ = nullptr;
 
   if (counter_) {
     counter_->Detach();
@@ -120,7 +124,7 @@ void MediaPacketConsumerBase::Fail() {
 void MediaPacketConsumerBase::OnPacketReturning() {}
 
 void MediaPacketConsumerBase::OnFlushRequested(const FlushCallback& callback) {
-  callback.Run();
+  callback();
 }
 
 void MediaPacketConsumerBase::OnFailure() {
@@ -134,13 +138,13 @@ void MediaPacketConsumerBase::PullDemandUpdate(
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
-  if (!get_demand_update_callback_.is_null()) {
+  if (get_demand_update_callback_) {
     // There's already a pending request. This isn't harmful, but it indicates
     // that the client doesn't know what it's doing.
     FTL_DLOG(WARNING) << "PullDemandUpdate was called when another "
                          "PullDemandUpdate call was pending";
     FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
-    get_demand_update_callback_.Run(demand_.Clone());
+    get_demand_update_callback_(demand_.Clone());
   }
 
   get_demand_update_callback_ = callback;
@@ -148,18 +152,17 @@ void MediaPacketConsumerBase::PullDemandUpdate(
   MaybeCompletePullDemandUpdate();
 }
 
-void MediaPacketConsumerBase::AddPayloadBuffer(
-    uint32_t payload_buffer_id,
-    ScopedSharedBufferHandle payload_buffer) {
+void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
+                                               mx::vmo payload_buffer) {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
-  FTL_DCHECK(payload_buffer.is_valid());
+  FTL_DCHECK(payload_buffer);
   FLOG(log_channel_,
        AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
-  MojoResult result = counter_->buffer_set().AddBuffer(payload_buffer_id,
-                                                       payload_buffer.Pass());
-  RCHECK(result == MOJO_RESULT_OK, "failed to map buffer");
+  mx_status_t status = counter_->buffer_set().AddBuffer(
+      payload_buffer_id, std::move(payload_buffer));
+  RCHECK(status == NO_ERROR, "failed to map buffer");
 }
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
@@ -199,7 +202,7 @@ void MediaPacketConsumerBase::SupplyPacket(
   SetPacketPtsRate(media_packet);
 
   OnPacketSupplied(std::unique_ptr<SuppliedPacket>(new SuppliedPacket(
-      label, media_packet.Pass(), payload, callback, counter_)));
+      label, std::move(media_packet), payload, callback, counter_)));
 }
 
 void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
@@ -213,7 +216,7 @@ void MediaPacketConsumerBase::Flush(const FlushCallback& callback) {
 
   OnFlushRequested([this, callback]() {
     FLOG(log_channel_, CompletingFlush());
-    callback.Run();
+    callback();
   });
 }
 
@@ -225,14 +228,14 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
   // SupplyPacket callback for demand updates rather than the PullDemandUpdate
   // callback.
   if (!demand_update_required_ || returning_packet_ ||
-      get_demand_update_callback_.is_null()) {
+      !get_demand_update_callback_) {
     return;
   }
 
   FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
   demand_update_required_ = false;
-  get_demand_update_callback_.Run(demand_.Clone());
-  get_demand_update_callback_.reset();
+  get_demand_update_callback_(demand_.Clone());
+  get_demand_update_callback_ = nullptr;
 }
 
 MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
@@ -285,12 +288,12 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
     const SupplyPacketCallback& callback,
     std::shared_ptr<SuppliedPacketCounter> counter)
     : label_(label),
-      packet_(packet.Pass()),
+      packet_(std::move(packet)),
       payload_(payload),
       callback_(callback),
       counter_(counter) {
   FTL_DCHECK(packet_);
-  FTL_DCHECK(!callback.is_null());
+  FTL_DCHECK(callback);
   FTL_DCHECK(counter_);
   counter_->OnPacketArrival();
 }
@@ -299,7 +302,7 @@ MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
-  callback_.Run(counter_->OnPacketDeparture(label_));
+  callback_(counter_->OnPacketDeparture(label_));
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
@@ -317,4 +320,3 @@ MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {
 }
 
 }  // namespace media
-}  // namespace mojo

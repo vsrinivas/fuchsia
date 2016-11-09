@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/stages/util.h"
 
-namespace mojo {
 namespace media {
 
 bool HasPositiveDemand(const std::vector<Output>& outputs) {
@@ -18,4 +17,3 @@ bool HasPositiveDemand(const std::vector<Output>& outputs) {
 }
 
 }  // namespace media
-}  // namespace mojo

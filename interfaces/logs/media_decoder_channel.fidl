@@ -1,0 +1,15 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media.logs;
+
+import "apps/media/interfaces/media_types.fidl";
+
+[ServiceName="media::logs::MediaDecoderChannel"]
+interface MediaDecoderChannel {
+  Config(MediaType input_type,
+      MediaType output_type,
+      uint64 consumer_address,
+      uint64 producer_address);
+};

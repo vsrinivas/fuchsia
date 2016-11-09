@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_sink_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_sink_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -22,7 +21,7 @@ MediaSinkDigest::MediaSinkDigest(const std::string& format)
 
 MediaSinkDigest::~MediaSinkDigest() {}
 
-void MediaSinkDigest::HandleMessage(Message* message) {
+void MediaSinkDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -30,15 +29,15 @@ std::shared_ptr<Accumulator> MediaSinkDigest::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaSinkDigest::Config(mojo::media::MediaTypePtr input_type,
-                             mojo::media::MediaTypePtr output_type,
+void MediaSinkDigest::Config(media::MediaTypePtr input_type,
+                             media::MediaTypePtr output_type,
                              uint64_t consumer_address,
                              uint64_t producer_address) {
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
-  accumulator_->input_type_ = input_type.Pass();
-  accumulator_->output_type_ = output_type.Pass();
+  accumulator_->input_type_ = std::move(input_type);
+  accumulator_->output_type_ = std::move(output_type);
   accumulator_->consumer_channel_ = AsChannel(consumer_address);
   accumulator_->consumer_channel_->SetHasParent();
   accumulator_->producer_channel_ = AsChannel(producer_address);
@@ -77,4 +76,3 @@ void MediaSinkAccumulator::Print(std::ostream& os) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

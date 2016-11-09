@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
-
 executable("flog_viewer") {
   sources = [
     "accumulator.cc",
@@ -52,9 +50,8 @@ executable("flog_viewer") {
   deps = [
     "//apps/media/interfaces",
     "//apps/media/interfaces/flog",
+    "//apps/modular/lib/app",
     "//lib/ftl",
-    "//lib/mtl:mtl_with_mojo",
-    "//mojo/public/cpp/application",
-    "//mojo/system",
+    "//lib/mtl",
   ]
 }

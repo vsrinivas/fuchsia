@@ -1,0 +1,25 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media.logs;
+
+import "apps/media/interfaces/media_types.fidl";
+import "apps/media/interfaces/timelines.fidl";
+
+[ServiceName="media::logs::MediaPlayerChannel"]
+interface MediaPlayerChannel {
+  ReceivedDemuxDescription(array<MediaType> stream_types);
+  StreamsPrepared();
+  Flushed();
+  Primed();
+  Playing();
+  EndOfStream();
+  PlayRequested();
+  PauseRequested();
+  SeekRequested(int64 position);
+  Seeking(int64 position);
+  Priming();
+  Flushing();
+  SettingTimelineTransform(TimelineTransform timeline_transform);
+};

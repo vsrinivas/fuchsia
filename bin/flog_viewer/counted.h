@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_
+#pragma once
 
 #include <limits>
 
-namespace mojo {
 namespace flog {
 
 // Counts things that are added or removed one at a time.
@@ -43,6 +41,3 @@ class Counted {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_COUNTED_H_

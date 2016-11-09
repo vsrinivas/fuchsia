@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
-#define APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_
+#pragma once
 
 #include <limits>
 
 #include "apps/media/cpp/flog.h"
 #include "apps/media/cpp/shared_buffer_set_allocator.h"
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_producer_channel.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 #include "lib/ftl/synchronization/thread_checker.h"
 
-namespace mojo {
 namespace media {
 
 // Base class for clients of MediaPacketConsumer.
@@ -111,6 +109,3 @@ class MediaPacketProducerBase {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_MEDIA_PACKET_PRODUCER_BASE_H_

@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_TIMELINE_RATE_H_
-#define APPS_MEDIA_CPP_TIMELINE_RATE_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -11,7 +10,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // TODO(dalesat): Consider always allowing inexact results.
@@ -157,6 +155,3 @@ inline int64_t operator/(int64_t a, TimelineRate b) {
 }
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_TIMELINE_RATE_H_

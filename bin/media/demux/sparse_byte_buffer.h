@@ -7,7 +7,6 @@
 #include <map>
 #include <vector>
 
-namespace mojo {
 namespace media {
 
 class SparseByteBuffer {
@@ -101,4 +100,3 @@ bool operator!=(const SparseByteBuffer::Region& a,
                 const SparseByteBuffer::Region& b);
 
 }  // namespace media
-}  // namespace mojo

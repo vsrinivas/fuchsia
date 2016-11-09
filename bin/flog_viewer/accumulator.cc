@@ -9,7 +9,6 @@
 
 #include "apps/media/tools/flog_viewer/formatting.h"
 
-namespace mojo {
 namespace flog {
 
 std::ostream& operator<<(std::ostream& os, const Accumulator::Problem& value) {
@@ -46,4 +45,3 @@ Accumulator::Problem::Problem(uint32_t log_id,
 Accumulator::Problem::~Problem() {}
 
 }  // namespace flog
-}  // namespace mojo

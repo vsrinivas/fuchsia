@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_FIFO_ALLOCATOR_H_
-#define APPS_MEDIA_CPP_FIFO_ALLOCATOR_H_
+#pragma once
 
 #include <cstdint>
 #include <limits>
 
-namespace mojo {
 namespace media {
 
 // FifoAllocator implements heap semantics on a single contiguous buffer using
@@ -143,6 +141,3 @@ class FifoAllocator {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_FIFO_ALLOCATOR_H_

@@ -9,7 +9,6 @@
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/cpp/timeline_function.h"
 
-namespace mojo {
 namespace media {
 
 VideoRenderer::VideoRenderer()
@@ -22,16 +21,17 @@ VideoRenderer::VideoRenderer()
 
 VideoRenderer::~VideoRenderer() {}
 
-void VideoRenderer::Bind(InterfaceRequest<MediaRenderer> renderer_request) {
-  renderer_binding_.Bind(renderer_request.Pass());
+void VideoRenderer::Bind(
+    fidl::InterfaceRequest<MediaRenderer> renderer_request) {
+  renderer_binding_.Bind(std::move(renderer_request));
 }
 
-Size VideoRenderer::GetSize() {
+mozart::Size VideoRenderer::GetSize() {
   return converter_.GetSize();
 }
 
 void VideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
-                                 const Size& rgba_buffer_size,
+                                 const mozart::Size& rgba_buffer_size,
                                  int64_t reference_time) {
   MaybeApplyPendingTimelineChange(reference_time);
   MaybePublishEndOfStream();
@@ -63,12 +63,13 @@ void VideoRenderer::GetSupportedMediaTypes(
   MediaTypeSetPtr supported_type = MediaTypeSet::New();
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(video_details.Pass());
-  supported_type->encodings = Array<String>::New(1);
+  supported_type->details->set_video(std::move(video_details));
+  supported_type->encodings = fidl::Array<fidl::String>::New(1);
   supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  Array<MediaTypeSetPtr> supported_types = Array<MediaTypeSetPtr>::New(1);
-  supported_types[0] = supported_type.Pass();
-  callback.Run(supported_types.Pass());
+  fidl::Array<MediaTypeSetPtr> supported_types =
+      fidl::Array<MediaTypeSetPtr>::New(1);
+  supported_types[0] = std::move(supported_type);
+  callback(std::move(supported_types));
 }
 
 void VideoRenderer::SetMediaType(MediaTypePtr media_type) {
@@ -81,13 +82,13 @@ void VideoRenderer::SetMediaType(MediaTypePtr media_type) {
 }
 
 void VideoRenderer::GetPacketConsumer(
-    InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
-  MediaPacketConsumerBase::Bind(packet_consumer_request.Pass());
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+  MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
 void VideoRenderer::GetTimelineControlPoint(
-    InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
-  control_point_binding_.Bind(control_point_request.Pass());
+    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+  control_point_binding_.Bind(std::move(control_point_request));
 }
 
 void VideoRenderer::OnPacketSupplied(
@@ -119,7 +120,7 @@ void VideoRenderer::OnFlushRequested(const FlushCallback& callback) {
     packet_queue_.pop();
   }
   MaybeClearEndOfStream();
-  callback.Run();
+  callback();
 }
 
 void VideoRenderer::OnFailure() {
@@ -149,14 +150,14 @@ void VideoRenderer::GetStatus(uint64_t version_last_seen,
 }
 
 void VideoRenderer::GetTimelineConsumer(
-    InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
-  timeline_consumer_binding_.Bind(timeline_consumer_request.Pass());
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
+  timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 
 void VideoRenderer::Prime(const PrimeCallback& callback) {
   pts_ = kUnspecifiedTime;
   SetDemand(2);
-  callback.Run();  // TODO(dalesat): Wait until we get packets.
+  callback();  // TODO(dalesat): Wait until we get packets.
 }
 
 void VideoRenderer::SetTimelineTransform(
@@ -201,9 +202,9 @@ void VideoRenderer::DiscardOldPackets() {
 void VideoRenderer::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
-  if (!set_timeline_transform_callback_.is_null()) {
-    set_timeline_transform_callback_.Run(completed);
-    set_timeline_transform_callback_.reset();
+  if (set_timeline_transform_callback_) {
+    set_timeline_transform_callback_(completed);
+    set_timeline_transform_callback_ = nullptr;
   }
 }
 
@@ -217,9 +218,9 @@ void VideoRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
 
-  if (!set_timeline_transform_callback_.is_null()) {
-    set_timeline_transform_callback_.Run(true);
-    set_timeline_transform_callback_.reset();
+  if (set_timeline_transform_callback_) {
+    set_timeline_transform_callback_(true);
+    set_timeline_transform_callback_ = nullptr;
   }
 
   SendStatusUpdates();
@@ -261,8 +262,7 @@ void VideoRenderer::CompleteGetStatus(const GetStatusCallback& callback) {
   status->end_of_stream =
       end_of_stream_pts_ != kUnspecifiedTime &&
       current_timeline_function_(Timeline::local_now()) >= end_of_stream_pts_;
-  callback.Run(status_version_, status.Pass());
+  callback(status_version_, std::move(status));
 }
 
 }  // namespace media
-}  // namespace mojo

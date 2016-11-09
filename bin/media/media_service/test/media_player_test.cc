@@ -2,30 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mojo/system/main.h>
-
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/media_service.mojom.h"
+#include "apps/media/interfaces/media_service.fidl.h"
+#include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/media_service/test/fake_renderer.h"
 #include "apps/media/src/media_service/test/fake_wav_reader.h"
-#include "apps/media/src/mojo/mojo_formatting.h"
+#include "apps/modular/lib/app/connect.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/application/application_impl_base.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/application/run_application.h"
 
-namespace mojo {
 namespace media {
 namespace test {
 
-class MediaPlayerTester : public ApplicationImplBase {
+class MediaPlayerTester {
  public:
-  void OnInitialize() override {
+  MediaPlayerTester()
+      : application_context_(
+            modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_LOG(INFO) << "MediaPlayerTest starting";
 
-    MediaServicePtr media_service;
-    ConnectToService(shell(), "mojo:media_service", GetProxy(&media_service));
+    FTL_LOG(INFO) << "connecting to MediaService";
+    MediaServicePtr media_service =
+        application_context_->ConnectToEnvironmentService<MediaService>();
+    FTL_LOG(INFO) << "connected to MediaService "
+                  << (media_service ? "ok" : "NULL PTR");
 
     fake_renderer_.SetPtsRate(TimelineRate(48000, 1));
 
@@ -48,22 +48,28 @@ class MediaPlayerTester : public ApplicationImplBase {
                                   {16373, true, 0, 0x0000000000000000}});
 
     SeekingReaderPtr fake_reader_ptr;
-    InterfaceRequest<SeekingReader> reader_request = GetProxy(&fake_reader_ptr);
-    fake_reader_.Bind(reader_request.Pass());
+    fidl::InterfaceRequest<SeekingReader> reader_request =
+        GetProxy(&fake_reader_ptr);
+    fake_reader_.Bind(std::move(reader_request));
 
     MediaRendererPtr fake_renderer_ptr;
-    InterfaceRequest<MediaRenderer> renderer_request =
+    fidl::InterfaceRequest<MediaRenderer> renderer_request =
         GetProxy(&fake_renderer_ptr);
-    fake_renderer_.Bind(renderer_request.Pass());
+    fake_renderer_.Bind(std::move(renderer_request));
 
-    media_service->CreatePlayer(fake_reader_ptr.Pass(),
-                                fake_renderer_ptr.Pass(), nullptr,
+    FTL_LOG(INFO) << "creating player";
+    media_service->CreatePlayer(std::move(fake_reader_ptr),
+                                std::move(fake_renderer_ptr), nullptr,
                                 GetProxy(&media_player_));
+    FTL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
 
     HandleStatusUpdates();
+    FTL_LOG(INFO) << "calling play";
     media_player_->Play();
+    FTL_LOG(INFO) << "called play";
   }
 
+ private:
   void HandleStatusUpdates(uint64_t version = MediaPlayer::kInitialStatus,
                            MediaPlayerStatusPtr status = nullptr) {
     if (status) {
@@ -78,10 +84,11 @@ class MediaPlayerTester : public ApplicationImplBase {
     // Request a status update.
     media_player_->GetStatus(
         version, [this](uint64_t version, MediaPlayerStatusPtr status) {
-          HandleStatusUpdates(version, status.Pass());
+          HandleStatusUpdates(version, std::move(status));
         });
   }
 
+  std::unique_ptr<modular::ApplicationContext> application_context_;
   FakeWavReader fake_reader_;
   FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;
@@ -90,11 +97,12 @@ class MediaPlayerTester : public ApplicationImplBase {
 
 }  // namespace test
 }  // namespace media
-}  // namespace mojo
 
-MojoResult MojoMain(MojoHandle application_request) {
-  FTL_DCHECK(application_request != MOJO_HANDLE_INVALID)
-      << "Must be hosted by application_manager";
-  mojo::media::test::MediaPlayerTester tester;
-  return mojo::RunApplication(application_request, &tester);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  media::test::MediaPlayerTester app;
+
+  loop.Run();
+  return 0;
 }

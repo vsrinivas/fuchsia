@@ -9,7 +9,6 @@
 #include "apps/media/src/util/safe_clone.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -180,4 +179,3 @@ std::unique_ptr<StreamTypeSet> VideoStreamTypeSet::Clone() const {
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -9,7 +9,6 @@
 #include "apps/media/src/framework/models/active_source.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 // A stage that hosts an ActiveSource.
@@ -51,4 +50,3 @@ class ActiveSourceStage : public Stage {
 };
 
 }  // namespace media
-}  // namespace mojo

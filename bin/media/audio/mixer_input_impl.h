@@ -14,7 +14,6 @@
 #include "apps/media/src/util/priority_queue_of_unique_ptr.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // Mixes a stream of packets into output buffers.
@@ -559,4 +558,3 @@ void MixerInputImpl<float, float, float>::Job::MixFade(
     int64_t pts);
 
 }  // namespace media
-}  // namespace mojo

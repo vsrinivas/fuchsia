@@ -4,8 +4,6 @@
 
 #include "apps/media/src/util/incident.h"
 
-namespace mojo {
-
 Incident::Incident() {}
 
 Incident::~Incident() {}
@@ -48,5 +46,3 @@ void ThreadsafeIncident::Occur() {
     consequence();
   }
 }
-
-}  // namespace mojo

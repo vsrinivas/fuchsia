@@ -14,7 +14,6 @@
 #include "apps/media/src/framework/result.h"
 #include "apps/media/src/framework/types/stream_type.h"
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for sources that parse input from a reader and
@@ -63,4 +62,3 @@ class Demux : public ActiveMultistreamSource {
 };
 
 }  // namespace media
-}  // namespace mojo

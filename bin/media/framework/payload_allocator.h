@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for objects that allocate buffers for packets.
@@ -24,4 +23,3 @@ class PayloadAllocator {
 };
 
 }  // namespace media
-}  // namespace mojo

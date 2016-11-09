@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/graph.h"
 
-namespace mojo {
 namespace media {
 
 Graph::Graph() {
@@ -217,4 +216,3 @@ PartRef Graph::Add(Stage* stage) {
 }
 
 }  // namespace media
-}  // namespace mojo

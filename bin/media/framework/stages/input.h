@@ -8,7 +8,6 @@
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/refs.h"
 
-namespace mojo {
 namespace media {
 
 class Stage;
@@ -67,4 +66,3 @@ class Input {
 };
 
 }  // namespace media
-}  // namespace mojo

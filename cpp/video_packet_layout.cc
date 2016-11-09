@@ -6,7 +6,6 @@
 
 #include <unordered_map>
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -137,4 +136,3 @@ VideoPacketLayout::VideoPacketLayout(PixelFormat pixel_format,
 VideoPacketLayout::~VideoPacketLayout() {}
 
 }  // namespace media
-}  // namespace mojo

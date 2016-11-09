@@ -6,30 +6,29 @@
 
 #include <vector>
 
-#include "apps/media/interfaces/media_source.mojom.h"
-#include "apps/media/interfaces/seeking_reader.mojom.h"
-#include "apps/media/src/framework/graph.h"
+#include "apps/media/interfaces/media_source.fidl.h"
+#include "apps/media/interfaces/seeking_reader.fidl.h"
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/demux/reader.h"
+#include "apps/media/src/fidl/fidl_packet_producer.h"
+#include "apps/media/src/framework/graph.h"
 #include "apps/media/src/media_service/media_service_impl.h"
-#include "apps/media/src/mojo/mojo_packet_producer.h"
+#include "apps/media/src/util/fidl_publisher.h"
 #include "apps/media/src/util/incident.h"
-#include "apps/media/src/util/mojo_publisher.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/tasks/task_runner.h"
-#include "mojo/public/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that produces streams from an origin specified by URL.
+// Fidl agent that produces streams from an origin specified by URL.
 class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
                         public MediaSource {
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
-      InterfaceHandle<SeekingReader> reader,
-      const Array<MediaTypeSetPtr>& allowed_media_types,
-      InterfaceRequest<MediaSource> request,
+      fidl::InterfaceHandle<SeekingReader> reader,
+      const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
+      fidl::InterfaceRequest<MediaSource> request,
       MediaServiceImpl* owner);
 
   ~MediaSourceImpl() override;
@@ -39,7 +38,7 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   void GetPacketProducer(
       uint32_t stream_index,
-      InterfaceRequest<MediaPacketProducer> producer) override;
+      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
 
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
@@ -51,9 +50,9 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   void Seek(int64_t position, const SeekCallback& callback) override;
 
  private:
-  MediaSourceImpl(InterfaceHandle<SeekingReader> reader,
-                  const Array<MediaTypeSetPtr>& allowed_media_types,
-                  InterfaceRequest<MediaSource> request,
+  MediaSourceImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                  const fidl::Array<MediaTypeSetPtr>& allowed_media_types,
+                  fidl::InterfaceRequest<MediaSource> request,
                   MediaServiceImpl* owner);
 
   class Stream {
@@ -73,18 +72,19 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     MediaTypePtr original_media_type() const;
 
     // Gets the producer.
-    void GetPacketProducer(InterfaceRequest<MediaPacketProducer> producer);
+    void GetPacketProducer(
+        fidl::InterfaceRequest<MediaPacketProducer> producer);
 
     // Tells the producer to flush its connection.
     void FlushConnection(
-        const MojoPacketProducer::FlushConnectionCallback callback);
+        const FidlPacketProducer::FlushConnectionCallback callback);
 
    private:
     std::unique_ptr<StreamType> stream_type_;
     std::unique_ptr<StreamType> original_stream_type_;
     Graph* graph_;
     OutputRef output_;
-    std::shared_ptr<MojoPacketProducer> producer_;
+    std::shared_ptr<FidlPacketProducer> producer_;
   };
 
   // Handles the completion of demux initialization.
@@ -94,16 +94,15 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   void ReportProblem(const std::string& type, const std::string& details);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  Array<MediaTypeSetPtr> allowed_media_types_;
+  fidl::Array<MediaTypeSetPtr> allowed_media_types_;
   Graph graph_;
   PartRef demux_part_;
   std::shared_ptr<Demux> demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;
-  MojoPublisher<GetStatusCallback> status_publisher_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
   MediaMetadataPtr metadata_;
   ProblemPtr problem_;
 };
 
 }  // namespace media
-}  // namespace mojo

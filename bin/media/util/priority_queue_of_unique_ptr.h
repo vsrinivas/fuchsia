@@ -6,7 +6,6 @@
 
 #include <queue>
 
-namespace mojo {
 namespace media {
 
 // Compares the referents of two pointers.
@@ -86,4 +85,3 @@ class priority_queue_of_unique_ptr {
 };
 
 }  // namespace media
-}  // namespace mojo

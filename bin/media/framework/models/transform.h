@@ -8,7 +8,6 @@
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
-namespace mojo {
 namespace media {
 
 // Synchronous packet transform.
@@ -28,4 +27,3 @@ class Transform : public Part {
 };
 
 }  // namespace media
-}  // namespace mojo

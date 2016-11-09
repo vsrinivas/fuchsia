@@ -7,30 +7,30 @@
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/src/demux/reader.h"
 #include "apps/media/src/util/callback_joiner.h"
+#include "apps/modular/lib/app/connect.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/application/connect.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    InterfaceHandle<SeekingReader> reader,
-    InterfaceHandle<MediaRenderer> audio_renderer,
-    InterfaceHandle<MediaRenderer> video_renderer,
-    InterfaceRequest<MediaPlayer> request,
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner) {
-  return std::shared_ptr<MediaPlayerImpl>(
-      new MediaPlayerImpl(reader.Pass(), audio_renderer.Pass(),
-                          video_renderer.Pass(), request.Pass(), owner));
+  return std::shared_ptr<MediaPlayerImpl>(new MediaPlayerImpl(
+      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
+      std::move(request), owner));
 }
 
-MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
-                                 InterfaceHandle<MediaRenderer> audio_renderer,
-                                 InterfaceHandle<MediaRenderer> video_renderer,
-                                 InterfaceRequest<MediaPlayer> request,
-                                 MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, request.Pass(), owner) {
+MediaPlayerImpl::MediaPlayerImpl(
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaPlayer> request,
+    MediaServiceImpl* owner)
+    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
   FTL_DCHECK(reader);
 
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
@@ -40,25 +40,25 @@ MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
     status->end_of_stream = end_of_stream_;
     status->metadata = metadata_.Clone();
     status->problem = demux_problem_.Clone();
-    callback.Run(version, status.Pass());
+    callback(version, std::move(status));
   });
 
   state_ = State::kWaiting;
 
-  ConnectToService(owner->shell(), "mojo:media_service", GetProxy(&factory_));
+  media_service_ = owner->ConnectToEnvironmentService<MediaService>();
 
-  factory_->CreateDemux(reader.Pass(), GetProxy(&demux_));
+  media_service_->CreateDemux(std::move(reader), GetProxy(&demux_));
   HandleDemuxStatusUpdates();
 
-  factory_->CreateTimelineController(GetProxy(&timeline_controller_));
+  media_service_->CreateTimelineController(GetProxy(&timeline_controller_));
   timeline_controller_->GetControlPoint(GetProxy(&timeline_control_point_));
   timeline_control_point_->GetTimelineConsumer(GetProxy(&timeline_consumer_));
   HandleTimelineControlPointStatusUpdates();
 
-  audio_renderer_ = audio_renderer.Pass();
-  video_renderer_ = video_renderer.Pass();
+  audio_renderer_ = std::move(audio_renderer);
+  video_renderer_ = std::move(video_renderer);
 
-  demux_->Describe([this](Array<MediaTypePtr> stream_types) {
+  demux_->Describe([this](fidl::Array<MediaTypePtr> stream_types) {
     FLOG(log_channel_, ReceivedDemuxDescription(stream_types.Clone()));
     // Populate streams_ and enable the streams we want.
     std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
@@ -69,14 +69,14 @@ MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
       switch (stream_type->medium) {
         case MediaTypeMedium::AUDIO:
           if (audio_renderer_) {
-            stream.renderer_ = audio_renderer_.Pass();
+            stream.renderer_ = std::move(audio_renderer_);
             PrepareStream(&stream, streams_.size() - 1, stream_type,
                           callback_joiner->NewCallback());
           }
           break;
         case MediaTypeMedium::VIDEO:
           if (video_renderer_) {
-            stream.renderer_ = video_renderer_.Pass();
+            stream.renderer_ = std::move(video_renderer_);
             PrepareStream(&stream, streams_.size() - 1, stream_type,
                           callback_joiner->NewCallback());
           }
@@ -90,7 +90,7 @@ MediaPlayerImpl::MediaPlayerImpl(InterfaceHandle<SeekingReader> reader,
     callback_joiner->WhenJoined([this]() {
       FLOG(log_channel_, StreamsPrepared());
       // The enabled streams are prepared.
-      factory_.reset();
+      media_service_.reset();
       state_ = State::kFlushed;
       FLOG(log_channel_, Flushed());
       Update();
@@ -214,7 +214,7 @@ void MediaPlayerImpl::Update() {
           FLOG(log_channel_,
                SettingTimelineTransform(timeline_transform.Clone()));
           timeline_consumer_->SetTimelineTransform(
-              timeline_transform.Pass(), [this](bool completed) {
+              std::move(timeline_transform), [this](bool completed) {
                 state_ = State::kPlaying;
                 FLOG(log_channel_, Playing());
                 // Now we're in |kPlaying|. Call |Update| to see if there's
@@ -245,7 +245,7 @@ void MediaPlayerImpl::Update() {
           FLOG(log_channel_,
                SettingTimelineTransform(timeline_transform.Clone()));
           timeline_consumer_->SetTimelineTransform(
-              timeline_transform.Pass(), [this](bool completed) {
+              std::move(timeline_transform), [this](bool completed) {
                 state_ = State::kPrimed;
                 FLOG(log_channel_, Primed());
                 // Now we're in |kPrimed|. Call |Update| to see if there's
@@ -289,7 +289,7 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(float rate) {
 
   transform_subject_time_ = kUnspecifiedTime;
 
-  return result.Pass();
+  return result;
 }
 
 void MediaPlayerImpl::GetStatus(uint64_t version_last_seen,
@@ -319,7 +319,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     size_t index,
                                     const MediaTypePtr& input_media_type,
                                     const std::function<void()>& callback) {
-  FTL_DCHECK(factory_);
+  FTL_DCHECK(media_service_);
 
   demux_->GetPacketProducer(index, GetProxy(&stream->encoded_producer_));
 
@@ -329,14 +329,14 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
 
     // Compressed media. Insert a decoder in front of the sink. The sink would
     // add its own internal decoder, but we want to test the decoder.
-    factory_->CreateDecoder(input_media_type.Clone(),
-                            GetProxy(&stream->decoder_));
+    media_service_->CreateDecoder(input_media_type.Clone(),
+                                  GetProxy(&stream->decoder_));
 
     MediaPacketConsumerPtr decoder_consumer;
     stream->decoder_->GetPacketConsumer(GetProxy(&decoder_consumer));
 
     callback_joiner->Spawn();
-    stream->encoded_producer_->Connect(decoder_consumer.Pass(),
+    stream->encoded_producer_->Connect(std::move(decoder_consumer),
                                        [stream, callback_joiner]() {
                                          stream->encoded_producer_.reset();
                                          callback_joiner->Complete();
@@ -355,7 +355,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     // Uncompressed media. Connect the demux stream directly to the sink. This
     // would work for compressed media as well (the sink would decode), but we
     // want to test the decoder.
-    stream->decoded_producer_ = stream->encoded_producer_.Pass();
+    stream->decoded_producer_ = std::move(stream->encoded_producer_);
     CreateSink(stream, input_media_type, callback);
   }
 }
@@ -365,20 +365,21 @@ void MediaPlayerImpl::CreateSink(Stream* stream,
                                  const std::function<void()>& callback) {
   FTL_DCHECK(input_media_type);
   FTL_DCHECK(stream->decoded_producer_);
-  FTL_DCHECK(factory_);
+  FTL_DCHECK(media_service_);
 
-  factory_->CreateSink(stream->renderer_.Pass(), input_media_type.Clone(),
-                       GetProxy(&stream->sink_));
+  media_service_->CreateSink(std::move(stream->renderer_),
+                             input_media_type.Clone(),
+                             GetProxy(&stream->sink_));
 
   MediaTimelineControlPointPtr timeline_control_point;
   stream->sink_->GetTimelineControlPoint(GetProxy(&timeline_control_point));
 
-  timeline_controller_->AddControlPoint(timeline_control_point.Pass());
+  timeline_controller_->AddControlPoint(std::move(timeline_control_point));
 
   MediaPacketConsumerPtr consumer;
   stream->sink_->GetPacketConsumer(GetProxy(&consumer));
 
-  stream->decoded_producer_->Connect(consumer.Pass(),
+  stream->decoded_producer_->Connect(std::move(consumer),
                                      [this, callback, stream]() {
                                        stream->decoded_producer_.reset();
                                        callback();
@@ -388,14 +389,14 @@ void MediaPlayerImpl::CreateSink(Stream* stream,
 void MediaPlayerImpl::HandleDemuxStatusUpdates(uint64_t version,
                                                MediaDemuxStatusPtr status) {
   if (status) {
-    metadata_ = status->metadata.Pass();
-    demux_problem_ = status->problem.Pass();
+    metadata_ = std::move(status->metadata);
+    demux_problem_ = std::move(status->problem);
     status_publisher_.SendUpdates();
   }
 
   demux_->GetStatus(version,
                     [this](uint64_t version, MediaDemuxStatusPtr status) {
-                      HandleDemuxStatusUpdates(version, status.Pass());
+                      HandleDemuxStatusUpdates(version, std::move(status));
                     });
 }
 
@@ -412,7 +413,7 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
   timeline_control_point_->GetStatus(
       version,
       [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
-        HandleTimelineControlPointStatusUpdates(version, status.Pass());
+        HandleTimelineControlPointStatusUpdates(version, std::move(status));
       });
 }
 
@@ -421,4 +422,3 @@ MediaPlayerImpl::Stream::Stream() {}
 MediaPlayerImpl::Stream::~Stream() {}
 
 }  // namespace media
-}  // namespace mojo

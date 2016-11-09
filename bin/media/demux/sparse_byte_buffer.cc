@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 SparseByteBuffer::Hole::Hole() {}
@@ -195,4 +194,3 @@ bool operator!=(const SparseByteBuffer::Region& a,
 }
 
 }  // namespace media
-}  // namespace mojo

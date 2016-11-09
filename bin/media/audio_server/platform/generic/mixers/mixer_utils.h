@@ -9,11 +9,9 @@
 
 #include "apps/media/src/audio_server/gain.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 namespace mixers {
-namespace utils {
 
 // mixer_utils.h is a collection of inline templated utility functions meant to
 // be used by mixer implementations and expanded/optimized at compile time in
@@ -168,8 +166,6 @@ class DstMixer<ScaleType,
   }
 };
 
-}  // namespace utils
 }  // namespace mixers
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

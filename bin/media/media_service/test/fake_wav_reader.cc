@@ -4,11 +4,8 @@
 
 #include "apps/media/src/media_service/test/fake_wav_reader.h"
 
-#include <mojo/system/result.h>
+#include <mx/datapipe.h>
 
-#include "mojo/public/cpp/system/data_pipe.h"
-
-namespace mojo {
 namespace media {
 
 FakeWavReader::FakeWavReader() : binding_(this) {
@@ -47,62 +44,55 @@ void FakeWavReader::WriteHeader() {
 
 FakeWavReader::~FakeWavReader() {}
 
-void FakeWavReader::Bind(InterfaceRequest<SeekingReader> request) {
-  binding_.Bind(request.Pass());
+void FakeWavReader::Bind(fidl::InterfaceRequest<SeekingReader> request) {
+  binding_.Bind(std::move(request));
 }
 
 void FakeWavReader::Describe(const DescribeCallback& callback) {
-  callback.Run(MediaResult::OK, size_, true);
+  callback(MediaResult::OK, size_, true);
 }
 
 void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
-  FTL_DCHECK(!producer_handle_.is_valid())
-      << "ReadAt request received with previous datapipe still open";
-  ScopedDataPipeConsumerHandle consumer_handle;
-  MojoResult result =
-      CreateDataPipe(nullptr, &producer_handle_, &consumer_handle);
-  FTL_DCHECK(result == MOJO_RESULT_OK);
-  FTL_DCHECK(producer_handle_.is_valid());
-  FTL_DCHECK(consumer_handle.is_valid());
-  callback.Run(MediaResult::OK, consumer_handle.Pass());
+  mx::datapipe_consumer datapipe_consumer;
+  mx_status_t status = mx::datapipe<void>::create(
+      1u, kDatapipeCapacity, 0u, &datapipe_producer_, &datapipe_consumer);
+  FTL_DCHECK(status == NO_ERROR);
+  callback(MediaResult::OK, std::move(datapipe_consumer));
 
   position_ = position;
 
-  WriteToProducerHandle();
+  WriteToProducer();
 }
 
-void FakeWavReader::WriteToProducerHandle() {
+void FakeWavReader::WriteToProducer() {
   while (true) {
     uint8_t byte = GetByte(position_);
-    uint32_t byte_count = 1;
+    mx_size_t byte_count;
 
-    MojoResult result = WriteDataRaw(producer_handle_.get(), &byte, &byte_count,
-                                     MOJO_WRITE_DATA_FLAG_NONE);
-    if (result == MOJO_RESULT_OK) {
+    mx_status_t status = datapipe_producer_.write(0u, &byte, 1u, &byte_count);
+    if (status == NO_ERROR) {
       FTL_DCHECK(byte_count == 1);
       ++position_;
       continue;
     }
 
-    if (result == MOJO_SYSTEM_RESULT_SHOULD_WAIT) {
-      Environment::GetDefaultAsyncWaiter()->AsyncWait(
-          producer_handle_.get().value(), MOJO_HANDLE_SIGNAL_WRITABLE,
-          MOJO_DEADLINE_INDEFINITE, FakeWavReader::WriteToProducerHandleStatic,
-          this);
+    if (status == ERR_SHOULD_WAIT) {
+      fidl::GetDefaultAsyncWaiter()->AsyncWait(
+          datapipe_producer_.get(), MX_SIGNAL_WRITABLE, MX_TIME_INFINITE,
+          FakeWavReader::WriteToProducerStatic, this);
       return;
     }
 
-    // TODO(dalesat): Remove UNKNOWN when fix lands for
-    // https://fuchsia.atlassian.net/projects/US/issues/US-43.
-    if (result == MOJO_SYSTEM_RESULT_FAILED_PRECONDITION ||
-        result == MOJO_SYSTEM_RESULT_UNKNOWN) {
+    // TODO(dalesat): Don't really know what error we're going to get here.
+    if (status == ERR_UNAVAILABLE) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
-      producer_handle_.reset();
+      datapipe_producer_.reset();
       return;
     }
 
-    FTL_DCHECK(false) << "WriteDataRaw failed, " << result;
+    FTL_DCHECK(false) << "mx::datapipe_producer::write failed, status "
+                      << status;
   }
 }
 
@@ -137,22 +127,22 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 }
 
 // static
-void FakeWavReader::WriteToProducerHandleStatic(void* reader_void_ptr,
-                                                MojoResult result) {
-  FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(reader_void_ptr);
-  if (result == MOJO_SYSTEM_RESULT_CANCELLED) {
+void FakeWavReader::WriteToProducerStatic(mx_status_t status,
+                                          mx_signals_t pending,
+                                          void* closure) {
+  FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
+  if (status == ERR_BAD_STATE) {
     // Run loop has aborted...the app is shutting down.
     return;
   }
 
-  if (result != MOJO_RESULT_OK) {
-    FTL_LOG(ERROR) << "AsyncWait failed " << result;
-    reader->producer_handle_.reset();
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "AsyncWait failed " << status;
+    reader->datapipe_producer_.reset();
     return;
   }
 
-  reader->WriteToProducerHandle();
+  reader->WriteToProducer();
 }
 
 }  // namespace media
-}  // namespace mojo

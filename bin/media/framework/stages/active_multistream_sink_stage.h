@@ -13,7 +13,6 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
-namespace mojo {
 namespace media {
 
 // A stage that hosts an ActiveSink.
@@ -71,4 +70,3 @@ class ActiveMultistreamSinkStage : public Stage,
 };
 
 }  // namespace media
-}  // namespace mojo

@@ -21,7 +21,6 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace media {
 
 class FfmpegDemuxImpl : public FfmpegDemux {
@@ -414,4 +413,3 @@ TimelineRate FfmpegDemuxImpl::FfmpegDemuxStream::pts_rate() const {
 }
 
 }  // namespace media
-}  // namespace mojo

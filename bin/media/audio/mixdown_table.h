@@ -10,7 +10,6 @@
 #include "apps/media/src/audio/level.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // A mutable rectangular matrix of Levels indicating how input channels should
@@ -106,4 +105,3 @@ class MixdownTable {
 };
 
 }  // namespace media
-}  // namespace mojo

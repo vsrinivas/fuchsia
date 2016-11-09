@@ -11,7 +11,6 @@
 #include "apps/media/src/framework/types/stream_type.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // Describes the type of an audio stream.
@@ -117,4 +116,3 @@ class AudioStreamTypeSet : public StreamTypeSet {
 };
 
 }  // namespace media
-}  // namespace mojo

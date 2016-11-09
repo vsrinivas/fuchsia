@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/models/part.h"
 #include "apps/media/src/framework/packet.h"
 
-namespace mojo {
 namespace media {
 
 // Asynchronous source of packets for multiple streams.
@@ -32,4 +31,3 @@ class ActiveMultistreamSource : public Part {
 };
 
 }  // namespace media
-}  // namespace mojo

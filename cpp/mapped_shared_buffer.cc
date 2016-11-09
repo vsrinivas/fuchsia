@@ -4,14 +4,14 @@
 
 #include "apps/media/cpp/mapped_shared_buffer.h"
 
-#include <mojo/system/result.h>
+#include <magenta/types.h>
+#include <mx/process.h>
+#include <mx/vmo.h>
 
 #include "apps/media/cpp/fifo_allocator.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/system/handle.h"
 
-namespace mojo {
 namespace media {
 
 MappedSharedBuffer::MappedSharedBuffer() {}
@@ -20,66 +20,64 @@ MappedSharedBuffer::~MappedSharedBuffer() {
   Reset();
 }
 
-MojoResult MappedSharedBuffer::InitNew(uint64_t size) {
+mx_status_t MappedSharedBuffer::InitNew(uint64_t size) {
   FTL_DCHECK(size > 0);
 
-  buffer_.reset(new SharedBuffer(size));
-  handle_.reset();
+  mx::vmo vmo;
 
-  return InitInternal(buffer_->handle);
+  mx_status_t status = mx::vmo::create(size, 0, &vmo);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::vmo::create failed, status " << status;
+    return status;
+  }
+
+  // Allocate physical memory for the buffer.
+  status = vmo.op_range(MX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::vmo::op_range failed, status " << status;
+    return status;
+  }
+
+  return InitInternal(std::move(vmo));
 }
 
-MojoResult MappedSharedBuffer::InitFromHandle(ScopedSharedBufferHandle handle) {
-  FTL_DCHECK(handle.is_valid());
-
-  buffer_.reset();
-  handle_ = handle.Pass();
-
-  return InitInternal(handle_);
+mx_status_t MappedSharedBuffer::InitFromVmo(mx::vmo vmo) {
+  return InitInternal(std::move(vmo));
 }
 
-MojoResult MappedSharedBuffer::InitInternal(
-    const ScopedSharedBufferHandle& handle) {
-  FTL_DCHECK(handle.is_valid());
-
-  // Query the buffer for its size.
-  MojoBufferInformation info;
-  MojoResult result =
-      MojoGetBufferInformation(handle.get().value(), &info, sizeof(info));
-  uint64_t size = info.num_bytes;
-
-  if (result != MOJO_RESULT_OK) {
-    FTL_DLOG(ERROR) << "MojoGetBufferInformation failed, result " << result;
-    return result;
+mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo) {
+  uint64_t size;
+  mx_status_t status = vmo.get_size(&size);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::vmo::get_size failed, status " << status;
+    return status;
   }
 
   if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
-    FTL_DLOG(ERROR) << "MojoGetBufferInformation returned invalid size "
-                    << size;
-    return MOJO_SYSTEM_RESULT_OUT_OF_RANGE;
+    FTL_LOG(ERROR) << "mx::vmo::get_size returned invalid size " << size;
+    return ERR_OUT_OF_RANGE;
   }
 
   size_ = size;
   buffer_ptr_.reset();
 
-  void* ptr;
-  result = MapBuffer(handle.get(),
-                     0,  // offset
-                     size, &ptr, MOJO_MAP_BUFFER_FLAG_NONE);
-
-  if (result != MOJO_RESULT_OK) {
-    FTL_DLOG(ERROR) << "MapBuffer failed, result " << result;
-    Reset();
-    return result;
+  // TODO(dalesat): Map only for required operations (read or write).
+  uintptr_t mapped_buffer = 0u;
+  status =
+      mx::process::self().map_vm(vmo, 0u, size, &mapped_buffer,
+                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::process::map_vm failed, status " << status;
+    return status;
   }
 
-  FTL_DCHECK(ptr);
+  buffer_ptr_.reset(reinterpret_cast<uint8_t*>(mapped_buffer));
 
-  buffer_ptr_.reset(reinterpret_cast<uint8_t*>(ptr));
+  vmo_ = std::move(vmo);
 
   OnInit();
 
-  return MOJO_RESULT_OK;
+  return NO_ERROR;
 }
 
 bool MappedSharedBuffer::initialized() const {
@@ -88,8 +86,7 @@ bool MappedSharedBuffer::initialized() const {
 
 void MappedSharedBuffer::Reset() {
   size_ = 0;
-  buffer_.reset();
-  handle_.reset();
+  vmo_.reset();
   buffer_ptr_.reset();
 }
 
@@ -97,17 +94,16 @@ uint64_t MappedSharedBuffer::size() const {
   return size_;
 }
 
-ScopedSharedBufferHandle MappedSharedBuffer::GetDuplicateHandle() const {
+mx::vmo MappedSharedBuffer::GetDuplicateVmo() const {
   FTL_DCHECK(initialized());
-  ScopedSharedBufferHandle handle;
-  if (buffer_) {
-    handle = DuplicateHandle(buffer_->handle.get());
-  } else {
-    FTL_DCHECK(handle_.is_valid());
-    handle = DuplicateHandle(handle_.get());
+  mx::vmo vmo;
+  // TODO(dalesat): Limit rights depending on usage.
+  mx_status_t status = vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, &vmo);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "mx::handle::duplicate failed, status " << status;
   }
-  FTL_DCHECK(handle.is_valid());
-  return handle;
+
+  return vmo;
 }
 
 bool MappedSharedBuffer::Validate(uint64_t offset, uint64_t size) {
@@ -139,4 +135,3 @@ uint64_t MappedSharedBuffer::OffsetFromPtr(void* ptr) const {
 void MappedSharedBuffer::OnInit() {}
 
 }  // namespace media
-}  // namespace mojo

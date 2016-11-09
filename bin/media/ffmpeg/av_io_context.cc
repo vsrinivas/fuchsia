@@ -13,7 +13,6 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
 
-namespace mojo {
 namespace media {
 
 void AVIOContextDeleter::operator()(AVIOContext* context) const {
@@ -140,4 +139,3 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
 }
 
 }  // namespace media
-}  // namespace mojo

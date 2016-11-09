@@ -4,29 +4,29 @@
 
 #include "apps/media/src/media_service/media_decoder_impl.h"
 
-#include "apps/media/src/mojo/mojo_type_conversions.h"
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
     MediaTypePtr input_media_type,
-    InterfaceRequest<MediaTypeConverter> request,
+    fidl::InterfaceRequest<MediaTypeConverter> request,
     MediaServiceImpl* owner) {
-  return std::shared_ptr<MediaDecoderImpl>(
-      new MediaDecoderImpl(input_media_type.Pass(), request.Pass(), owner));
+  return std::shared_ptr<MediaDecoderImpl>(new MediaDecoderImpl(
+      std::move(input_media_type), std::move(request), owner));
 }
 
-MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
-                                   InterfaceRequest<MediaTypeConverter> request,
-                                   MediaServiceImpl* owner)
+MediaDecoderImpl::MediaDecoderImpl(
+    MediaTypePtr input_media_type,
+    fidl::InterfaceRequest<MediaTypeConverter> request,
+    MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaTypeConverter>(this,
-                                                    request.Pass(),
+                                                    std::move(request),
                                                     owner),
-      consumer_(MojoPacketConsumer::Create()),
-      producer_(MojoPacketProducer::Create()) {
+      consumer_(FidlPacketConsumer::Create()),
+      producer_(FidlPacketProducer::Create()) {
   FTL_DCHECK(input_media_type);
 
   std::unique_ptr<StreamType> input_stream_type =
@@ -39,7 +39,7 @@ MediaDecoderImpl::MediaDecoderImpl(MediaTypePtr input_media_type,
   }
 
   FLOG(log_channel_,
-       Config(input_media_type.Pass(),
+       Config(std::move(input_media_type),
               MediaType::From(decoder_->output_stream_type()),
               FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
@@ -64,18 +64,17 @@ MediaDecoderImpl::~MediaDecoderImpl() {}
 
 void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
   FTL_DCHECK(decoder_);
-  callback.Run(MediaType::From(decoder_->output_stream_type()));
+  callback(MediaType::From(decoder_->output_stream_type()));
 }
 
 void MediaDecoderImpl::GetPacketConsumer(
-    mojo::InterfaceRequest<MediaPacketConsumer> consumer) {
-  consumer_->Bind(consumer.Pass());
+    fidl::InterfaceRequest<MediaPacketConsumer> consumer) {
+  consumer_->Bind(std::move(consumer));
 }
 
 void MediaDecoderImpl::GetPacketProducer(
-    mojo::InterfaceRequest<MediaPacketProducer> producer) {
-  producer_->Bind(producer.Pass());
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
+  producer_->Bind(std::move(producer));
 }
 
 }  // namespace media
-}  // namespace mojo

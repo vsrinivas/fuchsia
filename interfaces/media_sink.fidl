@@ -1,0 +1,21 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/interfaces/media_transport.fidl";
+import "apps/media/interfaces/timeline_controller.fidl";
+
+// TODO(dalesat): Define a media sink that multiplexes streams.
+
+// Consumes media streams and delivers them to specified destinations.
+interface MediaSink {
+  // TODO(dalesat): Support fanout to many destinations.
+
+  // Gets the packet consumer for the stream to be delivered.
+  GetPacketConsumer(MediaPacketConsumer& packet_consumer);
+
+  // Request the timeline control point for this sink
+  GetTimelineControlPoint(MediaTimelineControlPoint& timeline_control_point);
+};

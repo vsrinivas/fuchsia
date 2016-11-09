@@ -2,67 +2,59 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_
+#pragma once
 
 #include <vector>
 
-#include "apps/media/interfaces/media_common.mojom.h"
-#include "apps/media/interfaces/media_source.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
-#include "apps/media/interfaces/media_types.mojom.h"
-#include "apps/media/interfaces/timelines.mojom.h"
+#include "apps/media/interfaces/media_common.fidl.h"
+#include "apps/media/interfaces/media_source.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/media/interfaces/media_types.fidl.h"
+#include "apps/media/interfaces/timelines.fidl.h"
 #include "apps/media/tools/flog_viewer/formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
-// Mojo defines versions of operator<< for this that produce only numbers.
-const char* StringFromMediaTypeMedium(mojo::media::MediaTypeMedium value);
-const char* StringFromAudioSampleFormat(mojo::media::AudioSampleFormat value);
+// Fidl defines versions of operator<< for this that produce only numbers.
+const char* StringFromMediaTypeMedium(media::MediaTypeMedium value);
+const char* StringFromAudioSampleFormat(media::AudioSampleFormat value);
 
 // The following overloads add newlines.
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const InterfacePtr<T>& value);
+std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value);
 
+std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value);
+std::ostream& operator<<(std::ostream& os, const media::MediaTypeSetPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypePtr& value);
+                         const media::MediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeSetPtr& value);
+                         const media::MediaTypeSetDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeDetailsPtr& value);
+                         const media::AudioMediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaTypeSetDetailsPtr& value);
+                         const media::AudioMediaTypeSetDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::AudioMediaTypeDetailsPtr& value);
+                         const media::VideoMediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::AudioMediaTypeSetDetailsPtr& value);
+                         const media::VideoMediaTypeSetDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::VideoMediaTypeDetailsPtr& value);
+                         const media::TextMediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::VideoMediaTypeSetDetailsPtr& value);
+                         const media::TextMediaTypeSetDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::TextMediaTypeDetailsPtr& value);
+                         const media::SubpictureMediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::TextMediaTypeSetDetailsPtr& value);
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::SubpictureMediaTypeDetailsPtr& value);
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::SubpictureMediaTypeSetDetailsPtr& value);
-std::ostream& operator<<(
-    std::ostream& os,
-    const mojo::media::MediaSourceStreamDescriptorPtr& value);
-std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value);
+                         const media::SubpictureMediaTypeSetDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacketPtr& value);
+                         const media::MediaSourceStreamDescriptorPtr& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacket& value);
+                         const media::TimelineTransformPtr& value);
+std::ostream& operator<<(std::ostream& os, const media::MediaPacketPtr& value);
+std::ostream& operator<<(std::ostream& os, const media::MediaPacket& value);
 std::ostream& operator<<(std::ostream& os,
-                         const mojo::media::MediaPacketDemandPtr& value);
+                         const media::MediaPacketDemandPtr& value);
 
 struct AsTime {
   explicit AsTime(int64_t time) : time_(time) {}
@@ -72,7 +64,7 @@ struct AsTime {
 std::ostream& operator<<(std::ostream& os, AsTime value);
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const Array<T>& value) {
+std::ostream& operator<<(std::ostream& os, const fidl::Array<T>& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;
   } else if (value.size() == 0) {
@@ -82,7 +74,7 @@ std::ostream& operator<<(std::ostream& os, const Array<T>& value) {
   }
 
   int index = 0;
-  for (T& element : const_cast<Array<T>&>(value)) {
+  for (T& element : const_cast<fidl::Array<T>&>(value)) {
     os << begl << "[" << index++ << "] " << element;
   }
 
@@ -107,6 +99,3 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_FORMATTING_H_

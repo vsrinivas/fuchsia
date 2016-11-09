@@ -10,7 +10,6 @@
 
 #include "apps/media/cpp/timeline.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -35,13 +34,15 @@ FakeRenderer::FakeRenderer()
 
 FakeRenderer::~FakeRenderer() {}
 
-void FakeRenderer::Bind(InterfaceRequest<MediaRenderer> renderer_request) {
-  renderer_binding_.Bind(renderer_request.Pass());
+void FakeRenderer::Bind(
+    fidl::InterfaceRequest<MediaRenderer> renderer_request) {
+  renderer_binding_.Bind(std::move(renderer_request));
 }
 
 void FakeRenderer::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& callback) {
-  Array<MediaTypeSetPtr> supported_types = Array<MediaTypeSetPtr>::New(2);
+  fidl::Array<MediaTypeSetPtr> supported_types =
+      fidl::Array<MediaTypeSetPtr>::New(2);
 
   AudioMediaTypeSetDetailsPtr audio_details = AudioMediaTypeSetDetails::New();
   audio_details->sample_format = AudioSampleFormat::ANY;
@@ -52,10 +53,10 @@ void FakeRenderer::GetSupportedMediaTypes(
   MediaTypeSetPtr supported_type = MediaTypeSet::New();
   supported_type->medium = MediaTypeMedium::AUDIO;
   supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_audio(audio_details.Pass());
-  supported_type->encodings = Array<String>::New(1);
+  supported_type->details->set_audio(std::move(audio_details));
+  supported_type->encodings = fidl::Array<fidl::String>::New(1);
   supported_type->encodings[0] = MediaType::kAudioEncodingLpcm;
-  supported_types[0] = supported_type.Pass();
+  supported_types[0] = std::move(supported_type);
 
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 1;
@@ -65,12 +66,12 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type = MediaTypeSet::New();
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(video_details.Pass());
-  supported_type->encodings = Array<String>::New(1);
+  supported_type->details->set_video(std::move(video_details));
+  supported_type->encodings = fidl::Array<fidl::String>::New(1);
   supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  supported_types[1] = supported_type.Pass();
+  supported_types[1] = std::move(supported_type);
 
-  callback.Run(supported_types.Pass());
+  callback(std::move(supported_types));
 }
 
 void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
@@ -92,13 +93,13 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
 }
 
 void FakeRenderer::GetPacketConsumer(
-    InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
-  MediaPacketConsumerBase::Bind(packet_consumer_request.Pass());
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+  MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
 void FakeRenderer::GetTimelineControlPoint(
-    InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
-  control_point_binding_.Bind(control_point_request.Pass());
+    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+  control_point_binding_.Bind(std::move(control_point_request));
 }
 
 void FakeRenderer::OnPacketSupplied(
@@ -153,7 +154,7 @@ void FakeRenderer::OnFlushRequested(const FlushCallback& callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }
-  callback.Run();
+  callback();
 }
 
 void FakeRenderer::OnFailure() {
@@ -182,13 +183,13 @@ void FakeRenderer::GetStatus(uint64_t version_last_seen,
 }
 
 void FakeRenderer::GetTimelineConsumer(
-    InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
-  timeline_consumer_binding_.Bind(timeline_consumer_request.Pass());
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
+  timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 
 void FakeRenderer::Prime(const PrimeCallback& callback) {
   SetDemand(demand_min_packets_outstanding_);
-  callback.Run();
+  callback();
 }
 
 void FakeRenderer::SetTimelineTransform(
@@ -223,9 +224,9 @@ void FakeRenderer::SetTimelineTransform(
 void FakeRenderer::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
-  if (!set_timeline_transform_callback_.is_null()) {
-    set_timeline_transform_callback_.Run(completed);
-    set_timeline_transform_callback_.reset();
+  if (set_timeline_transform_callback_) {
+    set_timeline_transform_callback_(completed);
+    set_timeline_transform_callback_ = nullptr;
   }
 }
 
@@ -239,9 +240,9 @@ void FakeRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
 
-  if (!set_timeline_transform_callback_.is_null()) {
-    set_timeline_transform_callback_.Run(true);
-    set_timeline_transform_callback_.reset();
+  if (set_timeline_transform_callback_) {
+    set_timeline_transform_callback_(true);
+    set_timeline_transform_callback_ = nullptr;
   }
 
   SendStatusUpdates();
@@ -265,8 +266,7 @@ void FakeRenderer::CompleteGetStatus(const GetStatusCallback& callback) {
   status->timeline_transform =
       TimelineTransform::From(current_timeline_function_);
   status->end_of_stream = end_of_stream_;
-  callback.Run(status_version_, status.Pass());
+  callback(status_version_, std::move(status));
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -8,23 +8,23 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
 uint32_t CreateNewBuffer(SharedBufferSet* under_test, uint64_t size) {
   uint32_t buffer_id;
-  ScopedSharedBufferHandle handle;
-  MojoResult result = under_test->CreateNewBuffer(size, &buffer_id, &handle);
-  EXPECT_EQ(MOJO_RESULT_OK, result);
-  EXPECT_TRUE(handle.is_valid());
+  mx::vmo vmo;
+  mx_status_t status = under_test->CreateNewBuffer(size, &buffer_id, &vmo);
+  EXPECT_EQ(NO_ERROR, status);
   return buffer_id;
 }
 
 void AddBuffer(SharedBufferSet* under_test, uint64_t size, uint32_t buffer_id) {
-  SharedBuffer buffer(size);
-  MojoResult result = under_test->AddBuffer(buffer_id, buffer.handle.Pass());
-  EXPECT_EQ(MOJO_RESULT_OK, result);
+  mx::vmo vmo;
+  mx_status_t status = mx::vmo::create(size, 0, &vmo);
+  EXPECT_EQ(NO_ERROR, status);
+  status = under_test->AddBuffer(buffer_id, std::move(vmo));
+  EXPECT_EQ(NO_ERROR, status);
 }
 
 void VerifyBuffer(const SharedBufferSet& under_test,
@@ -107,4 +107,3 @@ TEST(SharedBufferSetTest, Validate) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

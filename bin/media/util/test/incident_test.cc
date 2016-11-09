@@ -6,7 +6,6 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -18,13 +17,6 @@ TEST(IncidentTest, Basics) {
   EXPECT_FALSE(under_test.occurred());
 
   under_test.Occur();
-  EXPECT_TRUE(under_test.occurred());
-
-  under_test.Reset();
-  EXPECT_FALSE(under_test.occurred());
-
-  // Incident::Run does the same thing as Incident::Occur.
-  under_test.Run();
   EXPECT_TRUE(under_test.occurred());
 
   under_test.Reset();
@@ -122,13 +114,6 @@ TEST(ThreadsafeIncidentTest, Basics) {
 
   under_test.Reset();
   EXPECT_FALSE(under_test.occurred());
-
-  // ThreadsafeIncident::Run does the same thing as ThreadsafeIncident::Occur.
-  under_test.Run();
-  EXPECT_TRUE(under_test.occurred());
-
-  under_test.Reset();
-  EXPECT_FALSE(under_test.occurred());
 }
 
 // Tests whether a consequence registered with ThreadsafeIncident::When runs
@@ -214,4 +199,3 @@ TEST(ThreadsafeIncidentTest, When_After_Delete) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

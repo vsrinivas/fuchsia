@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include "apps/media/src/media_service/media_service_impl.h"
-#include "mojo/public/c/include/mojo/system/main.h"
-#include "mojo/public/cpp/application/run_application.h"
+#include "lib/mtl/tasks/message_loop.h"
 
-MojoResult MojoMain(MojoHandle application_request) {
-  FTL_DCHECK(application_request != MOJO_HANDLE_INVALID)
-      << "Must be hosted by application_manager";
-  mojo::media::MediaServiceImpl media_service;
-  return mojo::RunApplication(application_request, &media_service);
+int main(int argc, const char** argv) {
+  mtl::MessageLoop loop;
+
+  media::MediaServiceImpl impl;
+
+  loop.Run();
+  return 0;
 }

@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_
+#pragma once
 
 #include <map>
 #include <unordered_set>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
-
-namespace mojo {
+#include "apps/modular/lib/app/application_context.h"
 
 class Shell;
 
@@ -36,7 +34,7 @@ class FlogViewer {
   void set_format(const std::string& format) { format_ = format; }
 
   // Initializes the viewer.
-  void Initialize(Shell* shell,
+  void Initialize(modular::ApplicationContext* application_context,
                   const std::function<void()>& terminate_callback);
 
   // Processs log descriptions.
@@ -87,6 +85,3 @@ class FlogViewer {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_FLOG_VIEWER_H_

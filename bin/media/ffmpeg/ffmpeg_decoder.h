@@ -8,7 +8,6 @@
 
 #include "apps/media/src/decode/decoder.h"
 
-namespace mojo {
 namespace media {
 
 // Abstract base class for ffmpeg-based decoders, just the create function.
@@ -22,4 +21,3 @@ class FfmpegDecoder : public Decoder {
 };
 
 }  // namespace media
-}  // namespace mojo

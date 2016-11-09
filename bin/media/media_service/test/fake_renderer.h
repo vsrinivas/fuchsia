@@ -10,11 +10,10 @@
 
 #include "apps/media/cpp/media_packet_consumer_base.h"
 #include "apps/media/cpp/timeline_function.h"
-#include "apps/media/interfaces/media_renderer.mojom.h"
-#include "apps/media/interfaces/media_transport.mojom.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/media/interfaces/media_renderer.fidl.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
 // Implements MediaRenderer for testing.
@@ -45,7 +44,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   ~FakeRenderer() override;
 
   // Binds the renderer.
-  void Bind(InterfaceRequest<MediaRenderer> renderer_request);
+  void Bind(fidl::InterfaceRequest<MediaRenderer> renderer_request);
 
   // Sets the demand min_packets_outstanding.
   void ConfigureDemand(uint32_t min_packets_outstanding) {
@@ -72,10 +71,10 @@ class FakeRenderer : public MediaPacketConsumerBase,
 
   void SetMediaType(MediaTypePtr media_type) override;
 
-  void GetPacketConsumer(
-      InterfaceRequest<MediaPacketConsumer> packet_consumer_request) override;
+  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
+                             packet_consumer_request) override;
 
-  void GetTimelineControlPoint(InterfaceRequest<MediaTimelineControlPoint>
+  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
@@ -90,8 +89,8 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
-  void GetTimelineConsumer(
-      InterfaceRequest<TimelineConsumer> timeline_consumer_request) override;
+  void GetTimelineConsumer(fidl::InterfaceRequest<TimelineConsumer>
+                               timeline_consumer_request) override;
 
   void Prime(const PrimeCallback& callback) override;
 
@@ -118,9 +117,9 @@ class FakeRenderer : public MediaPacketConsumerBase,
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  Binding<MediaRenderer> renderer_binding_;
-  Binding<MediaTimelineControlPoint> control_point_binding_;
-  Binding<TimelineConsumer> timeline_consumer_binding_;
+  fidl::Binding<MediaRenderer> renderer_binding_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;
@@ -134,4 +133,3 @@ class FakeRenderer : public MediaPacketConsumerBase,
 };
 
 }  // namespace media
-}  // namespace mojo

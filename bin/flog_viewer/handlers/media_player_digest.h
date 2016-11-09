@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_DIGEST_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_DIGEST_H_
+#pragma once
 
-#include "apps/media/interfaces/logs/media_player_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -17,7 +15,7 @@ class MediaPlayerAccumulator;
 
 // Handler for MediaPlayerChannel messages, digest format.
 class MediaPlayerDigest : public ChannelHandler,
-                          public mojo::media::logs::MediaPlayerChannel {
+                          public media::logs::MediaPlayerChannel {
  public:
   MediaPlayerDigest(const std::string& format);
 
@@ -27,12 +25,12 @@ class MediaPlayerDigest : public ChannelHandler,
 
  protected:
   // ChannelHandler overrides.
-  void HandleMessage(Message* message) override;
+  void HandleMessage(fidl::Message* message) override;
 
  private:
   // MediaPlayerChannel implementation.
   void ReceivedDemuxDescription(
-      Array<mojo::media::MediaTypePtr> stream_types) override;
+      fidl::Array<media::MediaTypePtr> stream_types) override;
 
   void StreamsPrepared() override;
 
@@ -57,10 +55,10 @@ class MediaPlayerDigest : public ChannelHandler,
   void Flushing() override;
 
   void SettingTimelineTransform(
-      TimelineTransformPtr timeline_transform) override;
+      media::TimelineTransformPtr timeline_transform) override;
 
  private:
-  mojo::media::logs::MediaPlayerChannelStub stub_;
+  media::logs::MediaPlayerChannelStub stub_;
   std::shared_ptr<MediaPlayerAccumulator> accumulator_;
 };
 
@@ -88,15 +86,12 @@ class MediaPlayerAccumulator : public Accumulator {
  private:
   State state_ = State::kInitial;
   State target_state_ = State::kFlushed;
-  int64_t target_position_ = kUnspecifiedTime;
-  Array<mojo::media::MediaTypePtr> stream_types_;
-  TimelineTransformPtr timeline_transform_;
+  int64_t target_position_ = media::kUnspecifiedTime;
+  fidl::Array<media::MediaTypePtr> stream_types_;
+  media::TimelineTransformPtr timeline_transform_;
 
   friend class MediaPlayerDigest;
 };
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_HANDLERS_MEDIA_PLAYER_DIGEST_H_

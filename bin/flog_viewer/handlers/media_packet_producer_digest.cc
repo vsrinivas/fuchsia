@@ -6,11 +6,10 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_packet_producer_channel.mojom.h"
+#include "apps/media/interfaces/logs/media_packet_producer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -22,7 +21,7 @@ MediaPacketProducerDigest::MediaPacketProducerDigest(const std::string& format)
 
 MediaPacketProducerDigest::~MediaPacketProducerDigest() {}
 
-void MediaPacketProducerDigest::HandleMessage(Message* message) {
+void MediaPacketProducerDigest::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
@@ -88,8 +87,8 @@ void MediaPacketProducerDigest::ReleasingPayloadBuffer(uint32_t index,
 }
 
 void MediaPacketProducerDigest::DemandUpdated(
-    mojo::media::MediaPacketDemandPtr demand) {
-  accumulator_->current_demand_ = demand.Pass();
+    media::MediaPacketDemandPtr demand) {
+  accumulator_->current_demand_ = std::move(demand);
   if (accumulator_->min_packets_outstanding_highest_ <
       accumulator_->current_demand_->min_packets_outstanding) {
     accumulator_->min_packets_outstanding_highest_ =
@@ -97,11 +96,10 @@ void MediaPacketProducerDigest::DemandUpdated(
   }
 }
 
-void MediaPacketProducerDigest::ProducingPacket(
-    uint64_t label,
-    mojo::media::MediaPacketPtr packet,
-    uint64_t payload_address,
-    uint32_t packets_outstanding) {
+void MediaPacketProducerDigest::ProducingPacket(uint64_t label,
+                                                media::MediaPacketPtr packet,
+                                                uint64_t payload_address,
+                                                uint32_t packets_outstanding) {
   auto iter = accumulator_->outstanding_packets_.find(label);
   if (iter != accumulator_->outstanding_packets_.end()) {
     ReportProblem() << "Packet label " << label << " reused";
@@ -110,8 +108,9 @@ void MediaPacketProducerDigest::ProducingPacket(
   accumulator_->packets_.Add(packet->payload_size);
 
   accumulator_->outstanding_packets_.emplace(
-      label, MediaPacketProducerAccumulator::Packet(
-                 label, packet.Pass(), payload_address, packets_outstanding));
+      label,
+      MediaPacketProducerAccumulator::Packet(
+          label, std::move(packet), payload_address, packets_outstanding));
 }
 
 void MediaPacketProducerDigest::RetiringPacket(uint64_t label,
@@ -200,4 +199,3 @@ void MediaPacketProducerAccumulator::Print(std::ostream& os) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

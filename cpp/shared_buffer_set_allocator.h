@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_SHARED_BUFFER_SET_ALLOCATOR_H_
-#define APPS_MEDIA_CPP_SHARED_BUFFER_SET_ALLOCATOR_H_
+#pragma once
 
 #include <map>
 #include <memory>
@@ -16,7 +15,6 @@
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
-namespace mojo {
 namespace media {
 
 // SharedBufferSetAllocator enhances SharedBufferSet by adding allocation
@@ -52,7 +50,7 @@ namespace media {
 // buffer of the required size is allocated.
 //
 // This design is intended to do a reasonable job of serving the real-world
-// needs of the mojo packet transport. The 'whole' strategy is intended for the
+// needs of the fidl packet transport. The 'whole' strategy is intended for the
 // very large packets containing uncompressed video. Typically, these are of
 // consistent size for a given connection, and packet flow control is tuned to
 // keep their number small and consistent (typically one or two per connection).
@@ -114,8 +112,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   // there is one, false if not. If this method returns true, |*buffer_id_out|
   // and |*handle_out| are updated. If |*handle_out| is valid, the update is
   // a buffer add, a buffer remove if not.
-  bool PollForBufferUpdate(uint32_t* buffer_id_out,
-                           ScopedSharedBufferHandle* handle_out);
+  bool PollForBufferUpdate(uint32_t* buffer_id_out, mx::vmo* handle_out);
 
  private:
   struct Buffer {
@@ -135,14 +132,14 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   };
 
   struct BufferUpdate {
-    BufferUpdate(uint32_t buffer_id, ScopedSharedBufferHandle handle);
+    BufferUpdate(uint32_t buffer_id, mx::vmo vmo);
 
     BufferUpdate(uint32_t buffer_id);
 
     ~BufferUpdate();
 
     uint32_t buffer_id_;
-    ScopedSharedBufferHandle handle_;
+    mx::vmo vmo_;
   };
 
   static constexpr uint64_t kWholeRegionMinimumSize = 64 * 1024;
@@ -187,6 +184,3 @@ class SharedBufferSetAllocator : public SharedBufferSet {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_SHARED_BUFFER_SET_ALLOCATOR_H_

@@ -7,7 +7,6 @@
 #include "apps/media/src/framework/engine.h"
 #include "apps/media/src/framework/stages/stage.h"
 
-namespace mojo {
 namespace media {
 
 Output::Output() : demand_(Demand::kNegative), copy_allocator_(nullptr) {}
@@ -86,4 +85,3 @@ void Output::Flush() {
 }
 
 }  // namespace media
-}  // namespace mojo

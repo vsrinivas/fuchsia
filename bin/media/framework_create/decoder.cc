@@ -5,7 +5,6 @@
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder.h"
 
-namespace mojo {
 namespace media {
 
 Result Decoder::Create(const StreamType& stream_type,
@@ -20,4 +19,3 @@ Result Decoder::Create(const StreamType& stream_type,
 }
 
 }  // namespace media
-}  // namespace mojo

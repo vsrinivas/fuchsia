@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // LpcmReformatter implementation that accepts samples of type TIn and
@@ -274,4 +273,3 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
 }
 
 }  // namespace media
-}  // namespace mojo

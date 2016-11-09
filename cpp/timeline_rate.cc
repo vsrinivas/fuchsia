@@ -9,7 +9,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 namespace {
@@ -238,4 +237,3 @@ int64_t TimelineRate::Scale(int64_t value,
 }
 
 }  // namespace media
-}  // namespace mojo

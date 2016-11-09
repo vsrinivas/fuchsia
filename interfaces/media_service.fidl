@@ -1,0 +1,55 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/interfaces/media_types.fidl";
+import "apps/media/interfaces/media_player.fidl";
+import "apps/media/interfaces/media_sink.fidl";
+import "apps/media/interfaces/media_source.fidl";
+import "apps/media/interfaces/media_demux.fidl";
+import "apps/media/interfaces/media_renderer.fidl";
+import "apps/media/interfaces/media_type_converter.fidl";
+import "apps/media/interfaces/seeking_reader.fidl";
+import "apps/media/interfaces/timeline_controller.fidl";
+
+// Primary media service definition.
+[ServiceName="media::MediaService"]
+interface MediaService {
+  // Creates a player.
+  CreatePlayer(SeekingReader reader,
+               MediaRenderer? audio_renderer,
+               MediaRenderer? video_renderer,
+               MediaPlayer& player);
+
+  // Creates a source. If allowed_media_types is supplied, conversions will be
+  // added to each stream as needed to make the media type of the stream match
+  // one of the allowed types. If a stream cannot be converted to one of the
+  // allowed types, its media type will have the scheme NONE, and the stream
+  // will not be usable.
+  CreateSource(SeekingReader reader,
+               array<MediaTypeSet>? allowed_media_types,
+               MediaSource& source);
+
+  // Creates a sink. Conversions are added to the pipeline as appropriate to
+  // convert a media type supported by the renderer.
+  CreateSink(MediaRenderer? renderer,
+             MediaType media_type,
+             MediaSink& sink);
+
+  // Creates a demux.
+  CreateDemux(SeekingReader reader, MediaDemux& demux);
+
+  // Creates a decoder.
+  CreateDecoder(MediaType input_media_type, MediaTypeConverter& decoder);
+
+  // Creates a network reader.
+  CreateNetworkReader(string url, SeekingReader& reader);
+
+  // Creates a file reader.
+  CreateFileReader(string path, SeekingReader& reader);
+
+  // Creates a timeline controller reader.
+  CreateTimelineController(MediaTimelineController& timeline_controller);
+};

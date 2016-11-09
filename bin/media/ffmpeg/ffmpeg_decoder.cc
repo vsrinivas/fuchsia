@@ -8,7 +8,6 @@
 #include "apps/media/src/ffmpeg/ffmpeg_audio_decoder.h"
 #include "apps/media/src/ffmpeg/ffmpeg_video_decoder.h"
 
-namespace mojo {
 namespace media {
 
 Result FfmpegDecoder::Create(const StreamType& stream_type,
@@ -52,4 +51,3 @@ Result FfmpegDecoder::Create(const StreamType& stream_type,
 }
 
 }  // namespace media
-}  // namespace mojo

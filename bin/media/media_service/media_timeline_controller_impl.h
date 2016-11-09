@@ -9,16 +9,15 @@
 
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/cpp/timeline_function.h"
-#include "apps/media/interfaces/timeline_controller.mojom.h"
+#include "apps/media/interfaces/timeline_controller.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/callback_joiner.h"
-#include "apps/media/src/util/mojo_publisher.h"
-#include "mojo/public/cpp/bindings/binding.h"
+#include "apps/media/src/util/fidl_publisher.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
-namespace mojo {
 namespace media {
 
-// Mojo agent that controls timing in a graph.
+// Fidl agent that controls timing in a graph.
 class MediaTimelineControllerImpl
     : public MediaServiceImpl::Product<MediaTimelineController>,
       public MediaTimelineController,
@@ -26,24 +25,24 @@ class MediaTimelineControllerImpl
       public TimelineConsumer {
  public:
   static std::shared_ptr<MediaTimelineControllerImpl> Create(
-      InterfaceRequest<MediaTimelineController> request,
+      fidl::InterfaceRequest<MediaTimelineController> request,
       MediaServiceImpl* owner);
 
   ~MediaTimelineControllerImpl() override;
 
   // MediaTimelineController implementation.
   void AddControlPoint(
-      InterfaceHandle<MediaTimelineControlPoint> control_point) override;
+      fidl::InterfaceHandle<MediaTimelineControlPoint> control_point) override;
 
   void GetControlPoint(
-      InterfaceRequest<MediaTimelineControlPoint> control_point) override;
+      fidl::InterfaceRequest<MediaTimelineControlPoint> control_point) override;
 
   // MediaTimelineControlPoint implementation.
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
   void GetTimelineConsumer(
-      InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+      fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
   void Prime(const PrimeCallback& callback) override;
 
@@ -107,18 +106,18 @@ class MediaTimelineControllerImpl
     void Cancel() {
       FTL_DCHECK(!cancelled_);
       cancelled_ = true;
-      FTL_DCHECK(callback_.is_null());
-      callback_.Run(false);
-      callback_.reset();
-      completed_callback_.reset();
+      FTL_DCHECK(!callback_);
+      callback_(false);
+      callback_ = nullptr;
+      completed_callback_ = nullptr;
     }
 
     // Specifies a callback to be called if and when the transition is complete.
     // The callback will never be called if the transition is cancelled.
-    void WhenCompleted(const mojo::Callback<void()>& completed_callback) {
-      FTL_DCHECK(completed_callback_.is_null());
-      if (callback_.is_null() && !cancelled_) {
-        completed_callback.Run();
+    void WhenCompleted(const std::function<void()>& completed_callback) {
+      FTL_DCHECK(!completed_callback_);
+      if (!callback_ && !cancelled_) {
+        completed_callback();
       } else {
         completed_callback_ = completed_callback;
       }
@@ -134,18 +133,19 @@ class MediaTimelineControllerImpl
     SetTimelineTransformCallback callback_;
     CallbackJoiner callback_joiner_;
     bool cancelled_ = false;
-    Callback<void()> completed_callback_;
+    std::function<void()> completed_callback_;
   };
 
-  MediaTimelineControllerImpl(InterfaceRequest<MediaTimelineController> request,
-                              MediaServiceImpl* owner);
+  MediaTimelineControllerImpl(
+      fidl::InterfaceRequest<MediaTimelineController> request,
+      MediaServiceImpl* owner);
 
   // Takes action when a control point changes its end-of-stream value.
   void HandleControlPointEndOfStreamChange();
 
-  Binding<MediaTimelineControlPoint> control_point_binding_;
-  Binding<TimelineConsumer> consumer_binding_;
-  MojoPublisher<GetStatusCallback> status_publisher_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> consumer_binding_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
   std::vector<std::unique_ptr<ControlPointState>> control_point_states_;
   TimelineFunction current_timeline_function_;
   bool end_of_stream_ = false;
@@ -153,4 +153,3 @@ class MediaTimelineControllerImpl
 };
 
 }  // namespace media
-}  // namespace mojo

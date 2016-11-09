@@ -21,7 +21,6 @@
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/path.h"
 
-namespace mojo {
 namespace flog {
 namespace {
 
@@ -143,4 +142,3 @@ bool FlogDirectory::ParseLogFilePath(const std::string& path,
 }
 
 }  // namespace flog
-}  // namespace mojo

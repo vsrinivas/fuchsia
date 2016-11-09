@@ -4,7 +4,6 @@
 
 #include "apps/media/src/media_service/media_service_impl.h"
 
-#include "apps/media/cpp/flog.h"
 #include "apps/media/src/media_service/file_reader_impl.h"
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
@@ -12,86 +11,80 @@
 #include "apps/media/src/media_service/media_sink_impl.h"
 #include "apps/media/src/media_service/media_source_impl.h"
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
-//#include "apps/media/src/media_service/network_reader_impl.h"
-#include "mojo/public/cpp/application/service_provider_impl.h"
+#include "apps/media/src/media_service/network_reader_impl.h"
 
-namespace mojo {
 namespace media {
 
-MediaServiceImpl::MediaServiceImpl() {}
+MediaServiceImpl::MediaServiceImpl()
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()) {
+  FTL_DCHECK(application_context_);
+
+  FLOG_INITIALIZE(application_context_.get(), "media_service");
+
+  application_context_->outgoing_services()->AddService<MediaService>(
+      [this](fidl::InterfaceRequest<MediaService> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+}
 
 MediaServiceImpl::~MediaServiceImpl() {
   FLOG_DESTROY();
 }
 
-void MediaServiceImpl::OnInitialize() {
-  FLOG_INITIALIZE(shell(), "media_service");
-}
-
-bool MediaServiceImpl::OnAcceptConnection(
-    ServiceProviderImpl* service_provider_impl) {
-  service_provider_impl->AddService<MediaService>(
-      [this](const ConnectionContext& connection_context,
-             InterfaceRequest<MediaService> media_service_request) {
-        bindings_.AddBinding(this, media_service_request.Pass());
-      });
-  return true;
-}
-
 void MediaServiceImpl::CreatePlayer(
-    InterfaceHandle<SeekingReader> reader,
-    InterfaceHandle<MediaRenderer> audio_renderer,
-    InterfaceHandle<MediaRenderer> video_renderer,
-    InterfaceRequest<MediaPlayer> player) {
-  AddProduct(MediaPlayerImpl::Create(reader.Pass(), audio_renderer.Pass(),
-                                     video_renderer.Pass(), player.Pass(),
-                                     this));
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaPlayer> player) {
+  AddProduct(MediaPlayerImpl::Create(
+      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
+      std::move(player), this));
 }
 
-void MediaServiceImpl::CreateSource(InterfaceHandle<SeekingReader> reader,
-                                    Array<MediaTypeSetPtr> media_types,
-                                    InterfaceRequest<MediaSource> source) {
-  AddProduct(
-      MediaSourceImpl::Create(reader.Pass(), media_types, source.Pass(), this));
+void MediaServiceImpl::CreateSource(
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::Array<MediaTypeSetPtr> media_types,
+    fidl::InterfaceRequest<MediaSource> source) {
+  AddProduct(MediaSourceImpl::Create(std::move(reader), media_types,
+                                     std::move(source), this));
 }
 
-void MediaServiceImpl::CreateSink(InterfaceHandle<MediaRenderer> renderer,
+void MediaServiceImpl::CreateSink(fidl::InterfaceHandle<MediaRenderer> renderer,
                                   MediaTypePtr media_type,
-                                  InterfaceRequest<MediaSink> sink) {
-  AddProduct(MediaSinkImpl::Create(renderer.Pass(), media_type.Pass(),
-                                   sink.Pass(), this));
+                                  fidl::InterfaceRequest<MediaSink> sink) {
+  AddProduct(MediaSinkImpl::Create(std::move(renderer), std::move(media_type),
+                                   std::move(sink), this));
 }
 
-void MediaServiceImpl::CreateDemux(InterfaceHandle<SeekingReader> reader,
-                                   InterfaceRequest<MediaDemux> demux) {
-  AddProduct(MediaDemuxImpl::Create(reader.Pass(), demux.Pass(), this));
+void MediaServiceImpl::CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,
+                                   fidl::InterfaceRequest<MediaDemux> demux) {
+  AddProduct(MediaDemuxImpl::Create(std::move(reader), std::move(demux), this));
 }
 
 void MediaServiceImpl::CreateDecoder(
     MediaTypePtr input_media_type,
-    InterfaceRequest<MediaTypeConverter> decoder) {
-  AddProduct(
-      MediaDecoderImpl::Create(input_media_type.Pass(), decoder.Pass(), this));
+    fidl::InterfaceRequest<MediaTypeConverter> decoder) {
+  AddProduct(MediaDecoderImpl::Create(std::move(input_media_type),
+                                      std::move(decoder), this));
 }
 
 void MediaServiceImpl::CreateNetworkReader(
-    const String& url,
-    InterfaceRequest<SeekingReader> reader) {
-  FTL_DCHECK(false) << "CreateNetworkReader not implemented";
-  // AddProduct(NetworkReaderImpl::Create(url, reader.Pass(), this));
+    const fidl::String& url,
+    fidl::InterfaceRequest<SeekingReader> reader) {
+  AddProduct(NetworkReaderImpl::Create(url, std::move(reader), this));
 }
 
 void MediaServiceImpl::CreateFileReader(
-    const String& path,
-    InterfaceRequest<SeekingReader> reader) {
-  AddProduct(FileReaderImpl::Create(path, reader.Pass(), this));
+    const fidl::String& path,
+    fidl::InterfaceRequest<SeekingReader> reader) {
+  AddProduct(FileReaderImpl::Create(path, std::move(reader), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(
-    InterfaceRequest<MediaTimelineController> timeline_controller) {
-  AddProduct(
-      MediaTimelineControllerImpl::Create(timeline_controller.Pass(), this));
+    fidl::InterfaceRequest<MediaTimelineController> timeline_controller) {
+  AddProduct(MediaTimelineControllerImpl::Create(std::move(timeline_controller),
+                                                 this));
 }
 
 }  // namespace media
-}  // namespace mojo

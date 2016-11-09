@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
@@ -195,4 +194,3 @@ void FfmpegAudioDecoder::ReleaseBufferForAvFrame(void* opaque,
 }
 
 }  // namespace media
-}  // namespace mojo

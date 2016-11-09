@@ -8,7 +8,6 @@
 
 #pragma once
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -63,4 +62,3 @@ class Gain {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

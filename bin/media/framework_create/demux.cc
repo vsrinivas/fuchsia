@@ -5,7 +5,6 @@
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/ffmpeg/ffmpeg_demux.h"
 
-namespace mojo {
 namespace media {
 
 std::shared_ptr<Demux> Demux::Create(std::shared_ptr<Reader> reader) {
@@ -13,4 +12,3 @@ std::shared_ptr<Demux> Demux::Create(std::shared_ptr<Reader> reader) {
 }
 
 }  // namespace media
-}  // namespace mojo

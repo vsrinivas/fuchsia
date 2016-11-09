@@ -4,16 +4,28 @@
 
 #include "apps/media/src/audio_server/audio_server_impl.h"
 
+#include "apps/media/cpp/flog.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/audio_track_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl()
-    : output_manager_(this), cleanup_queue_(new CleanupQueue) {}
+    : application_context_(
+          modular::ApplicationContext::CreateFromStartupInfo()),
+      output_manager_(this),
+      cleanup_queue_(new CleanupQueue) {
+  FTL_DCHECK(application_context_);
+
+  FLOG_INITIALIZE(application_context_.get(), "audio_server");
+
+  application_context_->outgoing_services()->AddService<AudioServer>(
+      [this](fidl::InterfaceRequest<AudioServer> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+}
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
@@ -50,9 +62,11 @@ void AudioServerImpl::Shutdown() {
   DoPacketCleanup();
 }
 
-void AudioServerImpl::CreateTrack(InterfaceRequest<AudioTrack> track,
-                                  InterfaceRequest<MediaRenderer> renderer) {
-  tracks_.insert(AudioTrackImpl::Create(track.Pass(), renderer.Pass(), this));
+void AudioServerImpl::CreateTrack(
+    fidl::InterfaceRequest<AudioTrack> track,
+    fidl::InterfaceRequest<MediaRenderer> renderer) {
+  tracks_.insert(
+      AudioTrackImpl::Create(std::move(track), std::move(renderer), this));
 }
 
 void AudioServerImpl::DoPacketCleanup() {
@@ -104,4 +118,3 @@ void AudioServerImpl::SchedulePacketCleanup(
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

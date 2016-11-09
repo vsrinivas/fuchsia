@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_MAPPED_SHARED_BUFFER_H_
-#define APPS_MEDIA_CPP_MAPPED_SHARED_BUFFER_H_
+#pragma once
 
 #include <memory>
 
-#include "mojo/public/cpp/system/buffer.h"
+#include <magenta/types.h>
+#include <mx/process.h>
+#include <mx/vmo.h>
 
-namespace mojo {
+#include "lib/ftl/logging.h"
+
 namespace media {
 
 // MappedSharedBuffer simplifies the use of shared buffers by taking care of
 // mapping/unmapping and by providing offset/pointer translation. It can be
 // used when the caller wants to allocate its own buffer (InitNew) and when
-// the caller needs to use a buffer supplied by another party (InitFromHandle).
+// the caller needs to use a buffer supplied by another party (InitFromVmo).
 // It can be used by itself when regions of the buffer are allocated by another
 // party. If the caller needs to allocate regions, SharedMediaBufferAllocator,
 // which is derived from MappedSharedBuffer, provides allocation semantics
@@ -27,10 +29,10 @@ class MappedSharedBuffer {
   virtual ~MappedSharedBuffer();
 
   // Initializes by creating a new shared buffer of the indicated size.
-  MojoResult InitNew(uint64_t size);
+  mx_status_t InitNew(uint64_t size);
 
-  // Initializes from a handle to an existing shared buffer.
-  MojoResult InitFromHandle(ScopedSharedBufferHandle handle);
+  // Initializes from a vmo to an existing shared buffer.
+  mx_status_t InitFromVmo(mx::vmo vmo);
 
   // Indicates whether the buffer is initialized.
   bool initialized() const;
@@ -41,8 +43,8 @@ class MappedSharedBuffer {
   // Gets the size of the buffer.
   uint64_t size() const;
 
-  // Gets a duplicate handle for the shared buffer.
-  ScopedSharedBufferHandle GetDuplicateHandle() const;
+  // Gets a duplicate vmo for the shared buffer.
+  mx::vmo GetDuplicateVmo() const;
 
   // Validates an offset and size.
   bool Validate(uint64_t offset, uint64_t size);
@@ -54,7 +56,7 @@ class MappedSharedBuffer {
   uint64_t OffsetFromPtr(void* payload_ptr) const;
 
  protected:
-  MojoResult InitInternal(const ScopedSharedBufferHandle& handle);
+  mx_status_t InitInternal(mx::vmo vmo);
 
   // Does nothing. Called when initialization is complete. Subclasses may
   // override.
@@ -62,23 +64,21 @@ class MappedSharedBuffer {
 
  private:
   struct MappedBufferDeleter {
-    inline void operator()(uint8_t* ptr) const { UnmapBuffer(ptr); }
+    inline void operator()(uint8_t* ptr) const {
+      mx_status_t status =
+          mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(ptr), 0u);
+      FTL_CHECK(status == NO_ERROR);
+    }
   };
 
   // Size of the shared buffer.
   uint64_t size_;
 
-  // Shared buffer when initialized with InitNew.
-  std::unique_ptr<SharedBuffer> buffer_;
-
-  // Handle to shared buffer when initialized with InitFromHandle.
-  ScopedSharedBufferHandle handle_;
+  // VMO to shared buffer when initialized with InitFromVmo.
+  mx::vmo vmo_;
 
   // Pointer to the mapped buffer.
   std::unique_ptr<uint8_t, MappedBufferDeleter> buffer_ptr_;
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_MAPPED_SHARED_BUFFER_H_

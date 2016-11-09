@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/stages/transform_stage.h"
 
-namespace mojo {
 namespace media {
 
 TransformStage::TransformStage(std::shared_ptr<Transform> transform)
@@ -93,4 +92,3 @@ void TransformStage::FlushOutput(size_t index) {
 }
 
 }  // namespace media
-}  // namespace mojo

@@ -5,27 +5,26 @@
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 
 #include "apps/media/cpp/timeline.h"
-#include "apps/media/src/mojo/mojo_type_conversions.h"
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // static
 std::shared_ptr<MediaTimelineControllerImpl>
 MediaTimelineControllerImpl::Create(
-    InterfaceRequest<MediaTimelineController> request,
+    fidl::InterfaceRequest<MediaTimelineController> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaTimelineControllerImpl>(
-      new MediaTimelineControllerImpl(request.Pass(), owner));
+      new MediaTimelineControllerImpl(std::move(request), owner));
 }
 
 MediaTimelineControllerImpl::MediaTimelineControllerImpl(
-    InterfaceRequest<MediaTimelineController> request,
+    fidl::InterfaceRequest<MediaTimelineController> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaTimelineController>(this,
-                                                         request.Pass(),
+                                                         std::move(request),
                                                          owner),
       control_point_binding_(this),
       consumer_binding_(this) {
@@ -34,9 +33,9 @@ MediaTimelineControllerImpl::MediaTimelineControllerImpl(
         MediaTimelineControlPointStatusPtr status =
             MediaTimelineControlPointStatus::New();
         status->timeline_transform =
-            mojo::TimelineTransform::From(current_timeline_function_);
+            TimelineTransform::From(current_timeline_function_);
         status->end_of_stream = end_of_stream_;
-        callback.Run(version, status.Pass());
+        callback(version, std::move(status));
       });
 }
 
@@ -45,7 +44,7 @@ MediaTimelineControllerImpl::~MediaTimelineControllerImpl() {
 }
 
 void MediaTimelineControllerImpl::AddControlPoint(
-    InterfaceHandle<MediaTimelineControlPoint> control_point) {
+    fidl::InterfaceHandle<MediaTimelineControlPoint> control_point) {
   control_point_states_.push_back(std::unique_ptr<ControlPointState>(
       new ControlPointState(this, MediaTimelineControlPointPtr::Create(
                                       std::move(control_point)))));
@@ -54,12 +53,12 @@ void MediaTimelineControllerImpl::AddControlPoint(
 }
 
 void MediaTimelineControllerImpl::GetControlPoint(
-    InterfaceRequest<MediaTimelineControlPoint> control_point) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point) {
   if (control_point_binding_.is_bound()) {
     control_point_binding_.Close();
   }
 
-  control_point_binding_.Bind(control_point.Pass());
+  control_point_binding_.Bind(std::move(control_point));
 }
 
 void MediaTimelineControllerImpl::GetStatus(uint64_t version_last_seen,
@@ -68,12 +67,12 @@ void MediaTimelineControllerImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void MediaTimelineControllerImpl::GetTimelineConsumer(
-    InterfaceRequest<TimelineConsumer> timeline_consumer) {
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
     consumer_binding_.Close();
   }
 
-  consumer_binding_.Bind(timeline_consumer.Pass());
+  consumer_binding_.Bind(std::move(timeline_consumer));
 }
 
 void MediaTimelineControllerImpl::Prime(const PrimeCallback& callback) {
@@ -192,7 +191,7 @@ void MediaTimelineControllerImpl::HandleControlPointEndOfStreamChange() {
 MediaTimelineControllerImpl::ControlPointState::ControlPointState(
     MediaTimelineControllerImpl* parent,
     MediaTimelineControlPointPtr point)
-    : parent_(parent), control_point_(point.Pass()) {
+    : parent_(parent), control_point_(std::move(point)) {
   control_point_->GetTimelineConsumer(GetProxy(&consumer_));
 }
 
@@ -212,7 +211,7 @@ void MediaTimelineControllerImpl::ControlPointState::HandleStatusUpdates(
   control_point_->GetStatus(
       version,
       [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
-        HandleStatusUpdates(version, status.Pass());
+        HandleStatusUpdates(version, std::move(status));
       });
 }
 
@@ -227,19 +226,19 @@ MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
                              reference_delta,
                              subject_delta),
       callback_(callback) {
-  FTL_DCHECK(!callback_.is_null());
+  FTL_DCHECK(callback_);
   callback_joiner_.WhenJoined([this]() {
     if (cancelled_) {
-      FTL_DCHECK(callback_.is_null());
+      FTL_DCHECK(!callback_);
       return;
     }
 
-    FTL_DCHECK(!callback_.is_null());
-    callback_.Run(true);
-    callback_.reset();
-    if (!completed_callback_.is_null()) {
-      completed_callback_.Run();
-      completed_callback_.reset();
+    FTL_DCHECK(callback_);
+    callback_(true);
+    callback_ = nullptr;
+    if (completed_callback_) {
+      completed_callback_();
+      completed_callback_ = nullptr;
     }
   });
 }
@@ -247,4 +246,3 @@ MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
 MediaTimelineControllerImpl::TimelineTransition::~TimelineTransition() {}
 
 }  // namespace media
-}  // namespace mojo

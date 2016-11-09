@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_
+#pragma once
 
 #include <limits>
 
-namespace mojo {
 namespace flog {
 
 // Tracks a sequence of values that may be added or removed.
@@ -93,6 +91,3 @@ class Tracked {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_TRACKED_H_

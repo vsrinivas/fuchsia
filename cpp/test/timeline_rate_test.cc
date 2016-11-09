@@ -8,7 +8,6 @@
 
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -179,4 +178,3 @@ TEST(TimelineRateTest, Inverse) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

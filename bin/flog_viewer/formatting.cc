@@ -8,9 +8,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
 
-namespace mojo {
 namespace flog {
 
 int ostream_indent_index() {
@@ -86,4 +85,3 @@ std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
 }
 
 }  // namespace flog
-}  // namespace mojo

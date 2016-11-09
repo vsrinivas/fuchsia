@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_CPP_VIDEO_PACKET_LAYOUT_H_
-#define APPS_MEDIA_CPP_VIDEO_PACKET_LAYOUT_H_
+#pragma once
 
 #include <memory>
 
-#include "apps/media/interfaces/media_transport.mojom.h"
+#include "apps/media/interfaces/media_transport.fidl.h"
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 // Describes the layout of a video packet.
@@ -126,6 +124,3 @@ class VideoPacketLayout {
 };
 
 }  // namespace media
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_CPP_VIDEO_PACKET_LAYOUT_H_

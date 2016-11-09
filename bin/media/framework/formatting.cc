@@ -6,7 +6,6 @@
 
 #include "apps/media/src/framework/formatting.h"
 
-namespace mojo {
 namespace media {
 
 int ostream_indent_index() {
@@ -325,4 +324,3 @@ std::ostream& operator<<(std::ostream& os, Range<bool> value) {
 }
 
 }  // namespace media
-}  // namespace mojo

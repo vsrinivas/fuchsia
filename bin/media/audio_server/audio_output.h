@@ -17,7 +17,6 @@
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_point.h"
 
-namespace mojo {
 namespace media {
 namespace audio {
 
@@ -180,4 +179,3 @@ class AudioOutput {
 
 }  // namespace audio
 }  // namespace media
-}  // namespace mojo

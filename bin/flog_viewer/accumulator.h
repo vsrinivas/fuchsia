@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_
-#define APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_
+#pragma once
 
 #include <limits>
 
-#include "apps/media/interfaces/flog/flog.mojom.h"
-#include "mojo/public/cpp/bindings/message.h"
+#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "lib/fidl/cpp/bindings/message.h"
 
-namespace mojo {
 namespace flog {
 
 // Base class for accumulators produced by handlers that analyze message
@@ -67,6 +65,3 @@ class Accumulator {
 };
 
 }  // namespace flog
-}  // namespace mojo
-
-#endif  // APPS_MEDIA_TOOLS_FLOG_VIEWER_ACCUMULATOR_H_

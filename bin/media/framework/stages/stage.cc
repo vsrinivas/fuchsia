@@ -6,7 +6,6 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mojo {
 namespace media {
 
 Stage::Stage() : in_supply_backlog_(false), in_demand_backlog_(false) {}
@@ -18,4 +17,3 @@ void Stage::UnprepareInput(size_t index) {}
 void Stage::UnprepareOutput(size_t index, const UpstreamCallback& callback) {}
 
 }  // namespace media
-}  // namespace mojo

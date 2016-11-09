@@ -11,7 +11,6 @@
 #include "apps/media/src/framework/stages/input.h"
 #include "apps/media/src/framework/stages/output.h"
 
-namespace mojo {
 namespace media {
 
 class Engine;
@@ -89,4 +88,3 @@ class Stage {
 };
 
 }  // namespace media
-}  // namespace mojo

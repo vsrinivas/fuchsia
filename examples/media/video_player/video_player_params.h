@@ -6,13 +6,14 @@
 
 #include <string>
 
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
 namespace examples {
 
 class VideoPlayerParams {
  public:
-  VideoPlayerParams(const std::string& connection_url);
+  VideoPlayerParams(const ftl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 

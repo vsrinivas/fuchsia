@@ -10,7 +10,6 @@
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/formatting.h"
 
-namespace mojo {
 namespace flog {
 namespace handlers {
 
@@ -20,7 +19,7 @@ Default::Default(const std::string& format)
 
 Default::~Default() {}
 
-void Default::HandleMessage(Message* message) {
+void Default::HandleMessage(fidl::Message* message) {
   if (terse_ || full_) {
     std::cout << entry() << "channel message, size "
               << message->data_num_bytes() << " name " << message->name()
@@ -71,4 +70,3 @@ void Default::PrintData(const uint8_t* data, size_t size) {
 
 }  // namespace handlers
 }  // namespace flog
-}  // namespace mojo

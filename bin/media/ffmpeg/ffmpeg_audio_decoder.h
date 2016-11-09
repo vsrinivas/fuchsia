@@ -7,7 +7,6 @@
 #include "apps/media/src/audio/lpcm_util.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
-namespace mojo {
 namespace media {
 
 // Decoder implementation employing an ffmpeg audio decoder.
@@ -64,4 +63,3 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 };
 
 }  // namespace media
-}  // namespace mojo

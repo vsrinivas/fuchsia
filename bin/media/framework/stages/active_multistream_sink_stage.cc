@@ -4,7 +4,6 @@
 
 #include "apps/media/src/framework/stages/active_multistream_sink_stage.h"
 
-namespace mojo {
 namespace media {
 
 ActiveMultistreamSinkStage::ActiveMultistreamSinkStage(
@@ -158,4 +157,3 @@ void ActiveMultistreamSinkStage::UpdateDemand(size_t input_index,
 }
 
 }  // namespace media
-}  // namespace mojo

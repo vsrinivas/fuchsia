@@ -10,7 +10,6 @@
 #include "apps/media/src/audio/mixer_input_impl.h"
 #include "gtest/gtest.h"
 
-namespace mojo {
 namespace media {
 namespace {
 
@@ -421,4 +420,3 @@ TEST(MixerTest, FadeTwoOutputBuffers) {
 
 }  // namespace
 }  // namespace media
-}  // namespace mojo

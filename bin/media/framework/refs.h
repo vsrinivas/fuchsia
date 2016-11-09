@@ -6,7 +6,6 @@
 
 #include <cstddef>
 
-namespace mojo {
 namespace media {
 
 class Graph;
@@ -156,4 +155,3 @@ class OutputRef {
 };
 
 }  // namespace media
-}  // namespace mojo
