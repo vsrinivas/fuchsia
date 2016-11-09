@@ -31,7 +31,6 @@ func main() {
 	names := make(map[string]*rustgen.Names)
 	for name, file := range config.FileGraph().Files {
 		names[name] = rustgen.CollectAllNames(config.FileGraph(), &file)
-		names[name].MangleKeywords()
 	}
 	common.GenerateOutput(func(fileName string, config common.GeneratorConfig) {
 		mojomFile := config.FileGraph().Files[fileName]

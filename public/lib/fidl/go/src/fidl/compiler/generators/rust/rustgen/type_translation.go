@@ -16,63 +16,73 @@ import (
 // TODO(vardhan): Make this file unittestable? This involves making it not crash
 // on failure (so that we can test failure).
 var reservedRustKeywords map[string]bool = map[string]bool{
-	"as":           true,
-	"box":          true,
-	"break":        true,
-	"const":        true,
-	"continue":     true,
-	"crate":	true,
-	"else":		true,
-	"enum":		true,
-	"extern":       true,
-	"false":	true,
-	"fn":		true,
-	"for":		true,
-	"if":		true,
-	"impl":		true,
-	"in":		true,
-	"let":		true,
-	"loop":		true,
-	"match":	true,
-	"mod":		true,
-	"move":		true,
-	"mut":		true,
-	"pub":		true,
-	"ref":		true,
-	"return":	true,
-	"self":		true,
-	"Self":		true,
-	"static":       true,
-	"struct":       true,
-	"super":	true,
-	"trait":	true,
-	"true":		true,
-	"type":		true,
-	"unsafe":       true,
-	"use":		true,
-	"where":	true,
-	"while":        true,
+	"as":       true,
+	"box":      true,
+	"break":    true,
+	"const":    true,
+	"continue": true,
+	"crate":    true,
+	"else":     true,
+	"enum":     true,
+	"extern":   true,
+	"false":    true,
+	"fn":       true,
+	"for":      true,
+	"if":       true,
+	"impl":     true,
+	"in":       true,
+	"let":      true,
+	"loop":     true,
+	"match":    true,
+	"mod":      true,
+	"move":     true,
+	"mut":      true,
+	"pub":      true,
+	"ref":      true,
+	"return":   true,
+	"self":     true,
+	"Self":     true,
+	"static":   true,
+	"struct":   true,
+	"super":    true,
+	"trait":    true,
+	"true":     true,
+	"type":     true,
+	"unsafe":   true,
+	"use":      true,
+	"where":    true,
+	"while":    true,
 	// Keywords reserved for future use (future-proofing...)
-	"abstract":	true,
-	"alignof":	true,
-	"become":	true,
-	"do":		true,
-	"final":	true,
-	"macro":	true,
-	"offsetof":	true,
-	"override":	true,
-	"priv":		true,
-	"proc":		true,
-	"pure":		true,
-	"sizeof":	true,
-	"typeof":	true,
-	"unsized":	true,
-	"virtual":	true,
-	"yield":	true,
+	"abstract": true,
+	"alignof":  true,
+	"become":   true,
+	"do":       true,
+	"final":    true,
+	"macro":    true,
+	"offsetof": true,
+	"override": true,
+	"priv":     true,
+	"proc":     true,
+	"pure":     true,
+	"sizeof":   true,
+	"typeof":   true,
+	"unsized":  true,
+	"virtual":  true,
+	"yield":    true,
+
 	// Weak keywords (special meaning in specific contexts)
-	"default":	true,
-	"'static":	true,
-	"union":	true,
+	// These are ok in all contexts of fidl names.
+	//"default":	true,
+	//"union":	true,
+
+	// Things that are not keywords, but for which collisions would be very unpleasant
+	"Ok":     true,
+	"Err":    true,
+	"Vec":    true,
+	"Option": true,
+	"Some":   true,
+	"None":   true,
+	"Box":    true,
 }
 
 func isReservedKeyword(keyword string) bool {
@@ -82,7 +92,7 @@ func isReservedKeyword(keyword string) bool {
 
 func assertNotReservedKeyword(keyword string) string {
 	if isReservedKeyword(keyword) {
-		log.Fatal("Generated name `%s` is a reserved Rust keyword.")
+		log.Fatalf("Generated name `%s` is a reserved Rust keyword.", keyword)
 	}
 	return keyword
 }
@@ -92,7 +102,7 @@ func mangleName(name string) string {
 	return name + "_"
 }
 
-// A map where keys are Mojom names and values are Rust-mangled names.
+// A map where keys are fidl names and values are Rust-mangled names.
 type Names map[string]string
 
 // Runs through the file graph and collects all names putting them into a Names map which
@@ -101,65 +111,52 @@ func CollectAllNames(fileGraph *fidl_files.FidlFileGraph, file *fidl_files.FidlF
 	names := make(Names)
 	// Collect all top-level constant names
 	if file.DeclaredFidlObjects.TopLevelConstants != nil {
-		for _, mojomConstKey := range *(file.DeclaredFidlObjects.TopLevelConstants) {
-			mojomConst := fileGraph.ResolvedConstants[mojomConstKey]
-			names[*mojomConst.DeclData.ShortName] = *mojomConst.DeclData.ShortName
+		for _, fidlConstKey := range *(file.DeclaredFidlObjects.TopLevelConstants) {
+			fidlConst := fileGraph.ResolvedConstants[fidlConstKey]
+			names[*fidlConst.DeclData.ShortName] = *fidlConst.DeclData.ShortName
 		}
 	}
 
 	// Collect all top-level enum names
 	if file.DeclaredFidlObjects.TopLevelEnums != nil {
-		for _, mojomEnumKey := range *(file.DeclaredFidlObjects.TopLevelEnums) {
-			mojomEnum := fileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
-			names[*mojomEnum.DeclData.ShortName] = *mojomEnum.DeclData.ShortName
+		for _, fidlEnumKey := range *(file.DeclaredFidlObjects.TopLevelEnums) {
+			fidlEnum := fileGraph.ResolvedTypes[fidlEnumKey].Interface().(fidl_types.FidlEnum)
+			names[*fidlEnum.DeclData.ShortName] = *fidlEnum.DeclData.ShortName
 		}
 	}
 
 	// Collect all union names
 	if file.DeclaredFidlObjects.Unions != nil {
-		for _, mojomUnionKey := range *(file.DeclaredFidlObjects.Unions) {
-			mojomUnion := fileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
-			names[*mojomUnion.DeclData.ShortName] = *mojomUnion.DeclData.ShortName
+		for _, fidlUnionKey := range *(file.DeclaredFidlObjects.Unions) {
+			fidlUnion := fileGraph.ResolvedTypes[fidlUnionKey].Interface().(fidl_types.FidlUnion)
+			names[*fidlUnion.DeclData.ShortName] = *fidlUnion.DeclData.ShortName
 		}
 	}
 
 	// Collect all struct names
 	if file.DeclaredFidlObjects.Structs != nil {
-		for _, mojomStructKey := range *(file.DeclaredFidlObjects.Structs) {
-			mojomStruct := fileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
-			names[*mojomStruct.DeclData.ShortName] = *mojomStruct.DeclData.ShortName
+		for _, fidlStructKey := range *(file.DeclaredFidlObjects.Structs) {
+			fidlStruct := fileGraph.ResolvedTypes[fidlStructKey].Interface().(fidl_types.FidlStruct)
+			names[*fidlStruct.DeclData.ShortName] = *fidlStruct.DeclData.ShortName
 		}
 	}
 
 	// Collect all interface names
 	if file.DeclaredFidlObjects.Interfaces != nil {
-		for _, mojomIfaceKey := range *(file.DeclaredFidlObjects.Interfaces) {
-			mojomIface := fileGraph.ResolvedTypes[mojomIfaceKey].Interface().(fidl_types.FidlInterface)
-			names[*mojomIface.DeclData.ShortName] = *mojomIface.DeclData.ShortName
+		for _, fidlIfaceKey := range *(file.DeclaredFidlObjects.Interfaces) {
+			fidlIface := fileGraph.ResolvedTypes[fidlIfaceKey].Interface().(fidl_types.FidlInterface)
+			names[*fidlIface.DeclData.ShortName] = *fidlIface.DeclData.ShortName
 			// Pre-mangle all the method names since we know exactly how they look
-			for _, mojomMethod := range mojomIface.Methods {
-				method_name := *mojomMethod.DeclData.ShortName
-				names[method_name + "-request"] = method_name + "Request"
-				names[method_name + "-response"] = method_name + "Response"
+			for _, fidlMethod := range fidlIface.Methods {
+				method_name := *fidlMethod.DeclData.ShortName
+				names[method_name+"-request"] = method_name + "_Request"
+				names[method_name+"-response"] = method_name + "_Response"
 			}
 		}
 	}
 	// Contained declarations do not need to be handled because they are prepended with
 	// their mangled parent's names.
 	return &names
-}
-
-// Mangles keywords found in the map until there are no more conflicts.
-func (n *Names) MangleKeywords() {
-	for name := range *n {
-		if isReservedKeyword(name) {
-			new_name := name
-			for (*n)[new_name] != "" {
-				new_name = mangleName(new_name)
-			}
-			(*n)[name] = new_name
-		}
-	}
 }
 
 // Removes the namespace from a full identifier are returns the mangled name
@@ -177,25 +174,26 @@ func removeNamespaceFromIdentifier(context *Context, file *fidl_files.FidlFile, 
 	return strings.Join(portions, "")
 }
 
-// Given a name (described in mojom IDL), return a Rust-managled name.
-func mojomToRustName(decl *fidl_types.DeclarationData, context *Context) string {
+// Given a name (described in fidl IDL), return a Rust-mangled name.
+func fidlToRustName(decl *fidl_types.DeclarationData, context *Context, fmt func(string) string) string {
 	// Might not have a full identifier; use a ShortName instead
 	if decl.FullIdentifier == nil {
-		return context.GetName(*decl.ShortName)
+		return mangleReservedKeyword(fmt(context.GetName(*decl.ShortName)))
 	}
 	// No need to specify path if the name is defined in the current file
 	src_file_name := decl.SourceFileInfo.FileName
 	if src_file_name == context.File.FileName {
-		return removeNamespaceFromIdentifier(context, context.File, *decl.FullIdentifier)
+		name := removeNamespaceFromIdentifier(context, context.File, *decl.FullIdentifier)
+		return mangleReservedKeyword(fmt(name))
 	}
 	src_file := context.FileGraph.Files[src_file_name]
 	// Figure out the path to the imported item
 	path := rustImportPath(context.File, &src_file)
 	name := removeNamespaceFromIdentifier(context, &src_file, *decl.FullIdentifier)
-	return path + "::" + name
+	return path + "::" + mangleReservedKeyword(fmt(name))
 }
 
-func mojomToRustBuiltinValue(val fidl_types.BuiltinConstantValue) string {
+func fidlToRustBuiltinValue(val fidl_types.BuiltinConstantValue) string {
 	switch val {
 	case fidl_types.BuiltinConstantValue_DoubleNegativeInfinity:
 		return "std::f64::NEG_INFINITY"
@@ -214,14 +212,14 @@ func mojomToRustBuiltinValue(val fidl_types.BuiltinConstantValue) string {
 	return ""
 }
 
-// A mojom type name-mangled to Rust type.
-func mojomToRustType(t fidl_types.Type, context *Context) string {
+// A fidl type name-mangled to Rust type.
+func fidlToRustType(t fidl_types.Type, context *Context) string {
 	switch t.(type) {
 	case *fidl_types.TypeSimpleType:
 		return simpleTypeToRustType(t.Interface().(fidl_types.SimpleType))
 	case *fidl_types.TypeArrayType:
 		array_type := t.Interface().(fidl_types.ArrayType)
-		elem_type_str := mojomToRustType(array_type.ElementType, context)
+		elem_type_str := fidlToRustType(array_type.ElementType, context)
 		var type_str string
 		if array_type.FixedLength < 0 {
 			type_str = "Vec<" + elem_type_str + ">"
@@ -233,11 +231,11 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 			type_str = "[" + elem_type_str + "; " + len_str + "]"
 		} else {
 			log.Fatal("Rust doesn't currently support arrays of " +
-				  "fixed size greater than 32. The reason for this is " +
-				  "the lack of generics over array length in the type " +
-				  "system. Since we cannot encode the length in the type " +
-				  "there is no way for nested decode routines to know " +
-				  "what length it should be. Sorry. :(")
+				"fixed size greater than 32. The reason for this is " +
+				"the lack of generics over array length in the type " +
+				"system. Since we cannot encode the length in the type " +
+				"there is no way for nested decode routines to know " +
+				"what length it should be. Sorry. :(")
 			// Fixed length array, but user has to validate the length themselves.
 			//type_str = "Box<[" + elem_type_str + "]>"
 		}
@@ -247,9 +245,9 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 		return type_str
 	case *fidl_types.TypeMapType:
 		map_type := t.Interface().(fidl_types.MapType)
-		key_type_str := mojomToRustType(map_type.KeyType, context)
-		value_type_str := mojomToRustType(map_type.ValueType, context)
-		type_str := "HashMap<" + key_type_str + "," + value_type_str + ">"
+		key_type_str := fidlToRustType(map_type.KeyType, context)
+		value_type_str := fidlToRustType(map_type.ValueType, context)
+		type_str := "::std::collections::HashMap<" + key_type_str + ", " + value_type_str + ">"
 		if map_type.Nullable {
 			return "Option<" + type_str + ">"
 		}
@@ -263,17 +261,32 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 	case *fidl_types.TypeHandleType:
 		handle_type := t.Interface().(fidl_types.HandleType)
 		var type_str string
+		// Note that not all of these handle types are currently supported in magenta-rs.
 		switch handle_type.Kind {
 		case fidl_types.HandleType_Kind_Channel:
-			type_str = "channel::MessageEndpoint"
+			type_str = "::magenta::Channel"
 		case fidl_types.HandleType_Kind_DataPipeConsumer:
-			type_str = "system::data_pipe::Consumer<u8>"
+			type_str = "::magenta::DataPipeConsumer"
 		case fidl_types.HandleType_Kind_DataPipeProducer:
-			type_str = "system::data_pipe::Producer<u8>"
+			type_str = "::magenta::DataPipeProducer"
 		case fidl_types.HandleType_Kind_Vmo:
-			type_str = "system::vmo::Vmo"
+			type_str = "::magenta::Vmo"
+		case fidl_types.HandleType_Kind_Process:
+			type_str = "::magenta::Process"
+		case fidl_types.HandleType_Kind_Thread:
+			type_str = "::magenta::Thread"
+		case fidl_types.HandleType_Kind_Event:
+			type_str = "::magenta::Event"
+		case fidl_types.HandleType_Kind_Port:
+			type_str = "::magenta::Port"
+		case fidl_types.HandleType_Kind_Job:
+			type_str = "::magenta::Job"
+		case fidl_types.HandleType_Kind_Socket:
+			type_str = "::magenta::Socket"
+		case fidl_types.HandleType_Kind_EventPair:
+			type_str = "::magenta::EventPair"
 		case fidl_types.HandleType_Kind_Unspecified:
-			type_str = "system::UntypedHandle"
+			type_str = "::magenta::Handle"
 		default:
 			log.Fatal("Unknown handle type kind! ", handle_type.Kind)
 		}
@@ -286,7 +299,11 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 		resolved_type := context.FileGraph.ResolvedTypes[*typ_ref.TypeKey]
 		type_str := userDefinedTypeToRustType(&resolved_type, context, typ_ref.IsInterfaceRequest)
 		if typ_ref.Nullable {
-			return "Option<" + type_str + ">"
+			if fidlTypeNeedsBoxing(resolved_type) {
+				return "Option<Box<" + type_str + ">>"
+			} else {
+				return "Option<" + type_str + ">"
+			}
 		}
 		return type_str
 	default:
@@ -296,7 +313,8 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 	return ""
 }
 
-func mojomToRustLiteral(value fidl_types.LiteralValue) string {
+// Formats a literal value suitable for use as a const
+func fidlToRustLiteral(value fidl_types.LiteralValue) string {
 	val := value.Interface()
 	switch value.(type) {
 	case *fidl_types.LiteralValueBoolValue:
@@ -322,8 +340,8 @@ func mojomToRustLiteral(value fidl_types.LiteralValue) string {
 	case *fidl_types.LiteralValueUint64Value:
 		return strconv.FormatUint(uint64(val.(uint64)), 10) + "u64"
 	case *fidl_types.LiteralValueStringValue:
-		// TODO(mknyszek): Do we have to do any string escaping here?
-		return "\"" + val.(string) + "\"" + ".to_string()"
+		// TODO(raph): Do we have to do any string escaping here?
+		return "\"" + val.(string) + "\""
 	default:
 		log.Fatal("Should not reach here. Unknown literal type:", value)
 	}
@@ -331,27 +349,27 @@ func mojomToRustLiteral(value fidl_types.LiteralValue) string {
 	return ""
 }
 
-func mojomUnionToRustType(u *fidl_types.FidlUnion, context *Context) string {
-	return mojomToRustName(u.DeclData, context)
+func fidlUnionToRustType(u *fidl_types.FidlUnion, context *Context) string {
+	return fidlToRustName(u.DeclData, context, ident)
 }
 
 func userDefinedTypeToRustType(t *fidl_types.UserDefinedType, context *Context, interfaceRequest bool) string {
 	switch (*t).(type) {
 	case *fidl_types.UserDefinedTypeStructType:
-		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlStruct).DeclData, context)
+		full_name := fidlToRustName((*t).Interface().(fidl_types.FidlStruct).DeclData, context, ident)
 		return full_name
 	case *fidl_types.UserDefinedTypeEnumType:
-		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlEnum).DeclData, context)
+		full_name := fidlToRustName((*t).Interface().(fidl_types.FidlEnum).DeclData, context, ident)
 		return full_name
 	case *fidl_types.UserDefinedTypeUnionType:
-		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlUnion).DeclData, context)
+		full_name := fidlToRustName((*t).Interface().(fidl_types.FidlUnion).DeclData, context, ident)
 		return full_name
 	case *fidl_types.UserDefinedTypeInterfaceType:
-		full_name := mojomToRustName((*t).Interface().(fidl_types.FidlInterface).DeclData, context)
+		full_name := fidlToRustName((*t).Interface().(fidl_types.FidlInterface).DeclData, context, ident)
 		if interfaceRequest {
-			return full_name + "Server"
+			return full_name + "_Server"
 		}
-		return full_name + "Client"
+		return "::fidl::InterfacePtr<" + full_name + "_Client>"
 	}
 	log.Fatal("Unknown UserDefinedType", t)
 	return ""
@@ -387,7 +405,7 @@ func simpleTypeToRustType(st fidl_types.SimpleType) string {
 	return ""
 }
 
-func mojomTypeIsBool(typ fidl_types.Type) bool {
+func fidlTypeIsBool(typ fidl_types.Type) bool {
 	switch typ.(type) {
 	case *fidl_types.TypeSimpleType:
 		if typ.Interface().(fidl_types.SimpleType) == fidl_types.SimpleType_Bool {
@@ -397,7 +415,7 @@ func mojomTypeIsBool(typ fidl_types.Type) bool {
 	return false
 }
 
-func mojomTypeIsUnion(typ fidl_types.Type, context *Context) bool {
+func fidlTypeIsUnion(typ fidl_types.Type, context *Context) bool {
 	switch typ.(type) {
 	case *fidl_types.TypeTypeReference:
 		type_key := *typ.Interface().(fidl_types.TypeReference).TypeKey
@@ -409,7 +427,7 @@ func mojomTypeIsUnion(typ fidl_types.Type, context *Context) bool {
 	return false
 }
 
-func mojomAlignToBytes(size uint32, alignment uint32) uint32 {
+func fidlAlignToBytes(size uint32, alignment uint32) uint32 {
 	diff := size % alignment
 	if alignment == 0 || diff == 0 {
 		return size
@@ -417,7 +435,7 @@ func mojomAlignToBytes(size uint32, alignment uint32) uint32 {
 	return size + alignment - diff
 }
 
-func mojomTypeSize(typ fidl_types.Type, context *Context) uint32 {
+func fidlTypeSize(typ fidl_types.Type, context *Context) uint32 {
 	switch typ.(type) {
 	case *fidl_types.TypeSimpleType:
 		switch typ.Interface().(fidl_types.SimpleType) {
@@ -457,7 +475,7 @@ func mojomTypeSize(typ fidl_types.Type, context *Context) uint32 {
 	case *fidl_types.TypeTypeReference:
 		return referenceTypeSize(typ.Interface().(fidl_types.TypeReference), context)
 	default:
-		log.Fatal("Should not be here. Unknown mojom type size for:", typ)
+		log.Fatal("Should not be here. Unknown fidl type size for:", typ)
 	}
 	return 0
 }
@@ -476,8 +494,19 @@ func referenceTypeSize(typ fidl_types.TypeReference, context *Context) uint32 {
 	case *fidl_types.UserDefinedTypeUnionType:
 		return 16
 	case *fidl_types.UserDefinedTypeInterfaceType:
-		return 8
+		return 8 // TODO(raph): this is wrong if it's an interface request
 	}
 	log.Fatal("Uhoh, should not be here.", udt.Interface())
 	return 0
+}
+
+// Return true if the type is an aggregate type that needs boxing if it's optional
+func fidlTypeNeedsBoxing(typ fidl_types.UserDefinedType) bool {
+	switch typ.(type) {
+	case *fidl_types.UserDefinedTypeStructType:
+		return true
+	case *fidl_types.UserDefinedTypeUnionType:
+		return true
+	}
+	return false
 }

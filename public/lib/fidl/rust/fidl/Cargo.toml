@@ -1,0 +1,13 @@
+[package]
+name = "fidl"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Raph Levien <raph@google.com>"]
+description = "Library and runtime for Rust fidl bindings"
+repository = "https://fuchsia.googlesource.com/fidl/"
+
+[dependencies]
+byteorder = "0.5.3"
+
+[dependencies.magenta]
+path = "../../../../rust/magenta-rs"

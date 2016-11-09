@@ -34,50 +34,30 @@ pub struct {{$struct.Name}} {
 {{end -}}
 }
 
-impl MojomPointer for {{$struct.Name}} {
-    fn header_data(&self) -> DataHeaderValue { DataHeaderValue::Version({{$struct.Version}}) }
-    fn serialized_size(&self, _context: &Context) -> usize { {{$struct.Size}} }
-    fn encode_value(self, encoder: &mut Encoder, context: Context) {
-{{range $field := $struct.Fields}}        MojomEncodable::encode(self.{{$field.Name}}, encoder, context.clone());
-{{end}}
+impl ::fidl::EncodablePtr for {{$struct.Name}} {
+    fn body_size(&self) -> usize {
+        {{$struct.Size}}
     }
-    fn decode_value(decoder: &mut Decoder, context: Context) -> Result<Self, ValidationError> {
-        let version = {
-            let mut state = decoder.get_mut(&context);
-            match state.decode_struct_header(&{{$struct.Name}}Versions) {
-                Ok(header) => header.data(),
-                Err(err) => return Err(err),
-            }
-        };
-{{range $field := $struct.Fields}}        let {{$field.Name}} = {{if ne $field.MinVersion 0 -}}
-	if version >= {{$field.MinVersion}} {
-            match <{{$field.Type}}>::decode(decoder, context.clone()) {
-                Ok(value) => value,
-                Err(err) => return Err(err),
-            }
-        } else {
-            Default::default()
-        };
-	{{- else -}}
-        match <{{$field.Type}}>::decode(decoder, context.clone()) {
-            Ok(value) => value,
-            Err(err) => return Err(err),
-        };
-	{{- end}}
-{{end}}        Ok({{$struct.Name}} {
-{{range $field := $struct.Fields}}            {{$field.Name}}: {{$field.Name}},
+
+    fn header_data(&self) -> u32 {
+        {{$struct.Version}}
+    }
+
+    fn encode_body(self, buf: &mut ::fidl::EncodeBuf, base: usize) {
+{{range $field := $struct.Fields}}        ::fidl::Encodable::encode(self.{{$field.Name}}, buf, base, {{$field.Offset}});
+{{end}}    }
+}
+
+// TODO(raph): more version negotiation
+impl ::fidl::DecodablePtr for {{$struct.Name}} {
+    fn decode_body(buf: &mut ::fidl::DecodeBuf, size: u32, val: u32, base: usize) -> ::fidl::Result<Self> {
+        if size < {{$struct.Size}} { return Err(::fidl::Error::OutOfRange); }
+        Ok({{$struct.Name}} {
+{{range $field := $struct.Fields}}            {{$field.Name}}: try!(::fidl::Decodable::decode(buf, base, {{$field.Offset}})),
 {{end}}        })
     }
 }
 
-impl MojomEncodable for {{$struct.Name}} {
-    impl_encodable_for_pointer!();
-    fn compute_size(&self, context: Context) -> usize {
-        encoding::align_default(self.serialized_size(&context))
-{{range $field := $struct.Fields}}        + self.{{$field.Name}}.compute_size(context.clone())
-{{end}}    }
-}
-
-impl MojomStruct for {{$struct.Name}} {}
-{{- end}}
+impl_codable_ptr!({{$struct.Name}});
+{{end}}
 `

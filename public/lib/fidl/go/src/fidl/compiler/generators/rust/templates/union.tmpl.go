@@ -15,52 +15,51 @@ const GenerateUnion = `
 
 pub enum {{$union.Name}} {
 {{range $field := $union.Fields}}    {{$field.Name}}({{$field.Type}}),
-{{end}}    _Unknown(u64),
+{{end -}}
 }
 
-impl MojomUnion for {{$union.Name}} {
-    fn get_tag(&self) -> u32 {
-        match *self {
-{{range $field := $union.Fields}}            {{$union.Name}}::{{$field.Name}}(_) => {{$union.TagsEnum.Name}}_{{$field.Name}},
-{{end}}            {{$union.Name}}::_Unknown(_) => {{$union.TagsEnum.Name}}__UNKNOWN,
-        }
-    }
-    fn encode_value(self, encoder: &mut Encoder, context: Context) {
+impl ::fidl::Encodable for {{$union.Name}} {
+    fn encode(self, buf: &mut ::fidl::EncodeBuf, base: usize, offset: usize) {
+        let start = base + offset;
+        ::fidl::Encodable::encode(16u32, buf, start, 0);
         match self {
-{{range $field := $union.Fields}}            {{$union.Name}}::{{$field.Name}}(val) => MojomEncodable::encode(val, encoder, context.clone()),
-{{end}}            {{$union.Name}}::_Unknown(val) => MojomEncodable::encode(val, encoder, context.clone()),
-        }
+{{range $field := $union.Fields}}            {{$union.Name}}::{{$field.Name}}(val) => {
+                ::fidl::Encodable::encode({{$union.TagsEnum.Name}}_{{$field.Name}}, buf, start, 4);
+                ::fidl::{{if $field.IsUnion}}CodableUnion::encode_
+                    {{- if $field.IsNullable}}opt_{{end}}as_ptr(val, buf, start + 8)
+                    {{- else -}}Encodable::encode(val, buf, start + 8, 0){{end -}}
+                    ;
+            },
+{{end}}        }
     }
-    fn decode_value(decoder: &mut Decoder, context: Context) -> Result<Self, ValidationError> {
-        let tag = {
-            let mut state = decoder.get_mut(&context);
-            let bytes = state.decode::<u32>();
-            if (bytes as usize) != UNION_SIZE {
-                return Err(ValidationError::UnexpectedNullUnion);
-            }
-	    state.decode::<u32>()
-        };
-        Ok(match tag {
-{{range $field := $union.Fields}}            {{$union.TagsEnum.Name}}_{{$field.Name}} => {{$union.Name}}::{{$field.Name}}({
-                match <{{$field.Type}}>::decode(decoder, context.clone()) {
-                    Ok(value) => value,
-                    Err(err) => return Err(err),
-                }
-            }),
-{{end}}        _ => {{$union.Name}}::_Unknown(u64::decode(decoder, context.clone()).unwrap()),
-        })
+
+    fn encodable_type() -> ::fidl::EncodableType {
+        ::fidl::EncodableType::Union
+    }
+
+    fn size() -> usize {
+        16
     }
 }
 
-impl MojomEncodable for {{$union.Name}} {
-    impl_encodable_for_union!();
-    fn compute_size(&self, context: Context) -> usize {
-        UNION_SIZE +
-        match *self {
-{{range $field := $union.Fields}}            {{$union.Name}}::{{$field.Name}}(ref val) => val.compute_size(context.clone()),
-{{end}}            {{$union.Name}}::_Unknown(ref val) => 0,
+impl ::fidl::Decodable for {{$union.Name}} {
+    fn decode(buf: &mut ::fidl::DecodeBuf, base: usize, offset: usize) -> ::fidl::Result<Self> {
+        let start = base + offset;
+        let size: u32 = ::fidl::Decodable::decode(buf, start, 0).unwrap();
+        if size != 16 { return Err(::fidl::Error::Invalid); }
+        let tag: {{$union.TagsEnum.Name}} = ::fidl::Decodable::decode(buf, start, 4).unwrap();
+        match tag {
+{{range $field := $union.Fields}}            {{$union.TagsEnum.Name}}_{{$field.Name}} =>
+                ::fidl::
+                    {{- if $field.IsUnion}}CodableUnion::decode_
+                    {{- if $field.IsNullable}}opt_{{end}}as_ptr(buf, start + 8)
+                    {{- else -}}Decodable::decode(buf, start + 8, 0){{end -}}
+                    .map({{$union.Name}}::{{$field.Name}}),
+{{end}}            _ => Err(::fidl::Error::UnknownUnionTag),
         }
     }
 }
+
+impl_codable_union!({{$union.Name}});
 {{end}}
 `
