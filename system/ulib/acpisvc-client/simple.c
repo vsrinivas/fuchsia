@@ -335,6 +335,36 @@ mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response) {
     return NO_ERROR;
 }
 
+mx_status_t acpi_enable_event(acpi_handle_t* _h, mx_handle_t port, uint64_t key, uint16_t events) {
+    if (_h == NULL) {
+        mx_handle_close(port);
+        return ERR_INVALID_ARGS;
+    }
+    if (port == MX_HANDLE_INVALID) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mx_status_t status;
+    acpi_cmd_enable_event_t cmd = {
+        .hdr = {
+            .version = 0,
+            .cmd = ACPI_CMD_ENABLE_EVENT,
+            .len = sizeof(cmd),
+        },
+        .key = key,
+        .type = events,
+    };
+
+    acpi_cmd_enable_event_t* rsp;
+    size_t rsp_len;
+    if ((status = run_txn(_h, &cmd, sizeof(cmd), (void**)&rsp, &rsp_len, port, NULL, 0)) < 0) {
+        mx_handle_close(port);
+        return status;
+    }
+    free(rsp);
+    return NO_ERROR;
+}
+
 mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
     acpi_cmd_hdr_t cmd = {
         .version = 0,
@@ -356,4 +386,3 @@ mx_handle_t acpi_clone_handle(acpi_handle_t* _h) {
     free(rsp);
     return h[0];
 }
-

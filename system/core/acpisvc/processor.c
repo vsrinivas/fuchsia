@@ -24,6 +24,9 @@ typedef struct {
     // the namespace tree.
     ACPI_HANDLE ns_node;
     bool root_node;
+    mx_handle_t notify;    // event port
+    uint32_t event_mask;
+    uint64_t event_key;
 } acpi_handle_ctx_t;
 
 // Command functions.  These should return an error only if the connection
@@ -35,6 +38,7 @@ static mx_status_t cmd_s_state_transition(mx_handle_t h, acpi_handle_ctx_t* ctx,
 static mx_status_t cmd_ps0(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_bst(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_bif(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
+static mx_status_t cmd_enable_event(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 static mx_status_t cmd_new_connection(mx_handle_t h, acpi_handle_ctx_t* ctx, void* cmd);
 
 typedef mx_status_t (*cmd_handler_t)(mx_handle_t, acpi_handle_ctx_t*, void*);
@@ -46,10 +50,47 @@ static const cmd_handler_t cmd_table[] = {
         [ACPI_CMD_PS0] = cmd_ps0,
         [ACPI_CMD_BST] = cmd_bst,
         [ACPI_CMD_BIF] = cmd_bif,
+        [ACPI_CMD_ENABLE_EVENT] = cmd_enable_event,
         [ACPI_CMD_NEW_CONNECTION] = cmd_new_connection,
 };
 
 static mx_status_t send_error(mx_handle_t h, uint32_t req_id, mx_status_t status);
+
+static inline uint32_t acpi_event_type(uint16_t events) {
+    if ((events & ACPI_EVENT_SYSTEM_NOTIFY) && (events & ACPI_EVENT_DEVICE_NOTIFY)) {
+        return ACPI_ALL_NOTIFY;
+    } else if (events & ACPI_EVENT_SYSTEM_NOTIFY) {
+        return ACPI_SYSTEM_NOTIFY;
+    } else if (events & ACPI_EVENT_DEVICE_NOTIFY) {
+        return ACPI_DEVICE_NOTIFY;
+    } else {
+        return 0;
+    }
+}
+
+static void notify_handler(ACPI_HANDLE node, uint32_t value, void* _ctx) {
+    acpi_handle_ctx_t* ctx = _ctx;
+    if (ctx->ns_node != node) {
+        return;
+    }
+    uint16_t type;
+    if (value <= 0x7f) {
+        type = ACPI_EVENT_SYSTEM_NOTIFY;
+    } else if (value <= 0xff) {
+        type = ACPI_EVENT_DEVICE_NOTIFY;
+    } else {
+        return;
+    }
+    acpi_event_packet_t pkt = {
+        .hdr = {
+            .key = ctx->event_key,
+        },
+        .version = 0,
+        .type = type,
+        .arg = value,
+    };
+    mx_port_queue(ctx->notify, &pkt, sizeof(pkt));
+}
 
 static mxio_dispatcher_t* dispatcher;
 static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
@@ -57,6 +98,10 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
 
     // Check if handle is closed
     if (h == 0) {
+        if (ctx->notify != MX_HANDLE_INVALID) {
+            AcpiRemoveNotifyHandler(ctx->ns_node, acpi_event_type(ctx->event_mask), notify_handler);
+            mx_handle_close(ctx->notify);
+        }
         free(ctx);
         return NO_ERROR;
     }
@@ -102,29 +147,43 @@ static mx_status_t dispatch(mx_handle_t h, void* _ctx, void* cookie) {
         status = send_error(h, hdr->request_id, ERR_NOT_SUPPORTED);
         goto cleanup;
     }
+    if (hdr->cmd == ACPI_CMD_ENABLE_EVENT && num_handles == 0) {
+        status = send_error(h, hdr->request_id, ERR_INVALID_ARGS);
+        goto cleanup;
+    }
     if (num_handles > 0) {
-        if (hdr->cmd != ACPI_CMD_NEW_CONNECTION) {
+        if (hdr->cmd == ACPI_CMD_NEW_CONNECTION) {
+            acpi_handle_ctx_t* context = calloc(1, sizeof(acpi_handle_ctx_t));
+            if (context == NULL) {
+                status = ERR_NO_MEMORY;
+                goto cleanup;
+            }
+            context->root_node = ctx->root_node;
+            context->ns_node = ctx->ns_node;
+            if ((status = mxio_dispatcher_add(dispatcher, cmd_handle, context, NULL)) < 0) {
+                free(context);
+                goto cleanup;
+            }
+            acpi_rsp_hdr_t rsp;
+            rsp.status = NO_ERROR;
+            rsp.len = sizeof(rsp);
+            rsp.request_id = hdr->request_id;
+            return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
+        } else if (hdr->cmd == ACPI_CMD_ENABLE_EVENT) {
+            if (ctx->notify != MX_HANDLE_INVALID) {
+                status = ERR_ALREADY_EXISTS;
+                goto cleanup;
+            }
+            // Set the notify handle here because the command table doesn't accept a handle
+            // in the parameter.
+            ctx->notify = cmd_handle;
+            // Fall through to call the command table
+        } else {
             status = ERR_INVALID_ARGS;
             goto cleanup;
         }
-        acpi_handle_ctx_t* context = calloc(1, sizeof(acpi_handle_ctx_t));
-        if (context == NULL) {
-            status = ERR_NO_MEMORY;
-            goto cleanup;
-        }
-        context->root_node = ctx->root_node;
-        context->ns_node = ctx->ns_node;
-        if ((status = mxio_dispatcher_add(dispatcher, cmd_handle, context, NULL)) < 0) {
-            free(context);
-            goto cleanup;
-        }
-        acpi_rsp_hdr_t rsp;
-        rsp.status = NO_ERROR;
-        rsp.len = sizeof(rsp);
-        rsp.request_id = hdr->request_id;
-        return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
     }
-    status = cmd_table[hdr->cmd](h, ctx, buf);
+    return cmd_table[hdr->cmd](h, ctx, buf);
 
 cleanup:
     if (cmd_handle > 0) {
@@ -600,6 +659,44 @@ static mx_status_t cmd_bif(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
     rsp.oem[sizeof(rsp.oem)-1] = '\0';
     ACPI_FREE(obj);
 
+    return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
+}
+
+static mx_status_t cmd_enable_event(mx_handle_t h, acpi_handle_ctx_t* ctx, void* _cmd) {
+    acpi_cmd_enable_event_t* cmd = _cmd;
+    if (cmd->hdr.len != sizeof(*cmd)) {
+        return send_error(h, cmd->hdr.request_id, ERR_INVALID_ARGS);
+    }
+
+    if (ctx->notify == MX_HANDLE_INVALID) {
+        return send_error(h, cmd->hdr.request_id, ERR_BAD_STATE);
+    }
+
+    uint32_t type;
+    if ((type = acpi_event_type(cmd->type)) == 0) {
+        // FIXME(yky): other ACPI event types
+        return send_error(h, cmd->hdr.request_id, ERR_NOT_SUPPORTED);
+    }
+
+    uint16_t old_mask = ctx->event_mask;
+    uint64_t old_key = ctx->event_key;
+    ctx->event_mask = cmd->type;
+    ctx->event_key = cmd->key;
+
+    ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(ctx->ns_node, type, notify_handler, ctx);
+    if (acpi_status != AE_OK) {
+        ctx->event_mask = old_mask;
+        ctx->event_key = old_key;
+        return send_error(h, cmd->hdr.request_id, ERR_BAD_STATE);
+    }
+
+    acpi_rsp_enable_event_t rsp = {
+        .hdr = {
+            .status = NO_ERROR,
+            .len = sizeof(rsp),
+            .request_id = cmd->hdr.request_id,
+        },
+    };
     return mx_channel_write(h, 0, &rsp, sizeof(rsp), NULL, 0);
 }
 

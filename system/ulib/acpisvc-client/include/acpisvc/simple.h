@@ -25,6 +25,7 @@ typedef struct {
 static void acpi_handle_init(acpi_handle_t* h, mx_handle_t pipe) {
     h->pipe = pipe;
     h->lock = (mtx_t)MTX_INIT;
+    h->next_req_id = 0;
 }
 
 static void acpi_handle_close(acpi_handle_t* h) {
@@ -84,5 +85,13 @@ mx_status_t acpi_bst(acpi_handle_t* h, acpi_rsp_bst_t** response);
 //
 // NOTE: this is a temporary interface that will be removed soon.
 mx_status_t acpi_bif(acpi_handle_t* h, acpi_rsp_bif_t** response);
+
+// Receive ACPI events on a port.
+//
+// *port* is the port to queue event packets on. The handle will always be
+// consumed.
+// *key* is the key to pass in the event packet.
+// *events* is a bitmap of events.
+mx_status_t acpi_enable_event(acpi_handle_t* h, mx_handle_t port, uint64_t key, uint16_t events);
 
 __END_CDECLS
