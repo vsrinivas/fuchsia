@@ -1,4 +1,4 @@
 {
-    "MaterialIcons": "/boot/data/fonts/MaterialIcons-Regular.ttf",
-    "Roboto": "/boot/data/fonts/Roboto-Regular.ttf"
+    "MaterialIcons": "/system/data/fonts/MaterialIcons-Regular.ttf",
+    "Roboto": "/system/data/fonts/Roboto-Regular.ttf"
 }

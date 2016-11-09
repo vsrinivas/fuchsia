@@ -4,6 +4,8 @@
 
 #include "apps/fonts/font_provider_impl.h"
 
+#include <string.h>
+
 #include <magenta/status.h>
 #include <magenta/syscalls.h>
 #include <utility>
@@ -16,7 +18,7 @@
 namespace fonts {
 namespace {
 
-constexpr char kFontManifestPath[] = "/boot/data/fonts/manifest.json";
+constexpr char kFontManifestPath[] = "/system/data/fonts/manifest.json";
 constexpr char kFallbackFontFamily[] = "Roboto";
 constexpr mx_rights_t kFontDataRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
@@ -37,7 +39,8 @@ FontProviderImpl::~FontProviderImpl() = default;
 bool FontProviderImpl::LoadFontsInternal() {
   std::string json_data;
   if (!files::ReadFileToString(kFontManifestPath, &json_data)) {
-    FTL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath << "'.";
+    FTL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath
+                   << "'.";
     return false;
   }
 
@@ -49,7 +52,6 @@ bool FontProviderImpl::LoadFontsInternal() {
   }
 
   mx::vmo fallback_vmo;
-
   for (const auto& entry : json.GetObject()) {
     // The iterator here is from string (family) to json type (path),
     // so we have to check the second type.
@@ -76,14 +78,15 @@ bool FontProviderImpl::LoadFontsInternal() {
       return false;
     }
 
-    rv = vmo.write(data.data(), 0, data.size(), nullptr);
+    mx_size_t actual = 0;
+    rv = vmo.write(data.data(), 0, data.size(), &actual);
     if (rv < 0) {
       FTL_LOG(ERROR) << "Failed to write data to VMO for " << family << ":"
                      << mx_status_get_string(rv);
       return false;
     }
 
-    if (family == kFallbackFontFamily) {
+    if (!strcmp(family, kFallbackFontFamily)) {
       rv = vmo.duplicate(kFontDataRights, &fallback_vmo);
       if (rv != NO_ERROR) {
         FTL_LOG(ERROR) << "Failed to create fallback vmo."
@@ -96,8 +99,9 @@ bool FontProviderImpl::LoadFontsInternal() {
     font_data_[family] = font_vmos_.size() - 1;
   }
 
-  if (!fallback_vmo_) {
-    FTL_LOG(ERROR) << "Failed to find fallback family " << kFallbackFontFamily << ".";
+  if (!fallback_vmo) {
+    FTL_LOG(ERROR) << "Failed to find fallback family " << kFallbackFontFamily
+                   << ".";
     return false;
   }
 
