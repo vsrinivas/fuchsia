@@ -6,6 +6,7 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
@@ -37,14 +38,6 @@ using fidl::InterfaceRequest;
 using fidl::String;
 using fidl::StructPtr;
 
-Array<uint8_t> StringToArray(const std::string& username) {
-  Array<uint8_t> array = Array<uint8_t>::New(username.length());
-  for (size_t i = 0; i < username.length(); i++) {
-    array[i] = static_cast<uint8_t>(username[i]);
-  }
-  return array;
-}
-
 class DeviceRunnerImpl : public DeviceRunner {
  public:
   DeviceRunnerImpl(InterfacePtr<ApplicationLauncher> launcher,
@@ -67,13 +60,13 @@ class DeviceRunnerImpl : public DeviceRunner {
     ConnectToService(services.get(), fidl::GetProxy(&user_runner_));
 
     StructPtr<ledger::Identity> identity = ledger::Identity::New();
-    identity->user_id = StringToArray(username);
+    identity->user_id = to_array(username);
     // |app_id| must not be null so it will pass mojo validation and must not
     // be empty or we'll get ledger::Status::AUTHENTICATION_ERROR when
     // UserRunner calls GetLedger().
     // TODO(jimbe): When there's support from the Ledger, open the user here,
     // then pass down a handle that is restricted from opening other users.
-    identity->app_id = StringToArray(kAppId);
+    identity->app_id = to_array(kAppId);
 
     user_runner_->Launch(
         std::move(identity), std::move(view_owner_request), [](bool success) {

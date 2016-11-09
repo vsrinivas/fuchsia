@@ -78,4 +78,4 @@ void CommandListener::Close() {
   }
 }
 
-}  // namespace mojo
+}  // namespace modular

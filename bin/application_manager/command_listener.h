@@ -39,6 +39,6 @@ class CommandListener : mtl::MessageLoopHandler {
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandListener);
 };
 
-}  // namespace mojo
+}  // namespace modular
 
 #endif  // APPS_MODULAR_SRC_APPLICATION_MANAGER_COMMAND_LISTENER_H_
