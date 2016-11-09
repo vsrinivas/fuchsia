@@ -44,7 +44,7 @@ status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
 
     status_t result = wait_queue_block(&cond->wait, timeout);
 
-    mutex_acquire_timeout_internal(mutex, INFINITE_TIME);
+    mutex_acquire_internal(mutex);
 
     THREAD_UNLOCK(state);
 

@@ -31,10 +31,6 @@ public:
     void Acquire() { mutex_acquire(&mutex_); }
     void Release() { mutex_release(&mutex_); }
 
-    status_t AcquireTimeout(lk_time_t timeout) {
-        return mutex_acquire_timeout(&mutex_, timeout);
-    }
-
     bool IsHeld() const {
         return is_mutex_held(&mutex_);
     }
@@ -65,10 +61,6 @@ public:
     ~Mutex() { mtx_destroy(&mutex_); }
     void Acquire() { mtx_lock(&mutex_); }
     void Release() { mtx_unlock(&mutex_); }
-
-    /* AcquireTimeout is not supported by the Mutex wrapper in user-mode.
-     * Implementation would require creation of a C11 mtx_timed mutex, a
-     * decision normally made at construction time. */
 
     /* IsHeld is not supported by the Mutex wrapper in user-mode as C11 mtx_t
      * instances do not support a direct IsHeld style check.  A possible

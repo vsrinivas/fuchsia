@@ -143,36 +143,6 @@ static int mutex_thread(void *arg)
     return 0;
 }
 
-static int mutex_timeout_thread(void *arg)
-{
-    mutex_t *timeout_mutex = (mutex_t *)arg;
-    status_t err;
-
-    printf("mutex_timeout_thread acquiring mutex %p with 1 second timeout\n", timeout_mutex);
-    err = mutex_acquire_timeout(timeout_mutex, 1000);
-    if (err == ERR_TIMED_OUT)
-        printf("mutex_acquire_timeout returns with TIMEOUT\n");
-    else
-        printf("mutex_acquire_timeout returns %d\n", err);
-
-    return err;
-}
-
-static int mutex_zerotimeout_thread(void *arg)
-{
-    mutex_t *timeout_mutex = (mutex_t *)arg;
-    status_t err;
-
-    printf("mutex_zerotimeout_thread acquiring mutex %p with zero second timeout\n", timeout_mutex);
-    err = mutex_acquire_timeout(timeout_mutex, 0);
-    if (err == ERR_TIMED_OUT)
-        printf("mutex_acquire_timeout returns with TIMEOUT\n");
-    else
-        printf("mutex_acquire_timeout returns %d\n", err);
-
-    return err;
-}
-
 static int mutex_test(void)
 {
     static mutex_t imutex = MUTEX_INITIAL_VALUE(imutex);
@@ -193,35 +163,7 @@ static int mutex_test(void)
         thread_join(threads[i], NULL, INFINITE_TIME);
     }
 
-    printf("done with simple mutex tests\n");
-
-    printf("testing mutex timeout\n");
-
-    mutex_t timeout_mutex;
-
-    mutex_init(&timeout_mutex);
-    mutex_acquire(&timeout_mutex);
-
-    for (uint i=0; i < 2; i++) {
-        threads[i] = thread_create("mutex timeout tester", &mutex_timeout_thread, (void *)&timeout_mutex, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-        thread_resume(threads[i]);
-    }
-
-    for (uint i=2; i < 4; i++) {
-        threads[i] = thread_create("mutex timeout tester", &mutex_zerotimeout_thread, (void *)&timeout_mutex, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-        thread_resume(threads[i]);
-    }
-
-    thread_sleep(5000);
-    mutex_release(&timeout_mutex);
-
-    for (uint i=0; i < 4; i++) {
-        thread_join(threads[i], NULL, INFINITE_TIME);
-    }
-
     printf("done with mutex tests\n");
-
-    mutex_destroy(&timeout_mutex);
 
     return 0;
 }

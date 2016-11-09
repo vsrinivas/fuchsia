@@ -57,15 +57,11 @@ void mutex_destroy(mutex_t *m)
     THREAD_UNLOCK(state);
 }
 
-status_t mutex_acquire_timeout_internal(mutex_t *m, lk_time_t timeout)
+status_t mutex_acquire_internal(mutex_t *m)
 {
     if (unlikely(++m->count > 1)) {
-        status_t ret = wait_queue_block(&m->wait, timeout);
+        status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
         if (unlikely(ret < NO_ERROR)) {
-            /* if the acquisition timed out, back out the acquire and exit */
-            if (likely(ret == ERR_TIMED_OUT)) {
-                m->count--;
-            }
             /* if there was a general error, it may have been destroyed out from
              * underneath us, so just exit (which is really an invalid state anyway)
              */
@@ -79,28 +75,23 @@ status_t mutex_acquire_timeout_internal(mutex_t *m, lk_time_t timeout)
 }
 
 /**
- * @brief  Mutex wait with timeout
+ * @brief  Acquire the mutex
  *
- * This function waits up to \a timeout ms for the mutex to become available.
- * Timeout may be zero, in which case this function returns immediately if
- * the mutex is not free.
- *
- * @return  NO_ERROR on success, ERR_TIMED_OUT on timeout,
- * other values on error
+ * @return  NO_ERROR on success, other values on error
  */
-status_t mutex_acquire_timeout(mutex_t *m, lk_time_t timeout)
+status_t mutex_acquire(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
 #if LK_DEBUGLEVEL > 0
     if (unlikely(get_current_thread() == m->holder))
-        panic("mutex_acquire_timeout: thread %p (%s) tried to acquire mutex %p it already owns.\n",
+        panic("mutex_acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n",
               get_current_thread(), get_current_thread()->name, m);
 #endif
 
     THREAD_LOCK(state);
-    status_t ret = mutex_acquire_timeout_internal(m, timeout);
+    status_t ret = mutex_acquire_internal(m);
     THREAD_UNLOCK(state);
     return ret;
 }
