@@ -5,8 +5,10 @@
 import("//magma/gnbuild/magma.gni")
 
 source_set("vkcube") {
+  include_dirs = [ "." ]
+
   sources = [
-    "cube.cc",
+    "$magma_build_root/third_party/vkcube/cube.cc",
   ]
 
   public_deps = [
