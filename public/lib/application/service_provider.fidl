@@ -13,5 +13,5 @@ interface ServiceProvider {
   // the message |pipe| endpoint supplied by the caller. If the host is not
   // willing or able to provide the requested service, it should close the
   // |pipe|.
-  ConnectToService(string interface_name, handle<message_pipe> pipe);
+  ConnectToService(string interface_name, handle<message_pipe> channel);
 };

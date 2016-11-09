@@ -11,27 +11,43 @@ import 'package:apps.modular.services.application/application_launcher.fidl.dart
 import 'package:apps.modular.services.application/service_provider.fidl.dart';
 
 class ApplicationContext {
-  final ServiceProviderProxy environmentServices;
-  final ApplicationEnvironmentProxy environment;
-  final ApplicationLauncherProxy launcher;
-
   ApplicationContext({
     this.environmentServices,
     this.environment,
     this.launcher,
+    this.outgoingServices,
   });
+
+  final ServiceProviderProxy environmentServices;
+  final ApplicationEnvironmentProxy environment;
+  final ApplicationLauncherProxy launcher;
+  final ServiceProviderImpl outgoingServices;
 
   factory ApplicationContext.fromStartupInfo() {
     ApplicationEnvironmentProxy environment;
     ApplicationLauncherProxy launcher;
-    if (MxStartupInfo.environment != null) {
-      environment = new ApplicationEnvironmentProxy.fromHandle(
-            new core.Handle(MxStartupInfo.environment));
-      MxStartupInfo.environment = null;
+    ServiceProviderImpl outgoingServices;
+
+    int environmentHandle = MxStartupInfo.takeEnvironment();
+    if (environmentHandle != null) {
+      core.Handle handle = new core.Handle(environmentHandle);
+      environment = new ApplicationEnvironmentProxy.fromHandle(handle);
+      launcher = new ApplicationLauncherProxy.unbound();
       environment.getApplicationLauncher(launcher);
     }
-    // TODO(abarth): Do something useful with MxStartupInfo.outgoingServices. 
-    return new ApplicationContext(environment: environment, launcher: launcher);
+
+    int outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
+    if (outgoingServicesHandle != null) {
+      core.Handle handle = new core.Handle(outgoingServicesHandle);
+      ServiceProviderStub stub = new ServiceProviderStub.fromHandle(handle);
+      outgoingServices = new ServiceProviderImpl(stub);
+    }
+
+    return new ApplicationContext(
+      environment: environment,
+      launcher: launcher,
+      outgoingServices: outgoingServices,
+    );
   }
 }
 
@@ -40,4 +56,32 @@ void connectToService(ServiceProvider serviceProvider, Proxy proxy) {
   if (serviceName == null)
     return;
   serviceProvider.connectToService(serviceName, proxy);
+}
+
+typedef void ServiceConnector(core.Channel channel);
+
+class ServiceProviderImpl extends ServiceProvider {
+  ServiceProviderImpl(this.stub) { _sub.impl = this; }
+
+  final ServiceProviderStub stub;
+
+  ServiceConnector defaultConnector;
+
+  final Map<String, ServiceConnector> _connectors = new Map<String, ServiceConnector>();
+
+  void addServiceForName(ServiceConnector connector, String serviceName) {
+    _connectors[serviceName] = connector;
+  }
+
+  @override
+  void connectToService(String interfaceName, core.Channel channel) {
+    ServiceConnector connector = _connectors[serviceName];
+    if (connector != null) {
+      connector(channel);
+    } else if (defaultConnector != null) {
+      defaultConnector(channel)
+    } else {
+      channel.close();
+    }
+  }
 }
