@@ -97,9 +97,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
 
 std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FTL_DCHECK(!page_id.empty());
-  std::string encoded;
-  glue::Base64Encode(page_id, &encoded);
-  return storage_dir_ + "/" + encoded;
+  return storage_dir_ + "/" + GetDirectoryName(page_id);
 }
 
 }  // namespace storage
