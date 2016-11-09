@@ -64,6 +64,10 @@ class BindingSet {
 
   size_t size() const { return bindings_.size(); }
 
+  void set_on_empty_set_handler(const ftl::Closure& on_empty_set_handler) {
+    on_empty_set_handler_ = on_empty_set_handler;
+  }
+
  private:
   void RemoveOnError(Binding* binding) {
     auto it = std::find_if(bindings_.begin(), bindings_.end(),
@@ -72,9 +76,12 @@ class BindingSet {
                            });
     assert(it != bindings_.end());
     bindings_.erase(it);
+    if (bindings_.empty() && on_empty_set_handler_)
+      on_empty_set_handler_();
   }
 
   std::vector<std::unique_ptr<Binding>> bindings_;
+  ftl::Closure on_empty_set_handler_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BindingSet);
 };
