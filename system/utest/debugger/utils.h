@@ -67,3 +67,15 @@ extern mx_status_t create_inferior(const char* name,
 extern bool setup_inferior(const char* name, mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_handle_t* out_eport);
 
 extern bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport);
+
+extern bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet);
+
+extern bool verify_exception(const mx_exception_packet_t* packet,
+                             mx_handle_t process,
+                             mx_excp_type_t expected_type,
+                             mx_koid_t* tid);
+
+extern bool read_and_verify_exception(mx_handle_t eport,
+                                      mx_handle_t process,
+                                      mx_excp_type_t expected_type,
+                                      mx_koid_t* tid);

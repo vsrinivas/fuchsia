@@ -226,8 +226,16 @@ status_t ProcessDispatcher::AddThread(UserThread* t) {
     return NO_ERROR;
 }
 
+// This is called within thread T's context when it is exiting.
+
 void ProcessDispatcher::RemoveThread(UserThread* t) {
     LTRACE_ENTRY_OBJ;
+
+    {
+        AutoLock lock(&exception_lock_);
+        if (debugger_exception_port_)
+            debugger_exception_port_->OnThreadExit(t);
+    }
 
     // we're going to check for state and possibly transition below
     AutoLock state_lock(&state_lock_);
@@ -303,6 +311,8 @@ void ProcessDispatcher::SetState(State s) {
             AutoLock lock(&exception_lock_);
             if (exception_port_)
                 exception_port_->OnProcessExit(this);
+            if (debugger_exception_port_)
+                debugger_exception_port_->OnProcessExit(this);
         }
     }
 }

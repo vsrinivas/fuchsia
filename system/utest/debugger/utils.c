@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -361,6 +362,11 @@ bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport
     send_msg(pipe, MSG_DONE);
     tu_handle_close(pipe);
 
+    mx_koid_t tid;
+    if (!read_and_verify_exception(eport, inferior, MX_EXCP_GONE, &tid))
+        return false;
+    EXPECT_EQ(tid, 0u, "reading of process gone notification");
+
     tu_wait_signaled(inferior);
     EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
               "unexpected inferior return code");
@@ -374,4 +380,56 @@ bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport
     tu_handle_close(inferior);
 
     return true;
+}
+
+// Wait for and receive an exception on |eport|.
+
+bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
+{
+    unittest_printf("Waiting for exception on eport %d\n", eport);
+    ASSERT_EQ(mx_port_wait(eport, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
+    ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
+    return true;
+}
+
+bool verify_exception(const mx_exception_packet_t* packet,
+                      mx_handle_t process,
+                      mx_excp_type_t expected_type,
+                      mx_koid_t* tid)
+{
+    const mx_exception_report_t* report = &packet->report;
+
+#ifdef __x86_64__
+    if (MX_EXCP_IS_ARCH (report->header.type))
+        unittest_printf("Received exception, vector 0x%" PRIx64 ", err_code 0x%" PRIx64 ", pc %p\n",
+                        report->context.arch.u.x86_64.vector,
+                        report->context.arch.u.x86_64.err_code,
+                        (void*) report->context.arch.pc);
+#endif
+
+    EXPECT_EQ(report->header.type, expected_type, "bad exception type");
+
+    // Verify the exception was from |process|.
+    if (process != MX_HANDLE_INVALID) {
+        mx_info_handle_basic_t process_info;
+        tu_handle_get_basic_info(process, &process_info);
+        ASSERT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
+    }
+
+    unittest_printf("exception received: pid %"
+                    PRIu64 ", tid %" PRIu64 "\n",
+                    report->context.pid, report->context.tid);
+    *tid = report->context.tid;
+    return true;
+}
+
+bool read_and_verify_exception(mx_handle_t eport,
+                               mx_handle_t process,
+                               mx_excp_type_t expected_type,
+                               mx_koid_t* tid)
+{
+    mx_exception_packet_t packet;
+    if (!read_exception(eport, &packet))
+        return false;
+    return verify_exception(&packet, process, expected_type, tid);
 }
