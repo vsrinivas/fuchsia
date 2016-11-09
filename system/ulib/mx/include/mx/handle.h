@@ -65,10 +65,16 @@ public:
     // where they work.
 
     mx_status_t signal(uint32_t clear_mask, uint32_t set_mask) const {
+        static_assert(handle_traits<T>::supports_user_signal,
+                      "Receiver must support user signals.");
         return mx_object_signal(get(), clear_mask, set_mask);
     }
 
     mx_status_t signal_peer(uint32_t clear_mask, uint32_t set_mask) const {
+        static_assert(handle_traits<T>::supports_user_signal,
+                      "Receiver must support user signals.");
+        static_assert(handle_traits<T>::has_peer_handle,
+                      "Receiver must have peer handle.");
         return mx_object_signal_peer(get(), clear_mask, set_mask);
     }
 

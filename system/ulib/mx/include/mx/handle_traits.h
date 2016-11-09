@@ -6,8 +6,65 @@
 
 namespace mx {
 
+class channel;
+class datapipe;
+class eventpair;
+class log;
+class socket;
+class vmo;
+class waitset;
+
+// The default traits supports:
+// - event
+// - thread
+// - process
+// - job
 template <typename T> struct handle_traits {
     static const bool supports_duplication = true;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = false;
+};
+
+template <> struct handle_traits<channel> {
+    static const bool supports_duplication = false;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = true;
+};
+
+template <> struct handle_traits<datapipe> {
+    static const bool supports_duplication = false;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = true;
+};
+
+template <> struct handle_traits<eventpair> {
+    static const bool supports_duplication = true;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = true;
+};
+
+template <> struct handle_traits<log> {
+    static const bool supports_duplication = true;
+    static const bool supports_user_signal = false;
+    static const bool has_peer_handle = false;
+};
+
+template <> struct handle_traits<socket> {
+    static const bool supports_duplication = true;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = true;
+};
+
+template <> struct handle_traits<vmo> {
+    static const bool supports_duplication = true;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = true;
+};
+
+template <> struct handle_traits<waitset> {
+    static const bool supports_duplication = false;
+    static const bool supports_user_signal = true;
+    static const bool has_peer_handle = false;
 };
 
 } // namespace mx
