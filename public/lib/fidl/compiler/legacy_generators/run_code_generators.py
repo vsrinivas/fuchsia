@@ -80,16 +80,16 @@ def LoadGenerators(generators_string):
     # "Built-in" generators:
     if generator_name_lower == "c++":
       generator_py_name = os.path.join(generators_dir,
-        "mojom_cpp_generator.py")
+        "fidl_cpp_generator.py")
     elif generator_name_lower == "dart":
       generator_py_name = os.path.join(generators_dir,
-        "mojom_dart_generator.py")
+        "fidl_dart_generator.py")
     elif generator_name_lower == "go":
       generator_py_name = os.path.join(generators_dir,
-        "mojom_go_generator.py")
+        "fidl_go_generator.py")
     elif generator_name_lower == "python":
       generator_py_name = os.path.join(generators_dir,
-        "mojom_python_generator.py")
+        "fidl_python_generator.py")
     # Specified generator python module:
     elif generator_name.endswith(".py"):
       generator_py_name = generator_name
