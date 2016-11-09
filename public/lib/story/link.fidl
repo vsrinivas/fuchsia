@@ -46,7 +46,6 @@ import "apps/modular/services/document_store/document.fidl";
 // changes.
 //
 // No service name: created by Story.
-//
 interface Link {
   // The Link contains a collection of Documents, which is empty when the Link
   // is created. AddDocuments() incrementally adds the given values to

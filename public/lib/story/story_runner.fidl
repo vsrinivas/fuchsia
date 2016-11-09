@@ -11,7 +11,7 @@ import "apps/modular/services/story/resolver.fidl";
 // configure the app with a resolver factory, and to create story
 // instances (which then are configured with a Resolver instance each,
 // obtained from the resolver factory).
-[ServiceName="modular.StoryRunner"]  // Created by story-runner app.
+[ServiceName="modular.StoryRunner"]  // Created by story_runner app.
 interface StoryRunner {
   Initialize(ResolverFactory resolver_factory);
   StartStory(StoryStorage story_storage, Story& story);

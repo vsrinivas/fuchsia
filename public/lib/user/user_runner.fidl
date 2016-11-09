@@ -7,8 +7,9 @@ module modular;
 import "apps/ledger/services/ledger.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
-// For use by Device Runner to launch a new User Runner per user.
-[ServiceName="modular.UserRunner"]
+// DeviceRunner requests an instance of this service in order to
+// launch and display a User Runner per user.
+[ServiceName="modular.UserRunner"]  // Created by user_runner application.
 interface UserRunner {
   // Launches a user runner instance for a user identified by
   // |user_id|. Returns false if there is a problem with |user_id| or
@@ -18,24 +19,36 @@ interface UserRunner {
       (bool success);
 };
 
-// Information about a story as provided by Story.GetInfo().
-struct StoryInfo {
-  // URL of the first mojo application run as a part of this story. Typically
-  // this will be the URL of the recipe.
-  string url;
+// UserRunner implementation creates an instance of this service and
+// passes it to the UserShell service so it can create a new story by
+// URL and to get a list of previously run stories which can be
+// resumed.
+//
+// TODO(mesch): If |StoryProvider| is closed, all associated |Story|
+// objects will have an undefined behavior. Actually they will crash
+// because the user runner impl gets deleted and the story impl still
+// accesses it. Apply same pattern as for Story/Module/Link here.
+interface StoryProvider {
+  // Creates a new story by running the module at |url|. Gives control
+  // over the newly created story through a StroyController.
+  CreateStory(string url, StoryController& story);
 
-  // The ID of the Story, under which it's kept in the root page.
-  string id;
+  // Obtains a controller for a previously run story identified by its
+  // story ID. Obtaining the controller doesn't run it yet.
+  ResumeStoryById(string story_id, StoryController& story);
 
-  // Whether this story is running on this device.
-  bool is_running;
+  // Obtains a controller for a previously run story identified by its
+  // story info. Obtaining the controller doesn't run it yet.
+  ResumeStoryByInfo(StoryInfo story_info, StoryController& story);
 
-  // Page id on the user's ledger which stores story information. It might be
-  // NULL until the story is being started.
-  array<uint8, 16>? story_page_id;
+  // Returns IDs of all previously run stories for the user. More
+  // information about the stories can be retrieved using
+  // ResumeStoryById().
+  PreviousStories() => (array<string> story_ids);
 };
 
-// Intended for use by SysUi to interact with a single story.
+// Used by the client of StoryProvider (UserShell) to interact with a
+// single story. Created by StoryProvider.
 interface StoryController {
   GetInfo() => (StoryInfo info);
 
@@ -70,27 +83,22 @@ interface StoryWatcher {
   OnDone();
 };
 
-// For use by SysUi to create a new story by URL and to get a list of
-// previously run stories which can be resumed. If |StoryProvider| is
-// closed, all associated |Story| objects will have an undefined
-// behavior. TODO(mesch): Actually they will crash because the user
-// runner impl gets deleted and the story impl still accesses it.
-// Apply same pattern as for Story/Module/Link here.
-interface StoryProvider {
-  // Creates a new story by running the module at |url|. Gives control
-  // over the newly created story through a StroyController.
-  CreateStory(string url, StoryController& story);
+// Information about a story as provided by Story.GetInfo(), to
+// display story information in the UserShell UI.
+struct StoryInfo {
+  // URL of the first mojo application run as a part of this story. Typically
+  // this will be the URL of the recipe.
+  string url;
 
-  // Obtains a controller for a previously run story identified by its
-  // story ID. Obtaining the controller doesn't run it yet.
-  ResumeStoryById(string story_id, StoryController& story);
+  // The ID of the Story, under which it's kept in the root page.
+  string id;
 
-  // Obtains a controller for a previously run story identified by its
-  // story info. Obtaining the controller doesn't run it yet.
-  ResumeStoryByInfo(StoryInfo story_info, StoryController& story);
+  // Whether this story is running on this device.
+  bool is_running;
 
-  // Returns IDs of all previously run stories for the user. More
-  // information about the stories can be retrieved using
-  // ResumeStoryById().
-  PreviousStories() => (array<string> story_ids);
+  // Page id on the user's ledger which stores story information. It
+  // might be NULL until the story is being started. TODO(mesch): This
+  // information does not belong here, as the UserShell does not need
+  // it.
+  array<uint8, 16>? story_page_id;
 };

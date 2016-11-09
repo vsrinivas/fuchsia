@@ -4,8 +4,7 @@
 
 module modular;
 
-// The main service implemented by the resolver app. A factory for
-// Resolver service instances.
+// A factory for Resolver service instances.
 [ServiceName="modular.ResolverFactory"]  // Created by resolver app.
 interface ResolverFactory {
   GetResolver(Resolver& resolver);

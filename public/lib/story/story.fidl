@@ -8,45 +8,6 @@ import "apps/modular/services/document_store/document.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
-// This service is implemented by an application that is meant to be
-// run in a story.
-//
-// The Story service implementation of the story runner when requested
-// through StartModule() runs the app, requests the Module service it
-// provides, and if it obtains one, calls Initialize().
-//
-// The arguments to Initialize() are a handle of the Story instance
-// that created the Module, and a Link instance provided by the caller
-// of StartModule(). The Link instance can be used to exchange data
-// with the calling module. The Story service can be used to start
-// more Modules, and to create Link instances to share with those
-// Modules.
-[ServiceName="modular.Module"]  // Created by each module app.
-interface Module {
-  Initialize(Story story, Link link);
-};
-
-
-// A handle of this interface is held by the client of Story that
-// requests the start of a module using StartModule().
-//
-// It can be used to register a watcher to be notified when the module
-// stops.
-//
-// It can also be used to request the module to stop. To accomplish
-// that, just close the handle to the ModuleController.
-interface ModuleController {
-  // Registers a watcher that is notified when the module stops.
-  Watch(ModuleWatcher watcher);
-};
-
-// This interface is implemented by the client calling
-// ModuleController::Watch().
-interface ModuleWatcher {
-  // Called when the module instance is stopped.
-  Done();
-};
-
 // This interface is implemented by the story runner application. The
 // service is used to run modules and initialize them with shared
 // data.
@@ -92,13 +53,46 @@ interface Story {
   Done();
 };
 
-// Internal state of the session, used for storage in Ledger.
-// immediate motivation to use this service is that Ledger crashes
-// <https://fuchsia.atlassian.net/browse/LE-46>, so we use an
-// implementation of this service that does not write to ledger to
-// experiment with session persistence. The abstraction might be
-// useful anyway, but is certain to change as persistence evolves.
-// TODO(mesch/jimbe): Use document store instead of ledger?
+// A handle of this interface is held by the client of Story that
+// requests the start of a module using StartModule().
+//
+// It can be used to register a watcher to be notified when the module
+// stops.
+//
+// It can also be used to request the module to stop. To accomplish
+// that, just close the handle to the ModuleController.
+interface ModuleController {
+  // Registers a watcher that is notified when the module stops.
+  Watch(ModuleWatcher watcher);
+};
+
+// This interface is implemented by the client calling
+// ModuleController::Watch().
+interface ModuleWatcher {
+  // Called when the module instance is stopped.
+  Done();
+};
+
+// This service is implemented by an application that is meant to be
+// run in a story.
+//
+// The Story service implementation of the story runner when requested
+// through StartModule() runs the app, requests the Module service it
+// provides, and if it obtains one, calls Initialize().
+//
+// The arguments to Initialize() are a handle of the Story instance
+// that created the Module, and a Link instance provided by the caller
+// of StartModule(). The Link instance can be used to exchange data
+// with the calling module. The Story service can be used to start
+// more Modules, and to create Link instances to share with those
+// Modules.
+[ServiceName="modular.Module"]  // Created by each module app.
+interface Module {
+  Initialize(Story story, Link link);
+};
+
+// This is the abstraction provided by UserRunner to StoryRunner for
+// state persistence.
 interface StoryStorage {
   ReadStoryData() => (StoryData? data);
   WriteStoryData(StoryData data);
