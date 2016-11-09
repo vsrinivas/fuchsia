@@ -47,7 +47,7 @@ source_set("lib") {
 }
 
 executable("ledger_app") {
-  output_name = "ledger_codex"
+  output_name = "ledger"
   sources = [
     "app.cc",
   ]
@@ -66,7 +66,7 @@ executable("ledger_app") {
 }
 
 executable("unittests") {
-  output_name = "ledger_codex_unittests"
+  output_name = "ledger_unittests"
 
   testonly = true
 
@@ -90,13 +90,13 @@ executable("unittests") {
   ]
 }
 
-executable("apptests") {
-  output_name = "ledger_codex_apptests"
+executable("integration_tests") {
+  output_name = "ledger_integration_tests"
 
   testonly = true
 
   sources = [
-    "ledger_apptest.cc",
+    "ledger_integration_tests.cc",
   ]
 
   deps = [

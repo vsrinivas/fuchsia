@@ -10,11 +10,11 @@ unittests = [
     '/system/test/gcs_unittests',
     '/system/test/ledger_codex_unittests',
     '/system/test/ledger_glue_unittests',
+    '/system/test/ledger_integration_tests',
     '/system/test/storage_btree_unittests',
     '/system/test/storage_unittests',
 ]
 
 # List of apptest binaries.
 apptests = [
-    'mojo:ledger_codex_apptests',
 ]
