@@ -61,7 +61,7 @@ void connectToService(ServiceProvider serviceProvider, Proxy proxy) {
 typedef void ServiceConnector(core.Channel channel);
 
 class ServiceProviderImpl extends ServiceProvider {
-  ServiceProviderImpl(this.stub) { _sub.impl = this; }
+  ServiceProviderImpl(this.stub) { stub.impl = this; }
 
   final ServiceProviderStub stub;
 
@@ -74,12 +74,12 @@ class ServiceProviderImpl extends ServiceProvider {
   }
 
   @override
-  void connectToService(String interfaceName, core.Channel channel) {
+  void connectToService(String serviceName, core.Channel channel) {
     ServiceConnector connector = _connectors[serviceName];
     if (connector != null) {
       connector(channel);
     } else if (defaultConnector != null) {
-      defaultConnector(channel)
+      defaultConnector(channel);
     } else {
       channel.close();
     }
