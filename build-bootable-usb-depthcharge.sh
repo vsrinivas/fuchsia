@@ -91,6 +91,9 @@ sudo sgdisk --zap-all "${BLOCK_DEVICE}"
 
 make -C "${VB_DIR}" cgpt futil
 
+# Ensure that magenta has been built.
+"${MX_DIR}"/scripts/build-magenta-x86-64
+
 "${VB_DIR}"/build/futility/futility vbutil_kernel \
 	--pack "${KERNEL_IMAGE}"  \
 	--keyblock "${VB_DIR}"/tests/devkeys/recovery_kernel.keyblock \
