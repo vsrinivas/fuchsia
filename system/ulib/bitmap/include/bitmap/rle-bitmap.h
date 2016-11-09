@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <bitmap/bitmap.h>
+
 #include <magenta/types.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
@@ -14,7 +16,7 @@ namespace bitmap {
 struct RleBitmapElement;
 
 // A run-length encoded bitmap
-class RleBitmap {
+class RleBitmap final : public Bitmap {
 private:
     // Private forward-declaration to share the type between the iterator type
     // and the internal list.
@@ -25,7 +27,7 @@ public:
     using FreeList = ListType;
 
     constexpr RleBitmap() = default;
-    ~RleBitmap() {}
+    virtual ~RleBitmap() = default;
 
     RleBitmap(RleBitmap&& rhs) = default;
     RleBitmap& operator=(RleBitmap&& rhs) = default;
@@ -35,11 +37,11 @@ public:
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set.  Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
     // first unset bit after *bitoff*.
-    bool Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first_unset = nullptr) const;
+    bool Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first_unset = nullptr) const override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Set(uint64_t bitoff, uint64_t bitmax);
+    mx_status_t Set(uint64_t bitoff, uint64_t bitmax) override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -53,7 +55,7 @@ public:
 
     // Clears all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Clear(uint64_t bitoff, uint64_t bitmax);
+    mx_status_t Clear(uint64_t bitoff, uint64_t bitmax) override;
 
     // Clear all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -66,7 +68,7 @@ public:
     mx_status_t ClearNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* free_list);
 
     // Clear all bits in the bitmap.
-    void ClearAll();
+    void ClearAll() override;
 
     // Iterate over the ranges in the bitmap.  Modifying the list while
     // iterating over it may yield undefined results.

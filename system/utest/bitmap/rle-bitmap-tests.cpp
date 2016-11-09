@@ -50,11 +50,11 @@ static bool SetTwice(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.Set(2, 3), NO_ERROR, "set bit");
-    EXPECT_TRUE(bitmap.Get(2, 3), "get bit after setting");
+    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
+    EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting");
 
-    ASSERT_EQ(bitmap.Set(2, 3), NO_ERROR, "set bit again");
-    EXPECT_TRUE(bitmap.Get(2, 3), "get bit after setting again");
+    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit again");
+    EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting again");
 
     size_t count = 0;
     for (auto& range : bitmap) {
@@ -72,13 +72,13 @@ static bool ClearTwice(void) {
 
     RleBitmap bitmap;
 
-    ASSERT_EQ(bitmap.Set(2, 3), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
 
-    ASSERT_EQ(bitmap.Clear(2, 3), NO_ERROR, "clear bit");
-    EXPECT_FALSE(bitmap.Get(2, 3), "get bit after clearing");
+    ASSERT_EQ(bitmap.ClearOne(2), NO_ERROR, "clear bit");
+    EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing");
 
-    ASSERT_EQ(bitmap.Clear(2, 3), NO_ERROR, "clear bit again");
-    EXPECT_FALSE(bitmap.Get(2, 3), "get bit after clearing again");
+    ASSERT_EQ(bitmap.ClearOne(2), NO_ERROR, "clear bit again");
+    EXPECT_FALSE(bitmap.GetOne(2), "get bit after clearing again");
 
     for (__UNUSED auto& range : bitmap) {
         EXPECT_FALSE(true, "iterating on empty set");
@@ -97,7 +97,7 @@ static bool GetReturnArg(void) {
     EXPECT_FALSE(bitmap.Get(2, 3, &first_unset), "get bit with nonnull");
     EXPECT_EQ(first_unset, 2U, "check returned arg");
 
-    ASSERT_EQ(bitmap.Set(2, 3), NO_ERROR, "set bit");
+    ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
     EXPECT_TRUE(bitmap.Get(2, 3, &first_unset), "get bit after setting");
     EXPECT_EQ(first_unset, 3U, "check returned arg");
 
@@ -209,7 +209,7 @@ static bool MergeRanges(void) {
     constexpr uint64_t kMaxVal = 100;
 
     for (uint64_t i = 0; i < kMaxVal; i += 2) {
-        ASSERT_EQ(bitmap.Set(i, i + 1), NO_ERROR, "setting even bits");
+        ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting even bits");
     }
 
     uint64_t count = 0;
@@ -221,7 +221,7 @@ static bool MergeRanges(void) {
     EXPECT_EQ(count, kMaxVal / 2, "check range count");
 
     for (uint64_t i = 1; i < kMaxVal; i += 4) {
-        ASSERT_EQ(bitmap.Set(i, i + 1), NO_ERROR, "setting congruent 1 mod 4 bits");
+        ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting congruent 1 mod 4 bits");
     }
 
     count = 0;
@@ -244,7 +244,7 @@ static bool SplitRanges(void) {
     ASSERT_EQ(bitmap.Set(0, kMaxVal), NO_ERROR, "setting all bits");
 
     for (uint64_t i = 1; i < kMaxVal; i += 4) {
-        ASSERT_EQ(bitmap.Clear(i, i + 1), NO_ERROR, "clearing congruent 1 mod 4 bits");
+        ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing congruent 1 mod 4 bits");
     }
 
     uint64_t count = 0;
@@ -263,7 +263,7 @@ static bool SplitRanges(void) {
     EXPECT_EQ(count, kMaxVal / 4 + 1, "check range count");
 
     for (uint64_t i = 0; i < kMaxVal; i += 2) {
-        ASSERT_EQ(bitmap.Clear(i, i + 1), NO_ERROR, "clearing even bits");
+        ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing even bits");
     }
 
     count = 0;
