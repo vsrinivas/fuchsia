@@ -21,7 +21,7 @@ class Handle {
   int close() {
     MxHandle.removeOpenHandle(_h);
     int result = MxHandle.close(_h);
-    _h = INVALID;
+    _h = MX_HANDLE_INVALID;
     return result;
   }
 
@@ -31,7 +31,7 @@ class Handle {
   }
 
   String toString() {
-    return "Handle(${isValid ? INVALID : _h})";
+    return "Handle($h)";
   }
 
   bool operator ==(other) =>

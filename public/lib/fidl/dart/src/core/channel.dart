@@ -33,6 +33,14 @@ class ChannelQueryAndReadState {
 
   ChannelQueryAndReadState();
 
+  void error(int status) {
+    _result[0] = status;
+    _result[1] = null;
+    _result[2] = null;
+    _result[3] = null;
+    _result[4] = null;
+  }
+
   void queryAndRead(Handle handle, int flags) {
     MxChannel.queryAndRead(handle.h, flags, _result);
 
@@ -54,56 +62,41 @@ class ChannelQueryAndReadState {
 }
 
 class Channel {
-  static const int WRITE_FLAG_NONE = 0;
-  static const int READ_FLAG_NONE = 0;
-  static const int READ_FLAG_MAY_DISCARD = 1 << 0;
-
-  static final _queryAndReadState = new ChannelQueryAndReadState();
+  static final ChannelQueryAndReadState _queryAndReadState =
+      new ChannelQueryAndReadState();
 
   Handle handle;
-  int status;
 
   Channel(this.handle);
 
-  bool get ok => status == NO_ERROR;
-
   int write(ByteData data,
       [int numBytes = -1, List<Handle> handles = null, int flags = 0]) {
-    if (handle == null) {
-      status = ERR_INVALID_ARGS;
-      return status;
-    }
+    if (handle == null)
+      return ERR_INVALID_ARGS;
 
     int dataLengthInBytes = (data == null) ? 0 : data.lengthInBytes;
 
     // If numBytes has the default value, use the full length of the data.
     int dataNumBytes = (numBytes == -1) ? dataLengthInBytes : numBytes;
-    if (dataNumBytes > dataLengthInBytes) {
-      status = ERR_INVALID_ARGS;
-      return status;
-    }
+    if (dataNumBytes > dataLengthInBytes)
+      return ERR_INVALID_ARGS;
 
     // handles may be null, otherwise convert to ints.
-    List mojoHandles;
+    List<int> rawHandles;
     if (handles != null) {
-      mojoHandles = new List(handles.length);
-      for (int i = 0; i < handles.length; i++) {
-        mojoHandles[i] = handles[i].h;
+      rawHandles = new List<int>(handles.length);
+      for (int i = 0; i < handles.length; ++i) {
+        rawHandles[i] = handles[i].h;
       }
     }
 
-    // Do the call.
-    status = MxChannel.write(
-        handle.h, data, dataNumBytes, mojoHandles, flags);
-    return status;
+    return MxChannel.write(handle.h, data, dataNumBytes, rawHandles, flags);
   }
 
   ChannelReadResult read(ByteData data,
       [int numBytes = -1, List<Handle> handles = null, int flags = 0]) {
-    if (handle == null) {
-      status = ERR_INVALID_ARGS;
-      return null;
-    }
+    if (handle == null)
+      return new ChannelReadResult(ERR_INVALID_ARGS, 0, 0);
 
     // If numBytes has the default value, use the full length of the data.
     int dataNumBytes;
@@ -111,44 +104,33 @@ class Channel {
       dataNumBytes = 0;
     } else {
       dataNumBytes = (numBytes == -1) ? data.lengthInBytes : numBytes;
-      if (dataNumBytes > data.lengthInBytes) {
-        status = ERR_INVALID_ARGS;
-        return null;
-      }
+      if (dataNumBytes > data.lengthInBytes)
+        return new ChannelReadResult(ERR_INVALID_ARGS, 0, 0);
     }
 
     // handles may be null, otherwise make an int list for the handles.
-    List<int> mojoHandles;
-    if (handles == null) {
-      mojoHandles = null;
-    } else {
-      mojoHandles = new List<int>(handles.length);
-    }
+    List<int> rawHandles;
+    if (handles != null)
+      rawHandles = new List<int>(handles.length);
 
-    // Do the call.
     List result = MxChannel.read(
-        handle.h, data, dataNumBytes, mojoHandles, flags);
+        handle.h, data, dataNumBytes, rawHandles, flags);
 
-    if (result == null) {
-      status = ERR_INVALID_ARGS;
-      return null;
-    }
+    if (result == null)
+      return new ChannelReadResult(ERR_INVALID_ARGS, 0, 0);
 
     assert((result is List) && (result.length == 3));
-    var readResult = new ChannelReadResult.fromList(result);
+    ChannelReadResult readResult = new ChannelReadResult.fromList(result);
 
     // Copy out the handles that were read.
     if (handles != null) {
       for (var i = 0; i < readResult.handlesRead; i++) {
-        handles[i] = new Handle(mojoHandles[i]);
+        handles[i] = new Handle(rawHandles[i]);
       }
     }
 
-    status = readResult.status;
     return readResult;
   }
-
-  ChannelReadResult query() => read(null);
 
   bool setDescription(String description) =>
       MxHandle.setDescription(handle.h, description);
@@ -158,12 +140,10 @@ class Channel {
   /// isolate.
   ChannelQueryAndReadState queryAndRead([int flags = 0]) {
     if (handle == null) {
-      status = ERR_INVALID_ARGS;
-      return null;
+      _queryAndReadState.error(ERR_INVALID_ARGS);
+    } else {
+      _queryAndReadState.queryAndRead(handle, flags);
     }
-
-    _queryAndReadState.queryAndRead(handle, flags);
-    status = _queryAndReadState.status;
     return _queryAndReadState;
   }
 
@@ -172,8 +152,7 @@ class Channel {
     handle = null;
   }
 
-  String toString() => "Channel(handle: $handle, "
-      "status: ${getStringForStatus(status)})";
+  String toString() => "Channel(handle: $handle)";
 }
 
 class ChannelPair {

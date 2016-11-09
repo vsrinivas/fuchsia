@@ -7,8 +7,10 @@ part of core;
 typedef void ErrorHandler(FidlEventHandlerError error);
 
 class FidlEventHandler {
+  static const int _kSignals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+
   Channel _channel;
-  FidlEventSubscription _eventSubscription;
+  FidlEventSubscription _subscription;
   bool _isOpen = false;
   bool _isInHandler = false;
   bool _isPeerClosed = false;
@@ -16,7 +18,7 @@ class FidlEventHandler {
   FidlEventHandler.fromChannel(Channel channel,
                                 {bool autoBegin: true})
       : _channel = channel,
-        _eventSubscription = new FidlEventSubscription(channel.handle) {
+        _subscription = new FidlEventSubscription(channel.handle, _kSignals) {
     if (autoBegin) {
       beginHandlingEvents();
     }
@@ -24,7 +26,7 @@ class FidlEventHandler {
 
   FidlEventHandler.fromHandle(Handle handle, {bool autoBegin: true})
       : _channel = new Channel(handle),
-        _eventSubscription = new FidlEventSubscription(handle) {
+        _subscription = new FidlEventSubscription(handle, _kSignals) {
     if (autoBegin) {
       beginHandlingEvents();
     }
@@ -60,7 +62,7 @@ class FidlEventHandler {
       throw new FidlApiError("FidlEventHandler is already bound.");
     }
     _channel = channel;
-    _eventSubscription = new FidlEventSubscription(channel.handle);
+    _subscription = new FidlEventSubscription(channel.handle, _kSignals);
     _isOpen = false;
     _isInHandler = false;
     _isPeerClosed = false;
@@ -71,7 +73,7 @@ class FidlEventHandler {
       throw new FidlApiError("FidlEventHandler is already bound.");
     }
     _channel = new Channel(handle);
-    _eventSubscription = new FidlEventSubscription(handle);
+    _subscription = new FidlEventSubscription(handle, _kSignals);
     _isOpen = false;
     _isInHandler = false;
     _isPeerClosed = false;
@@ -85,7 +87,7 @@ class FidlEventHandler {
       throw new FidlApiError("FidlEventHandler is already handling events");
     }
     _isOpen = true;
-    _eventSubscription.subscribe(_tryHandleEvent);
+    _subscription.subscribe(_tryHandleEvent);
   }
 
   /// [endHandlineEvents] unsubscribes from the underlying
@@ -100,7 +102,7 @@ class FidlEventHandler {
           "Cannot end handling events from inside a callback");
     }
     _isOpen = false;
-    _eventSubscription.unsubscribe();
+    _subscription.unsubscribe();
   }
 
   /// [unbind] stops handling events, and returns the underlying
@@ -119,9 +121,9 @@ class FidlEventHandler {
       throw new FidlApiError(
           "Cannot unbind a FidlEventHandler from inside a callback.");
     }
-    var boundchannel = _channel;
+    Channel boundchannel = _channel;
     _channel = null;
-    _eventSubscription = null;
+    _subscription = null;
     return boundchannel;
   }
 
@@ -129,11 +131,11 @@ class FidlEventHandler {
     var result;
     _isOpen = false;
     _channel = null;
-    if (_eventSubscription != null) {
-      result = _eventSubscription
+    if (_subscription != null) {
+      result = _subscription
           ._close(immediate: immediate, local: _isPeerClosed)
           .then((_) {
-        _eventSubscription = null;
+        _subscription = null;
       });
     }
     return result != null ? result : new Future.value(null);
@@ -178,12 +180,10 @@ class FidlEventHandler {
     _isInHandler = true;
     if ((pendingSignals & MX_SIGNAL_READABLE) != 0) {
       handleRead();
+      _subscription.wait();
+    } else if ((pendingSignals & MX_SIGNAL_PEER_CLOSED) != 0) {
+      _isPeerClosed = true;
     }
-    if ((pendingSignals & MX_SIGNAL_WRITABLE) != 0) {
-      handleWrite();
-    }
-    _isPeerClosed = (pendingSignals & MX_SIGNAL_PEER_CLOSED) ||
-        !_eventSubscription.enableSignals();
     _isInHandler = false;
     if (_isPeerClosed) {
       close().then((_) {

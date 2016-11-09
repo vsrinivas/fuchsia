@@ -87,13 +87,12 @@ abstract class StubMessageHandler extends core.FidlEventHandler
   /// Called by generated handleMessage functions in implementations.
   void sendResponse(Message response) {
     if (isOpen) {
-      channel.write(
+      int status = channel.write(
           response.buffer, response.buffer.lengthInBytes, response.handles);
       // ERR_BAD_STATE is only used to indicate that the other end of
       // the pipe has been closed. We can ignore the close here and wait for
       // the PeerClosed signal on the event stream.
-      assert((channel.status == core.NO_ERROR) ||
-          (channel.status == core.ERR_BAD_STATE));
+      assert((status == core.NO_ERROR) || (status == core.ERR_BAD_STATE));
     }
   }
 

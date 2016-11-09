@@ -58,9 +58,8 @@ class MxHandle {
 
   static bool setDescription(int handleToken, String description) {
     _OpenHandle openHandle = _openHandles[handleToken];
-    if (openHandle != null) {
+    if (openHandle != null)
       openHandle.description = description;
-    }
     return true;
   }
 
@@ -81,15 +80,6 @@ class MxHandle {
     _openHandles.clear();
     return count;
   }
-}
-
-class _MxHandleWatcher {
-  static int sendControlData(
-      int controlHandle,
-      int commandCode,
-      int handleOrDeadline,
-      SendPort port,
-      int data) native "MxHandleWatcher_SendControlData";
 }
 
 class MxChannel {

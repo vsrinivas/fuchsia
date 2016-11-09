@@ -133,11 +133,10 @@ abstract class ProxyMessageHandler extends core.FidlEventHandler
     }
     var header = new MessageHeader(name);
     var serviceMessage = message.serializeWithHeader(header);
-    channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
+    int status = channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
         serviceMessage.handles);
-    if (channel.status != core.NO_ERROR) {
-      proxyError("Write to message pipe channel failed.");
-    }
+    if (status != core.NO_ERROR)
+      proxyError("Write to channel failed: ${channel}");
   }
 
   void sendMessageWithRequestId(
@@ -155,14 +154,14 @@ abstract class ProxyMessageHandler extends core.FidlEventHandler
 
     var header = new MessageHeader.withRequestId(name, flags, id);
     var serviceMessage = message.serializeWithHeader(header);
-    channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
+    int status = channel.write(serviceMessage.buffer, serviceMessage.buffer.lengthInBytes,
         serviceMessage.handles);
 
-    if (channel.status == core.NO_ERROR) {
+    if (status == core.NO_ERROR) {
       _callbackMap[id] = callback;
       _pendingCount++;
     } else {
-      proxyError("Write to message pipe channel failed: ${channel}");
+      proxyError("Write to channel failed: ${channel}");
     }
   }
 

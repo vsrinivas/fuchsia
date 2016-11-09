@@ -4,13 +4,22 @@
 
 part of internal;
 
+class _MxHandleWatcher {
+  static int sendControlData(
+      int controlHandle,
+      int commandCode,
+      int handleOrDeadline,
+      SendPort port,
+      int data) native "MxHandleWatcher_SendControlData";
+}
+
 class HandleWatcher {
   // Control commands.
-  static const int _ADD = 0;
-  static const int _REMOVE = 1;
-  static const int _CLOSE = 2;
-  static const int _TIMER = 3;
-  static const int _SHUTDOWN = 4;
+  static const int _kAdd = 0;
+  static const int _kRemove = 1;
+  static const int _kClose = 2;
+  static const int _kTimer = 3;
+  static const int _kShutdown = 4;
 
   static const int _kHandleInvalid = 0;
 
@@ -24,40 +33,37 @@ class HandleWatcher {
                               SendPort port,
                               int signals) {
     final int localControlHandle = controlHandle;
-    if (localControlHandle == _kHandleInvalid) {
+    if (localControlHandle == _kHandleInvalid)
       return _kErrBadState;
-    }
-    var result = _MxHandleWatcher.sendControlData(
+    return _MxHandleWatcher.sendControlData(
         localControlHandle, command, handleOrDeadline, port, signals);
-    return result;
   }
 
-  static Future<int> close(int handleToken, {bool wait: false}) {
-    if (!wait) {
-      return new Future.value(_sendControlData(_CLOSE, handleToken, null, 0));
-    }
+  static Future<int> close(int handle, {bool wait: false}) {
+    if (!wait)
+      return new Future.value(_sendControlData(_kClose, handle, null, 0));
     int result;
     var completer = new Completer();
     var rawPort = new RawReceivePort((_) {
       completer.complete(result);
     });
-    result = _sendControlData(_CLOSE, handleToken, rawPort.sendPort, 0);
+    result = _sendControlData(_kClose, handle, rawPort.sendPort, 0);
     return completer.future.then((r) {
       rawPort.close();
       return r;
     });
   }
 
-  static int add(int handleToken, SendPort port, int signals) {
-    return _sendControlData(_ADD, handleToken, port, signals);
+  static int add(int handle, SendPort port, int signals) {
+    return _sendControlData(_kAdd, handle, port, signals);
   }
 
-  static int remove(int handleToken) {
-    return _sendControlData(_REMOVE, handleToken, null, 0);
+  static int remove(int handle) {
+    return _sendControlData(_kRemove, handle, null, 0);
   }
 
   static int timer(Object ignored, SendPort port, int deadline) {
     // The deadline will be unwrapped before sending to the handle watcher.
-    return _sendControlData(_TIMER, deadline, port, 0);
+    return _sendControlData(_kTimer, deadline, port, 0);
   }
 }

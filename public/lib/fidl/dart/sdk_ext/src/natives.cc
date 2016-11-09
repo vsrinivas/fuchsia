@@ -332,7 +332,7 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   mx_status_t rv = mx_channel_read(static_cast<mx_handle_t>(dart_handle), 0,
                                    nullptr, 0, &blen, nullptr, 0, &hlen);
 
-  if ((rv != NO_ERROR) && (rv != ERR_NO_MEMORY)) {
+  if ((rv != NO_ERROR) && (rv != ERR_BUFFER_TOO_SMALL)) {
     Dart_ListSetAt(result, 0, Dart_NewInteger(rv));
     Dart_ListSetAt(result, 1, data);
     Dart_ListSetAt(result, 2, dart_handles);

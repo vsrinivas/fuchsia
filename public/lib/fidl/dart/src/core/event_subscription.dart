@@ -17,58 +17,48 @@ class FidlEventSubscription {
   RawReceivePort _receivePort;
 
   // The signals on this handle that we're interested in.
+  int get signals => _signals;
   int _signals;
 
   // Whether subscribe() has been called.
   bool _isSubscribed;
 
-  FidlEventSubscription(Handle handle,
-      [int signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED])
-      : _handle = handle,
-        _signals = signals,
-        _isSubscribed = false {
+  FidlEventSubscription(this._handle, this._signals)
+      : _isSubscribed = false {
     if (!Handle.registerFinalizer(this)) {
       throw new FidlInternalError("Failed to register the Handle.");
     }
   }
 
-  int get signals => _signals;
-
   Future close({bool immediate: false}) => _close(immediate: immediate);
 
   void subscribe(void handler(int event)) {
-    if (_isSubscribed) {
+    if (_isSubscribed)
       throw new FidlApiError("Already subscribed: $this.");
-    }
     _receivePort = new RawReceivePort(handler);
     _sendPort = _receivePort.sendPort;
 
     if (_signals != 0) {
       int status = HandleWatcher.add(_handle.h, _sendPort, _signals);
-      if (status != NO_ERROR) {
+      if (status != NO_ERROR)
         throw new FidlInternalError("HandleWatcher add failed: ${getStringForStatus(status)}");
-      }
     }
+
     _isSubscribed = true;
   }
 
-  bool enableSignals([int signals]) {
-    if (signals != null) {
-      _signals = signals;
-    }
-    if (_isSubscribed) {
-      return HandleWatcher.add(_handle.h, _sendPort, _signals) == NO_ERROR;
-    }
-    return false;
+  void wait() {
+    if (!_isSubscribed)
+      throw new FidlApiError("Not yet subscribed: $this.");
+    int status = HandleWatcher.add(_handle.h, _sendPort, _signals);
+    if (status != NO_ERROR)
+      throw new FidlInternalError("HandleWatcher add failed: ${getStringForStatus(status)}");
   }
-
-  bool enableReadEvents() => enableSignals(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
-  bool enableWriteEvents() => enableSignals(MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED);
 
   /// End the subscription by removing the handle from the handle watcher and
   /// closing the Dart port, but do not close the underlying handle. The handle
   /// can then be reused, or closed at a later time.
-  void unsubscribe({bool immediate: false}) {
+  void unsubscribe() {
     if ((_handle == null) || !_isSubscribed || (_receivePort == null)) {
       throw new FidlApiError("Cannont unsubscribe from a FidlEventSubscription "
                              "that has not been subscribed to");
@@ -81,12 +71,12 @@ class FidlEventSubscription {
   }
 
   @override
-  String toString() => "$_handle";
+  String toString() => "FidlEventSubscription($_handle)";
 
   Future _close({bool immediate: false, bool local: false}) {
     if (_handle != null) {
       if (_isSubscribed && !local) {
-        return _handleWatcherClose(immediate: immediate).then((result) {
+        return _handleWatcherClose(immediate: immediate).then((int result) {
           // If the handle watcher is gone, then close the handle ourselves.
           if (result != NO_ERROR) {
             _localClose();
@@ -99,10 +89,10 @@ class FidlEventSubscription {
     return new Future.value(null);
   }
 
-  Future _handleWatcherClose({bool immediate: false}) {
+  Future<int> _handleWatcherClose({bool immediate: false}) {
     assert(_handle != null);
     MxHandle.removeOpenHandle(_handle.h);
-    return HandleWatcher.close(_handle.h, wait: !immediate).then((r) {
+    return HandleWatcher.close(_handle.h, wait: !immediate).then((int r) {
       if (_receivePort != null) {
         _receivePort.close();
         _receivePort = null;
