@@ -8,6 +8,7 @@ unittests = [
     '/system/test/convert_unittests',
     '/system/test/firebase_unittests',
     '/system/test/gcs_unittests',
+    '/system/test/ledger_callback_unittests',
     '/system/test/ledger_codex_unittests',
     '/system/test/ledger_glue_unittests',
     '/system/test/ledger_integration_tests',

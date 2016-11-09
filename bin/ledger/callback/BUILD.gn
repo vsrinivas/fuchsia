@@ -1,0 +1,33 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("callback") {
+  sources = [
+    "cancellable.cc",
+    "cancellable.h",
+    "cancellable_helper.cc",
+    "cancellable_helper.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+
+  output_name = "ledger_callback_unittests"
+
+  sources = [
+    "cancellable_helper_unittest.cc",
+    "cancellable_unittest.cc",
+  ]
+
+  deps = [
+    ":callback",
+    "//apps/ledger/src/test",
+    "//third_party/gtest",
+  ]
+}

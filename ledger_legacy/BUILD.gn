@@ -10,6 +10,7 @@ group("ledger") {
     "//apps/ledger/api",
     "//apps/ledger/services",
     "//apps/ledger/src/app",
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/cloud_provider",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/fake_network_service",
@@ -24,6 +25,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//apps/ledger/src/callback:unittests",
     "//apps/ledger/src/firebase:unittests",
     "//apps/ledger/src/gcs:unittests",
     "//apps/ledger/src/glue:unittests",
