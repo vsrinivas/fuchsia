@@ -6,15 +6,28 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-EFI_LINKSCRIPT	:= $(LOCAL_DIR)/build/efi-x86-64.lds
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+EFI_CC		:= $(TOOLCHAIN_PREFIX)clang
+EFI_LD		:= $(TOOLCHAIN_PREFIX)lld-link
+else
+EFI_CC		:= $(CC)
+EFI_LD		:= $(LD)
+endif
 
 EFI_CFLAGS	:= -fPIE -fshort-wchar -fno-stack-protector -mno-red-zone
 EFI_CFLAGS	+= -Wall -std=c99
 EFI_CFLAGS	+= -ffreestanding -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
-EFI_CFLAGS      += -Isystem/public
+EFI_CFLAGS	+= -Isystem/public
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+EFI_CFLAGS	+= --target=x86_64-windows-msvc
+endif
 
-EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie
-EFI_LDFLAGS	+= -Lout
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+EFI_LDFLAGS	:= /subsystem:efi_application /entry:efi_main /libpath:out
+else
+EFI_LINKSCRIPT	:= $(LOCAL_DIR)/build/efi-x86-64.lds
+EFI_LDFLAGS	:= -nostdlib -T $(EFI_LINKSCRIPT) -pie -Lout
+endif
 
 EFI_SECTIONS	:= .text .data .reloc
 EFI_SECTIONS	:= $(patsubst %,-j %,$(EFI_SECTIONS))
@@ -50,12 +63,21 @@ EFI_DEPS := $(patsubst %.o,%.d,$(EFI_OBJS))
 $(BUILDDIR)/bootloader/%.o : $(LOCAL_DIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo compiling: $@
-	$(NOECHO)$(CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
+	$(NOECHO)$(EFI_CC) -MMD -MP -o $@ -c $(EFI_CFLAGS) $<
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+
+$(EFI_BOOTLOADER): $(EFI_OBJS)
+	@mkdir -p $(dir $@)
+	@echo linking: $@
+	$(NOECHO)$(EFI_LD) /out:$@ $(EFI_LDFLAGS) $^
+
+else
 
 $(EFI_SO): $(EFI_OBJS)
 	@mkdir -p $(dir $@)
 	@echo linking: $@
-	$(NOECHO)$(LD) -o $@ $(EFI_LDFLAGS) $^
+	$(NOECHO)$(EFI_LD) -o $@ $(EFI_LDFLAGS) $^
 	$(NOECHO)if ! $(READELF) -r $@ | grep -q 'no relocations'; then \
 	    echo "error: $@ has relocations"; \
 	    $(READELF) -r $@; \
@@ -69,6 +91,8 @@ $(EFI_BOOTLOADER): $(EFI_SO)
 	@echo building: $@
 	$(NOECHO)$(OBJCOPY) --target=pei-x86-64 --subsystem 10 $(EFI_SECTIONS) $< $@
 	$(NOECHO)if [ "`$(NM) $< | grep ' U '`" != "" ]; then echo "error: $<: undefined symbols"; $(NM) $< | grep ' U '; rm $<; exit 1; fi
+
+endif
 
 GENERATED += $(EFI_BOOTLOADER)
 EXTRA_BUILDDEPS += $(EFI_BOOTLOADER)
