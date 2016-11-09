@@ -1,6 +1,5 @@
 {
     "labels": [
-        "//apps/document_store",
         "//apps/modular"
     ],
     "binaries": [

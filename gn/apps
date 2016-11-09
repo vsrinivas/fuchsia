@@ -2,7 +2,7 @@
     "labels": [
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
-        "//apps/document_store",
+        "//apps/modular/document_store",
         "//apps/logging",
         "//apps/maxwell",
         "//apps/modular/examples/hello_app"
