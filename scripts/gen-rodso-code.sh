@@ -46,6 +46,7 @@ while [ $# -gt 0 ]; do
   if [ $# -lt 2 ]; then
     usage
   fi
+  echo "#define ${1}_FILENAME \"${2}\""
   "$NM" -P "$2" | find_code_symbol "$1"
   shift 2
 done

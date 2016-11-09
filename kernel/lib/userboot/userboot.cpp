@@ -19,6 +19,7 @@
 #include <kernel/vm/vm_object.h>
 
 #include <lib/console.h>
+#include <lib/vdso.h>
 #include <lk/init.h>
 
 #include <magenta/channel_dispatcher.h>
@@ -32,17 +33,60 @@
 #include <magenta/thread_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
-#include "code-start.h"
-
 static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
 extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
 extern unsigned __kernel_cmdline_count;
 
-// These are defined in assembly by vdso.S; code-start.h
-// gives details about their size and layout.
-extern "C" const char vdso_image[], userboot_image[];
+namespace {
+
+#include "userboot-code.h"
+
+// This is defined in assembly by userboot-image.S; userboot-code.h
+// gives details about the image's size and layout.
+extern "C" const char userboot_image[];
+
+class UserbootImage : private RoDso {
+public:
+    explicit UserbootImage(VDso* vdso)
+        : RoDso("userboot", userboot_image,
+                USERBOOT_CODE_END, USERBOOT_CODE_START),
+          vdso_(vdso) {}
+
+    mx_status_t Map(mxtl::RefPtr<ProcessDispatcher> process,
+                    uintptr_t* vdso_base, uintptr_t* entry) {
+        // Map userboot anywhere.
+        uintptr_t start;
+        mx_status_t status = MapAnywhere(process, &start);
+        if (status == NO_ERROR) {
+            *entry = start + USERBOOT_ENTRY;
+            // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
+            // about the actual ELF symbol values when they are Thumb function
+            // symbols with the low bit set (it clears the low bit in what it
+            // displays).  We assume that if the kernel is built as Thumb,
+            // userboot's entry point will be too, and Thumbify it.
+#ifdef __thumb__
+            *entry |= 1;
+#endif
+
+            // Map the vDSO image immediately after the userboot image,
+            // where the userboot code expects to find it.  We assume that
+            // ASLR won't have placed the userboot image so close to the
+            // top of the address space that there isn't any room left for
+            // the vDSO.
+            *vdso_base = start + USERBOOT_CODE_END;
+            status = vdso_->Map(mxtl::move(process), *vdso_base);
+        }
+        return status;
+    }
+
+private:
+    VDso* vdso_;
+};
+
+}; // anonymous namespace
+
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
 static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
@@ -82,68 +126,6 @@ static mx_status_t get_resource_handle(Handle** ptr) {
     if (result == NO_ERROR)
         *ptr = MakeHandle(mxtl::move(dispatcher), rights);
     return result;
-}
-
-// Map a segment from one of our embedded VM objects.
-// If *mapped_address is zero to begin with, it can go anywhere.
-static mx_status_t map_dso_segment(mxtl::RefPtr<ProcessDispatcher> process,
-                                   const char* name, bool code,
-                                   mxtl::RefPtr<VmObjectDispatcher> vmo,
-                                   uintptr_t start_offset,
-                                   uintptr_t end_offset,
-                                   uintptr_t* mapped_address) {
-    char mapping_name[32];
-    strlcpy(mapping_name, name, sizeof(mapping_name));
-    strlcat(mapping_name, code ? "-code" : "-rodata", sizeof(mapping_name));
-
-    uint32_t flags = MX_VM_FLAG_PERM_READ;
-    if (code)
-        flags |= MX_VM_FLAG_PERM_EXECUTE;
-    if (*mapped_address != 0)
-        flags |= MX_VM_FLAG_FIXED;
-
-    size_t len = end_offset - start_offset;
-
-    mx_status_t status = process->Map(
-        mxtl::move(vmo), MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP,
-        start_offset, len, mapped_address, flags);
-
-    if (status != NO_ERROR) {
-        dprintf(CRITICAL,
-                "userboot: %s mapping %#" PRIxPTR " @ %#" PRIxPTR
-                " size %#zx failed %d\n",
-                mapping_name, start_offset, *mapped_address, len, status);
-    } else {
-        dprintf(SPEW, "userboot: %-16s %#6" PRIxPTR " @ [%#" PRIxPTR
-                ",%#" PRIxPTR ")\n", mapping_name, start_offset,
-                *mapped_address, *mapped_address + len);
-    }
-
-    return status;
-}
-
-// Map one of our embedded DSOs from its VM object.
-// If *start_address is zero, it can go anywhere.
-static mx_status_t map_dso_image(const char* name,
-                                 mxtl::RefPtr<ProcessDispatcher> process,
-                                 uintptr_t* start_address,
-                                 mxtl::RefPtr<VmObjectDispatcher> vmo,
-                                 size_t code_start, size_t code_end) {
-    ASSERT(*start_address % PAGE_SIZE == 0);
-    ASSERT(code_start % PAGE_SIZE == 0);
-    ASSERT(code_start > 0);
-    ASSERT(code_end % PAGE_SIZE == 0);
-    ASSERT(code_end > code_start);
-
-    mx_status_t status = map_dso_segment(process, name, false, vmo,
-                                         0, code_start, start_address);
-    if (status == 0) {
-        uintptr_t code_address = *start_address + code_start;
-        status = map_dso_segment(process, name, true, mxtl::move(vmo),
-                                 code_start, code_end, &code_address);
-    }
-
-    return status;
 }
 
 // Create a channel and write the bootstrap message down one side of
@@ -255,9 +237,6 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %15zu @ %p\n", rsize, rbase);
 
-    auto vdso_vmo = VmObjectPaged::CreateFromROData(vdso_image, VDSO_CODE_END);
-    auto userboot_vmo = VmObjectPaged::CreateFromROData(userboot_image,
-                                                   USERBOOT_CODE_END);
     auto stack_vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size);
     auto bootfs_vmo = VmObjectPaged::CreateFromROData(bootfs, bfslen);
     auto rootfs_vmo = VmObjectPaged::CreateFromROData(rbase, rsize);
@@ -276,14 +255,6 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (status == NO_ERROR)
         status = get_vmo_handle(rootfs_vmo, false, NULL,
                                 &handles[BOOTSTRAP_RAMDISK]);
-    mxtl::RefPtr<VmObjectDispatcher> userboot_vmo_dispatcher;
-    if (status == NO_ERROR)
-        status = get_vmo_handle(userboot_vmo, true,
-                                &userboot_vmo_dispatcher, NULL);
-    mxtl::RefPtr<VmObjectDispatcher> vdso_vmo_dispatcher;
-    if (status == NO_ERROR)
-        status = get_vmo_handle(vdso_vmo, true, &vdso_vmo_dispatcher,
-                                &handles[BOOTSTRAP_VDSO]);
     mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
     if (status == NO_ERROR)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
@@ -307,32 +278,13 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
 
     auto proc = DownCastDispatcher<ProcessDispatcher>(mxtl::move(proc_disp));
 
-    // Map the userboot image anywhere.
-    uintptr_t userboot_base = 0;
-    status = map_dso_image(
-        "userboot", proc, &userboot_base, mxtl::move(userboot_vmo_dispatcher),
-        USERBOOT_CODE_START, USERBOOT_CODE_END);
-    if (status < 0)
-        return status;
-    uintptr_t entry = userboot_base + USERBOOT_ENTRY;
-    // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
-    // about the actual ELF symbol values when they are Thumb function
-    // symbols with the low bit set (it clears the low bit in what it
-    // displays).  We assume that if the kernel is built as Thumb,
-    // userboot's entry point will be too, and Thumbify it.
-#ifdef __thumb__
-    entry |= 1;
-#endif
+    VDso vdso;
+    handles[BOOTSTRAP_VDSO] = vdso.vmo_handle().release();
 
-    // Map the vDSO image immediately after the userboot image, where the
-    // userboot code expects to find it.  We assume that ASLR won't have
-    // placed the userboot image so close to the top of the address space
-    // that there isn't any room left for the vDSO.
-    uintptr_t vdso_base = userboot_base + USERBOOT_CODE_END;
-    status = map_dso_image("vdso", proc, &vdso_base,
-                           mxtl::move(vdso_vmo_dispatcher),
-                           VDSO_CODE_START, VDSO_CODE_END);
-    if (status < 0)
+    UserbootImage userboot(&vdso);
+    uintptr_t vdso_base, entry;
+    status = userboot.Map(proc, &vdso_base, &entry);
+    if (status != NO_ERROR)
         return status;
 
     // Map the stack anywhere.
