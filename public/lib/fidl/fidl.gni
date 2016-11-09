@@ -94,31 +94,11 @@ template("fidl") {
       "$generator_root/generators/go_templates/source.tmpl",
       "$generator_root/generators/go_templates/struct.tmpl",
       "$generator_root/generators/go_templates/union.tmpl",
-      "$generator_root/generators/java_templates/constant_definition.tmpl",
-      "$generator_root/generators/java_templates/constants.java.tmpl",
-      "$generator_root/generators/java_templates/data_types_definition.tmpl",
-      "$generator_root/generators/java_templates/enum_definition.tmpl",
-      "$generator_root/generators/java_templates/enum.java.tmpl",
-      "$generator_root/generators/java_templates/header.java.tmpl",
-      "$generator_root/generators/java_templates/interface_definition.tmpl",
-      "$generator_root/generators/java_templates/interface_internal.java.tmpl",
-      "$generator_root/generators/java_templates/interface.java.tmpl",
-      "$generator_root/generators/java_templates/struct.java.tmpl",
-      "$generator_root/generators/java_templates/union.java.tmpl",
-      "$generator_root/generators/js_templates/enum_definition.tmpl",
-      "$generator_root/generators/js_templates/interface_definition.tmpl",
-      "$generator_root/generators/js_templates/module.amd.tmpl",
-      "$generator_root/generators/js_templates/module_definition.tmpl",
-      "$generator_root/generators/js_templates/struct_definition.tmpl",
-      "$generator_root/generators/js_templates/union_definition.tmpl",
-      "$generator_root/generators/js_templates/validation_macros.tmpl",
       "$generator_root/generators/python_templates/module.py.tmpl",
       "$generator_root/generators/python_templates/module_macros.tmpl",
       "$generator_root/generators/mojom_cpp_generator.py",
       "$generator_root/generators/mojom_dart_generator.py",
       "$generator_root/generators/mojom_go_generator.py",
-      "$generator_root/generators/mojom_js_generator.py",
-      "$generator_root/generators/mojom_java_generator.py",
       "$generator_root/generators/mojom_python_generator.py",
       "$generator_root/pylib/mojom/__init__.py",
       "$generator_root/pylib/mojom/error.py",
@@ -140,8 +120,6 @@ template("fidl") {
       "{{source_gen_dir}}/{{source_file_part}}.h",
       "{{source_gen_dir}}/{{source_file_part}}.cc",
     ]
-    generator_js_outputs =
-        [ "{{source_gen_dir}}/{{source_file_part}}.js" ]
     generator_dart_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
     # TODO(vardhan): We can't have both .mojom and .fidl coexist because of
@@ -149,8 +127,6 @@ template("fidl") {
     # '.fidl/.mojom' in names. Investigate putting in a package instead.
     generator_python_outputs =
         [ "{{source_gen_dir}}/{{source_name_part}}_fidl.py" ]
-    generator_java_outputs =
-        [ "{{source_gen_dir}}/{{source_file_part}}.srcjar" ]
   }
   generator_python_zip_output = "$target_out_dir/${target_name}_python.pyzip"
 
@@ -170,7 +146,6 @@ template("fidl") {
       sources = invoker.sources
       outputs =
           generator_cpp_outputs + generator_dart_outputs +
-          generator_java_outputs + generator_js_outputs +
           generator_python_outputs
       args = [
         fidl_tool,
@@ -247,7 +222,6 @@ template("fidl") {
 
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
-      data = process_file_template(invoker.sources, generator_js_outputs)
     }
 
     deps = cpp_deps
@@ -275,7 +249,6 @@ template("fidl") {
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sync_sources_target_name}" ]
-      data = process_file_template(invoker.sources, generator_js_outputs)
     }
 
     deps = cpp_deps
@@ -303,7 +276,6 @@ template("fidl") {
     public_deps += cpp_public_deps
     if (defined(invoker.sources)) {
       public_deps += [ ":${cpp_sources_target_name}" ]
-      data = process_file_template(invoker.sources, generator_js_outputs)
     }
     deps = cpp_deps
   }
