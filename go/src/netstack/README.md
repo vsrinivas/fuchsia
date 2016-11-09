@@ -14,6 +14,14 @@ See [Start netstack manually](#Start-netstack-manually) for more details.
 
 Netstack acquires an IPv4 address using DHCP.
 
+## Building minimum user.bootfs image to test netstack
+
+```
+$ ./scripts/build-sysroot.sh
+$ ./packages/gn/gen.py --modules netstack
+$ ./buildtools/ninja -C out/debug-x86-64
+```
+
 ## Using netstack on qemu
 
 Create a tap interface called qemu if you haven't done so.
