@@ -17,8 +17,8 @@ executable("story_runner") {
   ]
 
   deps = [
-    "//apps/modular/document_editor",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/document_store",

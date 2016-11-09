@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"

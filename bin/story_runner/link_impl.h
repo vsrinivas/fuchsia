@@ -7,16 +7,16 @@
 
 #include <unordered_map>
 
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "lib/ftl/macros.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/ftl/macros.h"
 
 namespace modular {
 

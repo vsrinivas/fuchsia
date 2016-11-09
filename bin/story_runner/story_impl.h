@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"

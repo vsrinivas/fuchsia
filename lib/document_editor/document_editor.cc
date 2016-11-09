@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 
 #include <iterator>
 #include <ostream>

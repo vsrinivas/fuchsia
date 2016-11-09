@@ -4,14 +4,14 @@
 
 #include "apps/modular/src/story_runner/link_impl.h"
 
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
-#include "lib/ftl/logging.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/logging.h"
 
 namespace modular {
 

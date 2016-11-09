@@ -4,15 +4,13 @@
 
 #include <iterator>
 
-#include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/document_editor/document_editor.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
-
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
-
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -20,9 +18,9 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
-#include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"

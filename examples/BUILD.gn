@@ -20,8 +20,8 @@ executable("example_module1") {
   ]
 
   deps = [
-    "//apps/modular/document_editor",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story",
@@ -40,8 +40,8 @@ executable("example_module2") {
   ]
 
   deps = [
-    "//apps/modular/document_editor",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story",
@@ -60,7 +60,7 @@ executable("example_recipe") {
   ]
 
   deps = [
-    "//apps/modular/document_editor",
+    "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story",
