@@ -86,7 +86,7 @@ static void launch_fat(const char* device_name) {
     char device_path_arg[MXIO_MAX_FILENAME + 64];
     snprintf(device_path_arg, sizeof(device_path_arg),
              "/dev/class/block/%s", device_name);
-    int fd = open(device_path_arg, O_RDONLY);
+    int fd = open(device_path_arg, O_RDWR);
     if (fd < 0) {
         printf("Could not open block device: %s\n", device_path_arg);
         return;
