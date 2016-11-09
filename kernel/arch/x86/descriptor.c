@@ -175,7 +175,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     // copy it into the appropriate entry
     uint16_t index = sel >> 3;
 
-    // index is in units of 8 bytes into the gdt table
+    // for x86_64 index is still in units of 8 bytes into the gdt table
     struct seg_desc_64 *g = (struct seg_desc_64 *)(_gdt + index * 8);
     *g = entry;
 }
