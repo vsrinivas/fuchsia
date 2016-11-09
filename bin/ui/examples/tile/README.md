@@ -1,13 +1,15 @@
 # Mozart View Tiling Example
 
 This directory contains a simple application which embeds any number of
-views from other applications all tiled in a row.
+views from other applications all tiled in a row. It also exposes a Presenter
+service so that if one of embedded applications launches another application,
+the launched application can present its View within the TileView.
 
-The applications must implement the ViewProvider interface for this to work.
+The applications must implement the ViewProvider interface to be embedded.
 
 ## USAGE
 
-Specify the urls of the views to embed as command-line arguments.
+Specify the urls of the views to embed initially as command-line arguments.
 
   $ file:///system/apps/launch file:///system/apps/tile_view <app1> <app2> ...
 

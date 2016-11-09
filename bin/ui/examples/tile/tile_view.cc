@@ -26,41 +26,91 @@ constexpr uint32_t kViewFallbackDimSceneNodeIdOffset = 4;
 
 TileView::TileView(mozart::ViewManagerPtr view_manager,
                    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                   modular::ApplicationLauncher* application_launcher,
+                   modular::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
-      application_launcher_(application_launcher),
+      env_host_binding_(this),
+      application_context_(application_context),
       params_(params) {
+  CreateNestedEnvironment();
   ConnectViews();
 }
 
 TileView::~TileView() {}
 
+// Adds a view as a child.
+void TileView::PresentHelper(
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    const std::string& url,
+    modular::ApplicationControllerPtr app_controller) {
+  child_key_++;
+  GetViewContainer()->AddChild(child_key_, std::move(child_view_owner));
+
+  views_.emplace(std::make_pair(
+      child_key_, std::unique_ptr<ViewData>(new ViewData(
+                      url, child_key_, std::move(app_controller)))));
+}
+
+// Adds a view as a child.
+void TileView::Present(
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
+  const std::string empty_url;
+  PresentHelper(std::move(child_view_owner), empty_url, nullptr);
+}
+
+// Launches initial list of views, passed as command line parameters.
 void TileView::ConnectViews() {
-  uint32_t child_key = 0;
   for (const auto& url : params_.view_urls) {
     modular::ServiceProviderPtr services;
     modular::ApplicationControllerPtr controller;
+
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = url;
     launch_info->services = GetProxy(&services);
-    application_launcher_->CreateApplication(std::move(launch_info),
-                                             GetProxy(&controller));
-    auto provider =
+
+    FTL_LOG(INFO) << "Launching view " << url;
+    // |env_launcher_| launches the app with our nested environment.
+    env_launcher_->CreateApplication(std::move(launch_info),
+                                     GetProxy(&controller));
+
+    // Get the view provider back from the launched app.
+    auto view_provider =
         modular::ConnectToService<mozart::ViewProvider>(services.get());
 
-    FTL_LOG(INFO) << "Launching view: child_key=" << child_key
-                  << ", url=" << url;
-    mozart::ViewOwnerPtr child_view_owner;
-    provider->CreateView(fidl::GetProxy(&child_view_owner), nullptr);
+    fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
+    view_provider->CreateView(fidl::GetProxy(&child_view_owner), nullptr);
 
-    GetViewContainer()->AddChild(child_key, std::move(child_view_owner));
-    views_.emplace(
-        std::make_pair(child_key, std::unique_ptr<ViewData>(new ViewData(
-                                      url, child_key, std::move(controller)))));
-
-    child_key++;
+    // Add the view, which increments child_key_.
+    PresentHelper(std::move(child_view_owner), url, std::move(controller));
   }
+}
+
+// Required method for |ApplicationEnvironmentHost|
+void TileView::GetApplicationEnvironmentServices(
+    fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
+  env_services_.AddBinding(std::move(environment_services));
+}
+
+// Set up environment with a |Presenter| service. We launch apps with this
+// environment
+void TileView::CreateNestedEnvironment() {
+  modular::ApplicationEnvironmentHostPtr env_host;
+  env_host_binding_.Bind(GetProxy(&env_host));
+  application_context_->environment()->CreateNestedEnvironment(
+      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_));
+  env_->GetApplicationLauncher(GetProxy(&env_launcher_));
+
+  // Add a binding for the presenter service
+  env_services_.AddService<mozart::Presenter>(
+      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
+        presenter_bindings_.AddBinding(this, std::move(request));
+      });
+
+  env_services_.SetDefaultServiceConnector(
+      [this](std::string service_name, mx::channel channel) {
+        application_context_->environment_services()->ConnectToService(
+            service_name, std::move(channel));
+      });
 }
 
 void TileView::OnChildAttached(uint32_t child_key,
