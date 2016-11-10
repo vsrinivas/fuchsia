@@ -46,7 +46,7 @@ void connectToService(ServiceProvider serviceProvider,
   final String serviceName = controller.serviceName;
   if (serviceName == null)
     return;
-  serviceProvider.connectToService(serviceName, controller.request());
+  serviceProvider.connectToService(serviceName, controller.request().passChannel());
 }
 
 typedef void ServiceConnector(InterfaceRequest request);
