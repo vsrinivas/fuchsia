@@ -31,6 +31,8 @@ int sys_invalid_syscall(void) {
     return ERR_BAD_SYSCALL;
 }
 
+#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
+
 #if ARCH_ARM
 
 using syscall_func = int64_t (*)(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,

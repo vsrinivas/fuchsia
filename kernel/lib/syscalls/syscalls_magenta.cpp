@@ -59,10 +59,6 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     return magenta_sleep(nanoseconds);
 }
 
-uint sys_num_cpus() {
-    return arch_max_num_cpus();
-}
-
 uint64_t sys_time_get(uint32_t clock_id) {
     switch (clock_id) {
     case MX_CLOCK_MONOTONIC:
@@ -463,4 +459,3 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
 
     return NO_ERROR;
 }
-

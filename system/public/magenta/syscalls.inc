@@ -18,20 +18,31 @@
 // uint32, uint32, uint64 == 4 slots
 // uint32, uint64, uint32 == 5 slots (uint32, padding, uint64 (2 slots), uint32)
 
-// Users of this file need to declare an implementation of the following macro:
+// Users of this file need to declare an implementation of the following macros:
 // MAGENTA_SYSCALL_DEF(#64b slots, #32b slots, syscall #, return type, name, arguments...)
+// MAGENTA_VDSOCALL_DEF(return type, name, arguments...)
 //
 // (optional)
 // MAGENTA_SYSCALL_DEF_WITH_ATTRS(#64b slots, #32b slots, syscall #, return type, name, attrs, arguments...)
+// MAGENTA_VDSOCALL_DEF_WITH_ATTRS(return type, name, attrs, arguments...)
 
 #ifndef MAGENTA_SYSCALL_DEF
 #error MAGENTA_SYSCALL_DEF not defined
+#endif
+
+#ifndef MAGENTA_VDSOCALL_DEF
+#error MAGENTA_VDSOCALL_DEF not defined
 #endif
 
 #ifndef MAGENTA_SYSCALL_DEF_WITH_ATTRS
 #define MAGENTA_SYSCALL_DEF_WITH_ATTRS(num_64bit_slots, num_32bit_slots, syscall_num, return_type, \
         name, attrs, arguments...) \
   MAGENTA_SYSCALL_DEF(num_64bit_slots, num_32bit_slots, syscall_num, return_type, name, arguments)
+#endif
+
+#ifndef MAGENTA_VDSOCALL_DEF_WITH_ATTRS
+#define MAGENTA_VDSOCALL_DEF_WITH_ATTRS(ret, name, attrs, arguments...) \
+    MAGENTA_VDSOCALL_DEF(ret, name, arguments)
 #endif
 
 #ifndef USER_PTR
@@ -41,6 +52,9 @@
 // Time
 MAGENTA_SYSCALL_DEF(0, 0, 0, mx_time_t, time_get, uint32_t clock_id)
 MAGENTA_SYSCALL_DEF(1, 2, 1, mx_status_t, nanosleep, mx_time_t nanoseconds)
+
+// Global system information
+MAGENTA_VDSOCALL_DEF_WITH_ATTRS(unsigned int, num_cpus, (leaf, const), void)
 
 // Generic handle operations
 MAGENTA_SYSCALL_DEF(1, 1, 10, mx_status_t, handle_close, mx_handle_t handle)
@@ -214,7 +228,6 @@ MAGENTA_SYSCALL_DEF(4, 4, 142, mx_status_t, ktrace_write, mx_handle_t handle,
 
 
 // Syscalls to be removed / refactored
-MAGENTA_SYSCALL_DEF(0, 0, 150, unsigned int, num_cpus, void)
 MAGENTA_SYSCALL_DEF(3, 3, 151, mx_status_t, thread_arch_prctl, mx_handle_t handle,
                     uint32_t op, USER_PTR(uintptr_t) value_ptr)
 MAGENTA_SYSCALL_DEF(2, 2, 152, mx_handle_t, debug_transfer_handle,
@@ -292,3 +305,5 @@ MAGENTA_SYSCALL_DEF(8, 8, 20008, int, syscall_test_8, int a, int b, int c, int d
 
 #undef MAGENTA_SYSCALL_DEF
 #undef MAGENTA_SYSCALL_DEF_WITH_ATTRS
+#undef MAGENTA_VDSOCALL_DEF
+#undef MAGENTA_VDSOCALL_DEF_WITH_ATTRS

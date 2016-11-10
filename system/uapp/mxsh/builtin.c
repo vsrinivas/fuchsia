@@ -319,6 +319,15 @@ static int mxc_dm(int argc, char** argv) {
     }
 }
 
+static int mxc_nprocs(int argc, char** argv) {
+    if (argc != 1) {
+        printf("usage: nprocs\n");
+        return -1;
+    }
+    printf("%u\n", mx_num_cpus());
+    return 0;
+}
+
 static int mxc_help(int argc, char** argv);
 
 builtin_t builtins[] = {
@@ -335,6 +344,7 @@ builtin_t builtins[] = {
     {"mv", mxc_mv, "rename a file or directory" },
     {"rm", mxc_rm, "delete a file"},
     {"msleep", mxc_msleep, "pause for milliseconds"},
+    {"nprocs", mxc_nprocs, "print number of CPUs"},
     {NULL, NULL, NULL},
 };
 

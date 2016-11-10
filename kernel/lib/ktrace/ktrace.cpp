@@ -30,6 +30,7 @@ static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char*
 
 #define MAGENTA_SYSCALL_DEF(s64,s32,num,ret,name,attr,args...) \
     ktrace_name_etc(TAG_SYSCALL_NAME, num, 0, #name, true);
+#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
 
 void ktrace_report_syscalls(void) {
 #include <magenta/syscalls.inc>

@@ -13,6 +13,10 @@
 // Please don't put CDECLS here. We want the stricter declaration matching
 // rules of C++.
 #define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) ret sys_##name(args);
+
 // On the kernel side, we define the type-safe user_ptr<> for syscall user pointer params.
 #define USER_PTR(type) user_ptr<type>
+
+#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
+
 #include <magenta/syscalls.inc>

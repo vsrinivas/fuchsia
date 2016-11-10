@@ -7,9 +7,9 @@
 # https://opensource.org/licenses/MIT
 
 # This script reads symbols with nm and writes a C header file that
-# defines macros <NAME>_CODE_START, <NAME>_CODE_END, and <NAME>_ENTRY,
-# with the address constants found in the symbol table for the symbols
-# CODE_START, CODE_END, and _start, respectively.
+# defines macros <NAME>_CODE_*, <NAME>_DATA_* and <NAME>_ENTRY, with
+# the address constants found in the symbol table for the symbols
+# CODE_*, DATA_* and _start, respectively.
 
 usage() {
   echo >&2 "Usage: $0 NM {NAME DSO}..."
@@ -30,7 +30,7 @@ find_code_symbol() {
   local symbol type addr rest
   while read symbol type addr rest; do
     case "$symbol" in
-    CODE_START|CODE_END|_start)
+    CODE_*|DATA_*|_start)
       if [ "$symbol" = _start ]; then
         symbol=ENTRY
       fi

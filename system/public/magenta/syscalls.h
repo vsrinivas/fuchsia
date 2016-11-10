@@ -9,14 +9,19 @@
 
 __BEGIN_CDECLS
 
-// define all of the syscalls from the syscall list header.
-// user space syscall veneer routines are all prefixed with mx_
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) \
+// Define all of the syscalls from the syscall list header.
+// User space syscall veneer routines are all prefixed with mx_.
+#define MAGENTA_VDSOCALL_DEF(ret, name, args...) \
     extern ret _mx_##name(args); \
     extern ret mx_##name(args);
-#define MAGENTA_SYSCALL_DEF_WITH_ATTRS(nargs64, nargs32, n, ret, name, attrs, args...) \
+#define MAGENTA_VDSOCALL_DEF_WITH_ATTRS(ret, name, attrs, args...) \
     extern ret _mx_##name(args) __attribute__(attrs); \
     extern ret mx_##name(args) __attribute__(attrs);
+
+#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) \
+    MAGENTA_VDSOCALL_DEF(ret, name, args)
+#define MAGENTA_SYSCALL_DEF_WITH_ATTRS(nargs64, nargs32, n, ret, name, attrs, args...) \
+    MAGENTA_VDSOCALL_DEF_WITH_ATTRS(ret, name, attrs, args)
 
 #include <magenta/syscalls.inc>
 

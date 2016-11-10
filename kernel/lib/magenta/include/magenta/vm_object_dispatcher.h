@@ -34,6 +34,8 @@ public:
     mx_status_t Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
                     uintptr_t* ptr, uint32_t flags);
 
+    mxtl::RefPtr<VmObject> vmo() const { return vmo_; }
+
 private:
     explicit VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo);
 
