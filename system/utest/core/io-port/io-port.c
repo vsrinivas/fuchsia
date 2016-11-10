@@ -65,7 +65,7 @@ static bool basic_test(void)
     } packet_t;
 
     const packet_t in = {{33u, 255u, 10u}, {164, 5, 7, 9, 99, 253, 1, 66}};
-    packet_t out = {0};
+    packet_t out = {};
 
     status = mx_port_queue(io_port, &in, 8u);
     EXPECT_EQ(status, ERR_INVALID_ARGS, "expected failure");
@@ -129,7 +129,7 @@ static bool thread_pool_test(void)
         EXPECT_EQ(ret, thrd_success, "could not create thread");
     }
 
-    mx_user_packet_t us_pkt = {0};
+    mx_user_packet_t us_pkt = {};
 
     for (size_t ix = 0; ix != NUM_SLOTS + NUM_IO_THREADS; ++ix) {
         us_pkt.hdr.key = ix;
@@ -246,7 +246,7 @@ static bool bind_channels_test(void)
 {
     BEGIN_TEST;
     mx_status_t status;
-    io_info_t info = {0};
+    io_info_t info = {};
 
     status = mx_port_create(0u, &info.io_port);
     EXPECT_EQ(status, 0, "could not create ioport");
@@ -278,7 +278,7 @@ static bool bind_channels_test(void)
     char msg[] = "=msg0=";
 
     struct pair { int actual; int expected; };
-    struct pair arrivals[10] = {0};
+    struct pair arrivals[10] = {};
 
     for (int ix = 0; ix != countof(order); ++ix) {
         msg[4] = (char)ix;
@@ -377,7 +377,7 @@ static bool bind_sockets_test(void)
     ret = thrd_join(thread, NULL);
     EXPECT_EQ(ret, thrd_success, "");
 
-    mx_io_packet_t io_pkt = {0};
+    mx_io_packet_t io_pkt = {};
     status = mx_object_signal_peer(socket0, 0u, MX_USER_SIGNAL_3);
     EXPECT_EQ(status, NO_ERROR, "");
 

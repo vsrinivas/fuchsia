@@ -59,7 +59,7 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
 #endif
     },
     /* null entry to terminate the list */
-    { 0 }
+    {}
 };
 
 void *_zero_page_boot_params;

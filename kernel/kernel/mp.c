@@ -126,7 +126,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
         .outstanding_cpus = target,
     };
 
-    struct mp_ipi_task sync_tasks[SMP_MAX_CPUS] = { 0 };
+    struct mp_ipi_task sync_tasks[SMP_MAX_CPUS] = {};
     for (uint i = 0; i < num_cpus; ++i) {
         sync_tasks[i].func = mp_sync_task;
         sync_tasks[i].context = &sync_context;

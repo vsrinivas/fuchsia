@@ -104,7 +104,7 @@ void set_global_desc_32(seg_sel_t sel, uint32_t base, uint32_t limit,
         uint8_t base_31_24;
     } __PACKED;
 
-    struct seg_desc_32 entry = { 0 };
+    struct seg_desc_32 entry = {};
 
     entry.limit_15_0 = limit & 0x0000ffff;
     entry.limit_19_16 = (limit & 0x000f0000) >> 16;
@@ -155,7 +155,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
         uint32_t reserved_sbz;
     } __PACKED;
 
-    struct seg_desc_64 entry = { 0 };
+    struct seg_desc_64 entry = {};
 
     entry.limit_15_0 = limit & 0x0000ffff;
     entry.limit_19_16 = (limit & 0x000f0000) >> 16;
@@ -179,4 +179,3 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit,
     struct seg_desc_64 *g = (struct seg_desc_64 *)(_gdt + index * 8);
     *g = entry;
 }
-

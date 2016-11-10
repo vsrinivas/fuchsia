@@ -156,7 +156,7 @@ static void gfxconsole_print_callback(print_callback_t *cb, const char *str, siz
 }
 
 static print_callback_t cb = {
-    .entry = { 0 },
+    .entry = {},
     .print = gfxconsole_print_callback,
     .context = NULL
 };

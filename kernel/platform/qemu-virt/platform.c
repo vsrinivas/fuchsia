@@ -51,7 +51,7 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
     },
 
     /* null entry to terminate the list */
-    { 0 }
+    {}
 };
 
 static pmm_arena_info_t arena = {

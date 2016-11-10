@@ -25,7 +25,7 @@ bool handle_info_test(void) {
               "handle should be valid");
 
     mx_size_t sz;
-    mx_info_handle_basic_t info = {0};
+    mx_info_handle_basic_t info = {};
     ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, 4u, &sz),
               ERR_BUFFER_TOO_SMALL, "bad struct size validation");
 
@@ -57,7 +57,7 @@ bool handle_rights_test(void) {
     ASSERT_EQ(status, NO_ERROR, "");
 
     mx_size_t sz;
-    mx_info_handle_basic_t info = {0};
+    mx_info_handle_basic_t info = {};
     status = mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
     ASSERT_EQ(status, NO_ERROR, "");
     ASSERT_EQ(sz, sizeof(info), "handle should be valid");
