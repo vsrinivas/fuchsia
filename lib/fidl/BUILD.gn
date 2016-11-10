@@ -7,7 +7,7 @@ source_set("single_service_application") {
     "single_service_application.h",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/modular/lib/app",
   ]
 }
@@ -17,7 +17,7 @@ source_set("single_service_view_app") {
     "single_service_view_app.h",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/modular/lib/app",
     "//apps/modular/services/application",
     "//apps/mozart/services/views",
