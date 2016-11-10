@@ -13,5 +13,6 @@ group("tests") {
     "//apps/netstack/tests/sockettest:selecttest",
     "//apps/netstack/tests/third_party/asio:async_client",
     "//apps/netstack/tests/third_party/asio:async_https",
+    "//apps/netstack/tests/third_party/openbsd-netcat:nc",
   ]
 }
