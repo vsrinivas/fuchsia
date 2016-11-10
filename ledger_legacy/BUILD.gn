@@ -7,7 +7,6 @@ group("ledger") {
 
   deps = [
     ":tests",
-    "//apps/ledger/api",
     "//apps/ledger/services",
     "//apps/ledger/src/app",
     "//apps/ledger/src/callback",
