@@ -210,9 +210,6 @@ KERNEL_COMPILEFLAGS += -msoft-float -mfloat-abi=soft -DWITH_NO_FP=1
 # set the max page size to something more reasonables (defaults to 64K or above)
 GLOBAL_LDFLAGS += -z max-page-size=4096
 
-# find the direct path to libgcc.a for our particular multilib variant
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) -print-libgcc-file-name)
-#$(info LIBGCC = $(LIBGCC))
 $(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS))
 
 # make sure some bits were set up

@@ -400,6 +400,11 @@ endif
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
 STRIP := $(TOOLCHAIN_PREFIX)strip
 
+LIBGCC := $(shell $(CC) $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) -print-libgcc-file-name)
+ifeq ($(LIBGCC),)
+$(error cannot find runtime library, please set LIBGCC)
+endif
+
 # try to have the compiler output colorized error messages if available
 export GCC_COLORS ?= 1
 

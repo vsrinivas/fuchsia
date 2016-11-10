@@ -179,15 +179,6 @@ endif
 GLOBAL_COMPILEFLAGS += -fasynchronous-unwind-tables
 endif # SUBARCH x86-64
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
-else
-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(CFLAGS) -print-libgcc-file-name)
-endif
-ifeq ($(LIBGCC),)
-$(error cannot find runtime library, please set LIBGCC)
-endif
-
 ARCH_OPTFLAGS := -O2
 
 LINKER_SCRIPT += $(SUBARCH_BUILDDIR)/kernel.ld
