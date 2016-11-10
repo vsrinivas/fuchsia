@@ -158,8 +158,8 @@ class DB {
   virtual Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) = 0;
 
   // Object sync metadata.
-  // Finds the set of unsynced objects and replaces the contentst of
-  // |object_ids| with their ids.
+  // Finds the set of unsynced objects and replaces the contents of |object_ids|
+  // with their ids. |object_ids| will be lexicographically sorted.
   virtual Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) = 0;
 
   // Marks the given |object_id| as synced.

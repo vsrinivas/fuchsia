@@ -513,6 +513,50 @@ TEST_F(PageStorageTest, GetObjectSynchronous) {
   EXPECT_EQ(content, convert::ToString(data));
 }
 
+TEST_F(PageStorageTest, UnsyncedObjects) {
+  int size = 3;
+  std::string values[] = {"Some data", "Some more data", "Even more data"};
+  std::string object_ids[size];
+  for (int i = 0; i < size; ++i) {
+    object_ids[i] = glue::SHA256Hash(values[i].data(), values[i].size());
+    TryAddFromLocal(values[i], object_ids[i]);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[i]));
+  }
+
+  std::vector<CommitId> commits;
+
+  // Add one key-value pair per commit.
+  for (int i = 0; i < size; ++i) {
+    std::unique_ptr<Journal> journal;
+    EXPECT_EQ(Status::OK, storage_->StartCommit(
+                              GetFirstHead(), JournalType::IMPLICIT, &journal));
+    EXPECT_EQ(Status::OK, journal->Put("key" + ftl::NumberToString(i),
+                                       object_ids[i], KeyPriority::LAZY));
+    journal->Commit([](Status status, const CommitId& id) {
+      EXPECT_EQ(Status::OK, status);
+    });
+    commits.push_back(GetFirstHead());
+  }
+
+  // Without syncing anything, the unsynced objects of any of the commits should
+  // be the values added up to that point and also the root node of the given
+  // commit.
+  for (int i = 0; i < size; ++i) {
+    std::vector<ObjectId> objects;
+    EXPECT_EQ(Status::OK, storage_->GetUnsyncedObjects(commits[i], &objects));
+    EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
+
+    std::unique_ptr<const Commit> commit;
+    EXPECT_EQ(Status::OK, storage_->GetCommit(commits[i], &commit));
+    EXPECT_TRUE(std::find(objects.begin(), objects.end(),
+                          commit->GetRootId()) != objects.end());
+    for (int j = 0; j < i; ++j) {
+      EXPECT_TRUE(std::find(objects.begin(), objects.end(), object_ids[j]) !=
+                  objects.end());
+    }
+  }
+}
+
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   std::string content("Some data");
 

@@ -6,6 +6,7 @@
 
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/commit_contents_impl.h"
+#include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "gtest/gtest.h"
@@ -13,32 +14,6 @@
 
 namespace storage {
 namespace {
-
-class EntryChangeIterator : public Iterator<const storage::EntryChange> {
- public:
-  EntryChangeIterator(std::vector<EntryChange>::const_iterator it,
-                      std::vector<EntryChange>::const_iterator end)
-      : it_(it), end_(end) {}
-
-  ~EntryChangeIterator() {}
-
-  Iterator<const storage::EntryChange>& Next() override {
-    FTL_DCHECK(Valid()) << "Iterator::Next iterator not valid";
-    ++it_;
-    return *this;
-  }
-
-  bool Valid() const override { return it_ != end_; }
-
-  Status GetStatus() const override { return Status::OK; }
-
-  const storage::EntryChange& operator*() const override { return *it_; }
-  const storage::EntryChange* operator->() const override { return &(*it_); }
-
- private:
-  std::vector<EntryChange>::const_iterator it_;
-  std::vector<EntryChange>::const_iterator end_;
-};
 
 class BTreeBuilderTest : public ::testing::Test {
  public:

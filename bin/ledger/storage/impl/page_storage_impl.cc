@@ -10,8 +10,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <algorithm>
+#include <iterator>
 
 #include "apps/ledger/src/glue/crypto/hash.h"
+#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -339,7 +342,28 @@ Status PageStorageImpl::GetDeltaObjects(const CommitId& commit_id,
 
 Status PageStorageImpl::GetUnsyncedObjects(const CommitId& commit_id,
                                            std::vector<ObjectId>* objects) {
-  return Status::NOT_IMPLEMENTED;
+  std::vector<ObjectId> result;
+  std::set<ObjectId> commit_objects;
+  std::unique_ptr<const Commit> commit;
+  Status s = GetCommit(commit_id, &commit);
+  if (s != Status::OK) {
+    return s;
+  }
+  s = btree::GetObjects(commit->GetRootId(), this, &commit_objects);
+  if (s != Status::OK) {
+    return s;
+  }
+  std::vector<ObjectId> unsynced_objects;
+  s = db_.GetUnsyncedObjectIds(&unsynced_objects);
+  if (s != Status::OK) {
+    return s;
+  }
+
+  std::set_intersection(commit_objects.begin(), commit_objects.end(),
+                        unsynced_objects.begin(), unsynced_objects.end(),
+                        std::back_inserter(result));
+  objects->swap(result);
+  return Status::OK;
 }
 
 Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
