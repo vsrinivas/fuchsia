@@ -4,6 +4,7 @@
 
 import 'dart:fidl.internal';
 
+import 'package:lib.fidl.dart/bindings.dart';
 import 'package:lib.fidl.dart/core.dart' as core;
 
 import 'package:apps.modular.services.application/application_environment.fidl.dart';
@@ -11,61 +12,55 @@ import 'package:apps.modular.services.application/application_launcher.fidl.dart
 import 'package:apps.modular.services.application/service_provider.fidl.dart';
 
 class ApplicationContext {
-  ApplicationContext({
-    this.environmentServices,
-    this.environment,
-    this.launcher,
-    this.outgoingServices,
-  });
+  ApplicationContext();
 
-  final ServiceProviderProxy environmentServices;
-  final ApplicationEnvironmentProxy environment;
-  final ApplicationLauncherProxy launcher;
-  final ServiceProviderImpl outgoingServices;
+  final ApplicationEnvironmentProxy environment = new ApplicationEnvironmentProxy();
+  final ApplicationLauncherProxy launcher = new ApplicationLauncherProxy();
+  final ServiceProviderProxy environmentServices = new ServiceProviderProxy();
+  final ServiceProviderImpl outgoingServices = new ServiceProviderImpl();
 
   factory ApplicationContext.fromStartupInfo() {
-    ApplicationEnvironmentProxy environment;
-    ApplicationLauncherProxy launcher;
-    ServiceProviderImpl outgoingServices;
+    final ApplicationContext context = new ApplicationContext();
 
-    int environmentHandle = MxStartupInfo.takeEnvironment();
+    final int environmentHandle = MxStartupInfo.takeEnvironment();
     if (environmentHandle != null) {
-      core.Handle handle = new core.Handle(environmentHandle);
-      environment = new ApplicationEnvironmentProxy.fromHandle(handle);
-      launcher = new ApplicationLauncherProxy.unbound();
-      environment.getApplicationLauncher(launcher);
+      final core.Handle handle = new core.Handle(environmentHandle);
+      context.environment
+        ..ctrl.bind(new InterfaceHandle<ApplicationEnvironment>(new core.Channel(handle), 0))
+        ..getApplicationLauncher(context.launcher.ctrl.request())
+        ..getServices(context.environmentServices.ctrl.request());
     }
 
-    int outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
+    final int outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
     if (outgoingServicesHandle != null) {
-      core.Handle handle = new core.Handle(outgoingServicesHandle);
-      ServiceProviderStub stub = new ServiceProviderStub.fromHandle(handle);
-      outgoingServices = new ServiceProviderImpl(stub);
+      final core.Handle handle = new core.Handle(outgoingServicesHandle);
+      context.outgoingServices.bind(new InterfaceRequest<ServiceProvider>(new core.Channel(handle)));
     }
 
-    return new ApplicationContext(
-      environment: environment,
-      launcher: launcher,
-      outgoingServices: outgoingServices,
-    );
+    return context;
   }
 }
 
-void connectToService(ServiceProvider serviceProvider, Proxy proxy) {
-  String serviceName = proxy.ctrl.serviceName;
+void connectToService(ServiceProvider serviceProvider,
+                      ProxyController controller) {
+  final String serviceName = controller.serviceName;
   if (serviceName == null)
     return;
-  serviceProvider.connectToService(serviceName, proxy);
+  serviceProvider.connectToService(serviceName, controller.request());
 }
 
-typedef void ServiceConnector(core.Channel channel);
+typedef void ServiceConnector(InterfaceRequest request);
+typedef void DefaultServiceConnector(String serviceName,
+                                     InterfaceRequest request);
 
 class ServiceProviderImpl extends ServiceProvider {
-  ServiceProviderImpl(this.stub) { stub.impl = this; }
+  final ServiceProviderBinding _binding = new ServiceProviderBinding();
 
-  final ServiceProviderStub stub;
+  void bind(InterfaceRequest<ServiceProvider> interfaceRequest) {
+    _binding.bind(this, interfaceRequest);
+  }
 
-  ServiceConnector defaultConnector;
+  DefaultServiceConnector defaultConnector;
 
   final Map<String, ServiceConnector> _connectors = new Map<String, ServiceConnector>();
 
@@ -75,11 +70,11 @@ class ServiceProviderImpl extends ServiceProvider {
 
   @override
   void connectToService(String serviceName, core.Channel channel) {
-    ServiceConnector connector = _connectors[serviceName];
+    final ServiceConnector connector = _connectors[serviceName];
     if (connector != null) {
-      connector(channel);
+      connector(new InterfaceRequest(channel));
     } else if (defaultConnector != null) {
-      defaultConnector(channel);
+      defaultConnector(serviceName, new InterfaceRequest(channel));
     } else {
       channel.close();
     }
