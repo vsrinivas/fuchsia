@@ -106,22 +106,22 @@ void KeyboardState::Update(const KeyboardReport& report,
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
-        modifiers_ |= MOD_LSHIFT;
+        modifiers_ &= (~MOD_LSHIFT);
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
-        modifiers_ |= MOD_RSHIFT;
+        modifiers_ &= (~MOD_RSHIFT);
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
-        modifiers_ |= MOD_LCTRL;
+        modifiers_ &= (~MOD_LCTRL);
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
-        modifiers_ |= MOD_RCTRL;
+        modifiers_ &= (~MOD_RCTRL);
         break;
       case HID_USAGE_KEY_LEFT_ALT:
-        modifiers_ |= MOD_LALT;
+        modifiers_ &= (~MOD_LALT);
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
-        modifiers_ |= MOD_RALT;
+        modifiers_ &= (~MOD_RALT);
         break;
       default:
         break;
