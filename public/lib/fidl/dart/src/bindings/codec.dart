@@ -666,7 +666,7 @@ class Decoder {
     if (!channel.handle.isValid) {
       return null;
     }
-    return InterfaceHandle(channel, version);
+    return new InterfaceHandle(channel, version);
   }
 
   InterfaceRequest decodeInterfaceRequest(int offset, bool nullable) {

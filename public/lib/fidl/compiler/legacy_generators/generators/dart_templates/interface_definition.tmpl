@@ -59,7 +59,9 @@ class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
         if (callback == null) {
           message.closeAllHandles();
         } else {
-          final response = {{response_struct|name}}.deserialize(message.payload);
+          {%- if method.response_parameters %}
+            final response = {{response_struct|name}}.deserialize(message.payload);
+          {%- endif %}
           callback(
             {%- for param in method.response_parameters -%}
               response.{{param|name}} {% if not loop.last %}, {% endif %}

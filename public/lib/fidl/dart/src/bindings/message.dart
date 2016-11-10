@@ -88,7 +88,7 @@ class Message {
   }
 
   String toString() =>
-      "Message(numBytes=${dataLength}, numHandles=${handlesLength})";
+      "Message(numBytes=$dataLength, numHandles=$handlesLength)";
 }
 
 class ServiceMessage extends Message {

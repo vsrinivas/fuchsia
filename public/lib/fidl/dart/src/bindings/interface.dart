@@ -172,19 +172,19 @@ class ProxyController<T> {
   }
 
   void _handleReadable() {
-    final result = channel.queryAndRead();
+    final result = _reader.channel.queryAndRead();
     if ((result.data == null) || (result.dataLength == 0)) {
       proxyError('Read from channel failed');
       return;
     }
     try {
       _pendingResponsesCount--;
-      if (_onResponse != null) {
+      if (onResponse != null) {
         final Message message = new Message(result.data,
                                             result.handles,
                                             result.dataLength,
                                             result.handlesLength);
-        _onResponse(new ServiceMessage.fromMessage(message));
+        onResponse(new ServiceMessage.fromMessage(message));
       }
     } on FidlCodecError catch (e) {
       if (result.handles != null)
@@ -205,7 +205,7 @@ class ProxyController<T> {
                                              serialized.buffer.lengthInBytes,
                                              serialized.handles);
     if (status != core.NO_ERROR)
-      proxyError('Failed to write to channel: ${channel} (status: $status)');
+      proxyError('Failed to write to channel: ${_reader.channel} (status: $status)');
   }
 
   void sendMessageWithRequestId(Struct message,
@@ -232,7 +232,7 @@ class ProxyController<T> {
                                              serialized.handles);
 
     if (status != core.NO_ERROR) {
-      proxyError('Failed to write to channel: ${channel} (status: $status)');
+      proxyError('Failed to write to channel: ${_reader.channel} (status: $status)');
       return;
     }
 

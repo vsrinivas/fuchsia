@@ -4,7 +4,7 @@
 
 part of bindings;
 
-abstract class Union {
+abstract class Union { // ignore: one_member_abstracts
   void encode(Encoder encoder, int offset);
 }
 
