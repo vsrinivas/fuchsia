@@ -19,38 +19,36 @@ CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
 
 CloudProviderImpl::~CloudProviderImpl() {}
 
-void CloudProviderImpl::AddNotification(
-    const PageId& page_id,
-    const Notification& notification,
-    const std::function<void(Status)>& callback) {
-  std::string encoded_notification;
-  bool ok = EncodeNotification(notification, &encoded_notification);
+void CloudProviderImpl::AddCommit(const PageId& page_id,
+                                  const Commit& commit,
+                                  const std::function<void(Status)>& callback) {
+  std::string encoded_commit;
+  bool ok = EncodeCommit(commit, &encoded_commit);
   FTL_DCHECK(ok);
 
-  firebase_->Put(
-      GetLocation(page_id) + "/" + firebase::EncodeKey(notification.id),
-      encoded_notification, [callback](firebase::Status status) {
-        if (status == firebase::Status::OK) {
-          callback(Status::OK);
-        } else {
-          callback(Status::UNKNOWN_ERROR);
-        }
-      });
+  firebase_->Put(GetLocation(page_id) + "/" + firebase::EncodeKey(commit.id),
+                 encoded_commit, [callback](firebase::Status status) {
+                   if (status == firebase::Status::OK) {
+                     callback(Status::OK);
+                   } else {
+                     callback(Status::UNKNOWN_ERROR);
+                   }
+                 });
 }
 
-void CloudProviderImpl::WatchNotifications(const PageId& page_id,
-                                           const std::string& min_timestamp,
-                                           NotificationWatcher* watcher) {
+void CloudProviderImpl::WatchCommits(const PageId& page_id,
+                                     const std::string& min_timestamp,
+                                     CommitWatcher* watcher) {
   watchers_[watcher].reset(new WatchClientImpl(firebase_, GetLocation(page_id),
                                                GetTimestampQuery(min_timestamp),
                                                watcher));
 }
 
-void CloudProviderImpl::UnwatchNotifications(NotificationWatcher* watcher) {
+void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
   watchers_.erase(watcher);
 }
 
-void CloudProviderImpl::GetNotifications(
+void CloudProviderImpl::GetCommits(
     const PageId& page_id,
     const std::string& min_timestamp,
     std::function<void(Status, const std::vector<Record>&)> callback) {
@@ -66,7 +64,7 @@ void CloudProviderImpl::GetNotifications(
           return;
         }
         std::vector<Record> records;
-        if (!DecodeMultipleNotificationsFromValue(value, &records)) {
+        if (!DecodeMultipleCommitsFromValue(value, &records)) {
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
           return;
         }

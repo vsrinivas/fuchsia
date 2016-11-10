@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_WATCH_CLIENT_IMPL_H_
 #define APPS_LEDGER_SRC_CLOUD_PROVIDER_IMPL_WATCH_CLIENT_IMPL_H_
 
-#include "apps/ledger/src/cloud_provider/public/notification_watcher.h"
+#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
 
@@ -13,14 +13,14 @@
 
 namespace cloud_provider {
 
-// Relay between Firebase and a NotificationWatcher corresponding to
-// particular WatchNotifications() request.
+// Relay between Firebase and a CommitWatcher corresponding to
+// particular WatchCommits() request.
 class WatchClientImpl : public firebase::WatchClient {
  public:
   WatchClientImpl(firebase::Firebase* firebase,
                   const std::string& firebase_key,
                   const std::string& query,
-                  NotificationWatcher* notification_watcher);
+                  CommitWatcher* commit_watcher);
   ~WatchClientImpl() override;
 
   // firebase::WatchClient:
@@ -29,7 +29,7 @@ class WatchClientImpl : public firebase::WatchClient {
 
  private:
   firebase::Firebase* const firebase_;
-  NotificationWatcher* const notification_watcher_;
+  CommitWatcher* const commit_watcher_;
 };
 
 }  // namespace cloud_provider

@@ -25,20 +25,20 @@ class CloudProviderImpl : public CloudProvider {
   ~CloudProviderImpl() override;
 
   // CloudProvider:
-  void AddNotification(const PageId& page_id,
-                       const Notification& notification,
-                       const std::function<void(Status)>& callback) override;
+  void AddCommit(const PageId& page_id,
+                 const Commit& commit,
+                 const std::function<void(Status)>& callback) override;
 
-  void WatchNotifications(const PageId& page_id,
-                          const std::string& min_timestamp,
-                          NotificationWatcher* watcher) override;
+  void WatchCommits(const PageId& page_id,
+                    const std::string& min_timestamp,
+                    CommitWatcher* watcher) override;
 
-  void UnwatchNotifications(NotificationWatcher* watcher) override;
+  void UnwatchCommits(CommitWatcher* watcher) override;
 
-  void GetNotifications(const PageId& page_id,
-                        const std::string& min_timestamp,
-                        std::function<void(Status, const std::vector<Record>&)>
-                            callback) override;
+  void GetCommits(const PageId& page_id,
+                  const std::string& min_timestamp,
+                  std::function<void(Status, const std::vector<Record>&)>
+                      callback) override;
 
   void AddObject(ObjectIdView object_id,
                  mx::vmo data,
@@ -51,18 +51,17 @@ class CloudProviderImpl : public CloudProvider {
                          mx::datapipe_consumer data)> callback) override;
 
  private:
-  // Returns url location where notifications for the particular page are
-  // stored.
+  // Returns url location where commits for the particular page are stored.
   std::string GetLocation(const PageId& page_id);
 
-  // Returns the Firebase query filtering the notifications so that only
-  // notifications not older than |min_timestamp| are returned. Passing empty
-  // |min_timestamp| returns empty query.
+  // Returns the Firebase query filtering the commits so that only commits not
+  // older than |min_timestamp| are returned. Passing empty |min_timestamp|
+  // returns empty query.
   std::string GetTimestampQuery(const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
   const AppId app_id_;
-  std::map<NotificationWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
+  std::map<CommitWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
 };
 
 }  // namespace cloud_provider

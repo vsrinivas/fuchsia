@@ -8,42 +8,41 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/notification.h"
+#include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/record.h"
 
 #include <rapidjson/document.h>
 
 namespace cloud_provider {
 
-// These methods encode and decode notifications specifically for storing
+// These methods encode and decode commits specifically for storing
 // in Firebase Realtime Database.
 
-// Encodes a notification as a JSON string suitable for storing in
-// Firebase Realtime Database. In addition to the notification content, a
-// timestamp placeholder is added, making Firebase tag the notification with a
+// Encodes a commit as a JSON string suitable for storing in
+// Firebase Realtime Database. In addition to the commit content, a
+// timestamp placeholder is added, making Firebase tag the commit with a
 // server timestamp.
-bool EncodeNotification(const Notification& notification,
-                        std::string* output_json);
+bool EncodeCommit(const Commit& commit, std::string* output_json);
 
-// Decodes a notification from the JSON representation in Firebase
+// Decodes a commit from the JSON representation in Firebase
 // Realtime Database. If successful, the method returns true, and
-// |output_record| contains the decoded notification, along with opaque
+// |output_record| contains the decoded commit, along with opaque
 // server timestamp.
-bool DecodeNotification(const std::string& json,
-                        std::unique_ptr<Record>* output_record);
+bool DecodeCommit(const std::string& json,
+                  std::unique_ptr<Record>* output_record);
 
-// Decodes multiple notifications from the JSON representation of an
+// Decodes multiple commits from the JSON representation of an
 // object holding them in Firebase Realtime Database. If successful, the method
-// returns true, and |output_records| contain the decoded notifications
+// returns true, and |output_records| contain the decoded commits
 // along with their timestamps.
-bool DecodeMultipleNotifications(const std::string& json,
-                                 std::vector<Record>* output_records);
+bool DecodeMultipleCommits(const std::string& json,
+                           std::vector<Record>* output_records);
 
-bool DecodeNotificationFromValue(const rapidjson::Value& value,
-                                 std::unique_ptr<Record>* output_record);
+bool DecodeCommitFromValue(const rapidjson::Value& value,
+                           std::unique_ptr<Record>* output_record);
 
-bool DecodeMultipleNotificationsFromValue(const rapidjson::Value& value,
-                                          std::vector<Record>* output_records);
+bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
+                                    std::vector<Record>* output_records);
 
 }  // namespace cloud_provider
 

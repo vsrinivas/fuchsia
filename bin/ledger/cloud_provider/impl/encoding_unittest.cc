@@ -20,12 +20,12 @@ std::string operator"" _s(const char* str, size_t size) {
 }
 
 TEST(EncodingTest, Encode) {
-  Notification notification(
+  Commit commit(
       "some_id", "some_content",
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
   std::string encoded;
-  EXPECT_TRUE(EncodeNotification(notification, &encoded));
+  EXPECT_TRUE(EncodeCommit(commit, &encoded));
   EXPECT_EQ(
       "{\"id\":\"some_idV\","
       "\"content\":\"some_contentV\","
@@ -48,12 +48,12 @@ TEST(EncodingTest, Decode) {
       "}";
 
   std::unique_ptr<Record> record;
-  EXPECT_TRUE(DecodeNotification(json, &record));
-  EXPECT_EQ("abc", record->notification.id);
-  EXPECT_EQ("xyz", record->notification.content);
-  EXPECT_EQ(2u, record->notification.storage_objects.size());
-  EXPECT_EQ("a", record->notification.storage_objects.at("object_a"));
-  EXPECT_EQ("b", record->notification.storage_objects.at("object_b"));
+  EXPECT_TRUE(DecodeCommit(json, &record));
+  EXPECT_EQ("abc", record->commit.id);
+  EXPECT_EQ("xyz", record->commit.content);
+  EXPECT_EQ(2u, record->commit.storage_objects.size());
+  EXPECT_EQ("a", record->commit.storage_objects.at("object_a"));
+  EXPECT_EQ("b", record->commit.storage_objects.at("object_b"));
   EXPECT_EQ(ServerTimestampToBytes(1472722368296), record->timestamp);
 }
 
@@ -74,39 +74,39 @@ TEST(EncodingTest, DecodeMultiple) {
       "}}";
 
   std::vector<Record> records;
-  EXPECT_TRUE(DecodeMultipleNotifications(json, &records));
+  EXPECT_TRUE(DecodeMultipleCommits(json, &records));
   EXPECT_EQ(2u, records.size());
 
-  EXPECT_EQ("id1", records[0].notification.id);
-  EXPECT_EQ("xyz", records[0].notification.content);
-  EXPECT_EQ(2u, records[0].notification.storage_objects.size());
-  EXPECT_EQ("a", records[0].notification.storage_objects.at("object_a"));
-  EXPECT_EQ("b", records[0].notification.storage_objects.at("object_b"));
+  EXPECT_EQ("id1", records[0].commit.id);
+  EXPECT_EQ("xyz", records[0].commit.content);
+  EXPECT_EQ(2u, records[0].commit.storage_objects.size());
+  EXPECT_EQ("a", records[0].commit.storage_objects.at("object_a"));
+  EXPECT_EQ("b", records[0].commit.storage_objects.at("object_b"));
   EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);
 
-  EXPECT_EQ("id2", records[1].notification.id);
-  EXPECT_EQ("bazinga", records[1].notification.content);
-  EXPECT_EQ(0u, records[1].notification.storage_objects.size());
+  EXPECT_EQ("id2", records[1].commit.id);
+  EXPECT_EQ("bazinga", records[1].commit.content);
+  EXPECT_EQ(0u, records[1].commit.storage_objects.size());
   EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
 }
 
 // Verifies that encoding and JSON parsing we use work with zero bytes within
 // strings.
 TEST(EncodingTest, EncodeDecodeZeroByte) {
-  Notification notification("id\0\0\0"_s, "\0"_s,
-                            std::map<ObjectId, Data>{{"object_a", "\0\0\0"_s},
-                                                     {"object_\0"_s, "\0"_s}});
+  Commit commit("id\0\0\0"_s, "\0"_s,
+                std::map<ObjectId, Data>{{"object_a", "\0\0\0"_s},
+                                         {"object_\0"_s, "\0"_s}});
 
   std::string encoded;
-  EXPECT_TRUE(EncodeNotification(notification, &encoded));
-  // Encoded notification is sent to server, which replaces the timestamp
+  EXPECT_TRUE(EncodeCommit(commit, &encoded));
+  // Encoded commit is sent to server, which replaces the timestamp
   // placeholder with server-side timestamp. We emulate this for testing.
   std::string pattern = "{\".sv\":\"timestamp\"}";
   encoded.replace(encoded.find(pattern), pattern.size(), "42");
 
   std::unique_ptr<Record> output_record;
-  EXPECT_TRUE(DecodeNotification(encoded, &output_record));
-  EXPECT_EQ(notification, output_record->notification);
+  EXPECT_TRUE(DecodeCommit(encoded, &output_record));
+  EXPECT_EQ(commit, output_record->commit);
   EXPECT_EQ(ServerTimestampToBytes(42), output_record->timestamp);
 }
 

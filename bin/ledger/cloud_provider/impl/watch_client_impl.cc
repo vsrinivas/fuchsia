@@ -14,8 +14,8 @@ namespace cloud_provider {
 WatchClientImpl::WatchClientImpl(firebase::Firebase* firebase,
                                  const std::string& firebase_key,
                                  const std::string& query,
-                                 NotificationWatcher* notification_watcher)
-    : firebase_(firebase), notification_watcher_(notification_watcher) {
+                                 CommitWatcher* commit_watcher)
+    : firebase_(firebase), commit_watcher_(commit_watcher) {
   firebase_->Watch(firebase_key, query, this);
 }
 
@@ -26,45 +26,43 @@ WatchClientImpl::~WatchClientImpl() {
 void WatchClientImpl::OnPut(const std::string& path,
                             const rapidjson::Value& value) {
   if (!value.IsObject()) {
-    FTL_LOG(ERROR) << "Ignoring a malformed notification from Firebase. "
+    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
                    << "Returned data is not a dictionary.";
     return;
   }
 
   if (path == "/") {
-    // The initial put event contains multiple notifications.
+    // The initial put event contains multiple commits.
     std::vector<Record> records;
-    if (!DecodeMultipleNotificationsFromValue(value, &records)) {
-      FTL_LOG(ERROR) << "Ignoring a malformed notification from Firebase. "
-                     << "Can't decode a collection of notifications.";
+    if (!DecodeMultipleCommitsFromValue(value, &records)) {
+      FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
+                     << "Can't decode a collection of commits.";
       return;
     }
     for (size_t i = 0u; i < records.size(); i++) {
-      notification_watcher_->OnNewNotification(records[i].notification,
-                                               records[i].timestamp);
+      commit_watcher_->OnNewCommit(records[i].commit, records[i].timestamp);
     }
     return;
   }
 
   if (path.empty() || path.front() != '/') {
-    FTL_LOG(ERROR) << "Ignoring a malformed notification from Firebase. "
-                   << path << " is not a valid path.";
+    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. " << path
+                   << " is not a valid path.";
     return;
   }
 
   std::unique_ptr<Record> record;
-  if (!DecodeNotificationFromValue(value, &record)) {
-    FTL_LOG(ERROR) << "Ignoring a malformed notification from Firebase. "
-                   << "Can't decode the notification.";
+  if (!DecodeCommitFromValue(value, &record)) {
+    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
+                   << "Can't decode the commit.";
     return;
   }
 
-  notification_watcher_->OnNewNotification(record->notification,
-                                           record->timestamp);
+  commit_watcher_->OnNewCommit(record->commit, record->timestamp);
 }
 
 void WatchClientImpl::OnError() {
-  // TODO(ppi): add an error callback on the NotificationWatcher and
+  // TODO(ppi): add an error callback on the CommitWatcher and
   // surface this there.
   FTL_LOG(ERROR) << "Firebase client signalled an unknown error.";
 }

@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/cloud_provider/public/notification.h"
-#include "apps/ledger/src/cloud_provider/public/notification_watcher.h"
+#include "apps/ledger/src/cloud_provider/public/commit.h"
+#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "lib/ftl/macros.h"
@@ -21,55 +21,53 @@ namespace cloud_provider {
 
 // This API captures Ledger requirements for a cloud sync provider.
 //
-// A CloudProvider instance is scoped to a particular ledger instance, but can
+// A CloudProvider instance is scoped to a particular Ledger instance, but can
 // be used to sync multiple pages within that ledger.
 //
-// When delivered from the server, notifications come along with their
-// timestamps. These timestamps are server timestamps , i.e. they represent the
-// time of registering the notification on the server. Their meaning is
-// opaque to the client and depends on the particular service provider, but they
-// can be used to make scoped queries - see GetNotifications(),
-// WatchNotifications().
+// When delivered from the server, commits come along with their timestamps.
+// These timestamps are server timestamps , i.e. they represent the time of
+// registering the commit on the server. Their meaning is opaque to the client
+// and depends on the particular service provider, but they can be used to make
+// scoped queries - see GetCommits(), WatchCommits().
 class CloudProvider {
  public:
   CloudProvider() {}
   virtual ~CloudProvider() {}
 
-  // Adds the given notification to the cloud. The given callback will be
-  // called asynchronously with Status::OK if the operation have succeeded.
-  virtual void AddNotification(const PageId& page_id,
-                               const Notification& notification,
-                               const std::function<void(Status)>& callback) = 0;
+  // Adds the given commit to the cloud. The given callback will be called
+  // asynchronously with Status::OK if the operation have succeeded.
+  virtual void AddCommit(const PageId& page_id,
+                         const Commit& commit,
+                         const std::function<void(Status)>& callback) = 0;
 
-  // Registers the given watcher to be notified about notifications
-  // already present and these being added to the cloud later. This includes
-  // notifications added by the same CloudProvider instance through
-  // AddNotification().
+  // Registers the given watcher to be notified about commits already present
+  // and these being added to the cloud later. This includes commits added by
+  // the same CloudProvider instance through AddCommit().
   //
-  // |watcher| is firstly notified about all notifications already
-  // present in the cloud. Then, it is notified about new notifications
-  // as they are registered. This allows the client to avoid the race condition
-  // when a notification is registered in the cloud between pulling down
-  // a list of notifications and establishing a watcher for a new one.
+  // |watcher| is firstly notified about all commits already present in the
+  // cloud. Then, it is notified about new commits as they are registered. This
+  // allows the client to avoid the race condition when a commit is registered
+  // in the cloud between pulling down a list of commits and establishing a
+  // watcher for a new one.
   //
-  // Only notifications not older than |min_timestamp| are passed to the
-  // |watcher|. Passing empty |min_timestamp| covers all notifications.
+  // Only commits not older than |min_timestamp| are passed to the |watcher|.
+  // Passing empty |min_timestamp| covers all commits.
   //
   // Each |watcher| object can be registered only once at a time.
-  virtual void WatchNotifications(const PageId& page_id,
-                                  const std::string& min_timestamp,
-                                  NotificationWatcher* watcher) = 0;
+  virtual void WatchCommits(const PageId& page_id,
+                            const std::string& min_timestamp,
+                            CommitWatcher* watcher) = 0;
 
   // Unregisters the given watcher. No methods on the watcher will be called
   // after this returns.
-  virtual void UnwatchNotifications(NotificationWatcher* watcher) = 0;
+  virtual void UnwatchCommits(CommitWatcher* watcher) = 0;
 
-  // Retrieves notifications not older than the given |min_timestamp|.
-  // Passing empty |min_timestamp| retrieves all notifications.
+  // Retrieves commits not older than the given |min_timestamp|.  Passing empty
+  // |min_timestamp| retrieves all commits.
   //
-  // Result is a vector of pairs of the retrieved notifications and their
+  // Result is a vector of pairs of the retrieved commits and their
   // corresponding server timestamps.
-  virtual void GetNotifications(
+  virtual void GetCommits(
       const PageId& page_id,
       const std::string& min_timestamp,
       std::function<void(Status, const std::vector<Record>&)> callback) = 0;

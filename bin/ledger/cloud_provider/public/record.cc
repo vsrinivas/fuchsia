@@ -8,8 +8,8 @@ namespace cloud_provider {
 
 Record::Record() = default;
 
-Record::Record(Notification&& n, std::string&& t)
-    : notification(std::move(n)), timestamp(std::move(t)) {}
+Record::Record(Commit&& n, std::string&& t)
+    : commit(std::move(n)), timestamp(std::move(t)) {}
 
 Record::~Record() = default;
 

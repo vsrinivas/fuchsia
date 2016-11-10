@@ -23,25 +23,24 @@ const char kTimestampKey[] = "timestamp";
 
 }  // namespace
 
-bool EncodeNotification(const Notification& notification,
-                        std::string* output_json) {
+bool EncodeCommit(const Commit& commit, std::string* output_json) {
   rapidjson::StringBuffer string_buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
 
   writer.StartObject();
 
   writer.Key(kIdKey);
-  std::string id = firebase::EncodeValue(notification.id);
+  std::string id = firebase::EncodeValue(commit.id);
   writer.String(id.c_str(), id.size());
 
   writer.Key(kContentKey);
-  std::string content = firebase::EncodeValue(notification.content);
+  std::string content = firebase::EncodeValue(commit.content);
   writer.String(content.c_str(), content.size());
 
-  if (!notification.storage_objects.empty()) {
+  if (!commit.storage_objects.empty()) {
     writer.Key(kObjectsKey);
     writer.StartObject();
-    for (const auto& entry : notification.storage_objects) {
+    for (const auto& entry : commit.storage_objects) {
       std::string key = firebase::EncodeKey(entry.first);
       writer.Key(key.c_str(), key.size());
       std::string value = firebase::EncodeValue(entry.second);
@@ -69,8 +68,8 @@ bool EncodeNotification(const Notification& notification,
   return true;
 }
 
-bool DecodeNotification(const std::string& json,
-                        std::unique_ptr<Record>* output_record) {
+bool DecodeCommit(const std::string& json,
+                  std::unique_ptr<Record>* output_record) {
   rapidjson::Document document;
   document.Parse(json.c_str(), json.size());
 
@@ -82,11 +81,11 @@ bool DecodeNotification(const std::string& json,
     return false;
   }
 
-  return DecodeNotificationFromValue(document, output_record);
+  return DecodeCommitFromValue(document, output_record);
 }
 
-bool DecodeMultipleNotifications(const std::string& json,
-                                 std::vector<Record>* output_records) {
+bool DecodeMultipleCommits(const std::string& json,
+                           std::vector<Record>* output_records) {
   rapidjson::Document document;
   document.Parse(json.c_str(), json.size());
 
@@ -98,11 +97,11 @@ bool DecodeMultipleNotifications(const std::string& json,
     return false;
   }
 
-  return DecodeMultipleNotificationsFromValue(document, output_records);
+  return DecodeMultipleCommitsFromValue(document, output_records);
 }
 
-bool DecodeMultipleNotificationsFromValue(const rapidjson::Value& value,
-                                          std::vector<Record>* output_records) {
+bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
+                                    std::vector<Record>* output_records) {
   FTL_DCHECK(output_records);
   FTL_DCHECK(value.IsObject());
 
@@ -115,7 +114,7 @@ bool DecodeMultipleNotificationsFromValue(const rapidjson::Value& value,
     }
 
     std::unique_ptr<Record> record;
-    if (!DecodeNotificationFromValue(it.value, &record)) {
+    if (!DecodeCommitFromValue(it.value, &record)) {
       return false;
     }
     FTL_DCHECK(record);
@@ -126,14 +125,14 @@ bool DecodeMultipleNotificationsFromValue(const rapidjson::Value& value,
   return true;
 }
 
-bool DecodeNotificationFromValue(const rapidjson::Value& value,
-                                 std::unique_ptr<Record>* output_record) {
+bool DecodeCommitFromValue(const rapidjson::Value& value,
+                           std::unique_ptr<Record>* output_record) {
   FTL_DCHECK(output_record);
   FTL_DCHECK(value.IsObject());
 
-  NotificationId notification_id;
+  CommitId commit_id;
   if (!value.HasMember(kIdKey) || !value[kIdKey].IsString() ||
-      !firebase::Decode(value[kIdKey].GetString(), &notification_id)) {
+      !firebase::Decode(value[kIdKey].GetString(), &commit_id)) {
     return false;
   }
 
@@ -164,10 +163,10 @@ bool DecodeNotificationFromValue(const rapidjson::Value& value,
     return false;
   }
 
-  std::unique_ptr<Record> record(new Record(
-      Notification(std::move(notification_id), std::move(commit_content),
-                   std::move(storage_objects)),
-      ServerTimestampToBytes(value[kTimestampKey].GetInt64())));
+  std::unique_ptr<Record> record(
+      new Record(Commit(std::move(commit_id), std::move(commit_content),
+                        std::move(storage_objects)),
+                 ServerTimestampToBytes(value[kTimestampKey].GetInt64())));
   output_record->swap(record);
   return true;
 }

@@ -25,7 +25,7 @@ namespace {
 
 class CloudProviderImplTest : public ::testing::Test,
                               public firebase::Firebase,
-                              public NotificationWatcher {
+                              public CommitWatcher {
  public:
   CloudProviderImplTest()
       : cloud_provider_(new CloudProviderImpl(this, "app_id")) {}
@@ -77,10 +77,10 @@ class CloudProviderImplTest : public ::testing::Test,
     watch_client_ = nullptr;
   }
 
-  // NotificationWatcher:
-  void OnNewNotification(const Notification& notification,
-                         const std::string& timestamp) override {
-    notifications_.push_back(notification.Clone());
+  // CommitWatcher:
+  void OnNewCommit(const Commit& commit,
+                   const std::string& timestamp) override {
+    commits_.push_back(commit.Clone());
     server_timestamps_.push_back(timestamp);
   }
 
@@ -102,8 +102,8 @@ class CloudProviderImplTest : public ::testing::Test,
   std::unique_ptr<rapidjson::Document> get_response_;
 
   // These members track calls received from CloudProviderImpl by this class
-  // registered as a NotificationWatcher.
-  std::vector<Notification> notifications_;
+  // registered as a CommitWatcher.
+  std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
 
   mtl::MessageLoop message_loop_;
@@ -112,17 +112,17 @@ class CloudProviderImplTest : public ::testing::Test,
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
 };
 
-TEST_F(CloudProviderImplTest, AddNotification) {
-  Notification notification(
+TEST_F(CloudProviderImplTest, AddCommit) {
+  Commit commit(
       "commit_id", "some_content",
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
   bool callback_called = false;
-  cloud_provider_->AddNotification("page_id", notification,
-                                   [&callback_called](Status status) {
-                                     EXPECT_EQ(Status::OK, status);
-                                     callback_called = true;
-                                   });
+  cloud_provider_->AddCommit("page_id", commit,
+                             [&callback_called](Status status) {
+                               EXPECT_EQ(Status::OK, status);
+                               callback_called = true;
+                             });
   message_loop_.Run();
 
   EXPECT_TRUE(callback_called);
@@ -143,29 +143,28 @@ TEST_F(CloudProviderImplTest, AddNotification) {
 }
 
 TEST_F(CloudProviderImplTest, WatchUnwatch) {
-  cloud_provider_->WatchNotifications("page_id", "", this);
+  cloud_provider_->WatchCommits("page_id", "", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
   EXPECT_EQ("", watch_queries_[0]);
   EXPECT_EQ(0u, unwatch_count_);
 
-  cloud_provider_->UnwatchNotifications(this);
+  cloud_provider_->UnwatchCommits(this);
   EXPECT_EQ(1u, unwatch_count_);
 }
 
 TEST_F(CloudProviderImplTest, WatchWithQuery) {
-  cloud_provider_->WatchNotifications("page_id", ServerTimestampToBytes(42),
-                                      this);
+  cloud_provider_->WatchCommits("page_id", ServerTimestampToBytes(42), this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
   EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", watch_queries_[0]);
 }
 
-// Tests handling a server event containing multiple notifications.
+// Tests handling a server event containing multiple commits.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
-  cloud_provider_->WatchNotifications("page_id", "", this);
+  cloud_provider_->WatchCommits("page_id", "", this);
 
   std::string put_content =
       "{\"id_1V\":"
@@ -184,20 +183,19 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
 
   watch_client_->OnPut("/", document);
 
-  Notification expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
-  Notification expected_n2("id_2", "some_other_content",
-                           std::map<ObjectId, Data>{});
-  EXPECT_EQ(2u, notifications_.size());
+  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
+  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  EXPECT_EQ(2u, commits_.size());
   EXPECT_EQ(2u, server_timestamps_.size());
-  EXPECT_EQ(expected_n1, notifications_[0]);
+  EXPECT_EQ(expected_n1, commits_[0]);
   EXPECT_EQ(ServerTimestampToBytes(42), server_timestamps_[0]);
-  EXPECT_EQ(expected_n2, notifications_[1]);
+  EXPECT_EQ(expected_n2, commits_[1]);
   EXPECT_EQ(ServerTimestampToBytes(43), server_timestamps_[1]);
 }
 
-// Tests handling a server event containing a single notification.
+// Tests handling a server event containing a single commit.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
-  cloud_provider_->WatchNotifications("page_id", "", this);
+  cloud_provider_->WatchCommits("page_id", "", this);
 
   std::string put_content =
       "{\"id\":\"commit_idV\","
@@ -213,17 +211,17 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
 
   watch_client_->OnPut("/app_idV/page_idV/commit_idV", document);
 
-  Notification expected_notification(
+  Commit expected_commit(
       "commit_id", "some_content",
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
   std::string expected_timestamp = ServerTimestampToBytes(1472722368296);
-  EXPECT_EQ(1u, notifications_.size());
-  EXPECT_EQ(expected_notification, notifications_[0]);
+  EXPECT_EQ(1u, commits_.size());
+  EXPECT_EQ(expected_commit, commits_[0]);
   EXPECT_EQ(1u, server_timestamps_.size());
   EXPECT_EQ(expected_timestamp, server_timestamps_[0]);
 }
 
-TEST_F(CloudProviderImplTest, GetNotifications) {
+TEST_F(CloudProviderImplTest, GetCommits) {
   std::string get_response_content =
       "{\"id1V\":"
       "{\"content\":\"xyzV\","
@@ -248,20 +246,19 @@ TEST_F(CloudProviderImplTest, GetNotifications) {
     EXPECT_EQ(Status::OK, status);
     callback_called = true;
 
-    const Notification expected_notification_1(
+    const Commit expected_commit_1(
         "id1", "xyz",
         std::map<ObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
-    const Notification expected_notification_2("id2", "bazinga",
-                                               std::map<ObjectId, Data>{});
+    const Commit expected_commit_2("id2", "bazinga",
+                                   std::map<ObjectId, Data>{});
     EXPECT_EQ(2u, records.size());
-    EXPECT_EQ(expected_notification_1, records[0].notification);
+    EXPECT_EQ(expected_commit_1, records[0].commit);
     EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);
-    EXPECT_EQ(expected_notification_2, records[1].notification);
+    EXPECT_EQ(expected_commit_2, records[1].commit);
     EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
   };
 
-  cloud_provider_->GetNotifications("page_id", ServerTimestampToBytes(42),
-                                    callback);
+  cloud_provider_->GetCommits("page_id", ServerTimestampToBytes(42), callback);
   message_loop_.Run();
 
   EXPECT_EQ(1u, get_keys_.size());
