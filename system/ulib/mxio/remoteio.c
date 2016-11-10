@@ -38,7 +38,7 @@ struct mxrio {
 };
 
 static const char* _opnames[] = MXRIO_OPNAMES;
-static const char* opname(uint32_t op) {
+const char* mxio_opname(uint32_t op) {
     op = MXRIO_OP(op);
     if (op < MXRIO_NUM_OPS) {
         return _opnames[op];

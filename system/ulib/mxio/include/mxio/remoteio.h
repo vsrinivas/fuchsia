@@ -57,6 +57,8 @@ __BEGIN_CDECLS
     "getpeername", "getsockopt", "setsockopt", "getaddrinfo", \
     "setattr", "sync" }
 
+const char* mxio_opname(uint32_t op);
+
 typedef struct mxrio_msg mxrio_msg_t;
 
 typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
