@@ -40,12 +40,10 @@ class FakePageStorage : public PageStorage {
   Status GetUnsyncedCommits(
       std::vector<std::unique_ptr<const Commit>>* commits) override;
   Status MarkCommitSynced(const CommitId& commit_id) override;
-  Status GetDeltaObjects(
-      const CommitId& commit_id,
-      std::vector<std::unique_ptr<const Object>>* objects) override;
-  Status GetUnsyncedObjects(
-      const CommitId& commit_id,
-      std::vector<std::unique_ptr<const Object>>* objects) override;
+  Status GetDeltaObjects(const CommitId& commit_id,
+                         std::vector<ObjectId>* objects) override;
+  Status GetUnsyncedObjects(const CommitId& commit_id,
+                            std::vector<ObjectId>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   void AddObjectFromSync(ObjectIdView object_id,
                          mx::datapipe_consumer data,

@@ -113,15 +113,13 @@ Status FakePageStorage::MarkCommitSynced(const CommitId& commit_id) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status FakePageStorage::GetDeltaObjects(
-    const CommitId& commit_id,
-    std::vector<std::unique_ptr<const Object>>* objects) {
+Status FakePageStorage::GetDeltaObjects(const CommitId& commit_id,
+                                        std::vector<ObjectId>* objects) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status FakePageStorage::GetUnsyncedObjects(
-    const CommitId& commit_id,
-    std::vector<std::unique_ptr<const Object>>* objects) {
+Status FakePageStorage::GetUnsyncedObjects(const CommitId& commit_id,
+                                           std::vector<ObjectId>* objects) {
   return Status::NOT_IMPLEMENTED;
 }
 
