@@ -13,12 +13,12 @@ class ContextEngineTestBase : public MaxwellTestBase {
 
  protected:
   void StartContextAgent(const std::string& url) {
-    auto env_host = std::make_unique<maxwell::AgentEnvironmentHost>();
-    env_host->AddService<maxwell::context_engine::ContextAgentClient>([this,
-                                                                       url](
+    auto agent_host = std::make_unique<maxwell::AgentEnvironmentHost>();
+    agent_host->AddService<maxwell::context_engine::ContextAgentClient>([this,
+                                                                         url](
         fidl::InterfaceRequest<maxwell::context_engine::ContextAgentClient>
             request) { cx_->RegisterContextAgent(url, std::move(request)); });
-    StartAgent(url, std::move(env_host));
+    StartAgent(url, std::move(agent_host));
   }
 
   const maxwell::context_engine::ContextEnginePtr cx_;

@@ -164,16 +164,16 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
   void StartSuggestionAgent(const std::string& url) {
-    auto env_host = std::make_unique<maxwell::AgentEnvironmentHost>();
-    env_host->AddService<SuggestionAgentClient>(
+    auto agent_host = std::make_unique<maxwell::AgentEnvironmentHost>();
+    agent_host->AddService<SuggestionAgentClient>(
         [this, url](fidl::InterfaceRequest<SuggestionAgentClient> request) {
           cx_->RegisterSuggestionAgent(url, std::move(request));
         });
-    env_host->AddService<ProposalManager>(
+    agent_host->AddService<ProposalManager>(
         [this, url](fidl::InterfaceRequest<ProposalManager> request) {
           suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
         });
-    StartAgent(url, std::move(env_host));
+    StartAgent(url, std::move(agent_host));
   }
 
   SuggestionEnginePtr suggestion_engine_;
@@ -283,8 +283,8 @@ TEST_F(SuggestionEngineTest, Dedup) {
 }
 
 // Tests two different agents proposing with the same ID (expect distinct
-// proposals). One agent is the mojo:agents/ideas process while the other is the
-// test itself (mojo:maxwell-test).
+// proposals). One agent is the agents/ideas process while the other is the test
+// itself (maxwell_test).
 TEST_F(SuggestionEngineTest, NamespacingPerAgent) {
   MockGps gps(cx_);
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");

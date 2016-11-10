@@ -105,41 +105,12 @@ extern modular::ApplicationEnvironment* root_environment;
 
 class MaxwellTestBase : public ::testing::Test {
  protected:
-  MaxwellTestBase() {
-    root_environment->CreateNestedEnvironment(
-        test_environment_host_.PassBoundHandle(), GetProxy(&test_environment_),
-        NULL);
-    test_environment_host_.SetEnvironment(test_environment_.get());
-    test_environment_->GetApplicationLauncher(GetProxy(&test_launcher_));
-  };
-
+  MaxwellTestBase();
   virtual ~MaxwellTestBase() = default;
 
   void StartAgent(const std::string& url,
-                  std::unique_ptr<maxwell::AgentEnvironmentHost> env_host) {
-    fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> env_host_handle =
-        agent_host_bindings_.AddBinding(std::move(env_host));
-
-    modular::ApplicationEnvironmentPtr agent_env;
-    test_environment_->CreateNestedEnvironment(std::move(env_host_handle),
-                                               GetProxy(&agent_env), NULL);
-
-    modular::ApplicationLauncherPtr agent_launcher;
-    agent_env->GetApplicationLauncher(GetProxy(&agent_launcher));
-
-    auto launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = url;
-    agent_launcher->CreateApplication(std::move(launch_info), NULL);
-  }
-
-  modular::ServiceProviderPtr StartEngine(const std::string& url) {
-    modular::ServiceProviderPtr services;
-    auto launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = url;
-    launch_info->services = GetProxy(&services);
-    test_launcher_->CreateApplication(std::move(launch_info), NULL);
-    return services;
-  }
+                  std::unique_ptr<maxwell::AgentEnvironmentHost> env_host);
+  modular::ServiceProviderPtr StartEngine(const std::string& url);
 
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {

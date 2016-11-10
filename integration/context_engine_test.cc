@@ -67,7 +67,7 @@ TEST_F(ContextEngineTest, DirectSubscription) {
 TEST_F(ContextEngineTest, NoSpontaneousTransitiveSubscription) {
   MockGps gps(cx_);
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
-
+  Sleep();
   ASYNC_CHECK(!gps.has_subscribers());
 }
 
