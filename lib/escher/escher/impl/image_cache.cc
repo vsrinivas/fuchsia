@@ -79,7 +79,7 @@ ImagePtr ImageCache::NewColorAttachmentImage(
     vk::ImageUsageFlags additional_flags) {
   vk::ImageCreateInfo info;
   info.imageType = vk::ImageType::e2D;
-  info.format = vk::Format::eB8G8R8A8Unorm;
+  info.format = vk::Format::eB8G8R8A8Srgb;
   info.extent = vk::Extent3D{width, height, 1};
   info.mipLevels = 1;
   info.arrayLayers = 1;

@@ -69,6 +69,8 @@ static_library("escher") {
     "impl/naive_gpu_allocator.h",
     "impl/resource.cc",
     "impl/resource.h",
+    "impl/ssdo_sampler.cc",
+    "impl/ssdo_sampler.h",
     "impl/uniform_buffer_pool.cc",
     "impl/uniform_buffer_pool.h",
     "impl/vk/pipeline.cc",

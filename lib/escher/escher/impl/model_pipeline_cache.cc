@@ -55,7 +55,7 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
     layout(location = 0) out vec2 fragUV;
 
     layout(set = 0, binding = 0) uniform PerModel {
-      vec4 brightness;
+      vec2 frag_coord_to_uv_multiplier;
       float time;
     };
 
@@ -133,23 +133,24 @@ constexpr char g_fragment_src[] = R"GLSL(
   layout(location = 0) in vec2 inUV;
 
   layout(set = 0, binding = 0) uniform PerModel {
-    vec4 brightness;
+    vec2 frag_coord_to_uv_multiplier;
     float time;
   };
+
+  layout(set = 0, binding = 1) uniform sampler2D light_tex;
 
   layout(set = 1, binding = 0) uniform PerObject {
     mat4 transform;
     vec4 color;
   };
 
-  layout(set = 1, binding = 1) uniform sampler2D tex;
+  layout(set = 1, binding = 1) uniform sampler2D material_tex;
 
   layout(location = 0) out vec4 outColor;
 
   void main() {
-    // TODO: would use mix(0.4f, 1.0f, brightness), but we currently don't have
-    // access to the GLSL standard library.  See glsl_compiler.h.
-    outColor = (0.4f + 0.6f * brightness) * color * texture(tex, inUV);
+    vec4 light = texture(light_tex, gl_FragCoord.xy * frag_coord_to_uv_multiplier);
+    outColor = light.r * color * texture(material_tex, inUV);
   }
   )GLSL";
 

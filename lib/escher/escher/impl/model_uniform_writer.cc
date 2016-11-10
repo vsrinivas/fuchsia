@@ -89,11 +89,26 @@ void ModelUniformWriter::AllocateBuffersAndDescriptorSets() {
   }
 }
 
-void ModelUniformWriter::WritePerModelData(
-    const ModelData::PerModel& per_model) {
+void ModelUniformWriter::WritePerModelData(const ModelData::PerModel& per_model,
+                                           vk::ImageView texture,
+                                           vk::Sampler sampler) {
   FTL_DCHECK(is_writable_);
   auto ptr = reinterpret_cast<ModelData::PerModel*>(uniforms_->ptr());
   ptr[0] = per_model;
+
+  // Update the texture.
+  vk::DescriptorImageInfo image_info;
+  image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  image_info.imageView = texture;
+  image_info.sampler = sampler;
+  vk::WriteDescriptorSet write;
+  write.dstSet = per_model_descriptor_sets_->get(0);  // the only one
+  write.dstBinding = ModelData::PerObject::kDescriptorSetSamplerBinding;
+  write.dstArrayElement = 0;
+  write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+  write.descriptorCount = 1;
+  write.pImageInfo = &image_info;
+  device_.updateDescriptorSets(1, &write, 0, nullptr);
 }
 
 ModelUniformWriter::PerObjectBinding ModelUniformWriter::WritePerObjectData(

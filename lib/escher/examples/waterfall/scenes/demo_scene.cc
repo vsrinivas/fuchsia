@@ -49,7 +49,5 @@ escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
   model_->set_blur_plane_height(12.0f);
   model_->set_time(stopwatch.GetElapsedSeconds());
 
-  stage->set_brightness(1.0);
-
   return model_.get();
 }

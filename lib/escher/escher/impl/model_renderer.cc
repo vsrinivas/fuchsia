@@ -46,7 +46,8 @@ ModelRenderer::~ModelRenderer() {
 
 void ModelRenderer::Draw(Stage& stage,
                          Model& model,
-                         CommandBuffer* command_buffer) {
+                         CommandBuffer* command_buffer,
+                         const TexturePtr& illumination_texture) {
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
   auto& volume = stage.viewing_volume();
@@ -68,16 +69,24 @@ void ModelRenderer::Draw(Stage& stage,
                             model_data_->per_model_descriptor_set_pool(),
                             model_data_->per_object_descriptor_set_pool());
 
-  ModelData::PerModel per_model;
-  per_model.brightness = vec4(vec3(stage.brightness()), 1.f);
-  per_model.time = model.time();
-  writer.WritePerModelData(per_model);
-
   // TODO: temporary hack... this is a way to allow objects to be drawn with
   // color only... if the object's material doesn't have a texture, then this
   // 1-pixel pure-white texture is used.
   vk::ImageView default_image_view = white_texture_->image_view();
   vk::Sampler default_sampler = white_texture_->sampler();
+
+  ModelData::PerModel per_model;
+  per_model.frag_coord_to_uv_multiplier =
+      vec2(1.f / volume.width(), 1.f / volume.height());
+  per_model.time = model.time();
+  if (illumination_texture) {
+    FTL_DCHECK(!hack_use_depth_prepass);
+    writer.WritePerModelData(per_model, illumination_texture->image_view(),
+                             illumination_texture->sampler());
+  } else {
+    FTL_DCHECK(hack_use_depth_prepass);
+    writer.WritePerModelData(per_model, default_image_view, default_sampler);
+  }
 
   // Write per-object uniforms, and collect a list of bindings that can be
   // used once the uniforms have been flushed to the GPU.
@@ -85,6 +94,7 @@ void ModelRenderer::Draw(Stage& stage,
   {
     const float half_width_recip = 2.f / volume.width();
     const float half_height_recip = 2.f / volume.height();
+    const float depth_range_recip = 1.f / volume.depth_range();
 
     ModelData::PerObject per_object;
     auto& scale_x = per_object.transform[0][0];
@@ -102,7 +112,7 @@ void ModelRenderer::Draw(Stage& stage,
       // Convert "height above the stage" into "distance from the camera",
       // normalized to the range (0,1).  This is passed unaltered through the
       // vertex shader.
-      translate_z = 1.f - (volume.far() + o.position().z / volume.depth());
+      translate_z = 1.f - (volume.far() + o.position().z * depth_range_recip);
       color = vec4(o.material()->color(), 1.f);  // always opaque
 
       // Find the texture to use, either the object's material's texture, or

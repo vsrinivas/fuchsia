@@ -31,17 +31,24 @@ ModelData::~ModelData() {}
 
 const vk::DescriptorSetLayoutCreateInfo&
 ModelData::GetPerModelDescriptorSetLayoutCreateInfo() {
-  static vk::DescriptorSetLayoutBinding binding;
+  constexpr uint32_t kNumBindings = 2;
+  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
   static vk::DescriptorSetLayoutCreateInfo info;
   static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
   if (!ptr) {
-    binding.binding = 0;
-    binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-    binding.descriptorCount = 1;
-    binding.stageFlags =
+    auto& uniform_binding = bindings[0];
+    auto& texture_binding = bindings[1];
+    uniform_binding.binding = 0;
+    uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+    uniform_binding.descriptorCount = 1;
+    uniform_binding.stageFlags =
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
-    info.bindingCount = 1;
-    info.pBindings = &binding;
+    texture_binding.binding = 1;
+    texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    texture_binding.descriptorCount = 1;
+    texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    info.bindingCount = kNumBindings;
+    info.pBindings = bindings;
     ptr = &info;
   }
   return *ptr;

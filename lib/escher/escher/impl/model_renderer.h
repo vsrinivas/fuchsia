@@ -23,7 +23,10 @@ class ModelRenderer {
                 vk::Format color_format,
                 vk::Format depth_format);
   ~ModelRenderer();
-  void Draw(Stage& stage, Model& model, CommandBuffer* command_buffer);
+  void Draw(Stage& stage,
+            Model& model,
+            CommandBuffer* command_buffer,
+            const TexturePtr& illumination_texture);
 
   // TODO: remove
   bool hack_use_depth_prepass = false;

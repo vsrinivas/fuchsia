@@ -29,7 +29,5 @@ class WobblyRingsScene : public Scene {
   escher::MaterialPtr blue_green_;
   escher::MaterialPtr purple_;
 
-  float brightness_change_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(WobblyRingsScene);
 };

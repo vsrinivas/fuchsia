@@ -57,6 +57,7 @@ class ModelPipeline;
 class ModelPipelineCache;
 class ModelRenderer;
 class Resource;
+class SsdoSampler;
 
 typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 typedef ftl::RefPtr<Resource> ResourcePtr;

@@ -24,7 +24,9 @@ class ModelUniformWriter {
 
   // PerModel data is first written to the uniform buffer, flushed to the GPU,
   // and then bound before rendering.
-  void WritePerModelData(const ModelData::PerModel& per_model);
+  void WritePerModelData(const ModelData::PerModel& per_model,
+                         vk::ImageView texture,
+                         vk::Sampler sampler);
   void BindPerModelData(vk::PipelineLayout pipeline_layout,
                         vk::CommandBuffer command_buffer);
 

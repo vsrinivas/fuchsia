@@ -27,10 +27,15 @@ class ModelData {
   struct PerModel {
     // layout(set = 0, ...)
     static constexpr uint32_t kDescriptorSetIndex = 0;
-    // layout(set = 0, binding = 0) uniform PerObject { ... }
+    // layout(set = 0, binding = 0) uniform PerModel { ... }
     static constexpr uint32_t kDescriptorSetUniformBinding = 0;
+    // layout(set = 0, binding = 1) sampler2D PerModelSampler;
+    static constexpr uint32_t kDescriptorSetSamplerBinding = 1;
 
-    vec4 brightness;
+    // Used by the lighting-pass fragment shader to map fragment coordinates to
+    // UV coordinates for the lighting texture.
+    vec2 frag_coord_to_uv_multiplier;
+    // Used for animation in vertex shaders.
     float time;
   };
 

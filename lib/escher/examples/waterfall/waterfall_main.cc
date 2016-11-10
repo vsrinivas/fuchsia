@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmath>
 #include <iostream>
 
 #include "demo.h"
@@ -24,7 +25,7 @@ static constexpr int kDemoHeight = 1440;
 static constexpr float kNear = 24.f;
 static constexpr float kFar = 0.f;
 
-bool g_show_debug_info = false;
+bool g_show_debug_info = true;
 int g_current_scene = 0;
 
 static void key_callback(GLFWwindow* window,
@@ -59,8 +60,7 @@ std::unique_ptr<Demo> create_demo() {
 
   Demo::InstanceParams instance_params;
 
-  // TODO: use make_unique().
-  return std::unique_ptr<Demo>(new Demo(instance_params, window_params));
+  return std::make_unique<Demo>(instance_params, window_params);
 }
 
 int main(int argc, char** argv) {
@@ -82,9 +82,11 @@ int main(int argc, char** argv) {
                  escher::SizeI(0, 0));
     stage.set_viewing_volume(
         escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
-    stage.set_brightness(0.0);
+    // TODO: perhaps lights should be initialized by the various demo scenes.
+    stage.set_key_light(escher::DirectionalLight(
+        escher::vec2(0.25f * M_PI, 0.25f * M_PI), 0.25f * M_PI, 1.f));
+    stage.set_fill_light(escher::AmbientLight(0.3f));
 
-    // AppTestScene scene;
     escher::Stopwatch stopwatch;
     uint64_t frame_count = 0;
     uint64_t first_frame_microseconds;

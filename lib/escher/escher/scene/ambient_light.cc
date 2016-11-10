@@ -6,6 +6,8 @@
 
 namespace escher {
 
+AmbientLight::AmbientLight(float intensity) : intensity_() {}
+
 AmbientLight::AmbientLight() {}
 
 AmbientLight::~AmbientLight() {}

@@ -18,6 +18,7 @@ class GpuUploader;
 class ImageCache;
 class MeshManager;
 class PipelineCache;
+class SsdoSampler;
 
 // Implements the public Escher API.
 class EscherImpl {

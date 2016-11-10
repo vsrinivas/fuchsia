@@ -23,7 +23,7 @@ using escher::ShapeModifier;
 
 WobblyRingsScene::WobblyRingsScene(escher::VulkanContext* vulkan_context,
                                    escher::Escher* escher)
-    : Scene(vulkan_context, escher), brightness_change_(0.0) {}
+    : Scene(vulkan_context, escher) {}
 
 void WobblyRingsScene::Init() {
   auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
@@ -50,7 +50,7 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   Object rectangle(
-      Object::NewRect(vec2(112.f, 112.f), vec2(800.f, 800.f), 2.f, purple_));
+      Object::NewRect(vec2(0.f, 0.f), vec2(2160.f, 1440.f), 2.f, purple_));
   Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 8.f, blue_));
   Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 8.f, blue_));
   Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 15.f, blue_));
@@ -94,16 +94,6 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
   model_->set_blur_plane_height(12.0f);
   model_->set_time(current_time_sec);
-
-  if ((frame_count % 200) == 0) {
-    stage->set_brightness(0.0);
-    brightness_change_ = 0.01;
-  } else if ((frame_count % 100) == 0) {
-    stage->set_brightness(1.0);
-    brightness_change_ = -0.01;
-  } else {
-    stage->set_brightness(stage->brightness() + brightness_change_);
-  }
 
   return model_.get();
 }

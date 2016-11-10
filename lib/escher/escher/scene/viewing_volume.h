@@ -24,7 +24,7 @@ class ViewingVolume {
   float near() const { return near_; }
   float far() const { return far_; }
 
-  float depth() const { return std::abs(near_ - far_); }
+  float depth_range() const { return std::abs(near_ - far_); }
 
   mat4 GetProjectionMatrix() const;
 
