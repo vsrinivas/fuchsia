@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//mojo/public/tools/bindings/mojom.gni")
+import("//lib/fidl/fidl.gni")
 
-mojom("services") {
+fidl("services") {
   sources = [
-    "trace_manager.mojom",
-    "trace_provider.mojom",
+    "trace_manager.fidl",
+    "trace_provider.fidl",
   ]
 }

@@ -5,15 +5,15 @@
 #ifndef APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
 #define APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
 
-#include "mojo/public/interfaces/application/application_connector.mojom.h"
-#include "apps/tracing/services/trace_manager.mojom.h"
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/tracing/services/trace_manager.fidl.h"
 
 namespace tracing {
 
 // Initializes the global |Tracer| and registers its underlying
 // |TraceProvider| with the system default trace provider registry service.
 // Does not take ownership of |app_connector|.
-void InitializeTracer(::mojo::ApplicationConnector* app_connector);
+void InitializeTracer(modular::ApplicationContext* app_context);
 
 // Initializes the global |Tracer| and registers its underlying
 // |TraceProvider| with the specified |registry|.

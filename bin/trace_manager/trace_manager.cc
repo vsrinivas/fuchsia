@@ -5,15 +5,14 @@
 #include <iostream>
 
 #include "apps/tracing/src/trace_manager/trace_manager.h"
-#include "mojo/public/cpp/system/buffer.h"
 
 namespace tracing {
 
 TraceManager::TraceManager() = default;
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(mojo::Array<mojo::String> categories,
-                                mojo::ScopedDataPipeProducerHandle) {
+void TraceManager::StartTracing(fidl::Array<fidl::String> categories,
+                                mx::datapipe_producer output) {
   if (controller_state_ == ControllerState::kStarted)
     return;
 
@@ -29,11 +28,11 @@ void TraceManager::StopTracing() {
 }
 
 void TraceManager::RegisterTraceProvider(
-    mojo::InterfaceHandle<tracing::TraceProvider> handle,
-    const mojo::String& label,
-    mojo::Map<mojo::String, mojo::String> categories) {
-  auto provider = TraceProviderPtr::Create(handle.Pass());
-  trace_providers_.AddInterfacePtr(provider.Pass());
+    fidl::InterfaceHandle<TraceProvider> handle,
+    const fidl::String& label,
+    fidl::Map<fidl::String, fidl::String> categories) {
+  auto provider = TraceProviderPtr::Create(std::move(handle));
+  trace_providers_.AddInterfacePtr(std::move(provider));
 }
 
 }  // namespace tracing

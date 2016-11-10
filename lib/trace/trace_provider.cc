@@ -5,12 +5,11 @@
 #include "apps/tracing/lib/trace/trace_provider.h"
 
 #include "apps/tracing/lib/trace/internal/trace_writer.h"
-#include "apps/tracing/services/trace_manager.mojom.h"
-#include "apps/tracing/services/trace_provider.mojom.h"
+#include "apps/tracing/services/trace_manager.fidl.h"
+#include "apps/tracing/services/trace_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/public/cpp/application/connect.h"
-#include "mojo/public/cpp/bindings/interface_handle.h"
 
 namespace tracing {
 namespace {
@@ -25,13 +24,13 @@ class TraceProviderImpl : public TraceProvider {
   TraceProviderImpl(TraceRegistryPtr registry)
       : state_(State::kStopped), binding_(this) {
     TraceProviderPtr provider;
-    mojo::InterfaceRequest<TraceProvider> provider_request =
-        mojo::GetProxy(&provider);
+    fidl::InterfaceRequest<TraceProvider> provider_request =
+        fidl::GetProxy(&provider);
 
-    binding_.Bind(provider_request.Pass());
+    binding_.Bind(std::move(provider_request));
     registry->RegisterTraceProvider(
-        provider.Pass(), mojo::String::From(label_),
-        mojo::Map<mojo::String, mojo::String>::From(known_categories_));
+        std::move(provider), fidl::String::From(label_),
+        fidl::Map<fidl::String, fidl::String>::From(known_categories_));
   }
 
  private:
@@ -39,9 +38,9 @@ class TraceProviderImpl : public TraceProvider {
   //
   // Preprocesses |categories| and builds a lookup-table
   // for fast checks if a trace event should be traced or not.
-  void Start(mojo::ScopedSharedBufferHandle initial_buffer,
-             mojo::ScopedSharedBufferHandle next_buffer,
-             mojo::Array<mojo::String> categories) override {
+  void Start(mx::vmo initial_buffer,
+             mx::vmo next_buffer,
+             ::fidl::Array<::fidl::String> categories) override {
     if (state_ != State::kStopped)
       return;
 
@@ -60,35 +59,30 @@ class TraceProviderImpl : public TraceProvider {
     state_ = State::kStopped;
     internal::StopTracing();
 
-    cb.Run();
+    cb();
   }
 
   void RecycleBuffer() override {}
 
   enum class State { kStarted, kStopped };
   State state_;
-  mojo::Binding<TraceProvider> binding_;
+  fidl::Binding<TraceProvider> binding_;
   std::string label_ = "HeWhoShallNotBeNamed";
   std::map<std::string, std::string> known_categories_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
 };
-
-// Url of the system default trace provider registry service.
-constexpr const char* kDefaultRegistryUrl = "mojo:trace_manager";
 
 // gTracer is the singleton |Tracer| instance.
 TraceProviderImpl* g_tracer = nullptr;
 
 }  // namespace
 
-void InitializeTracer(::mojo::ApplicationConnector* app_connector) {
-  TraceRegistryPtr registry;
-  mojo::ConnectToService(app_connector, kDefaultRegistryUrl,
-                         mojo::GetProxy(&registry));
+void InitializeTracer(modular::ApplicationContext* app_context) {
+  auto registry = app_context->ConnectToEnvironmentService<TraceRegistry>();
   InitializeTracer(std::move(registry));
 }
 
-void InitializeTracer(::tracing::TraceRegistryPtr registry) {
+void InitializeTracer(TraceRegistryPtr registry) {
   FTL_CHECK(!g_tracer) << "Tracer is already initialized.";
 
   if (g_tracer)

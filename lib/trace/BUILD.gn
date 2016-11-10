@@ -22,13 +22,7 @@ source_set("trace") {
   deps = [
     ":types",
     "//lib/ftl",
-    "//lib/mtl:mtl_with_mojo",
-    "//apps/tracing/services",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/environment",
-    "//mojo/public/cpp/system",
-    "//mojo/public/interfaces/application",
+    "//lib/mtl",
   ]
 }
 
@@ -40,14 +34,10 @@ source_set("provider") {
 
   deps = [
     ":trace",
+    "//apps/modular/lib/app",
     "//lib/ftl",
-    "//lib/mtl:mtl_with_mojo",
+    "//lib/mtl",
     "//apps/tracing/services",
-    "//mojo/public/cpp/application",
-    "//mojo/public/cpp/bindings",
-    "//mojo/public/cpp/environment",
-    "//mojo/public/cpp/system",
-    "//mojo/public/interfaces/application",
   ]
 }
 
@@ -69,7 +59,6 @@ executable("trace_event_tests") {
 
   sources = [
     "tests/categories_matcher_unittest.cc",
-    "tests/main.cc",
     "tests/trace_writer_unittest.cc",
   ]
 
@@ -77,8 +66,7 @@ executable("trace_event_tests") {
     ":trace",
     ":reader",
     "//apps/tracing/services",
-    "//mojo/public/cpp/application:test_support",
-    "//mojo/system",
+    "//lib/mtl/test",
     "//third_party/gtest",
     "//third_party/rapidjson",
   ]
