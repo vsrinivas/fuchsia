@@ -136,17 +136,15 @@ __BEGIN_CDECLS
 // C API
 
 // C Version of RegionAllocator::RegionPool
-typedef struct ralloc_pool {
-// Deliberate empty structure.
-//
-// Region pools are meant to be opaque structures as far as users are
-// concerned.  This empty structure is a pathetic attempt to get some small
-// amount of type safety from our compiler (instead of just using void*s
-// everywhere)
-} ralloc_pool_t;
+// This type is opaque to users; 'struct ralloc_pool' is not actually
+// defined anywhere, but this provides a distinct type for pointers.
+typedef struct ralloc_pool ralloc_pool_t;
 
 // C Version of RegionAllocator
-typedef struct ralloc_allocator { } ralloc_allocator_t; // Deliberate empty structure.
+
+// This type is opaque to users; 'struct ralloc_allocator' is not actually
+// defined anywhere, but this provides a distinct type for pointers.
+typedef struct ralloc_allocator ralloc_allocator_t;
 
 // C Version of RegionAllocator::Region
 typedef struct ralloc_region {
@@ -540,4 +538,3 @@ private:
 };
 
 #endif  // ifdef __cplusplus
-
