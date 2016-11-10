@@ -33,6 +33,19 @@ char* tu_strdup(const char* s)
     return r;
 }
 
+char* tu_asprintf(const char* fmt, ...)
+{
+    va_list args;
+    char* result;
+    va_start(args, fmt);
+    if (vasprintf(&result, fmt, args) < 0) {
+        unittest_printf_critical("out of memory trying to asprintf(%s)\n", fmt);
+        exit(TU_FAIL_ERRCODE);
+    }
+    va_end(args);
+    return result;
+}
+
 void tu_fatal(const char *what, mx_status_t status)
 {
     const char* reason = mx_status_get_string(status);

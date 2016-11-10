@@ -30,6 +30,8 @@ void* tu_malloc(size_t size);
 
 char* tu_strdup(const char* s);
 
+char* tu_asprintf(const char* fmt, ...);
+
 // Print a message saying a syscall (or similar) function failed,
 // and terminate the process.
 // |what| is typically the name of the function that had the syscall failure,
