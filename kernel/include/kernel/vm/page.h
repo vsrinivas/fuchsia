@@ -30,9 +30,6 @@ typedef struct vm_page {
             // in allocated/just freed state, use a linked list to hold the page in a queue
             struct list_node node;
         } free;
-        struct {
-            // nothing here, just holding onto it
-        } wired;
 #if __cplusplus
         struct {
             // attached to a vm object
