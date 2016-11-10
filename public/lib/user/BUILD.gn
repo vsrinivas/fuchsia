@@ -4,14 +4,27 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("user") {
+fidl("public") {
   sources = [
-    "user_runner.fidl",
+    "story_provider.fidl",
     "user_shell.fidl",
   ]
 
   deps = [
-    "//apps/ledger/services",
+    "//apps/mozart/services/views",
+  ]
+}
+
+fidl("user") {
+  sources = [
+    "user_runner.fidl",
+  ]
+
+  public_deps = [
+    ":public",
+  ]
+
+  deps = [
     "//apps/mozart/services/views",
   ]
 }

@@ -8,7 +8,9 @@
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
@@ -82,7 +84,6 @@ class LinkConnection : public LinkWatcher {
   }
 
   void Notify(FidlDocMap docs) override {
-    FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
     if (docs.size() > 0) {
       dst_->SetAllDocuments(std::move(docs));
     }
@@ -98,15 +99,19 @@ class LinkConnection : public LinkWatcher {
 
 class ModuleMonitor : public ModuleWatcher {
  public:
-  ModuleMonitor(ModuleController* const module_client,
-                Story* const story)
+  ModuleMonitor(ModuleController* const module_client, Story* const story)
       : binding_(this), story_(story) {
     InterfaceHandle<ModuleWatcher> watcher;
     binding_.Bind(GetProxy(&watcher));
     module_client->Watch(std::move(watcher));
   }
 
-  void Done() override { story_->Done(); }
+  void OnDone() override {
+    FTL_LOG(INFO) << "RECIPE DONE";
+    story_->Done();
+  }
+
+  void OnStop() override {}
 
  private:
   Binding<ModuleWatcher> binding_;
@@ -211,6 +216,20 @@ class RecipeImpl : public Module, public mozart::BaseView {
             module1_link_->SetAllDocuments(std::move(docs));
           }
         });
+  }
+
+  void Stop(const StopCallback& done) override {
+    // TODO(mesch): This is tentative. Not sure what the right amount
+    // of cleanup it is to ask from a module implementation.
+    connections_.clear();
+    module_monitors_.clear();
+    module1_->Stop([this, done]() {
+      module2_->Stop([this, done]() {
+        module1_link_.reset();
+        module2_link_.reset();
+        done();
+      });
+    });
   }
 
  private:

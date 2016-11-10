@@ -4,15 +4,12 @@
 
 module modular;
 
-import "apps/modular/services/document_store/document.fidl";
 import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/story/module_controller.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
-// This interface is implemented by the story runner application. The
-// service is used to run modules and initialize them with shared
-// data.
-//
-// No service name: created by StoryRunner.
+// This interface is exposed to all modules in a story. It allows to
+// create Link instances and run Module instances.
 interface Story {
   // Creates a new Link instance. The Link instance can be shared with
   // a newly created Module by passing it to StartModule(). In order
@@ -35,73 +32,16 @@ interface Story {
   CreateLink(string name, Link& link);
 
   // Starts a new module. The query identifies the module in some way.
-  // Currently, it's just the URL of the mojo executable, but in the
-  // future it might for example be a specification of a data schema
-  // the module can provide or consume.
-  //
-  // The implementation of StartModule() invokes Initialize() on the
-  // created Module instance.
+  // Currently, it's just the URL of the application executable, but
+  // in the future it might for example be a specification of a data
+  // schema the module can provide or consume.
   StartModule(string query, Link link, ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
   // The module holding this handle to the Story declares it's done
-  // and wants to be torn down. This causes the story runner to take
-  // down the Module instance this handle was passed to, and it
-  // notifies the ModuleController of the Story client that requested
-  // this Module to be started. This causes Done() to be called on all
-  // the module watchers registered on this Module's ModuleController.
+  // and wants to be torn down. The story implementation notifies all
+  // ModuleWatchers registered on the ModuleController by calling
+  // OnDone(), and then calls Stop() on the Module, which in turn
+  // notifies all ModuleWatchers with OnStop().
   Done();
-};
-
-// A handle of this interface is held by the client of Story that
-// requests the start of a module using StartModule().
-//
-// It can be used to register a watcher to be notified when the module
-// stops.
-//
-// It can also be used to request the module to stop. To accomplish
-// that, just close the handle to the ModuleController.
-interface ModuleController {
-  // Registers a watcher that is notified when the module stops.
-  Watch(ModuleWatcher watcher);
-};
-
-// This interface is implemented by the client calling
-// ModuleController::Watch().
-interface ModuleWatcher {
-  // Called when the module instance is stopped.
-  Done();
-};
-
-// This service is implemented by an application that is meant to be
-// run in a story.
-//
-// The Story service implementation of the story runner when requested
-// through StartModule() runs the app, requests the Module service it
-// provides, and if it obtains one, calls Initialize().
-//
-// The arguments to Initialize() are a handle of the Story instance
-// that created the Module, and a Link instance provided by the caller
-// of StartModule(). The Link instance can be used to exchange data
-// with the calling module. The Story service can be used to start
-// more Modules, and to create Link instances to share with those
-// Modules.
-[ServiceName="modular.Module"]  // Created by each module app.
-interface Module {
-  Initialize(Story story, Link link);
-};
-
-// This is the abstraction provided by UserRunner to StoryRunner for
-// state persistence.
-interface StoryStorage {
-  ReadStoryData() => (StoryData? data);
-  WriteStoryData(StoryData data);
-};
-
-struct StoryData {
-  map<string, LinkData> links;
-};
-
-struct LinkData {
-  array<document_store.Document> docs;
 };

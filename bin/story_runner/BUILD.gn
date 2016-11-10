@@ -11,6 +11,7 @@ group("all") {
 
 executable("story_runner") {
   sources = [
+    "module_controller_impl.cc",
     "link_impl.cc",
     "story_impl.cc",
     "story_runner.cc",

@@ -11,7 +11,7 @@
 
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/story/story_storage.fidl.h"
 #include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"

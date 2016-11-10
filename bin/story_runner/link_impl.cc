@@ -7,6 +7,7 @@
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -25,80 +26,54 @@ using fidl::InterfaceHandle;
 using fidl::InterfacePtr;
 using fidl::InterfaceRequest;
 
-struct SharedLinkImplData {
-  SharedLinkImplData(std::shared_ptr<StoryPage> p, const fidl::String& n)
-      : name(n), page_(p) {
-    // The document map is always valid, even when empty.
-    docs_map.mark_non_null();
+LinkImpl::LinkImpl(std::shared_ptr<StoryPage> p, const fidl::String& n)
+    : name(n), page_(p) {
+  // The document map is always valid, even when empty.
+  docs_map.mark_non_null();
 
-    FTL_LOG(INFO) << "SharedLinkImplData() " << name;
-    page_->MaybeReadLink(name, &docs_map);
-  }
-
-  ~SharedLinkImplData() {
-    FTL_LOG(INFO) << "~SharedLinkImplData() " << name;
-    page_->WriteLink(name, docs_map);
-  }
-
-  FidlDocMap docs_map;
-  std::vector<std::unique_ptr<LinkImpl>> impls;
-  const fidl::String name;
-
- private:
-  std::shared_ptr<StoryPage> page_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(SharedLinkImplData);
-};
-
-LinkImpl::LinkImpl(std::shared_ptr<StoryPage> page,
-                   const fidl::String& name,
-                   InterfaceRequest<Link> req)
-    : shared_(new SharedLinkImplData(page, name)),
-      binding_(this, std::move(req)) {
-  FTL_LOG(INFO) << "LinkImpl() " << name << " (primary) ";
-
-  shared_->impls.emplace_back(this);
-
-  // If the primary connection goes down, the whole implementation is
-  // deleted, taking down all remaining connections. This corresponds
-  // to a strong binding on the first connection, and regular bindings
-  // on all later ones. This is just how it is and may be revised in
-  // the future.
-  binding_.set_connection_error_handler([this]() { delete shared_; });
+  FTL_LOG(INFO) << "LinkImpl() " << name;
+  page_->MaybeReadLink(name, &docs_map);
 }
 
-LinkImpl::LinkImpl(InterfaceRequest<Link> req, SharedLinkImplData* const shared)
-    : shared_(shared), binding_(this, std::move(req)) {
-  FTL_LOG(INFO) << "LinkImpl() " << shared->name;
+LinkImpl::~LinkImpl() {
+  FTL_LOG(INFO) << "~LinkImpl() " << name;
+  page_->WriteLink(name, docs_map);
+}
 
+LinkImpl* LinkImpl::New(std::shared_ptr<StoryPage> page,
+                        const fidl::String& name,
+                        InterfaceRequest<Link> link_request) {
+  LinkImpl* const shared = new LinkImpl(page, name);
+  new LinkConnection(shared, std::move(link_request));
+  return shared;
+}
+
+LinkConnection::LinkConnection(LinkImpl* const shared,
+                               fidl::InterfaceRequest<Link> link_request)
+    : shared_(shared), binding_(this, std::move(link_request)) {
+  FTL_LOG(INFO) << "LinkConnection() " << shared->name;
   shared_->impls.emplace_back(this);
   binding_.set_connection_error_handler([this]() { RemoveImpl(); });
 }
 
-LinkImpl::~LinkImpl() {
-  FTL_LOG(INFO) << "~LinkImpl() " << shared_->name;
+LinkConnection::~LinkConnection() {
+  FTL_LOG(INFO) << "~LinkConnection() " << shared_->name;
 }
 
-void LinkImpl::New(std::shared_ptr<StoryPage> page,
-                   const fidl::String& name,
-                   InterfaceRequest<Link> req) {
-  new LinkImpl(page, name, std::move(req));
-}
-
-void LinkImpl::Query(const LinkImpl::QueryCallback& callback) {
+void LinkConnection::Query(const LinkConnection::QueryCallback& callback) {
   callback(shared_->docs_map.Clone());
 }
 
-void LinkImpl::Watch(InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::Watch(InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), false);
 }
 
-void LinkImpl::WatchAll(InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::WatchAll(InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), true);
 }
 
-void LinkImpl::AddWatcher(InterfaceHandle<LinkWatcher> watcher,
-                          const bool self_notify) {
+void LinkConnection::AddWatcher(InterfaceHandle<LinkWatcher> watcher,
+                                const bool self_notify) {
   InterfacePtr<LinkWatcher> watcher_ptr;
   watcher_ptr.Bind(std::move(watcher));
 
@@ -112,7 +87,8 @@ void LinkImpl::AddWatcher(InterfaceHandle<LinkWatcher> watcher,
   watcher_set.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-void LinkImpl::NotifyWatchers(const FidlDocMap& docs, const bool self_notify) {
+void LinkConnection::NotifyWatchers(const FidlDocMap& docs,
+                                    const bool self_notify) {
   if (self_notify) {
     watchers_.ForAllPtrs([&docs](LinkWatcher* const link_changed) {
       link_changed->Notify(docs.Clone());
@@ -123,34 +99,34 @@ void LinkImpl::NotifyWatchers(const FidlDocMap& docs, const bool self_notify) {
   });
 }
 
-void LinkImpl::DatabaseChanged(const FidlDocMap& docs) {
+void LinkConnection::DatabaseChanged(const FidlDocMap& docs) {
   for (auto& dst : shared_->impls) {
     bool self_notify = (dst.get() != this);
     dst->NotifyWatchers(docs, self_notify);
   }
 }
 
-void LinkImpl::Dup(InterfaceRequest<Link> dup) {
-  new LinkImpl(std::move(dup), shared_);
+void LinkConnection::Dup(InterfaceRequest<Link> dup) {
+  new LinkConnection(shared_, std::move(dup));
 }
 
-void LinkImpl::RemoveImpl() {
-  auto it = std::remove_if(
-      shared_->impls.begin(), shared_->impls.end(),
-      [this](const std::unique_ptr<LinkImpl>& p) { return p.get() == this; });
+void LinkConnection::RemoveImpl() {
+  auto it = std::remove_if(shared_->impls.begin(), shared_->impls.end(),
+                           [this](const std::unique_ptr<LinkConnection>& p) {
+                             return p.get() == this;
+                           });
   FTL_DCHECK(it != shared_->impls.end());
   shared_->impls.erase(it, shared_->impls.end());
 }
 
-// The |LinkImpl| object knows which client made the call to AddDocument() or
+// The |LinkConnection| object knows which client made the call to AddDocument()
+// or
 // SetAllDocument(), so it notifies either all clients or all other clients,
 // depending on whether WatchAll() or Watch() was called, respectively.
 //
 // TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
 // the call to SetAllDocument(). Need to find a way to improve this.
-void LinkImpl::AddDocuments(FidlDocMap mojo_add_docs) {
-  FTL_LOG(INFO) << "LinkImpl::AddDocuments() " << shared_->name << " "
-                << mojo_add_docs;
+void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
   DocMap add_docs;
   mojo_add_docs.Swap(&add_docs);
 
@@ -180,21 +156,14 @@ void LinkImpl::AddDocuments(FidlDocMap mojo_add_docs) {
 
   if (dirty) {
     DatabaseChanged(shared_->docs_map);
-  } else {
-    FTL_LOG(INFO) << "LinkImpl::AddDocuments() Skipped notify, not dirty";
   }
 }
 
-void LinkImpl::SetAllDocuments(FidlDocMap new_docs) {
-  FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() " << shared_->name << " "
-                << new_docs;
-
+void LinkConnection::SetAllDocuments(FidlDocMap new_docs) {
   bool dirty = !new_docs.Equals(shared_->docs_map);
   if (dirty) {
     shared_->docs_map.Swap(&new_docs);
     DatabaseChanged(shared_->docs_map);
-  } else {
-    FTL_LOG(INFO) << "LinkImpl::SetAllDocuments() Skipped notify, not dirty";
   }
 }
 

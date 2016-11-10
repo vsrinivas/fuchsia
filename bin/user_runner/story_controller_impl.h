@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -39,32 +40,25 @@ class StoryControllerImpl : public StoryController,
 
   ~StoryControllerImpl() override;
 
- private:  // factory support
+ private:
   // Constructor is private to ensure (by way of New()) that instances
-  // are created always with new. This is necessary because Done()
-  // calls delete this.
+  // are created always with new.
   StoryControllerImpl(
       StoryInfoPtr story_info,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request);
 
- private:  // virtual method implementations
-  // |Story|
+  // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
-
-  // |Story|
   void Start(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
-
-  // |Story|
-  void Stop() override;
-
-  // |Story|
+  void Stop(const StopCallback& done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) override;
 
   // |ModuleWatcher|
-  void Done() override;
+  void OnDone() override;
+  void OnStop() override;
 
   // |LinkWatcher|
   void Notify(FidlDocMap docs) override;
@@ -72,12 +66,12 @@ class StoryControllerImpl : public StoryController,
  private:
   void NotifyStoryWatchers(void (StoryWatcher::*method)());
 
-  // Starts the StoryRunner instance for the given story.
-  void StartStoryRunner(
+  // Starts the Story instance for the given story.
+  void StartStory(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   // Tears down the currently used StoryRunner instance, if any.
-  void TearDownStoryRunner();
+  void TearDownStory(std::function<void()> done);
 
   StoryInfoPtr story_info_;
   StoryProviderImpl* const story_provider_impl_;
@@ -89,6 +83,7 @@ class StoryControllerImpl : public StoryController,
   fidl::Binding<LinkWatcher> link_changed_binding_;
   std::vector<StoryWatcherPtr> story_watchers_;
   StoryPtr story_;
+  StoryContextPtr story_context_;
   LinkPtr root_;
   ModuleControllerPtr module_;
 

@@ -4,14 +4,36 @@
 
 module modular;
 
-import "apps/modular/services/story/story.fidl";
 import "apps/modular/services/story/resolver.fidl";
+import "apps/modular/services/story/story.fidl";
+import "apps/modular/services/story/story_storage.fidl";
 
 // A service to create Story instances configured with services they
-// need.
+// need. To the client of this service, the story is exposed through
+// the StoryContext interface. Modules in this story only get to access
+// the Story service, which is more restricted as it has no Stop()
+// method.
 //
 // This is the main service implemented by the story runner app.
-[ServiceName="modular.StoryFactory"]  // Created by story_runner app.
-interface StoryFactory {
-  CreateStory(Resolver resolver, StoryStorage story_storage, Story& story);
+[ServiceName="modular.StoryRunner"]  // Created by story_runner app.
+interface StoryRunner {
+  CreateStory(Resolver resolver, StoryStorage story_storage,
+              StoryContext& story_context);
+};
+
+// This interface is exposed to clients of the StoryRunner. It allows
+// its client everything the Story interface allows (by accessing the
+// Story interface through GetStory()), plus stopping the Story.
+interface StoryContext {
+  // Gives access to the Story interface to start modules etc.
+  GetStory(Story& story);
+
+  // Stops all Module and Link instances in this Story. Returns when
+  // everything is torn down. The story implementation is deleted only
+  // when the pipe to it closes. If the pipe closes before Stop() is
+  // called, the story is torn down too, but no indication can be
+  // obtained by the client as to when the teardown is complete
+  // (except by notification from LinkWatcher or ModuleWatcher
+  // instances held by the client).
+  Stop() => ();
 };

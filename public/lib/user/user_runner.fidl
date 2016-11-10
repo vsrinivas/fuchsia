@@ -4,7 +4,6 @@
 
 module modular;
 
-import "apps/ledger/services/ledger.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // DeviceRunner requests an instance of this service in order to
@@ -14,88 +13,4 @@ interface UserRunner {
   // Launches a user runner instance for a user identified by
   // |user_id|.
   Launch(array<uint8> user_id, string user_shell, mozart.ViewOwner& view_owner);
-};
-
-// UserRunner implementation creates an instance of this service and
-// passes it to the UserShell service so it can create a new story by
-// URL and to get a list of previously run stories which can be
-// resumed.
-//
-// TODO(mesch): If |StoryProvider| is closed, all associated |Story|
-// objects will have an undefined behavior. Actually they will crash
-// because the user runner impl gets deleted and the story impl still
-// accesses it. Apply same pattern as for Story/Module/Link here.
-interface StoryProvider {
-  // Creates a new story by running the module at |url|. Gives control
-  // over the newly created story through a StroyController.
-  CreateStory(string url, StoryController& story);
-
-  // Obtains a controller for a previously run story identified by its
-  // story ID. Obtaining the controller doesn't run it yet.
-  ResumeStoryById(string story_id, StoryController& story);
-
-  // Obtains a controller for a previously run story identified by its
-  // story info. Obtaining the controller doesn't run it yet.
-  ResumeStoryByInfo(StoryInfo story_info, StoryController& story);
-
-  // Returns IDs of all previously run stories for the user. More
-  // information about the stories can be retrieved using
-  // ResumeStoryById().
-  PreviousStories() => (array<string> story_ids);
-};
-
-// Used by the client of StoryProvider (UserShell) to interact with a
-// single story. Created by StoryProvider.
-interface StoryController {
-  GetInfo() => (StoryInfo info);
-
-  // Runs the |Story| controller by this controller if not running,
-  // else does nothing. |view_owner| is an interface request for the
-  // root view of this story.
-  Start(mozart.ViewOwner& view_owner);
-
-  // Stops this |Story| if it is running, else does nothing.
-  Stop();
-
-  // Registers a listener for changes of the story state.
-  Watch(StoryWatcher watcher);
-};
-
-// To be implemented by clients of StoryController to be notified of
-// changes of the Story. NOTE(mesch): TBD what we really want. It's just a
-// skeleton right now. Conceivably there could be just one method with
-// an updated StoryInfo value as its argument, or each method could
-// have such an argument.
-interface StoryWatcher {
-  // Story starts.
-  OnStart();
-
-  // Data is written to the root link.
-  OnData();
-
-  // Story stopped after Story.Stop() was called.
-  OnStop();
-
-  // Story stopped by root module calling Done().
-  OnDone();
-};
-
-// Information about a story as provided by Story.GetInfo(), to
-// display story information in the UserShell UI.
-struct StoryInfo {
-  // URL of the first mojo application run as a part of this story. Typically
-  // this will be the URL of the recipe.
-  string url;
-
-  // The ID of the Story, under which it's kept in the root page.
-  string id;
-
-  // Whether this story is running on this device.
-  bool is_running;
-
-  // Page id on the user's ledger which stores story information. It
-  // might be NULL until the story is being started. TODO(mesch): This
-  // information does not belong here, as the UserShell does not need
-  // it.
-  array<uint8, 16>? story_page_id;
 };

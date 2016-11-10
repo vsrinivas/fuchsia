@@ -1,0 +1,22 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/document_store/document.fidl";
+
+// The abstraction provided internally by UserRunner to StoryRunner
+// for state persistence.
+interface StoryStorage {
+  ReadStoryData() => (StoryData? data);
+  WriteStoryData(StoryData data);
+};
+
+struct StoryData {
+  map<string, LinkData> links;
+};
+
+struct LinkData {
+  array<document_store.Document> docs;
+};

@@ -7,7 +7,9 @@
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
@@ -41,6 +43,9 @@ constexpr char kDocId[] =
 // Property labels
 constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
 constexpr char kSenderLabel[] = "http://schema.org/sender";
+
+// Property values
+constexpr char kSenderValueSelf[] = "Module1Impl";
 
 using document_store::Document;
 using document_store::Value;
@@ -91,6 +96,13 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
     link_->Watch(std::move(watcher));
   }
 
+  void Stop(const StopCallback& done) override {
+    watcher_binding_.Close();
+    link_.reset();
+    story_.reset();
+    done();
+  }
+
   // See comments on Module2Impl in example-module2.cc.
   void Notify(FidlDocMap docs) override {
     FTL_LOG(INFO) << "Module1Impl::Notify() " << (int64_t)this << docs;
@@ -111,17 +123,33 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
       return false;
 
     Value* sender = editor.GetValue(kSenderLabel);
-    Value* value = editor.GetValue(kCounterLabel);
-    FTL_DCHECK(value != nullptr);
+    Value* counter = editor.GetValue(kCounterLabel);
 
-    int counter = value->get_int_value();
-    value->set_int_value(counter + 1);
+    FTL_DCHECK(counter != nullptr);
 
-    bool updated = counter <= 10;
+    // Ignore values from myself. See example_module2.cc for why
+    // sender can be null here.
+    //
+    // TODO(mesch): Normally nofifications of values from myself are
+    // suppressed by listing using Watch() not WatchAll(). However, if
+    // a story is brought back, the initial link value is sent to
+    // every listener including self.
+    if (sender != nullptr && sender->get_string_value() == kSenderValueSelf) {
+      return false;
+    }
+
+    int n = counter->get_int_value();
+    counter->set_int_value(n + 1);
+
+    bool updated = n <= 10;
     if (updated) {
-      sender->set_string_value("Module1Impl");
+      FTL_LOG(INFO) << "COUNTER " << (n + 1) << " INCREMENT";
+
+      sender->set_string_value(kSenderValueSelf);
       link_->SetAllDocuments(docs_.Clone());
     } else {
+      FTL_LOG(INFO) << "COUNTER " << (n + 1) << " DONE";
+
       // For the last iteration, test that Module2 removes the sender.
       FTL_DCHECK(sender == nullptr);
       story_->Done();

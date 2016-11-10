@@ -5,6 +5,7 @@
 #ifndef MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 #define MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
+#include <memory>
 #include <unordered_map>
 
 #include "apps/modular/lib/document_editor/document_editor.h"
@@ -20,13 +21,14 @@
 
 namespace modular {
 
-struct SharedLinkImplData;
 class StoryPage;
+class LinkConnection;
 
 // A Link is a mutable and observable value shared between modules.
+//
 // When a module requests to run more modules using
-// Story::StartModule(), a Link instance is associated with each
-// such request, i.e. a Link instance is shared between at least two
+// Story::StartModule(), a Link instance is associated with each such
+// request, i.e. a Link instance is shared between at least two
 // modules. The same Link instance can be used in multiple
 // StartModule() requests, so it can be shared between more than two
 // modules. The Dup() method allows to obtain more handles of the same
@@ -35,23 +37,52 @@ class StoryPage;
 // If a watcher is registered through one handle, it only receives
 // notifications for changes by requests through other handles. To
 // make this possible, each connection is associated with a separate
-// implementation instance. All implementation instances share a
-// common internal data object that holds the data
-// (SharedLinkImplData).
+// LinkConnection implementation instance. All implementation
+// instances share a common LinkImpl instance that holds the data.
 //
-// The first such instance is created by StoryImpl::CreateLink()
-// using the New() method. Subsequent such instances associated with
-// the same shared data are created by LinkImpl::Dup(). The first
-// instance is called the primary instance. If the pipe to this
-// instance is closed, all other connections are closed too. If a pipe
-// to a non-primary instance is closed, only that instance is removed
-// from the set of owners of the shared data. This is how it is now,
-// it may change in the future.
-class LinkImpl : public Link {
+// The first such instance is created by StoryImpl::CreateLink() using
+// the LinkImpl::New() method. Subsequent such instances associated
+// with the same shared data are created by LinkConnection::Dup(). The
+// LinkImpl::New() method returns a handle to the shared LinkImpl
+// instance. When that instance is deleted, all connections to it are
+// closed. This is done by the StoryImpl that created it. TODO(mesch):
+// Link instances should already be deleted earlier, when they lose
+// all their references.
+class LinkImpl {
  public:
-  ~LinkImpl() override;
+  ~LinkImpl();
 
-  // Implements Link interface.
+  // Connect a new LinkConnection object on the heap for the given
+  // Link interface request. The underlying shared LinkImpl is
+  // returned and can be deleted. It owns the LinkConnection created
+  // now and all future ones created by Dup(). LinkConnection
+  // instances are deleted when their connections close, and they are
+  // all deleted (and close their connections) when LinkImpl is
+  // deleted.
+  static LinkImpl* New(std::shared_ptr<StoryPage> page,
+                       const fidl::String& name,
+                       fidl::InterfaceRequest<Link> req);
+
+ private:
+  friend class LinkConnection;
+
+  // LinkImpl may not be constructed on the stack, so the constructor
+  // is private.
+  LinkImpl(std::shared_ptr<StoryPage> p, const fidl::String& n);
+
+  FidlDocMap docs_map;
+  std::vector<std::unique_ptr<LinkConnection>> impls;
+  const fidl::String name;
+  std::shared_ptr<StoryPage> page_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
+};
+
+class LinkConnection : public Link {
+ public:
+  ~LinkConnection() override;
+
+  // |Link|
   void AddDocuments(FidlDocMap docs) override;
   void SetAllDocuments(FidlDocMap docs) override;
   void Query(const QueryCallback& callback) override;
@@ -59,24 +90,12 @@ class LinkImpl : public Link {
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;
 
-  // Connect a new LinkImpl object on the heap. It manages its own lifetime.
-  // If this pipe is closed, then everything will be torn down. In comparison,
-  // handles created by Dup() do not affect other handles.
-  static void New(std::shared_ptr<StoryPage> page,
-                  const fidl::String& name,
-                  fidl::InterfaceRequest<Link> req);
-
  private:
-  // LinkImpl may not be constructed on the stack, so the constructors
-  // are private.
+  friend class LinkImpl;
 
-  // Called from New() by outside clients.
-  LinkImpl(std::shared_ptr<StoryPage> page,
-           const fidl::String& name,
-           fidl::InterfaceRequest<Link> req);
-
-  // Called from Dup().
-  LinkImpl(fidl::InterfaceRequest<Link> req, SharedLinkImplData* shared);
+  // LinkConnection may not be constructed on the stack, so the
+  // constructor is private.
+  LinkConnection(LinkImpl* shared, fidl::InterfaceRequest<Link> link_request);
 
   // For use by the binding error handler.
   void RemoveImpl();
@@ -86,9 +105,9 @@ class LinkImpl : public Link {
   void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
   void DatabaseChanged(const FidlDocMap& docs);
 
-  // |shared_| is owned (and eventually deleted) by the LinkImpl
+  // |shared_| is owned (and eventually deleted) by the LinkConnection
   // instance that created it, aka the primary instance.
-  SharedLinkImplData* const shared_;
+  LinkImpl* const shared_;
   fidl::Binding<Link> binding_;
 
   // These watchers do not want self notifications.
@@ -96,7 +115,7 @@ class LinkImpl : public Link {
   // These watchers want all notifications.
   fidl::InterfacePtrSet<LinkWatcher> all_watchers_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
 }  // namespace modular

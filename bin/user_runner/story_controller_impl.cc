@@ -30,12 +30,12 @@ StoryControllerImpl::~StoryControllerImpl() {
   FTL_LOG(INFO) << "~StoryControllerImpl() " << story_info_->id;
 }
 
-// |Story|
+// |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
   callback(story_info_->Clone());
 }
 
-// |Story|
+// |StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   FTL_LOG(INFO) << "StoryControllerImpl::Start() " << story_info_->id;
@@ -44,18 +44,20 @@ void StoryControllerImpl::Start(
     return;
   }
 
-  StartStoryRunner(std::move(view_owner_request));
+  StartStory(std::move(view_owner_request));
   NotifyStoryWatchers(&StoryWatcher::OnStart);
 }
 
-// |Story|
-void StoryControllerImpl::Stop() {
+// |StoryController|
+void StoryControllerImpl::Stop(const StopCallback& done) {
   FTL_LOG(INFO) << "StoryControllerImpl::Stop() " << story_info_->id;
-  TearDownStoryRunner();
-  NotifyStoryWatchers(&StoryWatcher::OnStop);
+  TearDownStory([this, done]() {
+    NotifyStoryWatchers(&StoryWatcher::OnStop);
+    done();
+  });
 }
 
-// |Story|
+// |StoryController|
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<StoryWatcher> story_watcher) {
   FTL_LOG(INFO) << "StoryControllerImpl::Watch() " << story_info_->id;
@@ -64,15 +66,19 @@ void StoryControllerImpl::Watch(
 }
 
 // |ModuleWatcher|
-void StoryControllerImpl::Done() {
-  FTL_LOG(INFO) << "StoryControllerImpl::Done() " << story_info_->id;
-  TearDownStoryRunner();
+void StoryControllerImpl::OnStop() {
+  FTL_LOG(INFO) << "StoryControllerImpl::OnStop() " << story_info_->id;
+  NotifyStoryWatchers(&StoryWatcher::OnStop);
+}
+
+// |ModuleWatcher|
+void StoryControllerImpl::OnDone() {
+  FTL_LOG(INFO) << "StoryControllerImpl::OnDone() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnDone);
 }
 
 // |LinkWatcher|
 void StoryControllerImpl::Notify(FidlDocMap docs) {
-  FTL_LOG(INFO) << "StoryControllerImpl::Notify() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnData);
 }
 
@@ -82,9 +88,9 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
   }
 }
 
-void StoryControllerImpl::StartStoryRunner(
+void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryControllerImpl::StartStoryRunner() "
+  FTL_LOG(INFO) << "StoryControllerImpl::StartStory() "
                 << story_info_->id;
 
   // NOTE(mesch): We start a new application for each of the services
@@ -96,8 +102,8 @@ void StoryControllerImpl::StartStoryRunner(
   story_runner_launch_info->services = GetProxy(&story_runner_app_services);
   story_runner_launch_info->url = "file:///system/apps/story_runner";
   launcher_->CreateApplication(std::move(story_runner_launch_info), nullptr);
-  StoryFactoryPtr story_factory;
-  ConnectToService(story_runner_app_services.get(), GetProxy(&story_factory));
+  StoryRunnerPtr story_runner;
+  ConnectToService(story_runner_app_services.get(), GetProxy(&story_runner));
 
   auto resolver_launch_info = ApplicationLaunchInfo::New();
   ServiceProviderPtr resolver_app_services;
@@ -113,9 +119,10 @@ void StoryControllerImpl::StartStoryRunner(
       story_provider_impl_->GetStoryPage(story_info_->story_page_id),
       story_info_->id, GetProxy(&story_storage));
 
-  story_factory->CreateStory(std::move(resolver), std::move(story_storage),
-                             GetProxy(&story_));
+  story_runner->CreateStory(std::move(resolver), std::move(story_storage),
+                             GetProxy(&story_context_));
 
+  story_context_->GetStory(GetProxy(&story_));
   story_->CreateLink("root", GetProxy(&root_));
 
   fidl::InterfaceHandle<Link> link;
@@ -135,24 +142,28 @@ void StoryControllerImpl::StartStoryRunner(
   root_->Watch(std::move(link_changed));
 }
 
-void StoryControllerImpl::TearDownStoryRunner() {
-  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStoryRunner() "
+void StoryControllerImpl::TearDownStory(std::function<void()> done) {
+  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
                 << story_info_->id;
 
-  // TODO(mesch): Here we need an actual call back when the Story is
-  // down.
+  story_context_->Stop([this, done]() {
+    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
+                  << story_info_->id << " CONT";
 
-  // NOTE(mesch): For now we need to reset all handles we have on the
-  // story, especially on links in the story, such that the
-  // story data gets written to the ledger.
-  root_.reset();
-  link_changed_binding_.Close();
-  module_.reset();
-  story_.reset();
-  module_watcher_binding_.Close();
+    story_info_->is_running = false;
+    story_provider_impl_->WriteStoryInfo(story_info_->Clone());
 
-  story_info_->is_running = false;
-  story_provider_impl_->WriteStoryInfo(story_info_->Clone());
+    root_.reset();
+    link_changed_binding_.Close();
+    module_.reset();
+    story_.reset();
+    module_watcher_binding_.Close();
+
+    done();
+
+    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
+                  << story_info_->id << " DONE";
+  });
 }
 
 }  // namespace modular

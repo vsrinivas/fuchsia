@@ -1,0 +1,58 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/story/story.fidl";
+
+// This service is implemented by an application that is meant to be
+// run in a Story.
+//
+// When Story.StartModule() is invoked, the Module instance is
+// requested from its application and its dependent services and
+// parameters are passed to it by Initialize().
+//
+// TODO(mesch) Change this to a factory method that takes the
+// parameters as arguments, like we do elsewhere.
+[ServiceName="modular.Module"]  // Created by each module app.
+interface Module {
+  // The arguments to Initialize() are the Story instance that created
+  // the Module instance and a Link instance provided by the caller of
+  // Story.StartModule().
+  //
+  // The Link instance can be used to exchange data with the calling
+  // module.
+  //
+  // The Story instance can be used to start more Module instances,
+  // and to create Link instances to share data with those Module
+  // instances. It can also be used to signal that this module wants
+  // to stop.
+  Initialize(Story story, Link link);
+
+  // This method is invoked by the Story instance to notify the module
+  // that something in the system has requested it to stop. What can
+  // cause a request to a module to Stop():
+  //
+  // (1) StoryContext.Stop() is called to stop the whole Story. A
+  //     plausible occasion for this to happen is that the root module
+  //     has signalled that it's Done().
+  //
+  // (2) ModuleController.Stop() is called by the caller that started
+  //     this Module. A plausible occasion for this to happen is that
+  //     the module has signalled before that it's Done().
+  //
+  // Additionally a Module instance is stopped when Module instance
+  // closes its own connection. But obviously in that case, Stop() can
+  // no longer be invoked on it.
+  //
+  // The Story implementation will wait to actually close its
+  // connection to the Module instance until after Stop() returns, or
+  // after a timeout of 1 second (TBD), whichever occurs earlier.
+  //
+  // Other connections the Module instance may hold, such as to Link,
+  // LinkWatcher, ModuleController of other Module instances, may be
+  // closed before Stop() is called. (TBD to give more guarantees.)
+  Stop() => ();
+};

@@ -67,42 +67,41 @@ class DummyUserShellImpl : public UserShell,
     // When some data has arrived, we stop the story.
     if (data_count_ % 5 == 0) {
       FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
-      story_controller_->Stop();
+      story_controller_->Stop([this]() {
+        TearDownStoryController();
+
+        // When the story stops, we start it again.
+        FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this]() {
+              FTL_LOG(INFO) << "DummyUserShell Story.Stop() DONE WAIT for 10s";
+              child_view_key_++;
+              ResumeStory();
+            },
+            ftl::TimeDelta::FromSeconds(10));
+      });
     }
   }
 
   // |StoryWatcher|
-  void OnStop() override {
-    FTL_LOG(INFO) << "DummyUserShell::OnStop()";
-    TearDownStory();
-
-    // When the story stops, we start it again. HACK(mesch): Right now
-    // we don't know when the story is fully torn down and written to
-    // ledger. We just wait for 10 seconds and resume it then.
-    FTL_LOG(INFO) << "DummyUserShell::OnStop() WAIT for 10s";
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() {
-          FTL_LOG(INFO) << "DummyUserShell::OnStop() DONE WAIT for 10s";
-          child_view_key_++;
-          ResumeStory();
-        },
-        ftl::TimeDelta::FromSeconds(10));
-  }
+  void OnStop() override { FTL_LOG(INFO) << "DummyUserShell::OnStop()"; }
 
   // |StoryWatcher|
   void OnDone() override {
     FTL_LOG(INFO) << "DummyUserShell::OnDone()";
-    TearDownStory();
+    story_controller_->Stop([this]() {
+      TearDownStoryController();
 
-    // When the story is done, we start the next one.
-    FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 10s";
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() {
-          FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 10s";
-          child_view_key_++;
-          CreateStory(kFlutterModuleUrl);
-        },
-        ftl::TimeDelta::FromSeconds(10));
+      // When the story is done, we start the next one.
+      FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 20s";
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+          [this]() {
+            FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 20s";
+            child_view_key_++;
+            CreateStory(kFlutterModuleUrl);
+          },
+          ftl::TimeDelta::FromSeconds(20));
+    });
   }
 
   // |mozart::BaseView|
@@ -188,7 +187,10 @@ class DummyUserShellImpl : public UserShell,
     GetViewContainer()->AddChild(child_view_key_, std::move(story_view));
   }
 
-  void TearDownStory() { story_watcher_binding_.Close(); }
+  void TearDownStoryController() {
+    story_watcher_binding_.Close();
+    story_controller_.reset();
+  }
 
   StrongBinding<UserShell> binding_;
   fidl::Binding<StoryWatcher> story_watcher_binding_;

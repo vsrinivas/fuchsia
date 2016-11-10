@@ -8,7 +8,6 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -20,28 +19,29 @@
 
 namespace modular {
 
-// The StoryRunnerApp provides the StoryFactory service. The story
+// The StoryRunnerApp provides the StoryRunner service. The story
 // factory doesn't need separate instances because it doesn't have
 // state or parameters, so the StoryRunnerApp implements it directly.
-class StoryRunnerApp : public StoryFactory {
+class StoryRunnerApp : public StoryRunner {
  public:
-  StoryRunnerApp() :
-      application_context_(ApplicationContext::CreateFromStartupInfo()) {
-    application_context_->outgoing_services()->AddService<StoryFactory>(
-        [this](fidl::InterfaceRequest<StoryFactory> request) {
+  StoryRunnerApp()
+      : application_context_(ApplicationContext::CreateFromStartupInfo()) {
+    application_context_->outgoing_services()->AddService<StoryRunner>(
+        [this](fidl::InterfaceRequest<StoryRunner> request) {
           bindings_.AddBinding(this, std::move(request));
         });
   }
 
  private:
-  void CreateStory(fidl::InterfaceHandle<Resolver> resolver,
-                   fidl::InterfaceHandle<StoryStorage> story_storage,
-                   fidl::InterfaceRequest<Story> story) override {
+  void CreateStory(
+      fidl::InterfaceHandle<Resolver> resolver,
+      fidl::InterfaceHandle<StoryStorage> story_storage,
+      fidl::InterfaceRequest<StoryContext> story_context_request) override {
     new StoryImpl(application_context_, std::move(resolver),
-                  std::move(story_storage), std::move(story));
+                  std::move(story_storage), std::move(story_context_request));
   }
 
-  fidl::BindingSet<StoryFactory> bindings_;
+  fidl::BindingSet<StoryRunner> bindings_;
   std::shared_ptr<ApplicationContext> application_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
 };

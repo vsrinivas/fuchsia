@@ -12,7 +12,7 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
-#include "apps/modular/services/user/user_runner.fidl.h"
+#include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

@@ -5,7 +5,9 @@
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
@@ -35,6 +37,9 @@ constexpr char kDocId[] =
 // Property labels
 constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
 constexpr char kSenderLabel[] = "http://schema.org/sender";
+
+// Property values
+constexpr char kSenderValueSelf[] = "Module2Impl";
 
 using document_store::Document;
 using document_store::Value;
@@ -84,6 +89,13 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
     link_->Watch(std::move(watcher));
   }
 
+  void Stop(const StopCallback& done) override {
+    watcher_binding_.Close();
+    link_.reset();
+    story_.reset();
+    done();
+  }
+
   // Whenever the module sees a changed value, it increments it by 1
   // and writes it back. This works because the module is not notified
   // of changes from itself. More precisely, a watcher registered
@@ -100,10 +112,20 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
     Value* sender = editor.GetValue(kSenderLabel);
     Value* counter = editor.GetValue(kCounterLabel);
 
-    FTL_DCHECK(sender != nullptr);
     FTL_DCHECK(counter != nullptr);
 
-    sender->set_string_value("Module2Impl");
+    // Ignore values from myself. See below for why sender can be null
+    // here.
+    //
+    // TODO(mesch): Normally nofifications of values from myself are
+    // suppressed by listing using Watch() not WatchAll(). However, if
+    // a story is brought back, the initial link value is sent to
+    // every listener including self.
+    if (sender == nullptr || sender->get_string_value() == kSenderValueSelf) {
+      return;
+    }
+
+    sender->set_string_value(kSenderValueSelf);
 
     int n = counter->get_int_value() + 1;
     counter->set_int_value(n);
