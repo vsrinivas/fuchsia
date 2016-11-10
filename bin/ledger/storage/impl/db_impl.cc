@@ -42,6 +42,8 @@ constexpr ftl::StringView kUnsyncedObjectPrefix = "unsynced/objects/";
 
 constexpr ftl::StringView kNodeSizeKey = "node-size";
 
+constexpr ftl::StringView kSyncMetadata = "sync-metadata";
+
 std::string Concatenate(std::initializer_list<ftl::StringView> l) {
   std::string result;
   size_t result_size = 0;
@@ -448,6 +450,14 @@ Status DbImpl::GetNodeSize(size_t* node_size) {
   }
   *node_size = *reinterpret_cast<const size_t*>(value.data());
   return Status::OK;
+}
+
+Status DbImpl::SetSyncMetadata(ftl::StringView sync_state) {
+  return Put(kSyncMetadata, sync_state);
+}
+
+Status DbImpl::GetSyncMetadata(std::string* sync_state) {
+  return Get(kSyncMetadata, sync_state);
 }
 
 Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,

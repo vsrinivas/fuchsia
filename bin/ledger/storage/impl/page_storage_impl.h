@@ -79,6 +79,8 @@ class PageStorageImpl : public PageStorage {
                               std::unique_ptr<const Object>* object) override;
   Status AddObjectSynchronous(convert::ExtendedStringView data,
                               std::unique_ptr<const Object>* object) override;
+  Status SetSyncMetadata(ftl::StringView sync_state) override;
+  Status GetSyncMetadata(std::string* sync_state) override;
 
  private:
   class FileWriter;

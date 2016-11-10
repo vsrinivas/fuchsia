@@ -183,6 +183,14 @@ Status FakePageStorage::AddObjectSynchronous(
   return GetObjectSynchronous(object_id, object);
 }
 
+Status FakePageStorage::SetSyncMetadata(ftl::StringView sync_state) {
+  return Status::NOT_IMPLEMENTED;
+}
+
+Status FakePageStorage::GetSyncMetadata(std::string* sync_state) {
+  return Status::NOT_IMPLEMENTED;
+}
+
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
 FakePageStorage::GetJournals() const {
   return journals_;

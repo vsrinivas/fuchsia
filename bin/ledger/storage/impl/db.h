@@ -179,6 +179,12 @@ class DB {
   // |NOT_FOUND| if the node_size is not defined, yet.
   virtual Status GetNodeSize(size_t* node_size) = 0;
 
+  // Sets the opaque sync metadata associated with this page.
+  virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;
+
+  // Retrieves the opaque sync metadata associated with this page.
+  virtual Status GetSyncMetadata(std::string* sync_state) = 0;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(DB);
 };

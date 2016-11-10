@@ -16,6 +16,7 @@
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 
 namespace storage {
@@ -112,6 +113,13 @@ class PageStorage {
   virtual Status AddObjectSynchronous(
       convert::ExtendedStringView data,
       std::unique_ptr<const Object>* object) = 0;
+
+  // Sets the opaque sync metadata associated with this page. This state is
+  // persisted through restarts and can be retrieved using |GetSyncMetadata()|.
+  virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;
+
+  // Retrieves the opaque sync metadata associated with this page.
+  virtual Status GetSyncMetadata(std::string* sync_state) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorage);

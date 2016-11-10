@@ -254,5 +254,14 @@ TEST_F(DBTest, NodeSize) {
   EXPECT_EQ(1024u, node_size);
 }
 
+TEST_F(DBTest, SyncMetadata) {
+  std::string sync_state;
+  EXPECT_EQ(Status::NOT_FOUND, db_->GetSyncMetadata(&sync_state));
+
+  EXPECT_EQ(Status::OK, db_->SetSyncMetadata("bazinga"));
+  EXPECT_EQ(Status::OK, db_->GetSyncMetadata(&sync_state));
+  EXPECT_EQ("bazinga", sync_state);
+}
+
 }  // namespace
 }  // namespace storage

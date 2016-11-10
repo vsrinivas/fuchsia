@@ -433,6 +433,14 @@ Status PageStorageImpl::AddObjectSynchronous(
   return GetObjectSynchronous(object_id, object);
 }
 
+Status PageStorageImpl::SetSyncMetadata(ftl::StringView sync_state) {
+  return db_.SetSyncMetadata(sync_state);
+}
+
+Status PageStorageImpl::GetSyncMetadata(std::string* sync_state) {
+  return db_.GetSyncMetadata(sync_state);
+}
+
 void PageStorageImpl::NotifyWatchers(const Commit& commit,
                                      ChangeSource source) {
   for (CommitWatcher* watcher : watchers_) {

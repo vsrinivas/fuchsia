@@ -169,6 +169,12 @@ class FakeDbImpl : public DB {
   }
   Status SetNodeSize(size_t node_size) override { return Status::IO_ERROR; }
   Status GetNodeSize(size_t* node_size) override { return Status::IO_ERROR; }
+  Status SetSyncMetadata(ftl::StringView sync_state) override {
+    return Status::IO_ERROR;
+  }
+  Status GetSyncMetadata(std::string* sync_state) override {
+    return Status::IO_ERROR;
+  }
 
  private:
   PageStorageImpl* page_storage_;
@@ -620,6 +626,15 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
   EXPECT_EQ(1, watcher.commit_count);
   EXPECT_EQ(commit_id, watcher.last_commit_id);
   EXPECT_EQ(ChangeSource::LOCAL, watcher.last_source);
+}
+
+TEST_F(PageStorageTest, SyncMetadata) {
+  std::string sync_state;
+  EXPECT_EQ(Status::NOT_FOUND, storage_->GetSyncMetadata(&sync_state));
+
+  EXPECT_EQ(Status::OK, storage_->SetSyncMetadata("bazinga"));
+  EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(&sync_state));
+  EXPECT_EQ("bazinga", sync_state);
 }
 
 }  // namespace
