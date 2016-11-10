@@ -12,11 +12,8 @@ import "apps/mozart/services/views/view_token.fidl";
 [ServiceName="modular.UserRunner"]  // Created by user_runner application.
 interface UserRunner {
   // Launches a user runner instance for a user identified by
-  // |user_id|. Returns false if there is a problem with |user_id| or
-  // |Launch| has already been called. If successful, connects to the
-  // view associated with this user runner instance.
-  Launch(ledger.Identity user_id, mozart.ViewOwner& view_owner) =>
-      (bool success);
+  // |user_id|.
+  Launch(array<uint8> user_id, mozart.ViewOwner& view_owner);
 };
 
 // UserRunner implementation creates an instance of this service and

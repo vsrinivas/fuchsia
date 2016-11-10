@@ -28,7 +28,6 @@
 namespace modular {
 
 namespace {
-const char kAppId[] = "modular_device_runner";
 
 using fidl::Array;
 using fidl::GetProxy;
@@ -58,20 +57,7 @@ class DeviceRunnerImpl : public DeviceRunner {
                                  GetProxy(&user_runner_controller_));
 
     ConnectToService(services.get(), fidl::GetProxy(&user_runner_));
-
-    StructPtr<ledger::Identity> identity = ledger::Identity::New();
-    identity->user_id = to_array(username);
-    // |app_id| must not be null so it will pass mojo validation and must not
-    // be empty or we'll get ledger::Status::AUTHENTICATION_ERROR when
-    // UserRunner calls GetLedger().
-    // TODO(jimbe): When there's support from the Ledger, open the user here,
-    // then pass down a handle that is restricted from opening other users.
-    identity->app_id = to_array(kAppId);
-
-    user_runner_->Launch(
-        std::move(identity), std::move(view_owner_request), [](bool success) {
-          FTL_LOG(INFO) << "DeviceRunnerImpl::Login() UserRunner.Launch()";
-        });
+    user_runner_->Launch(to_array(username), std::move(view_owner_request));
   }
 
   InterfacePtr<ApplicationLauncher> launcher_;

@@ -161,32 +161,33 @@ class UserRunnerImpl : public UserRunner {
 
  private:
   // |UserRunner|:
-  void Launch(ledger::IdentityPtr identity,
-              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-              const LaunchCallback& callback) override {
+  void Launch(
+      fidl::Array<uint8_t> user_id,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     FTL_LOG(INFO) << "UserRunnerImpl::Launch()";
 
-    // TODO(alhaad): Instead of extracting user_id from identity, the device
-    // runner should pass the user_id directly.
-    user_runner_scope_ = std::make_unique<UserRunnerScope>(
-        application_context_, identity->user_id.Clone());
+    user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
+                                                           std::move(user_id));
 
-    callback(true);
+    RunUserShell(std::move(view_owner_request));
 
     ServiceProviderPtr environment_services;
     user_runner_scope_->GetEnvironment()->GetServices(
         GetProxy(&environment_services));
-    StartUserShell(ConnectToService<ledger::Ledger>(environment_services.get()),
-                   std::move(view_owner_request));
+    fidl::InterfaceHandle<StoryProvider> story_provider;
+    new StoryProviderImpl(
+        user_runner_scope_->GetEnvironment(),
+        ConnectToService<ledger::Ledger>(environment_services.get()),
+        GetProxy(&story_provider));
+
+    user_shell_->SetStoryProvider(std::move(story_provider));
   }
 
-  // Run the User shell and provide it the |StoryProvider| interface.
-  void StartUserShell(
-      fidl::InterfacePtr<ledger::Ledger> ledger,
+  // This method starts UserShell in a new process, connects to its
+  // |ViewProvider| interface, passes a |ViewOwner| request, gets
+  // |ServiceProvider| and finally connects to UserShell.
+  void RunUserShell(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-    // First use ViewProvider service to plumb |view_owner_request| and get
-    // the
-    // associated service provider.
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr app_services;
@@ -209,12 +210,6 @@ class UserRunnerImpl : public UserRunner {
 
     // Use this service provider to get |UserShell| interface.
     ConnectToService(view_services.get(), GetProxy(&user_shell_));
-
-    fidl::InterfaceHandle<StoryProvider> story_provider;
-    new StoryProviderImpl(user_runner_scope_->GetEnvironment(),
-                          std::move(ledger), GetProxy(&story_provider));
-
-    user_shell_->SetStoryProvider(std::move(story_provider));
   }
 
   std::shared_ptr<ApplicationContext> application_context_;
