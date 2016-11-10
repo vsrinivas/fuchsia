@@ -420,7 +420,7 @@ void HandleWatcherThreadState::Run() {
   consumer_handle_.reset();
 }
 
-std::unordered_map<mx_handle_t, std::thread*>
+std::unordered_map<mx_handle_t, std::thread>
     HandleWatcher::handle_watcher_threads_;
 std::mutex HandleWatcher::handle_watcher_threads_mutex_;
 
@@ -433,14 +433,14 @@ mx::channel HandleWatcher::Start() {
     return mx::channel();
 
   // Spawn thread and pass one end of the channel to it.
-  std::thread* thread = new std::thread(ThreadMain, consumer_handle.release());
+  std::thread thread(ThreadMain, consumer_handle.release());
 
   {
     std::lock_guard<std::mutex> lock(handle_watcher_threads_mutex_);
     // Record the thread object so that we can join on it during shutdown.
     FTL_CHECK(handle_watcher_threads_.find(producer_handle.get()) ==
               handle_watcher_threads_.end());
-    handle_watcher_threads_[producer_handle.get()] = thread;
+    handle_watcher_threads_[producer_handle.get()] = std::move(thread);
   }
 
   // Return producer end of channel to caller.
@@ -461,44 +461,38 @@ mx_status_t HandleWatcher::SendCommand(mx_handle_t producer_handle,
                           sizeof(command), nullptr, 0);
 }
 
-std::thread* HandleWatcher::RemoveLocked(mx_handle_t producer_handle) {
-  std::thread* t;
-  auto mapping = handle_watcher_threads_.find(producer_handle);
-  if (mapping == handle_watcher_threads_.end()) {
-    return nullptr;
-  }
-  t = mapping->second;
-  handle_watcher_threads_.erase(producer_handle);
-  return t;
+std::thread HandleWatcher::RemoveLocked(mx_handle_t producer_handle) {
+  std::thread result;
+  auto it = handle_watcher_threads_.find(producer_handle);
+  if (it == handle_watcher_threads_.end())
+    return std::thread();
+  result.swap(it->second);
+  handle_watcher_threads_.erase(it);
+  return result;
 }
 
-void HandleWatcher::Stop(mx_handle_t producer_handle) {
-  std::thread* t;
+void HandleWatcher::Stop(mx::channel producer_handle) {
+  std::thread thread;
   {
     std::lock_guard<std::mutex> lock(handle_watcher_threads_mutex_);
-    t = RemoveLocked(producer_handle);
+    thread = RemoveLocked(producer_handle.get());
   }
 
-  if (t == nullptr) {
+  if (!thread.joinable())
     return;
-  }
 
-  SendCommand(producer_handle, HandleWatcherCommand::Shutdown());
-  t->join();
-
-  mx_handle_close(producer_handle);
-  delete t;
+  SendCommand(producer_handle.get(), HandleWatcherCommand::Shutdown());
+  thread.join();
 }
 
 void HandleWatcher::StopLocked(mx_handle_t producer_handle) {
-  std::thread* t = RemoveLocked(producer_handle);
-  FTL_CHECK(t != nullptr);
+  std::thread thread = RemoveLocked(producer_handle);
+  FTL_CHECK(thread.joinable());
 
   SendCommand(producer_handle, HandleWatcherCommand::Shutdown());
-  t->join();
+  thread.join();
 
   mx_handle_close(producer_handle);
-  delete t;
 }
 
 void HandleWatcher::StopAll() {

@@ -170,7 +170,7 @@ class HandleWatcher {
 
   // Stops and joins the handle watcher thread at the other end of the
   // given channel handle.
-  static void Stop(mx_handle_t producer_handle);
+  static void Stop(mx::channel producer_handle);
 
   // Stops and joins all handle watcher threads.
   static void StopAll();
@@ -181,7 +181,7 @@ class HandleWatcher {
   // Remove the mapping for |producer_handle| from |handle_watcher_threads_| and
   // return the associated thread object. Assumes
   // |handle_watcher_threads_mutex_| is held.
-  static std::thread* RemoveLocked(mx_handle_t producer_handle);
+  static std::thread RemoveLocked(mx_handle_t producer_handle);
 
   // Remove the mapping for |producer_handle| from |handle_watcher_threads_| and
   // join the associated thread. Assumes |handle_watcher_threads_mutex_| is
@@ -189,7 +189,7 @@ class HandleWatcher {
   static void StopLocked(mx_handle_t producer_handle);
 
   // A mapping from control handle to handle watcher thread.
-  static std::unordered_map<mx_handle_t, std::thread*> handle_watcher_threads_;
+  static std::unordered_map<mx_handle_t, std::thread> handle_watcher_threads_;
 
   // Protects |handle_watcher_threads_|
   static std::mutex handle_watcher_threads_mutex_;
