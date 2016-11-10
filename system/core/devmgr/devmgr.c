@@ -147,6 +147,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
         // probe for partition table
         ioctl_device_bind(fd, "gpt", 4);
+        close(fd);
     } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
         close(fd);
         launch_minfs(name);
