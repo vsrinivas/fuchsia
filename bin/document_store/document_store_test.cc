@@ -98,7 +98,7 @@ class DocumentStoreTest {
 
     // Test that it is possible to connect to the document store factory.
     launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/modular/document_store";
+    launch_info->url = "file:///system/apps/document_store";
     launch_info->services = fidl::GetProxy(&child_services);
     context_->launcher()->CreateApplication(
         std::move(launch_info), fidl::GetProxy(&docstore_factory_controller_));
@@ -192,9 +192,11 @@ class DocumentStoreTest {
 
     fidl::InterfaceHandle<Transaction> transaction_handle;
     FTL_CHECK(docstore_->BeginTransaction(&transaction_handle));
+    FTL_CHECK(transaction_handle.is_valid());
     auto transaction = fidl::SynchronousInterfacePtr<Transaction>::Create(
         std::move(transaction_handle));
-    transaction->AddOne(std::move(document));
+    FTL_CHECK(!document.is_null());
+    transaction->PutOne(std::move(document));
 
     document_store::Status docstore_status;
     transaction->Commit(&docstore_status);
@@ -229,7 +231,7 @@ class DocumentStoreTest {
 
     DocumentPtr document(Document::New());
     document->docid = "to_be_deleted";
-    transaction->AddOne(std::move(document));
+    transaction->PutOne(std::move(document));
 
     document_store::Status docstore_status;
     transaction->Commit(&docstore_status);
@@ -271,17 +273,17 @@ class DocumentStoreTest {
 
     document->properties["prop1"] = Value::New();
     document->properties["prop1"]->set_string_value("value1");
-    transaction->AddOne(document.Clone());
+    transaction->PutOne(document.Clone());
 
     document->docid = "docid2";
     document->properties["prop1"]->set_string_value("value2");
-    transaction->AddOne(document.Clone());
+    transaction->PutOne(document.Clone());
 
     document->docid = "docid3";
     document->properties.reset();
     document->properties["prop2"] = Value::New();
     document->properties["prop2"]->set_string_value("value2");
-    transaction->AddOne(document.Clone());
+    transaction->PutOne(document.Clone());
 
     document_store::Status docstore_status;
     transaction->Commit(&docstore_status);
@@ -337,8 +339,8 @@ class DocumentStoreTest {
 
     docstore_factory_->NewDocumentStore(&docstore_status, &docstore_handle);
 
-    FTL_CHECK(docstore_handle.is_valid());
     FTL_CHECK(docstore_status == Status::OK);
+    FTL_CHECK(docstore_handle.is_valid());
 
     docstore_ = fidl::SynchronousInterfacePtr<DocumentStore>::Create(
         std::move(docstore_handle));

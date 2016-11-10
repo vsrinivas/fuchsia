@@ -4,8 +4,8 @@
 #pragma once
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/modular/src/document_store/values.h"
 #include "apps/modular/services/document_store/document.fidl.h"
+#include "apps/modular/src/document_store/values.h"
 #include "lib/ftl/macros.h"
 
 namespace document_store {
@@ -167,6 +167,37 @@ bool NextDocumentFromEntries(fidl::Array<ledger::EntryPtr>::Iterator* it,
   }
 
   return true;
+}
+
+// Computes the difference between the |original| and the |recent| document.
+// Null values indicate that the value is to be deleted.
+void DocumentDiff(const DocumentPtr& original, const DocumentPtr& recent,
+                  DocumentPtr* diff) {
+  if (original.is_null()) {
+    *diff = recent.Clone();
+    return;
+  }
+  *diff = Document::New();
+  FTL_CHECK(original->docid == recent->docid);
+
+  // Every property in original but not recent, must be deleted.
+  for (auto it = original->properties.cbegin();
+       original->properties.cend() != it; ++it) {
+    if (recent->properties.end() == recent->properties.find(it.GetKey())) {
+      (*diff)->properties.insert(it.GetKey(), nullptr);
+    }
+  }
+
+  // Every property that is in recent and absent from or different in original
+  // must be written.
+  for (auto it = recent->properties.cbegin(); recent->properties.cend() != it;
+       ++it) {
+    auto original_item = original->properties.find(it.GetKey());
+    if (original->properties.end() == original_item ||
+        !it.GetValue().Equals(original_item.GetValue())) {
+      (*diff)->properties[it.GetKey()] = it.GetValue().Clone();
+    }
+  }
 }
 
 }  // namespace internal

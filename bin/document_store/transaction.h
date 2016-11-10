@@ -12,6 +12,7 @@
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 
 namespace document_store {
@@ -100,6 +101,7 @@ class TransactionImpl : public Transaction {
 
   void Add(fidl::Array<document_store::DocumentPtr> docs,
            const AddCallback& callback) override {
+    FTL_LOG(WARNING) << "Add is deprecated. Please use Put.";
     internal::VoidCallbackTracker* callback_tracker =
         new internal::VoidCallbackTracker(docs.size(),
                                           [callback]() { callback(); });
@@ -111,48 +113,31 @@ class TransactionImpl : public Transaction {
 
   void AddOne(document_store::DocumentPtr document,
               const AddOneCallback& callback) override {
+    FTL_LOG(WARNING) << "AddOne is deprecated. Please use PutOne.";
+    ApplyUpdate(std::move(document), callback);
+  }
+
+  void Put(fidl::Array<document_store::DocumentPtr> documents,
+           const PutCallback& callback) override {
     internal::VoidCallbackTracker* callback_tracker =
-        new internal::VoidCallbackTracker(document->properties.size() + 1,
+        new internal::VoidCallbackTracker(documents.size(),
                                           [callback]() { callback(); });
-    fidl::Array<uint8_t> key;
-    fidl::Array<uint8_t> value;
-
-    // Add the synthetic "docid" property.
-    ValuePtr docid_value(Value::New());
-    docid_value->set_iri(document->docid);
-    internal::LedgerKeyValueForProperty(document->docid, "docid", docid_value,
-                                        &key, &value);
-    page_->Put(std::move(key), std::move(value),
-               [callback_tracker](ledger::Status ledger_status) {
-                 callback_tracker->Run();
-               });
-
-    for (auto it = document->properties.cbegin();
-         document->properties.cend() != it; ++it) {
-      internal::LedgerKeyValueForProperty(document->docid, it.GetKey(),
-                                          it.GetValue(), &key, &value);
-      if (!value.is_null()) {
-        page_->Put(std::move(key), std::move(value),
-                   [callback_tracker](ledger::Status ledger_status) {
-                     callback_tracker->Run();
-                   });
-      } else {
-        page_->Delete(std::move(key),
-                      [callback_tracker](ledger::Status ledger_status) {
-                        callback_tracker->Run();
-                      });
-      }
+    for (size_t i = 0; i < documents.size(); ++i) {
+      PutOne(std::move(documents.at(i)),
+             [callback_tracker]() { callback_tracker->Run(); });
     }
   };
 
-  void AddReplace(fidl::Array<document_store::DocumentPtr> docs,
-                  const AddReplaceCallback& callback) override {
-    FTL_LOG(FATAL) << "Not implemented yet!";
-  };
-
-  void AddReplaceOne(document_store::DocumentPtr doc,
-                     const AddReplaceOneCallback& callback) override {
-    FTL_LOG(FATAL) << "Not implemented yet!";
+  void PutOne(document_store::DocumentPtr document,
+              const PutOneCallback& callback) override {
+    GetDocument(document->docid, ftl::MakeCopyable([
+                  this, document = std::move(document), callback
+                ](Status status, DocumentPtr original) mutable {
+                  // TODO(azani): Handle status != Status::OK.
+                  DocumentPtr diff;
+                  internal::DocumentDiff(original, document, &diff);
+                  ApplyUpdate(std::move(diff), callback);
+                }));
   };
 
   void Delete(fidl::Array<fidl::String> docids,
@@ -237,5 +222,83 @@ class TransactionImpl : public Transaction {
   ledger::PagePtr page_;
   fidl::Binding<Transaction> binding_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TransactionImpl);
+
+  void GetDocument(
+      const fidl::String& docid,
+      std::function<void(Status status, DocumentPtr document)> callback) {
+    fidl::Array<uint8_t> key_prefix;
+    internal::DocumentLedgerKeyPrefix(docid, &key_prefix);
+    snapshot_->GetEntries(
+        std::move(key_prefix),
+        NULL,  // token should be NULL on the first call to GetEntries.
+        [callback](ledger::Status ledger_status,
+                   fidl::Array<ledger::EntryPtr> entries,
+                   fidl::Array<uint8_t> next_token) {
+          DocumentPtr doc;
+          if (ledger_status != ledger::Status::OK) {
+            callback(internal::LedgerStatusToStatus(ledger_status),
+                     std::move(doc));
+            return;
+          }
+
+          if (entries.size() == 0) {
+            callback(Status::DOCUMENT_NOT_FOUND, std::move(doc));
+            return;
+          }
+
+          auto entries_begin = entries.begin();
+          auto entries_end = entries.end();
+          if (!internal::NextDocumentFromEntries(&entries_begin, entries_end,
+                                                 &doc)) {
+            doc.reset();
+            callback(Status::DOCUMENT_DATA_ERROR, std::move(doc));
+            return;
+          }
+
+          if (internal::IsDocumentDeleted(doc)) {
+            doc.reset();
+            callback(Status::DOCUMENT_NOT_FOUND, std::move(doc));
+            return;
+          }
+
+          callback(Status::OK, std::move(doc));
+        });
+  }
+
+  void ApplyUpdate(document_store::DocumentPtr document,
+                   std::function<void()> callback) {
+    internal::VoidCallbackTracker* callback_tracker =
+        new internal::VoidCallbackTracker(document->properties.size() + 1,
+                                          [callback]() { callback(); });
+    fidl::Array<uint8_t> key;
+    fidl::Array<uint8_t> value;
+
+    // Add the synthetic "docid" property.
+    ValuePtr docid_value(Value::New());
+    docid_value->set_iri(document->docid);
+    internal::LedgerKeyValueForProperty(document->docid, "docid", docid_value,
+                                        &key, &value);
+    page_->Put(std::move(key), std::move(value),
+               [callback_tracker](ledger::Status ledger_status) {
+                 callback_tracker->Run();
+               });
+
+    for (auto it = document->properties.cbegin();
+         document->properties.cend() != it; ++it) {
+      internal::LedgerKeyValueForProperty(document->docid, it.GetKey(),
+                                          it.GetValue(), &key, &value);
+      if (!value.is_null()) {
+        page_->Put(std::move(key), std::move(value),
+                   [callback_tracker](ledger::Status ledger_status) {
+                     callback_tracker->Run();
+                   });
+      } else {
+        page_->Delete(std::move(key),
+                      [callback_tracker](ledger::Status ledger_status) {
+                        callback_tracker->Run();
+                      });
+      }
+    }
+  }
 };
 }  // namespace document_store

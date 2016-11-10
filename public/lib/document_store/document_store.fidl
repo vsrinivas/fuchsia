@@ -52,19 +52,20 @@ interface DocumentStore {
 // them atomically.
 // Closing the pipe will roll back the transaction.
 interface Transaction {
+  // DEPRECATED
   // Adds the values in the specified document(s).
   // 1) If the document does not yet exist, it is created with the specified
   // values.
   // 2) If the document already exists, values already stored are overwritten
   // if specified in the document object, deleted if specified as null and
   // left unchanged otherwise.
-  // TODO(azani): Consider how to handle large documents.
   Add(array<Document> docs) => ();
   AddOne(Document doc) => ();
 
-  // Equivalent to Delete followed by Add.
-  AddReplace(array<Document> docs) => ();
-  AddReplaceOne(Document doc) => ();
+  // TODO(azani): Consider how to handle large documents.
+  // Write the document replacing it with the new document if it already exists.
+  Put(array<Document> documents) => ();
+  PutOne(Document document) => ();
 
   // Deletes the specified documents.
   Delete(array<string> docids) => ();
