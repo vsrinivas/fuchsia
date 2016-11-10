@@ -74,7 +74,7 @@ using modular::operator<<;
 // changed in one Link instance to a second Link instance.
 class LinkConnection : public LinkWatcher {
  public:
-  LinkConnection(InterfacePtr<Link>& src, InterfacePtr<Link>& dst)
+  LinkConnection(Link* const src, Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
     InterfaceHandle<LinkWatcher> watcher;
     src_binding_.Bind(GetProxy(&watcher));
@@ -90,16 +90,16 @@ class LinkConnection : public LinkWatcher {
 
  private:
   Binding<LinkWatcher> src_binding_;
-  InterfacePtr<Link>& src_;
-  InterfacePtr<Link>& dst_;
+  Link* const src_;
+  Link* const dst_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
 class ModuleMonitor : public ModuleWatcher {
  public:
-  ModuleMonitor(InterfacePtr<ModuleController>& module_client,
-                InterfacePtr<Story>& story)
+  ModuleMonitor(ModuleController* const module_client,
+                Story* const story)
       : binding_(this), story_(story) {
     InterfaceHandle<ModuleWatcher> watcher;
     binding_.Bind(GetProxy(&watcher));
@@ -110,7 +110,7 @@ class ModuleMonitor : public ModuleWatcher {
 
  private:
   Binding<ModuleWatcher> binding_;
-  InterfacePtr<Story>& story_;
+  Story* const story_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
@@ -173,16 +173,22 @@ class RecipeImpl : public Module, public mozart::BaseView {
     views_.emplace(
         std::make_pair(1, std::unique_ptr<ViewData>(new ViewData(1))));
 
-    connections_.emplace_back(new LinkConnection(module1_link_, module2_link_));
-    connections_.emplace_back(new LinkConnection(module2_link_, module1_link_));
+    connections_.emplace_back(
+        new LinkConnection(module1_link_.get(), module2_link_.get()));
+    connections_.emplace_back(
+        new LinkConnection(module2_link_.get(), module1_link_.get()));
 
     // Also connect with the root link, to create change notifications
     // the user shell can react on.
-    connections_.emplace_back(new LinkConnection(module1_link_, link_));
-    connections_.emplace_back(new LinkConnection(module2_link_, link_));
+    connections_.emplace_back(
+        new LinkConnection(module1_link_.get(), link_.get()));
+    connections_.emplace_back(
+        new LinkConnection(module2_link_.get(), link_.get()));
 
-    module_monitors_.emplace_back(new ModuleMonitor(module1_, story_));
-    module_monitors_.emplace_back(new ModuleMonitor(module2_, story_));
+    module_monitors_.emplace_back(
+        new ModuleMonitor(module1_.get(), story_.get()));
+    module_monitors_.emplace_back(
+        new ModuleMonitor(module2_.get(), story_.get()));
 
     // TODO(mesch): Good illustration of the remaining issue to
     // restart a story: Here is how does this code look like when
