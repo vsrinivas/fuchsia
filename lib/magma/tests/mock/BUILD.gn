@@ -40,5 +40,6 @@ source_set("magma_system") {
   deps = [
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util:common",
+    "$magma_build_root/src/magma_util/platform:buffer",
   ]
 }
