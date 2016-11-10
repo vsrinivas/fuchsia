@@ -577,6 +577,9 @@ static void __NO_RETURN trigger_undefined_instruction(void)
 #if defined(__x86_64__)
     __asm__("ud2");
 #elif defined(__aarch64__)
+    // An instruction not supported at this privilege level will do.
+    // ARM calls these "unallocated instructions". Geez, "unallocated"?
+    __asm__("mrs x0, elr_el1");
 #endif
     trigger_unsupported();
 }
@@ -597,6 +600,7 @@ static void __NO_RETURN trigger_sw_breakpoint(void)
 #if defined(__x86_64__)
     __asm__("int3");
 #elif defined(__aarch64__)
+    __asm__("brk 0");
 #endif
     trigger_unsupported();
 }

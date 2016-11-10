@@ -85,10 +85,15 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
     switch (ec) {
         case 0b000000: /* unknown reason */
             /* this is for a lot of reasons, but most of them are undefined instructions */
+#if WITH_LIB_MAGENTA
+            if (try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr) == NO_ERROR)
+                return;
+#endif
+            return;
         case 0b111000: /* BRK from arm32 */
         case 0b111100: { /* BRK from arm64 */
 #if WITH_LIB_MAGENTA
-            if (try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr) == NO_ERROR)
+            if (try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr) == NO_ERROR)
                 return;
 #endif
             return;
