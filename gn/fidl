@@ -1,5 +1,11 @@
 {
     "labels": [
         "//lib/fidl"
+    ],
+    "binaries": [
+        {
+            "binary": "lib_fidl_cpp_tests",
+            "bootfs_path": "test/lib_fidl_cpp_tests"
+        }
     ]
 }
