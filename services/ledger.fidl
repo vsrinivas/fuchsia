@@ -43,6 +43,7 @@ interface LedgerFactory {
   GetLedger(Identity identity, Ledger& ledger_request) => (Status status);
 };
 
+[ServiceName="ledger::Ledger"]
 interface Ledger {
   // This is used to bootstrap a namespace. This page allows the client to keep
   // track of new pages. The identifier of the root page is guaranteed to be
