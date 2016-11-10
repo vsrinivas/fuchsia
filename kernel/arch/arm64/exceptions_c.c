@@ -52,6 +52,28 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint3
     panic("unhandled syscall vector\n");
 }
 
+#if WITH_LIB_MAGENTA
+
+static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr)
+{
+    arch_exception_context_t context = { .frame = iframe, .esr = esr };
+    arch_enable_ints();
+    status_t status = magenta_exception_handler(type, &context, iframe->elr);
+    arch_disable_ints();
+    return status;
+}
+
+static status_t try_magenta_page_fault_exception_handler (struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
+{
+    arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
+    arch_enable_ints();
+    status_t status = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
+    arch_disable_ints();
+    return status;
+}
+
+#endif
+
 void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
 {
     struct fault_handler_table_entry *fault_handler;
@@ -66,12 +88,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
         case 0b111000: /* BRK from arm32 */
         case 0b111100: { /* BRK from arm64 */
 #if WITH_LIB_MAGENTA
-            /* let magenta get a shot at it */
-            arch_exception_context_t context = { .frame = iframe, .esr = esr };
-            arch_enable_ints();
-            status_t erc = magenta_exception_handler(MX_EXCP_UNDEFINED_INSTRUCTION, &context, iframe->elr);
-            arch_disable_ints();
-            if (erc == NO_ERROR)
+            if (try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr) == NO_ERROR)
                 return;
 #endif
             return;
@@ -123,11 +140,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 #if WITH_LIB_MAGENTA
             /* if this is from user space, let magenta get a shot at it */
             if (is_user) {
-                arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
-                arch_enable_ints();
-                status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
-                arch_disable_ints();
-                if (erc == NO_ERROR)
+                if (try_magenta_page_fault_exception_handler (iframe, esr, far) == NO_ERROR)
                     return;
             }
 #endif
@@ -179,11 +192,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 #if WITH_LIB_MAGENTA
             /* if this is from user space, let magenta get a shot at it */
             if (is_user) {
-                arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
-                arch_enable_ints();
-                status_t erc = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
-                arch_disable_ints();
-                if (erc == NO_ERROR)
+                if (try_magenta_page_fault_exception_handler (iframe, esr, far) == NO_ERROR)
                     return;
             }
 #endif
@@ -205,11 +214,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 #if WITH_LIB_MAGENTA
             /* TODO: properly decode more of these, since they may be originating in kernel space */
             /* let magenta get a shot at it */
-            arch_exception_context_t context = { .frame = iframe, .esr = esr };
-            arch_enable_ints();
-            status_t erc = magenta_exception_handler(MX_EXCP_GENERAL, &context, iframe->elr);
-            arch_disable_ints();
-            if (erc == NO_ERROR)
+            if (try_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
                 return;
 #endif
             printf("unhandled synchronous exception\n");
