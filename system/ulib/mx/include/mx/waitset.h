@@ -25,7 +25,7 @@ public:
 
     static mx_status_t create(uint32_t options, waitset* result);
 
-    mx_status_t add(uint64_t cookie, const handle& handle,
+    mx_status_t add(uint64_t cookie, const handle<void>& handle,
                     mx_signals_t signals) const {
         return mx_waitset_add(get(), cookie, handle.get(), signals);
     }

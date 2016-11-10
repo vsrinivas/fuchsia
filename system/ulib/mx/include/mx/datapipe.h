@@ -114,8 +114,8 @@ public:
 // static
 template <typename T>
 mx_status_t datapipe<T>::create(mx_size_t element_size, mx_size_t capacity,
-                             uint32_t options, datapipe_producer* producer,
-                             datapipe_consumer* consumer) {
+                                uint32_t options, datapipe_producer* producer,
+                                datapipe_consumer* consumer) {
     mx_handle_t consumer_handle = MX_HANDLE_INVALID;
     mx_handle_t h = mx_datapipe_create(options, element_size,
                                        capacity, &consumer_handle);
