@@ -462,16 +462,16 @@ class Generator(generator.Generator):
 
   def GenerateFiles(self, args):
     self.Write(self.GenerateModuleHeader(),
-        self.MatchMojomFilePath("%s.h" % self.module.name))
+        self.MatchFidlFilePath("%s.h" % self.module.name))
     self.Write(self.GenerateModuleInternalHeader(),
-        self.MatchMojomFilePath("%s-internal.h" % self.module.name))
+        self.MatchFidlFilePath("%s-internal.h" % self.module.name))
     self.Write(self.GenerateModuleCommonHeader(),
-        self.MatchMojomFilePath("%s-common.h" % self.module.name))
+        self.MatchFidlFilePath("%s-common.h" % self.module.name))
     self.Write(self.GenerateModuleCommonSource(),
-        self.MatchMojomFilePath("%s-common.cc" % self.module.name))
+        self.MatchFidlFilePath("%s-common.cc" % self.module.name))
     self.Write(self.GenerateModuleSynchronousHeader(),
-        self.MatchMojomFilePath("%s-sync.h" % self.module.name))
+        self.MatchFidlFilePath("%s-sync.h" % self.module.name))
     self.Write(self.GenerateModuleSynchronousSource(),
-        self.MatchMojomFilePath("%s-sync.cc" % self.module.name))
+        self.MatchFidlFilePath("%s-sync.cc" % self.module.name))
     self.Write(self.GenerateModuleSource(),
-        self.MatchMojomFilePath("%s.cc" % self.module.name))
+        self.MatchFidlFilePath("%s.cc" % self.module.name))

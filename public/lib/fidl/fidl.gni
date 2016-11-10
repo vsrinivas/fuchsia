@@ -44,7 +44,8 @@ template("fidl") {
 
   if (defined(invoker.sources)) {
     generator_root = rebase_path("//lib/fidl/compiler/legacy_generators")
-    legacy_gen_path = rebase_path("$generator_root/legacy")
+    legacy_gen_path = rebase_path("${generator_root}/legacy")
+    go_gen_path = rebase_path("${root_out_dir}/fidl-go")
     fidl_tool = rebase_path("${root_out_dir}/fidl")
 
     # The following list of files will trigger a rebuild if any of them change.
@@ -122,6 +123,7 @@ template("fidl") {
     ]
     generator_dart_outputs =
         [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
+    generator_go_outputs = [ "${root_gen_dir}/go/src/{{source_dir}}/{{source_name_part}}/{{source_name_part}}.core.go" ]
     # TODO(vardhan): We can't have both .mojom and .fidl coexist because of
     # this hardcoded '_fidl' suffix. Has to do with python imports not handling
     # '.fidl/.mojom' in names. Investigate putting in a package instead.
@@ -138,15 +140,16 @@ template("fidl") {
       public_deps = [
         "//lib/fidl/compiler:fidl",
       ]
+      deps = [ "//lib/fidl/compiler:fidl-go" ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
-        deps = [
+        deps += [
           "//lib/fidl/compiler/interfaces:interfaces",
         ]
       }
       sources = invoker.sources
       outputs =
           generator_cpp_outputs + generator_dart_outputs +
-          generator_python_outputs
+          generator_python_outputs + generator_go_outputs
       args = [
         fidl_tool,
         "gen",
@@ -158,7 +161,7 @@ template("fidl") {
         rebase_path(root_gen_dir),
         "--no-gen-imports",
         "--generators",
-        "${legacy_gen_path}",
+        "${legacy_gen_path},${go_gen_path}",
       ]
 
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {

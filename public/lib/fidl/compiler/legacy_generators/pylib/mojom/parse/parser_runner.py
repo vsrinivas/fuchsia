@@ -18,12 +18,12 @@ SDK_ROOT = os.path.abspath(os.path.join(THIS_DIR, os.pardir, os.pardir,
     os.pardir, os.pardir, os.pardir))
 PYTHON_SDK_DIR = os.path.abspath(os.path.join(SDK_ROOT, "python"))
 sys.path.insert(0, PYTHON_SDK_DIR)
-# In order to use mojom_files_mojom we need to make sure the dummy mojo_system
+# In order to use fidl_files_fidl we need to make sure the dummy mojo_system
 # can be found on the python path.
 sys.path.insert(0, os.path.join(PYTHON_SDK_DIR, "dummy_mojo_system"))
 
-from mojom.generate.generated import mojom_files_mojom
-from mojom.generate.generated import mojom_types_mojom
+from mojom.generate.generated import fidl_files_fidl
+from mojom.generate.generated import fidl_types_fidl
 from mojo_bindings import serialization
 
 def RunParser(sdk_root, file_names, import_directories=None,
@@ -47,7 +47,7 @@ def RunParser(sdk_root, file_names, import_directories=None,
         will be passed to the parser.
 
   Returns:
-    {str} The serialized mojom_files.MojomFileGraph returned by mojom parser,
+    {str} The serialized mojom_files.FidlFileGraph returned by mojom parser,
     or None if the mojom parser returned a non-zero error code.
   """
   system_dirs = {
@@ -81,20 +81,20 @@ def RunParser(sdk_root, file_names, import_directories=None,
     return None
 
 
-def DeserializeMojomFileGraph(serialized_bytes):
-  """Deserializes a mojom_files.MojomFileGraph.
+def DeserializeFidlFileGraph(serialized_bytes):
+  """Deserializes a mojom_files.FidlFileGraph.
 
   Args:
-    serialized_bytes: {str} The serialized mojom_files.MojomFileGraph returned
+    serialized_bytes: {str} The serialized mojom_files.FidlFileGraph returned
         by mojom parser
   Returns:
-    {mojom_files.MojomFileGraph} The deserialized MojomFileGraph.
+    {mojom_files.FidlFileGraph} The deserialized FidlFileGraph.
   """
   data = bytearray(serialized_bytes)
   context = serialization.RootDeserializationContext(data, [])
-  return mojom_files_mojom.MojomFileGraph.Deserialize(context)
+  return fidl_files_fidl.FidlFileGraph.Deserialize(context)
 
-def ParseToMojomFileGraph(sdk_root, file_names, import_directories=None,
+def ParseToFidlFileGraph(sdk_root, file_names, import_directories=None,
     meta_data_only=False):
   """Runs the mojom parser and deserializes the result. Only 64-bit Linux and
      Mac is supported.
@@ -116,7 +116,7 @@ def ParseToMojomFileGraph(sdk_root, file_names, import_directories=None,
         will be passed to the parser.
 
   Returns:
-    {mojom_files.MojomFileGraph} The deserialized MojomFileGraph obtained by
+    {mojom_files.FidlFileGraph} The deserialized FidlFileGraph obtained by
     deserializing the bytes returned by mojom parser, or None if the mojom
     parser returned a non-zero error code.
   """
@@ -124,4 +124,4 @@ def ParseToMojomFileGraph(sdk_root, file_names, import_directories=None,
       meta_data_only)
   if serialized_bytes is None:
     return None
-  return DeserializeMojomFileGraph(serialized_bytes)
+  return DeserializeFidlFileGraph(serialized_bytes)

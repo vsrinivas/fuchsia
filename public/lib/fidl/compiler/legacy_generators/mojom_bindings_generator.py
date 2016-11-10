@@ -23,7 +23,7 @@ def RunParser(args):
     args: {Namespace} The parsed arguments passed to the script.
 
   Returns:
-    {str} The serialized mojom_files.MojomFileGraph returned by mojom parser,
+    {str} The serialized mojom_files.FidlFileGraph returned by mojom parser,
     or None if the mojom parser returned a non-zero error code.
   """
   sdk_root = os.path.abspath(
@@ -39,7 +39,7 @@ def RunGenerators(serialized_file_graph, args, remaining_args):
   corresponding to the serialized_file_graph passed in.
 
   Args:
-    serialized_file_graph: {str} A serialized mojom_files.MojomFileGraph.
+    serialized_file_graph: {str} A serialized mojom_files.FidlFileGraph.
     args: {Namespace} The parsed arguments passed to the script.
     remaining_args: {list<str>} The unparsed arguments pass to the script.
 

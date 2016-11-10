@@ -116,7 +116,7 @@ class StructVersion(object):
     ],
   }
 
-class MojomStruct(object):
+class FidlStruct(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
@@ -136,7 +136,7 @@ class UnionField(object):
     ],
   }
 
-class MojomUnion(object):
+class FidlUnion(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
@@ -155,7 +155,7 @@ class EnumValue(object):
     ],
   }
 
-class MojomEnum(object):
+class FidlEnum(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
@@ -164,25 +164,25 @@ class MojomEnum(object):
     ],
   }
 
-class MojomMethod(object):
+class FidlMethod(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
       _descriptor.SingleFieldGroup('decl_data', _descriptor.StructType(lambda: DeclarationData, nullable=True), 0, 0),
-      _descriptor.SingleFieldGroup('parameters', _descriptor.StructType(lambda: MojomStruct), 1, 0),
-      _descriptor.SingleFieldGroup('response_params', _descriptor.StructType(lambda: MojomStruct, nullable=True), 2, 0),
+      _descriptor.SingleFieldGroup('parameters', _descriptor.StructType(lambda: FidlStruct), 1, 0),
+      _descriptor.SingleFieldGroup('response_params', _descriptor.StructType(lambda: FidlStruct, nullable=True), 2, 0),
       _descriptor.SingleFieldGroup('ordinal', _descriptor.TYPE_UINT32, 3, 0),
       _descriptor.SingleFieldGroup('min_version', _descriptor.TYPE_UINT32, 4, 0),
     ],
   }
 
-class MojomInterface(object):
+class FidlInterface(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
       _descriptor.SingleFieldGroup('decl_data', _descriptor.StructType(lambda: DeclarationData, nullable=True), 0, 0),
       _descriptor.SingleFieldGroup('service_name', _descriptor.TYPE_NULLABLE_STRING, 1, 0),
-      _descriptor.SingleFieldGroup('methods', _descriptor.MapType(_descriptor.TYPE_UINT32, _descriptor.StructType(lambda: MojomMethod)), 2, 0),
+      _descriptor.SingleFieldGroup('methods', _descriptor.MapType(_descriptor.TYPE_UINT32, _descriptor.StructType(lambda: FidlMethod)), 2, 0),
       _descriptor.SingleFieldGroup('current_version', _descriptor.TYPE_UINT32, 3, 0),
     ],
   }
@@ -299,10 +299,10 @@ class UserDefinedType(object):
   __metaclass__ = _reflection.MojoUnionType
   DESCRIPTOR = {
     'fields': [
-      _descriptor.SingleFieldGroup('enum_type', _descriptor.StructType(lambda: MojomEnum), 0, 0),
-      _descriptor.SingleFieldGroup('struct_type', _descriptor.StructType(lambda: MojomStruct), 1, 0),
-      _descriptor.SingleFieldGroup('union_type', _descriptor.StructType(lambda: MojomUnion), 2, 0),
-      _descriptor.SingleFieldGroup('interface_type', _descriptor.StructType(lambda: MojomInterface), 3, 0),
+      _descriptor.SingleFieldGroup('enum_type', _descriptor.StructType(lambda: FidlEnum), 0, 0),
+      _descriptor.SingleFieldGroup('struct_type', _descriptor.StructType(lambda: FidlStruct), 1, 0),
+      _descriptor.SingleFieldGroup('union_type', _descriptor.StructType(lambda: FidlUnion), 2, 0),
+      _descriptor.SingleFieldGroup('interface_type', _descriptor.StructType(lambda: FidlInterface), 3, 0),
     ],
    }
 

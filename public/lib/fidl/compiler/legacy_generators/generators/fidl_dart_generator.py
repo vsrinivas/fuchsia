@@ -560,7 +560,7 @@ class Generator(generator.Generator):
     lib_module = self.GenerateLibModule(args)
 
     package_name = GetPackage(self.module)
-    gen_path = self.MatchMojomFilePath("%s.dart" % self.module.name)
+    gen_path = self.MatchFidlFilePath("%s.dart" % self.module.name)
     self.Write(lib_module, gen_path)
 
   def GetImports(self, args):

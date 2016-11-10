@@ -233,7 +233,7 @@ class Generator(generator.Generator):
   def GenerateFiles(self, args):
     import_path = MojomToPythonImport(self.module.name)
     self.Write(self.GeneratePythonModule(),
-               self.MatchMojomFilePath('%s.py' % import_path))
+               self.MatchFidlFilePath('%s.py' % import_path))
 
   def GetImports(self):
     for each in self.module.transitive_imports:

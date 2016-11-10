@@ -5,30 +5,30 @@
 import mojo_bindings.descriptor as _descriptor
 import mojo_bindings.reflection as _reflection
 
-import mojom_types_mojom
+import fidl_types_fidl
 
-class MojomFile(object):
+class FidlFile(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
       _descriptor.SingleFieldGroup('file_name', _descriptor.TYPE_STRING, 0, 0),
       _descriptor.SingleFieldGroup('specified_file_name', _descriptor.TYPE_NULLABLE_STRING, 1, 0),
       _descriptor.SingleFieldGroup('module_namespace', _descriptor.TYPE_NULLABLE_STRING, 2, 0),
-      _descriptor.SingleFieldGroup('attributes', _descriptor.GenericArrayType(_descriptor.StructType(lambda: mojom_types_mojom.Attribute), nullable=True), 3, 0),
+      _descriptor.SingleFieldGroup('attributes', _descriptor.GenericArrayType(_descriptor.StructType(lambda: fidl_types_fidl.Attribute), nullable=True), 3, 0),
       _descriptor.SingleFieldGroup('imports', _descriptor.GenericArrayType(_descriptor.TYPE_STRING, nullable=True), 4, 0),
-      _descriptor.SingleFieldGroup('declared_mojom_objects', _descriptor.StructType(lambda: KeysByType), 5, 0),
+      _descriptor.SingleFieldGroup('declared_fidl_objects', _descriptor.StructType(lambda: KeysByType), 5, 0),
       _descriptor.SingleFieldGroup('serialized_runtime_type_info', _descriptor.TYPE_NULLABLE_STRING, 6, 0),
-      _descriptor.SingleFieldGroup('comments', _descriptor.StructType(lambda: mojom_types_mojom.Comments, nullable=True), 7, 0),
+      _descriptor.SingleFieldGroup('comments', _descriptor.StructType(lambda: fidl_types_fidl.Comments, nullable=True), 7, 0),
     ],
   }
 
-class MojomFileGraph(object):
+class FidlFileGraph(object):
   __metaclass__ = _reflection.MojoStructType
   DESCRIPTOR = {
     'fields': [
-      _descriptor.SingleFieldGroup('files', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.StructType(lambda: MojomFile)), 0, 0),
-      _descriptor.SingleFieldGroup('resolved_types', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.UnionType(lambda: mojom_types_mojom.UserDefinedType)), 1, 0),
-      _descriptor.SingleFieldGroup('resolved_constants', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.StructType(lambda: mojom_types_mojom.DeclaredConstant)), 2, 0),
+      _descriptor.SingleFieldGroup('files', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.StructType(lambda: FidlFile)), 0, 0),
+      _descriptor.SingleFieldGroup('resolved_types', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.UnionType(lambda: fidl_types_fidl.UserDefinedType)), 1, 0),
+      _descriptor.SingleFieldGroup('resolved_constants', _descriptor.MapType(_descriptor.TYPE_STRING, _descriptor.StructType(lambda: fidl_types_fidl.DeclaredConstant)), 2, 0),
     ],
   }
 

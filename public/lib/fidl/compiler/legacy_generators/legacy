@@ -56,14 +56,14 @@ SDK_ROOT = os.path.abspath(os.path.join(BINDINGS_DIR, os.pardir, os.pardir))
 PYTHON_SDK_DIR = os.path.abspath(os.path.join(SDK_ROOT, "python"))
 
 sys.path.insert(0, PYTHON_SDK_DIR)
-# In order to use mojom_files_mojom we need to make sure the dummy mojo_system
+# In order to use fidl_files_fidl we need to make sure the dummy mojo_system
 # can be found on the python path.
 sys.path.insert(0, os.path.join(PYTHON_SDK_DIR, "dummy_mojo_system"))
 
 sys.path.insert(0, os.path.join(BINDINGS_DIR, "pylib"))
 
 
-from mojom.generate.generated import mojom_files_mojom
+from mojom.generate.generated import fidl_files_fidl
 from mojom.generate import mojom_translator
 from mojom.parse import parser_runner
 from mojo_bindings import serialization
@@ -102,17 +102,17 @@ def LoadGenerators(generators_string):
   return generators
 
 
-def ReadMojomFileGraphFromFile(fp):
-  """Reads a mojom_files_mojom.MojomFileGraph from a file.
+def ReadFidlFileGraphFromFile(fp):
+  """Reads a fidl_files_fidl.FidlFileGraph from a file.
 
   Args:
-    fp: A file pointer from which a serialized mojom_fileS_mojom.MojomFileGraph
+    fp: A file pointer from which a serialized mojom_fileS_mojom.FidlFileGraph
         can be read.
 
   Returns:
-    The mojom_files_mojom.MojomFileGraph that was deserialized from the file.
+    The fidl_files_fidl.FidlFileGraph that was deserialized from the file.
   """
-  return parser_runner.DeserializeMojomFileGraph(fp.read())
+  return parser_runner.DeserializeFidlFileGraph(fp.read())
 
 def FixModulePath(module, abs_src_root_path):
   """Fix the path attribute of the provided module and its imports.
@@ -141,7 +141,7 @@ def main():
   else:
     fp = open(args.file_graph)
 
-  mojom_file_graph = ReadMojomFileGraphFromFile(fp)
+  mojom_file_graph = ReadFidlFileGraphFromFile(fp)
   mojom_modules = mojom_translator.TranslateFileGraph(mojom_file_graph)
 
   # Note that we are using the word "module" in two unrelated ways here.

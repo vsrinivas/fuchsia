@@ -33,7 +33,7 @@ def process_mojom(path_to_mojom):
   filename = os.path.abspath(path_to_mojom)
 
   # Parse
-  mojom_file_graph = parser_runner.ParseToMojomFileGraph(SDK_DIR, [filename],
+  mojom_file_graph = parser_runner.ParseToFidlFileGraph(SDK_DIR, [filename],
       meta_data_only=True)
   if mojom_file_graph is None:
     print("Error parsing %s" % filename)

@@ -136,7 +136,7 @@ class Generator(object):
 
   # Prepend the filename with a directory that matches the directory of the
   # original .mojom file, relative to the import root.
-  def MatchMojomFilePath(self, filename):
+  def MatchFidlFilePath(self, filename):
     return os.path.join(os.path.dirname(self.module.path), filename)
 
   def Write(self, contents, filename):

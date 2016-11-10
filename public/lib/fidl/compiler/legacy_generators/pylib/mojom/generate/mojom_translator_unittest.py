@@ -7,8 +7,8 @@ import module
 
 try:
   import mojom_translator
-  from generated import mojom_files_mojom
-  from generated import mojom_types_mojom
+  from generated import fidl_files_fidl
+  from generated import fidl_types_fidl
   bindings_imported = True
 except ImportError:
   bindings_imported = False
@@ -18,19 +18,19 @@ except ImportError:
 class TranslateFileGraph(unittest.TestCase):
 
   def test_basics(self):
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
 
     # File names need to be set so the file can be translated at all.
     g.files = {
-        'a.mojom': mojom_files_mojom.MojomFile(
+        'a.mojom': fidl_files_fidl.FidlFile(
             file_name='a.mojom',
             specified_file_name='',
             imports=[]),
-        'b.mojom': mojom_files_mojom.MojomFile(
+        'b.mojom': fidl_files_fidl.FidlFile(
             file_name='b.mojom',
             specified_file_name='',
             imports=[]),
-        'root/c.mojom': mojom_files_mojom.MojomFile(
+        'root/c.mojom': fidl_files_fidl.FidlFile(
             file_name='root/c.mojom',
             specified_file_name='',
             imports=[]),
@@ -44,23 +44,23 @@ class TranslateFileGraph(unittest.TestCase):
 class TestTranslateFile(unittest.TestCase):
 
   def test_basics(self):
-    graph = mojom_files_mojom.MojomFileGraph(
+    graph = fidl_files_fidl.FidlFileGraph(
         resolved_types={})
 
     file_name = 'root/f.mojom'
     imported_file_name = 'other/a.mojom'
     second_level_imported_file_name = 'something/other.mojom'
-    mojom_file = mojom_files_mojom.MojomFile(
+    mojom_file = fidl_files_fidl.FidlFile(
         file_name=file_name,
         specified_file_name='specified_file_name',
         module_namespace='somens',
         imports=[imported_file_name])
-    imported_file = mojom_files_mojom.MojomFile(
+    imported_file = fidl_files_fidl.FidlFile(
         file_name=imported_file_name,
         specified_file_name='',
         module_namespace='somens',
         imports=[second_level_imported_file_name])
-    second_level_imported_file = mojom_files_mojom.MojomFile(
+    second_level_imported_file = fidl_files_fidl.FidlFile(
         file_name=second_level_imported_file_name,
         specified_file_name='',
         module_namespace='somens')
@@ -70,54 +70,54 @@ class TestTranslateFile(unittest.TestCase):
         second_level_imported_file_name: second_level_imported_file
         }
 
-    mojom_interface = mojom_types_mojom.MojomInterface(
+    mojom_interface = fidl_types_fidl.FidlInterface(
         methods={},
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AnInterface',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
-    graph.resolved_types['interface_key'] = mojom_types_mojom.UserDefinedType(
+    graph.resolved_types['interface_key'] = fidl_types_fidl.UserDefinedType(
         interface_type=mojom_interface)
 
-    mojom_struct = mojom_types_mojom.MojomStruct(
+    mojom_struct = fidl_types_fidl.FidlStruct(
         fields=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AStruct',
           full_identifier='foo.AStruct',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
     add_version_info(mojom_struct, 0)
-    graph.resolved_types['struct_key'] = mojom_types_mojom.UserDefinedType(
+    graph.resolved_types['struct_key'] = fidl_types_fidl.UserDefinedType(
         struct_type=mojom_struct)
 
-    mojom_union = mojom_types_mojom.MojomUnion(
+    mojom_union = fidl_types_fidl.FidlUnion(
         fields=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AUnion',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
-    graph.resolved_types['union_key'] = mojom_types_mojom.UserDefinedType(
+    graph.resolved_types['union_key'] = fidl_types_fidl.UserDefinedType(
         union_type=mojom_union)
 
-    mojom_enum = mojom_types_mojom.MojomEnum(
+    mojom_enum = fidl_types_fidl.FidlEnum(
         values=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AnEnum',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
-    graph.resolved_types['enum_key'] = mojom_types_mojom.UserDefinedType(
+    graph.resolved_types['enum_key'] = fidl_types_fidl.UserDefinedType(
         enum_type=mojom_enum)
 
-    mojom_const = mojom_types_mojom.DeclaredConstant(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='AConst'),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.INT64),
-        value=mojom_types_mojom.Value(
-          literal_value=mojom_types_mojom.LiteralValue(
+    mojom_const = fidl_types_fidl.DeclaredConstant(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='AConst'),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.INT64),
+        value=fidl_types_fidl.Value(
+          literal_value=fidl_types_fidl.LiteralValue(
             int64_value=30)))
     graph.resolved_constants = {'constant_key': mojom_const}
 
-    mojom_file.declared_mojom_objects = mojom_files_mojom.KeysByType(
+    mojom_file.declared_fidl_objects = fidl_files_fidl.KeysByType(
         interfaces=['interface_key'],
         structs=['struct_key'],
         unions=['union_key'],
@@ -164,10 +164,10 @@ class TestTranslateFile(unittest.TestCase):
     self.assertFalse(imported_mod.specified_name)
 
   def test_no_imports(self):
-    graph = mojom_files_mojom.MojomFileGraph(
+    graph = fidl_files_fidl.FidlFileGraph(
         resolved_types={})
     file_name = 'root/f.mojom'
-    mojom_file = mojom_files_mojom.MojomFile(
+    mojom_file = fidl_files_fidl.FidlFile(
         file_name=file_name,
         specified_file_name='',
         module_namespace='somens')
@@ -182,25 +182,25 @@ class TestTranslateFile(unittest.TestCase):
 class TestUserDefinedFromTypeRef(unittest.TestCase):
 
   def do_interface_test(self, nullable, interface_request):
-    # Build a MojomInterface
+    # Build a FidlInterface
     file_name = 'a.mojom'
-    mojom_interface = mojom_types_mojom.MojomInterface(
-        decl_data=mojom_types_mojom.DeclarationData(
+    mojom_interface = fidl_types_fidl.FidlInterface(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AnInterface',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
     mojom_interface.methods={}
 
-    # Register the MojomInterface in a MojomFileGraph
-    graph = mojom_files_mojom.MojomFileGraph()
+    # Register the FidlInterface in a FidlFileGraph
+    graph = fidl_files_fidl.FidlFileGraph()
     type_key = 'some_type_key'
     graph.resolved_types = {
-      type_key: mojom_types_mojom.UserDefinedType(
+      type_key: fidl_types_fidl.UserDefinedType(
         interface_type=mojom_interface)}
 
     # Build a reference to the interface.
-    type_ref = mojom_types_mojom.Type(
-        type_reference=mojom_types_mojom.TypeReference(
+    type_ref = fidl_types_fidl.Type(
+        type_reference=fidl_types_fidl.TypeReference(
             type_key=type_key,
             nullable=nullable,
             is_interface_request=interface_request))
@@ -208,7 +208,7 @@ class TestUserDefinedFromTypeRef(unittest.TestCase):
     # Construct a translator
     translator = mojom_translator.FileTranslator(graph, file_name)
 
-    # Translate the MojomInterface referenced by type_ref.
+    # Translate the FidlInterface referenced by type_ref.
     interface = translator.UserDefinedFromTypeRef(type_ref)
 
     # Check the translation
@@ -233,63 +233,63 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_structs(self):
     file_name = 'a.mojom'
-    graph = mojom_files_mojom.MojomFileGraph()
-    mojom_file = mojom_files_mojom.MojomFile(
+    graph = fidl_files_fidl.FidlFileGraph()
+    mojom_file = fidl_files_fidl.FidlFile(
         file_name='a.mojom',
         module_namespace='foo.bar')
     graph.files = {mojom_file.file_name: mojom_file}
 
-    mojom_struct = mojom_types_mojom.MojomStruct(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='FirstStruct'))
+    mojom_struct = fidl_types_fidl.FidlStruct(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='FirstStruct'))
     mojom_struct.fields = [
-       mojom_types_mojom.StructField(
-          decl_data=mojom_types_mojom.DeclarationData(
+       fidl_types_fidl.StructField(
+          decl_data=fidl_types_fidl.DeclarationData(
             short_name='field03',
             declaration_order=2),
-          type=mojom_types_mojom.Type(
-            simple_type=mojom_types_mojom.SimpleType.BOOL),
+          type=fidl_types_fidl.Type(
+            simple_type=fidl_types_fidl.SimpleType.BOOL),
           offset=21,
           bit=6,
           min_version=11),
-        mojom_types_mojom.StructField(
-          decl_data=mojom_types_mojom.DeclarationData(
+        fidl_types_fidl.StructField(
+          decl_data=fidl_types_fidl.DeclarationData(
             short_name='field01',
             declared_ordinal=1,
             declaration_order=0),
-          type=mojom_types_mojom.Type(
-            simple_type=mojom_types_mojom.SimpleType.BOOL),
+          type=fidl_types_fidl.Type(
+            simple_type=fidl_types_fidl.SimpleType.BOOL),
           offset=17,
           bit=1,
           min_version=4),
-        mojom_types_mojom.StructField(
-          decl_data=mojom_types_mojom.DeclarationData(
+        fidl_types_fidl.StructField(
+          decl_data=fidl_types_fidl.DeclarationData(
             short_name='field02',
             declaration_order=1),
-          type=mojom_types_mojom.Type(
-            simple_type=mojom_types_mojom.SimpleType.DOUBLE),
+          type=fidl_types_fidl.Type(
+            simple_type=fidl_types_fidl.SimpleType.DOUBLE),
           offset=0,
           bit=0,
           min_version=0,
-          default_value=mojom_types_mojom.DefaultFieldValue(
-            value=mojom_types_mojom.Value(
-              literal_value=mojom_types_mojom.LiteralValue(double_value=15)))),
+          default_value=fidl_types_fidl.DefaultFieldValue(
+            value=fidl_types_fidl.Value(
+              literal_value=fidl_types_fidl.LiteralValue(double_value=15)))),
         ]
     mojom_struct.version_info=[
-        mojom_types_mojom.StructVersion(
+        fidl_types_fidl.StructVersion(
             version_number=0, num_bytes=67, num_fields=1),
-         mojom_types_mojom.StructVersion(
+         fidl_types_fidl.StructVersion(
             version_number=1, num_bytes=76, num_fields=3),
     ]
     # mojom_fields_declaration_order lists, in declaration order, the indices
-    # of the fields in mojom_types_mojom.StructField.
+    # of the fields in fidl_types_fidl.StructField.
     mojom_fields_declaration_order = [1, 2, 0]
-    mojom_struct.decl_data.source_file_info = mojom_types_mojom.SourceFileInfo(
+    mojom_struct.decl_data.source_file_info = fidl_types_fidl.SourceFileInfo(
         file_name=mojom_file.file_name)
 
     struct = module.Struct()
     translator = mojom_translator.FileTranslator(graph, file_name)
     translator.StructFromMojom(
-        struct, mojom_types_mojom.UserDefinedType(struct_type=mojom_struct))
+        struct, fidl_types_fidl.UserDefinedType(struct_type=mojom_struct))
 
     self.assertEquals('FirstStruct', struct.name)
     self.assertEquals(translator._module, struct.module)
@@ -326,25 +326,25 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_constant(self):
     file_name = 'a.mojom'
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
 
-    mojom_const = mojom_types_mojom.DeclaredConstant()
-    mojom_const.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_const = fidl_types_fidl.DeclaredConstant()
+    mojom_const.decl_data = fidl_types_fidl.DeclarationData(
         short_name='foo', container_type_key='struct_key')
-    mojom_const.type = mojom_types_mojom.Type(
-        simple_type=mojom_types_mojom.SimpleType.INT64)
-    mojom_const.value = mojom_types_mojom.Value()
-    mojom_const.value.literal_value = mojom_types_mojom.LiteralValue(
+    mojom_const.type = fidl_types_fidl.Type(
+        simple_type=fidl_types_fidl.SimpleType.INT64)
+    mojom_const.value = fidl_types_fidl.Value()
+    mojom_const.value.literal_value = fidl_types_fidl.LiteralValue(
         int64_value=20)
 
-    mojom_struct = mojom_types_mojom.MojomStruct(
+    mojom_struct = fidl_types_fidl.FidlStruct(
         fields=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AStruct',
-          source_file_info =mojom_types_mojom.SourceFileInfo(
+          source_file_info =fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
     add_version_info(mojom_struct, 0)
-    graph.resolved_types = {'struct_key': mojom_types_mojom.UserDefinedType(
+    graph.resolved_types = {'struct_key': fidl_types_fidl.UserDefinedType(
       struct_type=mojom_struct)}
 
     const = module.Constant()
@@ -359,26 +359,26 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_enum(self):
     file_name = 'a.mojom'
-    mojom_enum = mojom_types_mojom.MojomEnum()
-    mojom_enum.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_enum = fidl_types_fidl.FidlEnum()
+    mojom_enum.decl_data = fidl_types_fidl.DeclarationData(
         short_name='AnEnum',
-        source_file_info=mojom_types_mojom.SourceFileInfo(file_name=file_name))
-    value1 = mojom_types_mojom.EnumValue(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='val1'),
-        initializer_value=mojom_types_mojom.Value(
-            literal_value=mojom_types_mojom.LiteralValue(uint64_value=20)),
+        source_file_info=fidl_types_fidl.SourceFileInfo(file_name=file_name))
+    value1 = fidl_types_fidl.EnumValue(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='val1'),
+        initializer_value=fidl_types_fidl.Value(
+            literal_value=fidl_types_fidl.LiteralValue(uint64_value=20)),
         int_value=20)
-    value2 = mojom_types_mojom.EnumValue(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='val2'),
+    value2 = fidl_types_fidl.EnumValue(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='val2'),
         int_value=70)
     mojom_enum.values = [value1, value2]
 
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     enum = module.Enum()
     translator = mojom_translator.FileTranslator(graph, file_name)
     translator.EnumFromMojom(
-        enum, mojom_types_mojom.UserDefinedType(enum_type=mojom_enum))
+        enum, fidl_types_fidl.UserDefinedType(enum_type=mojom_enum))
 
     self.assertEquals(translator._module, enum.module)
     self.assertEquals(mojom_enum.decl_data.short_name, enum.name)
@@ -397,56 +397,56 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_child_enum(self):
     file_name = 'a.mojom'
-    mojom_enum = mojom_types_mojom.MojomEnum()
-    mojom_enum.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_enum = fidl_types_fidl.FidlEnum()
+    mojom_enum.decl_data = fidl_types_fidl.DeclarationData(
         short_name='AnEnum',
-        source_file_info=mojom_types_mojom.SourceFileInfo(file_name=file_name),
+        source_file_info=fidl_types_fidl.SourceFileInfo(file_name=file_name),
         container_type_key='struct_key')
     mojom_enum.values = []
 
-    graph = mojom_files_mojom.MojomFileGraph()
-    mojom_struct = mojom_types_mojom.MojomStruct(
+    graph = fidl_files_fidl.FidlFileGraph()
+    mojom_struct = fidl_types_fidl.FidlStruct(
         fields=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AStruct',
-          source_file_info =mojom_types_mojom.SourceFileInfo(
+          source_file_info =fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
     add_version_info(mojom_struct, 0)
-    graph.resolved_types = {'struct_key': mojom_types_mojom.UserDefinedType(
+    graph.resolved_types = {'struct_key': fidl_types_fidl.UserDefinedType(
       struct_type=mojom_struct)}
 
     enum = module.Enum()
     translator = mojom_translator.FileTranslator(graph, file_name)
     translator.EnumFromMojom(
-        enum, mojom_types_mojom.UserDefinedType(enum_type=mojom_enum))
+        enum, fidl_types_fidl.UserDefinedType(enum_type=mojom_enum))
 
     self.assertEquals(mojom_enum.decl_data.short_name, enum.name)
     self.assertEquals(len(mojom_enum.values), len(enum.fields))
 
   def test_unions(self):
     file_name = 'a.mojom'
-    mojom_union = mojom_types_mojom.MojomUnion()
-    mojom_union.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_union = fidl_types_fidl.FidlUnion()
+    mojom_union.decl_data = fidl_types_fidl.DeclarationData(
         short_name='AUnion',
-        source_file_info=mojom_types_mojom.SourceFileInfo(file_name=file_name))
+        source_file_info=fidl_types_fidl.SourceFileInfo(file_name=file_name))
 
-    field1 = mojom_types_mojom.UnionField(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='field1',
+    field1 = fidl_types_fidl.UnionField(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='field1',
             declaration_order=0, declared_ordinal=7),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.BOOL),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.BOOL),
         tag=7)
-    field2 = mojom_types_mojom.UnionField(
-        decl_data=mojom_types_mojom.DeclarationData(
+    field2 = fidl_types_fidl.UnionField(
+        decl_data=fidl_types_fidl.DeclarationData(
             short_name='field2', declaration_order=1),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.DOUBLE),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.DOUBLE),
         tag=8)
-    field3 = mojom_types_mojom.UnionField(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='field3',
+    field3 = fidl_types_fidl.UnionField(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='field3',
             declaration_order=2, declared_ordinal=0),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.INT32),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.INT32),
         tag=0)
 
     mojom_union.fields = [field3, field1, field2]
@@ -454,11 +454,11 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
     # of the fields in mojom_union.fields
     mojom_fields_declaration_order = [1, 2, 0]
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     union = module.Union()
     translator = mojom_translator.FileTranslator(graph, file_name)
     translator.UnionFromMojom(
-        union, mojom_types_mojom.UserDefinedType(union_type=mojom_union))
+        union, fidl_types_fidl.UserDefinedType(union_type=mojom_union))
 
     self.assertEquals(translator._module, union.module)
     self.assertEquals('AUnion', union.name)
@@ -488,19 +488,19 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
       {mojom_types.LiteralValue} with an appropriately typed value.
     """
     if isinstance(x, str):
-      return mojom_types_mojom.LiteralValue(string_value=x)
+      return fidl_types_fidl.LiteralValue(string_value=x)
     elif isinstance(x, int):
-      return mojom_types_mojom.LiteralValue(int64_value=x)
+      return fidl_types_fidl.LiteralValue(int64_value=x)
     elif isinstance(x, float):
-      return mojom_types_mojom.LiteralValue(double_value=x)
+      return fidl_types_fidl.LiteralValue(double_value=x)
     elif isinstance(x, bool):
-      return mojom_types_mojom.LiteralValue(bool_value=x)
+      return fidl_types_fidl.LiteralValue(bool_value=x)
     raise Exception("unexpected type(x)=%s" % type(x))
 
 
   def test_attributes(self):
-    mojom_enum = mojom_types_mojom.MojomEnum()
-    mojom_enum.decl_data = mojom_types_mojom.DeclarationData()
+    mojom_enum = fidl_types_fidl.FidlEnum()
+    mojom_enum.decl_data = fidl_types_fidl.DeclarationData()
     gold = {
         'foo': 'bar',
         'other': 'thing',
@@ -512,49 +512,49 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
     mojom_enum.decl_data.attributes = []
     for key, value in gold.iteritems():
       mojom_enum.decl_data.attributes.append(
-          mojom_types_mojom.Attribute(key=key, value=self.literal_value(value)))
+          fidl_types_fidl.Attribute(key=key, value=self.literal_value(value)))
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     attributes = mojom_translator.FileTranslator(
         graph, None).AttributesFromMojom(mojom_enum)
 
     self.assertEquals(gold, attributes)
 
   def test_attributes_none(self):
-    mojom_enum = mojom_types_mojom.MojomEnum()
-    mojom_enum.decl_data = mojom_types_mojom.DeclarationData()
-    graph = mojom_files_mojom.MojomFileGraph()
+    mojom_enum = fidl_types_fidl.FidlEnum()
+    mojom_enum.decl_data = fidl_types_fidl.DeclarationData()
+    graph = fidl_files_fidl.FidlFileGraph()
     attributes = mojom_translator.FileTranslator(
         graph, None).AttributesFromMojom(mojom_enum)
     self.assertFalse(attributes)
 
   def test_imported_struct(self):
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
 
     graph.files = {
-        'a.mojom': mojom_files_mojom.MojomFile(
+        'a.mojom': fidl_files_fidl.FidlFile(
             file_name='a.mojom',
             specified_file_name='',
             module_namespace='namespace',
             imports=['root/c.mojom']),
-        'root/c.mojom': mojom_files_mojom.MojomFile(
+        'root/c.mojom': fidl_files_fidl.FidlFile(
             file_name='root/c.mojom',
             specified_file_name='',
             module_namespace='otherns',
             imports=[]),
     }
 
-    mojom_struct = mojom_types_mojom.MojomStruct()
-    mojom_struct.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_struct = fidl_types_fidl.FidlStruct()
+    mojom_struct.decl_data = fidl_types_fidl.DeclarationData(
         short_name='AStruct',
-        source_file_info=mojom_types_mojom.SourceFileInfo(
+        source_file_info=fidl_types_fidl.SourceFileInfo(
           file_name='root/c.mojom'))
     mojom_struct.fields = []
     add_version_info(mojom_struct, 0)
 
     type_key = 'some_type_key'
     graph.resolved_types = {
-        type_key: mojom_types_mojom.UserDefinedType(struct_type=mojom_struct)}
+        type_key: fidl_types_fidl.UserDefinedType(struct_type=mojom_struct)}
     struct = module.Struct()
 
     # Translate should create the imports.
@@ -562,8 +562,8 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
     translator.Translate()
 
     struct = translator.UserDefinedFromTypeRef(
-        mojom_types_mojom.Type(
-          type_reference=mojom_types_mojom.TypeReference(
+        fidl_types_fidl.Type(
+          type_reference=fidl_types_fidl.TypeReference(
             type_key=type_key)))
 
     self.assertEquals(
@@ -577,56 +577,56 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def do_interface_test(self, specify_service_name):
     file_name = 'a.mojom'
-    mojom_interface = mojom_types_mojom.MojomInterface(
+    mojom_interface = fidl_types_fidl.FidlInterface(
         current_version=47,
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AnInterface',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
     if specify_service_name:
       mojom_interface.service_name = 'test::TheInterface'
-      mojom_interface.decl_data.attributes = [mojom_types_mojom.Attribute(
-          key='ServiceName', value=mojom_types_mojom.LiteralValue(
+      mojom_interface.decl_data.attributes = [fidl_types_fidl.Attribute(
+          key='ServiceName', value=fidl_types_fidl.LiteralValue(
               string_value='test::TheInterface'))]
     else:
       mojom_interface.service_name = None
-    mojom_method10 = mojom_types_mojom.MojomMethod(
+    mojom_method10 = fidl_types_fidl.FidlMethod(
         ordinal=10,
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AMethod10',
           declaration_order=1,
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)),
-        parameters=mojom_types_mojom.MojomStruct(fields=[],
+        parameters=fidl_types_fidl.FidlStruct(fields=[],
             version_info=build_version_info(0),
             decl_data=build_decl_data('AMethod10_Request')))
-    mojom_method0 = mojom_types_mojom.MojomMethod(
+    mojom_method0 = fidl_types_fidl.FidlMethod(
         ordinal=0,
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AMethod0',
            declaration_order=1,
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)),
-        parameters=mojom_types_mojom.MojomStruct(fields=[],
+        parameters=fidl_types_fidl.FidlStruct(fields=[],
             version_info=build_version_info(0),
             decl_data=build_decl_data('AMethod0_Request')))
-    mojom_method7 = mojom_types_mojom.MojomMethod(
+    mojom_method7 = fidl_types_fidl.FidlMethod(
         ordinal=7,
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AMethod7',
           declaration_order=0,
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)),
-        parameters=mojom_types_mojom.MojomStruct(fields=[],
+        parameters=fidl_types_fidl.FidlStruct(fields=[],
             version_info=build_version_info(0),
             decl_data=build_decl_data('AMethod7_Request')))
     mojom_interface.methods = {10: mojom_method10, 0: mojom_method0,
         7: mojom_method7}
 
     interface = module.Interface()
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     translator = mojom_translator.FileTranslator(graph, file_name)
-    translator.InterfaceFromMojom(interface, mojom_types_mojom.UserDefinedType(
+    translator.InterfaceFromMojom(interface, fidl_types_fidl.UserDefinedType(
       interface_type=mojom_interface))
 
 
@@ -646,35 +646,35 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_method(self):
     file_name = 'a.mojom'
-    mojom_method = mojom_types_mojom.MojomMethod(
+    mojom_method = fidl_types_fidl.FidlMethod(
         ordinal=10,
         min_version=6,
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AMethod',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)))
 
-    param1 = mojom_types_mojom.StructField(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='a_param'),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.UINT32),
+    param1 = fidl_types_fidl.StructField(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='a_param'),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.UINT32),
         offset=21,
         bit=6,
         min_version=11)
-    param2 = mojom_types_mojom.StructField(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='b_param'),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.UINT64),
+    param2 = fidl_types_fidl.StructField(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='b_param'),
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.UINT64),
         offset=22,
         bit=7,
         min_version=12)
-    mojom_method.parameters = mojom_types_mojom.MojomStruct(
+    mojom_method.parameters = fidl_types_fidl.FidlStruct(
         fields=[param1, param2],
         version_info=build_version_info(2),
         decl_data=build_decl_data('Not used'))
 
     interface = module.Interface('MyInterface')
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     translator = mojom_translator.FileTranslator(graph, file_name)
     method = translator.MethodFromMojom(mojom_method, interface)
 
@@ -699,7 +699,7 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
         self.assertEquals(gold.min_version, f.computed_min_version)
 
     # Add empty return params.
-    mojom_method.response_params = mojom_types_mojom.MojomStruct(fields=[])
+    mojom_method.response_params = fidl_types_fidl.FidlStruct(fields=[])
     add_version_info(mojom_method.response_params, 0)
     add_decl_data(mojom_method.response_params, 'AMethod_Response')
     method = translator.MethodFromMojom(mojom_method, interface)
@@ -713,16 +713,16 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 
   def test_parameter(self):
     # Parameters are encoded as fields in a struct.
-    mojom_param = mojom_types_mojom.StructField(
-        decl_data=mojom_types_mojom.DeclarationData(
+    mojom_param = fidl_types_fidl.StructField(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='param0',
           declared_ordinal=5),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.UINT64),
-        default_value=mojom_types_mojom.Value(
-          literal_value=mojom_types_mojom.LiteralValue(uint64_value=20)))
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.UINT64),
+        default_value=fidl_types_fidl.Value(
+          literal_value=fidl_types_fidl.LiteralValue(uint64_value=20)))
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     translator = mojom_translator.FileTranslator(graph, '')
     param = translator.ParamFromMojom(mojom_param)
 
@@ -731,31 +731,31 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
     self.assertEquals(mojom_param.decl_data.declared_ordinal, param.ordinal)
 
   def test_contained_declarations(self):
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     file_name = 'root/f.mojom'
 
-    mojom_enum = mojom_types_mojom.MojomEnum(
+    mojom_enum = fidl_types_fidl.FidlEnum(
         values=[],
-        decl_data=mojom_types_mojom.DeclarationData(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AnEnum',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name),
           container_type_key='parent_key'))
     graph.resolved_types = {
-        'enum_key': mojom_types_mojom.UserDefinedType(enum_type=mojom_enum)}
+        'enum_key': fidl_types_fidl.UserDefinedType(enum_type=mojom_enum)}
 
-    mojom_const = mojom_types_mojom.DeclaredConstant(
-        decl_data=mojom_types_mojom.DeclarationData(
+    mojom_const = fidl_types_fidl.DeclaredConstant(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AConst',
           container_type_key='parent_key'),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.INT64),
-        value=mojom_types_mojom.Value(
-          literal_value=mojom_types_mojom.LiteralValue(
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.INT64),
+        value=fidl_types_fidl.Value(
+          literal_value=fidl_types_fidl.LiteralValue(
             int64_value=30)))
     graph.resolved_constants = {'constant_key': mojom_const}
 
-    contained_declarations = mojom_types_mojom.ContainedDeclarations(
+    contained_declarations = fidl_types_fidl.ContainedDeclarations(
         enums=['enum_key'], constants=['constant_key'])
 
     translator = mojom_translator.FileTranslator(graph, file_name)
@@ -776,15 +776,15 @@ class TestUserDefinedTypeFromMojom(unittest.TestCase):
 class TestValueFromMojom(unittest.TestCase):
 
   def test_literal_value(self):
-    mojom_int64 = mojom_types_mojom.Value()
-    mojom_int64.literal_value = mojom_types_mojom.LiteralValue(int64_value=20)
-    mojom_bool = mojom_types_mojom.Value()
-    mojom_bool.literal_value = mojom_types_mojom.LiteralValue(bool_value=True)
-    mojom_double = mojom_types_mojom.Value()
-    mojom_double.literal_value = mojom_types_mojom.LiteralValue(
+    mojom_int64 = fidl_types_fidl.Value()
+    mojom_int64.literal_value = fidl_types_fidl.LiteralValue(int64_value=20)
+    mojom_bool = fidl_types_fidl.Value()
+    mojom_bool.literal_value = fidl_types_fidl.LiteralValue(bool_value=True)
+    mojom_double = fidl_types_fidl.Value()
+    mojom_double.literal_value = fidl_types_fidl.LiteralValue(
         double_value=1234.012345678901)
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     int64_const = mojom_translator.FileTranslator(graph, None).ValueFromMojom(
         mojom_int64)
     bool_const = mojom_translator.FileTranslator(graph, None).ValueFromMojom(
@@ -797,22 +797,22 @@ class TestValueFromMojom(unittest.TestCase):
     self.assertEquals('1234.012345678901', double_const)
 
   def test_builtin_const(self):
-    mojom = mojom_types_mojom.Value()
+    mojom = fidl_types_fidl.Value()
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
 
     gold = [
-        (mojom_types_mojom.BuiltinConstantValue.DOUBLE_INFINITY,
+        (fidl_types_fidl.BuiltinConstantValue.DOUBLE_INFINITY,
           'double.INFINITY'),
-        (mojom_types_mojom.BuiltinConstantValue.DOUBLE_NEGATIVE_INFINITY,
+        (fidl_types_fidl.BuiltinConstantValue.DOUBLE_NEGATIVE_INFINITY,
           'double.NEGATIVE_INFINITY'),
-        (mojom_types_mojom.BuiltinConstantValue.DOUBLE_NAN,
+        (fidl_types_fidl.BuiltinConstantValue.DOUBLE_NAN,
           'double.NAN'),
-        (mojom_types_mojom.BuiltinConstantValue.FLOAT_INFINITY,
+        (fidl_types_fidl.BuiltinConstantValue.FLOAT_INFINITY,
           'float.INFINITY'),
-        (mojom_types_mojom.BuiltinConstantValue.FLOAT_NEGATIVE_INFINITY,
+        (fidl_types_fidl.BuiltinConstantValue.FLOAT_NEGATIVE_INFINITY,
           'float.NEGATIVE_INFINITY'),
-        (mojom_types_mojom.BuiltinConstantValue.FLOAT_NAN, 'float.NAN'),
+        (fidl_types_fidl.BuiltinConstantValue.FLOAT_NAN, 'float.NAN'),
         ]
 
     for mojom_builtin, string in gold:
@@ -823,29 +823,29 @@ class TestValueFromMojom(unittest.TestCase):
 
   def test_enum_value(self):
     file_name = 'a.mojom'
-    mojom_enum = mojom_types_mojom.MojomEnum()
-    mojom_enum.decl_data = mojom_types_mojom.DeclarationData(
+    mojom_enum = fidl_types_fidl.FidlEnum()
+    mojom_enum.decl_data = fidl_types_fidl.DeclarationData(
         short_name='AnEnum',
-        source_file_info=mojom_types_mojom.SourceFileInfo(file_name=file_name))
-    value1 = mojom_types_mojom.EnumValue(
-        decl_data=mojom_types_mojom.DeclarationData(
+        source_file_info=fidl_types_fidl.SourceFileInfo(file_name=file_name))
+    value1 = fidl_types_fidl.EnumValue(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='val1',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)),
-        initializer_value=mojom_types_mojom.Value(
-            literal_value=mojom_types_mojom.LiteralValue(uint64_value=20)),
+        initializer_value=fidl_types_fidl.Value(
+            literal_value=fidl_types_fidl.LiteralValue(uint64_value=20)),
         int_value=20)
-    value2 = mojom_types_mojom.EnumValue(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='val2'),
+    value2 = fidl_types_fidl.EnumValue(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='val2'),
         int_value=70)
     mojom_enum.values = [value1, value2]
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     graph.resolved_types = {
-        'enum_key': mojom_types_mojom.UserDefinedType(enum_type=mojom_enum)}
+        'enum_key': fidl_types_fidl.UserDefinedType(enum_type=mojom_enum)}
 
-    mojom = mojom_types_mojom.Value(
-        enum_value_reference=mojom_types_mojom.EnumValueReference(
+    mojom = fidl_types_fidl.Value(
+        enum_value_reference=fidl_types_fidl.EnumValueReference(
           identifier='SOMEID',
           enum_type_key='enum_key',
           enum_value_index=0))
@@ -859,22 +859,22 @@ class TestValueFromMojom(unittest.TestCase):
 
   def test_constant_value(self):
     file_name = 'a.mojom'
-    mojom_const = mojom_types_mojom.DeclaredConstant(
-        decl_data=mojom_types_mojom.DeclarationData(
+    mojom_const = fidl_types_fidl.DeclaredConstant(
+        decl_data=fidl_types_fidl.DeclarationData(
           short_name='AConst',
-          source_file_info=mojom_types_mojom.SourceFileInfo(
+          source_file_info=fidl_types_fidl.SourceFileInfo(
             file_name=file_name)),
-        type=mojom_types_mojom.Type(
-          simple_type=mojom_types_mojom.SimpleType.INT64),
-        value=mojom_types_mojom.Value(
-          literal_value=mojom_types_mojom.LiteralValue(
+        type=fidl_types_fidl.Type(
+          simple_type=fidl_types_fidl.SimpleType.INT64),
+        value=fidl_types_fidl.Value(
+          literal_value=fidl_types_fidl.LiteralValue(
             int64_value=30)))
 
-    graph = mojom_files_mojom.MojomFileGraph()
+    graph = fidl_files_fidl.FidlFileGraph()
     graph.resolved_constants = {'constant_key': mojom_const}
 
-    mojom = mojom_types_mojom.Value(
-        constant_reference=mojom_types_mojom.ConstantReference(
+    mojom = fidl_types_fidl.Value(
+        constant_reference=fidl_types_fidl.ConstantReference(
           identifier='SOMEID',
           constant_key='constant_key'))
 
@@ -890,61 +890,61 @@ class TestKindFromMojom(unittest.TestCase):
 
   def test_simple_type(self):
     simple_types = [
-        (mojom_types_mojom.SimpleType.BOOL, module.BOOL),
-        (mojom_types_mojom.SimpleType.INT8, module.INT8),
-        (mojom_types_mojom.SimpleType.INT16, module.INT16),
-        (mojom_types_mojom.SimpleType.INT32, module.INT32),
-        (mojom_types_mojom.SimpleType.INT64, module.INT64),
-        (mojom_types_mojom.SimpleType.UINT8, module.UINT8),
-        (mojom_types_mojom.SimpleType.UINT16, module.UINT16),
-        (mojom_types_mojom.SimpleType.UINT32, module.UINT32),
-        (mojom_types_mojom.SimpleType.UINT64, module.UINT64),
-        (mojom_types_mojom.SimpleType.FLOAT, module.FLOAT),
-        (mojom_types_mojom.SimpleType.DOUBLE, module.DOUBLE),
+        (fidl_types_fidl.SimpleType.BOOL, module.BOOL),
+        (fidl_types_fidl.SimpleType.INT8, module.INT8),
+        (fidl_types_fidl.SimpleType.INT16, module.INT16),
+        (fidl_types_fidl.SimpleType.INT32, module.INT32),
+        (fidl_types_fidl.SimpleType.INT64, module.INT64),
+        (fidl_types_fidl.SimpleType.UINT8, module.UINT8),
+        (fidl_types_fidl.SimpleType.UINT16, module.UINT16),
+        (fidl_types_fidl.SimpleType.UINT32, module.UINT32),
+        (fidl_types_fidl.SimpleType.UINT64, module.UINT64),
+        (fidl_types_fidl.SimpleType.FLOAT, module.FLOAT),
+        (fidl_types_fidl.SimpleType.DOUBLE, module.DOUBLE),
     ]
 
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
     for mojom, golden in simple_types:
       self.assertEquals(
-          golden, t.KindFromMojom(mojom_types_mojom.Type(simple_type=mojom)))
+          golden, t.KindFromMojom(fidl_types_fidl.Type(simple_type=mojom)))
 
   def test_handle_type(self):
     handle_types = [
-        (mojom_types_mojom.HandleType.Kind.UNSPECIFIED, False,
+        (fidl_types_fidl.HandleType.Kind.UNSPECIFIED, False,
           module.HANDLE),
-        (mojom_types_mojom.HandleType.Kind.MESSAGE_PIPE, False,
+        (fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE, False,
           module.MSGPIPE),
-        (mojom_types_mojom.HandleType.Kind.DATA_PIPE_CONSUMER, False,
+        (fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER, False,
           module.DCPIPE),
-        (mojom_types_mojom.HandleType.Kind.DATA_PIPE_PRODUCER, False,
+        (fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER, False,
           module.DPPIPE),
-        (mojom_types_mojom.HandleType.Kind.SHARED_BUFFER, False,
+        (fidl_types_fidl.HandleType.Kind.SHARED_BUFFER, False,
           module.SHAREDBUFFER),
-        (mojom_types_mojom.HandleType.Kind.UNSPECIFIED, True,
+        (fidl_types_fidl.HandleType.Kind.UNSPECIFIED, True,
           module.NULLABLE_HANDLE),
-        (mojom_types_mojom.HandleType.Kind.MESSAGE_PIPE, True,
+        (fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE, True,
           module.NULLABLE_MSGPIPE),
-        (mojom_types_mojom.HandleType.Kind.DATA_PIPE_CONSUMER, True,
+        (fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER, True,
           module.NULLABLE_DCPIPE),
-        (mojom_types_mojom.HandleType.Kind.DATA_PIPE_PRODUCER, True,
+        (fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER, True,
           module.NULLABLE_DPPIPE),
-        (mojom_types_mojom.HandleType.Kind.SHARED_BUFFER, True,
+        (fidl_types_fidl.HandleType.Kind.SHARED_BUFFER, True,
           module.NULLABLE_SHAREDBUFFER),
     ]
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
     for mojom, nullable, golden in handle_types:
-      h = mojom_types_mojom.Type()
-      h.handle_type = mojom_types_mojom.HandleType(
+      h = fidl_types_fidl.Type()
+      h.handle_type = fidl_types_fidl.HandleType(
           kind=mojom, nullable=nullable)
       self.assertEquals(golden, t.KindFromMojom(h))
 
   def test_string_type(self):
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
 
-    s = mojom_types_mojom.Type(string_type=mojom_types_mojom.StringType())
+    s = fidl_types_fidl.Type(string_type=fidl_types_fidl.StringType())
     self.assertEquals(module.STRING, t.KindFromMojom(s))
 
     s.string_type.nullable = True
@@ -959,16 +959,16 @@ class TestKindFromMojom(unittest.TestCase):
         (False, True, -1),
         (False, True, 10),
         ]
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
 
     for array_nullable, element_nullable, size in array_types:
-      a = mojom_types_mojom.Type()
-      a.array_type = mojom_types_mojom.ArrayType(
+      a = fidl_types_fidl.Type()
+      a.array_type = fidl_types_fidl.ArrayType(
           nullable=array_nullable,
           fixed_length=size)
-      a.array_type.element_type = mojom_types_mojom.Type(
-          string_type=mojom_types_mojom.StringType(nullable=element_nullable))
+      a.array_type.element_type = fidl_types_fidl.Type(
+          string_type=fidl_types_fidl.StringType(nullable=element_nullable))
 
       result = t.KindFromMojom(a)
       self.assertTrue(module.IsArrayKind(result))
@@ -988,18 +988,18 @@ class TestKindFromMojom(unittest.TestCase):
         (False, True),
         (True, True),
     ]
-    g = mojom_files_mojom.MojomFileGraph()
+    g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
 
     for map_nullable, value_nullable in map_types:
-      m = mojom_types_mojom.Type()
-      m.map_type = mojom_types_mojom.MapType(
+      m = fidl_types_fidl.Type()
+      m.map_type = fidl_types_fidl.MapType(
           nullable=map_nullable)
-      m.map_type.key_type = mojom_types_mojom.Type(
-          string_type=mojom_types_mojom.StringType())
-      m.map_type.value_type = mojom_types_mojom.Type(
-          handle_type=mojom_types_mojom.HandleType(
-            kind=mojom_types_mojom.HandleType.Kind.SHARED_BUFFER,
+      m.map_type.key_type = fidl_types_fidl.Type(
+          string_type=fidl_types_fidl.StringType())
+      m.map_type.value_type = fidl_types_fidl.Type(
+          handle_type=fidl_types_fidl.HandleType(
+            kind=fidl_types_fidl.HandleType.Kind.SHARED_BUFFER,
             nullable=value_nullable))
 
       result = t.KindFromMojom(m)
@@ -1011,23 +1011,23 @@ class TestKindFromMojom(unittest.TestCase):
           module.IsNullableKind(result.value_kind))
 
   def test_user_defined_type_type(self):
-    graph = mojom_files_mojom.MojomFileGraph()
-    mojom_struct = mojom_types_mojom.MojomStruct(
-        decl_data=mojom_types_mojom.DeclarationData(short_name='FirstStruct'))
+    graph = fidl_files_fidl.FidlFileGraph()
+    mojom_struct = fidl_types_fidl.FidlStruct(
+        decl_data=fidl_types_fidl.DeclarationData(short_name='FirstStruct'))
     type_key = 'some opaque string'
     mojom_struct.fields = [
         # Make sure recursive structs are correctly handled.
-        mojom_types_mojom.StructField(
-          decl_data=mojom_types_mojom.DeclarationData(short_name='field00'),
-          type=mojom_types_mojom.Type(
-            type_reference=mojom_types_mojom.TypeReference(type_key=type_key)))
+        fidl_types_fidl.StructField(
+          decl_data=fidl_types_fidl.DeclarationData(short_name='field00'),
+          type=fidl_types_fidl.Type(
+            type_reference=fidl_types_fidl.TypeReference(type_key=type_key)))
         ]
     add_version_info(mojom_struct, 1)
     graph.resolved_types = {
-        type_key: mojom_types_mojom.UserDefinedType(struct_type=mojom_struct)}
+        type_key: fidl_types_fidl.UserDefinedType(struct_type=mojom_struct)}
 
-    mojom_type = mojom_types_mojom.Type()
-    mojom_type.type_reference = mojom_types_mojom.TypeReference(
+    mojom_type = fidl_types_fidl.Type()
+    mojom_type.type_reference = fidl_types_fidl.TypeReference(
         type_key=type_key)
 
     t = mojom_translator.FileTranslator(graph, None)
@@ -1056,9 +1056,9 @@ def build_decl_data(short_name):
     short_name: {str} short_name to use
 
   Returns:
-    {mojom_types_mojom.DeclarationData} With the given short_name
+    {fidl_types_fidl.DeclarationData} With the given short_name
   """
-  return mojom_types_mojom.DeclarationData(short_name=short_name)
+  return fidl_types_fidl.DeclarationData(short_name=short_name)
 
 def add_decl_data(element, short_name):
   """Builds a DeclarationData with the given short_name and adds it
@@ -1078,10 +1078,10 @@ def build_version_info(num_fields):
   Args:
     num_fields: {int} The value of num_fields to use.
   Returns:
-    {[mojom_types_mojom.StructVersion]} Containing a single element with
+    {[fidl_types_fidl.StructVersion]} Containing a single element with
         the given value for num_fields.
   """
-  return [mojom_types_mojom.StructVersion(
+  return [fidl_types_fidl.StructVersion(
         version_number=0, num_bytes=0,num_fields=num_fields)]
 
 def add_version_info(mojom_struct, num_fields):
