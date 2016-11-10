@@ -105,6 +105,15 @@ void idt_setup(struct idt *idt)
 #endif
     for (unsigned int i = 0; i < countof(idt->entries); ++i) {
         uintptr_t offset = isrs[i] + clac_shift;
-        idt_set_vector(idt, i, sel, offset, IDT_DPL0, typ);
+        enum idt_dpl dpl;
+        switch (i) {
+        case X86_INT_BREAKPOINT:
+            dpl = IDT_DPL3;
+            break;
+        default:
+            dpl = IDT_DPL0;
+            break;
+        }
+        idt_set_vector(idt, i, sel, offset, dpl, typ);
     }
 }

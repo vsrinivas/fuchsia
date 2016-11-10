@@ -129,42 +129,45 @@ static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid, uin
     mx_status_t status = mx_object_get_child(process, tid, MX_RIGHT_SAME_RIGHTS, &thread);
     if (status < 0)
         tu_fatal("mx_object_get_child", status);
-    // TODO: Really want to just kill the process here.
-    status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
+    status = mx_task_resume(thread, MX_RESUME_EXCEPTION | flags);
     if (status < 0)
         tu_fatal("mx_mark_exception_handled", status);
 }
 
-// This returns "bool" because it uses ASSERT_*.
+// Wait for and receive an exception on |eport|.
+
+static bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
+{
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
+    ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
+    return true;
+}
+
 // TODO(dje): test_not_enough_buffer is wip
 // The bool result is because we use the unittest EXPECT/ASSERT macros.
 
-static bool test_received_exception(mx_handle_t eport,
-                                    const char* kind,
-                                    mx_handle_t process,
-                                    mx_excp_type_t expected_type,
-                                    bool test_not_enough_buffer,
-                                    mx_koid_t* tid)
+static bool verify_exception(const mx_exception_packet_t* packet,
+                             const char* kind,
+                             mx_handle_t process,
+                             mx_excp_type_t expected_type,
+                             bool test_not_enough_buffer,
+                             mx_koid_t* tid)
 {
-    mx_exception_packet_t packet;
-    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
-              NO_ERROR, "mx_port_wait failed");
-    const mx_exception_report_t* report = &packet.report;
-
-    EXPECT_EQ(packet.hdr.key, 0u, "bad report key");
+    const mx_exception_report_t* report = &packet->report;
     EXPECT_EQ(report->header.type, expected_type, "bad exception type");
 
     if (strcmp(kind, "process") == 0) {
+        // Test mx_object_get_child: Verify it returns the correct process.
         mx_handle_t debug_child;
         mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, report->context.pid, MX_RIGHT_SAME_RIGHTS, &debug_child);
         if (status < 0)
             tu_fatal("mx_process_debug", status);
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(debug_child, &process_info);
-        ASSERT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
+        EXPECT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "thread") == 0) {
-        // TODO(dje)
+        // TODO(dje): Verify exception was from expected thread.
     } else {
         // process/thread gone, nothing to do
     }
@@ -173,14 +176,29 @@ static bool test_received_exception(mx_handle_t eport,
     if (process != MX_HANDLE_INVALID) {
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(process, &process_info);
-        ASSERT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
+        EXPECT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
     }
 
-    unittest_printf("exception received from %s handler: pid %"
-                    PRIu64 ", tid %" PRIu64 "\n",
-                    kind, report->context.pid, report->context.tid);
+    unittest_printf("%s: exception received: pid %"
+                    PRIu64 ", tid %" PRIu64 ", kind %d\n",
+                    kind, report->context.pid, report->context.tid,
+                    report->header.type);
     *tid = report->context.tid;
     return true;
+}
+
+static bool read_and_verify_exception(mx_handle_t eport,
+                                      const char* kind,
+                                      mx_handle_t process,
+                                      mx_excp_type_t expected_type,
+                                      bool test_not_enough_buffer,
+                                      mx_koid_t* tid)
+{
+    mx_exception_packet_t packet;
+    if (!read_exception(eport, &packet))
+        return false;
+    return verify_exception(&packet, kind, process, expected_type,
+                            test_not_enough_buffer, tid);
 }
 
 static void msg_loop(mx_handle_t channel)
@@ -248,8 +266,7 @@ static int thread_func(void* arg)
     return 0;
 }
 
-static void test_child(void) __NO_RETURN;
-static void test_child(void)
+static void __NO_RETURN test_child(void)
 {
     unittest_printf("Test child starting.\n");
     mx_handle_t channel = mxio_get_startup_handle(MX_HND_TYPE_USER0);
@@ -260,27 +277,35 @@ static void test_child(void)
     exit(0);
 }
 
-static launchpad_t* setup_test_child(mx_handle_t* out_channel)
+static launchpad_t* setup_test_child(const char* arg, mx_handle_t* out_channel)
 {
-    unittest_printf("Starting test child.\n");
+    if (arg)
+        unittest_printf("Starting test child %s.\n", arg);
+    else
+        unittest_printf("Starting test child.\n");
     mx_handle_t our_channel, their_channel;
     tu_channel_create(&our_channel, &their_channel);
     const char* test_child_path = program_path;
-    const char* const argv[2] = {
+    const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
+    const char* const argv[] = {
         test_child_path,
-        test_child_name
+        test_child_name,
+        verbosity_string,
+        arg,
     };
+    int argc = countof(argv) - (arg == NULL);
     mx_handle_t handles[1] = { their_channel };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
     *out_channel = our_channel;
-    launchpad_t* lp = tu_launch_mxio_init(test_child_name, 2, argv, NULL, 1, handles, handle_ids);
+    launchpad_t* lp = tu_launch_mxio_init(test_child_name, argc, argv, NULL, 1, handles, handle_ids);
     unittest_printf("Test child setup.\n");
     return lp;
 }
 
-static void start_test_child(mx_handle_t* out_child, mx_handle_t* out_channel)
+static void start_test_child(const char* arg,
+                             mx_handle_t* out_child, mx_handle_t* out_channel)
 {
-    launchpad_t* lp = setup_test_child(out_channel);
+    launchpad_t* lp = setup_test_child(arg, out_channel);
     *out_child = tu_launch_mxio_fini(lp);
     unittest_printf("Test child started.\n");
 }
@@ -375,7 +400,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
 {
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
-    test_received_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
+    read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
     resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
     tu_wait_signaled(child);
 
@@ -390,7 +415,7 @@ static bool process_handler_test(void)
     unittest_printf("process exception handler basic test\n");
 
     mx_handle_t child, our_channel;
-    start_test_child(&child, &our_channel);
+    start_test_child(NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, 0);
 
@@ -404,7 +429,7 @@ static bool thread_handler_test(void)
     unittest_printf("thread exception handler basic test\n");
 
     mx_handle_t child, our_channel;
-    start_test_child(&child, &our_channel);
+    start_test_child(NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     send_msg(our_channel, MSG_CREATE_AUX_THREAD);
     mx_handle_t thread;
@@ -423,7 +448,7 @@ static bool debugger_handler_test(void)
     unittest_printf("debugger exception handler basic test\n");
 
     mx_handle_t child, our_channel;
-    start_test_child(&child, &our_channel);
+    start_test_child(NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
 
@@ -437,16 +462,16 @@ static bool process_start_test(void)
     unittest_printf("process start test\n");
 
     mx_handle_t child, our_channel;
-    launchpad_t* lp = setup_test_child(&our_channel);
+    launchpad_t* lp = setup_test_child(NULL, &our_channel);
     mx_handle_t eport = tu_io_port_create(0);
     // Note: child is a borrowed handle, launchpad still owns it at this point.
     child = launchpad_get_process_handle(lp);
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    // Now we own the child handle, and lp is destroyed.
     child = tu_launch_mxio_fini(lp);
+    // Now we own the child handle, and lp is destroyed.
 
     mx_koid_t tid;
-    test_received_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+    read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, tid, 0);
     tu_wait_signaled(child);
@@ -464,14 +489,14 @@ static bool process_gone_notification_test(void)
     unittest_printf("process gone notification test\n");
 
     mx_handle_t child, our_channel;
-    start_test_child(&child, &our_channel);
+    start_test_child(NULL, &child, &our_channel);
 
     mx_handle_t eport = tu_io_port_create(0);
     tu_set_exception_port(child, eport, 0, 0);
 
     send_msg(our_channel, MSG_DONE);
     mx_koid_t tid;
-    test_received_exception(eport, "process gone", child, MX_EXCP_GONE, true, &tid);
+    read_and_verify_exception(eport, "process gone", child, MX_EXCP_GONE, true, &tid);
     ASSERT_EQ(tid, 0u, "tid not zero");
     // there's no reply to a "gone" notification
 
@@ -500,7 +525,7 @@ static bool thread_gone_notification_test(void)
     send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
     mx_koid_t tid;
-    test_received_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid);
+    read_and_verify_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid);
     ASSERT_GT(tid, 0u, "tid not >= 0");
     // there's no reply to a "gone" notification
 
@@ -513,6 +538,142 @@ static bool thread_gone_notification_test(void)
     END_TEST;
 }
 
+static const struct {
+    mx_excp_type_t type;
+    const char* name;
+} exceptions[] = {
+    { MX_EXCP_GENERAL, "general" },
+    { MX_EXCP_FATAL_PAGE_FAULT, "page-fault" },
+    { MX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn" },
+    { MX_EXCP_SW_BREAKPOINT, "sw-bkpt" },
+    { MX_EXCP_HW_BREAKPOINT, "hw-bkpt" },
+};
+
+static void __NO_RETURN trigger_unsupported(void)
+{
+    unittest_printf("unsupported exception\n");
+    // An unsupported exception is not a failure.
+    // Generally it just means that support for the exception doesn't
+    // exist yet on this particular architecture.
+    exit(0);
+}
+
+static void __NO_RETURN trigger_general(void)
+{
+#if defined(__x86_64__)
+#elif defined(__aarch64__)
+#endif
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_fatal_page_fault(void)
+{
+    *(volatile int*) 0 = 42;
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_undefined_instruction(void)
+{
+#if defined(__x86_64__)
+    __asm__("ud2");
+#elif defined(__aarch64__)
+#endif
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_hw_breakpoint(void)
+{
+#if defined(__x86_64__)
+    // We can't set the debug regs from user space, support for setting the
+    // debug regs via the debugger interface is work-in-progress, and we can't
+    // use "int $1" here. So testing this will have to wait.
+#elif defined(__aarch64__)
+#endif
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_sw_breakpoint(void)
+{
+#if defined(__x86_64__)
+    __asm__("int3");
+#elif defined(__aarch64__)
+#endif
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_exception(const char* int_name)
+{
+    for (size_t i = 0; i < countof(exceptions); ++i)
+    {
+        if (strcmp(int_name, exceptions[i].name) == 0)
+        {
+            switch (exceptions[i].type)
+            {
+            case MX_EXCP_GENERAL:
+                trigger_general();
+            case MX_EXCP_FATAL_PAGE_FAULT:
+                trigger_fatal_page_fault();
+            case MX_EXCP_UNDEFINED_INSTRUCTION:
+                trigger_undefined_instruction();
+            case MX_EXCP_SW_BREAKPOINT:
+                trigger_sw_breakpoint();
+            case MX_EXCP_HW_BREAKPOINT:
+                trigger_hw_breakpoint();
+            default:
+                assert(0);
+                trigger_unsupported();
+            }
+        }
+    }
+    fprintf(stderr, "unknown exception: %s\n", int_name);
+    exit (1);
+}
+
+static void __NO_RETURN test_child_trigger(const char* int_name)
+{
+    unittest_printf("Exception trigger test child (%s) starting.\n", int_name);
+    trigger_exception(int_name);
+    /* NOTREACHED */
+}
+
+static bool trigger_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("exception trigger tests\n");
+
+    for (size_t i = 0; i < countof(exceptions); ++i) {
+        mx_excp_type_t excp_type = exceptions[i].type;
+        const char *excp_name = exceptions[i].name;
+        mx_handle_t child, our_channel;
+        char* arg;
+        arg = tu_asprintf("trigger=%s", excp_name);
+        launchpad_t* lp = setup_test_child(arg, &our_channel);
+        free(arg);
+        mx_handle_t eport = tu_io_port_create(0);
+        // Note: child is a borrowed handle, launchpad still owns it at this point.
+        child = launchpad_get_process_handle(lp);
+        tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+        child = tu_launch_mxio_fini(lp);
+        // Now we own the child handle, and lp is destroyed.
+        mx_koid_t tid;
+        read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+        resume_thread_from_exception(child, tid, 0);
+        mx_exception_packet_t packet;
+        if (read_exception(eport, &packet)) {
+            if (packet.report.header.type != MX_EXCP_GONE) {
+                verify_exception(&packet, excp_name, child, excp_type, false, &tid);
+                resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
+            }
+        }
+        tu_wait_signaled(child);
+        tu_handle_close(child);
+        tu_handle_close(eport);
+        tu_handle_close(our_channel);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
@@ -521,14 +682,42 @@ RUN_TEST(thread_handler_test);
 RUN_TEST(process_start_test);
 RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
+RUN_TEST(trigger_test);
 END_TEST_CASE(exceptions_tests)
+
+static void check_verbosity(int argc, char** argv)
+{
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "v=", 2) == 0) {
+            int verbosity = atoi(argv[i] + 2);
+            unittest_set_verbosity_level(verbosity);
+            break;
+        }
+    }
+}
+
+static const char* check_trigger(int argc, char** argv)
+{
+    static const char trigger[] = "trigger=";
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], trigger, sizeof(trigger) - 1) == 0) {
+            return argv[i] + sizeof(trigger) - 1;
+        }
+    }
+    return NULL;
+}
 
 int main(int argc, char **argv)
 {
     program_path = argv[0];
 
-    if (argc == 2 && strcmp(argv[1], test_child_name) == 0) {
-        test_child();
+    if (argc >= 2 && strcmp(argv[1], test_child_name) == 0) {
+        check_verbosity(argc, argv);
+        const char* int_name = check_trigger(argc, argv);
+        if (int_name)
+            test_child_trigger(int_name);
+        else
+            test_child();
         return 0;
     }
 
