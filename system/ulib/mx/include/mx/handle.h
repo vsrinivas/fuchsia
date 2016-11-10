@@ -48,16 +48,18 @@ public:
         return status;
     }
 
-    mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
-                         mx_signals_t* pending) const {
-        return mx_handle_wait_one(value_, signals, timeout, pending);
-    }
-
-    mx_status_t replace(mx_rights_t rights, handle<T>* result) const {
+    mx_status_t replace(mx_rights_t rights, handle<T>* result) {
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_status_t status = mx_handle_replace(value_, rights, &h);
         result->reset(h);
+        if (status == NO_ERROR)
+            value_ = MX_HANDLE_INVALID;
         return status;
+    }
+
+    mx_status_t wait_one(mx_signals_t signals, mx_time_t timeout,
+                         mx_signals_t* pending) const {
+        return mx_handle_wait_one(value_, signals, timeout, pending);
     }
 
     // TODO(abarth): Not all of these methods apply to every type of handle. We

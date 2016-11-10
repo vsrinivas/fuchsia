@@ -22,6 +22,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vmo.cc \
     $(LOCAL_DIR)/waitset.cc \
 
+MODULE_SO_NAME := libmx
+
 MODULE_LIBS := ulib/magenta
 
 include make/module.mk
