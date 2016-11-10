@@ -11,6 +11,7 @@
 
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
+#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
@@ -26,7 +27,7 @@ class StoryControllerImpl;
 class StoryProviderImpl : public StoryProvider {
  public:
   StoryProviderImpl(
-      std::shared_ptr<ApplicationContext> application_context,
+      ApplicationEnvironmentPtr environment,
       fidl::InterfaceHandle<ledger::Ledger> ledger,
       fidl::InterfaceRequest<StoryProvider> story_provider_request);
 
@@ -69,7 +70,7 @@ class StoryProviderImpl : public StoryProvider {
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
 
-  std::shared_ptr<ApplicationContext> application_context_;
+  ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
   ledger::LedgerPtr ledger_;
 

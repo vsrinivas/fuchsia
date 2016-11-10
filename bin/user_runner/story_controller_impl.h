@@ -10,6 +10,7 @@
 
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
@@ -29,10 +30,10 @@ class StoryControllerImpl : public StoryController,
   static StoryControllerImpl* New(
       StoryInfoPtr story_info,
       StoryProviderImpl* story_provider_impl,
-      std::shared_ptr<ApplicationContext> application_context,
+      ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request) {
     return new StoryControllerImpl(std::move(story_info), story_provider_impl,
-                                   application_context,
+                                   std::move(launcher),
                                    std::move(story_controller_request));
   }
 
@@ -45,7 +46,7 @@ class StoryControllerImpl : public StoryController,
   StoryControllerImpl(
       StoryInfoPtr story_info,
       StoryProviderImpl* story_provider_impl,
-      std::shared_ptr<ApplicationContext> application_context,
+      ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request);
 
  private:  // virtual method implementations
@@ -81,7 +82,7 @@ class StoryControllerImpl : public StoryController,
   StoryInfoPtr story_info_;
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
-  std::shared_ptr<ApplicationContext> application_context_;
+  ApplicationLauncherPtr launcher_;
 
   StrongBinding<StoryController> binding_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;

@@ -8,23 +8,22 @@
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/app/application_context.h"
 
 namespace modular {
 
 StoryControllerImpl::StoryControllerImpl(
     StoryInfoPtr story_info,
     StoryProviderImpl* const story_provider_impl,
-    std::shared_ptr<ApplicationContext> application_context,
+    ApplicationLauncherPtr launcher,
     fidl::InterfaceRequest<StoryController> story_controller_request)
     : story_info_(std::move(story_info)),
       story_provider_impl_(story_provider_impl),
-      application_context_(application_context),
+      launcher_(std::move(launcher)),
       binding_(this, std::move(story_controller_request)),
       module_watcher_binding_(this),
       link_changed_binding_(this) {
-  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id
-                << " " << to_string(story_info_->story_page_id);
+  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id << " "
+                << to_string(story_info_->story_page_id);
 }
 
 StoryControllerImpl::~StoryControllerImpl() {
@@ -96,8 +95,7 @@ void StoryControllerImpl::StartStoryRunner(
   ServiceProviderPtr story_runner_app_services;
   story_runner_launch_info->services = GetProxy(&story_runner_app_services);
   story_runner_launch_info->url = "file:///system/apps/story_runner";
-  application_context_->launcher()->CreateApplication(
-      std::move(story_runner_launch_info), nullptr);
+  launcher_->CreateApplication(std::move(story_runner_launch_info), nullptr);
   StoryFactoryPtr story_factory;
   ConnectToService(story_runner_app_services.get(), GetProxy(&story_factory));
 
@@ -105,8 +103,7 @@ void StoryControllerImpl::StartStoryRunner(
   ServiceProviderPtr resolver_app_services;
   resolver_launch_info->services = GetProxy(&resolver_app_services);
   resolver_launch_info->url = "file:///system/apps/resolver";
-  application_context_->launcher()->CreateApplication(
-      std::move(resolver_launch_info), nullptr);
+  launcher_->CreateApplication(std::move(resolver_launch_info), nullptr);
   ResolverPtr resolver;
   ConnectToService(resolver_app_services.get(), GetProxy(&resolver));
 
