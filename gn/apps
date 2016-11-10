@@ -52,6 +52,10 @@
             "bootfs_path": "apps/hello_dart.dartx"
         },
         {
+            "binary": "maxwell_test",
+            "bootfs_path": "apps/maxwell_test"
+        },
+        {
             "binary": "suggestion_engine",
             "bootfs_path": "apps/suggestion_engine"
         }
