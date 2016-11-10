@@ -64,9 +64,12 @@ extern mx_status_t create_inferior(const char* name,
                                    size_t hnds_count, mx_handle_t* handles,
                                    uint32_t* ids, launchpad_t** out_launchpad);
 
-extern bool setup_inferior(const char* name, mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_handle_t* out_eport);
+extern bool setup_inferior(const char* name,
+                           mx_handle_t* out_channel,
+                           mx_handle_t* out_inferior,
+                           mx_handle_t* out_eport);
 
-extern bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport);
+extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior, mx_handle_t eport);
 
 extern bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet);
 

@@ -297,16 +297,16 @@ mx_status_t create_inferior(const char* name,
     return status;
 }
 
-bool setup_inferior(const char* name, mx_handle_t* out_pipe, mx_handle_t* out_inferior, mx_handle_t* out_eport)
+bool setup_inferior(const char* name, mx_handle_t* out_channel, mx_handle_t* out_inferior, mx_handle_t* out_eport)
 {
     mx_status_t status;
-    mx_handle_t pipe1, pipe2;
-    tu_channel_create(&pipe1, &pipe2);
+    mx_handle_t channel1, channel2;
+    tu_channel_create(&channel1, &channel2);
 
     const char verbosity_string[] = { 'v', '=', utest_verbosity_level + '0', '\0' };
     const char* test_child_path = program_path;
     const char* const argv[] = { test_child_path, name, verbosity_string };
-    mx_handle_t handles[1] = { pipe2 };
+    mx_handle_t handles[1] = { channel2 };
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
 
     launchpad_t* lp;
@@ -344,23 +344,23 @@ bool setup_inferior(const char* name, mx_handle_t* out_pipe, mx_handle_t* out_in
     launchpad_destroy(lp);
 
     enum message msg;
-    send_msg(pipe1, MSG_PING);
-    if (!recv_msg(pipe1, &msg))
+    send_msg(channel1, MSG_PING);
+    if (!recv_msg(channel1, &msg))
         return false;
     EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
 
-    *out_pipe = pipe1;
+    *out_channel = channel1;
     *out_inferior = inferior;
     *out_eport = eport;
     return true;
 }
 
-bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport)
+bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior, mx_handle_t eport)
 {
     unittest_printf("Shutting down inferior\n");
 
-    send_msg(pipe, MSG_DONE);
-    tu_handle_close(pipe);
+    send_msg(channel, MSG_DONE);
+    tu_handle_close(channel);
 
     mx_koid_t tid;
     if (!read_and_verify_exception(eport, inferior, MX_EXCP_GONE, &tid))

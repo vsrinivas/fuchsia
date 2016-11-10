@@ -165,9 +165,9 @@ static bool debugger_test(void)
 {
     BEGIN_TEST;
 
-    mx_handle_t pipe, inferior, eport;
+    mx_handle_t channel, inferior, eport;
 
-    if (!setup_inferior(test_inferior_child_name, &pipe, &inferior, &eport))
+    if (!setup_inferior(test_inferior_child_name, &channel, &inferior, &eport))
         return false;
 
     mx_handle_t wait_inf_args[2] = { inferior, eport };
@@ -175,12 +175,12 @@ static bool debugger_test(void)
     tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*) &wait_inf_args[0], "wait-inf thread");
 
     enum message msg;
-    send_msg(pipe, MSG_CRASH);
-    if (!recv_msg(pipe, &msg))
+    send_msg(channel, MSG_CRASH);
+    if (!recv_msg(channel, &msg))
         return false;
     EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "unexpected response from crash");
 
-    if (!shutdown_inferior(pipe, inferior, eport))
+    if (!shutdown_inferior(channel, inferior, eport))
         return false;
 
     unittest_printf("Waiting for wait-inf thread\n");
@@ -195,14 +195,14 @@ static bool debugger_thread_list_test(void)
 {
     BEGIN_TEST;
 
-    mx_handle_t pipe, inferior, eport;
+    mx_handle_t channel, inferior, eport;
 
-    if (!setup_inferior(test_inferior_child_name, &pipe, &inferior, &eport))
+    if (!setup_inferior(test_inferior_child_name, &channel, &inferior, &eport))
         return false;
 
     enum message msg;
-    send_msg(pipe, MSG_START_EXTRA_THREADS);
-    if (!recv_msg(pipe, &msg))
+    send_msg(channel, MSG_START_EXTRA_THREADS);
+    if (!recv_msg(channel, &msg))
         return false;
     EXPECT_EQ(msg, MSG_EXTRA_THREADS_STARTED, "unexpected response when starting extra threads");
 
@@ -232,7 +232,7 @@ static bool debugger_thread_list_test(void)
         EXPECT_EQ(info.rec.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
     }
 
-    if (!shutdown_inferior(pipe, inferior, eport))
+    if (!shutdown_inferior(channel, inferior, eport))
         return false;
 
     END_TEST;
@@ -305,7 +305,7 @@ static int extra_thread_func(void* arg)
 
 // This returns "bool" because it uses ASSERT_*.
 
-static bool msg_loop(mx_handle_t pipe)
+static bool msg_loop(mx_handle_t channel)
 {
     BEGIN_HELPER;
 
@@ -314,21 +314,21 @@ static bool msg_loop(mx_handle_t pipe)
     while (!done_tests && !my_done_tests)
     {
         enum message msg;
-        ASSERT_TRUE(recv_msg(pipe, &msg), "Error while receiving msg");
+        ASSERT_TRUE(recv_msg(channel, &msg), "Error while receiving msg");
         switch (msg)
         {
         case MSG_DONE:
             my_done_tests = true;
             break;
         case MSG_PING:
-            send_msg(pipe, MSG_PONG);
+            send_msg(channel, MSG_PONG);
             break;
         case MSG_CRASH:
             for (int i = 0; i < NUM_SEGV_TRIES; ++i) {
                 if (!test_prep_and_segv())
                     exit(21);
             }
-            send_msg(pipe, MSG_RECOVERED_FROM_CRASH);
+            send_msg(channel, MSG_RECOVERED_FROM_CRASH);
             break;
         case MSG_START_EXTRA_THREADS:
             for (int i = 0; i < NUM_EXTRA_THREADS; ++i) {
@@ -337,7 +337,7 @@ static bool msg_loop(mx_handle_t pipe)
                 thrd_t thread;
                 tu_thread_create_c11(&thread, extra_thread_func, NULL, "extra-thread");
             }
-            send_msg(pipe, MSG_EXTRA_THREADS_STARTED);
+            send_msg(channel, MSG_EXTRA_THREADS_STARTED);
             break;
         default:
             unittest_printf("unknown message received: %d\n", msg);
@@ -350,10 +350,10 @@ static bool msg_loop(mx_handle_t pipe)
 
 void test_inferior(void)
 {
-    mx_handle_t pipe = mxio_get_startup_handle(MX_HND_TYPE_USER0);
-    unittest_printf("test_inferior: got handle %d\n", pipe);
+    mx_handle_t channel = mxio_get_startup_handle(MX_HND_TYPE_USER0);
+    unittest_printf("test_inferior: got handle %d\n", channel);
 
-    if (!msg_loop(pipe))
+    if (!msg_loop(channel))
         exit(20);
 
     done_tests = true;

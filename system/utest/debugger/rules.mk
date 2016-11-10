@@ -11,8 +11,8 @@ MODULE_TYPE := usertest
 MODULE_NAME := debugger-test
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/debugger.c \
-	$(LOCAL_DIR)/utils.c
+    $(LOCAL_DIR)/debugger.c \
+    $(LOCAL_DIR)/utils.c
 
 MODULE_STATIC_LIBS := ulib/runtime
 MODULE_LIBS := \
