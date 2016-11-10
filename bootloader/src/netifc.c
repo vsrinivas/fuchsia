@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <efi/protocol/simple-network.h>
+
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -50,7 +52,8 @@ void eth_put_buffer(void* data) {
     eth_buffer* buf = (void*)(((uint64_t)data) & (~2047));
 
     if (buf->magic != ETH_BUFFER_MAGIC) {
-        printf("fatal: eth buffer %p (from %p) bad magic %lx\n", buf, data, buf->magic);
+        printf("fatal: eth buffer %p (from %p) bad magic %" PRIx64 "\n",
+               buf, data, buf->magic);
         for (;;)
             ;
     }

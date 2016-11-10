@@ -6,6 +6,7 @@
 
 #include <efi/protocol/graphics-output.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <xefi.h>
@@ -110,13 +111,13 @@ static int process_memory_map(efi_system_table* sys, size_t* _key, int silent) {
     mkey = dsize = dversion = 0;
     r = sys->BootServices->GetMemoryMap(&msize, mmap, &mkey, &dsize, &dversion);
     if (!silent)
-        printf("r=%lx msz=%lx key=%lx dsz=%lx dvn=%x\n", r, msize, mkey, dsize, dversion);
+        printf("r=%zx msz=%zx key=%zx dsz=%zx dvn=%x\n", r, msize, mkey, dsize, dversion);
     if (r != EFI_SUCCESS) {
         return -1;
     }
     if (msize > sizeof(scratch)) {
         if (!silent)
-            printf("Memory Table Too Large (%ld entries)\n", (msize / dsize));
+            printf("Memory Table Too Large (%zu entries)\n", (msize / dsize));
         return -1;
     }
     for (off = 0, n = 0; off < msize; off += dsize) {
@@ -137,7 +138,7 @@ static int process_memory_map(efi_system_table* sys, size_t* _key, int silent) {
         n++;
         if (n == 128) {
             if (!silent)
-                printf("E820 Table Too Large (%ld raw entries)\n", (msize / dsize));
+                printf("E820 Table Too Large (%zu raw entries)\n", (msize / dsize));
             return -1;
         }
     }
@@ -365,9 +366,9 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
     efi_graphics_output_protocol* gop;
     bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
 
-    printf("boot_kernel() from %p (%ld bytes)\n", image, sz);
+    printf("boot_kernel() from %p (%zu bytes)\n", image, sz);
     if (ramdisk && rsz) {
-        printf("ramdisk at %p (%ld bytes)\n", ramdisk, rsz);
+        printf("ramdisk at %p (%zu bytes)\n", ramdisk, rsz);
     }
 
     if (load_kernel(sys->BootServices, image, sz, &kernel)) {
@@ -412,7 +413,8 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
 
     for (i = 0; i < n; i++) {
         struct e820entry* e = e820table + i;
-        printf("%016lx %016lx %s\n", e->addr, e->size, e820name(e->type));
+        printf("%016" PRIx64 " %016" PRIx64 " %s\n",
+               e->addr, e->size, e820name(e->type));
     }
 
     r = sys->BootServices->ExitBootServices(img, key);

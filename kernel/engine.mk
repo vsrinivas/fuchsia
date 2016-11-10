@@ -282,11 +282,6 @@ include make/recurse.mk
 # host tools
 include system/tools/build.mk
 
-# bootloader (x86-64 only for now)
-ifeq ($(ARCH),x86)
-include bootloader/build.mk
-endif
-
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
 	@echo generating $@
@@ -438,6 +433,12 @@ USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
 #$(info LIBGCC = $(LIBGCC))
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))
 #$(info GLOBAL_OPTFLAGS = $(GLOBAL_OPTFLAGS))
+
+# bootloader (x86-64 only for now)
+# This needs to be after CC et al are set above.
+ifeq ($(ARCH),x86)
+include bootloader/build.mk
+endif
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)

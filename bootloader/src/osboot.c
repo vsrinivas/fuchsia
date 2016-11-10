@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -54,7 +55,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
             }
         }
 
-        printf("netboot: allocating %ld for ramdisk (requested %ld)\n", buf_size, size);
+        printf("netboot: allocating %zu for ramdisk (requested %zu)\n", buf_size, size);
         if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, buf_size / 4096, &mem)) {
             printf("Failed to allocate network io buffer\n");
             return NULL;
@@ -269,7 +270,7 @@ void do_netboot() {
             }
             r = gBS->StartImage(h, &exitdatasize, NULL);
             if (EFI_ERROR(r)) {
-                printf("StartImage Failed %ld\n", r);
+                printf("StartImage Failed %zu\n", r);
                 continue;
             }
             printf("\nNetBoot Server Resuming...\n");
@@ -305,7 +306,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     uint64_t mmio;
     if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
-        sprintf(cmdextra, " xdc.mmio=0x%lx ", mmio);
+        sprintf(cmdextra, " xdc.mmio=%#" PRIx64 " ", mmio);
     } else {
         cmdextra[0] = 0;
     }
@@ -331,7 +332,8 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
     efi_graphics_output_protocol* gop;
     gBS->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
-    printf("Framebuffer base is at %lx\n\n", gop->Mode->FrameBufferBase);
+    printf("Framebuffer base is at %" PRIx64 "\n\n",
+           gop->Mode->FrameBufferBase);
 
     // See if there's a network interface
     bool have_network = netboot_init() == 0;
