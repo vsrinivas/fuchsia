@@ -10,8 +10,8 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 EFI_CC		:= $(TOOLCHAIN_PREFIX)clang
 EFI_LD		:= $(TOOLCHAIN_PREFIX)lld-link
 else
-EFI_CC		:= $(CC)
-EFI_LD		:= $(LD)
+EFI_CC		:= $(TOOLCHAIN_PREFIX)gcc
+EFI_LD		:= $(TOOLCHAIN_PREFIX)ld
 endif
 
 EFI_CFLAGS	:= -fPIE -fshort-wchar -fno-stack-protector -mno-red-zone
