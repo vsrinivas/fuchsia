@@ -40,13 +40,13 @@ struct OtherTreeTraits {
 };
 
 template <typename _KeyType, typename _PtrType>
-struct OtherTreeNodeState {
+class OtherTreeNodeState {
 public:
     using KeyType = _KeyType;
     using PtrType = _PtrType;
 
 private:
-    friend class OtherTreeTraits<OtherTreeNodeState<KeyType, PtrType>>;
+    friend struct OtherTreeTraits<OtherTreeNodeState<KeyType, PtrType>>;
     WAVLTreeNodeState<PtrType> node_state_;
     KeyType key_ = 0;
 };

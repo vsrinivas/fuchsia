@@ -508,7 +508,7 @@ public:
     }
 
 private:
-    friend class Region::ReturnToAllocatorTraits;
+    friend struct Region::ReturnToAllocatorTraits;
 
     mx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);

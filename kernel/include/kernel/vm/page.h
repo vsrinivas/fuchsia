@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 #if __cplusplus
-struct VmObject;
+class VmObject;
 #endif
 
 __BEGIN_CDECLS
