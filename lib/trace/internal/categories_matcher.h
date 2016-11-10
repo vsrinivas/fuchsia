@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_CATEGORIES_MATCHER_H_
-#define APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_CATEGORIES_MATCHER_H_
+#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_CATEGORIES_MATCHER_H_
+#define APPS_TRACING_LIB_TRACE_INTERNAL_CATEGORIES_MATCHER_H_
 
 #include <string>
 #include <vector>
@@ -38,4 +38,4 @@ class CategoriesMatcher {
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_EVENT_CATEGORIES_MATCHER_H_
+#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_CATEGORIES_MATCHER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_WRITER_H_
-#define APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_WRITER_H_
+#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_WRITER_H_
+#define APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_WRITER_H_
 
 #include <stdint.h>
 
@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "apps/tracing/lib/trace_event/internal/trace_types.h"
+#include "apps/tracing/lib/trace/internal/trace_types.h"
 
 namespace tracing {
 namespace internal {
@@ -20,10 +20,6 @@ namespace internal {
 template <typename T>
 inline typename std::underlying_type<T>::type ToUnderlyingType(T value) {
   return static_cast<typename std::underlying_type<T>::type>(value);
-}
-
-inline size_t Pad(size_t size) {
-  return size + ((8 - (size & 7)) & 7);
 }
 
 struct Payload {
@@ -46,7 +42,7 @@ struct Payload {
 
   template <typename T>
   Payload& WriteValue(const T& value) {
-    value.Flatten(*this);
+    value.WriteTo(*this);
     return *this;
   }
 
@@ -61,15 +57,23 @@ struct Payload {
   uint64_t* ptr;
 };
 
-struct StringRef {
-  static constexpr uint16_t kMask = 0x8000;
+struct Koid {
+  explicit Koid(uint64_t value) : value(value) {}
 
-  static StringRef MakeEmpty() { return StringRef{0, nullptr}; }
+  uint64_t value;
+};
+
+struct StringRef {
+  static StringRef MakeEmpty() {
+    return StringRef{StringRefFields::kEmpty, nullptr};
+  }
 
   static StringRef MakeInlined(const char* string, size_t length) {
-    if (string && length < kMask)
-      return StringRef{static_cast<uint16_t>(kMask | length), string};
-    return MakeEmpty();
+    if (!length)
+      return MakeEmpty();
+    uint16_t trim = std::min(length, size_t(StringRefFields::kMaxLength));
+    return StringRef{static_cast<uint16_t>(trim | StringRefFields::kInlineFlag),
+                     string};
   }
 
   // Constructs a |StringRef| from a std::string.
@@ -83,26 +87,30 @@ struct StringRef {
     return StringRef{index, nullptr};
   }
 
-  size_t Size() const { return is_inlined() ? Pad(~kMask & encoded) : 0; }
+  size_t Size() const {
+    return is_inlined() ? Pad(StringRefFields::kLengthMask & encoded) : 0;
+  }
 
-  void Flatten(Payload& payload) const {
+  void WriteTo(Payload& payload) const {
     if (is_inlined())
       payload.WriteBytes(string, Size());
   }
 
-  bool is_empty() const { return encoded == 0; }
-  bool is_indexed() const { return !is_empty() && (0 == (encoded & kMask)); }
-  bool is_inlined() const { return 1 == (encoded & kMask); }
+  bool is_empty() const { return encoded == StringRefFields::kEmpty; }
+  bool is_indexed() const { return !is_empty() && !is_inlined(); }
+  bool is_inlined() const { return encoded & StringRefFields::kInlineFlag; }
 
   uint16_t encoded;
   const char* string;
 };
 
 struct ThreadRef {
-  size_t Size() const { return index == 0 ? 2 * sizeof(uint64_t) : 0; }
+  size_t Size() const {
+    return index == ThreadRefFields::kInline ? 2 * sizeof(uint64_t) : 0;
+  }
 
-  void Flatten(Payload& payload) const {
-    if (index == 0)
+  void WriteTo(Payload& payload) const {
+    if (index == ThreadRefFields::kInline)
       payload.Write(process_koid).Write(thread_koid);
   }
 
@@ -138,17 +146,12 @@ inline size_t SizeArguments(Head&& head, Tail&&... tail) {
   return head.Size() + SizeArguments(std::forward<Tail>(tail)...);
 }
 
-struct Koid {
-  explicit Koid(uint64_t value) : value(value) {}
-  uint64_t value;
-};
-
 struct ArgumentBase {
   explicit ArgumentBase(const char* name) : name_ref(RegisterString(name)) {}
 
   size_t Size() const { return sizeof(uint64_t) + name_ref.Size(); }
 
-  void Flatten(Payload& payload,
+  void WriteTo(Payload& payload,
                ArgumentType type,
                size_t size,
                ArgumentHeader extras = 0) const {
@@ -172,8 +175,8 @@ struct Argument<int32_t> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size(); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kInt32, Size(),
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kInt32, Size(),
                           Int32ArgumentFields::Value::Make(value));
   }
 
@@ -187,8 +190,8 @@ struct Argument<int64_t> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + sizeof(int64_t); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kInt64, Size());
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kInt64, Size());
     payload.Write(value);
   }
 
@@ -202,8 +205,8 @@ struct Argument<Koid> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + sizeof(uint64_t); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kKernelObjectId, Size());
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kKernelObjectId, Size());
     payload.Write(koid.value);
   }
 
@@ -217,8 +220,8 @@ struct Argument<double> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + sizeof(double); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kDouble, Size());
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kDouble, Size());
     payload.WriteBytes(&value, sizeof(double));
   }
 
@@ -233,8 +236,8 @@ struct Argument<std::string> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + value_ref.Size(); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kString, Size(),
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kString, Size(),
                           StringArgumentFields::Index::Make(value_ref.encoded));
     payload.WriteValue(value_ref);
   }
@@ -249,8 +252,8 @@ struct Argument<const char*> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + value_ref.Size(); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kString, Size(),
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kString, Size(),
                           StringArgumentFields::Index::Make(value_ref.encoded));
     payload.WriteValue(value_ref);
   }
@@ -265,8 +268,8 @@ struct Argument<char[n]> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + value_ref.Size(); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kString, Size(),
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kString, Size(),
                           StringArgumentFields::Index::Make(value_ref.encoded));
     payload.WriteValue(value_ref);
   }
@@ -281,8 +284,8 @@ struct Argument<T*> : ArgumentBase {
 
   size_t Size() const { return ArgumentBase::Size() + sizeof(uint64_t); }
 
-  void Flatten(Payload& payload) const {
-    ArgumentBase::Flatten(payload, ArgumentType::kPointer, Size());
+  void WriteTo(Payload& payload) const {
+    ArgumentBase::WriteTo(payload, ArgumentType::kPointer, Size());
     payload.Write(reinterpret_cast<uintptr_t>(value));
   }
 
@@ -339,7 +342,7 @@ inline void TraceAsyncBegin(const char* name,
   if (auto payload = WriteEventRecord(
           TraceEventType::kAsyncStart, name, cat, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
-    payload.Write(id).WriteValues(std::forward<Args>(args)...);
+    payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }
 }
 
@@ -351,7 +354,7 @@ inline void TraceAsyncInstant(const char* name,
   if (auto payload = WriteEventRecord(
           TraceEventType::kAsyncInstant, name, cat, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
-    payload.Write(id).WriteValues(std::forward<Args>(args)...);
+    payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }
 }
 
@@ -363,11 +366,11 @@ inline void TraceAsyncEnd(const char* name,
   if (auto payload = WriteEventRecord(
           TraceEventType::kAsyncEnd, name, cat, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
-    payload.Write(id).WriteValues(std::forward<Args>(args)...);
+    payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }
 }
 
 }  // namespace internal
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_WRITER_H_
+#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_WRITER_H_

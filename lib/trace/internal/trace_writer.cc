@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace_event/internal/allocator.h"
-#include "apps/tracing/lib/trace_event/internal/categories_matcher.h"
-#include "apps/tracing/lib/trace_event/internal/table.h"
-#include "apps/tracing/lib/trace_event/internal/trace_writer.h"
+#include "apps/tracing/lib/trace/internal/allocator.h"
+#include "apps/tracing/lib/trace/internal/categories_matcher.h"
+#include "apps/tracing/lib/trace/internal/table.h"
+#include "apps/tracing/lib/trace/internal/trace_writer.h"
 #include "lib/ftl/logging.h"
 #include "magenta/syscalls.h"
 #include "magenta/syscalls/object.h"
@@ -19,9 +19,11 @@ thread_local char tid;
 
 inline uint64_t GetProcessKoid() {
   mx_info_handle_basic_t info;
-  auto ret = mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC,
-                                sizeof(info.rec), &info, sizeof(info));
-  return ret == sizeof(info) ? info.rec.koid : 0;
+  mx_size_t size = 0;
+  if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC,
+                         sizeof(info.rec), &info, sizeof(info), &size) < 0)
+    return 0;
+  return size == sizeof(info) ? info.rec.koid : 0;
 }
 
 inline uint64_t GetThreadKoid() {
@@ -35,11 +37,11 @@ thread_local const uint64_t g_thread_koid = GetThreadKoid();
 Allocator g_allocator;
 bool g_is_tracing_started = false;
 CategoriesMatcher g_categories_matcher;
-Table<uintptr_t, 0, 4096> g_string_table;
-Table<uint64_t, 0, 256> g_thread_object_table;
+Table<uintptr_t, StringRefFields::kInvalidIndex, 4096> g_string_table;
+Table<uint64_t, ThreadRefFields::kInline, 256> g_thread_object_table;
 
 inline uint64_t GetNanosecondTimestamp() {
-  return mx_current_time();
+  return mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
 }  // namespace
@@ -49,7 +51,7 @@ Payload Payload::New(size_t size) {
 }
 
 ThreadRef RegisterCurrentThread() {
-  uint16_t index = 0;
+  uint16_t index = ThreadRefFields::kInline;
 
   if (g_thread_object_table.Register(g_thread_koid, &index))
     WriteThreadRecord(index, g_process_koid, g_thread_koid);
@@ -58,13 +60,17 @@ ThreadRef RegisterCurrentThread() {
 }
 
 StringRef RegisterString(const char* string) {
-  uint16_t index = 0;
+  if (!string || !*string)
+    return StringRef::MakeEmpty();
+
+  uint16_t index = StringRefFields::kInvalidIndex;
 
   if (g_string_table.Register(reinterpret_cast<uintptr_t>(string), &index))
     WriteStringRecord(index, string);
 
-  return index == 0 ? StringRef::MakeInlined(string, strlen(string))
-                    : StringRef::MakeIndexed(index);
+  return index == StringRefFields::kInvalidIndex
+             ? StringRef::MakeInlined(string, strlen(string))
+             : StringRef::MakeIndexed(index);
 }
 
 void WriteInitializationRecord(uint64_t ticks_per_second) {
@@ -84,11 +90,7 @@ void WriteInitializationRecord(uint64_t ticks_per_second) {
 
 void WriteStringRecord(uint16_t index, const char* string) {
   FTL_DCHECK(g_allocator);
-
-  if (index == 0) {
-    FTL_LOG(WARNING) << "Registering a string to index 0 is forbidden";
-    return;
-  }
+  FTL_DCHECK(index != StringRefFields::kInvalidIndex);
 
   auto length = strlen(string);
   auto size = sizeof(RecordHeader) + Pad(length);
@@ -108,11 +110,7 @@ void WriteThreadRecord(uint16_t index,
                        uint64_t process_koid,
                        uint64_t thread_koid) {
   FTL_DCHECK(g_allocator);
-
-  if (index == 0) {
-    FTL_LOG(WARNING) << "Registering a thread to index 0 is forbidden";
-    return;
-  }
+  FTL_DCHECK(index != ThreadRefFields::kInline);
 
   auto size = sizeof(RecordHeader) + 2 * sizeof(uint64_t);
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace_event/internal/categories_matcher.h"
+#include "apps/tracing/lib/trace/internal/categories_matcher.h"
 
 #include "gtest/gtest.h"
 

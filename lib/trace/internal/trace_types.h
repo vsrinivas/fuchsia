@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_TYPES_H_
-#define APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_TYPES_H_
+#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_
+#define APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_
 
 namespace tracing {
 namespace internal {
+
+inline size_t Pad(size_t size) {
+  return size + ((8 - (size & 7)) & 7);
+}
 
 // Enumerates all known record types.
 enum class RecordType {
@@ -21,7 +25,7 @@ enum class RecordType {
 //
 // Extend at end.
 enum class ArgumentType {
-  kUnknown = 0,
+  kNull = 0,
   kInt32 = 1,
   kInt64 = 2,
   kDouble = 3,
@@ -38,6 +42,20 @@ enum class TraceEventType {
   kAsyncStart = 3,
   kAsyncInstant = 4,
   kAsyncEnd = 5
+};
+
+struct StringRefFields {
+  static constexpr uint16_t kEmpty = 0;
+  static constexpr uint16_t kInvalidIndex = 0;
+  static constexpr uint16_t kInlineFlag = 0x8000;
+  static constexpr uint16_t kLengthMask = 0x7fff;
+  static constexpr size_t kMaxLength = 0x7fff;
+  static constexpr uint16_t kMaxIndex = 0x7fff;
+};
+
+struct ThreadRefFields {
+  static constexpr uint16_t kInline = 0;
+  static constexpr uint16_t kMaxIndex = 0xff;
 };
 
 template <size_t begin, size_t end>
@@ -105,4 +123,4 @@ struct EventRecordFields : RecordFields {
 }  // namspace internal
 }  // namepsace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_EVENT_INTERNAL_TRACE_TYPES_H_
+#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_

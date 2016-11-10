@@ -80,17 +80,23 @@ class TracerApp : public mojo::ApplicationImplBase,
                      GetProxy(&trace_controller_));
     FTL_DCHECK(trace_controller_) << "Failed to connect to tracing service";
 
-    MojoCreateDataPipeOptions options;
-    options.struct_size = sizeof(MojoCreateDataPipeOptions);
-    options.flags = MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE;
-    options.element_num_bytes = 1;
-    options.capacity_num_bytes = buffer_size;
+    mx::datapipe_consumer consumer;
+    mx::datapipe_producer producer;
 
-    mojo::DataPipe data_pipe(options);
-    data_pipe_drainer_.Start(std::move(data_pipe.consumer_handle));
+    // TODO(tvoss): Define constants for magic values.
+    if (mx::datapipe_producer::create(1, buffer_size, 0, &producer, &consumer) <
+        0) {
+      FTL_LOG(ERROR) << "Failed to create data pipe for trace data collection";
+      mtl::MessageLoop::GetCurrent()->QuitNow();
+      return;
+    }
 
-    trace_controller_->StartTracing(mojo::Array<mojo::String>::From(categories),
-                                    std::move(data_pipe.producer_handle));
+    data_pipe_drainer_.Start(std::move(consumer));
+
+    // TODO(tvoss): Enable once we switched over to fidl.
+    // trace_controller_->StartTracing(
+    // mojo::Array<mojo::String>::From(categories),
+    // std::move(data_pipe.producer_handle));
 
     // TODO(tvoss): Replace with a configurable approach to stop
     // tracing cleanly, e.g., after timeout or on user input.

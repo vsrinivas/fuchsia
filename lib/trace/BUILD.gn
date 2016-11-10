@@ -2,25 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# trace_event is a helper library for talking to the
+# trace is a helper library for talking to the
 # mojo tracing service (see tracing.mojo).
-static_library("trace_event") {
+source_set("types") {
+  sources = [
+    "internal/trace_types.h",
+  ]
+}
+
+source_set("trace") {
   sources = [
     "trace_event.h",
-    "trace_provider.h",
-    "trace_provider.cc",
     "internal/categories_matcher.h",
     "internal/categories_matcher.cc",
-    "internal/trace_reader.h",
-    "internal/trace_reader.cc",
-    "internal/trace_types.h",
     "internal/trace_writer.h",
     "internal/trace_writer.cc",
   ]
 
-  libs = [ "magenta" ]
-
-  public_deps = [
+  deps = [
+    ":types",
     "//lib/ftl",
     "//lib/mtl:mtl_with_mojo",
     "//apps/tracing/services",
@@ -29,7 +29,38 @@ static_library("trace_event") {
     "//mojo/public/cpp/environment",
     "//mojo/public/cpp/system",
     "//mojo/public/interfaces/application",
-    "//mojo/system",
+  ]
+}
+
+source_set("provider") {
+  sources = [
+    "trace_provider.h",
+    "trace_provider.cc",
+  ]
+
+  deps = [
+    ":trace",
+    "//lib/ftl",
+    "//lib/mtl:mtl_with_mojo",
+    "//apps/tracing/services",
+    "//mojo/public/cpp/application",
+    "//mojo/public/cpp/bindings",
+    "//mojo/public/cpp/environment",
+    "//mojo/public/cpp/system",
+    "//mojo/public/interfaces/application",
+  ]
+}
+
+source_set("reader") {
+  sources = [
+    "trace_reader.h",
+    "trace_reader.cc",
+  ]
+
+  deps = [
+    ":trace",
+    ":types",
+    "//lib/ftl",
   ]
 }
 
@@ -43,7 +74,8 @@ executable("trace_event_tests") {
   ]
 
   deps = [
-    ":trace_event",
+    ":trace",
+    ":reader",
     "//apps/tracing/services",
     "//mojo/public/cpp/application:test_support",
     "//mojo/system",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_EVENT_TRACE_PROVIDER_H_
-#define APPS_TRACING_LIB_TRACE_EVENT_TRACE_PROVIDER_H_
+#ifndef APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
+#define APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
 
 #include "mojo/public/interfaces/application/application_connector.mojom.h"
 #include "apps/tracing/services/trace_manager.mojom.h"
@@ -25,4 +25,4 @@ void DestroyTracer();
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_EVENT_TRACE_PROVIDER_H_
+#endif  // APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
