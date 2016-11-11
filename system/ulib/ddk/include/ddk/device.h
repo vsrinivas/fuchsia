@@ -102,11 +102,12 @@ typedef struct mx_protocol_device {
     // Otherwise identical operation as open.  The default implementation
     // simply returns ERR_NOT_SUPPORTED.
 
-    mx_status_t (*close)(mx_device_t* dev);
+    mx_status_t (*close)(mx_device_t* dev, uint32_t flags);
     // close is called whenever a handle to the device is closed (or the process
     // holding it exits).  Usually there's no need for a specific close hook, just
     // handling release() which is called after the final handle is closed and the
-    // device is unbound is sufficient.
+    // device is unbound is sufficient. flags is a copy of the flags used to
+    // open the device.
 
     void (*unbind)(mx_device_t* dev);
     // Notifies the device that its parent is being removed (has been hot unplugged, etc).
