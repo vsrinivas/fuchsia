@@ -45,7 +45,7 @@ interface ViewAssociate {
   // The |view_token| is the token of the view which requested the service.
   ConnectToViewService(ViewToken view_token,
                        string service_name,
-                       handle<message_pipe> pipe);
+                       handle<channel> pipe);
 
   // Asks the associate to provide the view tree service identified by
   // |interface_name| through the message |pipe| endpoint supplied by
@@ -56,7 +56,7 @@ interface ViewAssociate {
   // the service.
   ConnectToViewTreeService(ViewTreeToken view_tree_token,
                            string service_name,
-                           handle<message_pipe> pipe);
+                           handle<channel> pipe);
 };
 
 // ViewAssociateOwner is used as a transferable reference which can

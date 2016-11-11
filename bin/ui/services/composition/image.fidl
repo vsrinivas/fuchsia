@@ -61,5 +61,5 @@ struct Image {
   ColorSpace color_space = ColorSpace.SRGB;
 
   // The VMO handle of the buffer which contains the actual image data.
-  handle<shared_buffer> buffer;
+  handle<vmo> buffer;
 };
