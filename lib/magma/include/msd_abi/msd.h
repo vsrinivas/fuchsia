@@ -14,6 +14,9 @@ extern "C" {
 // Instantiates a driver instance.
 struct msd_driver* msd_driver_create(void);
 
+// Configures the driver according to |flags|.
+void msd_driver_configure(struct msd_driver* drv, uint32_t flags);
+
 // Destroys a driver instance.
 void msd_driver_destroy(struct msd_driver* drv);
 

@@ -23,6 +23,9 @@ public:
         auto msd_drv = msd_driver_unique_ptr_t(msd_driver_create(), &msd_driver_destroy);
         if (!msd_drv)
             return DRETP(nullptr, "failed to create msd driver");
+
+        msd_driver_configure(msd_drv.get(), MSD_DRIVER_CONFIG_TEST_NO_DEVICE_THREAD);
+
         auto msd_dev = msd_driver_create_device(
             msd_drv.get(), platform_device ? platform_device->GetDeviceHandle() : nullptr);
         if (!msd_dev)

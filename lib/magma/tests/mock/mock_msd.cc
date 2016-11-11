@@ -9,6 +9,8 @@ std::unique_ptr<MsdMockBufferManager> g_bufmgr;
 
 struct msd_driver* msd_driver_create(void) { return new MsdMockDriver(); }
 
+void msd_driver_configure(struct msd_driver* drv, uint32_t flags) {}
+
 void msd_driver_destroy(msd_driver* drv) { delete MsdMockDriver::cast(drv); }
 
 msd_device* msd_driver_create_device(msd_driver* drv, void* device)
