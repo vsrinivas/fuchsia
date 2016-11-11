@@ -15,12 +15,12 @@ namespace {
 template <size_t size_of_memory_in_bytes>
 struct TracingControllingFixture : public ::testing::Test {
   TracingControllingFixture() {
-    tracing::internal::StartTracing(memory_, sizeof(memory_), {""});
+    mx::vmo vmo;
+    assert(0 <= mx::vmo::create(size_of_memory_in_bytes, 0, &vmo));
+    tracing::internal::StartTracing(std::move(vmo), mx::vmo(), {""});
   }
 
   ~TracingControllingFixture() { tracing::internal::StopTracing(); }
-
-  char memory_[size_of_memory_in_bytes] = {0};
 };
 
 TEST(FieldTest, GetSet) {

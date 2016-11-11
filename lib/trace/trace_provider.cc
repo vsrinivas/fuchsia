@@ -10,25 +10,28 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace tracing {
 namespace {
 
-constexpr size_t kTraceBufferSize = 3 * 1024 * 1024;
-// We allocate three MB of memory for tracing.
-char* g_memory = static_cast<char*>(malloc(kTraceBufferSize));
-
 class TraceProviderImpl : public TraceProvider {
  public:
   // Initializes a new instance, registering itself with |registry|.
-  TraceProviderImpl(TraceRegistryPtr registry)
-      : state_(State::kStopped), binding_(this) {
+  TraceProviderImpl(TraceRegistryPtr registry,
+                    const std::string& label,
+                    const std::map<std::string, std::string>& known_categories)
+      : state_(State::kStopped),
+        binding_(this),
+        registry_(std::move(registry)),
+        label_(label),
+        known_categories_(known_categories) {
     TraceProviderPtr provider;
     fidl::InterfaceRequest<TraceProvider> provider_request =
         fidl::GetProxy(&provider);
 
     binding_.Bind(std::move(provider_request));
-    registry->RegisterTraceProvider(
+    registry_->RegisterTraceProvider(
         std::move(provider), fidl::String::From(label_),
         fidl::Map<fidl::String, fidl::String>::From(known_categories_));
   }
@@ -41,23 +44,23 @@ class TraceProviderImpl : public TraceProvider {
   void Start(mx::vmo initial_buffer,
              mx::vmo next_buffer,
              ::fidl::Array<::fidl::String> categories) override {
+    FTL_VLOG(2) << "TraceProvider::Start called";
+
     if (state_ != State::kStopped)
       return;
 
     state_ = State::kStarted;
-
-    // TODO(tvoss): Once we pass in a VMO here, the Writer API
-    // should be initialized to the memory handled by the VMO.
-    internal::StartTracing(g_memory, kTraceBufferSize,
+    internal::StartTracing(std::move(initial_buffer), mx::vmo(),
                            categories.To<std::vector<std::string>>());
   }
 
   void Stop(const StopCallback& cb) override {
-    if (state_ != State::kStarted)
-      return;
+    FTL_VLOG(2) << "TraceProvider::Stop called";
 
-    state_ = State::kStopped;
-    internal::StopTracing();
+    if (state_ == State::kStarted) {
+      state_ = State::kStopped;
+      internal::StopTracing();
+    }
 
     cb();
   }
@@ -67,6 +70,7 @@ class TraceProviderImpl : public TraceProvider {
   enum class State { kStarted, kStopped };
   State state_;
   fidl::Binding<TraceProvider> binding_;
+  TraceRegistryPtr registry_;
   std::string label_ = "HeWhoShallNotBeNamed";
   std::map<std::string, std::string> known_categories_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
@@ -77,18 +81,21 @@ TraceProviderImpl* g_tracer = nullptr;
 
 }  // namespace
 
-void InitializeTracer(modular::ApplicationContext* app_context) {
+void InitializeTracer(
+    modular::ApplicationContext* app_context,
+    const std::string& label,
+    const std::map<std::string, std::string>& known_categories) {
   auto registry = app_context->ConnectToEnvironmentService<TraceRegistry>();
-  InitializeTracer(std::move(registry));
+  InitializeTracer(std::move(registry), label, known_categories);
 }
 
-void InitializeTracer(TraceRegistryPtr registry) {
+void InitializeTracer(
+    TraceRegistryPtr registry,
+    const std::string& label,
+    const std::map<std::string, std::string>& known_categories) {
   FTL_CHECK(!g_tracer) << "Tracer is already initialized.";
-
-  if (g_tracer)
-    return;
-
-  g_tracer = new TraceProviderImpl(std::move(registry));
+  g_tracer =
+      new TraceProviderImpl(std::move(registry), label, known_categories);
 }
 
 void DestroyTracer() {

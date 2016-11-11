@@ -13,6 +13,8 @@
 #include <utility>
 
 #include "apps/tracing/lib/trace/internal/trace_types.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace tracing {
 namespace internal {
@@ -292,15 +294,50 @@ struct Argument<T*> : ArgumentBase {
   const T* value;
 };
 
+template <typename T, typename Enable = void>
+struct ArgumentMaker {
+  using ResultType = Argument<T>;
+  static ResultType Make(const char* name, const T& value) {
+    return ResultType(name, value);
+  }
+};
+
 template <typename T>
-Argument<T> MakeArgument(const char* name, const T& value) {
-  return Argument<T>(name, value);
+struct ArgumentMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+  using UnderlyingType = typename std::underlying_type<T>::type;
+  using NumericType =
+      typename std::conditional<sizeof(UnderlyingType) < sizeof(int32_t),
+                                int32_t,
+                                int64_t>::type;
+  using ResultType = Argument<NumericType>;
+  static ResultType Make(const char* name, T value) {
+    return ResultType(name, static_cast<NumericType>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<
+    T,
+    typename std::enable_if<std::is_unsigned<T>::value>::type> {
+  using NumericType = typename std::conditional<sizeof(T) < sizeof(int32_t),
+                                                int32_t,
+                                                int64_t>::type;
+  using ResultType = Argument<NumericType>;
+  static ResultType Make(const char* name, T value) {
+    return ResultType(name, static_cast<NumericType>(value));
+  }
+};
+
+template <typename T>
+inline typename ArgumentMaker<T>::ResultType MakeArgument(const char* name,
+                                                          const T& value) {
+  return ArgumentMaker<T>::Make(name, value);
 }
 
 // Sets up the Writer API to use |buffer| as destination for
 // incoming trace records.
-void StartTracing(void* buffer,
-                  size_t buffer_size,
+void StartTracing(mx::vmo current,
+                  mx::vmo next,
                   const std::vector<std::string>& categories);
 
 // Returns true iff:

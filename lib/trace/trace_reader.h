@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include <iostream>
+#include <iosfwd>
 #include <unordered_map>
 #include <vector>
 
@@ -60,6 +60,18 @@ class MemoryTraceInput : public TraceInput {
   Chunk chunk_;
 };
 
+class StreamTraceInput : public TraceInput {
+ public:
+  explicit StreamTraceInput(std::istream& in);
+
+  // |TraceInput| implementation.
+  bool ReadChunk(size_t num_words, Chunk* chunk) override;
+
+ private:
+  std::istream& in_;
+  std::vector<uint64_t> buffer_;
+};
+
 struct Thread {
   explicit operator bool() const {
     return thread_koid != 0 && process_koid != 0;
@@ -87,7 +99,7 @@ class TraceContext {
 
  private:
   TraceErrorHandler error_handler_;
-  std::unordered_map<uint16_t, ftl::StringView> string_table_;
+  std::unordered_map<uint16_t, std::string> string_table_;
   std::unordered_map<uint16_t, Thread> thread_table_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceContext);
@@ -253,6 +265,10 @@ class ArgumentReader {
                                     const Visitor& visitor);
 };
 
+struct DurationBegin {};
+
+struct DurationEnd {};
+
 struct AsyncBegin {
   uint64_t id;
 };
@@ -270,6 +286,13 @@ static_assert(sizeof(AsyncInstant) == sizeof(uint64_t), "");
 
 class EventData {
  public:
+  explicit EventData(const DurationBegin& duration_begin)
+      : type_(TraceEventType::kDurationBegin),
+        duration_begin_(duration_begin) {}
+
+  explicit EventData(const DurationEnd& duration_end)
+      : type_(TraceEventType::kDurationEnd), duration_end_(duration_end) {}
+
   explicit EventData(const AsyncBegin& async_begin)
       : type_(TraceEventType::kAsyncStart), async_begin_(async_begin) {}
 
@@ -299,6 +322,8 @@ class EventData {
  private:
   TraceEventType type_;
   union {
+    DurationBegin duration_begin_;
+    DurationEnd duration_end_;
     AsyncBegin async_begin_;
     AsyncInstant async_instant_;
     AsyncEnd async_end_;

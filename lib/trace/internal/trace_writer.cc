@@ -30,6 +30,7 @@ inline mx_koid_t GetThreadKoid() {
 const mx_koid_t g_process_koid = GetProcessKoid();
 thread_local const mx_koid_t g_thread_koid = GetThreadKoid();
 Allocator g_allocator;
+ftl::RefPtr<mtl::SharedVmo> g_shared_vmo;
 bool g_is_tracing_started = false;
 CategoriesMatcher g_categories_matcher;
 Table<uintptr_t, StringRefFields::kInvalidIndex, 4096> g_string_table;
@@ -154,11 +155,22 @@ Payload WriteEventRecord(TraceEventType event_type,
   return Payload(nullptr);
 }
 
-void StartTracing(void* buffer,
-                  size_t buffer_size,
+void StartTracing(mx::vmo current,
+                  mx::vmo next,
                   const std::vector<std::string>& categories) {
-  g_is_tracing_started = true;
-  g_allocator.Initialize(buffer, buffer_size);
+  FTL_VLOG(1) << "Started tracing...";
+  // TODO: Use next, instead of just dropping it.
+  g_shared_vmo = ftl::MakeRefCounted<mtl::SharedVmo>(
+      std::move(current), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+  g_is_tracing_started = g_shared_vmo->Map() != nullptr;
+
+  if (!g_is_tracing_started) {
+    FTL_LOG(WARNING) << "Failed to start tracing, vmo could not be mapped";
+    g_shared_vmo = nullptr;
+    return;
+  }
+
+  g_allocator.Initialize(g_shared_vmo->Map(), g_shared_vmo->vmo_size());
   g_string_table.Reset();
   g_thread_object_table.Reset();
   g_categories_matcher.SetEnabledCategories(categories);
@@ -170,9 +182,11 @@ bool IsTracingEnabled(const char* categories) {
 }
 
 void StopTracing() {
+  FTL_VLOG(1) << "Stopped tracing...";
   g_is_tracing_started = false;
   // TODO: Prevent race conditions.
   g_allocator.Reset();
+  g_shared_vmo = nullptr;
   g_categories_matcher.Reset();
 }
 

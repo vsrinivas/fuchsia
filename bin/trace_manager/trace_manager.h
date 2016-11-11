@@ -26,9 +26,24 @@ class TraceManager : public TraceRegistry, public TraceController {
  private:
   enum class ControllerState { kStarted, kStopped };
 
+  struct ProviderInfo {
+    explicit ProviderInfo(
+        TraceProviderPtr provider,
+        fidl::String label,
+        fidl::Map<fidl::String, fidl::String> known_categories)
+        : provider(std::move(provider)),
+          label(std::move(label)),
+          known_categories(std::move(known_categories)) {}
+
+    TraceProviderPtr provider;
+    fidl::String label;
+    fidl::Map<fidl::String, fidl::String> known_categories;
+    mx::vmo current_buffer;
+  };
+
   // |TraceController| implementation.
   void StartTracing(fidl::Array<fidl::String> categories,
-                    mx::datapipe_producer output) override;
+                    mx::socket output) override;
   void StopTracing() override;
 
   // |TraceRegistry| implementation.
@@ -37,10 +52,19 @@ class TraceManager : public TraceRegistry, public TraceController {
       const fidl::String& label,
       fidl::Map<fidl::String, fidl::String> categories) override;
 
+  void FinalizeTracing();
+  bool StartTracingForProvider(ProviderInfo* provider);
+  void StopTracingForProvider(ProviderInfo* provider);
+  void EraseProvider(TraceProvider* provider);
+
   ControllerState controller_state_{ControllerState::kStopped};
 
   fidl::Array<fidl::String> categories_;
-  fidl::InterfacePtrSet<TraceProvider> trace_providers_;
+  std::vector<ProviderInfo> providers_;
+  std::vector<ProviderInfo*> active_providers_;
+  mx::socket output_;
+  int generation_ = 0;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
 };
 

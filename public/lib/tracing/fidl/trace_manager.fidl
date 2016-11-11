@@ -41,7 +41,7 @@ interface TraceController {
   // themselves.  For example, it should not try to check argument lengths in
   // events.  This ensures that the trace format can be extended without needing
   // to modify the trace controller.
-  StartTracing(array<string> categories, handle<data_pipe_producer> output);
+  StartTracing(array<string> categories, handle<socket> output);
 
   // Requests to stop tracing.
   //

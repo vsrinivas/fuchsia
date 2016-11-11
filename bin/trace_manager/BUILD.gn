@@ -8,6 +8,6 @@ group("tracing") {
     "//apps/tracing/lib/trace_converters",
     "//apps/tracing/services",
     "//apps/tracing/src/trace_manager",
-    "//apps/tracing/src/tracer",
+    "//apps/tracing/src/trace",
   ]
 }

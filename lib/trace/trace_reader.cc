@@ -22,6 +22,20 @@ bool MemoryTraceInput::ReadChunk(size_t num_words, Chunk* out) {
   return chunk_.ReadChunk(num_words, out);
 }
 
+StreamTraceInput::StreamTraceInput(std::istream& in) : in_(in) {}
+
+bool StreamTraceInput::ReadChunk(size_t num_words, Chunk* out) {
+  buffer_.reserve(num_words);
+  in_.read(reinterpret_cast<char*>(buffer_.data()),
+           num_words * sizeof(uint64_t));
+
+  if (in_.bad() || in_.fail() || in_.eof())
+    return false;
+
+  *out = Chunk(buffer_.data(), num_words);
+  return true;
+}
+
 Chunk::Chunk() : current_(nullptr), end_(nullptr) {}
 
 Chunk::Chunk(const uint64_t* begin, size_t size)
@@ -82,7 +96,7 @@ void TraceContext::RegisterStringRef(uint16_t index,
                                      const ftl::StringView& string) {
   FTL_DCHECK(index != internal::StringRefFields::kInvalidIndex &&
              index <= internal::StringRefFields::kMaxIndex);
-  string_table_[index] = string;
+  string_table_[index] = string.ToString();
 }
 
 Thread TraceContext::DecodeThreadRef(uint16_t thread_ref, Chunk& chunk) const {
@@ -445,6 +459,18 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
   }
 
   switch (event_type) {
+    case TraceEventType::kDurationBegin: {
+      visitor_(Record(EventRecord{event_type, timestamp, thread,
+                                  name.ToString(), category.ToString(),
+                                  arguments, EventData(DurationBegin{})}));
+      break;
+    }
+    case TraceEventType::kDurationEnd: {
+      visitor_(Record(EventRecord{event_type, timestamp, thread,
+                                  name.ToString(), category.ToString(),
+                                  arguments, EventData(DurationEnd{})}));
+      break;
+    }
     case TraceEventType::kAsyncStart: {
       uint64_t id = 0;
       if (chunk.Read(&id))
@@ -478,22 +504,28 @@ void TraceReader::ForEachRecord(TraceInput& input) {
   Chunk chunk;
   internal::RecordHeader record_header = 0;
   while (true) {
-    if (!input.ReadChunk(1, &chunk))
+    if (!input.ReadChunk(1, &chunk)) {
+      trace_context_.OnError("Failed to read header from input");
       return;
+    }
 
-    if (!chunk.Read(&record_header))
-      return;
+    bool success = chunk.Read(&record_header);
+    FTL_DCHECK(success);
 
     auto record_type =
         internal::RecordFields::Type::Get<RecordType>(record_header);
     auto record_size =
         internal::RecordFields::RecordSize::Get<uint16_t>(record_header);
 
-    if (record_size == 0)
+    if (record_size == 0) {
+      trace_context_.OnError("Invalid record size");
       return;
+    }
 
-    if (!input.ReadChunk(record_size - 1, &chunk))
+    if (!input.ReadChunk(record_size - 1, &chunk)) {
+      trace_context_.OnError("Failed to read payload from input");
       return;
+    }
 
     switch (record_type) {
       case RecordType::kMetadata:
@@ -509,6 +541,9 @@ void TraceReader::ForEachRecord(TraceInput& input) {
         break;
       case RecordType::kEvent:
         HandleEventRecord(record_header, chunk);
+        break;
+      default:
+        FTL_LOG(INFO) << "Skipping record with unknown type";
         break;
     }
   }
