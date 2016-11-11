@@ -7,6 +7,7 @@
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/graph/scene_content.h"
+#include "apps/mozart/src/compositor/graph/paint_context.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkMatrix44.h"
 #include "third_party/skia/include/core/SkPictureRecorder.h"
@@ -31,9 +32,13 @@ ftl::RefPtr<RenderFrame> Snapshot::Paint(const RenderFrame::Metadata& metadata,
 
   SkPictureRecorder recorder;
   recorder.beginRecording(SkRect::Make(sk_viewport));
-  root_scene_content_->Paint(this, recorder.getRecordingCanvas());
+  PaintContext context(recorder.getRecordingCanvas());
+
+  root_scene_content_->Paint(this, &context);
+
   return ftl::MakeRefCounted<RenderFrame>(metadata, sk_viewport,
-                                          recorder.finishRecordingAsPicture());
+                                          recorder.finishRecordingAsPicture(),
+                                          context.TakeImages());
 }
 
 void Snapshot::HitTest(const mozart::PointF& point,

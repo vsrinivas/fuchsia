@@ -8,6 +8,7 @@
 #include <deque>
 #include <iosfwd>
 
+#include "apps/mozart/services/buffers/cpp/buffer_consumer.h"
 #include "apps/mozart/src/compositor/graph/scene_label.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "lib/ftl/macros.h"
@@ -49,6 +50,8 @@ class Universe {
  public:
   Universe();
   ~Universe();
+
+  mozart::BufferConsumer* buffer_consumer() { return &buffer_consumer_; }
 
   void AddScene(const SceneLabel& scene_label);
   void PresentScene(const ftl::RefPtr<const SceneContent>& content);
@@ -92,6 +95,7 @@ class Universe {
     FTL_DISALLOW_COPY_AND_ASSIGN(Snapshotter);
   };
 
+  mozart::BufferConsumer buffer_consumer_;
   std::unordered_map<uint32_t, std::unique_ptr<SceneInfo>> scenes_;
   uint64_t generation_ = 0u;
 

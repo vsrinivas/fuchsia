@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composition/scenes.fidl.h"
 #include "lib/ftl/macros.h"
 
@@ -27,6 +28,7 @@ class Rasterizer {
 
  private:
   mozart::ScenePtr scene_;
+  mozart::BufferProducer buffer_producer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Rasterizer);
 };

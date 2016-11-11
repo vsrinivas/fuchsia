@@ -1,0 +1,127 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+// A buffer bundles a VMO together with an optional fence which guards
+// consumption and recycling of the VMO and an optional event which enables
+// a producer to advise retention of buffers it intends to reuse.
+//
+// Buffers are designed to support frequent recurring asynchronous transfers
+// of large blobs (such as graphical images) from a producer to one or more
+// consumers.
+//
+// SETUP
+//
+// To begin, the producer allocates a VMO which it will use to transfer data.
+//
+// The producer should retain a READ/WRITE handle to the VMO so that it
+// can write the data it intends to transfer into the VMO.
+//
+// The producer should also create a READ-ONLY handle to the VMO and set
+// it as the |vmo| field of the buffer structure.
+//
+// If the producer intends to write data into the VMO asynchronously or
+// recycle the VMO for future transfers, then it also allocates an
+// event pair to act as the fence for the buffer and assigns one endpoint
+// of the event pair to the |fence| field of the buffer structure.
+// The producer retains the other endpoint of the fence for signaling.
+//
+// UNFENCED OPERATION
+//
+// If the producer did not allocate a fence, then it must fully write the
+// data it intends to transfer into the VMO before delivering the buffer
+// to its consumers.
+//
+// A buffer without a fence is assumed to be ready immediately and
+// indefinitely.
+//
+// FENCED OPERATION
+//
+// If the producer did allocate a fence, then it free to deliver the buffer
+// to its consumers at any time, even before fully writing the data it
+// intends to transfer into the VMO.  This mechanism allows for
+// asynchronous pipelining of production and consumption related tasks.
+//
+// Once the producer has finished writing into the VMO, it signals readiness
+// by setting |MX_EPAIR_SIGNAL_SIGNALED| on the fence using the endpoint
+// that it previously retained for signaling.
+//
+// A buffer with a fence is only ready when |MX_EPAIR_SIGNAL_SIGNALED| is set
+// on the fence.
+//
+// MULTIPLE CONSUMERS
+//
+// If the producer must deliver the buffer to more than one consumer, then
+// it must duplicate the buffer by creating duplicates of all of its handles.
+//
+// Duplicate buffers behave identically to the original buffer.  Since they
+// share the same underlying VMO, none of the VMO's contents needs to be copied
+// no matter how many duplicates are produced or how many consumers there are.
+//
+// CONSUMPTION
+//
+// Before consuming the buffer, the consumer must ensure that the buffer
+// is ready by waiting for |MX_EPAIR_SIGNAL_SIGNALED| to be set on the fence
+// if there is one.
+//
+// Once ready, the consumer should promptly consume the buffer's content
+// then close the buffer's fence handle (and optionally its VMO handle as
+// well) to indicate that it is done with the buffer.
+//
+// Once all consumers have closed their fence handles, the producer will
+// be informed that the buffer is available to be recycled.
+//
+// VMO RECYCLING OPTIMIZATION
+//
+// The buffer abstraction is designed to allow the VMOs underlying
+// the recycled, reducing allocation costs.
+//
+// Before recycling the buffer's VMO, the producer must ensure that the
+// buffer is available to be recycled by waiting for |MX_EPAIR_SIGNAL_CLOSED|
+// to be set on its endpoint of the fence.
+//
+// When this signal is received, the producer closes its endpoint of the
+// fence since it cannot be recycled and no longer serves any purpose.
+//
+// The producer can then recycle the VMO to create new buffers to be
+// transferred.
+//
+// Note: Do not reuse a VMO to transfer data to a different set of consumers;
+// the previous consumers may still be retaining references to the VMO and
+// therefore may be able to observe data transfers not meant for them.
+//
+// VMO RETENTION OPTIMIZATION
+//
+// To make transfers even more efficient, especially when VMOs will be
+// memory-mapped, a buffer producer may advise its consumer to retain the
+// VMO for use in subsequent transfers.
+//
+// A buffer producer indicates that it advises retention by providing a
+// valid eventpair handle in the |retention| field.
+//
+// When the |retention| handle is valid, a buffer consumer which support
+// retention should add the VMO's koid to a table and keep the VMO
+// memory-mapped.  When receiving new buffers, the buffer consumer should
+// consult the table of retained VMOs and reuse the memory mapping if it
+// still exists.  The buffer consumer should remove retained VMOs from the
+// upon observing |MX_EPAIR_SIGNAL_CLOSED|.
+//
+// This optimization allows the consumer to keep the VMO mapped in memory for
+// as long as it will be reused which results in less thrashing of the
+// process's page table.
+//
+// See also |BufferConsumer|, |BufferProducer|, and |BufferFence|.
+struct Buffer {
+  // The VMO which backs this buffer.
+  handle<vmo> vmo;
+
+  // The fence which guards this buffer.
+  // The handle may be invalid if there is no fence.
+  handle<eventpair>? fence;
+
+  // The event which retains this buffer in memory.
+  // The handle may be invalid if the producer did not advise retention.
+  handle<eventpair>? retention;
+};

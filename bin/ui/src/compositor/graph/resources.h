@@ -9,6 +9,7 @@
 #include "apps/mozart/src/compositor/render/render_image.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
+#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace compositor {
 
@@ -51,10 +52,10 @@ class SceneResource : public Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneResource);
 };
 
-// A resource which represents a refrence to a specified image.
+// A resource which represents a reference to a specified image.
 class ImageResource : public Resource {
  public:
-  explicit ImageResource(const ftl::RefPtr<RenderImage>& image);
+  explicit ImageResource(ftl::RefPtr<RenderImage> image);
 
   Type type() const override;
 

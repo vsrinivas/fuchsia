@@ -20,6 +20,8 @@ source_set("common") {
     "frame_info.h",
     "graph/nodes.cc",
     "graph/nodes.h",
+    "graph/paint_context.cc",
+    "graph/paint_context.h",
     "graph/resources.cc",
     "graph/resources.h",
     "graph/scene_content.cc",

@@ -197,37 +197,37 @@ void Node::TraverseSnapshottedChildren(const SceneContent* content,
 
 void Node::Paint(const SceneContent* content,
                  const Snapshot* snapshot,
-                 SkCanvas* canvas) const {
+                 PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   const bool must_save = content_transform_ || content_clip_;
   if (must_save) {
-    canvas->save();
+    context->canvas()->save();
     if (content_transform_)
-      canvas->concat(content_transform_->forward());
+      context->canvas()->concat(content_transform_->forward());
     if (content_clip_)
-      canvas->clipRect(content_clip_->To<SkRect>());
+      context->canvas()->clipRect(content_clip_->To<SkRect>());
   }
 
-  PaintInner(content, snapshot, canvas);
+  PaintInner(content, snapshot, context);
 
   if (must_save)
-    canvas->restore();
+    context->canvas()->restore();
 }
 
 void Node::PaintInner(const SceneContent* content,
                       const Snapshot* snapshot,
-                      SkCanvas* canvas) const {
+                      PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   TraverseSnapshottedChildren(
       content, snapshot,
-      [this, content, snapshot, canvas](const Node* child_node) -> bool {
-        child_node->Paint(content, snapshot, canvas);
+      [this, content, snapshot, context](const Node* child_node) -> bool {
+        child_node->Paint(content, snapshot, context);
         return true;
       });
 }
@@ -340,16 +340,16 @@ RectNode::~RectNode() {}
 
 void RectNode::PaintInner(const SceneContent* content,
                           const Snapshot* snapshot,
-                          SkCanvas* canvas) const {
+                          PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   SkPaint paint;
   paint.setColor(MakeSkColor(color_));
-  canvas->drawRect(content_rect_.To<SkRect>(), paint);
+  context->canvas()->drawRect(content_rect_.To<SkRect>(), paint);
 
-  Node::PaintInner(content, snapshot, canvas);
+  Node::PaintInner(content, snapshot, context);
 }
 
 ImageNode::ImageNode(uint32_t node_id,
@@ -385,10 +385,10 @@ bool ImageNode::RecordContent(SceneContentBuilder* builder) const {
 
 void ImageNode::PaintInner(const SceneContent* content,
                            const Snapshot* snapshot,
-                           SkCanvas* canvas) const {
+                           PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   auto image_resource = static_cast<const ImageResource*>(
       content->GetResource(image_resource_id_, Resource::Type::kImage));
@@ -397,14 +397,15 @@ void ImageNode::PaintInner(const SceneContent* content,
   SkPaint paint;
   SetPaintForBlend(&paint, blend_.get());
 
-  canvas->drawImageRect(image_resource->image()->image().get(),
-                        image_rect_
-                            ? image_rect_->To<SkRect>()
-                            : SkRect::MakeWH(image_resource->image()->width(),
-                                             image_resource->image()->height()),
-                        content_rect_.To<SkRect>(), &paint);
+  context->AddImage(image_resource->image());
+  context->canvas()->drawImageRect(
+      image_resource->image()->image().get(),
+      image_rect_ ? image_rect_->To<SkRect>()
+                  : SkRect::MakeWH(image_resource->image()->width(),
+                                   image_resource->image()->height()),
+      content_rect_.To<SkRect>(), &paint);
 
-  Node::PaintInner(content, snapshot, canvas);
+  Node::PaintInner(content, snapshot, context);
 }
 
 SceneNode::SceneNode(uint32_t node_id,
@@ -449,17 +450,17 @@ Snapshot::Disposition SceneNode::RecordSnapshot(
 
 void SceneNode::PaintInner(const SceneContent* content,
                            const Snapshot* snapshot,
-                           SkCanvas* canvas) const {
+                           PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   const SceneContent* resolved_content =
       snapshot->GetResolvedSceneContent(this);
   FTL_DCHECK(resolved_content);
-  resolved_content->Paint(snapshot, canvas);
+  resolved_content->Paint(snapshot, context);
 
-  Node::PaintInner(content, snapshot, canvas);
+  Node::PaintInner(content, snapshot, context);
 }
 
 bool SceneNode::HitTestInner(const SceneContent* content,
@@ -511,17 +512,17 @@ LayerNode::~LayerNode() {}
 
 void LayerNode::PaintInner(const SceneContent* content,
                            const Snapshot* snapshot,
-                           SkCanvas* canvas) const {
+                           PaintContext* context) const {
   FTL_DCHECK(content);
   FTL_DCHECK(snapshot);
-  FTL_DCHECK(canvas);
+  FTL_DCHECK(context);
 
   SkPaint paint;
   SetPaintForBlend(&paint, blend_.get());
 
-  canvas->saveLayer(layer_rect_.To<SkRect>(), &paint);
-  Node::PaintInner(content, snapshot, canvas);
-  canvas->restore();
+  context->canvas()->saveLayer(layer_rect_.To<SkRect>(), &paint);
+  Node::PaintInner(content, snapshot, context);
+  context->canvas()->restore();
 }
 
 }  // namespace compositor

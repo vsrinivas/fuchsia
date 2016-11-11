@@ -39,7 +39,8 @@ void ShapesView::OnDraw() {
     // Draw the content of the view to a texture and include it as an
     // image resource in the scene.
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+    sk_sp<SkSurface> surface =
+        mozart::MakeSkSurface(size, &buffer_producer_, &image);
     FTL_CHECK(surface);
     DrawContent(size, surface->getCanvas());
     auto content_resource = mozart::Resource::New();

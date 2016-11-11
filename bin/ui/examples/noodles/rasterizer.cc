@@ -25,16 +25,16 @@ void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
 
   auto update = mozart::SceneUpdate::New();
 
+  sk_sp<SkSurface> surface;
   if (frame->size().width > 0 && frame->size().height > 0) {
     mozart::RectF bounds;
     bounds.width = frame->size().width;
     bounds.height = frame->size().height;
 
-    // Draw the contents of the scene to a surface.
+    // Get a surface to draw the contents.
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface = mozart::MakeSkSurface(frame->size(), &image);
+    surface = mozart::MakeSkSurface(frame->size(), &buffer_producer_, &image);
     FTL_CHECK(surface);
-    frame->Paint(surface->getCanvas());
 
     // Update the scene contents.
     auto content_resource = mozart::Resource::New();
@@ -57,6 +57,14 @@ void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
   // Publish the updated scene contents.
   scene_->Update(std::move(update));
   scene_->Publish(frame->TakeSceneMetadata());
+
+  // Draw the contents of the scene to a surface.
+  // We do this after publishing to take advantage of pipelining.
+  // The image buffer's fence is signalled automatically when the surface
+  // goes out of scope.
+  if (surface) {
+    frame->Paint(surface->getCanvas());
+  }
 }
 
 }  // namespace examples

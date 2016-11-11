@@ -4,8 +4,6 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_image.h"
 
-#include <mx/process.h>
-
 #include "lib/ftl/logging.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
@@ -14,45 +12,53 @@ static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
-void UnmapMemory(const void* pixels, void* context) {
-  mx_status_t status =
-      mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(pixels), 0u);
-  FTL_CHECK(status == NO_ERROR);
+void ReleaseBuffer(const void* pixels, void* context) {
+  delete static_cast<ConsumedBufferHolder*>(context);
 }
 
-sk_sp<SkImage> MakeSkImageFromVMOWithSize(const mx::vmo& vmo,
-                                          const SkImageInfo& info,
-                                          size_t row_bytes,
-                                          size_t total_bytes) {
+sk_sp<SkImage> MakeSkImageInternal(
+    const SkImageInfo& info,
+    size_t row_bytes,
+    std::unique_ptr<ConsumedBufferHolder> buffer_holder,
+    std::unique_ptr<BufferFence>* out_fence) {
+  FTL_DCHECK(buffer_holder);
+
   size_t needed_bytes = info.height() * row_bytes;
-  if (!info.validRowBytes(row_bytes) || total_bytes < needed_bytes) {
-    FTL_LOG(ERROR) << "invalid image metadata";
+  if (!info.validRowBytes(row_bytes) ||
+      buffer_holder->shared_vmo()->vmo_size() < needed_bytes) {
+    FTL_LOG(ERROR) << "Invalid image metadata";
     return nullptr;
   }
 
-  uintptr_t buffer = 0u;
-  mx_status_t status = mx::process::self().map_vm(
-      vmo, 0u, needed_bytes, &buffer, MX_VM_FLAG_PERM_READ);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::process::map_vm failed: status=" << status;
+  void* buffer = buffer_holder->shared_vmo()->Map();
+  if (!buffer) {
+    FTL_LOG(ERROR) << "Could not map image into memory";
     return nullptr;
   }
 
-  SkPixmap sk_pixmap(info, reinterpret_cast<void*>(buffer), row_bytes);
+  SkPixmap sk_pixmap(info, buffer, row_bytes);
   sk_sp<SkImage> image =
-      SkImage::MakeFromRaster(sk_pixmap, &UnmapMemory, nullptr);
+      SkImage::MakeFromRaster(sk_pixmap, &ReleaseBuffer, buffer_holder.get());
   if (!image) {
     FTL_LOG(ERROR) << "Could not create SkImage";
     return nullptr;
   }
+
+  *out_fence = buffer_holder->TakeFence();
+  buffer_holder.release();  // now owned by SkImage
   return image;
 }
 
 }  // namespace
 
-sk_sp<SkImage> MakeSkImage(ImagePtr image) {
+sk_sp<SkImage> MakeSkImage(ImagePtr image,
+                           BufferConsumer* consumer,
+                           std::unique_ptr<BufferFence>* out_fence) {
   FTL_DCHECK(image);
   FTL_DCHECK(image->size);
+  FTL_DCHECK(image->buffer);
+  FTL_DCHECK(consumer);
+  FTL_DCHECK(consumer->map_flags() & MX_VM_FLAG_PERM_READ);
 
   SkColorType sk_color_type;
   switch (image->pixel_format) {
@@ -90,24 +96,23 @@ sk_sp<SkImage> MakeSkImage(ImagePtr image) {
       return nullptr;
   }
 
-  return MakeSkImageFromVMO(
-      std::move(image->buffer),
+  return MakeSkImageFromBuffer(
       SkImageInfo::Make(image->size->width, image->size->height, sk_color_type,
                         sk_alpha_type, sk_color_space),
-      image->stride);
+      image->stride, std::move(image->buffer), consumer, out_fence);
 }
 
-sk_sp<SkImage> MakeSkImageFromVMO(const mx::vmo& vmo,
-                                  const SkImageInfo& info,
-                                  size_t row_bytes) {
-  uint64_t total_bytes = 0u;
-  mx_status_t status = vmo.get_size(&total_bytes);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::vmo::get_size failed: status=" << status;
-    return nullptr;
-  }
+sk_sp<SkImage> MakeSkImageFromBuffer(const SkImageInfo& info,
+                                     size_t row_bytes,
+                                     BufferPtr buffer,
+                                     BufferConsumer* consumer,
+                                     std::unique_ptr<BufferFence>* out_fence) {
+  FTL_DCHECK(buffer);
+  FTL_DCHECK(consumer);
+  FTL_DCHECK(consumer->map_flags() & MX_VM_FLAG_PERM_READ);
 
-  return MakeSkImageFromVMOWithSize(vmo, info, row_bytes, total_bytes);
+  return MakeSkImageInternal(
+      info, row_bytes, consumer->ConsumeBuffer(std::move(buffer)), out_fence);
 }
 
 }  // namespace mozart

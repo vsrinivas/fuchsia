@@ -11,17 +11,23 @@
 
 namespace compositor {
 
-RenderImage::RenderImage(const sk_sp<SkImage>& image) : image_(image) {
+RenderImage::RenderImage(const sk_sp<SkImage>& image,
+                         std::unique_ptr<mozart::BufferFence> fence)
+    : image_(image), fence_(std::move(fence)) {
   FTL_DCHECK(image_);
 }
 
 RenderImage::~RenderImage() {}
 
-ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(mozart::ImagePtr image) {
-  sk_sp<SkImage> sk_image = MakeSkImage(std::move(image));
+ftl::RefPtr<RenderImage> RenderImage::CreateFromImage(
+    mozart::ImagePtr image,
+    mozart::BufferConsumer* consumer) {
+  std::unique_ptr<mozart::BufferFence> fence;
+  sk_sp<SkImage> sk_image = MakeSkImage(std::move(image), consumer, &fence);
   if (!sk_image)
     return nullptr;
-  return ftl::MakeRefCounted<RenderImage>(std::move(sk_image));
+  return ftl::MakeRefCounted<RenderImage>(std::move(sk_image),
+                                          std::move(fence));
 }
 
 }  // namespace compositor

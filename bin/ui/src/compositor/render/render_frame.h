@@ -5,7 +5,10 @@
 #ifndef APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_FRAME_H_
 #define APPS_MOZART_SRC_COMPOSITOR_RENDER_RENDER_FRAME_H_
 
+#include <unordered_set>
+
 #include "apps/mozart/src/compositor/frame_info.h"
+#include "apps/mozart/src/compositor/render/render_image.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/time/time_point.h"
@@ -23,6 +26,8 @@ namespace compositor {
 // They have no direct references to the scene graph.
 class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
  public:
+  using ImageSet = std::unordered_set<ftl::RefPtr<RenderImage>>;
+
   // Contains metadata about a particular |RenderFrame| used for tracing
   // and statistics.
   class Metadata {
@@ -44,7 +49,8 @@ class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
   // Creates render frame backed by a picture.
   RenderFrame(const Metadata& metadata,
               const SkIRect& viewport,
-              const sk_sp<SkPicture>& picture);
+              const sk_sp<SkPicture>& picture,
+              ImageSet images);
 
   // Gets metadata about the frame.
   const Metadata& metadata() const { return metadata_; }
@@ -54,6 +60,9 @@ class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
 
   // Gets the underlying picture to rasterize, or null if the frame is empty.
   const sk_sp<SkPicture>& picture() const { return picture_; }
+
+  // Gets the images presented within this frame.
+  const ImageSet& images() const { return images_; }
 
   // Draws the contents of the frame to a canvas.
   void Draw(SkCanvas* canvas) const;
@@ -67,6 +76,7 @@ class RenderFrame : public ftl::RefCountedThreadSafe<RenderFrame> {
   Metadata metadata_;
   SkIRect viewport_;
   sk_sp<SkPicture> picture_;
+  ImageSet images_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(RenderFrame);
 };

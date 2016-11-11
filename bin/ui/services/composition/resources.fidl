@@ -4,9 +4,9 @@
 
 module mozart;
 
-import "apps/mozart/services/composition/image.fidl";
 import "apps/mozart/services/composition/scene_token.fidl";
 import "apps/mozart/services/geometry/geometry.fidl";
+import "apps/mozart/services/images/image.fidl";
 
 // Resources are references to foreign objects which are being imported into
 // the scene graph, such as images and other scenes.  Each resource must be
@@ -30,9 +30,6 @@ struct SceneResource {
 // Image resource declaration.
 //
 // Binds a resource id to an image.
-//
-// TODO(jeffbrown): Associate a fence with the image to enable pipelining
-// and reuse of images.
 struct ImageResource {
   // The image to associate with the resource.
   Image image;

@@ -5,24 +5,32 @@
 #ifndef APPS_MOZART_LIB_SKIA_SKIA_VMO_IMAGE_H_
 #define APPS_MOZART_LIB_SKIA_SKIA_VMO_IMAGE_H_
 
-#include <mx/vmo.h>
-
-#include "apps/mozart/services/composition/image.fidl.h"
+#include "apps/mozart/services/buffers/cpp/buffer_consumer.h"
+#include "apps/mozart/services/images/image.fidl.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 
 namespace mozart {
 
-// Makes an |SkImage| object backed by an image which is mapped read only.
+// Creates an |SkImage| object backed by an image.
+// The |consumer| must be configured to map buffers with read permission.
+// On success, the buffer's fence is returned in |out_fence| if not null.
 // Returns nullptr on failure.
-sk_sp<SkImage> MakeSkImage(ImagePtr image);
+// Releases the image buffer when the returned |SkImage| is destroyed.
+sk_sp<SkImage> MakeSkImage(ImagePtr image,
+                           BufferConsumer* consumer,
+                           std::unique_ptr<BufferFence>* out_fence);
 
-// Makes an |SkImage| object backed by a virtual memory object which is mapped
-// read only.  Does not take ownership of the handle.
+// Creates an |SkImage| object backed by a buffer with image info.
+// The |consumer| must be configured to map buffers with read permission.
+// On success, the buffer's fence is returned in |out_fence| if not null.
 // Returns nullptr on failure.
-sk_sp<SkImage> MakeSkImageFromVMO(const mx::vmo&,
-                                  const SkImageInfo& info,
-                                  size_t row_bytes);
+// Releases the image buffer when the returned |SkImage| is destroyed.
+sk_sp<SkImage> MakeSkImageFromBuffer(const SkImageInfo& info,
+                                     size_t row_bytes,
+                                     BufferPtr buffer,
+                                     BufferConsumer* consumer,
+                                     std::unique_ptr<BufferFence>* out_fence);
 
 }  // namespace mozart
 

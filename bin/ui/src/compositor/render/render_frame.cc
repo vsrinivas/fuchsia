@@ -19,8 +19,12 @@ RenderFrame::RenderFrame(const Metadata& metadata, const SkIRect& viewport)
 
 RenderFrame::RenderFrame(const Metadata& metadata,
                          const SkIRect& viewport,
-                         const sk_sp<SkPicture>& picture)
-    : metadata_(metadata), viewport_(viewport), picture_(picture) {
+                         const sk_sp<SkPicture>& picture,
+                         ImageSet images)
+    : metadata_(metadata),
+      viewport_(viewport),
+      picture_(picture),
+      images_(std::move(images)) {
   FTL_DCHECK(!viewport_.isEmpty());
 }
 

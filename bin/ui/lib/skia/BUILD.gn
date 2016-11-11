@@ -48,8 +48,11 @@ source_set("vmo") {
   ]
 
   public_deps = [
+    "//apps/mozart/services/buffers",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//lib/ftl",
+    "//lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]

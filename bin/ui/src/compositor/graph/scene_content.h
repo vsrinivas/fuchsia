@@ -12,6 +12,7 @@
 #include "apps/mozart/services/composition/hit_tests.fidl.h"
 #include "apps/mozart/services/composition/scenes.fidl.h"
 #include "apps/mozart/src/compositor/graph/nodes.h"
+#include "apps/mozart/src/compositor/graph/paint_context.h"
 #include "apps/mozart/src/compositor/graph/resources.h"
 #include "apps/mozart/src/compositor/graph/scene_label.h"
 #include "lib/ftl/macros.h"
@@ -60,7 +61,7 @@ class SceneContent : public ftl::RefCountedThreadSafe<SceneContent> {
   bool MatchesVersion(uint32_t requested_version) const;
 
   // Paints the content of the scene to a recording canvas.
-  void Paint(const Snapshot* snapshot, SkCanvas* canvas) const;
+  void Paint(const Snapshot* snapshot, PaintContext* context) const;
 
   // Performs a hit test at the specified point.
   // The |scene_point| is the hit tested point in the scene's coordinate space.

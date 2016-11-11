@@ -4,9 +4,10 @@
 
 module mozart;
 
+import "apps/mozart/services/buffers/buffer.fidl";
 import "apps/mozart/services/geometry/geometry.fidl";
 
-// An image is a graphics buffer which can be transferred between processes.
+// A graphical image (texture) which can be transferred between processes.
 //
 // TODO: The current implementation relies on buffers in CPU memory
 // whereas eventually we will want to support buffers in graphics memory.
@@ -60,6 +61,6 @@ struct Image {
   // The intended interpreration of color information the image.
   ColorSpace color_space = ColorSpace.SRGB;
 
-  // The VMO handle of the buffer which contains the actual image data.
-  handle<vmo> buffer;
+  // The buffer which contains the actual image data.
+  Buffer buffer;
 };

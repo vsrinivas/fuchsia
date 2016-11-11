@@ -10,6 +10,7 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/composition/cpp/frame_tracker.h"
 #include "lib/ftl/logging.h"
@@ -75,7 +76,8 @@ class HelloApp {
 
     // Draw the contents of the scene to a surface.
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+    sk_sp<SkSurface> surface =
+        mozart::MakeSkSurface(size, &buffer_producer_, &image);
     FTL_CHECK(surface);
 
     SkCanvas* canvas = surface->getCanvas();
@@ -126,6 +128,7 @@ class HelloApp {
   mozart::ScenePtr scene_;
   mozart::FrameSchedulerPtr frame_scheduler_;
   mozart::FrameTracker frame_tracker_;
+  mozart::BufferProducer buffer_producer_;
 
   float x_ = 0.f;
   float y_ = 0.f;

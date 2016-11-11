@@ -13,6 +13,7 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -114,7 +115,8 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
 
       // Draw the contents of the scene to a surface.
       mozart::ImagePtr image;
-      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      sk_sp<SkSurface> surface =
+          mozart::MakeSkSurface(size, &buffer_producer_, &image);
       FTL_CHECK(surface);
       DrawContent(surface->getCanvas(), size);
 
@@ -166,6 +168,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   }
 
   mozart::InputHandler input_handler_;
+  mozart::BufferProducer buffer_producer_;
   std::map<uint32_t, std::vector<SkPoint>> points_;
   std::vector<SkPath> paths_;
 

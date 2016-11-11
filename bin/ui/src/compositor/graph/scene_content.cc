@@ -29,10 +29,11 @@ bool SceneContent::MatchesVersion(uint32_t requested_version) const {
          requested_version == version_ || version_ == mozart::kSceneVersionNone;
 }
 
-void SceneContent::Paint(const Snapshot* snapshot, SkCanvas* canvas) const {
+void SceneContent::Paint(const Snapshot* snapshot,
+                         PaintContext* context) const {
   const Node* root = GetRootNodeIfExists();
   if (root)
-    root->Paint(this, snapshot, canvas);
+    root->Paint(this, snapshot, context);
 }
 
 bool SceneContent::HitTest(const Snapshot* snapshot,

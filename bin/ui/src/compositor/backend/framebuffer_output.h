@@ -39,7 +39,7 @@ class FramebufferOutput : public Output {
 
   void OnFrameFinished(uint32_t frame_number,
                        ftl::TimePoint submit_time,
-                       ftl::TimePoint draw_time,
+                       ftl::TimePoint start_time,
                        ftl::TimePoint finish_time);
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;

@@ -7,7 +7,6 @@
 #include <mx/process.h>
 
 #include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
               "Fuchsia should always be 64-bit");
@@ -15,47 +14,64 @@ static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
+void ReleaseBuffer(void* pixels, void* context) {
+  delete static_cast<ProducedBufferHolder*>(context);
+}
+
 void UnmapMemory(void* pixels, void* context) {
   mx_status_t status =
       mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(pixels), 0u);
   FTL_CHECK(status == NO_ERROR);
 }
 
-sk_sp<SkSurface> MakeSkSurfaceFromVMOWithSize(const mx::vmo& vmo,
-                                              const SkImageInfo& info,
-                                              size_t row_bytes,
-                                              size_t total_bytes) {
-  size_t needed_bytes = info.height() * row_bytes;
-  if (!info.validRowBytes(row_bytes) || total_bytes < needed_bytes) {
-    FTL_LOG(ERROR) << "invalid image metadata";
-    return nullptr;
-  }
+sk_sp<SkSurface> MakeSkSurfaceInternal(
+    const SkImageInfo& info,
+    size_t row_bytes,
+    std::unique_ptr<ProducedBufferHolder> buffer_holder) {
+  FTL_DCHECK(buffer_holder);
 
-  uintptr_t buffer = 0u;
-  mx_status_t status =
-      mx::process::self().map_vm(vmo, 0u, needed_bytes, &buffer,
-                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::process::map_vm failed: status=" << status;
+  void* buffer = buffer_holder->shared_vmo()->Map();
+  if (!buffer) {
+    FTL_LOG(ERROR) << "Could not map surface into memory";
     return nullptr;
   }
 
   sk_sp<SkSurface> surface = SkSurface::MakeRasterDirectReleaseProc(
-      info, reinterpret_cast<void*>(buffer), row_bytes, &UnmapMemory, nullptr);
+      info, buffer, row_bytes, &ReleaseBuffer, buffer_holder.get());
   if (!surface) {
     FTL_LOG(ERROR) << "Could not create SkSurface";
     return nullptr;
   }
+
+  buffer_holder.release();  // now owned by SkSurface
   return surface;
 }
 
 }  // namespace
 
-sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
-  FTL_DCHECK(out_image);
+sk_sp<SkSurface> MakeSkSurface(const SkISize& size,
+                               BufferProducer* producer,
+                               ImagePtr* out_image) {
+  return MakeSkSurface(
+      SkImageInfo::Make(size.width(), size.height(), kBGRA_8888_SkColorType,
+                        kPremul_SkAlphaType),
+      producer, out_image);
+}
 
-  size_t row_bytes = info.minRowBytes();
-  size_t total_bytes = info.height() * row_bytes;
+sk_sp<SkSurface> MakeSkSurface(const Size& size,
+                               BufferProducer* producer,
+                               ImagePtr* out_image) {
+  return MakeSkSurface(SkISize::Make(size.width, size.height), producer,
+                       out_image);
+}
+
+sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info,
+                               BufferProducer* producer,
+                               ImagePtr* out_image) {
+  FTL_DCHECK(producer);
+  FTL_DCHECK(producer->map_flags() &
+             (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE));
+  FTL_DCHECK(out_image);
 
   Image::PixelFormat pixel_format;
   switch (info.colorType()) {
@@ -93,24 +109,22 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
     return nullptr;
   }
 
-  mx::vmo vmo;
-  if (mx::vmo::create(total_bytes, 0, &vmo) < 0) {
-    FTL_LOG(ERROR) << "mx::vmo::create failed";
+  size_t row_bytes = info.minRowBytes();
+  size_t total_bytes = row_bytes * info.height();
+  auto buffer_holder = producer->ProduceBuffer(total_bytes);
+  if (!buffer_holder) {
+    FTL_LOG(ERROR) << "Could not produce buffer: total_bytes=" << total_bytes;
     return nullptr;
   }
 
-  // Optimization: We will be writing to every page of the buffer, so
-  // allocate physical memory for it eagerly.
-  mx_status_t status =
-      vmo.op_range(MX_VMO_OP_COMMIT, 0u, total_bytes, nullptr, 0u);
-
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::vmo::op_range failed: status=" << status;
+  BufferPtr buffer = buffer_holder->GetBuffer();
+  if (!buffer) {
+    FTL_LOG(ERROR) << "Could not get buffer for consumer";
     return nullptr;
   }
 
   sk_sp<SkSurface> surface =
-      MakeSkSurfaceFromVMOWithSize(vmo, info, row_bytes, total_bytes);
+      MakeSkSurfaceInternal(info, row_bytes, std::move(buffer_holder));
   if (!surface)
     return nullptr;
 
@@ -122,34 +136,45 @@ sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image) {
   image->pixel_format = pixel_format;
   image->alpha_format = alpha_format;
   image->color_space = color_space;
-  image->buffer = std::move(vmo);
-
+  image->buffer = std::move(buffer);
   *out_image = std::move(image);
   return surface;
 }
 
-sk_sp<SkSurface> MakeSkSurface(const SkISize& size, ImagePtr* out_image) {
-  return MakeSkSurface(
-      SkImageInfo::Make(size.width(), size.height(), kBGRA_8888_SkColorType,
-                        kPremul_SkAlphaType),
-      out_image);
-}
+sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
+                                      size_t row_bytes,
+                                      const mx::vmo& vmo) {
+  FTL_DCHECK(vmo);
 
-sk_sp<SkSurface> MakeSkSurface(const Size& size, ImagePtr* out_image) {
-  return MakeSkSurface(SkISize::Make(size.width, size.height), out_image);
-}
-
-sk_sp<SkSurface> MakeSkSurfaceFromVMO(const mx::vmo& vmo,
-                                      const SkImageInfo& info,
-                                      size_t row_bytes) {
   uint64_t total_bytes = 0u;
   mx_status_t status = vmo.get_size(&total_bytes);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::vmo::get_size failed: status=" << status;
+  FTL_CHECK(status == NO_ERROR);
+
+  size_t needed_bytes = info.height() * row_bytes;
+  if (!info.validRowBytes(row_bytes) || total_bytes < needed_bytes) {
+    FTL_LOG(ERROR) << "Invalid image metadata: total_bytes=" << total_bytes
+                   << ", needed_bytes=" << needed_bytes;
     return nullptr;
   }
 
-  return MakeSkSurfaceFromVMOWithSize(vmo, info, row_bytes, total_bytes);
+  uintptr_t buffer = 0u;
+  status =
+      mx::process::self().map_vm(vmo, 0u, needed_bytes, &buffer,
+                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Could not map surface: status=" << status;
+    return nullptr;
+  }
+
+  sk_sp<SkSurface> surface = SkSurface::MakeRasterDirectReleaseProc(
+      info, reinterpret_cast<void*>(buffer), row_bytes, &UnmapMemory, nullptr);
+  if (!surface) {
+    FTL_LOG(ERROR) << "Could not create SkSurface";
+    mx::process::self().unmap_vm(buffer, 0u);
+    return nullptr;
+  }
+
+  return surface;
 }
 
 }  // namespace mozart

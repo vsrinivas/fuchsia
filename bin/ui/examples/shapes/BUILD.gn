@@ -14,6 +14,7 @@ executable("shapes") {
   deps = [
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/views",

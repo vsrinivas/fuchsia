@@ -32,6 +32,9 @@ constexpr ftl::TimeDelta kHardwareRefreshInterval =
 constexpr ftl::TimeDelta kHardwareDisplayLatency =
     ftl::TimeDelta::FromMicroseconds(1000);
 
+// Maximum amount of time to wait for a fence to clear.
+constexpr ftl::TimeDelta kFenceTimeout = ftl::TimeDelta::FromMilliseconds(5000);
+
 }  // namespace
 
 class FramebufferOutput::Rasterizer {
@@ -143,7 +146,7 @@ void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
 
 void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
                                         ftl::TimePoint submit_time,
-                                        ftl::TimePoint draw_time,
+                                        ftl::TimePoint start_time,
                                         ftl::TimePoint finish_time) {
   // TODO(jeffbrown): Tally these statistics.
   FTL_DCHECK(frame_in_progress_);
@@ -151,7 +154,8 @@ void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
   last_presentation_time_ = finish_time + kHardwareDisplayLatency;
 
   // TODO(jeffbrown): Filter this feedback loop to avoid large swings.
-  presentation_latency_ = last_presentation_time_ - submit_time;
+  // presentation_latency_ = last_presentation_time_ - submit_time;
+  presentation_latency_ = kHardwareRefreshInterval + kHardwareDisplayLatency;
   TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
 
   if (next_frame_) {
@@ -212,10 +216,10 @@ bool FramebufferOutput::Rasterizer::Initialize() {
   }
 
   framebuffer_surface_ = mozart::MakeSkSurfaceFromVMO(
-      framebuffer_->vmo(),
       SkImageInfo::Make(framebuffer_->info().width, framebuffer_->info().height,
                         sk_color_type, kOpaque_SkAlphaType),
-      framebuffer_->info().stride * framebuffer_->info().pixelsize);
+      framebuffer_->info().stride * framebuffer_->info().pixelsize,
+      framebuffer_->vmo());
   if (!framebuffer_surface_) {
     FTL_LOG(ERROR) << "Failed to map framebuffer surface";
     return false;
@@ -238,30 +242,57 @@ mozart::DisplayInfoPtr FramebufferOutput::Rasterizer::GetDisplayInfo() {
 void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
                                               uint32_t frame_number,
                                               ftl::TimePoint submit_time) {
-  TRACE_EVENT_ASYNC_BEGIN0("gfx", "DrawFrame", frame_number);
+  TRACE_EVENT_ASYNC_BEGIN0("gfx", "Rasterize", frame_number);
   FTL_DCHECK(frame);
 
-  ftl::TimePoint draw_time = ftl::TimePoint::Now();
+  ftl::TimePoint start_time = ftl::TimePoint::Now();
 
-  SkCanvas* canvas = framebuffer_surface_->getCanvas();
-  frame->Draw(canvas);
-  canvas->flush();
+  {
+    TRACE_EVENT0("gfx", "WaitFences");
+    ftl::TimePoint wait_timeout = start_time + kFenceTimeout;
+    for (const auto& image : frame->images()) {
+      if (image->fence() &&
+          !image->fence()->WaitReady(wait_timeout - ftl::TimePoint::Now())) {
+        FTL_LOG(WARNING)
+            << "Waiting for fences timed out after "
+            << (ftl::TimePoint::Now() - start_time).ToMilliseconds() << " ms";
+        // TODO(jeffbrown): When fences time out, we're kind of stuck.
+        // We have prepared a display list for a frame which includes content
+        // that was incompletely rendered.  We should just skip the frame
+        // (we are already way behind anyhow), track down which scenes
+        // got stuck, report them as not repsponding, destroy them, then run
+        // composition again and hope everything has cleared up.
+        break;
+      }
+    }
+  }
 
-  framebuffer_->Flush();
+  {
+    TRACE_EVENT0("gfx", "Draw");
+    SkCanvas* canvas = framebuffer_surface_->getCanvas();
+    frame->Draw(canvas);
+    canvas->flush();
+  }
+
+  {
+    TRACE_EVENT0("gfx", "Flush");
+    framebuffer_->Flush();
+  }
 
   ftl::TimePoint finish_time = ftl::TimePoint::Now();
 
   // Need a weak reference because the task may outlive the output.
   output_->compositor_task_runner_->PostTask([
     output_weak = output_->weak_ptr_factory_.GetWeakPtr(), frame_number,
-    submit_time, draw_time, finish_time
+    submit_time, start_time, finish_time
   ] {
+    TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
+
     if (output_weak) {
-      output_weak->OnFrameFinished(frame_number, submit_time, draw_time,
+      output_weak->OnFrameFinished(frame_number, submit_time, start_time,
                                    finish_time);
     }
   });
-  TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
 }
 
 }  // namespace compositor

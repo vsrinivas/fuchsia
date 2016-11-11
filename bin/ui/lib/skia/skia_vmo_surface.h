@@ -7,33 +7,44 @@
 
 #include <mx/vmo.h>
 
-#include "apps/mozart/services/composition/image.fidl.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
+#include "apps/mozart/services/images/image.fidl.h"
 #include "third_party/skia/include/core/SkImageInfo.h"
 #include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
 namespace mozart {
 
-// Creates a new |SkSurface| backed by an image which is mapped read/write.
+// Creates a new |SkSurface| backed by an image using native pixel format.
+// The |producer| must be configured to map buffers with read/write permission.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info, ImagePtr* out_image);
+// Signals the image buffer's fence when the returned |SkSurface| is destroyed.
+sk_sp<SkSurface> MakeSkSurface(const SkISize& size,
+                               BufferProducer* producer,
+                               ImagePtr* out_image);
 
-// Creates a new |SkSurface| backed by an image which is mapped read/write.
-// Uses native pixel format and given size.
+// Creates a new |SkSurface| backed by an image using native pixel format.
+// The |producer| must be configured to map buffers with read/write permission.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurface(const SkISize& size, ImagePtr* out_image);
+// Signals the image buffer's fence when the returned |SkSurface| is destroyed.
+sk_sp<SkSurface> MakeSkSurface(const Size& size,
+                               BufferProducer* producer,
+                               ImagePtr* out_image);
 
-// Creates a new |SkSurface| backed by an image which is mapped read/write.
-// Uses native pixel format and given size.
+// Creates a new |SkSurface| backed by an image using the specified |info|.
+// The |producer| must be configured to map buffers with read/write permission.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurface(const Size& size, ImagePtr* out_image);
+// Signals the image buffer's fence when the returned |SkSurface| is destroyed.
+sk_sp<SkSurface> MakeSkSurface(const SkImageInfo& info,
+                               BufferProducer* producer,
+                               ImagePtr* out_image);
 
-// Makes an |SkSurface| object backed by a virtual memory object which is
-// mapped read/write.  Does not take ownership of the handle.
+// Creates a new |SkSurface| backed by a VMO.
+// Does not take ownership of the VMO.
 // Returns nullptr on failure.
-sk_sp<SkSurface> MakeSkSurfaceFromVMO(const mx::vmo& vmo,
-                                      const SkImageInfo& info,
-                                      size_t row_bytes);
+sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
+                                      size_t row_bytes,
+                                      const mx::vmo& vmo);
 
 }  // namespace mozart
 

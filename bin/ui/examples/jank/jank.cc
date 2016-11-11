@@ -12,6 +12,7 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
@@ -105,7 +106,8 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
       bounds.height = size.height;
 
       mozart::ImagePtr image;
-      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      sk_sp<SkSurface> surface =
+          mozart::MakeSkSurface(size, &buffer_producer_, &image);
       FTL_CHECK(surface);
       DrawContent(surface->getCanvas());
 
@@ -196,6 +198,7 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
   }
 
   mozart::InputHandler input_handler_;
+  mozart::BufferProducer buffer_producer_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> typeface_;
   ftl::TimePoint stutter_end_time_;

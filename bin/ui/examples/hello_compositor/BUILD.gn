@@ -11,6 +11,7 @@ executable("hello_compositor") {
     "//apps/modular/lib/app",
     "//apps/modular/services/application",
     "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//lib/ftl",

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "apps/mozart/services/composition/nodes.fidl.h"
+#include "apps/mozart/src/compositor/graph/paint_context.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
@@ -73,7 +74,7 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
   // Paints the content of the node to a recording canvas.
   void Paint(const SceneContent* content,
              const Snapshot* snapshot,
-             SkCanvas* canvas) const;
+             PaintContext* context) const;
 
   // Performs a hit test at the specified point.
   // The |point| is the hit tested point in the parent's coordinate space.
@@ -102,7 +103,7 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
 
   virtual void PaintInner(const SceneContent* content,
                           const Snapshot* snapshot,
-                          SkCanvas* canvas) const;
+                          PaintContext* context) const;
 
   virtual bool HitTestInner(const SceneContent* content,
                             const Snapshot* snapshot,
@@ -149,7 +150,7 @@ class RectNode : public Node {
 
   void PaintInner(const SceneContent* content,
                   const Snapshot* snapshot,
-                  SkCanvas* canvas) const override;
+                  PaintContext* context) const override;
 
  private:
   mozart::RectF const content_rect_;
@@ -186,7 +187,7 @@ class ImageNode : public Node {
 
   void PaintInner(const SceneContent* content,
                   const Snapshot* snapshot,
-                  SkCanvas* canvas) const override;
+                  PaintContext* context) const override;
 
  private:
   mozart::RectF const content_rect_;
@@ -224,7 +225,7 @@ class SceneNode : public Node {
 
   void PaintInner(const SceneContent* content,
                   const Snapshot* snapshot,
-                  SkCanvas* canvas) const override;
+                  PaintContext* context) const override;
 
   bool HitTestInner(const SceneContent* content,
                     const Snapshot* snapshot,
@@ -261,7 +262,7 @@ class LayerNode : public Node {
 
   void PaintInner(const SceneContent* content,
                   const Snapshot* snapshot,
-                  SkCanvas* canvas) const override;
+                  PaintContext* context) const override;
 
  private:
   mozart::RectF const layer_rect_;

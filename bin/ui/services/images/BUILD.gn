@@ -4,21 +4,14 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("composition") {
+fidl("images") {
   sources = [
-    "compositor.fidl",
-    "hit_tests.fidl",
-    "nodes.fidl",
-    "renderers.fidl",
-    "resources.fidl",
-    "scene_token.fidl",
-    "scenes.fidl",
-    "scheduling.fidl",
+    "image.fidl",
+    "image_pipe.fidl",
   ]
 
   public_deps = [
     "//apps/mozart/services/buffers",
-    "//apps/mozart/services/images",
     "//apps/mozart/services/geometry",
   ]
 }

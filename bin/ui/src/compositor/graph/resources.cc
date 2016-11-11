@@ -21,9 +21,9 @@ Resource::Type SceneResource::type() const {
   return Type::kScene;
 }
 
-ImageResource::ImageResource(const ftl::RefPtr<RenderImage>& image)
-    : image_(image) {
-  FTL_DCHECK(image);
+ImageResource::ImageResource(ftl::RefPtr<RenderImage> image)
+    : image_(std::move(image)) {
+  FTL_DCHECK(image_);
 }
 
 ImageResource::~ImageResource() {}

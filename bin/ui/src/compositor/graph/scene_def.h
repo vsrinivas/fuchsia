@@ -114,6 +114,7 @@ class SceneDef {
   };
 
   bool ApplyUpdate(mozart::SceneUpdatePtr update,
+                   Universe* universe,
                    const SceneResolver& resolver,
                    const SceneUnavailableSender& unavailable_sender,
                    std::ostream& err);
@@ -121,6 +122,7 @@ class SceneDef {
   ftl::RefPtr<const Resource> CreateResource(
       uint32_t resource_id,
       mozart::ResourcePtr resource_decl,
+      Universe* universe,
       const SceneResolver& resolver,
       const SceneUnavailableSender& unavailable_sender,
       std::ostream& err);

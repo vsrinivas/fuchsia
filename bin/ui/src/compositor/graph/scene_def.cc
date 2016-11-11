@@ -60,7 +60,8 @@ SceneDef::Disposition SceneDef::Present(
   uint32_t version = pending_publications_[end - 1]->metadata->version;
   for (size_t index = 0; index < end; ++index) {
     for (auto& update : pending_publications_[index]->updates) {
-      if (!ApplyUpdate(std::move(update), resolver, unavailable_sender, err))
+      if (!ApplyUpdate(std::move(update), universe, resolver,
+                       unavailable_sender, err))
         return Disposition::kFailed;
     }
   }
@@ -81,6 +82,7 @@ SceneDef::Disposition SceneDef::Present(
 }
 
 bool SceneDef::ApplyUpdate(mozart::SceneUpdatePtr update,
+                           Universe* universe,
                            const SceneResolver& resolver,
                            const SceneUnavailableSender& unavailable_sender,
                            std::ostream& err) {
@@ -102,8 +104,8 @@ bool SceneDef::ApplyUpdate(mozart::SceneUpdatePtr update,
     mozart::ResourcePtr& resource_decl = it.GetValue();
     if (resource_decl) {
       ftl::RefPtr<const Resource> resource =
-          CreateResource(resource_id, std::move(resource_decl), resolver,
-                         unavailable_sender, err);
+          CreateResource(resource_id, std::move(resource_decl), universe,
+                         resolver, unavailable_sender, err);
       if (!resource)
         return false;
       resources_[resource_id] = std::move(resource);
@@ -148,6 +150,7 @@ void SceneDef::NotifySceneUnavailable(
 ftl::RefPtr<const Resource> SceneDef::CreateResource(
     uint32_t resource_id,
     mozart::ResourcePtr resource_decl,
+    Universe* universe,
     const SceneResolver& resolver,
     const SceneUnavailableSender& unavailable_sender,
     std::ostream& err) {
@@ -168,14 +171,14 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
     FTL_DCHECK(image_resource_decl->image);
 
     auto& image_decl = image_resource_decl->image;
-    ftl::RefPtr<RenderImage> image =
-        RenderImage::CreateFromImage(std::move(image_decl));
+    ftl::RefPtr<RenderImage> image = RenderImage::CreateFromImage(
+        std::move(image_decl), universe->buffer_consumer());
     if (!image) {
       err << "ImageResource is invalid: resource_id=" << resource_id
           << ", decl=" << image_decl;
       return nullptr;
     }
-    return ftl::MakeRefCounted<ImageResource>(image);
+    return ftl::MakeRefCounted<ImageResource>(std::move(image));
   }
 
   err << "Unsupported resource type: resource_id=" << resource_id;

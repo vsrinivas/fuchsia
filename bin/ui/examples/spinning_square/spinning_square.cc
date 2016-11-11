@@ -10,6 +10,7 @@
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -52,7 +53,8 @@ class SpinningSquareView : public mozart::BaseView {
 
       // Draw the contents of the scene to a surface.
       mozart::ImagePtr image;
-      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      sk_sp<SkSurface> surface =
+          mozart::MakeSkSurface(size, &buffer_producer_, &image);
       FTL_CHECK(surface);
       DrawContent(surface->getCanvas(), size);
 
@@ -97,6 +99,8 @@ class SpinningSquareView : public mozart::BaseView {
     canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
     canvas->flush();
   }
+
+  mozart::BufferProducer buffer_producer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SpinningSquareView);
 };
