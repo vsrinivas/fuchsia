@@ -378,6 +378,7 @@ static mx_status_t usb_hub_bind(mx_driver_t* driver, mx_device_t* device) {
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {
+        status = ERR_NO_MEMORY;
         goto fail;
     }
     thrd_detach(thread);
