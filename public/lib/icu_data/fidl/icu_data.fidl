@@ -5,7 +5,7 @@
 module icu_data;
 
 struct ICUData {
-  handle<shared_buffer> vmo;
+  handle<vmo> vmo;
 };
 
 [ServiceName="icu_data::ICUDataProvider"]
