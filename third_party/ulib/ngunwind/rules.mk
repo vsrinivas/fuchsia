@@ -103,4 +103,8 @@ MODULE_LIBS := \
 # the simplistic unwinder will work.
 MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
 
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+MODULE_COMPILEFLAGS += -Wno-absolute-value
+endif
+
 include make/module.mk
