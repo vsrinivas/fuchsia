@@ -37,7 +37,6 @@
 #include <magenta/wait_set_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
-#include <mxtl/string_piece.h>
 
 #include "syscalls_priv.h"
 
