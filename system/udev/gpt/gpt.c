@@ -14,6 +14,8 @@
 #include <sys/param.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <fcntl.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +40,7 @@ typedef struct gptpart_device {
     mx_device_t device;
     gpt_entry_t gpt_entry;
     uint64_t blksize;
+    atomic_int writercount;
 } gptpart_device_t;
 
 #define get_gptpart_device(dev) containerof(dev, gptpart_device_t, device)
@@ -142,12 +145,36 @@ static mx_status_t gpt_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+static inline bool is_writer(uint32_t flags) {
+    return (flags & O_RDWR || flags & O_WRONLY);
+}
+
+static mx_status_t gpt_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    mx_status_t status = NO_ERROR;
+    if (is_writer(flags) && (atomic_exchange(&device->writercount, 1) == 1)) {
+        printf("Partition cannot be opened as writable (open elsewhere)\n");
+        status = ERR_ALREADY_BOUND;
+    }
+    return status;
+}
+
+static mx_status_t gpt_close(mx_device_t* dev, uint32_t flags) {
+    gptpart_device_t* device = get_gptpart_device(dev);
+    if (is_writer(flags)) {
+        atomic_fetch_sub(&device->writercount, 1);
+    }
+    return NO_ERROR;
+}
+
 static mx_protocol_device_t gpt_proto = {
     .ioctl = gpt_ioctl,
     .iotxn_queue = gpt_iotxn_queue,
     .get_size = gpt_getsize,
     .unbind = gpt_unbind,
     .release = gpt_release,
+    .open = gpt_open,
+    .close = gpt_close,
 };
 
 static void gpt_read_sync_complete(iotxn_t* txn, void* cookie) {
