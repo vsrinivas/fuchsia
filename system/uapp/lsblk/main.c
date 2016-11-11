@@ -95,7 +95,7 @@ static int cmd_list_blk(void) {
         if (ioctl_block_get_size(fd, &size) > 0) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
         }
-        if (ioctl_block_get_guid(fd, info.guid, sizeof(info.guid)) == NO_ERROR) {
+        if (ioctl_block_get_type_guid(fd, info.guid, sizeof(info.guid)) >= 0) {
             type = guid_to_type(info.guid);
         }
         ioctl_block_get_name(fd, info.label, sizeof(info.label));

@@ -93,7 +93,7 @@ static void launch_fat(const char* device_name) {
     }
     // Use the GUID to avoid auto-mounting the EFI partition as writable
     char guid[40];
-    ioctl_block_get_guid(fd, guid, sizeof(guid));
+    ioctl_block_get_type_guid(fd, guid, sizeof(guid));
     bool efi = false;
     if (!strcmp("C12A7328-F81F-11D2-BA4B-00A0C93EC93B", guid)) {
         efi = true;

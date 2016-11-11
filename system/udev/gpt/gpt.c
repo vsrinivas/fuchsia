@@ -85,10 +85,16 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
         *blksize = device->blksize;
         return sizeof(*blksize);
     }
-    case IOCTL_BLOCK_GET_GUID: {
+    case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
         if (max < GPT_GUID_STRLEN) return ERR_BUFFER_TOO_SMALL;
         uint8_to_guid_string(guid, device->gpt_entry.type);
+        return GPT_GUID_STRLEN;
+    }
+    case IOCTL_BLOCK_GET_PARTITION_GUID: {
+        char* guid = reply;
+        if (max < GPT_GUID_STRLEN) return ERR_BUFFER_TOO_SMALL;
+        uint8_to_guid_string(guid, device->gpt_entry.guid);
         return GPT_GUID_STRLEN;
     }
     case IOCTL_BLOCK_GET_NAME: {
@@ -247,11 +253,14 @@ static int gpt_bind_thread(void* arg) {
             continue;
         }
 
-        char guid[40];
-        uint8_to_guid_string(guid, device->gpt_entry.type);
+        char type_guid[40];
+        uint8_to_guid_string(type_guid, device->gpt_entry.type);
+        char partition_guid[40];
+        uint8_to_guid_string(partition_guid, device->gpt_entry.guid);
         char pname[40];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
-        xprintf("gpt: partition %u (%s) type=%s name=%s\n", partitions, device->device.name, guid, pname);
+        xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
+                device->device.name, type_guid, partition_guid, pname);
 
         device->device.protocol_id = MX_PROTOCOL_BLOCK;
         if (device_add(&device->device, dev) != NO_ERROR) {
