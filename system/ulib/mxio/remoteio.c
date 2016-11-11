@@ -112,7 +112,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     bool is_close = (MXRIO_OP(msg.op) == MXRIO_CLOSE);
 
     xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
-            opname(msg.op), msg.arg, msg.datalen, msg.hcount);
+            mxio_opname(msg.op), msg.arg, msg.datalen, msg.hcount);
 
     msg.arg = cb(&msg, (rh != h) ? rh : 0, cookie);
     if (msg.arg == ERR_DISPATCHER_INDIRECT) {
