@@ -204,7 +204,7 @@ void PageImpl::GetReference(ReferencePtr reference,
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, handle<shared_buffer>? buffer);
+//   => (Status status, handle<vmo>? buffer);
 void PageImpl::GetPartialReference(
     ReferencePtr reference,
     int64_t offset,
