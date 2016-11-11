@@ -24,6 +24,10 @@
             "bootfs_path": "apps/input_manager_service"
         },
         {
+            "binary": "basic_wm.flx",
+            "bootfs_path": "apps/basic_wm"
+        },
+        {
             "binary": "jank_view",
             "bootfs_path": "apps/jank_view"
         },

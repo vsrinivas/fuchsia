@@ -3,7 +3,6 @@
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
         "//apps/modular/src/document_store",
-        "//apps/logging",
         "//apps/maxwell",
         "//apps/modular/examples/hello_app"
     ],
@@ -45,12 +44,12 @@
             "bootfs_path": "apps/hello_app_parent"
         },
         {
-            "binary": "hello_dart.dartx",
-            "bootfs_path": "apps/hello_dart.dartx"
+            "binary": "hello_app_dart.dartx",
+            "bootfs_path": "apps/hello_app_dart.dartx"
         },
         {
-            "binary": "logging",
-            "bootfs_path": "apps/logging"
+            "binary": "hello_dart.dartx",
+            "bootfs_path": "apps/hello_dart.dartx"
         },
         {
             "binary": "suggestion_engine",
