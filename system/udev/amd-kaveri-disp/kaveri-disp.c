@@ -67,14 +67,6 @@ static mx_display_protocol_t kaveri_disp_display_proto = {
 
 // implement device protocol
 
-static mx_status_t kaveri_disp_open(mx_device_t* dev, mx_device_t** out, uint32_t flags) {
-    return NO_ERROR;
-}
-
-static mx_status_t kaveri_disp_close(mx_device_t* dev) {
-    return NO_ERROR;
-}
-
 static mx_status_t kaveri_disp_release(mx_device_t* dev) {
     kaveri_disp_device_t* device = get_kaveri_disp_device(dev);
 
@@ -92,8 +84,6 @@ static mx_status_t kaveri_disp_release(mx_device_t* dev) {
 }
 
 static mx_protocol_device_t kaveri_disp_device_proto = {
-    .open = kaveri_disp_open,
-    .close = kaveri_disp_close,
     .release = kaveri_disp_release,
 };
 
