@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/lib/timeline_rate.h"
 
 #include <limits>
 #include <utility>

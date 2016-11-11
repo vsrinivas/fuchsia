@@ -7,9 +7,9 @@
 #include <limits>
 #include <vector>
 
-#include "apps/media/cpp/flog.h"
-#include "apps/media/cpp/timeline.h"
-#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/lib/flog.h"
+#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline_function.h"
 #include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"

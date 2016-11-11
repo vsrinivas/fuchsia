@@ -40,7 +40,7 @@ executable("apptests") {
 
   deps = [
     ":audio",
-    "//apps/media/cpp",
+    "//apps/media/lib",
     "//apps/media/src/framework_create",
     "//third_party/gtest",
   ]

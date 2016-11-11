@@ -7,10 +7,10 @@
 #include <memory>
 #include <queue>
 
-#include "apps/media/cpp/mapped_shared_buffer.h"
-#include "apps/media/cpp/timeline_function.h"
-#include "apps/media/cpp/video_renderer.h"
 #include "apps/media/examples/video_player/video_player_params.h"
+#include "apps/media/lib/mapped_shared_buffer.h"
+#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/video_renderer.h"
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"

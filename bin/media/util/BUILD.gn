@@ -18,7 +18,7 @@ source_set("util") {
   ]
 
   deps = [
-    "//apps/media/cpp",
+    "//apps/media/lib",
     "//apps/media/services",
     "//apps/modular/lib/app",
     "//lib/ftl",

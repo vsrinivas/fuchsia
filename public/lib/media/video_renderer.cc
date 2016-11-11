@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/cpp/video_renderer.h"
+#include "apps/media/lib/video_renderer.h"
 
 #include <limits>
 
-#include "apps/media/cpp/timeline.h"
-#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline_function.h"
 
 namespace media {
 

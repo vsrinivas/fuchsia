@@ -9,8 +9,8 @@
 #include <queue>
 #include <vector>
 
-#include "apps/media/cpp/fifo_allocator.h"
-#include "apps/media/cpp/shared_buffer_set.h"
+#include "apps/media/lib/fifo_allocator.h"
+#include "apps/media/lib/shared_buffer_set.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"

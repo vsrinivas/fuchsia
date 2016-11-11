@@ -4,7 +4,7 @@
 
 #include "apps/media/src/audio_server/platform/generic/mixer.h"
 
-#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/lib/timeline_rate.h"
 #include "apps/media/src/audio_server/platform/generic/mixers/linear_sampler.h"
 #include "apps/media/src/audio_server/platform/generic/mixers/no_op.h"
 #include "apps/media/src/audio_server/platform/generic/mixers/point_sampler.h"

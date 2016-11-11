@@ -4,8 +4,8 @@
 
 #include "apps/media/src/util/timeline_control_point.h"
 
-#include "apps/media/cpp/timeline.h"
-#include "apps/media/cpp/timeline_function.h"
+#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline_function.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

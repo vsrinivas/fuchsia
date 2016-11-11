@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/media/cpp/flog.h"
-#include "apps/media/cpp/shared_buffer_set.h"
-#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/lib/flog.h"
+#include "apps/media/lib/shared_buffer_set.h"
+#include "apps/media/lib/timeline_rate.h"
 #include "apps/media/services/logs/media_packet_consumer_channel.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

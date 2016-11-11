@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/lib/timeline_rate.h"
 #include "apps/media/services/timelines.fidl.h"
 #include "lib/ftl/logging.h"
 

@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-#include "apps/media/cpp/timeline.h"
-#include "apps/media/cpp/timeline_rate.h"
+#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline_rate.h"
 #include "apps/media/src/ffmpeg/ffmpeg_formatting.h"
 #include "lib/ftl/logging.h"
 extern "C" {

@@ -4,7 +4,7 @@
 
 #include "apps/media/src/audio_server/audio_server_app.h"
 
-#include "apps/media/cpp/flog.h"
+#include "apps/media/lib/flog.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"
 #include "lib/ftl/logging.h"
 

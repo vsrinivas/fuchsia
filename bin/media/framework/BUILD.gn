@@ -62,7 +62,7 @@ source_set("framework") {
   ]
 
   deps = [
-    "//apps/media/cpp",
+    "//apps/media/lib",
     "//apps/media/src/util",
     "//lib/ftl",
   ]

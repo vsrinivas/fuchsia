@@ -4,7 +4,7 @@
 
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 
-#include "apps/media/cpp/timeline.h"
+#include "apps/media/lib/timeline.h"
 #include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "lib/ftl/logging.h"

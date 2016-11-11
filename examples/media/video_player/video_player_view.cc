@@ -8,8 +8,8 @@
 
 #include <iomanip>
 
-#include "apps/media/cpp/timeline.h"
 #include "apps/media/examples/video_player/video_player_params.h"
+#include "apps/media/lib/timeline.h"
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/services/audio_track.fidl.h"
 #include "apps/media/services/media_service.fidl.h"

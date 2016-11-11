@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/cpp/media_packet_consumer_base.h"
+#include "apps/media/lib/media_packet_consumer_base.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/framework/models/active_source.h"
 

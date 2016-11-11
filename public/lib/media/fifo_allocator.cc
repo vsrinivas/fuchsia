@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/cpp/fifo_allocator.h"
+#include "apps/media/lib/fifo_allocator.h"
 
 #include "lib/ftl/logging.h"
 

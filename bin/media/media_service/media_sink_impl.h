@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/cpp/flog.h"
+#include "apps/media/lib/flog.h"
 #include "apps/media/services/logs/media_sink_channel.fidl.h"
 #include "apps/media/services/media_sink.fidl.h"
 #include "apps/media/services/timeline_controller.fidl.h"

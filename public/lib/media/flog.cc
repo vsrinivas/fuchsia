@@ -4,7 +4,7 @@
 
 #include <chrono>
 
-#include "apps/media/cpp/flog.h"
+#include "apps/media/lib/flog.h"
 
 namespace flog {
 

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/cpp/video_packet_layout.h"
+#include "apps/media/lib/video_packet_layout.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 
 namespace media {
