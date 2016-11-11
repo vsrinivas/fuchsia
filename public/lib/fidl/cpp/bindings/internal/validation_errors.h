@@ -118,7 +118,7 @@ class ValidationErrorStringStream {
 // this macro's use semantically valid.
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
   true ? (void)0                                   \
-       : ::fidl::internal::VoidifyOstream() &      \
+       : ::ftl::LogMessageVoidify() &              \
              ::fidl::internal::ValidationErrorStringStream(err_msg).stream()
 #else
 #define FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err_msg) \
