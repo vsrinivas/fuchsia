@@ -6,6 +6,7 @@
 #define ENGINE_COMMAND_STREAMER_H
 
 #include "address_space.h"
+#include "hardware_status_page.h"
 #include "mapped_batch.h"
 #include "msd_intel_context.h"
 #include "pagetable.h"
@@ -21,6 +22,7 @@ public:
     public:
         virtual RegisterIo* register_io() = 0;
         virtual Sequencer* sequencer() = 0;
+        virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
     };
 
     EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base);
@@ -33,7 +35,7 @@ public:
     bool InitContext(MsdIntelContext* context) const;
 
     // Initialize engine command streamer hardware.
-    void InitHardware(HardwareStatusPage* hardware_status_page);
+    void InitHardware();
 
     uint64_t GetActiveHeadPointer();
 
@@ -57,6 +59,11 @@ protected:
     uint32_t mmio_base() const { return mmio_base_; }
 
     Sequencer* sequencer() { return owner_->sequencer(); }
+
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id)
+    {
+        return owner_->hardware_status_page(id);
+    }
 
 private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }

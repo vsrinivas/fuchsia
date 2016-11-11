@@ -6,6 +6,7 @@
 #define MSD_DEVICE_H
 
 #include "engine_command_streamer.h"
+#include "global_context.h"
 #include "gtt.h"
 #include "magma_util/macros.h"
 #include "msd.h"
@@ -73,19 +74,13 @@ private:
         return sequencer_.get();
     }
 
+    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override;
+
     // MsdIntelConnection::Owner
-    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
-    {
-        DASSERT(global_context_);
-        return global_context_->hardware_status_page(id);
-    }
-
-    std::shared_ptr<AddressSpace> gtt() { return gtt_; }
-
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
-    bool WaitIdle();
 
+    bool WaitIdle();
     bool ReadGttSize(unsigned int* gtt_size);
 
     uint32_t GetCurrentFrequency();
@@ -94,9 +89,11 @@ private:
     static void DumpFault(DumpState* dump_out, uint32_t fault);
     static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
 
-    std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
+    std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
     RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
+
+    std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 
@@ -106,7 +103,7 @@ private:
     std::unique_ptr<RegisterIo> register_io_;
     std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
-    std::shared_ptr<MsdIntelContext> global_context_;
+    std::shared_ptr<GlobalContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
 
     // page flipping

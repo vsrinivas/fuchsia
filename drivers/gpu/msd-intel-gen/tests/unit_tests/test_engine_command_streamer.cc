@@ -142,7 +142,7 @@ public:
             engine_cs_->mmio_base() + registers::HardwareStatusPageAddress::kOffset, 0);
         register_io()->Write32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset, 0);
 
-        engine_cs_->InitHardware(hw_status_page_.get());
+        engine_cs_->InitHardware();
 
         EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() +
                                         registers::HardwareStatusPageAddress::kOffset),
@@ -201,7 +201,7 @@ public:
         EXPECT_EQ(ringbuffer_content[i++], (uint32_t)MiNoop::kCommandType);
 
         // store sequence number
-        gpu_addr_t seqno_gpu_addr = context_->hardware_status_page(engine_cs_->id())->gpu_addr() +
+        gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page(engine_cs_->id())->gpu_addr() +
                                     HardwareStatusPage::kSequenceNumberOffset;
 
         EXPECT_EQ(ringbuffer_content[i++], 0x10400000u | (4 - 2));

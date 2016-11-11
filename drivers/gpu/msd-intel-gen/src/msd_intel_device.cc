@@ -76,25 +76,23 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     render_engine_cs_ = RenderEngineCommandStreamer::Create(this);
 
-    auto context = std::shared_ptr<GlobalContext>(new GlobalContext());
+    global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext());
 
     // Creates the context backing store.
-    if (!render_engine_cs_->InitContext(context.get()))
+    if (!render_engine_cs_->InitContext(global_context_.get()))
         return DRETF(false, "render_engine_cs failed to init global context");
 
-    if (!context->Map(gtt_, render_engine_cs_->id()))
+    if (!global_context_->Map(gtt_, render_engine_cs_->id()))
         return DRETF(false, "global context init failed");
 
-    render_engine_cs_->InitHardware(context->hardware_status_page(render_engine_cs_->id()));
+    render_engine_cs_->InitHardware();
 
     auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
     if (!init_batch)
         return DRETF(false, "failed to create render init batch");
 
-    if (!render_engine_cs_->RenderInit(context, std::move(init_batch), gtt_))
+    if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
         return DRETF(false, "render_engine_cs failed RenderInit");
-
-    global_context_ = std::move(context);
 
     return true;
 }
@@ -296,6 +294,12 @@ uint32_t MsdIntelDevice::GetCurrentFrequency()
 
     DLOG("GetCurrentGraphicsFrequency not implemented");
     return 0;
+}
+
+HardwareStatusPage* MsdIntelDevice::hardware_status_page(EngineCommandStreamerId id)
+{
+    DASSERT(global_context_);
+    return global_context_->hardware_status_page(id);
 }
 
 //////////////////////////////////////////////////////////////////////////////

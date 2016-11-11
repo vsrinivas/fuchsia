@@ -41,13 +41,14 @@ bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const
     return true;
 }
 
-void EngineCommandStreamer::InitHardware(HardwareStatusPage* hardware_status_page)
+void EngineCommandStreamer::InitHardware()
 {
-    registers::HardwareStatusPageAddress::write(register_io(), mmio_base_,
-                                                hardware_status_page->gpu_addr());
+    HardwareStatusPage* status_page = hardware_status_page(id());
+
+    registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, status_page->gpu_addr());
 
     uint32_t initial_sequence_number = sequencer()->next_sequence_number();
-    hardware_status_page->write_sequence_number(initial_sequence_number);
+    status_page->write_sequence_number(initial_sequence_number);
 
     DLOG("initialized engine sequence number: 0x%x", initial_sequence_number);
 
@@ -493,8 +494,7 @@ bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
     if (sequence_number < inflight_command_sequences_.front().sequence_number())
         return true;
 
-    HardwareStatusPage* status_page =
-        inflight_command_sequences_.front().GetContext()->hardware_status_page(id());
+    HardwareStatusPage* status_page = hardware_status_page(id());
 
     constexpr uint32_t kTimeOutMs = 100;
     auto start = std::chrono::high_resolution_clock::now();
@@ -578,7 +578,7 @@ bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
         return DRETF(false, "ringbuffer has insufficient space");
 
     gpu_addr_t gpu_addr =
-        context->hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
+        hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
 
     DLOG("writing sequence number update to 0x%x", sequence_number);
 

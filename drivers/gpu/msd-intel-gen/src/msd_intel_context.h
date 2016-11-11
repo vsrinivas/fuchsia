@@ -6,7 +6,6 @@
 #define MSD_INTEL_CONTEXT_H
 
 #include "command_buffer.h"
-#include "hardware_status_page.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
 #include "ringbuffer.h"
@@ -30,8 +29,6 @@ public:
     // Gets the gpu address of the context buffer if mapped.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
     bool GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
-
-    virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
 
     MsdIntelBuffer* get_context_buffer(EngineCommandStreamerId id)
     {
@@ -66,7 +63,6 @@ class ClientContext : public MsdIntelContext {
 public:
     class Owner {
     public:
-        virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
         virtual std::shared_ptr<AddressSpace> exec_address_space() = 0;
         virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
     };
@@ -76,11 +72,6 @@ public:
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
-    }
-
-    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
-    {
-        return owner_->hardware_status_page(id);
     }
 
     std::shared_ptr<AddressSpace> exec_address_space() { return owner_->exec_address_space(); }

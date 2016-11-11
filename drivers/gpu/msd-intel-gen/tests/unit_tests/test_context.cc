@@ -71,12 +71,6 @@ public:
     }
 
 private:
-    HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
-    {
-        DASSERT(false);
-        return nullptr;
-    }
-
     std::shared_ptr<AddressSpace> exec_address_space() override
     {
         DASSERT(false);
