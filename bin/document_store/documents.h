@@ -138,7 +138,7 @@ bool PropertyValueFromEntry(const ledger::EntryPtr& entry, fidl::String* docid,
 
 // Checks whether a document that was found was deleted.
 bool IsDocumentDeleted(const DocumentPtr& document) {
-  return document->properties.at("docid")->is_empty();
+  return document->properties.at("@id")->is_empty();
 }
 
 // Decodes the next document in the list of ledger entries.

@@ -187,7 +187,7 @@ class TransactionImpl : public Transaction {
           docid_value->set_empty(true);
           fidl::Array<uint8_t> tombstone_key;
           fidl::Array<uint8_t> tombstone_value;
-          internal::LedgerKeyValueForProperty(docid, "docid", docid_value,
+          internal::LedgerKeyValueForProperty(docid, "@id", docid_value,
                                               &tombstone_key, &tombstone_value);
           page_->Put(std::move(tombstone_key), std::move(tombstone_value),
                      [callback_tracker](ledger::Status ledger_status) {
@@ -273,10 +273,10 @@ class TransactionImpl : public Transaction {
     fidl::Array<uint8_t> key;
     fidl::Array<uint8_t> value;
 
-    // Add the synthetic "docid" property.
+    // Add the synthetic "@id" property.
     ValuePtr docid_value(Value::New());
     docid_value->set_iri(document->docid);
-    internal::LedgerKeyValueForProperty(document->docid, "docid", docid_value,
+    internal::LedgerKeyValueForProperty(document->docid, "@id", docid_value,
                                         &key, &value);
     page_->Put(std::move(key), std::move(value),
                [callback_tracker](ledger::Status ledger_status) {
