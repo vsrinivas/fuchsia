@@ -13,7 +13,7 @@ namespace {
 bool instantiate(void*) {
     BEGIN_TEST;
 
-    { Hash256 hash(); }
+    { Hash256 hash; }
 
     END_TEST;
 }
