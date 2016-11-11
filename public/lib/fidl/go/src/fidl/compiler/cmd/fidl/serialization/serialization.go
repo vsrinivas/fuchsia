@@ -519,6 +519,12 @@ func translateHandleType(handleType core.HandleTypeRef) *fidl_types.TypeHandleTy
 		kind = fidl_types.HandleType_Kind_Event
 	case core.HandleKindPort:
 		kind = fidl_types.HandleType_Kind_Port
+	case core.HandleKindJob:
+		kind = fidl_types.HandleType_Kind_Job
+	case core.HandleKindSocket:
+		kind = fidl_types.HandleType_Kind_Socket
+	case core.HandleKindEventPair:
+		kind = fidl_types.HandleType_Kind_EventPair
 	}
 	return &fidl_types.TypeHandleType{fidl_types.HandleType{handleType.Nullable(), kind}}
 }

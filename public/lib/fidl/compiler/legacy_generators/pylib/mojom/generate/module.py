@@ -54,6 +54,12 @@ class ReferenceKind(Kind):
       return NULLABLE_EVENT
     if self == PORT:
       return NULLABLE_PORT
+    if self == JOB:
+      return NULLABLE_JOB
+    if self == SOCKET:
+      return NULLABLE_SOCKET
+    if self == EVENTPAIR:
+      return NULLABLE_EVENTPAIR
 
     nullable_kind = type(self)()
     nullable_kind.shared_definition = self.shared_definition
@@ -106,6 +112,9 @@ PROCESS               = ReferenceKind('h:p')
 THREAD                = ReferenceKind('h:t')
 EVENT                 = ReferenceKind('h:e')
 PORT                  = ReferenceKind('h:r')
+JOB                   = ReferenceKind('h:j')
+SOCKET                = ReferenceKind('h:s')
+EVENTPAIR             = ReferenceKind('h:ep')
 NULLABLE_STRING       = ReferenceKind('?s', True)
 NULLABLE_HANDLE       = ReferenceKind('?h', True)
 NULLABLE_DCPIPE       = ReferenceKind('?h:d:c', True)
@@ -116,6 +125,9 @@ NULLABLE_PROCESS      = ReferenceKind('?h:p', True)
 NULLABLE_THREAD       = ReferenceKind('?h:t', True)
 NULLABLE_EVENT        = ReferenceKind('?h:e', True)
 NULLABLE_PORT         = ReferenceKind('?h:r', True)
+NULLABLE_JOB          = ReferenceKind('?h:j', True)
+NULLABLE_SOCKET       = ReferenceKind('?h:s', True)
+NULLABLE_EVENTPAIR    = ReferenceKind('?h:ep', True)
 
 # Collection of all Primitive types
 PRIMITIVES = (
@@ -140,6 +152,9 @@ PRIMITIVES = (
   THREAD,
   EVENT,
   PORT,
+  JOB,
+  SOCKET,
+  EVENTPAIR,
   NULLABLE_STRING,
   NULLABLE_HANDLE,
   NULLABLE_DCPIPE,
@@ -149,7 +164,10 @@ PRIMITIVES = (
   NULLABLE_PROCESS,
   NULLABLE_THREAD,
   NULLABLE_EVENT,
-  NULLABLE_PORT
+  NULLABLE_PORT,
+  NULLABLE_JOB,
+  NULLABLE_SOCKET,
+  NULLABLE_EVENTPAIR,
 )
 
 class NamedValue(object):
@@ -529,6 +547,15 @@ def IsEventKind(kind):
 def IsPortKind(kind):
   return (kind.spec == PORT.spec or kind.spec == NULLABLE_PORT.spec)
 
+def IsJobKind(kind):
+  return (kind.spec == JOB.spec or kind.spec == NULLABLE_JOB.spec)
+
+def IsSocketKind(kind):
+  return (kind.spec == SOCKET.spec or kind.spec == NULLABLE_SOCKET.spec)
+
+def IsEventPairKind(kind):
+  return (kind.spec == EVENTPAIR.spec or kind.spec == NULLABLE_EVENTPAIR.spec)
+
 def IsStructKind(kind):
   return isinstance(kind, Struct)
 
@@ -586,6 +613,9 @@ def IsAnyHandleKind(kind):
           IsThreadKind(kind) or
           IsEventKind(kind) or
           IsPortKind(kind) or
+          IsJobKind(kind) or
+          IsSocketKind(kind) or
+          IsEventPairKind(kind) or
           IsInterfaceRequestKind(kind))
 
 

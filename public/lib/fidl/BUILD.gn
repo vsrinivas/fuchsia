@@ -5,8 +5,10 @@
 import("fidl.gni")
 
 group("fidl") {
+  testonly = true
   deps = [
     "examples",
     "compiler/interfaces",
+    "compiler/interfaces/tests:test_interfaces"
   ]
 }

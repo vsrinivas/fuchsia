@@ -54,6 +54,9 @@ class HandleType(object):
           ('THREAD', 6),
           ('EVENT', 7),
           ('PORT', 8),
+          ('JOB', 9),
+          ('SOCKET', 10),
+          ('EVENTPAIR', 11),
         ],
     },
     'fields': [

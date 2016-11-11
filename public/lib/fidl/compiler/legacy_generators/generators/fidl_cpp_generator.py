@@ -28,6 +28,9 @@ _kind_to_cpp_type = {
   mojom.THREAD:                "::fidl::internal::WrappedHandle",
   mojom.EVENT:                 "::fidl::internal::WrappedHandle",
   mojom.PORT:                  "::fidl::internal::WrappedHandle",
+  mojom.JOB:                   "::fidl::internal::WrappedHandle",
+  mojom.SOCKET:                "::fidl::internal::WrappedHandle",
+  mojom.EVENTPAIR:             "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_HANDLE:       "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_DCPIPE:       "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_DPPIPE:       "::fidl::internal::WrappedHandle",
@@ -37,6 +40,9 @@ _kind_to_cpp_type = {
   mojom.NULLABLE_THREAD:       "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_EVENT:        "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_PORT:         "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_JOB:          "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_SOCKET:       "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_EVENTPAIR:    "::fidl::internal::WrappedHandle",
   mojom.INT64:                 "int64_t",
   mojom.UINT64:                "uint64_t",
   mojom.DOUBLE:                "double",
@@ -146,6 +152,12 @@ def GetCppArrayArgWrapperType(kind):
     return "mx::event"
   if mojom.IsPortKind(kind):
     return "mx::port"
+  if mojom.IsJobKind(kind):
+    return "mx::job"
+  if mojom.IsSocketKind(kind):
+    return "mx::socket"
+  if mojom.IsEventPairKind(kind):
+    return "mx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppResultWrapperType(kind):
@@ -182,6 +194,12 @@ def GetCppResultWrapperType(kind):
     return "mx::event"
   if mojom.IsPortKind(kind):
     return "mx::port"
+  if mojom.IsJobKind(kind):
+    return "mx::job"
+  if mojom.IsSocketKind(kind):
+    return "mx::socket"
+  if mojom.IsEventPairKind(kind):
+    return "mx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppWrapperType(kind):
@@ -218,6 +236,12 @@ def GetCppWrapperType(kind):
     return "mx::event"
   if mojom.IsPortKind(kind):
     return "mx::port"
+  if mojom.IsJobKind(kind):
+    return "mx::job"
+  if mojom.IsSocketKind(kind):
+    return "mx::socket"
+  if mojom.IsEventPairKind(kind):
+    return "mx::eventpair"
   return GetCppTypeForKind(kind)
 
 def GetCppConstWrapperType(kind):
@@ -254,6 +278,12 @@ def GetCppConstWrapperType(kind):
     return "mx::event"
   if mojom.IsPortKind(kind):
     return "mx::port"
+  if mojom.IsJobKind(kind):
+    return "mx::job"
+  if mojom.IsSocketKind(kind):
+    return "mx::socket"
+  if mojom.IsEventPairKind(kind):
+    return "mx::eventpair"
   if not kind in _kind_to_cpp_type:
     print "missing:", kind.spec
   return GetCppTypeForKind(kind)

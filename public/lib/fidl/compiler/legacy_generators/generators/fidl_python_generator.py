@@ -35,6 +35,9 @@ _kind_to_type = {
   mojom.THREAD:                '_descriptor.TYPE_HANDLE',
   mojom.EVENT:                 '_descriptor.TYPE_HANDLE',
   mojom.PORT:                  '_descriptor.TYPE_HANDLE',
+  mojom.JOB:                   '_descriptor.TYPE_HANDLE',
+  mojom.SOCKET:                '_descriptor.TYPE_HANDLE',
+  mojom.EVENTPAIR:             '_descriptor.TYPE_HANDLE',
   mojom.NULLABLE_HANDLE:       '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_DCPIPE:       '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_DPPIPE:       '_descriptor.TYPE_NULLABLE_HANDLE',
@@ -43,7 +46,10 @@ _kind_to_type = {
   mojom.NULLABLE_PROCESS:      '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_THREAD:       '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_EVENT:        '_descriptor.TYPE_NULLABLE_HANDLE',
-  mojom.NULLABLE_PORT:         '_descriptor.TYPE_NULLABLE_HANDLE'
+  mojom.NULLABLE_PORT:         '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_JOB:          '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_SOCKET:       '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_EVENTPAIR:    '_descriptor.TYPE_NULLABLE_HANDLE',
 }
 
 # int64 integers are not handled by array.array. int64/uint64 array are

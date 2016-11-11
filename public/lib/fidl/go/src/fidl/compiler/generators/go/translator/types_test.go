@@ -47,6 +47,12 @@ func TestTranslateType(t *testing.T) {
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: false}}},
 		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Job, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Socket, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: false}}},
 		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
 		{"*system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
@@ -65,6 +71,12 @@ func TestTranslateType(t *testing.T) {
 			Kind: fidl_types.HandleType_Kind_Event, Nullable: true}}},
 		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Port, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Job, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Socket, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_EventPair, Nullable: true}}},
 		{"[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: false,
 			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},

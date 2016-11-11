@@ -1,0 +1,32 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module fidl.test;
+
+struct AllTheHandles {
+  handle<channel> f1;
+  handle<data_pipe_consumer> f2;
+  handle<data_pipe_producer> f3;
+  handle<channel>? f4;
+  handle<data_pipe_consumer>? f5;
+  handle<data_pipe_producer>? f6;
+  handle f7;
+  handle? f8;
+  handle<vmo> f9;
+  handle<vmo>? f10;
+  handle<process> f17;
+  handle<process>? f18;
+  handle<thread> f19;
+  handle<thread>? f20;
+  handle<event> f21;
+  handle<event>? f22;
+  handle<port> f23;
+  handle<port>? f24;
+  handle<job> f25;
+  handle<job>? f26;
+  handle<socket> f27;
+  handle<socket>? f28;
+  handle<eventpair> f29;
+  handle<eventpair>? f30;
+};

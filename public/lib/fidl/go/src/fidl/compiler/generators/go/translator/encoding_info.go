@@ -94,8 +94,6 @@ func (t *translator) handleTypeEncodingInfo(mojomType fidl_types.HandleType) (in
 	info = new(handleTypeEncodingInfo)
 	info.nullable = mojomType.Nullable
 	switch mojomType.Kind {
-	case fidl_types.HandleType_Kind_Unspecified:
-		fallthrough
 	case fidl_types.HandleType_Kind_Process:
 		fallthrough
 	case fidl_types.HandleType_Kind_Thread:
@@ -103,6 +101,14 @@ func (t *translator) handleTypeEncodingInfo(mojomType fidl_types.HandleType) (in
 	case fidl_types.HandleType_Kind_Event:
 		fallthrough
 	case fidl_types.HandleType_Kind_Port:
+		fallthrough
+	case fidl_types.HandleType_Kind_Job:
+		fallthrough
+	case fidl_types.HandleType_Kind_Socket:
+		fallthrough
+	case fidl_types.HandleType_Kind_EventPair:
+		fallthrough
+	case fidl_types.HandleType_Kind_Unspecified:
 		info.readFunction = "ReadHandle"
 	case fidl_types.HandleType_Kind_Channel:
 		info.readFunction = "ReadChannelHandle"

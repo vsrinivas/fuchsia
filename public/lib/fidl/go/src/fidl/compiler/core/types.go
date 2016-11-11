@@ -530,6 +530,9 @@ const (
 	HandleKindThread
 	HandleKindEvent
 	HandleKindPort
+	HandleKindJob
+	HandleKindSocket
+	HandleKindEventPair
 )
 
 var allHandleKinds = []HandleKind{
@@ -541,7 +544,11 @@ var allHandleKinds = []HandleKind{
 	HandleKindProcess,
 	HandleKindThread,
 	HandleKindEvent,
-	HandleKindPort}
+	HandleKindPort,
+	HandleKindJob,
+	HandleKindSocket,
+	HandleKindEventPair,
+}
 
 // HandleTypeRef is only ever used to represent type references, never types.
 type HandleTypeRef struct {
@@ -618,6 +625,12 @@ func (h HandleTypeRef) String() string {
 		suffix = "<event>"
 	case HandleKindPort:
 		suffix = "<port>"
+	case HandleKindJob:
+		suffix = "<job>"
+	case HandleKindSocket:
+		suffix = "<socket>"
+	case HandleKindEventPair:
+		suffix = "<eventpair>"
 	default:
 		panic(fmt.Sprintf("Unrecognized handle kind %d", h.kind))
 	}

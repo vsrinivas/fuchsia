@@ -129,7 +129,7 @@ type HandleType_Kind int32
 
 const (
 	HandleType_Kind_Unspecified      HandleType_Kind = 0
-	HandleType_Kind_Channel      HandleType_Kind = 1
+	HandleType_Kind_Channel          HandleType_Kind = 1
 	HandleType_Kind_DataPipeConsumer HandleType_Kind = 2
 	HandleType_Kind_DataPipeProducer HandleType_Kind = 3
 	HandleType_Kind_Vmo              HandleType_Kind = 4
@@ -137,6 +137,9 @@ const (
 	HandleType_Kind_Thread           HandleType_Kind = 6
 	HandleType_Kind_Event            HandleType_Kind = 7
 	HandleType_Kind_Port             HandleType_Kind = 8
+	HandleType_Kind_Job              HandleType_Kind = 9
+	HandleType_Kind_Socket           HandleType_Kind = 10
+	HandleType_Kind_EventPair        HandleType_Kind = 11
 )
 
 type ArrayType struct {

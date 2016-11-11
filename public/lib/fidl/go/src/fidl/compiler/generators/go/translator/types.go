@@ -89,6 +89,12 @@ func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goTyp
 		goType = "system.Handle"
 	case fidl_types.HandleType_Kind_Port:
 		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_Job:
+		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_Socket:
+		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_EventPair:
+		goType = "system.Handle"
 	}
 	if mojomType.Nullable {
 		goType = "*" + goType

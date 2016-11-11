@@ -745,6 +745,9 @@ class FileTranslator(object):
         fidl_types_fidl.HandleType.Kind.THREAD: module.THREAD,
         fidl_types_fidl.HandleType.Kind.EVENT: module.EVENT,
         fidl_types_fidl.HandleType.Kind.PORT: module.PORT,
+        fidl_types_fidl.HandleType.Kind.JOB: module.JOB,
+        fidl_types_fidl.HandleType.Kind.SOCKET: module.SOCKET,
+        fidl_types_fidl.HandleType.Kind.EVENTPAIR: module.EVENTPAIR,
     }
 
     nullable_handle_mojom_types = {
@@ -759,6 +762,9 @@ class FileTranslator(object):
         fidl_types_fidl.HandleType.Kind.THREAD: module.NULLABLE_THREAD,
         fidl_types_fidl.HandleType.Kind.EVENT: module.NULLABLE_EVENT,
         fidl_types_fidl.HandleType.Kind.PORT: module.NULLABLE_PORT,
+        fidl_types_fidl.HandleType.Kind.JOB: module.NULLABLE_JOB,
+        fidl_types_fidl.HandleType.Kind.SOCKET: module.NULLABLE_SOCKET,
+        fidl_types_fidl.HandleType.Kind.EVENTPAIR: module.NULLABLE_EVENTPAIR,
     }
 
     if mojom_type.handle_type.nullable:
