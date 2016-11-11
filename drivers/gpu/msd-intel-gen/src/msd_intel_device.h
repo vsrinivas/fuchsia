@@ -80,18 +80,9 @@ private:
         return global_context_->hardware_status_page(id);
     }
 
-    std::shared_ptr<AddressSpace> gtt() override { return gtt_; }
+    std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
-    {
-        RequestMaxFreq();
-
-        if (!render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf)))
-            return DRETF(false, "engine execute failed");
-
-        return true;
-    }
-
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
     bool WaitIdle();
 

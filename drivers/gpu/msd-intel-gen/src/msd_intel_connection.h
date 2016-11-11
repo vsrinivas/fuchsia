@@ -17,8 +17,6 @@ public:
     class Owner {
     public:
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
-        // TODO(MA-71) have the connection own its own PPGTT address space so we dont need this
-        virtual std::shared_ptr<AddressSpace> gtt() = 0;
         virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     };
@@ -45,7 +43,8 @@ private:
         return owner_->hardware_status_page(id);
     }
 
-    std::shared_ptr<AddressSpace> exec_address_space() override { return owner_->gtt(); }
+    // TODO(MA-71) have the connection own its own PPGTT address space
+    std::shared_ptr<AddressSpace> exec_address_space() override { return nullptr; }
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
     {

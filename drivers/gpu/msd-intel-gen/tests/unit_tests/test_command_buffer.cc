@@ -17,6 +17,14 @@ public:
         return std::unique_ptr<TestCommandBuffer>(new TestCommandBuffer());
     }
 
+    std::shared_ptr<AddressSpace> exec_address_space()
+    {
+        auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
+        if (context->exec_address_space())
+            return context->exec_address_space();
+        return MsdIntelDevice::cast(helper_->dev()->msd_dev())->gtt();
+    }
+
     void TestMapUnmapResourcesGpu()
     {
         auto addr_space =
@@ -84,15 +92,16 @@ public:
 
     void TestPrepareForExecution()
     {
-
         auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
-        ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine));
+        auto address_space = exec_address_space();
+
+        ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine, address_space));
 
         ClientContext* ctx = static_cast<ClientContext*>(cmd_buf_->GetContext());
         ASSERT_NE(ctx, nullptr);
 
         gpu_addr_t gpu_addr;
-        EXPECT_TRUE(cmd_buf_->GetGpuAddress(ctx->exec_address_space()->id(), &gpu_addr));
+        EXPECT_TRUE(cmd_buf_->GetGpuAddress(address_space->id(), &gpu_addr));
 
         // Check that context is initialized correctly
         EXPECT_TRUE(ctx->IsInitializedForEngine(engine->id()));
@@ -111,7 +120,7 @@ public:
     void TestExecute()
     {
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
-        auto addr_space = context->exec_address_space();
+        auto addr_space = exec_address_space();
 
         auto target_buffer_mapping =
             AddressSpace::MapBufferGpu(addr_space, MsdIntelBuffer::Create(PAGE_SIZE), PAGE_SIZE);

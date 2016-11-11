@@ -9,6 +9,9 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
                                                        uint64_t offset, uint64_t length,
                                                        uint32_t alignment)
 {
+    DASSERT(address_space);
+    DASSERT(buffer);
+
     if (alignment == 0)
         alignment = PAGE_SIZE;
 
@@ -55,6 +58,9 @@ AddressSpace::GetSharedGpuMapping(std::shared_ptr<AddressSpace> address_space,
                                   std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset,
                                   uint64_t length, uint32_t alignment)
 {
+    DASSERT(address_space);
+    DASSERT(buffer);
+
     std::shared_ptr<GpuMapping> mapping =
         buffer->FindBufferMapping(address_space->id(), offset, length, alignment);
     if (!mapping) {

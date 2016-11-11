@@ -169,6 +169,16 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     }
 }
 
+bool MsdIntelDevice::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+{
+    RequestMaxFreq();
+
+    if (!render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf), gtt()))
+        return DRETF(false, "engine execute failed");
+
+    return true;
+}
+
 bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
 {
     if (!render_engine_cs_->WaitRendering(std::move(buf))) {

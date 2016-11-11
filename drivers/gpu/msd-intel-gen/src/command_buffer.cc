@@ -63,15 +63,16 @@ MsdIntelContext* CommandBuffer::GetContext()
 bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out)
 {
     DASSERT(prepared_to_execute_);
-    if (address_space_id != locked_context_->exec_address_space()->id())
+    if (address_space_id != exec_resource_mappings_[batch_buffer_index_]->address_space_id())
         return DRETF(false, "wrong address space");
-    *gpu_addr_out = batch_buffer_gpu_addr_;
+    *gpu_addr_out = exec_resource_mappings_[batch_buffer_index_]->gpu_addr();
     return true;
 }
 
 void CommandBuffer::UnmapResourcesGpu() { exec_resource_mappings_.clear(); }
 
-bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
+bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
+                                        std::shared_ptr<AddressSpace> ggtt)
 {
     DASSERT(engine);
 
@@ -80,6 +81,9 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
         return DRETF(false, "context has already been deleted, aborting");
 
     auto address_space = locked_context_->exec_address_space();
+    if (!address_space)
+        address_space = ggtt;
+    DASSERT(address_space);
 
     if (!locked_context_->IsInitializedForEngine(engine->id())) {
         if (!engine->InitContext(locked_context_.get()))
@@ -98,7 +102,7 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
     if (!PatchRelocations(exec_resource_mappings_))
         return DRETF(false, "failed to patch relocations");
 
-    batch_buffer_gpu_addr_ = exec_resource_mappings_[batch_buffer_resource_index()]->gpu_addr();
+    batch_buffer_index_ = batch_buffer_resource_index();
 
     prepared_to_execute_ = true;
     engine_id_ = engine->id();

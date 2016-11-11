@@ -35,11 +35,12 @@ public:
 
     ~CommandBuffer();
 
-    // Map all execution resources into the given address space, patches relocations based on the
+    // Map all execution resources into the gpu address space, patches relocations based on the
     // mapped addresses, and locks the weak reference to the context for the rest of the lifetime
-    // of this object
-    // this should be called only when we are ready to submit the CommandBuffer for execution
-    bool PrepareForExecution(EngineCommandStreamer* engine);
+    // of this object.
+    // If the context has no address space then |ggtt| should be used.
+    // This should be called only when we are ready to submit the CommandBuffer for execution.
+    bool PrepareForExecution(EngineCommandStreamer* engine, std::shared_ptr<AddressSpace> ggtt);
 
     // only valid after PrepareForExecution succeeds
     MsdIntelContext* GetContext() override;
@@ -87,7 +88,7 @@ private:
     bool prepared_to_execute_;
     // valid only when prepared_to_execute_ is true
     std::shared_ptr<ClientContext> locked_context_;
-    gpu_addr_t batch_buffer_gpu_addr_;
+    uint32_t batch_buffer_index_;
     EngineCommandStreamerId engine_id_;
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
     // ---------------------------- //

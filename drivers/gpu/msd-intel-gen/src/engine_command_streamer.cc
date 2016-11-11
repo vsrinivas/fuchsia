@@ -446,11 +446,12 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     return true;
 }
 
-bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
+                                                       std::shared_ptr<AddressSpace> ggtt)
 {
     DLOG("preparing command buffer for execution");
 
-    if (!cmd_buf->PrepareForExecution(this))
+    if (!cmd_buf->PrepareForExecution(this, ggtt))
         return DRETF(false, "Failed to prepare command buffer for execution");
 
     uint32_t pipe_control_flags = MiPipeControl::kIndirectStatePointersDisable |

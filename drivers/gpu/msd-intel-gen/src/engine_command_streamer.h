@@ -37,7 +37,8 @@ public:
 
     uint64_t GetActiveHeadPointer();
 
-    virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+    virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
+                                      std::shared_ptr<AddressSpace> ggtt) = 0;
 
     virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     virtual bool WaitIdle() = 0;
@@ -80,7 +81,8 @@ public:
                     std::unique_ptr<RenderInitBatch> init_batch,
                     std::shared_ptr<AddressSpace> address_space);
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
+                              std::shared_ptr<AddressSpace> ggtt) override;
 
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
     bool WaitIdle() override;
