@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/network"
+    ],
+    "binaries": [
+        {
+            "binary": "network",
+            "bootfs_path": "apps/network"
+        }
+    ]
+}
