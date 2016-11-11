@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Type-safe bindings for Magenta kernel
+//! [syscalls](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls.md).
+
 extern crate core;
 extern crate magenta_sys;
 extern crate conv;
 
 use std::marker::PhantomData;
+use std::mem;
 
 use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
@@ -15,6 +19,16 @@ use magenta_sys as sys;
 type Time = sys::mx_time_t;
 pub use magenta_sys::MX_TIME_INFINITE;
 
+// A placeholder value used for handles that have been taken from the message buf.
+// We rely on the kernel never to produce any actual handles with this value.
+const INVALID_HANDLE: sys::mx_handle_t = 0;
+
+/// A status code returned from the Magenta kernel.
+///
+/// See
+/// [errors.md](https://fuchsia.googlesource.com/magenta/+/master/docs/errors.md)
+/// in the Magenta documentation for more information about the meaning of these
+/// codes.
 #[derive(Debug)]
 #[repr(i32)]
 // Auto-generated using tools/gen_status.py
@@ -93,26 +107,59 @@ impl Status {
     // handling of UnknownOther would be tricky.
 }
 
+/// Rights associated with a handle.
+///
+/// See [rights.md](https://fuchsia.googlesource.com/magenta/+/master/docs/rights.md)
+/// for more information.
 pub type Rights = sys::mx_rights_t;
 
+pub use magenta_sys::{
+    MX_RIGHT_NONE,
+    MX_RIGHT_DUPLICATE,
+    MX_RIGHT_TRANSFER,
+    MX_RIGHT_READ,
+    MX_RIGHT_WRITE,
+    MX_RIGHT_EXECUTE,
+    MX_RIGHT_MAP,
+    MX_RIGHT_GET_PROPERTY,
+    MX_RIGHT_SET_PROPERTY,
+    MX_RIGHT_DEBUG,
+    MX_RIGHT_SAME_RIGHTS,
+};
+
+/// Signals that can be waited upon.
+///
+/// See
+/// [Objects and signals](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Objects-and-Signals)
+/// in the Magenta kernel documentation. Note: the names of signals are still in flux.
 pub type Signals = sys::mx_signals_t;
 
 pub use magenta_sys::{MX_OBJECT_SIGNAL_0, MX_OBJECT_SIGNAL_1, MX_OBJECT_SIGNAL_2,
     MX_OBJECT_SIGNAL_3, MX_OBJECT_SIGNAL_4, MX_OBJECT_SIGNAL_5};
 
+/// Options for creating a channel.
+///
+/// A special type of channel is a 
 #[repr(u32)]
 pub enum ChannelOpts {
+    /// A normal channel.
     Normal = 0,
+    /// A "reply channel", where writing a message also passes ownership of the
+    /// channel back to the peer.
     ReplyChannel = sys::MX_CHANNEL_CREATE_REPLY_CHANNEL,
 }
 
+/// Options for creating wait sets. None supported yet.
 #[repr(u32)]
 pub enum WaitSetOpts {
+    /// Default options.
     Default = 0,
 }
 
+/// Options for creating virtual memory objects. None supported yet.
 #[repr(u32)]
 pub enum VmoOpts {
+    /// Default options.
     Default = 0,
 }
 
@@ -128,23 +175,43 @@ impl Default for VmoOpts {
     }
 }
 
+/// A "wait item" containing a handle reference and information about what signals
+/// to wait on, and, on return from `handle_wait_many`, which are pending.
 #[repr(C)]
 pub struct WaitItem<'a> {
-    handle: HandleRef<'a>,
-    waitfor: Signals,
-    pending: Signals,
+    /// The handle to wait on.
+    pub handle: HandleRef<'a>,
+    /// A set of signals to wait for.
+    pub waitfor: Signals,
+    /// The set of signals pending, on return of `handle_wait_many`.
+    pub pending: Signals,
 }
 
 
+/// An identifier to select a particular clock. See
+/// [mx_time_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/time_get.md)
+/// for more information about the possible values.
 #[repr(u32)]
 pub enum ClockId {
+    /// The number of nanoseconds since the system was powered on. Corresponds to
+    /// `MX_CLOCK_MONOTONIC`.
     Monotonic = 0,
 }
 
+/// Get the current time, from the specific clock id.
+///
+/// Wraps the
+/// [mx_time_get](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/time_get.md)
+/// syscall.
 pub fn time_get(clock_id: ClockId) -> Time {
     unsafe { sys::mx_time_get(clock_id as u32) }
 }
 
+/// Sleep the given number of nanoseconds.
+///
+/// Wraps the
+/// [mx_nanosleep](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/nano_sleep.md)
+/// syscall.
 pub fn nanosleep(time: Time) {
     unsafe { sys::mx_nanosleep(time); }
 }
@@ -162,6 +229,9 @@ fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
 
 // Handles
 
+/// A borrowed reference to a `Handle`.
+///
+/// Mostly useful as part of a `WaitItem`.
 pub struct HandleRef<'a> {
     handle: sys::mx_handle_t,
     phantom: PhantomData<&'a sys::mx_handle_t>,
@@ -188,24 +258,43 @@ impl<'a> HandleRef<'a> {
     }
 }
 
+/// A trait implemented by all handle objects.
+///
+/// Note: it is reasonable for user-defined objects wrapping a handle to implement
+/// this trait. For example, a speficic interface in some protocol might be
+/// represented as a newtype of `Channel`, and implement the `get_ref` and
+/// `from_handle` methods to facilitate conversion from and to the interface.
 pub trait HandleBase: Sized {
+    /// Get a reference to the handle. One important use of such a reference is
+    /// for `handle_wait_many`.
     fn get_ref(&self) -> HandleRef;
 
+    /// Interpret the reference as a raw handle (an integer type). Two distinct
+    /// handles will have different raw values (so it can perhaps be used as a
+    /// key in a data structure).
     fn raw_handle(&self) -> sys::mx_handle_t {
         self.get_ref().handle
     }
 
+    /// Duplicate a handle, possibly reducing the rights available. Wraps the
+    /// [mx_handle_duplicate](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_duplicate.md)
+    /// syscall.
     fn duplicate(&self, rights: Rights) -> Result<Self, Status> {
         self.get_ref().duplicate(rights).map(|handle|
             Self::from_handle(handle))
     }
 
+    /// Waits on a handle. Wraps the
+    /// [handle_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_one.md)
+    /// syscall.
     fn wait(&self, signals: Signals, timeout: Time) -> Result<Signals, Status> {
         self.get_ref().wait(signals, timeout)
     }
 
+    /// A method for converting an untyped `Handle` into a more specific reference.
     fn from_handle(handle: Handle) -> Self;
 
+    /// A method for converting the object into a generic Handle.
     // Not implemented as "From" because it would conflict in From<Handle> case
     fn into_handle(self) -> Handle {
         let raw_handle = self.get_ref().handle;
@@ -222,7 +311,9 @@ fn handle_drop(handle: sys::mx_handle_t) {
 /// The success return value is a bool indicating whether one or more of the
 /// provided handle references was closed during the wait.
 ///
-/// See: https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_many.md
+/// Wraps the
+/// [mx_handle_wait_many](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_wait_many.md)
+/// syscall.
 pub fn handle_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, Status>
 {
     let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
@@ -236,6 +327,17 @@ pub fn handle_wait_many(items: &mut [WaitItem], timeout: Time) -> Result<bool, S
 
 // An untyped handle
 
+/// An object representing a Magenta
+/// [handle](https://fuchsia.googlesource.com/magenta/+/master/docs/handles.md).
+///
+/// Internally, it is represented as a 32-bit integer, but this wrapper enforces
+/// strict ownership semantics. The `Drop` implementation closes the handle.
+///
+/// This type represents the most general reference to a kernel object, and can
+/// be interconverted to and from more specific types. Those conversions are not
+/// enforced in the type system; attempting to use them will result in errors
+/// returned by the kernel. These conversions don't change the underlying
+/// representation, but do change the type and thus what operations are available.
 pub struct Handle(sys::mx_handle_t);
 
 impl HandleBase for Handle {
@@ -255,6 +357,8 @@ impl Drop for Handle {
 }
 
 impl Handle {
+    /// If a raw handle is obtained from some other source, this method converts
+    /// it into a type-safe owned handle.
     pub unsafe fn from_raw(raw: sys::mx_handle_t) -> Handle {
         Handle(raw)
     }
@@ -262,6 +366,10 @@ impl Handle {
 
 // Channels
 
+/// An object representing a Magenta
+/// [channel](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/channel.md).
+///
+/// As essentially a subtype of `Handle`, it can be freely interconverted.
 pub struct Channel(Handle);
 
 impl HandleBase for Channel {
@@ -275,6 +383,12 @@ impl HandleBase for Channel {
 }
 
 impl Channel {
+    /// Create a channel, resulting an a pair of `Channel` objects representing both
+    /// sides of the channel. Messages written into one maybe read from the opposite.
+    ///
+    /// Wraps the
+    /// [mx_channel_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_create.md)
+    /// syscall.
     pub fn create(opts: ChannelOpts) -> Result<(Channel, Channel), Status> {
         unsafe {
             let mut handle0 = 0;
@@ -286,28 +400,49 @@ impl Channel {
         }
     }
 
-    pub fn read(&self, opts: u32, buf: &mut MessageBuf) -> Result<(), Status> {
+    /// Read a message from a channel. Wraps the
+    /// [mx_channel_read](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_read.md)
+    /// syscall.
+    ///
+    /// If the `MessageBuf` lacks the capacity to hold the pending message,
+    /// returns an `Err` with the number of bytes and number of handles needed.
+    /// Otherwise returns an `Ok` with the result as usual.
+    pub fn read_raw(&self, opts: u32, buf: &mut MessageBuf)
+        -> Result<Result<(), Status>, (usize, usize)>
+    {
         unsafe {
             buf.reset_handles();
             let raw_handle = self.raw_handle();
             let mut num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());
             let mut num_handles: u32 = size_to_u32_sat(buf.handles.capacity());
-            let mut status = sys::mx_channel_read(raw_handle, opts,
+            let status = sys::mx_channel_read(raw_handle, opts,
                 buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
                 buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
             if status == sys::ERR_BUFFER_TOO_SMALL {
-                ensure_capacity(&mut buf.bytes, num_bytes as usize);
-                ensure_capacity(&mut buf.handles, num_handles as usize);
-                num_bytes = size_to_u32_sat(buf.bytes.capacity());
-                num_handles = size_to_u32_sat(buf.handles.capacity());
-                status = sys::mx_channel_read(raw_handle, opts,
-                    buf.bytes.as_mut_ptr(), num_bytes, &mut num_bytes,
-                    buf.handles.as_mut_ptr(), num_handles, &mut num_handles);
+                Err((num_bytes as usize, num_handles as usize))
+            } else {
+                Ok(into_result(status, || {
+                    buf.bytes.set_len(num_bytes as usize);
+                    buf.handles.set_len(num_handles as usize);
+                }))
             }
-            into_result(status, || {
-                buf.bytes.set_len(num_bytes as usize);
-                buf.handles.set_len(num_handles as usize);
-            })
+        }
+    }
+
+    /// Read a message from a channel.
+    ///
+    /// Note that this method can cause internal reallocations in the `MessageBuf`
+    /// if it is lacks capacity to hold the full message. If such reallocations
+    /// are not desirable, use `read_raw` instead.
+    pub fn read(&self, opts: u32, buf: &mut MessageBuf) -> Result<(), Status> {
+        loop {
+            match self.read_raw(opts, buf) {
+                Ok(result) => return result,
+                Err((num_bytes, num_handles)) => {
+                    buf.ensure_capacity_bytes(num_bytes);
+                    buf.ensure_capacity_handles(num_handles);
+                }
+            }
         }
     }
 
@@ -326,12 +461,26 @@ impl Channel {
         }
     }
 
+    /// Write a message to a channel. Wraps the
+    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
+    /// syscall.
+    ///
+    /// This method should be used on normal channels. For reply channels, use
+    /// `write_reply` instead.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), Status>
     {
         Self::write_raw(self.raw_handle(), bytes, handles, opts)
     }
 
+    /// Write a message to a channel. Wraps the
+    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
+    /// syscall.
+    ///
+    /// This method should be used on reply channels. For normal channels, use
+    /// `write` instead. On success, ownership of `self` is transferred across
+    /// the channel. On error, the `Err` result contains the `self` handle so
+    /// ownership is passed back to the caller.
     pub fn write_reply(self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), (Self, Status)>
     {
@@ -343,39 +492,70 @@ impl Channel {
     }
 }
 
+/// A buffer for _receiving_ messages from a channel.
+///
+/// A `MessageBuf` is essentially a byte buffer and a vector of
+/// handles, but move semantics for "taking" handles requires special handling.
+///
+/// Note that for sending messages to a channel, the caller manages the buffers,
+/// using a plain byte slice and `Vec<Handle>`.
 #[derive(Default)]
 pub struct MessageBuf {
     bytes: Vec<u8>,
     handles: Vec<sys::mx_handle_t>,
-    unused_ix: usize,
 }
 
 impl MessageBuf {
+    /// Create a new, empty, message buffer.
     pub fn new() -> Self {
         Default::default()
     }
 
+    /// Ensure that the buffer has the capacity to hold at least `n_bytes` bytes.
+    pub fn ensure_capacity_bytes(&mut self, n_bytes: usize) {
+        ensure_capacity(&mut self.bytes, n_bytes);
+    }
+
+    /// Ensure that the buffer has the capacity to hold at least `n_handles` handles.
+    pub fn ensure_capacity_handles(&mut self, n_handles: usize) {
+        ensure_capacity(&mut self.handles, n_handles);
+    }
+
+    /// Get a reference to the bytes of the message buffer, as a `&[u8]` slice.
     pub fn bytes(&self) -> &[u8] {
         self.bytes.as_slice()
     }
 
+    /// The number of handles in the message buffer. Note this counts the number
+    /// available when the message was received; `take_handle` does not affect
+    /// the count.
     pub fn n_handles(&self) -> usize {
-        self.handles.len() - self.unused_ix
+        self.handles.len()
     }
 
-    pub fn handles(&mut self) -> HandleIter {
-        HandleIter(self)
+    /// Take the handle at the specified index from the message buffer. If the
+    /// method is called again with the same index, it will return `None`, as
+    /// will happen if the index exceeds the number of handles available.
+    pub fn take_handle(&mut self, index: usize) -> Option<Handle> {
+        self.handles.get_mut(index).and_then(|handleref|
+            if *handleref == INVALID_HANDLE {
+                None
+            } else {
+                Some(Handle(mem::replace(handleref, INVALID_HANDLE)))
+            }
+        )
     }
 
     fn drop_handles(&mut self) {
-        for &handle in &self.handles[self.unused_ix..] {
-            handle_drop(handle);
+        for &handle in &self.handles {
+            if handle != 0 {
+                handle_drop(handle);
+            }
         }
     }
 
     fn reset_handles(&mut self) {
         self.drop_handles();
-        self.unused_ix = 0;
         self.handles.clear();
     }
 }
@@ -383,26 +563,6 @@ impl MessageBuf {
 impl Drop for MessageBuf {
     fn drop(&mut self) {
         self.drop_handles();
-    }
-}
-
-pub struct HandleIter<'a>(&'a mut MessageBuf);
-
-impl<'a> Iterator for HandleIter<'a> {
-    type Item = Handle;
-
-    fn next(&mut self) -> Option<Handle> {
-        if self.0.unused_ix == self.0.handles.len() {
-            return None
-        }
-        let handle = self.0.handles[self.0.unused_ix];
-        self.0.unused_ix += 1;
-        Some(Handle(handle))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.0.n_handles();
-        (size, Some(size))
     }
 }
 
@@ -421,6 +581,10 @@ fn ensure_capacity<T>(vec: &mut Vec<T>, size: usize) {
 
 // This is the lowest level interface, strictly in terms of cookies.
 
+/// An object representing a Magenta
+/// [waitset](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/waitset.md).
+///
+/// As essentially a subtype of `Handle`, it can be freely interconverted.
 pub struct WaitSet(Handle);
 
 impl HandleBase for WaitSet {
@@ -434,6 +598,11 @@ impl HandleBase for WaitSet {
 }
 
 impl WaitSet {
+    /// Create a wait set.
+    ///
+    /// Wraps the
+    /// [mx_waitset_create](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_create.md)
+    /// sycall.
     pub fn create(options: WaitSetOpts) -> Result<WaitSet, Status> {
         let mut handle = 0;
         let status = unsafe { sys::mx_waitset_create(options as u32, &mut handle) };
@@ -441,6 +610,11 @@ impl WaitSet {
             WaitSet::from_handle(Handle(handle)))
     }
 
+    /// Add an entry to a wait set.
+    ///
+    /// Wraps the
+    /// [mx_waitset_add](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_add.md)
+    /// sycall.
     pub fn add<H>(&self, handle: &H, cookie: u64, signals: Signals) -> Result<(), Status>
         where H: HandleBase
     {
@@ -450,14 +624,25 @@ impl WaitSet {
         into_result(status, || ())
     }
 
+    /// Remove an entry from a wait set.
+    ///
+    /// Wraps the
+    /// [mx_waitset_remove](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_remove.md)
+    /// sycall.
     pub fn remove(&self, cookie: u64) -> Result<(), Status> {
         let status = unsafe { sys::mx_waitset_remove(self.raw_handle(), cookie) };
         into_result(status, || ())
     }
 
-    // The caller must make sure `results` has enough capacity. If the length is
-    // equal to the capacity on return, that may be interpreted as a sign that
-    // the capacity should be expanded.
+    /// Wait for one or more entires to be signalled.
+    ///
+    /// Wraps the
+    /// [mx_waitset_wait](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_wait.md)
+    /// sycall.
+    ///
+    /// The caller must make sure `results` has enough capacity. If the length is
+    /// equal to the capacity on return, that may be interpreted as a sign that
+    /// the capacity should be expanded.
     pub fn wait(&self, timeout: Time, results: &mut Vec<WaitSetResult>)
         -> Result<(), Status>
     {
@@ -476,17 +661,24 @@ impl WaitSet {
     }
 }
 
+/// An element of the result of `WaitSet::wait`. See
+/// [waitset_wait](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/waitset_wait.md)
+/// for more information about the underlying structure.
 pub struct WaitSetResult(sys::mx_waitset_result_t);
 
 impl WaitSetResult {
+    /// The cookie used to identify the wait, same as was given in `WaitSet::add`.
     pub fn cookie(&self) -> u64 {
         self.0.cookie
     }
 
+    /// The status. NoError if the signals are satisfied, ErrBadState if the signals
+    /// became unsatisfiable, or ErrHandleClosed if the handle was dropped.
     pub fn status(&self) -> Status {
         Status::from_raw(self.0.status)
     }
 
+    /// The observed signals at some point shortly before `WaitSet::wait` returned.
     pub fn observed(&self) -> Signals {
         self.0.observed
     }
@@ -494,6 +686,10 @@ impl WaitSetResult {
 
 // Virtual Memory Objects
 
+/// An object representing a Magenta
+/// [virtual memory object](https://fuchsia.googlesource.com/magenta/+/master/docs/objects/vm_object.md).
+///
+/// As essentially a subtype of `Handle`, it can be freely interconverted.
 pub struct Vmo(Handle);
 
 impl HandleBase for Vmo {
@@ -507,6 +703,13 @@ impl HandleBase for Vmo {
 }
 
 impl Vmo {
+    /// Create a virtual memory object.
+    ///
+    /// Wraps the
+    /// `mx_vmo_create`
+    /// syscall. See the
+    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/magenta/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
+    /// for more information.
     pub fn create(size: u64, options: VmoOpts) -> Result<Vmo, Status> {
         let mut handle = 0;
         let status = unsafe { sys::mx_vmo_create(size, options as u32, &mut handle) };
@@ -514,6 +717,9 @@ impl Vmo {
             Vmo::from_handle(Handle(handle)))
     }
 
+    /// Read from a virtual memory object.
+    ///
+    /// Wraps the `mx_vmo_read` syscall.
     pub fn read(&self, data: &mut [u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
@@ -523,6 +729,9 @@ impl Vmo {
         }
     }
 
+    /// Write to a virtual memory object.
+    ///
+    /// Wraps the `mx_vmo_write` syscall.
     pub fn write(&self, data: &[u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
@@ -532,12 +741,18 @@ impl Vmo {
         }
     }
 
+    /// Get the size of a virtual memory object.
+    ///
+    /// Wraps the `mx_vmo_get_size` syscall.
     pub fn get_size(&self) -> Result<u64, Status> {
         let mut size = 0;
         let status = unsafe { sys::mx_vmo_get_size(self.raw_handle(), &mut size) };
         into_result(status, || size)
     }
 
+    /// Attempt to change the size of a virtual memory object.
+    ///
+    /// Wraps the `mx_vmo_set_size` syscall.
     pub fn set_size(&self, size: u64) -> Result<(), Status> {
         let status = unsafe { sys::mx_vmo_set_size(self.raw_handle(), size) };
         into_result(status, || ())
