@@ -20,6 +20,7 @@ executable("mtl_unittests") {
     "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/unique_handle_unittest.cc",
     "tasks/message_loop_unittest.cc",
+    "vmo/shared_vmo_unittest.cc",
     "vmo/strings_unittest.cc",
     "vmo/vector_unittest.cc",
     "threading/create_thread_unittest.cc",

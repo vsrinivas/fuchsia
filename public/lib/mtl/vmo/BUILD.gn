@@ -4,9 +4,11 @@
 
 source_set("vmo") {
   sources = [
-    "vmo.cc",
+    "shared_vmo.cc",
+    "shared_vmo.h",
     "strings.h",
     "vector.h",
+    "vmo.cc",
   ]
 
   public_deps = [
