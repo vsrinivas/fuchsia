@@ -45,7 +45,7 @@ struct ApplicationPackage {
   // A read-only binary representation of the application. For example, if the
   // application is intended to run in the Dart virtual machine, this data might
   // contain a dartx package.
-  handle<shared_buffer> data;
+  handle<vmo> data;
 };
 
 // An interface for running applications.
