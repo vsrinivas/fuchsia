@@ -55,10 +55,12 @@ class FramebufferOutput::Rasterizer {
 };
 
 FramebufferOutput::FramebufferOutput()
-    : compositor_task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
+    : compositor_task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      weak_ptr_factory_(this) {}
 
 FramebufferOutput::~FramebufferOutput() {
   if (rasterizer_) {
+    // Safe to post "this" because we wait for this task to complete.
     rasterizer_task_runner_->PostTask([this] {
       rasterizer_.reset();
       mtl::MessageLoop::GetCurrent()->QuitNow();
@@ -72,8 +74,10 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
 
   error_callback_ = error_callback;
 
-  ftl::ManualResetWaitableEvent wait;
   rasterizer_thread_ = mtl::CreateThread(&rasterizer_task_runner_);
+
+  // Safe to post "this" because we wait for this task to complete.
+  ftl::ManualResetWaitableEvent wait;
   rasterizer_task_runner_->PostTask([this, &wait] {
     rasterizer_ = std::make_unique<Rasterizer>(this);
     wait.Signal();
@@ -84,6 +88,8 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
 void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
   FTL_DCHECK(rasterizer_);
 
+  // Safe to post "this" because this task runs on the rasterizer thread
+  // which is shut down before this object is destroyed.
   rasterizer_task_runner_->PostTask(
       [this, callback] { callback(rasterizer_->GetDisplayInfo()); });
 }
@@ -124,6 +130,9 @@ void FramebufferOutput::PostErrorCallback() {
 
 void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
   FTL_DCHECK(frame_in_progress_);
+
+  // Safe to post "this" because this task runs on the rasterizer thread
+  // which is shut down before this object is destroyed.
   rasterizer_task_runner_->PostTask(ftl::MakeCopyable([
     this, frame = std::move(frame), frame_number = frame_number_,
     submit_time = ftl::TimePoint::Now()
@@ -132,33 +141,29 @@ void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
   }));
 }
 
-void FramebufferOutput::PostFrameFinishedFromRasterizer(
-    uint32_t frame_number,
-    ftl::TimePoint submit_time,
-    ftl::TimePoint draw_time,
-    ftl::TimePoint finish_time) {
+void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
+                                        ftl::TimePoint submit_time,
+                                        ftl::TimePoint draw_time,
+                                        ftl::TimePoint finish_time) {
   // TODO(jeffbrown): Tally these statistics.
-  compositor_task_runner_->PostTask(
-      [this, frame_number, submit_time, finish_time] {
-        FTL_DCHECK(frame_in_progress_);
+  FTL_DCHECK(frame_in_progress_);
 
-        last_presentation_time_ = finish_time + kHardwareDisplayLatency;
+  last_presentation_time_ = finish_time + kHardwareDisplayLatency;
 
-        // TODO(jeffbrown): Filter this feedback loop to avoid large swings.
-        presentation_latency_ = last_presentation_time_ - submit_time;
-        FTL_LOG(INFO) << "presentation_latency_="
-                      << presentation_latency_.ToMicroseconds();
+  // TODO(jeffbrown): Filter this feedback loop to avoid large swings.
+  presentation_latency_ = last_presentation_time_ - submit_time;
+  FTL_LOG(INFO) << "presentation_latency_="
+                << presentation_latency_.ToMicroseconds();
 
-        TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
+  TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
 
-        if (next_frame_) {
-          PostFrameToRasterizer(std::move(next_frame_));
-        } else {
-          frame_in_progress_ = false;
-          if (scheduled_frame_callback_)
-            RunScheduledFrameCallback();
-        }
-      });
+  if (next_frame_) {
+    PostFrameToRasterizer(std::move(next_frame_));
+  } else {
+    frame_in_progress_ = false;
+    if (scheduled_frame_callback_)
+      RunScheduledFrameCallback();
+  }
 }
 
 void FramebufferOutput::RunScheduledFrameCallback() {
@@ -248,8 +253,17 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
   framebuffer_->Flush();
 
   ftl::TimePoint finish_time = ftl::TimePoint::Now();
-  output_->PostFrameFinishedFromRasterizer(frame_number, submit_time, draw_time,
-                                           finish_time);
+
+  // Need a weak reference because the task may outlive the output.
+  output_->compositor_task_runner_->PostTask([
+    output_weak = output_->weak_ptr_factory_.GetWeakPtr(), frame_number,
+    submit_time, draw_time, finish_time
+  ] {
+    if (output_weak) {
+      output_weak->OnFrameFinished(frame_number, submit_time, draw_time,
+                                   finish_time);
+    }
+  });
   TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
 }
 

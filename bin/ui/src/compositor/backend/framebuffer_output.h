@@ -10,6 +10,7 @@
 #include "apps/mozart/src/compositor/backend/output.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
@@ -34,11 +35,12 @@ class FramebufferOutput : public Output {
 
   void PostErrorCallback();
   void PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame);
-  void PostFrameFinishedFromRasterizer(uint32_t frame_number,
-                                       ftl::TimePoint submit_time,
-                                       ftl::TimePoint draw_time,
-                                       ftl::TimePoint finish_time);
   void RunScheduledFrameCallback();
+
+  void OnFrameFinished(uint32_t frame_number,
+                       ftl::TimePoint submit_time,
+                       ftl::TimePoint draw_time,
+                       ftl::TimePoint finish_time);
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;
   ftl::Closure error_callback_;
@@ -56,6 +58,8 @@ class FramebufferOutput : public Output {
   ftl::TimePoint last_submit_time_;
   ftl::TimePoint last_presentation_time_;
   ftl::TimeDelta presentation_latency_;
+
+  ftl::WeakPtrFactory<FramebufferOutput> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FramebufferOutput);
 };
