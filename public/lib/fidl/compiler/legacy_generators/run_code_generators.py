@@ -84,9 +84,6 @@ def LoadGenerators(generators_string):
     elif generator_name_lower == "dart":
       generator_py_name = os.path.join(generators_dir,
         "fidl_dart_generator.py")
-    elif generator_name_lower == "go":
-      generator_py_name = os.path.join(generators_dir,
-        "fidl_go_generator.py")
     elif generator_name_lower == "python":
       generator_py_name = os.path.join(generators_dir,
         "fidl_python_generator.py")
