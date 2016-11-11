@@ -94,7 +94,7 @@ interface MediaPacketConsumer {
 
   // Adds a payload buffer that may subsequently be referenced by a MediaPacket.
   AddPayloadBuffer(uint32 payload_buffer_id,
-                   handle<shared_buffer> payload_buffer);
+                   handle<vmo> payload_buffer);
 
   // Indicates that the identified payload buffer will no longer be used.
   RemovePayloadBuffer(uint32 payload_buffer_id);
