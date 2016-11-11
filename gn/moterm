@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/moterm"
+    ],
+    "binaries": [
+        {
+            "binary": "moterm",
+            "bootfs_path": "apps/moterm"
+        }
+    ]
+}
