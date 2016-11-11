@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/launcher/launcher_app.h"
 
-#include "apps/fonts/services/font_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -20,6 +19,7 @@ constexpr const char* kViewManagerUrl =
 constexpr const char* kInputManagerUrl =
     "file:///system/apps/input_manager_service";
 constexpr const char* kFontProviderUrl = "file:///system/apps/fonts";
+constexpr const char* kNetworkServiceUrl = "file:///system/apps/network";
 }
 
 LauncherApp::LauncherApp(const ftl::CommandLine& command_line)
@@ -85,7 +85,9 @@ void LauncherApp::RegisterServices() {
         launcher_bindings_.AddBinding(this, std::move(request));
       });
 
-  RegisterSingletonService(fonts::FontProvider::Name_, kFontProviderUrl);
+  RegisterSingletonService("fonts::FontProvider", kFontProviderUrl);
+
+  RegisterSingletonService("network::NetworkService", kNetworkServiceUrl);
 
   env_services_.SetDefaultServiceConnector([this](std::string service_name,
                                                   mx::channel channel) {

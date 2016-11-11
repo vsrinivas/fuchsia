@@ -32,6 +32,7 @@ namespace launcher {
 //   - view_manager: provides the |mozart::ViewManager| service
 //   - input_manager: registered as a view associate with the view manager
 //   - fonts: provides the |fonts::FontProvider| service
+//   - network: provides the |network::NetworkService| service
 //
 // After setting up the nested environment, the launcher starts the app
 // specified on the command-line.
@@ -66,7 +67,6 @@ class LauncherApp : public modular::ApplicationEnvironmentHost,
   void RegisterSingletonService(std::string service_name, std::string url);
   void InitCompositor();
   void InitViewManager();
-  void InitFontProvider();
 
   void Launch(fidl::String url, fidl::Array<fidl::String> arguments);
   void DisplayInternal(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
