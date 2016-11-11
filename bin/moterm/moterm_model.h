@@ -44,7 +44,7 @@ class MotermModel {
     Size(unsigned rows = 0, unsigned columns = 0)
         : rows(rows), columns(columns) {}
 
-    bool operator==(const Size lhs) {
+    bool operator==(const Size& lhs) {
       return rows == lhs.rows && columns == lhs.columns;
     }
 
