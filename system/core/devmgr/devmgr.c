@@ -106,8 +106,13 @@ static void launch_fat(const char* device_name) {
              "-devicepath=/dev/class/block/%s", device_name);
 
     static int fat_counter = 0;
+    static int efi_counter = 0;
     char mount_path[MXIO_MAX_FILENAME + 64];
-    snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
+    if (efi) {
+        snprintf(mount_path, sizeof(mount_path), "/volume/efi-%d", efi_counter++);
+    } else {
+        snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
+    }
     mkdir(mount_path, 0755);
     mx_handle_t h;
     mx_status_t status = mount_remote_handle(mount_path, &h);
