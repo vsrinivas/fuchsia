@@ -115,7 +115,7 @@ cleanup:
     return status;
 }
 
-static mx_protocol_tpm_t tpm_proto = {
+static mx_protocol_tpm_t tpm_proto __UNUSED = {
     .get_random = tpm_get_random,
     .save_state = tpm_save_state,
 };
@@ -130,7 +130,7 @@ static ssize_t tpm_device_ioctl(mx_device_t* dev, uint32_t op,
 }
 
 // implement device protocol:
-static mx_protocol_device_t tpm_device_proto = {
+static mx_protocol_device_t tpm_device_proto __UNUSED = {
     .ioctl = tpm_device_ioctl,
 };
 
@@ -214,8 +214,6 @@ cleanup_device:
     free(dev);
     return status;
 #else
-    tpm_proto = tpm_proto;
-    tpm_device_proto = tpm_device_proto;
     return ERR_NOT_SUPPORTED;
 #endif
 }

@@ -71,7 +71,7 @@ static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, mx_off_
     return n;
 }
 
-static mx_protocol_device_t intel_rtc_device_proto = {
+static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
     .read = intel_rtc_read,
 };
 
@@ -100,7 +100,6 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
     }
     return NO_ERROR;
 #else
-    intel_rtc_device_proto = intel_rtc_device_proto;
     return ERR_NOT_SUPPORTED;
 #endif
 }
