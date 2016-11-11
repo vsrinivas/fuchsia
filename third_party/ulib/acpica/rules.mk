@@ -182,6 +182,8 @@ endif
 # build output
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 MODULE_CFLAGS += -Wno-discarded-qualifiers
+else
+MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
 MODULE_CFLAGS += -Wno-strict-aliasing -I$(SRC_DIR)/include/acpica
 
