@@ -126,7 +126,10 @@ $(error $(LOCAL_DIR)/rules.mk doesnt have logic for arm core $(ARM_CPU))
 endif
 
 ifeq ($(ENABLE_THUMB),true)
-ARCH_COMPILEFLAGS += -mthumb -D__thumb__ -mthumb-interwork
+ARCH_COMPILEFLAGS += -mthumb -D__thumb__
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+ARCH_COMPILEFLAGS += -mthumb-interwork
+endif
 endif
 
 KERNEL_INCLUDES += \
@@ -209,6 +212,13 @@ KERNEL_COMPILEFLAGS += -msoft-float -mfloat-abi=soft -DWITH_NO_FP=1
 
 # set the max page size to something more reasonables (defaults to 64K or above)
 GLOBAL_LDFLAGS += -z max-page-size=4096
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+ifndef ARCH_arm_CLANG_TARGET
+ARCH_arm_CLANG_TARGET := arm-fuchsia
+endif
+GLOBAL_COMPILEFLAGS += --target=$(ARCH_arm_CLANG_TARGET)
+endif
 
 $(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS))
 

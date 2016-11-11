@@ -11,7 +11,7 @@
 // and __<type>_C for the various types.  All we have to do here is
 // define the public names based on those macros.
 
-#if defined(__arm__) || defined(__i386__)
+#if !defined(__clang__) && (defined(__arm__) || defined(__i386__))
 // The arm-eabi and i386-elf GCC target uses 'long' types for these, which is
 // inconsistent with everything else.  Both the arm-linux targets,
 // and the *-elf targets, use 'int' for 32-bit types.  Since it's so
