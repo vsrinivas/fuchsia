@@ -59,7 +59,7 @@ static inline int STATUS(mx_status_t status) {
 }
 
 // set errno to e, return -1
-static inline inline int ERRNO(int e) {
+static inline int ERRNO(int e) {
     errno = e;
     return -1;
 }
