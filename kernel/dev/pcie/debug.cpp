@@ -470,8 +470,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
 
     if (params->cfg_dump_amt)
         dump_pcie_raw_config(params->cfg_dump_amt,
-                             dev->config(),
-                             static_cast<uint64_t>(dev->config_phys()));
+                             dev->config(), dev->config_phys());
 
     return true;
 }
