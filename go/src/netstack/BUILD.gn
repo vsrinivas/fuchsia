@@ -37,6 +37,8 @@ executable("app") {
     "ports/lwip/multiplexer-lwip.c",
     "ports/lwip/net_init-lwip.c",
     "ports/lwip/net_socket-lwip.c",
+    "ports/lwip/lwip-socket.h",
+    "ports/lwip/lwip-netdb.h",
   ]
 
   if (is_debug) {

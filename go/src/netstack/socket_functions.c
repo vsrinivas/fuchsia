@@ -617,7 +617,7 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
 
   struct addrinfo* res;
   int ret = net_getaddrinfo(node, service, (struct addrinfo*)hints, &res);
-  int errno_ = (ret < 0) ? errno : 0;
+  int errno_ = (ret == EAI_SYSTEM) ? errno : 0;
   ios->last_errno = errno_;
   debug_net("net_getaddrinfo() => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
@@ -627,21 +627,28 @@ mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,
   static_assert(sizeof(mxrio_gai_reply_t) < MXIO_CHUNK_SIZE,
                 "mxrio_gai_reply_t should fit into msg->data");
   mxrio_gai_reply_t* gai_replyp = (struct mxrio_gai_reply*)msg->data;
+  memset(gai_replyp, 0, sizeof(mxrio_gai_reply_t));
+  gai_replyp->retval = ret;
 
-  // TODO: we are returning the first one only
-  gai_replyp->nres = 1;
-  memcpy(&gai_replyp->res[0].ai, res, sizeof(struct addrinfo));
-  vdebug("do_gai: res[0]: family=%d, socktype=%d, protocol=%d\n",
-         gai_replyp->res[0].ai.ai_family, gai_replyp->res[0].ai.ai_socktype,
-         gai_replyp->res[0].ai.ai_protocol);
+  if (ret == 0) {
+    // TODO: we are returning the first one only
+    gai_replyp->nres = 1;
+    memcpy(&gai_replyp->res[0].ai, res, sizeof(struct addrinfo));
+    vdebug("do_gai: res[0]: family=%d, socktype=%d, protocol=%d\n",
+           gai_replyp->res[0].ai.ai_family, gai_replyp->res[0].ai.ai_socktype,
+           gai_replyp->res[0].ai.ai_protocol);
 
-  gai_replyp->res[0].ai.ai_addr = NULL;  // don't pass the pointer
-  memcpy(&gai_replyp->res[0].addr, res->ai_addr, res->ai_addrlen);
-  gai_replyp->res[0].ai.ai_canonname = NULL;  // TODO
-  gai_replyp->res[0].ai.ai_next = NULL;       // TODO
+    if (res->ai_addr != NULL) {
+      // indicate ai_addr field needs to be adjusted by the receiver
+      gai_replyp->res[0].ai.ai_addr = (struct sockaddr*)(intptr_t)0xdeadbeef;
+      memcpy(&gai_replyp->res[0].addr, res->ai_addr, res->ai_addrlen);
+    }
+    gai_replyp->res[0].ai.ai_canonname = NULL;  // TODO
+    gai_replyp->res[0].ai.ai_next = NULL;       // TODO
 
-  net_freeaddrinfo(res);
-  debug_net("net_freeaddrinfo\n");
+    net_freeaddrinfo(res);
+    debug_net("net_freeaddrinfo\n");
+  }
 
   msg->datalen = sizeof(struct mxrio_gai_reply);
   msg->arg2.off = 0;

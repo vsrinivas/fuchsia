@@ -15,6 +15,7 @@
 #include <sys/types.h>
 
 #include "apps/netstack/net_socket.h"
+#include "apps/netstack/ports/lwip/lwip-netdb.h"
 #include "apps/netstack/ports/lwip/lwip-socket.h"
 #include "apps/netstack/trace.h"
 
@@ -344,6 +345,31 @@ int net_ioctl(int sockfd, int request, ...) {
 
 int net_close(int sockfd) { return lwip_close(sockfd); }
 
+static int convert_gai_error(int lwip_error) {
+  switch (lwip_error) {
+    case LWIP_EAI_NONAME:
+      return EAI_NONAME;
+    case LWIP_EAI_SERVICE:
+      return EAI_SERVICE;
+    case LWIP_EAI_FAIL:
+      return EAI_FAIL;
+    case LWIP_EAI_MEMORY:
+      return EAI_MEMORY;
+    case LWIP_EAI_FAMILY:
+      return EAI_FAMILY;
+    case LWIP_HOST_NOT_FOUND:
+      return HOST_NOT_FOUND;
+    case LWIP_NO_DATA:
+      return NO_DATA;
+    case LWIP_NO_RECOVERY:
+      return NO_RECOVERY;
+    case LWIP_TRY_AGAIN:
+      return TRY_AGAIN;
+    default:  // impossible
+      return EAI_FAIL;
+  }
+}
+
 int net_getaddrinfo(const char* node, const char* service,
                     const struct addrinfo* hints, struct addrinfo** res_p) {
   int ret;
@@ -355,9 +381,9 @@ int net_getaddrinfo(const char* node, const char* service,
   }
 
   ret = lwip_getaddrinfo(node, service, hints, &lwip_res);
-  if (ret != 0) return ret;
-
-  // TODO: may need to map errno
+  if (ret != 0) {
+    return convert_gai_error(ret);
+  }
 
   // TODO: we are returning the first one only
   struct addrinfo* res = malloc(sizeof(struct addrinfo));
