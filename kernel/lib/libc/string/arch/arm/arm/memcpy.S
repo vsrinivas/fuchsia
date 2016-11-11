@@ -8,6 +8,7 @@
 #include <asm.h>
 #include <arch/arm/cores.h>
 
+.syntax unified
 .text
 .align 2
 
@@ -35,7 +36,7 @@ FUNCTION(memcpy)
     bhi     .L_forwardoverlap
 
     // check for a short copy len.
-    // 20 bytes is enough so that if a 16 byte alignment needs to happen there is at least a 
+    // 20 bytes is enough so that if a 16 byte alignment needs to happen there is at least a
     //   wordwise copy worth of work to be done.
     cmp     r2, #(16+4)
     blo     .L_bytewise
@@ -46,7 +47,7 @@ FUNCTION(memcpy)
     bne     .L_bytewise     // dissimilarly aligned, nothing we can do (for now)
 
     // check for 16 byte alignment on dst.
-    // this will also catch src being not 4 byte aligned, since it is similarly 4 byte 
+    // this will also catch src being not 4 byte aligned, since it is similarly 4 byte
     //   aligned with dst at this point.
     tst     r0, #15
     bne     .L_not16bytealigned
@@ -57,7 +58,7 @@ FUNCTION(memcpy)
     blo     .L_wordwise
 
 .L_bigcopy:
-    // copy 32 bytes at a time. src & dst need to be at least 4 byte aligned, 
+    // copy 32 bytes at a time. src & dst need to be at least 4 byte aligned,
     // and we need at least 32 bytes remaining to copy
 
     // save r6-r7 for use in the big copy
@@ -95,7 +96,7 @@ FUNCTION(memcpy)
     bhs     .L_wordwise_loop
 
     // correct the remaining len and test for completion
-    adds    r2, r2, #4  
+    adds    r2, r2, #4
     beq     .L_done
 
 .L_bytewise:
@@ -124,16 +125,16 @@ FUNCTION(memcpy)
     msr     CPSR_f, r12             // move into NZCV fields in CPSR
 
     // move as many bytes as necessary to get the dst aligned
-    ldrvsb  r3, [r1], #1            // V set
-    ldrcsh  r4, [r1], #2            // C set
+    ldrbvs  r3, [r1], #1            // V set
+    ldrhcs  r4, [r1], #2            // C set
     ldreq   r5, [r1], #4            // Z set
 
-    strvsb  r3, [r0], #1
-    strcsh  r4, [r0], #2
+    strbvs  r3, [r0], #1
+    strhcs  r4, [r0], #2
     streq   r5, [r0], #4
 
-    ldmmiia r1!, {r3-r4}            // N set
-    stmmiia r0!, {r3-r4}
+    ldmiami r1!, {r3-r4}            // N set
+    stmiami r0!, {r3-r4}
 
     // fix the remaining len
     sub     r2, r2, r12, lsr #28
@@ -160,4 +161,3 @@ FUNCTION(memcpy)
     bhi     .L_bytewisereverse
 
     b       .L_done
-
