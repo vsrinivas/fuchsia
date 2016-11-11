@@ -86,7 +86,9 @@ GLOBAL_DEBUGFLAGS ?= -g
 GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS) -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-GLOBAL_COMPILEFLAGS += -Wno-error
+GLOBAL_COMPILEFLAGS += \
+    -Wno-address-of-packed-member \
+    -Wno-error
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
