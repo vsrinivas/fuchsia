@@ -4,65 +4,57 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:ui' as ui;
+import 'dart:mozart.internal';
 
-import 'package:apps.mozart.services.composition.interfaces/scene_token.mojom.dart' as mojom;
-import 'package:apps.mozart.services.views.interfaces/view_containers.mojom.dart' as mojom;
-import 'package:apps.mozart.services.views.interfaces/view_properties.mojom.dart' as mojom;
-import 'package:apps.mozart.services.views.interfaces/view_provider.mojom.dart' as mojom;
-import 'package:apps.mozart.services.views.interfaces/view_token.mojom.dart' as mojom;
-import 'package:apps.mozart.services.views.interfaces/views.mojom.dart' as mojom;
+import 'package:apps.modular.lib.app.dart/app.dart';
+import 'package:apps.modular.services.application/service_provider.fidl.dart';
+import 'package:apps.mozart.services.geometry/geometry.fidl.dart' as fidl;
+import 'package:apps.mozart.services.views/view_containers.fidl.dart';
+import 'package:apps.mozart.services.views/view_properties.fidl.dart';
+import 'package:apps.mozart.services.views/view_provider.fidl.dart';
+import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:mojo.services.geometry.interfaces/geometry.mojom.dart' as mojom;
-import 'package:mojo/application.dart';
-import 'package:mojo/core.dart' as core;
-import 'package:mojo.public.interfaces.application/service_provider.mojom.dart' as mojom;
+import 'package:lib.fidl.dart/bindings.dart';
+import 'package:lib.fidl.dart/core.dart' as core;
 
-mojom.ViewProxy _initViewProxy() {
-  int viewHandle = ui.MojoServices.takeView();
-  if (viewHandle == core.MojoHandle.INVALID)
+export 'package:apps.mozart.services.views/view_token.fidl.dart' show ViewOwner;
+
+ViewContainerProxy _initViewContainer() {
+  final int viewContainerHandle = MozartStartupInfo.takeViewContainer();
+  if (viewContainerHandle == null)
     return null;
-  return new mojom.ViewProxy.fromHandle(new core.MojoHandle(viewHandle));
+  final core.Handle handle = new core.Handle(viewContainerHandle);
+  final ViewContainerProxy proxy = new ViewContainerProxy()
+    ..ctrl.bind(new InterfaceHandle<ViewContainer>(new core.Channel(handle), 0))
+    ..setListener(_ViewContainerListenerImpl.instance.createInterfaceHandle());
+  return proxy;
 }
 
-// TODO(abarth): The view host is a unique resource. We should structure how we
-// take the handle from the engine so that multiple libraries can interact with
-// the view host safely. Unfortunately, the view host has a global namespace of
-// view keys, which means any scheme for sharing the view host also needs to
-// provide a mechanism for coordinating about view keys.
-final mojom.ViewProxy _viewProxy = _initViewProxy();
-final mojom.View _view = _viewProxy;
+final ViewContainerProxy _viewContainer = _initViewContainer();
 
-mojom.ViewContainer _initViewContainer() {
-  if (_view == null)
-    return null;
-  mojom.ViewContainerProxy viewContainerProxy = new mojom.ViewContainerProxy.unbound();
-  _view.getContainer(viewContainerProxy);
-  viewContainerProxy.setListener(new mojom.ViewContainerListenerStub.unbound()..impl = _ViewContainerListenerImpl.instance);
-  return viewContainerProxy;
-}
+class _ViewContainerListenerImpl extends ViewContainerListener {
+  final ViewContainerListenerBinding _binding =
+      new ViewContainerListenerBinding();
 
-final mojom.ViewContainer _viewContainer = _initViewContainer();
+  InterfaceHandle<ViewContainerListener> createInterfaceHandle() {
+    return _binding.wrap(this);
+  }
 
-typedef dynamic _ResponseFactory();
-
-class _ViewContainerListenerImpl extends mojom.ViewContainerListener {
   static final _ViewContainerListenerImpl instance = new _ViewContainerListenerImpl();
 
   @override
-  dynamic onChildAttached(int childKey, mojom.ViewInfo childViewInfo, [_ResponseFactory responseFactory = null]) {
+  void onChildAttached(int childKey,ViewInfo childViewInfo,void callback()) {
     ChildViewConnection connection = _connections[childKey];
     connection?._onAttachedToContainer(childViewInfo);
-    return responseFactory();
+    callback();
   }
 
   @override
-  dynamic onChildUnavailable(int childKey, [_ResponseFactory responseFactory = null]) {
+  void onChildUnavailable(int childKey,void callback()) {
     ChildViewConnection connection = _connections[childKey];
     connection?._onUnavailable();
-    return responseFactory();
+    callback();
   }
 
   final Map<int, ChildViewConnection> _connections = new HashMap<int, ChildViewConnection>();
@@ -72,43 +64,28 @@ class _ViewContainerListenerImpl extends mojom.ViewContainerListener {
 ///
 /// Used with the [ChildView] widget to display a child view.
 class ChildViewConnection {
-  /// Establishes a connection to the app at the given URL.
-  ChildViewConnection({ String url }) {
-    mojom.ViewProviderProxy viewProvider = shell.connectToApplicationService(
-      url, mojom.ViewProvider.connectToService
-    );
-    mojom.ServiceProviderProxy incomingServices = new mojom.ServiceProviderProxy.unbound();
-    _viewOwner = new mojom.ViewOwnerProxy.unbound();
-    viewProvider.createView(_viewOwner, incomingServices);
-    viewProvider.close();
-    _connection = new ApplicationConnection(null, incomingServices);
+  ChildViewConnection(this._viewOwner);
+
+  factory ChildViewConnection.connect(ServiceProvider services) {
+    final ViewProviderProxy viewProvider = new ViewProviderProxy();
+    connectToService(services, viewProvider.ctrl);
+    final ViewOwnerProxy viewOwner = new ViewOwnerProxy();
+    viewProvider.createView(viewOwner.ctrl.request(), null);
+    return new ChildViewConnection(viewOwner.ctrl.unbind());
   }
 
-  /// Wraps an already-established connection to a child app.
-  ChildViewConnection.fromViewOwner({
-    mojom.ViewOwnerProxy viewOwner,
-    ApplicationConnection connection
-  }) : _connection = connection, _viewOwner = viewOwner;
-
-  /// The underlying application connection to the child app.
-  ///
-  /// Useful for requesting services from the child app and for providing
-  /// services to the child app.
-  ApplicationConnection get connection => _connection;
-  ApplicationConnection _connection;
-
-  mojom.ViewOwnerProxy _viewOwner;
+  InterfaceHandle<ViewOwner> _viewOwner;
 
   static int _nextViewKey = 1;
   int _viewKey;
 
   int _sceneVersion = 1;
-  mojom.ViewProperties _currentViewProperties;
+  ViewProperties _currentViewProperties;
 
   VoidCallback _onViewInfoAvailable;
-  mojom.ViewInfo _viewInfo;
+  ViewInfo _viewInfo;
 
-  void _onAttachedToContainer(mojom.ViewInfo viewInfo) {
+  void _onAttachedToContainer(ViewInfo viewInfo) {
     assert(_viewInfo == null);
     _viewInfo = viewInfo;
     if (_onViewInfoAvailable != null)
@@ -120,25 +97,30 @@ class ChildViewConnection {
   }
 
   void _addChildToViewHost() {
+    if (_viewContainer == null)
+      return;
     assert(_attached);
     assert(_viewOwner != null);
     assert(_viewKey == null);
     assert(_viewInfo == null);
     _viewKey = _nextViewKey++;
-    _viewContainer?.addChild(_viewKey, _viewOwner);
+    _viewContainer.addChild(_viewKey, _viewOwner);
     _viewOwner = null;
     assert(!_ViewContainerListenerImpl.instance._connections.containsKey(_viewKey));
     _ViewContainerListenerImpl.instance._connections[_viewKey] = this;
   }
 
   void _removeChildFromViewHost() {
+    if (_viewContainer == null)
+      return;
     assert(!_attached);
     assert(_viewOwner == null);
     assert(_viewKey != null);
     assert(_ViewContainerListenerImpl.instance._connections[_viewKey] == this);
+    final core.ChannelPair pair = new core.ChannelPair();
     _ViewContainerListenerImpl.instance._connections.remove(_viewKey);
-    _viewOwner = new mojom.ViewOwnerProxy.unbound();
-    _viewContainer?.removeChild(_viewKey, _viewOwner);
+    _viewOwner = new InterfaceHandle<ViewOwner>(pair.channel0, 0);
+    _viewContainer.removeChild(_viewKey, new InterfaceRequest<ViewOwner>(pair.channel1));
     _viewKey = null;
     _viewInfo = null;
     _currentViewProperties = null;
@@ -170,23 +152,23 @@ class ChildViewConnection {
       _removeChildFromViewHost();
   }
 
-  mojom.ViewProperties _createViewProperties(int physicalWidth,
-                                             int physicalHeight,
-                                             double devicePixelRatio) {
+  ViewProperties _createViewProperties(int physicalWidth,
+                                       int physicalHeight,
+                                       double devicePixelRatio) {
     if (_currentViewProperties != null &&
         _currentViewProperties.displayMetrics.devicePixelRatio == devicePixelRatio &&
         _currentViewProperties.viewLayout.size.width == physicalWidth &&
         _currentViewProperties.viewLayout.size.height == physicalHeight)
       return null;
 
-    mojom.DisplayMetrics displayMetrics = new mojom.DisplayMetrics()
+    DisplayMetrics displayMetrics = new DisplayMetrics()
       ..devicePixelRatio = devicePixelRatio;
-    mojom.Size size = new mojom.Size()
+    fidl.Size size = new fidl.Size()
       ..width = physicalWidth
       ..height = physicalHeight;
-    mojom.ViewLayout viewLayout = new mojom.ViewLayout()
+    ViewLayout viewLayout = new ViewLayout()
       ..size = size;
-    _currentViewProperties = new mojom.ViewProperties()
+    _currentViewProperties = new ViewProperties()
       ..displayMetrics = displayMetrics
       ..viewLayout = viewLayout;
     return _currentViewProperties;
@@ -196,9 +178,9 @@ class ChildViewConnection {
     assert(_attached);
     assert(_attachments == 1);
     assert(_viewKey != null);
-    if (_view == null)
+    if (_viewContainer == null)
       return;
-    mojom.ViewProperties viewProperties = _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio);
+    ViewProperties viewProperties = _createViewProperties(physicalWidth, physicalHeight, devicePixelRatio);
     if (viewProperties == null)
       return;
     _viewContainer.setChildProperties(_viewKey, _sceneVersion++, viewProperties);
@@ -211,7 +193,7 @@ class _RenderChildView extends RenderBox {
   /// The [scale] argument must not be null.
   _RenderChildView({
     ChildViewConnection child,
-    double scale
+    double scale,
   }) : _scale = scale {
     assert(scale != null);
     this.child = child;
@@ -289,9 +271,9 @@ class _RenderChildView extends RenderBox {
       _physicalHeight = (size.height * scale).round();
       _child._setChildProperties(_physicalWidth, _physicalHeight, scale);
       assert(() {
-        if (_view == null) {
+        if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(
-            text: new TextSpan(text: 'Child views are supported only when running in Mojo shell.')
+            text: new TextSpan(text: 'Child views are supported only when running in Mozart.')
           );
           _debugErrorMessage.layout(minWidth: size.width, maxWidth: size.width);
         }
@@ -316,7 +298,7 @@ class _RenderChildView extends RenderBox {
       ));
     }
     assert(() {
-      if (_view == null) {
+      if (_viewContainer == null) {
         context.canvas.drawRect(offset & size, new Paint()..color = const Color(0xFF0000FF));
         _debugErrorMessage.paint(context.canvas, offset);
       }
@@ -336,40 +318,26 @@ class _RenderChildView extends RenderBox {
 ///
 /// Requires a [MediaQuery] ancestor to provide appropriate media information to
 /// the child.
-class ChildView extends StatelessWidget {
+class ChildView extends LeafRenderObjectWidget {
   /// Creates a widget that is replaced by content from another process.
-  ChildView({ Key key, this.child }) : super(key: key);
+  ChildView({ ChildViewConnection child })
+    : child = child, super(key: new GlobalObjectKey(child));
 
   /// A connection to the child whose content will replace this widget.
   final ChildViewConnection child;
 
   @override
-  Widget build(BuildContext context) {
-    return new _ChildViewWidget(
+  _RenderChildView createRenderObject(BuildContext context) {
+    return new _RenderChildView(
       child: child,
       scale: MediaQuery.of(context).devicePixelRatio
     );
   }
-}
-
-class _ChildViewWidget extends LeafRenderObjectWidget {
-  _ChildViewWidget({
-    ChildViewConnection child,
-    this.scale
-  }) : child = child, super(key: new GlobalObjectKey(child)) {
-    assert(scale != null);
-  }
-
-  final ChildViewConnection child;
-  final double scale;
-
-  @override
-  _RenderChildView createRenderObject(BuildContext context) => new _RenderChildView(child: child, scale: scale);
 
   @override
   void updateRenderObject(BuildContext context, _RenderChildView renderObject) {
     renderObject
       ..child = child
-      ..scale = scale;
+      ..scale = MediaQuery.of(context).devicePixelRatio;
   }
 }

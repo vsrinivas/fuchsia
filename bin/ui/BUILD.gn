@@ -4,13 +4,7 @@
 
 group("mozart") {
   deps = [
-    "//apps/mozart/examples/hello_compositor",
-    "//apps/mozart/examples/jank",
-    "//apps/mozart/examples/noodles",
-    "//apps/mozart/examples/paint",
-    "//apps/mozart/examples/shapes",
-    "//apps/mozart/examples/spinning_square",
-    "//apps/mozart/examples/tile",
+    "examples",
     "//apps/mozart/glue/base",
     "//apps/mozart/lib/skia",
     "//apps/mozart/lib/view_associate_framework",
