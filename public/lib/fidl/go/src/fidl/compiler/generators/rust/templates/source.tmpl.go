@@ -26,7 +26,7 @@ use mojo::bindings::mojom::{MojomEncodable, MojomPointer, MojomStruct,
 
 use mojo::system;
 use mojo::system::{CastHandle, UntypedHandle};
-use mojo::system::message_pipe;
+use mojo::system::channel;
 
 use std::collections::HashMap;
 use std::vec::Vec;

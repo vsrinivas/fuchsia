@@ -503,14 +503,22 @@ func translateHandleType(handleType core.HandleTypeRef) *fidl_types.TypeHandleTy
 	switch handleType.HandleKind() {
 	case core.HandleKindUnspecified:
 		kind = fidl_types.HandleType_Kind_Unspecified
-	case core.HandleKindMessagePipe:
-		kind = fidl_types.HandleType_Kind_MessagePipe
+	case core.HandleKindChannel:
+		kind = fidl_types.HandleType_Kind_Channel
 	case core.HandleKindDataPipeConsumer:
 		kind = fidl_types.HandleType_Kind_DataPipeConsumer
 	case core.HandleKindDataPipeProducer:
 		kind = fidl_types.HandleType_Kind_DataPipeProducer
-	case core.HandleKindSharedBuffer:
-		kind = fidl_types.HandleType_Kind_SharedBuffer
+	case core.HandleKindVmo:
+		kind = fidl_types.HandleType_Kind_Vmo
+	case core.HandleKindProcess:
+		kind = fidl_types.HandleType_Kind_Process
+	case core.HandleKindThread:
+		kind = fidl_types.HandleType_Kind_Thread
+	case core.HandleKindEvent:
+		kind = fidl_types.HandleType_Kind_Event
+	case core.HandleKindPort:
+		kind = fidl_types.HandleType_Kind_Port
 	}
 	return &fidl_types.TypeHandleType{fidl_types.HandleType{handleType.Nullable(), kind}}
 }

@@ -11,18 +11,18 @@ const GenerateEndpoint = `
 {{- $interface := .Interface -}}
 
 pub struct {{$endpoint}} {
-    pipe: message_pipe::MessageEndpoint,
+    pipe: channel::MessageEndpoint,
     version: u32,
 }
 
 impl {{$endpoint}} {
-    pub fn new(pipe: message_pipe::MessageEndpoint) -> {{$endpoint}} {
+    pub fn new(pipe: channel::MessageEndpoint) -> {{$endpoint}} {
         {{$endpoint}} {
             pipe: pipe,
             version: {{$interface}}::VERSION,
         }
     }
-    pub fn with_version(pipe: message_pipe::MessageEndpoint, version: u32) -> {{$endpoint}} {
+    pub fn with_version(pipe: channel::MessageEndpoint, version: u32) -> {{$endpoint}} {
         {{$endpoint}} {
             pipe: pipe,
             version: version,
@@ -33,14 +33,14 @@ impl {{$endpoint}} {
 impl MojomInterface for {{$endpoint}} {
     fn service_name() -> &'static str { {{$interface}}::SERVICE_NAME }
     fn version(&self) -> u32 { self.version }
-    fn pipe(&self) -> &message_pipe::MessageEndpoint { &self.pipe }
-    fn unwrap(self) -> message_pipe::MessageEndpoint { self.pipe }
+    fn pipe(&self) -> &channel::MessageEndpoint { &self.pipe }
+    fn unwrap(self) -> channel::MessageEndpoint { self.pipe }
 }
 
 impl CastHandle for {{$endpoint}} {
     unsafe fn from_untyped(handle: system::UntypedHandle) -> {{$endpoint}} {
         {{$endpoint}} {
-            pipe: message_pipe::MessageEndpoint::from_untyped(handle),
+            pipe: channel::MessageEndpoint::from_untyped(handle),
             version: 0, // Since we have no other information, assume its the base
         }
     }

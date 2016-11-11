@@ -36,20 +36,20 @@ _kind_infos = {
       'system.ConsumerHandle', 'Handle', 'ConsumerHandle', 32),
   mojom.DPPIPE:                KindInfo(
       'system.ProducerHandle', 'Handle', 'ProducerHandle', 32),
-  mojom.MSGPIPE:               KindInfo(
-      'system.MessagePipeHandle', 'Handle', 'MessagePipeHandle', 32),
-  mojom.SHAREDBUFFER:          KindInfo(
-      'system.SharedBufferHandle', 'Handle', 'SharedBufferHandle', 32),
+  mojom.CHANNEL:               KindInfo(
+      'system.ChannelHandle', 'Handle', 'ChannelHandle', 32),
+  mojom.VMO:          KindInfo(
+      'system.VMOHandle', 'Handle', 'VMOHandle', 32),
   mojom.NULLABLE_HANDLE:       KindInfo(
       'system.Handle', 'Handle', 'Handle', 32),
   mojom.NULLABLE_DCPIPE:       KindInfo(
       'system.ConsumerHandle', 'Handle', 'ConsumerHandle', 32),
   mojom.NULLABLE_DPPIPE:       KindInfo(
       'system.ProducerHandle', 'Handle', 'ProducerHandle', 32),
-  mojom.NULLABLE_MSGPIPE:      KindInfo(
-      'system.MessagePipeHandle', 'Handle', 'MessagePipeHandle', 32),
-  mojom.NULLABLE_SHAREDBUFFER: KindInfo(
-      'system.SharedBufferHandle', 'Handle', 'SharedBufferHandle', 32),
+  mojom.NULLABLE_CHANNEL:      KindInfo(
+      'system.ChannelHandle', 'Handle', 'ChannelHandle', 32),
+  mojom.NULLABLE_VMO: KindInfo(
+      'system.VMOHandle', 'Handle', 'VMOHandle', 32),
   mojom.INT64:                 KindInfo('int64', 'Int64', 'Int64', 64),
   mojom.UINT64:                KindInfo('uint64', 'Uint64', 'Uint64', 64),
   mojom.DOUBLE:                KindInfo('float64', 'Float64', 'Float64', 64),
@@ -74,7 +74,7 @@ def GetBitSize(kind):
   if mojom.IsUnionKind(kind):
     return 2*64
   if isinstance(kind, (mojom.InterfaceRequest)):
-    kind = mojom.MSGPIPE
+    kind = mojom.CHANNEL
   if isinstance(kind, mojom.Enum):
     kind = mojom.INT32
   return _kind_infos[kind].bit_size
@@ -183,7 +183,7 @@ def DecodeSuffix(kind):
   if mojom.IsInterfaceKind(kind):
     return 'Interface'
   if mojom.IsInterfaceRequestKind(kind):
-    return DecodeSuffix(mojom.MSGPIPE)
+    return DecodeSuffix(mojom.CHANNEL)
   return _kind_infos[kind].decode_suffix
 
 def EncodeSuffix(kind):
@@ -192,7 +192,7 @@ def EncodeSuffix(kind):
   if mojom.IsInterfaceKind(kind):
     return 'Interface'
   if mojom.IsInterfaceRequestKind(kind):
-    return EncodeSuffix(mojom.MSGPIPE)
+    return EncodeSuffix(mojom.CHANNEL)
   return _kind_infos[kind].encode_suffix
 
 def GetPackageName(module):

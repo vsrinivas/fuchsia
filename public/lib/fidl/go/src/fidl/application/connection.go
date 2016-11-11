@@ -42,10 +42,10 @@ type ServiceRequest interface {
 	// provide type information. Methods called may return nil or an error.
 	ServiceDescription() service_describer.ServiceDescription
 
-	// PassMessagePipe passes ownership of the underlying message pipe
+	// PassChannel passes ownership of the underlying message pipe
 	// handle to the newly created handle object, invalidating the
 	// underlying handle object in the process.
-	PassMessagePipe() system.MessagePipeHandle
+	PassChannel() system.ChannelHandle
 }
 
 // ServiceFactory provides implementation of a mojo service.
@@ -62,7 +62,7 @@ type ServiceFactory interface {
 
 	// Create binds an implementation of mojo service to the provided
 	// message pipe and runs it.
-	Create(pipe system.MessagePipeHandle)
+	Create(pipe system.ChannelHandle)
 }
 
 // Connection represents a connection to another application. An instance of
@@ -116,7 +116,7 @@ func (c *Connection) ProvideServices(services ...ServiceFactory) *OutgoingConnec
 		return c.outgoingConnection
 	}
 	if len(services) == 0 {
-		c.servicesRequest.PassMessagePipe().Close()
+		c.servicesRequest.PassChannel().Close()
 		return c.outgoingConnection
 	}
 
@@ -194,7 +194,7 @@ type OutgoingConnection struct {
 // ConnectToService asks remote application to provide a service through the
 // message pipe endpoint supplied by the caller.
 func (c *OutgoingConnection) ConnectToService(request ServiceRequest) {
-	pipe := request.PassMessagePipe()
+	pipe := request.PassChannel()
 	if c.remoteServices == nil {
 		pipe.Close()
 		return
@@ -208,7 +208,7 @@ type serviceProviderImpl struct {
 }
 
 // Mojo ServiceProvider implementation.
-func (sp *serviceProviderImpl) ConnectToService(name string, messagePipe system.MessagePipeHandle) error {
+func (sp *serviceProviderImpl) ConnectToService(name string, messagePipe system.ChannelHandle) error {
 	factory, ok := sp.factories[name]
 	if !ok {
 		messagePipe.Close()

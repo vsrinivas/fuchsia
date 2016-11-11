@@ -913,24 +913,32 @@ class TestKindFromMojom(unittest.TestCase):
     handle_types = [
         (fidl_types_fidl.HandleType.Kind.UNSPECIFIED, False,
           module.HANDLE),
-        (fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE, False,
-          module.MSGPIPE),
+        (fidl_types_fidl.HandleType.Kind.CHANNEL, False,
+          module.CHANNEL),
         (fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER, False,
           module.DCPIPE),
         (fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER, False,
           module.DPPIPE),
-        (fidl_types_fidl.HandleType.Kind.SHARED_BUFFER, False,
-          module.SHAREDBUFFER),
+        (fidl_types_fidl.HandleType.Kind.VMO, False,
+          module.VMO),
         (fidl_types_fidl.HandleType.Kind.UNSPECIFIED, True,
           module.NULLABLE_HANDLE),
-        (fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE, True,
-          module.NULLABLE_MSGPIPE),
+        (fidl_types_fidl.HandleType.Kind.CHANNEL, True,
+          module.NULLABLE_CHANNEL),
         (fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER, True,
           module.NULLABLE_DCPIPE),
         (fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER, True,
           module.NULLABLE_DPPIPE),
-        (fidl_types_fidl.HandleType.Kind.SHARED_BUFFER, True,
-          module.NULLABLE_SHAREDBUFFER),
+        (fidl_types_fidl.HandleType.Kind.VMO, True,
+          module.NULLABLE_VMO),
+        (fidl_types_fidl.HandleType.Kind.PROCESS, True,
+          module.NULLABLE_PROCESS),
+        (fidl_types_fidl.HandleType.Kind.THREAD, True,
+          module.NULLABLE_THREAD),
+        (fidl_types_fidl.HandleType.Kind.EVENT, True,
+          module.NULLABLE_EVENT),
+        (fidl_types_fidl.HandleType.Kind.PORT, True,
+          module.NULLABLE_PORT),
     ]
     g = fidl_files_fidl.FidlFileGraph()
     t = mojom_translator.FileTranslator(g, None)
@@ -999,13 +1007,13 @@ class TestKindFromMojom(unittest.TestCase):
           string_type=fidl_types_fidl.StringType())
       m.map_type.value_type = fidl_types_fidl.Type(
           handle_type=fidl_types_fidl.HandleType(
-            kind=fidl_types_fidl.HandleType.Kind.SHARED_BUFFER,
+            kind=fidl_types_fidl.HandleType.Kind.VMO,
             nullable=value_nullable))
 
       result = t.KindFromMojom(m)
       self.assertTrue(module.IsMapKind(result))
       self.assertTrue(module.IsStringKind(result.key_kind))
-      self.assertTrue(module.IsSharedBufferKind(result.value_kind))
+      self.assertTrue(module.IsVMOKind(result.value_kind))
       self.assertEquals(map_nullable, module.IsNullableKind(result))
       self.assertEquals(value_nullable,
           module.IsNullableKind(result.value_kind))

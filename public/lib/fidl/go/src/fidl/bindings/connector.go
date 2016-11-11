@@ -33,7 +33,7 @@ func (e *ConnectionError) Closed() bool {
 // thread-safe.
 type Connector struct {
 	mu   sync.RWMutex // protects pipe handle
-	pipe system.MessagePipeHandle
+	pipe system.ChannelHandle
 
 	done      chan struct{}
 	waitMutex sync.Mutex
@@ -43,7 +43,7 @@ type Connector struct {
 
 // NewStubConnector returns a new |Connector| instance that sends and
 // receives messages from a provided message pipe handle.
-func NewConnector(pipe system.MessagePipeHandle, waiter AsyncWaiter) *Connector {
+func NewConnector(pipe system.ChannelHandle, waiter AsyncWaiter) *Connector {
 	return &Connector{
 		pipe:     pipe,
 		waiter:   waiter,

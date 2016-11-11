@@ -4,10 +4,10 @@
 
 package system
 
-// MessagePipeHandle is a handle for a bidirectional communication channel for
+// ChannelHandle is a handle for a bidirectional communication channel for
 // framed data (i.e., messages). Messages can contain plain data and/or Mojo
 // handles.
-type MessagePipeHandle interface {
+type ChannelHandle interface {
 	Handle
 
 	// ReadMessage reads a message from the message pipe endpoint with the

@@ -22,13 +22,21 @@ _kind_to_cpp_type = {
   mojom.HANDLE:                "::fidl::internal::WrappedHandle",
   mojom.DCPIPE:                "::fidl::internal::WrappedHandle",
   mojom.DPPIPE:                "::fidl::internal::WrappedHandle",
-  mojom.MSGPIPE:               "::fidl::internal::WrappedHandle",
-  mojom.SHAREDBUFFER:          "::fidl::internal::WrappedHandle",
+  mojom.CHANNEL:               "::fidl::internal::WrappedHandle",
+  mojom.VMO:                   "::fidl::internal::WrappedHandle",
+  mojom.PROCESS:               "::fidl::internal::WrappedHandle",
+  mojom.THREAD:                "::fidl::internal::WrappedHandle",
+  mojom.EVENT:                 "::fidl::internal::WrappedHandle",
+  mojom.PORT:                  "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_HANDLE:       "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_DCPIPE:       "::fidl::internal::WrappedHandle",
   mojom.NULLABLE_DPPIPE:       "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_MSGPIPE:      "::fidl::internal::WrappedHandle",
-  mojom.NULLABLE_SHAREDBUFFER: "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_CHANNEL:      "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_VMO:          "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_PROCESS:      "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_THREAD:       "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_EVENT:        "::fidl::internal::WrappedHandle",
+  mojom.NULLABLE_PORT:         "::fidl::internal::WrappedHandle",
   mojom.INT64:                 "int64_t",
   mojom.UINT64:                "uint64_t",
   mojom.DOUBLE:                "double",
@@ -121,15 +129,23 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::channel"
+    return "mx::handle<void>"
   if mojom.IsDataPipeConsumerKind(kind):
     return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
     return "mx::datapipe_producer"
-  if mojom.IsMessagePipeKind(kind):
+  if mojom.IsChannelKind(kind):
     return "mx::channel"
-  if mojom.IsSharedBufferKind(kind):
+  if mojom.IsVMOKind(kind):
     return "mx::vmo"
+  if mojom.IsProcessKind(kind):
+    return "mx::process"
+  if mojom.IsThreadKind(kind):
+    return "mx::thread"
+  if mojom.IsEventKind(kind):
+    return "mx::event"
+  if mojom.IsPortKind(kind):
+    return "mx::port"
   return GetCppTypeForKind(kind)
 
 def GetCppResultWrapperType(kind):
@@ -149,15 +165,23 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::channel"
+    return "mx::handle<void>"
   if mojom.IsDataPipeConsumerKind(kind):
     return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
     return "mx::datapipe_producer"
-  if mojom.IsMessagePipeKind(kind):
+  if mojom.IsChannelKind(kind):
     return "mx::channel"
-  if mojom.IsSharedBufferKind(kind):
+  if mojom.IsVMOKind(kind):
     return "mx::vmo"
+  if mojom.IsProcessKind(kind):
+    return "mx::process"
+  if mojom.IsThreadKind(kind):
+    return "mx::thread"
+  if mojom.IsEventKind(kind):
+    return "mx::event"
+  if mojom.IsPortKind(kind):
+    return "mx::port"
   return GetCppTypeForKind(kind)
 
 def GetCppWrapperType(kind):
@@ -177,15 +201,23 @@ def GetCppWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::channel"
+    return "mx::handle<void>"
   if mojom.IsDataPipeConsumerKind(kind):
     return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
     return "mx::datapipe_producer"
-  if mojom.IsMessagePipeKind(kind):
+  if mojom.IsChannelKind(kind):
     return "mx::channel"
-  if mojom.IsSharedBufferKind(kind):
+  if mojom.IsVMOKind(kind):
     return "mx::vmo"
+  if mojom.IsProcessKind(kind):
+    return "mx::process"
+  if mojom.IsThreadKind(kind):
+    return "mx::thread"
+  if mojom.IsEventKind(kind):
+    return "mx::event"
+  if mojom.IsPortKind(kind):
+    return "mx::port"
   return GetCppTypeForKind(kind)
 
 def GetCppConstWrapperType(kind):
@@ -205,15 +237,23 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStringKind(kind):
     return "const ::fidl::String&"
   if mojom.IsGenericHandleKind(kind):
-    return "mx::channel"
+    return "mx::handle<void>"
   if mojom.IsDataPipeConsumerKind(kind):
     return "mx::datapipe_consumer"
   if mojom.IsDataPipeProducerKind(kind):
     return "mx::datapipe_producer"
-  if mojom.IsMessagePipeKind(kind):
+  if mojom.IsChannelKind(kind):
     return "mx::channel"
-  if mojom.IsSharedBufferKind(kind):
+  if mojom.IsVMOKind(kind):
     return "mx::vmo"
+  if mojom.IsProcessKind(kind):
+    return "mx::process"
+  if mojom.IsThreadKind(kind):
+    return "mx::thread"
+  if mojom.IsEventKind(kind):
+    return "mx::event"
+  if mojom.IsPortKind(kind):
+    return "mx::port"
   if not kind in _kind_to_cpp_type:
     print "missing:", kind.spec
   return GetCppTypeForKind(kind)

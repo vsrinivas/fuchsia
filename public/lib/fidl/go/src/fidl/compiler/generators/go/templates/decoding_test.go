@@ -254,7 +254,7 @@ if err != nil {
 	return err
 }
 if handle.IsValid() {
-	handleOwner := bindings.NewMessagePipeHandleOwner(handle)
+	handleOwner := bindings.NewChannelHandleOwner(handle)
 	s.IntField = SomeInterface_Pointer{handleOwner}
 } else {
 	return &bindings.ValidationError{bindings.UnexpectedInvalidHandle, "unexpected invalid handle"}
@@ -271,12 +271,12 @@ if handle.IsValid() {
 }
 
 func TestDecodingInterfaceRequestFieldDecoding(t *testing.T) {
-	expected := `handle, err := decoder.ReadMessagePipeHandle()
+	expected := `handle, err := decoder.ReadChannelHandle()
 if err != nil {
 	return err
 }
 if handle.IsValid() {
-	handleOwner := bindings.NewMessagePipeHandleOwner(handle)
+	handleOwner := bindings.NewChannelHandleOwner(handle)
 	s.IntField = SomeInterface_Request{handleOwner}
 } else {
 	return &bindings.ValidationError{bindings.UnexpectedInvalidHandle, "unexpected invalid handle"}
@@ -286,7 +286,7 @@ if handle.IsValid() {
 		isInterface:        true,
 		isInterfaceRequest: true,
 		identifier:         "s.IntField",
-		readFunction:       "ReadMessagePipeHandle",
+		readFunction:       "ReadChannelHandle",
 		goType:             "SomeInterface_Request",
 	}
 
@@ -294,12 +294,12 @@ if handle.IsValid() {
 }
 
 func TestDecodingNullableInterfaceRequestFieldDecoding(t *testing.T) {
-	expected := `handle, err := decoder.ReadMessagePipeHandle()
+	expected := `handle, err := decoder.ReadChannelHandle()
 if err != nil {
 	return err
 }
 if handle.IsValid() {
-	handleOwner := bindings.NewMessagePipeHandleOwner(handle)
+	handleOwner := bindings.NewChannelHandleOwner(handle)
 	s.IntField = &SomeInterface_Request{handleOwner}
 } else {
 	s.IntField = nil
@@ -310,7 +310,7 @@ if handle.IsValid() {
 		isInterfaceRequest: true,
 		isNullable:         true,
 		identifier:         "s.IntField",
-		readFunction:       "ReadMessagePipeHandle",
+		readFunction:       "ReadChannelHandle",
 		goType:             "SomeInterface_Request",
 	}
 

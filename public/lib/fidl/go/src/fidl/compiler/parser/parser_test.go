@@ -263,7 +263,7 @@ func TestSuccessfulParsing(t *testing.T) {
 	};
 
 	interface Doer {
-		DoIt(int8 lemon, handle<message_pipe> pipe) => (array<Foo> someFoos, Foo? anotherFoo);
+		DoIt(int8 lemon, handle<channel> pipe) => (array<Foo> someFoos, Foo? anotherFoo);
 	};
 
 	`
@@ -290,7 +290,7 @@ func TestSuccessfulParsing(t *testing.T) {
 		params := core.NewMojomStruct(core.DeclTestData("dummy"))
 		params.InitAsScope(core.NewTestFileScope("test.scope"))
 		params.AddField(core.NewStructField(core.DeclTestData("lemon"), core.SimpleTypeInt8, nil))
-		params.AddField(core.NewStructField(core.DeclTestData("pipe"), core.BuiltInType("handle<message_pipe>"), nil))
+		params.AddField(core.NewStructField(core.DeclTestData("pipe"), core.BuiltInType("handle<channel>"), nil))
 		responseParams := core.NewMojomStruct(core.DeclTestData("dummy"))
 		responseParams.InitAsScope(core.NewTestFileScope("test.scope"))
 		responseParams.AddField(core.NewStructField(core.DeclTestData("someFoos"), core.NewArrayTypeRef(fooRef1, -1, false), nil))
@@ -349,7 +349,7 @@ func TestSuccessfulParsing(t *testing.T) {
 	};
 
 	interface Doer {
-		DoIt(int8 lemon, handle<message_pipe> pipe) => (array<Foo> someFoos, Foo? anotherFoo);
+		DoIt(int8 lemon, handle<channel> pipe) => (array<Foo> someFoos, Foo? anotherFoo);
 	};
 
 	`
@@ -396,7 +396,7 @@ func TestSuccessfulParsing(t *testing.T) {
 		params := core.NewMojomStruct(core.DeclTestData("dummy"))
 		params.InitAsScope(core.NewTestFileScope("test.scope"))
 		params.AddField(core.NewStructField(core.DeclTestData("lemon"), core.SimpleTypeInt8, nil))
-		params.AddField(core.NewStructField(core.DeclTestData("pipe"), core.BuiltInType("handle<message_pipe>"), nil))
+		params.AddField(core.NewStructField(core.DeclTestData("pipe"), core.BuiltInType("handle<channel>"), nil))
 		responseParams := core.NewMojomStruct(core.DeclTestData("dummy"))
 		responseParams.InitAsScope(core.NewTestFileScope("test.scope"))
 		responseParams.AddField(core.NewStructField(core.DeclTestData("someFoos"), core.NewArrayTypeRef(fooRef1, -1, false), nil))

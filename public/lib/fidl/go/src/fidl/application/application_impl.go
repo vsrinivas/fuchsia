@@ -70,8 +70,8 @@ type ApplicationImpl struct {
 // Run binds your mojo application to provided message pipe handle and runs it
 // until the application is terminated.
 func Run(delegate Delegate, applicationRequest system.MojoHandle) {
-	messagePipe := system.GetCore().AcquireNativeHandle(applicationRequest).ToMessagePipeHandle()
-	appRequest := application.Application_Request{bindings.NewMessagePipeHandleOwner(messagePipe)}
+	messagePipe := system.GetCore().AcquireNativeHandle(applicationRequest).ToChannelHandle()
+	appRequest := application.Application_Request{bindings.NewChannelHandleOwner(messagePipe)}
 	impl := &ApplicationImpl{
 		delegate: delegate,
 	}
@@ -135,7 +135,7 @@ func (impl *ApplicationImpl) Args() []string {
 
 // Context implementaion.
 func (impl *ApplicationImpl) ConnectToApplication(remoteURL string) *OutgoingConnection {
-	servicesRequest, servicesPointer := sp.CreateMessagePipeForServiceProvider()
+	servicesRequest, servicesPointer := sp.CreateChannelForServiceProvider()
 	if err := impl.shell.ConnectToApplication(remoteURL, servicesRequest); err != nil {
 		log.Printf("can't connect to %v: %v", remoteURL, err)
 		// In case of error message pipes sent through Shell are closed and

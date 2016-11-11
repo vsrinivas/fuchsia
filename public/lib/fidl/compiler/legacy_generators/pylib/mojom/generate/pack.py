@@ -25,13 +25,21 @@ class PackedField(object):
     mojom.UINT32:                4,
     mojom.FLOAT:                 4,
     mojom.HANDLE:                4,
-    mojom.MSGPIPE:               4,
-    mojom.SHAREDBUFFER:          4,
+    mojom.CHANNEL:               4,
+    mojom.VMO:                   4,
+    mojom.PROCESS:               4,
+    mojom.THREAD:                4,
+    mojom.EVENT:                 4,
+    mojom.PORT:                  4,
     mojom.DCPIPE:                4,
     mojom.DPPIPE:                4,
     mojom.NULLABLE_HANDLE:       4,
-    mojom.NULLABLE_MSGPIPE:      4,
-    mojom.NULLABLE_SHAREDBUFFER: 4,
+    mojom.NULLABLE_CHANNEL:      4,
+    mojom.NULLABLE_VMO:          4,
+    mojom.NULLABLE_PROCESS:      4,
+    mojom.NULLABLE_THREAD:       4,
+    mojom.NULLABLE_EVENT:        4,
+    mojom.NULLABLE_PORT:         4,
     mojom.NULLABLE_DCPIPE:       4,
     mojom.NULLABLE_DPPIPE:       4,
     mojom.INT64:                 8,
@@ -49,7 +57,7 @@ class PackedField(object):
     if isinstance(kind, mojom.Union):
       return 16
     if isinstance(kind, mojom.InterfaceRequest):
-      kind = mojom.MSGPIPE
+      kind = mojom.CHANNEL
     if isinstance(kind, mojom.Enum):
       # TODO(mpcomplete): what about big enums?
       return cls.kind_to_size[mojom.INT32]

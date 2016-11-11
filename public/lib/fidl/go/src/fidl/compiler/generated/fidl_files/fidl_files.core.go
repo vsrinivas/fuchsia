@@ -2,8 +2,8 @@ package fidl_files
 
 import (
 	bindings "fidl/bindings"
-	fmt "fmt"
 	fidl_types "fidl/compiler/generated/fidl_types"
+	fmt "fmt"
 	sort "sort"
 )
 

@@ -17,7 +17,7 @@ enum Enum {
 interface Provider {
   EchoString(string a) => (string a);
   EchoStrings(string a, string b) => (string a, string b);
-  EchoMessagePipeHandle(handle<message_pipe> a) => (handle<message_pipe> a);
+  EchoMessagePipeHandle(handle<channel> a) => (handle<channel> a);
   EchoEnum(Enum a) => (Enum a);
   EchoInt(int32 a) => (int32 a);
 };

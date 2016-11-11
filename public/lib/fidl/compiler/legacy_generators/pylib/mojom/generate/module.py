@@ -42,10 +42,18 @@ class ReferenceKind(Kind):
       return NULLABLE_DCPIPE
     if self == DPPIPE:
       return NULLABLE_DPPIPE
-    if self == MSGPIPE:
-      return NULLABLE_MSGPIPE
-    if self == SHAREDBUFFER:
-      return NULLABLE_SHAREDBUFFER
+    if self == CHANNEL:
+      return NULLABLE_CHANNEL
+    if self == VMO:
+      return NULLABLE_VMO
+    if self == PROCESS:
+      return NULLABLE_PROCESS
+    if self == THREAD:
+      return NULLABLE_THREAD
+    if self == EVENT:
+      return NULLABLE_EVENT
+    if self == PORT:
+      return NULLABLE_PORT
 
     nullable_kind = type(self)()
     nullable_kind.shared_definition = self.shared_definition
@@ -92,15 +100,22 @@ STRING                = ReferenceKind('s')
 HANDLE                = ReferenceKind('h')
 DCPIPE                = ReferenceKind('h:d:c')
 DPPIPE                = ReferenceKind('h:d:p')
-MSGPIPE               = ReferenceKind('h:m')
-SHAREDBUFFER          = ReferenceKind('h:s')
+CHANNEL               = ReferenceKind('h:c')
+VMO                   = ReferenceKind('h:v')
+PROCESS               = ReferenceKind('h:p')
+THREAD                = ReferenceKind('h:t')
+EVENT                 = ReferenceKind('h:e')
+PORT                  = ReferenceKind('h:r')
 NULLABLE_STRING       = ReferenceKind('?s', True)
 NULLABLE_HANDLE       = ReferenceKind('?h', True)
 NULLABLE_DCPIPE       = ReferenceKind('?h:d:c', True)
 NULLABLE_DPPIPE       = ReferenceKind('?h:d:p', True)
-NULLABLE_MSGPIPE      = ReferenceKind('?h:m', True)
-NULLABLE_SHAREDBUFFER = ReferenceKind('?h:s', True)
-
+NULLABLE_CHANNEL      = ReferenceKind('?h:c', True)
+NULLABLE_VMO          = ReferenceKind('?h:v', True)
+NULLABLE_PROCESS      = ReferenceKind('?h:p', True)
+NULLABLE_THREAD       = ReferenceKind('?h:t', True)
+NULLABLE_EVENT        = ReferenceKind('?h:e', True)
+NULLABLE_PORT         = ReferenceKind('?h:r', True)
 
 # Collection of all Primitive types
 PRIMITIVES = (
@@ -119,16 +134,23 @@ PRIMITIVES = (
   HANDLE,
   DCPIPE,
   DPPIPE,
-  MSGPIPE,
-  SHAREDBUFFER,
+  CHANNEL,
+  VMO,
+  PROCESS,
+  THREAD,
+  EVENT,
+  PORT,
   NULLABLE_STRING,
   NULLABLE_HANDLE,
   NULLABLE_DCPIPE,
   NULLABLE_DPPIPE,
-  NULLABLE_MSGPIPE,
-  NULLABLE_SHAREDBUFFER
+  NULLABLE_CHANNEL,
+  NULLABLE_VMO,
+  NULLABLE_PROCESS,
+  NULLABLE_THREAD,
+  NULLABLE_EVENT,
+  NULLABLE_PORT
 )
-
 
 class NamedValue(object):
   def __init__(self, module=None, parent_kind=None, name=None):
@@ -489,14 +511,23 @@ def IsDataPipeProducerKind(kind):
   return kind.spec == DPPIPE.spec or kind.spec == NULLABLE_DPPIPE.spec
 
 
-def IsMessagePipeKind(kind):
-  return kind.spec == MSGPIPE.spec or kind.spec == NULLABLE_MSGPIPE.spec
+def IsChannelKind(kind):
+  return kind.spec == CHANNEL.spec or kind.spec == NULLABLE_CHANNEL.spec
 
+def IsVMOKind(kind):
+  return (kind.spec == VMO.spec or kind.spec == NULLABLE_VMO.spec)
 
-def IsSharedBufferKind(kind):
-  return (kind.spec == SHAREDBUFFER.spec or
-          kind.spec == NULLABLE_SHAREDBUFFER.spec)
+def IsProcessKind(kind):
+  return (kind.spec == PROCESS.spec or kind.spec == NULLABLE_PROCESS.spec)
 
+def IsThreadKind(kind):
+  return (kind.spec == THREAD.spec or kind.spec == NULLABLE_THREAD.spec)
+
+def IsEventKind(kind):
+  return (kind.spec == EVENT.spec or kind.spec == NULLABLE_EVENT.spec)
+
+def IsPortKind(kind):
+  return (kind.spec == PORT.spec or kind.spec == NULLABLE_PORT.spec)
 
 def IsStructKind(kind):
   return isinstance(kind, Struct)
@@ -549,8 +580,12 @@ def IsAnyHandleKind(kind):
   return (IsGenericHandleKind(kind) or
           IsDataPipeConsumerKind(kind) or
           IsDataPipeProducerKind(kind) or
-          IsMessagePipeKind(kind) or
-          IsSharedBufferKind(kind) or
+          IsChannelKind(kind) or
+          IsVMOKind(kind) or
+          IsProcessKind(kind) or
+          IsThreadKind(kind) or
+          IsEventKind(kind) or
+          IsPortKind(kind) or
           IsInterfaceRequestKind(kind))
 
 

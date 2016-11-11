@@ -700,7 +700,7 @@ func (t *interfaceTypeEncodingInfo) WriteFunction() string {
 
 func (t *interfaceTypeEncodingInfo) ReadFunction() string {
 	if t.interfaceRequest {
-		return "ReadMessagePipeHandle"
+		return "ReadChannelHandle"
 	} else {
 		return "ReadInterface"
 	}

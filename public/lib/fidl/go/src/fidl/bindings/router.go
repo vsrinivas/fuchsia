@@ -30,7 +30,7 @@ type routeRequest struct {
 // to appropriate receivers. The work is done on a separate go routine.
 type routerWorker struct {
 	// The message pipe handle to send requests and receive responses.
-	handle system.MessagePipeHandle
+	handle system.ChannelHandle
 	// Map from request id to response channel.
 	responders map[uint64]chan<- MessageReadResult
 	// The channel of incoming requests that require responses.
@@ -116,7 +116,7 @@ type Router struct {
 	// closed and the handle.
 	mu sync.Mutex
 	// The message pipe handle to send requests and receive responses.
-	handle system.MessagePipeHandle
+	handle system.ChannelHandle
 	// Channel to communicate with worker.
 	requestChan chan<- routeRequest
 
@@ -128,7 +128,7 @@ type Router struct {
 
 // NewRouter returns a new Router instance that sends and receives messages
 // from a provided message pipe handle.
-func NewRouter(handle system.MessagePipeHandle, waiter AsyncWaiter) *Router {
+func NewRouter(handle system.ChannelHandle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
 	router := &Router{

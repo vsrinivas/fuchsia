@@ -83,10 +83,14 @@ struct StringType {
 struct HandleType {
   enum Kind {
     UNSPECIFIED,
-    MESSAGE_PIPE,
+    CHANNEL,
     DATA_PIPE_CONSUMER,
     DATA_PIPE_PRODUCER,
-    SHARED_BUFFER,
+    VMO,
+    PROCESS,
+    THREAD,
+    EVENT,
+    PORT,
   };
 
   bool nullable;

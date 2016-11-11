@@ -95,15 +95,23 @@ func (t *translator) handleTypeEncodingInfo(mojomType fidl_types.HandleType) (in
 	info.nullable = mojomType.Nullable
 	switch mojomType.Kind {
 	case fidl_types.HandleType_Kind_Unspecified:
+		fallthrough
+	case fidl_types.HandleType_Kind_Process:
+		fallthrough
+	case fidl_types.HandleType_Kind_Thread:
+		fallthrough
+	case fidl_types.HandleType_Kind_Event:
+		fallthrough
+	case fidl_types.HandleType_Kind_Port:
 		info.readFunction = "ReadHandle"
-	case fidl_types.HandleType_Kind_MessagePipe:
-		info.readFunction = "ReadMessagePipeHandle"
+	case fidl_types.HandleType_Kind_Channel:
+		info.readFunction = "ReadChannelHandle"
 	case fidl_types.HandleType_Kind_DataPipeConsumer:
 		info.readFunction = "ReadConsumerHandle"
 	case fidl_types.HandleType_Kind_DataPipeProducer:
 		info.readFunction = "ReadProducerHandle"
-	case fidl_types.HandleType_Kind_SharedBuffer:
-		info.readFunction = "ReadSharedBufferHandle"
+	case fidl_types.HandleType_Kind_Vmo:
+		info.readFunction = "ReadVmoHandle"
 	}
 	return info
 }

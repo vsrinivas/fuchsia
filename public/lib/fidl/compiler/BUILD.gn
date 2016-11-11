@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 group("compiler") {
+  testonly = true
+
   deps = [
     ":fidl",
     ":fidl-c",

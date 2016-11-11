@@ -378,12 +378,12 @@ func (d *Decoder) ReadHandle() (system.Handle, error) {
 	return d.ReadUntypedHandle()
 }
 
-// ReadMessagePipeHandle reads a message pipe handle.
-func (d *Decoder) ReadMessagePipeHandle() (system.MessagePipeHandle, error) {
+// ReadChannelHandle reads a message pipe handle.
+func (d *Decoder) ReadChannelHandle() (system.ChannelHandle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
 		return nil, err
 	} else {
-		return handle.ToMessagePipeHandle(), nil
+		return handle.ToChannelHandle(), nil
 	}
 }
 
@@ -405,19 +405,19 @@ func (d *Decoder) ReadProducerHandle() (system.ProducerHandle, error) {
 	}
 }
 
-// ReadSharedBufferHandle reads a shared buffer handle.
-func (d *Decoder) ReadSharedBufferHandle() (system.SharedBufferHandle, error) {
+// ReadVmoHandle reads a shared buffer handle.
+func (d *Decoder) ReadVmoHandle() (system.VmoHandle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {
 		return nil, err
 	} else {
-		return handle.ToSharedBufferHandle(), nil
+		return handle.ToVmoHandle(), nil
 	}
 }
 
 // ReadInterface reads an encoded interface and returns the message pipe handle.
 // The version field is ignored for now.
-func (d *Decoder) ReadInterface() (system.MessagePipeHandle, error) {
-	handle, err := d.ReadMessagePipeHandle()
+func (d *Decoder) ReadInterface() (system.ChannelHandle, error) {
+	handle, err := d.ReadChannelHandle()
 	if err != nil {
 		return nil, err
 	}

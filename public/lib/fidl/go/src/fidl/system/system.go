@@ -9,7 +9,7 @@ package system
 // by code that doesn't depend on this package.
 type MojoSystem interface {
 	// Shared buffer
-	CreateSharedBuffer(flags uint32, numBytes uint64) (result uint32, handle uint32)
+	CreateVmo(flags uint32, numBytes uint64) (result uint32, handle uint32)
 	DuplicateBufferHandle(handle uint32, flags uint32) (result uint32, dupHandle uint32)
 	GetBufferInformation(handle uint32) (result uint32, flags uint32, numBytes uint64)
 	// After a successful MapBuffer call, the caller must pass the same slice value to UnmapBuffer to release
@@ -39,7 +39,7 @@ type MojoSystem interface {
 	WaitMany(handles []uint32, signals []uint32, deadline uint64) (result uint32, index int, satisfiedSignals, satisfiableSignals []uint32)
 
 	// Message pipe
-	CreateMessagePipe(flags uint32) (result uint32, handle0, handle1 uint32)
+	CreateChannel(flags uint32) (result uint32, handle0, handle1 uint32)
 	WriteMessage(handle uint32, bytes []byte, handles []uint32, flags uint32) (result uint32)
 	ReadMessage(handle uint32, flags uint32) (result uint32, buf []byte, handles []uint32)
 }

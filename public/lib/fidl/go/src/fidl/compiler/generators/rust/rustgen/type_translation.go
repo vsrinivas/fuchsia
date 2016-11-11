@@ -264,14 +264,14 @@ func mojomToRustType(t fidl_types.Type, context *Context) string {
 		handle_type := t.Interface().(fidl_types.HandleType)
 		var type_str string
 		switch handle_type.Kind {
-		case fidl_types.HandleType_Kind_MessagePipe:
-			type_str = "message_pipe::MessageEndpoint"
+		case fidl_types.HandleType_Kind_Channel:
+			type_str = "channel::MessageEndpoint"
 		case fidl_types.HandleType_Kind_DataPipeConsumer:
 			type_str = "system::data_pipe::Consumer<u8>"
 		case fidl_types.HandleType_Kind_DataPipeProducer:
 			type_str = "system::data_pipe::Producer<u8>"
-		case fidl_types.HandleType_Kind_SharedBuffer:
-			type_str = "system::shared_buffer::SharedBuffer"
+		case fidl_types.HandleType_Kind_Vmo:
+			type_str = "system::vmo::Vmo"
 		case fidl_types.HandleType_Kind_Unspecified:
 			type_str = "system::UntypedHandle"
 		default:

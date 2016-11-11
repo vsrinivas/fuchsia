@@ -44,11 +44,11 @@ func (h *InvalidHandle) ToProducerHandle() system.ProducerHandle {
 	return h
 }
 
-func (h *InvalidHandle) ToMessagePipeHandle() system.MessagePipeHandle {
+func (h *InvalidHandle) ToChannelHandle() system.ChannelHandle {
 	return h
 }
 
-func (h *InvalidHandle) ToSharedBufferHandle() system.SharedBufferHandle {
+func (h *InvalidHandle) ToVmoHandle() system.VmoHandle {
 	return h
 }
 
@@ -84,7 +84,7 @@ func (h *InvalidHandle) WriteMessage(bytes []byte, handles []system.UntypedHandl
 	return system.MOJO_SYSTEM_RESULT_INVALID_ARGUMENT
 }
 
-func (h *InvalidHandle) DuplicateBufferHandle(opts *system.DuplicateBufferHandleOptions) (system.MojoResult, system.SharedBufferHandle) {
+func (h *InvalidHandle) DuplicateBufferHandle(opts *system.DuplicateBufferHandleOptions) (system.MojoResult, system.VmoHandle) {
 	return system.MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, nil
 }
 

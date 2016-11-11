@@ -19,7 +19,7 @@ struct StructC {
 };
 
 struct StructD {
-  array<handle<message_pipe>> message_pipes;
+  array<handle<channel>> message_pipes;
 };
 
 struct StructE {

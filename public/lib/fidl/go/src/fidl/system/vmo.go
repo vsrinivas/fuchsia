@@ -4,13 +4,13 @@
 
 package system
 
-// SharedBufferHandle is a handle for a buffer that can be shared between
+// VmoHandle is a handle for a buffer that can be shared between
 // applications.
-type SharedBufferHandle interface {
+type VmoHandle interface {
 	Handle
 
 	// DuplicateBufferHandle duplicates the handle to a buffer.
-	DuplicateBufferHandle(opts *DuplicateBufferHandleOptions) (MojoResult, SharedBufferHandle)
+	DuplicateBufferHandle(opts *DuplicateBufferHandleOptions) (MojoResult, VmoHandle)
 
 	// MapBuffer maps the requested part of the shared buffer given by handle
 	// into memory with specified flags. On success, it returns slice that
@@ -30,7 +30,7 @@ type sharedBuffer struct {
 	baseHandle
 }
 
-func (h *sharedBuffer) DuplicateBufferHandle(opts *DuplicateBufferHandleOptions) (MojoResult, SharedBufferHandle) {
+func (h *sharedBuffer) DuplicateBufferHandle(opts *DuplicateBufferHandleOptions) (MojoResult, VmoHandle) {
 	var flags uint32
 	if opts != nil {
 		flags = uint32(opts.Flags)
@@ -38,7 +38,7 @@ func (h *sharedBuffer) DuplicateBufferHandle(opts *DuplicateBufferHandleOptions)
 	h.core.mu.Lock()
 	r, dup := sysImpl.DuplicateBufferHandle(uint32(h.mojoHandle), flags)
 	h.core.mu.Unlock()
-	return MojoResult(r), core.AcquireNativeHandle(MojoHandle(dup)).ToSharedBufferHandle()
+	return MojoResult(r), core.AcquireNativeHandle(MojoHandle(dup)).ToVmoHandle()
 }
 
 func (h *sharedBuffer) MapBuffer(offset uint64, numBytes int, flags MojoMapBufferFlags) (MojoResult, []byte) {

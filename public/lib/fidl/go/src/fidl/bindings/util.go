@@ -21,7 +21,7 @@ func bytesForBits(bits uint64) int {
 }
 
 // WriteMessage writes a message to a message pipe.
-func WriteMessage(handle system.MessagePipeHandle, message *Message) error {
+func WriteMessage(handle system.ChannelHandle, message *Message) error {
 	result := handle.WriteMessage(message.Bytes, message.Handles, system.MOJO_WRITE_MESSAGE_FLAG_NONE)
 	if result != system.MOJO_RESULT_OK {
 		return &ConnectionError{result}

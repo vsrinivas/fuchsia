@@ -116,7 +116,7 @@ if err != nil {
 	return err
 }
 if handle.IsValid() {
-	handleOwner := bindings.NewMessagePipeHandleOwner(handle)
+	handleOwner := bindings.NewChannelHandleOwner(handle)
   {{$info.Identifier}} = {{template "AmpersandIfNullable" $info}}{{$info.BaseGoType}}{handleOwner}
 } else {
 {{- if $info.IsNullable}}

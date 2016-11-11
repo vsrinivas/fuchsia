@@ -38,17 +38,17 @@ struct StructWithDataPipeProducers {
 };
 
 struct StructWithSharedBuffers {
-  array<handle<shared_buffer>> handles_array;
-  array<handle<shared_buffer>>? handles_nullable_array;
-  array<handle<shared_buffer>?> nullable_handles_array;
-  array<handle<shared_buffer>?>? nullable_handles_nullable_array;
+  array<handle<vmo>> handles_array;
+  array<handle<vmo>>? handles_nullable_array;
+  array<handle<vmo>?> nullable_handles_array;
+  array<handle<vmo>?>? nullable_handles_nullable_array;
 };
 
 struct StructWithMessagePipes {
-  array<handle<message_pipe>> handles_array;
-  array<handle<message_pipe>>? handles_nullable_array;
-  array<handle<message_pipe>?> nullable_handles_array;
-  array<handle<message_pipe>?>? nullable_handles_nullable_array;
+  array<handle<channel>> handles_array;
+  array<handle<channel>>? handles_nullable_array;
+  array<handle<channel>?> nullable_handles_array;
+  array<handle<channel>?>? nullable_handles_nullable_array;
 };
 
 struct StructWithHandles {

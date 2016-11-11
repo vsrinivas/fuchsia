@@ -73,15 +73,15 @@ func (f *{{$interface.Name}}_ServiceFactory) ServiceDescription() {{DescPkg}}Ser
 	return &{{$interface.Name}}_ServiceDescription{}
 }
 
-func (f *{{$interface.Name}}_ServiceFactory) Create(messagePipe system.MessagePipeHandle) {
-	request := {{$interface.Name}}_Request{bindings.NewMessagePipeHandleOwner(messagePipe)}
+func (f *{{$interface.Name}}_ServiceFactory) Create(messagePipe system.ChannelHandle) {
+	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(messagePipe)}
 	f.Delegate.Create(request)
 }
 
-// CreateMessagePipeFor{{$interface.Name}} creates a message pipe for use with the
+// CreateChannelFor{{$interface.Name}} creates a message pipe for use with the
 // {{$interface.Name}} interface with a {{$interface.Name}}_Request on one end and a {{$interface.Name}}_Pointer on the other.
-func CreateMessagePipeFor{{$interface.Name}}() ({{$interface.Name}}_Request, {{$interface.Name}}_Pointer) {
-        r, p := bindings.CreateMessagePipeForMojoInterface()
+func CreateChannelFor{{$interface.Name}}() ({{$interface.Name}}_Request, {{$interface.Name}}_Pointer) {
+        r, p := bindings.CreateChannelForMojoInterface()
         return {{$interface.Name}}_Request(r), {{$interface.Name}}_Pointer(p)
 }
 
@@ -92,7 +92,7 @@ type {{$interface.Name}}_Proxy struct {
 
 func New{{$interface.Name}}Proxy(p {{$interface.Name}}_Pointer, waiter bindings.AsyncWaiter) *{{$interface.Name}}_Proxy {
 	return &{{$interface.Name}}_Proxy{
-		bindings.NewRouter(p.PassMessagePipe(), waiter),
+		bindings.NewRouter(p.PassChannel(), waiter),
 		bindings.NewCounter(),
 	}
 }
@@ -107,7 +107,7 @@ type {{$interface.PrivateName}}_Stub struct {
 }
 
 func New{{$interface.Name}}Stub(r {{$interface.Name}}_Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
-	connector := bindings.NewConnector(r.PassMessagePipe(), waiter)
+	connector := bindings.NewConnector(r.PassChannel(), waiter)
 	return bindings.NewStub(connector, &{{$interface.PrivateName}}_Stub{connector, impl})
 }
 

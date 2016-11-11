@@ -31,24 +31,40 @@ func TestTranslateType(t *testing.T) {
 		{"*string", &fidl_types.TypeStringType{fidl_types.StringType{Nullable: true}}},
 		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: false}}},
-		{"system.MessagePipeHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_MessagePipe, Nullable: false}}},
+		{"system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Channel, Nullable: false}}},
 		{"system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: false}}},
 		{"system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: false}}},
-		{"system.SharedBufferHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_SharedBuffer, Nullable: false}}},
+		{"system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Process, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Thread, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Event, Nullable: false}}},
+		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Port, Nullable: false}}},
 		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
-		{"*system.MessagePipeHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_MessagePipe, Nullable: true}}},
+		{"*system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Channel, Nullable: true}}},
 		{"*system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: true}}},
 		{"*system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: true}}},
-		{"*system.SharedBufferHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_SharedBuffer, Nullable: true}}},
+		{"*system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Process, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Thread, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Event, Nullable: true}}},
+		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
+			Kind: fidl_types.HandleType_Kind_Port, Nullable: true}}},
 		{"[]float32", &fidl_types.TypeArrayType{fidl_types.ArrayType{
 			FixedLength: -1, Nullable: false,
 			ElementType: &fidl_types.TypeSimpleType{fidl_types.SimpleType_Float}}}},

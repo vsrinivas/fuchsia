@@ -522,13 +522,26 @@ type HandleKind int
 
 const (
 	HandleKindUnspecified HandleKind = iota
-	HandleKindMessagePipe
+	HandleKindChannel
 	HandleKindDataPipeConsumer
 	HandleKindDataPipeProducer
-	HandleKindSharedBuffer
+	HandleKindVmo
+	HandleKindProcess
+	HandleKindThread
+	HandleKindEvent
+	HandleKindPort
 )
 
-var allHandleKinds = []HandleKind{HandleKindUnspecified, HandleKindMessagePipe, HandleKindDataPipeConsumer, HandleKindDataPipeProducer, HandleKindSharedBuffer}
+var allHandleKinds = []HandleKind{
+	HandleKindUnspecified,
+	HandleKindChannel,
+	HandleKindDataPipeConsumer,
+	HandleKindDataPipeProducer,
+	HandleKindVmo,
+	HandleKindProcess,
+	HandleKindThread,
+	HandleKindEvent,
+	HandleKindPort}
 
 // HandleTypeRef is only ever used to represent type references, never types.
 type HandleTypeRef struct {
@@ -589,14 +602,22 @@ func (h HandleTypeRef) String() string {
 	switch h.kind {
 	case HandleKindUnspecified:
 		break
-	case HandleKindMessagePipe:
-		suffix = "<message_pipe>"
+	case HandleKindChannel:
+		suffix = "<channel>"
 	case HandleKindDataPipeConsumer:
 		suffix = "<data_pipe_consumer>"
 	case HandleKindDataPipeProducer:
 		suffix = "<data_pipe_producer>"
-	case HandleKindSharedBuffer:
-		suffix = "<shared_buffer>"
+	case HandleKindVmo:
+		suffix = "<vmo>"
+	case HandleKindProcess:
+		suffix = "<process>"
+	case HandleKindThread:
+		suffix = "<thread>"
+	case HandleKindEvent:
+		suffix = "<event>"
+	case HandleKindPort:
+		suffix = "<port>"
 	default:
 		panic(fmt.Sprintf("Unrecognized handle kind %d", h.kind))
 	}

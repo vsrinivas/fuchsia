@@ -188,7 +188,7 @@ func (w *asyncWaiterWorker) runLoop() {
 			if result != system.MOJO_RESULT_OK {
 				panic(fmt.Sprintf("error waiting on waking handle: %v", result))
 			}
-			w.handles[0].(system.MessagePipeHandle).ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
+			w.handles[0].(system.ChannelHandle).ReadMessage(system.MOJO_READ_MESSAGE_FLAG_NONE)
 			w.processIncomingRequests()
 		} else if result != system.MOJO_RESULT_OK {
 			w.sendWaitResponseAndRemove(index, result, system.MojoHandleSignalsState{})
@@ -203,7 +203,7 @@ func (w *asyncWaiterWorker) runLoop() {
 // message to |wakingHandle| to wake worker from |WaitMany()| call and
 // sending request via |waitChan| and |cancelChan|.
 type asyncWaiterImpl struct {
-	wakingHandle system.MessagePipeHandle
+	wakingHandle system.ChannelHandle
 
 	// Flag shared between waiterImpl and worker that is 1 iff the worker is
 	// already notified by waiterImpl. The worker sets it to 0 as soon as
@@ -224,7 +224,7 @@ func finalizeAsyncWaiter(waiter *asyncWaiterImpl) {
 
 // newAsyncWaiter creates an asyncWaiterImpl and starts its worker goroutine.
 func newAsyncWaiter() *asyncWaiterImpl {
-	result, h0, h1 := system.GetCore().CreateMessagePipe(nil)
+	result, h0, h1 := system.GetCore().CreateChannel(nil)
 	if result != system.MOJO_RESULT_OK {
 		panic(fmt.Sprintf("can't create message pipe %v", result))
 	}

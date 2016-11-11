@@ -193,10 +193,10 @@ func TestBuiltInType(t *testing.T) {
 	expectedBuiltInTypeNames := []string{
 		"bool", "double", "float", "int8", "int16", "int32", "int64",
 		"uint8", "uint16", "uint32", "uint64", "string", "string?",
-		"handle", "handle<message_pipe>", "handle<data_pipe_producer>",
-		"handle<data_pipe_consumer>", "handle<shared_buffer>",
-		"handle?", "handle<message_pipe>?", "handle<data_pipe_producer>?",
-		"handle<data_pipe_consumer>?", "handle<shared_buffer>?"}
+		"handle", "handle<channel>", "handle<data_pipe_producer>",
+		"handle<data_pipe_consumer>", "handle<vmo>",
+		"handle?", "handle<channel>?", "handle<data_pipe_producer>?",
+		"handle<data_pipe_consumer>?", "handle<vmo>?"}
 
 	for _, name := range expectedBuiltInTypeNames {
 		if BuiltInType(name) == nil {

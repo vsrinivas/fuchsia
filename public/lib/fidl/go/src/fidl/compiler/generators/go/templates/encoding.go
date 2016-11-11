@@ -72,7 +72,7 @@ if {{$info.Identifier}} == nil {
 encoder.Finish()
 {{- end -}}
 {{- else if $info.IsInterface -}}
-if err := encoder.{{$info.WriteFunction}}({{$info.Identifier}}.PassMessagePipe()); err != nil {
+if err := encoder.{{$info.WriteFunction}}({{$info.Identifier}}.PassChannel()); err != nil {
 	return err
 }
 {{- else if $info.IsArray -}}

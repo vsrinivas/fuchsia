@@ -46,10 +46,14 @@ class HandleType(object):
     'enums': {
       'Kind': [
           ('UNSPECIFIED', 0),
-          ('MESSAGE_PIPE', 1),
+          ('CHANNEL', 1),
           ('DATA_PIPE_CONSUMER', 2),
           ('DATA_PIPE_PRODUCER', 3),
-          ('SHARED_BUFFER', 4),
+          ('VMO', 4),
+          ('PROCESS', 5),
+          ('THREAD', 6),
+          ('EVENT', 7),
+          ('PORT', 8),
         ],
     },
     'fields': [

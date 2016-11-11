@@ -40,16 +40,16 @@ type Core interface {
 	// handle to the producer and consumer of the data pipe.
 	CreateDataPipe(opts *DataPipeOptions) (MojoResult, ProducerHandle, ConsumerHandle)
 
-	// CreateMessagePipe creates a message pipe which is a bidirectional
+	// CreateChannel creates a message pipe which is a bidirectional
 	// communication channel for framed data (i.e., messages). Messages
 	// can contain plain data and/or Mojo handles. On success, it returns
 	// handles to the two endpoints of the message pipe.
-	CreateMessagePipe(opts *MessagePipeOptions) (MojoResult, MessagePipeHandle, MessagePipeHandle)
+	CreateChannel(opts *ChannelOptions) (MojoResult, ChannelHandle, ChannelHandle)
 
-	// CreateSharedBuffer creates a buffer of size numBytes that can be
+	// CreateVmo creates a buffer of size numBytes that can be
 	// shared between applications. One must call MapBuffer to access
 	// the buffer.
-	CreateSharedBuffer(opts *SharedBufferOptions, numBytes uint64) (MojoResult, SharedBufferHandle)
+	CreateVmo(opts *VmoOptions, numBytes uint64) (MojoResult, VmoHandle)
 }
 
 // coreImpl is an implementation of the Mojo system APIs.
@@ -127,25 +127,25 @@ func (impl *coreImpl) CreateDataPipe(opts *DataPipeOptions) (MojoResult, Produce
 	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(p)).ToProducerHandle(), impl.AcquireNativeHandle(MojoHandle(c)).ToConsumerHandle()
 }
 
-func (impl *coreImpl) CreateMessagePipe(opts *MessagePipeOptions) (MojoResult, MessagePipeHandle, MessagePipeHandle) {
+func (impl *coreImpl) CreateChannel(opts *ChannelOptions) (MojoResult, ChannelHandle, ChannelHandle) {
 
 	var flags uint32
 	if opts != nil {
 		flags = uint32(opts.Flags)
 	}
 	impl.mu.Lock()
-	r, handle0, handle1 := sysImpl.CreateMessagePipe(flags)
+	r, handle0, handle1 := sysImpl.CreateChannel(flags)
 	impl.mu.Unlock()
-	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(handle0)).ToMessagePipeHandle(), impl.AcquireNativeHandle(MojoHandle(handle1)).ToMessagePipeHandle()
+	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(handle0)).ToChannelHandle(), impl.AcquireNativeHandle(MojoHandle(handle1)).ToChannelHandle()
 }
 
-func (impl *coreImpl) CreateSharedBuffer(opts *SharedBufferOptions, numBytes uint64) (MojoResult, SharedBufferHandle) {
+func (impl *coreImpl) CreateVmo(opts *VmoOptions, numBytes uint64) (MojoResult, VmoHandle) {
 	var flags uint32
 	if opts != nil {
 		flags = uint32(opts.Flags)
 	}
 	impl.mu.Lock()
-	r, handle := sysImpl.CreateSharedBuffer(flags, numBytes)
+	r, handle := sysImpl.CreateVmo(flags, numBytes)
 	impl.mu.Unlock()
-	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(handle)).ToSharedBufferHandle()
+	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(handle)).ToVmoHandle()
 }

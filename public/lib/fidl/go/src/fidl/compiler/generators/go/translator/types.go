@@ -72,14 +72,23 @@ func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goTyp
 		panic("Unknown handle type. This should never happen.")
 	case fidl_types.HandleType_Kind_Unspecified:
 		goType = "system.Handle"
-	case fidl_types.HandleType_Kind_MessagePipe:
-		goType = "system.MessagePipeHandle"
+	case fidl_types.HandleType_Kind_Channel:
+		goType = "system.ChannelHandle"
 	case fidl_types.HandleType_Kind_DataPipeConsumer:
 		goType = "system.ConsumerHandle"
 	case fidl_types.HandleType_Kind_DataPipeProducer:
 		goType = "system.ProducerHandle"
-	case fidl_types.HandleType_Kind_SharedBuffer:
-		goType = "system.SharedBufferHandle"
+	case fidl_types.HandleType_Kind_Vmo:
+		goType = "system.VmoHandle"
+	// TODO(vardhan): Fix the following types to not use generic |system.Handle|.
+	case fidl_types.HandleType_Kind_Process:
+		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_Thread:
+		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_Event:
+		goType = "system.Handle"
+	case fidl_types.HandleType_Kind_Port:
+		goType = "system.Handle"
 	}
 	if mojomType.Nullable {
 		goType = "*" + goType

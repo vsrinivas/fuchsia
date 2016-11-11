@@ -39,12 +39,12 @@ struct RectPair {
 struct EmptyStruct {};
 
 struct HandleStruct {
-  handle<message_pipe>? h;
-  array<handle<message_pipe>> array_h;
+  handle<channel>? h;
+  array<handle<channel>> array_h;
 };
 
 struct NullableHandleStruct {
-  handle<message_pipe>? h;
+  handle<channel>? h;
   int32 data = 1234;
 };
 
@@ -67,22 +67,30 @@ struct NoDefaultFieldValues {
   double f10;
   string f11;
   string? f12;
-  handle<message_pipe> f13;
+  handle<channel> f13;
   handle<data_pipe_consumer> f14;
   handle<data_pipe_producer> f15;
-  handle<message_pipe>? f16;
+  handle<channel>? f16;
   handle<data_pipe_consumer>? f17;
   handle<data_pipe_producer>? f18;
   handle f19;
   handle? f20;
-  handle<shared_buffer> f21;
-  handle<shared_buffer>? f22;
+  handle<vmo> f21;
+  handle<vmo>? f22;
   array<string> f23;
   array<string?> f24;
   array<string>? f25;
   array<string?>? f26;
   EmptyStruct f27;
   EmptyStruct? f28;
+  handle<process> f29;
+  handle<process>? f30;
+  handle<thread> f31;
+  handle<thread>? f32;
+  handle<event> f33;
+  handle<event>? f34;
+  handle<port> f35;
+  handle<port>? f36;
 };
 
 // Used to verify that struct fields with an explicit default value
@@ -321,7 +329,7 @@ struct MultiVersionStruct {
   [MinVersion=1] Rect? f_rect;
   [MinVersion=3] string? f_string;
   [MinVersion=5] array<int8>? f_array;
-  [MinVersion=7] handle<message_pipe>? f_message_pipe;
+  [MinVersion=7] handle<channel>? f_message_pipe;
   [MinVersion=7] bool f_bool;
   [MinVersion=9] int16 f_int16;
 };
@@ -353,7 +361,7 @@ struct MultiVersionStructV7 {
   [MinVersion=1] Rect? f_rect;
   [MinVersion=3] string? f_string;
   [MinVersion=5] array<int8>? f_array;
-  [MinVersion=7] handle<message_pipe>? f_message_pipe;
+  [MinVersion=7] handle<channel>? f_message_pipe;
   [MinVersion=7] bool f_bool;
 };
 
@@ -396,6 +404,6 @@ struct ArrayOfArrays {
 };
 
 struct StructWithNullableHandles {
-  handle<message_pipe>? h;
-  array<handle<message_pipe>?> array_h;
+  handle<channel>? h;
+  array<handle<channel>?> array_h;
 };

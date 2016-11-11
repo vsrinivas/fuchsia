@@ -52,13 +52,13 @@ type UntypedHandle interface {
 	// and invalidates this UntypedHandle representation.
 	ToProducerHandle() ProducerHandle
 
-	// ToMessagePipeHandle returns the underlying handle as a MessagePipeHandle
+	// ToChannelHandle returns the underlying handle as a ChannelHandle
 	// and invalidates this UntypedHandle representation.
-	ToMessagePipeHandle() MessagePipeHandle
+	ToChannelHandle() ChannelHandle
 
-	// ToSharedBufferHandle returns the underlying handle as a
-	// SharedBufferHandle and invalidates this UntypedHandle representation.
-	ToSharedBufferHandle() SharedBufferHandle
+	// ToVmoHandle returns the underlying handle as a
+	// VmoHandle and invalidates this UntypedHandle representation.
+	ToVmoHandle() VmoHandle
 }
 
 // finalizeHandle closes handles that becomes unreachable in runtime.
@@ -154,14 +154,14 @@ func (h *untypedHandleImpl) ToProducerHandle() ProducerHandle {
 	return handle
 }
 
-func (h *untypedHandleImpl) ToMessagePipeHandle() MessagePipeHandle {
+func (h *untypedHandleImpl) ToChannelHandle() ChannelHandle {
 	handle := &messagePipe{h.baseHandle}
 	runtime.SetFinalizer(handle, finalizeHandle)
 	h.invalidate()
 	return handle
 }
 
-func (h *untypedHandleImpl) ToSharedBufferHandle() SharedBufferHandle {
+func (h *untypedHandleImpl) ToVmoHandle() VmoHandle {
 	handle := &sharedBuffer{h.baseHandle}
 	runtime.SetFinalizer(handle, finalizeHandle)
 	h.invalidate()

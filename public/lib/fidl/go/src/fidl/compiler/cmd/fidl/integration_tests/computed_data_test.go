@@ -591,9 +591,9 @@ func TestStructsComputedData(t *testing.T) {
 		array<int8>?  f5;
 		handle<data_pipe_producer>?   f6;
 		array<int8, 5>?  f7;
-		handle<message_pipe>?   f8;
+		handle<channel>?   f8;
 		MyInterface? f9;
-		handle<shared_buffer>?   f10;
+		handle<vmo>?   f10;
 		MyInterface&? f11;
 	};`
 

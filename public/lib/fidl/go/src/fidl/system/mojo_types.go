@@ -18,8 +18,8 @@ type MojoReadMessageFlags uint32
 type MojoWriteDataFlags uint32
 type MojoReadDataFlags uint32
 type MojoCreateDataPipeOptionsFlags uint32
-type MojoCreateMessagePipeOptionsFlags uint32
-type MojoCreateSharedBufferOptionsFlags uint32
+type MojoCreateChannelOptionsFlags uint32
+type MojoCreateVmoOptionsFlags uint32
 type MojoDuplicateBufferHandleOptionsFlags uint32
 type MojoMapBufferFlags uint32
 type MojoBufferInformationFlags uint32
@@ -66,9 +66,9 @@ const (
 	MOJO_WRITE_DATA_FLAG_ALL_OR_NONE MojoWriteDataFlags = 1 << 0
 
 	MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE    MojoCreateDataPipeOptionsFlags    = 0
-	MOJO_CREATE_MESSAGE_PIPE_OPTIONS_FLAG_NONE MojoCreateMessagePipeOptionsFlags = 0
+	MOJO_CREATE_MESSAGE_PIPE_OPTIONS_FLAG_NONE MojoCreateChannelOptionsFlags = 0
 
-	MOJO_CREATE_SHARED_BUFFER_OPTIONS_FLAG_NONE    MojoCreateSharedBufferOptionsFlags    = 0
+	MOJO_CREATE_SHARED_BUFFER_OPTIONS_FLAG_NONE    MojoCreateVmoOptionsFlags    = 0
 	MOJO_DUPLICATE_BUFFER_HANDLE_OPTIONS_FLAG_NONE MojoDuplicateBufferHandleOptionsFlags = 0
 	MOJO_MAP_BUFFER_FLAG_NONE                      MojoMapBufferFlags                    = 0
 	MOJO_BUFFER_INFORMATION_FLAG_NONE              MojoBufferInformationFlags            = 0
@@ -110,15 +110,15 @@ type DataPipeOptions struct {
 	Capacity uint32
 }
 
-// MessagePipeOptions is used to specify creation parameters for a message pipe.
-type MessagePipeOptions struct {
-	Flags MojoCreateMessagePipeOptionsFlags
+// ChannelOptions is used to specify creation parameters for a message pipe.
+type ChannelOptions struct {
+	Flags MojoCreateChannelOptionsFlags
 }
 
-// SharedBufferOptions is used to specify creation parameters for a
+// VmoOptions is used to specify creation parameters for a
 // shared buffer.
-type SharedBufferOptions struct {
-	Flags MojoCreateSharedBufferOptionsFlags
+type VmoOptions struct {
+	Flags MojoCreateVmoOptionsFlags
 }
 
 // DuplicateBufferHandleOptions is used to specify parameters in

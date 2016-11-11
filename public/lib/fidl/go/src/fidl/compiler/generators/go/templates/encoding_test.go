@@ -416,7 +416,7 @@ func TestEncodingEnumFieldEncoding(t *testing.T) {
 }
 
 func TestEncodingInterfaceFieldEncoding(t *testing.T) {
-	expected := `if err := encoder.WriteInterface(s.IntField.PassMessagePipe()); err != nil {
+	expected := `if err := encoder.WriteInterface(s.IntField.PassChannel()); err != nil {
 	return err
 }`
 
@@ -433,7 +433,7 @@ func TestEncodingNullableInterfaceFieldEncoding(t *testing.T) {
 	expected := `if s.IntField == nil {
 	encoder.WriteInvalidInterface()
 } else {
-	if err := encoder.WriteInterface(s.IntField.PassMessagePipe()); err != nil {
+	if err := encoder.WriteInterface(s.IntField.PassChannel()); err != nil {
 		return err
 	}
 }`
@@ -449,7 +449,7 @@ func TestEncodingNullableInterfaceFieldEncoding(t *testing.T) {
 }
 
 func TestEncodingInterfaceRequestFieldEncoding(t *testing.T) {
-	expected := `if err := encoder.WriteHandle(s.IntField.PassMessagePipe()); err != nil {
+	expected := `if err := encoder.WriteHandle(s.IntField.PassChannel()); err != nil {
 	return err
 }`
 
@@ -467,7 +467,7 @@ func TestEncodingNullableInterfaceRequestFieldEncoding(t *testing.T) {
 	expected := `if s.IntField == nil {
 	encoder.WriteInvalidHandle()
 } else {
-	if err := encoder.WriteHandle(s.IntField.PassMessagePipe()); err != nil {
+	if err := encoder.WriteHandle(s.IntField.PassChannel()); err != nil {
 		return err
 	}
 }`

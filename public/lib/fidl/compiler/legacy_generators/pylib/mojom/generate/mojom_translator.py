@@ -737,21 +737,28 @@ class FileTranslator(object):
     """
     handle_mojom_types = {
         fidl_types_fidl.HandleType.Kind.UNSPECIFIED: module.HANDLE,
-        fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE: module.MSGPIPE,
+        fidl_types_fidl.HandleType.Kind.CHANNEL: module.CHANNEL,
         fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER: module.DCPIPE,
         fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER: module.DPPIPE,
-        fidl_types_fidl.HandleType.Kind.SHARED_BUFFER: module.SHAREDBUFFER,
+        fidl_types_fidl.HandleType.Kind.VMO: module.VMO,
+        fidl_types_fidl.HandleType.Kind.PROCESS: module.PROCESS,
+        fidl_types_fidl.HandleType.Kind.THREAD: module.THREAD,
+        fidl_types_fidl.HandleType.Kind.EVENT: module.EVENT,
+        fidl_types_fidl.HandleType.Kind.PORT: module.PORT,
     }
 
     nullable_handle_mojom_types = {
         fidl_types_fidl.HandleType.Kind.UNSPECIFIED: module.NULLABLE_HANDLE,
-        fidl_types_fidl.HandleType.Kind.MESSAGE_PIPE: module.NULLABLE_MSGPIPE,
+        fidl_types_fidl.HandleType.Kind.CHANNEL: module.NULLABLE_CHANNEL,
         fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER:
         module.NULLABLE_DCPIPE,
         fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER:
         module.NULLABLE_DPPIPE,
-        fidl_types_fidl.HandleType.Kind.SHARED_BUFFER:
-        module.NULLABLE_SHAREDBUFFER,
+        fidl_types_fidl.HandleType.Kind.VMO: module.NULLABLE_VMO,
+        fidl_types_fidl.HandleType.Kind.PROCESS: module.NULLABLE_PROCESS,
+        fidl_types_fidl.HandleType.Kind.THREAD: module.NULLABLE_THREAD,
+        fidl_types_fidl.HandleType.Kind.EVENT: module.NULLABLE_EVENT,
+        fidl_types_fidl.HandleType.Kind.PORT: module.NULLABLE_PORT,
     }
 
     if mojom_type.handle_type.nullable:

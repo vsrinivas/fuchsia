@@ -13,8 +13,8 @@ import "sample_import.fidl";
 
 struct Request {
   int32 x;
-  handle<message_pipe>? pipe;
-  array<handle<message_pipe>>? more_pipes;
+  handle<channel>? pipe;
+  array<handle<channel>>? more_pipes;
 
   // Interfaces can be used as members.
   imported.ImportedInterface? obj;
@@ -22,7 +22,7 @@ struct Request {
 
 struct Response {
   int32 x;
-  handle<message_pipe>? pipe;
+  handle<channel>? pipe;
 };
 
 [ServiceName="sample::NamedObject"]
@@ -32,7 +32,7 @@ interface NamedObject {
 };
 
 interface Factory {
-  DoStuff(Request request, handle<message_pipe>? pipe)
+  DoStuff(Request request, handle<channel>? pipe)
       => (Response response, string text);
   DoStuff2(handle<data_pipe_consumer> pipe) => (string text);
   CreateNamedObject(NamedObject& obj);

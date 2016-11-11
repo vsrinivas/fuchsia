@@ -29,13 +29,21 @@ _kind_to_type = {
   mojom.HANDLE:                '_descriptor.TYPE_HANDLE',
   mojom.DCPIPE:                '_descriptor.TYPE_HANDLE',
   mojom.DPPIPE:                '_descriptor.TYPE_HANDLE',
-  mojom.MSGPIPE:               '_descriptor.TYPE_HANDLE',
-  mojom.SHAREDBUFFER:          '_descriptor.TYPE_HANDLE',
+  mojom.CHANNEL:               '_descriptor.TYPE_HANDLE',
+  mojom.VMO:                   '_descriptor.TYPE_HANDLE',
+  mojom.PROCESS:               '_descriptor.TYPE_HANDLE',
+  mojom.THREAD:                '_descriptor.TYPE_HANDLE',
+  mojom.EVENT:                 '_descriptor.TYPE_HANDLE',
+  mojom.PORT:                  '_descriptor.TYPE_HANDLE',
   mojom.NULLABLE_HANDLE:       '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_DCPIPE:       '_descriptor.TYPE_NULLABLE_HANDLE',
   mojom.NULLABLE_DPPIPE:       '_descriptor.TYPE_NULLABLE_HANDLE',
-  mojom.NULLABLE_MSGPIPE:      '_descriptor.TYPE_NULLABLE_HANDLE',
-  mojom.NULLABLE_SHAREDBUFFER: '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_CHANNEL:      '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_VMO:          '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_PROCESS:      '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_THREAD:       '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_EVENT:        '_descriptor.TYPE_NULLABLE_HANDLE',
+  mojom.NULLABLE_PORT:         '_descriptor.TYPE_NULLABLE_HANDLE'
 }
 
 # int64 integers are not handled by array.array. int64/uint64 array are
