@@ -276,7 +276,8 @@ static void validate_memset(void)
 
                 int comp = memcmp(dst, dst2, maxsize * 2);
                 if (comp != 0) {
-                    printf("error! align %zu, c 0x%hhx, size %zu\n", dstalign, c, size);
+                    printf("error! align %zu, c 0x%hhx, size %zu\n",
+                           dstalign, (unsigned char)c, size);
                 }
             }
         }
@@ -342,4 +343,3 @@ STATIC_COMMAND_END(stringtests);
 
 APP_START(stringtests)
 APP_END
-

@@ -247,7 +247,7 @@ static_assert(UINTMAX_C(0xffffffffffffffff) == mxtl::integral_constant<uintmax_t
         pcheck(pri);                                                    \
         scheck(scn);                                                    \
         char buf[256] = {0};                                            \
-        ASSERT_GT(snprintf(buf, sizeof(buf), "%" pri, max), 1, "");     \
+        ASSERT_GT(snprintf(buf, sizeof(buf), "%" pri, (type)max), 1, ""); \
         type n = (type)0;                                               \
         ASSERT_EQ(sscanf(buf, "%" scn, &n), 1, "");                     \
         ASSERT_EQ(n, max, "");                                          \

@@ -466,7 +466,7 @@ void apic_io_debug(void)
         printf("IO APIC idx %u:\n", i);
         printf("  id: %08x\n", apic->desc.apic_id);
         printf("  version: %08hhx\n", apic->version);
-        printf("  entries: %08hhx\n", apic->max_redirection_entry + 1);
+        printf("  entries: %08x\n", apic->max_redirection_entry + 1U);
         for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
             uint32_t global_irq = apic->desc.global_irq_base + j;
             uint64_t reg = apic_io_read_redirection_entry(apic, global_irq);
