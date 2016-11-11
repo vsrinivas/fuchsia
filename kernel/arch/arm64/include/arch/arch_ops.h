@@ -108,7 +108,7 @@ static inline void set_current_thread(struct thread *t)
 static inline uint arch_curr_cpu_num(void)
 {
     uint64_t mpidr =  ARM64_READ_SYSREG(mpidr_el1);
-    return ((mpidr & ((1U << SMP_CPU_ID_BITS) - 1)) >> 8 << SMP_CPU_CLUSTER_SHIFT) | (mpidr & 0xff);
+    return (uint)((mpidr & ((1U << SMP_CPU_ID_BITS) - 1)) >> 8 << SMP_CPU_CLUSTER_SHIFT) | ((uint)mpidr & 0xff);
 }
 static inline uint arch_max_num_cpus(void)
 {
