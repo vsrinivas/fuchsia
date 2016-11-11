@@ -15,7 +15,7 @@ module mozart;
 // the view's intended container.
 //
 // TODO(jeffbrown): This implementation is a temporary placeholder until
-// we extend Mojo to provide a way to create tokens which cannot be forged.
+// we provide a way to create tokens which cannot be forged.
 struct ViewToken {
   uint32 value;
 };

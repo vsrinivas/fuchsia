@@ -13,7 +13,7 @@ module mozart;
 // Scene tokens should be kept secret.
 //
 // TODO(jeffbrown): This implementation is a temporary placeholder until
-// we extend Mojo to provide a way to create tokens which cannot be forged.
+// we provide a way to create tokens which cannot be forged.
 struct SceneToken {
   uint32 value;
 };

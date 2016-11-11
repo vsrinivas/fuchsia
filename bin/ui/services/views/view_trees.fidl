@@ -36,8 +36,8 @@ import "apps/mozart/services/views/view_tree_token.fidl";
 //
 // GETTING SERVICES
 //
-// The view tree's |mojo::ServiceProvider| offers access to many services which
-// are not directly expressed by the |ViewTree| interface itself, such
+// The view tree's |modular::ServiceProvider| offers access to many services
+// which are not directly expressed by the |ViewTree| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
 // For example, perform the following actions to dispatch input events:

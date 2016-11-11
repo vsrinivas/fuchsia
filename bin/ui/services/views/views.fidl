@@ -91,7 +91,7 @@ import "apps/mozart/services/views/view_token.fidl";
 //
 // GETTING SERVICES
 //
-// The view's |mojo::ServiceProvider| offers access to many services which
+// The view's |modular::ServiceProvider| offers access to many services which
 // are not directly expressed by the |View| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //

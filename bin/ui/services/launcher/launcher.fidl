@@ -6,7 +6,7 @@ module mozart;
 
 import "apps/mozart/services/views/view_token.fidl";
 
-// A way to run the launcher as a mojo service (as opposed to via command-line
+// A way to run the launcher as a service (as opposed to via command-line
 // arguments).
 [ServiceName="mozart::Launcher"]
 interface Launcher {

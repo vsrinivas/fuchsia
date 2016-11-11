@@ -14,7 +14,7 @@ module mozart;
 // trusted services.
 //
 // TODO(jeffbrown): This implementation is a temporary placeholder until
-// we extend Mojo to provide a way to create tokens which cannot be forged.
+// we provide a way to create tokens which cannot be forged.
 struct ViewTreeToken {
   uint32 value;
 };
