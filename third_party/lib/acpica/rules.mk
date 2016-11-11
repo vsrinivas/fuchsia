@@ -7,9 +7,11 @@ KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 # Disable these two warnings to prevent ACPICA from cluttering the
 # build output
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
-MODULE_CFLAGS += -Wno-discarded-qualifiers
+MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-format-signedness
+else
+MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
 endif
-MODULE_CFLAGS += -Wno-strict-aliasing -Wno-format-signedness -I$(LOCAL_DIR)/source/include/acpica
+MODULE_CFLAGS += -Wno-strict-aliasing -I$(LOCAL_DIR)/source/include/acpica
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/source/components/tables/tbdata.c \
