@@ -27,8 +27,8 @@ interface TraceProvider {
   //
   // If the trace provider fills all of its buffers before they can be recycled,
   // it should stop tracing altogether.
-  Start(handle<shared_buffer> initial_buffer,
-    handle<shared_buffer>? next_buffer,
+  Start(handle<vmo> initial_buffer,
+    handle<vmo>? next_buffer,
     array<string> categories);
 
   // Informs the provider that the trace manager has finished consuming the
