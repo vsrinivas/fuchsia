@@ -24,7 +24,11 @@ MODULE_NAME := kilo
 
 MODULE_LIBS := ulib/mxio ulib/musl
 
-MODULE_CFLAGS := -Wno-discarded-qualifiers
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+MODULE_CFLAGS += -Wno-discarded-qualifiers
+else
+MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
+endif
 
 USER_MANIFEST_LINES += src/kilo.c=$(LOCAL_DIR)/kilo.c
 
