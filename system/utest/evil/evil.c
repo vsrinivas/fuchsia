@@ -129,7 +129,7 @@ void* blaster(void* arg) {
             UNLOCK();
             if (info->bucket[n] == NULL) {
                 printf("blaster %d malloc failed %d\n", info->n, n);
-                *((unsigned*)0) = 1;
+                __builtin_trap();
             }
             memset(info->bucket[n], info->n * n, info->size[n]);
         } else {
@@ -139,7 +139,7 @@ void* blaster(void* arg) {
             for (int i = 0; i < sz; i++) {
                 if (x[i] != val) {
                     printf("blaster %d bad bucket %d\n", info->n, n);
-                    *((unsigned*)0) = 1;
+                    __builtin_trap();
                 }
             }
             if (rnum(1000) < 750) {

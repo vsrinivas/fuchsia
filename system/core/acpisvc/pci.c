@@ -19,7 +19,7 @@
 #define PCIE_MAX_FUNCTIONS_PER_DEVICE 8
 #define PCIE_EXTENDED_CONFIG_SIZE 4096
 
-#define PANIC_UNIMPLEMENTED *(uint8_t*)0 = 1
+#define PANIC_UNIMPLEMENTED __builtin_trap()
 
 /* Helper routine for translating IRQ routing tables into usable form
  *

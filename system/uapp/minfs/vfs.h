@@ -116,7 +116,7 @@ void bcache_invalidate(bcache_t* bc);
 
 // General Utilities
 
-#define panic(fmt...) do { fprintf(stderr, fmt); *((int*) 0) = 0; } while (0)
+#define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
 #define error(fmt...) fprintf(stderr, fmt)
 #define warn(fmt...) fprintf(stderr, fmt)
 #define info(fmt...) fprintf(stderr, fmt)
