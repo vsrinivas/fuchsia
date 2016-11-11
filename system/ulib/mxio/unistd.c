@@ -376,6 +376,7 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
     if ((io = fd_to_io(fd)) == NULL) {
         return ERR_BAD_HANDLE;
     }
+    //TODO: implement/honor close-on-exec flag
     if ((r = io->ops->clone(io, handles, types)) > 0) {
         for (int i = 0; i < r; i++) {
             types[i] |= (newfd << 16);

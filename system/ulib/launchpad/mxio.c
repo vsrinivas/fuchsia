@@ -40,6 +40,20 @@ mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
                     mxio_clone_fd(fd, target_fd, handles, types));
 }
 
+mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd) {
+    mx_handle_t handles[MXIO_MAX_HANDLES];
+    uint32_t types[MXIO_MAX_HANDLES];
+    return add_mxio(lp, handles, types,
+                    mxio_transfer_fd(fd, target_fd, handles, types));
+}
+
+mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp) {
+    mx_handle_t handles[MXIO_MAX_HANDLES];
+    uint32_t types[MXIO_MAX_HANDLES];
+    return add_mxio(lp, handles, types,
+                    mxio_clone_cwd(handles, types));
+}
+
 mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     mx_status_t status = launchpad_clone_mxio_root(lp);
     if(status == NO_ERROR) {

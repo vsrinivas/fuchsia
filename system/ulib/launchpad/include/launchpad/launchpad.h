@@ -69,6 +69,17 @@ mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp);
 // ERR_NOT_SUPPORTED if it's not possible to transfer this fd.
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
+// Attempt to transfer local descriptor fd into target_fd in the
+// new process.  Returns ERR_BAD_HANDLE if fd is not a valid fd,
+// ERR_UNAVILABLE if fd has been duplicated or is in use in an
+// io operation, or ERR_NOT_SUPPORTED if it's not possible to transfer
+// this fd.
+// Upon success, from the point of view of the calling process, the fd
+// will appear to have been closed.  The underlying "file" will continue
+// to exist until launch succeeds (and it is transfered) or fails (and
+// it is destroyed).
+mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd);
+
 // Convenience function to add all mxio handles to the launchpad.
 // This calls launchpad_clone_mxio_root and then launchpad_clone_fd for each
 // fd in the calling process.

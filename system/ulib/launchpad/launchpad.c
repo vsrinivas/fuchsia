@@ -230,21 +230,7 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
     return status;
 }
 
-mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp) {
-    mx_handle_t handles[MXIO_MAX_HANDLES];
-    uint32_t types[MXIO_MAX_HANDLES];
-    mx_status_t status = mxio_clone_cwd(handles, types);
-    if(status > 0) {
-        size_t n = status;
-        status = launchpad_add_handles(lp, status, handles, types);
-        if (status != NO_ERROR) {
-            for (size_t i = 0; i < n; ++i)
-                mx_handle_close(handles[i]);
-        }
-    }
-    return status;
-}
-
+//TODO: use transfer_fd here and eliminate mxio_pipe_half()
 mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd) {
     mx_handle_t handle;
     uint32_t id;
