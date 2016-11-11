@@ -76,3 +76,15 @@ source_set("connection") {
     "magenta:connection",
   ]
 }
+
+source_set("thread") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_thread.h",
+  ]
+
+  deps = [
+    "magenta:thread",
+  ]
+}

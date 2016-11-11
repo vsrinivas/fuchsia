@@ -60,6 +60,7 @@ source_set("magma_platform_tests") {
     "test_platform_connection.cc",
     "test_platform_device.cc",
     "test_platform_futex.cc",
+    "test_platform_thread.cc",
   ]
 
   deps = [
@@ -69,6 +70,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:futex",
+    "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/gtest",

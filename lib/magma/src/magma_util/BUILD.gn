@@ -53,6 +53,19 @@ source_set("command_buffer") {
   ]
 }
 
+source_set("thread") {
+  public_configs = [
+    ":magma_util_config",
+    "$magma_build_root:magma_src_include_config",
+  ]
+
+  sources = [
+    "thread.h",
+  ]
+
+  deps = [ "platform:thread" ]
+}
+
 source_set("system") {
   public_configs = [
     ":magma_util_config",

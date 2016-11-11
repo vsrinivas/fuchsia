@@ -79,3 +79,15 @@ source_set("connection") {
     "magenta",
   ]
 }
+
+source_set("thread") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "magenta_platform_thread.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+}
