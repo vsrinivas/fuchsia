@@ -89,6 +89,10 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += \
     -Wno-address-of-packed-member \
     -Wno-error
+# TODO(mcgrathr): This avoids complaints about the 'leaf' attribute, which
+# GCC supports as an optimization hint but Clang does not grok.  This can
+# be removed when https://llvm.org/bugs/show_bug.cgi?id=30980 is fixed.
+GLOBAL_COMPILEFLAGS += -Wno-unknown-attributes
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
