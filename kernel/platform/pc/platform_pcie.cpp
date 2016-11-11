@@ -38,7 +38,7 @@ public:
             return ERR_INVALID_ARGS;
 
         AutoLock swizzle_lock(swizzle_lock_);
-        static_assert(sizeof(swizzle_map_[dev_id][func_id]) == sizeof(map_entry));
+        static_assert(sizeof(swizzle_map_[dev_id][func_id]) == sizeof(map_entry), "");
         memcpy(&swizzle_map_[dev_id][func_id], &map_entry, sizeof(map_entry));
         return NO_ERROR;
     }

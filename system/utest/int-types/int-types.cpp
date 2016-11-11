@@ -174,9 +174,9 @@ CHECK_MIN(intptr_t, INTPTR);
 CHECK_MIN(intmax_t, INTMAX);
 
 CHECK_MIN(ptrdiff_t, PTRDIFF);
-static_assert(mxtl::is_signed<wchar_t>::value ? CHECK_MIN_TYPE(wchar_t, WCHAR) : (WCHAR_MIN == 0));
+static_assert(mxtl::is_signed<wchar_t>::value ? CHECK_MIN_TYPE(wchar_t, WCHAR) : (WCHAR_MIN == 0), "");
 
-static_assert(mxtl::is_signed<sig_atomic_t>::value ? CHECK_MIN_TYPE(sig_atomic_t, SIG_ATOMIC) : (SIG_ATOMIC_MIN == 0));
+static_assert(mxtl::is_signed<sig_atomic_t>::value ? CHECK_MIN_TYPE(sig_atomic_t, SIG_ATOMIC) : (SIG_ATOMIC_MIN == 0), "");
 
 // The INTN_C and UINTN_C macros expand into integer constants
 // "corresponding to the type int_leastN_t" and "uint_leastN_t"
