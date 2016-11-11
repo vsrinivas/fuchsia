@@ -95,7 +95,7 @@ int __signbitl(long double);
          ? (int)(__FLOAT_BITS(x) >> 31) \
          : sizeof(x) == sizeof(double) ? (int)(__DOUBLE_BITS(x) >> 63) : __signbitl(x))
 
-#define isunordered(x, y) (isnan((x)) ? ((void)(y), 1) : isnan((y)))
+#define isunordered(x, y) __builtin_isunordered(x, y)
 
 #define __ISREL_DEF(rel, op, type)                      \
     static __inline int __is##rel(type __x, type __y) { \
@@ -118,16 +118,11 @@ __ISREL_DEF(greaterequalf, >=, float_t)
 __ISREL_DEF(greaterequal, >=, double_t)
 __ISREL_DEF(greaterequall, >=, long double)
 
-#define __tg_pred_2(x, y, p)                                                               \
-    (sizeof((x) + (y)) == sizeof(float) ? p##f(x, y) : sizeof((x) + (y)) == sizeof(double) \
-                                                           ? p(x, y)                       \
-                                                           : p##l(x, y))
-
-#define isless(x, y) __tg_pred_2(x, y, __isless)
-#define islessequal(x, y) __tg_pred_2(x, y, __islessequal)
-#define islessgreater(x, y) __tg_pred_2(x, y, __islessgreater)
-#define isgreater(x, y) __tg_pred_2(x, y, __isgreater)
-#define isgreaterequal(x, y) __tg_pred_2(x, y, __isgreaterequal)
+#define isless(x, y) __builtin_isless(x, y)
+#define islessequal(x, y) __builtin_islessequal(x, y)
+#define islessgreater(x, y) __builtin_islessgreater(x, y)
+#define isgreater(x, y) __builtin_isgreater(x, y)
+#define isgreaterequal(x, y) __builtin_isgreaterequal(x, y)
 
 double acos(double);
 float acosf(float);
