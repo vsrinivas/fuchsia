@@ -13,7 +13,7 @@ import "apps/mozart/services/views/view_token.fidl";
 interface UserRunner {
   // Launches a user runner instance for a user identified by
   // |user_id|.
-  Launch(array<uint8> user_id, mozart.ViewOwner& view_owner);
+  Launch(array<uint8> user_id, string user_shell, mozart.ViewOwner& view_owner);
 };
 
 // UserRunner implementation creates an instance of this service and

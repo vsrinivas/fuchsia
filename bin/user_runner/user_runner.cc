@@ -163,13 +163,14 @@ class UserRunnerImpl : public UserRunner {
   // |UserRunner|:
   void Launch(
       fidl::Array<uint8_t> user_id,
+      const fidl::String& user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     FTL_LOG(INFO) << "UserRunnerImpl::Launch()";
 
     user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
                                                            std::move(user_id));
 
-    RunUserShell(std::move(view_owner_request));
+    RunUserShell(user_shell.get(), std::move(view_owner_request));
 
     ServiceProviderPtr environment_services;
     user_runner_scope_->GetEnvironment()->GetServices(
@@ -187,12 +188,13 @@ class UserRunnerImpl : public UserRunner {
   // |ViewProvider| interface, passes a |ViewOwner| request, gets
   // |ServiceProvider| and finally connects to UserShell.
   void RunUserShell(
+      const std::string& user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr app_services;
     launch_info->services = GetProxy(&app_services);
-    launch_info->url = "file:///system/apps/dummy_user_shell";
+    launch_info->url = user_shell;
 
     ApplicationLauncherPtr launcher;
     user_runner_scope_->GetEnvironment()->GetApplicationLauncher(

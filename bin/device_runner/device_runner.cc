@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <iostream>
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
@@ -21,6 +22,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -37,11 +39,30 @@ using fidl::InterfaceRequest;
 using fidl::String;
 using fidl::StructPtr;
 
+class Settings {
+ public:
+  explicit Settings(const ftl::CommandLine& command_line) {
+    user_shell = command_line.GetOptionValueWithDefault(
+        "user-shell", "file:///system/apps/armadillo_user_shell");
+  }
+
+  static std::string GetUsage() {
+    return R"USAGE(device_runner --user-shell=USER_SHELL
+    USER_SHELL: URL of the user shell to run.
+                Defaults to "file:///system/apps/armadillo_user_shell".)USAGE";
+  }
+
+  std::string user_shell;
+};
+
 class DeviceRunnerImpl : public DeviceRunner {
  public:
-  DeviceRunnerImpl(InterfacePtr<ApplicationLauncher> launcher,
+  DeviceRunnerImpl(const Settings& settings,
+                   InterfacePtr<ApplicationLauncher> launcher,
                    InterfaceRequest<DeviceRunner> service)
-      : launcher_(std::move(launcher)), binding_(this, std::move(service)) {}
+      : settings_(settings),
+        launcher_(std::move(launcher)),
+        binding_(this, std::move(service)) {}
 
   ~DeviceRunnerImpl() override = default;
 
@@ -57,9 +78,11 @@ class DeviceRunnerImpl : public DeviceRunner {
                                  GetProxy(&user_runner_controller_));
 
     ConnectToService(services.get(), fidl::GetProxy(&user_runner_));
-    user_runner_->Launch(to_array(username), std::move(view_owner_request));
+    user_runner_->Launch(to_array(username), settings_.user_shell,
+                         std::move(view_owner_request));
   }
 
+  Settings settings_;
   InterfacePtr<ApplicationLauncher> launcher_;
   StrongBinding<DeviceRunner> binding_;
 
@@ -74,7 +97,8 @@ class DeviceRunnerImpl : public DeviceRunner {
 
 class DeviceRunnerApp {
  public:
-  DeviceRunnerApp() : context_(ApplicationContext::CreateFromStartupInfo()) {
+  DeviceRunnerApp(const Settings& settings)
+      : context_(ApplicationContext::CreateFromStartupInfo()) {
     FTL_LOG(INFO) << "DeviceRunnerApp::DeviceRunnerApp()";
 
     auto launch_info = ApplicationLaunchInfo::New();
@@ -100,7 +124,8 @@ class DeviceRunnerApp {
     InterfacePtr<ApplicationLauncher> launcher;
     context_->environment()->GetApplicationLauncher(GetProxy(&launcher));
     InterfaceHandle<DeviceRunner> device_runner_handle;
-    new DeviceRunnerImpl(std::move(launcher), GetProxy(&device_runner_handle));
+    new DeviceRunnerImpl(settings, std::move(launcher),
+                         GetProxy(&device_runner_handle));
     device_shell_->SetDeviceRunner(std::move(device_runner_handle));
   }
 
@@ -116,8 +141,17 @@ class DeviceRunnerApp {
 
 int main(int argc, const char** argv) {
   FTL_LOG(INFO) << "device runner main";
+
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  if (command_line.HasOption("--help")) {
+    std::cout << modular::Settings::GetUsage() << std::endl;
+    return 0;
+  }
+
+  modular::Settings settings(command_line);
+
   mtl::MessageLoop loop;
-  modular::DeviceRunnerApp app;
+  modular::DeviceRunnerApp app(settings);
   loop.Run();
   return 0;
 }
