@@ -23,6 +23,7 @@
 #include <lib/crypto/global_prng.h>
 
 #include <magenta/futex_context.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -55,11 +56,12 @@ Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
     return MapU32ToHandle(handle_id);
 }
 
-mx_status_t ProcessDispatcher::Create(mxtl::StringPiece name,
+mx_status_t ProcessDispatcher::Create(mxtl::RefPtr<JobDispatcher> job,
+                                      mxtl::StringPiece name,
                                       mxtl::RefPtr<Dispatcher>* dispatcher,
                                       mx_rights_t* rights, uint32_t flags) {
     AllocChecker ac;
-    auto process = new (&ac) ProcessDispatcher(name, flags);
+    auto process = new (&ac) ProcessDispatcher(mxtl::move(job), name, flags);
     if (!ac.check())
         return ERR_NO_MEMORY;
 
@@ -72,8 +74,10 @@ mx_status_t ProcessDispatcher::Create(mxtl::StringPiece name,
     return NO_ERROR;
 }
 
-ProcessDispatcher::ProcessDispatcher(mxtl::StringPiece name, uint32_t flags)
-    : state_tracker_(0u) {
+ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
+                                     mxtl::StringPiece name,
+                                     uint32_t flags)
+    : job_(mxtl::move(job)), state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 
     // Add ourself to the global process list, generating an ID at the same time.
@@ -266,6 +270,10 @@ void ProcessDispatcher::AllHandlesClosed() {
 
     // last handle going away acts as a kill to the process object
     Kill();
+}
+
+mx_koid_t ProcessDispatcher::get_inner_koid() const {
+    return job_ ? job_->get_koid() : 0ull;
 }
 
 void ProcessDispatcher::SetState(State s) {

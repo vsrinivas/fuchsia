@@ -11,6 +11,7 @@
 #include <kernel/auto_lock.h>
 #include <lib/console.h>
 
+#include <magenta/job_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 
 void DumpProcessListKeyMap() {
@@ -115,15 +116,16 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #mp #ev #ip #dp [name]\n", "id");
+    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #mp #ev #ip #dp [  job:name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
-        printf("%8" PRIu64 "-%c %3u %4zu %s  [%s]\n",
+        printf("%8" PRIu64 "-%c %3u %4zu %s  [%5" PRIu64 ":%s]\n",
                process.get_koid(),
                StateChar(process),
                process.ThreadCount(),
                process.PageCount(),
                DumpHandleTypeCount_NoLock(process),
+               process.get_inner_koid(),
                process.name().data());
     }
 }

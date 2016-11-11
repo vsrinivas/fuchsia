@@ -14,7 +14,7 @@ namespace mx {
 mx_status_t process::create(const job& job, const char* name, uint32_t name_len, uint32_t flags,
                             process* result) {
     mx_handle_t h;
-    mx_status_t status = mx_process_create(name, name_len, flags, &h);
+    mx_status_t status = mx_process_create(job.get(), name, name_len, flags, &h);
     if (status < 0) {
         result->reset(MX_HANDLE_INVALID);
     } else {

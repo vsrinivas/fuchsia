@@ -168,7 +168,8 @@ syscall interrupt_complete
 # Processes
 
 syscall process_create
-    (name: char[name_len] IN, name_len: uint32_t, flags: uint32_t, out: mx_handle_t[1] OUT)
+    (job: mx_handle_t, name: char[name_len] IN, name_len: uint32_t, flags: uint32_t,
+        out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 syscall process_start

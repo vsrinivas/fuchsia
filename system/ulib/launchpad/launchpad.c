@@ -91,9 +91,8 @@ mx_status_t launchpad_create(mx_handle_t job,
                              const char* name, launchpad_t** result) {
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
 
-    // TODO:cpu. use the process creation syscall that takes a job.
     mx_handle_t proc;
-    mx_status_t status = mx_process_create(name, name_len, 0, &proc);
+    mx_status_t status = mx_process_create(job, name, name_len, 0, &proc);
     if (status < 0)
         return status;
 
@@ -103,6 +102,7 @@ mx_status_t launchpad_create(mx_handle_t job,
         goto cleanup;
 
     if (job > 0) {
+        // TODO(cpu): remove the |job| check.
         status = launchpad_add_handle(lp, job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
         if (status != NO_ERROR)
             goto cleanup;

@@ -177,9 +177,14 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
     return NO_ERROR;
 }
 
-mx_status_t sys_process_create(user_ptr<const char> name, uint32_t name_len,
+mx_status_t sys_process_create(mx_handle_t job_handle,
+                               user_ptr<const char> name, uint32_t name_len,
                                uint32_t flags, user_ptr<mx_handle_t> out) {
     LTRACEF("name %p, flags 0x%x\n", name.get(), flags);
+
+    // currently, the only valid flag value is 0
+    if (flags != 0)
+        return ERR_INVALID_ARGS;
 
     // copy out the name
     char buf[MX_MAX_NAME_LEN];
@@ -189,14 +194,21 @@ mx_status_t sys_process_create(user_ptr<const char> name, uint32_t name_len,
         return result;
     LTRACEF("name %s\n", buf);
 
-    // currently, the only valid flag value is 0
-    if (flags != 0)
-        return ERR_INVALID_ARGS;
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<JobDispatcher> job;
+    if (job_handle != MX_HANDLE_INVALID) {
+        // TODO: don't accept invalid handle here.
+        // TODO: define process creation job rights.
+        auto status = up->GetDispatcher(job_handle, &job, MX_RIGHT_WRITE);
+        if (status != NO_ERROR)
+            return status;
+    }
 
     // create a new process dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t res = ProcessDispatcher::Create(sp, &dispatcher, &rights, flags);
+    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, &dispatcher, &rights, flags);
     if (res != NO_ERROR)
         return res;
 
@@ -208,7 +220,6 @@ mx_status_t sys_process_create(user_ptr<const char> name, uint32_t name_len,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    auto up = ProcessDispatcher::GetCurrent();
     if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 

@@ -9,7 +9,8 @@ process_create - create a new process
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_process_create(const char* name, uint32_t name_len,
+mx_status_t mx_process_create(mx_handle_t job,
+                              const char* name, uint32_t name_len,
                               uint32_t flags, mx_handle_t* out);
 
 ```

@@ -117,8 +117,9 @@ MAGENTA_SYSCALL_DEF(4, 4, 44, mx_status_t, thread_write_state, mx_handle_t handl
 
 // Processes
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 50, void, process_exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(4, 4, 51, mx_handle_t, process_create, USER_PTR(const char) name,
-                    uint32_t name_len, uint32_t options, USER_PTR(mx_handle_t) out)
+MAGENTA_SYSCALL_DEF(5, 5, 51, mx_handle_t, process_create, mx_handle_t job,
+                    USER_PTR(const char) name, uint32_t name_len, uint32_t options,
+                    USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(6, 6, 52, mx_status_t, process_start, mx_handle_t process_handle,
                     mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack,
                     mx_handle_t arg_handle, uintptr_t arg2)

@@ -164,7 +164,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     const char* filename = o.value[OPTION_FILENAME];
     mx_handle_t proc;
-    status = mx_process_create(filename, strlen(filename), 0, &proc);
+    status = mx_process_create(job, filename, strlen(filename), 0, &proc);
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
 

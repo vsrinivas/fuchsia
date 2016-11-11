@@ -13,6 +13,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/object.h>
@@ -28,7 +29,8 @@
 class ProcessDispatcher : public Dispatcher
                         , public mxtl::DoublyLinkedListable<ProcessDispatcher*> {
 public:
-    static mx_status_t Create(mxtl::StringPiece name,
+    static mx_status_t Create(mxtl::RefPtr<JobDispatcher> job,
+                              mxtl::StringPiece name,
                               mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights, uint32_t flags);
 
@@ -42,6 +44,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PROCESS; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final { return AllHandlesClosed(); }
+    mx_koid_t get_inner_koid() const final;
 
     ~ProcessDispatcher() final;
 
@@ -119,6 +122,7 @@ public:
     StateTracker* state_tracker() { return &state_tracker_; }
     State state() const { return state_; }
     mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
+    mxtl::RefPtr<JobDispatcher> job() { return job_; }
     const mxtl::StringPiece name() const { return name_; }
 
     // Starts the process running
@@ -168,7 +172,7 @@ private:
     friend void DumpProcessHandles(mx_koid_t id);
     friend void KillProcess(mx_koid_t id);
 
-    ProcessDispatcher(mxtl::StringPiece name, uint32_t flags);
+    ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags);
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
@@ -204,6 +208,9 @@ private:
 
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;
+
+    // the enclosing job
+    mxtl::RefPtr<JobDispatcher> job_;
 
     // our list of handles
     mutable Mutex handle_table_lock_; // protects |handles_|.
