@@ -15,6 +15,8 @@ static bool InitializedEmpty(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(0);
+    EXPECT_EQ(bitmap.size(), 0U, "get size");
+
     EXPECT_TRUE(bitmap.GetOne(0), "get one bit");
     EXPECT_EQ(bitmap.SetOne(0), ERR_INVALID_ARGS, "set one bit");
     EXPECT_EQ(bitmap.ClearOne(0), ERR_INVALID_ARGS, "clear one bit");
@@ -31,6 +33,8 @@ static bool SingleBit(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
+
     EXPECT_FALSE(bitmap.GetOne(2), "get bit before setting");
 
     ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
@@ -46,6 +50,7 @@ static bool SetTwice(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
     EXPECT_TRUE(bitmap.GetOne(2), "get bit after setting");
@@ -60,6 +65,7 @@ static bool ClearTwice(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     ASSERT_EQ(bitmap.SetOne(2), NO_ERROR, "set bit");
 
@@ -76,6 +82,7 @@ static bool GetReturnArg(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     uint64_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 3, nullptr), "get bit with null");
@@ -101,6 +108,7 @@ static bool SetRange(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
 
@@ -123,6 +131,13 @@ static bool SetRange(void) {
     EXPECT_TRUE(bitmap.Get(50, 80, &first_unset), "get part of range");
     EXPECT_EQ(first_unset, 80U, "check returned arg");
 
+    EXPECT_EQ(bitmap.Scan(0, 100, true), 0U, "scan set bits out of range");
+    EXPECT_EQ(bitmap.Scan(0, 100, false), 2U, "scan cleared bits to start");
+    EXPECT_EQ(bitmap.Scan(2, 100, true), 100U, "scan set bits to end");
+    EXPECT_EQ(bitmap.Scan(2, 100, false), 2U, "scan cleared bits in set range");
+    EXPECT_EQ(bitmap.Scan(50, 80, true), 80U, "scan set bits in subrange");
+    EXPECT_EQ(bitmap.Scan(100, 200, false), 128U, "scan past end of bitmap");
+
     END_TEST;
 }
 
@@ -130,6 +145,7 @@ static bool ClearAll(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     ASSERT_EQ(bitmap.Set(0, 100), NO_ERROR, "set range");
 
@@ -150,6 +166,7 @@ static bool ClearSubrange(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
     ASSERT_EQ(bitmap.Clear(50, 80), NO_ERROR, "clear range");
@@ -175,6 +192,7 @@ static bool BoundaryArguments(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
 
     EXPECT_EQ(bitmap.Set(0, 0), NO_ERROR, "range contains no bits");
     EXPECT_EQ(bitmap.Set(5, 4), ERR_INVALID_ARGS, "max is less than off");
@@ -195,6 +213,8 @@ static bool SetOutOfOrder(void) {
     BEGIN_TEST;
 
     RawBitmap bitmap(128);
+    EXPECT_EQ(bitmap.size(), 128U, "get size");
+
     EXPECT_EQ(bitmap.SetOne(0x64), NO_ERROR, "setting later");
     EXPECT_EQ(bitmap.SetOne(0x60), NO_ERROR, "setting earlier");
 

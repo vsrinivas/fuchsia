@@ -78,27 +78,40 @@ void RawBitmap::Reset(size_t size) {
     ClearAll();
 }
 
-bool RawBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first) const {
-    if (bitoff >= bitmax || bitmax > size_) {
-        return true;
+uint64_t RawBitmap::Scan(uint64_t bitoff, uint64_t bitmax, bool is_set) const {
+    bitmax = mxtl::min(bitmax, size_);
+    if (bitoff >= bitmax) {
+        return bitmax;
     }
     size_t first_idx = FirstIdx(bitoff);
     size_t last_idx = LastIdx(bitmax);
     size_t i = first_idx;
     uint64_t value = 0;
-    if (!first) {
-        first = &value;
-    }
-    for (; i <= last_idx; ++i) {
-        value = ~GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
-        value |= bits_[i];
-        value = ~value;
+    for (i = first_idx; i <= last_idx; ++i) {
+        value = GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
+        if (is_set) {
+            // If is_set=true, invert the mask, OR it with the value, and invert
+            // it again to hopefully get all zeros.
+            value = ~(~value | bits_[i]);
+        } else {
+            // If is_set=false, just AND the mask with the value to hopefully
+            // get all zeros.
+            value &= bits_[i];
+        }
         if (value != 0) {
             break;
         }
     }
-    *first = mxtl::min(bitmax, CountZeros(i, value));
-    return *first == bitmax;
+    return mxtl::min(bitmax, CountZeros(i, value));
+}
+
+bool RawBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first) const {
+    bitmax = mxtl::min(bitmax, size_);
+    uint64_t result = Scan(bitoff, bitmax, true);
+    if (first) {
+        *first = result;
+    }
+    return result == bitmax;
 }
 
 mx_status_t RawBitmap::Set(uint64_t bitoff, uint64_t bitmax) {

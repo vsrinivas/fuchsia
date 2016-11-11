@@ -24,8 +24,15 @@ public:
     RawBitmap& operator=(RawBitmap&& rhs) = default;
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RawBitmap);
 
+    // Returns the size of this bitmap.
+    size_t size(void) const { return size_; }
+
     // Resets the bitmap; clearing and resizing it.
     void Reset(size_t size);
+
+    // Returns the lesser of bitmax and the index of the first bit that doesn't
+    // match *is_set* starting from *bitoff*.
+    uint64_t Scan(uint64_t bitoff, uint64_t bitmax, bool is_set) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
