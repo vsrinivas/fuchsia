@@ -250,7 +250,8 @@ mozart::NodePtr VideoPlayerView::MakeSkiaNode(
   size.height = rect.height;
 
   mozart::ImagePtr image;
-  sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+  sk_sp<SkSurface> surface =
+      mozart::MakeSkSurface(size, &buffer_producer_, &image);
   FTL_DCHECK(surface);
   content_drawer(size, surface->getCanvas());
   auto content_resource = mozart::Resource::New();
@@ -348,7 +349,8 @@ mozart::ResourcePtr VideoPlayerView::DrawVideoTexture(
   image->stride = size.width * sizeof(uint32_t);
   image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
   image->alpha_format = mozart::Image::AlphaFormat::OPAQUE;
-  image->buffer = buffer_.GetDuplicateVmo();
+  image->buffer = mozart::Buffer::New();
+  image->buffer->vmo = buffer_.GetDuplicateVmo();
 
   video_renderer_.GetRgbaFrame(static_cast<uint8_t*>(buffer_.PtrFromOffset(0)),
                                size, presentation_time);

@@ -16,6 +16,7 @@ executable("video_player") {
     "//apps/media/services",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/geometry/cpp",
     "//lib/mtl",
     "//third_party/skia",

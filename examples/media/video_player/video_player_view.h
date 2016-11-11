@@ -14,6 +14,7 @@
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/macros.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 
@@ -89,6 +90,7 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   }
 
   mozart::InputHandler input_handler_;
+  mozart::BufferProducer buffer_producer_;
   media::MappedSharedBuffer buffer_;
   mozart::Size buffer_size_;
   media::VideoRenderer video_renderer_;
