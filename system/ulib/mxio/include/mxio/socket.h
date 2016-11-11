@@ -46,6 +46,7 @@ typedef struct mxrio_gai_reply {
         struct sockaddr_storage addr;
     } res[MXRIO_GAI_REPLY_MAX];
     int32_t nres;
+    int32_t retval;
 } mxrio_gai_reply_t;
 
 typedef union {

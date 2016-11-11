@@ -244,26 +244,31 @@ int getaddrinfo(const char* __restrict node,
     mxio_release(io);
 
     if (r < 0) {
-        return ERROR(r);
+        errno = mxio_status_to_errno(r);
+        return EAI_SYSTEM;
     }
+    if (gai.reply.retval == 0) {
+        // alloc the memory for the out param
+        mxrio_gai_reply_t* reply = calloc(1, sizeof(*reply));
+        // copy the reply
+        memcpy(reply, &gai.reply, sizeof(*reply));
 
-    // alloc the memory for the out param
-    mxrio_gai_reply_t* reply = calloc(1, sizeof(*reply));
-    // copy the reply
-    memcpy(reply, &gai.reply, sizeof(*reply));
-
-    // link all entries in the reply
-    struct addrinfo *next = NULL;
-    for (int i = reply->nres - 1; i >= 0; --i) {
-        reply->res[i].ai.ai_addr = (struct sockaddr*)&reply->res[i].addr;
-        reply->res[i].ai.ai_next = next;
-        next = &reply->res[i].ai;
+        // link all entries in the reply
+        struct addrinfo *next = NULL;
+        for (int i = reply->nres - 1; i >= 0; --i) {
+            // adjust ai_addr to point the new address if not NULL
+            if (reply->res[i].ai.ai_addr != NULL) {
+                reply->res[i].ai.ai_addr =
+                    (struct sockaddr*)&reply->res[i].addr;
+            }
+            reply->res[i].ai.ai_next = next;
+            next = &reply->res[i].ai;
+        }
+        // the top of the reply must be the first addrinfo in the list
+        assert(next == (struct addrinfo*)reply);
+        *res = next;
     }
-    // the top of the reply must be the first addrinfo in the list
-    assert(next == (struct addrinfo*)reply);
-    *res = next;
-
-    return 0;
+    return gai.reply.retval;
 }
 
 void freeaddrinfo(struct addrinfo* res) {
