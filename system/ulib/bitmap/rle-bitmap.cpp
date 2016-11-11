@@ -66,6 +66,7 @@ bool RleBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first_unset) con
 
 void RleBitmap::ClearAll() {
     elems_.clear();
+    num_elems_ = 0;
 }
 
 mx_status_t RleBitmap::Set(uint64_t bitoff, uint64_t bitmax) {
@@ -106,6 +107,7 @@ mx_status_t RleBitmap::SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* f
     if (!new_elem) {
         return ERR_NO_MEMORY;
     }
+    ++num_elems_;
     new_elem->bitoff = bitoff;
     new_elem->bitlen = bitlen;
 
@@ -146,6 +148,7 @@ mx_status_t RleBitmap::SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* f
         auto to_erase = itr;
         ++itr;
         ReleaseElement(free_list, elems_.erase(to_erase));
+        --num_elems_;
     }
 
     return NO_ERROR;
@@ -181,7 +184,7 @@ mx_status_t RleBitmap::ClearInternal(uint64_t bitoff, uint64_t bitmax, FreeList*
                 if (!new_elem) {
                     return ERR_NO_MEMORY;
                 }
-
+                ++num_elems_;
                 new_elem->bitoff = bitmax;
                 new_elem->bitlen = itr->bitoff + itr->bitlen - bitmax;
 
@@ -199,6 +202,7 @@ mx_status_t RleBitmap::ClearInternal(uint64_t bitoff, uint64_t bitmax, FreeList*
                 // [bitoff, bitmax) fully contains '*itr'.
                 auto to_erase = itr++;
                 ReleaseElement(free_list, elems_.erase(to_erase));
+                --num_elems_;
             }
         }
     }

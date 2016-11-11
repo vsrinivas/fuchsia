@@ -26,13 +26,17 @@ public:
     using const_iterator = ListType::const_iterator;
     using FreeList = ListType;
 
-    constexpr RleBitmap() = default;
+    constexpr RleBitmap()
+        : num_elems_(0) {}
     virtual ~RleBitmap() = default;
 
     RleBitmap(RleBitmap&& rhs) = default;
     RleBitmap& operator=(RleBitmap&& rhs) = default;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RleBitmap);
+
+    // Returns the current number of ranges.
+    size_t num_ranges() const { return num_elems_; }
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set.  Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
@@ -83,6 +87,9 @@ private:
 
     // The ranges of the bitmap.
     ListType elems_;
+
+    // The number of ranges in elems_.
+    size_t num_elems_;
 };
 
 // Elements of the bitmap list

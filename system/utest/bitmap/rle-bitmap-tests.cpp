@@ -38,6 +38,7 @@ static bool SingleBit(void) {
         count++;
     }
     EXPECT_EQ(count, 1U, "bitmap has single range");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     ASSERT_EQ(bitmap.Clear(2, 3), NO_ERROR, "clear bit");
     EXPECT_FALSE(bitmap.Get(2, 3), "get bit after clearing");
@@ -63,6 +64,7 @@ static bool SetTwice(void) {
         count++;
     }
     EXPECT_EQ(count, 1U, "bitmap has single range");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     END_TEST;
 }
@@ -197,6 +199,7 @@ static bool ClearSubrange(void) {
         count++;
     }
     EXPECT_EQ(count, 2U, "check range count");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     END_TEST;
 }
@@ -231,6 +234,7 @@ static bool MergeRanges(void) {
         count++;
     }
     EXPECT_EQ(count, kMaxVal / 4, "check range count");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     END_TEST;
 }
@@ -261,6 +265,7 @@ static bool SplitRanges(void) {
         count++;
     }
     EXPECT_EQ(count, kMaxVal / 4 + 1, "check range count");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     for (uint64_t i = 0; i < kMaxVal; i += 2) {
         ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing even bits");
@@ -273,6 +278,7 @@ static bool SplitRanges(void) {
         count++;
     }
     EXPECT_EQ(count, kMaxVal / 4, "check range count");
+    EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
     END_TEST;
 }
