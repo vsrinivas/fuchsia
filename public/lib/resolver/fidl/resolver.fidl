@@ -4,7 +4,7 @@
 
 module maxwell.resolver;
 
-import "apps/document_store/interfaces/document.mojom";
+import "apps/document_store/interfaces/document.fidl";
 
 [ServiceName="maxwell.resolver"]
 interface Resolver {
