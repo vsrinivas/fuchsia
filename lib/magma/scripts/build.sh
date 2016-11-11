@@ -25,12 +25,9 @@ debug=true;
 
 indriver_test=msd_unit_tests;
 #indriver_test=sys_abi_tests;
-#indriver_test=glreadback;
-#indriver_test=spinning_cube;
 #indriver_test=vkreadback;
 #indriver_test=vkcube;
 
-autorun_magma_app_tests=true;
 autorun_magma_sys_tests=true;
 
 $tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="is_debug=$debug magma_indriver_test=\"$indriver_test\""
@@ -54,21 +51,8 @@ cp $build_dir/x64-shared/libmsd-intel-gen-test.so  $driver_path
 
 autorun_path=$bootfs_path/autorun
 
-if $autorun_msd_intel_tests && ($autorun_magma_app_tests || $autorun_magma_sys_tests); then
+if $autorun_msd_intel_tests && $autorun_magma_sys_tests; then
 	echo "msleep 5000" >> $autorun_path # give some time to write out to log listener
-fi
-
-if $autorun_magma_app_tests; then
-	echo "Enabling magma application driver tests to autorun"
-
-	test_executable=bin/magma_app_unit_tests
-	cp $build_dir/magma_app_unit_tests $bootfs_path/$test_executable
-
-	echo "echo Running magma application driver unit tests" >> $autorun_path # for sanity
-	echo "echo [APP START=]" >> $autorun_path
-	echo "/boot/$test_executable" >> $autorun_path # run the tests
-	echo "echo [APP END===]" >> $autorun_path
-	echo "echo [==========]" >> $autorun_path
 fi
 
 if $autorun_magma_sys_tests; then

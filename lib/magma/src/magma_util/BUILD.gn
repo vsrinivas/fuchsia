@@ -34,7 +34,6 @@ source_set("common") {
     "dlog.h",
     "macros.h",
     "mutex.h",
-    "refcounted.h",
   ]
 }
 

@@ -13,7 +13,6 @@ source_set("vkcube") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
-    "$mesa_build_root/include:vulkan",
-    "$mesa_build_root/src:vulkan_source",
+    "$mesa_build_root:magma_vulkan",
   ]
 }

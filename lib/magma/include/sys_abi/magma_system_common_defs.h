@@ -5,7 +5,6 @@
 #ifndef _MAGMA_SYSTEM_COMMON_DEFS_H_
 #define _MAGMA_SYSTEM_COMMON_DEFS_H_
 
-#include "magma_common_defs.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)
@@ -14,6 +13,9 @@ extern "C" {
 
 #define MAGMA_SYSTEM_CAPABILITY_RENDERING 1
 #define MAGMA_SYSTEM_CAPABILITY_DISPLAY 2
+
+#define MAGMA_DOMAIN_CPU 0x00000001
+#define MAGMA_DOMAIN_GTT 0x00000040
 
 // a relocation entry that informs the system driver how to patch GPU virtual addresses
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with

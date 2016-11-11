@@ -18,34 +18,6 @@ executable("magma_sys_unit_tests") {
   ]
 }
 
-executable("magma_app_unit_tests") {
-  testonly = true
-
-  sources = [
-    "main.cc",
-  ]
-
-  deps = [
-    ":libmad_tests",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("libmad_tests") {
-  testonly = true
-
-  sources = [
-    "test_magma_buffer.cc",
-  ]
-
-  deps = [
-    "$magma_build_root/include:mad_abi",
-    "$magma_build_root/src/app_driver",
-    "$magma_build_root/tests/mock:magma_system",
-    "//third_party/gtest",
-  ]
-}
-
 source_set("magma_system_tests") {
   testonly = true
 
@@ -71,7 +43,6 @@ source_set("magma_util_tests") {
     "test_address_space_allocator.cc",
     "test_macros.cc",
     "test_mutex.cc",
-    "test_refcounted.cc",
     "test_sleep.cc",
   ]
 
