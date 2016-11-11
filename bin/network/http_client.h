@@ -214,7 +214,7 @@ bool URLLoaderImpl::HTTPClient<T>::OnVerifyCertificate(
   char subject_name[256];
   X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
   X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-  FTL_LOG(INFO) << "Verifying " << subject_name;
+  // FTL_LOG(INFO) << "Verifying " << subject_name;
 
 #ifdef NETWORK_SERVICE_HTTPS_CERT_HACK
   preverified = true;
