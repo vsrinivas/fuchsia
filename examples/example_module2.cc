@@ -8,6 +8,7 @@
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -130,7 +131,8 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
       bounds.width = size.width;
       bounds.height = size.height;
       mozart::ImagePtr image;
-      sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+      sk_sp<SkSurface> surface =
+          mozart::MakeSkSurface(size, &buffer_producer_, &image);
       FTL_CHECK(surface);
       DrawContent(surface->getCanvas(), size);
       auto content_resource = mozart::Resource::New();
@@ -163,6 +165,8 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
     canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
     canvas->flush();
   }
+
+  mozart::BufferProducer buffer_producer_;
 
   StrongBinding<Module> module_binding_;
   StrongBinding<LinkWatcher> watcher_binding_;
