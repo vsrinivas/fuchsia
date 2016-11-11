@@ -5,6 +5,7 @@
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
+#include "apps/maxwell/src/acquirers/mock/mock_modular_acquirer.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -131,4 +132,59 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
     listener.WaitForUpdate();
     EXPECT_TRUE(listener.PopLast());
   }
+}
+
+TEST_F(ContextEngineTest, ModularAcquirerOneSubscriber) {
+  maxwell::acquirers::MockModularAcquirer modular_state(cx_);
+  {
+    TestListener listener;
+    out_->Subscribe(maxwell::acquirers::MockModularAcquirer::kLabel,
+                    maxwell::acquirers::MockModularAcquirer::kSchema,
+                    listener.PassBoundHandle());
+    ASYNC_CHECK(modular_state.has_subscribers());
+  }
+  ASYNC_CHECK(!modular_state.has_subscribers());
+}
+
+TEST_F(ContextEngineTest, ModularAcquirerMultipleSubscribers) {
+  maxwell::acquirers::MockModularAcquirer modular_state(cx_);
+  TestListener listeners[2];
+  for (auto& listener : listeners)
+    out_->Subscribe(maxwell::acquirers::MockModularAcquirer::kLabel,
+                    maxwell::acquirers::MockModularAcquirer::kSchema,
+                    listener.PassBoundHandle());
+
+  modular_state.Publish(1);
+  for (auto& listener : listeners) {
+    listener.WaitForUpdate();
+    EXPECT_TRUE(listener.PopLast());
+  }
+}
+
+TEST_F(ContextEngineTest, ModularAcquirerPublishAfterSubscribe) {
+  TestListener listener;
+  out_->Subscribe(maxwell::acquirers::MockModularAcquirer::kLabel,
+                  maxwell::acquirers::MockModularAcquirer::kSchema,
+                  listener.PassBoundHandle());
+  Sleep();
+
+  maxwell::acquirers::MockModularAcquirer modular_state(cx_);
+  ASYNC_CHECK(modular_state.has_subscribers());
+
+  modular_state.Publish(1);
+  listener.WaitForUpdate();
+  EXPECT_TRUE(listener.PopLast());
+}
+
+TEST_F(ContextEngineTest, ModularAcquirerSubscribeAfterPublish) {
+  maxwell::acquirers::MockModularAcquirer modular_state(cx_);
+  modular_state.Publish(1);
+  Sleep();
+
+  TestListener listener;
+  out_->Subscribe(maxwell::acquirers::MockModularAcquirer::kLabel,
+                  maxwell::acquirers::MockModularAcquirer::kSchema,
+                  listener.PassBoundHandle());
+  listener.WaitForUpdate();
+  EXPECT_TRUE(listener.PopLast());
 }
