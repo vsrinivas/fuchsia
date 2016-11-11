@@ -9,7 +9,9 @@
 namespace mxtl {
 
 // A string-like object that points to a sized piece of memory.
-// The string data may or may not be null terminated.
+// |length_| does NOT include a trailing NUL and no guarantee is made that
+// you can check |ptr_[length_]| to see if a NUL is there.
+// Basically, these aren't C strings, don't think otherwise.
 // The string piece does not own the data it points to.
 
 class StringPiece {
