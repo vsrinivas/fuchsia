@@ -1,11 +1,16 @@
 {
     "labels": [
-        "//apps/network"
+        "//apps/network",
+        "//apps/network/examples/wget"
     ],
     "binaries": [
         {
             "binary": "network",
             "bootfs_path": "apps/network"
+        },
+        {
+            "binary": "wget",
+            "bootfs_path": "test/wget"
         }
     ]
 }
