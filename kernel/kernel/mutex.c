@@ -39,17 +39,14 @@ void mutex_destroy(mutex_t *m)
 {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
 
-#if LK_DEBUGLEVEL > 0
-    if (unlikely(m->holder != 0 && get_current_thread() != m->holder))
-        panic("mutex_destroy: thread %p (%s) tried to release mutex %p it doesn't own. owned by %p (%s)\n",
-              get_current_thread(), get_current_thread()->name, m, m->holder, m->holder->name);
-#endif
-
     THREAD_LOCK(state);
 #if LK_DEBUGLEVEL > 0
-    if (unlikely(m->count > 1 || (m->count == 1 && get_current_thread() != m->holder)))
-        panic("mutex_destroy: thread %p (%s) tried to destroy mutex %p\n",
-              get_current_thread(), get_current_thread()->name, m);
+    if (unlikely(m->count > 0)) {
+        panic("mutex_destroy: thread %p (%s) tried to destroy locked mutex %p,"
+              " locked by %p (%s)\n",
+              get_current_thread(), get_current_thread()->name, m,
+              m->holder, m->holder->name);
+    }
 #endif
     m->magic = 0;
     m->count = 0;
