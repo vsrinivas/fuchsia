@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("network_service") {
+executable("network") {
   # if you don't need HTTPS, comment out NETWORK_SERVICE_USE_HTTPS in |defines| below.
   defines = [
     "NETWORK_SERVICE_USE_HTTPS",
