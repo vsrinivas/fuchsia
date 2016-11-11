@@ -101,7 +101,7 @@ static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* dev) {
+static mx_status_t intel_i915_close(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
