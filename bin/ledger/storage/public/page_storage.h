@@ -17,7 +17,6 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace storage {
 

@@ -19,7 +19,6 @@
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/data_pipe/files.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace gcs {
 

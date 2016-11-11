@@ -13,7 +13,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace firebase {
 

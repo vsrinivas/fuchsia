@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace glue {
 namespace {

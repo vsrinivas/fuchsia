@@ -10,7 +10,6 @@
 #include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
 #include "apps/ledger/src/glue/data_pipe/data_pipe_writer.h"
 #include "lib/ftl/logging.h"
-#include "mojo/public/cpp/system/data_pipe.h"
 
 namespace firebase {
 

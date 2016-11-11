@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <mojo/system/main.h>
-
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_factory_impl.h"
 #include "apps/ledger/src/convert/convert.h"
