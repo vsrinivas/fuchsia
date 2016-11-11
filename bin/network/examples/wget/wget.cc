@@ -68,7 +68,7 @@ class WGetApp {
       : url_(url),
         context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     auto launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/network_service";
+    launch_info->url = "file:///system/apps/network";
     launch_info->services = fidl::GetProxy(&network_service_provider_);
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             fidl::GetProxy(&app_controller_));
