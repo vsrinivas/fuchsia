@@ -20,4 +20,11 @@ MODULE_DEPS += \
     lib/mxtl \
     lib/region-alloc
 
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+# TODO(mcgrathr,johngro): This is only needed because of the unclean
+# use of list_node in PcieDevice.irq_.legacy; when that is cleaned up
+# then this should be removed.
+MODULE_COMPILEFLAGS += -Wno-invalid-offsetof
+endif
+
 include make/module.mk
