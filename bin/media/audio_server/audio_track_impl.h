@@ -9,8 +9,8 @@
 
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/audio_track.fidl.h"
-#include "apps/media/interfaces/media_renderer.fidl.h"
+#include "apps/media/services/audio_track.fidl.h"
+#include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 #include "apps/media/src/util/timeline_control_point.h"

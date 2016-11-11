@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/media/services/flog/flog.fidl.h"
 
 namespace flog {
 

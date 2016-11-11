@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "apps/media/cpp/flog.h"
-#include "apps/media/interfaces/logs/media_demux_channel.fidl.h"
-#include "apps/media/interfaces/media_demux.fidl.h"
-#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/services/logs/media_demux_channel.fidl.h"
+#include "apps/media/services/media_demux.fidl.h"
+#include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/fidl/fidl_packet_producer.h"
 #include "apps/media/src/framework/graph.h"

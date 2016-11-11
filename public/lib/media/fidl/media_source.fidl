@@ -4,10 +4,10 @@
 
 module media;
 
-import "apps/media/interfaces/media_metadata.fidl";
-import "apps/media/interfaces/media_transport.fidl";
-import "apps/media/interfaces/media_types.fidl";
-import "apps/media/interfaces/problem.fidl";
+import "apps/media/services/media_metadata.fidl";
+import "apps/media/services/media_transport.fidl";
+import "apps/media/services/media_types.fidl";
+import "apps/media/services/problem.fidl";
 
 // Produces media streams delivered from a specified origin.
 interface MediaSource {

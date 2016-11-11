@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/media/services/media_transport.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

@@ -7,7 +7,7 @@
 #include <map>
 #include <unordered_set>
 
-#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/modular/lib/app/application_context.h"

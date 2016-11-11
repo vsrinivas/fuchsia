@@ -8,7 +8,7 @@
 
 #include <mx/datapipe.h>
 
-#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/demux/reader.h"
 #include "apps/media/src/util/incident.h"
 #include "lib/ftl/tasks/task_runner.h"

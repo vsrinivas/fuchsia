@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/src/flog_service/flog_directory.h"
 #include "apps/media/src/flog_service/flog_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/interfaces/media_types.fidl.h"
+#include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
 #include "apps/media/src/audio_server/audio_track_impl.h"
 #include "apps/media/src/audio_server/gain.h"

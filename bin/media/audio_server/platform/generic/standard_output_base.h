@@ -6,8 +6,8 @@
 
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/timeline.h"
-#include "apps/media/interfaces/media_common.fidl.h"
-#include "apps/media/interfaces/media_types.fidl.h"
+#include "apps/media/services/media_common.fidl.h"
+#include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_track_to_output_link.h"
 #include "apps/media/src/audio_server/gain.h"

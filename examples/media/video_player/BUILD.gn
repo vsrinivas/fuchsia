@@ -13,7 +13,7 @@ executable("video_player") {
 
   deps = [
     "//apps/media/cpp",
-    "//apps/media/interfaces",
+    "//apps/media/services",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework:view_provider",
     "//apps/mozart/services/geometry/cpp",

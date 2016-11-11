@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/media/interfaces/logs/media_demux_channel.fidl.h"
+#include "apps/media/services/logs/media_demux_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 

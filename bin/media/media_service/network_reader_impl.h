@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/incident.h"
 #include "apps/network/services/url_loader.fidl.h"

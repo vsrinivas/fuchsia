@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/tools/flog_viewer/channel.h"
 
 //

@@ -7,8 +7,8 @@
 #include <memory>
 
 #include "apps/media/cpp/flog.h"
-#include "apps/media/interfaces/logs/media_decoder_channel.fidl.h"
-#include "apps/media/interfaces/media_type_converter.fidl.h"
+#include "apps/media/services/logs/media_decoder_channel.fidl.h"
+#include "apps/media/services/media_type_converter.fidl.h"
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/fidl/fidl_packet_consumer.h"
 #include "apps/media/src/fidl/fidl_packet_producer.h"

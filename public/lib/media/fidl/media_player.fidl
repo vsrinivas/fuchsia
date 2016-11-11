@@ -4,9 +4,9 @@
 
 module media;
 
-import "apps/media/interfaces/media_metadata.fidl";
-import "apps/media/interfaces/problem.fidl";
-import "apps/media/interfaces/timelines.fidl";
+import "apps/media/services/media_metadata.fidl";
+import "apps/media/services/problem.fidl";
+import "apps/media/services/timelines.fidl";
 
 // Plays media.
 interface MediaPlayer {

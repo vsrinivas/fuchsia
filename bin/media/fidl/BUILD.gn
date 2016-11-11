@@ -18,7 +18,7 @@ source_set("fidl") {
 
   deps = [
     "//apps/media/cpp",
-    "//apps/media/interfaces",
+    "//apps/media/services",
     "//apps/media/src/demux",
     "//apps/media/src/framework",
     "//apps/media/src/util",

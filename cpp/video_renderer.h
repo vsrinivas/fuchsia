@@ -10,8 +10,8 @@
 #include "apps/media/cpp/media_packet_consumer_base.h"
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/video_converter.h"
-#include "apps/media/interfaces/media_renderer.fidl.h"
-#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/media/services/media_renderer.fidl.h"
+#include "apps/media/services/media_transport.fidl.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 

@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
+#include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/flog_viewer.h"
 #include "apps/media/tools/flog_viewer/handlers/media_formatting.h"
 

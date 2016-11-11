@@ -7,7 +7,7 @@
 #include <map>
 #include <memory>
 
-#include "apps/media/interfaces/flog/flog.fidl.h"
+#include "apps/media/services/flog/flog.fidl.h"
 #include "apps/media/src/util/factory_service_base.h"
 #include "apps/media/src/util/incident.h"
 #include "apps/media/src/flog_service/flog_directory.h"

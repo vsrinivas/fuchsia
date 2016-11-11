@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/media/cpp/timeline_rate.h"
-#include "apps/media/interfaces/media_service.fidl.h"
+#include "apps/media/services/media_service.fidl.h"
 #include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/media_service/test/fake_renderer.h"
 #include "apps/media/src/media_service/test/fake_wav_reader.h"

@@ -6,11 +6,11 @@
 
 #include <vector>
 
-#include "apps/media/interfaces/media_common.fidl.h"
-#include "apps/media/interfaces/media_source.fidl.h"
-#include "apps/media/interfaces/media_transport.fidl.h"
-#include "apps/media/interfaces/media_types.fidl.h"
-#include "apps/media/interfaces/timelines.fidl.h"
+#include "apps/media/services/media_common.fidl.h"
+#include "apps/media/services/media_source.fidl.h"
+#include "apps/media/services/media_transport.fidl.h"
+#include "apps/media/services/media_types.fidl.h"
+#include "apps/media/services/timelines.fidl.h"
 #include "apps/media/tools/flog_viewer/formatting.h"
 
 namespace flog {

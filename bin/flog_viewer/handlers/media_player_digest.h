@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/interfaces/logs/media_player_channel.fidl.h"
+#include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 

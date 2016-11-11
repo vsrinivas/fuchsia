@@ -16,7 +16,7 @@ executable("flog_service") {
   ]
 
   deps = [
-    "//apps/media/interfaces/flog",
+    "//apps/media/services/flog",
     "//apps/media/src/util",
     "//apps/modular/lib/app",
     "//lib/ftl",

@@ -24,7 +24,7 @@ executable("audio_server") {
 
   deps = [
     "//apps/media/cpp",
-    "//apps/media/interfaces",
+    "//apps/media/services",
     "//apps/media/src/util",
     "//apps/modular/lib/app",
     "//lib/ftl",

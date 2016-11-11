@@ -11,7 +11,7 @@
 #include "apps/media/cpp/timeline_function.h"
 #include "apps/media/cpp/video_renderer.h"
 #include "apps/media/examples/video_player/video_player_params.h"
-#include "apps/media/interfaces/media_player.fidl.h"
+#include "apps/media/services/media_player.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "lib/ftl/macros.h"

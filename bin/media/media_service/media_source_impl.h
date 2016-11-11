@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "apps/media/interfaces/media_source.fidl.h"
-#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/services/media_source.fidl.h"
+#include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/decode/decoder.h"
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/demux/reader.h"

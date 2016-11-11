@@ -8,7 +8,7 @@
 
 #include <mx/datapipe.h>
 
-#include "apps/media/interfaces/seeking_reader.fidl.h"
+#include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"

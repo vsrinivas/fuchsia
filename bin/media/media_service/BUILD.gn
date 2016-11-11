@@ -29,7 +29,7 @@ executable("media_service") {
 
   deps = [
     "//apps/media/cpp",
-    "//apps/media/interfaces",
+    "//apps/media/services",
     "//apps/media/src/audio",
     "//apps/media/src/decode",
     "//apps/media/src/demux",
@@ -60,7 +60,7 @@ executable("apptests") {
   deps = [
     ":media_service",
     "//apps/media/cpp",
-    "//apps/media/interfaces",
+    "//apps/media/services",
     "//apps/media/src/fidl",
     "//apps/media/src/framework_create",
     "//apps/modular/lib/app",

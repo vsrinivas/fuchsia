@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/media/interfaces/logs/media_packet_producer_channel.fidl.h"
+#include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
 #include "apps/media/tools/flog_viewer/accumulator.h"
 #include "apps/media/tools/flog_viewer/channel_handler.h"
 #include "apps/media/tools/flog_viewer/counted.h"

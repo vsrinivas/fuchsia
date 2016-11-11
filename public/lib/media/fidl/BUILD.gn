@@ -4,7 +4,7 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("interfaces") {
+fidl("services") {
   sources = [
     "audio_server.fidl",
     "audio_track.fidl",

@@ -10,9 +10,9 @@
 
 #include "apps/media/cpp/timeline.h"
 #include "apps/media/examples/video_player/video_player_params.h"
-#include "apps/media/interfaces/audio_server.fidl.h"
-#include "apps/media/interfaces/audio_track.fidl.h"
-#include "apps/media/interfaces/media_service.fidl.h"
+#include "apps/media/services/audio_server.fidl.h"
+#include "apps/media/services/audio_track.fidl.h"
+#include "apps/media/services/media_service.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"

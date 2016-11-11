@@ -5,7 +5,7 @@
 #pragma once
 
 #include "apps/media/cpp/media_packet_producer_base.h"
-#include "apps/media/interfaces/media_transport.fidl.h"
+#include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/framework/models/active_sink.h"
 #include "apps/media/src/framework/payload_allocator.h"
 #include "lib/ftl/tasks/task_runner.h"

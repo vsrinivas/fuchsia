@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/interfaces/media_types.fidl.h"
+#include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/platform/generic/mixer.h"
 
 namespace media {

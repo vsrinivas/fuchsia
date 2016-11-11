@@ -7,8 +7,8 @@
 #include <list>
 #include <set>
 
-#include "apps/media/interfaces/audio_server.fidl.h"
-#include "apps/media/interfaces/audio_track.fidl.h"
+#include "apps/media/services/audio_server.fidl.h"
+#include "apps/media/services/audio_track.fidl.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 #include "apps/modular/lib/app/application_context.h"

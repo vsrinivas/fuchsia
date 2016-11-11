@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "apps/media/cpp/media_packet_consumer_base.h"
-#include "apps/media/interfaces/timeline_controller.fidl.h"
+#include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 
 namespace media {

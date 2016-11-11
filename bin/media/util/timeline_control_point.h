@@ -5,7 +5,7 @@
 #pragma once
 
 #include "apps/media/cpp/timeline_function.h"
-#include "apps/media/interfaces/timeline_controller.fidl.h"
+#include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/synchronization/mutex.h"

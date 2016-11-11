@@ -32,8 +32,8 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//apps/media/interfaces",
-    "//apps/media/interfaces/flog",
+    "//apps/media/services",
+    "//apps/media/services/flog",
     "//apps/modular/lib/app",
     "//apps/mozart/services/geometry",
     "//lib/ftl",
