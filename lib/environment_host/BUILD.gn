@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("agent_environment_host") {
+  sources = [
+    "agent_environment_host.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+  ]
+}
+
+source_set("bound_set") {
+  sources = [
+    "bound_set.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+  ]
+}

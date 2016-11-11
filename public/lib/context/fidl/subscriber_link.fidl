@@ -1,0 +1,28 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.context;
+
+// An attributed link that listens to updates to a context label with a bound
+// schema.
+interface SubscriberLink {
+  // Receives an update for a context label.
+  OnUpdate(Update update);
+};
+
+struct Update {
+  string source;
+  // TODO(thatguy): timestamp
+
+  // This may be null, indicating that the value was deleted.
+  string? json_value;
+};
+
+// Eventually, Subscribe() will return this, and give you further control over
+// flow.
+/*interface Subscription {
+  // Pause()
+  // Resume()
+}*/
+

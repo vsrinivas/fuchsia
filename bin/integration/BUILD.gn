@@ -1,0 +1,69 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("integration") {
+  testonly = true
+
+  output_name = "maxwell_test"
+
+  deps = [
+    ":context_engine_test",
+    ":suggestion_engine_test",
+  ]
+}
+
+source_set("context_engine_test") {
+  testonly = true
+
+  sources = [
+    "context_engine_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/src/acquirers/mock:gps",
+    "//apps/modular/lib/app",
+  ]
+}
+
+source_set("suggestion_engine_test") {
+  testonly = true
+
+  sources = [
+    "suggestion_engine_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/maxwell/lib/suggestion:formatting",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/src/acquirers/mock:gps",
+    "//apps/maxwell/src/agents:ideas",
+    "//apps/modular/lib/app",
+  ]
+}
+
+source_set("common") {
+  testonly = true
+
+  sources = [
+    "context_engine_test_base.h",
+    "test.cc",
+    "test.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/src:agent_environment_host",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+
+  public_deps = [
+    "//third_party/gtest",
+  ]
+}

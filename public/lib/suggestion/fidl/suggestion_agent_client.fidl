@@ -1,0 +1,69 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.suggestion;
+
+import "display.fidl";
+
+// A service and supporting structures enabling Agents to contribute Proposals
+// to the Suggestion engine.
+//
+// NOTE: Some future-thinking features are represented here and commented out
+// to give a sense for the likely future direction of this service, and are left
+// here for informational purposes at this time.
+[ServiceName="maxwell.suggestion.SuggestionAgentClient"]
+interface SuggestionAgentClient {
+  // Includes the given |proposal| in the list from this Agent. Proposals are
+  // identified by |proposal.id|, and are namespaced by the Agent's ID.
+  // If a Proposal with the same id is already present, it is overwritten.
+  Propose(Proposal proposal);
+
+  // Removes the Proposal with the given ID from the Suggestion engine.
+  Remove(string proposal_id);
+
+  // Returns a list of all Proposals created by the identified Agent.
+  GetAll() => (array<Proposal> proposals);
+};
+
+struct Proposal {
+  string id;  // namespaced internally to the proposing Agent. A URI?
+
+  // The Proposal is only considered valid if all of |preconditions| are
+  // evaluated to true.
+  // array<Precondition> preconditions;
+
+  // The Proposal is considered expired if *any* of the |expiry_conditions|
+  // are true.
+  // array<ExpiryCondition> expiry_conditions;
+
+  // The list of actions to take when the user selects the assocated Suggestion.
+  array<Action> on_selected;
+
+  Display display;
+};
+
+/*
+union Precondition {
+  DateTime after_time;
+  GeoArea geo_fence;
+}
+*/
+
+/*
+union ExpiryCondition {
+  DateTime expiry_time;
+}
+*/
+
+union Action {
+  AddModule add_module;
+
+  // TODO(thatguy): Add other actions.
+};
+
+struct AddModule {
+  string module_id;
+
+  // TODO(thatguy): Make this useful.
+};

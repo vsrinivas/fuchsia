@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("suggestion_engine") {
+  sources = [
+    "next_subscriber.cc",
+    "next_subscriber.h",
+    "suggestion_agent_client_impl.cc",
+    "suggestion_agent_client_impl.h",
+    "suggestion_engine.cc",
+    "suggestion_engine.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/src:bound_set",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+}

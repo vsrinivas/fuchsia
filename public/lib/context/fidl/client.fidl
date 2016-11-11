@@ -1,0 +1,55 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.context;
+
+import "publisher_link.fidl";
+import "subscriber_link.fidl";
+
+// Client that should be requested by context acquirers. All context written by
+// this client is attributed to the bound acquirer.
+//
+// Context may be pushed at any time, but Context Service will notify the
+// publisher as to whether any subscribers exist. The publisher is free to not
+// publish until subscribers exist, and to delete context once the last
+// subscriber is removed.
+[ServiceName="maxwell.context.ContextAcquirerClient"]
+interface ContextAcquirerClient {
+  // Registers a potential context publisher and attains a publisher link for
+  // it. When the existence or nonexistence of subscribers changes, the
+  // publisher is notified through the provided PublisherController.
+  Publish(string label, string schema, PublisherController? controller,
+          PublisherLink& link);
+};
+
+// Client that should be requested by context agents. All context read or
+// written by this client is attributed to the bound agent.
+[ServiceName="maxwell.context.ContextAgentClient"]
+interface ContextAgentClient {
+  // Registers a potential context publisher and attains a publisher link for
+  // it. When the existence or nonexistence of subscribers changes, the
+  // publisher is notified through the provided PublisherController.
+  //
+  // If the label/schema pair for this client has already been registered, the
+  // new controller and link replace the old. The new controller is notified of
+  // any existing subscribers, but no effort is made to notify the old
+  // controller beyond closing the pipe.
+  Publish(string label, string schema, PublisherController? controller,
+          PublisherLink& link);
+
+  // Registers a listener to a context label. Upon subscribing, the subscriber
+  // is immediately updated with the last known value of the context unless the
+  // publisher had invalidated it.
+  Subscribe(string label, string schema, SubscriberLink link);
+  // TODO(thatguy) => (Subscription subscription);
+};
+
+// Client that should be requested by suggestion agents. All context read by
+// this client is attributed to the bound agent.
+[ServiceName="maxwell.context.SuggestionAgentClient"]
+interface SuggestionAgentClient {
+  // Registers a listener to a context label.
+  Subscribe(string label, string schema, SubscriberLink link);
+  // TODO(thatguy) => (Subscription subscription);
+};

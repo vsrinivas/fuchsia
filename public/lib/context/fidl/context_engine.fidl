@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.context;
+
+import "client.fidl";
+
+// Top-level client provider interface that produces clients that can be used by
+// various types of publishers or subscribers of context.
+[ServiceName="maxwell.context.ContextEngine"]
+interface ContextEngine {
+  // Registers a component that publishes context based on sensors and/or
+  // network access. Such apps have publish-only access to Context Service.
+  RegisterContextAcquirer(string url, ContextAcquirerClient& client);
+
+  // Registers a component that infers higher level context from other available
+  // context. Such apps have pub-sub access to Context Service.
+  RegisterContextAgent(string url, ContextAgentClient& client);
+
+  // Registers a component that produces suggestions based on available context.
+  // Such apps have subscribe-only access to Context Service.
+  RegisterSuggestionAgent(string url, SuggestionAgentClient& client);
+};

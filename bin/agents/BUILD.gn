@@ -1,0 +1,49 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("agents") {
+  deps = [
+    ":carmen_sandiego",
+    ":ideas",
+  ]
+}
+
+executable("carmen_sandiego") {
+  output_name = "agents/carmen_sandiego"
+
+  sources = [
+    "carmen_sandiego.cc",
+  ]
+
+  public_deps = [
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/src/acquirers:gps",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+}
+
+executable("ideas") {
+  output_name = "agents/ideas"
+
+  sources = [
+    "ideas.cc",
+    "ideas.h",
+  ]
+
+  public_deps = [
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+}

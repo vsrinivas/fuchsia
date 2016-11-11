@@ -1,0 +1,29 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.context;
+
+// Optional listener interface that a context publisher can implement to be
+// informed by Context Service that one or more subscribers has subscribed to
+// the bound label and schema. This is recommended for acquirers and agents.
+interface PublisherController {
+  // Indicates that one or more subscribers has subscribed to the context
+  // published by this context publisher.
+  OnHasSubscribers();
+  // Indicates that all subscriber links to the context published by this
+  // context publisher have closed. The publisher is free to stop publishing. If
+  // the previously published context could become stale at the next
+  // subscription prior to a new update from the publisher, the publisher should
+  // invalidate the context by publishing null.
+  OnNoSubscribers();
+};
+
+// An attributed link that allows a context publisher to write to a context
+// label with a bound schema.
+interface PublisherLink {
+  // Writes attributed context data to the bound label. To remove the context,
+  // write null. Invalid JSON, including the empty string, should not be passed.
+  // TODO(rosswang): Validate JSON or expand formats.
+  Update(string? json_value);
+};
