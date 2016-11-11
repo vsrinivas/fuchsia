@@ -77,6 +77,8 @@ template("dart_package") {
              rebase_path(source_dir),
              "--root-build-dir",
              rebase_path(root_build_dir),
+             "--root-gen-dir",
+             rebase_path(root_gen_dir),
              "--package-name",
              package_name,
              "--depfile",

@@ -25,7 +25,7 @@ def parse_dot_packages(dot_packages_path):
         deps[name] = path
   return deps
 
-  
+
 
 
 def main():
@@ -35,6 +35,8 @@ def main():
                       required=True)
   parser.add_argument("--root-build-dir",
                       help="Path to root of the build directory", required=True)
+  parser.add_argument("--root-gen-dir",
+                      help="Path to root of the gen directory", required=True)
   parser.add_argument("--package-name", help="Name of this package",
                       required=True)
   parser.add_argument("--source-dir", help="Path to package source",
@@ -65,7 +67,7 @@ def main():
     else:
       target_name = target_base[target_base.rfind("/")+1:]
     dep_dot_packages_path = os.path.join(
-        args.root_build_dir, "gen", target_base, "%s.packages" % target_name)
+        args.root_gen_dir, target_base, "%s.packages" % target_name)
     dependent_files.append(dep_dot_packages_path)
     dependent_packages = parse_dot_packages(dep_dot_packages_path)
     for name, path in dependent_packages.iteritems():
