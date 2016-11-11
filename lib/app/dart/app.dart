@@ -49,6 +49,12 @@ void connectToService(ServiceProvider serviceProvider,
   serviceProvider.connectToService(serviceName, controller.request().passChannel());
 }
 
+InterfaceHandle connectToServiceByName(ServiceProvider serviceProvider, String serviceName) {
+  final core.ChannelPair pair = new core.ChannelPair();
+  serviceProvider.connectToService(serviceName, pair.channel0);
+  return new InterfaceHandle(pair.channel1, 0);
+}
+
 typedef void ServiceConnector(InterfaceRequest request);
 typedef void DefaultServiceConnector(String serviceName,
                                      InterfaceRequest request);
