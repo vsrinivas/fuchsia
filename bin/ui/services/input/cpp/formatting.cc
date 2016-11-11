@@ -11,6 +11,7 @@
 namespace mozart {
 
 std::ostream& operator<<(std::ostream& os, const KeyData& value) {
+  os << "{";
   if (value.code_point) {
     os << "{character=" << value.code_point;
   } else {
@@ -33,6 +34,9 @@ std::ostream& operator<<(std::ostream& os, const KeyData& value) {
     if (value.modifiers & mozart::kModifierSuper) {
       os << ":SUPER";
     }
+  }
+  if (value.is_repeat) {
+    os << ",is_repeat";
   }
   return os << "}";
 }

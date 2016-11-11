@@ -19,6 +19,9 @@ struct KeyData {
 
   // Key modifiers currently pressed
   uint32 modifiers;
+
+  // Whether this is an automatically generated key repeat
+  bool is_repeat = false;
 };
 
 struct PointerData {

@@ -5,6 +5,7 @@
 #include "apps/mozart/src/input_reader/input_state.h"
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace {
@@ -18,26 +19,55 @@ int64_t InputEventTimestampNow() {
 namespace mozart {
 namespace input {
 
+constexpr ftl::TimeDelta kKeyRepeatSlow = ftl::TimeDelta::FromMilliseconds(250);
+constexpr ftl::TimeDelta kKeyRepeatFast = ftl::TimeDelta::FromMilliseconds(75);
+
 constexpr uint32_t kMouseLeftButtonMask = 0x01;
 constexpr uint32_t kMouseRightButtonMask = 0x02;
 constexpr uint32_t kMouseMiddleButtonMask = 0x04;
 
 #pragma mark - KeyboardState
 
-KeyboardState::KeyboardState() : keymap_(qwerty_map) {
+KeyboardState::KeyboardState(OnEventCallback callback)
+    : callback_(callback),
+      keymap_(qwerty_map),
+      weak_ptr_factory_(this),
+      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {
   char* keys = getenv("gfxconsole.keymap");
   if (keys && !strcmp(keys, "dvorak")) {
     keymap_ = dvorak_map;
   }
 }
 
-void KeyboardState::Update(const KeyboardReport& report,
-                           const KeyboardDescriptor& descriptor,
-                           OnEventCallback callback) {
-  uint64_t now = InputEventTimestampNow();
+void KeyboardState::SendEvent(mozart::EventType type,
+                              KeyUsage key,
+                              uint64_t modifiers,
+                              uint64_t timestamp,
+                              bool is_repeat) {
+  mozart::EventPtr ev = mozart::Event::New();
+  ev->action = type;
+  ev->flags = mozart::EventFlags::NONE;
+  ev->time_stamp = timestamp;
 
+  ev->key_data = mozart::KeyData::New();
+  ev->key_data->hid_usage = key;
+  ev->key_data->code_point = hid_map_key(
+      key, modifiers & (kModifierShift | kModifierCapsLock), keymap_);
+  if (ev->key_data->code_point) {
+    ev->key_data->modifiers = modifiers;
+  } else {
+    ev->key_data->modifiers = 0;
+  }
+  ev->key_data->is_repeat = is_repeat;
+  callback_(std::move(ev));
+}
+
+void KeyboardState::Update(const KeyboardReport& report,
+                           const KeyboardDescriptor& descriptor) {
+  uint64_t now = InputEventTimestampNow();
   std::vector<KeyUsage> old_keys = keys_;
   keys_.clear();
+  repeat_keys_.clear();
 
   for (KeyUsage key : report.down) {
     keys_.push_back(key);
@@ -47,21 +77,9 @@ void KeyboardState::Update(const KeyboardReport& report,
       continue;
     }
 
-    mozart::EventPtr ev = mozart::Event::New();
-    ev->action = mozart::EventType::KEY_PRESSED;
-    ev->flags = mozart::EventFlags::NONE;
-    ev->time_stamp = now;
+    SendEvent(mozart::EventType::KEY_PRESSED, key, modifiers_, now, false);
 
-    ev->key_data = mozart::KeyData::New();
-    ev->key_data->hid_usage = key;
-    ev->key_data->code_point = hid_map_key(
-        key, modifiers_ & (kModifierShift | kModifierCapsLock), keymap_);
-    if (ev->key_data->code_point) {
-      ev->key_data->modifiers = modifiers_;
-    } else {
-      ev->key_data->modifiers = 0;
-    }
-
+    uint64_t modifiers = modifiers_;
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
         modifiers_ |= kModifierLeftShift;
@@ -90,24 +108,20 @@ void KeyboardState::Update(const KeyboardReport& report,
       default:
         break;
     }
-    callback(std::move(ev));
+
+    // Don't repeat modifier by themselves
+    if (modifiers == modifiers_) {
+      repeat_keys_.push_back(key);
+    }
+  }
+
+  // If any key was released as well, do not repeat
+  if (!old_keys.empty()) {
+    repeat_keys_.clear();
   }
 
   for (KeyUsage key : old_keys) {
-    mozart::EventPtr ev = mozart::Event::New();
-    ev->action = mozart::EventType::KEY_RELEASED;
-    ev->flags = mozart::EventFlags::NONE;
-    ev->time_stamp = now;
-
-    ev->key_data = mozart::KeyData::New();
-    ev->key_data->hid_usage = key;
-    ev->key_data->code_point = hid_map_key(
-        key, modifiers_ & (kModifierShift | kModifierCapsLock), keymap_);
-    if (ev->key_data->code_point) {
-      ev->key_data->modifiers = modifiers_;
-    } else {
-      ev->key_data->modifiers = 0;
-    }
+    SendEvent(mozart::EventType::KEY_RELEASED, key, modifiers_, now, false);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
@@ -144,8 +158,33 @@ void KeyboardState::Update(const KeyboardReport& report,
       default:
         break;
     }
-    callback(std::move(ev));
   }
+
+  if (!repeat_keys_.empty()) {
+    ScheduleRepeat(++repeat_sequence_, kKeyRepeatSlow);
+  } else {
+    ++repeat_sequence_;
+  }
+}
+
+void KeyboardState::Repeat(uint64_t sequence) {
+  if (sequence != repeat_sequence_) {
+    return;
+  }
+  uint64_t now = InputEventTimestampNow();
+  for (KeyUsage key : repeat_keys_) {
+    SendEvent(mozart::EventType::KEY_PRESSED, key, modifiers_, now, true);
+  }
+  ScheduleRepeat(sequence, kKeyRepeatFast);
+}
+
+void KeyboardState::ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta) {
+  task_runner_->PostDelayedTask(
+      [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
+        if (weak)
+          weak->Repeat(sequence);
+      },
+      delta);
 }
 
 #pragma mark - MouseState
@@ -154,8 +193,7 @@ void MouseState::SendEvent(float rel_x,
                            float rel_y,
                            int64_t timestamp,
                            mozart::EventType type,
-                           mozart::EventFlags flags,
-                           OnEventCallback callback) {
+                           mozart::EventFlags flags) {
   mozart::EventPtr ev = mozart::Event::New();
   ev->time_stamp = timestamp;
   ev->action = type;
@@ -174,13 +212,12 @@ void MouseState::SendEvent(float rel_x,
   ev->pointer_data->orientation = 0.;
   ev->pointer_data->horizontal_wheel = 0;
   ev->pointer_data->vertical_wheel = 0;
-  callback(std::move(ev));
+  callback_(std::move(ev));
 }
 
 void MouseState::Update(const MouseReport& report,
                         const MouseDescriptor& descriptor,
-                        mozart::Size display_size,
-                        OnEventCallback callback) {
+                        mozart::Size display_size) {
   uint64_t now = InputEventTimestampNow();
   uint8_t pressed = (report.buttons ^ buttons_) & report.buttons;
   uint8_t released = (report.buttons ^ buttons_) & buttons_;
@@ -196,48 +233,48 @@ void MouseState::Update(const MouseReport& report,
   if (!pressed && !released) {
     if (buttons_ & kMouseLeftButtonMask) {
       SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
+                mozart::EventFlags::LEFT_MOUSE_BUTTON);
     } else if (buttons_ & kMouseRightButtonMask) {
       SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
+                mozart::EventFlags::RIGHT_MOUSE_BUTTON);
 
     } else if (buttons_ & kMouseMiddleButtonMask) {
       SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
+                mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
     } else {
       SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::NONE, callback);
+                mozart::EventFlags::NONE);
     }
   } else {
     if (pressed) {
       if (pressed & kMouseLeftButtonMask) {
         SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
       }
       if (pressed & kMouseRightButtonMask) {
         SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
       }
       if (pressed & kMouseMiddleButtonMask) {
         SendEvent(position_.x, position_.y, now,
                   mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
       }
     }
     if (released) {
       if (released & kMouseLeftButtonMask) {
         SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
       }
       if (released & kMouseRightButtonMask) {
         SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
       }
       if (released & kMouseMiddleButtonMask) {
         SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
+                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
       }
     }
   }
@@ -247,8 +284,7 @@ void MouseState::Update(const MouseReport& report,
 
 void StylusState::Update(const StylusReport& report,
                          const StylusDescriptor& descriptor,
-                         mozart::Size display_size,
-                         OnEventCallback callback) {
+                         mozart::Size display_size) {
   const bool previous_stylus_down = stylus_down_;
   stylus_down_ = report.is_down;
 
@@ -296,15 +332,14 @@ void StylusState::Update(const StylusReport& report,
     ev->pointer_data->vertical_wheel = 0.;
     stylus_ = *ev->pointer_data;
   }
-  callback(std::move(ev));
+  callback_(std::move(ev));
 }
 
 #pragma mark - TouchscreenState
 
 void TouchscreenState::Update(const TouchReport& report,
                               const TouchscreenDescriptor& descriptor,
-                              mozart::Size display_size,
-                              OnEventCallback callback) {
+                              mozart::Size display_size) {
   std::vector<mozart::PointerData> old_pointers = pointers_;
   pointers_.clear();
 
@@ -350,7 +385,7 @@ void TouchscreenState::Update(const TouchReport& report,
     ev->pointer_data->horizontal_wheel = 0.;
     ev->pointer_data->vertical_wheel = 0.;
     pointers_.push_back(*ev->pointer_data);
-    callback(std::move(ev));
+    callback_(std::move(ev));
   }
 
   for (const auto& pointer : old_pointers) {
@@ -359,7 +394,7 @@ void TouchscreenState::Update(const TouchReport& report,
     ev->flags = mozart::EventFlags::NONE;
     ev->time_stamp = now;
     ev->pointer_data = pointer.Clone();
-    callback(std::move(ev));
+    callback_(std::move(ev));
   }
 }
 

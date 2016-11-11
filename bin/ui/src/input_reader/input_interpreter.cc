@@ -16,7 +16,12 @@ void InputInterpreter::RegisterCallback(OnEventCallback callback) {
 
 void InputInterpreter::RegisterDevice(const InputDevice* device) {
   FTL_DCHECK(devices_.count(device) == 0);
-  devices_.emplace(device, DeviceState());
+  auto on_update = [this](mozart::EventPtr event) {
+    for (auto callback : callbacks_) {
+      callback(event.Clone());
+    }
+  };
+  devices_.emplace(device, new DeviceState(on_update));
 }
 
 void InputInterpreter::UnregisterDevice(const InputDevice* device) {
@@ -35,30 +40,25 @@ void InputInterpreter::OnReport(const InputDevice* device,
   }
 
   TRACE_DURATION1("input", "OnReport", "type", type);
-  DeviceState& state = it->second;
-  auto on_update = [this](mozart::EventPtr event) {
-    for (auto callback : callbacks_) {
-      callback(event.Clone());
-    }
-  };
+  DeviceState* state = it->second.get();
 
   switch (type) {
     case InputReport::ReportType::kKeyboard:
-      state.keyboard.Update(device->keyboard_report(),
-                            device->keyboard_descriptor(), on_update);
+      state->keyboard.Update(device->keyboard_report(),
+                             device->keyboard_descriptor());
       break;
     case InputReport::ReportType::kMouse:
-      state.mouse.Update(device->mouse_report(), device->mouse_descriptor(),
-                         display_size_, on_update);
+      state->mouse.Update(device->mouse_report(), device->mouse_descriptor(),
+                          display_size_);
       break;
     case InputReport::ReportType::kStylus:
-      state.stylus.Update(device->stylus_report(), device->stylus_descriptor(),
-                          display_size_, on_update);
+      state->stylus.Update(device->stylus_report(), device->stylus_descriptor(),
+                           display_size_);
       break;
     case InputReport::ReportType::kTouchscreen:
-      state.touchscreen.Update(device->touch_report(),
-                               device->touchscreen_descriptor(), display_size_,
-                               on_update);
+      state->touchscreen.Update(device->touch_report(),
+                                device->touchscreen_descriptor(),
+                                display_size_);
       break;
   }
 }

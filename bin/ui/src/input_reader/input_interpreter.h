@@ -28,7 +28,7 @@ class InputInterpreter {
 
  private:
   std::vector<OnEventCallback> callbacks_;
-  std::map<const InputDevice*, DeviceState> devices_;
+  std::map<const InputDevice*, std::unique_ptr<DeviceState>> devices_;
   mozart::Size display_size_;
 };
 
