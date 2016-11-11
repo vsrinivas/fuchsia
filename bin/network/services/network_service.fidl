@@ -13,36 +13,36 @@ interface NetworkService {
   CreateURLLoader(URLLoader& loader);
 
   // This is not implemented
-  GetCookieStore(handle<message_pipe> cookie_store);
+  GetCookieStore(handle<channel> cookie_store);
 
   // This is not implemented
-  CreateWebSocket(handle<message_pipe> socket);
+  CreateWebSocket(handle<channel> socket);
 
   // This is not implemented
   CreateTCPBoundSocket(NetAddress? local_address,
-                       handle<message_pipe> bound_socket)
+                       handle<channel> bound_socket)
       => (NetworkError result, NetAddress? bound_to);
 
   // This is not implemented
   CreateTCPConnectedSocket(NetAddress remote_address,
                            handle<data_pipe_consumer> send_stream,
                            handle<data_pipe_producer> receive_stream,
-                           handle<message_pipe> client_socket)
+                           handle<channel> client_socket)
       => (NetworkError result,
           NetAddress? local_address);
 
   // This is not implemented
-  CreateUDPSocket(handle<message_pipe> socket);
+  CreateUDPSocket(handle<channel> socket);
 
   // This is not implemented
   CreateHttpServer(NetAddress local_address,
-                   handle<message_pipe> delegate)
+                   handle<channel> delegate)
       => (NetworkError result,
           NetAddress? bound_to);
 
   // This is not implemented
-  RegisterURLLoaderInterceptor(handle<message_pipe> factory);
+  RegisterURLLoaderInterceptor(handle<channel> factory);
 
   // This is not implemented
-  CreateHostResolver(handle<message_pipe> host_resolver);
+  CreateHostResolver(handle<channel> host_resolver);
 };
