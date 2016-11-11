@@ -19,6 +19,11 @@ static bool InitializedEmpty(void) {
     EXPECT_EQ(bitmap.SetOne(0), ERR_INVALID_ARGS, "set one bit");
     EXPECT_EQ(bitmap.ClearOne(0), ERR_INVALID_ARGS, "clear one bit");
 
+    bitmap.Reset(1);
+    EXPECT_FALSE(bitmap.GetOne(0), "get one bit");
+    EXPECT_EQ(bitmap.SetOne(0), NO_ERROR, "set one bit");
+    EXPECT_EQ(bitmap.ClearOne(0), NO_ERROR, "clear one bit");
+
     END_TEST;
 }
 
