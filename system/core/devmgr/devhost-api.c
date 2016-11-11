@@ -103,10 +103,10 @@ mx_status_t device_openat(mx_device_t* dev, mx_device_t** out, const char* path,
     return r;
 }
 
-mx_status_t device_close(mx_device_t* dev) {
+mx_status_t device_close(mx_device_t* dev, uint32_t flags) {
     mx_status_t r;
     DM_LOCK();
-    r = devhost_device_close(dev);
+    r = devhost_device_close(dev, flags);
     DM_UNLOCK();
     return r;
 }

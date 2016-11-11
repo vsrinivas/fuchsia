@@ -58,7 +58,7 @@ static mx_status_t default_openat(mx_device_t* dev, mx_device_t** out, const cha
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t default_close(mx_device_t* dev) {
+static mx_status_t default_close(mx_device_t* dev, uint32_t flags) {
     return NO_ERROR;
 }
 
@@ -522,10 +522,10 @@ mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out, const cha
     return r;
 }
 
-mx_status_t devhost_device_close(mx_device_t* dev) {
+mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags) {
     mx_status_t r;
     DM_UNLOCK();
-    r = dev->ops->close(dev);
+    r = dev->ops->close(dev, flags);
     DM_LOCK();
     dev_ref_release(dev);
     return r;

@@ -47,7 +47,7 @@ void devhost_device_init(mx_device_t* dev, mx_driver_t* driver,
 void devhost_device_set_bindable(mx_device_t* dev, bool bindable);
 mx_status_t devhost_device_openat(mx_device_t* dev, mx_device_t** out,
                                  const char* path, uint32_t flags);
-mx_status_t devhost_device_close(mx_device_t* dev);
+mx_status_t devhost_device_close(mx_device_t* dev, uint32_t flags);
 
 bool devhost_is_bindable_drv(mx_driver_t* drv, mx_device_t* dev);
 bool devhost_is_bindable_di(magenta_driver_info_t* di, mx_device_t* dev);

@@ -17,4 +17,4 @@
 
 mx_status_t device_bind(mx_device_t* dev, const char* drv_name);
 mx_status_t device_openat(mx_device_t* dev, mx_device_t** out, const char* path, uint32_t flags);
-mx_status_t device_close(mx_device_t* dev);
+mx_status_t device_close(mx_device_t* dev, uint32_t flags);

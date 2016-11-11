@@ -87,7 +87,7 @@ static mx_status_t devhost_get_handles(mx_device_t* dev, const char* path,
     return r;
 
 fail2:
-    device_close(dev);
+    device_close(dev, flags);
 fail1:
     mx_handle_close(h0);
     mx_handle_close(h1);
@@ -224,7 +224,7 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
-        device_close(dev);
+        device_close(dev, ios->flags);
         *should_free_ios = true;
         return NO_ERROR;
     case MXRIO_OPEN:
