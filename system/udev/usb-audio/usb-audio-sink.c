@@ -163,7 +163,7 @@ static mx_status_t usb_audio_sink_open(mx_device_t* dev, mx_device_t** dev_out, 
     return result;
 }
 
-static mx_status_t usb_audio_sink_close(mx_device_t* dev) {
+static mx_status_t usb_audio_sink_close(mx_device_t* dev, uint32_t flags) {
     usb_audio_sink_t* sink = get_usb_audio_sink(dev);
 
     mtx_lock(&sink->mutex);

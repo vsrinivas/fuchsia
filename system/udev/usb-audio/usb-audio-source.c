@@ -162,7 +162,7 @@ static mx_status_t usb_audio_source_open(mx_device_t* dev, mx_device_t** dev_out
     return result;
 }
 
-static mx_status_t usb_audio_source_close(mx_device_t* dev) {
+static mx_status_t usb_audio_source_close(mx_device_t* dev, uint32_t flags) {
     usb_audio_source_t* source = get_usb_audio_source(dev);
 
     mtx_lock(&source->mutex);
