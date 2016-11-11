@@ -231,7 +231,7 @@ int self_dump_func(void* arg) {
     // and just terminate on any exception.
 
     mx_exception_packet_t packet;
-    mx_port_wait(ex_port, &packet, sizeof(packet));
+    mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, sizeof(packet));
     if (packet.hdr.key != kSelfExceptionKey) {
         print_error("invalid crash key");
         return 1;
@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
 
     while (true) {
         mx_exception_packet_t packet;
-        mx_port_wait(ex_port, &packet, sizeof(packet));
+        mx_port_wait(ex_port, MX_TIME_INFINITE, &packet, sizeof(packet));
         if (packet.hdr.key != kSysExceptionKey) {
             print_error("invalid crash key");
             return 1;

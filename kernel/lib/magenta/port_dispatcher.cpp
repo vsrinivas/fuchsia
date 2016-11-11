@@ -177,7 +177,7 @@ void* PortDispatcher::Signal(void* cookie, uint64_t key, mx_signals_t signal) {
     return node;
 }
 
-mx_status_t PortDispatcher::Wait(IOP_Packet** packet) {
+mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
     while (true) {
         {
             AutoLock al(&lock_);
@@ -201,7 +201,11 @@ mx_status_t PortDispatcher::Wait(IOP_Packet** packet) {
 
         }
 
-        status_t st = event_wait_timeout(&event_, INFINITE_TIME, true);
+        if (timeout == 0ull)
+            return ERR_TIMED_OUT;
+
+        lk_time_t t = mx_time_to_lk(timeout);
+        status_t st = event_wait_timeout(&event_, (t == 0u) ? 1u : t, true);
         if (st != NO_ERROR)
             return st;
     }

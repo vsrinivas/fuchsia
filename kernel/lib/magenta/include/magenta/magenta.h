@@ -59,7 +59,7 @@ inline lk_time_t mx_time_to_lk(mx_time_t mxt) {
     if (mxt == MX_TIME_INFINITE)
         return INFINITE_TIME;
 
-    uint64_t temp = mxt / 1000000; // nanosecs to milliseconds
+    uint64_t temp = mxt / 1000000ull; // nanosecs to milliseconds
     if (temp >= UINT32_MAX)
         return UINT32_MAX - 1;
     return static_cast<lk_time_t>(temp & 0xffffffff);

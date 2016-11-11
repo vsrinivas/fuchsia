@@ -29,8 +29,8 @@ public:
         return mx_port_queue(get(), packet, size);
     }
 
-    mx_status_t wait(void* packet, mx_size_t size) const {
-        return mx_port_wait(get(), packet, size);
+    mx_status_t wait(mx_time_t timeout, void* packet, mx_size_t size) const {
+        return mx_port_wait(get(), timeout, packet, size);
     }
 
     mx_status_t bind(uint64_t key, mx_handle_t source,

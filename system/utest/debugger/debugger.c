@@ -355,7 +355,8 @@ static bool wait_inferior_thread_worker(void* arg)
         unittest_printf("wait-inf: waiting on inferior\n");
 
         mx_exception_packet_t packet;
-        ASSERT_EQ(mx_port_wait(eport, &packet, sizeof(packet)), NO_ERROR, "mx_io_port_wait failed");
+        ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet)),
+                  NO_ERROR, "mx_io_port_wait failed");
         unittest_printf("wait-inf: finished waiting, got exception 0x%x\n", packet.report.header.type);
         if (packet.report.header.type == MX_EXCP_GONE) {
             unittest_printf("wait-inf: inferior gone\n");

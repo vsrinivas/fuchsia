@@ -69,7 +69,7 @@ static int mxio_dispatcher_thread(void* _md) {
 again:
     for (;;) {
         mx_io_packet_t packet;
-        if ((r = mx_port_wait(md->ioport, &packet, sizeof(packet))) < 0) {
+        if ((r = mx_port_wait(md->ioport, MX_TIME_INFINITE, &packet, sizeof(packet))) < 0) {
             printf("dispatcher: ioport wait failed %d\n", r);
             break;
         }

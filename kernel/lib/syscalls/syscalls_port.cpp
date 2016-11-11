@@ -60,8 +60,8 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_s
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> ioport;
-    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_WRITE);
+    mxtl::RefPtr<PortDispatcher> port;
+    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
@@ -69,12 +69,13 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_s
     if (!iopk)
         return ERR_NO_MEMORY;
 
-    ktrace(TAG_PORT_QUEUE, (uint32_t)ioport->get_koid(), (uint32_t)size, 0, 0);
+    ktrace(TAG_PORT_QUEUE, (uint32_t)port->get_koid(), (uint32_t)size, 0, 0);
 
-    return ioport->Queue(iopk);
+    return port->Queue(iopk);
 }
 
-mx_status_t sys_port_wait(mx_handle_t handle, user_ptr<void> packet, mx_size_t size) {
+mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
+                          user_ptr<void> packet, mx_size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!packet)
@@ -82,16 +83,17 @@ mx_status_t sys_port_wait(mx_handle_t handle, user_ptr<void> packet, mx_size_t s
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> ioport;
-    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_READ);
+    mxtl::RefPtr<PortDispatcher> port;
+    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_READ);
     if (status != NO_ERROR)
         return status;
 
-    ktrace(TAG_PORT_WAIT, (uint32_t)ioport->get_koid(), 0, 0, 0);
+    ktrace(TAG_PORT_WAIT, (uint32_t)port->get_koid(), 0, 0, 0);
 
     IOP_Packet* iopk = nullptr;
-    status = ioport->Wait(&iopk);
-    ktrace(TAG_PORT_WAIT_DONE, (uint32_t)ioport->get_koid(), status, 0, 0);
+    status = port->Wait(timeout, &iopk);
+
+    ktrace(TAG_PORT_WAIT_DONE, (uint32_t)port->get_koid(), status, 0, 0);
     if (status < 0)
         return status;
 
@@ -111,8 +113,8 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> ioport;
-    mx_status_t status = up->GetDispatcher(handle, &ioport, MX_RIGHT_WRITE);
+    mxtl::RefPtr<PortDispatcher> port;
+    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
@@ -126,7 +128,7 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
 
     AllocChecker ac;
     mxtl::unique_ptr<PortClient> client(
-        new (&ac) PortClient(mxtl::move(ioport), key, signals));
+        new (&ac) PortClient(mxtl::move(port), key, signals));
     if (!ac.check())
         return ERR_NO_MEMORY;
 

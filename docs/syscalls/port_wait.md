@@ -10,7 +10,7 @@ port_wait - wait for a packet in an IO port
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 
-mx_status_t mx_port_wait(mx_handle_t handle, void* packet, mx_size_t size);
+mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t timeout, void* packet, mx_size_t size);
 ```
 
 ## DESCRIPTION
@@ -20,6 +20,10 @@ wait until at least one packet is available. *packet* must not be invalid.
 
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data with **port_queue**().
+
+A *timeout* of 0 can be used to get a pending packet if availabe. If there is
+no packet available the return is ERR_TIMED_OUT. The special value **MX_TIME_INFINITE**
+can be used to wait forever for a packet.
 
 Unlike **mx_wait_one**() and **mx_wait_many**() only one waiting thread is
 released (per available packet) which makes IO ports amenable to be serviced
@@ -67,6 +71,8 @@ pointer or *size* is an invalid packet size.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ** and may
 not be waited upon.
+
+**ERR_TIMED_OUT**  *timeout* nanoseconds have elapsed and no packet was available.
 
 
 ## NOTES

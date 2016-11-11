@@ -165,7 +165,7 @@ MAGENTA_SYSCALL_DEF(4, 6, 83, mx_status_t, waitset_wait, mx_handle_t waitset_han
 MAGENTA_SYSCALL_DEF(2, 2, 90, mx_status_t, port_create, uint32_t options, USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(3, 3, 91, mx_status_t, port_queue, mx_handle_t handle,
                     USER_PTR(const void) packet, mx_size_t size)
-MAGENTA_SYSCALL_DEF(3, 3, 92, mx_status_t, port_wait, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(4, 6, 92, mx_status_t, port_wait, mx_handle_t handle, mx_time_t timeout,
                     USER_PTR(void) packet, mx_size_t size)
 MAGENTA_SYSCALL_DEF(4, 6, 93, mx_status_t, port_bind, mx_handle_t handle, uint64_t key,
                     mx_handle_t source, mx_signals_t signals)
