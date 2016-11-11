@@ -48,16 +48,16 @@ public:
         auto addr_space =
             std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
 
-        auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index; // dont judge
+        auto batch_buf_index = cmd_buf_->batch_buffer_resource_index();
         auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
         void* batch_buf_virt_addr = 0;
         ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_buf_virt_addr));
         auto batch_buf_data = (uint32_t*)batch_buf_virt_addr;
 
         // Clear the relocations to be sure
-        auto batch_buf_resource = &cmd_buf_->cmd_buf_->resources[batch_buf_index];
-        for (uint32_t i = 0; i < batch_buf_resource->num_relocations; i++) {
-            auto relocation = &batch_buf_resource->relocations[i];
+        auto batch_buf_resource = &cmd_buf_->resource(batch_buf_index);
+        for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
+            auto relocation = batch_buf_resource->relocation(i);
 
             uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
             batch_buf_data[dword_offset] = 0;
@@ -71,8 +71,8 @@ public:
         ASSERT_TRUE(cmd_buf_->PatchRelocations(mappings));
 
         // check that we foo'd it correctly
-        for (uint32_t i = 0; i < batch_buf_resource->num_relocations; i++) {
-            auto relocation = &batch_buf_resource->relocations[i];
+        for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
+            auto relocation = batch_buf_resource->relocation(i);
             gpu_addr_t target_gpu_address = mappings[relocation->target_resource_index]->gpu_addr();
             auto expected_gpu_addr = target_gpu_address + relocation->target_offset;
             uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
@@ -123,7 +123,7 @@ public:
         gpu_addr_t target_gpu_addr = target_buffer_mapping->gpu_addr();
         *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
-        auto batch_buf_index = cmd_buf_->cmd_buf_->batch_buffer_resource_index;
+        auto batch_buf_index = cmd_buf_->batch_buffer_resource_index();
         auto batch_res = cmd_buf_->exec_resources_[batch_buf_index];
         void* batch_cpu_addr;
 
@@ -157,8 +157,9 @@ private:
         DLOG("creating helper");
         helper_ = CommandBufferHelper::Create(platform_device);
         DLOG("creating command buffer");
-        cmd_buf_ = CommandBuffer::Create(helper_->abi_cmd_buf(), helper_->msd_resources().data(),
-                                         MsdIntelAbiContext::cast(helper_->ctx())->ptr());
+        cmd_buf_ =
+            CommandBuffer::Create(helper_->buffer()->msd_buf(), helper_->msd_resources().data(),
+                                  MsdIntelAbiContext::cast(helper_->ctx())->ptr());
         DLOG("command buffer created");
     }
 

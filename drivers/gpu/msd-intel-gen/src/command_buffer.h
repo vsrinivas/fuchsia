@@ -5,6 +5,7 @@
 #ifndef COMMAND_BUFFER_H
 #define COMMAND_BUFFER_H
 
+#include "magma_util/command_buffer.h"
 #include "mapped_batch.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
@@ -17,14 +18,19 @@ class ClientContext;
 class EngineCommandStreamer;
 class MsdIntelContext;
 
-class CommandBuffer : public MappedBatch {
+class CommandBuffer : public MappedBatch, private magma::CommandBuffer {
 public:
     // Takes a weak reference on the context which it locks for the duration of its execution
-    static std::unique_ptr<CommandBuffer> Create(magma_system_command_buffer* cmd_buf,
-                                                 msd_buffer** exec_buffers,
+    // holds a shared reference to the buffers backing |abi_cmd_buf| and |exec_buffers| for the
+    // lifetime of this object
+    static std::unique_ptr<CommandBuffer> Create(msd_buffer* abi_cmd_buf, msd_buffer** exec_buffers,
                                                  std::weak_ptr<ClientContext> context)
     {
-        return std::unique_ptr<CommandBuffer>(new CommandBuffer(cmd_buf, exec_buffers, context));
+        auto command_buffer =
+            std::unique_ptr<CommandBuffer>(new CommandBuffer(abi_cmd_buf, context));
+        if (!command_buffer->Initialize(exec_buffers))
+            return DRETP(nullptr, "failed to initialize command buffer");
+        return command_buffer;
     }
 
     ~CommandBuffer();
@@ -43,8 +49,7 @@ public:
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override;
 
 private:
-    CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_resources,
-                  std::weak_ptr<ClientContext> context);
+    CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context);
 
     // maps all execution resources into the given |address_space|.
     // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
@@ -53,6 +58,8 @@ private:
                          std::vector<std::shared_ptr<GpuMapping>>& mappings);
 
     void UnmapResourcesGpu();
+
+    bool Initialize(msd_buffer** exec_buffers);
 
     // given the virtual addresses of all of the exec_resources_, walks the relocations data
     // structure in
@@ -69,8 +76,9 @@ private:
     static bool PatchRelocation(magma_system_relocation_entry* relocation,
                                 ExecResource* exec_resource, gpu_addr_t target_gpu_address);
 
-    // TODO (MA-70) cmd_buf should be uniquely owned here
-    magma_system_command_buffer* cmd_buf_;
+    std::shared_ptr<MsdIntelBuffer> abi_cmd_buf_;
+    // magma::CommandBuffer implementation
+    magma::PlatformBuffer* platform_buffer() override { return abi_cmd_buf_->platform_buffer(); }
 
     std::vector<ExecResource> exec_resources_;
     std::vector<std::shared_ptr<GpuMapping>> exec_resource_mappings_;

@@ -32,18 +32,26 @@ void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
     }
 }
 
-CommandBuffer::CommandBuffer(magma_system_command_buffer* cmd_buf, msd_buffer** exec_buffers,
-                             std::weak_ptr<ClientContext> context)
-    : cmd_buf_(cmd_buf), context_(context)
+CommandBuffer::CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context)
+    : abi_cmd_buf_(MsdIntelAbiBuffer::cast(abi_cmd_buf)->ptr()), context_(context)
 {
-    exec_resources_.reserve(cmd_buf->num_resources);
-    for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+    prepared_to_execute_ = false;
+}
+
+bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
+{
+
+    if (!magma::CommandBuffer::Initialize())
+        return DRETF(false, "Failed to intialize command buffer base class");
+
+    exec_resources_.reserve(num_resources());
+    for (uint32_t i = 0; i < num_resources(); i++) {
         auto buffer = MsdIntelAbiBuffer::cast(exec_buffers[i])->ptr();
-        exec_resources_.push_back(
-            ExecResource{buffer, cmd_buf->resources[i].offset, cmd_buf->resources[i].length});
+        exec_resources_.emplace_back(
+            ExecResource{buffer, resource(i).offset(), resource(i).length()});
     }
 
-    prepared_to_execute_ = false;
+    return true;
 }
 
 MsdIntelContext* CommandBuffer::GetContext()
@@ -90,8 +98,7 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine)
     if (!PatchRelocations(exec_resource_mappings_))
         return DRETF(false, "failed to patch relocations");
 
-    batch_buffer_gpu_addr_ =
-        exec_resource_mappings_[cmd_buf_->batch_buffer_resource_index]->gpu_addr();
+    batch_buffer_gpu_addr_ = exec_resource_mappings_[batch_buffer_resource_index()]->gpu_addr();
 
     prepared_to_execute_ = true;
     engine_id_ = engine->id();
@@ -155,12 +162,12 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
 
 bool CommandBuffer::PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings)
 {
-    DASSERT(mappings.size() == cmd_buf_->num_resources);
+    DASSERT(mappings.size() == num_resources());
 
-    for (uint32_t res_index = 0; res_index < cmd_buf_->num_resources; res_index++) {
-        auto resource = &cmd_buf_->resources[res_index];
-        for (uint32_t reloc_index = 0; reloc_index < resource->num_relocations; reloc_index++) {
-            auto reloc = &resource->relocations[reloc_index];
+    for (uint32_t res_index = 0; res_index < num_resources(); res_index++) {
+        auto resource = this->resource(res_index);
+        for (uint32_t reloc_index = 0; reloc_index < resource.num_relocations(); reloc_index++) {
+            auto reloc = resource.relocation(reloc_index);
             DLOG("Patching relocation res_index %u reloc_index %u target_resource_index %u",
                  res_index, reloc_index, reloc->target_resource_index);
             auto& mapping = mappings[reloc->target_resource_index];

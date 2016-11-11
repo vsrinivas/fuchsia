@@ -8,8 +8,8 @@ source_set("src") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
 
   sources = [
-    "address_space.h",
     "address_space.cc",
+    "address_space.h",
     "command_buffer.cc",
     "command_buffer.h",
     "engine_command_streamer.cc",
@@ -31,9 +31,9 @@ source_set("src") {
     "msd_intel_driver.cc",
     "msd_intel_driver.h",
     "pagetable.h",
-    "registers.h",
     "register_io.cc",
     "register_io.h",
+    "registers.h",
     "render_init_batch.cc",
     "render_init_batch.h",
     "render_init_batch_gen8.cc",
@@ -46,6 +46,7 @@ source_set("src") {
   deps = [
     "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/magma_util/platform:buffer",
   ]
 }
