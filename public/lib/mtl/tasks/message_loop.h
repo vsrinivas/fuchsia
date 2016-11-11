@@ -55,7 +55,7 @@ class MessageLoop : public internal::TaskQueueDelegate {
   HandlerKey AddHandler(MessageLoopHandler* handler,
                         mx_handle_t handle,
                         mx_signals_t handle_signals,
-                        ftl::TimeDelta timeout);
+                        ftl::TimeDelta timeout = ftl::TimeDelta::Max());
 
   // The message loop will no longer call the handler identified by the key. It
   // is an error to call this function with a key that doesn't correspond to a
