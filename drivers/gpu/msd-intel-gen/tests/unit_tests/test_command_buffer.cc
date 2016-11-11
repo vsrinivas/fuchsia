@@ -17,12 +17,14 @@ public:
         return std::unique_ptr<TestCommandBuffer>(new TestCommandBuffer());
     }
 
+    MsdIntelDevice* device() { return MsdIntelDevice::cast(helper_->dev()->msd_dev()); }
+
     std::shared_ptr<AddressSpace> exec_address_space()
     {
         auto context = MsdIntelAbiContext::cast(helper_->ctx())->ptr();
         if (context->exec_address_space())
             return context->exec_address_space();
-        return MsdIntelDevice::cast(helper_->dev()->msd_dev())->gtt();
+        return device()->gtt();
     }
 
     void TestMapUnmapResourcesGpu()
@@ -150,6 +152,8 @@ public:
 
         // batch end
         *batch_ptr++ = (0xA << 23);
+
+        device()->StartDeviceThread();
 
         EXPECT_TRUE(helper_->Execute());
 

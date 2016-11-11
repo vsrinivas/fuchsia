@@ -67,7 +67,7 @@ public:
     {
     }
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
 
     std::shared_ptr<AddressSpace> exec_address_space() { return exec_address_space_; }
 

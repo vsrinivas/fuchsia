@@ -417,9 +417,7 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
     uint32_t sequence_number = sequencer()->next_sequence_number();
 
-    DLOG("Executing batch with sequence number 0x%x", sequence_number);
-
-    mapped_batch->SetSequenceNumber(sequence_number);
+    DLOG("ExecBatch sequence number 0x%x", sequence_number);
 
     gpu_addr_t gpu_addr;
     if (!mapped_batch->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr))
@@ -439,6 +437,8 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 
     uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
 
+    mapped_batch->SetSequenceNumber(sequence_number);
+
     inflight_command_sequences_.emplace(
         InflightCommandSequence(sequence_number, ringbuffer_offset, std::move(mapped_batch)));
 
@@ -448,7 +448,8 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
 }
 
 bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                                                       std::shared_ptr<AddressSpace> ggtt)
+                                                       std::shared_ptr<AddressSpace> ggtt,
+                                                       uint32_t* sequence_number_out)
 {
     DLOG("preparing command buffer for execution");
 
@@ -457,84 +458,64 @@ bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBu
 
     uint32_t pipe_control_flags = MiPipeControl::kIndirectStatePointersDisable |
                                   MiPipeControl::kCommandStreamerStallEnableBit;
-    uint32_t sequence_number;
 
-    if (!ExecBatch(std::move(cmd_buf), pipe_control_flags, &sequence_number))
+    if (!ExecBatch(std::move(cmd_buf), pipe_control_flags, sequence_number_out))
         return DRETF(false, "ExecBatch failed");
 
     return true;
 }
 
-bool RenderEngineCommandStreamer::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
-{
-    DASSERT(buf);
-    // early out if we never rendered to this buffer or rendering has already completed
-    if (buf->sequence_number() == Sequencer::kInvalidSequenceNumber)
-        return true;
-    return WaitRendering(buf->sequence_number());
-}
-
 bool RenderEngineCommandStreamer::WaitIdle()
 {
-    if (inflight_command_sequences_.empty())
-        return true;
-    return WaitRendering(inflight_command_sequences_.back().sequence_number());
-}
-
-bool RenderEngineCommandStreamer::WaitRendering(uint32_t sequence_number)
-{
-    DLOG("WaitRendering on sequence number 0x%x", sequence_number);
-
-    // Dont wait for something you havent executed
-    DASSERT(!inflight_command_sequences_.empty());
-    DASSERT(sequence_number != Sequencer::kInvalidSequenceNumber);
-    DASSERT(sequence_number <= inflight_command_sequences_.back().sequence_number());
-
-    // TODO: Handle sequence number wrapping
-    if (sequence_number < inflight_command_sequences_.front().sequence_number())
-        return true;
-
-    HardwareStatusPage* status_page = hardware_status_page(id());
-
     constexpr uint32_t kTimeOutMs = 100;
+    uint32_t sequence_number = Sequencer::kInvalidSequenceNumber;
+
     auto start = std::chrono::high_resolution_clock::now();
 
     while (!inflight_command_sequences_.empty()) {
-        uint32_t last_completed_sequence = status_page->read_sequence_number();
-        DLOG("WaitRendering loop last_completed_sequence: 0x%x", last_completed_sequence);
-
-        // pop all completed command buffers
-        while (!inflight_command_sequences_.empty() &&
-               inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
-
-            InflightCommandSequence& sequence = inflight_command_sequences_.front();
-
-            DLOG("WaitRendering popping inflight command sequence with sequence_number 0x%x "
-                 "ringbuffer_start_offset 0x%x",
-                 sequence.sequence_number(), sequence.ringbuffer_offset());
-
-            sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
-
-            inflight_command_sequences_.pop();
-
-            start = std::chrono::high_resolution_clock::now();
-        }
-
-        if (last_completed_sequence >= sequence_number)
-            return true; // were done here
+        uint32_t last_completed_sequence_number;
+        ProcessCompletedCommandBuffers(&last_completed_sequence_number);
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
-        if (elapsed.count() > kTimeOutMs) {
-            DLOG("WaitRendering timeout");
-            return false;
+
+        if (last_completed_sequence_number != sequence_number) {
+            sequence_number = last_completed_sequence_number;
+            start = end;
+        } else if (elapsed.count() > kTimeOutMs) {
+            return DRETF(false, "WaitIdle timeout");
         }
 
         std::this_thread::yield();
     }
+    return true;
+}
 
-    DASSERT(false); // the asserts at the top should stop us from getting here
-    return false;
+void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
+    uint32_t* last_completed_sequence_number_out)
+{
+    HardwareStatusPage* status_page = hardware_status_page(id());
+
+    uint32_t last_completed_sequence = status_page->read_sequence_number();
+    DLOG("last_completed_sequence 0x%x", last_completed_sequence);
+
+    // pop all completed command buffers
+    while (!inflight_command_sequences_.empty() &&
+           inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
+
+        InflightCommandSequence& sequence = inflight_command_sequences_.front();
+
+        DLOG("ProcessCompletedCommandBuffers popping inflight command sequence with "
+             "sequence_number 0x%x "
+             "ringbuffer_start_offset 0x%x",
+             sequence.sequence_number(), sequence.ringbuffer_offset());
+
+        sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
+
+        inflight_command_sequences_.pop();
+    }
+
+    *last_completed_sequence_number_out = last_completed_sequence;
 }
 
 bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags)

@@ -9,12 +9,8 @@
 #include "msd.h"
 #include <memory>
 
-class MsdIntelDevice;
-
 class MsdIntelDriver : public msd_driver {
 public:
-    std::unique_ptr<MsdIntelDevice> CreateDevice(void* device);
-
     static MsdIntelDriver* Create();
     static void Destroy(MsdIntelDriver* drv);
 
@@ -25,11 +21,17 @@ public:
         return static_cast<MsdIntelDriver*>(drv);
     }
 
+    void configure(uint32_t flags) { configure_flags_ = flags; }
+
+    uint32_t configure_flags() { return configure_flags_; }
+
 private:
     MsdIntelDriver();
     virtual ~MsdIntelDriver() {}
 
     static const uint32_t kMagic = 0x64726976; //"driv"
+
+    uint32_t configure_flags_ = 0;
 };
 
 #endif // MSD_DRIVER_H

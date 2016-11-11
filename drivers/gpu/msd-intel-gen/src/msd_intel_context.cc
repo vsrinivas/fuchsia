@@ -101,13 +101,13 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
     return true;
 }
 
-bool ClientContext::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+bool ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
 {
     auto connection = connection_.lock();
     if (!connection)
         return DRETF(false, "couldn't lock reference to connection");
 
-    return connection->ExecuteCommandBuffer(std::move(cmd_buf));
+    return connection->SubmitCommandBuffer(std::move(cmd_buf));
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -117,7 +117,7 @@ void msd_context_destroy(msd_context* ctx) { delete MsdIntelAbiContext::cast(ctx
 int32_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
                                            msd_buffer** exec_resources)
 {
-    if (!MsdIntelAbiContext::cast(ctx)->ptr()->ExecuteCommandBuffer(
+    if (!MsdIntelAbiContext::cast(ctx)->ptr()->SubmitCommandBuffer(
             CommandBuffer::Create(cmd_buf, exec_resources, MsdIntelAbiContext::cast(ctx)->ptr())))
         return DRET(-EINVAL);
     return 0;

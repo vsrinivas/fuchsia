@@ -5,7 +5,6 @@
 #include "helper/platform_device_helper.h"
 #include "mock/mock_mmio.h"
 #include "msd_intel_device.h"
-#include "msd_intel_driver.h"
 #include "registers.h"
 #include "gtest/gtest.h"
 
@@ -16,25 +15,19 @@ public:
     {
         EXPECT_TRUE(engine->ExecBatch(std::move(mapped_batch), 0, sequence_number_out));
     }
-    static bool WaitRendering(RenderEngineCommandStreamer* engine, uint32_t sequence_number)
-    {
-        return engine->WaitRendering(sequence_number);
-    }
 };
 
+// These tests are unit testing the functionality of MsdIntelDevice.
+// All of these tests instantiate the device in test mode, that is without the device thread active.
 class TestMsdIntelDevice {
 public:
-    TestMsdIntelDevice() { driver_ = MsdIntelDriver::Create(); }
-
-    ~TestMsdIntelDevice() { MsdIntelDriver::Destroy(driver_); }
-
     void CreateAndDestroy()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
-        std::unique_ptr<MsdIntelDevice> device(
-            driver_->CreateDevice(platform_device->GetDeviceHandle()));
+        std::unique_ptr<MsdIntelDevice> device =
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
         EXPECT_NE(device, nullptr);
 
         EXPECT_TRUE(device->WaitIdle());
@@ -57,8 +50,8 @@ public:
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
-        std::unique_ptr<MsdIntelDevice> device(
-            driver_->CreateDevice(platform_device->GetDeviceHandle()));
+        std::unique_ptr<MsdIntelDevice> device =
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
         EXPECT_NE(device, nullptr);
 
         EXPECT_TRUE(device->WaitIdle());
@@ -107,11 +100,8 @@ public:
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
-        MsdIntelDriver* driver = MsdIntelDriver::Create();
-        ASSERT_NE(driver, nullptr);
-
         std::unique_ptr<MsdIntelDevice> device(
-            driver->CreateDevice(platform_device->GetDeviceHandle()));
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false));
         EXPECT_NE(device, nullptr);
 
         EXPECT_TRUE(device->WaitIdle());
@@ -173,8 +163,7 @@ public:
                 &sequence_number);
 
             EXPECT_NE(sequence_number, 0u);
-            EXPECT_TRUE(TestEngineCommandStreamer::WaitRendering(device->render_engine_cs(),
-                                                                 sequence_number));
+            EXPECT_TRUE(device->WaitIdle());
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 
@@ -199,13 +188,79 @@ public:
             EXPECT_TRUE(ringbuffer_wrapped);
     }
 
-    void MaxFreq()
+    void DeviceRequest()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
-            driver_->CreateDevice(platform_device->GetDeviceHandle()));
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false));
+        ASSERT_NE(device, nullptr);
+
+        class TestRequest : public DeviceRequest {
+        public:
+            TestRequest(std::shared_ptr<bool> processing_complete)
+                : processing_complete_(processing_complete)
+            {
+            }
+
+        protected:
+            void Process(MsdIntelDevice* device) override { *processing_complete_ = true; }
+
+        private:
+            std::shared_ptr<bool> processing_complete_;
+        };
+
+        auto processing_complete = std::make_shared<bool>(false);
+
+        device->EnqueueDeviceRequest(std::make_unique<TestRequest>(processing_complete));
+        device->ProcessDeviceRequests(nullptr);
+
+        EXPECT_TRUE(processing_complete);
+    }
+
+    void WaitRenderingRequest()
+    {
+        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        ASSERT_NE(platform_device, nullptr);
+
+        std::unique_ptr<MsdIntelDevice> device =
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
+        ASSERT_NE(device, nullptr);
+
+        // Pick a sequence number that's already completed.
+        EXPECT_TRUE(device->WaitIdle());
+
+        uint32_t sequence_number = device->global_context()
+                                       ->hardware_status_page(RENDER_COMMAND_STREAMER)
+                                       ->read_sequence_number();
+
+        std::thread wait_thread(
+            [](MsdIntelDevice* device, uint32_t sequence_number) {
+                auto buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+                buffer->SetSequenceNumber(sequence_number);
+                EXPECT_TRUE(device->WaitRendering(std::move(buffer)));
+            },
+            device.get(), sequence_number);
+
+        while (device->wait_rendering_request_count() == 0) {
+            std::this_thread::yield();
+        }
+
+        device->ProcessCompletedCommandBuffers(nullptr);
+
+        EXPECT_EQ(device->wait_rendering_request_count(), 0u);
+
+        wait_thread.join();
+    }
+
+    void MaxFreq()
+    {
+        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+        ASSERT_NE(platform_device, nullptr);
+
+        std::unique_ptr<MsdIntelDevice> device =
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
         EXPECT_NE(device, nullptr);
 
         constexpr uint32_t max_freq = 1050;
@@ -218,8 +273,6 @@ public:
         EXPECT_EQ(freq, max_freq);
     }
 
-private:
-    MsdIntelDriver* driver_;
 };
 
 TEST(MsdIntelDevice, CreateAndDestroy)
@@ -250,6 +303,18 @@ TEST(MsdIntelDevice, WrapRingbuffer)
 {
     TestMsdIntelDevice test;
     test.BatchBuffer(true);
+}
+
+TEST(MsdIntelDevice, DeviceRequest)
+{
+    TestMsdIntelDevice test;
+    test.DeviceRequest();
+}
+
+TEST(MsdIntelDevice, WaitRenderingRequest)
+{
+    TestMsdIntelDevice test;
+    test.WaitRenderingRequest();
 }
 
 TEST(MsdIntelDevice, MaxFreq)

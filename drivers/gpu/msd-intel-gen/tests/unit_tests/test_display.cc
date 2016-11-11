@@ -10,10 +10,6 @@
 
 class TestDisplay {
 public:
-    TestDisplay() { driver_ = MsdIntelDriver::Create(); }
-
-    ~TestDisplay() { MsdIntelDriver::Destroy(driver_); }
-
     static void callback(int32_t result, void* data)
     {
         EXPECT_EQ(result, 0);
@@ -27,7 +23,7 @@ public:
         ASSERT_NE(platform_device, nullptr);
 
         std::unique_ptr<MsdIntelDevice> device(
-            driver_->CreateDevice(platform_device->GetDeviceHandle()));
+            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), true));
         ASSERT_NE(device, nullptr);
 
         uint32_t buffer_size = 2160 * 1440 * 4;
@@ -60,7 +56,6 @@ public:
     }
 
 private:
-    MsdIntelDriver* driver_;
     uint32_t num_callback_{};
 };
 

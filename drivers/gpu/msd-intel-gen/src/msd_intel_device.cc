@@ -12,7 +12,88 @@
 #include <cstdio>
 #include <string>
 
+class MsdIntelDevice::CommandBufferRequest : public DeviceRequest {
+public:
+    CommandBufferRequest(std::unique_ptr<CommandBuffer> command_buffer)
+        : command_buffer_(std::move(command_buffer))
+    {
+    }
+
+protected:
+    void Process(MsdIntelDevice* device) override
+    {
+        device->ProcessCommandBuffer(std::move(command_buffer_));
+    }
+
+private:
+    std::unique_ptr<CommandBuffer> command_buffer_;
+};
+
+class MsdIntelDevice::WaitRenderingRequest : public DeviceRequest {
+public:
+    WaitRenderingRequest(uint32_t sequence_number) : sequence_number_(sequence_number) {}
+
+    uint32_t sequence_number() { return sequence_number_; }
+
+private:
+    uint32_t sequence_number_;
+};
+
+class MsdIntelDevice::FlipRequest : public DeviceRequest {
+public:
+    FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
+                void* data)
+        : buffer_(std::move(buffer)), callback_(callback), data_(data)
+    {
+    }
+
+protected:
+    void Process(MsdIntelDevice* device) override
+    {
+        device->ProcessFlip(buffer_, callback_, data_);
+    }
+
+private:
+    std::shared_ptr<MsdIntelBuffer> buffer_;
+    magma_system_pageflip_callback_t callback_;
+    void* data_;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
+                                                       bool start_device_thread)
+{
+    std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
+
+    if (!device->Init(device_handle))
+        return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
+
+    if (start_device_thread)
+        device->StartDeviceThread();
+
+    return device;
+}
+
 MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
+
+MsdIntelDevice::~MsdIntelDevice() { Destroy(); }
+
+void MsdIntelDevice::Destroy()
+{
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+
+    device_thread_quit_flag_ = true;
+
+    if (monitor_)
+        monitor_->Signal();
+
+    if (device_thread_.joinable()) {
+        DLOG("joining device thread");
+        device_thread_.join();
+        DLOG("joined");
+    }
+}
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id client_id)
 {
@@ -94,7 +175,15 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
         return DRETF(false, "render_engine_cs failed RenderInit");
 
+    monitor_ = magma::Monitor::CreateShared();
+
     return true;
+}
+
+void MsdIntelDevice::StartDeviceThread()
+{
+    DASSERT(!device_thread_.joinable());
+    device_thread_ = std::thread(DeviceThreadEntry, this);
 }
 
 bool MsdIntelDevice::ReadGttSize(unsigned int* gtt_size)
@@ -167,46 +256,219 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     }
 }
 
-bool MsdIntelDevice::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
-    RequestMaxFreq();
+    DLOG("SubmitCommandBuffer");
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-    if (!render_engine_cs_->ExecuteCommandBuffer(std::move(cmd_buf), gtt()))
-        return DRETF(false, "engine execute failed");
+    auto request = std::make_unique<CommandBufferRequest>(std::move(command_buffer));
+    auto reply = request->GetReply();
+
+    EnqueueDeviceRequest(std::move(request));
+
+    reply->Wait();
+
+    DLOG("SubmitCommandBuffer returning");
 
     return true;
 }
 
-bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
+bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buffer)
 {
-    if (!render_engine_cs_->WaitRendering(std::move(buf))) {
-        std::string s;
-        DumpToString(s);
-        printf("WaitRendering timed out!\n\n%s\n", s.c_str());
-        return false;
-    }
-    return true;
-}
+    DASSERT(buffer);
+    DLOG("WaitRendering buffer with sequence_number 0x%x", buffer->sequence_number());
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-bool MsdIntelDevice::WaitIdle()
-{
-    if (!render_engine_cs_->WaitIdle()) {
-        std::string s;
-        DumpToString(s);
-        printf("WaitRendering timed out!\n\n%s\n", s.c_str());
-        return false;
-    }
+    uint32_t sequence_number = buffer->sequence_number();
+    // early out if we never rendered to this buffer or rendering has already completed
+    if (sequence_number == Sequencer::kInvalidSequenceNumber)
+        return true;
+
+    auto request = std::make_unique<WaitRenderingRequest>(sequence_number);
+    auto reply = request->GetReply();
+
+    DASSERT(monitor_);
+    magma::Monitor::Lock lock(monitor_);
+    lock.Acquire();
+    wait_rendering_request_list_.emplace_back(std::move(request));
+    lock.Release();
+
+    // If the sequence number was completed before we inserted ourselves into the list,
+    // we could wait forever; so Signal the device thread to ensure our request is seen.
+    monitor_->Signal();
+
+    reply->Wait();
+
     return true;
 }
 
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
+    DLOG("Flip");
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+    DASSERT(buffer);
+
     if (!WaitRendering(buffer)) {
         if (callback)
             (*callback)(DRET_MSG(-ETIMEDOUT, "WaitRendering failed"), data);
         return;
     }
+
+    auto request = std::make_unique<FlipRequest>(buffer, callback, data);
+    auto reply = request->GetReply();
+
+    EnqueueDeviceRequest(std::move(request));
+
+    reply->Wait();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request)
+{
+    DASSERT(monitor_);
+    magma::Monitor::Lock lock(monitor_);
+    lock.Acquire();
+    device_request_list_.emplace_back(std::move(request));
+    lock.Release();
+    monitor_->Signal();
+}
+
+int MsdIntelDevice::DeviceThreadLoop()
+{
+    device_thread_id_ = std::make_unique<magma::PlatformThreadId>();
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    DLOG("DeviceThreadLoop starting thread 0x%x", device_thread_id_->id());
+
+    DASSERT(monitor_);
+    magma::Monitor::Lock lock(monitor_);
+    lock.Acquire();
+
+    constexpr uint32_t kTimeoutMs = 10;
+    std::chrono::high_resolution_clock::time_point time_point =
+        std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(kTimeoutMs);
+
+    while (true) {
+        bool timed_out = false;
+        monitor_->WaitUntil(&lock, time_point, &timed_out);
+
+        if (device_thread_quit_flag_)
+            break;
+
+        ProcessAllRequests(&lock);
+
+        HangCheck();
+
+        // TODO(US-86): only reset the time_point when timed_out (currently unreliable).
+        time_point =
+            std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(kTimeoutMs);
+    }
+
+    lock.Release();
+
+    DLOG("DeviceThreadLoop exit");
+    return 0;
+}
+
+// If |lock| is non null then it should be in acquired state.
+// The lock will be released and reacquired while processing device requests.
+void MsdIntelDevice::ProcessAllRequests(magma::Monitor::Lock* lock)
+{
+    ProcessCompletedCommandBuffers(lock);
+    ProcessDeviceRequests(lock);
+}
+
+// If |lock| is non null then it should be in acquired state.
+void MsdIntelDevice::ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock)
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    if (lock)
+        DASSERT(lock->acquired(monitor_.get()));
+
+    uint32_t last_completed_sequence_number;
+    render_engine_cs_->ProcessCompletedCommandBuffers(&last_completed_sequence_number);
+
+    progress_.Completed(last_completed_sequence_number);
+
+    for (auto iter = wait_rendering_request_list_.begin();
+         iter != wait_rendering_request_list_.end();) {
+        WaitRenderingRequest* request = (*iter).get();
+        DASSERT(request->sequence_number() != Sequencer::kInvalidSequenceNumber);
+
+        if (request->sequence_number() <= last_completed_sequence_number) {
+            DLOG("acknowledging wait rendering request");
+            request->ProcessAndReply(this);
+            iter = wait_rendering_request_list_.erase(iter);
+        } else {
+            iter++;
+        }
+    }
+}
+
+void MsdIntelDevice::ProcessDeviceRequests(magma::Monitor::Lock* lock)
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    if (lock)
+        DASSERT(lock->acquired(monitor_.get()));
+
+    while (device_request_list_.size()) {
+        DLOG("device_request_list_.size() %zu", device_request_list_.size());
+
+        auto request = std::move(device_request_list_.front());
+        device_request_list_.pop_front();
+
+        if (lock)
+            lock->Release();
+
+        DASSERT(request);
+        request->ProcessAndReply(this);
+
+        if (lock)
+            lock->Acquire();
+    }
+}
+
+void MsdIntelDevice::HangCheck()
+{
+    if (progress_.work_outstanding()) {
+        std::chrono::duration<double, std::milli> elapsed =
+            std::chrono::high_resolution_clock::now() - progress_.hangcheck_time_start();
+        constexpr uint32_t kHangCheckTimeoutMs = 100;
+        if (elapsed.count() > kHangCheckTimeoutMs) {
+            std::string s;
+            DumpToString(s);
+            printf("Suspected GPU hang: last submitted sequence number 0x%x\n\n%s\n",
+                   progress_.last_submitted_sequence_number(), s.c_str());
+            DASSERT(false);
+        }
+    }
+}
+
+void MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    RequestMaxFreq();
+
+    uint32_t sequence_number;
+    if (!render_engine_cs_->ExecuteCommandBuffer(std::move(command_buffer), gtt(),
+                                                 &sequence_number)) {
+        DLOG("[WARNING] Failed to execute command buffer");
+        return;
+    }
+
+    progress_.Submitted(sequence_number);
+}
+
+void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                                 magma_system_pageflip_callback_t callback, void* data)
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+    DASSERT(buffer);
 
     std::shared_ptr<GpuMapping> mapping;
 
@@ -279,8 +541,23 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     flip_data_ = data;
 }
 
+bool MsdIntelDevice::WaitIdle()
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+    if (!render_engine_cs_->WaitIdle()) {
+        std::string s;
+        DumpToString(s);
+        printf("WaitRendering timed out!\n\n%s\n", s.c_str());
+        return false;
+    }
+    return true;
+}
+
 void MsdIntelDevice::RequestMaxFreq()
 {
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
     uint32_t max_freq =
         registers::RenderPerformanceStateCapability::read_rp0_frequency(register_io());
     registers::RenderPerformanceNormalFrequencyRequest::write_frequency_request(register_io(),
@@ -289,6 +566,8 @@ void MsdIntelDevice::RequestMaxFreq()
 
 uint32_t MsdIntelDevice::GetCurrentFrequency()
 {
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
     if (DeviceId::is_gen9(device_id_))
         return registers::RenderPerformanceStatus::read_current_frequency_gen9(register_io());
 
@@ -298,11 +577,12 @@ uint32_t MsdIntelDevice::GetCurrentFrequency()
 
 HardwareStatusPage* MsdIntelDevice::hardware_status_page(EngineCommandStreamerId id)
 {
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(global_context_);
     return global_context_->hardware_status_page(id);
 }
 
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
 {
@@ -311,6 +591,8 @@ msd_connection* msd_device_open(msd_device* dev, msd_client_id client_id)
         return DRETP(nullptr, "MsdIntelDevice::Open failed");
     return new MsdIntelAbiConnection(std::move(connection));
 }
+
+void msd_device_destroy(msd_device* dev) { delete MsdIntelDevice::cast(dev); }
 
 uint32_t msd_device_get_id(msd_device* dev) { return MsdIntelDevice::cast(dev)->device_id(); }
 

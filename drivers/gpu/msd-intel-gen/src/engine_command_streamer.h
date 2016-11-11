@@ -40,9 +40,9 @@ public:
     uint64_t GetActiveHeadPointer();
 
     virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                                      std::shared_ptr<AddressSpace> ggtt) = 0;
+                                      std::shared_ptr<AddressSpace> ggtt,
+                                      uint32_t* sequence_number_out) = 0;
 
-    virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     virtual bool WaitIdle() = 0;
 
 protected:
@@ -89,15 +89,15 @@ public:
                     std::shared_ptr<AddressSpace> address_space);
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                              std::shared_ptr<AddressSpace> ggtt) override;
+                              std::shared_ptr<AddressSpace> ggtt,
+                              uint32_t* sequence_number_out) override;
 
-    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
+    void ProcessCompletedCommandBuffers(uint32_t* last_completed_sequence_number_out);
+
     bool WaitIdle() override;
 
 private:
     RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner);
-
-    bool WaitRendering(uint32_t sequence_number);
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 

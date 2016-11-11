@@ -21,26 +21,27 @@ MsdIntelDriver* MsdIntelDriver::Create()
 
 void MsdIntelDriver::Destroy(MsdIntelDriver* drv) { delete drv; }
 
-std::unique_ptr<MsdIntelDevice> MsdIntelDriver::CreateDevice(void* device_handle)
-{
-    std::unique_ptr<MsdIntelDevice> dev(new MsdIntelDevice());
-
-    if (!dev->Init(device_handle))
-        return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
-
-    return dev;
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 msd_driver* msd_driver_create(void) { return MsdIntelDriver::Create(); }
 
-void msd_driver_destroy(msd_driver* drv) { MsdIntelDriver::Destroy(MsdIntelDriver::cast(drv)); }
-
-msd_device* msd_driver_create_device(msd_driver* drv, void* device)
+void msd_driver_configure(struct msd_driver* drv, uint32_t flags)
 {
-    // Transfer ownership across the ABI
-    return MsdIntelDriver::cast(drv)->CreateDevice(device).release();
+    MsdIntelDriver::cast(drv)->configure(flags);
 }
 
-void msd_device_destroy(msd_device* dev) { delete MsdIntelDevice::cast(dev); }
+void msd_driver_destroy(msd_driver* drv) { MsdIntelDriver::Destroy(MsdIntelDriver::cast(drv)); }
+
+msd_device* msd_driver_create_device(msd_driver* drv, void* device_handle)
+{
+    bool start_device_thread = (MsdIntelDriver::cast(drv)->configure_flags() &
+                                MSD_DRIVER_CONFIG_TEST_NO_DEVICE_THREAD) == 0;
+
+    std::unique_ptr<MsdIntelDevice> device =
+        MsdIntelDevice::Create(device_handle, start_device_thread);
+    if (!device)
+        return DRETP(nullptr, "failed to create device");
+
+    // Transfer ownership across the ABI
+    return device.release();
+}

@@ -15,7 +15,7 @@ class MsdIntelConnection {
 public:
     class Owner {
     public:
-        virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+        virtual bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     };
 
@@ -28,9 +28,9 @@ public:
         return owner_->WaitRendering(std::move(buf));
     }
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
-        return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
+        return owner_->SubmitCommandBuffer(std::move(cmd_buf));
     }
 
 private:

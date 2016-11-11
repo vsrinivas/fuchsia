@@ -5,24 +5,34 @@
 #ifndef MSD_DEVICE_H
 #define MSD_DEVICE_H
 
+#include "device_request.h"
 #include "engine_command_streamer.h"
 #include "global_context.h"
+#include "gpu_progress.h"
 #include "gtt.h"
 #include "magma_util/macros.h"
+#include "magma_util/monitor.h"
+#include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
-#include "msd_intel_context.h"
 #include "platform_device.h"
 #include "register_io.h"
 #include "sequencer.h"
 #include <deque>
+#include <list>
+#include <thread>
 
 class MsdIntelDevice : public msd_device,
                        public Gtt::Owner,
                        public EngineCommandStreamer::Owner,
                        public MsdIntelConnection::Owner {
 public:
-    virtual ~MsdIntelDevice() {}
+    // Creates a device for the given |device_handle| and returns ownership.
+    // If |start_device_thread| is false, then StartDeviceThread should be called
+    // to enable device request processing.
+    static std::unique_ptr<MsdIntelDevice> Create(void* device_handle, bool start_device_thread);
+
+    virtual ~MsdIntelDevice();
 
     // This takes ownership of the connection so that ownership can be
     // transferred across the MSD ABI by the caller
@@ -38,6 +48,7 @@ public:
     }
 
     bool Init(void* device_handle);
+    void StartDeviceThread();
 
     struct DumpState {
         struct RenderCommandStreamer {
@@ -52,35 +63,61 @@ public:
         uint64_t fault_gpu_address;
     };
 
-    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
-              void* data);
-
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
 
+    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
+              void* data);
+
 private:
-    MsdIntelDevice();
+#define CHECK_THREAD_IS_CURRENT(x)                                                                 \
+    if (x)                                                                                         \
+    DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
+
+#define CHECK_THREAD_NOT_CURRENT(x)                                                                \
+    if (x)                                                                                         \
+    DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
     // Gtt::Owner, EngineCommandStreamer::Owner
     RegisterIo* register_io() override
     {
+        CHECK_THREAD_IS_CURRENT(device_thread_id_);
         DASSERT(register_io_);
         return register_io_.get();
     }
 
+    // EngineCommandStreamer::Owner
     Sequencer* sequencer() override
     {
+        CHECK_THREAD_IS_CURRENT(device_thread_id_);
         DASSERT(sequencer_);
         return sequencer_.get();
     }
 
+    // EngineCommandStreamer::Owner
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override;
 
     // MsdIntelConnection::Owner
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+
+    // MsdIntelConnection::Owner
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
 
+private:
+    MsdIntelDevice();
+    void Destroy();
+
+    void ProcessAllRequests(magma::Monitor::Lock* lock);
+    void ProcessDeviceRequests(magma::Monitor::Lock* lock);
+    void ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock);
+    void HangCheck();
+
+    void ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
+    void ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                     magma_system_pageflip_callback_t callback, void* data);
+
     bool WaitIdle();
+    void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);
     bool ReadGttSize(unsigned int* gtt_size);
 
     uint32_t GetCurrentFrequency();
@@ -89,15 +126,25 @@ private:
     static void DumpFault(DumpState* dump_out, uint32_t fault);
     static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
 
+    static int DeviceThreadEntry(MsdIntelDevice* device) { return device->DeviceThreadLoop(); }
+    int DeviceThreadLoop();
+
     std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
     RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
 
     std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
+    uint32_t wait_rendering_request_count() { return wait_rendering_request_list_.size(); }
+
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
+
+    std::thread device_thread_;
+    std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
+    bool device_thread_quit_flag_ = false;
+    GpuProgress progress_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<RegisterIo> register_io_;
@@ -111,7 +158,15 @@ private:
     magma_system_pageflip_callback_t flip_callback_{};
     void* flip_data_{};
 
-    friend class MsdIntelDriver;
+    class CommandBufferRequest;
+    class FlipRequest;
+    class WaitRenderingRequest;
+
+    // Thread-shared data members
+    std::shared_ptr<magma::Monitor> monitor_;
+    std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
+    std::list<std::unique_ptr<WaitRenderingRequest>> wait_rendering_request_list_;
+
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;
 };
