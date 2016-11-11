@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/vim"
+    ],
+    "binaries": [
+        {
+            "binary": "vim",
+            "bootfs_path": "bin/vim"
+        }
+    ]
+}

@@ -29,6 +29,7 @@
         "sysui",
         "thinfs",
         "url",
+        "vim",
         "wpa_supplicant"
     ]
 }
