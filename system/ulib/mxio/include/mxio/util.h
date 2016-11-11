@@ -22,6 +22,7 @@ mx_status_t mxio_clone_root(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_cwd(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
+mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 
 void bootfs_parse(void* _data, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
@@ -37,6 +38,12 @@ void mxio_install_root(mxio_t* root);
 // returns fd on success
 // the mxio must have been upref'd on behalf of the fdtab first
 int mxio_bind_to_fd(mxio_t* io, int fd, int starting_fd);
+
+// attempt to detach an mxio_t from the fd table
+// returns ERR_INVALID_ARGS if fd is out of range or doesn't exist
+// returns ERR_UNAVAILABLE if the fd is busy or has been dup'd
+// returns mxio_t via io_out with refcount 1 on success
+mx_status_t mxio_unbind_from_fd(int fd, mxio_t** io_out);
 
 // creates a do-nothing mxio_t
 mxio_t* mxio_null_create(void);

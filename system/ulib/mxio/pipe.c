@@ -139,6 +139,14 @@ static mx_status_t mx_pipe_clone(mxio_t* io, mx_handle_t* handles, uint32_t* typ
     return 1;
 }
 
+static mx_status_t mx_pipe_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    mx_pipe_t* p = (void*)io;
+    handles[0] = p->h;
+    types[0] = MX_HND_TYPE_MXIO_PIPE;
+    free(p);
+    return 1;
+}
+
 static mxio_ops_t mx_pipe_ops = {
     .read = mx_pipe_read,
     .write = mx_pipe_write,
@@ -150,6 +158,7 @@ static mxio_ops_t mx_pipe_ops = {
     .ioctl = mxio_default_ioctl,
     .wait_begin = mx_pipe_wait_begin,
     .wait_end = mx_pipe_wait_end,
+    .unwrap = mx_pipe_unwrap,
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {

@@ -33,6 +33,7 @@ typedef struct mxio_ops {
     mx_status_t (*close)(mxio_t* io);
     mx_status_t (*open)(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out);
     mx_status_t (*clone)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
+    mx_status_t (*unwrap)(mxio_t* io, mx_handle_t* out_handles, uint32_t* out_types);
     void (*wait_begin)(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* signals);
     void (*wait_end)(mxio_t* io, mx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
@@ -151,10 +152,11 @@ off_t mxio_default_seek(mxio_t* io, off_t offset, int whence);
 mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len);
 mx_status_t mxio_default_close(mxio_t* io);
 mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out);
-mx_handle_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types);
+mx_status_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types);
 ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
 void mxio_default_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals);
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events);
+mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types);
 
 void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
                                  uint32_t handle_info[])

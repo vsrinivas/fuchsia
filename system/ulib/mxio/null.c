@@ -38,7 +38,11 @@ mx_status_t mxio_default_open(mxio_t* io, const char* path, int32_t flags, uint3
     return ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+mx_status_t mxio_default_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -70,6 +74,7 @@ static mxio_ops_t mx_null_ops = {
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
+    .unwrap = mxio_default_unwrap,
 };
 
 mxio_t* mxio_null_create(void) {

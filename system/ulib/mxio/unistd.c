@@ -100,6 +100,39 @@ free_fd_found:
     return fd;
 }
 
+// If a mxio_t exists for this fd and it has not been dup'd
+// and is not in active use (an io operation underway, etc),
+// detach it from the fdtab and return it with a single
+// refcount.
+mx_status_t mxio_unbind_from_fd(int fd, mxio_t** out) {
+    mx_status_t status;
+    mtx_lock(&mxio_lock);
+    if (fd >= MAX_MXIO_FD) {
+        status = ERR_INVALID_ARGS;
+        goto done;
+    }
+    mxio_t* io = mxio_fdtab[fd];
+    if (io == NULL) {
+        status = ERR_INVALID_ARGS;
+        goto done;
+    }
+    if (io->dupcount > 1) {
+        status = ERR_UNAVAILABLE;
+        goto done;
+    }
+    if (atomic_load(&io->refcount) > 1) {
+        status = ERR_UNAVAILABLE;
+        goto done;
+    }
+    io->dupcount = 0;
+    mxio_fdtab[fd] = NULL;
+    *out = io;
+    status = NO_ERROR;
+done:
+    mtx_unlock(&mxio_lock);
+    return status;
+}
+
 mxio_t* __mxio_fd_to_io(int fd) {
     if ((fd < 0) || (fd >= MAX_MXIO_FD)) {
         return NULL;
@@ -350,6 +383,21 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
     }
     mxio_release(io);
     return r;
+}
+
+mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types) {
+    mxio_t* io;
+    mx_status_t status;
+    if ((status = mxio_unbind_from_fd(fd, &io)) < 0) {
+        return status;
+    }
+    if ((status = io->ops->unwrap(io, handles, types)) < 0) {
+        return status;
+    }
+    for (int n = 0; n < status; n++) {
+        types[n] |= (newfd << 16);
+    }
+    return status;
 }
 
 ssize_t mxio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len) {

@@ -609,6 +609,22 @@ mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types) 
     return mxrio_clone(&rio.io, handles, types);
 }
 
+static mx_status_t mxrio_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
+    mxrio_t* rio = (void*)io;
+    mx_status_t r;
+    handles[0] = rio->h;
+    types[0] = MX_HND_TYPE_MXIO_REMOTE;
+    if (rio->h2 != 0) {
+        handles[1] = rio->h2;
+        types[1] = MX_HND_TYPE_MXIO_REMOTE;
+        r = 2;
+    } else {
+        r = 1;
+    }
+    free(io);
+    return r;
+}
+
 static void mxrio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
@@ -655,6 +671,7 @@ static mxio_ops_t mx_remote_ops = {
     .ioctl = mxrio_ioctl,
     .wait_begin = mxrio_wait_begin,
     .wait_end = mxrio_wait_end,
+    .unwrap = mxrio_unwrap,
 };
 
 mxio_t* mxio_remote_create(mx_handle_t h, mx_handle_t e) {
@@ -802,6 +819,7 @@ static mxio_ops_t mxio_socket_ops = {
     .ioctl = mxrio_ioctl,
     .wait_begin = mxsio_wait_begin,
     .wait_end = mxsio_wait_end,
+    .unwrap = mxio_default_unwrap,
 };
 
 mxio_t* mxio_socket_create(mx_handle_t h, mx_handle_t s) {
