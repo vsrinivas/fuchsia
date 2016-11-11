@@ -167,7 +167,7 @@ class _WindowState extends State<Window> {
             padding: const EdgeInsets.all(_kWindowPadding),
             child: new Material(
               elevation: 8,
-              child: new ChildView(child: config.child.connection)
+              child: new ChildView(connection: config.child.connection)
             )
           )
         ]

@@ -192,31 +192,31 @@ class _RenderChildView extends RenderBox {
   ///
   /// The [scale] argument must not be null.
   _RenderChildView({
-    ChildViewConnection child,
+    ChildViewConnection connection,
     double scale,
   }) : _scale = scale {
     assert(scale != null);
-    this.child = child;
+    this.connection = connection;
   }
 
   /// The child to display.
-  ChildViewConnection get child => _child;
-  ChildViewConnection _child;
-  set child (ChildViewConnection value) {
-    if (value == _child)
+  ChildViewConnection get connection => _connection;
+  ChildViewConnection _connection;
+  set connection (ChildViewConnection value) {
+    if (value == _connection)
       return;
-    if (attached && _child != null) {
-      _child._detach();
-      assert(_child._onViewInfoAvailable != null);
-      _child._onViewInfoAvailable = null;
+    if (attached && _connection != null) {
+      _connection._detach();
+      assert(_connection._onViewInfoAvailable != null);
+      _connection._onViewInfoAvailable = null;
     }
-    _child = value;
-    if (attached && _child != null) {
-      _child._attach();
-      assert(_child._onViewInfoAvailable == null);
-      _child._onViewInfoAvailable = markNeedsPaint;
+    _connection = value;
+    if (attached && _connection != null) {
+      _connection._attach();
+      assert(_connection._onViewInfoAvailable == null);
+      _connection._onViewInfoAvailable = markNeedsPaint;
     }
-    if (_child == null) {
+    if (_connection == null) {
       markNeedsPaint();
     } else {
       markNeedsLayout();
@@ -231,26 +231,26 @@ class _RenderChildView extends RenderBox {
     if (value == _scale)
       return;
     _scale = value;
-    if (_child != null)
+    if (_connection != null)
       markNeedsLayout();
   }
 
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
-    if (_child != null) {
-      _child._attach();
-      assert(_child._onViewInfoAvailable == null);
-      _child._onViewInfoAvailable = markNeedsPaint;
+    if (_connection != null) {
+      _connection._attach();
+      assert(_connection._onViewInfoAvailable == null);
+      _connection._onViewInfoAvailable = markNeedsPaint;
     }
   }
 
   @override
   void detach() {
-    if (_child != null) {
-      _child._detach();
-      assert(_child._onViewInfoAvailable != null);
-      _child._onViewInfoAvailable = null;
+    if (_connection != null) {
+      _connection._detach();
+      assert(_connection._onViewInfoAvailable != null);
+      _connection._onViewInfoAvailable = null;
     }
     super.detach();
   }
@@ -266,10 +266,10 @@ class _RenderChildView extends RenderBox {
   @override
   void performLayout() {
     size = constraints.biggest;
-    if (_child != null) {
+    if (_connection != null) {
       _physicalWidth = (size.width * scale).round();
       _physicalHeight = (size.height * scale).round();
-      _child._setChildProperties(_physicalWidth, _physicalHeight, scale);
+      _connection._setChildProperties(_physicalWidth, _physicalHeight, scale);
       assert(() {
         if (_viewContainer == null) {
           _debugErrorMessage ??= new TextPainter(
@@ -288,13 +288,13 @@ class _RenderChildView extends RenderBox {
   @override
   void paint(PaintingContext context, Offset offset) {
     assert(needsCompositing);
-    if (_child?._viewInfo != null) {
+    if (_connection?._viewInfo != null) {
       context.addLayer(new ChildSceneLayer(
         offset: offset,
         devicePixelRatio: scale,
         physicalWidth: _physicalWidth,
         physicalHeight: _physicalHeight,
-        sceneToken: _child._viewInfo.sceneToken.value
+        sceneToken: _connection._viewInfo.sceneToken.value
       ));
     }
     assert(() {
@@ -309,7 +309,7 @@ class _RenderChildView extends RenderBox {
   @override
   void debugFillDescription(List<String> description) {
     super.debugFillDescription(description);
-    description.add('child: $child');
+    description.add('connection: $connection');
     description.add('scale: $scale');
   }
 }
@@ -320,16 +320,16 @@ class _RenderChildView extends RenderBox {
 /// the child.
 class ChildView extends LeafRenderObjectWidget {
   /// Creates a widget that is replaced by content from another process.
-  ChildView({ ChildViewConnection child })
-    : child = child, super(key: new GlobalObjectKey(child));
+  ChildView({ ChildViewConnection connection })
+    : connection = connection, super(key: new GlobalObjectKey(connection));
 
   /// A connection to the child whose content will replace this widget.
-  final ChildViewConnection child;
+  final ChildViewConnection connection;
 
   @override
   _RenderChildView createRenderObject(BuildContext context) {
     return new _RenderChildView(
-      child: child,
+      connection: connection,
       scale: MediaQuery.of(context).devicePixelRatio
     );
   }
@@ -337,7 +337,7 @@ class ChildView extends LeafRenderObjectWidget {
   @override
   void updateRenderObject(BuildContext context, _RenderChildView renderObject) {
     renderObject
-      ..child = child
+      ..connection = connection
       ..scale = MediaQuery.of(context).devicePixelRatio;
   }
 }
