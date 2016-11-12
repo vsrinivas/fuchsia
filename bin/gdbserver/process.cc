@@ -91,9 +91,9 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
 
   mx_info_handle_basic_t info;
   mx_size_t size;
-  mx_status_t status = mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC,
-                                          sizeof(info.rec), &info,
-                                          sizeof(info), &size);
+  mx_status_t status =
+      mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
+                         &info, sizeof(info), &size);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("mx_object_get_info_failed", status);
     return MX_KOID_INVALID;
@@ -111,9 +111,8 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
 
 mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   mx_handle_t debug_handle = MX_HANDLE_INVALID;
-  mx_status_t status =
-      mx_object_get_child(MX_HANDLE_INVALID, pid, MX_RIGHT_SAME_RIGHTS,
-                          &debug_handle);
+  mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, pid,
+                                           MX_RIGHT_SAME_RIGHTS, &debug_handle);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("mx_object_get_child failed", status);
     return MX_HANDLE_INVALID;
@@ -159,7 +158,7 @@ Process::~Process() {
 
 bool Process::Initialize() {
   FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(!debug_handle_.is_valid());
+  FTL_DCHECK(!debug_handle_);
   FTL_DCHECK(!eport_key_);
 
   mx_status_t status;
@@ -180,7 +179,7 @@ bool Process::Initialize() {
 
   // Now we need a debug-capable handle of the process.
   debug_handle_.reset(GetProcessDebugHandle(process_id_));
-  if (!debug_handle_.is_valid())
+  if (!debug_handle_)
     goto fail;
 
   FTL_LOG(INFO) << "mx_debug handle obtained for process";
@@ -188,8 +187,7 @@ bool Process::Initialize() {
   status = launchpad_get_base_address(launchpad_, &base_address_);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
-        "Failed to obtain the dynamic linker base address for process",
-        status);
+        "Failed to obtain the dynamic linker base address for process", status);
     goto fail;
   }
 
@@ -217,7 +215,7 @@ fail:
 }
 
 bool Process::Attach() {
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
 
   if (IsAttached()) {
     FTL_LOG(ERROR) << "Cannot attach an already attached process";
@@ -238,7 +236,7 @@ bool Process::Attach() {
 }
 
 bool Process::Detach() {
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
 
   if (!IsAttached()) {
     FTL_LOG(ERROR) << "Cannot detach an already detached process";
@@ -256,7 +254,7 @@ bool Process::Detach() {
 
 bool Process::Start() {
   FTL_DCHECK(launchpad_);
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
 
   if (started_) {
     FTL_LOG(WARNING) << "Process already started";
@@ -266,14 +264,14 @@ bool Process::Start() {
   // launchpad_start returns a dup of the process handle (owned by
   // |launchpad_|), where the original handle is given to the child. We have to
   // close the dup handle to avoid leaking it.
-  mtl::UniqueHandle dup_handle(launchpad_start(launchpad_));
+  mx::process dup_handle(launchpad_start(launchpad_));
   if (dup_handle.get() < 0) {
     util::LogErrorWithMxStatus("Failed to start inferior process",
                                dup_handle.get());
     return false;
   }
 
-  FTL_DCHECK(dup_handle.is_valid());
+  FTL_DCHECK(dup_handle);
 
   started_ = true;
 
@@ -285,7 +283,7 @@ bool Process::IsAttached() const {
 }
 
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
   if (thread_id == MX_HANDLE_INVALID) {
     FTL_LOG(WARNING) << "Invalid thread ID given: " << thread_id;
     return nullptr;
@@ -320,14 +318,15 @@ Thread* Process::PickOneThread() {
 }
 
 bool Process::RefreshAllThreads() {
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
   mx_info_header_t hdr;
   mx_size_t result_size;
-  mx_status_t status = mx_object_get_info(
-      debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr, sizeof(hdr), &result_size);
+  mx_status_t status =
+      mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr,
+                         sizeof(hdr), &result_size);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
@@ -338,11 +337,10 @@ bool Process::RefreshAllThreads() {
       hdr.avail_count * sizeof(mx_record_process_thread_t);
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
   status = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
-                              sizeof(mx_record_process_thread_t),
-                              buffer.get(), buffer_size, &result_size);
+                              sizeof(mx_record_process_thread_t), buffer.get(),
+                              buffer_size, &result_size);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Failed to get process thread info",
-                               status);
+    util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
   }
 
@@ -357,8 +355,8 @@ bool Process::RefreshAllThreads() {
   for (size_t i = 0; i < hdr.avail_count; ++i) {
     mx_koid_t thread_id = thread_info->rec[i].koid;
     mx_handle_t thread_debug_handle = MX_HANDLE_INVALID;
-    status = mx_object_get_child(
-        debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
+    status = mx_object_get_child(debug_handle_.get(), thread_id,
+                                 MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
     if (status != NO_ERROR) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                  status);
@@ -384,7 +382,7 @@ bool Process::ReadMemory(uintptr_t address,
                          void* out_buffer,
                          size_t* out_bytes_read) {
   FTL_DCHECK(out_buffer);
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
   mx_status_t status = mx_process_read_memory(
       debug_handle_.get(), address, out_buffer, length, out_bytes_read);
   if (status != NO_ERROR) {
@@ -400,7 +398,7 @@ bool Process::ReadMemory(uintptr_t address,
 }
 
 bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
-  FTL_DCHECK(debug_handle_.is_valid());
+  FTL_DCHECK(debug_handle_);
 
   if (length == 0) {
     FTL_VLOG(1) << "No data to write";

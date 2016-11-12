@@ -11,9 +11,9 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
+#include <mx/process.h>
 
 #include "lib/ftl/macros.h"
-#include "lib/mtl/handles/unique_handle.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -153,7 +153,7 @@ class Process final {
   launchpad_t* launchpad_;
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mtl::UniqueHandle debug_handle_;
+  mx::process debug_handle_;
 
   // The process ID.
   mx_koid_t process_id_;
