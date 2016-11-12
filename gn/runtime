@@ -1,11 +1,22 @@
 {
     "labels": [
-        "//apps/modular/src/application_manager"
+        "//apps/modular/src/application_manager",
+        "//apps/modular/src/bootstrap"
     ],
     "binaries": [
         {
             "binary": "application_manager",
             "bootfs_path": "bin/application_manager"
+        },
+        {
+            "binary": "bootstrap",
+            "bootfs_path": "apps/bootstrap"
+        }
+    ],
+    "resources": [
+        {
+            "file": "apps/modular/src/bootstrap/services.config",
+            "bootfs_path": "data/bootstrap/services.config"
         }
     ]
 }
