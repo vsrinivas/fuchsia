@@ -57,7 +57,7 @@ typedef struct logpacket {
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-static void run_program(int argc, const char** argv, mx_handle_t h) {
+static void run_program(const char *progname, int argc, const char** argv, mx_handle_t h) {
     mx_handle_t handles[4];
     uint32_t ids[4];
 
@@ -79,7 +79,7 @@ static void run_program(int argc, const char** argv, mx_handle_t h) {
     ids[3] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
 
     mx_handle_t proc;
-    if ((proc = launchpad_launch_mxio_etc("net:mxsh", argc, argv,
+    if ((proc = launchpad_launch_mxio_etc(progname, argc, argv,
                                           (const char* const*) environ,
                                           (h != 0) ? 4 : 3, handles, ids)) < 0) {
         printf("netsvc: cannot launch %s\n", argv[0]);
@@ -91,11 +91,11 @@ static void run_command(const char* cmd) {
         "/boot/bin/mxsh", "-c", cmd
     };
     printf("net cmd: %s\n", cmd);
-    run_program(3, args, 0);
+    run_program("net:mxsh", 3, args, 0);
 }
 
-static void run_server(const char* bin, mx_handle_t h) {
-    run_program(1, &bin, h);
+static void run_server(const char* progname, const char* bin, mx_handle_t h) {
+    run_program(progname, 1, &bin, h);
 }
 
 static const char* hostname = "magenta";
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
 
     mx_handle_t h[2] = { 0, 0 };
     if (mx_channel_create(0, &h[0], &h[1]) == NO_ERROR) {
-        run_server("/system/bin/netstack", h[1]);
+        run_server("netstack", "/system/bin/netstack", h[1]);
         ipc_handle = h[0];
         thrd_t t;
         if (thrd_create(&t, ipc_thread, h) != thrd_success) {
