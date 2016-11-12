@@ -4,10 +4,10 @@
 
 executable("launcher") {
   sources = [
-    "launch_instance.cc",
-    "launch_instance.h",
-    "launcher_app.cc",
-    "launcher_app.h",
+    "presenter.cc",
+    "presenter.h",
+    "app.cc",
+    "app.h",
     "launcher_view_tree.cc",
     "launcher_view_tree.h",
     "main.cc",

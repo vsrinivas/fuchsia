@@ -6,7 +6,6 @@
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
-#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
 
 namespace launcher {
