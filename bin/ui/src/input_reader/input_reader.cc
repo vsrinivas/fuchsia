@@ -105,7 +105,7 @@ void InputReader::DeviceRemoved(mx_handle_t handle) {
 void InputReader::DeviceAdded(std::unique_ptr<InputDevice> device) {
   FTL_LOG(INFO) << "Input device " << device->name() << " added ";
   mx_handle_t handle = device->handle();
-  mx_signals_t signals = MX_SIGNAL_SIGNAL0;
+  mx_signals_t signals = MX_USER_SIGNAL_0;
   mtl::MessageLoop::HandlerKey key =
       main_loop_->AddHandler(this, handle, signals, ftl::TimeDelta::Max());
   interpreter_->RegisterDevice(device.get());
