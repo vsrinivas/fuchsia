@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bootstrap") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "config.cc",
+    "config.h",
+    "main.cc",
+    "params.cc",
+    "params.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//lib/fidl/cpp/bindings",
+    "//third_party/rapidjson",
+  ]
+}
