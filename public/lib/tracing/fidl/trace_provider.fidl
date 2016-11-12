@@ -20,7 +20,7 @@ interface TraceProvider {
   // traces without interruption when the |initial_buffer| becomes full.
   //
   // Each time the trace provider fills a buffer, it should set the
-  // |MX_SIGNAL_SIGNAL0| signal bit on that buffer to inform the trace manager
+  // |MX_USER_SIGNAL_0| signal bit on that buffer to inform the trace manager
   // that the buffer has filled up.  The trace manager may then copy the data
   // out of the buffer, reset the signal bit, and call |RecycleBuffer| to
   // let the trace provider know that it can reuse the buffer.
@@ -34,7 +34,7 @@ interface TraceProvider {
   // Informs the provider that the trace manager has finished consuming the
   // data in the previous buffer so it is now available to be reused.
   //
-  // This should be called in response to receiving |MX_SIGNAL_SIGNAL0|
+  // This should be called in response to receiving |MX_USER_SIGNAL_0|
   // on a prior buffer in order to ensure that tracing can continue
   // uninterrupted.  This is essentially a double-buffering scheme.
   //
