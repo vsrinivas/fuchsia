@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("postfile") {
+  sources = [
+    "postfile.cc",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//apps/network/services",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
