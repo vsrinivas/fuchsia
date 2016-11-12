@@ -24,6 +24,8 @@ typedef struct driver_api {
     void (*device_set_bindable)(mx_device_t* dev, bool bindable);
 
     mx_handle_t (*get_root_resource)(void);
+    mx_status_t (*load_firmware)(mx_driver_t* drv, const char* path,
+                                 mx_handle_t* fw, mx_size_t* size);
 } driver_api_t;
 
 void driver_api_init(driver_api_t* api);

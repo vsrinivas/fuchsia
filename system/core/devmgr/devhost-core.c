@@ -6,10 +6,14 @@
 #include "devhost.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -32,6 +36,8 @@
 #endif
 
 #define TRACE_ADD_REMOVE 0
+
+#define FIRMWARE_DIR "/boot/lib/firmware"
 
 bool __dm_locked = false;
 mtx_t __devhost_api_lock = MTX_INIT;
@@ -566,6 +572,89 @@ mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     }
     dev->owner = NULL;
     dev_ref_release(dev);
+
+    return NO_ERROR;
+}
+
+mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
+                                  mx_size_t* size) {
+    xprintf("devhost: drv=%p path=%s fw=%p\n", drv, path, fw);
+
+    static int fwdir = -1;
+    if (fwdir < 0) {
+        fwdir = open(FIRMWARE_DIR, O_RDONLY | O_DIRECTORY);
+        if (fwdir < 0) {
+            printf("devhost: error opening firmware dir '%s': %d\n", FIRMWARE_DIR, errno);
+            return ERR_IO;
+        }
+    }
+
+    int fwfd = openat(fwdir, path, O_RDONLY);
+    if (fwfd < 0) {
+        switch (errno) {
+        case ENOENT: return ERR_NOT_FOUND;
+        case EACCES: return ERR_ACCESS_DENIED;
+        case ENOMEM: return ERR_NO_MEMORY;
+        default: return ERR_INTERNAL;
+        }
+    }
+
+    struct stat fwstat;
+    int ret = fstat(fwfd, &fwstat);
+    if (ret < 0) {
+        int e = errno;
+        close(fwfd);
+        switch (e) {
+        case EACCES: return ERR_ACCESS_DENIED;
+        case EBADF:
+        case EFAULT: return ERR_BAD_STATE;
+        default: return ERR_INTERNAL;
+        }
+    }
+
+    if (fwstat.st_size == 0) {
+        close(fwfd);
+        return ERR_NOT_SUPPORTED;
+    }
+
+    uint64_t vmo_size = (fwstat.st_size + 4095) & ~4095;
+    mx_handle_t vmo;
+    mx_status_t status = mx_vmo_create(vmo_size, 0, &vmo);
+    if (status != NO_ERROR) {
+        close(fwfd);
+        return status;
+    }
+
+    uint8_t buffer[4096];
+    size_t remaining = fwstat.st_size;
+    uint64_t off = 0;
+    while (remaining) {
+        ssize_t r = read(fwfd, buffer, sizeof(buffer));
+        if (r < 0) {
+            close(fwfd);
+            mx_handle_close(vmo);
+            // Distinguish other errors?
+            return ERR_IO;
+        }
+        if (r == 0) break;
+        mx_size_t actual = 0;
+        status = mx_vmo_write(vmo, (const void*)buffer, off, (mx_size_t)r, &actual);
+        if (actual < (mx_size_t)r) {
+            printf("devhost: BUG: wrote %zu < %zu firmware vmo bytes!\n", actual, r);
+            close(fwfd);
+            mx_handle_close(vmo);
+            return ERR_BAD_STATE;
+        }
+        off += actual;
+        remaining -= actual;
+    }
+
+    if (remaining > 0) {
+        printf("devhost: EOF found before writing firmware '%s'\n", path);
+    }
+    *fw = vmo;
+    *size = fwstat.st_size;
+    close(fwfd);
 
     return NO_ERROR;
 }

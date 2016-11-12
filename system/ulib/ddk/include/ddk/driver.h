@@ -85,6 +85,14 @@ void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 // temporary accessor for root resource handle
 mx_handle_t get_root_resource(void);
 
+mx_status_t load_firmware(mx_driver_t* driver, const char* path,
+                          mx_handle_t* fw, mx_size_t* size);
+// Drivers may need to load firmware for a device, typically during the call to
+// bind the device. The devmgr will look for the firmware at the given path
+// relative to system-defined locations for device firmware. The file will be
+// loaded into a vmo pointed to by fw. The actual size of the firmware will be
+// returned in size.
+
 // panic is for handling non-recoverable, non-reportable fatal
 // errors in a way that will get logged.  Right now this just
 // does a bogus write to unmapped memory.

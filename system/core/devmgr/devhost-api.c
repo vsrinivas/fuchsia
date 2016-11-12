@@ -117,6 +117,15 @@ __EXPORT mx_handle_t _get_root_resource(void) {
     return root_resource_handle;
 }
 
+static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
+                                  mx_size_t* size) {
+    mx_status_t r;
+    DM_LOCK();
+    r = devhost_load_firmware(drv, path, fw, size);
+    DM_UNLOCK();
+    return r;
+}
+
 driver_api_t devhost_api = {
     .driver_add = _driver_add,
     .driver_remove = _driver_remove,
@@ -129,4 +138,5 @@ driver_api_t devhost_api = {
     .device_rebind = _device_rebind,
     .device_set_bindable = _device_set_bindable,
     .get_root_resource = _get_root_resource,
+    .load_firmware = _load_firmware,
 };

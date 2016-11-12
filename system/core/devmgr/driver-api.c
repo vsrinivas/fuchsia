@@ -60,3 +60,8 @@ __EXPORT void device_set_bindable(mx_device_t* dev, bool bindable) {
 __EXPORT mx_handle_t get_root_resource(void) {
     return API->get_root_resource();
 }
+
+__EXPORT mx_status_t load_firmware(mx_driver_t* drv, const char* path,
+                                   mx_handle_t* fw, mx_size_t* size) {
+    return API->load_firmware(drv, path, fw, size);
+}
