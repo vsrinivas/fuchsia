@@ -7,8 +7,8 @@
 #include "apps/tracing/lib/trace/internal/table.h"
 #include "apps/tracing/lib/trace/internal/trace_writer.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/handles/object_info.h"
 #include "magenta/syscalls.h"
-#include "magenta/syscalls/object.h"
 
 namespace tracing {
 namespace internal {
@@ -17,23 +17,18 @@ namespace {
 // A hacky way of ensuring a unique id per thread.
 thread_local char tid;
 
-inline uint64_t GetProcessKoid() {
-  mx_info_handle_basic_t info;
-  mx_size_t size = 0;
-  if (mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_BASIC,
-                         sizeof(info.rec), &info, sizeof(info), &size) < 0)
-    return 0;
-  return size == sizeof(info) ? info.rec.koid : 0;
+inline mx_koid_t GetProcessKoid() {
+  return mtl::GetKoid(mx_process_self());
 }
 
-inline uint64_t GetThreadKoid() {
+inline mx_koid_t GetThreadKoid() {
   // TODO(tvoss): Fix once an API for querying the current thread id
   // is available.
   return reinterpret_cast<uintptr_t>(&tid);
 }
 
-const uint64_t g_process_koid = GetProcessKoid();
-thread_local const uint64_t g_thread_koid = GetThreadKoid();
+const mx_koid_t g_process_koid = GetProcessKoid();
+thread_local const mx_koid_t g_thread_koid = GetThreadKoid();
 Allocator g_allocator;
 bool g_is_tracing_started = false;
 CategoriesMatcher g_categories_matcher;
