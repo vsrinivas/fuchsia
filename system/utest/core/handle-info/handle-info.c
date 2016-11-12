@@ -75,7 +75,7 @@ bool handle_rights_test(void) {
               "cannot upgrade rights");
 
     status = mx_handle_replace(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);
-    ASSERT_EQ(status, NO_ERROR, "should be able to duplicate handle");
+    ASSERT_EQ(status, NO_ERROR, "should be able to replace handle");
     // duped_ro should now be invalid.
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close original handle");
