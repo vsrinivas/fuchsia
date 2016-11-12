@@ -2,8 +2,7 @@
     "imports": [
         "fonts",
         "mozart",
-        "icu_data",
-        "mojo"
+        "icu_data"
     ],
     "labels": [
         "//flutter"
