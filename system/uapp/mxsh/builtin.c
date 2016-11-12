@@ -92,6 +92,9 @@ static int mxc_cd(int argc, char** argv) {
         fprintf(stderr, "error: cannot change directory to '%s'\n", argv[1]);
         return -1;
     }
+    char cwd[PATH_MAX];
+    getcwd(cwd, PATH_MAX);
+    setenv("PWD", cwd, true);
     return 0;
 }
 

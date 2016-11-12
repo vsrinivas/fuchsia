@@ -215,6 +215,70 @@ mx_status_t __mxio_open(mxio_t** io, const char* path, int flags, uint32_t mode)
     return __mxio_open_at(io, AT_FDCWD, path, flags, mode);
 }
 
+static void update_cwd_path(const char* path) {
+    if (path[0] == '/') {
+        // it's "absolute", but we'll still parse it as relative (from /)
+        // so that we normalize the path (resolving, ., .., //, etc)
+        mxio_cwd_path[0] = '/';
+        mxio_cwd_path[1] = 0;
+        path++;
+    }
+
+    size_t seglen;
+    const char* next;
+    for (; path[0]; path = next) {
+        next = strchr(path, '/');
+        if (next == NULL) {
+            seglen = strlen(path);
+            next = path + seglen;
+        } else {
+            seglen = next - path;
+            next++;
+        }
+        if (seglen == 0) {
+            // empty segment, skip
+            continue;
+        }
+        if ((seglen == 1) && (path[0] == '.')) {
+            // no-change segment, skip
+            continue;
+        }
+        if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
+            // parent directory, remove the trailing path segment from cwd_path
+            char* x = strrchr(mxio_cwd_path, '/');
+            if (x == NULL) {
+                // shouldn't ever happen
+                goto wat;
+            }
+            // remove the current trailing path segment from cwd
+            if (x == mxio_cwd_path) {
+                // but never remove the first /
+                mxio_cwd_path[1] = 0;
+            } else {
+                x[0] = 0;
+            }
+            continue;
+        }
+        // regular path segment, append to cwd_path
+        size_t len = strlen(mxio_cwd_path);
+        if ((len + seglen + 2) >= PATH_MAX) {
+            // doesn't fit, shouldn't happen, but...
+            goto wat;
+        }
+        if (len != 1) {
+            // if len is 1, path is "/", so don't append a '/'
+            mxio_cwd_path[len++] = '/';
+        }
+        memcpy(mxio_cwd_path + len, path, seglen);
+        mxio_cwd_path[len + seglen] = 0;
+    }
+    return;
+
+wat:
+    strcpy(mxio_cwd_path, "(unknown)");
+    return;
+}
+
 // opens the directory containing path
 // returns the non-directory portion of the path as name on success
 static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const char* path, const char** _name) {
@@ -320,6 +384,13 @@ void __libc_extensions_init(uint32_t handle_count,
     // Stash the rest for mxio_get_startup_handle callers to see.
     __mxio_startup_handles_init(handle_count, handle, handle_info);
 
+    // TODO(abarth): The cwd path string should be more tightly coupled with
+    // the cwd handle.
+    const char* cwd = getenv("PWD");
+    if (cwd != NULL) {
+        update_cwd_path(cwd);
+    }
+
     mxio_t* use_for_stdio = (stdio_fd >= 0) ? mxio_fdtab[stdio_fd] : NULL;
 
     // configure stdin/out/err if not init'd
@@ -337,7 +408,7 @@ void __libc_extensions_init(uint32_t handle_count,
     if (mxio_root_handle) {
         mxio_root_init = true;
         if(!mxio_cwd_handle) {
-            __mxio_open(&mxio_cwd_handle, "/", O_DIRECTORY, 0);
+            __mxio_open(&mxio_cwd_handle, mxio_cwd_path, O_DIRECTORY, 0);
         }
     } else {
         // placeholder null handle
@@ -1038,70 +1109,6 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
     mxio_close(io);
     mxio_release(io);
     return STATUS(status);
-}
-
-static void update_cwd_path(const char* path) {
-    if (path[0] == '/') {
-        // it's "absolute", but we'll still parse it as relative (from /)
-        // so that we normalize the path (resolving, ., .., //, etc)
-        mxio_cwd_path[0] = '/';
-        mxio_cwd_path[1] = 0;
-        path++;
-    }
-
-    size_t seglen;
-    const char* next;
-    for (; path[0]; path = next) {
-        next = strchr(path, '/');
-        if (next == NULL) {
-            seglen = strlen(path);
-            next = path + seglen;
-        } else {
-            seglen = next - path;
-            next++;
-        }
-        if (seglen == 0) {
-            // empty segment, skip
-            continue;
-        }
-        if ((seglen == 1) && (path[0] == '.')) {
-            // no-change segment, skip
-            continue;
-        }
-        if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
-            // parent directory, remove the trailing path segment from cwd_path
-            char* x = strrchr(mxio_cwd_path, '/');
-            if (x == NULL) {
-                // shouldn't ever happen
-                goto wat;
-            }
-            // remove the current trailing path segment from cwd
-            if (x == mxio_cwd_path) {
-                // but never remove the first /
-                mxio_cwd_path[1] = 0;
-            } else {
-                x[0] = 0;
-            }
-            continue;
-        }
-        // regular path segment, append to cwd_path
-        size_t len = strlen(mxio_cwd_path);
-        if ((len + seglen + 2) >= PATH_MAX) {
-            // doesn't fit, shouldn't happen, but...
-            goto wat;
-        }
-        if (len != 1) {
-            // if len is 1, path is "/", so don't append a '/'
-            mxio_cwd_path[len++] = '/';
-        }
-        memcpy(mxio_cwd_path + len, path, seglen);
-        mxio_cwd_path[len + seglen] = 0;
-    }
-    return;
-
-wat:
-    strcpy(mxio_cwd_path, "(unknown)");
-    return;
 }
 
 char* getcwd(char* buf, size_t size) {
