@@ -12,6 +12,7 @@
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/macros.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkTypeface.h"
@@ -59,6 +60,7 @@ class MotermView : public mozart::BaseView,
   // If we skip drawing despite being forced to, we should force the next draw.
   bool force_next_draw_;
 
+  mozart::BufferProducer buffer_producer_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> regular_typeface_;
 

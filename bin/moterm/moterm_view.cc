@@ -87,7 +87,8 @@ void MotermView::OnDraw() {
 
     // Draw the contents of the scene to a surface.
     mozart::ImagePtr image;
-    sk_sp<SkSurface> surface = mozart::MakeSkSurface(size, &image);
+    sk_sp<SkSurface> surface =
+        mozart::MakeSkSurface(size, &buffer_producer_, &image);
     FTL_CHECK(surface);
     DrawContent(surface->getCanvas(), size);
 
