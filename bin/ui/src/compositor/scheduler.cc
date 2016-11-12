@@ -94,8 +94,8 @@ void Scheduler::OnFrameScheduled(const Output::FrameTiming& timing) {
                   last_snapshot_time_ - next_snapshot_time,
                   last_update_time_ - next_update_time});
     int64_t skipped_frames = (overlap / next_presentation_interval) + 1;
-    FTL_DLOG(WARNING) << "Skipping " << skipped_frames
-                      << " to prevent time running backwards";
+    FTL_VLOG(1) << "Skipping " << skipped_frames
+                << " to prevent time running backwards";
     ftl::TimeDelta adjustment = next_presentation_interval * skipped_frames;
     next_presentation_time = next_presentation_time + adjustment;
     next_snapshot_time = next_snapshot_time + adjustment;
@@ -125,7 +125,7 @@ void Scheduler::OnFrameScheduled(const Output::FrameTiming& timing) {
       // If snapshots take way too long to complete, we can end up in a
       // situation where the next update gets deferred indefinitely.
       // Prevent this from happening.
-      FTL_DLOG(WARNING) << "Scheduled late update to prevent stalls";
+      FTL_VLOG(1) << "Scheduled late update to prevent stalls";
     } else {
       prevent_stall_ = false;
     }
@@ -162,8 +162,8 @@ void Scheduler::OnUpdate(const FrameInfo& frame_info) {
   ftl::TimePoint now = ftl::TimePoint::Now();
   ftl::TimePoint deadline = frame_info.base_time + kDeadlineTolerance;
   if (deadline < now) {
-    FTL_DLOG(WARNING) << "Compositor missed frame update deadline by "
-                      << (now - deadline).ToMillisecondsF() << " ms";
+    FTL_VLOG(1) << "Compositor missed frame update deadline by "
+                << (now - deadline).ToMillisecondsF() << " ms";
   }
 
   // Schedule the upcoming snapshot.
@@ -185,8 +185,8 @@ void Scheduler::OnSnapshot(const FrameInfo& frame_info) {
   ftl::TimePoint now = ftl::TimePoint::Now();
   ftl::TimePoint deadline = frame_info.publish_deadline + kDeadlineTolerance;
   if (deadline < now) {
-    FTL_DLOG(WARNING) << "Compositor missed frame snapshot deadline by "
-                      << (now - deadline).ToMillisecondsF() << " ms";
+    FTL_VLOG(1) << "Compositor missed frame snapshot deadline by "
+                << (now - deadline).ToMillisecondsF() << " ms";
   }
 
   // Now that we are finishing this frame, schedule the next one if needed.

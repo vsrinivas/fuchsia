@@ -4,7 +4,6 @@
 
 source_set("base") {
   sources = [
-    "logging.h",
     "trace_event.h",
   ]
 

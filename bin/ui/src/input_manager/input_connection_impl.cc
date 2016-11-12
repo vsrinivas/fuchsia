@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/input_manager/input_connection_impl.h"
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/src/input_manager/input_associate.h"
 
 namespace input_manager {
@@ -27,7 +26,7 @@ InputConnectionImpl::~InputConnectionImpl() {}
 void InputConnectionImpl::DeliverEvent(mozart::EventPtr event) {
   // TODO(jeffbrown): Pass the result back up the stack and handle errors.
   if (!listener_) {
-    DVLOG(1) << "DeliverEvent: dropped because there was no listener";
+    FTL_VLOG(1) << "DeliverEvent: dropped because there was no listener";
     return;
   }
 

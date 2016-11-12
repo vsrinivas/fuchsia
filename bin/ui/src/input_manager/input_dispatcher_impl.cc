@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/input_manager/input_dispatcher_impl.h"
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
@@ -63,7 +62,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
       auto point = mozart::PointF::New();
       point->x = event->pointer_data->x;
       point->y = event->pointer_data->y;
-      DVLOG(1) << "HitTest: point=" << point;
+      FTL_VLOG(1) << "HitTest: point=" << point;
       auto hit_result_callback = [ this, weak = weak_factory_.GetWeakPtr() ](
           std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
         if (weak)
@@ -87,7 +86,7 @@ void InputDispatcherImpl::DeliverEvent(mozart::EventPtr event) {
 void InputDispatcherImpl::OnHitTestResult(
     std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
   FTL_DCHECK(!pending_events_.empty());
-  DVLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
+  FTL_VLOG(1) << "OnHitTestResult: resolved_hits=" << resolved_hits.get();
 
   // TODO(jeffbrown): Flesh out the input protocol so it makes sense to
   // look at more than the first hit.
@@ -112,8 +111,8 @@ void InputDispatcherImpl::OnHitTestResult(
     }
   }
 
-  DVLOG(1) << "OnHitTestResult: focused_view_token_=" << focused_view_token_
-           << ", focused_view_transform_=" << focused_view_transform_;
+  FTL_VLOG(1) << "OnHitTestResult: focused_view_token_=" << focused_view_token_
+              << ", focused_view_transform_=" << focused_view_transform_;
 
   DeliverEvent(std::move(pending_events_.front()));
   pending_events_.pop();

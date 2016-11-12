@@ -152,9 +152,6 @@ void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
 
   // TODO(jeffbrown): Filter this feedback loop to avoid large swings.
   presentation_latency_ = last_presentation_time_ - submit_time;
-  FTL_LOG(INFO) << "presentation_latency_="
-                << presentation_latency_.ToMicroseconds();
-
   TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
 
   if (next_frame_) {

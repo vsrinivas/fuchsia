@@ -6,7 +6,6 @@
 
 #include <algorithm>
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -83,9 +82,9 @@ void ViewAssociateTable::ConnectToViewService(mozart::ViewTokenPtr view_token,
   for (auto& data : associates_) {
     FTL_DCHECK(data->info);
     if (Contains(data->info->view_service_names, service_name)) {
-      DVLOG(2) << "Connecting to view service: view_token=" << view_token
-               << ", service_name=" << service_name
-               << ", associate_label=" << data->label;
+      FTL_VLOG(2) << "Connecting to view service: view_token=" << view_token
+                  << ", service_name=" << service_name
+                  << ", associate_label=" << data->label;
       FTL_DCHECK(data->associate);
       data->associate->ConnectToViewService(std::move(view_token), service_name,
                                             std::move(client_handle));
@@ -93,8 +92,8 @@ void ViewAssociateTable::ConnectToViewService(mozart::ViewTokenPtr view_token,
     }
   }
 
-  DVLOG(2) << "Requested view service not available: view_token=" << view_token
-           << ", service_name=" << service_name;
+  FTL_VLOG(2) << "Requested view service not available: view_token="
+              << view_token << ", service_name=" << service_name;
   // Allow pipe to be closed as an indication of failure.
 }
 
@@ -116,8 +115,8 @@ void ViewAssociateTable::OnAssociateConnectionError(
   std::string label;
   bool removed = RemoveAssociateData(associate_data, label);
   FTL_DCHECK(removed);
-  DVLOG(2) << "ViewAssociate disconnected, removing from table"
-           << ", associate_label=" << label;
+  FTL_VLOG(2) << "ViewAssociate disconnected, removing from table"
+              << ", associate_label=" << label;
 }
 
 void ViewAssociateTable::OnAssociateOwnerConnectionError(
@@ -125,8 +124,8 @@ void ViewAssociateTable::OnAssociateOwnerConnectionError(
   std::string label;
   bool removed = RemoveAssociateData(associate_data, label);
   FTL_DCHECK(removed);
-  DVLOG(2) << "ViewAssociateOwner disconnected, removing from table"
-           << ", associate_label=" << label;
+  FTL_VLOG(2) << "ViewAssociateOwner disconnected, removing from table"
+              << ", associate_label=" << label;
 }
 
 void ViewAssociateTable::ConnectToViewTreeService(
@@ -147,9 +146,9 @@ void ViewAssociateTable::ConnectToViewTreeService(
   for (auto& data : associates_) {
     FTL_DCHECK(data->info);
     if (Contains(data->info->view_tree_service_names, service_name)) {
-      DVLOG(2) << "Connecting to view tree service: view_tree_token="
-               << view_tree_token << ", service_name=" << service_name
-               << ", associate_label=" << data->label;
+      FTL_VLOG(2) << "Connecting to view tree service: view_tree_token="
+                  << view_tree_token << ", service_name=" << service_name
+                  << ", associate_label=" << data->label;
       FTL_DCHECK(data->associate);
       data->associate->ConnectToViewTreeService(
           std::move(view_tree_token), service_name, std::move(client_handle));
@@ -157,8 +156,8 @@ void ViewAssociateTable::ConnectToViewTreeService(
     }
   }
 
-  DVLOG(2) << "Requested view tree service not available: view_tree_token="
-           << view_tree_token << ", service_name=" << service_name;
+  FTL_VLOG(2) << "Requested view tree service not available: view_tree_token="
+              << view_tree_token << ", service_name=" << service_name;
   // Allow pipe to be closed as an indication of failure.
 }
 
@@ -168,8 +167,8 @@ void ViewAssociateTable::OnConnected(uint32_t index,
   FTL_DCHECK(pending_connection_count_);
   FTL_DCHECK(!associates_[index]->info);
 
-  DVLOG(1) << "Connected to view associate: label=" << associates_[index]->label
-           << ", info=" << info;
+  FTL_VLOG(1) << "Connected to view associate: label="
+              << associates_[index]->label << ", info=" << info;
   associates_[index]->info = std::move(info);
 
   pending_connection_count_--;

@@ -8,7 +8,6 @@
 #include <cmath>
 #include <utility>
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/src/view_manager/view_impl.h"
 #include "apps/mozart/src/view_manager/view_tree_impl.h"
@@ -104,20 +103,20 @@ void ViewRegistry::CreateView(
 
   // Add to registry and return token.
   views_by_token_.emplace(view_state->view_token()->value, view_state);
-  DVLOG(1) << "CreateView: view=" << view_state;
+  FTL_VLOG(1) << "CreateView: view=" << view_state;
 }
 
 void ViewRegistry::OnViewDied(ViewState* view_state,
                               const std::string& reason) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(1) << "OnViewDied: view=" << view_state << ", reason=" << reason;
+  FTL_VLOG(1) << "OnViewDied: view=" << view_state << ", reason=" << reason;
 
   UnregisterView(view_state);
 }
 
 void ViewRegistry::UnregisterView(ViewState* view_state) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(1) << "UnregisterView: view=" << view_state;
+  FTL_VLOG(1) << "UnregisterView: view=" << view_state;
 
   HijackView(view_state);
   UnregisterChildren(view_state);
@@ -151,20 +150,20 @@ void ViewRegistry::CreateViewTree(
   // Add to registry.
   view_trees_by_token_.emplace(tree_state->view_tree_token()->value,
                                tree_state);
-  DVLOG(1) << "CreateViewTree: tree=" << tree_state;
+  FTL_VLOG(1) << "CreateViewTree: tree=" << tree_state;
 }
 
 void ViewRegistry::OnViewTreeDied(ViewTreeState* tree_state,
                                   const std::string& reason) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(1) << "OnViewTreeDied: tree=" << tree_state << ", reason=" << reason;
+  FTL_VLOG(1) << "OnViewTreeDied: tree=" << tree_state << ", reason=" << reason;
 
   UnregisterViewTree(tree_state);
 }
 
 void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(1) << "UnregisterViewTree: tree=" << tree_state;
+  FTL_VLOG(1) << "UnregisterViewTree: tree=" << tree_state;
 
   UnregisterChildren(tree_state);
 
@@ -209,7 +208,7 @@ void ViewRegistry::CreateScene(ViewState* view_state,
                                fidl::InterfaceRequest<mozart::Scene> scene) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
   FTL_DCHECK(scene.is_pending());
-  DVLOG(1) << "CreateScene: view=" << view_state;
+  FTL_VLOG(1) << "CreateScene: view=" << view_state;
 
   compositor_->CreateScene(std::move(scene), view_state->label(), [
     this, weak = view_state->GetWeakPtr()
@@ -228,8 +227,8 @@ void ViewRegistry::OnViewSceneTokenAvailable(
     return;
 
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(2) << "OnSceneCreated: view=" << view_state
-           << ", scene_token=" << scene_token;
+  FTL_VLOG(2) << "OnSceneCreated: view=" << view_state
+              << ", scene_token=" << scene_token;
 
   if (view_state->scene_token())
     views_by_scene_token_.erase(view_state->scene_token()->value);
@@ -249,8 +248,8 @@ void ViewRegistry::OnStubSceneTokenAvailable(
   if (!view_stub || view_stub->is_unavailable())
     return;
 
-  DVLOG(2) << "OnStubSceneCreated: view_state=" << view_stub->state()
-           << ", scene_token=" << scene_token;
+  FTL_VLOG(2) << "OnStubSceneCreated: view_state=" << view_stub->state()
+              << ", scene_token=" << scene_token;
 
   // Store the scene token.
   FTL_DCHECK(view_stub->is_linked());
@@ -280,9 +279,10 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
 
   FTL_DCHECK(
       view_state->view_stub()->stub_scene());  // we know view is attached
-  DVLOG(2) << "PublishStubScene: view=" << view_state
-           << ", view_stub=" << view_state->view_stub() << ", stub_scene_token="
-           << view_state->view_stub()->stub_scene_token();
+  FTL_VLOG(2) << "PublishStubScene: view=" << view_state
+              << ", view_stub=" << view_state->view_stub()
+              << ", stub_scene_token="
+              << view_state->view_stub()->stub_scene_token();
 
   auto update = mozart::SceneUpdate::New();
   update->clear_resources = true;
@@ -325,7 +325,7 @@ void ViewRegistry::PublishStubScene(ViewState* view_state) {
 void ViewRegistry::SetRenderer(ViewTreeState* tree_state,
                                mozart::RendererPtr renderer) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(1) << "SetRenderer: tree=" << tree_state;
+  FTL_VLOG(1) << "SetRenderer: tree=" << tree_state;
 
   if (renderer) {
     renderer.set_connection_error_handler(
@@ -340,7 +340,7 @@ void ViewRegistry::SetRenderer(ViewTreeState* tree_state,
 
 void ViewRegistry::OnRendererDied(ViewTreeState* tree_state) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(1) << "OnRendererDied: tree=" << tree_state;
+  FTL_VLOG(1) << "OnRendererDied: tree=" << tree_state;
   FTL_DCHECK(tree_state->renderer());
 
   tree_state->SetRenderer(nullptr);
@@ -366,17 +366,17 @@ void ViewRegistry::SetRendererRootScene(ViewTreeState* tree_state) {
     auto viewport = mozart::Rect::New();
     viewport->width = layout->size->width;
     viewport->height = layout->size->height;
-    DVLOG(2) << "SetRootScene: tree=" << tree_state
-             << ", scene_token=" << root_stub->stub_scene_token()
-             << ", scene_version=" << root_stub->scene_version()
-             << ", viewport=" << viewport;
+    FTL_VLOG(2) << "SetRootScene: tree=" << tree_state
+                << ", scene_token=" << root_stub->stub_scene_token()
+                << ", scene_version=" << root_stub->scene_version()
+                << ", viewport=" << viewport;
     tree_state->renderer()->SetRootScene(root_stub->stub_scene_token()->Clone(),
                                          root_stub->scene_version(),
                                          std::move(viewport));
     return;
   }
 
-  DVLOG(2) << "ClearRootScene: tree=" << tree_state;
+  FTL_VLOG(2) << "ClearRootScene: tree=" << tree_state;
   tree_state->renderer()->ClearRootScene();
 }
 
@@ -388,8 +388,8 @@ void ViewRegistry::AddChild(
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   FTL_DCHECK(child_view_owner);
-  DVLOG(1) << "AddChild: container=" << container_state
-           << ", child_key=" << child_key;
+  FTL_VLOG(1) << "AddChild: container=" << container_state
+              << ", child_key=" << child_key;
 
   // Ensure there are no other children with the same key.
   if (container_state->children().find(child_key) !=
@@ -424,8 +424,8 @@ void ViewRegistry::RemoveChild(
     uint32_t child_key,
     fidl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  DVLOG(1) << "RemoveChild: container=" << container_state
-           << ", child_key=" << child_key;
+  FTL_VLOG(1) << "RemoveChild: container=" << container_state
+              << ", child_key=" << child_key;
 
   // Ensure the child key exists in the container.
   auto child_it = container_state->children().find(child_key);
@@ -453,10 +453,10 @@ void ViewRegistry::SetChildProperties(
     uint32_t child_scene_version,
     mozart::ViewPropertiesPtr child_properties) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  DVLOG(1) << "SetChildProperties: container=" << container_state
-           << ", child_key=" << child_key
-           << ", child_scene_version=" << child_scene_version
-           << ", child_properties=" << child_properties;
+  FTL_VLOG(1) << "SetChildProperties: container=" << container_state
+              << ", child_key=" << child_key
+              << ", child_scene_version=" << child_scene_version
+              << ", child_properties=" << child_properties;
 
   // Check whether the properties are well-formed.
   if (child_properties && !Validate(*child_properties)) {
@@ -502,8 +502,8 @@ void ViewRegistry::SetChildProperties(
 void ViewRegistry::FlushChildren(ViewContainerState* container_state,
                                  uint32_t flush_token) {
   FTL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  DVLOG(1) << "FlushChildren: container=" << container_state
-           << ", flush_token=" << flush_token;
+  FTL_VLOG(1) << "FlushChildren: container=" << container_state
+              << ", flush_token=" << flush_token;
 }
 
 void ViewRegistry::OnViewResolved(ViewStub* view_stub,
@@ -534,7 +534,7 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
                                                ViewState* view_state) {
   FTL_DCHECK(view_stub);
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
+  FTL_VLOG(2) << "AttachViewStubAndNotify: view=" << view_state;
 
   // Create the scene and get its token asynchronously.
   // TODO(jeffbrown): It would be really nice to have a way to pipeline
@@ -560,7 +560,7 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
 
 void ViewRegistry::ReleaseUnavailableViewAndNotify(ViewStub* view_stub) {
   FTL_DCHECK(view_stub);
-  DVLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
+  FTL_VLOG(2) << "ReleaseUnavailableViewAndNotify: key=" << view_stub->key();
 
   ViewState* view_state = view_stub->ReleaseView();
   FTL_DCHECK(!view_state);
@@ -610,7 +610,7 @@ void ViewRegistry::TransferOrUnregisterViewStub(
 
 void ViewRegistry::Invalidate(ViewState* view_state) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(1) << "Invalidate: view=" << view_state;
+  FTL_VLOG(1) << "Invalidate: view=" << view_state;
 
   ScheduleViewInvalidation(view_state, ViewState::INVALIDATION_EXPLICIT);
 }
@@ -618,8 +618,8 @@ void ViewRegistry::Invalidate(ViewState* view_state) {
 void ViewRegistry::ScheduleViewInvalidation(ViewState* view_state,
                                             uint32_t flags) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(2) << "ScheduleViewInvalidation: view=" << view_state
-           << ", flags=" << flags;
+  FTL_VLOG(2) << "ScheduleViewInvalidation: view=" << view_state
+              << ", flags=" << flags;
 
   view_state->set_invalidation_flags(view_state->invalidation_flags() | flags);
   if (view_state->view_stub() && view_state->view_stub()->tree()) {
@@ -631,8 +631,8 @@ void ViewRegistry::ScheduleViewInvalidation(ViewState* view_state,
 void ViewRegistry::ScheduleViewTreeInvalidation(ViewTreeState* tree_state,
                                                 uint32_t flags) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(2) << "ScheduleViewTreeInvalidation: tree=" << tree_state
-           << ", flags=" << flags;
+  FTL_VLOG(2) << "ScheduleViewTreeInvalidation: tree=" << tree_state
+              << ", flags=" << flags;
 
   tree_state->set_invalidation_flags(tree_state->invalidation_flags() | flags);
   if (flags & ViewTreeState::INVALIDATION_RENDERER_CHANGED)
@@ -653,9 +653,9 @@ void ViewRegistry::ScheduleViewTreeInvalidation(ViewTreeState* tree_state,
 void ViewRegistry::TraverseViewTree(ViewTreeState* tree_state,
                                     mozart::FrameInfoPtr frame_info) {
   FTL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  DVLOG(2) << "TraverseViewTree: tree=" << tree_state
-           << ", frame_info=" << frame_info
-           << ", invalidation_flags=" << tree_state->invalidation_flags();
+  FTL_VLOG(2) << "TraverseViewTree: tree=" << tree_state
+              << ", frame_info=" << frame_info
+              << ", invalidation_flags=" << tree_state->invalidation_flags();
   FTL_DCHECK(tree_state->frame_scheduled());
   FTL_DCHECK(tree_state->invalidation_flags());
 
@@ -671,10 +671,10 @@ void ViewRegistry::TraverseView(ViewState* view_state,
                                 const mozart::FrameInfo* frame_info,
                                 bool parent_properties_changed) {
   FTL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  DVLOG(2) << "TraverseView: view=" << view_state
-           << ", frame_info=" << frame_info
-           << ", parent_properties_changed=" << parent_properties_changed
-           << ", invalidation_flags=" << view_state->invalidation_flags();
+  FTL_VLOG(2) << "TraverseView: view=" << view_state
+              << ", frame_info=" << frame_info
+              << ", parent_properties_changed=" << parent_properties_changed
+              << ", invalidation_flags=" << view_state->invalidation_flags();
 
   uint32_t flags = view_state->invalidation_flags();
 
@@ -699,7 +699,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
   // If we don't have view properties yet then we cannot pursue traversals
   // any further.
   if (!view_state->issued_properties()) {
-    DVLOG(2) << "View has no valid properties: view=" << view_state;
+    FTL_VLOG(2) << "View has no valid properties: view=" << view_state;
     view_state->set_invalidation_flags(flags);
     return;
   }
@@ -718,8 +718,8 @@ void ViewRegistry::TraverseView(ViewState* view_state,
       SendInvalidation(view_state, std::move(invalidation));
       flags = ViewState::INVALIDATION_IN_PROGRESS;
     } else {
-      DVLOG(2) << "View invalidation stalled awaiting response: view="
-               << view_state;
+      FTL_VLOG(2) << "View invalidation stalled awaiting response: view="
+                  << view_state;
       if (send_properties)
         flags |= ViewState::INVALIDATION_RESEND_PROPERTIES;
       flags |= ViewState::INVALIDATION_STALLED;
@@ -760,8 +760,8 @@ mozart::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
     return properties;
   } else if (view_stub->is_root_of_tree()) {
     if (!view_stub->properties() || !IsComplete(*view_stub->properties())) {
-      DVLOG(2) << "View tree properties are incomplete: root=" << view_state
-               << ", properties=" << view_stub->properties();
+      FTL_VLOG(2) << "View tree properties are incomplete: root=" << view_state
+                  << ", properties=" << view_stub->properties();
       return nullptr;
     }
     return view_stub->properties().Clone();
@@ -799,7 +799,7 @@ void ViewRegistry::GetHitTester(
     const GetHitTesterCallback& callback) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(hit_tester_request.is_pending());
-  DVLOG(1) << "GetHitTester: tree=" << view_tree_token;
+  FTL_VLOG(1) << "GetHitTester: tree=" << view_tree_token;
 
   ViewTreeState* view_tree = FindViewTree(view_tree_token->value);
   if (!view_tree) {
@@ -827,8 +827,8 @@ void ViewRegistry::ResolveScenes(
     index++;
   }
 
-  DVLOG(1) << "ResolveScenes: scene_tokens=" << scene_tokens
-           << ", result=" << result;
+  FTL_VLOG(1) << "ResolveScenes: scene_tokens=" << scene_tokens
+              << ", result=" << result;
   callback(std::move(result));
 }
 
@@ -840,8 +840,8 @@ void ViewRegistry::SendInvalidation(ViewState* view_state,
   FTL_DCHECK(invalidation);
   FTL_DCHECK(view_state->view_listener());
 
-  DVLOG(1) << "SendInvalidation: view_state=" << view_state
-           << ", invalidation=" << invalidation;
+  FTL_VLOG(1) << "SendInvalidation: view_state=" << view_state
+              << ", invalidation=" << invalidation;
 
   // It's safe to capture the view state because the ViewListener is closed
   // before the view state is destroyed so we will only receive the callback
@@ -857,8 +857,8 @@ void ViewRegistry::SendInvalidation(ViewState* view_state,
               ViewState::INVALIDATION_STALLED));
 
         if (old_flags & ViewState::INVALIDATION_STALLED) {
-          DVLOG(2) << "View recovered from stalled invalidation: view_state="
-                   << view_state;
+          FTL_VLOG(2) << "View recovered from stalled invalidation: view_state="
+                      << view_state;
           Invalidate(view_state);
         }
       });
@@ -869,7 +869,7 @@ void ViewRegistry::SendRendererDied(ViewTreeState* tree_state) {
   FTL_DCHECK(tree_state->view_tree_listener());
 
   // TODO: Detect ANRs
-  DVLOG(1) << "SendRendererDied: tree_state=" << tree_state;
+  FTL_VLOG(1) << "SendRendererDied: tree_state=" << tree_state;
   tree_state->view_tree_listener()->OnRendererDied([] {});
 }
 
@@ -883,9 +883,9 @@ void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
     return;
 
   // TODO: Detect ANRs
-  DVLOG(1) << "SendChildAttached: container_state=" << container_state
-           << ", child_key=" << child_key
-           << ", child_view_info=" << child_view_info;
+  FTL_VLOG(1) << "SendChildAttached: container_state=" << container_state
+              << ", child_key=" << child_key
+              << ", child_view_info=" << child_view_info;
   container_state->view_container_listener()->OnChildAttached(
       child_key, std::move(child_view_info), [] {});
 }
@@ -898,8 +898,8 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
     return;
 
   // TODO: Detect ANRs
-  DVLOG(1) << "SendChildUnavailable: container=" << container_state
-           << ", child_key=" << child_key;
+  FTL_VLOG(1) << "SendChildUnavailable: container=" << container_state
+              << ", child_key=" << child_key;
   container_state->view_container_listener()->OnChildUnavailable(child_key,
                                                                  [] {});
 }

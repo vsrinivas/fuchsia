@@ -59,11 +59,10 @@ void FrameTracker::Update(const FrameInfo& raw_frame_info, ftl::TimePoint now) {
 
     // Jank warning.
     // TODO(jeffbrown): Suppress this once we're happy with things.
-    FTL_LOG(WARNING) << "Missed "
-                     << (frame_info_.presentation_interval * 0.000001f)
-                     << " ms publish deadline by " << (lag * 0.000001f)
-                     << " ms, skipping "
-                     << (lag / frame_info_.presentation_interval) << " frames";
+    FTL_VLOG(1) << "Missed " << (frame_info_.presentation_interval * 0.000001f)
+                << " ms publish deadline by " << (lag * 0.000001f)
+                << " ms, skipping " << (lag / frame_info_.presentation_interval)
+                << " frames";
   }
 
   // Ensure monotonicity.

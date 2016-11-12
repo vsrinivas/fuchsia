@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/view_manager/view_state.h"
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/src/view_manager/view_impl.h"
 #include "apps/mozart/src/view_manager/view_registry.h"
 #include "apps/mozart/src/view_manager/view_stub.h"

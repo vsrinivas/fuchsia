@@ -5,7 +5,6 @@
 #include "apps/mozart/src/launcher/launcher_view_tree.h"
 
 #include "apps/modular/lib/app/connect.h"
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
@@ -87,7 +86,7 @@ void LauncherViewTree::OnChildAttached(
   FTL_DCHECK(child_view_info);
 
   if (root_key_ == child_key) {
-    DVLOG(1) << "OnChildAttached: child_view_info=" << child_view_info;
+    FTL_VLOG(1) << "OnChildAttached: child_view_info=" << child_view_info;
     root_view_info_ = std::move(child_view_info);
   }
   callback();

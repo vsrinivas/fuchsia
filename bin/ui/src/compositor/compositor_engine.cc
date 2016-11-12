@@ -8,7 +8,6 @@
 #include <sstream>
 #include <utility>
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/glue/base/trace_event.h"
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
@@ -60,20 +59,20 @@ mozart::SceneTokenPtr CompositorEngine::CreateScene(
   // Add to registry.
   scenes_by_token_.emplace(scene_state->scene_token().value, scene_state);
   universe_.AddScene(scene_state->scene_def()->label());
-  DVLOG(1) << "CreateScene: scene=" << scene_state;
+  FTL_VLOG(1) << "CreateScene: scene=" << scene_state;
   return scene_state->scene_token().Clone();
 }
 
 void CompositorEngine::OnSceneConnectionError(SceneState* scene_state) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "OnSceneConnectionError: scene=" << scene_state;
+  FTL_VLOG(1) << "OnSceneConnectionError: scene=" << scene_state;
 
   DestroyScene(scene_state);
 }
 
 void CompositorEngine::DestroyScene(SceneState* scene_state) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "DestroyScene: scene=" << scene_state;
+  FTL_VLOG(1) << "DestroyScene: scene=" << scene_state;
 
   // Notify other scenes which may depend on this one.
   for (auto& pair : scenes_by_token_) {
@@ -151,20 +150,20 @@ void CompositorEngine::CreateRenderer(
 
   // Add to registry.
   renderers_.push_back(renderer_state);
-  DVLOG(1) << "CreateRenderer: " << renderer_state;
+  FTL_VLOG(1) << "CreateRenderer: " << renderer_state;
 }
 
 void CompositorEngine::OnRendererConnectionError(
     RendererState* renderer_state) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(1) << "OnRendererConnectionError: renderer=" << renderer_state;
+  FTL_VLOG(1) << "OnRendererConnectionError: renderer=" << renderer_state;
 
   DestroyRenderer(renderer_state);
 }
 
 void CompositorEngine::DestroyRenderer(RendererState* renderer_state) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(1) << "DestroyRenderer: renderer=" << renderer_state;
+  FTL_VLOG(1) << "DestroyRenderer: renderer=" << renderer_state;
 
   // Remove from registry.
   renderers_.erase(
@@ -175,7 +174,7 @@ void CompositorEngine::DestroyRenderer(RendererState* renderer_state) {
 void CompositorEngine::SetListener(SceneState* scene_state,
                                    mozart::SceneListenerPtr listener) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "SetSceneListener: scene=" << scene_state;
+  FTL_VLOG(1) << "SetSceneListener: scene=" << scene_state;
 
   scene_state->set_scene_listener(std::move(listener));
 }
@@ -183,7 +182,7 @@ void CompositorEngine::SetListener(SceneState* scene_state,
 void CompositorEngine::Update(SceneState* scene_state,
                               mozart::SceneUpdatePtr update) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "Update: scene=" << scene_state << ", update=" << update;
+  FTL_VLOG(1) << "Update: scene=" << scene_state << ", update=" << update;
 
   scene_state->scene_def()->EnqueueUpdate(std::move(update));
 }
@@ -191,7 +190,7 @@ void CompositorEngine::Update(SceneState* scene_state,
 void CompositorEngine::Publish(SceneState* scene_state,
                                mozart::SceneMetadataPtr metadata) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "Publish: scene=" << scene_state << ", metadata=" << metadata;
+  FTL_VLOG(1) << "Publish: scene=" << scene_state << ", metadata=" << metadata;
 
   if (!metadata)
     metadata = mozart::SceneMetadata::New();
@@ -232,7 +231,7 @@ void CompositorEngine::Publish(SceneState* scene_state,
 void CompositorEngine::ScheduleFrame(SceneState* scene_state,
                                      const FrameCallback& callback) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(1) << "ScheduleFrame: scene=" << scene_state;
+  FTL_VLOG(1) << "ScheduleFrame: scene=" << scene_state;
 
   if (!scene_state->frame_dispatcher().AddCallback(callback))
     return;
@@ -249,7 +248,7 @@ void CompositorEngine::ScheduleFrame(SceneState* scene_state,
 void CompositorEngine::GetDisplayInfo(RendererState* renderer_state,
                                       DisplayCallback callback) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(1) << "GetDisplayInfo: renderer=" << renderer_state;
+  FTL_VLOG(1) << "GetDisplayInfo: renderer=" << renderer_state;
 
   renderer_state->output()->GetDisplayInfo(std::move(callback));
 }
@@ -261,9 +260,10 @@ void CompositorEngine::SetRootScene(RendererState* renderer_state,
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(scene_token);
   FTL_DCHECK(viewport);
-  DVLOG(1) << "SetRootScene: renderer=" << renderer_state
-           << ", scene_token=" << scene_token
-           << ", scene_version=" << scene_version << ", viewport=" << viewport;
+  FTL_VLOG(1) << "SetRootScene: renderer=" << renderer_state
+              << ", scene_token=" << scene_token
+              << ", scene_version=" << scene_version
+              << ", viewport=" << viewport;
 
   if (viewport->width <= 0 || viewport->width > kMaxViewportWidth ||
       viewport->height <= 0 || viewport->height > kMaxViewportHeight) {
@@ -292,7 +292,7 @@ void CompositorEngine::SetRootScene(RendererState* renderer_state,
 
 void CompositorEngine::ClearRootScene(RendererState* renderer_state) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(1) << "ClearRootScene: renderer=" << renderer_state;
+  FTL_VLOG(1) << "ClearRootScene: renderer=" << renderer_state;
 
   // Update the root.
   if (renderer_state->ClearRootScene()) {
@@ -304,7 +304,7 @@ void CompositorEngine::ClearRootScene(RendererState* renderer_state) {
 void CompositorEngine::ScheduleFrame(RendererState* renderer_state,
                                      const FrameCallback& callback) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(1) << "ScheduleFrame: renderer=" << renderer_state;
+  FTL_VLOG(1) << "ScheduleFrame: renderer=" << renderer_state;
 
   if (!renderer_state->frame_dispatcher().AddCallback(callback))
     return;
@@ -319,7 +319,7 @@ void CompositorEngine::HitTest(
     const mozart::HitTester::HitTestCallback& callback) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_DCHECK(point);
-  DVLOG(1) << "HitTest: renderer=" << renderer_state << ", point=" << point;
+  FTL_VLOG(1) << "HitTest: renderer=" << renderer_state << ", point=" << point;
 
   auto result = mozart::HitTestResult::New();
 
@@ -339,7 +339,7 @@ bool CompositorEngine::ResolveSceneReference(
 void CompositorEngine::SendResourceUnavailable(SceneState* scene_state,
                                                uint32_t resource_id) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(2) << "SendResourceUnavailable: resource_id=" << resource_id;
+  FTL_VLOG(2) << "SendResourceUnavailable: resource_id=" << resource_id;
 
   // TODO: Detect ANRs
   if (scene_state->scene_listener()) {
@@ -354,7 +354,7 @@ SceneState* CompositorEngine::FindScene(uint32_t scene_token) {
 
 void CompositorEngine::InvalidateScene(SceneState* scene_state) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(2) << "InvalidateScene: scene=" << scene_state;
+  FTL_VLOG(2) << "InvalidateScene: scene=" << scene_state;
 
   for (auto& renderer : renderers_) {
     if (renderer->current_snapshot() &&
@@ -369,7 +369,7 @@ SceneDef::Disposition CompositorEngine::PresentScene(
     SceneState* scene_state,
     ftl::TimePoint presentation_time) {
   FTL_DCHECK(IsSceneStateRegisteredDebug(scene_state));
-  DVLOG(2) << "PresentScene: scene=" << scene_state;
+  FTL_VLOG(2) << "PresentScene: scene=" << scene_state;
 
   std::ostringstream errs;
   SceneDef::Disposition disposition = scene_state->scene_def()->Present(
@@ -392,7 +392,7 @@ SceneDef::Disposition CompositorEngine::PresentScene(
 void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
                                        const FrameInfo& frame_info) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
+  FTL_VLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
   TRACE_EVENT1("gfx", "CompositorEngine::ComposeRenderer", "renderer",
                renderer_state->FormattedLabel());
@@ -406,7 +406,7 @@ void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
 void CompositorEngine::PresentRenderer(RendererState* renderer_state,
                                        ftl::TimePoint presentation_time) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
+  FTL_VLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
 
   TRACE_EVENT1("gfx", "CompositorEngine::PresentRenderer", "renderer",
                renderer_state->FormattedLabel());
@@ -427,23 +427,23 @@ void CompositorEngine::PresentRenderer(RendererState* renderer_state,
 
 void CompositorEngine::SnapshotRenderer(RendererState* renderer_state) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(2) << "SnapshotRenderer: renderer_state=" << renderer_state;
+  FTL_VLOG(2) << "SnapshotRenderer: renderer_state=" << renderer_state;
 
   TRACE_EVENT1("gfx", "CompositorEngine::SnapshotRenderer", "renderer",
                renderer_state->FormattedLabel());
 
-  if (VLOG_IS_ON(2)) {
+  if (FTL_VLOG_IS_ON(2)) {
     std::ostringstream block_log;
     SnapshotRendererInner(renderer_state, &block_log);
     if (!renderer_state->current_snapshot() ||
         renderer_state->current_snapshot()->is_blocked()) {
-      DVLOG(2) << "Rendering completely blocked:" << std::endl
-               << block_log.str();
+      FTL_VLOG(2) << "Rendering completely blocked:" << std::endl
+                  << block_log.str();
     } else if (!block_log.str().empty()) {
-      DVLOG(2) << "Rendering partially blocked:" << std::endl
-               << block_log.str();
+      FTL_VLOG(2) << "Rendering partially blocked:" << std::endl
+                  << block_log.str();
     } else {
-      DVLOG(2) << "Rendering unblocked";
+      FTL_VLOG(2) << "Rendering unblocked";
     }
   } else {
     SnapshotRendererInner(renderer_state, nullptr);
@@ -468,7 +468,7 @@ void CompositorEngine::PaintRenderer(RendererState* renderer_state,
                                      const FrameInfo& frame_info,
                                      ftl::TimePoint composition_time) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
-  DVLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
+  FTL_VLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
   TRACE_EVENT1("gfx", "CompositorEngine::PaintRenderer", "renderer",
                renderer_state->FormattedLabel());

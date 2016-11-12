@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include "apps/mozart/glue/base/logging.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 
 namespace input_manager {
@@ -71,7 +70,7 @@ void InputAssociate::CreateInputConnection(
     fidl::InterfaceRequest<mozart::InputConnection> request) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(request.is_pending());
-  DVLOG(1) << "CreateInputConnection: view_token=" << view_token;
+  FTL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
 
   const uint32_t view_token_value = view_token->value;
   input_connections_by_view_token_.emplace(
@@ -86,7 +85,8 @@ void InputAssociate::OnInputConnectionDied(InputConnectionImpl* connection) {
       input_connections_by_view_token_.find(connection->view_token()->value);
   FTL_DCHECK(it != input_connections_by_view_token_.end());
   FTL_DCHECK(it->second.get() == connection);
-  DVLOG(1) << "OnInputConnectionDied: view_token=" << connection->view_token();
+  FTL_VLOG(1) << "OnInputConnectionDied: view_token="
+              << connection->view_token();
 
   input_connections_by_view_token_.erase(it);
 }
@@ -96,7 +96,7 @@ void InputAssociate::CreateInputDispatcher(
     fidl::InterfaceRequest<mozart::InputDispatcher> request) {
   FTL_DCHECK(view_tree_token);
   FTL_DCHECK(request.is_pending());
-  DVLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
+  FTL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
 
   const uint32_t view_tree_token_value = view_tree_token->value;
   input_dispatchers_by_view_tree_token_.emplace(
@@ -107,8 +107,8 @@ void InputAssociate::CreateInputDispatcher(
 
 void InputAssociate::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
   FTL_DCHECK(dispatcher);
-  DVLOG(1) << "OnInputDispatcherDied: view_tree_token="
-           << dispatcher->view_tree_token();
+  FTL_VLOG(1) << "OnInputDispatcherDied: view_tree_token="
+              << dispatcher->view_tree_token();
 
   auto it = input_dispatchers_by_view_tree_token_.find(
       dispatcher->view_tree_token()->value);
@@ -122,12 +122,13 @@ void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
                                   mozart::EventPtr event) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(event);
-  DVLOG(1) << "DeliverEvent: view_token=" << *view_token
-           << ", event=" << *event;
+  FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
+              << ", event=" << *event;
 
   auto it = input_connections_by_view_token_.find(view_token->value);
   if (it == input_connections_by_view_token_.end()) {
-    DVLOG(1) << "DeliverEvent: dropped because there was no input connection";
+    FTL_VLOG(1)
+        << "DeliverEvent: dropped because there was no input connection";
     return;
   }
 
