@@ -51,9 +51,11 @@ public:
     mx_status_t replace(mx_rights_t rights, handle<T>* result) {
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_status_t status = mx_handle_replace(value_, rights, &h);
-        result->reset(h);
+        // We store MX_HANDLE_INVALID to value_ before calling reset on result
+        // in case result == this.
         if (status == NO_ERROR)
             value_ = MX_HANDLE_INVALID;
+        result->reset(h);
         return status;
     }
 
