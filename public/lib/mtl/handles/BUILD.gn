@@ -4,6 +4,8 @@
 
 source_set("handles") {
   sources = [
+    "object_info.cc",
+    "object_info.h",
     "unique_handle.cc",
     "unique_handle.h",
   ]
