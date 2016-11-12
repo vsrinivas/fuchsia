@@ -5,7 +5,7 @@
     ],
     "binaries": [
         {
-            "binary": "component_manager_program",
+            "binary": "component_manager_main",
             "bootfs_path": "apps/component_manager"
         },
         {
