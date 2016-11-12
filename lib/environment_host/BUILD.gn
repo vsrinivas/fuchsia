@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("agent_environment_host") {
+source_set("application_environment_host_impl") {
   sources = [
-    "agent_environment_host.h",
+    "application_environment_host_impl.cc",
+    "application_environment_host_impl.h",
   ]
 
   deps = [

@@ -161,7 +161,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
   void StartSuggestionAgent(const std::string& url) {
-    auto agent_host = std::make_unique<maxwell::AgentEnvironmentHost>();
+    auto agent_host =
+        std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
     agent_host->AddService<maxwell::context::SuggestionAgentClient>([this, url](
         fidl::InterfaceRequest<maxwell::context::SuggestionAgentClient>
             request) {

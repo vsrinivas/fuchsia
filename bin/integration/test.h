@@ -7,7 +7,7 @@
 #include <chrono>
 
 #include "gtest/gtest.h"
-#include "apps/maxwell/src/agent_environment_host.h"
+#include "apps/maxwell/src/application_environment_host_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -108,8 +108,9 @@ class MaxwellTestBase : public ::testing::Test {
   MaxwellTestBase();
   virtual ~MaxwellTestBase() = default;
 
-  void StartAgent(const std::string& url,
-                  std::unique_ptr<maxwell::AgentEnvironmentHost> env_host);
+  void StartAgent(
+      const std::string& url,
+      std::unique_ptr<modular::ApplicationEnvironmentHost> env_host);
   modular::ServiceProviderPtr StartServiceProvider(const std::string& url);
 
   template <typename Interface>
@@ -119,52 +120,13 @@ class MaxwellTestBase : public ::testing::Test {
   }
 
  private:
-  class TestEnvironmentHost : public modular::ApplicationEnvironmentHost,
-                              public modular::ServiceProvider {
-   public:
-    TestEnvironmentHost() : binding_(this) {}
-
-    void GetApplicationEnvironmentServices(
-        fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
-        override {
-      svc_bindings_.AddBinding(this, std::move(environment_services));
-    }
-
-    void ConnectToService(const fidl::String& interface_name,
-                          mx::channel channel) override {
-      if (interface_name == modular::ApplicationEnvironment::Name_) {
-        env_bindings_.AddBinding(
-            environment_,
-            fidl::InterfaceRequest<modular::ApplicationEnvironment>(
-                std::move(channel)));
-      }
-    }
-
-    // Sets the environment hosted by this host, which should be the result
-    // obtained by CreateNestedEnvironment after passing this host.
-    void SetEnvironment(modular::ApplicationEnvironment* environment) {
-      environment_ = environment;
-    }
-
-    fidl::InterfaceHandle<modular::ApplicationEnvironmentHost>
-    PassBoundHandle() {
-      fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> handle;
-      binding_.Bind(&handle);
-      return handle;
-    }
-
-   private:
-    fidl::Binding<modular::ApplicationEnvironmentHost> binding_;
-    fidl::BindingSet<modular::ServiceProvider> svc_bindings_;
-    fidl::BindingSet<modular::ApplicationEnvironment> env_bindings_;
-    modular::ApplicationEnvironment* environment_;
-  };
-
-  TestEnvironmentHost test_environment_host_;
+  maxwell::ApplicationEnvironmentHostImpl test_environment_host_;
+  fidl::Binding<modular::ApplicationEnvironmentHost>
+      test_environment_host_binding_;
   modular::ApplicationEnvironmentPtr test_environment_;
   modular::ApplicationLauncherPtr test_launcher_;
 
   fidl::BindingSet<modular::ApplicationEnvironmentHost,
-                   std::unique_ptr<maxwell::AgentEnvironmentHost>>
+                   std::unique_ptr<modular::ApplicationEnvironmentHost>>
       agent_host_bindings_;
 };

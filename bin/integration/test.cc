@@ -49,22 +49,25 @@ void Sleep() {
   Sleep(1s);
 }
 
-MaxwellTestBase::MaxwellTestBase() {
+MaxwellTestBase::MaxwellTestBase()
+    : test_environment_host_binding_(&test_environment_host_) {
+  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost>
+      test_environment_host_handle;
+  test_environment_host_binding_.Bind(&test_environment_host_handle);
   root_environment->CreateNestedEnvironment(
-      test_environment_host_.PassBoundHandle(), GetProxy(&test_environment_),
+      std::move(test_environment_host_handle), GetProxy(&test_environment_),
       NULL);
-  test_environment_host_.SetEnvironment(test_environment_.get());
   test_environment_->GetApplicationLauncher(GetProxy(&test_launcher_));
 }
 
 void MaxwellTestBase::StartAgent(
     const std::string& url,
-    std::unique_ptr<maxwell::AgentEnvironmentHost> env_host) {
-  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> env_host_handle =
+    std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
+  fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> agent_host_handle =
       agent_host_bindings_.AddBinding(std::move(env_host));
 
   modular::ApplicationEnvironmentPtr agent_env;
-  test_environment_->CreateNestedEnvironment(std::move(env_host_handle),
+  test_environment_->CreateNestedEnvironment(std::move(agent_host_handle),
                                              GetProxy(&agent_env), NULL);
 
   modular::ApplicationLauncherPtr agent_launcher;
