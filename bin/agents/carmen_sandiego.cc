@@ -5,15 +5,12 @@
 #include <rapidjson/document.h>
 
 #include "apps/maxwell/services/context/client.fidl.h"
+#include "apps/maxwell/src/acquirers/gps.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/maxwell/src/acquirers/gps.h"
-
-using maxwell::acquirers::GpsAcquirer;
-
-constexpr char GpsAcquirer::kLabel[];
-constexpr char GpsAcquirer::kSchema[];
+constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
+constexpr char maxwell::acquirers::GpsAcquirer::kSchema[];
 
 namespace {
 
@@ -38,7 +35,8 @@ class CarmenSandiegoApp : public maxwell::context::PublisherController,
   void OnHasSubscribers() override {
     fidl::InterfaceHandle<maxwell::context::SubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    maxwell_context_->Subscribe(GpsAcquirer::kLabel, GpsAcquirer::kSchema,
+    maxwell_context_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
+                                maxwell::acquirers::GpsAcquirer::kSchema,
                                 std::move(in_handle));
   }
 

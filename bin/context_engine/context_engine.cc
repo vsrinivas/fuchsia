@@ -3,19 +3,14 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-
+#include "apps/maxwell/src/context_engine/graph.h"
+#include "apps/maxwell/src/context_engine/repo.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/maxwell/src/context_engine/graph.h"
-#include "apps/maxwell/src/context_engine/repo.h"
-
+namespace maxwell {
+namespace context {
 namespace {
-
-using fidl::InterfaceHandle;
-using fidl::InterfaceRequest;
-
-using namespace maxwell::context;
 
 template <typename Interface>
 class PublisherClient : public virtual Interface {
@@ -25,8 +20,8 @@ class PublisherClient : public virtual Interface {
 
   void Publish(const fidl::String& label,
                const fidl::String& schema,
-               InterfaceHandle<PublisherController> controller,
-               InterfaceRequest<PublisherLink> link) override {
+               fidl::InterfaceHandle<PublisherController> controller,
+               fidl::InterfaceRequest<PublisherLink> link) override {
     DataNode* output = component_->EmplaceDataNode(label, schema);
     repo_->Index(output);
     output->SetPublisher(std::move(controller), std::move(link));
@@ -50,7 +45,7 @@ class SubscriberClient : public virtual Interface {
   // match and ignore all others.
   virtual void Subscribe(const fidl::String& label,
                          const fidl::String& schema,
-                         InterfaceHandle<SubscriberLink> link_handle) {
+                         fidl::InterfaceHandle<SubscriberLink> link_handle) {
     SubscriberLinkPtr link = SubscriberLinkPtr::Create(std::move(link_handle));
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
     repo_->Query(label, schema, std::move(link));
@@ -76,14 +71,14 @@ class ContextEngineApp : public ContextEngine {
   ContextEngineApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<ContextEngine>(
-        [this](InterfaceRequest<ContextEngine> request) {
+        [this](fidl::InterfaceRequest<ContextEngine> request) {
           bindings_.AddBinding(this, std::move(request));
         });
   }
 
   void RegisterContextAcquirer(
       const fidl::String& url,
-      InterfaceRequest<ContextAcquirerClient> client) override {
+      fidl::InterfaceRequest<ContextAcquirerClient> client) override {
     caq_bindings_.AddBinding(std::make_unique<ContextAcquirerClientImpl>(
                                  new ComponentNode(url), &repo_),
                              std::move(client));
@@ -91,7 +86,7 @@ class ContextEngineApp : public ContextEngine {
 
   void RegisterContextAgent(
       const fidl::String& url,
-      InterfaceRequest<ContextAgentClient> client) override {
+      fidl::InterfaceRequest<ContextAgentClient> client) override {
     cag_bindings_.AddBinding(std::make_unique<ContextAgentClientImpl>(
                                  new ComponentNode(url), &repo_),
                              std::move(client));
@@ -99,7 +94,7 @@ class ContextEngineApp : public ContextEngine {
 
   void RegisterSuggestionAgent(
       const fidl::String& url,
-      InterfaceRequest<SuggestionAgentClient> client) override {
+      fidl::InterfaceRequest<SuggestionAgentClient> client) override {
     sag_bindings_.AddBinding(
         std::make_unique<SuggestionAgentClientImpl>(&repo_), std::move(client));
   }
@@ -120,10 +115,12 @@ class ContextEngineApp : public ContextEngine {
 };
 
 }  // namespace
+}  // namespace context
+}  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  ContextEngineApp app;
+  maxwell::context::ContextEngineApp app;
   loop.Run();
   return 0;
 }

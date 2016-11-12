@@ -7,9 +7,8 @@
 #include <unordered_map>
 
 #include "apps/maxwell/services/context/client.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-
 #include "apps/maxwell/src/bound_set.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 namespace context {

@@ -45,8 +45,17 @@ Predicate operator!(const Predicate& a) {
   return [&a] { return !a(); };
 }
 
+Predicate Deadline(const ftl::TimeDelta& duration) {
+  const auto deadline = ftl::TimePoint::Now() + duration;
+  return [deadline] { return ftl::TimePoint::Now() >= deadline; };
+}
+
+void Sleep(const ftl::TimeDelta& duration) {
+  WaitUntil(Deadline(duration));
+}
+
 void Sleep() {
-  Sleep(1s);
+  Sleep(ftl::TimeDelta::FromSeconds(1));
 }
 
 MaxwellTestBase::MaxwellTestBase()

@@ -11,13 +11,11 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-using maxwell::agents::IdeasAgent;
-
-constexpr char IdeasAgent::kIdeaId[];
+constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
 namespace {
 
-class IdeasAgentApp : public IdeasAgent,
+class IdeasAgentApp : public maxwell::agents::IdeasAgent,
                       public maxwell::context::SubscriberLink {
  public:
   IdeasAgentApp()

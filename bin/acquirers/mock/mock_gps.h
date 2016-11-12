@@ -5,7 +5,6 @@
 #pragma once
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 

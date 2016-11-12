@@ -11,10 +11,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 
-using maxwell::acquirers::GpsAcquirer;
-
-constexpr char GpsAcquirer::kLabel[];
-constexpr char GpsAcquirer::kSchema[];
+constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
+constexpr char maxwell::acquirers::GpsAcquirer::kSchema[];
 
 namespace {
 
@@ -22,7 +20,7 @@ constexpr ftl::TimeDelta kGpsUpdatePeriod = ftl::TimeDelta::FromSeconds(1);
 #define KEEP_ALIVE_TICKS 3
 #define HAS_SUBSCRIBERS -1
 
-class GpsAcquirerApp : public GpsAcquirer,
+class GpsAcquirerApp : public maxwell::acquirers::GpsAcquirer,
                        public maxwell::context::PublisherController {
  public:
   GpsAcquirerApp()

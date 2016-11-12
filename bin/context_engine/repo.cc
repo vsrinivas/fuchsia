@@ -7,8 +7,6 @@
 namespace maxwell {
 namespace context {
 
-using std::string;
-
 void Repo::Index(DataNode* data_node) {
   by_label_and_schema_[data_node->label].emplace(data_node->schema, data_node);
 
@@ -26,8 +24,8 @@ void Repo::Index(DataNode* data_node) {
   }
 }
 
-void Repo::Query(const string& label,
-                 const string& schema,
+void Repo::Query(const std::string& label,
+                 const std::string& schema,
                  SubscriberLinkPtr subscriber) {
   auto repo_by_schema = by_label_and_schema_.find(label);
   if (repo_by_schema == by_label_and_schema_.end()) {

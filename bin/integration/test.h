@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <chrono>
-
 #include "gtest/gtest.h"
 #include "apps/maxwell/src/application_environment_host_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/ftl/time/time_point.h"
 
 void Yield();
 
@@ -44,31 +43,21 @@ Predicate SideEffect(Closure side_effect) {
 // Convenience macro that wraps "condition" in a Predicate.
 #define WAIT_UNTIL(condition) WaitUntil(PREDICATE(condition))
 
-using namespace std::chrono_literals;
-
-template <class Rep, class Period>
-Predicate Deadline(const std::chrono::duration<Rep, Period>& duration) {
-  using std::chrono::steady_clock;
-  const auto deadline = steady_clock::now() + duration;
-  return [deadline] { return steady_clock::now() >= deadline; };
-}
+Predicate Deadline(const ftl::TimeDelta& duration);
 
 // Sleeps for a time while processing messages.
-template <class Rep, class Period>
-void Sleep(const std::chrono::duration<Rep, Period>& duration) {
-  WaitUntil(Deadline(duration));
-}
+void Sleep(const ftl::TimeDelta& duration);
 
 // Sleep for a default reasonable time for apps to start up.
 void Sleep();
 
 // 2s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
-constexpr ftl::TimeDelta kSignalDeadline = ftl::TimeDelta::FromSeconds(2);
+constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(2);
 
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely
 // succeed tests that should fail. Flakiness should thus be considered failure.
-constexpr auto kAsyncCheckSteady = 100ms;
-constexpr auto kAsyncCheckMax = 5s;
+constexpr auto kAsyncCheckSteady = ftl::TimeDelta::FromMilliseconds(100);
+constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
 
 // Does a weak stability check on an async condition by waiting until the given
 // condition is true (max 2s) and then ensuring that the condition remains true

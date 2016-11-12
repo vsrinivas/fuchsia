@@ -4,10 +4,9 @@
 
 #include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace {
 

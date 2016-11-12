@@ -7,12 +7,10 @@
 #include <unordered_map>
 
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
-
 #include "apps/maxwell/src/bound_set.h"
-#include "apps/modular/lib/app/application_context.h"
-
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
+#include "apps/modular/lib/app/application_context.h"
 
 namespace maxwell {
 namespace suggestion {
