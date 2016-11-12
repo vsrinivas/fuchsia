@@ -100,11 +100,6 @@ typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_SIGNALED          MX_OBJECT_SIGNAL_3
 #define MX_SIGNAL_READ_THRESHOLD    MX_OBJECT_SIGNAL_4
 #define MX_SIGNAL_WRITE_THRESHOLD   MX_OBJECT_SIGNAL_5
-#define MX_SIGNAL_SIGNAL0           MX_USER_SIGNAL_0
-#define MX_SIGNAL_SIGNAL1           MX_USER_SIGNAL_1
-#define MX_SIGNAL_SIGNAL2           MX_USER_SIGNAL_2
-#define MX_SIGNAL_SIGNAL3           MX_USER_SIGNAL_3
-#define MX_SIGNAL_SIGNAL4           MX_USER_SIGNAL_4
 
 
 typedef struct {
