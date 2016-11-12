@@ -185,7 +185,8 @@ void ExceptionPort::Worker() {
   }
   while (keep_running_) {
     mx_exception_packet_t packet;
-    mx_status_t status = mx_port_wait(eport, &packet, sizeof(packet));
+    mx_status_t status =
+        mx_port_wait(eport, MX_TIME_INFINITE, &packet, sizeof(packet));
     if (status < 0)
       util::LogErrorWithMxStatus("mx_port_wait returned error: ", status);
 
