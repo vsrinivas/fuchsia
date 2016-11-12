@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <magenta/assert.h>
 #include <magenta/types.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
@@ -36,19 +37,23 @@ uint64_t GetMask(bool first, bool last, uint64_t off, uint64_t max) {
 }
 
 // Translates a bit offset into a starting index in the bitmap array.
-uint64_t FirstIdx(uint64_t bitoff) {
-    return bitoff / 64;
+size_t FirstIdx(uint64_t bitoff) {
+    uint64_t idx = bitoff / 64;
+    DEBUG_ASSERT(idx < SIZE_MAX);
+    return static_cast<size_t>(idx);
 }
 
 // Translates a max bit into a final index in the bitmap array.
-uint64_t LastIdx(uint64_t bitmax) {
-    return (bitmax - 1) / 64;
+size_t LastIdx(uint64_t bitmax) {
+    uint64_t idx = (bitmax - 1) / 64;
+    DEBUG_ASSERT(idx < SIZE_MAX);
+    return static_cast<size_t>(idx);
 }
 
 // Counts the number of zeros.  It assumes everything in the array up to
 // bits_[idx] is zero.
 static_assert(UINT64_MAX == ULLONG_MAX, "uint64_t is not unsigned long long");
-uint64_t CountZeros(uint64_t idx, uint64_t value) {
+uint64_t CountZeros(size_t idx, uint64_t value) {
     return idx * 64 + (value == 0 ? 64 : __builtin_ctzll(value));
 }
 
@@ -68,7 +73,7 @@ void RawBitmap::Reset(size_t size) {
         bits_.reset(nullptr);
         return;
     }
-    uint64_t last_idx = LastIdx(size);
+    size_t last_idx = LastIdx(size);
     bits_.reset(new uint64_t[last_idx + 1]);
     ClearAll();
 }
@@ -77,14 +82,14 @@ bool RawBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first) const {
     if (bitoff >= bitmax || bitmax > size_) {
         return true;
     }
-    uint64_t i;
-    uint64_t first_idx = FirstIdx(bitoff);
-    uint64_t last_idx = LastIdx(bitmax);
+    size_t first_idx = FirstIdx(bitoff);
+    size_t last_idx = LastIdx(bitmax);
+    size_t i = first_idx;
     uint64_t value = 0;
     if (!first) {
         first = &value;
     }
-    for (i = first_idx; i <= last_idx; ++i) {
+    for (; i <= last_idx; ++i) {
         value = ~GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
         value |= bits_[i];
         value = ~value;
@@ -103,9 +108,9 @@ mx_status_t RawBitmap::Set(uint64_t bitoff, uint64_t bitmax) {
     if (bitoff == bitmax) {
         return NO_ERROR;
     }
-    uint64_t first_idx = FirstIdx(bitoff);
-    uint64_t last_idx = LastIdx(bitmax);
-    for (uint64_t i = first_idx; i <= last_idx; ++i) {
+    size_t first_idx = FirstIdx(bitoff);
+    size_t last_idx = LastIdx(bitmax);
+    for (size_t i = first_idx; i <= last_idx; ++i) {
         bits_[i] |= GetMask(i == first_idx, i == last_idx, bitoff, bitmax);
     }
     return NO_ERROR;
@@ -118,9 +123,9 @@ mx_status_t RawBitmap::Clear(uint64_t bitoff, uint64_t bitmax) {
     if (bitoff == bitmax) {
         return NO_ERROR;
     }
-    uint64_t first_idx = FirstIdx(bitoff);
-    uint64_t last_idx = LastIdx(bitmax);
-    for (uint64_t i = first_idx; i <= last_idx; ++i) {
+    size_t first_idx = FirstIdx(bitoff);
+    size_t last_idx = LastIdx(bitmax);
+    for (size_t i = first_idx; i <= last_idx; ++i) {
         bits_[i] &= ~(GetMask(i == first_idx, i == last_idx, bitoff, bitmax));
     }
     return NO_ERROR;
@@ -130,8 +135,8 @@ void RawBitmap::ClearAll() {
     if (size_ == 0) {
         return;
     }
-    uint64_t last_idx = LastIdx(size_);
-    for (uint64_t i = 0; i <= last_idx; ++i) {
+    size_t last_idx = LastIdx(size_);
+    for (size_t i = 0; i <= last_idx; ++i) {
         bits_[i] = 0;
     }
 }
