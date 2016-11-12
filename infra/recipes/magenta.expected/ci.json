@@ -48,9 +48,11 @@
   {
     "cmd": [
       "[CACHE]/cipd/jiri",
-      "init"
+      "init",
+      "-cache",
+      "[CACHE]/jiri"
     ],
-    "name": "init"
+    "name": "jiri init"
   },
   {
     "cmd": [
@@ -58,7 +60,7 @@
       "project",
       "clean"
     ],
-    "name": "project clean"
+    "name": "jiri project clean"
   },
   {
     "cmd": [
@@ -68,7 +70,7 @@
       "magenta",
       "https://fuchsia.googlesource.com/manifest"
     ],
-    "name": "import"
+    "name": "jiri import"
   },
   {
     "cmd": [
@@ -77,7 +79,24 @@
       "-autoupdate=false",
       "-gc=true"
     ],
-    "name": "update"
+    "name": "jiri update"
+  },
+  {
+    "cmd": [
+      "[CACHE]/cipd/jiri",
+      "snapshot",
+      "/path/to/tmp/"
+    ],
+    "name": "jiri snapshot",
+    "~followup_annotations": [
+      "@@@STEP_LOG_LINE@jiri.snapshot@@@@",
+      "@@@STEP_LOG_LINE@jiri.snapshot@<manifest>@@@",
+      "@@@STEP_LOG_LINE@jiri.snapshot@  <projects>@@@",
+      "@@@STEP_LOG_LINE@jiri.snapshot@    <project name=\"manifest\" path=\"manifest\" remote=\"https://fuchsia.googlesource.com/manifest\" revision=\"4c2b0da3c06341db5cebe4d02c78c93c3b2bd78b\"/>@@@",
+      "@@@STEP_LOG_LINE@jiri.snapshot@  </projects>@@@",
+      "@@@STEP_LOG_LINE@jiri.snapshot@</manifest>@@@",
+      "@@@STEP_LOG_END@jiri.snapshot@@@"
+    ]
   },
   {
     "cmd": [],

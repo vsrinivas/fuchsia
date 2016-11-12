@@ -13,6 +13,7 @@ DEPS = [
     'infra/jiri',
     'recipe_engine/path',
     'recipe_engine/properties',
+    'recipe_engine/raw_io',
     'recipe_engine/step',
 ]
 
@@ -44,6 +45,10 @@ def RunSteps(api, category, patch_gerrit_url, patch_project, patch_ref,
     api.jiri.clean_project()
     api.jiri.import_manifest(manifest, remote, overwrite=True)
     api.jiri.update(gc=True)
+    step_result = api.jiri.snapshot(api.raw_io.output())
+    snapshot = step_result.raw_io.output
+    step_result.presentation.logs['jiri.snapshot'] = snapshot.splitlines()
+
     if patch_ref is not None:
         api.jiri.patch(patch_ref, host=patch_gerrit_url, delete=True, force=True)
 
