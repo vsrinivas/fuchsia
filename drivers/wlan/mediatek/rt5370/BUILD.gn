@@ -1,0 +1,41 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+
+group("rt5370-with-firmware") {
+  deps = [
+    ":rt5370",
+    ":rt5370-firmware",
+  ]
+}
+
+driver_module("rt5370") {
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "register.h",
+    "rt5370.h",
+  ]
+
+  defines = [ "MX_DEBUGLEVEL=2" ]
+
+  deps = [
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
+  ]
+
+  libs = [
+    "ddk",
+    "driver",
+    "sync",
+  ]
+}
+
+copy("rt5370-firmware") {
+  sources = [ "firmware/rt2870.bin" ]
+  outputs = [ "$root_out_dir/rt2870.bin" ]
+}
