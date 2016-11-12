@@ -413,7 +413,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_status_t r = mx_object_signal_peer(ios->s, MX_SIGNAL_SIGNAL0, 0u);
+  mx_status_t r = mx_object_signal_peer(ios->s, MX_USER_SIGNAL_0, 0u);
   debug_always("mx_object_signal_peer(clear) => %d\n", r);
   schedule_sigconn_r(ios);
 
