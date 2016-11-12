@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 executable("wget") {
+  defines = [
+    "USE_ENVIRONMENT_SERVICE=1",
+  ]
+
   sources = [
     "wget.cc",
   ]

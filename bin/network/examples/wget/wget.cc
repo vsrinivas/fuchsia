@@ -64,9 +64,12 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp(const std::string& url)
-      : url_(url),
-        context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  WGetApp(const std::vector<std::string>& args)
+    : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+#if USE_ENVIRONMENT_SERVICE
+    network_service_ =
+      context_->ConnectToEnvironmentService<network::NetworkService>();
+#else
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/network";
     launch_info->services = fidl::GetProxy(&network_service_provider_);
@@ -75,18 +78,25 @@ class WGetApp {
 
     modular::ConnectToService(network_service_provider_.get(),
                               fidl::GetProxy(&network_service_));
+#endif
+    FTL_DCHECK(network_service_);
 
-    Start();
+    Start(args);
   }
 
  private:
-  void Start() {
-    printf("Loading: %s\n", url_.c_str());
+  void Start(const std::vector<std::string>& args) {
+    if (args.size() == 1) {
+      printf("needs an url argument\n");
+      return;
+    }
+    std::string url(args[1]);
+    printf("Loading: %s\n", url.c_str());
 
     network_service_->CreateURLLoader(GetProxy(&url_loader_));
 
     network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url_;
+    request->url = url;
     request->method = "GET";
     request->auto_follow_redirects = true;
 
@@ -97,28 +107,23 @@ class WGetApp {
                        });
   }
 
-  const std::string url_;
-
   std::unique_ptr<modular::ApplicationContext> context_;
-
+#if !USE_ENVIRONMENT_SERVICE
   modular::ApplicationControllerPtr app_controller_;
   modular::ServiceProviderPtr network_service_provider_;
-  network::NetworkServicePtr network_service_;
+#endif
 
+  network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
 };
 
 }  // namespace examples
 
 int main(int argc, const char** argv) {
-  if (argc != 2) {
-    fprintf(stderr, "needs an url argument\n");
-    return -1;
-  }
-
+  std::vector<std::string> args(argv, argv + argc);
   mtl::MessageLoop loop;
 
-  examples::WGetApp app(argv[1]);
+  examples::WGetApp app(args);
 
   loop.Run();
   return 0;
