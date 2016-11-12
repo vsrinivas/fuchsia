@@ -9,6 +9,7 @@
 
 #include <cstddef>
 
+#include <functional>
 #include <utility>
 
 #include "lib/ftl/compiler_specific.h"
@@ -233,5 +234,18 @@ RefPtr<T> MakeRefCounted(Args&&... args) {
 }
 
 }  // namespace ftl
+
+// Inject custom std::hash<> function object for |RefPtr<T>|.
+namespace std {
+template <typename T>
+struct hash<ftl::RefPtr<T>> {
+  using argument_type = ftl::RefPtr<T>;
+  using result_type = std::size_t;
+
+  result_type operator()(const argument_type& ptr) const {
+    return std::hash<T*>()(ptr.get());
+  }
+};
+}  // namespace std
 
 #endif  // LIB_FTL_MEMORY__REF_PTR_H_
