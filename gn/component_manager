@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/component_manager"
+        "//apps/component_manager",
+        "//apps/component_manager/examples"
     ],
     "binaries": [
         {
@@ -8,11 +9,16 @@
             "bootfs_path": "apps/component_manager"
         },
         {
+            "binary": "components_main",
+            "bootfs_path": "bin/components"
+        },
+        {
             "binary": "gen/component_index.json",
             "bootfs_path": "components/index.json"
         }
     ],
     "components": [
-        "apps/component_manager/component_manager.json"
+        "apps/component_manager/component_manager.json",
+        "apps/component_manager/examples/hello_component/hello_component.json"
     ]
 }
