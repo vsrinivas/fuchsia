@@ -22,17 +22,6 @@ constexpr uint32_t kMouseLeftButtonMask = 0x01;
 constexpr uint32_t kMouseRightButtonMask = 0x02;
 constexpr uint32_t kMouseMiddleButtonMask = 0x04;
 
-#define MOD_LSHIFT (1 << 0)
-#define MOD_RSHIFT (1 << 1)
-#define MOD_LALT (1 << 2)
-#define MOD_RALT (1 << 3)
-#define MOD_LCTRL (1 << 4)
-#define MOD_RCTRL (1 << 5)
-
-#define MOD_SHIFT (MOD_LSHIFT | MOD_RSHIFT)
-#define MOD_ALT (MOD_LALT | MOD_RALT)
-#define MOD_CTRL (MOD_LCTRL | MOD_RCTRL)
-
 #pragma mark - KeyboardState
 
 KeyboardState::KeyboardState() : keymap_(qwerty_map) {
@@ -65,27 +54,38 @@ void KeyboardState::Update(const KeyboardReport& report,
 
     ev->key_data = mozart::KeyData::New();
     ev->key_data->hid_usage = key;
-    ev->key_data->code_point =
-        hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
+    ev->key_data->code_point = hid_map_key(
+        key, modifiers_ & (kModifierShift | kModifierCapsLock), keymap_);
+    if (ev->key_data->code_point) {
+      ev->key_data->modifiers = modifiers_;
+    } else {
+      ev->key_data->modifiers = 0;
+    }
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
-        modifiers_ |= MOD_LSHIFT;
+        modifiers_ |= kModifierLeftShift;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
-        modifiers_ |= MOD_RSHIFT;
+        modifiers_ |= kModifierRightShift;
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
-        modifiers_ |= MOD_LCTRL;
+        modifiers_ |= kModifierLeftControl;
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
-        modifiers_ |= MOD_RCTRL;
+        modifiers_ |= kModifierRightControl;
         break;
       case HID_USAGE_KEY_LEFT_ALT:
-        modifiers_ |= MOD_LALT;
+        modifiers_ |= kModifierLeftAlt;
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
-        modifiers_ |= MOD_RALT;
+        modifiers_ |= kModifierRightAlt;
+        break;
+      case HID_USAGE_KEY_LEFT_GUI:
+        modifiers_ |= kModifierLeftSuper;
+        break;
+      case HID_USAGE_KEY_RIGHT_GUI:
+        modifiers_ |= kModifierRightSuper;
         break;
       default:
         break;
@@ -101,27 +101,45 @@ void KeyboardState::Update(const KeyboardReport& report,
 
     ev->key_data = mozart::KeyData::New();
     ev->key_data->hid_usage = key;
-    ev->key_data->code_point =
-        hid_map_key(key, modifiers_ & MOD_SHIFT, keymap_);
+    ev->key_data->code_point = hid_map_key(
+        key, modifiers_ & (kModifierShift | kModifierCapsLock), keymap_);
+    if (ev->key_data->code_point) {
+      ev->key_data->modifiers = modifiers_;
+    } else {
+      ev->key_data->modifiers = 0;
+    }
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
-        modifiers_ &= (~MOD_LSHIFT);
+        modifiers_ &= (~kModifierLeftShift);
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
-        modifiers_ &= (~MOD_RSHIFT);
+        modifiers_ &= (~kModifierRightShift);
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
-        modifiers_ &= (~MOD_LCTRL);
+        modifiers_ &= (~kModifierLeftControl);
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
-        modifiers_ &= (~MOD_RCTRL);
+        modifiers_ &= (~kModifierRightControl);
         break;
       case HID_USAGE_KEY_LEFT_ALT:
-        modifiers_ &= (~MOD_LALT);
+        modifiers_ &= (~kModifierLeftAlt);
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
-        modifiers_ &= (~MOD_RALT);
+        modifiers_ &= (~kModifierRightAlt);
+        break;
+      case HID_USAGE_KEY_LEFT_GUI:
+        modifiers_ &= (~kModifierLeftSuper);
+        break;
+      case HID_USAGE_KEY_RIGHT_GUI:
+        modifiers_ &= (~kModifierRightSuper);
+        break;
+      case HID_USAGE_KEY_CAPSLOCK:
+        if (modifiers_ & kModifierCapsLock) {
+          modifiers_ &= (~kModifierCapsLock);
+        } else {
+          modifiers_ |= kModifierCapsLock;
+        }
         break;
       default:
         break;

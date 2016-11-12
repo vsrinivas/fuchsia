@@ -16,6 +16,9 @@ struct KeyData {
   //
   // If there is no unicode code point, this value is zero.
   uint32 code_point;
+
+  // Key modifiers currently pressed
+  uint32 modifiers;
 };
 
 struct PointerData {

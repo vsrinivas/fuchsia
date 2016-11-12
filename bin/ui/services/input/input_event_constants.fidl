@@ -45,4 +45,19 @@ enum PointerKind {
   TOUCH,
   MOUSE,
 };
+
+const uint32 kModifierCapsLock     = 1;
+const uint32 kModifierLeftShift    = 2;
+const uint32 kModifierRightShift   = 4;
+const uint32 kModifierShift        = 6; // (kModifierLeftShift | kModifierRightShift);
+const uint32 kModifierLeftControl  = 8;
+const uint32 kModifierRightControl = 16;
+const uint32 kModifierControl      = 24; // (kModifierLeftControl | kModifierRightControl);
+const uint32 kModifierLeftAlt      = 32;
+const uint32 kModifierRightAlt     = 64;
+const uint32 kModifierAlt          = 96; // (kModifierLeftAlt | kModifierRightAlt);
+const uint32 kModifierLeftSuper    = 128;
+const uint32 kModifierRightSuper   = 256;
+const uint32 kModifierSuper        = 384; // (kModifierLeftSuper | kModifierRightSuper);
+
 // end-no-format
