@@ -15,7 +15,8 @@ namespace maxwell {
 //
 // TODO(rosswang): rename agents vs acquirers to acquisition agents,
 // interpretation agents, and suggestion agents, or acquirers, interpreters, and
-// suggesters? The former sound more formal but the latter are shorter.
+// suggesters/proposers? The former sound more formal but the latter are
+// shorter.
 class AgentEnvironmentHost : public modular::ApplicationEnvironmentHost,
                              public modular::ServiceProviderImpl {
  public:

@@ -22,8 +22,8 @@ class SuggestionAgentClientImpl;
 class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
  public:
   SuggestionEngineApp()
-      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()) {
-    app_ctx_->outgoing_services()->AddService<SuggestionEngine>(
+      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+    app_context_->outgoing_services()->AddService<SuggestionEngine>(
         [this](fidl::InterfaceRequest<SuggestionEngine> request) {
           bindings_.AddBinding(this, std::move(request));
         });
@@ -75,7 +75,7 @@ class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
  private:
   friend class SuggestionAgentClientImpl;
 
-  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  std::unique_ptr<modular::ApplicationContext> app_context_;
 
   std::unordered_map<std::string, std::unique_ptr<SuggestionAgentClientImpl>>
       sources_;

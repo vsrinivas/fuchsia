@@ -112,11 +112,12 @@ class NProposals : public Proposinator,
   NProposals(const maxwell::context::ContextEnginePtr& context_engine,
              const maxwell::suggestion::SuggestionEnginePtr& suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
-    context_engine->RegisterSuggestionAgent("NProposals", GetProxy(&cx_));
+    context_engine->RegisterSuggestionAgent("NProposals",
+                                            GetProxy(&context_engine_));
 
     fidl::InterfaceHandle<maxwell::context::SubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
-    cx_->Subscribe("n", "int", std::move(link_handle));
+    context_engine_->Subscribe("n", "int", std::move(link_handle));
   }
 
   void OnUpdate(maxwell::context::UpdatePtr update) override {
@@ -131,7 +132,7 @@ class NProposals : public Proposinator,
   }
 
  private:
-  maxwell::context::SuggestionAgentClientPtr cx_;
+  maxwell::context::SuggestionAgentClientPtr context_engine_;
   fidl::Binding<maxwell::context::SubscriberLink> link_binding_;
 
   int n_ = 0;
@@ -164,7 +165,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     agent_host->AddService<maxwell::context::SuggestionAgentClient>([this, url](
         fidl::InterfaceRequest<maxwell::context::SuggestionAgentClient>
             request) {
-      cx_->RegisterSuggestionAgent(url, std::move(request));
+      context_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
     agent_host->AddService<maxwell::suggestion::SuggestionAgentClient>(
         [this,
@@ -187,8 +188,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 class ResultCountTest : public SuggestionEngineTest {
  public:
   ResultCountTest()
-      : pub_(new NPublisher(cx_)),
-        sub_(new NProposals(cx_, suggestion_engine_)) {}
+      : pub_(new NPublisher(context_engine_)),
+        sub_(new NProposals(context_engine_, suggestion_engine_)) {}
 
  protected:
   // Publishes signals for n new suggestions to context.
@@ -264,7 +265,7 @@ TEST_F(ResultCountTest, MultiRemove) {
 // duplicate suggestion. Test that given two such ideas (via two GPS locations),
 // only the latest is kept.
 TEST_F(SuggestionEngineTest, Dedup) {
-  maxwell::acquirers::MockGps gps(cx_);
+  maxwell::acquirers::MockGps gps(context_engine_);
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   StartSuggestionAgent("file:///system/apps/agents/ideas");
 
@@ -285,7 +286,7 @@ TEST_F(SuggestionEngineTest, Dedup) {
 // proposals). One agent is the agents/ideas process while the other is the test
 // itself (maxwell_test).
 TEST_F(SuggestionEngineTest, NamespacingPerAgent) {
-  maxwell::acquirers::MockGps gps(cx_);
+  maxwell::acquirers::MockGps gps(context_engine_);
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   StartSuggestionAgent("file:///system/apps/agents/ideas");
   Proposinator conflictinator(suggestion_engine_);

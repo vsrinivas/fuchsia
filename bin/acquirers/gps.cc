@@ -26,11 +26,11 @@ class GpsAcquirerApp : public GpsAcquirer,
                        public maxwell::context::PublisherController {
  public:
   GpsAcquirerApp()
-      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
         ctl_(this) {
     srand(time(NULL));
 
-    auto cx = app_ctx_->ConnectToEnvironmentService<
+    auto cx = app_context_->ConnectToEnvironmentService<
         maxwell::context::ContextAcquirerClient>();
 
     fidl::InterfaceHandle<maxwell::context::PublisherController> ctl_handle;
@@ -87,7 +87,7 @@ class GpsAcquirerApp : public GpsAcquirer,
         [this] { PublishingTick(); }, kGpsUpdatePeriod);
   }
 
-  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  std::unique_ptr<modular::ApplicationContext> app_context_;
 
   fidl::Binding<maxwell::context::PublisherController> ctl_;
   maxwell::context::PublisherLinkPtr out_;

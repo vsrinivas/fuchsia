@@ -89,8 +89,8 @@ modular::ApplicationEnvironment* root_environment;
 
 int main(int argc, char** argv) {
   mtl::MessageLoop loop;
-  auto app_ctx = modular::ApplicationContext::CreateFromStartupInfo();
-  root_environment = app_ctx->environment().get();
+  auto app_context = modular::ApplicationContext::CreateFromStartupInfo();
+  root_environment = app_context->environment().get();
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

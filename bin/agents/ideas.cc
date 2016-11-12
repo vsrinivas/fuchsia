@@ -21,15 +21,16 @@ class IdeasAgentApp : public IdeasAgent,
                       public maxwell::context::SubscriberLink {
  public:
   IdeasAgentApp()
-      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
-        cx_(app_ctx_->ConnectToEnvironmentService<
-            maxwell::context::SuggestionAgentClient>()),
+      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
+        maxwell_context_(app_context_->ConnectToEnvironmentService<
+                         maxwell::context::SuggestionAgentClient>()),
         in_(this),
-        out_(app_ctx_->ConnectToEnvironmentService<
+        out_(app_context_->ConnectToEnvironmentService<
              maxwell::suggestion::SuggestionAgentClient>()) {
     fidl::InterfaceHandle<maxwell::context::SubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    cx_->Subscribe("/location/region", "json:string", std::move(in_handle));
+    maxwell_context_->Subscribe("/location/region", "json:string",
+                                std::move(in_handle));
   }
 
   void OnUpdate(maxwell::context::UpdatePtr update) override {
@@ -72,9 +73,9 @@ class IdeasAgentApp : public IdeasAgent,
   }
 
  private:
-  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  std::unique_ptr<modular::ApplicationContext> app_context_;
 
-  maxwell::context::SuggestionAgentClientPtr cx_;
+  maxwell::context::SuggestionAgentClientPtr maxwell_context_;
   fidl::Binding<maxwell::context::SubscriberLink> in_;
   maxwell::suggestion::SuggestionAgentClientPtr out_;
 };

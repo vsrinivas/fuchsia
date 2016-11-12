@@ -74,8 +74,8 @@ typedef SubscriberClient<SuggestionAgentClient> SuggestionAgentClientImpl;
 class ContextEngineApp : public ContextEngine {
  public:
   ContextEngineApp()
-      : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()) {
-    app_ctx_->outgoing_services()->AddService<ContextEngine>(
+      : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+    app_context_->outgoing_services()->AddService<ContextEngine>(
         [this](InterfaceRequest<ContextEngine> request) {
           bindings_.AddBinding(this, std::move(request));
         });
@@ -109,7 +109,7 @@ class ContextEngineApp : public ContextEngine {
   using UptrBindingSet =
       fidl::BindingSet<Interface, std::unique_ptr<Interface>>;
 
-  std::unique_ptr<modular::ApplicationContext> app_ctx_;
+  std::unique_ptr<modular::ApplicationContext> app_context_;
 
   Repo repo_;
 
