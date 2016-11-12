@@ -147,7 +147,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     return result;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* dev) { return NO_ERROR; }
+static mx_status_t intel_i915_close(mx_device_t* dev, uint32_t flags) { return NO_ERROR; }
 
 static mx_status_t intel_i915_release(mx_device_t* dev)
 {
