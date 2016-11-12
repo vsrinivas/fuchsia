@@ -57,7 +57,8 @@ class ApplicationContext {
   // provide outgoing services back to its creator.
   ServiceProviderImpl* outgoing_services() { return &outgoing_services_; }
 
-  // Connects to a service provided by the application's environment.
+  // Connects to a service provided by the application's environment,
+  // returning an interface pointer.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
@@ -65,6 +66,16 @@ class ApplicationContext {
     environment_services_->ConnectToService(
         interface_name, GetProxy(&interface_ptr).PassMessagePipe());
     return interface_ptr;
+  }
+
+  // Connects to a service provided by the application's environment,
+  // binding the service to an interface request.
+  template <typename Interface>
+  void ConnectToEnvironmentService(
+      fidl::InterfaceRequest<Interface> interface_request,
+      const std::string& interface_name = Interface::Name_) {
+    environment_services_->ConnectToService(
+        interface_name, interface_request.PassMessagePipe());
   }
 
  private:
