@@ -12,7 +12,7 @@ class TestContext : public ClientContext::Owner {
 public:
     void Init()
     {
-        std::unique_ptr<MsdIntelContext> context(new ClientContext(this));
+        std::unique_ptr<MsdIntelContext> context(new ClientContext(this, nullptr));
 
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
         EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -39,7 +39,7 @@ public:
         if (global)
             context = std::unique_ptr<MsdIntelContext>(new GlobalContext());
         else
-            context = std::unique_ptr<MsdIntelContext>(new ClientContext(this));
+            context = std::unique_ptr<MsdIntelContext>(new ClientContext(this, nullptr));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
         std::unique_ptr<Ringbuffer> ringbuffer(
@@ -71,12 +71,6 @@ public:
     }
 
 private:
-    std::shared_ptr<AddressSpace> exec_address_space() override
-    {
-        DASSERT(false);
-        return nullptr;
-    }
-
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
     {
         DASSERT(false);

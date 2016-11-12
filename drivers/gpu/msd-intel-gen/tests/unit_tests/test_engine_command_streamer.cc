@@ -50,7 +50,7 @@ public:
         register_io_ =
             std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
 
-        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(this));
+        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(this, nullptr));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
@@ -259,12 +259,6 @@ private:
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {
         return hw_status_page_.get();
-    }
-
-    std::shared_ptr<AddressSpace> exec_address_space() override
-    {
-        DASSERT(false);
-        return nullptr;
     }
 
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override

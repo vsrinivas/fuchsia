@@ -27,7 +27,8 @@ public:
     std::unique_ptr<ClientContext> CreateContext()
     {
         // Backing store creation deferred until context is used.
-        return std::unique_ptr<ClientContext>(new ClientContext(this));
+        // TODO(MA-71) pass a reference to the connection's ppgtt
+        return std::unique_ptr<ClientContext>(new ClientContext(this, nullptr));
     }
 
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
@@ -37,9 +38,6 @@ public:
 
 private:
     // ClientContext::Owner
-    // TODO(MA-71) have the connection own its own PPGTT address space
-    std::shared_ptr<AddressSpace> exec_address_space() override { return nullptr; }
-
     bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
     {
         return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
