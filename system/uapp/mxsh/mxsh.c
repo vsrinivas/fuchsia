@@ -652,9 +652,16 @@ static void send_debug_command(const char* cmd) {
         return;
     }
 
-    strcpy(buf, prefix);
-    strncpy(buf + strlen(prefix), cmd, len - strlen(prefix));
-    buf[len - 1] = '\0';
+    // If we detect someone trying to use the LK poweroff/reboot,
+    // divert it to devmgr backed one instead.
+    if (!strcmp(cmd, "poweroff") || !strcmp(cmd, "reboot")) {
+        strcpy(buf, cmd);
+        buf[strlen(cmd)] = '\0';
+    } else {
+        strcpy(buf, prefix);
+        strncpy(buf + strlen(prefix), cmd, len - strlen(prefix));
+        buf[len - 1] = '\0';
+    }
 
     write(fd, buf, len);
     close(fd);
