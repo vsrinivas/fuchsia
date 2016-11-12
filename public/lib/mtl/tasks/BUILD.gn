@@ -20,7 +20,5 @@ source_set("tasks") {
     "//lib/ftl",
     "//lib/mtl/handles",
     "//magenta/system/ulib/mx",
-    "//mojo/public/c:system",
-    "//mojo/public/cpp/system",
   ]
 }
