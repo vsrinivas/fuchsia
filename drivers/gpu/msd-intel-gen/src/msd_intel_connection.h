@@ -9,10 +9,9 @@
 #include "engine_command_streamer.h"
 #include "magma_util/macros.h"
 #include "msd.h"
-#include "msd_intel_context.h"
 #include <memory>
 
-class MsdIntelConnection : public ClientContext::Owner {
+class MsdIntelConnection {
 public:
     class Owner {
     public:
@@ -24,25 +23,17 @@ public:
 
     virtual ~MsdIntelConnection() {}
 
-    std::unique_ptr<ClientContext> CreateContext()
-    {
-        // Backing store creation deferred until context is used.
-        // TODO(MA-71) pass a reference to the connection's ppgtt
-        return std::unique_ptr<ClientContext>(new ClientContext(this, nullptr));
-    }
-
     bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
     {
         return owner_->WaitRendering(std::move(buf));
     }
 
-private:
-    // ClientContext::Owner
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
     }
 
+private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
     Owner* owner_;

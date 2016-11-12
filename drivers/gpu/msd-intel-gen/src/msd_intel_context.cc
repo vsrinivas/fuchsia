@@ -5,6 +5,7 @@
 #include "msd_intel_context.h"
 #include "address_space.h"
 #include "command_buffer.h"
+#include "msd_intel_connection.h"
 #include <errno.h>
 
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
@@ -98,6 +99,15 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
         return DRETF(false, "failed to get gpu address");
 
     return true;
+}
+
+bool ClientContext::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+{
+    auto connection = connection_.lock();
+    if (!connection)
+        return DRETF(false, "couldn't lock reference to connection");
+
+    return connection->ExecuteCommandBuffer(std::move(cmd_buf));
 }
 
 //////////////////////////////////////////////////////////////////////////////

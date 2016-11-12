@@ -13,6 +13,8 @@
 #include <map>
 #include <memory>
 
+class MsdIntelConnection;
+
 // Abstract base context.
 class MsdIntelContext {
 public:
@@ -59,25 +61,18 @@ private:
 
 class ClientContext : public MsdIntelContext {
 public:
-    class Owner {
-    public:
-        virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
-    };
-
-    ClientContext(Owner* owner, std::shared_ptr<AddressSpace> exec_address_space)
-        : owner_(owner), exec_address_space_(exec_address_space)
+    ClientContext(std::weak_ptr<MsdIntelConnection> connection,
+                  std::shared_ptr<AddressSpace> exec_address_space)
+        : connection_(connection), exec_address_space_(exec_address_space)
     {
     }
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
-    {
-        return owner_->ExecuteCommandBuffer(std::move(cmd_buf));
-    }
+    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
 
     std::shared_ptr<AddressSpace> exec_address_space() { return exec_address_space_; }
 
 private:
-    Owner* owner_;
+    std::weak_ptr<MsdIntelConnection> connection_;
     std::shared_ptr<AddressSpace> exec_address_space_;
 };
 

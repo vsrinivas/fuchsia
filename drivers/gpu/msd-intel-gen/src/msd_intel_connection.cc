@@ -13,10 +13,10 @@ void msd_connection_close(msd_connection* connection)
 
 msd_context* msd_connection_create_context(msd_connection* connection)
 {
-    auto context = MsdIntelAbiConnection::cast(connection)->ptr()->CreateContext();
-    if (!context)
-        return DRETP(nullptr, "MsdIntelConnection::CreateContext failed");
-    return new MsdIntelAbiContext(std::move(context));
+    // Backing store creation deferred until context is used.
+    // TODO(MA-71) pass a reference to the connection's ppgtt
+    return new MsdIntelAbiContext(
+        std::make_unique<ClientContext>(MsdIntelAbiConnection::cast(connection)->ptr(), nullptr));
 }
 
 int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf)

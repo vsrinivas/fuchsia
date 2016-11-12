@@ -8,11 +8,12 @@
 #include "ringbuffer.h"
 #include "gtest/gtest.h"
 
-class TestContext : public ClientContext::Owner {
+class TestContext {
 public:
     void Init()
     {
-        std::unique_ptr<MsdIntelContext> context(new ClientContext(this, nullptr));
+        std::weak_ptr<MsdIntelConnection> connection;
+        std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, nullptr));
 
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
         EXPECT_EQ(nullptr, get_ringbuffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -35,11 +36,12 @@ public:
     {
         constexpr uint32_t base = 0x10000;
 
+        std::weak_ptr<MsdIntelConnection> connection;
         std::unique_ptr<MsdIntelContext> context;
         if (global)
             context = std::unique_ptr<MsdIntelContext>(new GlobalContext());
         else
-            context = std::unique_ptr<MsdIntelContext>(new ClientContext(this, nullptr));
+            context = std::unique_ptr<MsdIntelContext>(new ClientContext(connection, nullptr));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE));
         std::unique_ptr<Ringbuffer> ringbuffer(
@@ -71,12 +73,6 @@ public:
     }
 
 private:
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
-    {
-        DASSERT(false);
-        return false;
-    }
-
     static MsdIntelBuffer* get_buffer(MsdIntelContext* context, EngineCommandStreamerId id)
     {
         return context->get_context_buffer(id);

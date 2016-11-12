@@ -40,7 +40,6 @@ public:
 };
 
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
-                                  public ClientContext::Owner,
                                   public HardwareStatusPage::Owner {
 public:
     static constexpr uint32_t kFirstSequenceNumber = 5;
@@ -50,7 +49,9 @@ public:
         register_io_ =
             std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8 * 1024 * 1024)));
 
-        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(this, nullptr));
+        std::weak_ptr<MsdIntelConnection> connection;
+
+        context_ = std::shared_ptr<MsdIntelContext>(new ClientContext(connection, nullptr));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 
@@ -259,12 +260,6 @@ private:
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override
     {
         return hw_status_page_.get();
-    }
-
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
-    {
-        DASSERT(false);
-        return false;
     }
 
     void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
