@@ -133,22 +133,30 @@ static int mxc_ls(int argc, char** argv) {
     dirln = strlen(dirn);
 
     if (argc > 2) {
-        fprintf(stderr, "usage: ls [ <directory> ]\n");
+        fprintf(stderr, "usage: ls [ <file_or_directory> ]\n");
         return -1;
     }
-    if ((dir = opendir(dirn)) == NULL) {
-        fprintf(stderr, "error: cannot open '%s'\n", dirn);
+    if(stat(dirn, &s) == -1) {
+        fprintf(stderr, "error: cannot stat '%s'\n", dirn);
         return -1;
     }
-    while((de = readdir(dir)) != NULL) {
-        memset(&s, 0, sizeof(struct stat));
-        if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
-            snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
-            stat(tmp, &s);
+    if((s.st_mode & S_IFMT) == S_IFDIR) {
+        if ((dir = opendir(dirn)) == NULL) {
+            fprintf(stderr, "error: cannot open dir '%s'\n", dirn);
+            return -1;
         }
-        printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
+        while((de = readdir(dir)) != NULL) {
+            memset(&s, 0, sizeof(struct stat));
+            if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
+                snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
+                stat(tmp, &s);
+            }
+            printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
+        }
+        closedir(dir);
+    } else {
+        printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, dirn);
     }
-    closedir(dir);
     return 0;
 }
 
@@ -341,7 +349,7 @@ builtin_t builtins[] = {
     {"help", mxc_help, "list built-in shell commands"},
     {"dm", mxc_dm, "send command to device manager"},
     {"list", mxc_list, "display a text file with line numbers"},
-    {"ls", mxc_ls, "list directory contents"},
+    {"ls", mxc_ls, "list file or directory contents"},
     {"mkdir", mxc_mkdir, "create a directory" },
     {"motd", mxc_motd, "show the message of the day"},
     {"mv", mxc_mv, "rename a file or directory" },
