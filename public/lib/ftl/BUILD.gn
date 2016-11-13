@@ -17,8 +17,8 @@ config("thread_safety_warning") {
 source_set("stateful_sources") {
   sources = [
     "log_level.h",
+    "log_settings.h",
     "log_settings_state.cc",
-    "log_settings_state.h",
   ]
 }
 
@@ -49,7 +49,6 @@ static_library("ftl") {
     "functional/make_runnable.h",
     "functional/make_copyable.h",
     "log_settings.cc",
-    "log_settings.h",
     "logging.cc",
     "logging.h",
     "macros.h",

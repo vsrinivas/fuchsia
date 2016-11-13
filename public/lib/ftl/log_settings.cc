@@ -4,12 +4,33 @@
 
 #include "lib/ftl/log_settings.h"
 
+#include <algorithm>
+
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings_state.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
 namespace ftl {
+namespace state {
+
+// Defined in log_settings_state.cc.
+extern LogSettings g_log_settings;
+
+}  // namespace state
+
+void SetLogSettings(const LogSettings& settings) {
+  // Validate the new settings as we set them.
+  state::g_log_settings.min_log_level =
+      std::min(LOG_FATAL, settings.min_log_level);
+}
+
+LogSettings GetLogSettings() {
+  return state::g_log_settings;
+}
+
+int GetMinLogLevel() {
+  return state::g_log_settings.min_log_level;
+}
 
 bool ParseLogSettings(const ftl::CommandLine& command_line,
                       LogSettings* out_settings) {
