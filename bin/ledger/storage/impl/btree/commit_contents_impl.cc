@@ -33,7 +33,7 @@ std::unique_ptr<Iterator<const Entry>> CommitContentsImpl::find(
 }
 
 void CommitContentsImpl::diff(
-    const CommitContents& other,
+    std::unique_ptr<CommitContents> other,
     std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
         callback) const {
   std::unique_ptr<const TreeNode> root;
@@ -44,7 +44,7 @@ void CommitContentsImpl::diff(
   }
 
   std::unique_ptr<const TreeNode> right;
-  status = TreeNode::FromId(page_storage_, other.GetBaseObjectId(), &right);
+  status = TreeNode::FromId(page_storage_, other->GetBaseObjectId(), &right);
   if (status != Status::OK) {
     callback(status, nullptr);
     return;

@@ -75,13 +75,15 @@ Status DiffIterator::GetStatus() const {
 
 void DiffIterator::BuildEntryChange() {
   FTL_DCHECK(Valid());
-  if ((left_->Valid() && !right_->Valid()) || (*left_)->key < (*right_)->key) {
+  if ((left_->Valid() && !right_->Valid()) ||
+      (left_->Valid() && right_->Valid() && (*left_)->key < (*right_)->key)) {
     EntryChange entry_change;
     entry_change.entry = **left_;
     entry_change.deleted = true;
     changes_.push(entry_change);
   } else if ((right_->Valid() && !left_->Valid()) ||
-             (*left_)->key > (*right_)->key) {
+             (left_->Valid() && right_->Valid() &&
+              (*left_)->key > (*right_)->key)) {
     EntryChange entry_change;
     entry_change.entry = **right_;
     entry_change.deleted = false;

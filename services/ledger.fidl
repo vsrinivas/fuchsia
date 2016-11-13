@@ -249,7 +249,7 @@ struct PageChange {
 
 // Interface to watch changes to a page. The initial state is sent immediately
 // when the watcher is registered. The client will then receive changes made by
-// other clients or synced from other devices.
+// itself, as well as other clients or synced from other devices.
 interface PageWatcher {
   OnInitialState(PageSnapshot snapshot) => ();
   OnChange(PageChange page_change) => ();

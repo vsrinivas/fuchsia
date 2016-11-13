@@ -15,10 +15,11 @@ group("app") {
 
 source_set("lib") {
   sources = [
+    "branch_tracker.cc",
+    "branch_tracker.h",
     "constants.cc",
     "constants.h",
-    "branch_tracker.h",
-    "branch_tracker.cc",
+    "fidl/bound_interface.h",
     "ledger_impl.cc",
     "ledger_impl.h",
     "ledger_manager.cc",
@@ -29,18 +30,19 @@ source_set("lib") {
     "ledger_repository_impl.h",
     "page_impl.cc",
     "page_impl.h",
-    "page_utils.cc",
-    "page_utils.h",
     "page_manager.cc",
     "page_manager.h",
     "page_snapshot_impl.cc",
     "page_snapshot_impl.h",
+    "page_utils.cc",
+    "page_utils.h",
   ]
 
   deps = [
     "//apps/ledger/services",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/storage/impl:lib",
@@ -86,6 +88,7 @@ executable("unittests") {
     "//apps/ledger/src/glue",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

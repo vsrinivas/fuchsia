@@ -6,6 +6,8 @@ source_set("test") {
   testonly = true
 
   sources = [
+    "commit_contents_empty_impl.cc",
+    "commit_contents_empty_impl.h",
     "commit_empty_impl.cc",
     "commit_empty_impl.h",
     "page_storage_empty_impl.cc",

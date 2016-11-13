@@ -7,9 +7,9 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -17,18 +17,20 @@
 #include "lib/ftl/macros.h"
 
 namespace ledger {
-
 class PageManager;
+class BranchTracker;
 
 // An implementation of the |Page| interface.
 class PageImpl : public Page {
  public:
-  PageImpl(PageManager* manager,
-           storage::PageStorage* storage,
+  PageImpl(storage::PageStorage* storage,
+           PageManager* manager,
            BranchTracker* branch_tracker);
   ~PageImpl() override;
 
  private:
+  const storage::CommitId& GetCurrentCommitId();
+
   void PutInCommit(convert::ExtendedStringView key,
                    storage::ObjectIdView value,
                    storage::KeyPriority priority,
@@ -89,8 +91,8 @@ class PageImpl : public Page {
 
   void Rollback(const RollbackCallback& callback) override;
 
-  PageManager* manager_;
   storage::PageStorage* storage_;
+  PageManager* manager_;
   BranchTracker* branch_tracker_;
   storage::CommitId journal_parent_commit_;
   std::unique_ptr<storage::Journal> journal_;

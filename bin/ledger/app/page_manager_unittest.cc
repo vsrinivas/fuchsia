@@ -10,6 +10,7 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "apps/ledger/src/storage/test/commit_contents_empty_impl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -65,6 +66,18 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
+
+  on_empty_called = false;
+  PageSnapshotPtr snapshot;
+  page_manager.BindPageSnapshot(
+      std::unique_ptr<storage::CommitContents>(
+          new storage::test::CommitContentsEmptyImpl()),
+      GetProxy(&snapshot));
+  snapshot.reset();
+  message_loop_.task_runner()->PostDelayedTask(
+      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+  message_loop_.Run();
+  EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
@@ -82,6 +95,49 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   page_manager.reset();
   message_loop_.Run();
   EXPECT_TRUE(page_closed);
+}
+
+TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
+  bool on_empty_called = false;
+  PageManager page_manager(
+      std::make_unique<storage::fake::FakePageStorage>(page_id_));
+  page_manager.set_on_empty([this, &on_empty_called] {
+    on_empty_called = true;
+    message_loop_.QuitNow();
+  });
+
+  EXPECT_FALSE(on_empty_called);
+  PagePtr page1;
+  PagePtr page2;
+  page_manager.BindPage(GetProxy(&page1));
+  page_manager.BindPage(GetProxy(&page2));
+  page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
+             [this](Status status) {
+               EXPECT_EQ(Status::OK, status);
+               message_loop_.QuitNow();
+             });
+  message_loop_.Run();
+
+  PageWatcherPtr watcher;
+  fidl::InterfaceRequest<PageWatcher> watcher_request = GetProxy(&watcher);
+  page1->Watch(std::move(watcher), [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.QuitNow();
+  });
+  message_loop_.Run();
+
+  page1.reset();
+  page2.reset();
+  message_loop_.task_runner()->PostDelayedTask(
+      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+  message_loop_.Run();
+  EXPECT_FALSE(on_empty_called);
+
+  watcher_request.PassChannel();
+  message_loop_.task_runner()->PostDelayedTask(
+      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+  message_loop_.Run();
+  EXPECT_TRUE(on_empty_called);
 }
 
 }  // namespace

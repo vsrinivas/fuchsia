@@ -9,6 +9,7 @@ source_set("callback") {
     "cancellable.h",
     "cancellable_helper.cc",
     "cancellable_helper.h",
+    "waiter.h",
   ]
 
   deps = [

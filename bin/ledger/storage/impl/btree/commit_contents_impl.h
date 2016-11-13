@@ -29,7 +29,7 @@ class CommitContentsImpl : public CommitContents {
       convert::ExtendedStringView key) const override;
 
   void diff(
-      const CommitContents& other,
+      std::unique_ptr<CommitContents> other,
       std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
           callback) const override;
 

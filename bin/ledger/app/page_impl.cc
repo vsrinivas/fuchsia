@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
@@ -19,10 +20,10 @@
 
 namespace ledger {
 
-PageImpl::PageImpl(PageManager* manager,
-                   storage::PageStorage* storage,
+PageImpl::PageImpl(storage::PageStorage* storage,
+                   PageManager* manager,
                    BranchTracker* branch_tracker)
-    : manager_(manager), storage_(storage), branch_tracker_(branch_tracker) {}
+    : storage_(storage), manager_(manager), branch_tracker_(branch_tracker) {}
 
 PageImpl::~PageImpl() {}
 
@@ -31,19 +32,21 @@ void PageImpl::GetId(const GetIdCallback& callback) {
   callback(convert::ToArray(storage_->GetId()));
 }
 
+const storage::CommitId& PageImpl::GetCurrentCommitId() {
+  // TODO(etiennej): Commit implicit transactions when we have those.
+  if (!journal_) {
+    return branch_tracker_->GetBranchHeadId();
+  } else {
+    return journal_parent_commit_;
+  }
+}
+
 // GetSnapshot(PageSnapshot& snapshot) => (Status status);
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     const GetSnapshotCallback& callback) {
-  // TODO(etiennej): Commit implicit transactions when we have those.
-  storage::CommitId commit_id;
-  if (!journal_) {
-    commit_id = branch_tracker_->GetBranchHeadId();
-  } else {
-    commit_id = journal_parent_commit_;
-  }
   std::unique_ptr<const storage::Commit> commit;
-  storage::Status status = storage_->GetCommit(commit_id, &commit);
+  storage::Status status = storage_->GetCommit(GetCurrentCommitId(), &commit);
   if (status != storage::Status::OK) {
     callback(PageUtils::ConvertStatus(status));
     return;
@@ -56,8 +59,10 @@ void PageImpl::GetSnapshot(
 // Watch(PageWatcher watcher) => (Status status);
 void PageImpl::Watch(fidl::InterfaceHandle<PageWatcher> watcher,
                      const WatchCallback& callback) {
-  FTL_LOG(ERROR) << "PageImpl::Watch not implemented";
-  callback(Status::UNKNOWN_ERROR);
+  PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
+  PageSnapshotPtr snapshot;
+  GetSnapshot(GetProxy(&snapshot), callback);
+  branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr), std::move(snapshot));
 }
 
 void PageImpl::RunInTransaction(
@@ -221,6 +226,7 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
     return;
   }
   storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
+  branch_tracker_->SetTransactionInProgress(true);
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::EXPLICIT, &journal_);
   journal_parent_commit_ = commit_id;
@@ -235,6 +241,7 @@ void PageImpl::Commit(const CommitCallback& callback) {
   }
   journal_parent_commit_.clear();
   CommitJournal(std::move(journal_), callback);
+  branch_tracker_->SetTransactionInProgress(false);
 }
 
 // Rollback() => (Status status);
@@ -247,6 +254,7 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
   journal_.reset();
   journal_parent_commit_.clear();
   callback(PageUtils::ConvertStatus(status));
+  branch_tracker_->SetTransactionInProgress(false);
 }
 
 }  // namespace ledger
