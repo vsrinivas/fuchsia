@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "lib/ftl/command_line.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
@@ -26,10 +27,9 @@ constexpr char kUsageString[] =
     "e.g. debugserver 2345 /path/to/executable\n"
     "\n"
     "Options:\n"
-    "  --help           show this help message\n"
-    "  --debug=[level]  set debug verbosity level\n";
-
-constexpr char kDebugOption[] = "debug";
+    "  --help             show this help message\n"
+    "  --verbose=[level]  set debug verbosity level\n"
+    "  --quiet=[level]    set quietness level (opposite of verbose)\n";
 
 void PrintUsageString() {
   std::cout << kUsageString << std::endl;
@@ -45,19 +45,8 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  if (cl.HasOption(kDebugOption, nullptr)) {
-    std::string debug_level;
-    cl.GetOptionValue(kDebugOption, &debug_level);
-
-    // Parse the verbosity level as a positive integer.
-    unsigned int level;
-    if (!ftl::StringToNumberWithError<unsigned int>(debug_level, &level)) {
-      FTL_LOG(ERROR) << "Invalid log level: " << debug_level;
-      return EXIT_FAILURE;
-    }
-
-    ftl::SetMinLogLevel(-level);
-  }
+  if (!ftl::SetLogSettingsFromCommandLine(cl))
+    return EXIT_FAILURE;
 
   uint16_t port;
   if (!ftl::StringToNumberWithError<uint16_t>(cl.positional_args()[0], &port)) {
