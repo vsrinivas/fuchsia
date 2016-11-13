@@ -6,6 +6,7 @@
 
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/debug/debugger.h"
+#include "lib/ftl/log_settings_state.h"
 #include "lib/ftl/logging.h"
 
 #if defined(OS_ANDROID)

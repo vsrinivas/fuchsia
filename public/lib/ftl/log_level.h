@@ -23,18 +23,6 @@ const LogSeverity LOG_DFATAL = LOG_ERROR;
 const LogSeverity LOG_DFATAL = LOG_FATAL;
 #endif
 
-// Sets the log level. Anything at or above this level will be written to the
-// log file/displayed to the user (if applicable). Anything below this level
-// will be silently ignored. The log level defaults to 0.
-//
-// Note that log messages for FTL_VLOG(x) (from lib/ftl/logging.h) are logged at
-// level -x, so setting the min log level to negative values enables verbose
-// logging.
-void SetMinLogLevel(int level);
-
-// Gets the current log level.
-int GetMinLogLevel();
-
 }  // namespace ftl
 
 #endif  // LIB_FTL_LOG_LEVEL_H_

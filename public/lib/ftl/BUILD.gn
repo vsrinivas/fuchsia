@@ -16,8 +16,9 @@ config("thread_safety_warning") {
 # constraints on dynamic linking. We separate these out here.
 source_set("stateful_sources") {
   sources = [
-    "log_level.cc",
     "log_level.h",
+    "log_settings_state.cc",
+    "log_settings_state.h",
   ]
 }
 
@@ -47,6 +48,8 @@ static_library("ftl") {
     "functional/closure.h",
     "functional/make_runnable.h",
     "functional/make_copyable.h",
+    "log_settings.cc",
+    "log_settings.h",
     "logging.cc",
     "logging.h",
     "macros.h",
@@ -119,6 +122,7 @@ executable("ftl_unittests") {
   sources = [
     "arraysize_unittest.cc",
     "command_line_unittest.cc",
+    "log_settings_unittest.cc",
     "files/file_unittest.cc",
     "files/path_unittest.cc",
     "files/scoped_temp_dir_unittest.cc",
