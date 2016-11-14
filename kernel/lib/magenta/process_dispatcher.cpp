@@ -237,11 +237,6 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
     DEBUG_ASSERT(t != nullptr);
     thread_list_.erase(*t);
 
-    // drop the ref from the main_thread_ pointer if its being removed
-    if (t == main_thread_.get()) {
-        main_thread_.reset();
-    }
-
     // if this was the last thread, transition directly to DEAD state
     if (thread_list_.is_empty()) {
         LTRACEF("last thread left the process %p, entering DEAD state\n", this);

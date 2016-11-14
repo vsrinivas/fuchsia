@@ -202,9 +202,6 @@ private:
     // list of threads in this process
     mxtl::DoublyLinkedList<UserThread*> thread_list_;
 
-    // a ref to the main thread
-    mxtl::RefPtr<UserThread> main_thread_;
-
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;
 
