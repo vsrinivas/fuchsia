@@ -104,7 +104,7 @@ void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     if (res < 0) {
         printf("failed reading %p memory; error : %d\n", (void*)start, res);
     } else if (len != 0) {
-        hexdump(buf, len);
+        hexdump_ex(buf, len, start);
     }
 }
 
