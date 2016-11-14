@@ -31,11 +31,11 @@ class FTL_LOCKABLE Monitor {
   // Gain exclusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to ensure that you call |Exit| to
   // give up exclusive access to the monitor.
-  void Enter() FTL_EXCLUSIVE_LOCK_FUNCTION();
+  void Enter() FTL_EXCLUSIVE_LOCK_FUNCTION(mutex_);
 
   // Give up excusive access to the monitor. Rather than calling this function
   // directly, consider using |MonitorLocker| to pair this call with |Enter|.
-  void Exit() FTL_UNLOCK_FUNCTION();
+  void Exit() FTL_UNLOCK_FUNCTION(mutex_);
 
   // Signal that the condition associated with the monitor has occurred. This
   // function will wake up a thread that is waiting on the monitor in |Wait|.
