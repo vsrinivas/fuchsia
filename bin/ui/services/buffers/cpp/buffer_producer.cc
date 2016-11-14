@@ -165,7 +165,7 @@ void ProducedBufferHolder::SetReadySignal() {
     return;
 
   mx_status_t status =
-      production_fence_->signal_peer(0u, MX_EPAIR_SIGNAL_SIGNALED);
+      production_fence_->signal_peer(0u, MX_EPAIR_SIGNALED);
   FTL_DCHECK(status == NO_ERROR);
   ready_ = true;
 }

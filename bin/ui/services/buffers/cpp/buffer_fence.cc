@@ -10,7 +10,7 @@ namespace mozart {
 namespace {
 
 constexpr mx_status_t kSignaledOrClosed =
-    MX_EPAIR_SIGNAL_SIGNALED | MX_EPAIR_SIGNAL_CLOSED;
+    MX_EPAIR_SIGNALED | MX_EPAIR_CLOSED;
 }
 
 BufferFence::BufferFence(mx::eventpair fence) : fence_(std::move(fence)) {
