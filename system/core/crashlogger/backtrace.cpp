@@ -330,7 +330,7 @@ void backtrace(mx_handle_t process, mx_handle_t thread,
 
     int n = 1;
     btprint(&di_cache, n++, pc, sp);
-    while ((fp >= 0x1000000) && (n < 50)) {
+    while ((sp >= 0x1000000) && (n < 50)) {
         if (libunwind_ok) {
             int ret = unw_step(&cursor);
             if (ret < 0) {
