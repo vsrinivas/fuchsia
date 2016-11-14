@@ -444,7 +444,7 @@ static bool port_timeout(void) {
     status = mx_port_create(0u, &port);
     EXPECT_EQ(status, 0, "");
 
-    mx_io_packet_t io_pkt = {0};
+    mx_io_packet_t io_pkt = {};
     status = mx_port_wait(port, 5000000ull, &io_pkt, sizeof(io_pkt));
     EXPECT_EQ(status, ERR_TIMED_OUT, "");
 
