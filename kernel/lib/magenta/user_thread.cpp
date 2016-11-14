@@ -115,7 +115,8 @@ status_t UserThread::Initialize(mxtl::StringPiece name) {
 
 // start a thread
 status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
-                           uintptr_t arg1, uintptr_t arg2) {
+                           uintptr_t arg1, uintptr_t arg2,
+                           bool initial_thread) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -130,7 +131,7 @@ status_t UserThread::Start(uintptr_t entry, uintptr_t sp,
     user_arg2_ = arg2;
 
     // add ourselves to the process, which may fail if the process is in a dead state
-    auto ret = process_->AddThread(this);
+    auto ret = process_->AddThread(this, initial_thread);
     if (ret < 0)
         return ret;
 

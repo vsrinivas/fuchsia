@@ -19,7 +19,10 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
     mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
 
-    mx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2) { return thread_->Start(pc, sp, arg1, arg2); }
+    mx_status_t Start(uintptr_t pc, uintptr_t sp,
+                      uintptr_t arg1, uintptr_t arg2, bool initial_thread) {
+        return thread_->Start(pc, sp, arg1, arg2, initial_thread);
+    }
     void Kill() { thread_->Kill(); }
 
     StateTracker* get_state_tracker() final;

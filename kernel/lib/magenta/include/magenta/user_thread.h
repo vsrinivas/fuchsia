@@ -49,7 +49,8 @@ public:
     // Performs initialization on a newly constructed UserThread
     // If this fails, then the object is invalid and should be deleted
     status_t Initialize(mxtl::StringPiece name);
-    status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2);
+    status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
+                   bool initial_thread);
     void Exit() __NO_RETURN;
     void Kill();
     void DispatcherClosed();

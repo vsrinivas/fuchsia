@@ -109,7 +109,7 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
         return status;
 
     ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
-    return thread->Start(entry, stack, arg1, arg2);
+    return thread->Start(entry, stack, arg1, arg2, /* initial_thread= */ false);
 }
 
 void sys_thread_exit() {
@@ -277,7 +277,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     ktrace(TAG_PROC_START, (uint32_t)thread->get_koid(),
            (uint32_t)process->get_koid(), 0, 0);
 
-    return process->Start(mxtl::move(thread), pc, sp, arg_nhv, arg2);
+    return thread->Start(pc, sp, arg_nhv, arg2, /* initial_thread= */ true);
 }
 
 void sys_process_exit(int retcode) {

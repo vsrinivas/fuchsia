@@ -321,10 +321,11 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
 
-    // start the process
-    status = proc->Start(mxtl::move(thread), entry, sp, hv, vdso_base);
+    // Start the process's initial thread.
+    status = thread->Start(entry, sp, hv, vdso_base,
+                           /* initial_thread= */ true);
     if (status != NO_ERROR) {
-        printf("userboot: failed to start process %d\n", status);
+        printf("userboot: failed to start initial thread: %d\n", status);
         return status;
     }
 

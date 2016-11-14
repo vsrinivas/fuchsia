@@ -126,32 +126,6 @@ status_t ProcessDispatcher::Initialize() {
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::Start(mxtl::RefPtr<ThreadDispatcher> thread,
-                                  uintptr_t pc, uintptr_t sp,
-                                  uintptr_t arg1, uintptr_t arg2) {
-    LTRACEF("process %p thread %p, entry %#" PRIxPTR ", sp %#" PRIxPTR
-            ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
-            this, thread.get(), pc, sp, arg1, arg2);
-
-    // grab and hold the state lock across this entire routine, since we're
-    // effectively transitioning from INITIAL to RUNNING
-    AutoLock lock(state_lock_);
-
-    // make sure we're in the right state
-    if (state_ != State::INITIAL)
-        return ERR_BAD_STATE;
-
-    // start the initial thread
-    LTRACEF("starting main thread\n");
-    auto status = thread->Start(pc, sp, arg1, arg2);
-    if (status < 0)
-        return status;
-
-    SetState(State::RUNNING);
-
-    return NO_ERROR;
-}
-
 void ProcessDispatcher::Exit(int retcode) {
     LTRACE_ENTRY_OBJ;
 
@@ -213,8 +187,13 @@ void ProcessDispatcher::KillAllThreads() {
     futex_context_.WakeAll();
 }
 
-status_t ProcessDispatcher::AddThread(UserThread* t) {
+status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
     LTRACE_ENTRY_OBJ;
+
+    AutoLock state_lock(&state_lock_);
+
+    if (initial_thread && state_ != State::INITIAL)
+        return ERR_BAD_STATE;
 
     // cannot add thread to dying/dead state
     if (state_ == State::DYING || state_ == State::DEAD) {
@@ -226,6 +205,9 @@ status_t ProcessDispatcher::AddThread(UserThread* t) {
     thread_list_.push_back(t);
 
     DEBUG_ASSERT(t->process() == this);
+
+    if (initial_thread)
+        SetState(State::RUNNING);
 
     return NO_ERROR;
 }

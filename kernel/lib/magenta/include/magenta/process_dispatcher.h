@@ -125,10 +125,6 @@ public:
     mxtl::RefPtr<JobDispatcher> job() { return job_; }
     const mxtl::StringPiece name() const { return name_; }
 
-    // Starts the process running
-    status_t Start(mxtl::RefPtr<ThreadDispatcher> thread,
-                   uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2);
-
     void Exit(int retcode);
     void Kill();
 
@@ -179,7 +175,7 @@ private:
 
     // Thread lifecycle support
     friend class UserThread;
-    status_t AddThread(UserThread* t);
+    status_t AddThread(UserThread* t, bool initial_thread);
     void RemoveThread(UserThread* t);
 
     // Called when this object is not longer reachable from user mode. However
