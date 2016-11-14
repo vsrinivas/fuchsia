@@ -28,6 +28,10 @@
             "bootfs_path": "apps/ledger"
         },
         {
+            "binary": "ledger_apptests",
+            "bootfs_path": "apps/ledger_apptests"
+        },
+        {
             "binary": "ledger_callback_unittests",
             "bootfs_path": "test/ledger_callback_unittests"
         },
