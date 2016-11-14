@@ -90,6 +90,26 @@ static void fix_inferior_segv(mx_handle_t thread)
 #endif
 }
 
+static bool test_segv_pc(mx_handle_t thread) {
+#ifdef __x86_64__
+    uint64_t pc = get_uint64_register(
+        thread, offsetof(mx_x86_64_general_regs_t, rip));
+    uint64_t r10 = get_uint64_register(
+        thread, offsetof(mx_x86_64_general_regs_t, r10));
+    ASSERT_EQ(pc, r10, "fault PC does not match r10");
+#endif
+
+#ifdef __aarch64__
+    uint64_t pc = get_uint64_register(
+        thread, offsetof(mx_aarch64_general_regs_t, pc));
+    uint64_t x10 = get_uint64_register(
+        thread, offsetof(mx_aarch64_general_regs_t, r[10]));
+    ASSERT_EQ(pc, x10, "fault PC does not match x10");
+#endif
+
+    return true;
+}
+
 // This exists so that we can use ASSERT_EQ which does a return on failure.
 
 static bool wait_inferior_thread_worker(void* arg)
@@ -121,6 +141,10 @@ static bool wait_inferior_thread_worker(void* arg)
         ASSERT_EQ(status, 0, "mx_debug_task_get_child failed");
 
         dump_inferior_regs(thread);
+
+        // Verify that the fault is at the PC we expected.
+        if (!test_segv_pc(thread))
+            return false;
 
         // Do some tests that require a suspended inferior.
         test_memory_ops(inferior, thread);
@@ -248,36 +272,46 @@ __NO_INLINE static bool test_prep_and_segv(void)
 
 #ifdef __x86_64__
     void* segv_pc;
-    // Note: Fuchsia is always pic.
-    __asm__ ("movq .Lsegv_here@GOTPCREL(%%rip),%0" : "=r" (segv_pc));
-    unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
+    // Note: Fuchsia is always PIC.
+    __asm__("leaq .Lsegv_here(%%rip),%0" : "=r" (segv_pc));
+    unittest_printf("About to segv, pc %p\n", segv_pc);
 
     // Set r9 to point to test_data so we can easily access it
-    // from the parent process.
-    __asm__ ("\
-	movq %0,%%r9\n\
-	movq $0,%%r8\n\
+    // from the parent process.  Likewise set r10 to segv_pc
+    // so the parent process can verify it matches the fault PC.
+    __asm__("\
+        movq %[zero],%%r8\n\
+        movq %[test_data],%%r9\n\
+        movq %[pc],%%r10\n\
 .Lsegv_here:\n\
-	movq (%%r8),%%rax\
-"
-        : : "r" (&test_data[0]) : "rax", "r8", "r9");
+        movq (%%r8),%%rax\
+" : :
+            [zero] "g" (0),
+            [test_data] "g" (&test_data[0]),
+            [pc] "g" (segv_pc) :
+            "rax", "r8", "r9", "r10");
 #endif
 
 #ifdef __aarch64__
     void* segv_pc;
-    // Note: Fuchsia is always pic.
-    __asm__ ("mov %0,.Lsegv_here" : "=r" (segv_pc));
-    unittest_printf("About to segv, pc 0x%lx\n", (long) segv_pc);
+    // Note: Fuchsia is always PIC.
+    __asm__("adrp %0, .Lsegv_here\n"
+            "add %0, %0, :lo12:.Lsegv_here" : "=r" (segv_pc));
+    unittest_printf("About to segv, pc %p\n", segv_pc);
 
     // Set r9 to point to test_data so we can easily access it
-    // from the parent process.
-    __asm__ ("\
-	mov x9,%0\n\
-	mov x8,0\n\
+    // from the parent process.  Likewise set r10 to segv_pc
+    // so the parent process can verify it matches the fault PC.
+    __asm__("\
+        mov x8,xzr\n\
+        mov x9,%[test_data]\n\
+        mov x10,%[pc]\n\
 .Lsegv_here:\n\
-	ldr x0,[x8]\
-"
-        : : "r" (&test_data[0]) : "x0", "x8", "x9");
+        ldr x0,[x8]\
+" : :
+            [test_data] "r" (&test_data[0]),
+            [pc] "r" (segv_pc) :
+            "x0", "x8", "x9", "x10");
 #endif
 
     // On resumption test_data should have had TEST_DATA_ADJUST added to each element.
