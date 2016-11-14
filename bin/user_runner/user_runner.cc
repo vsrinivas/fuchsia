@@ -29,6 +29,18 @@ namespace modular {
 namespace {
 
 const char kAppId[] = "modular_user_runner";
+const char kLedgerBaseDir[] = "/data/ledger/";
+const char kHexadecimalCharacters[] = "0123456789abcdef";
+
+std::string ToHex(const fidl::Array<uint8_t>& user_id) {
+  std::string result;
+  result.resize(user_id.size() * 2);
+  for (size_t index = 0; index < user_id.size(); ++index) {
+    result[2 * index] = kHexadecimalCharacters[user_id[index] >> 4];
+    result[2 * index + 1] = kHexadecimalCharacters[user_id[index] & 0xf];
+  };
+  return result;
+}
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -99,17 +111,28 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
           FTL_DLOG(INFO) << "Servicing Ledger service request";
           // TODO(alhaad): Once supported by Ledger, only create a user scoped
           // ledger here.
-          fidl::StructPtr<ledger::Identity> identity = ledger::Identity::New();
-          identity->user_id = user_id_.Clone();
-          identity->app_id = to_array(kAppId);
-          ledger_factory_->GetLedger(
-              std::move(identity), std::move(request),
+          ledger::LedgerRepositoryPtr repository;
+          ledger_repository_factory_->GetRepository(
+              kLedgerBaseDir + ToHex(user_id_), GetProxy(&repository),
               [this](ledger::Status status) {
                 if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "UserRunnerScope::"
-                                    "GetApplicationEnvironmentServices():"
-                                 << " LedgerFactory.GetLedger() failed:"
-                                 << " " << LedgerStatusToString(status) << ".";
+                  FTL_LOG(ERROR)
+                      << "UserRunnerScope::"
+                         "GetApplicationEnvironmentServices():"
+                      << " LedgerRepositoryFactory.GetRepository() failed:"
+                      << " " << LedgerStatusToString(status) << ".";
+                }
+              });
+
+          repository->GetLedger(
+              to_array(kAppId), std::move(request),
+              [this](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR)
+                      << "UserRunnerScope::"
+                         "GetApplicationEnvironmentServices():"
+                      << " LedgerRepositoryFactory.GetLedger() failed:"
+                      << " " << LedgerStatusToString(status) << ".";
                 }
               });
         });
@@ -130,11 +153,12 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
     launch_info->services = GetProxy(&app_services);
     launch_info->url = "file:///system/apps/ledger";
 
-    // Note that |LedgerFactory| is started in the device runner's environment.
+    // Note that |LedgerRepositoryFactory| is started in the device runner's
+    // environment.
     application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                         nullptr);
 
-    ConnectToService(app_services.get(), GetProxy(&ledger_factory_));
+    ConnectToService(app_services.get(), GetProxy(&ledger_repository_factory_));
   }
 
   std::shared_ptr<ApplicationContext> application_context_;
@@ -147,7 +171,7 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   fidl::Array<uint8_t> user_id_;
 
   // Services hosted in this environment.
-  ledger::LedgerFactoryPtr ledger_factory_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 };
 
 class UserRunnerImpl : public UserRunner {

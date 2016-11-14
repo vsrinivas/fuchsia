@@ -16,6 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -60,29 +61,37 @@ class DocumentStoreTest {
   void RunTests() {
     // TODO(azani): Make sure the data is not persisted unnecessarily across
     // runs.
+    files::ScopedTempDir tmp_dir_;
     modular::ServiceProviderPtr child_services;
 
-    fidl::SynchronousInterfacePtr<ledger::LedgerFactory> ledger_factory;
+    fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
+        ledger_repository_factory;
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/ledger";
     launch_info->services = fidl::GetProxy(&child_services);
     context_->launcher()->CreateApplication(
-        std::move(launch_info), fidl::GetProxy(&ledger_factory_controller_));
-    modular::ConnectToService(child_services.get(),
-                              fidl::GetSynchronousProxy(&ledger_factory));
-    FTL_LOG(INFO) << "Connected to " << ledger::LedgerFactory::Name_;
-    FTL_CHECK(ledger_factory.is_bound());
+        std::move(launch_info),
+        fidl::GetProxy(&ledger_repository_factory_controller_));
+    modular::ConnectToService(
+        child_services.get(),
+        fidl::GetSynchronousProxy(&ledger_repository_factory));
+    FTL_LOG(INFO) << "Connected to " << ledger::LedgerRepositoryFactory::Name_;
+    FTL_CHECK(ledger_repository_factory.is_bound());
 
-    ledger::IdentityPtr id(ledger::Identity::New());
-    // Currently, any user_id is valid as long as it's not the size-0 array.
-    id->user_id = fidl::Array<uint8_t>::New(1);
-    id->app_id = fidl::Array<uint8_t>::New(1);
+    // Currently, any name is valid as long as it's not the size-0 array.
+    fidl::Array<uint8_t> ledger_name = fidl::Array<uint8_t>::New(1);
 
-    ledger::LedgerPtr ledger;
     ledger::Status ledger_status;
 
-    FTL_CHECK(ledger_factory->GetLedger(std::move(id), GetProxy(&ledger),
-                                        &ledger_status));
+    fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
+    FTL_CHECK(ledger_repository_factory->GetRepository(
+        tmp_dir_.path(), fidl::GetSynchronousProxy(&ledger_repository),
+        &ledger_status));
+
+    ledger::LedgerPtr ledger;
+
+    FTL_CHECK(ledger_repository->GetLedger(std::move(ledger_name),
+                                           GetProxy(&ledger), &ledger_status));
     FTL_LOG(INFO) << "Got a ledger with status: " << ledger_status;
     FTL_CHECK(!ledger.encountered_error());
     FTL_CHECK(ledger_status == ledger::Status::OK);
@@ -312,7 +321,7 @@ class DocumentStoreTest {
   std::unique_ptr<modular::ApplicationContext> context_;
   fidl::SynchronousInterfacePtr<DocumentStoreFactory> docstore_factory_;
   fidl::SynchronousInterfacePtr<DocumentStore> docstore_;
-  modular::ApplicationControllerPtr ledger_factory_controller_;
+  modular::ApplicationControllerPtr ledger_repository_factory_controller_;
   modular::ApplicationControllerPtr docstore_factory_controller_;
 
   void ResetDocstore() {
