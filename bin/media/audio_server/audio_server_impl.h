@@ -26,8 +26,6 @@ class AudioServerImpl : public AudioServer {
   AudioServerImpl();
   ~AudioServerImpl() override;
 
-  void Initialize();
-
   // AudioServer
   void CreateTrack(fidl::InterfaceRequest<AudioTrack> track,
                    fidl::InterfaceRequest<MediaRenderer> renderer) override;

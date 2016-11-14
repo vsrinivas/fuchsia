@@ -25,15 +25,7 @@ AudioServerImpl::AudioServerImpl()
       [this](fidl::InterfaceRequest<AudioServer> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-}
 
-AudioServerImpl::~AudioServerImpl() {
-  Shutdown();
-  FTL_DCHECK(cleanup_queue_);
-  FTL_DCHECK(cleanup_queue_->empty());
-}
-
-void AudioServerImpl::Initialize() {
   // Stash a pointer to our task runner.
   FTL_DCHECK(mtl::MessageLoop::GetCurrent());
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
@@ -43,6 +35,12 @@ void AudioServerImpl::Initialize() {
   MediaResult res = output_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
   FTL_DCHECK(res == MediaResult::OK);
+}
+
+AudioServerImpl::~AudioServerImpl() {
+  Shutdown();
+  FTL_DCHECK(cleanup_queue_);
+  FTL_DCHECK(cleanup_queue_->empty());
 }
 
 void AudioServerImpl::Shutdown() {

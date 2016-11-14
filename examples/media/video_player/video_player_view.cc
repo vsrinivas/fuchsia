@@ -88,7 +88,7 @@ VideoPlayerView::VideoPlayerView(
 
   // Create a player from all that stuff.
   media_service->CreatePlayer(
-      std::move(reader), nullptr,  // std::move(audio_media_renderer),
+      std::move(reader), std::move(audio_media_renderer),
       std::move(video_media_renderer), GetProxy(&media_player_));
 
   // Get the first frames queued up so we can show something.

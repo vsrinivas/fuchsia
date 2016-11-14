@@ -19,7 +19,10 @@ executable("audio_server") {
     "platform/generic/output_formatter.cc",
     "platform/generic/standard_output_base.cc",
     "platform/generic/throttle_output.cc",
-    "platform/stubs/alsa_output_stub.cc",
+    "platform/usb/usb_output.cc",
+    "platform/usb/usb_output.h",
+    "platform/usb/usb_output_enum.cc",
+    "platform/usb/usb_output_enum.h",
   ]
 
   deps = [

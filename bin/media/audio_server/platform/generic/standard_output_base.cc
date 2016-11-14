@@ -427,7 +427,8 @@ void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
   // The transformation has changed, re-compute the local time -> track frame
   // transformation.
   lt_to_track_frames = TimelineFunction(
-      tmp.reference_time(), tmp.subject_time(),
+      tmp.reference_time(),
+      tmp.subject_time() * track->FractionalFrameToMediaTimeRatio(),
       TimelineRate::Product(track->FractionalFrameToMediaTimeRatio(),
                             tmp.rate()));
 

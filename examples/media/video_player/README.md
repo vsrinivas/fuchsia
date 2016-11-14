@@ -8,9 +8,15 @@ create a video player.
 The video player currently uses a file reader only, so you'll need to have an
 accessible file. Here's an example command line:
 
-  @ bootstrap launch video_player --path=/data/vid.ogv
+  @ bootstrap -
+  @boot launch video_player --path=/data/vid.ogv
 
 In the future, we'll support a network reader as well.
+
+It's important to use @boot as shown above rather than creating a new
+bootstrap environment for each invocation of video_player. Each instance of
+the bootstrap environment will create its own instance of audio_server, and
+multiple audio_servers will conflict when trying to access devices.
 
 The app responds to mouse clicks (touch on the Acer) and the keyboard. Mozart
 requires a touch to focus the keyboard. Touching anywhere but the progress bar

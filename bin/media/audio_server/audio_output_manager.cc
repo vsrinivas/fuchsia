@@ -10,12 +10,10 @@
 #include "apps/media/src/audio_server/audio_server_impl.h"
 #include "apps/media/src/audio_server/audio_track_to_output_link.h"
 #include "apps/media/src/audio_server/platform/generic/throttle_output.h"
+#include "apps/media/src/audio_server/platform/usb/usb_output_enum.h"
 
 namespace media {
 namespace audio {
-
-// TODO(johngro): This needs to be replaced with a proper HAL
-extern AudioOutputPtr CreateDefaultAlsaOutput(AudioOutputManager* manager);
 
 AudioOutputManager::AudioOutputManager(AudioServerImpl* server)
     : server_(server) {}
@@ -32,10 +30,12 @@ MediaResult AudioOutputManager::Init() {
   // platform.  Right now, we just create some hardcoded default outputs and
   // leave it at that.
   outputs_.emplace(audio::ThrottleOutput::New(this));
+
   {
-    AudioOutputPtr alsa = CreateDefaultAlsaOutput(this);
-    if (alsa) {
-      outputs_.emplace(alsa);
+    UsbOutputEnum usb_output_enum;
+    AudioOutputPtr default_usb_output = usb_output_enum.GetDefaultOutput(this);
+    if (default_usb_output) {
+      outputs_.emplace(default_usb_output);
     }
   }
 
