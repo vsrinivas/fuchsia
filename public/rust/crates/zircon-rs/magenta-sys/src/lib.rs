@@ -84,18 +84,33 @@ bitflags! {
         const MX_USER_SIGNAL_5            = 1 << 29,
         const MX_USER_SIGNAL_6            = 1 << 30,
         const MX_USER_SIGNAL_7            = 1 << 31,
+
         // Event
-        const MX_EVENT_SIGNAL_SIGNALED    = MX_OBJECT_SIGNAL_3.bits,
-        const MX_EVENT_SIGNAL_MASK        =
-            (MX_USER_SIGNAL_ALL.bits | MX_OBJECT_SIGNAL_3.bits),
+        const MX_EVENT_SIGNALED           = MX_OBJECT_SIGNAL_3.bits,
+
         // EventPair
-        const MX_EPAIR_SIGNAL_SIGNALED    = MX_OBJECT_SIGNAL_3.bits,
-        const MX_EPAIR_SIGNAL_CLOSED      = MX_OBJECT_SIGNAL_2.bits,
-        const MX_EPAIR_SIGNAL_MASK        =
-            (MX_USER_SIGNAL_ALL.bits | MX_OBJECT_SIGNAL_2.bits | MX_OBJECT_SIGNAL_3.bits),
-        // Task signals
-        const MX_TASK_SIGNAL_TERMINATED   = MX_OBJECT_SIGNAL_3.bits,
-        const MX_TASK_SIGNAL_MASK         = MX_OBJECT_SIGNAL_3.bits,
+        const MX_EPAIR_SIGNALED           = MX_OBJECT_SIGNAL_3.bits,
+        const MX_EPAIR_CLOSED             = MX_OBJECT_SIGNAL_2.bits,
+
+        // Task signals (process, thread, job)
+        const MX_TASK_TERMINATED          = MX_OBJECT_SIGNAL_3.bits,
+
+        // Channel
+        const MX_CHANNEL_READABLE         = MX_OBJECT_SIGNAL_0.bits,
+        const MX_CHANNEL_WRITABLE         = MX_OBJECT_SIGNAL_1.bits,
+        const MX_CHANNEL_PEER_CLOSED      = MX_OBJECT_SIGNAL_2.bits,
+
+        // Socket
+        const MX_SOCKET_READABLE          = MX_OBJECT_SIGNAL_0.bits,
+        const MX_SOCKET_WRITABLE          = MX_OBJECT_SIGNAL_1.bits,
+        const MX_SOCKET_PEER_CLOSED       = MX_OBJECT_SIGNAL_2.bits,
+
+        // Data pipe
+        const MX_DATAPIPE_READABLE        = MX_OBJECT_SIGNAL_0.bits,
+        const MX_DATAPIPE_WRITABLE        = MX_OBJECT_SIGNAL_1.bits,
+        const MX_DATAPIPE_PEER_CLOSED     = MX_OBJECT_SIGNAL_2.bits,
+        const MX_DATAPIPE_READ_THRESHOLD  = MX_OBJECT_SIGNAL_4.bits,
+        const MX_DATAPIPE_WRITE_THRESHOLD = MX_OBJECT_SIGNAL_5.bits,
     }
 }
 

@@ -134,8 +134,68 @@ pub use magenta_sys::{
 /// in the Magenta kernel documentation. Note: the names of signals are still in flux.
 pub type Signals = sys::mx_signals_t;
 
-pub use magenta_sys::{MX_OBJECT_SIGNAL_0, MX_OBJECT_SIGNAL_1, MX_OBJECT_SIGNAL_2,
-    MX_OBJECT_SIGNAL_3, MX_OBJECT_SIGNAL_4, MX_OBJECT_SIGNAL_5};
+pub use magenta_sys::{
+        MX_OBJECT_SIGNAL_0,
+        MX_OBJECT_SIGNAL_1,
+        MX_OBJECT_SIGNAL_2,
+        MX_OBJECT_SIGNAL_3,
+        MX_OBJECT_SIGNAL_4,
+        MX_OBJECT_SIGNAL_5,
+        MX_OBJECT_SIGNAL_6,
+        MX_OBJECT_SIGNAL_7,
+        MX_OBJECT_SIGNAL_8,
+        MX_OBJECT_SIGNAL_9,
+        MX_OBJECT_SIGNAL_10,
+        MX_OBJECT_SIGNAL_11,
+        MX_OBJECT_SIGNAL_12,
+        MX_OBJECT_SIGNAL_13,
+        MX_OBJECT_SIGNAL_14,
+        MX_OBJECT_SIGNAL_15,
+        MX_OBJECT_SIGNAL_16,
+        MX_OBJECT_SIGNAL_17,
+        MX_OBJECT_SIGNAL_18,
+        MX_OBJECT_SIGNAL_19,
+        MX_OBJECT_SIGNAL_20,
+        MX_OBJECT_SIGNAL_21,
+        MX_OBJECT_SIGNAL_22,
+        MX_OBJECT_SIGNAL_23,
+
+        MX_USER_SIGNAL_0,
+        MX_USER_SIGNAL_1,
+        MX_USER_SIGNAL_2,
+        MX_USER_SIGNAL_3,
+        MX_USER_SIGNAL_4,
+        MX_USER_SIGNAL_5,
+        MX_USER_SIGNAL_6,
+        MX_USER_SIGNAL_7,
+
+        // Event
+        MX_EVENT_SIGNALED,
+
+        // EventPair
+        MX_EPAIR_SIGNALED,
+        MX_EPAIR_CLOSED,
+
+        // Task signals (process, thread, job)
+        MX_TASK_TERMINATED,
+
+        // Channel
+        MX_CHANNEL_READABLE,
+        MX_CHANNEL_WRITABLE,
+        MX_CHANNEL_PEER_CLOSED,
+
+        // Socket
+        MX_SOCKET_READABLE,
+        MX_SOCKET_WRITABLE,
+        MX_SOCKET_PEER_CLOSED,
+
+        // Data pipe
+        MX_DATAPIPE_READABLE,
+        MX_DATAPIPE_WRITABLE,
+        MX_DATAPIPE_PEER_CLOSED,
+        MX_DATAPIPE_READ_THRESHOLD,
+        MX_DATAPIPE_WRITE_THRESHOLD,
+};
 
 /// Options for creating a channel.
 ///
