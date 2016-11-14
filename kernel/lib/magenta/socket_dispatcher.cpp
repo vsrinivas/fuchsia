@@ -31,7 +31,7 @@ constexpr mx_rights_t kDefaultSocketRights =
 constexpr mx_size_t kDeFaultSocketBufferSize = 256 * 1024u;
 
 constexpr mx_signals_t kValidSignalMask =
-    MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_USER_SIGNAL_ALL;
+    MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_USER_SIGNAL_ALL;
 
 namespace {
 // Cribbed from pow2.h, we need overloading to correctly deal with 32 and 64 bits.
@@ -174,7 +174,7 @@ SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
       half_closed_{false, false} {
 
-    state_tracker_.set_initial_signals_state(MX_SIGNAL_WRITABLE);
+    state_tracker_.set_initial_signals_state(MX_SOCKET_WRITABLE);
 }
 
 SocketDispatcher::~SocketDispatcher() {
@@ -200,9 +200,9 @@ void SocketDispatcher::on_zero_handles() {
 void SocketDispatcher::OnPeerZeroHandles() {
     AutoLock lock(&lock_);
     other_.reset();
-    state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, MX_SIGNAL_PEER_CLOSED);
+    state_tracker_.UpdateState(MX_SOCKET_WRITABLE, MX_SOCKET_PEER_CLOSED);
     if (iopc_)
-        iopc_->Signal(MX_SIGNAL_PEER_CLOSED, &lock_);
+        iopc_->Signal(MX_SOCKET_PEER_CLOSED, &lock_);
 }
 
 status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
@@ -251,7 +251,7 @@ status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) 
         iopc_ = mxtl::move(client);
 
         if (!cbuf_.empty())
-            iopc_->Signal(MX_SIGNAL_READABLE, 0u, &lock_);
+            iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
     }
 
     return NO_ERROR;
@@ -267,7 +267,7 @@ status_t SocketDispatcher::HalfClose() {
             return ERR_REMOTE_CLOSED;
         other = other_;
         half_closed_[0] = true;
-        state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u);
+        state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
     }
     return other->HalfCloseOther();
 }
@@ -275,7 +275,7 @@ status_t SocketDispatcher::HalfClose() {
 status_t SocketDispatcher::HalfCloseOther() {
     AutoLock lock(&lock_);
     half_closed_[1] = true;
-    state_tracker_.UpdateState(0u, MX_SIGNAL_PEER_CLOSED);
+    state_tracker_.UpdateState(0u, MX_SOCKET_PEER_CLOSED);
     return NO_ERROR;
 }
 
@@ -305,13 +305,13 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
 
     if (st > 0) {
         if (was_empty)
-            state_tracker_.UpdateState(0u, MX_SIGNAL_READABLE);
+            state_tracker_.UpdateState(0u, MX_SOCKET_READABLE);
         if (iopc_)
-            iopc_->Signal(MX_SIGNAL_READABLE, st, &lock_);
+            iopc_->Signal(MX_SOCKET_READABLE, st, &lock_);
     }
 
     if (!cbuf_.free())
-        other_->state_tracker_.UpdateState(MX_SIGNAL_WRITABLE, 0u);
+        other_->state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
 
     return st;
 }
@@ -329,11 +329,11 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     auto st = cbuf_.Read(dest, len, from_user);
 
     if (cbuf_.empty()) {
-        state_tracker_.UpdateState(MX_SIGNAL_READABLE, 0u);
+        state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);
     }
 
     if (!closed && was_full && (st > 0))
-        other_->state_tracker_.UpdateState(0u, MX_SIGNAL_WRITABLE);
+        other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
     return st;
 }

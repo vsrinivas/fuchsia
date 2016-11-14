@@ -64,7 +64,7 @@ static bool create_destroy_test(void) {
     ASSERT_GT(consumer, 0, "could not create consumer data pipe");
 
     ASSERT_EQ(get_satisfied_signals(consumer), 0u, "");
-    ASSERT_EQ(get_satisfied_signals(producer), MX_SIGNAL_WRITABLE | MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD, "");
+    ASSERT_EQ(get_satisfied_signals(producer), MX_SIGNAL_WRITABLE | MX_DATAPIPE_WRITE_THRESHOLD, "");
 
     status = mx_datapipe_end_write(producer, 0u);
     ASSERT_EQ(status, ERR_BAD_STATE, "wrong pipe state");
@@ -193,13 +193,13 @@ static bool write_read(void) {
     mx_ssize_t written = mx_datapipe_write(producer, 0u, 4 * 3000u, buffer);
     ASSERT_EQ(written, 4 * 3000, "write failed");
 
-    ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE | MX_DATAPIPE_SIGNAL_READ_THRESHOLD, "");
+    ASSERT_EQ(get_satisfied_signals(consumer), MX_SIGNAL_READABLE | MX_DATAPIPE_READ_THRESHOLD, "");
 
     status = mx_handle_close(producer);
     ASSERT_GE(status, NO_ERROR, "failed to close data pipe");
 
     ASSERT_EQ(get_satisfied_signals(consumer),
-              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_SIGNAL_READ_THRESHOLD, "");
+              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_READ_THRESHOLD, "");
 
     memset(buffer, 0, 4 * 3000u);
 
@@ -363,13 +363,13 @@ static bool consumer_signals_when_producer_closed(void) {
         ASSERT_EQ(mx_handle_close(producer), NO_ERROR, "failed to close data pipe producer");
 
         ASSERT_EQ(get_satisfied_signals(consumer),
-                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_SIGNAL_READ_THRESHOLD,
+                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_READ_THRESHOLD,
                   "incorrect satisfied signals");
 
         char buffer[64];
         ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
         ASSERT_EQ(get_satisfied_signals(consumer),
-                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_SIGNAL_READ_THRESHOLD,
+                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_READ_THRESHOLD,
                   "incorrect satisfied signals");
 
         ASSERT_EQ(mx_datapipe_read(consumer, 0u, 5, buffer), 5, "read failed");
@@ -611,7 +611,7 @@ static mx_status_t set_write_threshold(mx_handle_t h, mx_size_t threshold) {
 static bool write_threshold(void) {
     // Some abbreviations for readability.
     static const mx_signals_t W = MX_SIGNAL_WRITABLE;
-    static const mx_signals_t WT = MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD;
+    static const mx_signals_t WT = MX_DATAPIPE_WRITE_THRESHOLD;
     static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
 
     BEGIN_TEST;
@@ -716,7 +716,7 @@ static bool write_threshold_set_invalid(void) {
 static bool write_two_phase_signals(void) {
     // Some abbreviations for readability.
     static const mx_signals_t W = MX_SIGNAL_WRITABLE;
-    static const mx_signals_t WT = MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD;
+    static const mx_signals_t WT = MX_DATAPIPE_WRITE_THRESHOLD;
     static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
 
     BEGIN_TEST;
@@ -985,7 +985,7 @@ static mx_status_t set_read_threshold(mx_handle_t h, mx_size_t threshold) {
 static bool read_threshold(void) {
     // Some abbreviations for readability.
     static const mx_signals_t R = MX_SIGNAL_READABLE;
-    static const mx_signals_t RT = MX_DATAPIPE_SIGNAL_READ_THRESHOLD;
+    static const mx_signals_t RT = MX_DATAPIPE_READ_THRESHOLD;
     static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
 
     BEGIN_TEST;
@@ -1082,7 +1082,7 @@ static bool read_threshold_set_invalid(void) {
 static bool read_two_phase_signals(void) {
     // Some abbreviations for readability.
     static const mx_signals_t R = MX_SIGNAL_READABLE;
-    static const mx_signals_t RT = MX_DATAPIPE_SIGNAL_READ_THRESHOLD;
+    static const mx_signals_t RT = MX_DATAPIPE_READ_THRESHOLD;
     static const mx_signals_t PC = MX_SIGNAL_PEER_CLOSED;
 
     BEGIN_TEST;

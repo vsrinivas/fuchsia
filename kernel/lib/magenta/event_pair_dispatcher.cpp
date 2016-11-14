@@ -46,7 +46,7 @@ void EventPairDispatcher::on_zero_handles() {
     AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
-    other_->state_tracker_.UpdateState(0u, MX_EPAIR_SIGNAL_CLOSED);
+    other_->state_tracker_.UpdateState(0u, MX_EPAIR_CLOSED);
     other_.reset();
 }
 

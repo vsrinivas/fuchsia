@@ -59,7 +59,7 @@ DataPipe::DataPipe(mx_size_t element_size, mx_size_t capacity)
       free_space_(0u),
       write_threshold_(0u),
       read_threshold_(0u) {
-    producer_.state_tracker.set_initial_signals_state(MX_SIGNAL_WRITABLE | MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD);
+    producer_.state_tracker.set_initial_signals_state(MX_DATAPIPE_WRITABLE | MX_DATAPIPE_WRITE_THRESHOLD);
     consumer_.state_tracker.set_initial_signals_state(0u);
 
     consumer_.read_only = true;
@@ -119,17 +119,17 @@ void DataPipe::UpdateProducerSignalsNoLock() {
         } else {
             // Note: write_threshold_no_lock() > 0.
             if (free_space_no_lock() >= write_threshold_no_lock())
-                satisfied = MX_SIGNAL_WRITABLE | MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD;
+                satisfied = MX_DATAPIPE_WRITABLE | MX_DATAPIPE_WRITE_THRESHOLD;
             else if (free_space_no_lock() > 0u)
-                satisfied = MX_SIGNAL_WRITABLE;
+                satisfied = MX_DATAPIPE_WRITABLE;
             else
                 satisfied = 0u;
         }
-        producer_.state_tracker.UpdateState(MX_SIGNAL_WRITABLE | MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD,
+        producer_.state_tracker.UpdateState(MX_DATAPIPE_WRITABLE | MX_DATAPIPE_WRITE_THRESHOLD,
                                             satisfied);
     } else {
         producer_.state_tracker.UpdateState(
-                MX_SIGNAL_WRITABLE | MX_DATAPIPE_SIGNAL_WRITE_THRESHOLD, MX_SIGNAL_PEER_CLOSED);
+                MX_DATAPIPE_WRITABLE | MX_DATAPIPE_WRITE_THRESHOLD, MX_DATAPIPE_PEER_CLOSED);
     }
 }
 
@@ -140,19 +140,19 @@ void DataPipe::UpdateConsumerSignalsNoLock() {
     } else {
         // Note: read_threshold_no_lock() > 0.
         if (available_size_no_lock() >= read_threshold_no_lock())
-            satisfied = MX_SIGNAL_READABLE | MX_DATAPIPE_SIGNAL_READ_THRESHOLD;
+            satisfied = MX_DATAPIPE_READABLE | MX_DATAPIPE_READ_THRESHOLD;
         else if (available_size_no_lock() > 0u)
-            satisfied = MX_SIGNAL_READABLE;
+            satisfied = MX_DATAPIPE_READABLE;
         else
             satisfied = 0u;
     }
     if (producer_.alive) {
-        consumer_.state_tracker.UpdateState(MX_SIGNAL_READABLE | MX_DATAPIPE_SIGNAL_READ_THRESHOLD,
+        consumer_.state_tracker.UpdateState(MX_DATAPIPE_READABLE | MX_DATAPIPE_READ_THRESHOLD,
                                             satisfied);
     } else {
-        satisfied |= MX_SIGNAL_PEER_CLOSED;
+        satisfied |= MX_DATAPIPE_PEER_CLOSED;
         consumer_.state_tracker.UpdateState(
-                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED | MX_DATAPIPE_SIGNAL_READ_THRESHOLD, satisfied);
+                MX_DATAPIPE_READABLE | MX_DATAPIPE_PEER_CLOSED | MX_DATAPIPE_READ_THRESHOLD, satisfied);
     }
 }
 
