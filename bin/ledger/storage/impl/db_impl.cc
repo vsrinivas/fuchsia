@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 
 namespace storage {
@@ -44,52 +45,39 @@ constexpr ftl::StringView kNodeSizeKey = "node-size";
 
 constexpr ftl::StringView kSyncMetadata = "sync-metadata";
 
-std::string Concatenate(std::initializer_list<ftl::StringView> l) {
-  std::string result;
-  size_t result_size = 0;
-  for (const ftl::StringView& s : l) {
-    result_size += s.size();
-  }
-  result.reserve(result_size);
-  for (const ftl::StringView& s : l) {
-    result.append(s.data(), s.size());
-  }
-  return result;
-}
-
 std::string GetHeadKeyFor(const CommitId& head) {
-  return Concatenate({kHeadPrefix, head});
+  return ftl::Concatenate({kHeadPrefix, head});
 }
 
 std::string GetCommitKeyFor(const CommitId& commit_id) {
-  return Concatenate({kCommitPrefix, commit_id});
+  return ftl::Concatenate({kCommitPrefix, commit_id});
 }
 
 std::string GetUnsyncedCommitKeyFor(const CommitId& commit_id) {
-  return Concatenate({kUnsyncedCommitPrefix, commit_id});
+  return ftl::Concatenate({kUnsyncedCommitPrefix, commit_id});
 }
 
 std::string GetUnsyncedObjectKeyFor(ObjectIdView object_id) {
-  return Concatenate({kUnsyncedObjectPrefix, object_id});
+  return ftl::Concatenate({kUnsyncedObjectPrefix, object_id});
 }
 
 std::string GetImplicitJournalMetaKeyFor(const JournalId& journal_id) {
-  return Concatenate({kImplicitJournalMetaPrefix, journal_id});
+  return ftl::Concatenate({kImplicitJournalMetaPrefix, journal_id});
 }
 
 std::string GetJournalEntryPrefixFor(const JournalId& journal_id) {
-  return Concatenate({kJournalPrefix, journal_id, "/", kJournalEntry});
+  return ftl::Concatenate({kJournalPrefix, journal_id, "/", kJournalEntry});
 }
 
 std::string GetJournalEntryKeyFor(const JournalId id, ftl::StringView key) {
-  return Concatenate({GetJournalEntryPrefixFor(id), key});
+  return ftl::Concatenate({GetJournalEntryPrefixFor(id), key});
 }
 
 std::string GetJournalEntryValueFor(ftl::StringView value,
                                     KeyPriority priority) {
   char priority_byte =
       (priority == KeyPriority::EAGER) ? kJournalEagerEntry : kJournalLazyEntry;
-  return Concatenate({{&kJournalEntryAdd, 1}, {&priority_byte, 1}, value});
+  return ftl::Concatenate({{&kJournalEntryAdd, 1}, {&priority_byte, 1}, value});
 }
 
 Status ExtractObjectId(ftl::StringView db_value, ObjectId* id) {
@@ -101,12 +89,12 @@ Status ExtractObjectId(ftl::StringView db_value, ObjectId* id) {
 }
 
 std::string GetJournalCounterPrefixFor(const JournalId& id) {
-  return Concatenate({kJournalPrefix, id, "/", kJournalCounter});
+  return ftl::Concatenate({kJournalPrefix, id, "/", kJournalCounter});
 }
 
 std::string GetJournalCounterKeyFor(const JournalId& id,
                                     ftl::StringView value) {
-  return Concatenate({GetJournalCounterPrefixFor(id), value});
+  return ftl::Concatenate({GetJournalCounterPrefixFor(id), value});
 }
 
 std::string NewJournalId(JournalType journal_type) {
@@ -312,7 +300,7 @@ Status DbImpl::GetImplicitJournal(const JournalId& journal_id,
 }
 
 Status DbImpl::RemoveExplicitJournals() {
-  static std::string kExplicitJournalPrefix = Concatenate(
+  static std::string kExplicitJournalPrefix = ftl::Concatenate(
       {kJournalPrefix, ftl::StringView(&kImplicitJournalIdPrefix, 1)});
   return DeleteByPrefix(kExplicitJournalPrefix);
 }
