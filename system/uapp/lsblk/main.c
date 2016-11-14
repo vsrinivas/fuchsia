@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gpt/gpt.h>
 #include <magenta/types.h>
 #include <mxio/io.h>
 #include <dirent.h>
@@ -64,7 +65,7 @@ typedef struct blkinfo {
     char path[128];
     char devname[128];
     char drvname[128];
-    char guid[40];
+    char guid[GPT_GUID_STRLEN];
     char label[40];
     char sizestr[6];
 } blkinfo_t;
@@ -95,7 +96,9 @@ static int cmd_list_blk(void) {
         if (ioctl_block_get_size(fd, &size) > 0) {
             size_to_cstring(info.sizestr, sizeof(info.sizestr), size);
         }
-        if (ioctl_block_get_type_guid(fd, info.guid, sizeof(info.guid)) >= 0) {
+        uint8_t guid[GPT_GUID_LEN];
+        if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) >= 0) {
+            uint8_to_guid_string(info.guid, guid);
             type = guid_to_type(info.guid);
         }
         ioctl_block_get_name(fd, info.label, sizeof(info.label));

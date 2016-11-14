@@ -90,15 +90,15 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
     }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reply;
-        if (max < GPT_GUID_STRLEN) return ERR_BUFFER_TOO_SMALL;
-        uint8_to_guid_string(guid, device->gpt_entry.type);
-        return GPT_GUID_STRLEN;
+        if (max < GPT_GUID_LEN) return ERR_BUFFER_TOO_SMALL;
+        memcpy(guid, device->gpt_entry.type, GPT_GUID_LEN);
+        return GPT_GUID_LEN;
     }
     case IOCTL_BLOCK_GET_PARTITION_GUID: {
         char* guid = reply;
-        if (max < GPT_GUID_STRLEN) return ERR_BUFFER_TOO_SMALL;
-        uint8_to_guid_string(guid, device->gpt_entry.guid);
-        return GPT_GUID_STRLEN;
+        if (max < GPT_GUID_LEN) return ERR_BUFFER_TOO_SMALL;
+        memcpy(guid, device->gpt_entry.guid, GPT_GUID_LEN);
+        return GPT_GUID_LEN;
     }
     case IOCTL_BLOCK_GET_NAME: {
         char* name = reply;
@@ -280,11 +280,11 @@ static int gpt_bind_thread(void* arg) {
             continue;
         }
 
-        char type_guid[40];
+        char type_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(type_guid, device->gpt_entry.type);
-        char partition_guid[40];
+        char partition_guid[GPT_GUID_STRLEN];
         uint8_to_guid_string(partition_guid, device->gpt_entry.guid);
-        char pname[40];
+        char pname[GPT_NAME_LEN];
         utf16_to_cstring(pname, device->gpt_entry.name, GPT_NAME_LEN);
         xprintf("gpt: partition %u (%s) type=%s guid=%s name=%s\n", partitions,
                 device->device.name, type_guid, partition_guid, pname);

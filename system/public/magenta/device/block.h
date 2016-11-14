@@ -26,11 +26,11 @@ IOCTL_WRAPPER_OUT(ioctl_block_get_size, IOCTL_BLOCK_GET_SIZE, uint64_t);
 // ssize_t ioctl_block_get_blocksize(int fd, uint64_t* out);
 IOCTL_WRAPPER_OUT(ioctl_block_get_blocksize, IOCTL_BLOCK_GET_BLOCKSIZE, uint64_t);
 
-// ssize_t ioctl_block_get_type_guid(int fd, char* out, size_t out_len);
-IOCTL_WRAPPER_VAROUT(ioctl_block_get_type_guid, IOCTL_BLOCK_GET_TYPE_GUID, char);
+// ssize_t ioctl_block_get_type_guid(int fd, void* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_block_get_type_guid, IOCTL_BLOCK_GET_TYPE_GUID, void);
 
-// ssize_t ioctl_block_get_partition_guid(int fd, char* out, size_t out_len);
-IOCTL_WRAPPER_VAROUT(ioctl_block_get_partition_guid, IOCTL_BLOCK_GET_PARTITION_GUID, char);
+// ssize_t ioctl_block_get_partition_guid(int fd, void* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_block_get_partition_guid, IOCTL_BLOCK_GET_PARTITION_GUID, void);
 
 // ssize_t ioctl_block_get_name(int fd, char* out, size_t out_len);
 IOCTL_WRAPPER_VAROUT(ioctl_block_get_name, IOCTL_BLOCK_GET_NAME, char);

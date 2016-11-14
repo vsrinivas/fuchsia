@@ -5,6 +5,7 @@
 #pragma once
 
 #define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
+#define GPT_GUID_LEN 16
 #define GPT_GUID_STRLEN 37
 #define GPT_NAME_LEN 72
 
@@ -18,7 +19,7 @@ typedef struct gpt {
     uint64_t backup;
     uint64_t first_lba;
     uint64_t last_lba;
-    uint8_t guid[16];
+    uint8_t guid[GPT_GUID_LEN];
     uint64_t entries;
     uint32_t entries_count;
     uint32_t entries_sz;
@@ -27,10 +28,10 @@ typedef struct gpt {
 } gpt_t;
 
 typedef struct gpt_entry {
-    uint8_t type[16];
-    uint8_t guid[16];
+    uint8_t type[GPT_GUID_LEN];
+    uint8_t guid[GPT_GUID_LEN];
     uint64_t first_lba;
     uint64_t last_lba;
     uint64_t flags;
-    uint8_t name[72];
+    uint8_t name[GPT_NAME_LEN];
 } gpt_entry_t;

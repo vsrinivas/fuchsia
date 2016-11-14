@@ -31,6 +31,7 @@ MODULE_SRCS += \
 # ddk is needed only for ddk/device.h
 MODULE_STATIC_LIBS := \
     ulib/ddk \
+    ulib/gpt \
     ulib/launchpad \
     ulib/elfload \
     ulib/mxio

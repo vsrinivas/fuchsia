@@ -42,14 +42,7 @@ static const uint8_t guid_fuchsia_part[16] = {
     0xb7, 0x37, 0x33, 0x2c, 0x89, 0x9d
 };
 
-// GUID for an EFI partition
-static const uint8_t guid_efi_part[16] = {
-    0x28, 0x73, 0x2a, 0xc1,
-    0x1f, 0xf8,
-    0xd2, 0x11,
-    0xba, 0x4b,
-    0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b
-};
+static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
 /*
  * Read the next entry out of the directory and place copy it into name_out.

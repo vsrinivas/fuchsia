@@ -14,11 +14,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "gpt/gpt.h"
+
 #define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
 #define GPT_HEADER_SIZE 0x5c
 #define GPT_ENTRY_SIZE  0x80
-#define GPT_GUID_STRLEN 37
-#define GPT_NAME_LEN 72
 
 typedef struct gpt_header {
     uint64_t magic;
@@ -30,7 +30,7 @@ typedef struct gpt_header {
     uint64_t backup;
     uint64_t first;
     uint64_t last;
-    uint8_t guid[16];
+    uint8_t guid[GPT_GUID_LEN];
     uint64_t entries;
     uint32_t entries_count;
     uint32_t entries_size;
@@ -401,4 +401,19 @@ int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid) {
         }
     }
     return 0;
+}
+
+// Since the human-readable representation of a GUID is the following format,
+// ordered little-endian, it is useful to group a GUID into these
+// appropriately-sized groups.
+struct guid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+};
+
+void uint8_to_guid_string(char* dst, const uint8_t* src) {
+    struct guid* guid = (struct guid*)src;
+    sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2, guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3], guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
 }

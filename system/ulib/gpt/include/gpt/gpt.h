@@ -10,14 +10,24 @@
 typedef struct gpt_device gpt_device_t;
 
 #define PARTITIONS_COUNT 128
+#define GPT_GUID_LEN 16
+#define GPT_GUID_STRLEN 37
+#define GPT_NAME_LEN 72
+
+#define GUID_EFI_VALUE {                           \
+    0x28, 0x73, 0x2a, 0xc1,                        \
+    0x1f, 0xf8,                                    \
+    0xd2, 0x11,                                    \
+    0xba, 0x4b, 0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b \
+};
 
 typedef struct gpt_partition {
-    uint8_t type[16];
-    uint8_t guid[16];
+    uint8_t type[GPT_GUID_LEN];
+    uint8_t guid[GPT_GUID_LEN];
     uint64_t first;
     uint64_t last;
     uint64_t flags;
-    uint8_t name[72];
+    uint8_t name[GPT_NAME_LEN];
 } gpt_partition_t;
 
 struct gpt_device {
@@ -42,3 +52,6 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
 
 int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);
 // removes a partition
+
+void uint8_to_guid_string(char* dst, const uint8_t* src);
+// converts GUID to a string
