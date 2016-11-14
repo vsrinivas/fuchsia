@@ -60,7 +60,7 @@ public:
     const ExecResource& resource(uint32_t resource_index) const
     {
         DASSERT(initialized_);
-        DASSERT(resource_index < num_resources())
+        DASSERT(resource_index < num_resources());
         return resources_[resource_index];
     }
 

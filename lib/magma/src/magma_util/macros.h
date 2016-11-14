@@ -25,7 +25,7 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
             printf("%s:%d ASSERT\n", __FILE__, __LINE__);                                          \
             assert(__VA_ARGS__);                                                                   \
         }                                                                                          \
-    } while (0);
+    } while (0)
 
 static constexpr bool kMagmaDretEnable = kDebug;
 
