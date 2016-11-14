@@ -2,13 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("storage") {
+source_set("test") {
   testonly = true
 
-  deps = [
-    "//apps/ledger/src/storage/fake",
-    "//apps/ledger/src/storage/impl",
+  sources = [
+    "commit_empty_impl.cc",
+    "commit_empty_impl.h",
+    "page_storage_empty_impl.cc",
+    "page_storage_empty_impl.h",
+  ]
+
+  public_deps = [
     "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/storage/test",
+  ]
+
+  deps = [
+    "//lib/ftl",
   ]
 }

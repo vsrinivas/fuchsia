@@ -2,13 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cloud_provider") {
+source_set("test") {
   testonly = true
 
-  deps = [
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_provider/impl:unittests",
+  sources = [
+    "cloud_provider_empty_impl.cc",
+    "cloud_provider_empty_impl.h",
+  ]
+
+  public_deps = [
     "//apps/ledger/src/cloud_provider/public",
-    "//apps/ledger/src/cloud_provider/test",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//magenta/system/ulib/mx",
   ]
 }
