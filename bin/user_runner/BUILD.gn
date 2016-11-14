@@ -26,7 +26,6 @@ executable("user_runner") {
     "//apps/ledger/services",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:single_service_application",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story",

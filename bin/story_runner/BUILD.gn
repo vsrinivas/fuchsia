@@ -37,7 +37,7 @@ executable("resolver") {
   ]
 
   deps = [
-    "//apps/modular/lib/fidl:single_service_application",
+    "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/story",
     "//lib/fidl/cpp/bindings",
