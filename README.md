@@ -13,9 +13,8 @@ semantic goals are satisfied and what services are employed.
 
 **Setup, build and run** instructions for Fuchsia are
 [here](https://fuchsia.googlesource.com/manifest/+/master/README.md). Once setup
-and build is done, you can start the TQ Framework flow by doing:
+and build is done, you can start the TQ Framework flow thus:
 
 ```sh
-file:///system/apps/device_runner  # Without graphical environment
-file:///system/apps/launcher file:///system/apps/device_runner # With graphical environment.
+file:///system/apps/bootstrap file:///system/apps/device_runner --user-shell=file:///system/apps/dummy_user_shell
 ```
