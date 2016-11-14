@@ -10,7 +10,6 @@ group("maxwell") {
     "src/agents",
     "src/context_engine",
     "src/integration",
-    "src/resolver",
     "src/suggestion_engine",
   ]
 }
