@@ -5,4 +5,4 @@ input usage.
 
 ## USAGE
 
-  $ file:///system/apps/launcher file:///system/apps/paint_view
+  $ file:///system/apps/launch file:///system/apps/paint_view

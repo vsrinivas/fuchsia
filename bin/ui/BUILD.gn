@@ -13,6 +13,7 @@ group("mozart") {
     "src/compositor",
     "src/input_manager",
     "src/input_reader",
+    "src/launch",
     "src/launcher",
     "src/print_input",
     "src/view_manager",

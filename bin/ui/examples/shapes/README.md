@@ -5,4 +5,4 @@ some simple shapes to a view.
 
 ## USAGE
 
-  $ file:///system/apps/launcher file:///system/apps/shapes_view
+  $ file:///system/apps/launch file:///system/apps/shapes_view

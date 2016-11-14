@@ -9,7 +9,7 @@ The applications must implement the ViewProvider interface for this to work.
 
 Specify the urls of the views to embed as command-line arguments.
 
-  $ file:///system/apps/launcher file:///system/apps/tile_view <app1> <app2> ...
+  $ file:///system/apps/launch file:///system/apps/tile_view <app1> <app2> ...
 
 The following command-line options are also supported:
 

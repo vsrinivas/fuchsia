@@ -8,4 +8,4 @@ For the purposes of this example, the content consists of a Lissajous figure.
 
 ## USAGE
 
-  $ file:///system/apps/launcher file:///system/apps/noodles_view
+  $ file:///system/apps/launch file:///system/apps/noodles_view

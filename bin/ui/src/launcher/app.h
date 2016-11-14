@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/services/application/application_controller.fidl.h"
 #include "apps/mozart/services/composition/compositor.fidl.h"
 #include "apps/mozart/services/launcher/launcher.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -39,7 +38,6 @@ class App : public mozart::Launcher {
   // |Launcher|:
   void Display(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) override;
 
-  void Launch(fidl::String url, fidl::Array<fidl::String> arguments);
   void InitializeServices();
   void Reset();
 
@@ -48,8 +46,6 @@ class App : public mozart::Launcher {
 
   mozart::CompositorPtr compositor_;
   mozart::ViewManagerPtr view_manager_;
-
-  modular::ApplicationControllerPtr app_controller_;
 
   std::vector<std::unique_ptr<Presenter>> presenters_;
 
