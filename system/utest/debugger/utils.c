@@ -387,7 +387,7 @@ bool shutdown_inferior(mx_handle_t pipe, mx_handle_t inferior, mx_handle_t eport
 bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
 {
     unittest_printf("Waiting for exception on eport %d\n", eport);
-    ASSERT_EQ(mx_port_wait(eport, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
+    ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
     return true;
 }
