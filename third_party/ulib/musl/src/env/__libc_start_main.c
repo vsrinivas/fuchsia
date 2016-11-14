@@ -155,8 +155,14 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
         self->stack_size = stack_size;
     }
 
-    // TODO(kulakowski) Set up ssp once kernel randomness exists
-    // __init_ssp((void*)aux[AT_RANDOM]);
+    volatile uintptr_t entropy;
+    mx_size_t actual;
+    status = mx_cprng_draw(&entropy, sizeof(entropy), &actual);
+    if (status != NO_ERROR || actual != sizeof(entropy)) {
+        abort();
+    }
+    __init_ssp((void*)&entropy);
+    entropy = 0;
     __init_security();
 
     // allow companion libraries a chance to poke at this

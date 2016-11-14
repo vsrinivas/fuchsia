@@ -16,4 +16,6 @@ MODULE_NAME := crasher
 
 MODULE_LIBS := ulib/mxio ulib/musl ulib/mxcpp
 
+MODULE_COMPILEFLAGS := -fstack-protector-all
+
 include make/module.mk

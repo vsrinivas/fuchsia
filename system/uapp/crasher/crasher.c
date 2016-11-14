@@ -55,6 +55,16 @@ int stack_overflow(volatile unsigned int* i_array) {
     return 0;
 }
 
+int stack_buf_overrun(volatile unsigned int* arg) {
+    volatile unsigned int array[6];
+    if (!arg) {
+        return stack_buf_overrun(array);
+    } else {
+        memset((void*)arg, 0, sizeof(array[0]) * 7);
+    }
+    return 0;
+}
+
 int undefined(volatile unsigned int* unused) {
 #if defined(__x86_64__)
     __asm__ volatile("ud2");
@@ -77,6 +87,7 @@ command_t commands[] = {
     {"read0", blind_read, "read address 0x0"},
     {"writero", ro_write, "write to read only code segment"},
     {"stackov", stack_overflow, "overflow the stack (recursive)"},
+    {"stackbuf", stack_buf_overrun, "overrun a buffer on the stack"},
     {"und", undefined, "undefined instruction"},
     {"nx_run", nx_run, "run in no-execute memory"},
     {"oom", oom, "out of memory c++ death"},
