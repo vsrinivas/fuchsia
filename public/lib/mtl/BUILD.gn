@@ -6,6 +6,7 @@ group("mtl") {
   public_deps = [
     "//lib/mtl/data_pipe",
     "//lib/mtl/handles",
+    "//lib/mtl/io",
     "//lib/mtl/tasks",
     "//lib/mtl/threading",
     "//lib/mtl/vmo",
