@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define HID_FLAGS_DEAD 1
+#define HID_FLAGS_DEAD         (1 << 0)
+#define HID_FLAGS_WRITE_FAILED (1 << 1)
 
 #define USB_HID_DEBUG 0
 
@@ -590,8 +591,13 @@ void hid_io_queue(mx_hid_device_t* hid, const uint8_t* buf, size_t len) {
         bool was_empty = mx_hid_fifo_size(&instance->fifo) == 0;
         ssize_t wrote = mx_hid_fifo_write(&instance->fifo, buf, len);
         if (wrote <= 0) {
-            printf("could not write to hid fifo (ret=%zd)\n", wrote);
+            if (!(instance->flags & HID_FLAGS_WRITE_FAILED)) {
+                printf("%s: could not write to hid fifo (ret=%zd)\n",
+                        hid->dev.name, wrote);
+                instance->flags |= HID_FLAGS_WRITE_FAILED;
+            }
         } else {
+            instance->flags &= ~HID_FLAGS_WRITE_FAILED;
             if (was_empty) {
                 device_state_set(&instance->dev, DEV_STATE_READABLE);
             }
