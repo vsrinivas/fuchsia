@@ -25,15 +25,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <sys/param.h>
-#include <sys/fdcio.h>
-#include <sys/disk.h>
-#include <sys/disklabel.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -81,105 +73,87 @@ static const char rcsid[] =
 				    MAXCLS32)
 
 #define	mk1(p, x)				\
-    (p) = (u_int8_t)(x)
+    (p) = (uint8_t)(x)
 
 #define	mk2(p, x)				\
-    (p)[0] = (u_int8_t)(x),			\
-    (p)[1] = (u_int8_t)((x) >> 010)
+    (p)[0] = (uint8_t)(x),			\
+    (p)[1] = (uint8_t)((x) >> 010)
 
 #define	mk4(p, x)				\
-    (p)[0] = (u_int8_t)(x),			\
-    (p)[1] = (u_int8_t)((x) >> 010),		\
-    (p)[2] = (u_int8_t)((x) >> 020),		\
-    (p)[3] = (u_int8_t)((x) >> 030)
+    (p)[0] = (uint8_t)(x),			\
+    (p)[1] = (uint8_t)((x) >> 010),		\
+    (p)[2] = (uint8_t)((x) >> 020),		\
+    (p)[3] = (uint8_t)((x) >> 030)
 
 struct bs {
-    u_int8_t bsJump[3];			/* bootstrap entry point */
-    u_int8_t bsOemName[8];		/* OEM name and version */
-} __packed;
+    uint8_t bsJump[3];			/* bootstrap entry point */
+    uint8_t bsOemName[8];		/* OEM name and version */
+} __attribute__((packed));
 
 struct bsbpb {
-    u_int8_t bpbBytesPerSec[2];		/* bytes per sector */
-    u_int8_t bpbSecPerClust;		/* sectors per cluster */
-    u_int8_t bpbResSectors[2];		/* reserved sectors */
-    u_int8_t bpbFATs;			/* number of FATs */
-    u_int8_t bpbRootDirEnts[2];		/* root directory entries */
-    u_int8_t bpbSectors[2];		/* total sectors */
-    u_int8_t bpbMedia;			/* media descriptor */
-    u_int8_t bpbFATsecs[2];		/* sectors per FAT */
-    u_int8_t bpbSecPerTrack[2];		/* sectors per track */
-    u_int8_t bpbHeads[2];		/* drive heads */
-    u_int8_t bpbHiddenSecs[4];		/* hidden sectors */
-    u_int8_t bpbHugeSectors[4];		/* big total sectors */
-} __packed;
+    uint8_t bpbBytesPerSec[2];		/* bytes per sector */
+    uint8_t bpbSecPerClust;		/* sectors per cluster */
+    uint8_t bpbResSectors[2];		/* reserved sectors */
+    uint8_t bpbFATs;			/* number of FATs */
+    uint8_t bpbRootDirEnts[2];		/* root directory entries */
+    uint8_t bpbSectors[2];		/* total sectors */
+    uint8_t bpbMedia;			/* media descriptor */
+    uint8_t bpbFATsecs[2];		/* sectors per FAT */
+    uint8_t bpbSecPerTrack[2];		/* sectors per track */
+    uint8_t bpbHeads[2];		/* drive heads */
+    uint8_t bpbHiddenSecs[4];		/* hidden sectors */
+    uint8_t bpbHugeSectors[4];		/* big total sectors */
+} __attribute__((packed));
 
 struct bsxbpb {
-    u_int8_t bpbBigFATsecs[4];		/* big sectors per FAT */
-    u_int8_t bpbExtFlags[2];		/* FAT control flags */
-    u_int8_t bpbFSVers[2];		/* file system version */
-    u_int8_t bpbRootClust[4];		/* root directory start cluster */
-    u_int8_t bpbFSInfo[2];		/* file system info sector */
-    u_int8_t bpbBackup[2];		/* backup boot sector */
-    u_int8_t bpbReserved[12];		/* reserved */
-} __packed;
+    uint8_t bpbBigFATsecs[4];		/* big sectors per FAT */
+    uint8_t bpbExtFlags[2];		/* FAT control flags */
+    uint8_t bpbFSVers[2];		/* file system version */
+    uint8_t bpbRootClust[4];		/* root directory start cluster */
+    uint8_t bpbFSInfo[2];		/* file system info sector */
+    uint8_t bpbBackup[2];		/* backup boot sector */
+    uint8_t bpbReserved[12];		/* reserved */
+} __attribute__((packed));
 
 struct bsx {
-    u_int8_t exDriveNumber;		/* drive number */
-    u_int8_t exReserved1;		/* reserved */
-    u_int8_t exBootSignature;		/* extended boot signature */
-    u_int8_t exVolumeID[4];		/* volume ID number */
-    u_int8_t exVolumeLabel[11];		/* volume label */
-    u_int8_t exFileSysType[8];		/* file system type */
-} __packed;
+    uint8_t exDriveNumber;		/* drive number */
+    uint8_t exReserved1;		/* reserved */
+    uint8_t exBootSignature;		/* extended boot signature */
+    uint8_t exVolumeID[4];		/* volume ID number */
+    uint8_t exVolumeLabel[11];		/* volume label */
+    uint8_t exFileSysType[8];		/* file system type */
+} __attribute__((packed));
 
 struct de {
-    u_int8_t deName[11];		/* name and extension */
-    u_int8_t deAttributes;		/* attributes */
-    u_int8_t rsvd[10];			/* reserved */
-    u_int8_t deMTime[2];		/* last-modified time */
-    u_int8_t deMDate[2];		/* last-modified date */
-    u_int8_t deStartCluster[2];		/* starting cluster */
-    u_int8_t deFileSize[4];		/* size */
-} __packed;
+    uint8_t deName[11];		/* name and extension */
+    uint8_t deAttributes;		/* attributes */
+    uint8_t rsvd[10];			/* reserved */
+    uint8_t deMTime[2];		/* last-modified time */
+    uint8_t deMDate[2];		/* last-modified date */
+    uint8_t deStartCluster[2];		/* starting cluster */
+    uint8_t deFileSize[4];		/* size */
+} __attribute__((packed));
 
 struct bpb {
-    u_int bpbBytesPerSec;		/* bytes per sector */
-    u_int bpbSecPerClust;		/* sectors per cluster */
-    u_int bpbResSectors;		/* reserved sectors */
-    u_int bpbFATs;			/* number of FATs */
-    u_int bpbRootDirEnts;		/* root directory entries */
-    u_int bpbSectors;			/* total sectors */
-    u_int bpbMedia;			/* media descriptor */
-    u_int bpbFATsecs;			/* sectors per FAT */
-    u_int bpbSecPerTrack;		/* sectors per track */
-    u_int bpbHeads;			/* drive heads */
-    u_int bpbHiddenSecs;		/* hidden sectors */
-    u_int bpbHugeSectors; 		/* big total sectors */
-    u_int bpbBigFATsecs; 		/* big sectors per FAT */
-    u_int bpbRootClust; 		/* root directory start cluster */
-    u_int bpbFSInfo; 			/* file system info sector */
-    u_int bpbBackup; 			/* backup boot sector */
+    uint32_t bpbBytesPerSec;		/* bytes per sector */
+    uint32_t bpbSecPerClust;		/* sectors per cluster */
+    uint32_t bpbResSectors;		/* reserved sectors */
+    uint32_t bpbFATs;			/* number of FATs */
+    uint32_t bpbRootDirEnts;		/* root directory entries */
+    uint32_t bpbSectors;			/* total sectors */
+    uint32_t bpbMedia;			/* media descriptor */
+    uint32_t bpbFATsecs;			/* sectors per FAT */
+    uint32_t bpbSecPerTrack;		/* sectors per track */
+    uint32_t bpbHeads;			/* drive heads */
+    uint32_t bpbHiddenSecs;		/* hidden sectors */
+    uint32_t bpbHugeSectors; 		/* big total sectors */
+    uint32_t bpbBigFATsecs; 		/* big sectors per FAT */
+    uint32_t bpbRootClust; 		/* root directory start cluster */
+    uint32_t bpbFSInfo; 			/* file system info sector */
+    uint32_t bpbBackup; 			/* backup boot sector */
 };
 
-#define	BPBGAP 0, 0, 0, 0, 0, 0
-
-static struct {
-    const char *name;
-    struct bpb bpb;
-} const stdfmt[] = {
-    {"160",  {512, 1, 1, 2,  64,  320, 0xfe, 1,  8, 1, BPBGAP}},
-    {"180",  {512, 1, 1, 2,  64,  360, 0xfc, 2,  9, 1, BPBGAP}},
-    {"320",  {512, 2, 1, 2, 112,  640, 0xff, 1,  8, 2, BPBGAP}},
-    {"360",  {512, 2, 1, 2, 112,  720, 0xfd, 2,  9, 2, BPBGAP}},
-    {"640",  {512, 2, 1, 2, 112, 1280, 0xfb, 2,  8, 2, BPBGAP}},
-    {"720",  {512, 2, 1, 2, 112, 1440, 0xf9, 3,  9, 2, BPBGAP}},
-    {"1200", {512, 1, 1, 2, 224, 2400, 0xf9, 7, 15, 2, BPBGAP}},
-    {"1232", {1024,1, 1, 2, 192, 1232, 0xfe, 2,  8, 2, BPBGAP}},
-    {"1440", {512, 1, 1, 2, 224, 2880, 0xf0, 9, 18, 2, BPBGAP}},
-    {"2880", {512, 2, 1, 2, 240, 5760, 0xf0, 9, 36, 2, BPBGAP}}
-};
-
-static const u_int8_t bootcode[] = {
+static const uint8_t bootcode[] = {
     0xfa,			/* cli		    */
     0x31, 0xc0, 		/* xor	   ax,ax    */
     0x8e, 0xd0, 		/* mov	   ss,ax    */
@@ -211,23 +185,17 @@ static const u_int8_t bootcode[] = {
     0
 };
 
-static volatile sig_atomic_t got_siginfo;
-static void infohandler(int);
-
-static int check_mounted(const char *, mode_t);
-static int getstdfmt(const char *, struct bpb *);
-static int getdiskinfo(int, const char *, const char *, int, struct bpb *);
+static int getdiskinfo(int, const char *, struct bpb *);
 static void print_bpb(struct bpb *);
-static int ckgeom(const char *, u_int, const char *);
-static void mklabel(u_int8_t *, const char *);
+static int ckgeom(const char *, uint32_t, const char *);
+static void mklabel(uint8_t *, const char *);
 static int oklabel(const char *);
-static void setstr(u_int8_t *, const char *, size_t);
+static void setstr(uint8_t *, const char *, size_t);
 
 int
-mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
+mkfs_msdos(const char *fname, const struct msdos_options *op)
 {
     char buf[MAXPATHLEN];
-    struct sigaction si_sa;
     struct stat sb;
     struct timeval tv;
     struct bpb bpb;
@@ -237,11 +205,11 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
     struct bsxbpb *bsxbpb;
     struct bsx *bsx;
     struct de *de;
-    u_int8_t *img;
+    uint8_t *img;
     const char *bname;
     ssize_t n;
     time_t now;
-    u_int fat, bss, rds, cls, dir, lsn, x, x1, x2;
+    uint32_t fat, bss, rds, cls, dir, lsn, x, x1, x2;
     int fd, fd1, rv;
     struct msdos_options o = *op;
 
@@ -285,48 +253,24 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	if (!S_ISCHR(sb.st_mode))
 	    warnx("warning, %s is not a character device", fname);
     }
-    if (!o.no_create)
-	if (check_mounted(fname, sb.st_mode) == -1)
-	    goto done;
     if (o.offset && o.offset != lseek(fd, o.offset, SEEK_SET)) {
 	warnx("cannot seek to %jd", (intmax_t)o.offset);
 	goto done;
     }
     memset(&bpb, 0, sizeof(bpb));
-    if (o.floppy) {
-	if (getstdfmt(o.floppy, &bpb) == -1)
-	    goto done;
-	bpb.bpbHugeSectors = bpb.bpbSectors;
-	bpb.bpbSectors = 0;
-	bpb.bpbBigFATsecs = bpb.bpbFATsecs;
-	bpb.bpbFATsecs = 0;
-    }
-    if (o.drive_heads)
-	bpb.bpbHeads = o.drive_heads;
-    if (o.sectors_per_track)
-	bpb.bpbSecPerTrack = o.sectors_per_track;
-    if (o.bytes_per_sector)
-	bpb.bpbBytesPerSec = o.bytes_per_sector;
-    if (o.size)
-	bpb.bpbHugeSectors = o.size;
-    if (o.hidden_sectors_set)
-	bpb.bpbHiddenSecs = o.hidden_sectors;
-    if (!(o.floppy || (o.drive_heads && o.sectors_per_track &&
-	o.bytes_per_sector && o.size && o.hidden_sectors_set))) {
-	getdiskinfo(fd, fname, dtype, o.hidden_sectors_set, &bpb);
-	bpb.bpbHugeSectors -= (o.offset / bpb.bpbBytesPerSec);
-	if (bpb.bpbSecPerClust == 0) {	/* set defaults */
-	    if (bpb.bpbHugeSectors <= 6000)	/* about 3MB -> 512 bytes */
-		bpb.bpbSecPerClust = 1;
-	    else if (bpb.bpbHugeSectors <= (1<<17)) /* 64M -> 4k */
-		bpb.bpbSecPerClust = 8;
-	    else if (bpb.bpbHugeSectors <= (1<<19)) /* 256M -> 8k */
-		bpb.bpbSecPerClust = 16;
-	    else if (bpb.bpbHugeSectors <= (1<<21)) /* 1G -> 16k */
-		bpb.bpbSecPerClust = 32;
-	    else
-		bpb.bpbSecPerClust = 64;		/* otherwise 32k */
-	}
+    getdiskinfo(fd, fname, &bpb);
+    bpb.bpbHugeSectors -= (o.offset / bpb.bpbBytesPerSec);
+    if (bpb.bpbSecPerClust == 0) {	/* set defaults */
+        if (bpb.bpbHugeSectors <= 6000)	/* about 3MB -> 512 bytes */
+    	bpb.bpbSecPerClust = 1;
+        else if (bpb.bpbHugeSectors <= (1<<17)) /* 64M -> 4k */
+    	bpb.bpbSecPerClust = 8;
+        else if (bpb.bpbHugeSectors <= (1<<19)) /* 256M -> 8k */
+    	bpb.bpbSecPerClust = 16;
+        else if (bpb.bpbHugeSectors <= (1<<21)) /* 1G -> 16k */
+    	bpb.bpbSecPerClust = 32;
+        else
+    	bpb.bpbSecPerClust = 64;		/* otherwise 32k */
     }
     if (!powerof2(bpb.bpbBytesPerSec)) {
 	warnx("bytes/sector (%u) is not a power of 2", bpb.bpbBytesPerSec);
@@ -343,9 +287,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	goto done;
     }
     if (!(fat = o.fat_type)) {
-	if (o.floppy)
-	    fat = 12;
-	else if (!o.directory_entries && (o.info_sector || o.backup_sector))
+	if (!o.directory_entries && (o.info_sector || o.backup_sector))
 	    fat = 32;
     }
     if ((fat == 32 && o.directory_entries) || (fat != 32 && (o.info_sector || o.backup_sector))) {
@@ -354,8 +296,6 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	     fat == 32 ? "32" : "12/16");
 	goto done;
     }
-    if (o.floppy && fat == 32)
-	bpb.bpbRootDirEnts = 0;
     if (fat != 0 && fat != 12 && fat != 16 && fat != 32) {
 	warnx("%d: bad FAT type", fat);
 	goto done;
@@ -505,7 +445,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 		     bpb.bpbBytesPerSec * NPB) *
 	     bpb.bpbFATs +
 	     rds +
-	     (u_int64_t) (maxcls(fat) + 1) *
+	     (uint64_t) (maxcls(fat) + 1) *
 	     bpb.bpbSecPerClust <= bpb.bpbHugeSectors;
 	     bpb.bpbSecPerClust <<= 1)
 	    continue;
@@ -515,12 +455,12 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
     }
     x1 = bpb.bpbResSectors + rds;
     x = bpb.bpbBigFATsecs ? bpb.bpbBigFATsecs : 1;
-    if (x1 + (u_int64_t)x * bpb.bpbFATs > bpb.bpbHugeSectors) {
+    if (x1 + (uint64_t)x * bpb.bpbFATs > bpb.bpbHugeSectors) {
 	warnx("meta data exceeds file system size");
 	goto done;
     }
     x1 += x * bpb.bpbFATs;
-    x = (u_int64_t)(bpb.bpbHugeSectors - x1) * bpb.bpbBytesPerSec * NPB /
+    x = (uint64_t)(bpb.bpbHugeSectors - x1) * bpb.bpbBytesPerSec * NPB /
 	(bpb.bpbSecPerClust * bpb.bpbBytesPerSec * NPB + fat /
 	 BPN * bpb.bpbFATs);
     x2 = howmany((RESFTE + MIN(x, maxcls(fat))) * (fat / BPN),
@@ -530,7 +470,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	x1 += (bpb.bpbBigFATsecs - 1) * bpb.bpbFATs;
     }
     cls = (bpb.bpbHugeSectors - x1) / bpb.bpbSecPerClust;
-    x = (u_int64_t)bpb.bpbBigFATsecs * bpb.bpbBytesPerSec * NPB / (fat / BPN) -
+    x = (uint64_t)bpb.bpbBigFATsecs * bpb.bpbBytesPerSec * NPB / (fat / BPN) -
 	RESFTE;
     if (cls > x)
 	cls = x;
@@ -575,21 +515,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	}
 	dir = bpb.bpbResSectors + (bpb.bpbFATsecs ? bpb.bpbFATsecs :
 				   bpb.bpbBigFATsecs) * bpb.bpbFATs;
-	memset(&si_sa, 0, sizeof(si_sa));
-	si_sa.sa_handler = infohandler;
-	if (sigaction(SIGINFO, &si_sa, NULL) == -1) {
-	    warn("sigaction SIGINFO");
-	    goto done;
-	}
 	for (lsn = 0; lsn < dir + (fat == 32 ? bpb.bpbSecPerClust : rds); lsn++) {
-	    if (got_siginfo) {
-		    fprintf(stderr,"%s: writing sector %u of %u (%u%%)\n",
-			fname, lsn,
-			(dir + (fat == 32 ? bpb.bpbSecPerClust: rds)),
-			(lsn * 100) / (dir +
-			    (fat == 32 ? bpb.bpbSecPerClust: rds)));
-		    got_siginfo = 0;
-	    }
 	    x = lsn;
 	    if (o.bootstrap &&
 		fat == 32 && bpb.bpbBackup != MAXU16 &&
@@ -640,17 +566,18 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 		    x1 += sizeof(struct bsxbpb);
 		}
 		bsx = (struct bsx *)(img + x1);
+		mk1(bsx->exDriveNumber, 0x80);
 		mk1(bsx->exBootSignature, 0x29);
 		if (o.volume_id_set)
 		    x = o.volume_id;
 		else
-		    x = (((u_int)(1 + tm->tm_mon) << 8 |
-			  (u_int)tm->tm_mday) +
-			 ((u_int)tm->tm_sec << 8 |
-			  (u_int)(tv.tv_usec / 10))) << 16 |
-			((u_int)(1900 + tm->tm_year) +
-			 ((u_int)tm->tm_hour << 8 |
-			  (u_int)tm->tm_min));
+		    x = (((uint32_t)(1 + tm->tm_mon) << 8 |
+			  (uint32_t)tm->tm_mday) +
+			 ((uint32_t)tm->tm_sec << 8 |
+			  (uint32_t)(tv.tv_usec / 10))) << 16 |
+			((uint32_t)(1900 + tm->tm_year) +
+			 ((uint32_t)tm->tm_hour << 8 |
+			  (uint32_t)tm->tm_min));
 		mk4(bsx->exVolumeID, x);
 		mklabel(bsx->exVolumeLabel, o.volume_label ? o.volume_label : "NO NAME");
 		snprintf(buf, sizeof(buf), "FAT%u", fat);
@@ -686,13 +613,13 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 		de = (struct de *)img;
 		mklabel(de->deName, o.volume_label);
 		mk1(de->deAttributes, 050);
-		x = (u_int)tm->tm_hour << 11 |
-		    (u_int)tm->tm_min << 5 |
-		    (u_int)tm->tm_sec >> 1;
+		x = (uint32_t)tm->tm_hour << 11 |
+		    (uint32_t)tm->tm_min << 5 |
+		    (uint32_t)tm->tm_sec >> 1;
 		mk2(de->deMTime, x);
-		x = (u_int)(tm->tm_year - 80) << 9 |
-		    (u_int)(tm->tm_mon + 1) << 5 |
-		    (u_int)tm->tm_mday;
+		x = (uint32_t)(tm->tm_year - 80) << 9 |
+		    (uint32_t)(tm->tm_mon + 1) << 5 |
+		    (uint32_t)tm->tm_mday;
 		mk2(de->deMDate, x);
 	    }
 	    if ((n = write(fd, img, bpb.bpbBytesPerSec)) == -1) {
@@ -713,146 +640,23 @@ done:
 }
 
 /*
- * return -1 with error if file system is mounted.
- */
-static int
-check_mounted(const char *fname, mode_t mode)
-{
-    struct statfs *mp;
-    const char *s1, *s2;
-    size_t len;
-    int n, r;
-
-    if (!(n = getmntinfo(&mp, MNT_NOWAIT))) {
-	warn("getmntinfo");
-	return -1;
-    }
-    len = strlen(_PATH_DEV);
-    s1 = fname;
-    if (!strncmp(s1, _PATH_DEV, len))
-	s1 += len;
-    r = S_ISCHR(mode) && s1 != fname && *s1 == 'r';
-    for (; n--; mp++) {
-	s2 = mp->f_mntfromname;
-	if (!strncmp(s2, _PATH_DEV, len))
-	    s2 += len;
-	if ((r && s2 != mp->f_mntfromname && !strcmp(s1 + 1, s2)) ||
-	    !strcmp(s1, s2)) {
-	    warnx("%s is mounted on %s", fname, mp->f_mntonname);
-	    return -1;
-	}
-    }
-    return 0;
-}
-
-/*
- * Get a standard format.
- */
-static int
-getstdfmt(const char *fmt, struct bpb *bpb)
-{
-    u_int x, i;
-
-    x = nitems(stdfmt);
-    for (i = 0; i < x && strcmp(fmt, stdfmt[i].name); i++);
-    if (i == x) {
-	warnx("%s: unknown standard format", fmt);
-	return -1;
-    }
-    *bpb = stdfmt[i].bpb;
-    return 0;
-}
-
-/*
  * Get disk slice, partition, and geometry information.
  */
 static int
-getdiskinfo(int fd, const char *fname, const char *dtype, __unused int oflag,
-	    struct bpb *bpb)
+getdiskinfo(int fd, const char *fname, struct bpb *bpb)
 {
-    struct disklabel *lp, dlp;
-    struct fd_type type;
-    off_t ms, hs = 0;
+    off_t ms = 0;
 
-    lp = NULL;
-
-    /* If the user specified a disk type, try to use that */
-    if (dtype != NULL) {
-	lp = getdiskbyname(dtype);
-    }
-
-    /* Maybe it's a floppy drive */
-    if (lp == NULL) {
-	if (ioctl(fd, DIOCGMEDIASIZE, &ms) == -1) {
-	    struct stat st;
-
-	    if (fstat(fd, &st))
-		err(1, "cannot get disk size");
-	    /* create a fake geometry for a file image */
-	    ms = st.st_size;
-	    dlp.d_secsize = 512;
-	    dlp.d_nsectors = 63;
-	    dlp.d_ntracks = 255;
-	    dlp.d_secperunit = ms / dlp.d_secsize;
-	    lp = &dlp;
-	} else if (ioctl(fd, FD_GTYPE, &type) != -1) {
-	    dlp.d_secsize = 128 << type.secsize;
-	    dlp.d_nsectors = type.sectrac;
-	    dlp.d_ntracks = type.heads;
-	    dlp.d_secperunit = ms / dlp.d_secsize;
-	    lp = &dlp;
-	}
-    }
-
-    /* Maybe it's a fixed drive */
-    if (lp == NULL) {
-	if (bpb->bpbBytesPerSec)
-	    dlp.d_secsize = bpb->bpbBytesPerSec;
-	if (bpb->bpbBytesPerSec == 0 && ioctl(fd, DIOCGSECTORSIZE,
-					      &dlp.d_secsize) == -1)
-	    err(1, "cannot get sector size");
-
-	dlp.d_secperunit = ms / dlp.d_secsize;
-
-	if (bpb->bpbSecPerTrack == 0 && ioctl(fd, DIOCGFWSECTORS,
-					      &dlp.d_nsectors) == -1) {
-	    warn("cannot get number of sectors per track");
-	    dlp.d_nsectors = 63;
-	}
-	if (bpb->bpbHeads == 0 &&
-	    ioctl(fd, DIOCGFWHEADS, &dlp.d_ntracks) == -1) {
-	    warn("cannot get number of heads");
-	    if (dlp.d_secperunit <= 63*1*1024)
-		dlp.d_ntracks = 1;
-	    else if (dlp.d_secperunit <= 63*16*1024)
-		dlp.d_ntracks = 16;
-	    else
-		dlp.d_ntracks = 255;
-	}
-
-	hs = (ms / dlp.d_secsize) - dlp.d_secperunit;
-	lp = &dlp;
-    }
-
-    if (bpb->bpbBytesPerSec == 0) {
-	if (ckgeom(fname, lp->d_secsize, "bytes/sector") == -1)
-	    return -1;
-	bpb->bpbBytesPerSec = lp->d_secsize;
-    }
-    if (bpb->bpbSecPerTrack == 0) {
-	if (ckgeom(fname, lp->d_nsectors, "sectors/track") == -1)
-	    return -1;
-	bpb->bpbSecPerTrack = lp->d_nsectors;
-    }
-    if (bpb->bpbHeads == 0) {
-	if (ckgeom(fname, lp->d_ntracks, "drive heads") == -1)
-	    return -1;
-	bpb->bpbHeads = lp->d_ntracks;
-    }
-    if (bpb->bpbHugeSectors == 0)
-	bpb->bpbHugeSectors = lp->d_secperunit;
-    if (bpb->bpbHiddenSecs == 0)
-	bpb->bpbHiddenSecs = hs;
+    struct stat st;
+    if (fstat(fd, &st))
+        err(1, "cannot get disk size");
+    /* create a fake geometry for a file image */
+    ms = st.st_size;
+    bpb->bpbBytesPerSec = 512;
+    bpb->bpbSecPerTrack = 63;
+    bpb->bpbHeads = 255;
+    bpb->bpbHugeSectors = ms / bpb->bpbBytesPerSec;
+    bpb->bpbHiddenSecs = 0;
     return 0;
 }
 
@@ -891,7 +695,7 @@ print_bpb(struct bpb *bpb)
  * Check a disk geometry value.
  */
 static int
-ckgeom(const char *fname, u_int val, const char *msg)
+ckgeom(const char *fname, uint32_t val, const char *msg)
 {
     if (!val) {
 	warnx("%s: no default %s", fname, msg);
@@ -924,7 +728,7 @@ oklabel(const char *src)
  * Make a volume label.
  */
 static void
-mklabel(u_int8_t *dest, const char *src)
+mklabel(uint8_t *dest, const char *src)
 {
     int c, i;
 
@@ -938,15 +742,8 @@ mklabel(u_int8_t *dest, const char *src)
  * Copy string, padding with spaces.
  */
 static void
-setstr(u_int8_t *dest, const char *src, size_t len)
+setstr(uint8_t *dest, const char *src, size_t len)
 {
     while (len--)
 	*dest++ = *src ? *src++ : ' ';
-}
-
-static void
-infohandler(int sig __unused)
-{
-
-	got_siginfo = 1;
 }

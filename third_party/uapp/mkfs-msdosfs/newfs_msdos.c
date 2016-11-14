@@ -25,11 +25,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD$";
-#endif /* not lint */
-
 #include <sys/param.h>
 
 #include <err.h>
@@ -59,7 +54,7 @@ main(int argc, char *argv[])
 {
     static const char opts[] = "@:NB:C:F:I:L:O:S:a:b:c:e:f:h:i:k:m:n:o:r:s:u:";
     struct msdos_options o;
-    const char *fname, *dtype;
+    const char *fname;
     char buf[MAXPATHLEN];
     int ch;
 
@@ -96,9 +91,6 @@ main(int argc, char *argv[])
 	case 'O':
 	    o.OEM_string = optarg;
 	    break;
-	case 'S':
-	    o.bytes_per_sector = argto2(optarg, 1, "bytes/sector");
-	    break;
 	case 'a':
 	    o.sectors_per_fat = argto4(optarg, 1, "sectors/FAT");
 	    break;
@@ -113,12 +105,6 @@ main(int argc, char *argv[])
 	case 'e':
 	    o.directory_entries = argto2(optarg, 1, "directory entries");
 	    break;
-	case 'f':
-	    o.floppy = optarg;
-	    break;
-	case 'h':
-	    o.drive_heads = argto2(optarg, 1, "drive heads");
-	    break;
 	case 'i':
 	    o.info_sector = argto2(optarg, 1, "info sector");
 	    break;
@@ -132,25 +118,15 @@ main(int argc, char *argv[])
 	case 'n':
 	    o.num_FAT = argto1(optarg, 1, "number of FATs");
 	    break;
-	case 'o':
-	    o.hidden_sectors = argto4(optarg, 0, "hidden sectors");
-	    o.hidden_sectors_set = 1;
-	    break;
 	case 'r':
 	    o.reserved_sectors = argto2(optarg, 1, "reserved sectors");
-	    break;
-	case 's':
-	    o.size = argto4(optarg, 1, "file system size");
-	    break;
-	case 'u':
-	    o.sectors_per_track = argto2(optarg, 1, "sectors/track");
 	    break;
 	default:
 	    usage();
 	}
     argc -= optind;
     argv += optind;
-    if (argc < 1 || argc > 2)
+    if (argc != 1)
 	usage();
     fname = *argv++;
     if (!o.create_size && !strchr(fname, '/')) {
@@ -158,8 +134,7 @@ main(int argc, char *argv[])
 	if (!(fname = strdup(buf)))
 	    err(1, NULL);
     }
-    dtype = *argv;
-    return !!mkfs_msdos(fname, dtype, &o);
+    return !!mkfs_msdos(fname, &o);
 }
 
 /*
@@ -235,8 +210,7 @@ argtooff(const char *arg, const char *msg)
 static void
 usage(void)
 {
-    fprintf(stderr,
-	    "usage: %s [ -options ] special [disktype]\n", getprogname());
+    fprintf(stderr, "usage: mkfs [ -options ] special [disktype]\n");
     fprintf(stderr, "where the options are:\n");
 static struct {
     char o;
@@ -246,7 +220,7 @@ static struct {
 ALLOPTS
 #undef AOPT
     };
-    for (size_t i = 0; i < nitems(opts); i++)
+    for (size_t i = 0; i < sizeof(opts)/sizeof(opts[0]); i++)
 	fprintf(stderr, "\t-%c %s\n", opts[i].o, opts[i].h);
     exit(1);
 }
