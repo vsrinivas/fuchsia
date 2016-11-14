@@ -18,4 +18,5 @@ unittests = [
 
 # List of apptest binaries.
 apptests = [
+    'file:///system/apps/ledger_apptests',
 ]

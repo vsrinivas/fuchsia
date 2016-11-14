@@ -6,7 +6,8 @@ group("app") {
   testonly = true
 
   deps = [
-#    ":apptests",
+    ":application_tests",
+    ":integration_tests",
     ":ledger_app",
     ":unittests",
   ]
@@ -110,6 +111,25 @@ executable("integration_tests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test",
+    "//lib/fidl/cpp/bindings",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}
+
+executable("application_tests") {
+  output_name = "ledger_apptests"
+
+  testonly = true
+
+  sources = [
+    "ledger_apptest.cc",
+  ]
+
+  deps = [
+    "//apps/ledger/services",
+    "//apps/ledger/services:services_sync",
+    "//apps/modular/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
     "//third_party/gtest",

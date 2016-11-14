@@ -29,8 +29,7 @@ def test():
   subprocess.check_call([_NETCMD_TOOL, 'echo', 'Running Ledger apptests.'],
                         cwd=_MAGENTA_DIR)
   for apptest in config['apptests']:
-    subprocess.check_call([_NETCMD_TOOL, 'application_manager', apptest],
-                          cwd=_MAGENTA_DIR)
+    subprocess.check_call([_NETCMD_TOOL, apptest], cwd=_MAGENTA_DIR)
 
 
 def main():
