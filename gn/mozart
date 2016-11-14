@@ -32,6 +32,10 @@
             "bootfs_path": "apps/jank_view"
         },
         {
+            "binary": "launch",
+            "bootfs_path": "apps/launch"
+        },
+        {
             "binary": "launcher",
             "bootfs_path": "apps/launcher"
         },
