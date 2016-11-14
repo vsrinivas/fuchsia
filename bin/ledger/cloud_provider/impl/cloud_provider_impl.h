@@ -21,22 +21,19 @@ namespace cloud_provider {
 
 class CloudProviderImpl : public CloudProvider {
  public:
-  CloudProviderImpl(firebase::Firebase* firebase, const AppId& app_id);
+  CloudProviderImpl(firebase::Firebase* firebase);
   ~CloudProviderImpl() override;
 
   // CloudProvider:
-  void AddCommit(const PageId& page_id,
-                 const Commit& commit,
+  void AddCommit(const Commit& commit,
                  const std::function<void(Status)>& callback) override;
 
-  void WatchCommits(const PageId& page_id,
-                    const std::string& min_timestamp,
+  void WatchCommits(const std::string& min_timestamp,
                     CommitWatcher* watcher) override;
 
   void UnwatchCommits(CommitWatcher* watcher) override;
 
-  void GetCommits(const PageId& page_id,
-                  const std::string& min_timestamp,
+  void GetCommits(const std::string& min_timestamp,
                   std::function<void(Status, const std::vector<Record>&)>
                       callback) override;
 
@@ -51,16 +48,12 @@ class CloudProviderImpl : public CloudProvider {
                          mx::datapipe_consumer data)> callback) override;
 
  private:
-  // Returns url location where commits for the particular page are stored.
-  std::string GetLocation(const PageId& page_id);
-
   // Returns the Firebase query filtering the commits so that only commits not
   // older than |min_timestamp| are returned. Passing empty |min_timestamp|
   // returns empty query.
   std::string GetTimestampQuery(const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
-  const AppId app_id_;
   std::map<CommitWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
 };
 

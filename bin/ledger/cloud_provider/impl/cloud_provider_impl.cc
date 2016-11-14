@@ -9,25 +9,35 @@
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace cloud_provider {
+namespace {
+// The root path under which all commits are stored.
+constexpr ftl::StringView kCommitRoot = "commits";
 
-CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
-                                     const AppId& app_id)
-    : firebase_(firebase), app_id_(app_id) {}
+// Returns the path under which the given commit is stored.
+std::string GetCommitPath(const Commit& commit) {
+  return ftl::Concatenate({kCommitRoot, "/", firebase::EncodeKey(commit.id)});
+}
+
+}  // namespace
+
+CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase)
+    : firebase_(firebase) {}
 
 CloudProviderImpl::~CloudProviderImpl() {}
 
-void CloudProviderImpl::AddCommit(const PageId& page_id,
-                                  const Commit& commit,
+void CloudProviderImpl::AddCommit(const Commit& commit,
                                   const std::function<void(Status)>& callback) {
   std::string encoded_commit;
   bool ok = EncodeCommit(commit, &encoded_commit);
   FTL_DCHECK(ok);
 
-  firebase_->Put(GetLocation(page_id) + "/" + firebase::EncodeKey(commit.id),
-                 encoded_commit, [callback](firebase::Status status) {
+  firebase_->Put(GetCommitPath(commit), encoded_commit,
+                 [callback](firebase::Status status) {
                    if (status == firebase::Status::OK) {
                      callback(Status::OK);
                    } else {
@@ -36,12 +46,11 @@ void CloudProviderImpl::AddCommit(const PageId& page_id,
                  });
 }
 
-void CloudProviderImpl::WatchCommits(const PageId& page_id,
-                                     const std::string& min_timestamp,
+void CloudProviderImpl::WatchCommits(const std::string& min_timestamp,
                                      CommitWatcher* watcher) {
-  watchers_[watcher].reset(new WatchClientImpl(firebase_, GetLocation(page_id),
-                                               GetTimestampQuery(min_timestamp),
-                                               watcher));
+  watchers_[watcher].reset(
+      new WatchClientImpl(firebase_, kCommitRoot.ToString(),
+                          GetTimestampQuery(min_timestamp), watcher));
 }
 
 void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
@@ -49,11 +58,10 @@ void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
 }
 
 void CloudProviderImpl::GetCommits(
-    const PageId& page_id,
     const std::string& min_timestamp,
     std::function<void(Status, const std::vector<Record>&)> callback) {
   firebase_->Get(
-      GetLocation(page_id), GetTimestampQuery(min_timestamp),
+      kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
@@ -84,10 +92,6 @@ void CloudProviderImpl::GetObject(
                        uint64_t size,
                        mx::datapipe_consumer data)> callback) {
   FTL_NOTIMPLEMENTED();
-}
-
-std::string CloudProviderImpl::GetLocation(const PageId& page_id) {
-  return firebase::EncodeKey(app_id_) + "/" + firebase::EncodeKey(page_id);
 }
 
 std::string CloudProviderImpl::GetTimestampQuery(

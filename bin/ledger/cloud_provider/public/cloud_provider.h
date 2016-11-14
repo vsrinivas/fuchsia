@@ -21,10 +21,9 @@ namespace cloud_provider {
 
 // This API captures Ledger requirements for a cloud sync provider.
 //
-// A CloudProvider instance is scoped to a particular Ledger instance, but can
-// be used to sync multiple pages within that ledger.
+// A CloudProvider instance is scoped to a particular page.
 //
-// When delivered from the server, commits come along with their timestamps.
+// When delivered from the server, commits come along with timestamps.
 // These timestamps are server timestamps , i.e. they represent the time of
 // registering the commit on the server. Their meaning is opaque to the client
 // and depends on the particular service provider, but they can be used to make
@@ -36,8 +35,7 @@ class CloudProvider {
 
   // Adds the given commit to the cloud. The given callback will be called
   // asynchronously with Status::OK if the operation have succeeded.
-  virtual void AddCommit(const PageId& page_id,
-                         const Commit& commit,
+  virtual void AddCommit(const Commit& commit,
                          const std::function<void(Status)>& callback) = 0;
 
   // Registers the given watcher to be notified about commits already present
@@ -54,8 +52,7 @@ class CloudProvider {
   // Passing empty |min_timestamp| covers all commits.
   //
   // Each |watcher| object can be registered only once at a time.
-  virtual void WatchCommits(const PageId& page_id,
-                            const std::string& min_timestamp,
+  virtual void WatchCommits(const std::string& min_timestamp,
                             CommitWatcher* watcher) = 0;
 
   // Unregisters the given watcher. No methods on the watcher will be called
@@ -68,7 +65,6 @@ class CloudProvider {
   // Result is a vector of pairs of the retrieved commits and their
   // corresponding server timestamps.
   virtual void GetCommits(
-      const PageId& page_id,
       const std::string& min_timestamp,
       std::function<void(Status, const std::vector<Record>&)> callback) = 0;
 

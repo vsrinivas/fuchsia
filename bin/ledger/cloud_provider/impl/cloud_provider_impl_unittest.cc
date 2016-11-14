@@ -27,8 +27,7 @@ class CloudProviderImplTest : public ::testing::Test,
                               public firebase::Firebase,
                               public CommitWatcher {
  public:
-  CloudProviderImplTest()
-      : cloud_provider_(new CloudProviderImpl(this, "app_id")) {}
+  CloudProviderImplTest() : cloud_provider_(new CloudProviderImpl(this)) {}
   ~CloudProviderImplTest() override {}
 
   // firebase::Firebase:
@@ -118,17 +117,16 @@ TEST_F(CloudProviderImplTest, AddCommit) {
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
   bool callback_called = false;
-  cloud_provider_->AddCommit("page_id", commit,
-                             [&callback_called](Status status) {
-                               EXPECT_EQ(Status::OK, status);
-                               callback_called = true;
-                             });
+  cloud_provider_->AddCommit(commit, [&callback_called](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    callback_called = true;
+  });
   message_loop_.Run();
 
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(1u, put_keys_.size());
   EXPECT_EQ(put_keys_.size(), put_data_.size());
-  EXPECT_EQ("app_idV/page_idV/commit_idV", put_keys_[0]);
+  EXPECT_EQ("commits/commit_idV", put_keys_[0]);
   EXPECT_EQ(
       "{\"id\":\"commit_idV\","
       "\"content\":\"some_contentV\","
@@ -143,10 +141,10 @@ TEST_F(CloudProviderImplTest, AddCommit) {
 }
 
 TEST_F(CloudProviderImplTest, WatchUnwatch) {
-  cloud_provider_->WatchCommits("page_id", "", this);
+  cloud_provider_->WatchCommits("", this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
-  EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
+  EXPECT_EQ("commits", watch_keys_[0]);
   EXPECT_EQ("", watch_queries_[0]);
   EXPECT_EQ(0u, unwatch_count_);
 
@@ -155,16 +153,16 @@ TEST_F(CloudProviderImplTest, WatchUnwatch) {
 }
 
 TEST_F(CloudProviderImplTest, WatchWithQuery) {
-  cloud_provider_->WatchCommits("page_id", ServerTimestampToBytes(42), this);
+  cloud_provider_->WatchCommits(ServerTimestampToBytes(42), this);
   EXPECT_EQ(1u, watch_keys_.size());
   EXPECT_EQ(1u, watch_queries_.size());
-  EXPECT_EQ("app_idV/page_idV", watch_keys_[0]);
+  EXPECT_EQ("commits", watch_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", watch_queries_[0]);
 }
 
 // Tests handling a server event containing multiple commits.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
-  cloud_provider_->WatchCommits("page_id", "", this);
+  cloud_provider_->WatchCommits("", this);
 
   std::string put_content =
       "{\"id_1V\":"
@@ -195,7 +193,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
 
 // Tests handling a server event containing a single commit.
 TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
-  cloud_provider_->WatchCommits("page_id", "", this);
+  cloud_provider_->WatchCommits("", this);
 
   std::string put_content =
       "{\"id\":\"commit_idV\","
@@ -209,7 +207,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
   document.Parse(put_content.c_str(), put_content.size());
   ASSERT_FALSE(document.HasParseError());
 
-  watch_client_->OnPut("/app_idV/page_idV/commit_idV", document);
+  watch_client_->OnPut("/commits/commit_idV", document);
 
   Commit expected_commit(
       "commit_id", "some_content",
@@ -258,12 +256,12 @@ TEST_F(CloudProviderImplTest, GetCommits) {
     EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
   };
 
-  cloud_provider_->GetCommits("page_id", ServerTimestampToBytes(42), callback);
+  cloud_provider_->GetCommits(ServerTimestampToBytes(42), callback);
   message_loop_.Run();
 
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ(1u, get_queries_.size());
-  EXPECT_EQ("app_idV/page_idV", get_keys_[0]);
+  EXPECT_EQ("commits", get_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
   EXPECT_TRUE(callback_called);
 }
