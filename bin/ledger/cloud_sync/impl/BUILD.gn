@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("impl") {
+  sources = [
+    "commit_upload.cc",
+    "commit_upload.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/cloud_provider/public",
+    "//apps/ledger/src/storage/public",
+  ]
+
+  deps = [
+    "//lib/mtl",
+  ]
+}
+
+executable("unittests") {
+  output_name = "cloud_sync_unittests"
+
+  testonly = true
+
+  sources = [
+    "commit_upload_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//apps/ledger/src/cloud_provider/test",
+    "//apps/ledger/src/storage/test",
+    "//apps/ledger/src/test",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}

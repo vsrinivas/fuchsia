@@ -11,6 +11,7 @@ group("ledger") {
     "//apps/ledger/src/app",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/cloud_provider",
+    "//apps/ledger/src/cloud_sync",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/fake_network_service",
     "//apps/ledger/src/firebase",
