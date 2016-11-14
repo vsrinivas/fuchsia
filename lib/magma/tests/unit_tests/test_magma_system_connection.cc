@@ -183,38 +183,29 @@ TEST(MagmaSystemConnection, PageFlip)
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
 
-    uint32_t connection_handle;
-
-    ASSERT_TRUE(dev.Open(0, MAGMA_SYSTEM_CAPABILITY_RENDERING, &connection_handle));
-    auto connection = magma::PlatformIpcConnection::Create(connection_handle);
-    ASSERT_NE(connection, nullptr);
-
-    ASSERT_TRUE(dev.Open(0, MAGMA_SYSTEM_CAPABILITY_DISPLAY, &connection_handle));
-    auto display = magma::PlatformIpcConnection::Create(connection_handle);
-    ASSERT_NE(display, nullptr);
+    auto msd_connection = msd_device_open(msd_dev, 0);
+    ASSERT_NE(msd_connection, nullptr);
+    auto display = MagmaSystemConnection(&dev, MsdConnectionUniquePtr(msd_connection),
+                                         MAGMA_SYSTEM_CAPABILITY_DISPLAY);
 
     // should be unable to pageflip totally bogus handle
     auto test_invalid = std::unique_ptr<TestPageFlip>(new TestPageFlip(-EINVAL));
-    magma_system_display_page_flip(display.get(), 0, &callback, test_invalid.get());
+    display.PageFlip(0, &callback, test_invalid.get());
 
-    uint64_t buf_size;
-    uint32_t buf_handle;
-    magma_system_alloc(connection.get(), PAGE_SIZE, &buf_size, &buf_handle);
-    ASSERT_EQ(magma_system_get_error(connection.get()), 0);
+    auto buf = magma::PlatformBuffer::Create(PAGE_SIZE);
 
     // should still be unable to page flip buffer because it hasnt been exported to display
-    magma_system_display_page_flip(display.get(), buf_handle, &callback, test_invalid.get());
+    display.PageFlip(buf->id(), &callback, test_invalid.get());
 
-    uint32_t buffer_handle;
-    uint32_t imported_handle;
-    magma_system_export(connection.get(), buf_handle, &buffer_handle);
-    EXPECT_EQ(magma_system_get_error(connection.get()), 0);
-    magma_system_import(display.get(), buffer_handle, &imported_handle);
-    EXPECT_EQ(magma_system_get_error(display.get()), 0);
+    uint64_t imported_id;
+    uint32_t handle;
+    ASSERT_TRUE(buf->duplicate_handle(&handle));
+    ASSERT_TRUE(display.ImportBuffer(handle, &imported_id));
+    ASSERT_EQ(buf->id(), imported_id);
 
     // should be ok to page flip now
     auto test_success = std::unique_ptr<TestPageFlip>(new TestPageFlip(0));
-    magma_system_display_page_flip(display.get(), imported_handle, &callback, test_success.get());
+    display.PageFlip(imported_id, &callback, test_success.get());
 
     msd_driver_destroy(msd_drv);
 }

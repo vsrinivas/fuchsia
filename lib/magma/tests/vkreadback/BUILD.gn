@@ -4,14 +4,17 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("vkreadback") {
+executable("vkreadback") {
   sources = [
     "vkreadback.cc",
-    "vkreadback.h",
   ]
 
   public_deps = [
     "$magma_build_root/src/magma_util",
     "$mesa_build_root:magma_vulkan",
+  ]
+
+  deps = [
+    "$magma_build_root/src/sys_driver:sys_abi_impl",
   ]
 }

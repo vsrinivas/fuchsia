@@ -50,7 +50,7 @@ public:
     // Returns nullptr if the buffer is not found
     std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
 
-    bool ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) override;
+    bool ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
 
     bool CreateContext(uint32_t context_id) override;
     bool DestroyContext(uint32_t context_id) override;

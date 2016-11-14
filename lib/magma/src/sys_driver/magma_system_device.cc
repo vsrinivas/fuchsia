@@ -8,25 +8,20 @@
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
-bool MagmaSystemDevice::Open(msd_client_id client_id, uint32_t capabilities,
-                             uint32_t* connection_handle_out)
+std::unique_ptr<magma::PlatformConnection> MagmaSystemDevice::Open(msd_client_id client_id,
+                                                                   uint32_t capabilities)
 {
     // at least one bit must be one and it must be one of the 2 least significant bits
     if (!capabilities ||
         (capabilities & ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)))
-        return DRETF(false, "attempting to open connection to device with invalid capabilities");
+        return DRETP(nullptr, "attempting to open connection to device with invalid capabilities");
 
     msd_connection* msd_connection = msd_device_open(msd_dev(), client_id);
     if (!msd_connection)
-        return DRETF(false, "msd_device_open failed");
+        return DRETP(nullptr, "msd_device_open failed");
 
-    auto connection = magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
+    return magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
         this, MsdConnectionUniquePtr(msd_connection), capabilities));
-
-    *connection_handle_out = connection->GetHandle();
-    connections_.push_back(std::move(connection));
-
-    return true;
 }
 
 void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,

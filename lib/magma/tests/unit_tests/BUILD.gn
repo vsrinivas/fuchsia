@@ -58,13 +58,16 @@ source_set("magma_platform_tests") {
   sources = [
     "test_mmio.cc",
     "test_platform_buffer.cc",
+    "test_platform_connection.cc",
     "test_platform_device.cc",
     "test_platform_futex.cc",
   ]
 
   deps = [
+    "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:futex",
     "$magma_build_root/tests/helper:platform_device_helper",
@@ -78,25 +81,13 @@ executable("magma_sys_abi_conformance_tests") {
 
   sources = [
     "main.cc",
-  ]
-
-  deps = [
-    ":sys_abi_conformance_tests",
-    "$magma_build_root/tests/mock:magma_system",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("sys_abi_conformance_tests") {
-  testonly = true
-
-  sources = [
     "test_sys_abi.cc",
   ]
 
   deps = [
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/sys_driver:sys_abi_impl",
     "//third_party/gtest",
   ]
 }

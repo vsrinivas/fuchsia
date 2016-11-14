@@ -48,6 +48,11 @@ struct magma_system_command_buffer {
 // |data| is a user defined parameter which is passed into the page flip function
 typedef void (*magma_system_pageflip_callback_t)(int32_t error, void* data);
 
+struct magma_system_connection_request {
+    uint32_t client_id;
+    uint32_t capabilities;
+} __attribute__((packed));
+
 #if defined(__cplusplus)
 }
 #endif

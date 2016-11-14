@@ -24,16 +24,12 @@ public:
 
     MagmaSystemDevice* CreateDevice(void* device)
     {
-        DASSERT(!g_device);
-
         msd_device* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
         if (!msd_dev) {
             return DRETP(nullptr, "msd_create_device failed");;
         }
 
-        g_device = new MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
-
-        return g_device;
+        return new MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
     }
 
     static MagmaDriver* Create()
@@ -49,11 +45,8 @@ public:
         return driver;
     }
 
-    static MagmaSystemDevice* GetDevice() { return g_device; }
-
 private:
     msd_driver_unique_ptr_t msd_drv_;
-    static MagmaSystemDevice* g_device;
 };
 
 #endif // MAGMA_DRIVER_H

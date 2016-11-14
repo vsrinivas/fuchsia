@@ -14,7 +14,6 @@ source_set("sys_driver") {
 
   sources = [
     "magma_driver.h",
-    "magma_system.cc",
     "magma_system_buffer.cc",
     "magma_system_buffer.h",
     "magma_system_connection.cc",
@@ -28,6 +27,22 @@ source_set("sys_driver") {
   deps = [
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
+  ]
+}
+
+source_set("sys_abi_impl") {
+  public_deps = [
+    "$magma_build_root/include:sys_abi",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:buffer",
+  ]
+
+  sources = [
+    "magma_system.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:connection",
   ]
 
   libs = [ "mxio" ]

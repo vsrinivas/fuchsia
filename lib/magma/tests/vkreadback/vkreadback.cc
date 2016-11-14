@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern "C" {
-#include "vkreadback.h"
-}
-
 #include "vulkan/vulkan.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -336,7 +332,7 @@ bool VkReadbackTest::Readback()
     return mismatches == 0;
 }
 
-int test_vk_readback()
+int main(void)
 {
     VkReadbackTest app;
 

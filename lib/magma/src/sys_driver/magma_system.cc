@@ -3,43 +3,25 @@
 // found in the LICENSE file.
 
 #include "magma_system.h"
-#include "magenta/device/ioctl-wrapper.h"
-#include "magma_driver.h"
-#include "magma_system_connection.h"
+#include "magenta/magenta_platform_ioctl.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include <errno.h>
 
-#ifdef __linux__
-#include <unistd.h>
-static msd_client_id get_client_id() { return static_cast<msd_client_id>(getpid()); }
-#else
-static msd_client_id get_client_id() { return static_cast<msd_client_id>(1); }
-#endif // __linux__
-
-MagmaSystemDevice* MagmaDriver::g_device;
-
 magma_system_connection* magma_system_open(int fd, uint32_t capabilities)
 {
+    magma_system_connection_request request;
+    request.client_id = 0;
+    request.capabilities = capabilities;
+
     uint32_t device_handle;
-    int ioctl_ret = mxio_ioctl(fd, 1, NULL, 0, &device_handle, sizeof(device_handle));
+    int ioctl_ret = mxio_ioctl(fd, IOCTL_MAGMA_CONNECT, &request, sizeof(request), &device_handle,
+                               sizeof(device_handle));
     if (ioctl_ret < 0)
         return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
 
-    if (device_handle != 0xdeadbeef)
-        return DRETP(nullptr, "Unexpected device_handle");
-
-    MagmaSystemDevice* dev = MagmaDriver::GetDevice();
-    DASSERT(dev);
-
-    msd_client_id client_id = get_client_id();
-
-    uint32_t connection_handle;
-    if (!dev->Open(client_id, capabilities, &connection_handle))
-        return DRETP(nullptr, "failed to open device");
-
     // Here we release ownership of the connection to the client
-    return magma::PlatformIpcConnection::Create(connection_handle).release();
+    return magma::PlatformIpcConnection::Create(device_handle).release();
 }
 
 void magma_system_close(magma_system_connection* connection)
@@ -57,7 +39,8 @@ int32_t magma_system_get_error(magma_system_connection* connection)
 uint32_t magma_system_get_device_id(int fd)
 {
     uint32_t device_id;
-    int ioctl_ret = mxio_ioctl(fd, 0, NULL, 0, &device_id, sizeof(device_id));
+    int ioctl_ret =
+        mxio_ioctl(fd, IOCTL_MAGMA_GET_DEVICE_ID, NULL, 0, &device_id, sizeof(device_id));
     if (ioctl_ret < 0) {
         DLOG("mxio_ioctl failed: %d", ioctl_ret);
         return 0;

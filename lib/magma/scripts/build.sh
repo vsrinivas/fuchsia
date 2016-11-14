@@ -24,9 +24,6 @@ echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
 debug=true;
 
 indriver_test=msd_unit_tests;
-#indriver_test=sys_abi_tests;
-#indriver_test=vkreadback;
-#indriver_test=vkcube;
 
 autorun_magma_sys_tests=true;
 
@@ -50,10 +47,6 @@ mkdir -p $driver_path
 cp $build_dir/x64-shared/libmsd-intel-gen-test.so  $driver_path
 
 autorun_path=$bootfs_path/autorun
-
-if $autorun_msd_intel_tests && $autorun_magma_sys_tests; then
-	echo "msleep 5000" >> $autorun_path # give some time to write out to log listener
-fi
 
 if $autorun_magma_sys_tests; then
 	echo "Enabling magma system driver tests to autorun"

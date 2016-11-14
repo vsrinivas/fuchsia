@@ -16,7 +16,6 @@ source_set("main") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
-    "$mesa_build_root:magma_vulkan",
   ]
 
   libs = [
@@ -39,7 +38,6 @@ source_set("test_driver") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/helper:platform_device_helper",
-    "$mesa_build_root:magma_vulkan",
   ]
 
   defines = []
@@ -55,31 +53,6 @@ source_set("test_driver") {
       "$msd_gtest_target",
       "//third_party/gtest",
     ]
-  } else if (magma_indriver_test == "sys_abi_tests") {
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_gtest.cc" ]
-    deps += [
-      "$magma_build_root/tests/unit_tests:sys_abi_conformance_tests",
-      "//third_party/gtest",
-    ]
-  } else if (magma_indriver_test == "glreadback") {
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_readback.cc" ]
-    deps -= [ "$mesa_build_root:magma_vulkan" ]
-    deps += [ "$magma_build_root/tests/gpureadback" ]
-  } else if (magma_indriver_test == "spinning_cube") {
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_spinning_cube.cc" ]
-    deps -= [ "$mesa_build_root:magma_vulkan" ]
-    deps += [ "$magma_build_root/tests/spinning_cube" ]
-  } else if (magma_indriver_test == "vkreadback") {
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_vkreadback.cc" ]
-    deps += [ "$magma_build_root/tests/vkreadback" ]
-  } else if (magma_indriver_test == "vkcube") {
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_vkcube.cc" ]
-    deps += [ "$magma_build_root/tests/vkcube" ]
   } else if (magma_indriver_test != "") {
     assert(false)
   }

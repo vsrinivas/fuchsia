@@ -35,7 +35,7 @@ public:
 
     virtual int32_t GetError() = 0;
 
-    virtual void ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) = 0;
+    virtual void ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) = 0;
 
     // Blocks until all gpu work currently queued that references the buffer
     // with |buffer_id| has completed.
@@ -68,7 +68,7 @@ public:
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;
 
-        virtual bool ExecuteCommandBuffer(uint32_t command_buffer_id, uint32_t context_id) = 0;
+        virtual bool ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) = 0;
         virtual bool WaitRendering(uint64_t buffer_id) = 0;
 
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
@@ -77,6 +77,18 @@ public:
 
     static std::unique_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
     virtual uint32_t GetHandle() = 0;
+
+    // handles a single request, returns false if anything has put it into an illegal state
+    // or if the remote has closed
+    virtual bool HandleRequest() = 0;
+
+    static void RunLoop(std::unique_ptr<magma::PlatformConnection> connection)
+    {
+        while (connection->HandleRequest())
+            ;
+        // the runloop terminates when the remote closes, or an error is experienced
+        // so this is the apropriate time to let the connection go out of scope and be destroyed
+    }
 };
 
 } // namespace magma

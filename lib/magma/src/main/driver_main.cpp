@@ -23,6 +23,7 @@ int devhost_start(void);
 #include <magenta/types.h>
 #include <thread>
 
+#include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include "magma_util/sleep.h"
 #include "sys_driver/magma_driver.h"
 
@@ -125,7 +126,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
-    case 0: {
+    case IOCTL_MAGMA_GET_DEVICE_ID: {
         auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
         if (!out_buf || out_len < sizeof(*device_id_out))
             return ERR_INVALID_ARGS;
@@ -133,16 +134,30 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
         result = sizeof(*device_id_out);
         break;
     }
-    case 1: {
+    case IOCTL_MAGMA_CONNECT: {
+        auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
+        if (!in_buf || in_len < sizeof(*request))
+            return DRET(ERR_INVALID_ARGS);
+
         auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
         if (!out_buf || out_len < sizeof(*device_handle_out))
-            return ERR_INVALID_ARGS;
-        *device_handle_out = 0xdeadbeef;
+            return DRET(ERR_INVALID_ARGS);
+
+        auto connection =
+            device->magma_system_device->Open(request->client_id, request->capabilities);
+        if (!connection)
+            return DRET(ERR_INVALID_ARGS);
+
+        *device_handle_out = connection->GetHandle();
         result = sizeof(*device_handle_out);
+
+        std::thread connection_thread(magma::PlatformConnection::RunLoop, std::move(connection));
+        connection_thread.detach();
+
         break;
     }
     }
-    xprintf("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
+    DLOG("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
 
     return result;
 }
@@ -288,7 +303,11 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
 
     auto dev = reinterpret_cast<intel_i915_device_t*>(param);
 
-#if MAGMA_CREATE_DEVICE
+#if MAGMA_INDRIVER_TEST
+    xprintf("running magma indriver test\n");
+    magma_indriver_test(dev->parent_device);
+#endif
+
     // create and add the gpu device
     dev->magma_driver = MagmaDriver::Create();
     if (!dev->magma_driver)
@@ -303,12 +322,6 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
     }
 
     xprintf("Created device %p\n", dev->magma_system_device);
-#endif
-
-#if MAGMA_INDRIVER_TEST
-    xprintf("running magma indriver test\n");
-    magma_indriver_test(dev->parent_device);
-#endif
 
     xprintf("magma_hook finish\n");
 

@@ -68,6 +68,7 @@ source_set("connection") {
   ]
 
   deps = [
+    "$magenta_build_root/system/ulib/mx",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
   ]

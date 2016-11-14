@@ -26,9 +26,7 @@ public:
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
-    bool Open(msd_client_id client_id, uint32_t capabilities, uint32_t* connection_handle_out);
-    bool Close(msd_client_id client_id);
-
+    std::unique_ptr<magma::PlatformConnection> Open(msd_client_id client_id, uint32_t capabilities);
 
     msd_device* msd_dev() { return msd_dev_.get(); }
 
@@ -46,7 +44,6 @@ public:
 
 private:
     msd_device_unique_ptr_t msd_dev_;
-    std::vector<std::unique_ptr<magma::PlatformConnection>> connections_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
 };
 

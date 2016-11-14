@@ -9,7 +9,7 @@ fuchsia_root=`pwd`
 magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
 netcp=$magenta_build_dir/tools/netcp
 netruncmd=$magenta_build_dir/tools/netruncmd
-build_dir=$fuchsia_root/out/Debug/x64-shared
+build_dir=$fuchsia_root/out/Debug
 
 test=$1
 if [ "$test" != "" ]
