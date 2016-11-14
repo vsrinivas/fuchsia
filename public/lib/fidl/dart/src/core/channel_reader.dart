@@ -86,7 +86,8 @@ class ChannelReader {
       if ((pendingSignals & MX_SIGNAL_READABLE) != 0) {
         if (onReadable != null)
           onReadable();
-        _waiter.next();
+        if (isBound)
+          _waiter.next();
       } else if ((pendingSignals & MX_SIGNAL_PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);
