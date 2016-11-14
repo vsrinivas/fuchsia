@@ -8,7 +8,7 @@
 #include <errno.h>
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/ledger/src/app/ledger_factory_impl.h"
+#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -19,15 +19,10 @@
 
 namespace ledger {
 
-namespace {
-
-const char kDefaultStoragePath[] = "/data/ledger";
-
-}  // namespace
-
 // App is the main entry point of the Ledger Mojo application.
 //
-// It is responsible for setting up the LedgerFactory, which connects clients to
+// It is responsible for setting up the LedgerRepositoryFactory, which connects
+// clients to
 // individual ledger instances. It should not however hold long-lived objects
 // shared between ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
@@ -38,22 +33,12 @@ class App {
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
 
-    storage_path_ = kDefaultStoragePath;
+    factory_impl_.reset(new LedgerRepositoryFactoryImpl(
+        mtl::MessageLoop::GetCurrent()->task_runner()));
 
-    // TODO(qsr): Look for arguments to setup another storage path.
-
-    if (!files::IsDirectory(storage_path_) &&
-        !files::CreateDirectory(storage_path_)) {
-      FTL_LOG(ERROR) << "Unable to access " << storage_path_;
-      exit(EACCES);
-      return;
-    }
-
-    factory_impl_.reset(new LedgerFactoryImpl(
-        mtl::MessageLoop::GetCurrent()->task_runner(), storage_path_));
-
-    application_context_->outgoing_services()->AddService<LedgerFactory>(
-        [this](fidl::InterfaceRequest<LedgerFactory> request) {
+    application_context_->outgoing_services()
+        ->AddService<LedgerRepositoryFactory>([this](
+            fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
   }
@@ -61,9 +46,8 @@ class App {
 
  private:
   std::unique_ptr<modular::ApplicationContext> application_context_;
-  std::string storage_path_;
-  std::unique_ptr<LedgerFactoryImpl> factory_impl_;
-  fidl::BindingSet<LedgerFactory> factory_bindings_;
+  std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
+  fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

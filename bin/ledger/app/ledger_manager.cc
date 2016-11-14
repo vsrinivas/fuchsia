@@ -39,6 +39,13 @@ class LedgerManager::PageManagerContainer {
     }
   }
 
+  void set_on_empty(const ftl::Closure& on_empty_callback) {
+    on_empty_callback_ = on_empty_callback;
+    if (page_manager_) {
+      page_manager_->set_on_empty(on_empty_callback);
+    }
+  };
+
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
   void BindPage(fidl::InterfaceRequest<Page> page_request,
@@ -69,6 +76,13 @@ class LedgerManager::PageManagerContainer {
       it->second(status_);
     }
     requests_.clear();
+    if (on_empty_callback_) {
+      if (page_manager_) {
+        page_manager_->set_on_empty(on_empty_callback_);
+      } else {
+        on_empty_callback_();
+      }
+    }
   }
 
  private:
@@ -77,6 +91,7 @@ class LedgerManager::PageManagerContainer {
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
+  ftl::Closure on_empty_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
@@ -114,7 +129,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
   // If we have the page manager ready, just ask for a new page impl.
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {
-    it->second->BindPage(std::move(page_request), std::move(callback));
+    it->second.BindPage(std::move(page_request), std::move(callback));
     return;
   }
 
@@ -165,19 +180,24 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
 
 LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
     storage::PageIdView page_id) {
-  auto ret = page_managers_.insert(std::make_pair(
-      page_id.ToString(), std::make_unique<PageManagerContainer>()));
+  auto ret = page_managers_.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(page_id.ToString()),
+                                    std::forward_as_tuple());
   FTL_DCHECK(ret.second);
-  return ret.first->second.get();
+  return &ret.first->second;
 }
 
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
     storage::PageId&& page_id,
     std::unique_ptr<storage::PageStorage> page_storage) {
-  return std::make_unique<PageManager>(std::move(page_storage),
-                                       [ this, page_id = std::move(page_id) ] {
-                                         page_managers_.erase(page_id);
-                                       });
+  return std::make_unique<PageManager>(std::move(page_storage));
+}
+
+void LedgerManager::CheckEmpty() {
+  if (!on_empty_callback_)
+    return;
+  if (bindings_.size() == 0 && page_managers_.empty())
+    on_empty_callback_();
 }
 
 }  // namespace ledger

@@ -10,6 +10,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/ledger_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -42,6 +43,10 @@ class LedgerManager : public LedgerImpl::Delegate {
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
 
+  void set_on_empty(const ftl::Closure& on_empty_callback) {
+    on_empty_callback_ = on_empty_callback;
+  }
+
  private:
   class PageManagerContainer;
   // Adds a new PageManagerContainer for |page_id| and configures its so that we
@@ -53,15 +58,18 @@ class LedgerManager : public LedgerImpl::Delegate {
       storage::PageId&& page_id,
       std::unique_ptr<storage::PageStorage> page_storage);
 
+  void CheckEmpty();
+
   std::unique_ptr<storage::LedgerStorage> storage_;
   LedgerImpl ledger_impl_;
   fidl::BindingSet<Ledger> bindings_;
 
   // Mapping from page id to the manager of that page.
-  std::map<storage::PageId,
-           std::unique_ptr<PageManagerContainer>,
-           convert::StringViewComparator>
+  AutoCleanableMap<storage::PageId,
+                   PageManagerContainer,
+                   convert::StringViewComparator>
       page_managers_;
+  ftl::Closure on_empty_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };

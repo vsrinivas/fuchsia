@@ -15,15 +15,9 @@ namespace storage {
 
 class LedgerStorageImpl : public LedgerStorage {
  public:
-  // Identifies the Ledger instance to be instantiated.
-  struct Identity {
-    std::string user_id;
-    std::string app_id;
-  };
-
   LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                     const std::string& base_storage_dir,
-                    const Identity& identity);
+                    const std::string& ledger_name);
   ~LedgerStorageImpl() override;
 
   Status CreatePageStorage(PageIdView page_id,

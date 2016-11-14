@@ -10,6 +10,7 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -28,7 +29,7 @@ storage::PageId RandomId() {
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
   FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {}
+      : get_page_fails(false), task_runner_(task_runner) {}
   ~FakeLedgerStorage() {}
 
   storage::Status CreatePageStorage(
@@ -45,8 +46,14 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                std::unique_ptr<storage::PageStorage>)>&
           callback) override {
     get_page_calls.push_back(page_id.ToString());
-    task_runner_->PostTask(
-        [callback]() { callback(storage::Status::NOT_FOUND, nullptr); });
+    task_runner_->PostTask([ this, callback, page_id = page_id.ToString() ]() {
+      if (get_page_fails) {
+        callback(storage::Status::NOT_FOUND, nullptr);
+      } else {
+        callback(storage::Status::OK,
+                 std::make_unique<storage::fake::FakePageStorage>(page_id));
+      }
+    });
   }
 
   bool DeletePageStorage(storage::PageIdView page_id) override {
@@ -60,6 +67,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
     delete_page_calls.clear();
   }
 
+  bool get_page_fails;
   std::vector<storage::PageId> create_page_calls;
   std::vector<storage::PageId> get_page_calls;
   std::vector<storage::PageId> delete_page_calls;
@@ -105,6 +113,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.reset();
   storage_ptr->ClearCalls();
 
+  storage_ptr->get_page_fails = true;
   ledger->GetRootPage(GetProxy(&page),
                       [this](Status) { message_loop_.QuitNow(); });
   message_loop_.Run();

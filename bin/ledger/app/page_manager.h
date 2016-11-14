@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -18,13 +19,28 @@
 namespace ledger {
 
 template <class Interface, class Impl>
-struct BoundInterface {
+class BoundInterface {
+ public:
   template <class... Args>
   BoundInterface(fidl::InterfaceRequest<Interface> request, Args&&... args)
-      : impl(std::forward<Args>(args)...), binding(&impl, std::move(request)) {}
+      : impl_(std::forward<Args>(args)...),
+        binding_(&impl_, std::move(request)) {}
 
-  Impl impl;
-  fidl::Binding<Interface> binding;
+  void set_on_empty(const ftl::Closure& on_empty_callback) {
+    binding_.set_connection_error_handler([this, on_empty_callback]() {
+      binding_.Close();
+      if (on_empty_callback)
+        on_empty_callback();
+    });
+  }
+
+  bool is_bound() { return binding_.is_bound(); }
+
+ private:
+  Impl impl_;
+  fidl::Binding<Interface> binding_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
 };
 
 // Manages a ledger page.
@@ -40,11 +56,7 @@ class PageManager {
  public:
   // |page_storage| becomes owned by PageManager and is deleted when it goes
   //   away
-  // |on_empty_callback| is called each time the set of managed PageImpls
-  //   becomes empty. It is valid to delete PageManager synchronously within
-  //   that callback.
-  PageManager(std::unique_ptr<storage::PageStorage> page_storage,
-              ftl::Closure on_empty_callback);
+  PageManager(std::unique_ptr<storage::PageStorage> page_storage);
   ~PageManager();
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -56,17 +68,18 @@ class PageManager {
   void BindPageSnapshot(std::unique_ptr<storage::CommitContents> contents,
                         fidl::InterfaceRequest<PageSnapshot> snapshot_request);
 
+  void set_on_empty(const ftl::Closure& on_empty_callback) {
+    on_empty_callback_ = on_empty_callback;
+  }
+
  private:
   class PageHolder;
+
+  void CheckEmpty();
+
   std::unique_ptr<storage::PageStorage> page_storage_;
-
-  // TODO(ppi): switch to something like a (Strong)BindingSet when they grow
-  // facilities to notify the client when the bindings shut down, so that we can
-  // implement |on_empty_callback|.
-  std::vector<std::unique_ptr<PageHolder>> pages_;
-  std::vector<std::unique_ptr<BoundInterface<PageSnapshot, PageSnapshotImpl>>>
-      snapshots_;
-
+  AutoCleanableSet<PageHolder> pages_;
+  AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>> snapshots_;
   ftl::Closure on_empty_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManager);

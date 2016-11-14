@@ -31,11 +31,10 @@ std::string GetDirectoryName(ftl::StringView bytes) {
 
 LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                      const std::string& base_storage_dir,
-                                     const Identity& identity)
+                                     const std::string& ledger_name)
     : task_runner_(std::move(task_runner)) {
-  storage_dir_ = base_storage_dir + "/" + kVersion + "/" +
-                 GetDirectoryName(identity.user_id) + "/" +
-                 GetDirectoryName(identity.app_id);
+  storage_dir_ =
+      base_storage_dir + "/" + kVersion + "/" + GetDirectoryName(ledger_name);
 }
 
 LedgerStorageImpl::~LedgerStorageImpl() {}

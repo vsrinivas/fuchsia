@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/ledger/src/app/ledger_factory_impl.h"
+#include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -103,17 +103,19 @@ std::string SnapshotGetPartial(PageSnapshotPtr* snapshot,
   return result;
 }
 
-class LedgerFactoryContainer {
+class LedgerRepositoryFactoryContainer {
  public:
-  LedgerFactoryContainer(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                         const std::string& path,
-                         fidl::InterfaceRequest<LedgerFactory> request)
-      : factory_impl_(task_runner, path),
+  LedgerRepositoryFactoryContainer(
+      ftl::RefPtr<ftl::TaskRunner> task_runner,
+      const std::string& path,
+      fidl::InterfaceRequest<LedgerRepositoryFactory> request)
+      : factory_impl_(task_runner),
         factory_binding_(&factory_impl_, std::move(request)) {}
-  ~LedgerFactoryContainer() {}
+  ~LedgerRepositoryFactoryContainer() {}
+
  private:
-  LedgerFactoryImpl factory_impl_;
-  fidl::Binding<LedgerFactory> factory_binding_;
+  LedgerRepositoryFactoryImpl factory_impl_;
+  fidl::Binding<LedgerRepositoryFactory> factory_binding_;
 };
 
 class LedgerApplicationTest : public ::testing::Test {
@@ -127,8 +129,8 @@ class LedgerApplicationTest : public ::testing::Test {
     ::testing::Test::SetUp();
     thread_ = mtl::CreateThread(&task_runner_);
     task_runner_->PostTask(ftl::MakeCopyable(
-        [ this, request = GetProxy(&ledger_factory_) ]() mutable {
-          factory_container_.reset(new LedgerFactoryContainer(
+        [ this, request = GetProxy(&ledger_repository_factory_) ]() mutable {
+          factory_container_.reset(new LedgerRepositoryFactoryContainer(
               task_runner_, tmp_dir_.path(), std::move(request)));
         }));
     ledger_ = GetTestLedger();
@@ -149,12 +151,12 @@ class LedgerApplicationTest : public ::testing::Test {
   PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status);
   void DeletePage(const fidl::Array<uint8_t>& page_id, Status expected_status);
 
-  LedgerFactoryPtr ledger_factory_;
+  LedgerRepositoryFactoryPtr ledger_repository_factory_;
   LedgerPtr ledger_;
 
  private:
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<LedgerFactoryContainer> factory_container_;
+  std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   mtl::MessageLoop loop_;
   std::thread thread_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
@@ -164,14 +166,17 @@ class LedgerApplicationTest : public ::testing::Test {
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
   Status status;
-  LedgerPtr ledger;
-  IdentityPtr identity = Identity::New();
-  identity->user_id = RandomArray(1);
-  identity->app_id = RandomArray(1);
-  ledger_factory_->GetLedger(std::move(identity), GetProxy(&ledger),
-                             [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_factory_.WaitForIncomingResponse());
+  LedgerRepositoryPtr repository;
+  ledger_repository_factory_->GetRepository(
+      tmp_dir_.path(), GetProxy(&repository),
+      [&status](Status s) { status = s; });
+  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
+  EXPECT_EQ(Status::OK, status);
 
+  LedgerPtr ledger;
+  repository->GetLedger(RandomArray(1), GetProxy(&ledger),
+                        [&status](Status s) { status = s; });
+  EXPECT_TRUE(repository.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
   return ledger;
 }

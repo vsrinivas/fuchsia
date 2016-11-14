@@ -39,11 +39,11 @@ class PageManagerTest : public ::testing::Test {
 TEST_F(PageManagerTest, OnEmptyCallback) {
   bool on_empty_called = false;
   PageManager page_manager(
-      std::make_unique<storage::fake::FakePageStorage>(page_id_),
-      [this, &on_empty_called] {
-        on_empty_called = true;
-        message_loop_.QuitNow();
-      });
+      std::make_unique<storage::fake::FakePageStorage>(page_id_));
+  page_manager.set_on_empty([this, &on_empty_called] {
+    on_empty_called = true;
+    message_loop_.QuitNow();
+  });
 
   EXPECT_FALSE(on_empty_called);
   PagePtr page1;
@@ -52,6 +52,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page_manager.BindPage(GetProxy(&page2));
   page1.reset();
   page2.reset();
+  message_loop_.task_runner()->PostDelayedTask(
+      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 
@@ -59,13 +61,15 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PagePtr page3;
   page_manager.BindPage(GetProxy(&page3));
   page3.reset();
+  message_loop_.task_runner()->PostDelayedTask(
+      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   std::unique_ptr<PageManager> page_manager = std::make_unique<PageManager>(
-      std::make_unique<storage::fake::FakePageStorage>(page_id_), [] {});
+      std::make_unique<storage::fake::FakePageStorage>(page_id_));
 
   PagePtr page;
   page_manager->BindPage(GetProxy(&page));

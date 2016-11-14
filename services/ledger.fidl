@@ -26,21 +26,20 @@ enum Status {
   UNKNOWN_ERROR = -1,
 };
 
-// Identity of the Ledger client. This is currently declarative with no
-// guarantee of authenticity. Once we have tokens for user and component access
-// scopes, we will use them instead.
-struct Identity {
-  // Identifies the user.
-  array<uint8> user_id;
-
-  // Identifies the client app.
-  array<uint8> app_id;
+// Base interface implemented by the Ledger application.
+// Will be called by the process setting up the user environment.
+[ServiceName="ledger::LedgerRepositoryFactory"]
+interface LedgerRepositoryFactory {
+  // Creates a new repository with the given |repository_name| if it doesn't
+  // already exist. All storage will be under |repository_path|.
+  GetRepository(string repository_path,
+                LedgerRepository& repository) => (Status status);
 };
 
-[ServiceName="ledger::LedgerFactory"]
-interface LedgerFactory {
-  // Creates a new Ledger for the current client if it doesn't already exist.
-  GetLedger(Identity identity, Ledger& ledger_request) => (Status status);
+interface LedgerRepository {
+  // Creates a new Ledger for the given |ledger_name| if it doesn't already
+  // exist.
+   GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
 };
 
 [ServiceName="ledger::Ledger"]

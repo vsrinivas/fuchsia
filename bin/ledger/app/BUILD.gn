@@ -14,16 +14,19 @@ group("app") {
 
 source_set("lib") {
   sources = [
+    "auto_cleanable.h",
     "constants.cc",
     "constants.h",
     "branch_tracker.h",
     "branch_tracker.cc",
-    "ledger_factory_impl.cc",
-    "ledger_factory_impl.h",
     "ledger_impl.cc",
     "ledger_impl.h",
     "ledger_manager.cc",
     "ledger_manager.h",
+    "ledger_repository_factory_impl.cc",
+    "ledger_repository_factory_impl.h",
+    "ledger_repository_impl.cc",
+    "ledger_repository_impl.h",
     "page_impl.cc",
     "page_impl.h",
     "page_utils.cc",
@@ -71,6 +74,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
+    "auto_cleanable_unittest.cc",
     "ledger_manager_unittest.cc",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",

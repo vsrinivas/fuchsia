@@ -37,7 +37,7 @@ class PageImplTest : public ::testing::Test {
         new storage::fake::FakePageStorage(page_id1_));
     fake_storage_ = fake_storage.get();
 
-    manager_.reset(new PageManager(std::move(fake_storage), [] {}));
+    manager_ = std::make_unique<PageManager>(std::move(fake_storage));
     manager_->BindPage(GetProxy(&page_ptr_));
   }
 
