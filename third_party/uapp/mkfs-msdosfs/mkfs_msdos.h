@@ -30,34 +30,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
 #include <stdbool.h>
-#define ALLOPTS \
-AOPT('@', off_t, offset, 0, "Offset in device") \
-AOPT('B', const char *, bootstrap, -1, "Bootstrap file") \
-AOPT('C', off_t, create_size, 0, "Create file") \
-AOPT('F', uint8_t,  fat_type, 12, "FAT type (12, 16, or 32)") \
-AOPT('I', uint32_t, volume_id, 0, "Volume ID") \
-AOPT('L', const char *, volume_label, -1, "Volume Label") \
-AOPT('N', bool, no_create, -2, "Don't create filesystem, print params only") \
-AOPT('O', const char *, OEM_string, -1, "OEM string") \
-AOPT('a', uint32_t, sectors_per_fat, 1, "Sectors per FAT") \
-AOPT('b', uint32_t, block_size, 1, "Block size") \
-AOPT('c', uint8_t, sectors_per_cluster, 1, "Sectors per cluster") \
-AOPT('e', uint16_t, directory_entries, 1, "Directory entries") \
-AOPT('i', uint16_t, info_sector, 1, "Info sector") \
-AOPT('k', uint16_t, backup_sector, 1, "Backup sector") \
-AOPT('m', uint8_t, media_descriptor, 0, "Media descriptor") \
-AOPT('n', uint8_t, num_FAT, 1, "Number of FATs") \
-AOPT('r', uint16_t, reserved_sectors, 1, "Reserved sectors")
+#include <sys/types.h>
+#define ALLOPTS                                                                  \
+    AOPT('@', off_t, offset, 0, "Offset in device")                              \
+    AOPT('B', const char*, bootstrap, -1, "Bootstrap file")                      \
+    AOPT('C', off_t, create_size, 0, "Create file")                              \
+    AOPT('F', uint8_t, fat_type, 12, "FAT type (12, 16, or 32)")                 \
+    AOPT('I', uint32_t, volume_id, 0, "Volume ID")                               \
+    AOPT('L', const char*, volume_label, -1, "Volume Label")                     \
+    AOPT('N', bool, no_create, -2, "Don't create filesystem, print params only") \
+    AOPT('O', const char*, OEM_string, -1, "OEM string")                         \
+    AOPT('a', uint32_t, sectors_per_fat, 1, "Sectors per FAT")                   \
+    AOPT('b', uint32_t, block_size, 1, "Block size")                             \
+    AOPT('c', uint8_t, sectors_per_cluster, 1, "Sectors per cluster")            \
+    AOPT('e', uint16_t, directory_entries, 1, "Directory entries")               \
+    AOPT('i', uint16_t, info_sector, 1, "Info sector")                           \
+    AOPT('k', uint16_t, backup_sector, 1, "Backup sector")                       \
+    AOPT('m', uint8_t, media_descriptor, 0, "Media descriptor")                  \
+    AOPT('n', uint8_t, num_FAT, 1, "Number of FATs")                             \
+    AOPT('r', uint16_t, reserved_sectors, 1, "Reserved sectors")
 
 struct msdos_options {
 #define AOPT(_opt, _type, _name, _min, _desc) _type _name;
-ALLOPTS
-#undef AOPT	
-	uint32_t volume_id_set:1;
-	uint32_t media_descriptor_set:1;
-	uint32_t hidden_sectors_set:1;
+    ALLOPTS
+#undef AOPT
+    uint32_t volume_id_set : 1;
+    uint32_t media_descriptor_set : 1;
+    uint32_t hidden_sectors_set : 1;
 };
 
-int mkfs_msdos(const char *, const struct msdos_options *);
+int mkfs_msdos(const char*, const struct msdos_options*);
