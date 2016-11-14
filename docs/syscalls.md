@@ -96,3 +96,11 @@
 + [datapipe_begin_read](syscalls/datapipe_begin_read.md)
 + [datapipe_end_read](syscalls/datapipe_end_read.md)
 
+## Information
++ version_get - get kernel version string
++ num_cpus - get number of cores
+
+## Logging
++ log_create - create a kernel managed log reader or writer
++ log_write - write log entry to log
++ log_read - read log entries from log

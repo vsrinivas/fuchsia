@@ -79,6 +79,7 @@ OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
 KERNEL_CONFIG_HEADER := $(BUILDDIR)/config-kernel.h
 USER_CONFIG_HEADER := $(BUILDDIR)/config-user.h
+GIT_VERSION_HEADER := $(BUILDDIR)/git-version.h
 
 GLOBAL_INCLUDES := system/public system/private
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
@@ -445,6 +446,14 @@ USER_DEFINES += USER_ASMFLAGS=\"$(subst $(SPACE),_,$(USER_ASMFLAGS))\"
 ifeq ($(ARCH),x86)
 include bootloader/build.mk
 endif
+
+# Regenerate this every time, but if it comes out identical then
+# don't touch the file so gratuitous recompiles won't be triggered.
+$(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
+	@echo generating $@
+	$(NOECHO)$< $@.new
+	$(NOECHO)if cmp -s $@.new $@; then rm $@.new; else mv -f $@.new $@; fi
+FORCE:;
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)

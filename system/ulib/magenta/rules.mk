@@ -13,10 +13,14 @@ MODULE_COMPILEFLAGS := -ffreestanding
 
 MODULE_HEADER_DEPS := lib/vdso
 
+MODULE_SRCDEPS := $(GIT_VERSION_HEADER)
+MODULE_COMPILEFLAGS += -I$(BUILDDIR)
+
 MODULE_SRCS := \
     $(LOCAL_DIR)/data.c \
     $(LOCAL_DIR)/mx_num_cpus.c \
     $(LOCAL_DIR)/mx_status_get_string.c \
+    $(LOCAL_DIR)/mx_version_get.c \
 
 ifeq ($(ARCH),arm)
 MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S

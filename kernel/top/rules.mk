@@ -20,4 +20,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/init.c \
 	$(LOCAL_DIR)/main.c \
 
+MODULE_SRCDEPS := $(GIT_VERSION_HEADER)
+
 include make/module.mk

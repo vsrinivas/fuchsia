@@ -55,6 +55,7 @@ MAGENTA_SYSCALL_DEF(1, 2, 1, mx_status_t, nanosleep, mx_time_t nanoseconds)
 
 // Global system information
 MAGENTA_VDSOCALL_DEF_WITH_ATTRS(unsigned int, num_cpus, (leaf, const), void)
+MAGENTA_VDSOCALL_DEF(mx_status_t, version_get, USER_PTR(char) version, uint32_t version_len)
 
 // Generic handle operations
 MAGENTA_SYSCALL_DEF(1, 1, 10, mx_status_t, handle_close, mx_handle_t handle)
