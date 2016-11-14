@@ -406,7 +406,7 @@ void HandleWatcherThreadState::Run() {
     mx_status_t result = mx_handle_wait_many(wait_many_items_.data(),
                                              num_handles, WaitDeadline());
 
-    if (result == ERR_BAD_HANDLE) {
+    if (result == ERR_BAD_HANDLE || result == ERR_HANDLE_CLOSED) {
       PruneClosedHandles();
       continue;
     }
