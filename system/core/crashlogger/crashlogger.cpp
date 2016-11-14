@@ -312,7 +312,7 @@ int main(int argc, char** argv) {
     // that prevents printing it later).
     if (debug_level >= 1) {
         mx_handle_t self = mx_process_self();
-        dsoinfo_t* dso_list = dso_fetch_list(self, "app");
+        dsoinfo_t* dso_list = dso_fetch_list(self, "crashlogger");
         printf("Crashlogger dso list:\n");
         dso_print_list(dso_list);
         dso_free_list(dso_list);
