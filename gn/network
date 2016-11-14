@@ -1,12 +1,17 @@
 {
     "labels": [
         "//apps/network",
+        "//apps/network/examples/postfile",
         "//apps/network/examples/wget"
     ],
     "binaries": [
         {
             "binary": "network",
             "bootfs_path": "apps/network"
+        },
+        {
+            "binary": "postfile",
+            "bootfs_path": "test/postfile"
         },
         {
             "binary": "wget",
