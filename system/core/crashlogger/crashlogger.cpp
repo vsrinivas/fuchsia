@@ -360,7 +360,7 @@ int main(int argc, char** argv) {
     status = mx_object_bind_exception_port(thread_self, self_dump_port,
                                            kSelfExceptionKey, 0);
     if (status < 0) {
-        print_mx_error("unable to set self exception port", self_dump_port);
+        print_mx_error("unable to set self exception port", status);
         return 1;
     }
 
