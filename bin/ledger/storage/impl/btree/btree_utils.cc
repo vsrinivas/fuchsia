@@ -39,7 +39,7 @@ Status GetObjectsFromChild(const TreeNode& node,
                            std::set<ObjectId>* objects) {
   std::unique_ptr<const TreeNode> child;
   Status s = node.GetChild(child_index, &child);
-  if (s == Status::NOT_FOUND) {
+  if (s == Status::NO_SUCH_CHILD) {
     return Status::OK;
   }
   if (s != Status::OK) {
@@ -71,10 +71,10 @@ Status Merge(PageStorage* page_storage,
   Status left_status =
       left->GetChild(left->GetKeyCount(), &left_rightmost_child);
   Status right_status = right->GetChild(0, &left_rightmost_child);
-  if (left_status != Status::OK && left_status != Status::NOT_FOUND) {
+  if (left_status != Status::OK && left_status != Status::NO_SUCH_CHILD) {
     return left_status;
   }
-  if (right_status != Status::OK && right_status != Status::NOT_FOUND) {
+  if (right_status != Status::OK && right_status != Status::NO_SUCH_CHILD) {
     return right_status;
   }
   Status child_result =
@@ -127,10 +127,11 @@ Status ApplyChanges(PageStorage* page_storage,
         std::unique_ptr<const TreeNode> right;
         Status left_status = node->GetChild(index, &left);
         Status right_status = node->GetChild(index + 1, &right);
-        if (left_status != Status::OK && left_status != Status::NOT_FOUND) {
+        if (left_status != Status::OK && left_status != Status::NO_SUCH_CHILD) {
           return left_status;
         }
-        if (right_status != Status::OK && right_status != Status::NOT_FOUND) {
+        if (right_status != Status::OK &&
+            right_status != Status::NO_SUCH_CHILD) {
           return right_status;
         }
         Status merge_status = Merge(page_storage, std::move(left),
@@ -168,7 +169,7 @@ Status ApplyChanges(PageStorage* page_storage,
         // The change iterator already advanced inside the nested ApplyChanges,
         // so we skip advancing it here.
         continue;
-      } else if (child_status == Status::NOT_FOUND) {
+      } else if (child_status == Status::NO_SUCH_CHILD) {
         if ((*changes)->deleted) {
           // We try to remove an entry that is not in the tree.
           FTL_LOG(INFO) << "Failed to delete key " << key << ": No such entry.";

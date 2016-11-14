@@ -20,7 +20,7 @@ BTreeIterator::BTreeIterator(std::unique_ptr<const TreeNode> root) {
     stack_.emplace(std::move(current_node), -1, 0);
     if (status == Status::OK) {
       current_node = std::move(next_node);
-    } else if (status == Status::NOT_FOUND) {
+    } else if (status == Status::NO_SUCH_CHILD) {
       break;
     } else {
       current_status_ = status;
@@ -62,7 +62,7 @@ BTreeIterator& BTreeIterator::Seek(convert::ExtendedStringView key) {
         current_node = std::move(next_node);
         // If child_status != Status::OK, then current_node would remain unset
         // after the move above, then we will exit the loop.
-      } else if (child_status == Status::NOT_FOUND) {
+      } else if (child_status == Status::NO_SUCH_CHILD) {
         Next();
       } else {
         current_status_ = child_status;
@@ -126,7 +126,7 @@ BTreeIterator& BTreeIterator::Next() {
       if (status == Status::OK) {
         // [3] The child is not empty, so we add it to the stack to explore it.
         stack_.emplace(std::move(next_child), -1, -1);
-      } else if (status == Status::NOT_FOUND) {
+      } else if (status == Status::NO_SUCH_CHILD) {
         // [4] The child is empty, so we reverse direction. This will lead us to
         // try to read the next entry, if available.
         direction_up = true;

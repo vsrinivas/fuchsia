@@ -143,7 +143,7 @@ Status TreeNode::GetChild(int index,
                           std::unique_ptr<const TreeNode>* child) const {
   FTL_DCHECK(index >= 0 && index <= GetKeyCount());
   if (children_[index].empty()) {
-    return Status::NOT_FOUND;
+    return Status::NO_SUCH_CHILD;
   }
   return FromId(page_storage_, children_[index], child);
 }

@@ -53,6 +53,7 @@ enum class Status {
   NOT_FOUND,
 
   // Internal status.
+  NO_SUCH_CHILD,
   FORMAT_ERROR,
   ILLEGAL_STATE,
   INTERNAL_IO_ERROR,

@@ -114,7 +114,7 @@ TEST_F(TreeNodeTest, GetEntryChild) {
 
   for (int i = 0; i <= size; ++i) {
     std::unique_ptr<const TreeNode> child;
-    EXPECT_EQ(Status::NOT_FOUND, node->GetChild(i, &child));
+    EXPECT_EQ(Status::NO_SUCH_CHILD, node->GetChild(i, &child));
   }
 }
 

@@ -152,7 +152,7 @@ class TreeNode {
 
   // Finds the child node at position |index| and stores it in |child|. |index|
   // has to be in [0, GetKeyCount()]. If the child at the given index is empty
-  // Status::NOT_FOUND is returned and the value of |child| is not updated.
+  // |NO_SUCH_CHILD| is returned and the value of |child| is not updated.
   Status GetChild(int index, std::unique_ptr<const TreeNode>* child) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
