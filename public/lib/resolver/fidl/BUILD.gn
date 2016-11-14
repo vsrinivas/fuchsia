@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("maxwell") {
-  testonly = true
+import("//lib/fidl/fidl.gni")
+
+fidl("resolver") {
+  sources = [
+    "resolver.fidl",
+  ]
 
   deps = [
-    "src/acquirers",
-    "src/agents",
-    "src/context_engine",
-    "src/integration",
-    "src/resolver",
-    "src/suggestion_engine",
+    "//apps/modular/services/document_store",
   ]
 }
+

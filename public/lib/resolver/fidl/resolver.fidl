@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.resolver;
+module resolver;
 
-import "apps/document_store/interfaces/document.fidl";
+import "apps/modular/services/document_store/document.fidl";
 
-[ServiceName="maxwell.resolver"]
+[ServiceName="resolver"]
 interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
