@@ -5,7 +5,6 @@
 group("acquirers") {
   deps = [
     ":gps",
-    ":modular_acquirer",
   ]
 }
 
@@ -15,21 +14,6 @@ executable("gps") {
   sources = [
     "gps.cc",
     "gps.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//apps/modular/lib/app",
-    "//lib/mtl",
-  ]
-}
-
-executable("modular_acquirer") {
-  output_name = "acquirers/modular_acquirer"
-
-  sources = [
-    "modular_acquirer.cc",
-    "modular_acquirer.h",
   ]
 
   deps = [

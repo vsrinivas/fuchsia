@@ -25,7 +25,6 @@ source_set("context_engine_test") {
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers/mock:gps",
-    "//apps/maxwell/src/acquirers/mock:modular_acquirer",
     "//apps/modular/lib/app",
   ]
 }

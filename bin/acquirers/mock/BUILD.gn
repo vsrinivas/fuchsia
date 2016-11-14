@@ -15,17 +15,3 @@ source_set("gps") {
     "//lib/mtl",
   ]
 }
-
-source_set("modular_acquirer") {
-  sources = [
-    "mock_modular_acquirer.cc",
-    "mock_modular_acquirer.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src/acquirers:modular_acquirer",
-    "//apps/modular/lib/app",
-    "//lib/mtl",
-  ]
-}
