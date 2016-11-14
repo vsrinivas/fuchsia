@@ -18,11 +18,16 @@
 #include <threads.h>
 
 static ssize_t ktrace_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    return mx_ktrace_read(get_root_resource(), buf, off, count);
+    uint32_t actual;
+    mx_status_t status = mx_ktrace_read(get_root_resource(),
+                                        buf, off, count, &actual);
+    return status != NO_ERROR ? (ssize_t)status : (ssize_t)actual;
 }
 
 static mx_off_t ktrace_get_size(mx_device_t* dev) {
-    return mx_ktrace_read(get_root_resource(), NULL, 0, 0);
+    uint32_t size;
+    mx_status_t status = mx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
+    return status != NO_ERROR ? (mx_off_t)status : (mx_off_t)size;
 }
 
 static ssize_t ktrace_ioctl(mx_device_t* dev, uint32_t op,

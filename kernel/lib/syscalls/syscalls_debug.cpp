@@ -213,14 +213,20 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     return st;
 }
 
-mx_ssize_t sys_ktrace_read(mx_handle_t handle, void* ptr, uint32_t off, uint32_t len) {
+mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> data,
+                            uint32_t offset, uint32_t len,
+                            user_ptr<uint32_t> actual) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
         return status;
     }
 
-    return ktrace_read_user(ptr, off, len);
+    int result = ktrace_read_user(data.get(), offset, len);
+    if (result < 0)
+        return result;
+
+    return actual.copy_to_user(static_cast<uint32_t>(result));
 }
 
 mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options, user_ptr<void> ptr) {

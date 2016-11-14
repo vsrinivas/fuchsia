@@ -220,8 +220,9 @@ MAGENTA_SYSCALL_DEF(4, 4, 132, mx_status_t, log_read,
                     mx_handle_t handle, uint32_t len, USER_PTR(void) buffer, uint32_t options)
 
 // Tracing
-MAGENTA_SYSCALL_DEF(4, 4, 140, mx_ssize_t, ktrace_read, mx_handle_t handle,
-                    void* ptr, uint32_t off, uint32_t len)
+MAGENTA_SYSCALL_DEF(4, 4, 140, mx_status_t, ktrace_read, mx_handle_t handle,
+                    USER_PTR(void) data, uint32_t offset, uint32_t len,
+                    USER_PTR(uint32_t) actual)
 MAGENTA_SYSCALL_DEF(4, 4, 141, mx_status_t, ktrace_control, mx_handle_t handle,
                     uint32_t action, uint32_t options, USER_PTR(void))
 MAGENTA_SYSCALL_DEF(4, 4, 142, mx_status_t, ktrace_write, mx_handle_t handle,
