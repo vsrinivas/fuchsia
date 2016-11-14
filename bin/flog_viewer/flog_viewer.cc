@@ -28,27 +28,31 @@ void FlogViewer::Initialize(modular::ApplicationContext* application_context,
                             const std::function<void()>& terminate_callback) {
   terminate_callback_ = terminate_callback;
   service_ = application_context->ConnectToEnvironmentService<FlogService>();
+  service_.set_connection_error_handler([this]() {
+    FTL_LOG(ERROR) << "FlogService connection failed";
+    terminate_callback_();
+  });
 }
 
 void FlogViewer::ProcessLogs() {
   FTL_DCHECK(service_);
 
-  service_->GetLogDescriptions([this](
-      fidl::Array<FlogDescriptionPtr> descriptions) {
-    std::cout << std::endl;
-    std::cout << "     id  label" << std::endl;
-    std::cout << "-------- ---------------------------------------------"
-              << std::endl;
+  service_->GetLogDescriptions(
+      [this](fidl::Array<FlogDescriptionPtr> descriptions) {
+        std::cout << std::endl;
+        std::cout << "     id  label" << std::endl;
+        std::cout << "-------- ---------------------------------------------"
+                  << std::endl;
 
-    for (const FlogDescriptionPtr& description : descriptions) {
-      std::cout << std::setw(8) << description->log_id << " "
-                << description->label << std::endl;
-    }
+        for (const FlogDescriptionPtr& description : descriptions) {
+          std::cout << std::setw(8) << description->log_id << " "
+                    << description->label << std::endl;
+        }
 
-    std::cout << std::endl;
+        std::cout << std::endl;
 
-    terminate_callback_();
-  });
+        terminate_callback_();
+      });
 }
 
 void FlogViewer::ProcessLog(uint32_t log_id) {
