@@ -7,7 +7,7 @@
 #include <functional>
 #include <string>
 
-#include "apps/ledger/src/storage/impl/btree/btree_builder.h"
+#include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/public/commit.h"
@@ -147,7 +147,7 @@ void JournalDBImpl::Commit(
     return;
   }
 
-  BTreeBuilder::ApplyChanges(
+  btree::ApplyChanges(
       page_storage_, base_commit->GetRootId(), node_size, std::move(entries),
       [this, callback](Status status, ObjectId object_id,
                        std::unordered_set<ObjectId>&& new_nodes) {

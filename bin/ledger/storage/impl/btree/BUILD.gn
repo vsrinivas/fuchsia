@@ -15,8 +15,6 @@ source_set("lib") {
   sources = [
     "encoding.cc",
     "encoding.h",
-    "btree_builder.cc",
-    "btree_builder.h",
     "btree_utils.cc",
     "btree_utils.h",
     "btree_iterator.cc",
@@ -45,7 +43,6 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "btree_builder_unittest.cc",
     "btree_iterator_unittest.cc",
     "btree_utils_unittest.cc",
     "diff_iterator_unittest.cc",
