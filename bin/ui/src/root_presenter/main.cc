@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/launcher/app.h"
+#include "apps/mozart/src/root_presenter/app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -14,7 +14,7 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
 
-  launcher::App app(command_line);
+  root_presenter::App app(command_line);
 
   loop.Run();
   return 0;

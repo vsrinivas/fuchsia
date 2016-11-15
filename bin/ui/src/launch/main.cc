@@ -4,7 +4,7 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/mozart/services/launcher/launcher.fidl.h"
+#include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
@@ -44,10 +44,10 @@ int main(int argc, const char** argv) {
   fidl::InterfaceHandle<mozart::ViewOwner> view_owner;
   view_provider->CreateView(fidl::GetProxy(&view_owner), nullptr);
 
-  // Ask the launcher to display it.
-  auto launcher =
-      application_context_->ConnectToEnvironmentService<mozart::Launcher>();
-  launcher->Display(std::move(view_owner));
+  // Ask the presenter to display it.
+  auto presenter =
+      application_context_->ConnectToEnvironmentService<mozart::Presenter>();
+  presenter->Present(std::move(view_owner));
 
   // Done!
   loop.PostQuitTask();

@@ -4,9 +4,9 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("launcher") {
+fidl("presentation") {
   sources = [
-    "launcher.fidl",
+    "presenter.fidl",
   ]
 
   public_deps = [

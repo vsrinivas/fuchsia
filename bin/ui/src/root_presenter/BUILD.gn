@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("launcher") {
+executable("root_presenter") {
   sources = [
-    "presenter.cc",
-    "presenter.h",
     "app.cc",
     "app.h",
-    "launcher_view_tree.cc",
-    "launcher_view_tree.h",
     "main.cc",
+    "presentation.cc",
+    "presentation.h",
   ]
 
   deps = [
@@ -19,7 +17,7 @@ executable("launcher") {
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
-    "//apps/mozart/services/launcher",
+    "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",

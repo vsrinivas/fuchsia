@@ -18,10 +18,6 @@ interactions, and manages the state of the overall view hierarchy.
 
 A service which dispatches input events to views.
 
-## Launcher
+## Root Presenter
 
-A simple application to configure the framebuffer, compositor, and view
-system, then launch a view as the root of a new view hierarchy.
-
-This project is intended as scaffolding to bootstrap the user interface
-while we build the rest of the system.
+A simple application to present views as the root of a display.

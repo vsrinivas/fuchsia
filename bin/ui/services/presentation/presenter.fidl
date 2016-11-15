@@ -1,0 +1,15 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "apps/mozart/services/views/view_token.fidl";
+
+// The Presenter service provides a way for applications to ask that a
+// specified view be added to a view tree, leaving any window management
+// concerns up to the discretion of the presenter implementation.
+[ServiceName="mozart::Presenter"]
+interface Presenter {
+  Present(mozart.ViewOwner view_owner);
+};

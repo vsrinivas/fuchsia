@@ -2,49 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/launcher/app.h"
+#include "apps/mozart/src/root_presenter/app.h"
 
 #include <algorithm>
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
-#include "apps/mozart/src/launcher/presenter.h"
+#include "apps/mozart/src/root_presenter/presentation.h"
 #include "lib/ftl/logging.h"
 
-namespace launcher {
+namespace root_presenter {
 
 App::App(const ftl::CommandLine& command_line)
     : application_context_(
           modular::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 
-  // Register launcher service.
-  application_context_->outgoing_services()->AddService<mozart::Launcher>(
-      [this](fidl::InterfaceRequest<mozart::Launcher> request) {
-        launcher_bindings_.AddBinding(this, std::move(request));
+  application_context_->outgoing_services()->AddService<mozart::Presenter>(
+      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
+        presenter_bindings_.AddBinding(this, std::move(request));
       });
 }
 
 App::~App() {}
 
-void App::Display(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
-  mozart::ViewOwnerPtr view_owner =
-      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle));
-
+void App::Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
   InitializeServices();
 
-  auto launch = std::make_unique<Presenter>(
-      compositor_.get(), view_manager_.get(), std::move(view_owner));
-  launch->set_shutdown_callback([ this, launch = launch.get() ] {
-    auto it = std::find_if(presenters_.begin(), presenters_.end(),
-                           [launch](const std::unique_ptr<Presenter>& other) {
-                             return other.get() == launch;
-                           });
-    FTL_DCHECK(it != presenters_.end());
-    presenters_.erase(it);
+  auto presentation = std::make_unique<Presentation>(
+      compositor_.get(), view_manager_.get(),
+      mozart::ViewOwnerPtr::Create(std::move(view_owner_handle)));
+  presentation->Present([ this, presentation = presentation.get() ] {
+    auto it = std::find_if(
+        presentations_.begin(), presentations_.end(),
+        [presentation](const std::unique_ptr<Presentation>& other) {
+          return other.get() == presentation;
+        });
+    FTL_DCHECK(it != presentations_.end());
+    presentations_.erase(it);
   });
-  launch->Show();
-  presenters_.push_back(std::move(launch));
+  presentations_.push_back(std::move(presentation));
 }
 
 void App::InitializeServices() {
@@ -66,9 +63,9 @@ void App::InitializeServices() {
 }
 
 void App::Reset() {
-  presenters_.clear();  // must be first, holds pointers to services
+  presentations_.clear();  // must be first, holds pointers to services
   compositor_.reset();
   view_manager_.reset();
 }
 
-}  // namespace launcher
+}  // namespace root_presenter

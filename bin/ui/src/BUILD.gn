@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("mozart") {
+group("src") {
   deps = [
-    "examples",
-    "glue/base",
-    "lib/skia",
-    "lib/view_associate_framework",
-    "lib/view_framework",
-    "services",
-    "src",
+    "compositor",
+    "input_manager",
+    "input_reader",
+    "launch",
+    "print_input",
+    "root_presenter",
+    "view_manager",
   ]
 }

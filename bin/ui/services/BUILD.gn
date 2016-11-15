@@ -12,7 +12,7 @@ group("services") {
     "geometry/cpp",
     "input",
     "input/cpp",
-    "launcher",
+    "presentation",
     "views",
     "views/cpp",
   ]
