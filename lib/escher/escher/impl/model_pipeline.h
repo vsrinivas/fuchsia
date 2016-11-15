@@ -6,32 +6,32 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/pipeline_spec.h"
+#include "escher/impl/model_pipeline_spec.h"
 #include "ftl/macros.h"
 
 namespace escher {
 namespace impl {
 
-class Pipeline {
+class ModelPipeline {
  public:
-  Pipeline(const PipelineSpec& spec,
-           vk::Device device,
-           vk::Pipeline pipeline,
-           vk::PipelineLayout pipeline_layout);
-  ~Pipeline();
+  ModelPipeline(const ModelPipelineSpec& spec,
+                vk::Device device,
+                vk::Pipeline pipeline,
+                vk::PipelineLayout pipeline_layout);
+  ~ModelPipeline();
 
   vk::Pipeline pipeline() const { return pipeline_; }
   vk::PipelineLayout pipeline_layout() const { return pipeline_layout_; }
 
  private:
-  friend class PipelineCache;
+  friend class ModelPipelineCache;
 
-  PipelineSpec spec_;
+  ModelPipelineSpec spec_;
   vk::Device device_;
   vk::Pipeline pipeline_;
   vk::PipelineLayout pipeline_layout_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Pipeline);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ModelPipeline);
 };
 
 }  // namespace impl

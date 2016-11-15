@@ -46,8 +46,8 @@ class ImageCache;
 class MeshImpl;
 class MeshManager;
 class ModelData;
+class ModelPipelineCache;
 class ModelRenderer;
-class PipelineCache;
 class Resource;
 
 typedef ftl::RefPtr<Resource> ResourcePtr;

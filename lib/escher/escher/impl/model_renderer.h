@@ -20,7 +20,7 @@ class ModelRenderer {
  public:
   ModelRenderer(EscherImpl* escher,
                 ModelData* model_data,
-                PipelineCache* pipeline_cache);
+                ModelPipelineCache* pipeline_cache);
   ~ModelRenderer();
   void Draw(Stage& stage, Model& model, CommandBuffer* command_buffer);
 
@@ -29,7 +29,7 @@ class ModelRenderer {
 
   MeshManager* mesh_manager_;
   ModelData* model_data_;
-  PipelineCache* pipeline_cache_;
+  ModelPipelineCache* pipeline_cache_;
 
   // Avoid per-frame heap allocations.
   std::vector<ModelUniformWriter::PerObjectBinding> per_object_bindings_;

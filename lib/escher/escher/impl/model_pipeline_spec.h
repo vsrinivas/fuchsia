@@ -9,15 +9,13 @@
 namespace escher {
 namespace impl {
 
-// TODO: For now, there is only 1 material, so the PipelineSpec doesn't
+// TODO: For now, there is only 1 material, so the ModelPipelineSpec doesn't
 // bother to mention anything about it.
-// TODO: Rename (ModelPipelineSpec?).  This is the spec for a particular kind of
-// pipeline; there  will be other pipelines that are not created this way.
-struct PipelineSpec {
+struct ModelPipelineSpec {
   MeshSpec mesh_spec;
 
   struct Hash {
-    std::size_t operator()(const PipelineSpec& spec) const {
+    std::size_t operator()(const ModelPipelineSpec& spec) const {
       return static_cast<std::uint32_t>(spec.mesh_spec.flags);
     }
   };
@@ -25,11 +23,13 @@ struct PipelineSpec {
 
 // Inline function definitions.
 
-inline bool operator==(const PipelineSpec& spec1, const PipelineSpec& spec2) {
+inline bool operator==(const ModelPipelineSpec& spec1,
+                       const ModelPipelineSpec& spec2) {
   return spec1.mesh_spec == spec2.mesh_spec;
 }
 
-inline bool operator!=(const PipelineSpec& spec1, const PipelineSpec& spec2) {
+inline bool operator!=(const ModelPipelineSpec& spec1,
+                       const ModelPipelineSpec& spec2) {
   return !(spec1 == spec2);
 }
 

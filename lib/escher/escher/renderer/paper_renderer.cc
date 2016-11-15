@@ -8,8 +8,8 @@
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/model_data.h"
+#include "escher/impl/model_pipeline_cache.h"
 #include "escher/impl/model_renderer.h"
-#include "escher/impl/pipeline_cache.h"
 #include "escher/impl/render_pass_manager.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
@@ -28,14 +28,15 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       // between multiple PaperRenderers.
       model_data_(std::make_unique<impl::ModelData>(context_.device,
                                                     escher->gpu_allocator())),
-      pipeline_cache_(std::make_unique<impl::PipelineCache>(context_.device,
-                                                            render_pass_,
-                                                            0,
-                                                            model_data_.get())),
+      model_pipeline_cache_(
+          std::make_unique<impl::ModelPipelineCache>(context_.device,
+                                                     render_pass_,
+                                                     0,
+                                                     model_data_.get())),
       model_renderer_(
           std::make_unique<impl::ModelRenderer>(escher,
                                                 model_data_.get(),
-                                                pipeline_cache_.get())) {}
+                                                model_pipeline_cache_.get())) {}
 
 PaperRenderer::~PaperRenderer() {}
 

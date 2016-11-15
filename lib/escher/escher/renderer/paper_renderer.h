@@ -30,7 +30,7 @@ class PaperRenderer : public Renderer {
   vk::Format depth_format_;
   vk::RenderPass render_pass_;
   std::unique_ptr<impl::ModelData> model_data_;
-  std::unique_ptr<impl::PipelineCache> pipeline_cache_;
+  std::unique_ptr<impl::ModelPipelineCache> model_pipeline_cache_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);

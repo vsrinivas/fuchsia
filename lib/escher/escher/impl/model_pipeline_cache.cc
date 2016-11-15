@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/impl/pipeline_cache.h"
+#include "escher/impl/model_pipeline_cache.h"
 
 #include "escher/geometry/types.h"
 // TODO: move MeshSpecImpl into its own file, then remove this.
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/model_data.h"
-#include "escher/impl/pipeline.h"
+#include "escher/impl/model_pipeline.h"
 #include "escher/impl/vulkan_utils.h"
 
 namespace escher {
@@ -70,22 +70,23 @@ constexpr char g_fragment_src[] = R"GLSL(
 
 }  // namespace
 
-PipelineCache::PipelineCache(vk::Device device,
-                             vk::RenderPass render_pass,
-                             uint32_t subpass_index,
-                             ModelData* model_data)
+ModelPipelineCache::ModelPipelineCache(vk::Device device,
+                                       vk::RenderPass render_pass,
+                                       uint32_t subpass_index,
+                                       ModelData* model_data)
     : device_(device),
       render_pass_(render_pass),
       subpass_index_(subpass_index),
       model_data_(model_data) {}
 
-PipelineCache::~PipelineCache() {
+ModelPipelineCache::~ModelPipelineCache() {
   device_.waitIdle();
   pipelines_.clear();
 }
 
-Pipeline* PipelineCache::GetPipeline(const PipelineSpec& spec,
-                                     const MeshSpecImpl& mesh_spec_impl) {
+ModelPipeline* ModelPipelineCache::GetPipeline(
+    const ModelPipelineSpec& spec,
+    const MeshSpecImpl& mesh_spec_impl) {
   // TODO: deal with hash collisions
   auto it = pipelines_.find(spec);
   if (it != pipelines_.end()) {
@@ -97,8 +98,8 @@ Pipeline* PipelineCache::GetPipeline(const PipelineSpec& spec,
   return new_pipeline_ptr;
 }
 
-std::unique_ptr<Pipeline> PipelineCache::NewPipeline(
-    const PipelineSpec& spec,
+std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
+    const ModelPipelineSpec& spec,
     const MeshSpecImpl& mesh_spec_impl) {
   // TODO: create customized pipelines for different shapes/materials/etc.
 
@@ -243,7 +244,8 @@ std::unique_ptr<Pipeline> PipelineCache::NewPipeline(
   device_.destroyShaderModule(vertex_module);
   device_.destroyShaderModule(fragment_module);
 
-  return std::make_unique<Pipeline>(spec, device_, pipeline, pipeline_layout);
+  return std::make_unique<ModelPipeline>(spec, device_, pipeline,
+                                         pipeline_layout);
 }
 
 }  // namespace impl

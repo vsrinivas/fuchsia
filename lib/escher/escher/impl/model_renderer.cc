@@ -11,8 +11,8 @@
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/model_data.h"
-#include "escher/impl/pipeline.h"
-#include "escher/impl/pipeline_cache.h"
+#include "escher/impl/model_pipeline.h"
+#include "escher/impl/model_pipeline_cache.h"
 #include "escher/renderer/image.h"
 #include "escher/scene/model.h"
 #include "escher/scene/shape.h"
@@ -24,7 +24,7 @@ namespace impl {
 
 ModelRenderer::ModelRenderer(EscherImpl* escher,
                              ModelData* model_data,
-                             PipelineCache* pipeline_cache)
+                             ModelPipelineCache* pipeline_cache)
     : mesh_manager_(escher->mesh_manager()),
       model_data_(model_data),
       pipeline_cache_(pipeline_cache) {
@@ -114,14 +114,14 @@ void ModelRenderer::Draw(Stage& stage,
   // sucks a litte bit, because we'll eventually want to sort draw calls by
   // pipeline/opacity/depth-order/etc.
   // TODO: sort draw calls.
-  PipelineSpec previous_pipeline_spec;
-  Pipeline* pipeline = nullptr;
+  ModelPipelineSpec previous_pipeline_spec;
+  ModelPipeline* pipeline = nullptr;
   for (size_t i = 0; i < objects.size(); ++i) {
     const Object& o = objects[i];
     const MeshPtr& mesh = GetMeshForShape(o.shape());
     FTL_DCHECK(mesh);
 
-    PipelineSpec pipeline_spec;
+    ModelPipelineSpec pipeline_spec;
     pipeline_spec.mesh_spec = mesh->spec;
 
     // Don't rebind pipeline state if it is already up-to-date.
