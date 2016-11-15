@@ -31,13 +31,17 @@ public:
 
     mx_status_t Map(size_t vmar_offset,
                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, size_t len,
-                    uint32_t vmar_flags, uint arch_mmu_flags, mxtl::RefPtr<VmMapping>* out);
+                    uint32_t flags, mxtl::RefPtr<VmMapping>* out);
 
-    mx_status_t Protect(size_t offset, size_t len, uint arch_mmu_flags);
+    mx_status_t Protect(size_t offset, size_t len, uint32_t flags);
 
     mx_status_t Unmap(size_t offset, size_t len);
 
     mxtl::RefPtr<VmAddressRegion> vmar() const { return vmar_; }
+
+    // Check if the given flags define an allowed combination of RWX
+    // protections.
+    static bool is_valid_mapping_protection(uint32_t flags);
 
 private:
     explicit VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegion> vmar);
