@@ -28,7 +28,24 @@ std::string GetInputSequenceForKeyPressedEvent(const mozart::Event& key_event,
       FTL_NOTIMPLEMENTED();
       return std::string();
     }
-    return std::string(1, static_cast<char>(key_data.code_point));
+
+    uint32_t non_control = (mozart::kModifierShift | mozart::kModifierAlt |
+                            mozart::kModifierSuper);
+    if (key_data.modifiers) {
+      if ((key_data.modifiers & mozart::kModifierControl) &&
+          !(key_data.modifiers & non_control)) {
+        char c = static_cast<char>(key_data.code_point);
+        if (c >= 'a' && c <= 'z') {
+          c -= 96;
+        } else if (c >= '@' && c <= '_') {
+          c -= 64;
+        }
+        return std::string(1, c);
+      }
+      return std::string();
+    } else {
+      return std::string(1, static_cast<char>(key_data.code_point));
+    }
   }
 
   switch (key_data.hid_usage) {
