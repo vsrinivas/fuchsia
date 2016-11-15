@@ -25,7 +25,7 @@
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace modular {
+namespace {
 
 constexpr char kExampleRecipeUrl[] = "file:///system/apps/example_recipe";
 constexpr char kFlutterModuleUrl[] = "file:///system/apps/example_module3.flx";
@@ -33,81 +33,26 @@ constexpr char kFlutterModuleUrl[] = "file:///system/apps/example_module3.flx";
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewResourceIdBase = 100;
 
-class DummyUserShellImpl : public UserShell,
-                           public StoryWatcher,
-                           public mozart::BaseView {
+class DummyUserShellView : public mozart::BaseView {
  public:
-  explicit DummyUserShellImpl(
+  explicit DummyUserShellView(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<UserShell> user_shell_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
-                 "DummyUserShellImpl"),
-        binding_(this, std::move(user_shell_request)),
-        story_watcher_binding_(this) {}
+                 "DummyUserShellView") {}
 
-  ~DummyUserShellImpl() override = default;
+  ~DummyUserShellView() override = default;
+
+  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    GetViewContainer()->AddChild(++child_view_key_, std::move(view_owner));
+  }
 
  private:
-  // |UserShell|
-  void SetStoryProvider(
-      fidl::InterfaceHandle<StoryProvider> story_provider) override {
-    story_provider_.Bind(std::move(story_provider));
-    CreateStory(kExampleRecipeUrl);
-  }
-
-  // |StoryWatcher|
-  void OnStart() override { FTL_LOG(INFO) << "DummyUserShell::OnStart()"; }
-
-  // |StoryWatcher|
-  void OnData() override {
-    FTL_LOG(INFO) << "DummyUserShell::OnData() " << ++data_count_;
-
-    // When some data has arrived, we stop the story.
-    if (data_count_ % 5 == 0) {
-      FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
-      story_controller_->Stop([this]() {
-        TearDownStoryController();
-
-        // When the story stops, we start it again.
-        FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this]() {
-              FTL_LOG(INFO) << "DummyUserShell Story.Stop() DONE WAIT for 10s";
-              child_view_key_++;
-              ResumeStory();
-            },
-            ftl::TimeDelta::FromSeconds(10));
-      });
-    }
-  }
-
-  // |StoryWatcher|
-  void OnStop() override { FTL_LOG(INFO) << "DummyUserShell::OnStop()"; }
-
-  // |StoryWatcher|
-  void OnDone() override {
-    FTL_LOG(INFO) << "DummyUserShell::OnDone()";
-    story_controller_->Stop([this]() {
-      TearDownStoryController();
-
-      // When the story is done, we start the next one.
-      FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 20s";
-      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this]() {
-            FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 20s";
-            child_view_key_++;
-            CreateStory(kFlutterModuleUrl);
-          },
-          ftl::TimeDelta::FromSeconds(20));
-    });
-  }
-
   // |mozart::BaseView|
   void OnChildAttached(
       uint32_t child_key,
-      fidl::StructPtr<mozart::ViewInfo> child_view_info) override {
+      mozart::ViewInfoPtr child_view_info) override {
     view_info_ = std::move(child_view_info);
     auto view_properties = mozart::ViewProperties::New();
     GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
@@ -146,15 +91,88 @@ class DummyUserShellImpl : public UserShell,
     scene()->Publish(CreateSceneMetadata());
   }
 
+  mozart::ViewInfoPtr view_info_;
+  uint32_t child_view_key_{};
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellView);
+};
+
+class DummyUserShellApp : public modular::StoryWatcher,
+                          public modular::SingleServiceViewApp<modular::UserShell> {
+ public:
+  explicit DummyUserShellApp() : story_watcher_binding_(this) {}
+  ~DummyUserShellApp() override = default;
+
  private:
+  // |SingleServiceViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+    view_.reset(new DummyUserShellView(
+        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request)));
+  }
+
+  // |UserShell|
+  void SetStoryProvider(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
+    story_provider_.Bind(std::move(story_provider));
+    CreateStory(kExampleRecipeUrl);
+  }
+
+  // |StoryWatcher|
+  void OnStart() override { FTL_LOG(INFO) << "DummyUserShell::OnStart()"; }
+
+  // |StoryWatcher|
+  void OnData() override {
+    FTL_LOG(INFO) << "DummyUserShell::OnData() " << ++data_count_;
+
+    // When some data has arrived, we stop the story.
+    if (data_count_ % 5 == 0) {
+      FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
+      story_controller_->Stop([this]() {
+        TearDownStoryController();
+
+        // When the story stops, we start it again.
+        FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this]() {
+              FTL_LOG(INFO) << "DummyUserShell Story.Stop() DONE WAIT for 10s";
+              ResumeStory();
+            },
+            ftl::TimeDelta::FromSeconds(10));
+      });
+    }
+  }
+
+  // |StoryWatcher|
+  void OnStop() override { FTL_LOG(INFO) << "DummyUserShell::OnStop()"; }
+
+  // |StoryWatcher|
+  void OnDone() override {
+    FTL_LOG(INFO) << "DummyUserShell::OnDone()";
+    story_controller_->Stop([this]() {
+      TearDownStoryController();
+
+      // When the story is done, we start the next one.
+      FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 20s";
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+          [this]() {
+            FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 20s";
+            CreateStory(kFlutterModuleUrl);
+          },
+          ftl::TimeDelta::FromSeconds(20));
+    });
+  }
+
   void CreateStory(const fidl::String& url) {
     FTL_LOG(INFO) << "DummyUserShell::CreateStory() " << url;
     story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
-    story_controller_->GetInfo([this](fidl::StructPtr<StoryInfo> story_info) {
+    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
       FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
                     << " url: " << story_info->url << " id: " << story_info->id
                     << " story_page_id: "
-                    << to_string(story_info->story_page_id)
+                    << modular::to_string(story_info->story_page_id)
                     << " is_running: " << story_info->is_running;
 
       // Retain the story info so we can resume it by ID.
@@ -167,7 +185,8 @@ class DummyUserShellImpl : public UserShell,
   void ResumeStory() {
     FTL_LOG(INFO) << "DummyUserShell::ResumeStory() "
                   << " url: " << story_info_->url << " id: " << story_info_->id
-                  << " story_page_id: " << to_string(story_info_->story_page_id)
+                  << " story_page_id: "
+                  << modular::to_string(story_info_->story_page_id)
                   << " is_running: " << story_info_->is_running;
 
     story_provider_->ResumeStoryByInfo(story_info_->Clone(),
@@ -183,8 +202,10 @@ class DummyUserShellImpl : public UserShell,
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(fidl::GetProxy(&story_view));
 
-    // Embed the new story.
-    GetViewContainer()->AddChild(child_view_key_, std::move(story_view));
+    // Show the new story, if we have a view.
+    if (view_) {
+      view_->ConnectView(std::move(story_view));
+    }
   }
 
   void TearDownStoryController() {
@@ -192,25 +213,22 @@ class DummyUserShellImpl : public UserShell,
     story_controller_.reset();
   }
 
-  StrongBinding<UserShell> binding_;
-  fidl::Binding<StoryWatcher> story_watcher_binding_;
-  StoryProviderPtr story_provider_;
-  StoryControllerPtr story_controller_;
-  StoryInfoPtr story_info_;
+  std::unique_ptr<DummyUserShellView> view_;
+
+  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  modular::StoryProviderPtr story_provider_;
+  modular::StoryControllerPtr story_controller_;
+  modular::StoryInfoPtr story_info_;
   int data_count_ = 0;
 
-  mozart::ViewInfoPtr view_info_;
-  uint32_t child_view_key_ = 0;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellApp);
 };
 
-}  // namespace modular
+}  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<modular::UserShell, modular::DummyUserShellImpl>
-      app;
+  DummyUserShellApp app;
   loop.Run();
   return 0;
 }

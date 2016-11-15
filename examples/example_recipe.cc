@@ -17,7 +17,6 @@
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -54,36 +53,20 @@ constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
 using document_store::Document;
 using document_store::DocumentPtr;
 
-using fidl::Array;
-using fidl::Binding;
-using fidl::InterfaceHandle;
-using fidl::InterfacePtr;
-using fidl::InterfaceRequest;
-using fidl::StructPtr;
-
-using modular::DocumentEditor;
-using modular::FidlDocMap;
-using modular::Link;
-using modular::LinkWatcher;
-using modular::Module;
-using modular::ModuleController;
-using modular::ModuleWatcher;
-using modular::Story;
-using modular::StrongBinding;
 using modular::operator<<;
 
 // Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
-class LinkConnection : public LinkWatcher {
+class LinkConnection : public modular::LinkWatcher {
  public:
-  LinkConnection(Link* const src, Link* const dst)
+  LinkConnection(modular::Link* const src, modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
-    InterfaceHandle<LinkWatcher> watcher;
+    fidl::InterfaceHandle<modular::LinkWatcher> watcher;
     src_binding_.Bind(GetProxy(&watcher));
     src_->Watch(std::move(watcher));
   }
 
-  void Notify(FidlDocMap docs) override {
+  void Notify(modular::FidlDocMap docs) override {
     FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
     // We receive an initial update when the Link initializes. It's empty
     // if this is a new session, or it has documents if it's a restored session.
@@ -96,19 +79,20 @@ class LinkConnection : public LinkWatcher {
   }
 
  private:
-  Binding<LinkWatcher> src_binding_;
-  Link* const src_;
-  Link* const dst_;
+  fidl::Binding<modular::LinkWatcher> src_binding_;
+  modular::Link* const src_;
+  modular::Link* const dst_;
   bool initial_update_ = true;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
 
-class ModuleMonitor : public ModuleWatcher {
+class ModuleMonitor : public modular::ModuleWatcher {
  public:
-  ModuleMonitor(ModuleController* const module_client, Story* const story)
+  ModuleMonitor(modular::ModuleController* const module_client,
+                modular::Story* const story)
       : binding_(this), story_(story) {
-    InterfaceHandle<ModuleWatcher> watcher;
+    fidl::InterfaceHandle<modular::ModuleWatcher> watcher;
     binding_.Bind(GetProxy(&watcher));
     module_client->Watch(std::move(watcher));
   }
@@ -121,122 +105,36 @@ class ModuleMonitor : public ModuleWatcher {
   void OnStop() override {}
 
  private:
-  Binding<ModuleWatcher> binding_;
-  Story* const story_;
+  fidl::Binding<modular::ModuleWatcher> binding_;
+  modular::Story* const story_;
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
 struct ViewData {
   explicit ViewData(uint32_t key) : key(key) {}
   const uint32_t key;
-  StructPtr<mozart::ViewInfo> view_info;
-  StructPtr<mozart::ViewProperties> view_properties;
+  mozart::ViewInfoPtr view_info;
+  mozart::ViewPropertiesPtr view_properties;
   mozart::RectF layout_bounds;
   uint32_t scene_version = 1u;
 };
 
-// Module implementation that acts as a recipe.
-class RecipeImpl : public Module, public mozart::BaseView {
+class RecipeView : public mozart::BaseView {
  public:
-  explicit RecipeImpl(
+  explicit RecipeView(
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<Module> module_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
-                 "RecipeImpl"),
-        module_binding_(this, std::move(module_request)) {
-    FTL_LOG(INFO) << "RecipeImpl";
-  }
+                 "RecipeView") {}
 
-  ~RecipeImpl() override { FTL_LOG(INFO) << "~RecipeImpl"; }
+  ~RecipeView() override = default;
 
-  void Initialize(InterfaceHandle<Story> story,
-                  InterfaceHandle<Link> link) override {
-    FTL_LOG(INFO) << "RecipeImpl::Initialize()";
-
-    story_.Bind(std::move(story));
-    link_.Bind(std::move(link));
-
-    story_->CreateLink("module1", GetProxy(&module1_link_));
-    story_->CreateLink("module2", GetProxy(&module2_link_));
-
-    InterfaceHandle<Link> module1_link_handle;  // To pass to StartModule().
-    module1_link_->Dup(GetProxy(&module1_link_handle));
-
-    InterfaceHandle<Link> module2_link_handle;  // To pass to StartModule().
-    module2_link_->Dup(GetProxy(&module2_link_handle));
-
-    FTL_LOG(INFO) << "recipe start module module1";
-    InterfaceHandle<mozart::ViewOwner> module1_view;
-    story_->StartModule("file:///system/apps/example_module1",
-                        std::move(module1_link_handle), GetProxy(&module1_),
-                        GetProxy(&module1_view));
-    GetViewContainer()->AddChild(0, std::move(module1_view));
+  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    const uint32_t key = next_child_key_++;
+    GetViewContainer()->AddChild(key, std::move(view_owner));
     views_.emplace(
-        std::make_pair(0, std::unique_ptr<ViewData>(new ViewData(0))));
-
-    FTL_LOG(INFO) << "recipe start module module2";
-    InterfaceHandle<mozart::ViewOwner> module2_view;
-    story_->StartModule("file:///system/apps/example_module2",
-                        std::move(module2_link_handle), GetProxy(&module2_),
-                        GetProxy(&module2_view));
-    GetViewContainer()->AddChild(1, std::move(module2_view));
-    views_.emplace(
-        std::make_pair(1, std::unique_ptr<ViewData>(new ViewData(1))));
-
-    connections_.emplace_back(
-        new LinkConnection(module1_link_.get(), module2_link_.get()));
-    connections_.emplace_back(
-        new LinkConnection(module2_link_.get(), module1_link_.get()));
-
-    // Also connect with the root link, to create change notifications
-    // the user shell can react on.
-    connections_.emplace_back(
-        new LinkConnection(module1_link_.get(), link_.get()));
-    connections_.emplace_back(
-        new LinkConnection(module2_link_.get(), link_.get()));
-
-    module_monitors_.emplace_back(
-        new ModuleMonitor(module1_.get(), story_.get()));
-    module_monitors_.emplace_back(
-        new ModuleMonitor(module2_.get(), story_.get()));
-
-    // TODO(mesch): Good illustration of the remaining issue to
-    // restart a story: Here is how does this code look like when
-    // the Story is not new, but already contains existing Modules
-    // and Links from the previous execution that is continued here.
-    // Is that really enough?
-    module1_link_->Query(
-        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
-          if (value.size() == 0) {
-            // This must come last, otherwise LinkConnection gets a
-            // notification of our own write because of the "send
-            // initial values" code.
-            FidlDocMap docs;
-            DocumentEditor(kDocId)
-                .SetProperty(kIsALabel, DocumentEditor::NewIriValue(kIsAValue))
-                .SetProperty(kCounterLabel, DocumentEditor::NewIntValue(1))
-                .SetProperty(kSenderLabel,
-                             DocumentEditor::NewStringValue("RecipeImpl"))
-                .Insert(&docs);
-            module1_link_->SetAllDocuments(std::move(docs));
-          }
-        });
-  }
-
-  void Stop(const StopCallback& done) override {
-    // TODO(mesch): This is tentative. Not sure what the right amount
-    // of cleanup it is to ask from a module implementation.
-    connections_.clear();
-    module_monitors_.clear();
-    module1_->Stop([this, done]() {
-      module2_->Stop([this, done]() {
-        module1_link_.reset();
-        module2_link_.reset();
-        done();
-      });
-    });
+        std::make_pair(key, std::unique_ptr<ViewData>(new ViewData(key))));
   }
 
  private:
@@ -244,7 +142,7 @@ class RecipeImpl : public Module, public mozart::BaseView {
   // https://github.com/fuchsia-mirror/mozart/blob/master/examples/tile/tile_view.cc
   // |BaseView|:
   void OnChildAttached(uint32_t child_key,
-                       StructPtr<mozart::ViewInfo> child_view_info) override {
+                       mozart::ViewInfoPtr child_view_info) override {
     auto it = views_.find(child_key);
     FTL_DCHECK(it != views_.end()) << "Invalid child_key.";
     auto view_data = it->second.get();
@@ -376,30 +274,151 @@ class RecipeImpl : public Module, public mozart::BaseView {
     scene()->Publish(CreateSceneMetadata());
   }
 
-  StrongBinding<Module> module_binding_;
+  std::map<uint32_t, std::unique_ptr<ViewData>> views_;
+  uint32_t next_child_key_{};
 
-  InterfacePtr<Link> link_;
-  InterfacePtr<Story> story_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(RecipeView);
+};
 
-  InterfacePtr<ModuleController> module1_;
-  InterfacePtr<Link> module1_link_;
+// Module implementation that acts as a recipe. There is one instance
+// per application; the story runner creates new application instances
+// to run more module instances.
+class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
+ public:
+  RecipeApp() {}
+  ~RecipeApp() override = default;
 
-  InterfacePtr<ModuleController> module2_;
-  InterfacePtr<Link> module2_link_;
+ private:
+  // |SingleServiceViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+    view_.reset(new RecipeView(
+        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request)));
+
+    for (auto& view_owner : child_views_) {
+      view_->ConnectView(std::move(view_owner));
+    }
+
+    child_views_.clear();
+  }
+
+  void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    if (view_) {
+      view_->ConnectView(std::move(view_owner));
+    } else {
+      child_views_.emplace_back(std::move(view_owner));
+    }
+  }
+
+  // |Module|
+  void Initialize(fidl::InterfaceHandle<modular::Story> story,
+                  fidl::InterfaceHandle<modular::Link> link) override {
+    story_.Bind(std::move(story));
+    link_.Bind(std::move(link));
+
+    story_->CreateLink("module1", GetProxy(&module1_link_));
+    story_->CreateLink("module2", GetProxy(&module2_link_));
+
+    fidl::InterfaceHandle<modular::Link> module1_link_handle;
+    module1_link_->Dup(GetProxy(&module1_link_handle));
+
+    fidl::InterfaceHandle<modular::Link> module2_link_handle;
+    module2_link_->Dup(GetProxy(&module2_link_handle));
+
+    fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
+    story_->StartModule("file:///system/apps/example_module1",
+                        std::move(module1_link_handle), GetProxy(&module1_),
+                        GetProxy(&module1_view));
+    ConnectView(std::move(module1_view));
+
+    fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
+    story_->StartModule("file:///system/apps/example_module2",
+                        std::move(module2_link_handle), GetProxy(&module2_),
+                        GetProxy(&module2_view));
+    ConnectView(std::move(module2_view));
+
+    connections_.emplace_back(
+        new LinkConnection(module1_link_.get(), module2_link_.get()));
+    connections_.emplace_back(
+        new LinkConnection(module2_link_.get(), module1_link_.get()));
+
+    // Also connect with the root link, to create change notifications
+    // the user shell can react on.
+    connections_.emplace_back(
+        new LinkConnection(module1_link_.get(), link_.get()));
+    connections_.emplace_back(
+        new LinkConnection(module2_link_.get(), link_.get()));
+
+    module_monitors_.emplace_back(
+        new ModuleMonitor(module1_.get(), story_.get()));
+    module_monitors_.emplace_back(
+        new ModuleMonitor(module2_.get(), story_.get()));
+
+    // TODO(mesch): Good illustration of the remaining issue to
+    // restart a story: Here is how does this code look like when
+    // the Story is not new, but already contains existing Modules
+    // and Links from the previous execution that is continued here.
+    // Is that really enough?
+    module1_link_->Query(
+        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
+          if (value.size() == 0) {
+            // This must come last, otherwise LinkConnection gets a
+            // notification of our own write because of the "send
+            // initial values" code.
+            modular::FidlDocMap docs;
+            modular::DocumentEditor(kDocId)
+                .SetProperty(kIsALabel,
+                             modular::DocumentEditor::NewIriValue(kIsAValue))
+                .SetProperty(kCounterLabel,
+                             modular::DocumentEditor::NewIntValue(1))
+                .SetProperty(kSenderLabel,
+                             modular::DocumentEditor::NewStringValue("RecipeImpl"))
+                .Insert(&docs);
+            module1_link_->SetAllDocuments(std::move(docs));
+          }
+        });
+  }
+
+  // |Module|
+  void Stop(const StopCallback& done) override {
+    // TODO(mesch): This is tentative. Not sure what the right amount
+    // of cleanup it is to ask from a module implementation.
+    connections_.clear();
+    module_monitors_.clear();
+    module1_->Stop([this, done]() {
+      module2_->Stop([this, done]() {
+        module1_link_.reset();
+        module2_link_.reset();
+        done();
+      });
+    });
+  }
+
+  std::unique_ptr<RecipeView> view_;
+  std::vector<fidl::InterfaceHandle<mozart::ViewOwner>> child_views_;
+
+  modular::LinkPtr link_;
+  modular::StoryPtr story_;
+
+  modular::ModuleControllerPtr module1_;
+  modular::LinkPtr module1_link_;
+
+  modular::ModuleControllerPtr module2_;
+  modular::LinkPtr module2_link_;
 
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
-  std::map<uint32_t, std::unique_ptr<ViewData>> views_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(RecipeImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<modular::Module, RecipeImpl> app;
+  RecipeApp app;
   loop.Run();
   return 0;
 }

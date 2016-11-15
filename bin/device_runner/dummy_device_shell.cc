@@ -8,43 +8,47 @@
 #include <memory>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/device/device_runner.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace modular {
+namespace {
 
 constexpr char kDummyUserName[] = "user1";
 
-using fidl::InterfaceHandle;
-using fidl::InterfacePtr;
-using fidl::InterfaceRequest;
-
-class DummyDeviceShellImpl : public DeviceShell {
+class DummyDeviceShellApp :
+      public modular::SingleServiceViewApp<modular::DeviceShell> {
  public:
-  DummyDeviceShellImpl(mozart::ViewManagerPtr view_manager,
-                       InterfaceRequest<DeviceShell> device_shell_request,
-                       InterfaceRequest<mozart::ViewOwner> view_owner_request)
-      : binding_(this, std::move(device_shell_request)),
-        view_owner_request_(std::move(view_owner_request)) {}
-
-  ~DummyDeviceShellImpl() override = default;
+  DummyDeviceShellApp() {}
+  ~DummyDeviceShellApp() override = default;
 
  private:
-  void SetDeviceRunner(InterfaceHandle<DeviceRunner> device_runner) override {
-    device_runner_.Bind(std::move(device_runner));
-    device_runner_->Login(kDummyUserName, std::move(view_owner_request_));
+  // |SingleServiceViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+    view_owner_request_ = std::move(view_owner_request);
+    Connect();
   }
 
-  StrongBinding<DeviceShell> binding_;
-  InterfacePtr<DeviceRunner> device_runner_;
-  InterfaceRequest<mozart::ViewOwner> view_owner_request_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellImpl);
+  // |DeviceShell|
+  void SetDeviceRunner(
+      fidl::InterfaceHandle<modular::DeviceRunner> device_runner) override {
+    device_runner_.Bind(std::move(device_runner));
+    Connect();
+  }
+
+  void Connect() {
+    if (device_runner_ && view_owner_request_) {
+      device_runner_->Login(kDummyUserName, std::move(view_owner_request_));
+    }
+  }
+
+  fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  modular::DeviceRunnerPtr device_runner_;
+  FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellApp);
 };
 
 }  // namespace
@@ -52,9 +56,7 @@ class DummyDeviceShellImpl : public DeviceShell {
 int main(int argc, const char** argv) {
   FTL_LOG(INFO) << "dummy_device_shell main";
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<modular::DeviceShell,
-                                modular::DummyDeviceShellImpl>
-      app;
+  DummyDeviceShellApp app;
   loop.Run();
   return 0;
 }

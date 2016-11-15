@@ -131,13 +131,10 @@ void StoryImpl::StartModule(
 
         mozart::ViewProviderPtr view_provider;
         ConnectToService(app_services.get(), fidl::GetProxy(&view_provider));
-
-        ServiceProviderPtr view_services;
-        view_provider->CreateView(std::move(view_owner_request),
-                                  fidl::GetProxy(&view_services));
+        view_provider->CreateView(std::move(view_owner_request), nullptr);
 
         ModulePtr module;
-        ConnectToService(view_services.get(), fidl::GetProxy(&module));
+        ConnectToService(app_services.get(), fidl::GetProxy(&module));
 
         fidl::InterfaceHandle<Story> self;
         fidl::InterfaceRequest<Story> self_request = GetProxy(&self);

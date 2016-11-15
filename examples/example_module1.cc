@@ -25,17 +25,6 @@
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
 
-using fidl::InterfaceHandle;
-using fidl::InterfacePtr;
-using fidl::InterfaceRequest;
-
-using modular::Link;
-using modular::Module;
-using modular::Store;
-using modular::Story;
-using modular::StrongBinding;
-using modular::operator<<;
-
 namespace {
 
 constexpr uint32_t kContentImageResourceId = 1;
@@ -45,70 +34,24 @@ constexpr int kValueHandoffDuration = 1;
 
 constexpr char kModuleName[] = "Module1Impl";
 
-// Module implementation that acts as a leaf module. It implements Module.
-// TODO(jimbe) Factor out the BaseView code into its own class.
-class Module1Impl : public mozart::BaseView, public Module {
+class Module1View : public mozart::BaseView {
  public:
-  explicit Module1Impl(
+  explicit Module1View(
+      modular::Store* const store,
       mozart::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<Module> module_request,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  kModuleName),
-        module_binding_(this, std::move(module_request)),
-        store_(kModuleName),
-        weak_ptr_factory_(this) {
-    FTL_LOG(INFO) << kModuleName;
+        store_(store) {}
 
-    store_.AddCallback([this] { IncrementCounterAction(); });
-    store_.AddCallback([this] { CheckForDone(); });
-  }
+  ~Module1View() override = default;
 
-  ~Module1Impl() override { FTL_LOG(INFO) << "~Module1Impl"; }
-
-  void Initialize(InterfaceHandle<Story> story,
-                  InterfaceHandle<Link> link) override {
-    story_.Bind(std::move(story));
-    store_.Initialize(std::move(link));
-  }
-
-  void Stop(const StopCallback& done) override {
-    store_.Stop();
-    story_.reset();
-    done();
+  void set_enable_animation(bool value) {
+    enable_animation_ = value;
   }
 
  private:
-  void CheckForDone() {
-    if (store_.counter.counter > 10)
-      story_->Done();
-  }
-
-  void IncrementCounterAction() {
-    if (store_.counter.sender == kModuleName || store_.counter.counter > 10)
-      return;
-
-    // TODO(jimbe) Enabling animation should be done in its own function, but
-    // it needs a trigger to know when to start.
-    enable_animation_ = true;
-    Invalidate();
-    ftl::WeakPtr<Module1Impl> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, module_ptr]() {
-          FTL_LOG(INFO) << "ControlAnimation() DONE";
-          if (!module_ptr.get())
-            return;
-
-          enable_animation_ = false;
-          store_.counter.sender = kModuleName;
-          store_.counter.counter += 1;
-          store_.MarkDirty();
-          store_.ModelChanged();
-        },
-        ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
-  }
-
   // Copied from
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
@@ -151,7 +94,7 @@ class Module1Impl : public mozart::BaseView, public Module {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
     canvas->rotate(
-        SkIntToScalar(kTickRotationDegrees * store_.counter.counter));
+        SkIntToScalar(kTickRotationDegrees * store_->counter.counter));
     SkPaint paint;
     paint.setColor(SK_ColorGREEN);
     paint.setAntiAlias(true);
@@ -160,26 +103,101 @@ class Module1Impl : public mozart::BaseView, public Module {
     canvas->flush();
   }
 
+  modular::Store* const store_;
   mozart::BufferProducer buffer_producer_;
-
-  StrongBinding<Module> module_binding_;
-  InterfacePtr<Story> story_;
-
-  Store store_;
-
   bool enable_animation_ = false;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(Module1View);
+};
+
+// Module implementation that acts as a leaf module. It implements Module.
+class Module1App : public modular::SingleServiceViewApp<modular::Module> {
+ public:
+  explicit Module1App()
+      : store_(kModuleName),
+        weak_ptr_factory_(this) {
+    FTL_LOG(INFO) << kModuleName;
+
+    store_.AddCallback([this] { IncrementCounterAction(); });
+    store_.AddCallback([this] { CheckForDone(); });
+  }
+
+  ~Module1App() override = default;
+
+ private:
+  // |SingleServiceViewApp|
+  void CreateView(
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<modular::ServiceProvider> services) override {
+    view_.reset(new Module1View(
+        &store_,
+        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request)));
+  }
+
+  // |Module|
+  void Initialize(fidl::InterfaceHandle<modular::Story> story,
+                  fidl::InterfaceHandle<modular::Link> link) override {
+    story_.Bind(std::move(story));
+    store_.Initialize(std::move(link));
+  }
+
+  // |Module|
+  void Stop(const StopCallback& done) override {
+    store_.Stop();
+    story_.reset();
+    done();
+  }
+
+  void CheckForDone() {
+    if (store_.counter.counter > 10)
+      story_->Done();
+  }
+
+  void IncrementCounterAction() {
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 10)
+      return;
+
+    // TODO(jimbe) Enabling animation should be done in its own function, but
+    // it needs a trigger to know when to start.
+    if (view_) {
+      view_->set_enable_animation(true);
+      view_->Invalidate();
+    }
+    ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this, module_ptr]() {
+          FTL_LOG(INFO) << "ControlAnimation() DONE";
+          if (!module_ptr.get())
+            return;
+
+          if (view_) {
+            view_->set_enable_animation(false);
+          };
+          store_.counter.sender = kModuleName;
+          store_.counter.counter += 1;
+          store_.MarkDirty();
+          store_.ModelChanged();
+        },
+        ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
+  }
+
+  std::unique_ptr<Module1View> view_;
+  fidl::InterfacePtr<modular::Story> story_;
+  modular::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<Module1Impl> weak_ptr_factory_;
+  ftl::WeakPtrFactory<Module1App> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module1Impl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Module1App);
 };
+
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<Module, Module1Impl> app;
+  Module1App app;
   loop.Run();
   return 0;
 }

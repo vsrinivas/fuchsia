@@ -227,15 +227,10 @@ class UserRunnerImpl : public UserRunner {
 
     mozart::ViewProviderPtr view_provider;
     ConnectToService(app_services.get(), GetProxy(&view_provider));
-
-    ServiceProviderPtr view_services;
-    view_provider->CreateView(std::move(view_owner_request),
-                              GetProxy(&view_services));
-
-    view_providers_.AddInterfacePtr(std::move(view_provider));
+    view_provider->CreateView(std::move(view_owner_request), nullptr);
 
     // Use this service provider to get |UserShell| interface.
-    ConnectToService(view_services.get(), GetProxy(&user_shell_));
+    ConnectToService(app_services.get(), GetProxy(&user_shell_));
   }
 
   std::shared_ptr<ApplicationContext> application_context_;
@@ -244,7 +239,6 @@ class UserRunnerImpl : public UserRunner {
   // The application environment hosted by user runner.
   std::unique_ptr<UserRunnerScope> user_runner_scope_;
 
-  fidl::InterfacePtrSet<mozart::ViewProvider> view_providers_;
   UserShellPtr user_shell_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
