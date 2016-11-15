@@ -39,6 +39,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/thread_dispatcher.cpp \
     $(LOCAL_DIR)/user_copy.cpp \
     $(LOCAL_DIR)/user_thread.cpp \
+    $(LOCAL_DIR)/vm_address_region_dispatcher.cpp \
     $(LOCAL_DIR)/vm_object_dispatcher.cpp \
     $(LOCAL_DIR)/wait_set_dispatcher.cpp \
     $(LOCAL_DIR)/wait_state_observer.cpp \

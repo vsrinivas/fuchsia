@@ -24,7 +24,8 @@ static void DumpProcessListKeyMap() {
     printf("#jb : number of job handles\n");
     printf("#pr : number of process handles\n");
     printf("#th : number of thread handles\n");
-    printf("#vm : number of vm map handles\n");
+    printf("#vo : number of vmo handles\n");
+    printf("#vm : number of virtual memory address region handles\n");
     printf("#ch : number of channel handles\n");
     printf("#ev : number of event and event pair handles\n");
     printf("#ip : number of io port handles\n");
@@ -45,7 +46,7 @@ static char StateChar(const ProcessDispatcher& pd) {
 }
 
 static const char* ObjectTypeToString(mx_obj_type_t type) {
-    static_assert(MX_OBJ_TYPE_LAST == 18, "need to update switch below");
+    static_assert(MX_OBJ_TYPE_LAST == 19, "need to update switch below");
 
     switch (type) {
         case MX_OBJ_TYPE_PROCESS: return "process";
@@ -63,6 +64,7 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_RESOURCE: return "resource";
         case MX_OBJ_TYPE_EVENT_PAIR: return "event-pair";
         case MX_OBJ_TYPE_JOB: return "job";
+        case MX_OBJ_TYPE_VMAR: return "vmar";
         default: return "???";
     }
 }
@@ -96,12 +98,13 @@ static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
              types[MX_OBJ_TYPE_THREAD],
              types[MX_OBJ_TYPE_VMEM],
+             types[MX_OBJ_TYPE_VMAR],
              types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
@@ -112,7 +115,7 @@ static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #ch #ev #ip #dp [  job:name]\n", "id");
+    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vo #vm #ch #ev #ip #dp [  job:name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
         char pname[MX_MAX_NAME_LEN];
